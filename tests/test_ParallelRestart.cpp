@@ -855,7 +855,7 @@ BOOST_AUTO_TEST_CASE(BCConfig)
 {
 #if HAVE_MPI
     Opm::BCConfig val1({{10,11,12,13,14,15,Opm::BCType::RATE, Opm::FaceDir::XPlus, Opm::BCComponent::GAS, 100}});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(BCConfig)
 #endif
 }

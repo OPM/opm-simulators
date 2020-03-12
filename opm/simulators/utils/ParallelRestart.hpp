@@ -41,7 +41,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQActive.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/SimulationConfig/BCConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/RockConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/DenT.hpp>
 #include <opm/parser/eclipse/EclipseState/Util/OrderedMap.hpp>
@@ -505,8 +504,6 @@ ADD_PACK_PROTOTYPES(AquiferCT)
 ADD_PACK_PROTOTYPES(AquiferCT::AQUCT_data)
 ADD_PACK_PROTOTYPES(Aquifetp)
 ADD_PACK_PROTOTYPES(Aquifetp::AQUFETP_data)
-ADD_PACK_PROTOTYPES(BCConfig)
-ADD_PACK_PROTOTYPES(BCConfig::BCFace)
 ADD_PACK_PROTOTYPES(BrineDensityTable)
 ADD_PACK_PROTOTYPES(ColumnSchema)
 ADD_PACK_PROTOTYPES(Connection)

@@ -66,7 +66,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTracerProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WList.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
-#include <opm/parser/eclipse/EclipseState/SimulationConfig/BCConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/RockConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
@@ -349,7 +348,6 @@ std::size_t packSize(const std::array<T,N>& data, Dune::MPIHelper::MPICommunicat
 
 HANDLE_AS_POD(Actdims)
 HANDLE_AS_POD(Aqudims)
-HANDLE_AS_POD(BCConfig::BCFace)
 HANDLE_AS_POD(data::Connection)
 HANDLE_AS_POD(data::CurrentControl)
 HANDLE_AS_POD(data::Rates)
@@ -492,11 +490,6 @@ std::size_t packSize(const Aquancon::AquancCell& data, Dune::MPIHelper::MPICommu
 std::size_t packSize(const Aquancon& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.data(), comm);
-}
-
-std::size_t packSize(const BCConfig& bc, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(bc.faces(), comm);
 }
 
 std::size_t packSize(const RockConfig& data, Dune::MPIHelper::MPICommunicator comm)
@@ -2019,12 +2012,6 @@ void pack(const Aquancon::AquancCell& data, std::vector<char>& buffer, int& posi
 void pack(const Aquancon& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm) {
     pack(data.data(), buffer, position, comm);
-}
-
-void pack(const BCConfig& bc, std::vector<char>& buffer, int& position,
-    Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(bc.faces(), buffer, position, comm);
 }
 
 void pack(const RockConfig& data, std::vector<char>& buffer, int& position,
@@ -3709,15 +3696,6 @@ void unpack(Aquancon& data, std::vector<char>& buffer, int& position, Dune::MPIH
     std::unordered_map<int, std::vector<Aquancon::AquancCell>> aquiferCells;
     unpack(aquiferCells, buffer, position, comm);
     data = Aquancon(aquiferCells);
-}
-
-void unpack(BCConfig& bc, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<BCConfig::BCFace> faces;
-
-    unpack(faces, buffer, position, comm);
-    bc = BCConfig(faces);
 }
 
 void unpack(Rock2dTable& data, std::vector<char>& buffer, int& position,
