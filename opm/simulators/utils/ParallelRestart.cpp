@@ -69,7 +69,6 @@
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/BCConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/RockConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Eqldims.hpp>
@@ -420,14 +419,6 @@ std::size_t packSize(const data::WellRates& data, Dune::MPIHelper::MPICommunicat
 std::size_t packSize(const RestartValue& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.solution, comm) + packSize(data.wells, comm) + packSize(data.extra, comm);
-}
-
-std::size_t packSize(const ThresholdPressure& data, Dune::MPIHelper::MPICommunicator comm)
-{
-   return packSize(data.active(), comm) +
-          packSize(data.restart(), comm) +
-          packSize(data.thresholdPressureTable(), comm) +
-          packSize(data.pressureTable(), comm);
 }
 
 std::size_t packSize(const WellType& data, Dune::MPIHelper::MPICommunicator comm)
@@ -1953,15 +1944,6 @@ void pack(const RestartValue& data, std::vector<char>& buffer, int& position,
     pack(data.solution, buffer, position, comm);
     pack(data.wells, buffer, position, comm);
     pack(data.extra, buffer, position, comm);
-}
-
-void pack(const ThresholdPressure& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.active(), buffer, position, comm);
-    pack(data.restart(), buffer, position, comm);
-    pack(data.thresholdPressureTable(), buffer, position, comm);
-    pack(data.pressureTable(), buffer, position, comm);
 }
 
 void pack(const AquiferCT::AQUCT_data& data, std::vector<char>& buffer, int& position,
@@ -3594,20 +3576,6 @@ void unpack(RockConfig& data, std::vector<char>& buffer, int& position,
     unpack(water_compaction, buffer, position, comm);
     unpack(hyst_mode, buffer, position, comm);
     data = RockConfig(active, rock_comp, rocknum_property, num_rock_tables, water_compaction, hyst_mode);
-}
-
-void unpack(ThresholdPressure& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    ThresholdPressure::ThresholdPressureTable thpTable;
-    ThresholdPressure::PressureTable pTable;
-    bool active, restart;
-    unpack(active, buffer, position, comm);
-    unpack(restart, buffer, position, comm);
-    unpack(thpTable, buffer, position, comm);
-    unpack(pTable, buffer, position, comm);
-
-    data = ThresholdPressure(active, restart, thpTable, pTable);
 }
 
 void unpack(AquiferCT::AQUCT_data& data, std::vector<char>& buffer, int& position, Dune::MPIHelper::MPICommunicator comm)

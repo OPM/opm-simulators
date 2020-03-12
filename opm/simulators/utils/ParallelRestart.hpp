@@ -141,7 +141,6 @@ class TableColumn;
 class TableContainer;
 class TableManager;
 class TableSchema;
-class ThresholdPressure;
 class TimeStampUTC;
 class TlmixparRecord;
 class TlmixparTable;
@@ -606,7 +605,6 @@ ADD_PACK_PROTOTYPES(TableColumn)
 ADD_PACK_PROTOTYPES(TableContainer)
 ADD_PACK_PROTOTYPES(TableManager)
 ADD_PACK_PROTOTYPES(TableSchema)
-ADD_PACK_PROTOTYPES(ThresholdPressure)
 ADD_PACK_PROTOTYPES(TimeMap)
 ADD_PACK_PROTOTYPES(TimeStampUTC)
 ADD_PACK_PROTOTYPES(TlmixparRecord)

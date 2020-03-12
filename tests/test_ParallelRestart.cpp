@@ -675,7 +675,7 @@ BOOST_AUTO_TEST_CASE(ThresholdPressure)
 {
 #if HAVE_MPI
     Opm::ThresholdPressure val1 = getThresholdPressure();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(ThresholdPressure)
 #endif
 }
