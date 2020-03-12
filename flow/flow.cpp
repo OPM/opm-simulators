@@ -352,7 +352,7 @@ int main(int argc, char** argv)
 
             Opm::FlowMainEbos<PreTypeTag>::printPRTHeader(outputCout);
 
-#ifdef HAVE_MPI
+#if HAVE_MPI
             Opm::ParallelEclipseState* parState;
 #endif
             if (mpiRank == 0) {
@@ -361,7 +361,7 @@ int main(int argc, char** argv)
                 if ( outputCout )
                     Opm::checkDeck(*deck, parser, parseContext, errorGuard);
 
-#ifdef HAVE_MPI
+#if HAVE_MPI
                 parState = new Opm::ParallelEclipseState(*deck);
                 eclipseState.reset(parState);
 #else
@@ -386,7 +386,7 @@ int main(int argc, char** argv)
                 setupMessageLimiter(schedule->getMessageLimits(), "STDOUT_LOGGER");
                 summaryConfig.reset( new Opm::SummaryConfig(*deck, *schedule, eclipseState->getTableManager(), parseContext, errorGuard));
             }
-#ifdef HAVE_MPI
+#if HAVE_MPI
             else {
                 summaryConfig.reset(new Opm::SummaryConfig);
                 schedule.reset(new Opm::Schedule);
