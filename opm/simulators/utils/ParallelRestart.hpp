@@ -80,7 +80,6 @@ class Dimension;
 class EclHysterConfig;
 class EclipseConfig;
 class Eqldims;
-class EDITNNC;
 class EndpointScaling;
 class Equil;
 class EquilRecord;
@@ -100,8 +99,6 @@ class MessageLimits;
 class MLimits;
 class MULTREGTRecord;
 class MULTREGTScanner;
-class NNC;
-struct NNCdata;
 class OilVaporizationProperties;
 class Phases;
 class PlymwinjTable;
@@ -534,7 +531,6 @@ ADD_PACK_PROTOTYPES(DenT::entry)
 ADD_PACK_PROTOTYPES(Dimension)
 ADD_PACK_PROTOTYPES(EclHysterConfig)
 ADD_PACK_PROTOTYPES(EclipseConfig)
-ADD_PACK_PROTOTYPES(EDITNNC)
 ADD_PACK_PROTOTYPES(EndpointScaling)
 ADD_PACK_PROTOTYPES(Equil)
 ADD_PACK_PROTOTYPES(Eqldims)
@@ -565,8 +561,6 @@ ADD_PACK_PROTOTYPES(MessageLimits)
 ADD_PACK_PROTOTYPES(MLimits)
 ADD_PACK_PROTOTYPES(MULTREGTRecord)
 ADD_PACK_PROTOTYPES(MULTREGTScanner)
-ADD_PACK_PROTOTYPES(NNC)
-ADD_PACK_PROTOTYPES(NNCdata)
 ADD_PACK_PROTOTYPES(OilVaporizationProperties)
 ADD_PACK_PROTOTYPES(Phases)
 ADD_PACK_PROTOTYPES(PlmixparRecord)

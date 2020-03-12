@@ -29,14 +29,12 @@
 #include <opm/parser/eclipse/EclipseState/Grid/FaultCollection.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/FaultFace.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/MULTREGTScanner.hpp>
-#include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/TransMult.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/FoamConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionAST.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/Actions.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionX.hpp>
@@ -518,16 +516,6 @@ std::size_t packSize(const RockConfig& data, Dune::MPIHelper::MPICommunicator co
            packSize(data.num_rock_tables(), comm) +
            packSize(data.water_compaction(), comm) +
            packSize(data.hysteresis_mode(), comm);
-}
-
-std::size_t packSize(const NNC& data, Dune::MPIHelper::MPICommunicator comm)
-{
-   return packSize(data.data(), comm);
-}
-
-std::size_t packSize(const EDITNNC& data, Dune::MPIHelper::MPICommunicator comm)
-{
-   return packSize(data.data(), comm);
 }
 
 std::size_t packSize(const Rock2dTable& data, Dune::MPIHelper::MPICommunicator comm)
@@ -2074,18 +2062,6 @@ void pack(const RockConfig& data, std::vector<char>& buffer, int& position,
     pack(data.hysteresis_mode(), buffer, position, comm);
 }
 
-
-void pack(const NNC& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.data(), buffer, position, comm);
-}
-
-void pack(const EDITNNC& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.data(), buffer, position, comm);
-}
 
 void pack(const Rock2dTable& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
@@ -3787,22 +3763,6 @@ void unpack(BCConfig& bc, std::vector<char>& buffer, int& position,
 
     unpack(faces, buffer, position, comm);
     bc = BCConfig(faces);
-}
-
-void unpack(NNC& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<NNCdata> res;
-    unpack(res, buffer, position, comm);
-    data = NNC(res);
-}
-
-void unpack(EDITNNC& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<NNCdata> res;
-    unpack(res, buffer, position, comm);
-    data = EDITNNC(res);
 }
 
 void unpack(Rock2dTable& data, std::vector<char>& buffer, int& position,
