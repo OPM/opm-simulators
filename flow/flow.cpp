@@ -385,21 +385,18 @@ int main(int argc, char** argv)
 
                 setupMessageLimiter(schedule->getMessageLimits(), "STDOUT_LOGGER");
                 summaryConfig.reset( new Opm::SummaryConfig(*deck, *schedule, eclipseState->getTableManager(), parseContext, errorGuard));
-#ifdef HAVE_MPI
-                Opm::Mpi::packAndSend(*schedule, Dune::MPIHelper::getCollectiveCommunication());
-#endif
             }
 #ifdef HAVE_MPI
             else {
                 summaryConfig.reset(new Opm::SummaryConfig);
                 schedule.reset(new Opm::Schedule);
                 parState = new Opm::ParallelEclipseState;
-                Opm::Mpi::receiveAndUnpack(*schedule, mpiHelper.getCollectiveCommunication());
                 eclipseState.reset(parState);
             }
             Opm::EclMpiSerializer ser(mpiHelper.getCollectiveCommunication());
             ser.broadcast(*summaryConfig);
             ser.broadcast(*parState);
+            ser.broadcast(*schedule);
 #endif
 
             Opm::checkConsistentArrayDimensions(*eclipseState, *schedule, parseContext, errorGuard);

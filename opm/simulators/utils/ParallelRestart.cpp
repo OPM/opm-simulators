@@ -50,7 +50,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/RFTConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/ScheduleTypes.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Tuning.hpp>
@@ -174,49 +173,6 @@ void reconstructDynState(const std::vector<Type>& unique,
         ptrData.push_back(unique[idxVec[i]]);
     }
     result = Opm::DynamicState<Type>(ptrData, idxVec.back());
-}
-
-template<template<class, class> class Map, class Type, class Key>
-void reconstructDynMap(const std::vector<Type>& unique,
-                       const std::vector<std::pair<Key, std::vector<int>>>& asMap,
-                       Map<Key, Opm::DynamicState<Type>>& result)
-{
-    for (const auto& it : asMap) {
-        reconstructDynState(unique, it.second, result[it.first]);
-    }
-}
-
-template<template<class, class> class Map, class Type, class Key>
-std::size_t packSizeDynMap(const Map<Key, Opm::DynamicState<Type>>& data,
-                           Dune::MPIHelper::MPICommunicator comm)
-{
-    auto split = splitDynMap<Map,Type,Key>(data);
-    return Opm::Mpi::packSize(split.first, comm) +
-           Opm::Mpi::packSize(split.second, comm);
-}
-
-template<template<class, class> class Map, class Type, class Key>
-void packDynMap(const Map<Key, Opm::DynamicState<Type>>& data,
-                std::vector<char>& buffer,
-                int& position,
-                Dune::MPIHelper::MPICommunicator comm)
-{
-    auto split = splitDynMap<Map,Type,Key>(data);
-    Opm::Mpi::pack(split.first, buffer, position, comm);
-    Opm::Mpi::pack(split.second, buffer, position, comm);
-}
-
-template<template<class, class> class Map, class Type, class Key>
-void unpackDynMap(Map<Key, Opm::DynamicState<Type>>& data,
-                  std::vector<char>& buffer,
-                  int& position,
-                  Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<Type> unique;
-    std::vector<std::pair<Key, std::vector<int>>> indices;
-    Opm::Mpi::unpack(unique, buffer, position, comm);
-    Opm::Mpi::unpack(indices, buffer, position, comm);
-    reconstructDynMap<Map,Type,Key>(unique, indices, data);
 }
 
 }
@@ -1532,37 +1488,6 @@ std::size_t packSize(const Action::Actions& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.getActions(), comm);
-}
-
-template<class Key, class T> using Map2 = std::map<Key,T>;
-
-std::size_t packSize(const Schedule& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getTimeMap(), comm) +
-           packSizeDynMap(data.getStaticWells(), comm) +
-           packSizeDynMap(data.getGroups(), comm) +
-           packSize(data.getOilVapProps(), comm) +
-           packSize(data.getEvents(), comm) +
-           packSize(data.getModifierDeck(), comm) +
-           packSize(data.getTuning(), comm) +
-           packSize(data.getMessageLimits(), comm) +
-           packSize(data.getRunspec(), comm) +
-           packSizeDynMap<Map2>(data.getVFPProdTables(), comm) +
-           packSizeDynMap<Map2>(data.getVFPInjTables(), comm) +
-           packSize(data.getWellTestConfig(), comm) +
-           packSize(data.getWListManager(), comm) +
-           packSize(data.getUDQConfig(), comm) +
-           packSize(data.getUDQActive(), comm) +
-           packSize(data.getGuideRateConfig(), comm) +
-           packSize(data.getGConSale(), comm) +
-           packSize(data.getGConSump(), comm) +
-           packSize(data.getGlobalWhistCtlMode(), comm) +
-           packSize(data.getActions(), comm) +
-           packSize(data.rftConfig(), comm) +
-           packSize(data.getNupCol(), comm) +
-           packSize(data.restart(), comm) +
-           packSize(data.getWellGroupEvents(), comm);
 }
 
 std::size_t packSize(const BrineDensityTable& data,
@@ -3158,36 +3083,6 @@ void pack(const Action::Actions& data,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.getActions(), buffer, position, comm);
-}
-
-void pack(const Schedule& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getTimeMap(), buffer, position, comm);
-    packDynMap(data.getStaticWells(), buffer, position, comm);
-    packDynMap(data.getGroups(), buffer, position, comm);
-    pack(data.getOilVapProps(), buffer, position, comm);
-    pack(data.getEvents(), buffer, position, comm);
-    pack(data.getModifierDeck(), buffer, position, comm);
-    pack(data.getTuning(), buffer, position, comm);
-    pack(data.getMessageLimits(), buffer, position, comm);
-    pack(data.getRunspec(), buffer, position, comm);
-    packDynMap<Map2>(data.getVFPProdTables(), buffer, position, comm);
-    packDynMap<Map2>(data.getVFPInjTables(), buffer, position, comm);
-    pack(data.getWellTestConfig(), buffer, position, comm);
-    pack(data.getWListManager(), buffer, position, comm);
-    pack(data.getUDQConfig(), buffer, position, comm);
-    pack(data.getUDQActive(), buffer, position, comm);
-    pack(data.getGuideRateConfig(), buffer, position, comm);
-    pack(data.getGConSale(), buffer, position, comm);
-    pack(data.getGConSump(), buffer, position, comm);
-    pack(data.getGlobalWhistCtlMode(), buffer, position, comm);
-    pack(data.getActions(), buffer, position, comm);
-    pack(data.rftConfig(), buffer, position, comm);
-    pack(data.getNupCol(), buffer, position, comm);
-    pack(data.restart(), buffer, position, comm);
-    pack(data.getWellGroupEvents(), buffer, position, comm);
 }
 
 void pack(const BrineDensityTable& data,
@@ -5411,67 +5306,6 @@ void unpack(Action::Actions& data, std::vector<char>& buffer, int& position,
     data = Action::Actions(actions);
 }
 
-void unpack(Schedule& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    TimeMap timeMap;
-    Schedule::WellMap staticWells;
-    Schedule::GroupMap groups;
-    DynamicState<OilVaporizationProperties> oilVapProps;
-    Events events;
-    DynamicVector<Deck> modifierDeck;
-    DynamicState<Tuning> tuning;
-    MessageLimits messageLimits;
-    Runspec runspec;
-    Schedule::VFPProdMap vfpProdTables;
-    Schedule::VFPInjMap vfpInjTables;
-    DynamicState<std::shared_ptr<WellTestConfig>> wellTestConfig;
-    DynamicState<std::shared_ptr<WListManager>> wListManager;
-    DynamicState<std::shared_ptr<UDQConfig>> udqConfig;
-    DynamicState<std::shared_ptr<UDQActive>> udqActive;
-    DynamicState<std::shared_ptr<GuideRateConfig>> guideRateConfig;
-    DynamicState<std::shared_ptr<GConSale>> gconSale;
-    DynamicState<std::shared_ptr<GConSump>> gconSump;
-    DynamicState<Well::ProducerCMode> globalWhistCtlMode;
-    DynamicState<std::shared_ptr<Action::Actions>> actions;
-    RFTConfig rftConfig;
-    DynamicState<int> nupCol;
-    RestartConfig restartConfig;
-    std::map<std::string,Events> wellGroupEvents;
-
-    unpack(timeMap, buffer, position, comm);
-    unpackDynMap(staticWells, buffer, position, comm);
-    unpackDynMap(groups, buffer, position, comm);
-    unpack(oilVapProps, buffer, position, comm);
-    unpack(events, buffer, position, comm);
-    unpack(modifierDeck, buffer, position, comm);
-    unpack(tuning, buffer, position, comm);
-    unpack(messageLimits, buffer, position, comm);
-    unpack(runspec, buffer, position, comm);
-    unpackDynMap<Map2>(vfpProdTables, buffer, position, comm);
-    unpackDynMap<Map2>(vfpInjTables, buffer, position, comm);
-    unpack(wellTestConfig, buffer, position, comm);
-    unpack(wListManager, buffer, position, comm);
-    unpack(udqConfig, buffer, position, comm);
-    unpack(udqActive, buffer, position, comm);
-    unpack(guideRateConfig, buffer, position, comm);
-    unpack(gconSale, buffer, position, comm);
-    unpack(gconSump, buffer, position, comm);
-    unpack(globalWhistCtlMode, buffer, position, comm);
-    unpack(actions, buffer, position, comm);
-
-    unpack(rftConfig, buffer, position, comm);
-    unpack(nupCol, buffer, position, comm);
-    unpack(restartConfig, buffer, position, comm);
-    unpack(wellGroupEvents, buffer, position, comm);
-    data = Schedule(timeMap, staticWells, groups, oilVapProps, events,
-                    modifierDeck, tuning, messageLimits, runspec,
-                    vfpProdTables, vfpInjTables, wellTestConfig,
-                    wListManager, udqConfig, udqActive, guideRateConfig,
-                    gconSale, gconSump, globalWhistCtlMode, actions,
-                    rftConfig, nupCol, restartConfig, wellGroupEvents);
-}
-
 void unpack(BrineDensityTable& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
@@ -5845,6 +5679,13 @@ INSTANTIATE_PACK_VECTOR(bool)
 INSTANTIATE_PACK_VECTOR(char)
 INSTANTIATE_PACK_VECTOR(int)
 INSTANTIATE_PACK_VECTOR(std::array<double, 3>)
+INSTANTIATE_PACK_VECTOR(std::pair<bool,double>)
+INSTANTIATE_PACK_VECTOR(std::shared_ptr<Group>)
+INSTANTIATE_PACK_VECTOR(std::shared_ptr<VFPInjTable>)
+INSTANTIATE_PACK_VECTOR(std::shared_ptr<VFPProdTable>)
+INSTANTIATE_PACK_VECTOR(std::shared_ptr<Well>)
+INSTANTIATE_PACK_VECTOR(std::pair<std::string,std::vector<int>>)
+INSTANTIATE_PACK_VECTOR(std::pair<int,std::vector<int>>)
 
 #undef INSTANTIATE_PACK_VECTOR
 
@@ -5873,6 +5714,9 @@ template void unpack(std::shared_ptr<__VA_ARGS__>& data, \
                      Dune::MPIHelper::MPICommunicator comm);
 
 INSTANTIATE_PACK_SHARED_PTR(SpiralICD)
+INSTANTIATE_PACK_SHARED_PTR(VFPInjTable)
+INSTANTIATE_PACK_SHARED_PTR(Well)
+INSTANTIATE_PACK_SHARED_PTR(WellTestConfig)
 #undef INSTANTIATE_PACK_SHARED_PTR
 
 #define INSTANTIATE_PACK(...) \
@@ -5892,6 +5736,28 @@ INSTANTIATE_PACK(int)
 INSTANTIATE_PACK(std::array<short,3>)
 INSTANTIATE_PACK(std::array<bool,3>)
 INSTANTIATE_PACK(unsigned char)
+INSTANTIATE_PACK(std::map<std::pair<int,int>,std::pair<bool,double>>)
+INSTANTIATE_PACK(std::map<FaceDir::DirEnum,std::string>)
+INSTANTIATE_PACK(std::map<FaceDir::DirEnum,std::vector<double>>)
+INSTANTIATE_PACK(std::map<std::string,Events>)
+INSTANTIATE_PACK(std::map<std::string,std::vector<int>>)
+INSTANTIATE_PACK(std::map<std::string,std::map<std::pair<int,int>,int>>)
+INSTANTIATE_PACK(std::unordered_map<std::string,size_t>)
+INSTANTIATE_PACK(std::pair<bool,double>)
+INSTANTIATE_PACK(DynamicState<int>)
+INSTANTIATE_PACK(DynamicState<OilVaporizationProperties>)
+INSTANTIATE_PACK(DynamicState<std::shared_ptr<Action::Actions>>)
+INSTANTIATE_PACK(DynamicState<std::shared_ptr<GConSale>>)
+INSTANTIATE_PACK(DynamicState<std::shared_ptr<GConSump>>)
+INSTANTIATE_PACK(DynamicState<std::shared_ptr<GuideRateConfig>>)
+INSTANTIATE_PACK(DynamicState<std::shared_ptr<UDQActive>>)
+INSTANTIATE_PACK(DynamicState<std::shared_ptr<UDQConfig>>)
+INSTANTIATE_PACK(DynamicState<Tuning>)
+INSTANTIATE_PACK(DynamicState<Well::ProducerCMode>)
+INSTANTIATE_PACK(DynamicState<std::shared_ptr<WellTestConfig>>)
+INSTANTIATE_PACK(DynamicState<std::shared_ptr<WListManager>>)
+INSTANTIATE_PACK(DynamicVector<Deck>)
+
 #undef INSTANTIATE_PACK
 
 } // end namespace Mpi
