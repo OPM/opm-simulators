@@ -684,7 +684,7 @@ BOOST_AUTO_TEST_CASE(RockConfig)
 {
 #if HAVE_MPI
     Opm::RockConfig val1 = getRockConfig();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(RockConfig)
 #endif
 }
