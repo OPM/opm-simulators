@@ -54,7 +54,10 @@ public:
         auto handle = [&](auto& d)
         {
             for (auto& it : d) {
-                it.serializeOp(*this);
+              if constexpr (is_pair<T>::value)
+                  pair(it);
+              else
+                  it.serializeOp(*this);
             }
         };
 
@@ -118,6 +121,30 @@ public:
     }
 
 protected:
+    template<class T>
+    struct is_pair {
+        constexpr static bool value = false;
+    };
+
+    template<class T1, class T2>
+    struct is_pair<std::pair<T1,T2>> {
+        constexpr static bool value = true;
+    };
+
+    template<class T1, class T2>
+    void pair(const std::pair<T1,T2>& data)
+    {
+        if constexpr (std::is_pod<T1>::value || std::is_same<T1,std::string>::value)
+            (*this)(data.first);
+        else
+            data.first.serializeOp(*this);
+
+        if constexpr (std::is_pod<T2>::value || std::is_same<T2,std::string>::value)
+            (*this)(data.second);
+        else
+            const_cast<T2&>(data.second).serializeOp(*this);
+    }
+
     Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> m_comm;
 
     Operation m_op = Operation::PACKSIZE;
