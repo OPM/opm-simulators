@@ -255,33 +255,6 @@ std::size_t packSize(const T* data, std::size_t l, Dune::MPIHelper::MPICommunica
     return packSize(data, l, comm, typename std::is_pod<T>::type());
 }
 
-template<class T>
-std::size_t packSize(const T&, Dune::MPIHelper::MPICommunicator,
-                     std::integral_constant<bool, false>)
-{
-    OPM_THROW(std::logic_error, "Packing not (yet) supported for this non-pod type.");
-}
-
-template<class T>
-std::size_t packSize(const T&, Dune::MPIHelper::MPICommunicator comm,
-                     std::integral_constant<bool, true>)
-{
-#if HAVE_MPI
-    int size{};
-    MPI_Pack_size(1, Dune::MPITraits<T>::getType(), comm, &size);
-    return size;
-#else
-    (void) comm;
-    return 0;
-#endif
-}
-
-template<class T>
-std::size_t packSize(const T& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data, comm, typename std::is_pod<T>::type());
-}
-
 template<class T1, class T2>
 std::size_t packSize(const std::pair<T1,T2>& data, Dune::MPIHelper::MPICommunicator comm)
 {
@@ -1860,35 +1833,6 @@ void pack(const T* data, std::size_t l, std::vector<char>& buffer, int& position
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data, l, buffer, position, comm, typename std::is_pod<T>::type());
-}
-
-template<class T>
-void pack(const T&, std::vector<char>&, int&,
-          Dune::MPIHelper::MPICommunicator, std::integral_constant<bool, false>)
-{
-    OPM_THROW(std::logic_error, "Packing not (yet) supported for this non-pod type.");
-}
-
-template<class T>
-void pack(const T& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm, std::integral_constant<bool, true>)
-{
-#if HAVE_MPI
-    MPI_Pack(&data, 1, Dune::MPITraits<T>::getType(), buffer.data(),
-             buffer.size(), &position, comm);
-#else
-    (void) data;
-    (void) comm;
-    (void) buffer;
-    (void) position;
-#endif
-}
-
-template<class T>
-void pack(const T& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data, buffer, position, comm, typename std::is_pod<T>::type());
 }
 
 template<class T1, class T2>
@@ -3553,35 +3497,6 @@ void unpack(T* data, const std::size_t& l, std::vector<char>& buffer, int& posit
             Dune::MPIHelper::MPICommunicator comm)
 {
     unpack(data, l, buffer, position, comm, typename std::is_pod<T>::type());
-}
-
-template<class T>
-void unpack(T&, std::vector<char>&, int&,
-            Dune::MPIHelper::MPICommunicator, std::integral_constant<bool, false>)
-{
-    OPM_THROW(std::logic_error, "Packing not (yet) supported for this non-pod type.");
-}
-
-template<class T>
-void unpack(T& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm, std::integral_constant<bool, true>)
-{
-#if HAVE_MPI
-    MPI_Unpack(buffer.data(), buffer.size(), &position, &data, 1,
-               Dune::MPITraits<T>::getType(), comm);
-#else
-    (void) data;
-    (void) comm;
-    (void) buffer;
-    (void) position;
-#endif
-}
-
-template<class T>
-void unpack(T& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    unpack(data, buffer, position, comm, typename std::is_pod<T>::type());
 }
 
 template<class T1, class T2>
