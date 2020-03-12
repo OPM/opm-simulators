@@ -19,8 +19,6 @@
 #include <config.h>
 
 #include "ParallelEclipseState.hpp"
-#include "ParallelRestart.hpp"
-#include <ebos/eclmpiserializer.hh>
 
 namespace Opm {
 
