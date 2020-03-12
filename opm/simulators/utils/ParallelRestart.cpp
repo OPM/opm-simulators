@@ -66,7 +66,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTracerProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WList.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
-#include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Eqldims.hpp>
@@ -568,17 +567,6 @@ std::size_t packSize(const InitConfig& data, Dune::MPIHelper::MPICommunicator co
            packSize(data.restartRequested(), comm) +
            packSize(data.getRestartStep(), comm) +
            packSize(data.getRestartRootName(), comm);
-}
-
-std::size_t packSize(const SimulationConfig& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getThresholdPressure(), comm) +
-           packSize(data.bcconfig(), comm) +
-           packSize(data.rock_config(), comm) +
-           packSize(data.useCPR(), comm) +
-           packSize(data.hasDISGAS(), comm) +
-           packSize(data.hasVAPOIL(), comm) +
-           packSize(data.isThermal(), comm);
 }
 
 std::size_t packSize(const TimeMap& data, Dune::MPIHelper::MPICommunicator comm)
@@ -2093,18 +2081,6 @@ void pack(const InitConfig& data, std::vector<char>& buffer, int& position,
     pack(data.restartRequested(), buffer, position, comm);
     pack(data.getRestartStep(), buffer, position, comm);
     pack(data.getRestartRootName(), buffer, position, comm);
-}
-
-void pack(const SimulationConfig& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getThresholdPressure(), buffer, position, comm);
-    pack(data.bcconfig(), buffer, position, comm);
-    pack(data.rock_config(), buffer, position, comm);
-    pack(data.useCPR(), buffer, position, comm);
-    pack(data.hasDISGAS(), buffer, position, comm);
-    pack(data.hasVAPOIL(), buffer, position, comm);
-    pack(data.isThermal(), buffer, position, comm);
 }
 
 void pack(const TimeMap& data, std::vector<char>& buffer, int& position,
@@ -3781,23 +3757,6 @@ void unpack(InitConfig& data, std::vector<char>& buffer, int& position,
     unpack(restartRootName, buffer, position, comm);
     data = InitConfig(equil, foam, filleps, hasGravity,
                       restartRequested, restartStep, restartRootName);
-}
-
-void unpack(SimulationConfig& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    ThresholdPressure thresholdPressure;
-    BCConfig bc;
-    RockConfig rock_config;
-    bool useCPR, DISGAS, VAPOIL, isThermal;
-    unpack(thresholdPressure, buffer, position, comm);
-    unpack(bc, buffer, position, comm);
-    unpack(rock_config, buffer, position, comm);
-    unpack(useCPR, buffer, position, comm);
-    unpack(DISGAS, buffer, position, comm);
-    unpack(VAPOIL, buffer, position, comm);
-    unpack(isThermal, buffer, position, comm);
-    data = SimulationConfig(thresholdPressure, bc, rock_config, useCPR, DISGAS, VAPOIL, isThermal);
 }
 
 void unpack(TimeMap& data, std::vector<char>& buffer, int& position,

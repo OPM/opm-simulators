@@ -125,7 +125,6 @@ class Runspec;
 class Segment;
 class ShrateRecord;
 class ShrateTable;
-class SimulationConfig;
 class SimpleTable;
 class SkprpolyTable;
 class SkprwatTable;
@@ -585,7 +584,6 @@ ADD_PACK_PROTOTYPES(Runspec)
 ADD_PACK_PROTOTYPES(Segment)
 ADD_PACK_PROTOTYPES(ShrateRecord)
 ADD_PACK_PROTOTYPES(ShrateTable)
-ADD_PACK_PROTOTYPES(SimulationConfig)
 ADD_PACK_PROTOTYPES(SimpleTable)
 ADD_PACK_PROTOTYPES(SkprpolyTable)
 ADD_PACK_PROTOTYPES(SkprwatTable)

@@ -845,7 +845,7 @@ BOOST_AUTO_TEST_CASE(SimulationConfig)
 {
 #if HAVE_MPI
     Opm::SimulationConfig val1(getThresholdPressure(), getBCConfig(), getRockConfig(), false, true, false, true);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(SimulationConfig)
 #endif
 }
