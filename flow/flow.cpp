@@ -352,9 +352,6 @@ int main(int argc, char** argv)
 
             Opm::FlowMainEbos<PreTypeTag>::printPRTHeader(outputCout);
 
-#if HAVE_MPI
-            Opm::ParallelEclipseState* parState;
-#endif
             if (mpiRank == 0) {
                 deck.reset( new Opm::Deck( parser.parseFile(deckFilename , parseContext, errorGuard)));
                 Opm::MissingFeatures::checkKeywords(*deck, parseContext, errorGuard);
@@ -362,8 +359,7 @@ int main(int argc, char** argv)
                     Opm::checkDeck(*deck, parser, parseContext, errorGuard);
 
 #if HAVE_MPI
-                parState = new Opm::ParallelEclipseState(*deck);
-                eclipseState.reset(parState);
+                eclipseState.reset(new Opm::ParallelEclipseState(*deck));
 #else
                 eclipseState.reset(new Opm::EclipseState(*deck));
 #endif
@@ -390,12 +386,11 @@ int main(int argc, char** argv)
             else {
                 summaryConfig.reset(new Opm::SummaryConfig);
                 schedule.reset(new Opm::Schedule);
-                parState = new Opm::ParallelEclipseState;
-                eclipseState.reset(parState);
+                eclipseState.reset(new Opm::ParallelEclipseState);
             }
             Opm::EclMpiSerializer ser(mpiHelper.getCollectiveCommunication());
             ser.broadcast(*summaryConfig);
-            ser.broadcast(*parState);
+            ser.broadcast(*eclipseState);
             ser.broadcast(*schedule);
 #endif
 
