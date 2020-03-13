@@ -23,7 +23,6 @@
 
 #include "ParallelRestart.hpp"
 #include <opm/common/OpmLog/Location.hpp>
-#include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionAST.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/Actions.hpp>
@@ -554,19 +553,6 @@ std::size_t packSize(const UDQParams& data, Dune::MPIHelper::MPICommunicator com
            packSize(data.range(), comm) +
            packSize(data.undefinedValue(), comm) +
            packSize(data.cmpEpsilon(), comm);
-}
-
-std::size_t packSize(const Runspec& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.phases(), comm) +
-           packSize(data.tabdims(), comm) +
-           packSize(data.endpointScaling(), comm) +
-           packSize(data.wellDimensions(), comm) +
-           packSize(data.wellSegmentDimensions(), comm) +
-           packSize(data.udqParams(), comm) +
-           packSize(data.hysterPar(), comm) +
-           packSize(data.actdims(), comm) +
-           packSize(data.saturationFunctionControls(), comm);
 }
 
 std::size_t packSize(const PvtxTable& data, Dune::MPIHelper::MPICommunicator comm)
@@ -1929,20 +1915,6 @@ void pack(const UDQParams& data, std::vector<char>& buffer, int& position,
     pack(data.range(), buffer, position, comm);
     pack(data.undefinedValue(), buffer, position, comm);
     pack(data.cmpEpsilon(), buffer, position, comm);
-}
-
-void pack(const Runspec& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.phases(), buffer, position, comm);
-    pack(data.tabdims(), buffer, position, comm);
-    pack(data.endpointScaling(), buffer, position, comm);
-    pack(data.wellDimensions(), buffer, position, comm);
-    pack(data.wellSegmentDimensions(), buffer, position, comm);
-    pack(data.udqParams(), buffer, position, comm);
-    pack(data.hysterPar(), buffer, position, comm);
-    pack(data.actdims(), buffer, position, comm);
-    pack(data.saturationFunctionControls(), buffer, position, comm);
 }
 
 void pack(const PvtxTable& data, std::vector<char>& buffer, int& position,
@@ -3453,32 +3425,6 @@ void unpack(UDQParams& data, std::vector<char>& buffer, int& position,
     unpack(undefVal, buffer, position, comm);
     unpack(cmp_eps, buffer, position, comm);
     data = UDQParams(reseed, rand_seed, range, undefVal, cmp_eps);
-}
-
-void unpack(Runspec& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    Phases phases;
-    Tabdims tabdims;
-    EndpointScaling endScale;
-    Welldims wellDims;
-    WellSegmentDims wsegDims;
-    UDQParams udqparams;
-    EclHysterConfig hystPar;
-    Actdims actdims;
-    SatFuncControls sfuncctrl;
-
-    unpack(phases, buffer, position, comm);
-    unpack(tabdims, buffer, position, comm);
-    unpack(endScale, buffer, position, comm);
-    unpack(wellDims, buffer, position, comm);
-    unpack(wsegDims, buffer, position, comm);
-    unpack(udqparams, buffer, position, comm);
-    unpack(hystPar, buffer, position, comm);
-    unpack(actdims, buffer, position, comm);
-    unpack(sfuncctrl, buffer, position, comm);
-    data = Runspec(phases, tabdims, endScale, wellDims, wsegDims,
-                   udqparams, hystPar, actdims, sfuncctrl);
 }
 
 template<class PVTType>

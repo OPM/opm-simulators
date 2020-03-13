@@ -1000,7 +1000,7 @@ BOOST_AUTO_TEST_CASE(Runspec)
                       Opm::Actdims(1,2,3,4),
                       Opm::SatFuncControls(5.0e-7, Opm::SatFuncControls::ThreePhaseOilKrModel::Stone2));
 
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Runspec)
 #endif
 }

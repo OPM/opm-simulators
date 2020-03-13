@@ -104,7 +104,6 @@ class RockTable;
 class RocktabTable;
 class Rock2dTable;
 class Rock2dtrTable;
-class Runspec;
 class Segment;
 class ShrateRecord;
 class ShrateTable;
@@ -544,7 +543,6 @@ ADD_PACK_PROTOTYPES(RockTable)
 ADD_PACK_PROTOTYPES(Rock2dTable)
 ADD_PACK_PROTOTYPES(Rock2dtrTable)
 ADD_PACK_PROTOTYPES(RocktabTable)
-ADD_PACK_PROTOTYPES(Runspec)
 ADD_PACK_PROTOTYPES(Segment)
 ADD_PACK_PROTOTYPES(ShrateRecord)
 ADD_PACK_PROTOTYPES(ShrateTable)
