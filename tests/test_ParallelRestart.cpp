@@ -793,7 +793,7 @@ BOOST_AUTO_TEST_CASE(EquilRecord)
 {
 #if HAVE_MPI
     Opm::EquilRecord val1 = getEquilRecord();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(EquilRecord)
 #endif
 }
@@ -803,7 +803,7 @@ BOOST_AUTO_TEST_CASE(Equil)
 {
 #if HAVE_MPI
     Opm::Equil val1({getEquilRecord(), getEquilRecord()});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Equil)
 #endif
 }

@@ -25,7 +25,6 @@
 #include <opm/common/OpmLog/Location.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
-#include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/FoamConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
@@ -539,11 +538,6 @@ std::size_t packSize(const TableContainer& data, Dune::MPIHelper::MPICommunicato
     }
 
     return res;
-}
-
-std::size_t packSize(const Equil& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.records(), comm);
 }
 
 std::size_t packSize(const FoamConfig& data, Dune::MPIHelper::MPICommunicator comm)
@@ -1447,20 +1441,6 @@ std::size_t packSize(const PvtwsaltTable& data,
           packSize(data.getTableValues(), comm);
 }
 
-std::size_t packSize(const EquilRecord& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.datumDepth(), comm) +
-           packSize(data.datumDepthPressure(), comm) +
-           packSize(data.waterOilContactDepth(), comm) +
-           packSize(data.waterOilContactCapillaryPressure(), comm) +
-           packSize(data.gasOilContactDepth(), comm) +
-           packSize(data.gasOilContactCapillaryPressure(), comm) +
-           packSize(data.liveOilInitConstantRs(), comm) +
-           packSize(data.wetGasInitConstantRv(), comm) +
-           packSize(data.initializationTargetAccuracy(), comm);
-}
-
 std::size_t packSize(const FoamData& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -1999,12 +1979,6 @@ void pack(const TableContainer& data, std::vector<char>& buffer, int& position,
           pack(*it.second, buffer, position, comm);
         }
     }
-}
-
-void pack(const Equil& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.records(), buffer, position, comm);
 }
 
 void pack(const FoamConfig& data, std::vector<char>& buffer, int& position,
@@ -2936,21 +2910,6 @@ void pack(const PvtwsaltTable& data,
     pack(data.getTableValues(), buffer, position, comm);
 }
 
-void pack(const EquilRecord& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.datumDepth(), buffer, position, comm);
-    pack(data.datumDepthPressure(), buffer, position, comm);
-    pack(data.waterOilContactDepth(), buffer, position, comm);
-    pack(data.waterOilContactCapillaryPressure(), buffer, position, comm);
-    pack(data.gasOilContactDepth(), buffer, position, comm);
-    pack(data.gasOilContactCapillaryPressure(), buffer, position, comm);
-    pack(data.liveOilInitConstantRs(), buffer, position, comm);
-    pack(data.wetGasInitConstantRv(), buffer, position, comm);
-    pack(data.initializationTargetAccuracy(), buffer, position, comm);
-}
-
 void pack(const FoamData& data,
           std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
@@ -3605,14 +3564,6 @@ void unpack(TableContainer& data, std::vector<char>& buffer, int& position,
         unpack(table, buffer, position, comm);
         data.addTable(id, std::make_shared<SimpleTable>(table));
     }
-}
-
-void unpack(Equil& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<EquilRecord> records;
-    unpack(records, buffer, position, comm);
-    data = Equil(records);
 }
 
 void unpack(FoamConfig& data, std::vector<char>& buffer, int& position,
@@ -5020,31 +4971,6 @@ void unpack(PvtwsaltTable& data, std::vector<char>& buffer, int& position,
     unpack(refSaltConValue, buffer, position, comm);
     unpack(tableValues, buffer, position, comm);
     data = PvtwsaltTable(refPressValue, refSaltConValue, tableValues);
-}
-
-void unpack(EquilRecord& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    double datumDepth, datumDepthPressure, waterOilContactDepth;
-    double waterOilContactCapillaryPressure, gasOilContactDepth;
-    double gasOilContactCapillaryPressure;
-    bool liveOilInitConstantRs, wetGasInitConstantRv;
-    int initializationTargetAccuracy;
-
-    unpack(datumDepth, buffer, position, comm);
-    unpack(datumDepthPressure, buffer, position, comm);
-    unpack(waterOilContactDepth, buffer, position, comm);
-    unpack(waterOilContactCapillaryPressure, buffer, position, comm);
-    unpack(gasOilContactDepth, buffer, position, comm);
-    unpack(gasOilContactCapillaryPressure, buffer, position, comm);
-    unpack(liveOilInitConstantRs, buffer, position, comm);
-    unpack(wetGasInitConstantRv, buffer, position, comm);
-    unpack(initializationTargetAccuracy, buffer, position, comm);
-    data = EquilRecord(datumDepth, datumDepthPressure, waterOilContactDepth,
-                       waterOilContactCapillaryPressure, gasOilContactDepth,
-                       gasOilContactCapillaryPressure, liveOilInitConstantRs,
-                       wetGasInitConstantRv, initializationTargetAccuracy);
 }
 
 void unpack(FoamData& data,

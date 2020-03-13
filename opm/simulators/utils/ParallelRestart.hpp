@@ -79,8 +79,6 @@ class EclHysterConfig;
 class EclipseConfig;
 class Eqldims;
 class EndpointScaling;
-class Equil;
-class EquilRecord;
 class Events;
 class FoamConfig;
 class FoamData;
@@ -519,9 +517,7 @@ ADD_PACK_PROTOTYPES(Dimension)
 ADD_PACK_PROTOTYPES(EclHysterConfig)
 ADD_PACK_PROTOTYPES(EclipseConfig)
 ADD_PACK_PROTOTYPES(EndpointScaling)
-ADD_PACK_PROTOTYPES(Equil)
 ADD_PACK_PROTOTYPES(Eqldims)
-ADD_PACK_PROTOTYPES(EquilRecord)
 ADD_PACK_PROTOTYPES(Events)
 ADD_PACK_PROTOTYPES(FoamConfig)
 ADD_PACK_PROTOTYPES(FoamData)
