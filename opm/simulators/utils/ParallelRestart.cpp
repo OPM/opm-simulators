@@ -28,7 +28,6 @@
 #include <opm/parser/eclipse/EclipseState/Grid/Fault.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/FaultCollection.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/FaultFace.hpp>
-#include <opm/parser/eclipse/EclipseState/Grid/TransMult.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/FoamConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
@@ -1555,15 +1554,6 @@ std::size_t packSize(const EclipseConfig& data,
            packSize(data.io(), comm);
 }
 
-std::size_t packSize(const TransMult& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getSize(), comm) +
-           packSize(data.getTrans(), comm) +
-           packSize(data.getNames(), comm) +
-           packSize(data.getScanner(), comm);
-}
-
 std::size_t packSize(const FaultFace& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -3083,16 +3073,6 @@ void pack(const EclipseConfig& data,
 {
     pack(data.init(), buffer, position, comm);
     pack(data.io(), buffer, position, comm);
-}
-
-void pack(const TransMult& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getSize(), buffer, position, comm);
-    pack(data.getTrans(), buffer, position, comm);
-    pack(data.getNames(), buffer, position, comm);
-    pack(data.getScanner(), buffer, position, comm);
 }
 
 void pack(const FaultFace& data,
@@ -5240,22 +5220,6 @@ void unpack(EclipseConfig& data,
     unpack(init, buffer, position, comm);
     unpack(io, buffer, position, comm);
     data = EclipseConfig(init, io);
-}
-
-void unpack(TransMult& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::array<size_t, 3> size;
-    std::map<FaceDir::DirEnum, std::vector<double>> trans;
-    std::map<FaceDir::DirEnum, std::string> names;
-    MULTREGTScanner scanner;
-
-    unpack(size, buffer, position, comm);
-    unpack(trans, buffer, position, comm);
-    unpack(names, buffer, position, comm);
-    unpack(scanner, buffer, position, comm);
-    data = TransMult(size, trans, names, scanner);
 }
 
 void unpack(FaultFace& data,
