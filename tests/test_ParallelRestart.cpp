@@ -971,7 +971,7 @@ BOOST_AUTO_TEST_CASE(EclHysterConfig)
 {
 #if HAVE_MPI
     Opm::EclHysterConfig val1(true, 1, 2);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(EclHysterConfig)
 #endif
 }

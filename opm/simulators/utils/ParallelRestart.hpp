@@ -75,7 +75,6 @@ class DeckRecord;
 class DENSITYRecord;
 class DensityTable;
 class Dimension;
-class EclHysterConfig;
 class Eqldims;
 class Events;
 template<class T> class IOrderSet;
@@ -505,7 +504,6 @@ ADD_PACK_PROTOTYPES(DensityTable)
 ADD_PACK_PROTOTYPES(DenT)
 ADD_PACK_PROTOTYPES(DenT::entry)
 ADD_PACK_PROTOTYPES(Dimension)
-ADD_PACK_PROTOTYPES(EclHysterConfig)
 ADD_PACK_PROTOTYPES(Eqldims)
 ADD_PACK_PROTOTYPES(Events)
 ADD_PACK_PROTOTYPES(GConSale)

@@ -1411,14 +1411,6 @@ std::size_t packSize(const TimeStampUTC& data,
            packSize(data.microseconds(), comm);
 }
 
-std::size_t packSize(const EclHysterConfig& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.active(), comm) +
-           packSize(data.pcHysteresisModel(), comm) +
-           packSize(data.krHysteresisModel(), comm);
-}
-
 std::size_t packSize(const JFunc& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -2814,15 +2806,6 @@ void pack(const TimeStampUTC& data,
     pack(data.minutes(), buffer, position, comm);
     pack(data.seconds(), buffer, position, comm);
     pack(data.microseconds(), buffer, position, comm);
-}
-
-void pack(const EclHysterConfig& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.active(), buffer, position, comm);
-    pack(data.pcHysteresisModel(), buffer, position, comm);
-    pack(data.krHysteresisModel(), buffer, position, comm);
 }
 
 void pack(const JFunc& data,
@@ -4791,20 +4774,6 @@ void unpack(TimeStampUTC& data,
     unpack(seconds, buffer, position, comm);
     unpack(usec, buffer, position, comm);
     data = TimeStampUTC(ymd, hour, minutes, seconds, usec);
-}
-
-
-void unpack(EclHysterConfig& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    bool active;
-    int pcHysteresisModel, krHysteresisModel;
-
-    unpack(active, buffer, position, comm);
-    unpack(pcHysteresisModel, buffer, position, comm);
-    unpack(krHysteresisModel, buffer, position, comm);
-    data = EclHysterConfig(active, pcHysteresisModel, krHysteresisModel);
 }
 
 void unpack(JFunc& data,
