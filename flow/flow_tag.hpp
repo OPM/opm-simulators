@@ -65,11 +65,14 @@ END_PROPERTIES
 
 namespace Opm {
   template <class TypeTag>
-  void flowEbosSetDeck(Deck &deck, EclipseState& eclState)
+  void flowEbosSetDeck(double setupTime, Deck &deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
   {
     typedef typename GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
+    Vanguard::setExternalSetupTime(setupTime);
     Vanguard::setExternalDeck(&deck);
     Vanguard::setExternalEclState(&eclState);
+    Vanguard::setExternalSchedule(&schedule);
+    Vanguard::setExternalSummaryConfig(&summaryConfig);
   }
 
 // ----------------- Main program -----------------
@@ -371,15 +374,40 @@ int mainFlow(int argc, char** argv)
 
             Opm::FlowMainEbos<PreTypeTag>::printPRTHeader(outputCout);
 
-            deck.reset( new Opm::Deck( parser.parseFile(deckFilename , parseContext, errorGuard)));
-            Opm::MissingFeatures::checkKeywords(*deck, parseContext, errorGuard);
-            if ( outputCout )
-                Opm::checkDeck(*deck, parser, parseContext, errorGuard);
+#ifdef HAVE_MPI
+            Opm::ParallelEclipseState* parState;
+#endif
+            if (mpiRank == 0) {
+                deck.reset( new Opm::Deck( parser.parseFile(deckFilename , parseContext, errorGuard)));
+                Opm::MissingFeatures::checkKeywords(*deck, parseContext, errorGuard);
+                if ( outputCout )
+                    Opm::checkDeck(*deck, parser, parseContext, errorGuard);
 
-            eclipseState.reset( new Opm::EclipseState(*deck ));
-            schedule.reset(new Opm::Schedule(*deck, *eclipseState, parseContext, errorGuard));
-            summaryConfig.reset( new Opm::SummaryConfig(*deck, *schedule, eclipseState->getTableManager(), parseContext, errorGuard));
-            setupMessageLimiter(schedule->getMessageLimits(), "STDOUT_LOGGER");
+#ifdef HAVE_MPI
+                parState = new Opm::ParallelEclipseState(*deck);
+                eclipseState.reset(parState);
+#else
+                eclipseState.reset(new Opm::EclipseState(*deck));
+#endif
+                schedule.reset(new Opm::Schedule(*deck, *eclipseState, parseContext, errorGuard));
+                setupMessageLimiter(schedule->getMessageLimits(), "STDOUT_LOGGER");
+                summaryConfig.reset( new Opm::SummaryConfig(*deck, *schedule, eclipseState->getTableManager(), parseContext, errorGuard));
+#ifdef HAVE_MPI
+                Opm::Mpi::packAndSend(*schedule, Dune::MPIHelper::getCollectiveCommunication());
+#endif
+            }
+#ifdef HAVE_MPI
+            else {
+                summaryConfig.reset(new Opm::SummaryConfig);
+                schedule.reset(new Opm::Schedule);
+                parState = new Opm::ParallelEclipseState;
+                Opm::Mpi::receiveAndUnpack(*schedule, mpiHelper.getCollectiveCommunication());
+                eclipseState.reset(parState);
+            }
+            Opm::EclMpiSerializer ser(mpiHelper.getCollectiveCommunication());
+            ser.broadcast(*summaryConfig);
+            ser.broadcast(*parState);
+#endif
 
             Opm::checkConsistentArrayDimensions(*eclipseState, *schedule, parseContext, errorGuard);
 
@@ -391,7 +419,7 @@ int mainFlow(int argc, char** argv)
             }
         }
         bool outputFiles = (outputMode != FileOutputMode::OUTPUT_NONE);
-        Opm::flowEbosSetDeck<TypeTag>(*deck, *eclipseState);
+        Opm::flowEbosSetDeck<TypeTag>(externalSetupTimer.elapsed(), *deck, *eclipseState, *schedule, *summaryConfig);
         return Opm::flowEbosMain<TypeTag>(argc, argv, outputCout, outputFiles);
     }
   catch (const std::invalid_argument& e)
