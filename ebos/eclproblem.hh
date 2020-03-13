@@ -53,7 +53,6 @@
 #endif
 #include "eclwellmanager.hh"
 #include "eclequilinitializer.hh"
-#include "eclmpiserializer.hh"
 #include "eclwriter.hh"
 #include "ecloutputblackoilmodule.hh"
 #include "ecltransmissibility.hh"

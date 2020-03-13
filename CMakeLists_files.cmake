@@ -37,7 +37,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/utils/DeferredLogger.cpp
   opm/simulators/utils/gatherDeferredLogger.cpp
   opm/simulators/utils/moduleVersion.cpp
-  opm/simulators/utils/ParallelEclipseState.cpp
   opm/simulators/utils/ParallelRestart.cpp
   opm/simulators/wells/VFPProdProperties.cpp
   opm/simulators/wells/VFPInjProperties.cpp
@@ -45,6 +44,9 @@ list (APPEND MAIN_SOURCE_FILES
 
 if(CUDA_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/cusparseSolverBackend.cu)
+endif()
+if(MPI_FOUND)
+  list(APPEND MAIN_SOURCE_FILES opm/simulators/utils/ParallelEclipseState.cpp)
 endif()
 
 # originally generated with the command:
@@ -68,12 +70,12 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_stoppedwells.cpp
   tests/test_relpermdiagnostics.cpp
   tests/test_norne_pvt.cpp
-  tests/test_ParallelRestart.cpp
   tests/test_wellstatefullyimplicitblackoil.cpp
   )
 
 if(MPI_FOUND)
-  list(APPEND TEST_SOURCE_FILES tests/test_parallelistlinformation.cpp)
+  list(APPEND TEST_SOURCE_FILES tests/test_parallelistlinformation.cpp
+                                tests/test_ParallelRestart.cpp)
 endif()
 
 list (APPEND TEST_DATA_FILES
