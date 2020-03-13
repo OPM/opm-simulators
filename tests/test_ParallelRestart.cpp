@@ -2185,7 +2185,7 @@ BOOST_AUTO_TEST_CASE(SummaryNode)
                                  .number(2)
                                  .isUserDefined(true);
 
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(SummaryNode)
 #endif
 }

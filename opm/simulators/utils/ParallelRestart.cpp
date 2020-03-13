@@ -73,7 +73,6 @@
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/RockConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
-#include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Eqldims.hpp>
@@ -1578,18 +1577,6 @@ std::size_t packSize(const PvtwsaltTable& data,
    return packSize(data.getReferencePressureValue(), comm) +
           packSize(data.getReferenceSaltConcentrationValue(), comm) +
           packSize(data.getTableValues(), comm);
-}
-
-std::size_t packSize(const SummaryNode& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.keyword(), comm) +
-           packSize(data.category(), comm) +
-           packSize(data.location(), comm)  +
-           packSize(data.type(), comm) +
-           packSize(data.namedEntity(), comm) +
-           packSize(data.number(), comm) +
-           packSize(data.isUserDefined(), comm);
 }
 
 std::size_t packSize(const EquilRecord& data,
@@ -3217,19 +3204,6 @@ void pack(const PvtwsaltTable& data,
     pack(data.getReferencePressureValue(), buffer, position, comm);
     pack(data.getReferenceSaltConcentrationValue(), buffer, position, comm);
     pack(data.getTableValues(), buffer, position, comm);
-}
-
-void pack(const SummaryNode& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.keyword(), buffer, position, comm);
-    pack(data.category(), buffer, position, comm);
-    pack(data.location(), buffer, position, comm) ;
-    pack(data.type(), buffer, position, comm);
-    pack(data.namedEntity(), buffer, position, comm);
-    pack(data.number(), buffer, position, comm);
-    pack(data.isUserDefined(), buffer, position, comm);
 }
 
 void pack(const EquilRecord& data,
@@ -5519,32 +5493,6 @@ void unpack(PvtwsaltTable& data, std::vector<char>& buffer, int& position,
     data = PvtwsaltTable(refPressValue, refSaltConValue, tableValues);
 }
 
-void unpack(SummaryNode& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::string keyword;
-    SummaryNode::Category category;
-    Location location;
-    SummaryNode::Type type;
-    std::string namedEntity;
-    int number;
-    bool isUserDefined;
-
-    unpack(keyword, buffer, position, comm);
-    unpack(category, buffer, position, comm);
-    unpack(location, buffer, position, comm) ;
-    unpack(type, buffer, position, comm);
-    unpack(namedEntity, buffer, position, comm);
-    unpack(number, buffer, position, comm);
-    unpack(isUserDefined, buffer, position, comm);
-    data = SummaryNode{keyword, category, location}
-           .parameterType(type)
-           .namedEntity(namedEntity)
-           .number(number)
-           .isUserDefined(isUserDefined);
-}
-
 void unpack(EquilRecord& data,
             std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
@@ -5897,7 +5845,6 @@ INSTANTIATE_PACK_VECTOR(bool)
 INSTANTIATE_PACK_VECTOR(char)
 INSTANTIATE_PACK_VECTOR(int)
 INSTANTIATE_PACK_VECTOR(std::array<double, 3>)
-INSTANTIATE_PACK_VECTOR(SummaryNode)
 
 #undef INSTANTIATE_PACK_VECTOR
 
@@ -5945,7 +5892,6 @@ INSTANTIATE_PACK(int)
 INSTANTIATE_PACK(std::array<short,3>)
 INSTANTIATE_PACK(std::array<bool,3>)
 INSTANTIATE_PACK(unsigned char)
-INSTANTIATE_PACK(SummaryNode)
 #undef INSTANTIATE_PACK
 
 } // end namespace Mpi
