@@ -2300,7 +2300,7 @@ BOOST_AUTO_TEST_CASE(FaultFace)
 {
 #ifdef HAVE_MPI
     Opm::FaultFace val1({1,2,3,4,5,6}, Opm::FaceDir::YPlus);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(FaultFace)
 #endif
 }
@@ -2310,7 +2310,7 @@ BOOST_AUTO_TEST_CASE(Fault)
 {
 #ifdef HAVE_MPI
     Opm::Fault val1("test", 1.0, {{{1,2,3,4,5,6}, Opm::FaceDir::YPlus}});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Fault)
 #endif
 }
@@ -2340,7 +2340,7 @@ BOOST_AUTO_TEST_CASE(FaultCollection)
     Opm::OrderedMap<std::string, Opm::Fault> faults;
     faults.insert({"test2", fault});
     Opm::FaultCollection val1(faults);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(FaultCollection)
 #endif
 }
