@@ -542,15 +542,6 @@ std::size_t packSize(const RestartConfig& data, Dune::MPIHelper::MPICommunicator
            packSize(data.saveKeywords(), comm);
 }
 
-std::size_t packSize(const UDQParams& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.reseed(), comm) +
-           packSize(data.rand_seed(), comm) +
-           packSize(data.range(), comm) +
-           packSize(data.undefinedValue(), comm) +
-           packSize(data.cmpEpsilon(), comm);
-}
-
 std::size_t packSize(const PvtxTable& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.getOuterColumnSchema(), comm) +
@@ -1813,16 +1804,6 @@ void pack(const RestartConfig& data, std::vector<char>& buffer, int& position,
     pack(data.restartSchedule(), buffer, position, comm);
     pack(data.restartKeywords(), buffer, position, comm);
     pack(data.saveKeywords(), buffer, position, comm);
-}
-
-void pack(const UDQParams& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.reseed(), buffer, position, comm);
-    pack(data.rand_seed(), buffer, position, comm);
-    pack(data.range(), buffer, position, comm);
-    pack(data.undefinedValue(), buffer, position, comm);
-    pack(data.cmpEpsilon(), buffer, position, comm);
 }
 
 void pack(const PvtxTable& data, std::vector<char>& buffer, int& position,
@@ -3222,21 +3203,6 @@ void unpack(RestartConfig& data, std::vector<char>& buffer, int& position,
     unpack(save_keyw, buffer, position, comm);
     data = RestartConfig(timemap, firstRstStep, writeInitialRst, restart_sched,
                          restart_keyw, save_keyw);
-}
-
-void unpack(UDQParams& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    bool reseed;
-    int rand_seed;
-    double range, undefVal, cmp_eps;
-
-    unpack(reseed, buffer, position, comm);
-    unpack(rand_seed, buffer, position, comm);
-    unpack(range, buffer, position, comm);
-    unpack(undefVal, buffer, position, comm);
-    unpack(cmp_eps, buffer, position, comm);
-    data = UDQParams(reseed, rand_seed, range, undefVal, cmp_eps);
 }
 
 template<class PVTType>

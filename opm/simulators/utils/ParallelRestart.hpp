@@ -123,7 +123,6 @@ class TlmixparRecord;
 class TlmixparTable;
 class Tuning;
 class UDAValue;
-class UDQParams;
 class UnitSystem;
 class Valve;
 class VFPInjTable;
@@ -559,7 +558,6 @@ ADD_PACK_PROTOTYPES(TlmixparRecord)
 ADD_PACK_PROTOTYPES(TlmixparTable)
 ADD_PACK_PROTOTYPES(Tuning)
 ADD_PACK_PROTOTYPES(UDAValue)
-ADD_PACK_PROTOTYPES(UDQParams)
 ADD_PACK_PROTOTYPES(UnitSystem)
 ADD_PACK_PROTOTYPES(Valve)
 ADD_PACK_PROTOTYPES(VFPInjTable)

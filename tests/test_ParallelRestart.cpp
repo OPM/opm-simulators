@@ -961,7 +961,7 @@ BOOST_AUTO_TEST_CASE(UDQParams)
 {
 #if HAVE_MPI
     Opm::UDQParams val1(true, 1, 2.0, 3.0, 4.0);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(UDQParams)
 #endif
 }
