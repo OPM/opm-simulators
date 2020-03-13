@@ -2267,7 +2267,7 @@ BOOST_AUTO_TEST_CASE(EclipseConfig)
                          true, true, true, 20, "test1");
     Opm::EclipseConfig val1{init, io};
 
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(EclipseConfig)
 #endif
 }

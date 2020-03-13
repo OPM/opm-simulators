@@ -23,7 +23,6 @@
 
 #include "ParallelRestart.hpp"
 #include <opm/common/OpmLog/Location.hpp>
-#include <opm/parser/eclipse/EclipseState/EclipseConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionAST.hpp>
@@ -1477,13 +1476,6 @@ std::size_t packSize(const GuideRateConfig::GroupTarget& data,
            packSize(data.target, comm);
 }
 
-std::size_t packSize(const EclipseConfig& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.init(), comm) +
-           packSize(data.io(), comm);
-}
-
 std::size_t packSize(const SolventDensityTable& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -2905,14 +2897,6 @@ void pack(const GuideRateConfig::GroupTarget& data,
 {
     pack(data.guide_rate, buffer, position, comm);
     pack(data.target, buffer, position, comm);
-}
-
-void pack(const EclipseConfig& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.init(), buffer, position, comm);
-    pack(data.io(), buffer, position, comm);
 }
 
 void pack(const SolventDensityTable& data,
@@ -4918,18 +4902,6 @@ void unpack(GuideRateConfig::GroupTarget& data,
 {
     unpack(data.guide_rate, buffer, position, comm);
     unpack(data.target, buffer, position, comm);
-}
-
-void unpack(EclipseConfig& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    InitConfig init;
-    IOConfig io;
-
-    unpack(init, buffer, position, comm);
-    unpack(io, buffer, position, comm);
-    data = EclipseConfig(init, io);
 }
 
 void unpack(SolventDensityTable& data, std::vector<char>& buffer, int& position,
