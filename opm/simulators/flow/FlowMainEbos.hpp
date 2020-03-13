@@ -454,7 +454,7 @@ namespace Opm
                     this->grid().switchToGlobalView();
                     static_cast<ParallelEclipseState&>(this->eclState()).switchToGlobalProps();
                 }
-                diagnostic.diagnosis(eclState(), deck(), this->grid());
+                diagnostic.diagnosis(eclState(), this->grid());
                 if (mpi_size_ > 1) {
                     this->grid().switchToDistributedView();
                     static_cast<ParallelEclipseState&>(this->eclState()).switchToDistributedProps();

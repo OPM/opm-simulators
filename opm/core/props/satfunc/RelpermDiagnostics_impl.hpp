@@ -33,7 +33,6 @@ namespace Opm {
 
     template <class GridT>
     void RelpermDiagnostics::diagnosis(const Opm::EclipseState& eclState,
-                                       const Opm::Deck& deck,
                                        const GridT& grid)
     {
         OpmLog::info("\n===============Saturation Functions Diagnostics===============\n");
@@ -41,12 +40,11 @@ namespace Opm {
         satFamilyCheck_(eclState);
         tableCheck_(eclState);
         unscaledEndPointsCheck_(eclState);
-        scaledEndPointsCheck_(deck, eclState, grid);
+        scaledEndPointsCheck_(eclState, grid);
     }
 
     template <class GridT>
-    void RelpermDiagnostics::scaledEndPointsCheck_(const Deck& deck,
-                                                   const EclipseState& eclState,
+    void RelpermDiagnostics::scaledEndPointsCheck_(const EclipseState& eclState,
                                                    const GridT& grid)
     {
         // All end points are subject to round-off errors, checks should account for it

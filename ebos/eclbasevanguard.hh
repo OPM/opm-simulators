@@ -552,7 +552,7 @@ protected:
 
         if (enableExperiments) {
             Opm::RelpermDiagnostics relpermDiagnostics;
-            relpermDiagnostics.diagnosis(*eclState_, *deck_, asImp_().grid());
+            relpermDiagnostics.diagnosis(*eclState_, asImp_().grid());
         }
     }
 private:

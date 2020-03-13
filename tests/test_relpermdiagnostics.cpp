@@ -53,7 +53,7 @@ BOOST_AUTO_TEST_CASE(diagnosis)
     std::shared_ptr<CounterLog> counterLog = std::make_shared<CounterLog>(Log::DefaultMessageTypes);
     OpmLog::addBackend( "COUNTERLOG" , counterLog );
     RelpermDiagnostics diagnostics;
-    diagnostics.diagnosis(eclState, deck, grid);
+    diagnostics.diagnosis(eclState, grid);
     BOOST_CHECK_EQUAL(1, counterLog->numMessages(Log::MessageType::Warning));
 }
 BOOST_AUTO_TEST_SUITE_END()
