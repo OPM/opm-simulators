@@ -41,6 +41,7 @@ BdaBridge::BdaBridge(bool use_gpu_, int linear_solver_verbosity, int maxit, doub
 {
     if (use_gpu) {
         backend.reset(new cusparseSolverBackend(linear_solver_verbosity, maxit, tolerance));
+        WellContributions::setMode(use_gpu);
     }
 }
 #else
@@ -121,7 +122,7 @@ void getSparsityPattern(BridgeMatrix& mat, std::vector<int> &h_rows, std::vector
 #endif
 
 template <class BridgeMatrix, class BridgeVector>
-void BdaBridge::solve_system(BridgeMatrix *mat OPM_UNUSED, BridgeVector &b OPM_UNUSED, InverseOperatorResult &res OPM_UNUSED)
+void BdaBridge::solve_system(BridgeMatrix *mat OPM_UNUSED, BridgeVector &b OPM_UNUSED, WellContributions& wellContribs OPM_UNUSED, InverseOperatorResult &res OPM_UNUSED)
 {
 
 #if HAVE_CUDA
@@ -169,7 +170,7 @@ void BdaBridge::solve_system(BridgeMatrix *mat OPM_UNUSED, BridgeVector &b OPM_U
 
         typedef cusparseSolverBackend::cusparseSolverStatus cusparseSolverStatus;
         // assume that underlying data (nonzeroes) from mat (Dune::BCRSMatrix) are contiguous, if this is not the case, cusparseSolver is expected to perform undefined behaviour
-        cusparseSolverStatus status = backend->solve_system(N, nnz, dim, static_cast<double*>(&(((*mat)[0][0][0][0]))), h_rows.data(), h_cols.data(), static_cast<double*>(&(b[0][0])), result);
+        cusparseSolverStatus status = backend->solve_system(N, nnz, dim, static_cast<double*>(&(((*mat)[0][0][0][0]))), h_rows.data(), h_cols.data(), static_cast<double*>(&(b[0][0])), wellContribs, result);
         switch(status) {
         case cusparseSolverStatus::CUSPARSE_SOLVER_SUCCESS:
             //OpmLog::info("cusparseSolver converged");
@@ -210,6 +211,7 @@ Dune::BCRSMatrix<Opm::MatrixBlock<double, 1, 1>, std::allocator<Opm::MatrixBlock
 Dune::BlockVector<Dune::FieldVector<double, 1>, std::allocator<Dune::FieldVector<double, 1> > > > \
 (Dune::BCRSMatrix<Opm::MatrixBlock<double, 1, 1>, std::allocator<Opm::MatrixBlock<double, 1, 1> > > *mat, \
     Dune::BlockVector<Dune::FieldVector<double, 1>, std::allocator<Dune::FieldVector<double, 1> > > &b, \
+    WellContributions& wellContribs, \
     InverseOperatorResult &res);
 
 template void BdaBridge::solve_system< \
@@ -217,6 +219,7 @@ Dune::BCRSMatrix<Opm::MatrixBlock<double, 2, 2>, std::allocator<Opm::MatrixBlock
 Dune::BlockVector<Dune::FieldVector<double, 2>, std::allocator<Dune::FieldVector<double, 2> > > > \
 (Dune::BCRSMatrix<Opm::MatrixBlock<double, 2, 2>, std::allocator<Opm::MatrixBlock<double, 2, 2> > > *mat, \
     Dune::BlockVector<Dune::FieldVector<double, 2>, std::allocator<Dune::FieldVector<double, 2> > > &b, \
+    WellContributions& wellContribs, \
     InverseOperatorResult &res);
 
 template void BdaBridge::solve_system< \
@@ -224,6 +227,7 @@ Dune::BCRSMatrix<Opm::MatrixBlock<double, 3, 3>, std::allocator<Opm::MatrixBlock
 Dune::BlockVector<Dune::FieldVector<double, 3>, std::allocator<Dune::FieldVector<double, 3> > > > \
 (Dune::BCRSMatrix<Opm::MatrixBlock<double, 3, 3>, std::allocator<Opm::MatrixBlock<double, 3, 3> > > *mat, \
     Dune::BlockVector<Dune::FieldVector<double, 3>, std::allocator<Dune::FieldVector<double, 3> > > &b, \
+    WellContributions& wellContribs, \
     InverseOperatorResult &res);
 
 template void BdaBridge::solve_system< \
@@ -231,6 +235,7 @@ Dune::BCRSMatrix<Opm::MatrixBlock<double, 4, 4>, std::allocator<Opm::MatrixBlock
 Dune::BlockVector<Dune::FieldVector<double, 4>, std::allocator<Dune::FieldVector<double, 4> > > > \
 (Dune::BCRSMatrix<Opm::MatrixBlock<double, 4, 4>, std::allocator<Opm::MatrixBlock<double, 4, 4> > > *mat, \
     Dune::BlockVector<Dune::FieldVector<double, 4>, std::allocator<Dune::FieldVector<double, 4> > > &b, \
+    WellContributions& wellContribs, \
     InverseOperatorResult &res);
 
 template void BdaBridge::get_result< \

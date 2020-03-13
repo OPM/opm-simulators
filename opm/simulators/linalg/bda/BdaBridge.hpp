@@ -26,6 +26,8 @@
 #include "dune/istl/bcrsmatrix.hh"
 #include <opm/simulators/linalg/matrixblock.hh>
 
+#include <opm/simulators/linalg/bda/WellContributions.hpp>
+
 #if HAVE_CUDA
 #include <opm/simulators/linalg/bda/cusparseSolverBackend.hpp>
 #endif
@@ -55,11 +57,12 @@ public:
 
 
     /// Solve linear system, A*x = b
-    /// \param[in] mat     matrix A, should be of type Dune::BCRSMatrix
-    /// \param[in] b       vector b, should be of type Dune::BlockVector
-    /// \param[in] result  summary of solver result
+    /// \param[in] mat          matrix A, should be of type Dune::BCRSMatrix
+    /// \param[in] b            vector b, should be of type Dune::BlockVector
+    /// \param[in] wellContribs contains all WellContributions, to apply them separately, instead of adding them to matrix A
+    /// \param[inout] result    summary of solver result
     template <class BridgeMatrix, class BridgeVector>
-    void solve_system(BridgeMatrix *mat, BridgeVector &b, InverseOperatorResult &result);
+    void solve_system(BridgeMatrix *mat, BridgeVector &b, WellContributions& wellContribs, InverseOperatorResult &result);
 
     /// Get the resulting x vector
     /// \param[inout] x    vector x, should be of type Dune::BlockVector

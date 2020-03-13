@@ -240,11 +240,7 @@ protected:
             const bool use_gpu = EWOMS_GET_PARAM(TypeTag, bool, UseGpu);
             const int maxit = EWOMS_GET_PARAM(TypeTag, int, LinearSolverMaxIter);
             const double tolerance = EWOMS_GET_PARAM(TypeTag, double, LinearSolverReduction);
-            const bool matrix_add_well_contributions = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
             const int linear_solver_verbosity = parameters_.linear_solver_verbosity_;
-            if (use_gpu && !matrix_add_well_contributions) {
-                OPM_THROW(std::logic_error,"Error cannot use GPU solver if command line parameter --matrix-add-well-contributions is false, because the GPU solver performs a standard bicgstab");
-            }
             bdaBridge.reset(new BdaBridge(use_gpu, linear_solver_verbosity, maxit, tolerance));
 #else
             const bool use_gpu = EWOMS_GET_PARAM(TypeTag, bool, UseGpu);
@@ -442,14 +438,20 @@ protected:
                 // tries to solve linear system
                 // solve_system() does nothing if Dune is selected
 #if HAVE_CUDA
-                bdaBridge->solve_system(matrix_.get(), istlb, result);
+                WellContributions wellContribs;
+                const bool addWellContribs = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
+                const bool use_gpu = EWOMS_GET_PARAM(TypeTag, bool, UseGpu);
+                if(!addWellContribs && use_gpu)
+                {
+                    simulator_.problem().wellModel().getWellContributions(wellContribs);
+                }
+                bdaBridge->solve_system(matrix_.get(), istlb, wellContribs, result);
 
                 if (result.converged) {
                     // get result vector x from non-Dune backend, iff solve was successful
                     bdaBridge->get_result(x);
                 } else {
                     // CPU fallback, or default case for Dune
-                    const bool use_gpu = EWOMS_GET_PARAM(TypeTag, bool, UseGpu);
                     if (use_gpu) {
                         OpmLog::warning("cusparseSolver did not converge, now trying Dune to solve current linear system...");
                     }

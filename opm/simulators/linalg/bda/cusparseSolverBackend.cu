@@ -38,6 +38,10 @@
 #include "cusparse_v2.h"
 // For more information about cusparse, check https://docs.nvidia.com/cuda/cusparse/index.html
 
+// iff true, the nonzeroes of the matrix are copied row-by-row into a contiguous, pinned memory array, then a single GPU memcpy is done
+// otherwise, the nonzeroes of the matrix are assumed to be in a contiguous array, and a single GPU memcpy is enough
+#define COPY_ROW_BY_ROW 0
+
 namespace Opm
 {
 
@@ -58,7 +62,7 @@ namespace Opm
         finalize();
     }
 
-    void cusparseSolverBackend::gpu_pbicgstab(BdaResult& res) {
+    void cusparseSolverBackend::gpu_pbicgstab(WellContributions& wellContribs, BdaResult& res) {
         double t_total1, t_total2;
         int n = N;
         double rho = 1.0, rhop;
@@ -72,7 +76,11 @@ namespace Opm
 
         t_total1 = second();
 
-        cusparseDbsrmv(cusparseHandle, order, operation, Nb, Nb, nnzb, &one, descr_M, d_bVals, d_bRows, d_bCols, BLOCK_SIZE, d_x, &zero, d_r);
+        if(wellContribs.get_num_wells() > 0){
+            wellContribs.setCudaStream(stream);
+        }
+
+        cusparseDbsrmv(cusparseHandle, order, operation, Nb, Nb, nnzb, &one, descr_M, d_bVals, d_bRows, d_bCols, block_size, d_x, &zero, d_r);
 
         cublasDscal(cublasHandle, n, &mone, d_r, 1);
         cublasDaxpy(cublasHandle, n, &one, d_b, 1, d_r, 1);
@@ -101,15 +109,20 @@ namespace Opm
             // apply ilu0
             cusparseDbsrsv2_solve(cusparseHandle, order, \
                 operation, Nb, nnzb, &one, \
-                descr_L, d_mVals, d_mRows, d_mCols, BLOCK_SIZE, info_L, d_p, d_t, policy, d_buffer);
+                descr_L, d_mVals, d_mRows, d_mCols, block_size, info_L, d_p, d_t, policy, d_buffer);
             cusparseDbsrsv2_solve(cusparseHandle, order, \
                 operation, Nb, nnzb, &one, \
-                descr_U, d_mVals, d_mRows, d_mCols, BLOCK_SIZE, info_U, d_t, d_pw, policy, d_buffer);
+                descr_U, d_mVals, d_mRows, d_mCols, block_size, info_U, d_t, d_pw, policy, d_buffer);
 
             // spmv
             cusparseDbsrmv(cusparseHandle, order, \
                 operation, Nb, Nb, nnzb, \
-                &one, descr_M, d_bVals, d_bRows, d_bCols, BLOCK_SIZE, d_pw, &zero, d_v);
+                &one, descr_M, d_bVals, d_bRows, d_bCols, block_size, d_pw, &zero, d_v);
+
+            // apply wellContributions
+            if(wellContribs.get_num_wells() > 0){
+                wellContribs.apply(d_pw, d_v);
+            }
 
             cublasDdot(cublasHandle, n, d_rw, 1, d_v, 1, &tmp1);
             alpha = rho / tmp1;
@@ -127,15 +140,20 @@ namespace Opm
             // apply ilu0
             cusparseDbsrsv2_solve(cusparseHandle, order, \
                 operation, Nb, nnzb, &one, \
-                descr_L, d_mVals, d_mRows, d_mCols, BLOCK_SIZE, info_L, d_r, d_t, policy, d_buffer);
+                descr_L, d_mVals, d_mRows, d_mCols, block_size, info_L, d_r, d_t, policy, d_buffer);
             cusparseDbsrsv2_solve(cusparseHandle, order, \
                 operation, Nb, nnzb, &one, \
-                descr_U, d_mVals, d_mRows, d_mCols, BLOCK_SIZE, info_U, d_t, d_s, policy, d_buffer);
+                descr_U, d_mVals, d_mRows, d_mCols, block_size, info_U, d_t, d_s, policy, d_buffer);
 
             // spmv
             cusparseDbsrmv(cusparseHandle, order, \
                 operation, Nb, Nb, nnzb, &one, descr_M, \
-                d_bVals, d_bRows, d_bCols, BLOCK_SIZE, d_s, &zero, d_t);
+                d_bVals, d_bRows, d_bCols, block_size, d_s, &zero, d_t);
+
+            // apply wellContributions
+            if(wellContribs.get_num_wells() > 0){
+                wellContribs.apply(d_s, d_t);
+            }
 
             cublasDdot(cublasHandle, n, d_t, 1, d_r, 1, &tmp1);
             cublasDdot(cublasHandle, n, d_t, 1, d_t, 1, &tmp2);
@@ -178,8 +196,8 @@ namespace Opm
     void cusparseSolverBackend::initialize(int N, int nnz, int dim) {
         this->N = N;
         this->nnz = nnz;
-        this->BLOCK_SIZE = dim;
-        this->nnzb = nnz/BLOCK_SIZE/BLOCK_SIZE;
+        this->block_size = dim;
+        this->nnzb = nnz/block_size/block_size;
         Nb = (N + dim - 1) / dim;
         std::ostringstream out;
         out << "Initializing GPU, matrix size: " << N << " blocks, nnz: " << nnzb << " blocks";
@@ -229,8 +247,10 @@ namespace Opm
         cusparseSetStream(cusparseHandle, stream);
         cudaCheckLastError("Could not set stream to cusparse");
 
-        cudaMallocHost((void**)&x, sizeof(double) * N);
-        cudaCheckLastError("Could not allocate pinned host memory");
+#if COPY_ROW_BY_ROW
+        cudaMallocHost((void**)&vals_contiguous, sizeof(double) * nnz);
+        cudaCheckLastError("Could not allocate pinned memory");
+#endif
 
         initialized = true;
     } // end initialize()
@@ -259,11 +279,10 @@ namespace Opm
         cusparseDestroyMatDescr(descr_U);
         cusparseDestroy(cusparseHandle);
         cublasDestroy(cublasHandle);
-        cudaHostUnregister(vals);
-        cudaHostUnregister(cols);
-        cudaHostUnregister(rows);
+#if COPY_ROW_BY_ROW
+        cudaFreeHost(vals_contiguous);
+#endif
         cudaStreamDestroy(stream);
-        cudaFreeHost(x);
     } // end finalize()
 
 
@@ -274,21 +293,22 @@ namespace Opm
             t1 = second();
         }
 
-        // information cudaHostRegister: https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__MEMORY.html#group__CUDART__MEMORY_1ge8d5c17670f16ac4fc8fcb4181cb490c
-        // possible flags for cudaHostRegister: cudaHostRegisterDefault, cudaHostRegisterPortable, cudaHostRegisterMapped, cudaHostRegisterIoMemory
-        cudaHostRegister(vals, nnz * sizeof(double), cudaHostRegisterDefault);
-        cudaHostRegister(cols, nnz * sizeof(int), cudaHostRegisterDefault);
-        cudaHostRegister(rows, (Nb+1) * sizeof(int), cudaHostRegisterDefault);
-        cudaHostRegister(b, N * sizeof(double), cudaHostRegisterDefault);
+#if COPY_ROW_BY_ROW
+        int sum = 0;
+        for(int i = 0; i < Nb; ++i){
+            int size_row = rows[i+1] - rows[i];
+            memcpy(vals_contiguous + sum, vals + sum, size_row * sizeof(double) * block_size * block_size);
+            sum += size_row * block_size * block_size;
+        }
+        cudaMemcpyAsync(d_bVals, vals_contiguous, nnz * sizeof(double), cudaMemcpyHostToDevice, stream);
+#else
         cudaMemcpyAsync(d_bVals, vals, nnz * sizeof(double), cudaMemcpyHostToDevice, stream);
+#endif
+
         cudaMemcpyAsync(d_bCols, cols, nnz * sizeof(int), cudaMemcpyHostToDevice, stream);
         cudaMemcpyAsync(d_bRows, rows, (Nb+1) * sizeof(int), cudaMemcpyHostToDevice, stream);
         cudaMemcpyAsync(d_b, b, N * sizeof(double), cudaMemcpyHostToDevice, stream);
         cudaMemsetAsync(d_x, 0, sizeof(double) * N, stream);
-
-        this->vals = vals;
-        this->cols = cols;
-        this->rows = rows;
 
         if (verbosity > 2) {
             cudaStreamSynchronize(stream);
@@ -301,14 +321,25 @@ namespace Opm
 
 
     // don't copy rowpointers and colindices, they stay the same
-    void cusparseSolverBackend::update_system_on_gpu(double *vals, double *b) {
+    void cusparseSolverBackend::update_system_on_gpu(double *vals, int *rows, double *b) {
 
         double t1, t2;
         if (verbosity > 2) {
             t1 = second();
         }
 
+#if COPY_ROW_BY_ROW
+        int sum = 0;
+        for(int i = 0; i < Nb; ++i){
+            int size_row = rows[i+1] - rows[i];
+            memcpy(vals_contiguous + sum, vals + sum, size_row * sizeof(double) * block_size * block_size);
+            sum += size_row * block_size * block_size;
+        }
+        cudaMemcpyAsync(d_bVals, vals_contiguous, nnz * sizeof(double), cudaMemcpyHostToDevice, stream);
+#else
         cudaMemcpyAsync(d_bVals, vals, nnz * sizeof(double), cudaMemcpyHostToDevice, stream);
+#endif
+
         cudaMemcpyAsync(d_b, b, N * sizeof(double), cudaMemcpyHostToDevice, stream);
         cudaMemsetAsync(d_x, 0, sizeof(double) * N, stream);
 
@@ -364,11 +395,11 @@ namespace Opm
         cudaCheckLastError("Could not create analysis info");
 
         cusparseDbsrilu02_bufferSize(cusparseHandle, order, Nb, nnzb,
-            descr_M, d_bVals, d_bRows, d_bCols, BLOCK_SIZE, info_M, &d_bufferSize_M);
+            descr_M, d_bVals, d_bRows, d_bCols, block_size, info_M, &d_bufferSize_M);
         cusparseDbsrsv2_bufferSize(cusparseHandle, order, operation, Nb, nnzb,
-            descr_L, d_bVals, d_bRows, d_bCols, BLOCK_SIZE, info_L, &d_bufferSize_L);
+            descr_L, d_bVals, d_bRows, d_bCols, block_size, info_L, &d_bufferSize_L);
         cusparseDbsrsv2_bufferSize(cusparseHandle, order, operation, Nb, nnzb,
-            descr_U, d_bVals, d_bRows, d_bCols, BLOCK_SIZE, info_U, &d_bufferSize_U);
+            descr_U, d_bVals, d_bRows, d_bCols, block_size, info_U, &d_bufferSize_U);
         cudaCheckLastError();
         d_bufferSize = std::max(d_bufferSize_M, std::max(d_bufferSize_L, d_bufferSize_U));
         
@@ -377,7 +408,7 @@ namespace Opm
         // analysis of ilu LU decomposition
         cusparseDbsrilu02_analysis(cusparseHandle, order, \
             Nb, nnzb, descr_B, d_bVals, d_bRows, d_bCols, \
-            BLOCK_SIZE, info_M, policy, d_buffer);
+            block_size, info_M, policy, d_buffer);
 
         int structural_zero;
         cusparseStatus_t status = cusparseXbsrilu02_zeroPivot(cusparseHandle, info_M, &structural_zero);
@@ -388,11 +419,11 @@ namespace Opm
         // analysis of ilu apply
         cusparseDbsrsv2_analysis(cusparseHandle, order, operation, \
             Nb, nnzb, descr_L, d_bVals, d_bRows, d_bCols, \
-            BLOCK_SIZE, info_L, policy, d_buffer);
+            block_size, info_L, policy, d_buffer);
 
         cusparseDbsrsv2_analysis(cusparseHandle, order, operation, \
             Nb, nnzb, descr_U, d_bVals, d_bRows, d_bCols, \
-            BLOCK_SIZE, info_U, policy, d_buffer);
+            block_size, info_U, policy, d_buffer);
         cudaCheckLastError("Could not analyse level information");
 
         if (verbosity > 2) {
@@ -402,6 +433,8 @@ namespace Opm
             out << "cusparseSolver::analyse_matrix(): " << t2-t1 << " s";
             OpmLog::info(out.str());
         }
+
+        analysis_done = true;
 
         return true;
     } // end analyse_matrix()
@@ -417,7 +450,8 @@ namespace Opm
         d_mRows = d_bRows;
         cusparseDbsrilu02(cusparseHandle, order, \
             Nb, nnzb, descr_M, d_mVals, d_mRows, d_mCols, \
-            BLOCK_SIZE, info_M, policy, d_buffer);
+            block_size, info_M, policy, d_buffer);
+        cudaCheckLastError("Could not perform ilu decomposition");
 
         int structural_zero;
         // cusparseXbsrilu02_zeroPivot() calls cudaDeviceSynchronize()
@@ -437,9 +471,9 @@ namespace Opm
     } // end create_preconditioner()
 
 
-    void cusparseSolverBackend::solve_system(BdaResult &res) {
+    void cusparseSolverBackend::solve_system(WellContributions& wellContribs, BdaResult &res) {
         // actually solve
-        gpu_pbicgstab(res);
+        gpu_pbicgstab(wellContribs, res);
         cudaStreamSynchronize(stream);
         cudaCheckLastError("Something went wrong during the GPU solve");
     } // end solve_system()
@@ -448,10 +482,6 @@ namespace Opm
     // copy result to host memory
     // caller must be sure that x is a valid array
     void cusparseSolverBackend::post_process(double *x) {
-
-        if (!initialized) {
-            cudaHostRegister(x, N * sizeof(double), cudaHostRegisterDefault);
-        }
 
         double t1, t2;
         if (verbosity > 2) {
@@ -472,12 +502,12 @@ namespace Opm
 
     typedef cusparseSolverBackend::cusparseSolverStatus cusparseSolverStatus;
 
-    cusparseSolverStatus cusparseSolverBackend::solve_system(int N, int nnz, int dim, double *vals, int *rows, int *cols, double *b, BdaResult &res) {       
+    cusparseSolverStatus cusparseSolverBackend::solve_system(int N, int nnz, int dim, double *vals, int *rows, int *cols, double *b, WellContributions& wellContribs, BdaResult &res) { 
         if (initialized == false) {
             initialize(N, nnz, dim);
             copy_system_to_gpu(vals, rows, cols, b);
         }else{
-            update_system_on_gpu(vals, b);
+            update_system_on_gpu(vals, rows, b);
         }
         if (analysis_done == false) {
             if (!analyse_matrix()) {
@@ -486,7 +516,7 @@ namespace Opm
         }
         reset_prec_on_gpu();
         if (create_preconditioner()) {
-            solve_system(res);
+            solve_system(wellContribs, res);
         }else{
             return cusparseSolverStatus::CUSPARSE_SOLVER_CREATE_PRECONDITIONER_FAILED;
         }

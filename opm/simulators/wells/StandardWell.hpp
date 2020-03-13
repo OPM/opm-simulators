@@ -184,6 +184,12 @@ namespace Opm
         /// r = r - C D^-1 Rw
         virtual void apply(BVector& r) const override;
 
+        /// add the contribution (C, D^-1, B matrices) of this Well to the WellContributions object
+        void addWellContribution(WellContributions& wellContribs) const;
+
+        /// get the sizes of the C, D^-1 and B matrices, used to allocate memory in a WellContributions object
+        void getWellSizes(unsigned int& _nnzs, unsigned int& _numEq, unsigned int& _numWellEq) const;
+
         /// using the solution x to recover the solution xw for wells and applying
         /// xw to update Well State
         virtual void recoverWellSolutionAndUpdateWellState(const BVector& x,

@@ -919,7 +919,25 @@ namespace Opm {
     }
 
 
-
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    getWellContributions(WellContributions& wellContribs) const
+    {
+        for(unsigned int i = 0; i < well_container_.size(); i++){
+            auto& well = well_container_[i];
+            std::shared_ptr<StandardWell<TypeTag> > derived = std::dynamic_pointer_cast<StandardWell<TypeTag> >(well);
+            unsigned int nnz, numEq, numWellEq;
+            derived->getWellSizes(nnz, numEq, numWellEq);
+            wellContribs.addSizes(nnz, numEq, numWellEq);
+        }
+        wellContribs.alloc_all();
+        for(unsigned int i = 0; i < well_container_.size(); i++){
+            auto& well = well_container_[i];
+            std::shared_ptr<StandardWell<TypeTag> > derived = std::dynamic_pointer_cast<StandardWell<TypeTag> >(well);
+            derived->addWellContribution(wellContribs);
+        }
+    }
 
 
     // Ax = Ax - alpha * C D^-1 B x

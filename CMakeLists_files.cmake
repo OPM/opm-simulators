@@ -45,6 +45,7 @@ list (APPEND MAIN_SOURCE_FILES
 
 if(CUDA_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/cusparseSolverBackend.cu)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/WellContributions.cu)
 endif()
 
 # originally generated with the command:
