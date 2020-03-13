@@ -901,7 +901,7 @@ BOOST_AUTO_TEST_CASE(IOConfig)
 #if HAVE_MPI
     Opm::IOConfig val1(true, false, true, false, false, true, "test1", true,
                        "test2", true, "test3", false);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(IOConfig)
 #endif
 }
