@@ -48,23 +48,14 @@ NEW_TYPE_TAG(FvBaseDiscretization,
 
 
 //! set the splices for the finite volume discretizations
-
-
-//SET_SPLICES(FvBaseDiscretization, LinearSolverSplice, LocalLinearizerSplice);
-template<class TypeTag>
-struct Splices<TypeTag, TTag::FvBaseDiscretization>
-{
-//     using type = std::tuple<GetSplicePropType<TypeTag, Properties::LinearSolverSplice>,
-//                             GetSplicePropType<TypeTag, Properties::LocalLinearizerSplice>>;
-    using type = std::tuple<TTag::ParallelBiCGStabLinearSolver,
-                            TTag::FiniteDifferenceLocalLinearizer>;
-};
+SET_SPLICES(FvBaseDiscretization, LinearSolverSplice, LocalLinearizerSplice);
 
 //! use a parallel BiCGStab linear solver by default
 SET_TAG_PROP(FvBaseDiscretization, LinearSolverSplice, ParallelBiCGStabLinearSolver);
 
 //! by default, use finite differences to linearize the system of PDEs
 SET_TAG_PROP(FvBaseDiscretization, LocalLinearizerSplice, FiniteDifferenceLocalLinearizer);
+
 
 /*!
  * \brief Representation of a function evaluation and all necessary derivatives with

@@ -345,14 +345,24 @@ struct GetTypeTagInheritance<std::tuple<FirstTypeTag, OtherTypeTags...>>
         typedef typename RevertedTupleOuter<sizeof...(Args)>::template RevertedTupleInner<Args...>::type type;
     };
     
-#define SET_SPLICES(TypeTagName, ...)                               \
-template<class TypeTag>                                                      \
-struct Splices<TypeTag, TTAG(TypeTagName)>                               \
-{                                                               \
-    typedef RevertedTuple<__VA_ARGS__>::type tuple;             \
-};                                                              \
+#define SET_SPLICE(TypeTagName, SpliceName)                               \
+template<class TypeTag> \
+struct Splices<TypeTag, TTag::TypeTagName> \
+{ \
+    using type = std::tuple<GetSplicePropType<TypeTag, TTag::TypeTagName, Properties::SpliceName>>; \
+}; \
 extern int semicolonHack_
-    
+
+#define SET_SPLICES(TypeTagName, SpliceName1, SpliceName2)                               \
+template<class TypeTag> \
+struct Splices<TypeTag, TTag::TypeTagName> \
+{ \
+    using type = std::tuple<GetSplicePropType<TypeTag, TTag::TypeTagName, Properties::SpliceName1>, \
+                            GetSplicePropType<TypeTag, TTag::TypeTagName, Properties::SpliceName2>>; \
+}; \
+extern int semicolonHack_
+
+
 #define SET_PROP_(EffTypeTagName, PropKind, PropTagName, ...)   \
 template <class TypeTag>                                    \
 struct PropTagName<TypeTag, TTAG(EffTypeTagName)>
