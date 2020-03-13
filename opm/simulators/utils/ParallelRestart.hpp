@@ -80,7 +80,6 @@ class EclipseConfig;
 class Eqldims;
 class EndpointScaling;
 class Events;
-class InitConfig;
 class IOConfig;
 template<class T> class IOrderSet;
 class JFunc;
@@ -528,7 +527,6 @@ ADD_PACK_PROTOTYPES(GuideRateModel)
 ADD_PACK_PROTOTYPES(Group)
 ADD_PACK_PROTOTYPES(Group::GroupInjectionProperties)
 ADD_PACK_PROTOTYPES(Group::GroupProductionProperties)
-ADD_PACK_PROTOTYPES(InitConfig)
 ADD_PACK_PROTOTYPES(IOConfig)
 ADD_PACK_PROTOTYPES(JFunc)
 ADD_PACK_PROTOTYPES(Location)

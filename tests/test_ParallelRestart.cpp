@@ -835,7 +835,7 @@ BOOST_AUTO_TEST_CASE(InitConfig)
     Opm::InitConfig val1(Opm::Equil({getEquilRecord(), getEquilRecord()}),
                          getFoamConfig(),
                          true, true, true, 20, "test1");
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(InitConfig)
 #endif
 }

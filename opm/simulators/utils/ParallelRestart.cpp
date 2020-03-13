@@ -25,7 +25,6 @@
 #include <opm/common/OpmLog/Location.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
-#include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionAST.hpp>
@@ -537,17 +536,6 @@ std::size_t packSize(const TableContainer& data, Dune::MPIHelper::MPICommunicato
     }
 
     return res;
-}
-
-std::size_t packSize(const InitConfig& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getEquil(), comm) +
-           packSize(data.getFoamConfig(), comm) +
-           packSize(data.filleps(), comm) +
-           packSize(data.hasGravity(), comm) +
-           packSize(data.restartRequested(), comm) +
-           packSize(data.getRestartStep(), comm) +
-           packSize(data.getRestartRootName(), comm);
 }
 
 std::size_t packSize(const TimeMap& data, Dune::MPIHelper::MPICommunicator comm)
@@ -1961,18 +1949,6 @@ void pack(const TableContainer& data, std::vector<char>& buffer, int& position,
           pack(*it.second, buffer, position, comm);
         }
     }
-}
-
-void pack(const InitConfig& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getEquil(), buffer, position, comm);
-    pack(data.getFoamConfig(), buffer, position, comm);
-    pack(data.filleps(), buffer, position, comm);
-    pack(data.hasGravity(), buffer, position, comm);
-    pack(data.restartRequested(), buffer, position, comm);
-    pack(data.getRestartStep(), buffer, position, comm);
-    pack(data.getRestartRootName(), buffer, position, comm);
 }
 
 void pack(const TimeMap& data, std::vector<char>& buffer, int& position,
@@ -3527,25 +3503,6 @@ void unpack(TableContainer& data, std::vector<char>& buffer, int& position,
         unpack(table, buffer, position, comm);
         data.addTable(id, std::make_shared<SimpleTable>(table));
     }
-}
-
-void unpack(InitConfig& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    Equil equil;
-    FoamConfig foam;
-    bool filleps, hasGravity, restartRequested;
-    int restartStep;
-    std::string restartRootName;
-    unpack(equil, buffer, position, comm);
-    unpack(foam, buffer, position, comm);
-    unpack(filleps, buffer, position, comm);
-    unpack(hasGravity, buffer, position, comm);
-    unpack(restartRequested, buffer, position, comm);
-    unpack(restartStep, buffer, position, comm);
-    unpack(restartRootName, buffer, position, comm);
-    data = InitConfig(equil, foam, filleps, hasGravity,
-                      restartRequested, restartStep, restartRootName);
 }
 
 void unpack(TimeMap& data, std::vector<char>& buffer, int& position,
