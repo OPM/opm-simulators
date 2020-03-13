@@ -3408,7 +3408,7 @@ void unpack(std::string& str, std::vector<char>& buffer, int& position,
     unpack(length, buffer, position, comm);
     std::vector<char> cStr(length, '\0');
     unpack(cStr.data(), length, buffer, position, comm);
-    assert(str.empty());
+    str.clear();
     str.append(cStr.data());
 }
 
