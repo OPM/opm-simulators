@@ -2232,7 +2232,7 @@ BOOST_AUTO_TEST_CASE(MULTREGTRecord)
 {
 #ifdef HAVE_MPI
     Opm::MULTREGTRecord val1{1, 2, 3.0, 4, Opm::MULTREGT::ALL, "test"};
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(MULTREGTRecord)
 #endif
 }
@@ -2251,7 +2251,7 @@ BOOST_AUTO_TEST_CASE(MULTREGTScanner)
                               {{"test3", {7,8}}},
                               "test4");
 
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(MULTREGTScanner)
 #endif
 }

@@ -28,7 +28,6 @@
 #include <opm/parser/eclipse/EclipseState/Grid/Fault.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/FaultCollection.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/FaultFace.hpp>
-#include <opm/parser/eclipse/EclipseState/Grid/MULTREGTScanner.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/TransMult.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/FoamConfig.hpp>
@@ -1547,27 +1546,6 @@ std::size_t packSize(const GuideRateConfig::GroupTarget& data,
 {
     return packSize(data.guide_rate, comm) +
            packSize(data.target, comm);
-}
-
-std::size_t packSize(const MULTREGTRecord& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.src_value, comm) +
-           packSize(data.target_value, comm) +
-           packSize(data.trans_mult, comm) +
-           packSize(data.directions, comm) +
-           packSize(data.nnc_behaviour, comm) +
-           packSize(data.region_name, comm);
-}
-
-std::size_t packSize(const MULTREGTScanner& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getSize(), comm) +
-           packSize(data.getRecords(), comm) +
-           packSize(data.getSearchMap(), comm) +
-           packSize(data.getRegions(), comm) +
-           packSize(data.getDefaultRegion(), comm);
 }
 
 std::size_t packSize(const EclipseConfig& data,
@@ -3097,29 +3075,6 @@ void pack(const GuideRateConfig::GroupTarget& data,
 {
     pack(data.guide_rate, buffer, position, comm);
     pack(data.target, buffer, position, comm);
-}
-
-void pack(const MULTREGTRecord& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.src_value, buffer, position, comm);
-    pack(data.target_value, buffer, position, comm);
-    pack(data.trans_mult, buffer, position, comm);
-    pack(data.directions, buffer, position, comm);
-    pack(data.nnc_behaviour, buffer, position, comm);
-    pack(data.region_name, buffer, position, comm);
-}
-
-void pack(const MULTREGTScanner& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getSize(), buffer, position, comm);
-    pack(data.getRecords(), buffer, position, comm);
-    pack(data.getSearchMap(), buffer, position, comm);
-    pack(data.getRegions(), buffer, position, comm);
-    pack(data.getDefaultRegion(), buffer, position, comm);
 }
 
 void pack(const EclipseConfig& data,
@@ -5273,37 +5228,6 @@ void unpack(GuideRateConfig::GroupTarget& data,
 {
     unpack(data.guide_rate, buffer, position, comm);
     unpack(data.target, buffer, position, comm);
-}
-
-void unpack(MULTREGTRecord& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    unpack(data.src_value, buffer, position, comm);
-    unpack(data.target_value, buffer, position, comm);
-    unpack(data.trans_mult, buffer, position, comm);
-    unpack(data.directions, buffer, position, comm);
-    unpack(data.nnc_behaviour, buffer, position, comm);
-    unpack(data.region_name, buffer, position, comm);
-}
-
-void unpack(MULTREGTScanner& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::array<size_t, 3> size;
-    std::vector<MULTREGTRecord> records;
-    MULTREGTScanner::ExternalSearchMap searchMap;
-    std::map<std::string, std::vector<int>> regions;
-    std::string defaultRegion;
-
-    unpack(size, buffer, position, comm);
-    unpack(records, buffer, position, comm);
-    unpack(searchMap, buffer, position, comm);
-    unpack(regions, buffer, position, comm);
-    unpack(defaultRegion, buffer, position, comm);
-
-    data = MULTREGTScanner(size, records, searchMap, regions, defaultRegion);
 }
 
 void unpack(EclipseConfig& data,

@@ -94,8 +94,6 @@ class JFunc;
 class Location;
 class MessageLimits;
 class MLimits;
-class MULTREGTRecord;
-class MULTREGTScanner;
 class OilVaporizationProperties;
 class Phases;
 class PlymwinjTable;
@@ -551,8 +549,6 @@ ADD_PACK_PROTOTYPES(JFunc)
 ADD_PACK_PROTOTYPES(Location)
 ADD_PACK_PROTOTYPES(MessageLimits)
 ADD_PACK_PROTOTYPES(MLimits)
-ADD_PACK_PROTOTYPES(MULTREGTRecord)
-ADD_PACK_PROTOTYPES(MULTREGTScanner)
 ADD_PACK_PROTOTYPES(OilVaporizationProperties)
 ADD_PACK_PROTOTYPES(Phases)
 ADD_PACK_PROTOTYPES(PlmixparRecord)
