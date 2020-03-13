@@ -334,7 +334,6 @@ std::size_t packSize(const std::array<T,N>& data, Dune::MPIHelper::MPICommunicat
     return N*packSize(data[0], comm);
 }
 
-HANDLE_AS_POD(Actdims)
 HANDLE_AS_POD(Aqudims)
 HANDLE_AS_POD(data::Connection)
 HANDLE_AS_POD(data::CurrentControl)

@@ -981,7 +981,7 @@ BOOST_AUTO_TEST_CASE(Actdims)
 {
 #if HAVE_MPI
     Opm::Actdims val1(1,2,3,4);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Actdims)
 #endif
 }
