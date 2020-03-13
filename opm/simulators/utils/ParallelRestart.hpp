@@ -77,7 +77,6 @@ class DensityTable;
 class Dimension;
 class EclHysterConfig;
 class Eqldims;
-class EndpointScaling;
 class Events;
 template<class T> class IOrderSet;
 class JFunc;
@@ -509,7 +508,6 @@ ADD_PACK_PROTOTYPES(DenT)
 ADD_PACK_PROTOTYPES(DenT::entry)
 ADD_PACK_PROTOTYPES(Dimension)
 ADD_PACK_PROTOTYPES(EclHysterConfig)
-ADD_PACK_PROTOTYPES(EndpointScaling)
 ADD_PACK_PROTOTYPES(Eqldims)
 ADD_PACK_PROTOTYPES(Events)
 ADD_PACK_PROTOTYPES(GConSale)

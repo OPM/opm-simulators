@@ -931,7 +931,7 @@ BOOST_AUTO_TEST_CASE(EndpointScaling)
 {
 #if HAVE_MPI
     Opm::EndpointScaling val1(std::bitset<4>(13));
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(EndpointScaling)
 #endif
 }
