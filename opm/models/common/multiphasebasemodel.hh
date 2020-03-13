@@ -56,16 +56,10 @@ struct FiniteDifferenceLocalLinearizer;
 }
 
 //! The generic type tag for problems using the immiscible multi-phase model
-NEW_TYPE_TAG(MultiPhaseBaseModel, INHERITS_FROM(NumericModel, VtkMultiPhase, VtkTemperature));
+NEW_TYPE_TAG(MultiPhaseBaseModel, INHERITS_FROM(VtkMultiPhase, VtkTemperature));
 
 //! Specify the splices of the MultiPhaseBaseModel type tag
-//NEW_PROP_TAG(SpatialDiscretizationSplice);
-//SET_SPLICES(MultiPhaseBaseModel, SpatialDiscretizationSplice);
-template<class TypeTag>
-struct Splices<TypeTag, TTag::MultiPhaseBaseModel>
-{
-    using type = std::tuple<GetSplicePropType<TypeTag, Properties::SpatialDiscretizationSplice>>;
-};
+SET_SPLICE(MultiPhaseBaseModel, SpatialDiscretizationSplice);
 
 //! Set the default spatial discretization
 //!

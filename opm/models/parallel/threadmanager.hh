@@ -126,10 +126,6 @@ private:
     static int numThreads_;
 };
 
-namespace Properties {
-    SET_TYPE_PROP(NumericModel, ThreadManager, Opm::ThreadManager<TypeTag>);
-}
-
 template <class TypeTag>
 int ThreadManager<TypeTag>::numThreads_ = 1;
 } // namespace Opm

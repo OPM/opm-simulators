@@ -41,7 +41,6 @@ struct Splices
 {
      using type = std::tuple<>;
 };
-    
 
 //! implementation details for template meta programming
 namespace Detail {
@@ -171,7 +170,12 @@ template<class TypeTag, class LastTypeTag>
 struct GetDefinedSplice<TypeTag, std::tuple<LastTypeTag>>
 {
      using LastSplice = Splices<TypeTag, LastTypeTag>;
-     using nexttuple = typename GetNextSpliceTypeTag<TypeTag, std::tuple<LastTypeTag>, void>::type;
+     using nexttuple = typename GetNextSpliceTypeTag<TypeTag,
+                                                     ConCatTuples<
+                                                         std::tuple<LastTypeTag>,
+                                                         typename LastSplice::type
+                                                     >,
+                                                     void>::type;
 
      using type = std::conditional_t<isDefinedSplice<LastSplice>(int{}),
                                      ConCatTuples<nexttuple, typename LastSplice::type>,
@@ -182,7 +186,12 @@ template<class TypeTag, class FirstTypeTag, class ...Args>
 struct GetDefinedSplice<TypeTag, std::tuple<FirstTypeTag, Args...>>
 {
      using FirstSplice = Splices<TypeTag, FirstTypeTag>;
-     using nexttuple = typename GetNextSpliceTypeTag<TypeTag, std::tuple<FirstTypeTag, Args...>, void>::type;
+     using nexttuple = typename GetNextSpliceTypeTag<TypeTag,
+                                                     ConCatTuples<
+                                                         std::tuple<FirstTypeTag, Args...>,
+                                                         typename FirstSplice::type
+                                                     >,
+                                                     void>::type;
 
      using type = std::conditional_t<isDefinedSplice<FirstSplice>(int{}),
                                      ConCatTuples<typename FirstSplice::type, nexttuple>,
@@ -193,8 +202,7 @@ struct GetDefinedSplice<TypeTag, std::tuple<FirstTypeTag, Args...>>
 template<class TypeTag, template<class,class> class Property>
 struct GetPropImpl
 {
-    using splice = typename Detail::GetDefinedSplice<TypeTag, std::tuple<TypeTag>>::type;
-    using tuple = std::conditional_t<std::is_same<splice, std::tuple<>>::value, std::tuple<>, splice>;
+    using tuple = typename Detail::GetDefinedSplice<TypeTag, std::tuple<TypeTag>>::type;
     using type = typename Detail::GetDefined<TypeTag,
                                              Property,
                                              ConCatTuples<std::tuple<TypeTag>, tuple>
@@ -202,10 +210,10 @@ struct GetPropImpl
     static_assert(!std::is_same<type, UndefinedProperty>::value, "Property is undefined!");
 };
 
-template<class TypeTag, template<class,class> class Property>
+template<class TypeTag, class SpliceTypeTag, template<class,class> class Property>
 struct GetSplicePropImpl
 {
-    using type = typename Detail::GetDefined<TypeTag, Property, std::tuple<TypeTag>>::type;
+    using type = typename Detail::GetDefined<TypeTag, Property, std::tuple<TypeTag, SpliceTypeTag>>::type;
     static_assert(!std::is_same<type, std::tuple<>>::value, "Splice is undefined!");
 };
 
@@ -225,8 +233,8 @@ using GetProp = typename Properties::Detail::GetPropImpl<TypeTag, Property>::typ
 template<class TypeTag, template<class,class> class Property>
 using GetPropType = typename Properties::Detail::GetPropImpl<TypeTag, Property>::type::type;
 
-template<class TypeTag, template<class,class> class Property>
-using GetSplicePropType = typename Properties::Detail::GetSplicePropImpl<TypeTag, Property>::type::type;
+template<class TypeTag, class SpliceTypeTag, template<class,class> class Property>
+using GetSplicePropType = typename Properties::Detail::GetSplicePropImpl<TypeTag, SpliceTypeTag, Property>::type::type;
 
 //! get the value data member of a property
 template<class TypeTag, template<class,class> class Property>
