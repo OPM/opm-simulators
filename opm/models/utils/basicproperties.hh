@@ -100,7 +100,7 @@ NEW_PROP_TAG(ThreadManager);
 NEW_PROP_TAG(NewtonMethod);
 NEW_PROP_TAG(SolutionVector);
 NEW_PROP_TAG(GlobalEqVector);
-//NEW_PROP_TAG(VtkOutputFormat);
+NEW_PROP_TAG(VtkOutputFormat);
 
 //! Specifies the type of a solution for a single degee of freedom
 NEW_PROP_TAG(PrimaryVariables);
@@ -318,6 +318,7 @@ NEW_PROP_TAG(LinearSolverMaxError);
 
 NEW_PROP_TAG(LinearSolverSplice);
 NEW_PROP_TAG(LocalLinearizerSplice);
+NEW_PROP_TAG(SpatialDiscretizationSplice);
 
 //! The discretization specific part of he implementing the Newton algorithm
 NEW_PROP_TAG(DiscNewtonMethod);

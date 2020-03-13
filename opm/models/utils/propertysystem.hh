@@ -39,7 +39,7 @@ struct UndefinedProperty {};
 template <class TypeTag, class MyTypeTag>
 struct Splices
 {
-     using tuple = std::tuple<>;
+     using type = std::tuple<>;
 };
     
 
@@ -133,122 +133,80 @@ struct GetDefined<TypeTag, Property, std::tuple<FirstTypeTag, Args...>>
 };
 
 
+//! helper struct to get the first property that is defined in the TypeTag hierarchy
+template<class TypeTag, class TTagList>
+struct GetDefinedSplice;
+
+//! helper struct to iterate over the TypeTag hierarchy
+template<class TypeTag, class TTagList, class Enable>
+struct GetNextSpliceTypeTag;
+
+template<class TypeTag, class LastTypeTag>
+struct GetNextSpliceTypeTag<TypeTag, std::tuple<LastTypeTag>, std::enable_if_t<hasParentTypeTag<LastTypeTag>(int{}), void>>
+{ using type = typename GetDefinedSplice<TypeTag, typename LastTypeTag::InheritsFrom>::type; };
+
+template<class TypeTag, class LastTypeTag>
+struct GetNextSpliceTypeTag<TypeTag, std::tuple<LastTypeTag>, std::enable_if_t<!hasParentTypeTag<LastTypeTag>(int{}), void>>
+{ using type = std::tuple<>; };
+
+template<class TypeTag, class FirstTypeTag, class ...Args>
+struct GetNextSpliceTypeTag<TypeTag, std::tuple<FirstTypeTag, Args...>, std::enable_if_t<hasParentTypeTag<FirstTypeTag>(int{}), void>>
+{ using type = typename GetDefinedSplice<TypeTag, ConCatTuples<typename FirstTypeTag::InheritsFrom, std::tuple<Args...>>>::type; };
+
+template<class TypeTag, class FirstTypeTag, class ...Args>
+struct GetNextSpliceTypeTag<TypeTag, std::tuple<FirstTypeTag, Args...>, std::enable_if_t<!hasParentTypeTag<FirstTypeTag>(int{}), void>>
+{ using type = typename GetDefinedSplice<TypeTag, std::tuple<Args...>>::type; };
+
 //! check if a splice S is defined
 template<class S>
 constexpr auto isDefinedSplice(int)
--> decltype(std::integral_constant<bool, !std::is_same<typename S::tuple, std::tuple<>>::value>{})
+-> decltype(std::integral_constant<bool, !std::is_same<typename S::type, std::tuple<>>::value>{})
 { return {}; }
 
 //! fall back if a splice is defined
 template<class S>
 constexpr std::true_type isDefinedSplice(...) { return {}; }
 
-template<class TypeTag, class TTagList>
-struct GetSplicesTypeTags;
-
-template<class TypeTag, class TTagList, class Enable>
-struct GetNextSplicesTypeTag;
-
 template<class TypeTag, class LastTypeTag>
-struct GetNextSplicesTypeTag<TypeTag, std::tuple<LastTypeTag>, std::enable_if_t<hasParentTypeTag<LastTypeTag>(int{}), void>>
-{ using tuple = typename GetSplicesTypeTags<TypeTag, typename LastTypeTag::InheritsFrom>::tuple; };
-
-template<class TypeTag, class LastTypeTag>
-struct GetNextSplicesTypeTag<TypeTag, std::tuple<LastTypeTag>, std::enable_if_t<!hasParentTypeTag<LastTypeTag>(int{}), void>>
-{ using tuple = std::tuple<>; };
-
-template<class TypeTag, class FirstTypeTag, class ...Args>
-struct GetNextSplicesTypeTag<TypeTag, std::tuple<FirstTypeTag, Args...>, std::enable_if_t<hasParentTypeTag<FirstTypeTag>(int{}), void>>
-{ using tuple = typename GetSplicesTypeTags<TypeTag, ConCatTuples<typename FirstTypeTag::InheritsFrom, std::tuple<Args...>>>::tuple; };
-
-template<class TypeTag, class FirstTypeTag, class ...Args>
-struct GetNextSplicesTypeTag<TypeTag, std::tuple<FirstTypeTag, Args...>, std::enable_if_t<!hasParentTypeTag<FirstTypeTag>(int{}), void>>
-{ using tuple = typename GetSplicesTypeTags<TypeTag, std::tuple<Args...>>::tuple; };
-
-template<class TypeTag, class LastTypeTag>
-struct GetSplicesTypeTags<TypeTag, std::tuple<LastTypeTag>>
+struct GetDefinedSplice<TypeTag, std::tuple<LastTypeTag>>
 {
-     using LastSplices = Splices<TypeTag, LastTypeTag>;
-     using nexttuple = typename GetNextSplicesTypeTag<TypeTag, std::tuple<LastTypeTag>, void>::tuple;
-     // originally intended
-//      using tuple = std::conditional_t<isDefinedSplice<LastSplices>(int{}),
-//                                       typename ConCatTuples<nexttuple, typename LastSplices::tuple>::tuple,
-//                                       nexttuple>;
-     using tuple = std::conditional_t<isDefinedSplice<LastSplices>(int{}),
-                                      typename LastSplices::tuple,
-                                      typename GetNextSplicesTypeTag<TypeTag, std::tuple<LastTypeTag>, void>::tuple>;
+     using LastSplice = Splices<TypeTag, LastTypeTag>;
+     using nexttuple = typename GetNextSpliceTypeTag<TypeTag, std::tuple<LastTypeTag>, void>::type;
+
+     using type = std::conditional_t<isDefinedSplice<LastSplice>(int{}),
+                                     ConCatTuples<nexttuple, typename LastSplice::type>,
+                                     nexttuple>;
 };
 
 template<class TypeTag, class FirstTypeTag, class ...Args>
-struct GetSplicesTypeTags<TypeTag, std::tuple<FirstTypeTag, Args...>>
+struct GetDefinedSplice<TypeTag, std::tuple<FirstTypeTag, Args...>>
 {
-     using FirstSplices = Splices<TypeTag, FirstTypeTag>;
-     using nexttuple = typename GetNextSplicesTypeTag<TypeTag, std::tuple<FirstTypeTag, Args...>, void>::tuple;
-     // originally intended
-//      using tuple = std::conditional_t<isDefinedSplice<FirstSplices>(int{}),
-//                                       typename ConCatTuples<typename FirstSplices::tuple, nexttuple>::tuple,
-//                                       nexttuple>;
-     using tuple = std::conditional_t<isDefinedSplice<FirstSplices>(int{}),
-                                      typename FirstSplices::tuple,
-                                      typename GetNextSplicesTypeTag<TypeTag, std::tuple<FirstTypeTag, Args...>, void>::tuple>;
+     using FirstSplice = Splices<TypeTag, FirstTypeTag>;
+     using nexttuple = typename GetNextSpliceTypeTag<TypeTag, std::tuple<FirstTypeTag, Args...>, void>::type;
+
+     using type = std::conditional_t<isDefinedSplice<FirstSplice>(int{}),
+                                     ConCatTuples<typename FirstSplice::type, nexttuple>,
+                                     nexttuple>;
 };
 
-} // end namespace Detail
-
-template<class TypeTag, class MyTypeTag>
-struct SpatialDiscretizationSplice { using type = UndefinedProperty; };
-
-namespace TTag {
-struct MyTTag {};
-struct MySDTTag {};
-}
-
-template<class TypeTag>
-struct SpatialDiscretizationSplice<TypeTag, TTag::MyTTag>
-{ using type = TTag::MySDTTag; };
-
-template<class TypeTag, class MyTypeTag>
-struct VtkOutputFormat { using type = UndefinedProperty; };
-
-template<class TypeTag>
-struct VtkOutputFormat<TypeTag, TTag::MySDTTag>
-{ static constexpr auto value = 2; };
-
-namespace TTag {
-struct FvBaseDiscretization;
-struct VcfvDiscretization;
-struct MultiPhaseBaseModel;
-}
-
-namespace Detail {
-
-    //! helper struct to extract get the Property specilization given a TypeTag, asserts that the property is defined
+//! helper struct to extract get the Property specilization given a TypeTag, asserts that the property is defined
 template<class TypeTag, template<class,class> class Property>
 struct GetPropImpl
 {
-    using PType = Properties::SpatialDiscretizationSplice<TypeTag, TTag::MyTTag>;
-    using testtype = std::conditional_t<isDefinedProperty<PType>(int{}), PType, UndefinedProperty>;
-    static_assert(!std::is_same<testtype, UndefinedProperty>::value, "SpatialDiscretizationSplice is undefined in MyTTag!");
-
-    using QType = Properties::VtkOutputFormat<TypeTag, TTag::MySDTTag>;
-    using testtype2 = std::conditional_t<isDefinedProperty<QType>(int{}), QType, UndefinedProperty>;
-    static_assert(!std::is_same<testtype2, UndefinedProperty>::value, "VtkOutputFormat is undefined in MySDTTag!");
-
-    using RType = Properties::VtkOutputFormat<TypeTag, TTag::FvBaseDiscretization>;
-    using testtype3 = std::conditional_t<isDefinedProperty<RType>(int{}), RType, UndefinedProperty>;
-    static_assert(!std::is_same<testtype3, UndefinedProperty>::value, "VtkOutputFormat is undefined in FvBaseDiscretization!");
-
-    // works:
-//     using type = typename Detail::GetDefined<TypeTag,
-//                                              Property,
-//                                              std::tuple<TypeTag, TTag::VcfvDiscretization>
-//                                             >::type;
-    using tuple = typename GetSplicesTypeTags<TypeTag, std::tuple<TypeTag>>::tuple;
+    using splice = typename Detail::GetDefinedSplice<TypeTag, std::tuple<TypeTag>>::type;
+    using tuple = std::conditional_t<std::is_same<splice, std::tuple<>>::value, std::tuple<>, splice>;
     using type = typename Detail::GetDefined<TypeTag,
                                              Property,
-                                             typename ConCatTuples<std::tuple<TypeTag>, tuple>::type
+                                             ConCatTuples<std::tuple<TypeTag>, tuple>
                                             >::type;
     static_assert(!std::is_same<type, UndefinedProperty>::value, "Property is undefined!");
+};
+
+template<class TypeTag, template<class,class> class Property>
+struct GetSplicePropImpl
+{
+    using type = typename Detail::GetDefined<TypeTag, Property, std::tuple<TypeTag>>::type;
+    static_assert(!std::is_same<type, std::tuple<>>::value, "Splice is undefined!");
 };
 
 } // end namespace Detail
@@ -266,6 +224,9 @@ using GetProp = typename Properties::Detail::GetPropImpl<TypeTag, Property>::typ
 //! get the type alias defined in the property (equivalent to old macro GET_PROP_TYPE(...))
 template<class TypeTag, template<class,class> class Property>
 using GetPropType = typename Properties::Detail::GetPropImpl<TypeTag, Property>::type::type;
+
+template<class TypeTag, template<class,class> class Property>
+using GetSplicePropType = typename Properties::Detail::GetSplicePropImpl<TypeTag, Property>::type::type;
 
 //! get the value data member of a property
 template<class TypeTag, template<class,class> class Property>
