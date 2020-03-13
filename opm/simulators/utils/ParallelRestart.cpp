@@ -361,7 +361,6 @@ HANDLE_AS_POD(Tuning)
 HANDLE_AS_POD(VISCREFRecord)
 HANDLE_AS_POD(WATDENTRecord)
 HANDLE_AS_POD(WellBrineProperties)
-HANDLE_AS_POD(Welldims)
 HANDLE_AS_POD(WellFoamProperties)
 HANDLE_AS_POD(WellSegmentDims)
 
