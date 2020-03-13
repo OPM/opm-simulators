@@ -2175,18 +2175,18 @@ BOOST_AUTO_TEST_CASE(BrineDensityTable)
 #endif
 }
 
-BOOST_AUTO_TEST_CASE(SummaryNode)
+BOOST_AUTO_TEST_CASE(SummaryConfigNode)
 {
 #ifdef HAVE_MPI
-    auto val1 = Opm::SummaryNode{"test1", Opm::SummaryNode::Category::Region,
+    auto val1 = Opm::SummaryConfigNode{"test1", Opm::SummaryConfigNode::Category::Region,
                                  Opm::Location{"test2", 1}}
-                                 .parameterType(Opm::SummaryNode::Type::Pressure)
+                                 .parameterType(Opm::SummaryConfigNode::Type::Pressure)
                                  .namedEntity("test3")
                                  .number(2)
                                  .isUserDefined(true);
 
     auto val2 = PackUnpack2(val1);
-    DO_CHECKS(SummaryNode)
+    DO_CHECKS(SummaryConfigNode)
 #endif
 }
 
@@ -2194,9 +2194,9 @@ BOOST_AUTO_TEST_CASE(SummaryNode)
 BOOST_AUTO_TEST_CASE(SummaryConfig)
 {
 #ifdef HAVE_MPI
-    auto node = Opm::SummaryNode{"test1", Opm::SummaryNode::Category::Region,
+    auto node = Opm::SummaryConfigNode{"test1", Opm::SummaryConfigNode::Category::Region,
                                  Opm::Location{"test2", 1}}
-                                 .parameterType(Opm::SummaryNode::Type::Pressure)
+                                 .parameterType(Opm::SummaryConfigNode::Type::Pressure)
                                  .namedEntity("test3")
                                  .number(2)
                                  .isUserDefined(true);
