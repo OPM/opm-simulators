@@ -362,7 +362,6 @@ HANDLE_AS_POD(VISCREFRecord)
 HANDLE_AS_POD(WATDENTRecord)
 HANDLE_AS_POD(WellBrineProperties)
 HANDLE_AS_POD(WellFoamProperties)
-HANDLE_AS_POD(WellSegmentDims)
 
 std::size_t packSize(const data::Well& data, Dune::MPIHelper::MPICommunicator comm)
 {

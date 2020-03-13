@@ -146,7 +146,6 @@ class WellConnections;
 class WellEconProductionLimits;
 class WellFoamProperties;
 class WellPolymerProperties;
-class WellSegmentDims;
 class WellSegments;
 class WellTracerProperties;
 class WList;
@@ -601,7 +600,6 @@ ADD_PACK_PROTOTYPES(WellConnections)
 ADD_PACK_PROTOTYPES(WellEconProductionLimits)
 ADD_PACK_PROTOTYPES(WellFoamProperties)
 ADD_PACK_PROTOTYPES(WellPolymerProperties)
-ADD_PACK_PROTOTYPES(WellSegmentDims)
 ADD_PACK_PROTOTYPES(WellSegments)
 ADD_PACK_PROTOTYPES(WellTestConfig)
 ADD_PACK_PROTOTYPES(WellTestConfig::WTESTWell)
