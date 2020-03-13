@@ -50,6 +50,11 @@ class MultiPhaseBaseModel;
 
 BEGIN_PROPERTIES
 
+namespace TTag {
+struct ParallelBiCGStabLinearSolver;
+struct FiniteDifferenceLocalLinearizer;
+}
+
 //! The generic type tag for problems using the immiscible multi-phase model
 NEW_TYPE_TAG(MultiPhaseBaseModel, INHERITS_FROM(NumericModel, VtkMultiPhase, VtkTemperature));
 
@@ -59,7 +64,7 @@ NEW_TYPE_TAG(MultiPhaseBaseModel, INHERITS_FROM(NumericModel, VtkMultiPhase, Vtk
 template<class TypeTag>
 struct Splices<TypeTag, TTag::MultiPhaseBaseModel>
 {
-    using tuple = std::tuple<GetPropType<TypeTag, Properties::SpatialDiscretizationSplice>>;
+    using type = std::tuple<GetSplicePropType<TypeTag, Properties::SpatialDiscretizationSplice>>;
 };
 
 //! Set the default spatial discretization
