@@ -3,10 +3,8 @@
 CONTENT
 -------
 
-opm-simulators contains simulator programs for porous media flow. It
-also contains a small library for automatic differentiation
-built on the Eigen linear algebra package which is used by many of the
-simulators to handle the building of Jacobians. The most important
+opm-simulators contains simulator programs for porous media flow.
+The most important
 (and tested) part is the Flow reservoir simulator, which is a fully
 implicit black-oil simulator that also supports solvent and polymer
 options. It is built using automatic differentiation, using the local
@@ -32,8 +30,8 @@ REQUIREMENTS
 
 opm-simulators requires several other OPM modules, see
 http://opm-project.org/?page_id=274. In addition, opm-simulators
-requires the Dune module dune-istl and Eigen, version 3.1 (has not been
-tested with later versions).
+requires Dune and some other software to be available, for details
+see https://opm-project.org/?page_id=239.
 
 
 DOWNLOADING
@@ -59,8 +57,7 @@ In order to build the documentation, enter the command
 
  make doc
 
-in the topmost directory. The class AutoDiffBlock is the most
-important and most well-documented.
+in the topmost directory.
 
 
 REPORTING ISSUES
