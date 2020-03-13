@@ -85,7 +85,6 @@ class Location;
 class MessageLimits;
 class MLimits;
 class OilVaporizationProperties;
-class Phases;
 class PlymwinjTable;
 class PlyshlogTable;
 class PlyvmhRecord;
@@ -529,7 +528,6 @@ ADD_PACK_PROTOTYPES(Location)
 ADD_PACK_PROTOTYPES(MessageLimits)
 ADD_PACK_PROTOTYPES(MLimits)
 ADD_PACK_PROTOTYPES(OilVaporizationProperties)
-ADD_PACK_PROTOTYPES(Phases)
 ADD_PACK_PROTOTYPES(PlmixparRecord)
 ADD_PACK_PROTOTYPES(PlmixparTable)
 ADD_PACK_PROTOTYPES(PlymwinjTable)

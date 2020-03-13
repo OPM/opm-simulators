@@ -551,11 +551,6 @@ std::size_t packSize(const RestartConfig& data, Dune::MPIHelper::MPICommunicator
            packSize(data.saveKeywords(), comm);
 }
 
-std::size_t packSize(const Phases& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getBits(), comm);
-}
-
 std::size_t packSize(const EndpointScaling& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.getBits(), comm);
@@ -1941,12 +1936,6 @@ void pack(const RestartConfig& data, std::vector<char>& buffer, int& position,
     pack(data.restartSchedule(), buffer, position, comm);
     pack(data.restartKeywords(), buffer, position, comm);
     pack(data.saveKeywords(), buffer, position, comm);
-}
-
-void pack(const Phases& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getBits(), buffer, position, comm);
 }
 
 void pack(const EndpointScaling& data, std::vector<char>& buffer, int& position,
@@ -3481,14 +3470,6 @@ void unpack(RestartConfig& data, std::vector<char>& buffer, int& position,
     unpack(save_keyw, buffer, position, comm);
     data = RestartConfig(timemap, firstRstStep, writeInitialRst, restart_sched,
                          restart_keyw, save_keyw);
-}
-
-void unpack(Phases& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    unsigned long bits;
-    unpack(bits, buffer, position, comm);
-    data = Phases(std::bitset<NUM_PHASES_IN_ENUM>(bits));
 }
 
 void unpack(EndpointScaling& data, std::vector<char>& buffer, int& position,

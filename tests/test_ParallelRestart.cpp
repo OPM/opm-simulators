@@ -911,7 +911,7 @@ BOOST_AUTO_TEST_CASE(Phases)
 {
 #if HAVE_MPI
     Opm::Phases val1(true, true, true, false, true, false, true, false);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Phases)
 #endif
 }
