@@ -817,7 +817,6 @@ namespace MissingFeatures {
             "WSCCLENL",
             "WSCTAB",
             "WSEGAICD",
-            "WSEGVALV",
             "WSEGDFIN",
             "WSEGDFMD",
             "WSEGDFPA",
