@@ -364,7 +364,13 @@ protected:
 
             if (!ownersFirst_ || parameters_.linear_solver_use_amg_  || parameters_.use_cpr_ ) {
                 detail::setWellConnections(gridForConn, wellsForConn, useWellConn, wellConnectionsGraph_);
-                detail::findOverlapAndInterior(gridForConn, overlapRows_, interiorRows_);
+                // For some reason simulator_.model().elementMapper() is not initialized at this stage
+                // Hence const auto& elemMapper = simulator_.model().elementMapper(); does not work.
+                // Set it up manually
+                using ElementMapper =
+                    Dune::MultipleCodimMultipleGeomTypeMapper<GridView>;
+                ElementMapper elemMapper(simulator_.vanguard().grid().leafGridView(), Dune::mcmgElementLayout());
+                detail::findOverlapAndInterior(gridForConn, elemMapper, overlapRows_, interiorRows_);
                 if (gridForConn.comm().size() > 1) {
 
                     noGhostAdjacency();
@@ -787,6 +793,12 @@ protected:
         void noGhostAdjacency()
         {
             const auto& grid = simulator_.vanguard().grid();
+            // For some reason simulator_.model().elementMapper() is not initialized at this stage.
+            // Hence const auto& elemMapper = simulator_.model().elementMapper(); does not work.
+            // Set it up manually
+            using ElementMapper =
+                Dune::MultipleCodimMultipleGeomTypeMapper<GridView>;
+            ElementMapper elemMapper(simulator_.vanguard().grid().leafGridView(), Dune::mcmgElementLayout());
             typedef typename Matrix::size_type size_type;
             size_type numCells = grid.size( 0 );
             noGhostMat_.reset(new Matrix(numCells, numCells, Matrix::random));
@@ -794,7 +806,6 @@ protected:
             std::vector<std::set<size_type>> pattern;
             pattern.resize(numCells);
 
-            const auto& lid = grid.localIdSet();
             const auto& gridView = grid.leafGridView();
             auto elemIt = gridView.template begin<0>();
             const auto& elemEndIt = gridView.template end<0>();
@@ -803,7 +814,7 @@ protected:
             for (; elemIt != elemEndIt; ++elemIt)
             {
                 const auto& elem = *elemIt;
-                size_type idx = lid.id(elem);
+                size_type idx = elemMapper.index(elem);
                 pattern[idx].insert(idx);
 
                 // Add well non-zero connections
@@ -822,7 +833,7 @@ protected:
                         //check if face has neighbor
                         if (is->neighbor())
                         {
-                            size_type nid = lid.id(is->outside());
+                            size_type nid = elemMapper.index(is->outside());
                             pattern[idx].insert(nid);
                         }
                     }

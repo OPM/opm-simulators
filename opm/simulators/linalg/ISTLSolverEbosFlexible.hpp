@@ -54,6 +54,7 @@ namespace Opm
 template <class TypeTag>
 class ISTLSolverEbosFlexible
 {
+    using GridView = typename GET_PROP_TYPE(TypeTag, GridView);
     using SparseMatrixAdapter = typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter);
     using VectorType = typename GET_PROP_TYPE(TypeTag, GlobalEqVector);
     using Simulator = typename GET_PROP_TYPE(TypeTag, Simulator);
@@ -77,7 +78,13 @@ public:
         parameters_.template init<TypeTag>();
         prm_ = setupPropertyTree(parameters_);
         extractParallelGridInformationToISTL(simulator_.vanguard().grid(), parallelInformation_);
-        detail::findOverlapAndInterior(simulator_.vanguard().grid(), overlapRows_, interiorRows_);
+        // For some reason simulator_.model().elementMapper() is not initialized at this stage
+        // Hence const auto& elemMapper = simulator_.model().elementMapper(); does not work.
+        // Set it up manually
+        using ElementMapper =
+            Dune::MultipleCodimMultipleGeomTypeMapper<GridView>;
+        ElementMapper elemMapper(simulator_.vanguard().grid().leafGridView(), Dune::mcmgElementLayout());
+        detail::findOverlapAndInterior(simulator_.vanguard().grid(), elemMapper, overlapRows_, interiorRows_);
 #if HAVE_MPI
         if (parallelInformation_.type() == typeid(ParallelISTLInformation)) {
             // Parallel case.

@@ -82,16 +82,14 @@ namespace detail
     /// \param grid The grid where we look for overlap cells.
     /// \param overlapRows List where overlap rows are stored.
     /// \param interiorRows List where overlap rows are stored.
-    template<class Grid>
-    void findOverlapAndInterior(const Grid& grid, std::vector<int>& overlapRows,
+    template<class Grid, class Mapper>
+    void findOverlapAndInterior(const Grid& grid, const Mapper& mapper, std::vector<int>& overlapRows,
                                 std::vector<int>& interiorRows)
     {
         //only relevant in parallel case.
         if ( grid.comm().size() > 1)
         {
             //Numbering of cells
-            const auto& lid = grid.localIdSet();
-
             const auto& gridView = grid.leafGridView();
             auto elemIt = gridView.template begin<0>();
             const auto& elemEndIt = gridView.template end<0>();
@@ -100,7 +98,7 @@ namespace detail
             for (; elemIt != elemEndIt; ++elemIt)
             {
                 const auto& elem = *elemIt;
-                int lcell = lid.id(elem);
+                int lcell = mapper.index(elem);
 
                 if (elem.partitionType() != Dune::InteriorEntity)
                 {
