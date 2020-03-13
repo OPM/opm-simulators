@@ -55,6 +55,7 @@ namespace Opm {
         const auto& global_cell = Opm::UgGridHelpers::globalCell(grid);
         const auto dims = Opm::UgGridHelpers::cartDims(grid);
         const auto& compressedToCartesianIdx = Opm::compressedToCartesian(nc, global_cell);
+        const bool threepoint = eclState.runspec().endpointScaling().threepoint();
         scaledEpsInfo_.resize(nc);
         EclEpsGridProperties epsGridProperties(eclState, false);
         const std::string tag = "Scaled endpoints";
@@ -85,7 +86,7 @@ namespace Opm {
                 OpmLog::warning(tag, msg);
             }
 
-            if (deck.hasKeyword("SCALECRS") && fluidSystem_ == FluidSystem::BlackOil) {
+            if (threepoint && fluidSystem_ == FluidSystem::BlackOil) {
                 // Mobilility check.
 		    if ((scaledEpsInfo_[c].Sowcr + scaledEpsInfo_[c].Swcr) >= (1.0 + tolerance)) {
                     const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SOWCR + SWCR exceed 1.0";
