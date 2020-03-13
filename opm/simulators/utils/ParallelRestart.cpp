@@ -25,7 +25,6 @@
 #include <opm/common/OpmLog/Location.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
-#include <opm/parser/eclipse/EclipseState/InitConfig/FoamConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
@@ -538,13 +537,6 @@ std::size_t packSize(const TableContainer& data, Dune::MPIHelper::MPICommunicato
     }
 
     return res;
-}
-
-std::size_t packSize(const FoamConfig& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.records(), comm) +
-           packSize(data.getTransportPhase(), comm) +
-           packSize(data.getMobilityModel(), comm);
 }
 
 std::size_t packSize(const InitConfig& data, Dune::MPIHelper::MPICommunicator comm)
@@ -1441,16 +1433,6 @@ std::size_t packSize(const PvtwsaltTable& data,
           packSize(data.getTableValues(), comm);
 }
 
-std::size_t packSize(const FoamData& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.referenceSurfactantConcentration(), comm) +
-           packSize(data.exponent(), comm) +
-           packSize(data.minimumSurfactantConcentration(), comm) +
-           packSize(data.allowDesorption(), comm) +
-           packSize(data.rockDensity(), comm);
-}
-
 std::size_t packSize(const RestartSchedule& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -1979,14 +1961,6 @@ void pack(const TableContainer& data, std::vector<char>& buffer, int& position,
           pack(*it.second, buffer, position, comm);
         }
     }
-}
-
-void pack(const FoamConfig& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.records(), buffer, position, comm);
-    pack(data.getTransportPhase(), buffer, position, comm);
-    pack(data.getMobilityModel(), buffer, position, comm);
 }
 
 void pack(const InitConfig& data, std::vector<char>& buffer, int& position,
@@ -2910,17 +2884,6 @@ void pack(const PvtwsaltTable& data,
     pack(data.getTableValues(), buffer, position, comm);
 }
 
-void pack(const FoamData& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.referenceSurfactantConcentration(), buffer, position, comm);
-    pack(data.exponent(), buffer, position, comm);
-    pack(data.minimumSurfactantConcentration(), buffer, position, comm);
-    pack(data.allowDesorption(), buffer, position, comm);
-    pack(data.rockDensity(), buffer, position, comm);
-}
-
 void pack(const RestartSchedule& data,
           std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
@@ -3564,18 +3527,6 @@ void unpack(TableContainer& data, std::vector<char>& buffer, int& position,
         unpack(table, buffer, position, comm);
         data.addTable(id, std::make_shared<SimpleTable>(table));
     }
-}
-
-void unpack(FoamConfig& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<FoamData> records;
-    Phase transport_phase;
-    FoamConfig::MobilityModel mobility_model;
-    unpack(records, buffer, position, comm);
-    unpack(transport_phase, buffer, position, comm);
-    unpack(mobility_model, buffer, position, comm);
-    data = FoamConfig(records, transport_phase, mobility_model);
 }
 
 void unpack(InitConfig& data, std::vector<char>& buffer, int& position,
@@ -4971,24 +4922,6 @@ void unpack(PvtwsaltTable& data, std::vector<char>& buffer, int& position,
     unpack(refSaltConValue, buffer, position, comm);
     unpack(tableValues, buffer, position, comm);
     data = PvtwsaltTable(refPressValue, refSaltConValue, tableValues);
-}
-
-void unpack(FoamData& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    double referenceSurfactantConcentration, exponent;
-    double minimumSurfactantConcentration;
-    bool allowDesorption;
-    double rockDensity;
-
-    unpack(referenceSurfactantConcentration, buffer, position, comm);
-    unpack(exponent, buffer, position, comm);
-    unpack(minimumSurfactantConcentration, buffer, position, comm);
-    unpack(allowDesorption, buffer, position, comm);
-    unpack(rockDensity, buffer, position, comm);
-    data = FoamData(referenceSurfactantConcentration, exponent,
-                    minimumSurfactantConcentration, allowDesorption, rockDensity);
 }
 
 void unpack(RestartSchedule& data,

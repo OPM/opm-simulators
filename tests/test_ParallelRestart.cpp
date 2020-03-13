@@ -813,7 +813,7 @@ BOOST_AUTO_TEST_CASE(FoamData)
 {
 #if HAVE_MPI
     Opm::FoamData val1 = getFoamData();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(FoamData)
 #endif
 }
@@ -823,7 +823,7 @@ BOOST_AUTO_TEST_CASE(FoamConfig)
 {
 #if HAVE_MPI
     Opm::FoamConfig val1 = getFoamConfig();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(FoamConfig)
 #endif
 }

@@ -80,8 +80,6 @@ class EclipseConfig;
 class Eqldims;
 class EndpointScaling;
 class Events;
-class FoamConfig;
-class FoamData;
 class InitConfig;
 class IOConfig;
 template<class T> class IOrderSet;
@@ -519,8 +517,6 @@ ADD_PACK_PROTOTYPES(EclipseConfig)
 ADD_PACK_PROTOTYPES(EndpointScaling)
 ADD_PACK_PROTOTYPES(Eqldims)
 ADD_PACK_PROTOTYPES(Events)
-ADD_PACK_PROTOTYPES(FoamConfig)
-ADD_PACK_PROTOTYPES(FoamData)
 ADD_PACK_PROTOTYPES(GConSale)
 ADD_PACK_PROTOTYPES(GConSale::GCONSALEGroup)
 ADD_PACK_PROTOTYPES(GConSump)
