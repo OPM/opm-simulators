@@ -20,8 +20,6 @@
 */
 #include "config.h"
 
-#include <ebos/eclmpiserializer.hh>
-
 #include <flow/flow_ebos_blackoil.hpp>
 
 #ifndef FLOW_BLACKOIL_ONLY
@@ -39,7 +37,6 @@
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/simulators/flow/FlowMainEbos.hpp>
 #include <opm/simulators/utils/moduleVersion.hpp>
-#include <opm/simulators/utils/ParallelEclipseState.hpp>
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/simulators/flow/MissingFeatures.hpp>
@@ -69,6 +66,11 @@
 #include <dune/fem/misc/mpimanager.hh>
 #else
 #include <dune/common/parallel/mpihelper.hh>
+#endif
+
+#if HAVE_MPI
+#include <ebos/eclmpiserializer.hh>
+#include <opm/simulators/utils/ParallelEclipseState.hpp>
 #endif
 
 BEGIN_PROPERTIES
