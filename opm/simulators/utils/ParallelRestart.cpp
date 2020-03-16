@@ -25,11 +25,6 @@
 #include <opm/common/OpmLog/Location.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
-#include <opm/parser/eclipse/EclipseState/Grid/Fault.hpp>
-#include <opm/parser/eclipse/EclipseState/Grid/FaultCollection.hpp>
-#include <opm/parser/eclipse/EclipseState/Grid/FaultFace.hpp>
-#include <opm/parser/eclipse/EclipseState/Grid/MULTREGTScanner.hpp>
-#include <opm/parser/eclipse/EclipseState/Grid/TransMult.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/FoamConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
@@ -1549,62 +1544,11 @@ std::size_t packSize(const GuideRateConfig::GroupTarget& data,
            packSize(data.target, comm);
 }
 
-std::size_t packSize(const MULTREGTRecord& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.src_value, comm) +
-           packSize(data.target_value, comm) +
-           packSize(data.trans_mult, comm) +
-           packSize(data.directions, comm) +
-           packSize(data.nnc_behaviour, comm) +
-           packSize(data.region_name, comm);
-}
-
-std::size_t packSize(const MULTREGTScanner& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getSize(), comm) +
-           packSize(data.getRecords(), comm) +
-           packSize(data.getSearchMap(), comm) +
-           packSize(data.getRegions(), comm) +
-           packSize(data.getDefaultRegion(), comm);
-}
-
 std::size_t packSize(const EclipseConfig& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.init(), comm) +
            packSize(data.io(), comm);
-}
-
-std::size_t packSize(const TransMult& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getSize(), comm) +
-           packSize(data.getTrans(), comm) +
-           packSize(data.getNames(), comm) +
-           packSize(data.getScanner(), comm);
-}
-
-std::size_t packSize(const FaultFace& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getIndices(), comm) +
-           packSize(data.getDir(), comm);
-}
-
-std::size_t packSize(const Fault& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getName(), comm) +
-           packSize(data.getTransMult(), comm) +
-           packSize(data.getFaceList(), comm);
-}
-
-std::size_t packSize(const FaultCollection& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getFaults(), comm);
 }
 
 std::size_t packSize(const SolventDensityTable& data,
@@ -3099,69 +3043,12 @@ void pack(const GuideRateConfig::GroupTarget& data,
     pack(data.target, buffer, position, comm);
 }
 
-void pack(const MULTREGTRecord& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.src_value, buffer, position, comm);
-    pack(data.target_value, buffer, position, comm);
-    pack(data.trans_mult, buffer, position, comm);
-    pack(data.directions, buffer, position, comm);
-    pack(data.nnc_behaviour, buffer, position, comm);
-    pack(data.region_name, buffer, position, comm);
-}
-
-void pack(const MULTREGTScanner& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getSize(), buffer, position, comm);
-    pack(data.getRecords(), buffer, position, comm);
-    pack(data.getSearchMap(), buffer, position, comm);
-    pack(data.getRegions(), buffer, position, comm);
-    pack(data.getDefaultRegion(), buffer, position, comm);
-}
-
 void pack(const EclipseConfig& data,
           std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.init(), buffer, position, comm);
     pack(data.io(), buffer, position, comm);
-}
-
-void pack(const TransMult& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getSize(), buffer, position, comm);
-    pack(data.getTrans(), buffer, position, comm);
-    pack(data.getNames(), buffer, position, comm);
-    pack(data.getScanner(), buffer, position, comm);
-}
-
-void pack(const FaultFace& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getIndices(), buffer, position, comm);
-    pack(data.getDir(), buffer, position, comm);
-}
-
-void pack(const Fault& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getName(), buffer, position, comm);
-    pack(data.getTransMult(), buffer, position, comm);
-    pack(data.getFaceList(), buffer, position, comm);
-}
-
-void pack(const FaultCollection& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getFaults(), buffer, position, comm);
 }
 
 void pack(const SolventDensityTable& data,
@@ -5275,37 +5162,6 @@ void unpack(GuideRateConfig::GroupTarget& data,
     unpack(data.target, buffer, position, comm);
 }
 
-void unpack(MULTREGTRecord& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    unpack(data.src_value, buffer, position, comm);
-    unpack(data.target_value, buffer, position, comm);
-    unpack(data.trans_mult, buffer, position, comm);
-    unpack(data.directions, buffer, position, comm);
-    unpack(data.nnc_behaviour, buffer, position, comm);
-    unpack(data.region_name, buffer, position, comm);
-}
-
-void unpack(MULTREGTScanner& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::array<size_t, 3> size;
-    std::vector<MULTREGTRecord> records;
-    MULTREGTScanner::ExternalSearchMap searchMap;
-    std::map<std::string, std::vector<int>> regions;
-    std::string defaultRegion;
-
-    unpack(size, buffer, position, comm);
-    unpack(records, buffer, position, comm);
-    unpack(searchMap, buffer, position, comm);
-    unpack(regions, buffer, position, comm);
-    unpack(defaultRegion, buffer, position, comm);
-
-    data = MULTREGTScanner(size, records, searchMap, regions, defaultRegion);
-}
-
 void unpack(EclipseConfig& data,
             std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
@@ -5316,58 +5172,6 @@ void unpack(EclipseConfig& data,
     unpack(init, buffer, position, comm);
     unpack(io, buffer, position, comm);
     data = EclipseConfig(init, io);
-}
-
-void unpack(TransMult& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::array<size_t, 3> size;
-    std::map<FaceDir::DirEnum, std::vector<double>> trans;
-    std::map<FaceDir::DirEnum, std::string> names;
-    MULTREGTScanner scanner;
-
-    unpack(size, buffer, position, comm);
-    unpack(trans, buffer, position, comm);
-    unpack(names, buffer, position, comm);
-    unpack(scanner, buffer, position, comm);
-    data = TransMult(size, trans, names, scanner);
-}
-
-void unpack(FaultFace& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<size_t> indices;
-    FaceDir::DirEnum dir;
-
-    unpack(indices, buffer, position, comm);
-    unpack(dir, buffer, position, comm);
-    data = FaultFace(indices, dir);
-}
-
-void unpack(Fault& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::string name;
-    double transMult;
-    std::vector<FaultFace> faceList;
-
-    unpack(name, buffer, position, comm);
-    unpack(transMult, buffer, position, comm);
-    unpack(faceList, buffer, position, comm);
-    data = Fault(name, transMult, faceList);
-}
-
-void unpack(FaultCollection& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    OrderedMap<std::string, Fault> faults;
-
-    unpack(faults, buffer, position, comm);
-    data = FaultCollection(faults);
 }
 
 void unpack(SolventDensityTable& data, std::vector<char>& buffer, int& position,
@@ -5476,6 +5280,7 @@ INSTANTIATE_PACK_VECTOR(std::vector<double>)
 INSTANTIATE_PACK_VECTOR(bool)
 INSTANTIATE_PACK_VECTOR(char)
 INSTANTIATE_PACK_VECTOR(int)
+INSTANTIATE_PACK_VECTOR(size_t)
 INSTANTIATE_PACK_VECTOR(std::array<double, 3>)
 INSTANTIATE_PACK_VECTOR(std::pair<bool,double>)
 INSTANTIATE_PACK_VECTOR(std::shared_ptr<Group>)
