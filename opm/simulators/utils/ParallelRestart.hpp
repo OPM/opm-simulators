@@ -124,7 +124,6 @@ class TlmixparTable;
 class Tuning;
 class UDAValue;
 class UDQConfig;
-class UDQIndex;
 class UDQParams;
 class UnitSystem;
 class Valve;
@@ -562,7 +561,6 @@ ADD_PACK_PROTOTYPES(TlmixparTable)
 ADD_PACK_PROTOTYPES(Tuning)
 ADD_PACK_PROTOTYPES(UDAValue)
 ADD_PACK_PROTOTYPES(UDQConfig)
-ADD_PACK_PROTOTYPES(UDQIndex)
 ADD_PACK_PROTOTYPES(UDQParams)
 ADD_PACK_PROTOTYPES(UnitSystem)
 ADD_PACK_PROTOTYPES(Valve)
