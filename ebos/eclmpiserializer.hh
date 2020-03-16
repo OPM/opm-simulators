@@ -40,12 +40,16 @@ public:
     template<class T>
     void operator()(const T& data)
     {
-        if (m_op == Operation::PACKSIZE)
-            m_packSize += Mpi::packSize(data, m_comm);
-        else if (m_op == Operation::PACK)
-            Mpi::pack(data, m_buffer, m_position, m_comm);
-        else if (m_op == Operation::UNPACK)
-            Mpi::unpack(const_cast<T&>(data), m_buffer, m_position, m_comm);
+        if constexpr (is_shared_ptr<T>::value) {
+            shared_ptr(data);
+        } else {
+          if (m_op == Operation::PACKSIZE)
+              m_packSize += Mpi::packSize(data, m_comm);
+          else if (m_op == Operation::PACK)
+              Mpi::pack(data, m_buffer, m_position, m_comm);
+          else if (m_op == Operation::UNPACK)
+              Mpi::unpack(const_cast<T&>(data), m_buffer, m_position, m_comm);
+        }
     }
 
     template<class T>
@@ -56,6 +60,8 @@ public:
             for (auto& it : d) {
               if constexpr (is_pair<T>::value)
                   pair(it);
+              else if constexpr (is_shared_ptr<T>::value)
+                  shared_ptr(it);
               else
                   it.serializeOp(*this);
             }
@@ -131,6 +137,16 @@ protected:
         constexpr static bool value = true;
     };
 
+    template<class T>
+    struct is_shared_ptr {
+        constexpr static bool value = false;
+    };
+
+    template<class T1>
+    struct is_shared_ptr<std::shared_ptr<T1>> {
+        constexpr static bool value = true;
+    };
+
     template<class T1, class T2>
     void pair(const std::pair<T1,T2>& data)
     {
@@ -143,6 +159,18 @@ protected:
             (*this)(data.second);
         else
             const_cast<T2&>(data.second).serializeOp(*this);
+    }
+
+    template<class T1>
+    void shared_ptr(const std::shared_ptr<T1>& data)
+    {
+        bool value = data ? true : false;
+        (*this)(value);
+        if (m_op == Operation::UNPACK && value) {
+            const_cast<std::shared_ptr<T1>&>(data) = std::make_shared<T1>();
+        }
+        if (data)
+            data->serializeOp(*this);
     }
 
     Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> m_comm;
