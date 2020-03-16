@@ -29,7 +29,6 @@
 
 #include <opm/common/utility/numeric/linearInterpolation.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SsfnTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/MiscTable.hpp>
@@ -52,11 +51,9 @@ namespace Opm {
         ///eclipse data file. Errors and warings will be
         ///output if they're found.
         ///\param[in] eclState  eclipse state.
-        ///\param[in] deck      ecliplise data file.
         ///\param[in] grid      unstructured grid.
         template <class GridT>
         void diagnosis(const EclipseState& eclState,
-                       const Deck& deck,
                        const GridT& grid);
 
     private:
@@ -95,8 +92,7 @@ namespace Opm {
         void unscaledEndPointsCheck_(const EclipseState& eclState);
 
         template <class GridT>
-        void scaledEndPointsCheck_(const Deck& deck,
-                                   const EclipseState& eclState,
+        void scaledEndPointsCheck_(const EclipseState& eclState,
                                    const GridT& grid);
 
         ///For every table, need to deal with case by case.

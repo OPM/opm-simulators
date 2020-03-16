@@ -456,7 +456,7 @@ namespace Opm
                     static_cast<ParallelEclipseState&>(this->eclState()).switchToGlobalProps();
 #endif
                 }
-                diagnostic.diagnosis(eclState(), deck(), this->grid());
+                diagnostic.diagnosis(eclState(), this->grid());
                 if (mpi_size_ > 1) {
 #if HAVE_MPI
                     this->grid().switchToDistributedView();

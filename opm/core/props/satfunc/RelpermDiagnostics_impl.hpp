@@ -33,7 +33,6 @@ namespace Opm {
 
     template <class GridT>
     void RelpermDiagnostics::diagnosis(const Opm::EclipseState& eclState,
-                                       const Opm::Deck& deck,
                                        const GridT& grid)
     {
         OpmLog::info("\n===============Saturation Functions Diagnostics===============\n");
@@ -41,12 +40,11 @@ namespace Opm {
         satFamilyCheck_(eclState);
         tableCheck_(eclState);
         unscaledEndPointsCheck_(eclState);
-        scaledEndPointsCheck_(deck, eclState, grid);
+        scaledEndPointsCheck_(eclState, grid);
     }
 
     template <class GridT>
-    void RelpermDiagnostics::scaledEndPointsCheck_(const Deck& deck,
-                                                   const EclipseState& eclState,
+    void RelpermDiagnostics::scaledEndPointsCheck_(const EclipseState& eclState,
                                                    const GridT& grid)
     {
         // All end points are subject to round-off errors, checks should account for it
@@ -55,6 +53,7 @@ namespace Opm {
         const auto& global_cell = Opm::UgGridHelpers::globalCell(grid);
         const auto dims = Opm::UgGridHelpers::cartDims(grid);
         const auto& compressedToCartesianIdx = Opm::compressedToCartesian(nc, global_cell);
+        const bool threepoint = eclState.runspec().endpointScaling().threepoint();
         scaledEpsInfo_.resize(nc);
         EclEpsGridProperties epsGridProperties(eclState, false);
         const std::string tag = "Scaled endpoints";
@@ -85,7 +84,7 @@ namespace Opm {
                 OpmLog::warning(tag, msg);
             }
 
-            if (deck.hasKeyword("SCALECRS") && fluidSystem_ == FluidSystem::BlackOil) {
+            if (threepoint && fluidSystem_ == FluidSystem::BlackOil) {
                 // Mobilility check.
 		    if ((scaledEpsInfo_[c].Sowcr + scaledEpsInfo_[c].Swcr) >= (1.0 + tolerance)) {
                     const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SOWCR + SWCR exceed 1.0";
