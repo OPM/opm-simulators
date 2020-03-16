@@ -81,6 +81,44 @@ public:
         }
     }
 
+    template<template<class Key, class Data> class Map, class Key, class Data>
+    void map(Map<Key, Data>& data)
+    {
+        auto handle = [&](auto& d)
+        {
+            if constexpr (is_vector<Data>::value)
+                vector(d);
+            else if constexpr (is_shared_ptr<Data>::value)
+                shared_ptr(d);
+            else
+                d.serializeOp(*this);
+        };
+
+        if (m_op == Operation::PACKSIZE) {
+            m_packSize += Mpi::packSize(data.size(), m_comm);
+            for (auto& it : data) {
+                m_packSize += Mpi::packSize(it.first, m_comm);
+                handle(it.second);
+            }
+        } else if (m_op == Operation::PACK) {
+            Mpi::pack(data.size(), m_buffer, m_position, m_comm);
+            for (auto& it : data) {
+                Mpi::pack(it.first, m_buffer, m_position, m_comm);
+                handle(it.second);
+            }
+        } else if (m_op == Operation::UNPACK) {
+            size_t size;
+            Mpi::unpack(size, m_buffer, m_position, m_comm);
+            for (size_t i = 0; i < size; ++i) {
+                Key key;
+                Mpi::unpack(key, m_buffer, m_position, m_comm);
+                Data entry;
+                handle(entry);
+                data.insert(std::make_pair(key, entry));
+            }
+        }
+    }
+
     template<class T>
     void pack(T& data)
     {
@@ -134,6 +172,16 @@ protected:
 
     template<class T1, class T2>
     struct is_pair<std::pair<T1,T2>> {
+        constexpr static bool value = true;
+    };
+
+    template<class T>
+    struct is_vector {
+        constexpr static bool value = false;
+    };
+
+    template<class T1>
+    struct is_vector<std::vector<T1>> {
         constexpr static bool value = true;
     };
 
