@@ -1728,7 +1728,7 @@ BOOST_AUTO_TEST_CASE(UDQActiveInputRecord)
 #ifdef HAVE_MPI
     Opm::UDQActive::InputRecord val1(1, "test1", "test2",
                                      Opm::UDAControl::WCONPROD_ORAT);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(UDQActive::InputRecord)
 #endif
 }
@@ -1739,7 +1739,7 @@ BOOST_AUTO_TEST_CASE(UDQActiveRecord)
 #ifdef HAVE_MPI
     Opm::UDQActive::Record val1("test1", 1, 2, "test2",
                                 Opm::UDAControl::WCONPROD_ORAT);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(UDQActive::Record)
 #endif
 }
@@ -1753,7 +1753,7 @@ BOOST_AUTO_TEST_CASE(UDQActive)
                         {Opm::UDQActive::Record("test1", 1, 2, "test2",
                                                   Opm::UDAControl::WCONPROD_ORAT)},
                         {{"test1", 1}}, {{"test2", 2}});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(UDQActive)
 #endif
 }

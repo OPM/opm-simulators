@@ -1146,36 +1146,6 @@ std::size_t packSize(const UDQConfig& data,
            packSize(data.typeCount(), comm);
 }
 
-std::size_t packSize(const UDQActive::InputRecord& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.input_index, comm) +
-           packSize(data.udq, comm) +
-           packSize(data.wgname, comm) +
-           packSize(data.control, comm);
-}
-
-std::size_t packSize(const UDQActive::Record& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.udq, comm) +
-           packSize(data.input_index, comm) +
-           packSize(data.use_index, comm) +
-           packSize(data.wgname, comm) +
-           packSize(data.control, comm) +
-           packSize(data.uad_code, comm) +
-           packSize(data.use_count, comm);
-}
-
-std::size_t packSize(const UDQActive& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getInputRecords(), comm) +
-           packSize(data.getOutputRecords(), comm) +
-           packSize(data.getUdqKeys(), comm) +
-           packSize(data.getWgKeys(), comm);
-}
-
 std::size_t packSize(const GuideRateModel& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -2489,39 +2459,6 @@ void pack(const UDQConfig& data,
     pack(data.unitsMap(), buffer, position, comm);
     pack(data.inputIndex(), buffer, position, comm);
     pack(data.typeCount(), buffer, position, comm);
-}
-
-void pack(const UDQActive::InputRecord& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.input_index, buffer, position, comm);
-    pack(data.udq, buffer, position, comm);
-    pack(data.wgname, buffer, position, comm);
-    pack(data.control, buffer, position, comm);
-}
-
-void pack(const UDQActive::Record& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.udq, buffer, position, comm);
-    pack(data.input_index, buffer, position, comm);
-    pack(data.use_index, buffer, position, comm);
-    pack(data.wgname, buffer, position, comm);
-    pack(data.control, buffer, position, comm);
-    pack(data.uad_code, buffer, position, comm);
-    pack(data.use_count, buffer, position, comm);
-}
-
-void pack(const UDQActive& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getInputRecords(), buffer, position, comm);
-    pack(data.getOutputRecords(), buffer, position, comm);
-    pack(data.getUdqKeys(), buffer, position, comm);
-    pack(data.getWgKeys(), buffer, position, comm);
 }
 
 void pack(const GuideRateModel& data,
@@ -4320,44 +4257,6 @@ void unpack(UDQConfig& data,
                      assignmentsMap, units, inputIndex, typeCount);
 }
 
-void unpack(UDQActive::InputRecord& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    unpack(data.input_index, buffer, position, comm);
-    unpack(data.udq, buffer, position, comm);
-    unpack(data.wgname, buffer, position, comm);
-    unpack(data.control, buffer, position, comm);
-}
-
-void unpack(UDQActive::Record& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    unpack(data.udq, buffer, position, comm);
-    unpack(data.input_index, buffer, position, comm);
-    unpack(data.use_index, buffer, position, comm);
-    unpack(data.wgname, buffer, position, comm);
-    unpack(data.control, buffer, position, comm);
-    unpack(data.uad_code, buffer, position, comm);
-    unpack(data.use_count, buffer, position, comm);
-}
-
-void unpack(UDQActive& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<UDQActive::InputRecord> inputRecords;
-    std::vector<UDQActive::Record> outputRecords;
-    std::unordered_map<std::string,std::size_t> udqKeys, wgKeys;
-
-    unpack(inputRecords, buffer, position, comm);
-    unpack(outputRecords, buffer, position, comm);
-    unpack(udqKeys, buffer, position, comm);
-    unpack(wgKeys, buffer, position, comm);
-    data = UDQActive(inputRecords, outputRecords, udqKeys, wgKeys);
-}
-
 void unpack(GuideRateModel& data,
             std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
@@ -4906,7 +4805,6 @@ INSTANTIATE_PACK(DynamicState<std::shared_ptr<Action::Actions>>)
 INSTANTIATE_PACK(DynamicState<std::shared_ptr<GConSale>>)
 INSTANTIATE_PACK(DynamicState<std::shared_ptr<GConSump>>)
 INSTANTIATE_PACK(DynamicState<std::shared_ptr<GuideRateConfig>>)
-INSTANTIATE_PACK(DynamicState<std::shared_ptr<UDQActive>>)
 INSTANTIATE_PACK(DynamicState<std::shared_ptr<UDQConfig>>)
 INSTANTIATE_PACK(DynamicState<Tuning>)
 INSTANTIATE_PACK(DynamicState<Well::ProducerCMode>)

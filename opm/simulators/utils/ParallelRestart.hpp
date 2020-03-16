@@ -38,7 +38,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRateConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQAssign.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQActive.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/DenT.hpp>
@@ -564,9 +563,6 @@ ADD_PACK_PROTOTYPES(TlmixparRecord)
 ADD_PACK_PROTOTYPES(TlmixparTable)
 ADD_PACK_PROTOTYPES(Tuning)
 ADD_PACK_PROTOTYPES(UDAValue)
-ADD_PACK_PROTOTYPES(UDQActive)
-ADD_PACK_PROTOTYPES(UDQActive::InputRecord)
-ADD_PACK_PROTOTYPES(UDQActive::Record)
 ADD_PACK_PROTOTYPES(UDQAssign)
 ADD_PACK_PROTOTYPES(UDQAssign::AssignRecord)
 ADD_PACK_PROTOTYPES(UDQConfig)
