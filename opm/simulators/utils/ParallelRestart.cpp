@@ -94,34 +94,6 @@
 
 namespace
 {
-template<template<class, class> class Map, class Type, class Key>
-std::pair<std::vector<Type>, std::vector<std::pair<Key, std::vector<int>>>>
-splitDynMap(const Map<Key, Opm::DynamicState<Type>>& map)
-{
-    // we have to pack the unique ptrs separately, and use an index map
-    // to allow reconstructing the appropriate structures.
-    std::vector<std::pair<Key, std::vector<int>>> asMap;
-    std::vector<Type> unique;
-    for (const auto& it : map) {
-        for (const auto& w : it.second.data()) {
-            if (std::find(unique.begin(), unique.end(), w) == unique.end())
-                unique.push_back(w);
-        }
-    }
-    for (const auto& it : map) {
-        std::vector<int> idxVec;
-        idxVec.reserve(it.second.size()+1);
-        for (const auto& w : it.second.data()) {
-            auto uIt = std::find(unique.begin(), unique.end(), w);
-            idxVec.push_back(uIt-unique.begin());
-        }
-        idxVec.push_back(it.second.initialRange());
-        asMap.push_back(std::make_pair(it.first, idxVec));
-    }
-
-    return std::make_pair(unique, asMap);
-}
-
 template<class Type>
 std::pair<std::vector<Type>, std::vector<int>>
 splitDynState(const Opm::DynamicState<Type>& state)
