@@ -41,7 +41,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Tuning.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQDefine.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunction.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQInput.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunctionTable.hpp>
@@ -1100,15 +1099,6 @@ std::size_t packSize(const WListManager& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.lists(), comm);
-}
-
-std::size_t packSize(const UDQDefine& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.keyword(), comm) +
-           packSize(data.getAst(), comm) +
-           packSize(data.var_type(), comm) +
-           packSize(data.input_string(), comm);
 }
 
 std::size_t packSize(const UDQIndex& data,
@@ -2395,16 +2385,6 @@ void pack(const WListManager& data,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.lists(), buffer, position, comm);
-}
-
-void pack(const UDQDefine& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.keyword(), buffer, position, comm);
-    pack(data.getAst(), buffer, position, comm);
-    pack(data.var_type(), buffer, position, comm);
-    pack(data.input_string(), buffer, position, comm);
 }
 
 void pack(const UDQIndex& data,
@@ -4153,22 +4133,6 @@ void unpack(WListManager& data,
     std::map<std::string,WList> lists;
     unpack(lists, buffer, position, comm);
     data = WListManager(lists);
-}
-
-void unpack(UDQDefine& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::string keyword;
-    std::shared_ptr<UDQASTNode> ast;
-    UDQVarType varType;
-    std::string string_data;
-
-    unpack(keyword, buffer, position, comm);
-    unpack(ast, buffer, position, comm);
-    unpack(varType, buffer, position, comm);
-    unpack(string_data, buffer, position, comm);
-    data = UDQDefine(keyword, ast, varType, string_data);
 }
 
 void unpack(UDQIndex& data,
