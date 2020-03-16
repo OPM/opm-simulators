@@ -40,7 +40,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/ScheduleTypes.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Tuning.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunction.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunctionTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
@@ -1098,17 +1097,6 @@ std::size_t packSize(const WListManager& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.lists(), comm);
-}
-
-std::size_t packSize(const UDQConfig& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.params(), comm) +
-           packSize(data.definitionMap(), comm) +
-           packSize(data.assignmentMap(), comm) +
-           packSize(data.unitsMap(), comm) +
-           packSize(data.inputIndex(), comm) +
-           packSize(data.typeCount(), comm);
 }
 
 std::size_t packSize(const GuideRateModel& data,
@@ -2375,18 +2363,6 @@ void pack(const WListManager& data,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.lists(), buffer, position, comm);
-}
-
-void pack(const UDQConfig& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.params(), buffer, position, comm);
-    pack(data.definitionMap(), buffer, position, comm);
-    pack(data.assignmentMap(), buffer, position, comm);
-    pack(data.unitsMap(), buffer, position, comm);
-    pack(data.inputIndex(), buffer, position, comm);
-    pack(data.typeCount(), buffer, position, comm);
 }
 
 void pack(const GuideRateModel& data,
@@ -4115,29 +4091,6 @@ void unpack(WListManager& data,
     data = WListManager(lists);
 }
 
-void unpack(UDQConfig& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    UDQParams params;
-    UDQFunctionTable function_table;
-    std::unordered_map<std::string,UDQDefine> definitionsMap;
-    std::unordered_map<std::string,UDQAssign> assignmentsMap;
-    std::unordered_map<std::string,std::string> units;
-    OrderedMap<std::string,UDQIndex> inputIndex;
-    std::map<UDQVarType,std::size_t> typeCount;
-
-    unpack(params, buffer, position, comm);
-    function_table = UDQFunctionTable(params);
-    unpack(definitionsMap, buffer, position, comm);
-    unpack(assignmentsMap, buffer, position, comm);
-    unpack(units, buffer, position, comm);
-    unpack(inputIndex, buffer, position, comm);
-    unpack(typeCount, buffer, position, comm);
-    data = UDQConfig(params, function_table, definitionsMap,
-                     assignmentsMap, units, inputIndex, typeCount);
-}
-
 void unpack(GuideRateModel& data,
             std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
@@ -4686,7 +4639,6 @@ INSTANTIATE_PACK(DynamicState<std::shared_ptr<Action::Actions>>)
 INSTANTIATE_PACK(DynamicState<std::shared_ptr<GConSale>>)
 INSTANTIATE_PACK(DynamicState<std::shared_ptr<GConSump>>)
 INSTANTIATE_PACK(DynamicState<std::shared_ptr<GuideRateConfig>>)
-INSTANTIATE_PACK(DynamicState<std::shared_ptr<UDQConfig>>)
 INSTANTIATE_PACK(DynamicState<Tuning>)
 INSTANTIATE_PACK(DynamicState<Well::ProducerCMode>)
 INSTANTIATE_PACK(DynamicState<std::shared_ptr<WellTestConfig>>)

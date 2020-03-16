@@ -1717,7 +1717,7 @@ BOOST_AUTO_TEST_CASE(UDQConfig)
 {
 #ifdef HAVE_MPI
     Opm::UDQConfig val1 = getUDQConfig();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(UDQConfig)
 #endif
 }
