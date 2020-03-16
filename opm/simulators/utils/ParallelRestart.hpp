@@ -125,7 +125,6 @@ class TlmixparRecord;
 class TlmixparTable;
 class Tuning;
 class UDAValue;
-class UDQASTNode;
 class UDQConfig;
 class UDQDefine;
 class UDQIndex;
@@ -570,7 +569,6 @@ ADD_PACK_PROTOTYPES(UDQActive::InputRecord)
 ADD_PACK_PROTOTYPES(UDQActive::Record)
 ADD_PACK_PROTOTYPES(UDQAssign)
 ADD_PACK_PROTOTYPES(UDQAssign::AssignRecord)
-ADD_PACK_PROTOTYPES(UDQASTNode)
 ADD_PACK_PROTOTYPES(UDQConfig)
 ADD_PACK_PROTOTYPES(UDQDefine)
 ADD_PACK_PROTOTYPES(UDQIndex)

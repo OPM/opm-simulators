@@ -40,7 +40,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/ScheduleTypes.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Tuning.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQASTNode.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQDefine.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunction.hpp>
@@ -1101,20 +1100,6 @@ std::size_t packSize(const WListManager& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.lists(), comm);
-}
-
-
-
-std::size_t packSize(const UDQASTNode& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.var_type, comm) +
-           packSize(data.getType(), comm) +
-           packSize(data.stringValue(), comm) +
-           packSize(data.scalarValue(), comm) +
-           packSize(data.getSelectors(), comm) +
-           packSize(data.getLeft(), comm) +
-           packSize(data.getRight(), comm);
 }
 
 std::size_t packSize(const UDQDefine& data,
@@ -2455,20 +2440,6 @@ void pack(const WListManager& data,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.lists(), buffer, position, comm);
-}
-
-
-void pack(const UDQASTNode& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.var_type, buffer, position, comm);
-    pack(data.getType(), buffer, position, comm);
-    pack(data.stringValue(), buffer, position, comm);
-    pack(data.scalarValue(), buffer, position, comm);
-    pack(data.getSelectors(), buffer, position, comm);
-    pack(data.getLeft(), buffer, position, comm);
-    pack(data.getRight(), buffer, position, comm);
 }
 
 void pack(const UDQDefine& data,
@@ -4279,29 +4250,6 @@ void unpack(WListManager& data,
     data = WListManager(lists);
 }
 
-
-void unpack(UDQASTNode& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    UDQVarType var_type;
-    UDQTokenType type;
-    std::string stringValue;
-    double scalarValue;
-    std::vector<std::string> selectors;
-    std::shared_ptr<UDQASTNode> left;
-    std::shared_ptr<UDQASTNode> right;
-
-    unpack(var_type, buffer, position, comm);
-    unpack(type, buffer, position, comm);
-    unpack(stringValue, buffer, position, comm);
-    unpack(scalarValue, buffer, position, comm);
-    unpack(selectors, buffer, position, comm);
-    unpack(left, buffer, position, comm);
-    unpack(right, buffer, position, comm);
-    data = UDQASTNode(var_type, type, stringValue, scalarValue, selectors, left, right);
-}
-
 void unpack(UDQDefine& data,
             std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
@@ -4948,7 +4896,9 @@ INSTANTIATE_PACK(std::map<FaceDir::DirEnum,std::vector<double>>)
 INSTANTIATE_PACK(std::map<std::string,Events>)
 INSTANTIATE_PACK(std::map<std::string,std::vector<int>>)
 INSTANTIATE_PACK(std::map<std::string,std::map<std::pair<int,int>,int>>)
+INSTANTIATE_PACK(std::map<UDQVarType,std::size_t>)
 INSTANTIATE_PACK(std::unordered_map<std::string,size_t>)
+INSTANTIATE_PACK(std::unordered_map<std::string,std::string>)
 INSTANTIATE_PACK(std::pair<bool,double>)
 INSTANTIATE_PACK(DynamicState<int>)
 INSTANTIATE_PACK(DynamicState<OilVaporizationProperties>)

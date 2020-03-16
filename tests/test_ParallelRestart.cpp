@@ -1671,7 +1671,7 @@ BOOST_AUTO_TEST_CASE(UDQASTNode)
     Opm::UDQASTNode val1(Opm::UDQVarType::NONE,
                          Opm::UDQTokenType::error,
                          "test", 1.0, {"test3"}, n1, n1);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(UDQASTNode)
 #endif
 }
