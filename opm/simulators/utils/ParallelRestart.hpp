@@ -128,7 +128,6 @@ class RocktabTable;
 class Rock2dTable;
 class Rock2dtrTable;
 class Runspec;
-class Schedule;
 class Segment;
 class ShrateRecord;
 class ShrateTable;
@@ -598,7 +597,6 @@ ADD_PACK_PROTOTYPES(Rock2dTable)
 ADD_PACK_PROTOTYPES(Rock2dtrTable)
 ADD_PACK_PROTOTYPES(RocktabTable)
 ADD_PACK_PROTOTYPES(Runspec)
-ADD_PACK_PROTOTYPES(Schedule)
 ADD_PACK_PROTOTYPES(Segment)
 ADD_PACK_PROTOTYPES(ShrateRecord)
 ADD_PACK_PROTOTYPES(ShrateTable)
@@ -661,31 +659,6 @@ ADD_PACK_PROTOTYPES(WellTracerProperties)
 ADD_PACK_PROTOTYPES(WList)
 ADD_PACK_PROTOTYPES(WListManager)
 
-template<class T, class C>
-const T& packAndSend(const T& in, const C& comm)
-{
-    if (comm.size() == 1)
-        return in;
-
-    std::size_t size = packSize(in, comm);
-    std::vector<char> buffer(size);
-    int pos = 0;
-    Mpi::pack(in, buffer, pos, comm);
-    comm.broadcast(&pos, 1, 0);
-    comm.broadcast(buffer.data(), pos, 0);
-    return in;
-}
-
-template<class T, class C>
-void receiveAndUnpack(T& result, const C& comm)
-{
-    int size;
-    comm.broadcast(&size, 1, 0);
-    std::vector<char> buffer(size);
-    comm.broadcast(buffer.data(), size, 0);
-    int pos = 0;
-    unpack(result, buffer, pos, comm);
-}
 } // end namespace Mpi
 
 RestartValue loadParallelRestart(const EclipseIO* eclIO, SummaryState& summaryState,

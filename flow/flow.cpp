@@ -352,18 +352,14 @@ int main(int argc, char** argv)
 
             Opm::FlowMainEbos<PreTypeTag>::printPRTHeader(outputCout);
 
-#ifdef HAVE_MPI
-            Opm::ParallelEclipseState* parState;
-#endif
             if (mpiRank == 0) {
                 deck.reset( new Opm::Deck( parser.parseFile(deckFilename , parseContext, errorGuard)));
                 Opm::MissingFeatures::checkKeywords(*deck, parseContext, errorGuard);
                 if ( outputCout )
                     Opm::checkDeck(*deck, parser, parseContext, errorGuard);
 
-#ifdef HAVE_MPI
-                parState = new Opm::ParallelEclipseState(*deck);
-                eclipseState.reset(parState);
+#if HAVE_MPI
+                eclipseState.reset(new Opm::ParallelEclipseState(*deck));
 #else
                 eclipseState.reset(new Opm::EclipseState(*deck));
 #endif
@@ -385,21 +381,17 @@ int main(int argc, char** argv)
 
                 setupMessageLimiter(schedule->getMessageLimits(), "STDOUT_LOGGER");
                 summaryConfig.reset( new Opm::SummaryConfig(*deck, *schedule, eclipseState->getTableManager(), parseContext, errorGuard));
-#ifdef HAVE_MPI
-                Opm::Mpi::packAndSend(*schedule, Dune::MPIHelper::getCollectiveCommunication());
-#endif
             }
-#ifdef HAVE_MPI
+#if HAVE_MPI
             else {
                 summaryConfig.reset(new Opm::SummaryConfig);
                 schedule.reset(new Opm::Schedule);
-                parState = new Opm::ParallelEclipseState;
-                Opm::Mpi::receiveAndUnpack(*schedule, mpiHelper.getCollectiveCommunication());
-                eclipseState.reset(parState);
+                eclipseState.reset(new Opm::ParallelEclipseState);
             }
             Opm::EclMpiSerializer ser(mpiHelper.getCollectiveCommunication());
             ser.broadcast(*summaryConfig);
-            ser.broadcast(*parState);
+            ser.broadcast(*eclipseState);
+            ser.broadcast(*schedule);
 #endif
 
             Opm::checkConsistentArrayDimensions(*eclipseState, *schedule, parseContext, errorGuard);
