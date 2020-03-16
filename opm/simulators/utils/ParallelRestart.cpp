@@ -1111,21 +1111,6 @@ std::size_t packSize(const UDQDefine& data,
            packSize(data.input_string(), comm);
 }
 
-std::size_t packSize(const UDQAssign::AssignRecord& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.selector, comm) +
-           packSize(data.value, comm);
-}
-
-std::size_t packSize(const UDQAssign& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.keyword(), comm) +
-           packSize(data.var_type(), comm) +
-           packSize(data.getRecords(), comm);
-}
-
 std::size_t packSize(const UDQIndex& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -2420,23 +2405,6 @@ void pack(const UDQDefine& data,
     pack(data.getAst(), buffer, position, comm);
     pack(data.var_type(), buffer, position, comm);
     pack(data.input_string(), buffer, position, comm);
-}
-
-void pack(const UDQAssign::AssignRecord& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.selector, buffer, position, comm);
-    pack(data.value, buffer, position, comm);
-}
-
-void pack(const UDQAssign& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.keyword(), buffer, position, comm);
-    pack(data.var_type(), buffer, position, comm);
-    pack(data.getRecords(), buffer, position, comm);
 }
 
 void pack(const UDQIndex& data,
@@ -4201,27 +4169,6 @@ void unpack(UDQDefine& data,
     unpack(varType, buffer, position, comm);
     unpack(string_data, buffer, position, comm);
     data = UDQDefine(keyword, ast, varType, string_data);
-}
-
-void unpack(UDQAssign::AssignRecord& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    unpack(data.selector, buffer, position, comm);
-    unpack(data.value, buffer, position, comm);
-}
-
-void unpack(UDQAssign& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::string keyword;
-    UDQVarType varType;
-    std::vector<UDQAssign::AssignRecord> records;
-    unpack(keyword, buffer, position, comm);
-    unpack(varType, buffer, position, comm);
-    unpack(records, buffer, position, comm);
-    data = UDQAssign(keyword, varType, records);
 }
 
 void unpack(UDQIndex& data,

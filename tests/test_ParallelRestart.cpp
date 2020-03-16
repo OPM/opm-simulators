@@ -1697,7 +1697,7 @@ BOOST_AUTO_TEST_CASE(UDQAssign)
     Opm::UDQAssign val1("test", Opm::UDQVarType::NONE,
                         {Opm::UDQAssign::AssignRecord{{"test1"}, 1.0},
                          Opm::UDQAssign::AssignRecord{{"test2"}, 2.0}});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(UDQAssign)
 #endif
 }
