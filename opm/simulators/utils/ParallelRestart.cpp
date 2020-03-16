@@ -23,12 +23,7 @@
 
 #include "ParallelRestart.hpp"
 #include <opm/common/OpmLog/Location.hpp>
-#include <opm/parser/eclipse/EclipseState/EclipseConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
-#include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
-#include <opm/parser/eclipse/EclipseState/InitConfig/FoamConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionAST.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/Actions.hpp>
@@ -541,29 +536,6 @@ std::size_t packSize(const TableContainer& data, Dune::MPIHelper::MPICommunicato
     return res;
 }
 
-std::size_t packSize(const Equil& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.records(), comm);
-}
-
-std::size_t packSize(const FoamConfig& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.records(), comm) +
-           packSize(data.getTransportPhase(), comm) +
-           packSize(data.getMobilityModel(), comm);
-}
-
-std::size_t packSize(const InitConfig& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getEquil(), comm) +
-           packSize(data.getFoamConfig(), comm) +
-           packSize(data.filleps(), comm) +
-           packSize(data.hasGravity(), comm) +
-           packSize(data.restartRequested(), comm) +
-           packSize(data.getRestartStep(), comm) +
-           packSize(data.getRestartRootName(), comm);
-}
-
 std::size_t packSize(const TimeMap& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.timeList(), comm);
@@ -577,22 +549,6 @@ std::size_t packSize(const RestartConfig& data, Dune::MPIHelper::MPICommunicator
            packSize(data.restartSchedule(), comm) +
            packSize(data.restartKeywords(), comm) +
            packSize(data.saveKeywords(), comm);
-}
-
-std::size_t packSize(const IOConfig& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getWriteINITFile(), comm) +
-           packSize(data.getWriteEGRIDFile(), comm) +
-           packSize(data.getUNIFIN(), comm) +
-           packSize(data.getUNIFOUT(), comm) +
-           packSize(data.getFMTIN(), comm) +
-           packSize(data.getFMTOUT(), comm) +
-           packSize(data.getDeckFileName(), comm) +
-           packSize(data.getOutputEnabled(), comm) +
-           packSize(data.getOutputDir(), comm) +
-           packSize(data.getNoSim(), comm) +
-           packSize(data.getBaseName(), comm) +
-           packSize(data.getEclCompatibleRST(), comm);
 }
 
 std::size_t packSize(const Phases& data, Dune::MPIHelper::MPICommunicator comm)
@@ -1447,30 +1403,6 @@ std::size_t packSize(const PvtwsaltTable& data,
           packSize(data.getTableValues(), comm);
 }
 
-std::size_t packSize(const EquilRecord& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.datumDepth(), comm) +
-           packSize(data.datumDepthPressure(), comm) +
-           packSize(data.waterOilContactDepth(), comm) +
-           packSize(data.waterOilContactCapillaryPressure(), comm) +
-           packSize(data.gasOilContactDepth(), comm) +
-           packSize(data.gasOilContactCapillaryPressure(), comm) +
-           packSize(data.liveOilInitConstantRs(), comm) +
-           packSize(data.wetGasInitConstantRv(), comm) +
-           packSize(data.initializationTargetAccuracy(), comm);
-}
-
-std::size_t packSize(const FoamData& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.referenceSurfactantConcentration(), comm) +
-           packSize(data.exponent(), comm) +
-           packSize(data.minimumSurfactantConcentration(), comm) +
-           packSize(data.allowDesorption(), comm) +
-           packSize(data.rockDensity(), comm);
-}
-
 std::size_t packSize(const RestartSchedule& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -1542,13 +1474,6 @@ std::size_t packSize(const GuideRateConfig::GroupTarget& data,
 {
     return packSize(data.guide_rate, comm) +
            packSize(data.target, comm);
-}
-
-std::size_t packSize(const EclipseConfig& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.init(), comm) +
-           packSize(data.io(), comm);
 }
 
 std::size_t packSize(const SolventDensityTable& data,
@@ -2001,32 +1926,6 @@ void pack(const TableContainer& data, std::vector<char>& buffer, int& position,
     }
 }
 
-void pack(const Equil& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.records(), buffer, position, comm);
-}
-
-void pack(const FoamConfig& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.records(), buffer, position, comm);
-    pack(data.getTransportPhase(), buffer, position, comm);
-    pack(data.getMobilityModel(), buffer, position, comm);
-}
-
-void pack(const InitConfig& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getEquil(), buffer, position, comm);
-    pack(data.getFoamConfig(), buffer, position, comm);
-    pack(data.filleps(), buffer, position, comm);
-    pack(data.hasGravity(), buffer, position, comm);
-    pack(data.restartRequested(), buffer, position, comm);
-    pack(data.getRestartStep(), buffer, position, comm);
-    pack(data.getRestartRootName(), buffer, position, comm);
-}
-
 void pack(const TimeMap& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
@@ -2042,23 +1941,6 @@ void pack(const RestartConfig& data, std::vector<char>& buffer, int& position,
     pack(data.restartSchedule(), buffer, position, comm);
     pack(data.restartKeywords(), buffer, position, comm);
     pack(data.saveKeywords(), buffer, position, comm);
-}
-
-void pack(const IOConfig& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getWriteINITFile(), buffer, position, comm);
-    pack(data.getWriteEGRIDFile(), buffer, position, comm);
-    pack(data.getUNIFIN(), buffer, position, comm);
-    pack(data.getUNIFOUT(), buffer, position, comm);
-    pack(data.getFMTIN(), buffer, position, comm);
-    pack(data.getFMTOUT(), buffer, position, comm);
-    pack(data.getDeckFileName(), buffer, position, comm);
-    pack(data.getOutputEnabled(), buffer, position, comm);
-    pack(data.getOutputDir(), buffer, position, comm);
-    pack(data.getNoSim(), buffer, position, comm);
-    pack(data.getBaseName(), buffer, position, comm);
-    pack(data.getEclCompatibleRST(), buffer, position, comm);
 }
 
 void pack(const Phases& data, std::vector<char>& buffer, int& position,
@@ -2936,32 +2818,6 @@ void pack(const PvtwsaltTable& data,
     pack(data.getTableValues(), buffer, position, comm);
 }
 
-void pack(const EquilRecord& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.datumDepth(), buffer, position, comm);
-    pack(data.datumDepthPressure(), buffer, position, comm);
-    pack(data.waterOilContactDepth(), buffer, position, comm);
-    pack(data.waterOilContactCapillaryPressure(), buffer, position, comm);
-    pack(data.gasOilContactDepth(), buffer, position, comm);
-    pack(data.gasOilContactCapillaryPressure(), buffer, position, comm);
-    pack(data.liveOilInitConstantRs(), buffer, position, comm);
-    pack(data.wetGasInitConstantRv(), buffer, position, comm);
-    pack(data.initializationTargetAccuracy(), buffer, position, comm);
-}
-
-void pack(const FoamData& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.referenceSurfactantConcentration(), buffer, position, comm);
-    pack(data.exponent(), buffer, position, comm);
-    pack(data.minimumSurfactantConcentration(), buffer, position, comm);
-    pack(data.allowDesorption(), buffer, position, comm);
-    pack(data.rockDensity(), buffer, position, comm);
-}
-
 void pack(const RestartSchedule& data,
           std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
@@ -3041,14 +2897,6 @@ void pack(const GuideRateConfig::GroupTarget& data,
 {
     pack(data.guide_rate, buffer, position, comm);
     pack(data.target, buffer, position, comm);
-}
-
-void pack(const EclipseConfig& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.init(), buffer, position, comm);
-    pack(data.io(), buffer, position, comm);
 }
 
 void pack(const SolventDensityTable& data,
@@ -3607,45 +3455,6 @@ void unpack(TableContainer& data, std::vector<char>& buffer, int& position,
     }
 }
 
-void unpack(Equil& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<EquilRecord> records;
-    unpack(records, buffer, position, comm);
-    data = Equil(records);
-}
-
-void unpack(FoamConfig& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<FoamData> records;
-    Phase transport_phase;
-    FoamConfig::MobilityModel mobility_model;
-    unpack(records, buffer, position, comm);
-    unpack(transport_phase, buffer, position, comm);
-    unpack(mobility_model, buffer, position, comm);
-    data = FoamConfig(records, transport_phase, mobility_model);
-}
-
-void unpack(InitConfig& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    Equil equil;
-    FoamConfig foam;
-    bool filleps, hasGravity, restartRequested;
-    int restartStep;
-    std::string restartRootName;
-    unpack(equil, buffer, position, comm);
-    unpack(foam, buffer, position, comm);
-    unpack(filleps, buffer, position, comm);
-    unpack(hasGravity, buffer, position, comm);
-    unpack(restartRequested, buffer, position, comm);
-    unpack(restartStep, buffer, position, comm);
-    unpack(restartRootName, buffer, position, comm);
-    data = InitConfig(equil, foam, filleps, hasGravity,
-                      restartRequested, restartStep, restartRootName);
-}
-
 void unpack(TimeMap& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
@@ -3672,30 +3481,6 @@ void unpack(RestartConfig& data, std::vector<char>& buffer, int& position,
     unpack(save_keyw, buffer, position, comm);
     data = RestartConfig(timemap, firstRstStep, writeInitialRst, restart_sched,
                          restart_keyw, save_keyw);
-}
-
-void unpack(IOConfig& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    bool write_init, write_egrid, unifin, unifout, fmtin, fmtout;
-    std::string deck_name, output_dir, base_name;
-    bool output_enabled, no_sim, ecl_compatible_rst;
-
-    unpack(write_init, buffer, position, comm);
-    unpack(write_egrid, buffer, position, comm);
-    unpack(unifin, buffer, position, comm);
-    unpack(unifout, buffer, position, comm);
-    unpack(fmtin, buffer, position, comm);
-    unpack(fmtout, buffer, position, comm);
-    unpack(deck_name, buffer, position, comm);
-    unpack(output_enabled, buffer, position, comm);
-    unpack(output_dir, buffer, position, comm);
-    unpack(no_sim, buffer, position, comm);
-    unpack(base_name, buffer, position, comm);
-    unpack(ecl_compatible_rst, buffer, position, comm);
-    data = IOConfig(write_init, write_egrid, unifin, unifout, fmtin, fmtout,
-                    deck_name, output_enabled, output_dir,
-                    no_sim, base_name, ecl_compatible_rst);
 }
 
 void unpack(Phases& data, std::vector<char>& buffer, int& position,
@@ -5022,49 +4807,6 @@ void unpack(PvtwsaltTable& data, std::vector<char>& buffer, int& position,
     data = PvtwsaltTable(refPressValue, refSaltConValue, tableValues);
 }
 
-void unpack(EquilRecord& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    double datumDepth, datumDepthPressure, waterOilContactDepth;
-    double waterOilContactCapillaryPressure, gasOilContactDepth;
-    double gasOilContactCapillaryPressure;
-    bool liveOilInitConstantRs, wetGasInitConstantRv;
-    int initializationTargetAccuracy;
-
-    unpack(datumDepth, buffer, position, comm);
-    unpack(datumDepthPressure, buffer, position, comm);
-    unpack(waterOilContactDepth, buffer, position, comm);
-    unpack(waterOilContactCapillaryPressure, buffer, position, comm);
-    unpack(gasOilContactDepth, buffer, position, comm);
-    unpack(gasOilContactCapillaryPressure, buffer, position, comm);
-    unpack(liveOilInitConstantRs, buffer, position, comm);
-    unpack(wetGasInitConstantRv, buffer, position, comm);
-    unpack(initializationTargetAccuracy, buffer, position, comm);
-    data = EquilRecord(datumDepth, datumDepthPressure, waterOilContactDepth,
-                       waterOilContactCapillaryPressure, gasOilContactDepth,
-                       gasOilContactCapillaryPressure, liveOilInitConstantRs,
-                       wetGasInitConstantRv, initializationTargetAccuracy);
-}
-
-void unpack(FoamData& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    double referenceSurfactantConcentration, exponent;
-    double minimumSurfactantConcentration;
-    bool allowDesorption;
-    double rockDensity;
-
-    unpack(referenceSurfactantConcentration, buffer, position, comm);
-    unpack(exponent, buffer, position, comm);
-    unpack(minimumSurfactantConcentration, buffer, position, comm);
-    unpack(allowDesorption, buffer, position, comm);
-    unpack(rockDensity, buffer, position, comm);
-    data = FoamData(referenceSurfactantConcentration, exponent,
-                    minimumSurfactantConcentration, allowDesorption, rockDensity);
-}
-
 void unpack(RestartSchedule& data,
             std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
@@ -5160,18 +4902,6 @@ void unpack(GuideRateConfig::GroupTarget& data,
 {
     unpack(data.guide_rate, buffer, position, comm);
     unpack(data.target, buffer, position, comm);
-}
-
-void unpack(EclipseConfig& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    InitConfig init;
-    IOConfig io;
-
-    unpack(init, buffer, position, comm);
-    unpack(io, buffer, position, comm);
-    data = EclipseConfig(init, io);
 }
 
 void unpack(SolventDensityTable& data, std::vector<char>& buffer, int& position,

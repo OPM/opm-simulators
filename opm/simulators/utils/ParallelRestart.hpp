@@ -76,16 +76,9 @@ class DENSITYRecord;
 class DensityTable;
 class Dimension;
 class EclHysterConfig;
-class EclipseConfig;
 class Eqldims;
 class EndpointScaling;
-class Equil;
-class EquilRecord;
 class Events;
-class FoamConfig;
-class FoamData;
-class InitConfig;
-class IOConfig;
 template<class T> class IOrderSet;
 class JFunc;
 class Location;
@@ -517,14 +510,9 @@ ADD_PACK_PROTOTYPES(DenT)
 ADD_PACK_PROTOTYPES(DenT::entry)
 ADD_PACK_PROTOTYPES(Dimension)
 ADD_PACK_PROTOTYPES(EclHysterConfig)
-ADD_PACK_PROTOTYPES(EclipseConfig)
 ADD_PACK_PROTOTYPES(EndpointScaling)
-ADD_PACK_PROTOTYPES(Equil)
 ADD_PACK_PROTOTYPES(Eqldims)
-ADD_PACK_PROTOTYPES(EquilRecord)
 ADD_PACK_PROTOTYPES(Events)
-ADD_PACK_PROTOTYPES(FoamConfig)
-ADD_PACK_PROTOTYPES(FoamData)
 ADD_PACK_PROTOTYPES(GConSale)
 ADD_PACK_PROTOTYPES(GConSale::GCONSALEGroup)
 ADD_PACK_PROTOTYPES(GConSump)
@@ -536,8 +524,6 @@ ADD_PACK_PROTOTYPES(GuideRateModel)
 ADD_PACK_PROTOTYPES(Group)
 ADD_PACK_PROTOTYPES(Group::GroupInjectionProperties)
 ADD_PACK_PROTOTYPES(Group::GroupProductionProperties)
-ADD_PACK_PROTOTYPES(InitConfig)
-ADD_PACK_PROTOTYPES(IOConfig)
 ADD_PACK_PROTOTYPES(JFunc)
 ADD_PACK_PROTOTYPES(Location)
 ADD_PACK_PROTOTYPES(MessageLimits)

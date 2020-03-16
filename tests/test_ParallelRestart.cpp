@@ -793,7 +793,7 @@ BOOST_AUTO_TEST_CASE(EquilRecord)
 {
 #if HAVE_MPI
     Opm::EquilRecord val1 = getEquilRecord();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(EquilRecord)
 #endif
 }
@@ -803,7 +803,7 @@ BOOST_AUTO_TEST_CASE(Equil)
 {
 #if HAVE_MPI
     Opm::Equil val1({getEquilRecord(), getEquilRecord()});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Equil)
 #endif
 }
@@ -813,7 +813,7 @@ BOOST_AUTO_TEST_CASE(FoamData)
 {
 #if HAVE_MPI
     Opm::FoamData val1 = getFoamData();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(FoamData)
 #endif
 }
@@ -823,7 +823,7 @@ BOOST_AUTO_TEST_CASE(FoamConfig)
 {
 #if HAVE_MPI
     Opm::FoamConfig val1 = getFoamConfig();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(FoamConfig)
 #endif
 }
@@ -835,7 +835,7 @@ BOOST_AUTO_TEST_CASE(InitConfig)
     Opm::InitConfig val1(Opm::Equil({getEquilRecord(), getEquilRecord()}),
                          getFoamConfig(),
                          true, true, true, 20, "test1");
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(InitConfig)
 #endif
 }
@@ -901,7 +901,7 @@ BOOST_AUTO_TEST_CASE(IOConfig)
 #if HAVE_MPI
     Opm::IOConfig val1(true, false, true, false, false, true, "test1", true,
                        "test2", true, "test3", false);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(IOConfig)
 #endif
 }
@@ -2267,7 +2267,7 @@ BOOST_AUTO_TEST_CASE(EclipseConfig)
                          true, true, true, 20, "test1");
     Opm::EclipseConfig val1{init, io};
 
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(EclipseConfig)
 #endif
 }
