@@ -51,7 +51,6 @@ public:
     template<class T>
     void vector(std::vector<T>& data)
     {
-        static_assert(!std::is_pod<T>::value, "Do not call this for POD vectors");
         auto handle = [&](auto& d)
         {
             for (auto& it : d) {

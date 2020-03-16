@@ -29,14 +29,12 @@
 #include <opm/parser/eclipse/EclipseState/Grid/FaultCollection.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/FaultFace.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/MULTREGTScanner.hpp>
-#include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/TransMult.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/FoamConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionAST.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/Actions.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionX.hpp>
@@ -68,10 +66,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTracerProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WList.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
-#include <opm/parser/eclipse/EclipseState/SimulationConfig/BCConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/SimulationConfig/RockConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Eqldims.hpp>
@@ -352,7 +346,6 @@ std::size_t packSize(const std::array<T,N>& data, Dune::MPIHelper::MPICommunicat
 
 HANDLE_AS_POD(Actdims)
 HANDLE_AS_POD(Aqudims)
-HANDLE_AS_POD(BCConfig::BCFace)
 HANDLE_AS_POD(data::Connection)
 HANDLE_AS_POD(data::CurrentControl)
 HANDLE_AS_POD(data::Rates)
@@ -366,7 +359,6 @@ HANDLE_AS_POD(PlyvmhRecord)
 HANDLE_AS_POD(PVTWRecord)
 HANDLE_AS_POD(PVCDORecord)
 HANDLE_AS_POD(Regdims)
-HANDLE_AS_POD(RockConfig::RockComp)
 HANDLE_AS_POD(ROCKRecord)
 HANDLE_AS_POD(SatFuncControls)
 HANDLE_AS_POD(ShrateRecord)
@@ -422,14 +414,6 @@ std::size_t packSize(const data::WellRates& data, Dune::MPIHelper::MPICommunicat
 std::size_t packSize(const RestartValue& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.solution, comm) + packSize(data.wells, comm) + packSize(data.extra, comm);
-}
-
-std::size_t packSize(const ThresholdPressure& data, Dune::MPIHelper::MPICommunicator comm)
-{
-   return packSize(data.active(), comm) +
-          packSize(data.restart(), comm) +
-          packSize(data.thresholdPressureTable(), comm) +
-          packSize(data.pressureTable(), comm);
 }
 
 std::size_t packSize(const WellType& data, Dune::MPIHelper::MPICommunicator comm)
@@ -503,31 +487,6 @@ std::size_t packSize(const Aquancon::AquancCell& data, Dune::MPIHelper::MPICommu
 std::size_t packSize(const Aquancon& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.data(), comm);
-}
-
-std::size_t packSize(const BCConfig& bc, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(bc.faces(), comm);
-}
-
-std::size_t packSize(const RockConfig& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.active(), comm) +
-           packSize(data.rocknum_property(), comm) +
-           packSize(data.comp(), comm) +
-           packSize(data.num_rock_tables(), comm) +
-           packSize(data.water_compaction(), comm) +
-           packSize(data.hysteresis_mode(), comm);
-}
-
-std::size_t packSize(const NNC& data, Dune::MPIHelper::MPICommunicator comm)
-{
-   return packSize(data.data(), comm);
-}
-
-std::size_t packSize(const EDITNNC& data, Dune::MPIHelper::MPICommunicator comm)
-{
-   return packSize(data.data(), comm);
 }
 
 std::size_t packSize(const Rock2dTable& data, Dune::MPIHelper::MPICommunicator comm)
@@ -608,17 +567,6 @@ std::size_t packSize(const InitConfig& data, Dune::MPIHelper::MPICommunicator co
            packSize(data.restartRequested(), comm) +
            packSize(data.getRestartStep(), comm) +
            packSize(data.getRestartRootName(), comm);
-}
-
-std::size_t packSize(const SimulationConfig& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getThresholdPressure(), comm) +
-           packSize(data.bcconfig(), comm) +
-           packSize(data.rock_config(), comm) +
-           packSize(data.useCPR(), comm) +
-           packSize(data.hasDISGAS(), comm) +
-           packSize(data.hasVAPOIL(), comm) +
-           packSize(data.isThermal(), comm);
 }
 
 std::size_t packSize(const TimeMap& data, Dune::MPIHelper::MPICommunicator comm)
@@ -1665,12 +1613,6 @@ std::size_t packSize(const SolventDensityTable& data,
     return packSize(data.getSolventDensityColumn(), comm);
 }
 
-std::size_t packSize(const GridDims& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getNXYZ(), comm);
-}
-
 std::size_t packSize(const ShrateTable& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(static_cast<const std::vector<ShrateRecord>&>(data), comm);
@@ -1973,15 +1915,6 @@ void pack(const RestartValue& data, std::vector<char>& buffer, int& position,
     pack(data.extra, buffer, position, comm);
 }
 
-void pack(const ThresholdPressure& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.active(), buffer, position, comm);
-    pack(data.restart(), buffer, position, comm);
-    pack(data.thresholdPressureTable(), buffer, position, comm);
-    pack(data.pressureTable(), buffer, position, comm);
-}
-
 void pack(const AquiferCT::AQUCT_data& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm) {
     pack(data.aquiferID, buffer, position, comm);
@@ -2054,36 +1987,6 @@ void pack(const Aquancon::AquancCell& data, std::vector<char>& buffer, int& posi
 
 void pack(const Aquancon& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm) {
-    pack(data.data(), buffer, position, comm);
-}
-
-void pack(const BCConfig& bc, std::vector<char>& buffer, int& position,
-    Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(bc.faces(), buffer, position, comm);
-}
-
-void pack(const RockConfig& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.active(), buffer, position, comm);
-    pack(data.rocknum_property(), buffer, position, comm);
-    pack(data.comp(), buffer, position, comm);
-    pack(data.num_rock_tables(), buffer, position, comm);
-    pack(data.water_compaction(), buffer, position, comm);
-    pack(data.hysteresis_mode(), buffer, position, comm);
-}
-
-
-void pack(const NNC& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.data(), buffer, position, comm);
-}
-
-void pack(const EDITNNC& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
     pack(data.data(), buffer, position, comm);
 }
 
@@ -2178,18 +2081,6 @@ void pack(const InitConfig& data, std::vector<char>& buffer, int& position,
     pack(data.restartRequested(), buffer, position, comm);
     pack(data.getRestartStep(), buffer, position, comm);
     pack(data.getRestartRootName(), buffer, position, comm);
-}
-
-void pack(const SimulationConfig& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getThresholdPressure(), buffer, position, comm);
-    pack(data.bcconfig(), buffer, position, comm);
-    pack(data.rock_config(), buffer, position, comm);
-    pack(data.useCPR(), buffer, position, comm);
-    pack(data.hasDISGAS(), buffer, position, comm);
-    pack(data.hasVAPOIL(), buffer, position, comm);
-    pack(data.isThermal(), buffer, position, comm);
 }
 
 void pack(const TimeMap& data, std::vector<char>& buffer, int& position,
@@ -3280,13 +3171,6 @@ void pack(const SolventDensityTable& data,
     pack(data.getSolventDensityColumn(), buffer, position, comm);
 }
 
-void pack(const GridDims& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getNXYZ(), buffer, position, comm);
-}
-
 void pack(const ShrateTable& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
@@ -3524,7 +3408,7 @@ void unpack(std::string& str, std::vector<char>& buffer, int& position,
     unpack(length, buffer, position, comm);
     std::vector<char> cStr(length, '\0');
     unpack(cStr.data(), length, buffer, position, comm);
-    assert(str.empty());
+    str.clear();
     str.append(cStr.data());
 }
 
@@ -3611,40 +3495,6 @@ void unpack(RestartValue& data, std::vector<char>& buffer, int& position,
     unpack(data.solution, buffer, position, comm);
     unpack(data.wells, buffer, position, comm);
     unpack(data.extra, buffer, position, comm);
-}
-
-void unpack(RockConfig& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    RockConfig rock_config;
-    bool active;
-    std::vector<RockConfig::RockComp> rock_comp;
-    std::string rocknum_property;
-    std::size_t num_rock_tables;
-    bool water_compaction;
-    RockConfig::Hysteresis hyst_mode;
-
-    unpack(active, buffer, position, comm);
-    unpack(rocknum_property, buffer, position, comm);
-    unpack(rock_comp, buffer, position, comm);
-    unpack(num_rock_tables, buffer, position, comm);
-    unpack(water_compaction, buffer, position, comm);
-    unpack(hyst_mode, buffer, position, comm);
-    data = RockConfig(active, rock_comp, rocknum_property, num_rock_tables, water_compaction, hyst_mode);
-}
-
-void unpack(ThresholdPressure& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    ThresholdPressure::ThresholdPressureTable thpTable;
-    ThresholdPressure::PressureTable pTable;
-    bool active, restart;
-    unpack(active, buffer, position, comm);
-    unpack(restart, buffer, position, comm);
-    unpack(thpTable, buffer, position, comm);
-    unpack(pTable, buffer, position, comm);
-
-    data = ThresholdPressure(active, restart, thpTable, pTable);
 }
 
 void unpack(AquiferCT::AQUCT_data& data, std::vector<char>& buffer, int& position, Dune::MPIHelper::MPICommunicator comm)
@@ -3780,31 +3630,6 @@ void unpack(Aquancon& data, std::vector<char>& buffer, int& position, Dune::MPIH
     data = Aquancon(aquiferCells);
 }
 
-void unpack(BCConfig& bc, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<BCConfig::BCFace> faces;
-
-    unpack(faces, buffer, position, comm);
-    bc = BCConfig(faces);
-}
-
-void unpack(NNC& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<NNCdata> res;
-    unpack(res, buffer, position, comm);
-    data = NNC(res);
-}
-
-void unpack(EDITNNC& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<NNCdata> res;
-    unpack(res, buffer, position, comm);
-    data = EDITNNC(res);
-}
-
 void unpack(Rock2dTable& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
@@ -3932,23 +3757,6 @@ void unpack(InitConfig& data, std::vector<char>& buffer, int& position,
     unpack(restartRootName, buffer, position, comm);
     data = InitConfig(equil, foam, filleps, hasGravity,
                       restartRequested, restartStep, restartRootName);
-}
-
-void unpack(SimulationConfig& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    ThresholdPressure thresholdPressure;
-    BCConfig bc;
-    RockConfig rock_config;
-    bool useCPR, DISGAS, VAPOIL, isThermal;
-    unpack(thresholdPressure, buffer, position, comm);
-    unpack(bc, buffer, position, comm);
-    unpack(rock_config, buffer, position, comm);
-    unpack(useCPR, buffer, position, comm);
-    unpack(DISGAS, buffer, position, comm);
-    unpack(VAPOIL, buffer, position, comm);
-    unpack(isThermal, buffer, position, comm);
-    data = SimulationConfig(thresholdPressure, bc, rock_config, useCPR, DISGAS, VAPOIL, isThermal);
 }
 
 void unpack(TimeMap& data, std::vector<char>& buffer, int& position,
@@ -5569,16 +5377,6 @@ void unpack(SolventDensityTable& data, std::vector<char>& buffer, int& position,
 
     unpack(tableValues, buffer, position, comm);
     data = SolventDensityTable(tableValues);
-}
-
-void unpack(GridDims& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::array<int,3> NXYZ;
-
-    unpack(NXYZ, buffer, position, comm);
-    data = GridDims(NXYZ);
 }
 
 void unpack(ShrateTable& data, std::vector<char>& buffer, int& position,

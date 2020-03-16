@@ -41,8 +41,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQActive.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/SimulationConfig/BCConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/SimulationConfig/RockConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/DenT.hpp>
 #include <opm/parser/eclipse/EclipseState/Util/OrderedMap.hpp>
 
@@ -80,7 +78,6 @@ class Dimension;
 class EclHysterConfig;
 class EclipseConfig;
 class Eqldims;
-class EDITNNC;
 class EndpointScaling;
 class Equil;
 class EquilRecord;
@@ -90,7 +87,6 @@ class FaultCollection;
 class FaultFace;
 class FoamConfig;
 class FoamData;
-class GridDims;
 class InitConfig;
 class IOConfig;
 template<class T> class IOrderSet;
@@ -100,8 +96,6 @@ class MessageLimits;
 class MLimits;
 class MULTREGTRecord;
 class MULTREGTScanner;
-class NNC;
-struct NNCdata;
 class OilVaporizationProperties;
 class Phases;
 class PlymwinjTable;
@@ -131,7 +125,6 @@ class Runspec;
 class Segment;
 class ShrateRecord;
 class ShrateTable;
-class SimulationConfig;
 class SimpleTable;
 class SkprpolyTable;
 class SkprwatTable;
@@ -145,7 +138,6 @@ class TableColumn;
 class TableContainer;
 class TableManager;
 class TableSchema;
-class ThresholdPressure;
 class TimeStampUTC;
 class TlmixparRecord;
 class TlmixparTable;
@@ -510,8 +502,6 @@ ADD_PACK_PROTOTYPES(AquiferCT)
 ADD_PACK_PROTOTYPES(AquiferCT::AQUCT_data)
 ADD_PACK_PROTOTYPES(Aquifetp)
 ADD_PACK_PROTOTYPES(Aquifetp::AQUFETP_data)
-ADD_PACK_PROTOTYPES(BCConfig)
-ADD_PACK_PROTOTYPES(BCConfig::BCFace)
 ADD_PACK_PROTOTYPES(BrineDensityTable)
 ADD_PACK_PROTOTYPES(ColumnSchema)
 ADD_PACK_PROTOTYPES(Connection)
@@ -534,7 +524,6 @@ ADD_PACK_PROTOTYPES(DenT::entry)
 ADD_PACK_PROTOTYPES(Dimension)
 ADD_PACK_PROTOTYPES(EclHysterConfig)
 ADD_PACK_PROTOTYPES(EclipseConfig)
-ADD_PACK_PROTOTYPES(EDITNNC)
 ADD_PACK_PROTOTYPES(EndpointScaling)
 ADD_PACK_PROTOTYPES(Equil)
 ADD_PACK_PROTOTYPES(Eqldims)
@@ -549,7 +538,6 @@ ADD_PACK_PROTOTYPES(GConSale)
 ADD_PACK_PROTOTYPES(GConSale::GCONSALEGroup)
 ADD_PACK_PROTOTYPES(GConSump)
 ADD_PACK_PROTOTYPES(GConSump::GCONSUMPGroup)
-ADD_PACK_PROTOTYPES(GridDims)
 ADD_PACK_PROTOTYPES(GuideRateConfig)
 ADD_PACK_PROTOTYPES(GuideRateConfig::GroupTarget)
 ADD_PACK_PROTOTYPES(GuideRateConfig::WellTarget)
@@ -565,8 +553,6 @@ ADD_PACK_PROTOTYPES(MessageLimits)
 ADD_PACK_PROTOTYPES(MLimits)
 ADD_PACK_PROTOTYPES(MULTREGTRecord)
 ADD_PACK_PROTOTYPES(MULTREGTScanner)
-ADD_PACK_PROTOTYPES(NNC)
-ADD_PACK_PROTOTYPES(NNCdata)
 ADD_PACK_PROTOTYPES(OilVaporizationProperties)
 ADD_PACK_PROTOTYPES(Phases)
 ADD_PACK_PROTOTYPES(PlmixparRecord)
@@ -589,8 +575,6 @@ ADD_PACK_PROTOTYPES(RestartKey)
 ADD_PACK_PROTOTYPES(RestartSchedule)
 ADD_PACK_PROTOTYPES(RestartValue)
 ADD_PACK_PROTOTYPES(RFTConfig)
-ADD_PACK_PROTOTYPES(RockConfig)
-ADD_PACK_PROTOTYPES(RockConfig::RockComp)
 ADD_PACK_PROTOTYPES(ROCKRecord)
 ADD_PACK_PROTOTYPES(RockTable)
 ADD_PACK_PROTOTYPES(Rock2dTable)
@@ -600,7 +584,6 @@ ADD_PACK_PROTOTYPES(Runspec)
 ADD_PACK_PROTOTYPES(Segment)
 ADD_PACK_PROTOTYPES(ShrateRecord)
 ADD_PACK_PROTOTYPES(ShrateTable)
-ADD_PACK_PROTOTYPES(SimulationConfig)
 ADD_PACK_PROTOTYPES(SimpleTable)
 ADD_PACK_PROTOTYPES(SkprpolyTable)
 ADD_PACK_PROTOTYPES(SkprwatTable)
@@ -614,7 +597,6 @@ ADD_PACK_PROTOTYPES(TableColumn)
 ADD_PACK_PROTOTYPES(TableContainer)
 ADD_PACK_PROTOTYPES(TableManager)
 ADD_PACK_PROTOTYPES(TableSchema)
-ADD_PACK_PROTOTYPES(ThresholdPressure)
 ADD_PACK_PROTOTYPES(TimeMap)
 ADD_PACK_PROTOTYPES(TimeStampUTC)
 ADD_PACK_PROTOTYPES(TlmixparRecord)
