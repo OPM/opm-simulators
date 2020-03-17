@@ -80,9 +80,7 @@ class PlmixparRecord;
 class PlmixparTable;
 class PvtgTable;
 class PvtoTable;
-class PVTWRecord;
 class PvtwsaltTable;
-class PvtwTable;
 class Regdims;
 class RestartConfig;
 class RestartSchedule;
@@ -498,9 +496,7 @@ ADD_PACK_PROTOTYPES(PVCDORecord)
 ADD_PACK_PROTOTYPES(PvcdoTable)
 ADD_PACK_PROTOTYPES(PvtgTable)
 ADD_PACK_PROTOTYPES(PvtoTable)
-ADD_PACK_PROTOTYPES(PVTWRecord)
 ADD_PACK_PROTOTYPES(PvtwsaltTable)
-ADD_PACK_PROTOTYPES(PvtwTable)
 ADD_PACK_PROTOTYPES(Regdims)
 ADD_PACK_PROTOTYPES(RestartConfig)
 ADD_PACK_PROTOTYPES(RestartKey)
