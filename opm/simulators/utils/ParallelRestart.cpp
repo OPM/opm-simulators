@@ -25,7 +25,6 @@
 #include <opm/parser/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionAST.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/Actions.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionX.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/Condition.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/icd.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/SpiralICD.hpp>
@@ -686,20 +685,6 @@ std::size_t packSize(const Action::Condition& data,
            packSize(data.logic, comm) +
            packSize(data.cmp, comm) +
            packSize(data.cmp_string, comm);
-}
-
-std::size_t packSize(const Action::ActionX& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.name(), comm) +
-           packSize(data.max_run(), comm) +
-           packSize(data.min_wait(), comm) +
-           packSize(data.start_time(), comm) +
-           packSize(data.getKeywords(), comm) +
-           packSize(data.getCondition(), comm) +
-           packSize(data.conditions(), comm) +
-           packSize(data.getRunCount(), comm) +
-           packSize(data.getLastRun(), comm);
 }
 
 std::size_t packSize(const Action::Actions& data,
@@ -1372,21 +1357,6 @@ void pack(const Action::Condition& data,
     pack(data.logic, buffer, position, comm);
     pack(data.cmp, buffer, position, comm);
     pack(data.cmp_string, buffer, position, comm);
-}
-
-void pack(const Action::ActionX& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.name(), buffer, position, comm);
-    pack(data.max_run(), buffer, position, comm);
-    pack(data.min_wait(), buffer, position, comm);
-    pack(data.start_time(), buffer, position, comm);
-    pack(data.getKeywords(), buffer, position, comm);
-    pack(data.getCondition(), buffer, position, comm);
-    pack(data.conditions(), buffer, position, comm);
-    pack(data.getRunCount(), buffer, position, comm);
-    pack(data.getLastRun(), buffer, position, comm);
 }
 
 void pack(const Action::Actions& data,
@@ -2296,32 +2266,6 @@ void unpack(Action::Condition& data, std::vector<char>& buffer, int& position,
     unpack(data.logic, buffer, position, comm);
     unpack(data.cmp, buffer, position, comm);
     unpack(data.cmp_string, buffer, position, comm);
-}
-
-void unpack(Action::ActionX& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::string name;
-    size_t max_run;
-    double min_wait;
-    std::time_t start_time;
-    std::vector<DeckKeyword> keywords;
-    Action::AST condition;
-    std::vector<Action::Condition> conditions;
-    size_t run_count;
-    std::time_t last_run;
-
-    unpack(name, buffer, position, comm);
-    unpack(max_run, buffer, position, comm);
-    unpack(min_wait, buffer, position, comm);
-    unpack(start_time, buffer, position, comm);
-    unpack(keywords, buffer, position, comm);
-    unpack(condition, buffer, position, comm);
-    unpack(conditions, buffer, position, comm);
-    unpack(run_count, buffer, position, comm);
-    unpack(last_run, buffer, position, comm);
-    data = Action::ActionX(name, max_run, min_wait, start_time, keywords,
-                           condition, conditions, run_count, last_run);
 }
 
 void unpack(Action::Actions& data, std::vector<char>& buffer, int& position,
