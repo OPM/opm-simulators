@@ -74,8 +74,6 @@ class PlyshlogTable;
 class PlyvmhRecord;
 class PlyvmhTable;
 class PolyInjTable;
-class PVCDORecord;
-class PvcdoTable;
 class PlmixparRecord;
 class PlmixparTable;
 class PvtgTable;
@@ -490,8 +488,6 @@ ADD_PACK_PROTOTYPES(PlyshlogTable)
 ADD_PACK_PROTOTYPES(PlyvmhRecord)
 ADD_PACK_PROTOTYPES(PlyvmhTable)
 ADD_PACK_PROTOTYPES(PolyInjTable)
-ADD_PACK_PROTOTYPES(PVCDORecord)
-ADD_PACK_PROTOTYPES(PvcdoTable)
 ADD_PACK_PROTOTYPES(PvtgTable)
 ADD_PACK_PROTOTYPES(PvtoTable)
 ADD_PACK_PROTOTYPES(PvtwsaltTable)
