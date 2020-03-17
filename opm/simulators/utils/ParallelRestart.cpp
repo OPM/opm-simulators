@@ -54,8 +54,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/FlatTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/PlymwinjTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/PolyInjTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PvtgTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PvtoTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Regdims.hpp>
@@ -64,7 +62,6 @@
 #include <opm/parser/eclipse/EclipseState/Tables/RocktabTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SkprpolyTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/SkprwatTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/StandardCond.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableColumn.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableContainer.hpp>
@@ -440,28 +437,10 @@ std::size_t packSize(const PvtoTable& data, Dune::MPIHelper::MPICommunicator com
     return packSize(static_cast<const PvtxTable&>(data), comm);
 }
 
-std::size_t packSize(const PolyInjTable& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getThroughputs(), comm) +
-           packSize(data.getVelocities(), comm) +
-           packSize(data.getTableNumber(), comm) +
-           packSize(data.getTableData(), comm);
-}
-
-std::size_t packSize(const PlymwinjTable& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(static_cast<const PolyInjTable&>(data), comm);
-}
-
 std::size_t packSize(const SkprpolyTable& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(static_cast<const PolyInjTable&>(data), comm) +
            packSize(data.referenceConcentration(), comm);
-}
-
-std::size_t packSize(const SkprwatTable& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(static_cast<const PolyInjTable&>(data), comm);
 }
 
 namespace {
@@ -1551,32 +1530,11 @@ void pack(const PvtoTable& data, std::vector<char>& buffer, int& position,
     pack(static_cast<const PvtxTable&>(data), buffer, position, comm);
 }
 
-void pack(const PolyInjTable& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getThroughputs(), buffer, position, comm);
-    pack(data.getVelocities(), buffer, position, comm);
-    pack(data.getTableNumber(), buffer, position, comm);
-    pack(data.getTableData(), buffer, position, comm);
-}
-
-void pack(const PlymwinjTable& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(static_cast<const PolyInjTable&>(data), buffer, position, comm);
-}
-
 void pack(const SkprpolyTable& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(static_cast<const PolyInjTable&>(data), buffer, position, comm);
     pack(data.referenceConcentration(), buffer, position, comm);
-}
-
-void pack(const SkprwatTable& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(static_cast<const PolyInjTable&>(data), buffer, position, comm);
 }
 
 void pack(const TableManager& data, std::vector<char>& buffer, int& position,
@@ -2727,25 +2685,6 @@ void unpack(PvtoTable& data, std::vector<char>& buffer, int& position,
     unpack_pvt(data, buffer, position, comm);
 }
 
-void unpack(PolyInjTable& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<double> throughputs, velocities;
-    int tableNumber;
-    std::vector<std::vector<double>> tableData;
-    unpack(throughputs, buffer, position, comm);
-    unpack(velocities, buffer, position, comm);
-    unpack(tableNumber, buffer, position, comm);
-    unpack(tableData, buffer, position, comm);
-    data = PolyInjTable(throughputs, velocities, tableNumber, tableData);
-}
-
-void unpack(PlymwinjTable& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    unpack(static_cast<PolyInjTable&>(data), buffer, position, comm);
-}
-
 void unpack(SkprpolyTable& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
@@ -2753,12 +2692,6 @@ void unpack(SkprpolyTable& data, std::vector<char>& buffer, int& position,
     double refConcentration;
     unpack(refConcentration, buffer, position, comm);
     data.setReferenceConcentration(refConcentration);
-}
-
-void unpack(SkprwatTable& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    unpack(static_cast<PolyInjTable&>(data), buffer, position, comm);
 }
 
 void unpack(TableManager& data, std::vector<char>& buffer, int& position,

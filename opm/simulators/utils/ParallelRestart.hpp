@@ -68,10 +68,8 @@ class Location;
 class MessageLimits;
 class MLimits;
 class OilVaporizationProperties;
-class PlymwinjTable;
 class PlyvmhRecord;
 class PlyvmhTable;
-class PolyInjTable;
 class PvtgTable;
 class PvtoTable;
 class PvtwsaltTable;
@@ -85,7 +83,6 @@ class Rock2dtrTable;
 class Segment;
 class SimpleTable;
 class SkprpolyTable;
-class SkprwatTable;
 class SolventDensityTable;
 class SpiralICD;
 class StandardCond;
@@ -466,10 +463,8 @@ ADD_PACK_PROTOTYPES(Location)
 ADD_PACK_PROTOTYPES(MessageLimits)
 ADD_PACK_PROTOTYPES(MLimits)
 ADD_PACK_PROTOTYPES(OilVaporizationProperties)
-ADD_PACK_PROTOTYPES(PlymwinjTable)
 ADD_PACK_PROTOTYPES(PlyvmhRecord)
 ADD_PACK_PROTOTYPES(PlyvmhTable)
-ADD_PACK_PROTOTYPES(PolyInjTable)
 ADD_PACK_PROTOTYPES(PvtgTable)
 ADD_PACK_PROTOTYPES(PvtoTable)
 ADD_PACK_PROTOTYPES(PvtwsaltTable)
@@ -485,7 +480,6 @@ ADD_PACK_PROTOTYPES(RocktabTable)
 ADD_PACK_PROTOTYPES(Segment)
 ADD_PACK_PROTOTYPES(SimpleTable)
 ADD_PACK_PROTOTYPES(SkprpolyTable)
-ADD_PACK_PROTOTYPES(SkprwatTable)
 ADD_PACK_PROTOTYPES(SolventDensityTable)
 ADD_PACK_PROTOTYPES(SpiralICD)
 ADD_PACK_PROTOTYPES(std::string)
