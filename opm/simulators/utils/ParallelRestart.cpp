@@ -308,7 +308,6 @@ HANDLE_AS_POD(data::Segment)
 HANDLE_AS_POD(MLimits)
 HANDLE_AS_POD(PlyvmhRecord)
 HANDLE_AS_POD(Regdims)
-HANDLE_AS_POD(ShrateRecord)
 HANDLE_AS_POD(StandardCond)
 HANDLE_AS_POD(Stone1exRecord)
 HANDLE_AS_POD(Tabdims)
@@ -1202,11 +1201,6 @@ std::size_t packSize(const SolventDensityTable& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.getSolventDensityColumn(), comm);
-}
-
-std::size_t packSize(const ShrateTable& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(static_cast<const std::vector<ShrateRecord>&>(data), comm);
 }
 
 std::size_t packSize(const TlmixparTable& data, Dune::MPIHelper::MPICommunicator comm)
@@ -2370,12 +2364,6 @@ void pack(const SolventDensityTable& data,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.getSolventDensityColumn(), buffer, position, comm);
-}
-
-void pack(const ShrateTable& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(static_cast<const std::vector<ShrateRecord>&>(data), buffer, position, comm);
 }
 
 void pack(const TlmixparTable& data, std::vector<char>& buffer, int& position,
@@ -3987,14 +3975,6 @@ void unpack(SolventDensityTable& data, std::vector<char>& buffer, int& position,
 
     unpack(tableValues, buffer, position, comm);
     data = SolventDensityTable(tableValues);
-}
-
-void unpack(ShrateTable& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<ShrateRecord> pdata;
-    unpack(pdata, buffer, position, comm);
-    data = ShrateTable(pdata);
 }
 
 void unpack(TlmixparTable& data, std::vector<char>& buffer, int& position,

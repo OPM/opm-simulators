@@ -85,8 +85,6 @@ class RocktabTable;
 class Rock2dTable;
 class Rock2dtrTable;
 class Segment;
-class ShrateRecord;
-class ShrateTable;
 class SimpleTable;
 class SkprpolyTable;
 class SkprwatTable;
@@ -497,8 +495,6 @@ ADD_PACK_PROTOTYPES(Rock2dTable)
 ADD_PACK_PROTOTYPES(Rock2dtrTable)
 ADD_PACK_PROTOTYPES(RocktabTable)
 ADD_PACK_PROTOTYPES(Segment)
-ADD_PACK_PROTOTYPES(ShrateRecord)
-ADD_PACK_PROTOTYPES(ShrateTable)
 ADD_PACK_PROTOTYPES(SimpleTable)
 ADD_PACK_PROTOTYPES(SkprpolyTable)
 ADD_PACK_PROTOTYPES(SkprwatTable)
