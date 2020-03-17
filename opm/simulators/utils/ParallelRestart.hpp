@@ -97,8 +97,6 @@ class TableContainer;
 class TableManager;
 class TableSchema;
 class TimeStampUTC;
-class TlmixparRecord;
-class TlmixparTable;
 class Tuning;
 class UDAValue;
 class UnitSystem;
@@ -506,8 +504,6 @@ ADD_PACK_PROTOTYPES(TableManager)
 ADD_PACK_PROTOTYPES(TableSchema)
 ADD_PACK_PROTOTYPES(TimeMap)
 ADD_PACK_PROTOTYPES(TimeStampUTC)
-ADD_PACK_PROTOTYPES(TlmixparRecord)
-ADD_PACK_PROTOTYPES(TlmixparTable)
 ADD_PACK_PROTOTYPES(Tuning)
 ADD_PACK_PROTOTYPES(UDAValue)
 ADD_PACK_PROTOTYPES(UnitSystem)

@@ -311,7 +311,6 @@ HANDLE_AS_POD(Regdims)
 HANDLE_AS_POD(StandardCond)
 HANDLE_AS_POD(Tabdims)
 HANDLE_AS_POD(TimeStampUTC::YMD)
-HANDLE_AS_POD(TlmixparRecord)
 HANDLE_AS_POD(Tuning)
 HANDLE_AS_POD(VISCREFRecord)
 HANDLE_AS_POD(WATDENTRecord)
@@ -1200,11 +1199,6 @@ std::size_t packSize(const SolventDensityTable& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.getSolventDensityColumn(), comm);
-}
-
-std::size_t packSize(const TlmixparTable& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(static_cast<const std::vector<TlmixparRecord>&>(data), comm);
 }
 
 std::size_t packSize(const PlyvmhTable& data, Dune::MPIHelper::MPICommunicator comm)
@@ -2358,12 +2352,6 @@ void pack(const SolventDensityTable& data,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.getSolventDensityColumn(), buffer, position, comm);
-}
-
-void pack(const TlmixparTable& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(static_cast<const std::vector<TlmixparRecord>&>(data), buffer, position, comm);
 }
 
 void pack(const PlyvmhTable& data, std::vector<char>& buffer, int& position,
@@ -3963,14 +3951,6 @@ void unpack(SolventDensityTable& data, std::vector<char>& buffer, int& position,
 
     unpack(tableValues, buffer, position, comm);
     data = SolventDensityTable(tableValues);
-}
-
-void unpack(TlmixparTable& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<TlmixparRecord> pdata;
-    unpack(pdata, buffer, position, comm);
-    data = TlmixparTable(pdata);
 }
 
 void unpack(PlyvmhTable& data, std::vector<char>& buffer, int& position,
