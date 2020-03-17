@@ -654,17 +654,6 @@ std::size_t packSize(const Group& data,
            packSize(data.productionProperties(), comm);
 }
 
-std::size_t packSize(const DeckKeyword& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.name(), comm) +
-           packSize(data.location(), comm) +
-           packSize(data.records(), comm) +
-           packSize(data.isDataKeyword(), comm) +
-           packSize(data.isSlashTerminated(), comm);
-}
-
-
 std::size_t packSize(const Deck& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -1345,17 +1334,6 @@ void pack(const Group& data,
     pack(data.igroups(), buffer, position, comm);
     pack(data.injectionProperties(), buffer, position, comm);
     pack(data.productionProperties(), buffer, position, comm);
-}
-
-void pack(const DeckKeyword& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.name(), buffer, position, comm);
-    pack(data.location(), buffer, position, comm);
-    pack(data.records(), buffer, position, comm);
-    pack(data.isDataKeyword(), buffer, position, comm);
-    pack(data.isSlashTerminated(), buffer, position, comm);
 }
 
 void pack(const Deck& data,
@@ -2274,24 +2252,6 @@ void unpack(Group& data,
                  availableForGroupControl,
                  groupNetVFPTable, parent, wells, groups,
                  injection, production);
-}
-
-void unpack(DeckKeyword& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::string name;
-    Location location;
-    std::vector<DeckRecord> records;
-    bool isDataKeyword, isSlashTerminated;
-
-    unpack(name, buffer, position, comm);
-    unpack(location, buffer, position, comm);
-    unpack(records, buffer, position, comm);
-    unpack(isDataKeyword, buffer, position, comm);
-    unpack(isSlashTerminated, buffer, position, comm);
-    data = DeckKeyword(name, location, records,
-                       isDataKeyword, isSlashTerminated);
 }
 
 void unpack(Deck& data, std::vector<char>& buffer, int& position,
