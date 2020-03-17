@@ -1808,7 +1808,7 @@ BOOST_AUTO_TEST_CASE(GuideRateModel)
 {
 #ifdef HAVE_MPI
     Opm::GuideRateModel val1 = getGuideRateModel();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(GuideRateModel)
 #endif
 }

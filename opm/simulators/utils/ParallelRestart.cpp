@@ -657,19 +657,6 @@ std::size_t packSize(const Group& data,
            packSize(data.productionProperties(), comm);
 }
 
-std::size_t packSize(const GuideRateModel& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.timeInterval(), comm) +
-           packSize(data.target(), comm) +
-           packSize(data.coefs(), comm) +
-           packSize(data.allow_increase(), comm) +
-           packSize(data.damping_factor(), comm) +
-           packSize(data.free_gas(), comm) +
-           packSize(data.defaultModel(), comm) +
-           packSize(data.udaCoefs(), comm);
-}
-
 std::size_t packSize(const GuideRateConfig& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -1456,20 +1443,6 @@ void pack(const Group& data,
     pack(data.igroups(), buffer, position, comm);
     pack(data.injectionProperties(), buffer, position, comm);
     pack(data.productionProperties(), buffer, position, comm);
-}
-
-void pack(const GuideRateModel& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.timeInterval(), buffer, position, comm);
-    pack(data.target(), buffer, position, comm);
-    pack(data.coefs(), buffer, position, comm);
-    pack(data.allow_increase(), buffer, position, comm);
-    pack(data.damping_factor(), buffer, position, comm);
-    pack(data.free_gas(), buffer, position, comm);
-    pack(data.defaultModel(), buffer, position, comm);
-    pack(data.udaCoefs(), buffer, position, comm);
 }
 
 void pack(const GuideRateConfig& data,
@@ -2505,29 +2478,6 @@ void unpack(Group& data,
                  availableForGroupControl,
                  groupNetVFPTable, parent, wells, groups,
                  injection, production);
-}
-
-void unpack(GuideRateModel& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    double timeInterval;
-    GuideRateModel::Target target;
-    std::array<double,6> coefs;
-    bool allow_increase, free_gas, defaultModel;
-    double damping_factor;
-    std::array<UDAValue,3> udaCoefs;
-
-    unpack(timeInterval, buffer, position, comm);
-    unpack(target, buffer, position, comm);
-    unpack(coefs, buffer, position, comm);
-    unpack(allow_increase, buffer, position, comm);
-    unpack(damping_factor, buffer, position, comm);
-    unpack(free_gas, buffer, position, comm);
-    unpack(defaultModel, buffer, position, comm);
-    unpack(udaCoefs, buffer, position, comm);
-    data = GuideRateModel(timeInterval, target, coefs, allow_increase,
-                          damping_factor, free_gas, defaultModel, udaCoefs);
 }
 
 void unpack(GuideRateConfig& data,
