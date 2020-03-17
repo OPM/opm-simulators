@@ -72,7 +72,6 @@ class RestartSchedule;
 class RFTConfig;
 class Segment;
 class SpiralICD;
-class TimeStampUTC;
 class Tuning;
 class UDAValue;
 class UnitSystem;
@@ -452,7 +451,6 @@ ADD_PACK_PROTOTYPES(Segment)
 ADD_PACK_PROTOTYPES(SpiralICD)
 ADD_PACK_PROTOTYPES(std::string)
 ADD_PACK_PROTOTYPES(TimeMap)
-ADD_PACK_PROTOTYPES(TimeStampUTC)
 ADD_PACK_PROTOTYPES(Tuning)
 ADD_PACK_PROTOTYPES(UDAValue)
 ADD_PACK_PROTOTYPES(UnitSystem)
