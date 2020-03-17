@@ -1783,7 +1783,7 @@ BOOST_AUTO_TEST_CASE(Aquancon)
 {
 #ifdef HAVE_MPI
     Opm::Aquancon val1 = getAquancon();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Aquancon);
 #endif
 }

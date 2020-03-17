@@ -27,7 +27,6 @@
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/output/eclipse/Summary.hpp>
 #include <opm/parser/eclipse/EclipseState/AquiferConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/Aquancon.hpp>
 #include <opm/parser/eclipse/EclipseState/AquiferCT.hpp>
 #include <opm/parser/eclipse/EclipseState/Aquifetp.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/DynamicState.hpp>
@@ -467,8 +466,6 @@ ADD_PACK_PROTOTYPES(Action::Condition)
 ADD_PACK_PROTOTYPES(Action::Quantity)
 ADD_PACK_PROTOTYPES(Aqudims)
 ADD_PACK_PROTOTYPES(AquiferConfig)
-ADD_PACK_PROTOTYPES(Aquancon)
-ADD_PACK_PROTOTYPES(Aquancon::AquancCell)
 ADD_PACK_PROTOTYPES(AquiferCT)
 ADD_PACK_PROTOTYPES(AquiferCT::AQUCT_data)
 ADD_PACK_PROTOTYPES(Aquifetp)

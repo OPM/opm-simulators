@@ -428,20 +428,6 @@ std::size_t packSize(const AquiferConfig& data, Dune::MPIHelper::MPICommunicator
            packSize(data.connections(), comm);
 }
 
-std::size_t packSize(const Aquancon::AquancCell& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.aquiferID, comm) +
-           packSize(data.global_index, comm) +
-           packSize(data.influx_coeff, comm) +
-           packSize(data.influx_mult, comm) +
-           packSize(data.face_dir, comm);
-}
-
-std::size_t packSize(const Aquancon& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.data(), comm);
-}
-
 std::size_t packSize(const Rock2dTable& data, Dune::MPIHelper::MPICommunicator comm)
 {
    return packSize(data.pvmultValues(), comm) +
@@ -1678,20 +1664,6 @@ void pack(const AquiferConfig& data, std::vector<char>& buffer, int& position,
     pack(data.fetp(), buffer, position, comm);
     pack(data.ct(), buffer, position, comm);
     pack(data.connections(), buffer, position, comm);
-}
-
-void pack(const Aquancon::AquancCell& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm) {
-    pack(data.aquiferID, buffer, position, comm);
-    pack(data.global_index, buffer, position, comm);
-    pack(data.influx_coeff, buffer, position, comm);
-    pack(data.influx_mult, buffer, position, comm);
-    pack(data.face_dir, buffer, position, comm);
-}
-
-void pack(const Aquancon& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm) {
-    pack(data.data(), buffer, position, comm);
 }
 
 void pack(const Rock2dTable& data, std::vector<char>& buffer, int& position,
@@ -3021,25 +2993,6 @@ void unpack(Aquifetp& data, std::vector<char>& buffer, int& position, Dune::MPIH
     data = Aquifetp(aquiferList);
 }
 
-
-void unpack(Aquancon::AquancCell& data, std::vector<char>& buffer, int& position, Dune::MPIHelper::MPICommunicator comm)
-{
-    int aquiferID;
-    std::size_t globalIndex;
-    std::pair<bool, double> influxCoeff;
-    double influxMult;
-    FaceDir::DirEnum faceDir;
-
-    unpack(aquiferID, buffer, position, comm);
-    unpack(globalIndex, buffer, position, comm);
-    unpack(influxCoeff, buffer, position, comm);
-    unpack(influxMult, buffer, position, comm);
-    unpack(faceDir, buffer, position, comm);
-
-    data = Aquancon::AquancCell(aquiferID, globalIndex, influxCoeff, influxMult, faceDir);
-}
-
-
 void unpack(AquiferConfig& data, std::vector<char>& buffer, int& position, Dune::MPIHelper::MPICommunicator comm) {
     Aquifetp fetp;
     AquiferCT ct;
@@ -3049,14 +3002,6 @@ void unpack(AquiferConfig& data, std::vector<char>& buffer, int& position, Dune:
     unpack(ct, buffer, position, comm);
     unpack(conn, buffer, position, comm);
     data = AquiferConfig(fetp, ct, conn);
-}
-
-
-void unpack(Aquancon& data, std::vector<char>& buffer, int& position, Dune::MPIHelper::MPICommunicator comm)
-{
-    std::unordered_map<int, std::vector<Aquancon::AquancCell>> aquiferCells;
-    unpack(aquiferCells, buffer, position, comm);
-    data = Aquancon(aquiferCells);
 }
 
 void unpack(Rock2dTable& data, std::vector<char>& buffer, int& position,
