@@ -380,22 +380,6 @@ std::size_t packSize(const DenT& data, Dune::MPIHelper::MPICommunicator comm)
     return packSize(data.records(), comm);
 }
 
-std::size_t packSize(const Aquifetp& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.data(), comm);
-}
-
-std::size_t packSize(const Aquifetp::AQUFETP_data& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.aquiferID, comm) +
-           packSize(data.pvttableID, comm) +
-           packSize(data.J, comm) +
-           packSize(data.C_t, comm) +
-           packSize(data.V0, comm) +
-           packSize(data.d0, comm) +
-           packSize(data.p0, comm);
-}
-
 std::size_t packSize(const AquiferConfig& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.fetp(), comm) +
@@ -1580,17 +1564,6 @@ void pack(const RestartValue& data, std::vector<char>& buffer, int& position,
     pack(data.extra, buffer, position, comm);
 }
 
-void pack(const Aquifetp::AQUFETP_data& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm) {
-    pack(data.aquiferID, buffer, position, comm);
-    pack(data.pvttableID, buffer, position, comm);
-    pack(data.J, buffer, position, comm);
-    pack(data.C_t, buffer, position, comm);
-    pack(data.V0, buffer, position, comm);
-    pack(data.d0, buffer, position, comm);
-    pack(data.p0, buffer, position, comm);
-}
-
 void pack(const WellType& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm) {
     pack(data.producer(), buffer, position, comm);
@@ -1600,12 +1573,6 @@ void pack(const WellType& data, std::vector<char>& buffer, int& position,
 void pack(const DenT& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm) {
     pack(data.records(), buffer, position, comm);
-}
-
-
-void pack(const Aquifetp& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm) {
-    pack(data.data(), buffer, position, comm);
 }
 
 void pack(const AquiferConfig& data, std::vector<char>& buffer, int& position,
@@ -2863,30 +2830,6 @@ void unpack(DenT& data, std::vector<char>& buffer, int& position, Dune::MPIHelpe
     std::vector<DenT::entry> records;
     unpack(records, buffer, position, comm);
     data = DenT( records );
-}
-
-void unpack(Aquifetp::AQUFETP_data& data, std::vector<char>& buffer, int& position, Dune::MPIHelper::MPICommunicator comm)
-{
-    int aquiferID;
-    int pvttableID;
-    double  J, C_t, V0, d0;
-    std::pair<bool, double> p0;
-
-    unpack(aquiferID, buffer, position, comm);
-    unpack(pvttableID, buffer, position, comm);
-    unpack(J, buffer, position, comm);
-    unpack(C_t, buffer, position, comm);
-    unpack(V0, buffer, position, comm);
-    unpack(d0, buffer, position, comm);
-    unpack(p0, buffer, position, comm);
-    data = Aquifetp::AQUFETP_data(aquiferID, pvttableID, J, C_t, V0, d0, p0);
-}
-
-void unpack(Aquifetp& data, std::vector<char>& buffer, int& position, Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<Aquifetp::AQUFETP_data> aquiferList;
-    unpack(aquiferList, buffer, position, comm);
-    data = Aquifetp(aquiferList);
 }
 
 void unpack(AquiferConfig& data, std::vector<char>& buffer, int& position, Dune::MPIHelper::MPICommunicator comm) {

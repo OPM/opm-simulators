@@ -1773,7 +1773,7 @@ BOOST_AUTO_TEST_CASE(Aquifetp)
 {
 #ifdef HAVE_MPI
     Opm::Aquifetp val1 = getAquifetp();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Aquifetp);
 #endif
 }

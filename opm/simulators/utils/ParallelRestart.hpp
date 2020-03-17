@@ -27,7 +27,6 @@
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/output/eclipse/Summary.hpp>
 #include <opm/parser/eclipse/EclipseState/AquiferConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/Aquifetp.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/DynamicState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/DynamicVector.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GConSale.hpp>
@@ -465,8 +464,6 @@ ADD_PACK_PROTOTYPES(Action::Condition)
 ADD_PACK_PROTOTYPES(Action::Quantity)
 ADD_PACK_PROTOTYPES(Aqudims)
 ADD_PACK_PROTOTYPES(AquiferConfig)
-ADD_PACK_PROTOTYPES(Aquifetp)
-ADD_PACK_PROTOTYPES(Aquifetp::AQUFETP_data)
 ADD_PACK_PROTOTYPES(BrineDensityTable)
 ADD_PACK_PROTOTYPES(ColumnSchema)
 ADD_PACK_PROTOTYPES(Connection)
