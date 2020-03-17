@@ -777,18 +777,6 @@ std::size_t packSize(const GConSump& data,
     return packSize(data.getGroups(), comm);
 }
 
-std::size_t packSize(const RFTConfig& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.timeMap(), comm) +
-           packSize(data.firstRFTOutput(), comm) +
-           packSize(data.wellOpenRftTime(), comm) +
-           packSize(data.wellOpenRftName(), comm) +
-           packSize(data.wellOpen(), comm) +
-           packSize(data.rftConfig(), comm) +
-           packSize(data.pltConfig(), comm);
-}
-
 std::size_t packSize(const DeckItem& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -1659,19 +1647,6 @@ void pack(const GConSump& data,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.getGroups(), buffer, position, comm);
-}
-
-void pack(const RFTConfig& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.timeMap(), buffer, position, comm);
-    pack(data.firstRFTOutput(), buffer, position, comm);
-    pack(data.wellOpenRftTime(), buffer, position, comm);
-    pack(data.wellOpenRftName(), buffer, position, comm);
-    pack(data.wellOpen(), buffer, position, comm);
-    pack(data.rftConfig(), buffer, position, comm);
-    pack(data.pltConfig(), buffer, position, comm);
 }
 
 void pack(const DeckItem& data,
@@ -2825,30 +2800,6 @@ void unpack(GConSump& data,
     data = GConSump(groups);
 }
 
-void unpack(RFTConfig& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    TimeMap timeMap;
-    std::size_t first_rft;
-    std::pair<bool, std::size_t> wellOpenRftTime;
-    RFTConfig::WellOpenTimeMap wellOpenRftName;
-    RFTConfig::WellOpenTimeMap wellOpen;
-    RFTConfig::RFTMap rftConfig;
-    RFTConfig::PLTMap pltConfig;
-
-    unpack(timeMap, buffer, position, comm);
-    unpack(first_rft, buffer, position, comm);
-    unpack(wellOpenRftTime, buffer, position, comm);
-    unpack(wellOpenRftName, buffer, position, comm);
-    unpack(wellOpen, buffer, position, comm);
-    unpack(rftConfig, buffer, position, comm);
-    unpack(pltConfig, buffer, position, comm);
-    data = RFTConfig(timeMap, first_rft, wellOpenRftTime, wellOpenRftName,
-                     wellOpen, rftConfig, pltConfig);
-}
-
-
 void unpack(DeckItem& data,
             std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
@@ -3074,6 +3025,8 @@ INSTANTIATE_PACK_VECTOR(std::shared_ptr<Well>)
 INSTANTIATE_PACK_VECTOR(std::map<std::string,int>)
 INSTANTIATE_PACK_VECTOR(std::pair<std::string,std::vector<int>>)
 INSTANTIATE_PACK_VECTOR(std::pair<int,std::vector<int>>)
+INSTANTIATE_PACK_VECTOR(std::pair<RFTConfig::RFT,std::size_t>)
+INSTANTIATE_PACK_VECTOR(std::pair<RFTConfig::PLT,std::size_t>)
 
 #undef INSTANTIATE_PACK_VECTOR
 
@@ -3134,6 +3087,7 @@ INSTANTIATE_PACK(std::map<UDQVarType,std::size_t>)
 INSTANTIATE_PACK(std::unordered_map<std::string,size_t>)
 INSTANTIATE_PACK(std::unordered_map<std::string,std::string>)
 INSTANTIATE_PACK(std::pair<bool,double>)
+INSTANTIATE_PACK(std::pair<bool,std::size_t>)
 INSTANTIATE_PACK(DynamicState<int>)
 INSTANTIATE_PACK(DynamicState<OilVaporizationProperties>)
 INSTANTIATE_PACK(DynamicState<std::shared_ptr<Action::Actions>>)

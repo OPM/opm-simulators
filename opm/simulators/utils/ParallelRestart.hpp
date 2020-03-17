@@ -67,7 +67,6 @@ class Location;
 class MessageLimits;
 class MLimits;
 class OilVaporizationProperties;
-class RFTConfig;
 class Segment;
 class SpiralICD;
 class Tuning;
@@ -442,7 +441,6 @@ ADD_PACK_PROTOTYPES(MLimits)
 ADD_PACK_PROTOTYPES(OilVaporizationProperties)
 ADD_PACK_PROTOTYPES(RestartKey)
 ADD_PACK_PROTOTYPES(RestartValue)
-ADD_PACK_PROTOTYPES(RFTConfig)
 ADD_PACK_PROTOTYPES(Segment)
 ADD_PACK_PROTOTYPES(SpiralICD)
 ADD_PACK_PROTOTYPES(std::string)

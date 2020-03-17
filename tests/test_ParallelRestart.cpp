@@ -1913,7 +1913,7 @@ BOOST_AUTO_TEST_CASE(RFTConfig)
                         {{"test3", 2}},
                         {{"test1", {{{Opm::RFTConfig::RFT::TIMESTEP, 3}}, 4}}},
                         {{"test2", {{{Opm::RFTConfig::PLT::REPT, 5}}, 6}}});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(RFTConfig)
 #endif
 }
