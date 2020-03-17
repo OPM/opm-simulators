@@ -866,7 +866,7 @@ BOOST_AUTO_TEST_CASE(RestartSchedule)
 {
 #if HAVE_MPI
     Opm::RestartSchedule val1(1, 2, 3);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(RestartSchedule)
 #endif
 }
@@ -891,7 +891,7 @@ BOOST_AUTO_TEST_CASE(RestartConfig)
     Opm::IOConfig io(true, false, true, false, false, true, "test1", true,
                      "test2", true, "test3", false);
     Opm::RestartConfig val1(getTimeMap(), 1, true, rsched, rkw, {false, true});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(RestartConfig)
 #endif
 }

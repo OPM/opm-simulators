@@ -67,8 +67,6 @@ class Location;
 class MessageLimits;
 class MLimits;
 class OilVaporizationProperties;
-class RestartConfig;
-class RestartSchedule;
 class RFTConfig;
 class Segment;
 class SpiralICD;
@@ -442,9 +440,7 @@ ADD_PACK_PROTOTYPES(Location)
 ADD_PACK_PROTOTYPES(MessageLimits)
 ADD_PACK_PROTOTYPES(MLimits)
 ADD_PACK_PROTOTYPES(OilVaporizationProperties)
-ADD_PACK_PROTOTYPES(RestartConfig)
 ADD_PACK_PROTOTYPES(RestartKey)
-ADD_PACK_PROTOTYPES(RestartSchedule)
 ADD_PACK_PROTOTYPES(RestartValue)
 ADD_PACK_PROTOTYPES(RFTConfig)
 ADD_PACK_PROTOTYPES(Segment)

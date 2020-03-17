@@ -24,7 +24,6 @@
 #include "ParallelRestart.hpp"
 #include <opm/common/OpmLog/Location.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/FaceDir.hpp>
-#include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionAST.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/Actions.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionX.hpp>
@@ -339,16 +338,6 @@ std::size_t packSize(const WellType& data, Dune::MPIHelper::MPICommunicator comm
 std::size_t packSize(const TimeMap& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.timeList(), comm);
-}
-
-std::size_t packSize(const RestartConfig& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.timeMap(), comm) +
-           packSize(data.getFirstRestartStep(), comm) +
-           packSize(data.writeInitialRst(), comm) +
-           packSize(data.restartSchedule(), comm) +
-           packSize(data.restartKeywords(), comm) +
-           packSize(data.saveKeywords(), comm);
 }
 
 template
@@ -904,16 +893,6 @@ std::size_t packSize(const Action::Actions& data,
     return packSize(data.getActions(), comm);
 }
 
-std::size_t packSize(const RestartSchedule& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.timestep, comm) +
-           packSize(data.basic, comm) +
-           packSize(data.frequency, comm) +
-           packSize(data.rptsched_restart_set, comm) +
-           packSize(data.rptsched_restart, comm);
-}
-
 std::size_t packSize(const WellPolymerProperties& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -1219,17 +1198,6 @@ void pack(const TimeMap& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.timeList(), buffer, position, comm);
-}
-
-void pack(const RestartConfig& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.timeMap(), buffer, position, comm);
-    pack(data.getFirstRestartStep(), buffer, position, comm);
-    pack(data.writeInitialRst(), buffer, position, comm);
-    pack(data.restartSchedule(), buffer, position, comm);
-    pack(data.restartKeywords(), buffer, position, comm);
-    pack(data.saveKeywords(), buffer, position, comm);
 }
 
 void pack(const OilVaporizationProperties& data,
@@ -1820,17 +1788,6 @@ void pack(const Action::Actions& data,
     pack(data.getActions(), buffer, position, comm);
 }
 
-void pack(const RestartSchedule& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.timestep, buffer, position, comm);
-    pack(data.basic, buffer, position, comm);
-    pack(data.frequency, buffer, position, comm);
-    pack(data.rptsched_restart_set, buffer, position, comm);
-    pack(data.rptsched_restart, buffer, position, comm);
-}
-
 void pack(const WellPolymerProperties& data,
           std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
@@ -2163,25 +2120,6 @@ void unpack(TimeMap& data, std::vector<char>& buffer, int& position,
     unpack(timeList, buffer, position, comm);
 
     data = TimeMap(timeList);
-}
-
-void unpack(RestartConfig& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    TimeMap timemap;
-    int firstRstStep;
-    bool writeInitialRst;
-    DynamicState<RestartSchedule> restart_sched;
-    DynamicState<std::map<std::string,int>> restart_keyw;
-    std::vector<bool> save_keyw;
-    unpack(timemap, buffer, position, comm);
-    unpack(firstRstStep, buffer, position, comm);
-    unpack(writeInitialRst, buffer, position, comm);
-    unpack(restart_sched, buffer, position, comm);
-    unpack(restart_keyw, buffer, position, comm);
-    unpack(save_keyw, buffer, position, comm);
-    data = RestartConfig(timemap, firstRstStep, writeInitialRst, restart_sched,
-                         restart_keyw, save_keyw);
 }
 
 void unpack(OilVaporizationProperties& data,
@@ -3070,17 +3008,6 @@ void unpack(Action::Actions& data, std::vector<char>& buffer, int& position,
     std::vector<Action::ActionX> actions;
     unpack(actions, buffer, position, comm);
     data = Action::Actions(actions);
-}
-
-void unpack(RestartSchedule& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    unpack(data.timestep, buffer, position, comm);
-    unpack(data.basic, buffer, position, comm);
-    unpack(data.frequency, buffer, position, comm);
-    unpack(data.rptsched_restart_set, buffer, position, comm);
-    unpack(data.rptsched_restart, buffer, position, comm);
 }
 
 void unpack(WellPolymerProperties& data,
