@@ -164,6 +164,11 @@ public:
         return m_position;
     }
 
+    bool isSerializing() const
+    {
+        return m_op != Operation::UNPACK;
+    }
+
 protected:
     template<class T>
     struct is_pair {
