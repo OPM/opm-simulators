@@ -54,7 +54,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/FlatTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/Regdims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/RocktabTable.hpp>
@@ -300,7 +299,6 @@ HANDLE_AS_POD(data::Rates)
 HANDLE_AS_POD(data::Segment)
 HANDLE_AS_POD(MLimits)
 HANDLE_AS_POD(PlyvmhRecord)
-HANDLE_AS_POD(Regdims)
 HANDLE_AS_POD(StandardCond)
 HANDLE_AS_POD(Tabdims)
 HANDLE_AS_POD(TimeStampUTC::YMD)
