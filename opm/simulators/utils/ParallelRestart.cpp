@@ -289,7 +289,6 @@ HANDLE_AS_POD(data::CurrentControl)
 HANDLE_AS_POD(data::Rates)
 HANDLE_AS_POD(data::Segment)
 HANDLE_AS_POD(MLimits)
-HANDLE_AS_POD(PlyvmhRecord)
 HANDLE_AS_POD(Tabdims)
 HANDLE_AS_POD(TimeStampUTC::YMD)
 HANDLE_AS_POD(Tuning)
@@ -1054,11 +1053,6 @@ std::size_t packSize(const GuideRateConfig::GroupTarget& data,
 {
     return packSize(data.guide_rate, comm) +
            packSize(data.target, comm);
-}
-
-std::size_t packSize(const PlyvmhTable& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(static_cast<const std::vector<PlyvmhRecord>&>(data), comm);
 }
 
 ////// pack routines
@@ -2043,12 +2037,6 @@ void pack(const GuideRateConfig::GroupTarget& data,
 {
     pack(data.guide_rate, buffer, position, comm);
     pack(data.target, buffer, position, comm);
-}
-
-void pack(const PlyvmhTable& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(static_cast<const std::vector<PlyvmhRecord>&>(data), buffer, position, comm);
 }
 
 /// unpack routines
@@ -3430,14 +3418,6 @@ void unpack(GuideRateConfig::GroupTarget& data,
 {
     unpack(data.guide_rate, buffer, position, comm);
     unpack(data.target, buffer, position, comm);
-}
-
-void unpack(PlyvmhTable& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<PlyvmhRecord> pdata;
-    unpack(pdata, buffer, position, comm);
-    data = PlyvmhTable(pdata);
 }
 
 #define INSTANTIATE_PACK_VECTOR(...) \

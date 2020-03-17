@@ -68,8 +68,6 @@ class Location;
 class MessageLimits;
 class MLimits;
 class OilVaporizationProperties;
-class PlyvmhRecord;
-class PlyvmhTable;
 class RestartConfig;
 class RestartSchedule;
 class RFTConfig;
@@ -449,8 +447,6 @@ ADD_PACK_PROTOTYPES(Location)
 ADD_PACK_PROTOTYPES(MessageLimits)
 ADD_PACK_PROTOTYPES(MLimits)
 ADD_PACK_PROTOTYPES(OilVaporizationProperties)
-ADD_PACK_PROTOTYPES(PlyvmhRecord)
-ADD_PACK_PROTOTYPES(PlyvmhTable)
 ADD_PACK_PROTOTYPES(RestartConfig)
 ADD_PACK_PROTOTYPES(RestartKey)
 ADD_PACK_PROTOTYPES(RestartSchedule)
