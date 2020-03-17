@@ -769,7 +769,7 @@ BOOST_AUTO_TEST_CASE(SimpleTable)
 {
 #if HAVE_MPI
     Opm::SimpleTable val1 = getSimpleTable();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(SimpleTable)
 #endif
 }

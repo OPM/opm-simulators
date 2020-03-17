@@ -74,7 +74,6 @@ class RestartConfig;
 class RestartSchedule;
 class RFTConfig;
 class Segment;
-class SimpleTable;
 class SkprpolyTable;
 class SolventDensityTable;
 class SpiralICD;
@@ -464,7 +463,6 @@ ADD_PACK_PROTOTYPES(RestartSchedule)
 ADD_PACK_PROTOTYPES(RestartValue)
 ADD_PACK_PROTOTYPES(RFTConfig)
 ADD_PACK_PROTOTYPES(Segment)
-ADD_PACK_PROTOTYPES(SimpleTable)
 ADD_PACK_PROTOTYPES(SkprpolyTable)
 ADD_PACK_PROTOTYPES(SolventDensityTable)
 ADD_PACK_PROTOTYPES(SpiralICD)

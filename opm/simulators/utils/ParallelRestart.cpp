@@ -54,7 +54,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/FlatTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SkprpolyTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/StandardCond.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableColumn.hpp>
@@ -362,13 +361,6 @@ std::size_t packSize(const TableColumn& data, Dune::MPIHelper::MPICommunicator c
           packSize(data.values(), comm) +
           packSize(data.defaults(), comm) +
           packSize(data.defaultCount(), comm);
-}
-
-std::size_t packSize(const SimpleTable& data, Dune::MPIHelper::MPICommunicator comm)
-{
-   return packSize(data.schema(), comm) +
-          packSize(data.columns(), comm) +
-          packSize(data.jfunc(), comm);
 }
 
 std::size_t packSize(const TableContainer& data, Dune::MPIHelper::MPICommunicator comm)
@@ -1394,14 +1386,6 @@ void pack(const TableColumn& data, std::vector<char>& buffer, int& position,
     pack(data.values(), buffer, position, comm);
     pack(data.defaults(), buffer, position, comm);
     pack(data.defaultCount(), buffer, position, comm);
-}
-
-void pack(const SimpleTable& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.schema(), buffer, position, comm);
-    pack(data.columns(), buffer, position, comm);
-    pack(data.jfunc(), buffer, position, comm);
 }
 
 void pack(const TableContainer& data, std::vector<char>& buffer, int& position,
@@ -2469,18 +2453,6 @@ void unpack(TableColumn& data, std::vector<char>& buffer, int& position,
     unpack(defaults, buffer, position, comm);
     unpack(defaultCount, buffer, position, comm);
     data = TableColumn(schema, name, values, defaults, defaultCount);
-}
-
-void unpack(SimpleTable& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    TableSchema schema;
-    OrderedMap<std::string, TableColumn> columns;
-    bool jf;
-    unpack(schema, buffer, position, comm);
-    unpack(columns, buffer, position, comm);
-    unpack(jf, buffer, position, comm);
-    data = SimpleTable(schema, columns, jf);
 }
 
 void unpack(TableContainer& data, std::vector<char>& buffer, int& position,
