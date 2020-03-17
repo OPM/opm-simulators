@@ -29,6 +29,7 @@
 #include <opm/parser/eclipse/Deck/DeckItem.hpp>
 #include <opm/parser/eclipse/EclipseState/Aquancon.hpp>
 #include <opm/parser/eclipse/EclipseState/AquiferCT.hpp>
+#include <opm/parser/eclipse/EclipseState/AquiferConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Aquifetp.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
@@ -2170,7 +2171,7 @@ BOOST_AUTO_TEST_CASE(BrineDensityTable)
 {
 #ifdef HAVE_MPI
     Opm::BrineDensityTable val1({1.0, 2.0, 3.0});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(BrineDensityTable)
 #endif
 }

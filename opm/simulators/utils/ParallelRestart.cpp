@@ -23,6 +23,7 @@
 
 #include "ParallelRestart.hpp"
 #include <opm/common/OpmLog/Location.hpp>
+#include <opm/parser/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionAST.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/Actions.hpp>
@@ -1168,12 +1169,6 @@ std::size_t packSize(const Action::Actions& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.getActions(), comm);
-}
-
-std::size_t packSize(const BrineDensityTable& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getBrineDensityColumn(), comm);
 }
 
 std::size_t packSize(const PvtwsaltTable& data,
@@ -2377,13 +2372,6 @@ void pack(const Action::Actions& data,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.getActions(), buffer, position, comm);
-}
-
-void pack(const BrineDensityTable& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getBrineDensityColumn(), buffer, position, comm);
 }
 
 void pack(const PvtwsaltTable& data,
@@ -4049,15 +4037,6 @@ void unpack(Action::Actions& data, std::vector<char>& buffer, int& position,
     std::vector<Action::ActionX> actions;
     unpack(actions, buffer, position, comm);
     data = Action::Actions(actions);
-}
-
-void unpack(BrineDensityTable& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<double> tableValues;
-
-    unpack(tableValues, buffer, position, comm);
-    data = BrineDensityTable(tableValues);
 }
 
 void unpack(PvtwsaltTable& data, std::vector<char>& buffer, int& position,

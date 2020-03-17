@@ -59,7 +59,6 @@ namespace Action {
 }
 
 class Aqudims;
-class BrineDensityTable;
 class ColumnSchema;
 class Connection;
 class DeckItem;
@@ -462,7 +461,6 @@ ADD_PACK_PROTOTYPES(Action::ASTNode)
 ADD_PACK_PROTOTYPES(Action::Condition)
 ADD_PACK_PROTOTYPES(Action::Quantity)
 ADD_PACK_PROTOTYPES(Aqudims)
-ADD_PACK_PROTOTYPES(BrineDensityTable)
 ADD_PACK_PROTOTYPES(ColumnSchema)
 ADD_PACK_PROTOTYPES(Connection)
 ADD_PACK_PROTOTYPES(data::CellData)
