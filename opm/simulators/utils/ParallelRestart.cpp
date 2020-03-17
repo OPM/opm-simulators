@@ -52,7 +52,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTracerProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WList.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/FlatTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Util/IOrderSet.hpp>
@@ -283,7 +282,6 @@ std::size_t packSize(const std::array<T,N>& data, Dune::MPIHelper::MPICommunicat
     return N*packSize(data[0], comm);
 }
 
-HANDLE_AS_POD(Aqudims)
 HANDLE_AS_POD(data::Connection)
 HANDLE_AS_POD(data::CurrentControl)
 HANDLE_AS_POD(data::Rates)

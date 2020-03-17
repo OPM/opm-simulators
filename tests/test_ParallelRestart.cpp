@@ -1192,7 +1192,7 @@ BOOST_AUTO_TEST_CASE(Aqudims)
 {
 #if HAVE_MPI
     Opm::Aqudims val1(1,2,3,4,5,6,7,8);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Aqudims)
 #endif
 }
