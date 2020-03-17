@@ -1299,7 +1299,7 @@ BOOST_AUTO_TEST_CASE(MLimits)
 {
 #ifdef HAVE_MPI
     Opm::MLimits val1{1,2,3,4,5,6,7,8,9,10,11,12};
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(MLimits)
 #endif
 }
@@ -1310,7 +1310,7 @@ BOOST_AUTO_TEST_CASE(MessageLimits)
 #ifdef HAVE_MPI
     std::vector<Opm::MLimits> limits{Opm::MLimits{1,2,3,4,5,6,7,8,9,10,11,12}};
     Opm::MessageLimits val1(Opm::DynamicState<Opm::MLimits>(limits,2));
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(MessageLimits)
 #endif
 }

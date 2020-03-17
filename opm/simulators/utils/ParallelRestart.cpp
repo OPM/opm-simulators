@@ -30,7 +30,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ASTNode.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/Condition.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRateConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/MessageLimits.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/icd.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/SpiralICD.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
@@ -279,7 +278,6 @@ HANDLE_AS_POD(data::Connection)
 HANDLE_AS_POD(data::CurrentControl)
 HANDLE_AS_POD(data::Rates)
 HANDLE_AS_POD(data::Segment)
-HANDLE_AS_POD(MLimits)
 HANDLE_AS_POD(WellBrineProperties)
 HANDLE_AS_POD(WellFoamProperties)
 
@@ -333,12 +331,6 @@ std::size_t packSize(const WellType& data, Dune::MPIHelper::MPICommunicator comm
 template
 std::size_t packSize(const std::map<Phase,Group::GroupInjectionProperties>& data,
                      Dune::MPIHelper::MPICommunicator comm);
-
-std::size_t packSize(const MessageLimits& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getLimits(), comm);
-}
 
 std::size_t packSize(const VFPInjTable& data,
                      Dune::MPIHelper::MPICommunicator comm)
@@ -1155,12 +1147,6 @@ void pack(const WellType& data, std::vector<char>& buffer, int& position,
     pack(data.preferred_phase(), buffer, position, comm);
 }
 
-void pack(const MessageLimits& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getLimits(), buffer, position, comm);
-}
 void pack(const VFPInjTable& data,
           std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
@@ -2033,15 +2019,6 @@ void unpack(WellType& data, std::vector<char>& buffer, int& position, Dune::MPIH
     unpack(producer, buffer, position, comm);
     unpack(preferred_phase, buffer, position, comm);
     data = WellType( producer, preferred_phase );
-}
-
-void unpack(MessageLimits& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    DynamicState<MLimits> limits;
-    unpack(limits, buffer, position, comm);
-    data = MessageLimits(limits);
 }
 
 void unpack(VFPInjTable& data,
