@@ -22,7 +22,6 @@
 #endif
 
 #include "ParallelRestart.hpp"
-#include <opm/common/OpmLog/Location.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionAST.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/Actions.hpp>
@@ -653,13 +652,6 @@ std::size_t packSize(const Group& data,
            packSize(data.igroups(), comm) +
            packSize(data.injectionProperties(), comm) +
            packSize(data.productionProperties(), comm);
-}
-
-std::size_t packSize(const Location& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.filename, comm) +
-           packSize(data.lineno, comm);
 }
 
 std::size_t packSize(const DeckKeyword& data,
@@ -1353,14 +1345,6 @@ void pack(const Group& data,
     pack(data.igroups(), buffer, position, comm);
     pack(data.injectionProperties(), buffer, position, comm);
     pack(data.productionProperties(), buffer, position, comm);
-}
-
-void pack(const Location& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.filename, buffer, position, comm);
-    pack(data.lineno, buffer, position, comm);
 }
 
 void pack(const DeckKeyword& data,
@@ -2290,15 +2274,6 @@ void unpack(Group& data,
                  availableForGroupControl,
                  groupNetVFPTable, parent, wells, groups,
                  injection, production);
-}
-
-void unpack(Location& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    data.filename.clear();
-    unpack(data.filename, buffer, position, comm);
-    unpack(data.lineno, buffer, position, comm);
 }
 
 void unpack(DeckKeyword& data,

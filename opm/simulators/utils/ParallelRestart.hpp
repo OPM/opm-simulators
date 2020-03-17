@@ -54,7 +54,6 @@ namespace Action {
 class Connection;
 class Dimension;
 template<class T> class IOrderSet;
-class Location;
 class Segment;
 class SpiralICD;
 class UDAValue;
@@ -408,7 +407,6 @@ ADD_PACK_PROTOTYPES(Dimension)
 ADD_PACK_PROTOTYPES(Group)
 ADD_PACK_PROTOTYPES(Group::GroupInjectionProperties)
 ADD_PACK_PROTOTYPES(Group::GroupProductionProperties)
-ADD_PACK_PROTOTYPES(Location)
 ADD_PACK_PROTOTYPES(RestartKey)
 ADD_PACK_PROTOTYPES(RestartValue)
 ADD_PACK_PROTOTYPES(Segment)
