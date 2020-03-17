@@ -1763,7 +1763,7 @@ BOOST_AUTO_TEST_CASE(AquiferCT)
 {
 #ifdef HAVE_MPI
     Opm::AquiferCT val1 = getAquiferCT();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(AquiferCT);
 #endif
 }

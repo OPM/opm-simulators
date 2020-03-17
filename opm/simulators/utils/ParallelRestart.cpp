@@ -396,31 +396,6 @@ std::size_t packSize(const Aquifetp::AQUFETP_data& data, Dune::MPIHelper::MPICom
            packSize(data.p0, comm);
 }
 
-std::size_t packSize(const AquiferCT::AQUCT_data& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.aquiferID, comm) +
-           packSize(data.inftableID, comm) +
-           packSize(data.pvttableID, comm) +
-           packSize(data.phi_aq, comm) +
-           packSize(data.d0, comm) +
-           packSize(data.C_t, comm) +
-           packSize(data.r_o, comm) +
-           packSize(data.k_a, comm) +
-           packSize(data.c1, comm) +
-           packSize(data.h, comm) +
-           packSize(data.theta, comm) +
-           packSize(data.c2, comm) +
-           packSize(data.p0, comm) +
-           packSize(data.td, comm) +
-           packSize(data.pi, comm) +
-           packSize(data.cell_id, comm);
-}
-
-std::size_t packSize(const AquiferCT& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.data(), comm);
-}
-
 std::size_t packSize(const AquiferConfig& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.fetp(), comm) +
@@ -1604,32 +1579,6 @@ void pack(const RestartValue& data, std::vector<char>& buffer, int& position,
     pack(data.wells, buffer, position, comm);
     pack(data.extra, buffer, position, comm);
 }
-
-void pack(const AquiferCT::AQUCT_data& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm) {
-    pack(data.aquiferID, buffer, position, comm);
-    pack(data.inftableID, buffer, position, comm);
-    pack(data.pvttableID, buffer, position, comm);
-    pack(data.phi_aq, buffer, position, comm);
-    pack(data.d0, buffer, position, comm);
-    pack(data.C_t, buffer, position, comm);
-    pack(data.r_o, buffer, position, comm);
-    pack(data.k_a, buffer, position, comm);
-    pack(data.c1, buffer, position, comm);
-    pack(data.h, buffer, position, comm);
-    pack(data.theta, buffer, position, comm);
-    pack(data.c2, buffer, position, comm);
-    pack(data.p0, buffer, position, comm);
-    pack(data.td, buffer, position, comm);
-    pack(data.pi, buffer, position, comm);
-    pack(data.cell_id, buffer, position, comm);
-}
-
-void pack(const AquiferCT& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm) {
-    pack(data.data(), buffer, position, comm);
-}
-
 
 void pack(const Aquifetp::AQUFETP_data& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm) {
@@ -2898,51 +2847,6 @@ void unpack(RestartValue& data, std::vector<char>& buffer, int& position,
     unpack(data.extra, buffer, position, comm);
 }
 
-void unpack(AquiferCT::AQUCT_data& data, std::vector<char>& buffer, int& position, Dune::MPIHelper::MPICommunicator comm)
-{
-    int aquiferID;
-    int inftableID, pvttableID;
-    double phi_aq, d0, C_t, r_o, k_a, c1, h, theta, c2;
-    std::pair<bool, double> p0;
-    std::vector<double> td, pi;
-    std::vector<int> cell_id;
-
-    unpack(aquiferID, buffer, position, comm);
-    unpack(inftableID, buffer, position, comm);
-    unpack(pvttableID, buffer, position, comm);
-    unpack(phi_aq, buffer, position, comm);
-    unpack(d0, buffer, position, comm);
-    unpack(C_t, buffer, position, comm);
-    unpack(r_o, buffer, position, comm);
-    unpack(k_a, buffer, position, comm);
-    unpack(c1, buffer, position, comm);
-    unpack(h, buffer, position, comm);
-    unpack(theta, buffer, position, comm);
-    unpack(c2, buffer, position, comm);
-    unpack(p0, buffer, position, comm);
-    unpack(td, buffer, position, comm);
-    unpack(pi, buffer, position, comm);
-    unpack(cell_id, buffer, position, comm);
-
-    data = AquiferCT::AQUCT_data(aquiferID,
-                                 inftableID,
-                                 pvttableID,
-                                 phi_aq,
-                                 d0,
-                                 C_t,
-                                 r_o,
-                                 k_a,
-                                 c1,
-                                 h,
-                                 theta,
-                                 c2,
-                                 p0,
-                                 td,
-                                 pi,
-                                 cell_id);
-}
-
-
 void unpack(WellType& data, std::vector<char>& buffer, int& position, Dune::MPIHelper::MPICommunicator comm)
 {
     Phase preferred_phase;
@@ -2959,14 +2863,6 @@ void unpack(DenT& data, std::vector<char>& buffer, int& position, Dune::MPIHelpe
     std::vector<DenT::entry> records;
     unpack(records, buffer, position, comm);
     data = DenT( records );
-}
-
-
-void unpack(AquiferCT& data, std::vector<char>& buffer, int& position, Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<AquiferCT::AQUCT_data> aquiferList;
-    unpack(aquiferList, buffer, position, comm);
-    data = AquiferCT(aquiferList);
 }
 
 void unpack(Aquifetp::AQUFETP_data& data, std::vector<char>& buffer, int& position, Dune::MPIHelper::MPICommunicator comm)
