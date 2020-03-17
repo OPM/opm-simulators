@@ -380,13 +380,6 @@ std::size_t packSize(const DenT& data, Dune::MPIHelper::MPICommunicator comm)
     return packSize(data.records(), comm);
 }
 
-std::size_t packSize(const AquiferConfig& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.fetp(), comm) +
-           packSize(data.ct(), comm) +
-           packSize(data.connections(), comm);
-}
-
 std::size_t packSize(const Rock2dTable& data, Dune::MPIHelper::MPICommunicator comm)
 {
    return packSize(data.pvmultValues(), comm) +
@@ -1573,13 +1566,6 @@ void pack(const WellType& data, std::vector<char>& buffer, int& position,
 void pack(const DenT& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm) {
     pack(data.records(), buffer, position, comm);
-}
-
-void pack(const AquiferConfig& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm) {
-    pack(data.fetp(), buffer, position, comm);
-    pack(data.ct(), buffer, position, comm);
-    pack(data.connections(), buffer, position, comm);
 }
 
 void pack(const Rock2dTable& data, std::vector<char>& buffer, int& position,
@@ -2830,17 +2816,6 @@ void unpack(DenT& data, std::vector<char>& buffer, int& position, Dune::MPIHelpe
     std::vector<DenT::entry> records;
     unpack(records, buffer, position, comm);
     data = DenT( records );
-}
-
-void unpack(AquiferConfig& data, std::vector<char>& buffer, int& position, Dune::MPIHelper::MPICommunicator comm) {
-    Aquifetp fetp;
-    AquiferCT ct;
-    Aquancon conn;
-
-    unpack(fetp, buffer, position, comm);
-    unpack(ct, buffer, position, comm);
-    unpack(conn, buffer, position, comm);
-    data = AquiferConfig(fetp, ct, conn);
 }
 
 void unpack(Rock2dTable& data, std::vector<char>& buffer, int& position,

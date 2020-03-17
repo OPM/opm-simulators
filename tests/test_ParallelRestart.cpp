@@ -1795,7 +1795,7 @@ BOOST_AUTO_TEST_CASE(AquferConfig)
     Opm::AquiferCT ct = getAquiferCT();
     Opm::Aquancon conn = getAquancon();
     Opm::AquiferConfig val1(fetp, ct, conn);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(AquiferConfig);
 #endif
 }
