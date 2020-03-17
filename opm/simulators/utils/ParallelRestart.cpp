@@ -1087,14 +1087,6 @@ std::size_t packSize(const Action::Actions& data,
     return packSize(data.getActions(), comm);
 }
 
-std::size_t packSize(const PvtwsaltTable& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-   return packSize(data.getReferencePressureValue(), comm) +
-          packSize(data.getReferenceSaltConcentrationValue(), comm) +
-          packSize(data.getTableValues(), comm);
-}
-
 std::size_t packSize(const RestartSchedule& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -2175,15 +2167,6 @@ void pack(const Action::Actions& data,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.getActions(), buffer, position, comm);
-}
-
-void pack(const PvtwsaltTable& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getReferencePressureValue(), buffer, position, comm);
-    pack(data.getReferenceSaltConcentrationValue(), buffer, position, comm);
-    pack(data.getTableValues(), buffer, position, comm);
 }
 
 void pack(const RestartSchedule& data,
@@ -3694,18 +3677,6 @@ void unpack(Action::Actions& data, std::vector<char>& buffer, int& position,
     std::vector<Action::ActionX> actions;
     unpack(actions, buffer, position, comm);
     data = Action::Actions(actions);
-}
-
-void unpack(PvtwsaltTable& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    double refPressValue, refSaltConValue;
-    std::vector<double> tableValues;
-
-    unpack(refPressValue, buffer, position, comm);
-    unpack(refSaltConValue, buffer, position, comm);
-    unpack(tableValues, buffer, position, comm);
-    data = PvtwsaltTable(refPressValue, refSaltConValue, tableValues);
 }
 
 void unpack(RestartSchedule& data,

@@ -2213,7 +2213,7 @@ BOOST_AUTO_TEST_CASE(PvtwsaltTable)
 {
 #ifdef HAVE_MPI
     Opm::PvtwsaltTable val1(1.0, 2.0, {3.0, 4.0, 5.0});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(PvtwsaltTable)
 #endif
 }
