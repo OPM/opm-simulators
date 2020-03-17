@@ -784,7 +784,7 @@ BOOST_AUTO_TEST_CASE(TableContainer)
     Opm::TableContainer val1(2);
     val1.addTable(0, std::make_shared<Opm::SimpleTable>(tab1));
     val1.addTable(1, std::make_shared<Opm::SimpleTable>(tab1));
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(TableContainer)
 #endif
 }

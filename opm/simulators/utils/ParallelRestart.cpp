@@ -54,7 +54,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/FlatTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/TableContainer.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableSchema.hpp>
 #include <opm/parser/eclipse/EclipseState/Util/IOrderSet.hpp>
@@ -348,18 +347,6 @@ std::size_t packSize(const WellType& data, Dune::MPIHelper::MPICommunicator comm
 std::size_t packSize(const TableSchema& data, Dune::MPIHelper::MPICommunicator comm)
 {
    return packSize(data.getColumns(), comm);
-}
-
-std::size_t packSize(const TableContainer& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    size_t res = 2*packSize(data.max(), comm);
-    for (const auto& it : data.tables()) {
-        if (it.second) {
-            res += packSize(it.first, comm) + packSize(*it.second, comm);
-        }
-    }
-
-    return res;
 }
 
 std::size_t packSize(const TimeMap& data, Dune::MPIHelper::MPICommunicator comm)
@@ -1351,25 +1338,6 @@ void pack(const TableSchema& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.getColumns(), buffer, position, comm);
-}
-
-void pack(const TableContainer& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.max(), buffer, position, comm);
-    size_t entries = 0;
-    for (const auto& it : data.tables()) {
-        if (it.second) {
-          ++entries;
-        }
-    }
-    pack(entries, buffer, position, comm);
-    for (const auto& it : data.tables()) {
-        if (it.second) {
-          pack(it.first, buffer, position, comm);
-          pack(*it.second, buffer, position, comm);
-        }
-    }
 }
 
 void pack(const TimeMap& data, std::vector<char>& buffer, int& position,
@@ -2388,23 +2356,6 @@ void unpack(TableSchema& data, std::vector<char>& buffer, int& position,
     OrderedMap<std::string, ColumnSchema> columns;
     unpack(columns, buffer, position, comm);
     data = TableSchema(columns);
-}
-
-void unpack(TableContainer& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    size_t max;
-    unpack(max, buffer, position, comm);
-    data = TableContainer(max);
-    size_t entries;
-    unpack(entries, buffer, position, comm);
-    for (size_t i = 0; i < entries; ++i) {
-        size_t id;
-        unpack(id, buffer, position, comm);
-        SimpleTable table;
-        unpack(table, buffer, position, comm);
-        data.addTable(id, std::make_shared<SimpleTable>(table));
-    }
 }
 
 void unpack(TimeMap& data, std::vector<char>& buffer, int& position,
