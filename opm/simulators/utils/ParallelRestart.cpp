@@ -53,7 +53,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WList.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/Eqldims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/FlatTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/JFunc.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PlymwinjTable.hpp>
@@ -307,7 +306,6 @@ HANDLE_AS_POD(data::CurrentControl)
 HANDLE_AS_POD(data::Rates)
 HANDLE_AS_POD(data::Segment)
 HANDLE_AS_POD(DENSITYRecord)
-HANDLE_AS_POD(Eqldims)
 HANDLE_AS_POD(MLimits)
 HANDLE_AS_POD(PlmixparRecord)
 HANDLE_AS_POD(PlyvmhRecord)

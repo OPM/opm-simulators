@@ -64,7 +64,6 @@ class DeckRecord;
 class DENSITYRecord;
 class DensityTable;
 class Dimension;
-class Eqldims;
 class Events;
 template<class T> class IOrderSet;
 class JFunc;
@@ -475,7 +474,6 @@ ADD_PACK_PROTOTYPES(DeckRecord)
 ADD_PACK_PROTOTYPES(DENSITYRecord)
 ADD_PACK_PROTOTYPES(DensityTable)
 ADD_PACK_PROTOTYPES(Dimension)
-ADD_PACK_PROTOTYPES(Eqldims)
 ADD_PACK_PROTOTYPES(Events)
 ADD_PACK_PROTOTYPES(GConSale)
 ADD_PACK_PROTOTYPES(GConSale::GCONSALEGroup)

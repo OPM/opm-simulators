@@ -1182,7 +1182,7 @@ BOOST_AUTO_TEST_CASE(Eqldims)
 {
 #if HAVE_MPI
     Opm::Eqldims val1(1,2,3,4,5);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Eqldims)
 #endif
 }
