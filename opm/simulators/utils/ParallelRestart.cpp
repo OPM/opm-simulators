@@ -306,7 +306,6 @@ HANDLE_AS_POD(data::CurrentControl)
 HANDLE_AS_POD(data::Rates)
 HANDLE_AS_POD(data::Segment)
 HANDLE_AS_POD(MLimits)
-HANDLE_AS_POD(PlmixparRecord)
 HANDLE_AS_POD(PlyvmhRecord)
 HANDLE_AS_POD(Regdims)
 HANDLE_AS_POD(ShrateRecord)
@@ -1213,11 +1212,6 @@ std::size_t packSize(const ShrateTable& data, Dune::MPIHelper::MPICommunicator c
 std::size_t packSize(const TlmixparTable& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(static_cast<const std::vector<TlmixparRecord>&>(data), comm);
-}
-
-std::size_t packSize(const PlmixparTable& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(static_cast<const std::vector<PlmixparRecord>&>(data), comm);
 }
 
 std::size_t packSize(const PlyvmhTable& data, Dune::MPIHelper::MPICommunicator comm)
@@ -2388,12 +2382,6 @@ void pack(const TlmixparTable& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(static_cast<const std::vector<TlmixparRecord>&>(data), buffer, position, comm);
-}
-
-void pack(const PlmixparTable& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(static_cast<const std::vector<PlmixparRecord>&>(data), buffer, position, comm);
 }
 
 void pack(const PlyvmhTable& data, std::vector<char>& buffer, int& position,
@@ -4015,14 +4003,6 @@ void unpack(TlmixparTable& data, std::vector<char>& buffer, int& position,
     std::vector<TlmixparRecord> pdata;
     unpack(pdata, buffer, position, comm);
     data = TlmixparTable(pdata);
-}
-
-void unpack(PlmixparTable& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<PlmixparRecord> pdata;
-    unpack(pdata, buffer, position, comm);
-    data = PlmixparTable(pdata);
 }
 
 void unpack(PlyvmhTable& data, std::vector<char>& buffer, int& position,

@@ -74,8 +74,6 @@ class PlyshlogTable;
 class PlyvmhRecord;
 class PlyvmhTable;
 class PolyInjTable;
-class PlmixparRecord;
-class PlmixparTable;
 class PvtgTable;
 class PvtoTable;
 class PvtwsaltTable;
@@ -481,8 +479,6 @@ ADD_PACK_PROTOTYPES(Location)
 ADD_PACK_PROTOTYPES(MessageLimits)
 ADD_PACK_PROTOTYPES(MLimits)
 ADD_PACK_PROTOTYPES(OilVaporizationProperties)
-ADD_PACK_PROTOTYPES(PlmixparRecord)
-ADD_PACK_PROTOTYPES(PlmixparTable)
 ADD_PACK_PROTOTYPES(PlymwinjTable)
 ADD_PACK_PROTOTYPES(PlyshlogTable)
 ADD_PACK_PROTOTYPES(PlyvmhRecord)
