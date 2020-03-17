@@ -1152,7 +1152,7 @@ BOOST_AUTO_TEST_CASE(SkprpolyTable)
 {
 #if HAVE_MPI
     Opm::SkprpolyTable val1({1.0}, {2.0}, 1, {{1.0}, {2.0}}, 3.0);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(SkprpolyTable)
 #endif
 }

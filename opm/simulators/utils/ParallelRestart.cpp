@@ -54,7 +54,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/FlatTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/SkprpolyTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/StandardCond.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableColumn.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableContainer.hpp>
@@ -388,12 +387,6 @@ std::size_t packSize(const RestartConfig& data, Dune::MPIHelper::MPICommunicator
            packSize(data.restartSchedule(), comm) +
            packSize(data.restartKeywords(), comm) +
            packSize(data.saveKeywords(), comm);
-}
-
-std::size_t packSize(const SkprpolyTable& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(static_cast<const PolyInjTable&>(data), comm) +
-           packSize(data.referenceConcentration(), comm);
 }
 
 namespace {
@@ -1422,13 +1415,6 @@ void pack(const RestartConfig& data, std::vector<char>& buffer, int& position,
     pack(data.restartSchedule(), buffer, position, comm);
     pack(data.restartKeywords(), buffer, position, comm);
     pack(data.saveKeywords(), buffer, position, comm);
-}
-
-void pack(const SkprpolyTable& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(static_cast<const PolyInjTable&>(data), buffer, position, comm);
-    pack(data.referenceConcentration(), buffer, position, comm);
 }
 
 void pack(const TableManager& data, std::vector<char>& buffer, int& position,
@@ -2498,15 +2484,6 @@ void unpack(RestartConfig& data, std::vector<char>& buffer, int& position,
     unpack(save_keyw, buffer, position, comm);
     data = RestartConfig(timemap, firstRstStep, writeInitialRst, restart_sched,
                          restart_keyw, save_keyw);
-}
-
-void unpack(SkprpolyTable& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    unpack(static_cast<PolyInjTable&>(data), buffer, position, comm);
-    double refConcentration;
-    unpack(refConcentration, buffer, position, comm);
-    data.setReferenceConcentration(refConcentration);
 }
 
 void unpack(TableManager& data, std::vector<char>& buffer, int& position,
