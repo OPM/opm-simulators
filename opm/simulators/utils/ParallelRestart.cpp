@@ -310,7 +310,6 @@ HANDLE_AS_POD(PlmixparRecord)
 HANDLE_AS_POD(PlyvmhRecord)
 HANDLE_AS_POD(PVCDORecord)
 HANDLE_AS_POD(Regdims)
-HANDLE_AS_POD(ROCKRecord)
 HANDLE_AS_POD(ShrateRecord)
 HANDLE_AS_POD(StandardCond)
 HANDLE_AS_POD(Stone1exRecord)
@@ -487,11 +486,6 @@ std::size_t packSize(const SkprpolyTable& data, Dune::MPIHelper::MPICommunicator
 std::size_t packSize(const SkprwatTable& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(static_cast<const PolyInjTable&>(data), comm);
-}
-
-std::size_t packSize(const RockTable& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(static_cast<const std::vector<ROCKRecord>&>(data), comm);
 }
 
 namespace {
@@ -1666,12 +1660,6 @@ void pack(const SkprwatTable& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(static_cast<const PolyInjTable&>(data), buffer, position, comm);
-}
-
-void pack(const RockTable& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(static_cast<const std::vector<ROCKRecord>&>(data), buffer, position, comm);
 }
 
 void pack(const TableManager& data, std::vector<char>& buffer, int& position,
@@ -2925,14 +2913,6 @@ void unpack(SkprwatTable& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
     unpack(static_cast<PolyInjTable&>(data), buffer, position, comm);
-}
-
-void unpack(RockTable& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<ROCKRecord> pdata;
-    unpack(pdata, buffer, position, comm);
-    data = RockTable(pdata);
 }
 
 void unpack(TableManager& data, std::vector<char>& buffer, int& position,
