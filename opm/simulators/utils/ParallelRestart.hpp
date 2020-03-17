@@ -65,7 +65,6 @@ template<class T> class IOrderSet;
 class Location;
 class MessageLimits;
 class MLimits;
-class OilVaporizationProperties;
 class Segment;
 class SpiralICD;
 class Tuning;
@@ -437,7 +436,6 @@ ADD_PACK_PROTOTYPES(Group::GroupProductionProperties)
 ADD_PACK_PROTOTYPES(Location)
 ADD_PACK_PROTOTYPES(MessageLimits)
 ADD_PACK_PROTOTYPES(MLimits)
-ADD_PACK_PROTOTYPES(OilVaporizationProperties)
 ADD_PACK_PROTOTYPES(RestartKey)
 ADD_PACK_PROTOTYPES(RestartValue)
 ADD_PACK_PROTOTYPES(Segment)

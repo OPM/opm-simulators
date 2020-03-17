@@ -1274,12 +1274,12 @@ BOOST_AUTO_TEST_CASE(OilVaporizationProperties)
     Opm::OilVaporizationProperties val1(VapType::VAPPARS,
                                         1.0, 2.0, {5.0, 6.0},
                                         {false, true}, {7.0, 8.0});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(OilVaporizationProperties)
     val1 = Opm::OilVaporizationProperties(VapType::DRDT,
                                           1.0, 2.0, {5.0, 6.0},
                                           {false, true}, {7.0, 8.0});
-    val2 = PackUnpack(val1);
+    val2 = PackUnpack2(val1);
     DO_CHECKS(OilVaporizationProperties)
 #endif
 }

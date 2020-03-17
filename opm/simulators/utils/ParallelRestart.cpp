@@ -35,7 +35,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/icd.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/SpiralICD.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/RFTConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/ScheduleTypes.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Tuning.hpp>
@@ -337,17 +336,6 @@ std::size_t packSize(const WellType& data, Dune::MPIHelper::MPICommunicator comm
 template
 std::size_t packSize(const std::map<Phase,Group::GroupInjectionProperties>& data,
                      Dune::MPIHelper::MPICommunicator comm);
-
-std::size_t packSize(const OilVaporizationProperties& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getType(), comm) +
-           packSize(data.vap1(), comm) +
-           packSize(data.vap2(), comm) +
-           packSize(data.maxDRSDT(), comm) +
-           packSize(data.maxDRSDT_allCells(), comm) +
-           packSize(data.maxDRVDT(), comm);
-}
 
 std::size_t packSize(const Events& data,
                      Dune::MPIHelper::MPICommunicator comm)
@@ -1174,19 +1162,6 @@ void pack(const WellType& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm) {
     pack(data.producer(), buffer, position, comm);
     pack(data.preferred_phase(), buffer, position, comm);
-}
-
-void pack(const OilVaporizationProperties& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getType(), buffer, position, comm);
-    pack(data.vap1(), buffer, position, comm);
-    pack(data.vap2(), buffer, position, comm);
-    pack(data.maxDRSDT(), buffer, position, comm);
-    pack(data.maxDRSDT_allCells(), buffer, position, comm);
-    pack(data.maxDRVDT(), buffer, position, comm);
-
 }
 
 void pack(const Events& data,
@@ -2074,24 +2049,6 @@ void unpack(WellType& data, std::vector<char>& buffer, int& position, Dune::MPIH
     unpack(producer, buffer, position, comm);
     unpack(preferred_phase, buffer, position, comm);
     data = WellType( producer, preferred_phase );
-}
-
-void unpack(OilVaporizationProperties& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    OilVaporizationProperties::OilVaporization type;
-    double vap1, vap2;
-    std::vector<double> maxDRSDT, maxDRVDT;
-    std::vector<bool> maxDRSDT_allCells;
-    unpack(type, buffer, position, comm);
-    unpack(vap1, buffer, position, comm);
-    unpack(vap2, buffer, position, comm);
-    unpack(maxDRSDT, buffer, position, comm);
-    unpack(maxDRSDT_allCells, buffer, position, comm);
-    unpack(maxDRVDT, buffer, position, comm);
-    data = OilVaporizationProperties(type, vap1, vap2, maxDRSDT,
-                                     maxDRSDT_allCells, maxDRVDT);
 }
 
 void unpack(Events& data,
@@ -3068,7 +3025,6 @@ INSTANTIATE_PACK(std::unordered_map<std::string,std::string>)
 INSTANTIATE_PACK(std::pair<bool,double>)
 INSTANTIATE_PACK(std::pair<bool,std::size_t>)
 INSTANTIATE_PACK(DynamicState<int>)
-INSTANTIATE_PACK(DynamicState<OilVaporizationProperties>)
 INSTANTIATE_PACK(DynamicState<std::shared_ptr<Action::Actions>>)
 INSTANTIATE_PACK(DynamicState<std::shared_ptr<GConSale>>)
 INSTANTIATE_PACK(DynamicState<std::shared_ptr<GConSump>>)
