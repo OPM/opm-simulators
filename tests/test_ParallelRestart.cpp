@@ -1032,7 +1032,7 @@ BOOST_AUTO_TEST_CASE(JFunc)
 #if HAVE_MPI
     Opm::JFunc val1(Opm::JFunc::Flag::BOTH, 1.0, 2.0,
                     3.0, 4.0, Opm::JFunc::Direction::XY);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(JFunc)
 #endif
 }

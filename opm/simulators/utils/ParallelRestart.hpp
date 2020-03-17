@@ -64,7 +64,6 @@ class DeckRecord;
 class Dimension;
 class Events;
 template<class T> class IOrderSet;
-class JFunc;
 class Location;
 class MessageLimits;
 class MLimits;
@@ -464,7 +463,6 @@ ADD_PACK_PROTOTYPES(GuideRateModel)
 ADD_PACK_PROTOTYPES(Group)
 ADD_PACK_PROTOTYPES(Group::GroupInjectionProperties)
 ADD_PACK_PROTOTYPES(Group::GroupProductionProperties)
-ADD_PACK_PROTOTYPES(JFunc)
 ADD_PACK_PROTOTYPES(Location)
 ADD_PACK_PROTOTYPES(MessageLimits)
 ADD_PACK_PROTOTYPES(MLimits)
