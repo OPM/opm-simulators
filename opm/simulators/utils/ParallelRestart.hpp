@@ -69,7 +69,6 @@ class MessageLimits;
 class MLimits;
 class OilVaporizationProperties;
 class PlymwinjTable;
-class PlyshlogTable;
 class PlyvmhRecord;
 class PlyvmhTable;
 class PolyInjTable;
@@ -468,7 +467,6 @@ ADD_PACK_PROTOTYPES(MessageLimits)
 ADD_PACK_PROTOTYPES(MLimits)
 ADD_PACK_PROTOTYPES(OilVaporizationProperties)
 ADD_PACK_PROTOTYPES(PlymwinjTable)
-ADD_PACK_PROTOTYPES(PlyshlogTable)
 ADD_PACK_PROTOTYPES(PlyvmhRecord)
 ADD_PACK_PROTOTYPES(PlyvmhTable)
 ADD_PACK_PROTOTYPES(PolyInjTable)

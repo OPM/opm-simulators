@@ -2373,7 +2373,7 @@ BOOST_AUTO_TEST_CASE(PlyshlogTable)
     Opm::OrderedMap<std::string, Opm::TableColumn> data;
     data.insert({"test3", getTableColumn()});
     Opm::PlyshlogTable val1(getTableSchema(), data, true, 1.0, 2.0, 3.0, true, true);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(PlyshlogTable)
 #endif
 }

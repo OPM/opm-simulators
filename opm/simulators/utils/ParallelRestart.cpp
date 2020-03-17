@@ -54,7 +54,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/FlatTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/JFunc.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PlymwinjTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PolyInjTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PvtgTable.hpp>
@@ -63,7 +62,6 @@
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/RocktabTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/PlyshlogTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SkprpolyTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SkprwatTable.hpp>
@@ -1138,17 +1136,6 @@ std::size_t packSize(const TimeStampUTC& data,
            packSize(data.microseconds(), comm);
 }
 
-std::size_t packSize(const JFunc& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.flag(), comm) +
-           packSize(data.owSurfaceTension(), comm) +
-           packSize(data.goSurfaceTension(), comm) +
-           packSize(data.alphaFactor(), comm) +
-           packSize(data.betaFactor(), comm) +
-           packSize(data.direction(), comm);
-}
-
 std::size_t packSize(const WellPolymerProperties& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -1192,16 +1179,6 @@ std::size_t packSize(const SolventDensityTable& data,
 std::size_t packSize(const PlyvmhTable& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(static_cast<const std::vector<PlyvmhRecord>&>(data), comm);
-}
-
-std::size_t packSize(const PlyshlogTable& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(static_cast<const SimpleTable&>(data), comm) +
-           packSize(data.getRefPolymerConcentration(), comm) +
-           packSize(data.getRefSalinity(), comm) +
-           packSize(data.getRefTemperature(), comm) +
-           packSize(data.hasRefSalinity(), comm) +
-           packSize(data.hasRefTemperature(), comm);
 }
 
 std::size_t packSize(const RocktabTable& data, Dune::MPIHelper::MPICommunicator comm)
@@ -2273,18 +2250,6 @@ void pack(const TimeStampUTC& data,
     pack(data.microseconds(), buffer, position, comm);
 }
 
-void pack(const JFunc& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.flag(), buffer, position, comm);
-    pack(data.owSurfaceTension(), buffer, position, comm);
-    pack(data.goSurfaceTension(), buffer, position, comm);
-    pack(data.alphaFactor(), buffer, position, comm);
-    pack(data.betaFactor(), buffer, position, comm);
-    pack(data.direction(), buffer, position, comm);
-}
-
 void pack(const WellPolymerProperties& data,
           std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
@@ -2334,17 +2299,6 @@ void pack(const PlyvmhTable& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(static_cast<const std::vector<PlyvmhRecord>&>(data), buffer, position, comm);
-}
-
-void pack(const PlyshlogTable& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(static_cast<const SimpleTable&>(data), buffer, position, comm);
-    pack(data.getRefPolymerConcentration(), buffer, position, comm);
-    pack(data.getRefSalinity(), buffer, position, comm);
-    pack(data.getRefTemperature(), buffer, position, comm);
-    pack(data.hasRefSalinity(), buffer, position, comm);
-    pack(data.hasRefTemperature(), buffer, position, comm);
 }
 
 void pack(const RocktabTable& data, std::vector<char>& buffer, int& position,
@@ -3847,25 +3801,6 @@ void unpack(TimeStampUTC& data,
     data = TimeStampUTC(ymd, hour, minutes, seconds, usec);
 }
 
-void unpack(JFunc& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    JFunc::Flag flag;
-    double owSurfaceTension, goSurfaceTension;
-    double alphaFactor, betaFactor;
-    JFunc::Direction dir;
-
-    unpack(flag, buffer, position, comm);
-    unpack(owSurfaceTension, buffer, position, comm);
-    unpack(goSurfaceTension, buffer, position, comm);
-    unpack(alphaFactor, buffer, position, comm);
-    unpack(betaFactor, buffer, position, comm);
-    unpack(dir, buffer, position, comm);
-    data = JFunc(flag, owSurfaceTension, goSurfaceTension,
-                  alphaFactor, betaFactor, dir);
-}
-
 void unpack(WellPolymerProperties& data,
             std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
@@ -3919,32 +3854,6 @@ void unpack(PlyvmhTable& data, std::vector<char>& buffer, int& position,
     std::vector<PlyvmhRecord> pdata;
     unpack(pdata, buffer, position, comm);
     data = PlyvmhTable(pdata);
-}
-
-void unpack(PlyshlogTable& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    TableSchema schema;
-    OrderedMap<std::string, TableColumn> columns;
-    bool jfunc;
-    double refPolymerConcentration;
-    double refSalinity;
-    double refTemperature;
-    bool hasRefSalinity;
-    bool hasRefTemperature;
-
-    unpack(schema, buffer, position, comm);
-    unpack(columns, buffer, position, comm);
-    unpack(jfunc, buffer, position, comm);
-    unpack(refPolymerConcentration, buffer, position, comm);
-    unpack(refSalinity, buffer, position, comm);
-    unpack(refTemperature, buffer, position, comm);
-    unpack(hasRefSalinity, buffer, position, comm);
-    unpack(hasRefTemperature, buffer, position, comm);
-
-    data = PlyshlogTable(schema, columns, jfunc,
-                         refPolymerConcentration, refSalinity,
-                         refTemperature, hasRefSalinity, hasRefTemperature);
 }
 
 void unpack(RocktabTable& data, std::vector<char>& buffer, int& position,
