@@ -1883,7 +1883,7 @@ BOOST_AUTO_TEST_CASE(GConSumpGroup)
                                       Opm::UDAValue(2.0),
                                       "test",
                                       3.0, Opm::UnitSystem()};
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(GConSump::GCONSUMPGroup)
 #endif
 }
@@ -1897,7 +1897,7 @@ BOOST_AUTO_TEST_CASE(GConSump)
                                        "test",
                                        3.0, Opm::UnitSystem()};
     Opm::GConSump val1({{"test1", group}, {"test2", group}});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(GConSump)
 #endif
 }

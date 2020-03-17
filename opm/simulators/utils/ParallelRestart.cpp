@@ -656,22 +656,6 @@ std::size_t packSize(const Group& data,
            packSize(data.productionProperties(), comm);
 }
 
-std::size_t packSize(const GConSump::GCONSUMPGroup& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.consumption_rate, comm) +
-           packSize(data.import_rate, comm) +
-           packSize(data.network_node, comm) +
-           packSize(data.udq_undefined, comm) +
-           packSize(data.unit_system, comm);
-}
-
-std::size_t packSize(const GConSump& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getGroups(), comm);
-}
-
 std::size_t packSize(const DeckItem& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -1402,24 +1386,6 @@ void pack(const Group& data,
     pack(data.igroups(), buffer, position, comm);
     pack(data.injectionProperties(), buffer, position, comm);
     pack(data.productionProperties(), buffer, position, comm);
-}
-
-void pack(const GConSump::GCONSUMPGroup& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.consumption_rate, buffer, position, comm);
-    pack(data.import_rate, buffer, position, comm);
-    pack(data.network_node, buffer, position, comm);
-    pack(data.udq_undefined, buffer, position, comm);
-    pack(data.unit_system, buffer, position, comm);
-}
-
-void pack(const GConSump& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getGroups(), buffer, position, comm);
 }
 
 void pack(const DeckItem& data,
@@ -2394,26 +2360,6 @@ void unpack(Group& data,
                  injection, production);
 }
 
-void unpack(GConSump::GCONSUMPGroup& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    unpack(data.consumption_rate, buffer, position, comm);
-    unpack(data.import_rate, buffer, position, comm);
-    unpack(data.network_node, buffer, position, comm);
-    unpack(data.udq_undefined, buffer, position, comm);
-    unpack(data.unit_system, buffer, position, comm);
-}
-
-void unpack(GConSump& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::map<std::string,GConSump::GCONSUMPGroup> groups;
-    unpack(groups, buffer, position, comm);
-    data = GConSump(groups);
-}
-
 void unpack(DeckItem& data,
             std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
@@ -2686,7 +2632,6 @@ INSTANTIATE_PACK(std::pair<bool,double>)
 INSTANTIATE_PACK(std::pair<bool,std::size_t>)
 INSTANTIATE_PACK(DynamicState<int>)
 INSTANTIATE_PACK(DynamicState<std::shared_ptr<Action::Actions>>)
-INSTANTIATE_PACK(DynamicState<std::shared_ptr<GConSump>>)
 INSTANTIATE_PACK(DynamicState<Well::ProducerCMode>)
 INSTANTIATE_PACK(DynamicVector<Deck>)
 
