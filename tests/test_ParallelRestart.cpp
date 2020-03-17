@@ -1289,7 +1289,7 @@ BOOST_AUTO_TEST_CASE(Events)
 {
 #ifdef HAVE_MPI
     Opm::Events val1(Opm::DynamicVector<uint64_t>({1,2,3,4,5}));
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Events)
 #endif
 }

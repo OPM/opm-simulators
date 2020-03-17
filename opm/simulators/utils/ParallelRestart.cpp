@@ -29,7 +29,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionX.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ASTNode.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/Condition.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRateConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MessageLimits.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/icd.hpp>
@@ -336,12 +335,6 @@ std::size_t packSize(const WellType& data, Dune::MPIHelper::MPICommunicator comm
 template
 std::size_t packSize(const std::map<Phase,Group::GroupInjectionProperties>& data,
                      Dune::MPIHelper::MPICommunicator comm);
-
-std::size_t packSize(const Events& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.events(), comm);
-}
 
 std::size_t packSize(const MessageLimits& data,
                      Dune::MPIHelper::MPICommunicator comm)
@@ -1162,13 +1155,6 @@ void pack(const WellType& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm) {
     pack(data.producer(), buffer, position, comm);
     pack(data.preferred_phase(), buffer, position, comm);
-}
-
-void pack(const Events& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.events(), buffer, position, comm);
 }
 
 void pack(const MessageLimits& data,
@@ -2049,15 +2035,6 @@ void unpack(WellType& data, std::vector<char>& buffer, int& position, Dune::MPIH
     unpack(producer, buffer, position, comm);
     unpack(preferred_phase, buffer, position, comm);
     data = WellType( producer, preferred_phase );
-}
-
-void unpack(Events& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    DynamicVector<uint64_t> events;
-    unpack(events, buffer, position, comm);
-    data = Events(events);
 }
 
 void unpack(MessageLimits& data,
@@ -3016,7 +2993,6 @@ INSTANTIATE_PACK(unsigned char)
 INSTANTIATE_PACK(std::map<std::pair<int,int>,std::pair<bool,double>>)
 INSTANTIATE_PACK(std::map<FaceDir::DirEnum,std::string>)
 INSTANTIATE_PACK(std::map<FaceDir::DirEnum,std::vector<double>>)
-INSTANTIATE_PACK(std::map<std::string,Events>)
 INSTANTIATE_PACK(std::map<std::string,std::vector<int>>)
 INSTANTIATE_PACK(std::map<std::string,std::map<std::pair<int,int>,int>>)
 INSTANTIATE_PACK(std::map<UDQVarType,std::size_t>)

@@ -60,7 +60,6 @@ class Connection;
 class DeckItem;
 class DeckRecord;
 class Dimension;
-class Events;
 template<class T> class IOrderSet;
 class Location;
 class MessageLimits;
@@ -421,7 +420,6 @@ ADD_PACK_PROTOTYPES(DeckItem)
 ADD_PACK_PROTOTYPES(DeckKeyword)
 ADD_PACK_PROTOTYPES(DeckRecord)
 ADD_PACK_PROTOTYPES(Dimension)
-ADD_PACK_PROTOTYPES(Events)
 ADD_PACK_PROTOTYPES(GConSale)
 ADD_PACK_PROTOTYPES(GConSale::GCONSALEGroup)
 ADD_PACK_PROTOTYPES(GConSump)
