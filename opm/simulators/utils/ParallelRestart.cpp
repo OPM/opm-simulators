@@ -309,7 +309,6 @@ HANDLE_AS_POD(MLimits)
 HANDLE_AS_POD(PlyvmhRecord)
 HANDLE_AS_POD(Regdims)
 HANDLE_AS_POD(StandardCond)
-HANDLE_AS_POD(Stone1exRecord)
 HANDLE_AS_POD(Tabdims)
 HANDLE_AS_POD(TimeStampUTC::YMD)
 HANDLE_AS_POD(TlmixparRecord)
@@ -1211,11 +1210,6 @@ std::size_t packSize(const TlmixparTable& data, Dune::MPIHelper::MPICommunicator
 std::size_t packSize(const PlyvmhTable& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(static_cast<const std::vector<PlyvmhRecord>&>(data), comm);
-}
-
-std::size_t packSize(const Stone1exTable& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(static_cast<const std::vector<Stone1exRecord>&>(data), comm);
 }
 
 std::size_t packSize(const PlyshlogTable& data, Dune::MPIHelper::MPICommunicator comm)
@@ -2376,12 +2370,6 @@ void pack(const PlyvmhTable& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(static_cast<const std::vector<PlyvmhRecord>&>(data), buffer, position, comm);
-}
-
-void pack(const Stone1exTable& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(static_cast<const std::vector<Stone1exRecord>&>(data), buffer, position, comm);
 }
 
 void pack(const PlyshlogTable& data, std::vector<char>& buffer, int& position,
@@ -3991,14 +3979,6 @@ void unpack(PlyvmhTable& data, std::vector<char>& buffer, int& position,
     std::vector<PlyvmhRecord> pdata;
     unpack(pdata, buffer, position, comm);
     data = PlyvmhTable(pdata);
-}
-
-void unpack(Stone1exTable& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<Stone1exRecord> pdata;
-    unpack(pdata, buffer, position, comm);
-    data = Stone1exTable(pdata);
 }
 
 void unpack(PlyshlogTable& data, std::vector<char>& buffer, int& position,

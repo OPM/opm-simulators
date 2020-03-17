@@ -91,8 +91,6 @@ class SkprwatTable;
 class SolventDensityTable;
 class SpiralICD;
 class StandardCond;
-class Stone1exRecord;
-class Stone1exTable;
 class Tabdims;
 class TableColumn;
 class TableContainer;
@@ -501,8 +499,6 @@ ADD_PACK_PROTOTYPES(SkprwatTable)
 ADD_PACK_PROTOTYPES(SolventDensityTable)
 ADD_PACK_PROTOTYPES(SpiralICD)
 ADD_PACK_PROTOTYPES(std::string)
-ADD_PACK_PROTOTYPES(Stone1exRecord)
-ADD_PACK_PROTOTYPES(Stone1exTable)
 ADD_PACK_PROTOTYPES(Tabdims)
 ADD_PACK_PROTOTYPES(TableColumn)
 ADD_PACK_PROTOTYPES(TableContainer)
