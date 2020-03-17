@@ -1995,7 +1995,7 @@ BOOST_AUTO_TEST_CASE(ASTNode)
 #ifdef HAVE_MPI
     Opm::Action::ASTNode child(number, FuncType::field, "test3", {"test2"}, 2.0, {});
     Opm::Action::ASTNode val1(number, FuncType::field, "test1", {"test2"}, 1.0, {child});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Action::ASTNode)
 #endif
 }

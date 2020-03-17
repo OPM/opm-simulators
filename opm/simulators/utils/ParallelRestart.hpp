@@ -47,7 +47,6 @@ namespace Action {
     class Actions;
     class ActionX;
     class AST;
-    class ASTNode;
     class Condition;
     class Quantity;
 }
@@ -393,7 +392,6 @@ void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& posit
 ADD_PACK_PROTOTYPES(Action::Actions)
 ADD_PACK_PROTOTYPES(Action::ActionX)
 ADD_PACK_PROTOTYPES(Action::AST)
-ADD_PACK_PROTOTYPES(Action::ASTNode)
 ADD_PACK_PROTOTYPES(Action::Condition)
 ADD_PACK_PROTOTYPES(Action::Quantity)
 ADD_PACK_PROTOTYPES(Connection)

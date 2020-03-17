@@ -27,7 +27,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionAST.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/Actions.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionX.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Action/ASTNode.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/Condition.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/icd.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/SpiralICD.hpp>
@@ -689,17 +688,6 @@ std::size_t packSize(const Deck& data,
            packSize(data.getDataFile(), comm) +
            packSize(data.getInputPath(), comm) +
            packSize(data.unitSystemAccessCount(), comm);
-}
-
-std::size_t packSize(const Action::ASTNode& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.type, comm) +
-           packSize(data.func_type, comm) +
-           packSize(data.func, comm) +
-           packSize(data.argList(), comm) +
-           packSize(data.getNumber(), comm) +
-           packSize(data.childrens(), comm);
 }
 
 std::size_t packSize(const Action::AST& data,
@@ -1409,18 +1397,6 @@ void pack(const Deck& data,
     pack(data.getDataFile(), buffer, position, comm);
     pack(data.getInputPath(), buffer, position, comm);
     pack(data.unitSystemAccessCount(), buffer, position, comm);
-}
-
-void pack(const Action::ASTNode& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.type, buffer, position, comm);
-    pack(data.func_type, buffer, position, comm);
-    pack(data.func, buffer, position, comm);
-    pack(data.argList(), buffer, position, comm);
-    pack(data.getNumber(), buffer, position, comm);
-    pack(data.childrens(), buffer, position, comm);
 }
 
 void pack(const Action::AST& data,
@@ -2382,25 +2358,6 @@ void unpack(Deck& data, std::vector<char>& buffer, int& position,
     unpack(accessCount, buffer, position, comm);
     data = Deck(keywords, defaultUnitSystem,
                 activeUnitSystem.get(), dataFile, inputPath, accessCount);
-}
-
-void unpack(Action::ASTNode& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    TokenType token;
-    FuncType func_type;
-    std::string func;
-    std::vector<std::string> argList;
-    double number;
-    std::vector<Action::ASTNode> children;
-
-    unpack(token, buffer, position, comm);
-    unpack(func_type, buffer, position, comm);
-    unpack(func, buffer, position, comm);
-    unpack(argList, buffer, position, comm);
-    unpack(number, buffer, position, comm);
-    unpack(children, buffer, position, comm);
-    data = Action::ASTNode(token, func_type, func, argList, number, children);
 }
 
 void unpack(Action::AST& data, std::vector<char>& buffer, int& position,
