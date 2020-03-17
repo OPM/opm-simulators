@@ -307,7 +307,6 @@ HANDLE_AS_POD(data::CurrentControl)
 HANDLE_AS_POD(data::Rates)
 HANDLE_AS_POD(data::Segment)
 HANDLE_AS_POD(DENSITYRecord)
-HANDLE_AS_POD(DenT::entry)
 HANDLE_AS_POD(Eqldims)
 HANDLE_AS_POD(MLimits)
 HANDLE_AS_POD(PlmixparRecord)
@@ -373,11 +372,6 @@ std::size_t packSize(const WellType& data, Dune::MPIHelper::MPICommunicator comm
 {
     return packSize(data.producer(), comm) +
            packSize(data.preferred_phase(), comm);
-}
-
-std::size_t packSize(const DenT& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.records(), comm);
 }
 
 std::size_t packSize(const Rock2dTable& data, Dune::MPIHelper::MPICommunicator comm)
@@ -1543,11 +1537,6 @@ void pack(const WellType& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm) {
     pack(data.producer(), buffer, position, comm);
     pack(data.preferred_phase(), buffer, position, comm);
-}
-
-void pack(const DenT& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm) {
-    pack(data.records(), buffer, position, comm);
 }
 
 void pack(const Rock2dTable& data, std::vector<char>& buffer, int& position,
@@ -2772,15 +2761,6 @@ void unpack(WellType& data, std::vector<char>& buffer, int& position, Dune::MPIH
     unpack(producer, buffer, position, comm);
     unpack(preferred_phase, buffer, position, comm);
     data = WellType( producer, preferred_phase );
-}
-
-
-
-void unpack(DenT& data, std::vector<char>& buffer, int& position, Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<DenT::entry> records;
-    unpack(records, buffer, position, comm);
-    data = DenT( records );
 }
 
 void unpack(Rock2dTable& data, std::vector<char>& buffer, int& position,

@@ -2329,7 +2329,7 @@ BOOST_AUTO_TEST_CASE(DenT)
 {
 #ifdef HAVE_MPI
     Opm::DenT val1 = getDenT();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(DenT)
 #endif
 }

@@ -35,7 +35,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/DenT.hpp>
 #include <opm/parser/eclipse/EclipseState/Util/OrderedMap.hpp>
 
 #include <dune/common/parallel/mpihelper.hh>
@@ -475,8 +474,6 @@ ADD_PACK_PROTOTYPES(DeckKeyword)
 ADD_PACK_PROTOTYPES(DeckRecord)
 ADD_PACK_PROTOTYPES(DENSITYRecord)
 ADD_PACK_PROTOTYPES(DensityTable)
-ADD_PACK_PROTOTYPES(DenT)
-ADD_PACK_PROTOTYPES(DenT::entry)
 ADD_PACK_PROTOTYPES(Dimension)
 ADD_PACK_PROTOTYPES(Eqldims)
 ADD_PACK_PROTOTYPES(Events)
