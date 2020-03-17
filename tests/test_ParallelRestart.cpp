@@ -1643,7 +1643,7 @@ BOOST_AUTO_TEST_CASE(WList)
 {
 #ifdef HAVE_MPI
     Opm::WList val1({"test1", "test2", "test3"});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(WList)
 #endif
 }
@@ -1655,7 +1655,7 @@ BOOST_AUTO_TEST_CASE(WListManager)
     Opm::WList wl({"test1", "test2", "test3"});
     std::map<std::string,Opm::WList> data{{"test", wl}, {"test2", wl}};
     Opm::WListManager val1(data);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(WListManager)
 #endif
 }

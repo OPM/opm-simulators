@@ -44,8 +44,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellFoamProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellPolymerProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTracerProperties.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/WList.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Util/IOrderSet.hpp>
 #include <dune/common/parallel/mpitraits.hh>
 
@@ -657,18 +655,6 @@ std::size_t packSize(const Group& data,
            packSize(data.igroups(), comm) +
            packSize(data.injectionProperties(), comm) +
            packSize(data.productionProperties(), comm);
-}
-
-std::size_t packSize(const WList& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.wellList(), comm);
-}
-
-std::size_t packSize(const WListManager& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.lists(), comm);
 }
 
 std::size_t packSize(const GuideRateModel& data,
@@ -1470,20 +1456,6 @@ void pack(const Group& data,
     pack(data.igroups(), buffer, position, comm);
     pack(data.injectionProperties(), buffer, position, comm);
     pack(data.productionProperties(), buffer, position, comm);
-}
-
-void pack(const WList& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.wellList(), buffer, position, comm);
-}
-
-void pack(const WListManager& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.lists(), buffer, position, comm);
 }
 
 void pack(const GuideRateModel& data,
@@ -2535,24 +2507,6 @@ void unpack(Group& data,
                  injection, production);
 }
 
-void unpack(WList& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    WList::storage ddata;
-    unpack(ddata, buffer, position, comm);
-    data = WList(ddata);
-}
-
-void unpack(WListManager& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::map<std::string,WList> lists;
-    unpack(lists, buffer, position, comm);
-    data = WListManager(lists);
-}
-
 void unpack(GuideRateModel& data,
             std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
@@ -2915,6 +2869,7 @@ INSTANTIATE_PACK(std::map<std::string,std::map<std::pair<int,int>,int>>)
 INSTANTIATE_PACK(std::map<UDQVarType,std::size_t>)
 INSTANTIATE_PACK(std::unordered_map<std::string,size_t>)
 INSTANTIATE_PACK(std::unordered_map<std::string,std::string>)
+INSTANTIATE_PACK(std::unordered_set<std::string>)
 INSTANTIATE_PACK(std::pair<bool,double>)
 INSTANTIATE_PACK(std::pair<bool,std::size_t>)
 INSTANTIATE_PACK(DynamicState<int>)
@@ -2923,7 +2878,6 @@ INSTANTIATE_PACK(DynamicState<std::shared_ptr<GConSale>>)
 INSTANTIATE_PACK(DynamicState<std::shared_ptr<GConSump>>)
 INSTANTIATE_PACK(DynamicState<std::shared_ptr<GuideRateConfig>>)
 INSTANTIATE_PACK(DynamicState<Well::ProducerCMode>)
-INSTANTIATE_PACK(DynamicState<std::shared_ptr<WListManager>>)
 INSTANTIATE_PACK(DynamicVector<Deck>)
 
 #undef INSTANTIATE_PACK

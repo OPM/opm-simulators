@@ -74,8 +74,6 @@ class WellFoamProperties;
 class WellPolymerProperties;
 class WellSegments;
 class WellTracerProperties;
-class WList;
-class WListManager;
 
 namespace Mpi
 {
@@ -450,8 +448,6 @@ ADD_PACK_PROTOTYPES(WellFoamProperties)
 ADD_PACK_PROTOTYPES(WellPolymerProperties)
 ADD_PACK_PROTOTYPES(WellSegments)
 ADD_PACK_PROTOTYPES(WellTracerProperties)
-ADD_PACK_PROTOTYPES(WList)
-ADD_PACK_PROTOTYPES(WListManager)
 
 } // end namespace Mpi
 

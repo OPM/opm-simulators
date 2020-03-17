@@ -42,6 +42,8 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQAssign.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQASTNode.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WList.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
 
 //#include <opm/material/fluidsystems/BlackOilFluidSystemSimple.hpp>
 //#include <opm/material/fluidsystems/BlackOilFluidSystemSimple.hpp>
