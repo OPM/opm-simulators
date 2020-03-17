@@ -72,7 +72,6 @@ class RestartSchedule;
 class RFTConfig;
 class Segment;
 class SpiralICD;
-class Tabdims;
 class TableManager;
 class TimeStampUTC;
 class Tuning;
@@ -453,7 +452,6 @@ ADD_PACK_PROTOTYPES(RFTConfig)
 ADD_PACK_PROTOTYPES(Segment)
 ADD_PACK_PROTOTYPES(SpiralICD)
 ADD_PACK_PROTOTYPES(std::string)
-ADD_PACK_PROTOTYPES(Tabdims)
 ADD_PACK_PROTOTYPES(TableManager)
 ADD_PACK_PROTOTYPES(TimeMap)
 ADD_PACK_PROTOTYPES(TimeStampUTC)
