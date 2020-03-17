@@ -40,12 +40,16 @@ public:
     template<class T>
     void operator()(const T& data)
     {
-        if (m_op == Operation::PACKSIZE)
-            m_packSize += Mpi::packSize(data, m_comm);
-        else if (m_op == Operation::PACK)
-            Mpi::pack(data, m_buffer, m_position, m_comm);
-        else if (m_op == Operation::UNPACK)
-            Mpi::unpack(const_cast<T&>(data), m_buffer, m_position, m_comm);
+        if constexpr (is_shared_ptr<T>::value) {
+            shared_ptr(data);
+        } else {
+          if (m_op == Operation::PACKSIZE)
+              m_packSize += Mpi::packSize(data, m_comm);
+          else if (m_op == Operation::PACK)
+              Mpi::pack(data, m_buffer, m_position, m_comm);
+          else if (m_op == Operation::UNPACK)
+              Mpi::unpack(const_cast<T&>(data), m_buffer, m_position, m_comm);
+        }
     }
 
     template<class T>
@@ -56,6 +60,8 @@ public:
             for (auto& it : d) {
               if constexpr (is_pair<T>::value)
                   pair(it);
+              else if constexpr (is_shared_ptr<T>::value)
+                  shared_ptr(it);
               else
                   it.serializeOp(*this);
             }
@@ -72,6 +78,44 @@ public:
             Mpi::unpack(size, m_buffer, m_position, m_comm);
             data.resize(size);
             handle(data);
+        }
+    }
+
+    template<template<class Key, class Data> class Map, class Key, class Data>
+    void map(Map<Key, Data>& data)
+    {
+        auto handle = [&](auto& d)
+        {
+            if constexpr (is_vector<Data>::value)
+                vector(d);
+            else if constexpr (is_shared_ptr<Data>::value)
+                shared_ptr(d);
+            else
+                d.serializeOp(*this);
+        };
+
+        if (m_op == Operation::PACKSIZE) {
+            m_packSize += Mpi::packSize(data.size(), m_comm);
+            for (auto& it : data) {
+                m_packSize += Mpi::packSize(it.first, m_comm);
+                handle(it.second);
+            }
+        } else if (m_op == Operation::PACK) {
+            Mpi::pack(data.size(), m_buffer, m_position, m_comm);
+            for (auto& it : data) {
+                Mpi::pack(it.first, m_buffer, m_position, m_comm);
+                handle(it.second);
+            }
+        } else if (m_op == Operation::UNPACK) {
+            size_t size;
+            Mpi::unpack(size, m_buffer, m_position, m_comm);
+            for (size_t i = 0; i < size; ++i) {
+                Key key;
+                Mpi::unpack(key, m_buffer, m_position, m_comm);
+                Data entry;
+                handle(entry);
+                data.insert(std::make_pair(key, entry));
+            }
         }
     }
 
@@ -120,6 +164,11 @@ public:
         return m_position;
     }
 
+    bool isSerializing() const
+    {
+        return m_op != Operation::UNPACK;
+    }
+
 protected:
     template<class T>
     struct is_pair {
@@ -128,6 +177,26 @@ protected:
 
     template<class T1, class T2>
     struct is_pair<std::pair<T1,T2>> {
+        constexpr static bool value = true;
+    };
+
+    template<class T>
+    struct is_vector {
+        constexpr static bool value = false;
+    };
+
+    template<class T1>
+    struct is_vector<std::vector<T1>> {
+        constexpr static bool value = true;
+    };
+
+    template<class T>
+    struct is_shared_ptr {
+        constexpr static bool value = false;
+    };
+
+    template<class T1>
+    struct is_shared_ptr<std::shared_ptr<T1>> {
         constexpr static bool value = true;
     };
 
@@ -143,6 +212,18 @@ protected:
             (*this)(data.second);
         else
             const_cast<T2&>(data.second).serializeOp(*this);
+    }
+
+    template<class T1>
+    void shared_ptr(const std::shared_ptr<T1>& data)
+    {
+        bool value = data ? true : false;
+        (*this)(value);
+        if (m_op == Operation::UNPACK && value) {
+            const_cast<std::shared_ptr<T1>&>(data) = std::make_shared<T1>();
+        }
+        if (data)
+            data->serializeOp(*this);
     }
 
     Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> m_comm;

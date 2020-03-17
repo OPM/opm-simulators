@@ -911,7 +911,7 @@ BOOST_AUTO_TEST_CASE(Phases)
 {
 #if HAVE_MPI
     Opm::Phases val1(true, true, true, false, true, false, true, false);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Phases)
 #endif
 }
@@ -931,7 +931,7 @@ BOOST_AUTO_TEST_CASE(EndpointScaling)
 {
 #if HAVE_MPI
     Opm::EndpointScaling val1(std::bitset<4>(13));
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(EndpointScaling)
 #endif
 }
@@ -941,7 +941,7 @@ BOOST_AUTO_TEST_CASE(Welldims)
 {
 #if HAVE_MPI
     Opm::Welldims val1(1,2,3,4);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Welldims)
 #endif
 }
@@ -951,7 +951,7 @@ BOOST_AUTO_TEST_CASE(WellSegmentDims)
 {
 #if HAVE_MPI
     Opm::WellSegmentDims val1(1,2,3);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(WellSegmentDims)
 #endif
 }
@@ -961,7 +961,7 @@ BOOST_AUTO_TEST_CASE(UDQParams)
 {
 #if HAVE_MPI
     Opm::UDQParams val1(true, 1, 2.0, 3.0, 4.0);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(UDQParams)
 #endif
 }
@@ -971,7 +971,7 @@ BOOST_AUTO_TEST_CASE(EclHysterConfig)
 {
 #if HAVE_MPI
     Opm::EclHysterConfig val1(true, 1, 2);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(EclHysterConfig)
 #endif
 }
@@ -981,7 +981,7 @@ BOOST_AUTO_TEST_CASE(Actdims)
 {
 #if HAVE_MPI
     Opm::Actdims val1(1,2,3,4);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Actdims)
 #endif
 }
@@ -1000,7 +1000,7 @@ BOOST_AUTO_TEST_CASE(Runspec)
                       Opm::Actdims(1,2,3,4),
                       Opm::SatFuncControls(5.0e-7, Opm::SatFuncControls::ThreePhaseOilKrModel::Stone2));
 
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Runspec)
 #endif
 }
@@ -1671,7 +1671,7 @@ BOOST_AUTO_TEST_CASE(UDQASTNode)
     Opm::UDQASTNode val1(Opm::UDQVarType::NONE,
                          Opm::UDQTokenType::error,
                          "test", 1.0, {"test3"}, n1, n1);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(UDQASTNode)
 #endif
 }
@@ -1685,7 +1685,7 @@ BOOST_AUTO_TEST_CASE(UDQDefine)
                        "test", 1.0, {"test1", "test2"}, n0, n0);
     Opm::UDQDefine val1("test", std::make_shared<Opm::UDQASTNode>(n1),
                         Opm::UDQVarType::NONE, "test2");
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(UDQDefine)
 #endif
 }
@@ -1697,7 +1697,7 @@ BOOST_AUTO_TEST_CASE(UDQAssign)
     Opm::UDQAssign val1("test", Opm::UDQVarType::NONE,
                         {Opm::UDQAssign::AssignRecord{{"test1"}, 1.0},
                          Opm::UDQAssign::AssignRecord{{"test2"}, 2.0}});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(UDQAssign)
 #endif
 }
@@ -1707,7 +1707,7 @@ BOOST_AUTO_TEST_CASE(UDQIndex)
 {
 #ifdef HAVE_MPI
     Opm::UDQIndex val1(1, 2, Opm::UDQAction::ASSIGN, Opm::UDQVarType::WELL_VAR);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(UDQIndex)
 #endif
 }
@@ -1717,7 +1717,7 @@ BOOST_AUTO_TEST_CASE(UDQConfig)
 {
 #ifdef HAVE_MPI
     Opm::UDQConfig val1 = getUDQConfig();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(UDQConfig)
 #endif
 }
@@ -1728,7 +1728,7 @@ BOOST_AUTO_TEST_CASE(UDQActiveInputRecord)
 #ifdef HAVE_MPI
     Opm::UDQActive::InputRecord val1(1, "test1", "test2",
                                      Opm::UDAControl::WCONPROD_ORAT);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(UDQActive::InputRecord)
 #endif
 }
@@ -1739,7 +1739,7 @@ BOOST_AUTO_TEST_CASE(UDQActiveRecord)
 #ifdef HAVE_MPI
     Opm::UDQActive::Record val1("test1", 1, 2, "test2",
                                 Opm::UDAControl::WCONPROD_ORAT);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(UDQActive::Record)
 #endif
 }
@@ -1753,7 +1753,7 @@ BOOST_AUTO_TEST_CASE(UDQActive)
                         {Opm::UDQActive::Record("test1", 1, 2, "test2",
                                                   Opm::UDAControl::WCONPROD_ORAT)},
                         {{"test1", 1}}, {{"test2", 2}});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(UDQActive)
 #endif
 }

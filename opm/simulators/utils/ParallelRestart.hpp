@@ -37,8 +37,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRateConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQAssign.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQActive.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/DenT.hpp>
@@ -54,8 +52,6 @@
 
 namespace Opm
 {
-
-class Actdims;
 
 namespace Action {
     class Actions;
@@ -75,9 +71,7 @@ class DeckRecord;
 class DENSITYRecord;
 class DensityTable;
 class Dimension;
-class EclHysterConfig;
 class Eqldims;
-class EndpointScaling;
 class Events;
 template<class T> class IOrderSet;
 class JFunc;
@@ -85,7 +79,6 @@ class Location;
 class MessageLimits;
 class MLimits;
 class OilVaporizationProperties;
-class Phases;
 class PlymwinjTable;
 class PlyshlogTable;
 class PlyvmhRecord;
@@ -109,7 +102,6 @@ class RockTable;
 class RocktabTable;
 class Rock2dTable;
 class Rock2dtrTable;
-class Runspec;
 class Segment;
 class ShrateRecord;
 class ShrateTable;
@@ -131,11 +123,6 @@ class TlmixparRecord;
 class TlmixparTable;
 class Tuning;
 class UDAValue;
-class UDQASTNode;
-class UDQConfig;
-class UDQDefine;
-class UDQIndex;
-class UDQParams;
 class UnitSystem;
 class Valve;
 class VFPInjTable;
@@ -145,11 +132,9 @@ class ViscrefTable;
 class WATDENTRecord;
 class WatdentTable;
 class WellConnections;
-class Welldims;
 class WellEconProductionLimits;
 class WellFoamProperties;
 class WellPolymerProperties;
-class WellSegmentDims;
 class WellSegments;
 class WellTracerProperties;
 class WList;
@@ -474,7 +459,6 @@ void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& posit
   void unpack(T& data, std::vector<char>& buffer, int& position, \
               Dune::MPIHelper::MPICommunicator comm);
 
-ADD_PACK_PROTOTYPES(Actdims)
 ADD_PACK_PROTOTYPES(Action::Actions)
 ADD_PACK_PROTOTYPES(Action::ActionX)
 ADD_PACK_PROTOTYPES(Action::AST)
@@ -509,8 +493,6 @@ ADD_PACK_PROTOTYPES(DensityTable)
 ADD_PACK_PROTOTYPES(DenT)
 ADD_PACK_PROTOTYPES(DenT::entry)
 ADD_PACK_PROTOTYPES(Dimension)
-ADD_PACK_PROTOTYPES(EclHysterConfig)
-ADD_PACK_PROTOTYPES(EndpointScaling)
 ADD_PACK_PROTOTYPES(Eqldims)
 ADD_PACK_PROTOTYPES(Events)
 ADD_PACK_PROTOTYPES(GConSale)
@@ -529,7 +511,6 @@ ADD_PACK_PROTOTYPES(Location)
 ADD_PACK_PROTOTYPES(MessageLimits)
 ADD_PACK_PROTOTYPES(MLimits)
 ADD_PACK_PROTOTYPES(OilVaporizationProperties)
-ADD_PACK_PROTOTYPES(Phases)
 ADD_PACK_PROTOTYPES(PlmixparRecord)
 ADD_PACK_PROTOTYPES(PlmixparTable)
 ADD_PACK_PROTOTYPES(PlymwinjTable)
@@ -555,7 +536,6 @@ ADD_PACK_PROTOTYPES(RockTable)
 ADD_PACK_PROTOTYPES(Rock2dTable)
 ADD_PACK_PROTOTYPES(Rock2dtrTable)
 ADD_PACK_PROTOTYPES(RocktabTable)
-ADD_PACK_PROTOTYPES(Runspec)
 ADD_PACK_PROTOTYPES(Segment)
 ADD_PACK_PROTOTYPES(ShrateRecord)
 ADD_PACK_PROTOTYPES(ShrateTable)
@@ -578,16 +558,6 @@ ADD_PACK_PROTOTYPES(TlmixparRecord)
 ADD_PACK_PROTOTYPES(TlmixparTable)
 ADD_PACK_PROTOTYPES(Tuning)
 ADD_PACK_PROTOTYPES(UDAValue)
-ADD_PACK_PROTOTYPES(UDQActive)
-ADD_PACK_PROTOTYPES(UDQActive::InputRecord)
-ADD_PACK_PROTOTYPES(UDQActive::Record)
-ADD_PACK_PROTOTYPES(UDQAssign)
-ADD_PACK_PROTOTYPES(UDQAssign::AssignRecord)
-ADD_PACK_PROTOTYPES(UDQASTNode)
-ADD_PACK_PROTOTYPES(UDQConfig)
-ADD_PACK_PROTOTYPES(UDQDefine)
-ADD_PACK_PROTOTYPES(UDQIndex)
-ADD_PACK_PROTOTYPES(UDQParams)
 ADD_PACK_PROTOTYPES(UnitSystem)
 ADD_PACK_PROTOTYPES(Valve)
 ADD_PACK_PROTOTYPES(VFPInjTable)
@@ -603,11 +573,9 @@ ADD_PACK_PROTOTYPES(Well::WellInjectionProperties)
 ADD_PACK_PROTOTYPES(Well::WellProductionProperties)
 ADD_PACK_PROTOTYPES(WellBrineProperties)
 ADD_PACK_PROTOTYPES(WellConnections)
-ADD_PACK_PROTOTYPES(Welldims)
 ADD_PACK_PROTOTYPES(WellEconProductionLimits)
 ADD_PACK_PROTOTYPES(WellFoamProperties)
 ADD_PACK_PROTOTYPES(WellPolymerProperties)
-ADD_PACK_PROTOTYPES(WellSegmentDims)
 ADD_PACK_PROTOTYPES(WellSegments)
 ADD_PACK_PROTOTYPES(WellTestConfig)
 ADD_PACK_PROTOTYPES(WellTestConfig::WTESTWell)
