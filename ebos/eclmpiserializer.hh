@@ -81,15 +81,20 @@ public:
         }
     }
 
-    template<template<class Key, class Data> class Map, class Key, class Data>
-    void map(Map<Key, Data>& data)
+    template<class Map, bool complexType = true>
+    void map(Map& data)
     {
+        using Key = typename Map::key_type;
+        using Data = typename Map::mapped_type;
+
         auto handle = [&](auto& d)
         {
             if constexpr (is_vector<Data>::value)
                 vector(d);
             else if constexpr (is_shared_ptr<Data>::value)
                 shared_ptr(d);
+            else if constexpr (!complexType)
+                d.template serializeOp<EclMpiSerializer, false>(*this);
             else
                 d.serializeOp(*this);
         };
