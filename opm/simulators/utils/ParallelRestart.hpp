@@ -103,8 +103,6 @@ class UnitSystem;
 class Valve;
 class VFPInjTable;
 class VFPProdTable;
-class VISCREFRecord;
-class ViscrefTable;
 class WATDENTRecord;
 class WatdentTable;
 class WellConnections;
@@ -510,8 +508,6 @@ ADD_PACK_PROTOTYPES(UnitSystem)
 ADD_PACK_PROTOTYPES(Valve)
 ADD_PACK_PROTOTYPES(VFPInjTable)
 ADD_PACK_PROTOTYPES(VFPProdTable)
-ADD_PACK_PROTOTYPES(VISCREFRecord)
-ADD_PACK_PROTOTYPES(ViscrefTable)
 ADD_PACK_PROTOTYPES(WATDENTRecord)
 ADD_PACK_PROTOTYPES(WatdentTable)
 ADD_PACK_PROTOTYPES(Well)
