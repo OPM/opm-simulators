@@ -655,12 +655,6 @@ std::size_t packSize(const Group& data,
            packSize(data.productionProperties(), comm);
 }
 
-std::size_t packSize(const DeckRecord& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getItems(), comm);
-}
-
 std::size_t packSize(const Location& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -1359,13 +1353,6 @@ void pack(const Group& data,
     pack(data.igroups(), buffer, position, comm);
     pack(data.injectionProperties(), buffer, position, comm);
     pack(data.productionProperties(), buffer, position, comm);
-}
-
-void pack(const DeckRecord& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getItems(), buffer, position, comm);
 }
 
 void pack(const Location& data,
@@ -2303,15 +2290,6 @@ void unpack(Group& data,
                  availableForGroupControl,
                  groupNetVFPTable, parent, wells, groups,
                  injection, production);
-}
-
-void unpack(DeckRecord& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<DeckItem> items;
-    unpack(items, buffer, position, comm);
-    data = DeckRecord(std::move(items));
 }
 
 void unpack(Location& data,

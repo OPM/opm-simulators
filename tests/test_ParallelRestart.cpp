@@ -1939,7 +1939,7 @@ BOOST_AUTO_TEST_CASE(DeckRecord)
 {
 #ifdef HAVE_MPI
     Opm::DeckRecord val1 = getDeckRecord();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(DeckRecord)
 #endif
 }

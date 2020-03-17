@@ -52,7 +52,6 @@ namespace Action {
 }
 
 class Connection;
-class DeckRecord;
 class Dimension;
 template<class T> class IOrderSet;
 class Location;
@@ -405,7 +404,6 @@ ADD_PACK_PROTOTYPES(data::Well)
 ADD_PACK_PROTOTYPES(data::WellRates)
 ADD_PACK_PROTOTYPES(Deck)
 ADD_PACK_PROTOTYPES(DeckKeyword)
-ADD_PACK_PROTOTYPES(DeckRecord)
 ADD_PACK_PROTOTYPES(Dimension)
 ADD_PACK_PROTOTYPES(Group)
 ADD_PACK_PROTOTYPES(Group::GroupInjectionProperties)
