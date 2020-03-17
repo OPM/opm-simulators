@@ -656,21 +656,6 @@ std::size_t packSize(const Group& data,
            packSize(data.productionProperties(), comm);
 }
 
-std::size_t packSize(const DeckItem& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.dVal(), comm) +
-           packSize(data.iVal(), comm) +
-           packSize(data.sVal(), comm) +
-           packSize(data.uVal(), comm) +
-           packSize(data.getType(), comm) +
-           packSize(data.name(), comm) +
-           packSize(data.valueStatus(), comm) +
-           packSize(data.rawData(), comm) +
-           packSize(data.activeDimensions(), comm) +
-           packSize(data.defaultDimensions(), comm);
-}
-
 std::size_t packSize(const DeckRecord& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -1386,22 +1371,6 @@ void pack(const Group& data,
     pack(data.igroups(), buffer, position, comm);
     pack(data.injectionProperties(), buffer, position, comm);
     pack(data.productionProperties(), buffer, position, comm);
-}
-
-void pack(const DeckItem& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.dVal(), buffer, position, comm);
-    pack(data.iVal(), buffer, position, comm);
-    pack(data.sVal(), buffer, position, comm);
-    pack(data.uVal(), buffer, position, comm);
-    pack(data.getType(), buffer, position, comm);
-    pack(data.name(), buffer, position, comm);
-    pack(data.valueStatus(), buffer, position, comm);
-    pack(data.rawData(), buffer, position, comm);
-    pack(data.activeDimensions(), buffer, position, comm);
-    pack(data.defaultDimensions(), buffer, position, comm);
 }
 
 void pack(const DeckRecord& data,
@@ -2358,34 +2327,6 @@ void unpack(Group& data,
                  availableForGroupControl,
                  groupNetVFPTable, parent, wells, groups,
                  injection, production);
-}
-
-void unpack(DeckItem& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<double> dVal;
-    std::vector<int> iVal;
-    std::vector<std::string> sVal;
-    std::vector<UDAValue> uVal;
-    type_tag type;
-    std::string name;
-    std::vector<value::status> valueStatus;
-    bool rawData;
-    std::vector<Dimension> activeDimensions, defaultDimensions;
-
-    unpack(dVal, buffer, position, comm);
-    unpack(iVal, buffer, position, comm);
-    unpack(sVal, buffer, position, comm);
-    unpack(uVal, buffer, position, comm);
-    unpack(type, buffer, position, comm);
-    unpack(name, buffer, position, comm);
-    unpack(valueStatus, buffer, position, comm);
-    unpack(rawData, buffer, position, comm);
-    unpack(activeDimensions, buffer, position, comm);
-    unpack(defaultDimensions, buffer, position, comm);
-    data = DeckItem(dVal, iVal, sVal, uVal, type, name,
-                    valueStatus, rawData, activeDimensions, defaultDimensions);
 }
 
 void unpack(DeckRecord& data,

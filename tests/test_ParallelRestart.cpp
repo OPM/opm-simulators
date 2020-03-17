@@ -1929,7 +1929,7 @@ BOOST_AUTO_TEST_CASE(DeckItem)
                        {Opm::Dimension(7.0, 8.0)},
                        {Opm::Dimension(10.0, 11.0)});
 
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(DeckItem)
 #endif
 }

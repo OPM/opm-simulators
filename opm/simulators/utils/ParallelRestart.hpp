@@ -53,7 +53,6 @@ namespace Action {
 }
 
 class Connection;
-class DeckItem;
 class DeckRecord;
 class Dimension;
 template<class T> class IOrderSet;
@@ -407,7 +406,6 @@ ADD_PACK_PROTOTYPES(data::Solution)
 ADD_PACK_PROTOTYPES(data::Well)
 ADD_PACK_PROTOTYPES(data::WellRates)
 ADD_PACK_PROTOTYPES(Deck)
-ADD_PACK_PROTOTYPES(DeckItem)
 ADD_PACK_PROTOTYPES(DeckKeyword)
 ADD_PACK_PROTOTYPES(DeckRecord)
 ADD_PACK_PROTOTYPES(Dimension)
