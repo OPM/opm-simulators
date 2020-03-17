@@ -74,7 +74,6 @@ class RestartConfig;
 class RestartSchedule;
 class RFTConfig;
 class RocktabTable;
-class Rock2dTable;
 class Rock2dtrTable;
 class Segment;
 class SimpleTable;
@@ -466,7 +465,6 @@ ADD_PACK_PROTOTYPES(RestartKey)
 ADD_PACK_PROTOTYPES(RestartSchedule)
 ADD_PACK_PROTOTYPES(RestartValue)
 ADD_PACK_PROTOTYPES(RFTConfig)
-ADD_PACK_PROTOTYPES(Rock2dTable)
 ADD_PACK_PROTOTYPES(Rock2dtrTable)
 ADD_PACK_PROTOTYPES(RocktabTable)
 ADD_PACK_PROTOTYPES(Segment)
