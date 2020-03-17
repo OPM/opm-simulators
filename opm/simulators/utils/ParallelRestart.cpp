@@ -36,7 +36,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/RFTConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/ScheduleTypes.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Tuning.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunction.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunctionTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
@@ -281,7 +280,6 @@ HANDLE_AS_POD(data::CurrentControl)
 HANDLE_AS_POD(data::Rates)
 HANDLE_AS_POD(data::Segment)
 HANDLE_AS_POD(MLimits)
-HANDLE_AS_POD(Tuning)
 HANDLE_AS_POD(WellBrineProperties)
 HANDLE_AS_POD(WellFoamProperties)
 
@@ -3005,7 +3003,6 @@ INSTANTIATE_PACK(DynamicState<std::shared_ptr<Action::Actions>>)
 INSTANTIATE_PACK(DynamicState<std::shared_ptr<GConSale>>)
 INSTANTIATE_PACK(DynamicState<std::shared_ptr<GConSump>>)
 INSTANTIATE_PACK(DynamicState<std::shared_ptr<GuideRateConfig>>)
-INSTANTIATE_PACK(DynamicState<Tuning>)
 INSTANTIATE_PACK(DynamicState<Well::ProducerCMode>)
 INSTANTIATE_PACK(DynamicState<std::shared_ptr<WellTestConfig>>)
 INSTANTIATE_PACK(DynamicState<std::shared_ptr<WListManager>>)

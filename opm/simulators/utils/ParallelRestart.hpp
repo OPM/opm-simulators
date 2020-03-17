@@ -66,7 +66,6 @@ class MessageLimits;
 class MLimits;
 class Segment;
 class SpiralICD;
-class Tuning;
 class UDAValue;
 class UnitSystem;
 class Valve;
@@ -439,7 +438,6 @@ ADD_PACK_PROTOTYPES(RestartValue)
 ADD_PACK_PROTOTYPES(Segment)
 ADD_PACK_PROTOTYPES(SpiralICD)
 ADD_PACK_PROTOTYPES(std::string)
-ADD_PACK_PROTOTYPES(Tuning)
 ADD_PACK_PROTOTYPES(UDAValue)
 ADD_PACK_PROTOTYPES(UnitSystem)
 ADD_PACK_PROTOTYPES(Valve)
