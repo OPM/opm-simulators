@@ -1087,12 +1087,6 @@ std::size_t packSize(const GuideRateConfig::GroupTarget& data,
            packSize(data.target, comm);
 }
 
-std::size_t packSize(const SolventDensityTable& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getSolventDensityColumn(), comm);
-}
-
 std::size_t packSize(const PlyvmhTable& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(static_cast<const std::vector<PlyvmhRecord>&>(data), comm);
@@ -2115,13 +2109,6 @@ void pack(const GuideRateConfig::GroupTarget& data,
 {
     pack(data.guide_rate, buffer, position, comm);
     pack(data.target, buffer, position, comm);
-}
-
-void pack(const SolventDensityTable& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getSolventDensityColumn(), buffer, position, comm);
 }
 
 void pack(const PlyvmhTable& data, std::vector<char>& buffer, int& position,
@@ -3550,15 +3537,6 @@ void unpack(GuideRateConfig::GroupTarget& data,
 {
     unpack(data.guide_rate, buffer, position, comm);
     unpack(data.target, buffer, position, comm);
-}
-
-void unpack(SolventDensityTable& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<double> tableValues;
-
-    unpack(tableValues, buffer, position, comm);
-    data = SolventDensityTable(tableValues);
 }
 
 void unpack(PlyvmhTable& data, std::vector<char>& buffer, int& position,

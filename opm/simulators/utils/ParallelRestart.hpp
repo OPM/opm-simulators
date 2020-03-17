@@ -74,7 +74,6 @@ class RestartConfig;
 class RestartSchedule;
 class RFTConfig;
 class Segment;
-class SolventDensityTable;
 class SpiralICD;
 class StandardCond;
 class Tabdims;
@@ -462,7 +461,6 @@ ADD_PACK_PROTOTYPES(RestartSchedule)
 ADD_PACK_PROTOTYPES(RestartValue)
 ADD_PACK_PROTOTYPES(RFTConfig)
 ADD_PACK_PROTOTYPES(Segment)
-ADD_PACK_PROTOTYPES(SolventDensityTable)
 ADD_PACK_PROTOTYPES(SpiralICD)
 ADD_PACK_PROTOTYPES(std::string)
 ADD_PACK_PROTOTYPES(Tabdims)

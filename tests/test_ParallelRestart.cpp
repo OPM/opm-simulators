@@ -2351,7 +2351,7 @@ BOOST_AUTO_TEST_CASE(SolventDensityTable)
 {
 #ifdef HAVE_MPI
     Opm::SolventDensityTable val1({1.0, 2.0, 3.0});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(SolventDensityTable)
 #endif
 }
