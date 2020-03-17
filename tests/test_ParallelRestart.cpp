@@ -725,7 +725,7 @@ BOOST_AUTO_TEST_CASE(Rock2dtrTable)
 {
 #if HAVE_MPI
     Opm::Rock2dtrTable val1({{1.0,2.0},{3.0,4.0}}, {1.0, 2.0, 3.0});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Rock2dtrTable)
 #endif
 }

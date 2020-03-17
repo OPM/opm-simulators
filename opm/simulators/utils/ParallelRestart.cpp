@@ -54,7 +54,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/FlatTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/RocktabTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SkprpolyTable.hpp>
@@ -350,12 +349,6 @@ std::size_t packSize(const WellType& data, Dune::MPIHelper::MPICommunicator comm
 {
     return packSize(data.producer(), comm) +
            packSize(data.preferred_phase(), comm);
-}
-
-std::size_t packSize(const Rock2dtrTable& data, Dune::MPIHelper::MPICommunicator comm)
-{
-   return packSize(data.transMultValues(), comm) +
-          packSize(data.pressureValues(), comm);
 }
 
 std::size_t packSize(const TableSchema& data, Dune::MPIHelper::MPICommunicator comm)
@@ -1392,13 +1385,6 @@ void pack(const WellType& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm) {
     pack(data.producer(), buffer, position, comm);
     pack(data.preferred_phase(), buffer, position, comm);
-}
-
-void pack(const Rock2dtrTable& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.transMultValues(), buffer, position, comm);
-    pack(data.pressureValues(), buffer, position, comm);
 }
 
 void pack(const TableSchema& data, std::vector<char>& buffer, int& position,
@@ -2473,16 +2459,6 @@ void unpack(WellType& data, std::vector<char>& buffer, int& position, Dune::MPIH
     unpack(producer, buffer, position, comm);
     unpack(preferred_phase, buffer, position, comm);
     data = WellType( producer, preferred_phase );
-}
-
-void unpack(Rock2dtrTable& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<std::vector<double>> transMultValues;
-    std::vector<double> pressureValues;
-    unpack(transMultValues, buffer, position, comm);
-    unpack(pressureValues, buffer, position, comm);
-    data = Rock2dtrTable(transMultValues, pressureValues);
 }
 
 void unpack(TableSchema& data, std::vector<char>& buffer, int& position,
