@@ -759,7 +759,7 @@ BOOST_AUTO_TEST_CASE(TableColumn)
 {
 #if HAVE_MPI
     Opm::TableColumn val1 = getTableColumn();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(TableColumn)
 #endif
 }

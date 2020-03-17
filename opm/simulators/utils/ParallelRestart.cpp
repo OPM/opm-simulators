@@ -54,7 +54,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/FlatTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/TableColumn.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableContainer.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableSchema.hpp>
@@ -349,15 +348,6 @@ std::size_t packSize(const WellType& data, Dune::MPIHelper::MPICommunicator comm
 std::size_t packSize(const TableSchema& data, Dune::MPIHelper::MPICommunicator comm)
 {
    return packSize(data.getColumns(), comm);
-}
-
-std::size_t packSize(const TableColumn& data, Dune::MPIHelper::MPICommunicator comm)
-{
-   return packSize(data.schema(), comm) +
-          packSize(data.name(), comm) +
-          packSize(data.values(), comm) +
-          packSize(data.defaults(), comm) +
-          packSize(data.defaultCount(), comm);
 }
 
 std::size_t packSize(const TableContainer& data, Dune::MPIHelper::MPICommunicator comm)
@@ -1361,16 +1351,6 @@ void pack(const TableSchema& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.getColumns(), buffer, position, comm);
-}
-
-void pack(const TableColumn& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.schema(), buffer, position, comm);
-    pack(data.name(), buffer, position, comm);
-    pack(data.values(), buffer, position, comm);
-    pack(data.defaults(), buffer, position, comm);
-    pack(data.defaultCount(), buffer, position, comm);
 }
 
 void pack(const TableContainer& data, std::vector<char>& buffer, int& position,
@@ -2408,22 +2388,6 @@ void unpack(TableSchema& data, std::vector<char>& buffer, int& position,
     OrderedMap<std::string, ColumnSchema> columns;
     unpack(columns, buffer, position, comm);
     data = TableSchema(columns);
-}
-
-void unpack(TableColumn& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    ColumnSchema schema;
-    std::string name;
-    std::vector<double> values;
-    std::vector<bool> defaults;
-    size_t defaultCount;
-    unpack(schema, buffer, position, comm);
-    unpack(name, buffer, position, comm);
-    unpack(values, buffer, position, comm);
-    unpack(defaults, buffer, position, comm);
-    unpack(defaultCount, buffer, position, comm);
-    data = TableColumn(schema, name, values, defaults, defaultCount);
 }
 
 void unpack(TableContainer& data, std::vector<char>& buffer, int& position,

@@ -76,7 +76,6 @@ class RFTConfig;
 class Segment;
 class SpiralICD;
 class Tabdims;
-class TableColumn;
 class TableContainer;
 class TableManager;
 class TableSchema;
@@ -463,7 +462,6 @@ ADD_PACK_PROTOTYPES(Segment)
 ADD_PACK_PROTOTYPES(SpiralICD)
 ADD_PACK_PROTOTYPES(std::string)
 ADD_PACK_PROTOTYPES(Tabdims)
-ADD_PACK_PROTOTYPES(TableColumn)
 ADD_PACK_PROTOTYPES(TableContainer)
 ADD_PACK_PROTOTYPES(TableManager)
 ADD_PACK_PROTOTYPES(TableSchema)
