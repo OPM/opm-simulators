@@ -656,23 +656,6 @@ std::size_t packSize(const Group& data,
            packSize(data.productionProperties(), comm);
 }
 
-std::size_t packSize(const GConSale::GCONSALEGroup& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.sales_target, comm) +
-           packSize(data.max_sales_rate, comm) +
-           packSize(data.min_sales_rate, comm) +
-           packSize(data.max_proc, comm) +
-           packSize(data.udq_undefined, comm) +
-           packSize(data.unit_system, comm);
-}
-
-std::size_t packSize(const GConSale& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getGroups(), comm);
-}
-
 std::size_t packSize(const GConSump::GCONSUMPGroup& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -1419,25 +1402,6 @@ void pack(const Group& data,
     pack(data.igroups(), buffer, position, comm);
     pack(data.injectionProperties(), buffer, position, comm);
     pack(data.productionProperties(), buffer, position, comm);
-}
-
-void pack(const GConSale::GCONSALEGroup& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.sales_target, buffer, position, comm);
-    pack(data.max_sales_rate, buffer, position, comm);
-    pack(data.min_sales_rate, buffer, position, comm);
-    pack(data.max_proc, buffer, position, comm);
-    pack(data.udq_undefined, buffer, position, comm);
-    pack(data.unit_system, buffer, position, comm);
-}
-
-void pack(const GConSale& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getGroups(), buffer, position, comm);
 }
 
 void pack(const GConSump::GCONSUMPGroup& data,
@@ -2430,27 +2394,6 @@ void unpack(Group& data,
                  injection, production);
 }
 
-void unpack(GConSale::GCONSALEGroup& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    unpack(data.sales_target, buffer, position, comm);
-    unpack(data.max_sales_rate, buffer, position, comm);
-    unpack(data.min_sales_rate, buffer, position, comm);
-    unpack(data.max_proc, buffer, position, comm);
-    unpack(data.udq_undefined, buffer, position, comm);
-    unpack(data.unit_system, buffer, position, comm);
-}
-
-void unpack(GConSale& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::map<std::string,GConSale::GCONSALEGroup> groups;
-    unpack(groups, buffer, position, comm);
-    data = GConSale(groups);
-}
-
 void unpack(GConSump::GCONSUMPGroup& data,
             std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
@@ -2743,7 +2686,6 @@ INSTANTIATE_PACK(std::pair<bool,double>)
 INSTANTIATE_PACK(std::pair<bool,std::size_t>)
 INSTANTIATE_PACK(DynamicState<int>)
 INSTANTIATE_PACK(DynamicState<std::shared_ptr<Action::Actions>>)
-INSTANTIATE_PACK(DynamicState<std::shared_ptr<GConSale>>)
 INSTANTIATE_PACK(DynamicState<std::shared_ptr<GConSump>>)
 INSTANTIATE_PACK(DynamicState<Well::ProducerCMode>)
 INSTANTIATE_PACK(DynamicVector<Deck>)

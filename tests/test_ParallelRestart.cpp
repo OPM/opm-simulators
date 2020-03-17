@@ -1855,7 +1855,7 @@ BOOST_AUTO_TEST_CASE(GConSaleGroup)
                                       Opm::UDAValue(3.0),
                                       Opm::GConSale::MaxProcedure::PLUG,
                                       4.0, Opm::UnitSystem()};
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(GConSale::GCONSALEGroup)
 #endif
 }
@@ -1870,7 +1870,7 @@ BOOST_AUTO_TEST_CASE(GConSale)
                                        Opm::GConSale::MaxProcedure::PLUG,
                                        4.0, Opm::UnitSystem()};
     Opm::GConSale val1({{"test1", group}, {"test2", group}});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(GConSale)
 #endif
 }
