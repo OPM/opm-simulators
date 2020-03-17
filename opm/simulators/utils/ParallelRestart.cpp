@@ -23,7 +23,6 @@
 
 #include "ParallelRestart.hpp"
 #include <opm/parser/eclipse/EclipseState/Grid/FaceDir.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionAST.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/Actions.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/Condition.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/icd.hpp>
@@ -662,12 +661,6 @@ std::size_t packSize(const Deck& data,
            packSize(data.getDataFile(), comm) +
            packSize(data.getInputPath(), comm) +
            packSize(data.unitSystemAccessCount(), comm);
-}
-
-std::size_t packSize(const Action::AST& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getCondition(), comm);
 }
 
 std::size_t packSize(const Action::Quantity& data,
@@ -1331,13 +1324,6 @@ void pack(const Deck& data,
     pack(data.getDataFile(), buffer, position, comm);
     pack(data.getInputPath(), buffer, position, comm);
     pack(data.unitSystemAccessCount(), buffer, position, comm);
-}
-
-void pack(const Action::AST& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getCondition(), buffer, position, comm);
 }
 
 void pack(const Action::Quantity& data,
@@ -2241,14 +2227,6 @@ void unpack(Deck& data, std::vector<char>& buffer, int& position,
     unpack(accessCount, buffer, position, comm);
     data = Deck(keywords, defaultUnitSystem,
                 activeUnitSystem.get(), dataFile, inputPath, accessCount);
-}
-
-void unpack(Action::AST& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::shared_ptr<Action::ASTNode> condition;
-    unpack(condition, buffer, position, comm);
-    data = Action::AST(condition);
 }
 
 void unpack(Action::Quantity& data, std::vector<char>& buffer, int& position,

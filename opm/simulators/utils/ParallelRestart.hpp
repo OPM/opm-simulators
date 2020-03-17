@@ -45,7 +45,6 @@ namespace Opm
 
 namespace Action {
     class Actions;
-    class AST;
     class Condition;
     class Quantity;
 }
@@ -387,7 +386,6 @@ void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& posit
               Dune::MPIHelper::MPICommunicator comm);
 
 ADD_PACK_PROTOTYPES(Action::Actions)
-ADD_PACK_PROTOTYPES(Action::AST)
 ADD_PACK_PROTOTYPES(Action::Condition)
 ADD_PACK_PROTOTYPES(Action::Quantity)
 ADD_PACK_PROTOTYPES(Connection)

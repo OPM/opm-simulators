@@ -2008,7 +2008,7 @@ BOOST_AUTO_TEST_CASE(AST)
     node.reset(new Opm::Action::ASTNode(number, FuncType::field,
                                         "test1", {"test2"}, 1.0, {}));
     Opm::Action::AST val1(node);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Action::AST)
 #endif
 }
