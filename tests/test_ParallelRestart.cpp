@@ -29,6 +29,7 @@
 #include <opm/parser/eclipse/Deck/DeckItem.hpp>
 #include <opm/parser/eclipse/EclipseState/Aquancon.hpp>
 #include <opm/parser/eclipse/EclipseState/AquiferCT.hpp>
+#include <opm/parser/eclipse/EclipseState/AquiferConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Aquifetp.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
@@ -714,7 +715,7 @@ BOOST_AUTO_TEST_CASE(Rock2dTable)
 {
 #if HAVE_MPI
     Opm::Rock2dTable val1({{1.0,2.0},{3.0,4.0}}, {1.0, 2.0, 3.0});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Rock2dTable)
 #endif
 }
@@ -724,7 +725,7 @@ BOOST_AUTO_TEST_CASE(Rock2dtrTable)
 {
 #if HAVE_MPI
     Opm::Rock2dtrTable val1({{1.0,2.0},{3.0,4.0}}, {1.0, 2.0, 3.0});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Rock2dtrTable)
 #endif
 }
@@ -735,10 +736,10 @@ BOOST_AUTO_TEST_CASE(ColumnSchema)
 #if HAVE_MPI
     Opm::ColumnSchema val1("test1", Opm::Table::INCREASING,
                            Opm::Table::DEFAULT_LINEAR);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(ColumnSchema)
     val1 = Opm::ColumnSchema("test2", Opm::Table::DECREASING, 1.0);
-    val2 = PackUnpack(val1);
+    val2 = PackUnpack2(val1);
     DO_CHECKS(ColumnSchema)
 #endif
 }
@@ -748,7 +749,7 @@ BOOST_AUTO_TEST_CASE(TableSchema)
 {
 #if HAVE_MPI
     Opm::TableSchema val1 = getTableSchema();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(TableSchema)
 #endif
 }
@@ -758,7 +759,7 @@ BOOST_AUTO_TEST_CASE(TableColumn)
 {
 #if HAVE_MPI
     Opm::TableColumn val1 = getTableColumn();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(TableColumn)
 #endif
 }
@@ -768,7 +769,7 @@ BOOST_AUTO_TEST_CASE(SimpleTable)
 {
 #if HAVE_MPI
     Opm::SimpleTable val1 = getSimpleTable();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(SimpleTable)
 #endif
 }
@@ -783,7 +784,7 @@ BOOST_AUTO_TEST_CASE(TableContainer)
     Opm::TableContainer val1(2);
     val1.addTable(0, std::make_shared<Opm::SimpleTable>(tab1));
     val1.addTable(1, std::make_shared<Opm::SimpleTable>(tab1));
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(TableContainer)
 #endif
 }
@@ -921,7 +922,7 @@ BOOST_AUTO_TEST_CASE(Tabdims)
 {
 #if HAVE_MPI
     Opm::Tabdims val1(1,2,3,4,5,6);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Tabdims)
 #endif
 }
@@ -1010,7 +1011,7 @@ BOOST_AUTO_TEST_CASE(PvtgTable)
 {
 #if HAVE_MPI
     Opm::PvtgTable val1 = getPvtgTable();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(PvtgTable)
 #endif
 }
@@ -1020,7 +1021,7 @@ BOOST_AUTO_TEST_CASE(PvtoTable)
 {
 #if HAVE_MPI
     Opm::PvtoTable val1 = getPvtoTable();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(PvtoTable)
 #endif
 }
@@ -1031,7 +1032,7 @@ BOOST_AUTO_TEST_CASE(JFunc)
 #if HAVE_MPI
     Opm::JFunc val1(Opm::JFunc::Flag::BOTH, 1.0, 2.0,
                     3.0, 4.0, Opm::JFunc::Direction::XY);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(JFunc)
 #endif
 }
@@ -1041,7 +1042,7 @@ BOOST_AUTO_TEST_CASE(PVTWRecord)
 {
 #if HAVE_MPI
     Opm::PVTWRecord val1{1.0, 2.0, 3.0, 4.0, 5.0};
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(PVTWRecord)
 #endif
 }
@@ -1051,7 +1052,7 @@ BOOST_AUTO_TEST_CASE(PvtwTable)
 {
 #if HAVE_MPI
     Opm::PvtwTable val1({Opm::PVTWRecord{1.0, 2.0, 3.0, 4.0, 5.0}});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(PvtwTable)
 #endif
 }
@@ -1061,7 +1062,7 @@ BOOST_AUTO_TEST_CASE(PVCDORecord)
 {
 #if HAVE_MPI
     Opm::PVTWRecord val1{1.0, 2.0, 3.0, 4.0, 5.0};
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(PVTWRecord)
 #endif
 }
@@ -1071,7 +1072,7 @@ BOOST_AUTO_TEST_CASE(PvcdoTable)
 {
 #if HAVE_MPI
     Opm::PvcdoTable val1({Opm::PVCDORecord{1.0, 2.0, 3.0, 4.0, 5.0}});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(PvcdoTable)
 #endif
 }
@@ -1081,7 +1082,7 @@ BOOST_AUTO_TEST_CASE(DENSITYRecord)
 {
 #if HAVE_MPI
     Opm::DENSITYRecord val1{1.0, 2.0, 3.0};
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(DENSITYRecord)
 #endif
 }
@@ -1091,7 +1092,7 @@ BOOST_AUTO_TEST_CASE(DensityTable)
 {
 #if HAVE_MPI
     Opm::DensityTable val1({Opm::DENSITYRecord{1.0, 2.0, 3.0}});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(DensityTable)
 #endif
 }
@@ -1101,7 +1102,7 @@ BOOST_AUTO_TEST_CASE(VISCREFRecord)
 {
 #if HAVE_MPI
     Opm::VISCREFRecord val1{1.0, 2.0};
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(VISCREFRecord)
 #endif
 }
@@ -1111,7 +1112,7 @@ BOOST_AUTO_TEST_CASE(ViscrefTable)
 {
 #if HAVE_MPI
     Opm::ViscrefTable val1({Opm::VISCREFRecord{1.0, 2.0}});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(ViscrefTable)
 #endif
 }
@@ -1121,7 +1122,7 @@ BOOST_AUTO_TEST_CASE(WATDENTRecord)
 {
 #if HAVE_MPI
     Opm::WATDENTRecord val1{1.0, 2.0, 3.0};
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(WATDENTRecord)
 #endif
 }
@@ -1131,7 +1132,7 @@ BOOST_AUTO_TEST_CASE(WatdentTable)
 {
 #if HAVE_MPI
     Opm::WatdentTable val1({Opm::WATDENTRecord{1.0, 2.0, 3.0}});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(WatdentTable)
 #endif
 }
@@ -1141,7 +1142,7 @@ BOOST_AUTO_TEST_CASE(PlymwinjTable)
 {
 #if HAVE_MPI
     Opm::PlymwinjTable val1({1.0}, {2.0}, 1, {{1.0}, {2.0}});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(PlymwinjTable)
 #endif
 }
@@ -1151,7 +1152,7 @@ BOOST_AUTO_TEST_CASE(SkprpolyTable)
 {
 #if HAVE_MPI
     Opm::SkprpolyTable val1({1.0}, {2.0}, 1, {{1.0}, {2.0}}, 3.0);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(SkprpolyTable)
 #endif
 }
@@ -1161,7 +1162,7 @@ BOOST_AUTO_TEST_CASE(SkprwatTable)
 {
 #if HAVE_MPI
     Opm::SkprwatTable val1({1.0}, {2.0}, 1, {{1.0}, {2.0}});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(SkprwatTable)
 #endif
 }
@@ -1171,7 +1172,7 @@ BOOST_AUTO_TEST_CASE(Regdims)
 {
 #if HAVE_MPI
     Opm::Regdims val1(1,2,3,4,5);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Regdims)
 #endif
 }
@@ -1181,7 +1182,7 @@ BOOST_AUTO_TEST_CASE(Eqldims)
 {
 #if HAVE_MPI
     Opm::Eqldims val1(1,2,3,4,5);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Eqldims)
 #endif
 }
@@ -1191,7 +1192,7 @@ BOOST_AUTO_TEST_CASE(Aqudims)
 {
 #if HAVE_MPI
     Opm::Aqudims val1(1,2,3,4,5,6,7,8);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Aqudims)
 #endif
 }
@@ -1201,7 +1202,7 @@ BOOST_AUTO_TEST_CASE(ROCKRecord)
 {
 #if HAVE_MPI
     Opm::ROCKRecord val1{1.0,2.0};
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(ROCKRecord)
 #endif
 }
@@ -1211,7 +1212,7 @@ BOOST_AUTO_TEST_CASE(RockTable)
 {
 #if HAVE_MPI
     Opm::RockTable val1({Opm::ROCKRecord{1.0,2.0}});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(RockTable)
 #endif
 }
@@ -1260,7 +1261,7 @@ BOOST_AUTO_TEST_CASE(TableManager)
                            {7.0, 8.0},
                            77,
                            1.0);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(TableManager)
 #endif
 }
@@ -1763,7 +1764,7 @@ BOOST_AUTO_TEST_CASE(AquiferCT)
 {
 #ifdef HAVE_MPI
     Opm::AquiferCT val1 = getAquiferCT();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(AquiferCT);
 #endif
 }
@@ -1773,7 +1774,7 @@ BOOST_AUTO_TEST_CASE(Aquifetp)
 {
 #ifdef HAVE_MPI
     Opm::Aquifetp val1 = getAquifetp();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Aquifetp);
 #endif
 }
@@ -1783,7 +1784,7 @@ BOOST_AUTO_TEST_CASE(Aquancon)
 {
 #ifdef HAVE_MPI
     Opm::Aquancon val1 = getAquancon();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Aquancon);
 #endif
 }
@@ -1795,7 +1796,7 @@ BOOST_AUTO_TEST_CASE(AquferConfig)
     Opm::AquiferCT ct = getAquiferCT();
     Opm::Aquancon conn = getAquancon();
     Opm::AquiferConfig val1(fetp, ct, conn);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(AquiferConfig);
 #endif
 }
@@ -2170,7 +2171,7 @@ BOOST_AUTO_TEST_CASE(BrineDensityTable)
 {
 #ifdef HAVE_MPI
     Opm::BrineDensityTable val1({1.0, 2.0, 3.0});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(BrineDensityTable)
 #endif
 }
@@ -2212,7 +2213,7 @@ BOOST_AUTO_TEST_CASE(PvtwsaltTable)
 {
 #ifdef HAVE_MPI
     Opm::PvtwsaltTable val1(1.0, 2.0, {3.0, 4.0, 5.0});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(PvtwsaltTable)
 #endif
 }
@@ -2328,7 +2329,7 @@ BOOST_AUTO_TEST_CASE(DenT)
 {
 #ifdef HAVE_MPI
     Opm::DenT val1 = getDenT();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(DenT)
 #endif
 }
@@ -2350,7 +2351,7 @@ BOOST_AUTO_TEST_CASE(SolventDensityTable)
 {
 #ifdef HAVE_MPI
     Opm::SolventDensityTable val1({1.0, 2.0, 3.0});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(SolventDensityTable)
 #endif
 }
@@ -2372,7 +2373,7 @@ BOOST_AUTO_TEST_CASE(PlyshlogTable)
     Opm::OrderedMap<std::string, Opm::TableColumn> data;
     data.insert({"test3", getTableColumn()});
     Opm::PlyshlogTable val1(getTableSchema(), data, true, 1.0, 2.0, 3.0, true, true);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(PlyshlogTable)
 #endif
 }
@@ -2384,7 +2385,7 @@ BOOST_AUTO_TEST_CASE(RocktabTable)
     Opm::OrderedMap<std::string, Opm::TableColumn> data;
     data.insert({"test3", getTableColumn()});
     Opm::RocktabTable val1(getTableSchema(), data, true, true);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(RocktabTable)
 #endif
 }

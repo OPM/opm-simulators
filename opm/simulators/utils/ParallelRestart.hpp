@@ -26,10 +26,6 @@
 #include <opm/output/eclipse/RestartValue.hpp>
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/output/eclipse/Summary.hpp>
-#include <opm/parser/eclipse/EclipseState/AquiferConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/Aquancon.hpp>
-#include <opm/parser/eclipse/EclipseState/AquiferCT.hpp>
-#include <opm/parser/eclipse/EclipseState/Aquifetp.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/DynamicState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/DynamicVector.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GConSale.hpp>
@@ -39,7 +35,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/DenT.hpp>
 #include <opm/parser/eclipse/EclipseState/Util/OrderedMap.hpp>
 
 #include <dune/common/parallel/mpihelper.hh>
@@ -62,75 +57,28 @@ namespace Action {
     class Quantity;
 }
 
-class Aqudims;
-class BrineDensityTable;
-class ColumnSchema;
 class Connection;
 class DeckItem;
 class DeckRecord;
-class DENSITYRecord;
-class DensityTable;
 class Dimension;
-class Eqldims;
 class Events;
 template<class T> class IOrderSet;
-class JFunc;
 class Location;
 class MessageLimits;
 class MLimits;
 class OilVaporizationProperties;
-class PlymwinjTable;
-class PlyshlogTable;
-class PlyvmhRecord;
-class PlyvmhTable;
-class PolyInjTable;
-class PVCDORecord;
-class PvcdoTable;
-class PlmixparRecord;
-class PlmixparTable;
-class PvtgTable;
-class PvtoTable;
-class PVTWRecord;
-class PvtwsaltTable;
-class PvtwTable;
-class Regdims;
 class RestartConfig;
 class RestartSchedule;
 class RFTConfig;
-class ROCKRecord;
-class RockTable;
-class RocktabTable;
-class Rock2dTable;
-class Rock2dtrTable;
 class Segment;
-class ShrateRecord;
-class ShrateTable;
-class SimpleTable;
-class SkprpolyTable;
-class SkprwatTable;
-class SolventDensityTable;
 class SpiralICD;
-class StandardCond;
-class Stone1exRecord;
-class Stone1exTable;
-class Tabdims;
-class TableColumn;
-class TableContainer;
-class TableManager;
-class TableSchema;
 class TimeStampUTC;
-class TlmixparRecord;
-class TlmixparTable;
 class Tuning;
 class UDAValue;
 class UnitSystem;
 class Valve;
 class VFPInjTable;
 class VFPProdTable;
-class VISCREFRecord;
-class ViscrefTable;
-class WATDENTRecord;
-class WatdentTable;
 class WellConnections;
 class WellEconProductionLimits;
 class WellFoamProperties;
@@ -465,16 +413,6 @@ ADD_PACK_PROTOTYPES(Action::AST)
 ADD_PACK_PROTOTYPES(Action::ASTNode)
 ADD_PACK_PROTOTYPES(Action::Condition)
 ADD_PACK_PROTOTYPES(Action::Quantity)
-ADD_PACK_PROTOTYPES(Aqudims)
-ADD_PACK_PROTOTYPES(AquiferConfig)
-ADD_PACK_PROTOTYPES(Aquancon)
-ADD_PACK_PROTOTYPES(Aquancon::AquancCell)
-ADD_PACK_PROTOTYPES(AquiferCT)
-ADD_PACK_PROTOTYPES(AquiferCT::AQUCT_data)
-ADD_PACK_PROTOTYPES(Aquifetp)
-ADD_PACK_PROTOTYPES(Aquifetp::AQUFETP_data)
-ADD_PACK_PROTOTYPES(BrineDensityTable)
-ADD_PACK_PROTOTYPES(ColumnSchema)
 ADD_PACK_PROTOTYPES(Connection)
 ADD_PACK_PROTOTYPES(data::CellData)
 ADD_PACK_PROTOTYPES(data::Connection)
@@ -488,12 +426,7 @@ ADD_PACK_PROTOTYPES(Deck)
 ADD_PACK_PROTOTYPES(DeckItem)
 ADD_PACK_PROTOTYPES(DeckKeyword)
 ADD_PACK_PROTOTYPES(DeckRecord)
-ADD_PACK_PROTOTYPES(DENSITYRecord)
-ADD_PACK_PROTOTYPES(DensityTable)
-ADD_PACK_PROTOTYPES(DenT)
-ADD_PACK_PROTOTYPES(DenT::entry)
 ADD_PACK_PROTOTYPES(Dimension)
-ADD_PACK_PROTOTYPES(Eqldims)
 ADD_PACK_PROTOTYPES(Events)
 ADD_PACK_PROTOTYPES(GConSale)
 ADD_PACK_PROTOTYPES(GConSale::GCONSALEGroup)
@@ -506,66 +439,26 @@ ADD_PACK_PROTOTYPES(GuideRateModel)
 ADD_PACK_PROTOTYPES(Group)
 ADD_PACK_PROTOTYPES(Group::GroupInjectionProperties)
 ADD_PACK_PROTOTYPES(Group::GroupProductionProperties)
-ADD_PACK_PROTOTYPES(JFunc)
 ADD_PACK_PROTOTYPES(Location)
 ADD_PACK_PROTOTYPES(MessageLimits)
 ADD_PACK_PROTOTYPES(MLimits)
 ADD_PACK_PROTOTYPES(OilVaporizationProperties)
-ADD_PACK_PROTOTYPES(PlmixparRecord)
-ADD_PACK_PROTOTYPES(PlmixparTable)
-ADD_PACK_PROTOTYPES(PlymwinjTable)
-ADD_PACK_PROTOTYPES(PlyshlogTable)
-ADD_PACK_PROTOTYPES(PlyvmhRecord)
-ADD_PACK_PROTOTYPES(PlyvmhTable)
-ADD_PACK_PROTOTYPES(PolyInjTable)
-ADD_PACK_PROTOTYPES(PVCDORecord)
-ADD_PACK_PROTOTYPES(PvcdoTable)
-ADD_PACK_PROTOTYPES(PvtgTable)
-ADD_PACK_PROTOTYPES(PvtoTable)
-ADD_PACK_PROTOTYPES(PVTWRecord)
-ADD_PACK_PROTOTYPES(PvtwsaltTable)
-ADD_PACK_PROTOTYPES(PvtwTable)
-ADD_PACK_PROTOTYPES(Regdims)
 ADD_PACK_PROTOTYPES(RestartConfig)
 ADD_PACK_PROTOTYPES(RestartKey)
 ADD_PACK_PROTOTYPES(RestartSchedule)
 ADD_PACK_PROTOTYPES(RestartValue)
 ADD_PACK_PROTOTYPES(RFTConfig)
-ADD_PACK_PROTOTYPES(ROCKRecord)
-ADD_PACK_PROTOTYPES(RockTable)
-ADD_PACK_PROTOTYPES(Rock2dTable)
-ADD_PACK_PROTOTYPES(Rock2dtrTable)
-ADD_PACK_PROTOTYPES(RocktabTable)
 ADD_PACK_PROTOTYPES(Segment)
-ADD_PACK_PROTOTYPES(ShrateRecord)
-ADD_PACK_PROTOTYPES(ShrateTable)
-ADD_PACK_PROTOTYPES(SimpleTable)
-ADD_PACK_PROTOTYPES(SkprpolyTable)
-ADD_PACK_PROTOTYPES(SkprwatTable)
-ADD_PACK_PROTOTYPES(SolventDensityTable)
 ADD_PACK_PROTOTYPES(SpiralICD)
 ADD_PACK_PROTOTYPES(std::string)
-ADD_PACK_PROTOTYPES(Stone1exRecord)
-ADD_PACK_PROTOTYPES(Stone1exTable)
-ADD_PACK_PROTOTYPES(Tabdims)
-ADD_PACK_PROTOTYPES(TableColumn)
-ADD_PACK_PROTOTYPES(TableContainer)
-ADD_PACK_PROTOTYPES(TableManager)
-ADD_PACK_PROTOTYPES(TableSchema)
 ADD_PACK_PROTOTYPES(TimeMap)
 ADD_PACK_PROTOTYPES(TimeStampUTC)
-ADD_PACK_PROTOTYPES(TlmixparRecord)
-ADD_PACK_PROTOTYPES(TlmixparTable)
 ADD_PACK_PROTOTYPES(Tuning)
 ADD_PACK_PROTOTYPES(UDAValue)
 ADD_PACK_PROTOTYPES(UnitSystem)
 ADD_PACK_PROTOTYPES(Valve)
 ADD_PACK_PROTOTYPES(VFPInjTable)
 ADD_PACK_PROTOTYPES(VFPProdTable)
-ADD_PACK_PROTOTYPES(VISCREFRecord)
-ADD_PACK_PROTOTYPES(ViscrefTable)
-ADD_PACK_PROTOTYPES(WATDENTRecord)
-ADD_PACK_PROTOTYPES(WatdentTable)
 ADD_PACK_PROTOTYPES(Well)
 ADD_PACK_PROTOTYPES(WellType)
 ADD_PACK_PROTOTYPES(Well::WellGuideRate)
