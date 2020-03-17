@@ -38,7 +38,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/RFTConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/ScheduleTypes.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Tuning.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunction.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunctionTable.hpp>
@@ -333,11 +332,6 @@ std::size_t packSize(const WellType& data, Dune::MPIHelper::MPICommunicator comm
 {
     return packSize(data.producer(), comm) +
            packSize(data.preferred_phase(), comm);
-}
-
-std::size_t packSize(const TimeMap& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.timeList(), comm);
 }
 
 template
@@ -1180,12 +1174,6 @@ void pack(const WellType& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm) {
     pack(data.producer(), buffer, position, comm);
     pack(data.preferred_phase(), buffer, position, comm);
-}
-
-void pack(const TimeMap& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.timeList(), buffer, position, comm);
 }
 
 void pack(const OilVaporizationProperties& data,
@@ -2086,15 +2074,6 @@ void unpack(WellType& data, std::vector<char>& buffer, int& position, Dune::MPIH
     unpack(producer, buffer, position, comm);
     unpack(preferred_phase, buffer, position, comm);
     data = WellType( producer, preferred_phase );
-}
-
-void unpack(TimeMap& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<std::time_t> timeList;
-    unpack(timeList, buffer, position, comm);
-
-    data = TimeMap(timeList);
 }
 
 void unpack(OilVaporizationProperties& data,
