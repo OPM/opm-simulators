@@ -75,7 +75,6 @@ class RestartSchedule;
 class RFTConfig;
 class Segment;
 class SpiralICD;
-class StandardCond;
 class Tabdims;
 class TableColumn;
 class TableContainer;
