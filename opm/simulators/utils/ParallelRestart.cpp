@@ -54,8 +54,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/FlatTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/PvtgTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/PvtoTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Regdims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Rock2dtrTable.hpp>
@@ -415,26 +413,6 @@ std::size_t packSize(const RestartConfig& data, Dune::MPIHelper::MPICommunicator
            packSize(data.restartSchedule(), comm) +
            packSize(data.restartKeywords(), comm) +
            packSize(data.saveKeywords(), comm);
-}
-
-std::size_t packSize(const PvtxTable& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getOuterColumnSchema(), comm) +
-           packSize(data.getOuterColumn(), comm) +
-           packSize(data.getUnderSaturatedSchema(), comm) +
-           packSize(data.getSaturatedSchema(), comm) +
-           packSize(data.getUnderSaturatedTables(), comm) +
-           packSize(data.getSaturatedTable(), comm);
-}
-
-std::size_t packSize(const PvtgTable& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(static_cast<const PvtxTable&>(data), comm);
-}
-
-std::size_t packSize(const PvtoTable& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(static_cast<const PvtxTable&>(data), comm);
 }
 
 std::size_t packSize(const SkprpolyTable& data, Dune::MPIHelper::MPICommunicator comm)
@@ -1497,29 +1475,6 @@ void pack(const RestartConfig& data, std::vector<char>& buffer, int& position,
     pack(data.restartSchedule(), buffer, position, comm);
     pack(data.restartKeywords(), buffer, position, comm);
     pack(data.saveKeywords(), buffer, position, comm);
-}
-
-void pack(const PvtxTable& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getOuterColumnSchema(), buffer, position, comm);
-    pack(data.getOuterColumn(), buffer, position, comm);
-    pack(data.getUnderSaturatedSchema(), buffer, position, comm);
-    pack(data.getSaturatedSchema(), buffer, position, comm);
-    pack(data.getUnderSaturatedTables(), buffer, position, comm);
-    pack(data.getSaturatedTable(), buffer, position, comm);
-}
-
-void pack(const PvtgTable& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(static_cast<const PvtxTable&>(data), buffer, position, comm);
-}
-
-void pack(const PvtoTable& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(static_cast<const PvtxTable&>(data), buffer, position, comm);
 }
 
 void pack(const SkprpolyTable& data, std::vector<char>& buffer, int& position,
@@ -2635,37 +2590,6 @@ void unpack(RestartConfig& data, std::vector<char>& buffer, int& position,
     unpack(save_keyw, buffer, position, comm);
     data = RestartConfig(timemap, firstRstStep, writeInitialRst, restart_sched,
                          restart_keyw, save_keyw);
-}
-
-template<class PVTType>
-void unpack_pvt(PVTType& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    ColumnSchema outer_schema;
-    TableColumn outer_column;
-    TableSchema undersat_schema, sat_schema;
-    std::vector<SimpleTable> undersat_tables;
-    SimpleTable sat_table;
-    unpack(outer_schema, buffer, position, comm);
-    unpack(outer_column, buffer, position, comm);
-    unpack(undersat_schema, buffer, position, comm);
-    unpack(sat_schema, buffer, position, comm);
-    unpack(undersat_tables, buffer, position, comm);
-    unpack(sat_table, buffer, position, comm);
-    data = PVTType(outer_schema, outer_column, undersat_schema, sat_schema,
-                   undersat_tables, sat_table);
-}
-
-void unpack(PvtgTable& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    unpack_pvt(data, buffer, position, comm);
-}
-
-void unpack(PvtoTable& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    unpack_pvt(data, buffer, position, comm);
 }
 
 void unpack(SkprpolyTable& data, std::vector<char>& buffer, int& position,

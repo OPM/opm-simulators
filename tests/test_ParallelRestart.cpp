@@ -1011,7 +1011,7 @@ BOOST_AUTO_TEST_CASE(PvtgTable)
 {
 #if HAVE_MPI
     Opm::PvtgTable val1 = getPvtgTable();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(PvtgTable)
 #endif
 }
@@ -1021,7 +1021,7 @@ BOOST_AUTO_TEST_CASE(PvtoTable)
 {
 #if HAVE_MPI
     Opm::PvtoTable val1 = getPvtoTable();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(PvtoTable)
 #endif
 }

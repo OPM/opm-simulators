@@ -70,8 +70,6 @@ class MLimits;
 class OilVaporizationProperties;
 class PlyvmhRecord;
 class PlyvmhTable;
-class PvtgTable;
-class PvtoTable;
 class Regdims;
 class RestartConfig;
 class RestartSchedule;
@@ -464,8 +462,6 @@ ADD_PACK_PROTOTYPES(MLimits)
 ADD_PACK_PROTOTYPES(OilVaporizationProperties)
 ADD_PACK_PROTOTYPES(PlyvmhRecord)
 ADD_PACK_PROTOTYPES(PlyvmhTable)
-ADD_PACK_PROTOTYPES(PvtgTable)
-ADD_PACK_PROTOTYPES(PvtoTable)
 ADD_PACK_PROTOTYPES(Regdims)
 ADD_PACK_PROTOTYPES(RestartConfig)
 ADD_PACK_PROTOTYPES(RestartKey)
