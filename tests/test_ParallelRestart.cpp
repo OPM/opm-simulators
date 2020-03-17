@@ -1341,7 +1341,7 @@ BOOST_AUTO_TEST_CASE(WTESTWell)
 #ifdef HAVE_MPI
     Opm::WellTestConfig::WTESTWell val1{"test", Opm::WellTestConfig::ECONOMIC,
                                          1.0, 2, 3.0, 4};
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(WellTestConfig::WTESTWell)
 #endif
 }
@@ -1353,7 +1353,7 @@ BOOST_AUTO_TEST_CASE(WellTestConfig)
     Opm::WellTestConfig::WTESTWell tw{"test", Opm::WellTestConfig::ECONOMIC,
                                          1.0, 2, 3.0, 4};
     Opm::WellTestConfig val1({tw, tw, tw});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(WellTestConfig)
 #endif
 }

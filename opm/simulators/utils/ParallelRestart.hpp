@@ -33,7 +33,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRateConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Util/OrderedMap.hpp>
 
 #include <dune/common/parallel/mpihelper.hh>
@@ -450,8 +449,6 @@ ADD_PACK_PROTOTYPES(WellEconProductionLimits)
 ADD_PACK_PROTOTYPES(WellFoamProperties)
 ADD_PACK_PROTOTYPES(WellPolymerProperties)
 ADD_PACK_PROTOTYPES(WellSegments)
-ADD_PACK_PROTOTYPES(WellTestConfig)
-ADD_PACK_PROTOTYPES(WellTestConfig::WTESTWell)
 ADD_PACK_PROTOTYPES(WellTracerProperties)
 ADD_PACK_PROTOTYPES(WList)
 ADD_PACK_PROTOTYPES(WListManager)
