@@ -312,7 +312,6 @@ HANDLE_AS_POD(StandardCond)
 HANDLE_AS_POD(Tabdims)
 HANDLE_AS_POD(TimeStampUTC::YMD)
 HANDLE_AS_POD(Tuning)
-HANDLE_AS_POD(WATDENTRecord)
 HANDLE_AS_POD(WellBrineProperties)
 HANDLE_AS_POD(WellFoamProperties)
 
@@ -441,11 +440,6 @@ std::size_t packSize(const PvtgTable& data, Dune::MPIHelper::MPICommunicator com
 std::size_t packSize(const PvtoTable& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(static_cast<const PvtxTable&>(data), comm);
-}
-
-std::size_t packSize(const WatdentTable& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(static_cast<const std::vector<WATDENTRecord>&>(data), comm);
 }
 
 std::size_t packSize(const PolyInjTable& data, Dune::MPIHelper::MPICommunicator comm)
@@ -1578,12 +1572,6 @@ void pack(const PvtoTable& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(static_cast<const PvtxTable&>(data), buffer, position, comm);
-}
-
-void pack(const WatdentTable& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(static_cast<const std::vector<WATDENTRecord>&>(data), buffer, position, comm);
 }
 
 void pack(const PolyInjTable& data, std::vector<char>& buffer, int& position,
@@ -2783,14 +2771,6 @@ void unpack(PvtoTable& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
     unpack_pvt(data, buffer, position, comm);
-}
-
-void unpack(WatdentTable& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<WATDENTRecord> pdata;
-    unpack(pdata, buffer, position, comm);
-    data = WatdentTable(pdata);
 }
 
 void unpack(PolyInjTable& data, std::vector<char>& buffer, int& position,

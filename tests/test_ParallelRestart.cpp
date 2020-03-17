@@ -1122,7 +1122,7 @@ BOOST_AUTO_TEST_CASE(WATDENTRecord)
 {
 #if HAVE_MPI
     Opm::WATDENTRecord val1{1.0, 2.0, 3.0};
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(WATDENTRecord)
 #endif
 }
@@ -1132,7 +1132,7 @@ BOOST_AUTO_TEST_CASE(WatdentTable)
 {
 #if HAVE_MPI
     Opm::WatdentTable val1({Opm::WATDENTRecord{1.0, 2.0, 3.0}});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(WatdentTable)
 #endif
 }
