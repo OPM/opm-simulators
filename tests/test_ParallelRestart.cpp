@@ -1082,7 +1082,7 @@ BOOST_AUTO_TEST_CASE(DENSITYRecord)
 {
 #if HAVE_MPI
     Opm::DENSITYRecord val1{1.0, 2.0, 3.0};
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(DENSITYRecord)
 #endif
 }
@@ -1092,7 +1092,7 @@ BOOST_AUTO_TEST_CASE(DensityTable)
 {
 #if HAVE_MPI
     Opm::DensityTable val1({Opm::DENSITYRecord{1.0, 2.0, 3.0}});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(DensityTable)
 #endif
 }

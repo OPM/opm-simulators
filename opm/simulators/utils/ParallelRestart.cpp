@@ -305,7 +305,6 @@ HANDLE_AS_POD(data::Connection)
 HANDLE_AS_POD(data::CurrentControl)
 HANDLE_AS_POD(data::Rates)
 HANDLE_AS_POD(data::Segment)
-HANDLE_AS_POD(DENSITYRecord)
 HANDLE_AS_POD(MLimits)
 HANDLE_AS_POD(PlmixparRecord)
 HANDLE_AS_POD(PlyvmhRecord)
@@ -460,11 +459,6 @@ std::size_t packSize(const PvtwTable& data, Dune::MPIHelper::MPICommunicator com
 std::size_t packSize(const PvcdoTable& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(static_cast<const std::vector<PVCDORecord>&>(data), comm);
-}
-
-std::size_t packSize(const DensityTable& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(static_cast<const std::vector<DENSITYRecord>&>(data), comm);
 }
 
 std::size_t packSize(const ViscrefTable& data, Dune::MPIHelper::MPICommunicator comm)
@@ -1644,12 +1638,6 @@ void pack(const PvcdoTable& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(static_cast<const std::vector<PVCDORecord>&>(data), buffer, position, comm);
-}
-
-void pack(const DensityTable& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(static_cast<const std::vector<DENSITYRecord>&>(data), buffer, position, comm);
 }
 
 void pack(const ViscrefTable& data, std::vector<char>& buffer, int& position,
@@ -2907,14 +2895,6 @@ void unpack(PvcdoTable& data, std::vector<char>& buffer, int& position,
     std::vector<PVCDORecord> pdata;
     unpack(pdata, buffer, position, comm);
     data = PvcdoTable(pdata);
-}
-
-void unpack(DensityTable& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<DENSITYRecord> pdata;
-    unpack(pdata, buffer, position, comm);
-    data = DensityTable(pdata);
 }
 
 void unpack(ViscrefTable& data, std::vector<char>& buffer, int& position,
