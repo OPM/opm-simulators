@@ -1818,7 +1818,7 @@ BOOST_AUTO_TEST_CASE(GuideRateConfigGroup)
 {
 #ifdef HAVE_MPI
     Opm::GuideRateConfig::GroupTarget val1 = getGuideRateConfigGroup();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(GuideRateConfig::GroupTarget)
 #endif
 }
@@ -1828,7 +1828,7 @@ BOOST_AUTO_TEST_CASE(GuideRateConfigWell)
 {
 #ifdef HAVE_MPI
     Opm::GuideRateConfig::WellTarget val1 = getGuideRateConfigWell();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(GuideRateConfig::WellTarget)
 #endif
 }
@@ -1841,7 +1841,7 @@ BOOST_AUTO_TEST_CASE(GuideRateConfig)
     Opm::GuideRateConfig val1(model,
                               {{"test1", getGuideRateConfigWell()}},
                               {{"test2", getGuideRateConfigGroup()}});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(GuideRateConfig)
 #endif
 }

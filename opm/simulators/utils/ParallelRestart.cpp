@@ -29,7 +29,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionX.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ASTNode.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/Condition.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRateConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/icd.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/SpiralICD.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
@@ -657,14 +656,6 @@ std::size_t packSize(const Group& data,
            packSize(data.productionProperties(), comm);
 }
 
-std::size_t packSize(const GuideRateConfig& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getModel(), comm) +
-           packSize(data.getWells(), comm) +
-           packSize(data.getGroups(), comm);
-}
-
 std::size_t packSize(const GConSale::GCONSALEGroup& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -819,21 +810,6 @@ std::size_t packSize(const Well::WellGuideRate& data,
            packSize(data.guide_rate, comm) +
            packSize(data.guide_phase, comm) +
            packSize(data.scale_factor, comm);
-}
-
-std::size_t packSize(const GuideRateConfig::WellTarget& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.guide_rate, comm) +
-           packSize(data.target, comm) +
-           packSize(data.scaling_factor, comm);
-}
-
-std::size_t packSize(const GuideRateConfig::GroupTarget& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.guide_rate, comm) +
-           packSize(data.target, comm);
 }
 
 ////// pack routines
@@ -1445,15 +1421,6 @@ void pack(const Group& data,
     pack(data.productionProperties(), buffer, position, comm);
 }
 
-void pack(const GuideRateConfig& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getModel(), buffer, position, comm);
-    pack(data.getWells(), buffer, position, comm);
-    pack(data.getGroups(), buffer, position, comm);
-}
-
 void pack(const GConSale::GCONSALEGroup& data,
           std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
@@ -1624,23 +1591,6 @@ void pack(const Well::WellGuideRate& data,
     pack(data.guide_rate, buffer, position, comm);
     pack(data.guide_phase, buffer, position, comm);
     pack(data.scale_factor, buffer, position, comm);
-}
-
-void pack(const GuideRateConfig::WellTarget& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.guide_rate, buffer, position, comm);
-    pack(data.target, buffer, position, comm);
-    pack(data.scaling_factor, buffer, position, comm);
-}
-
-void pack(const GuideRateConfig::GroupTarget& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.guide_rate, buffer, position, comm);
-    pack(data.target, buffer, position, comm);
 }
 
 /// unpack routines
@@ -2480,20 +2430,6 @@ void unpack(Group& data,
                  injection, production);
 }
 
-void unpack(GuideRateConfig& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::shared_ptr<GuideRateModel> model;
-    std::unordered_map<std::string, GuideRateConfig::WellTarget> wells;
-    std::unordered_map<std::string, GuideRateConfig::GroupTarget> groups;
-
-    unpack(model, buffer, position, comm);
-    unpack(wells, buffer, position, comm);
-    unpack(groups, buffer, position, comm);
-    data = GuideRateConfig(model, wells, groups);
-}
-
 void unpack(GConSale::GCONSALEGroup& data,
             std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
@@ -2717,23 +2653,6 @@ void unpack(Well::WellGuideRate& data,
     unpack(data.scale_factor, buffer, position, comm);
 }
 
-void unpack(GuideRateConfig::WellTarget& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    unpack(data.guide_rate, buffer, position, comm);
-    unpack(data.target, buffer, position, comm);
-    unpack(data.scaling_factor, buffer, position, comm);
-}
-
-void unpack(GuideRateConfig::GroupTarget& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    unpack(data.guide_rate, buffer, position, comm);
-    unpack(data.target, buffer, position, comm);
-}
-
 #define INSTANTIATE_PACK_VECTOR(...) \
 template std::size_t packSize(const std::vector<__VA_ARGS__>& data, \
                               Dune::MPIHelper::MPICommunicator comm); \
@@ -2826,7 +2745,6 @@ INSTANTIATE_PACK(DynamicState<int>)
 INSTANTIATE_PACK(DynamicState<std::shared_ptr<Action::Actions>>)
 INSTANTIATE_PACK(DynamicState<std::shared_ptr<GConSale>>)
 INSTANTIATE_PACK(DynamicState<std::shared_ptr<GConSump>>)
-INSTANTIATE_PACK(DynamicState<std::shared_ptr<GuideRateConfig>>)
 INSTANTIATE_PACK(DynamicState<Well::ProducerCMode>)
 INSTANTIATE_PACK(DynamicVector<Deck>)
 

@@ -31,7 +31,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GConSale.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GConSump.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRateConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Util/OrderedMap.hpp>
 
@@ -418,9 +417,6 @@ ADD_PACK_PROTOTYPES(GConSale)
 ADD_PACK_PROTOTYPES(GConSale::GCONSALEGroup)
 ADD_PACK_PROTOTYPES(GConSump)
 ADD_PACK_PROTOTYPES(GConSump::GCONSUMPGroup)
-ADD_PACK_PROTOTYPES(GuideRateConfig)
-ADD_PACK_PROTOTYPES(GuideRateConfig::GroupTarget)
-ADD_PACK_PROTOTYPES(GuideRateConfig::WellTarget)
 ADD_PACK_PROTOTYPES(Group)
 ADD_PACK_PROTOTYPES(Group::GroupInjectionProperties)
 ADD_PACK_PROTOTYPES(Group::GroupProductionProperties)
