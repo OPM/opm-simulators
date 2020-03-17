@@ -736,10 +736,10 @@ BOOST_AUTO_TEST_CASE(ColumnSchema)
 #if HAVE_MPI
     Opm::ColumnSchema val1("test1", Opm::Table::INCREASING,
                            Opm::Table::DEFAULT_LINEAR);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(ColumnSchema)
     val1 = Opm::ColumnSchema("test2", Opm::Table::DECREASING, 1.0);
-    val2 = PackUnpack(val1);
+    val2 = PackUnpack2(val1);
     DO_CHECKS(ColumnSchema)
 #endif
 }

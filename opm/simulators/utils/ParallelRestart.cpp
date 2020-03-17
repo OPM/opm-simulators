@@ -53,7 +53,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WList.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/ColumnSchema.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Eqldims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/FlatTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/JFunc.hpp>
@@ -391,18 +390,6 @@ std::size_t packSize(const Rock2dtrTable& data, Dune::MPIHelper::MPICommunicator
 {
    return packSize(data.transMultValues(), comm) +
           packSize(data.pressureValues(), comm);
-}
-
-std::size_t packSize(const ColumnSchema& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    std::size_t res = packSize(data.name(), comm) +
-                      packSize(data.order(), comm) +
-                      packSize(data.getDefaultMode(), comm);
-    if (data.getDefaultMode() == Table::DEFAULT_CONST) {
-        res += packSize(data.getDefaultValue(), comm);
-    }
-
-    return res;
 }
 
 std::size_t packSize(const TableSchema& data, Dune::MPIHelper::MPICommunicator comm)
@@ -1575,16 +1562,6 @@ void pack(const Rock2dtrTable& data, std::vector<char>& buffer, int& position,
 {
     pack(data.transMultValues(), buffer, position, comm);
     pack(data.pressureValues(), buffer, position, comm);
-}
-
-void pack(const ColumnSchema& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.name(), buffer, position, comm);
-    pack(data.order(), buffer, position, comm);
-    pack(data.getDefaultMode(), buffer, position, comm);
-    if (data.getDefaultMode() == Table::DEFAULT_CONST)
-        pack(data.getDefaultValue(), buffer, position, comm);
 }
 
 void pack(const TableSchema& data, std::vector<char>& buffer, int& position,
@@ -2824,23 +2801,6 @@ void unpack(Rock2dtrTable& data, std::vector<char>& buffer, int& position,
     unpack(transMultValues, buffer, position, comm);
     unpack(pressureValues, buffer, position, comm);
     data = Rock2dtrTable(transMultValues, pressureValues);
-}
-
-void unpack(ColumnSchema& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::string name;
-    Table::ColumnOrderEnum order;
-    Table::DefaultAction action;
-    unpack(name, buffer, position, comm);
-    unpack(order, buffer, position, comm);
-    unpack(action, buffer, position, comm);
-    if (action == Table::DEFAULT_CONST) {
-        double value;
-        unpack(value, buffer, position, comm);
-        data = ColumnSchema(name, order, value);
-    } else
-        data = ColumnSchema(name, order, action);
 }
 
 void unpack(TableSchema& data, std::vector<char>& buffer, int& position,
