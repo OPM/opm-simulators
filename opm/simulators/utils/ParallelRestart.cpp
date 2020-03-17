@@ -55,7 +55,6 @@
 #include <opm/parser/eclipse/EclipseState/Tables/Aqudims.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/FlatTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/TableSchema.hpp>
 #include <opm/parser/eclipse/EclipseState/Util/IOrderSet.hpp>
 #include <dune/common/parallel/mpitraits.hh>
 
@@ -342,11 +341,6 @@ std::size_t packSize(const WellType& data, Dune::MPIHelper::MPICommunicator comm
 {
     return packSize(data.producer(), comm) +
            packSize(data.preferred_phase(), comm);
-}
-
-std::size_t packSize(const TableSchema& data, Dune::MPIHelper::MPICommunicator comm)
-{
-   return packSize(data.getColumns(), comm);
 }
 
 std::size_t packSize(const TimeMap& data, Dune::MPIHelper::MPICommunicator comm)
@@ -1332,12 +1326,6 @@ void pack(const WellType& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm) {
     pack(data.producer(), buffer, position, comm);
     pack(data.preferred_phase(), buffer, position, comm);
-}
-
-void pack(const TableSchema& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getColumns(), buffer, position, comm);
 }
 
 void pack(const TimeMap& data, std::vector<char>& buffer, int& position,
@@ -2348,14 +2336,6 @@ void unpack(WellType& data, std::vector<char>& buffer, int& position, Dune::MPIH
     unpack(producer, buffer, position, comm);
     unpack(preferred_phase, buffer, position, comm);
     data = WellType( producer, preferred_phase );
-}
-
-void unpack(TableSchema& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    OrderedMap<std::string, ColumnSchema> columns;
-    unpack(columns, buffer, position, comm);
-    data = TableSchema(columns);
 }
 
 void unpack(TimeMap& data, std::vector<char>& buffer, int& position,

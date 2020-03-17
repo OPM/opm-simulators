@@ -76,9 +76,7 @@ class RFTConfig;
 class Segment;
 class SpiralICD;
 class Tabdims;
-class TableContainer;
 class TableManager;
-class TableSchema;
 class TimeStampUTC;
 class Tuning;
 class UDAValue;
@@ -463,7 +461,6 @@ ADD_PACK_PROTOTYPES(SpiralICD)
 ADD_PACK_PROTOTYPES(std::string)
 ADD_PACK_PROTOTYPES(Tabdims)
 ADD_PACK_PROTOTYPES(TableManager)
-ADD_PACK_PROTOTYPES(TableSchema)
 ADD_PACK_PROTOTYPES(TimeMap)
 ADD_PACK_PROTOTYPES(TimeStampUTC)
 ADD_PACK_PROTOTYPES(Tuning)

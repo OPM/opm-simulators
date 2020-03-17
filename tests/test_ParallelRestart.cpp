@@ -749,7 +749,7 @@ BOOST_AUTO_TEST_CASE(TableSchema)
 {
 #if HAVE_MPI
     Opm::TableSchema val1 = getTableSchema();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(TableSchema)
 #endif
 }
