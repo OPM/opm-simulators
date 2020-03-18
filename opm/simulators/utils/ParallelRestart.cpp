@@ -24,7 +24,6 @@
 #include "ParallelRestart.hpp"
 #include <opm/parser/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/icd.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/RFTConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/ScheduleTypes.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunction.hpp>
@@ -344,19 +343,6 @@ std::size_t packSize(const UDAValue& data,
            packSize(data.is<double>(), comm) +
            (data.is<double>() ? packSize(data.get<double>(), comm) :
                                 packSize(data.get<std::string>(), comm));
-}
-
-std::size_t packSize(const Valve& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.conFlowCoefficient(), comm) +
-           packSize(data.conCrossArea(), comm) +
-           packSize(data.conMaxCrossArea(), comm) +
-           packSize(data.pipeAdditionalLength(), comm) +
-           packSize(data.pipeDiameter(), comm) +
-           packSize(data.pipeRoughness(), comm) +
-           packSize(data.pipeCrossArea(), comm) +
-           packSize(data.status(), comm);
 }
 
 std::size_t packSize(const Segment& data,
@@ -816,20 +802,6 @@ void pack(const UDAValue& data,
         pack(data.get<double>(), buffer, position, comm);
     else
         pack(data.get<std::string>(), buffer, position, comm);
-}
-
-void pack(const Valve& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.conFlowCoefficient(), buffer, position, comm);
-    pack(data.conCrossArea(), buffer, position, comm);
-    pack(data.conMaxCrossArea(), buffer, position, comm);
-    pack(data.pipeAdditionalLength(), buffer, position, comm);
-    pack(data.pipeDiameter(), buffer, position, comm);
-    pack(data.pipeRoughness(), buffer, position, comm);
-    pack(data.pipeCrossArea(), buffer, position, comm);
-    pack(data.status(), buffer, position, comm);
 }
 
 void pack(const Segment& data,
@@ -1338,32 +1310,6 @@ void unpack(UDAValue& data,
         unpack(val, buffer, position, comm);
         data = UDAValue(val, dim);
     }
-}
-
-void unpack(Valve& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    double conFlowCoefficient;
-    double conCrossArea;
-    double conMaxCrossArea;
-    double pipeAdditionalLength;
-    double pipeDiameter;
-    double pipeRoughness;
-    double pipeCrossArea;
-    ICDStatus status;
-
-    unpack(conFlowCoefficient, buffer, position, comm);
-    unpack(conCrossArea, buffer, position, comm);
-    unpack(conMaxCrossArea, buffer, position, comm);
-    unpack(pipeAdditionalLength, buffer, position, comm);
-    unpack(pipeDiameter, buffer, position, comm);
-    unpack(pipeRoughness, buffer, position, comm);
-    unpack(pipeCrossArea, buffer, position, comm);
-    unpack(status, buffer, position, comm);
-    data = Valve(conFlowCoefficient, conCrossArea, conMaxCrossArea,
-                 pipeAdditionalLength, pipeDiameter, pipeRoughness,
-                 pipeCrossArea, status);
 }
 
 void unpack(Segment& data,

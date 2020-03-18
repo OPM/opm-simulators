@@ -47,7 +47,6 @@ template<class T> class IOrderSet;
 class Segment;
 class UDAValue;
 class UnitSystem;
-class Valve;
 class VFPInjTable;
 class VFPProdTable;
 class WellSegments;
@@ -378,7 +377,6 @@ ADD_PACK_PROTOTYPES(Segment)
 ADD_PACK_PROTOTYPES(std::string)
 ADD_PACK_PROTOTYPES(UDAValue)
 ADD_PACK_PROTOTYPES(UnitSystem)
-ADD_PACK_PROTOTYPES(Valve)
 ADD_PACK_PROTOTYPES(VFPInjTable)
 ADD_PACK_PROTOTYPES(VFPProdTable)
 ADD_PACK_PROTOTYPES(Well)
