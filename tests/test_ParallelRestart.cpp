@@ -1613,7 +1613,7 @@ BOOST_AUTO_TEST_CASE(GroupProductionProperties)
                                                5.0, Opm::Group::GuideRateTarget::COMB,
                                                6.0, 7};
 
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Group::GroupProductionProperties)
 #endif
 }

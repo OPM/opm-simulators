@@ -371,21 +371,6 @@ std::size_t packSize(const UnitSystem& data,
            packSize(data.use_count(), comm);
 }
 
-std::size_t packSize(const Group::GroupProductionProperties& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.cmode, comm) +
-           packSize(data.exceed_action, comm) +
-           packSize(data.oil_target, comm) +
-           packSize(data.water_target, comm) +
-           packSize(data.gas_target, comm) +
-           packSize(data.liquid_target, comm) +
-           packSize(data.guide_rate, comm) +
-           packSize(data.guide_rate_def, comm) +
-           packSize(data.resv_target, comm) +
-           packSize(data.production_controls, comm);
-}
-
 std::size_t packSize(const Group& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -729,22 +714,6 @@ void pack(const UnitSystem& data,
     pack(data.getType(), buffer, position, comm);
     pack(data.getDimensions(), buffer, position, comm);
     pack(data.use_count(), buffer, position, comm);
-}
-
-void pack(const Group::GroupProductionProperties& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.cmode, buffer, position, comm);
-    pack(data.exceed_action, buffer, position, comm);
-    pack(data.oil_target, buffer, position, comm);
-    pack(data.water_target, buffer, position, comm);
-    pack(data.gas_target, buffer, position, comm);
-    pack(data.liquid_target, buffer, position, comm);
-    pack(data.guide_rate, buffer, position, comm);
-    pack(data.guide_rate_def, buffer, position, comm);
-    pack(data.resv_target, buffer, position, comm);
-    pack(data.production_controls, buffer, position, comm);
 }
 
 void pack(const Group& data,
@@ -1157,22 +1126,6 @@ void unpack(UnitSystem& data,
     unpack(use_count, buffer, position, comm);
 
     data = UnitSystem(name, type, dimensions, use_count);
-}
-
-void unpack(Group::GroupProductionProperties& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    unpack(data.cmode, buffer, position, comm);
-    unpack(data.exceed_action, buffer, position, comm);
-    unpack(data.oil_target, buffer, position, comm);
-    unpack(data.water_target, buffer, position, comm);
-    unpack(data.gas_target, buffer, position, comm);
-    unpack(data.liquid_target, buffer, position, comm);
-    unpack(data.guide_rate, buffer, position, comm);
-    unpack(data.guide_rate_def, buffer, position, comm);
-    unpack(data.resv_target, buffer, position, comm);
-    unpack(data.production_controls, buffer, position, comm);
 }
 
 void unpack(Group& data,
