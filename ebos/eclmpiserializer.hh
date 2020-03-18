@@ -52,7 +52,7 @@ public:
         }
     }
 
-    template<class T>
+    template<class T, bool complexType = true>
     void vector(std::vector<T>& data)
     {
         auto handle = [&](auto& d)
@@ -62,6 +62,8 @@ public:
                   pair(it);
               else if constexpr (is_ptr<T>::value)
                   ptr(it);
+              else if constexpr (!complexType)
+                  (*this)(it);
               else
                   it.serializeOp(*this);
             }
