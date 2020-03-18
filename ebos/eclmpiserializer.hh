@@ -40,8 +40,8 @@ public:
     template<class T>
     void operator()(const T& data)
     {
-        if constexpr (is_shared_ptr<T>::value) {
-            shared_ptr(data);
+        if constexpr (is_ptr<T>::value) {
+            ptr(data);
         } else {
           if (m_op == Operation::PACKSIZE)
               m_packSize += Mpi::packSize(data, m_comm);
@@ -60,8 +60,8 @@ public:
             for (auto& it : d) {
               if constexpr (is_pair<T>::value)
                   pair(it);
-              else if constexpr (is_shared_ptr<T>::value)
-                  shared_ptr(it);
+              else if constexpr (is_ptr<T>::value)
+                  ptr(it);
               else
                   it.serializeOp(*this);
             }
@@ -91,8 +91,8 @@ public:
         {
             if constexpr (is_vector<Data>::value)
                 vector(d);
-            else if constexpr (is_shared_ptr<Data>::value)
-                shared_ptr(d);
+            else if constexpr (is_ptr<Data>::value)
+                ptr(d);
             else if constexpr (!complexType)
                 d.template serializeOp<EclMpiSerializer, false>(*this);
             else
@@ -196,12 +196,17 @@ protected:
     };
 
     template<class T>
-    struct is_shared_ptr {
+    struct is_ptr {
         constexpr static bool value = false;
     };
 
     template<class T1>
-    struct is_shared_ptr<std::shared_ptr<T1>> {
+    struct is_ptr<std::shared_ptr<T1>> {
+        constexpr static bool value = true;
+    };
+
+    template<class T1>
+    struct is_ptr<std::unique_ptr<T1>> {
         constexpr static bool value = true;
     };
 
@@ -219,13 +224,13 @@ protected:
             const_cast<T2&>(data.second).serializeOp(*this);
     }
 
-    template<class T1>
-    void shared_ptr(const std::shared_ptr<T1>& data)
+    template<template<class T> class PtrType, class T1>
+    void ptr(const PtrType<T1>& data)
     {
         bool value = data ? true : false;
         (*this)(value);
         if (m_op == Operation::UNPACK && value) {
-            const_cast<std::shared_ptr<T1>&>(data) = std::make_shared<T1>();
+            const_cast<PtrType<T1>&>(data).reset(new T1);
         }
         if (data)
             data->serializeOp(*this);
