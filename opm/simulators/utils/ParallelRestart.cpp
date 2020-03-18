@@ -24,7 +24,6 @@
 #include "ParallelRestart.hpp"
 #include <opm/parser/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/Actions.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Action/Condition.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/icd.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/SpiralICD.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
@@ -661,16 +660,6 @@ std::size_t packSize(const Deck& data,
            packSize(data.getDataFile(), comm) +
            packSize(data.getInputPath(), comm) +
            packSize(data.unitSystemAccessCount(), comm);
-}
-
-std::size_t packSize(const Action::Condition& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.lhs, comm) +
-           packSize(data.rhs, comm) +
-           packSize(data.logic, comm) +
-           packSize(data.cmp, comm) +
-           packSize(data.cmp_string, comm);
 }
 
 std::size_t packSize(const Action::Actions& data,
@@ -1317,17 +1306,6 @@ void pack(const Deck& data,
     pack(data.getDataFile(), buffer, position, comm);
     pack(data.getInputPath(), buffer, position, comm);
     pack(data.unitSystemAccessCount(), buffer, position, comm);
-}
-
-void pack(const Action::Condition& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.lhs, buffer, position, comm);
-    pack(data.rhs, buffer, position, comm);
-    pack(data.logic, buffer, position, comm);
-    pack(data.cmp, buffer, position, comm);
-    pack(data.cmp_string, buffer, position, comm);
 }
 
 void pack(const Action::Actions& data,
@@ -2212,16 +2190,6 @@ void unpack(Deck& data, std::vector<char>& buffer, int& position,
     unpack(accessCount, buffer, position, comm);
     data = Deck(keywords, defaultUnitSystem,
                 activeUnitSystem.get(), dataFile, inputPath, accessCount);
-}
-
-void unpack(Action::Condition& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    unpack(data.lhs, buffer, position, comm);
-    unpack(data.rhs, buffer, position, comm);
-    unpack(data.logic, buffer, position, comm);
-    unpack(data.cmp, buffer, position, comm);
-    unpack(data.cmp_string, buffer, position, comm);
 }
 
 void unpack(Action::Actions& data, std::vector<char>& buffer, int& position,

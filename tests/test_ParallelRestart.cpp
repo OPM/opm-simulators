@@ -2030,7 +2030,7 @@ BOOST_AUTO_TEST_CASE(Condition)
 {
 #ifdef HAVE_MPI
     Opm::Action::Condition val1 = getCondition();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Action::Condition)
 #endif
 }
