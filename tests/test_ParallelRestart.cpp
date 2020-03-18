@@ -1432,7 +1432,7 @@ BOOST_AUTO_TEST_CASE(WellInjectionProperties)
                                             8,
                                             Opm::InjectorType::OIL,
                                             Opm::Well::InjectorCMode::BHP);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Well::WellInjectionProperties)
 #endif
 }

@@ -347,26 +347,6 @@ std::size_t packSize(const UDAValue& data,
                                 packSize(data.get<std::string>(), comm));
 }
 
-std::size_t packSize(const Well::WellInjectionProperties& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.name, comm) +
-           packSize(data.surfaceInjectionRate, comm) +
-           packSize(data.reservoirInjectionRate, comm) +
-           packSize(data.BHPTarget, comm) +
-           packSize(data.THPTarget, comm) +
-           packSize(data.bhp_hist_limit, comm) +
-           packSize(data.thp_hist_limit, comm) +
-           packSize(data.temperature, comm) +
-           packSize(data.BHPH, comm) +
-           packSize(data.THPH, comm) +
-           packSize(data.VFPTableNumber, comm) +
-           packSize(data.predictionMode, comm) +
-           packSize(data.injectionControls, comm) +
-           packSize(data.injectorType, comm) +
-           packSize(data.controlMode, comm);
-}
-
 std::size_t packSize(const SpiralICD& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -853,27 +833,6 @@ void pack(const UDAValue& data,
         pack(data.get<double>(), buffer, position, comm);
     else
         pack(data.get<std::string>(), buffer, position, comm);
-}
-
-void pack(const Well::WellInjectionProperties& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.name, buffer, position, comm);
-    pack(data.surfaceInjectionRate, buffer, position, comm);
-    pack(data.reservoirInjectionRate, buffer, position, comm);
-    pack(data.BHPTarget, buffer, position, comm);
-    pack(data.THPTarget, buffer, position, comm);
-    pack(data.bhp_hist_limit, buffer, position, comm);
-    pack(data.thp_hist_limit, buffer, position, comm);
-    pack(data.temperature, buffer, position, comm);
-    pack(data.BHPH, buffer, position, comm);
-    pack(data.THPH, buffer, position, comm);
-    pack(data.VFPTableNumber, buffer, position, comm);
-    pack(data.predictionMode, buffer, position, comm);
-    pack(data.injectionControls, buffer, position, comm);
-    pack(data.injectorType, buffer, position, comm);
-    pack(data.controlMode, buffer, position, comm);
 }
 
 void pack(const SpiralICD& data,
@@ -1413,27 +1372,6 @@ void unpack(UDAValue& data,
         unpack(val, buffer, position, comm);
         data = UDAValue(val, dim);
     }
-}
-
-void unpack(Well::WellInjectionProperties& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    unpack(data.name, buffer, position, comm);
-    unpack(data.surfaceInjectionRate, buffer, position, comm);
-    unpack(data.reservoirInjectionRate, buffer, position, comm);
-    unpack(data.BHPTarget, buffer, position, comm);
-    unpack(data.THPTarget, buffer, position, comm);
-    unpack(data.bhp_hist_limit, buffer, position, comm);
-    unpack(data.thp_hist_limit, buffer, position, comm);
-    unpack(data.temperature, buffer, position, comm);
-    unpack(data.BHPH, buffer, position, comm);
-    unpack(data.THPH, buffer, position, comm);
-    unpack(data.VFPTableNumber, buffer, position, comm);
-    unpack(data.predictionMode, buffer, position, comm);
-    unpack(data.injectionControls, buffer, position, comm);
-    unpack(data.injectorType, buffer, position, comm);
-    unpack(data.controlMode, buffer, position, comm);
 }
 
 void unpack(SpiralICD& data,
