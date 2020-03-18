@@ -44,42 +44,6 @@
       unpack(data, buffer, position, comm, std::integral_constant<bool,true>()); \
   }
 
-namespace
-{
-template<class Type>
-std::pair<std::vector<Type>, std::vector<int>>
-splitDynState(const Opm::DynamicState<Type>& state)
-{
-    std::vector<Type> unique;
-    for (const auto& w : state.data()) {
-        if (std::find(unique.begin(), unique.end(), w) == unique.end())
-            unique.push_back(w);
-    }
-    std::vector<int> idxVec;
-    idxVec.reserve(state.data().size()+1);
-    for (const auto& w : state.data()) {
-        auto uIt = std::find(unique.begin(), unique.end(), w);
-        idxVec.push_back(uIt-unique.begin());
-    }
-    idxVec.push_back(state.initialRange());
-
-    return std::make_pair(unique, idxVec);
-}
-
-template<class Type>
-void reconstructDynState(const std::vector<Type>& unique,
-                         const std::vector<int>& idxVec,
-                         Opm::DynamicState<Type>& result)
-{
-    std::vector<Type> ptrData;
-    for (size_t i = 0; i < idxVec.size()-1; ++i) {
-        ptrData.push_back(unique[idxVec[i]]);
-    }
-    result = Opm::DynamicState<Type>(ptrData, idxVec.back());
-}
-
-}
-
 namespace Opm
 {
 namespace Mpi
@@ -183,14 +147,6 @@ std::size_t packSize(const std::set<K,C,A>& data,
         totalSize += packSize(entry, comm);
     }
     return totalSize;
-}
-
-template<class T>
-std::size_t packSize(const DynamicState<T>& data, Dune::MPIHelper::MPICommunicator comm)
-{
-
-    auto split = splitDynState(data);
-    return packSize(split.first, comm) + packSize(split.second, comm);
 }
 
 std::size_t packSize(const char* str, Dune::MPIHelper::MPICommunicator comm)
@@ -435,15 +391,6 @@ void pack(const std::tuple<Ts...>& data, std::vector<char>& buffer,
           int& position, Dune::MPIHelper::MPICommunicator comm)
 {
     pack_tuple_entry(data, buffer, position, comm);
-}
-
-template<class T>
-void pack(const DynamicState<T>& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    auto split = splitDynState(data);
-    pack(split.first, buffer, position, comm);
-    pack(split.second, buffer, position, comm);
 }
 
 void pack(const char* str, std::vector<char>& buffer, int& position,
@@ -701,17 +648,6 @@ void unpack(std::array<T,N>& data, std::vector<char>& buffer, int& position,
 {
     for (T& entry : data)
         unpack(entry, buffer, position, comm);
-}
-
-template<class T>
-void unpack(DynamicState<T>& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<T> unique;
-    std::vector<int> indices;
-    Opm::Mpi::unpack(unique, buffer, position, comm);
-    Opm::Mpi::unpack(indices, buffer, position, comm);
-    reconstructDynState(unique, indices, data);
 }
 
 void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& position,
