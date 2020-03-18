@@ -1568,7 +1568,7 @@ BOOST_AUTO_TEST_CASE(WellSegments)
     Opm::WellSegments val1(Opm::WellSegments::CompPressureDrop::HF_,
                            {seg, seg});
 
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(WellSegments)
 #endif
 }

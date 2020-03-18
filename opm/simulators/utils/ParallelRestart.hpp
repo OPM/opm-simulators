@@ -48,7 +48,6 @@ class UDAValue;
 class UnitSystem;
 class VFPInjTable;
 class VFPProdTable;
-class WellSegments;
 
 namespace Mpi
 {
@@ -379,7 +378,6 @@ ADD_PACK_PROTOTYPES(VFPInjTable)
 ADD_PACK_PROTOTYPES(VFPProdTable)
 ADD_PACK_PROTOTYPES(Well)
 ADD_PACK_PROTOTYPES(WellType)
-ADD_PACK_PROTOTYPES(WellSegments)
 
 } // end namespace Mpi
 

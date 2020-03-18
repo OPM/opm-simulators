@@ -383,13 +383,6 @@ std::size_t packSize(const UnitSystem& data,
            packSize(data.use_count(), comm);
 }
 
-std::size_t packSize(const WellSegments& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.compPressureDrop(), comm) +
-           packSize(data.segments(), comm);
-}
-
 std::size_t packSize(const Well& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -819,14 +812,6 @@ void pack(const UnitSystem& data,
     pack(data.getType(), buffer, position, comm);
     pack(data.getDimensions(), buffer, position, comm);
     pack(data.use_count(), buffer, position, comm);
-}
-
-void pack(const WellSegments& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.compPressureDrop(), buffer, position, comm);
-    pack(data.segments(), buffer, position, comm);
 }
 
 void pack(const Well& data,
@@ -1322,19 +1307,6 @@ void unpack(UnitSystem& data,
     unpack(use_count, buffer, position, comm);
 
     data = UnitSystem(name, type, dimensions, use_count);
-}
-
-void unpack(WellSegments& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    WellSegments::CompPressureDrop compPressureDrop;
-    std::vector<Segment> segments;
-
-    unpack(compPressureDrop, buffer, position, comm);
-    unpack(segments, buffer, position, comm);
-
-    data = WellSegments(compPressureDrop, segments);
 }
 
 void unpack(Well& data,
