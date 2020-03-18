@@ -69,6 +69,12 @@ public:
     template <class BridgeVector>
     void get_result(BridgeVector &x);
 
+    /// Return whether the BdaBridge will use the GPU or not
+    /// return whether the BdaBridge will use the GPU or not
+    bool getUseGpu(){
+        return use_gpu;
+    }
+
 }; // end class BdaBridge
 
 }

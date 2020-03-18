@@ -236,8 +236,13 @@ protected:
               converged_(false)
         {
             parameters_.template init<TypeTag>();
+            const auto& gridForConn = simulator_.vanguard().grid();
 #if HAVE_CUDA
-            const bool use_gpu = EWOMS_GET_PARAM(TypeTag, bool, UseGpu);
+            bool use_gpu = EWOMS_GET_PARAM(TypeTag, bool, UseGpu);
+            if (gridForConn.comm().size() > 1 && use_gpu) {
+                OpmLog::warning("Warning cannot use GPU with MPI, GPU is disabled");
+                use_gpu = false;
+            }
             const int maxit = EWOMS_GET_PARAM(TypeTag, int, LinearSolverMaxIter);
             const double tolerance = EWOMS_GET_PARAM(TypeTag, double, LinearSolverReduction);
             const int linear_solver_verbosity = parameters_.linear_solver_verbosity_;
@@ -249,7 +254,6 @@ protected:
             }
 #endif
             extractParallelGridInformationToISTL(simulator_.vanguard().grid(), parallelInformation_);
-            const auto& gridForConn = simulator_.vanguard().grid();
             const auto wellsForConn = simulator_.vanguard().schedule().getWellsatEnd();
             const bool useWellConn = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
 
@@ -440,7 +444,7 @@ protected:
 #if HAVE_CUDA
                 WellContributions wellContribs;
                 const bool addWellContribs = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
-                const bool use_gpu = EWOMS_GET_PARAM(TypeTag, bool, UseGpu);
+                const bool use_gpu = bdaBridge->getUseGpu();
                 if(!addWellContribs && use_gpu)
                 {
                     simulator_.problem().wellModel().getWellContributions(wellContribs);
