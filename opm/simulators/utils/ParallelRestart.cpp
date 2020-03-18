@@ -24,7 +24,6 @@
 #include "ParallelRestart.hpp"
 #include <opm/parser/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/icd.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/MSW/SpiralICD.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/RFTConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/ScheduleTypes.hpp>
@@ -345,22 +344,6 @@ std::size_t packSize(const UDAValue& data,
            packSize(data.is<double>(), comm) +
            (data.is<double>() ? packSize(data.get<double>(), comm) :
                                 packSize(data.get<std::string>(), comm));
-}
-
-std::size_t packSize(const SpiralICD& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.strength(), comm) +
-           packSize(data.length(), comm) +
-           packSize(data.densityCalibration(), comm) +
-           packSize(data.viscosityCalibration(), comm) +
-           packSize(data.criticalValue(), comm) +
-           packSize(data.widthTransitionRegion(), comm) +
-           packSize(data.maxViscosityRatio(), comm) +
-           packSize(data.methodFlowScaling(), comm) +
-           packSize(data.maxAbsoluteRate(), comm) +
-           packSize(data.status(), comm) +
-           packSize(data.scalingFactor(), comm);
 }
 
 std::size_t packSize(const Valve& data,
@@ -833,23 +816,6 @@ void pack(const UDAValue& data,
         pack(data.get<double>(), buffer, position, comm);
     else
         pack(data.get<std::string>(), buffer, position, comm);
-}
-
-void pack(const SpiralICD& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.strength(), buffer, position, comm);
-    pack(data.length(), buffer, position, comm);
-    pack(data.densityCalibration(), buffer, position, comm);
-    pack(data.viscosityCalibration(), buffer, position, comm);
-    pack(data.criticalValue(), buffer, position, comm);
-    pack(data.widthTransitionRegion(), buffer, position, comm);
-    pack(data.maxViscosityRatio(), buffer, position, comm);
-    pack(data.methodFlowScaling(), buffer, position, comm);
-    pack(data.maxAbsoluteRate(), buffer, position, comm);
-    pack(data.status(), buffer, position, comm);
-    pack(data.scalingFactor(), buffer, position, comm);
 }
 
 void pack(const Valve& data,
@@ -1374,37 +1340,6 @@ void unpack(UDAValue& data,
     }
 }
 
-void unpack(SpiralICD& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    double strength, length, densityCalibration,
-           viscosityCalibration, criticalValue,
-           widthTransitionRegion, maxViscosityRatio;
-    int methodFlowScaling;
-    double maxAbsoluteRate;
-    ICDStatus status;
-    double scalingFactor;
-
-    unpack(strength, buffer, position, comm);
-    unpack(length, buffer, position, comm);
-    unpack(densityCalibration, buffer, position, comm);
-    unpack(viscosityCalibration, buffer, position, comm);
-    unpack(criticalValue, buffer, position, comm);
-    unpack(widthTransitionRegion, buffer, position, comm);
-    unpack(maxViscosityRatio, buffer, position, comm);
-    unpack(methodFlowScaling, buffer, position, comm);
-    unpack(maxAbsoluteRate, buffer, position, comm);
-    unpack(status, buffer, position, comm);
-    unpack(scalingFactor, buffer, position, comm);
-
-    data = SpiralICD(strength, length, densityCalibration,
-                     viscosityCalibration, criticalValue,
-                     widthTransitionRegion, maxViscosityRatio,
-                     methodFlowScaling, maxAbsoluteRate,
-                     status, scalingFactor);
-}
-
 void unpack(Valve& data,
             std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
@@ -1740,7 +1675,6 @@ template void unpack(std::shared_ptr<__VA_ARGS__>& data, \
                      std::vector<char>& buffer, int& position, \
                      Dune::MPIHelper::MPICommunicator comm);
 
-INSTANTIATE_PACK_SHARED_PTR(SpiralICD)
 INSTANTIATE_PACK_SHARED_PTR(VFPInjTable)
 INSTANTIATE_PACK_SHARED_PTR(Well)
 #undef INSTANTIATE_PACK_SHARED_PTR
