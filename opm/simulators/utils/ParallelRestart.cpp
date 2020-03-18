@@ -460,7 +460,6 @@ std::size_t packSize(const Connection& data,
            packSize(data.getSegDistStart(), comm) +
            packSize(data.getSegDistEnd(), comm) +
            packSize(data.getDefaultSatTabId(), comm) +
-           packSize(data.getCompSegSeqIndex(), comm) +
            packSize(data.segment(), comm) +
            packSize(data.wellPi(), comm);
 }
@@ -1360,7 +1359,6 @@ void pack(const Connection& data,
     pack(data.getSegDistStart(), buffer, position, comm);
     pack(data.getSegDistEnd(), buffer, position, comm);
     pack(data.getDefaultSatTabId(), buffer, position, comm);
-    pack(data.getCompSegSeqIndex(), buffer, position, comm);
     pack(data.segment(), buffer, position, comm);
     pack(data.wellPi(), buffer, position, comm);
 }
@@ -2358,7 +2356,6 @@ void unpack(Connection& data,
     size_t seqIndex;
     double segDistStart, segDistEnd;
     bool defaultSatTabId;
-    size_t compSegSeqIndex;
     int segment;
     double wellPi;
     Connection::CTFKind kind;
@@ -2381,7 +2378,6 @@ void unpack(Connection& data,
     unpack(segDistStart, buffer, position, comm);
     unpack(segDistEnd, buffer, position, comm);
     unpack(defaultSatTabId, buffer, position, comm);
-    unpack(compSegSeqIndex, buffer, position, comm);
     unpack(segment, buffer, position, comm);
     unpack(wellPi, buffer, position, comm);
 
@@ -2389,7 +2385,7 @@ void unpack(Connection& data,
                       complnum, CF, Kh, rw, r0,
                       skinFactor, {I,J,K}, kind, seqIndex,
                       segDistStart, segDistEnd,
-                      defaultSatTabId, compSegSeqIndex,
+                      defaultSatTabId,
                       segment, wellPi);
 }
 
