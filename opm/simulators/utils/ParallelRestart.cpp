@@ -32,7 +32,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunctionTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellConnections.hpp>
 #include <opm/parser/eclipse/EclipseState/Util/IOrderSet.hpp>
 #include <dune/common/parallel/mpitraits.hh>
 
@@ -366,15 +365,6 @@ std::size_t packSize(const Well::WellInjectionProperties& data,
            packSize(data.injectionControls, comm) +
            packSize(data.injectorType, comm) +
            packSize(data.controlMode, comm);
-}
-
-std::size_t packSize(const WellConnections& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.ordering(), comm) +
-           packSize(data.getHeadI(), comm) +
-           packSize(data.getHeadJ(), comm) +
-           packSize(data.getConnections(), comm);
 }
 
 std::size_t packSize(const Well::WellProductionProperties& data,
@@ -907,16 +897,6 @@ void pack(const Well::WellInjectionProperties& data,
     pack(data.injectionControls, buffer, position, comm);
     pack(data.injectorType, buffer, position, comm);
     pack(data.controlMode, buffer, position, comm);
-}
-
-void pack(const WellConnections& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.ordering(), buffer, position, comm);
-    pack(data.getHeadI(), buffer, position, comm);
-    pack(data.getHeadJ(), buffer, position, comm);
-    pack(data.getConnections(), buffer, position, comm);
 }
 
 void pack(const Well::WellProductionProperties& data,
@@ -1501,22 +1481,6 @@ void unpack(Well::WellInjectionProperties& data,
     unpack(data.injectionControls, buffer, position, comm);
     unpack(data.injectorType, buffer, position, comm);
     unpack(data.controlMode, buffer, position, comm);
-}
-
-void unpack(WellConnections& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    int headI, headJ;
-    Connection::Order ordering;
-    std::vector<Connection> connections;
-
-    unpack(ordering, buffer, position, comm),
-    unpack(headI, buffer, position, comm),
-    unpack(headJ, buffer, position, comm),
-    unpack(connections, buffer, position, comm),
-
-    data = WellConnections(ordering, headI, headJ, connections);
 }
 
 void unpack(Well::WellProductionProperties& data,

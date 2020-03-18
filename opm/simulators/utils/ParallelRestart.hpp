@@ -51,7 +51,6 @@ class UnitSystem;
 class Valve;
 class VFPInjTable;
 class VFPProdTable;
-class WellConnections;
 class WellSegments;
 
 namespace Mpi
@@ -388,7 +387,6 @@ ADD_PACK_PROTOTYPES(Well)
 ADD_PACK_PROTOTYPES(WellType)
 ADD_PACK_PROTOTYPES(Well::WellInjectionProperties)
 ADD_PACK_PROTOTYPES(Well::WellProductionProperties)
-ADD_PACK_PROTOTYPES(WellConnections)
 ADD_PACK_PROTOTYPES(WellSegments)
 
 } // end namespace Mpi

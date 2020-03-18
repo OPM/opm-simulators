@@ -1474,7 +1474,7 @@ BOOST_AUTO_TEST_CASE(WellConnections)
                          12, 13.0, 14.0, true,
                          15, 16, 17.0);
     Opm::WellConnections val1(Opm::Connection::Order::TRACK, 1, 2, {conn, conn});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(WellConnections)
 #endif
 }
