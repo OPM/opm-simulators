@@ -324,15 +324,6 @@ std::size_t packSize(const VFPProdTable& data,
            packSize(data.getTable(), comm);
 }
 
-std::size_t packSize(const UDAValue& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.get_dim(), comm) +
-           packSize(data.is<double>(), comm) +
-           (data.is<double>() ? packSize(data.get<double>(), comm) :
-                                packSize(data.get<std::string>(), comm));
-}
-
 template<class T>
 std::size_t packSize(const std::shared_ptr<T>& data,
                      Dune::MPIHelper::MPICommunicator comm)
@@ -646,18 +637,6 @@ void pack(const VFPProdTable& data,
     pack(data.getGFRAxis(), buffer, position, comm);
     pack(data.getALQAxis(), buffer, position, comm);
     pack(data.getTable(), buffer, position, comm);
-}
-
-void pack(const UDAValue& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.get_dim(), buffer, position, comm);
-    pack(data.is<double>(), buffer, position, comm);
-    if (data.is<double>())
-        pack(data.get<double>(), buffer, position, comm);
-    else
-        pack(data.get<std::string>(), buffer, position, comm);
 }
 
 template<class T>
@@ -1015,25 +994,6 @@ void unpack(VFPProdTable& data,
     data = VFPProdTable(tableNum, datumDepth, floType, wfrType,
                         gfrType, alqType, floAxis, thpAxis,
                         wfrAxis, gfrAxis, alqAxis, table);
-}
-
-void unpack(UDAValue& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    bool isDouble;
-    Dimension dim;
-    unpack(dim, buffer, position, comm);
-    unpack(isDouble, buffer, position, comm);
-    if (isDouble) {
-        double val;
-        unpack(val, buffer, position, comm);
-        data = UDAValue(val, dim);
-    } else {
-        std::string val;
-        unpack(val, buffer, position, comm);
-        data = UDAValue(val, dim);
-    }
 }
 
 template<class T>

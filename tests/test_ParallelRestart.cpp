@@ -1393,10 +1393,10 @@ BOOST_AUTO_TEST_CASE(UDAValue)
 {
 #ifdef HAVE_MPI
     Opm::UDAValue val1("test");
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(UDAValue)
     val1 = Opm::UDAValue(1.0);
-    val2 = PackUnpack(val1);
+    val2 = PackUnpack2(val1);
     DO_CHECKS(UDAValue)
 #endif
 }
