@@ -376,42 +376,6 @@ std::size_t packSize(const UnitSystem& data,
            packSize(data.use_count(), comm);
 }
 
-std::size_t packSize(const Well& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    std::size_t size = packSize(data.name(), comm) +
-                       packSize(data.groupName(), comm) +
-                       packSize(data.firstTimeStep(), comm) +
-                       packSize(data.seqIndex(), comm) +
-                       packSize(data.getHeadI(), comm) +
-                       packSize(data.getHeadJ(), comm) +
-                       packSize(data.getRefDepth(), comm) +
-                       packSize(data.wellType(), comm) +
-                       packSize(data.units(), comm) +
-                       packSize(data.udqUndefined(), comm) +
-                       packSize(data.getStatus(), comm) +
-                       packSize(data.getDrainageRadius(), comm) +
-                       packSize(data.getAllowCrossFlow(), comm) +
-                       packSize(data.getAutomaticShutIn(), comm) +
-                       packSize(data.wellGuideRate(), comm) +
-                       packSize(data.getEfficiencyFactor(), comm) +
-                       packSize(data.getSolventFraction(), comm) +
-                       packSize(data.predictionMode(), comm) +
-                       packSize(data.getEconLimits(), comm) +
-                       packSize(data.getFoamProperties(), comm) +
-                       packSize(data.getPolymerProperties(), comm) +
-                       packSize(data.getBrineProperties(), comm) +
-                       packSize(data.getTracerProperties(), comm) +
-                       packSize(data.getConnections(), comm) +
-                       packSize(data.getProductionProperties(), comm) +
-                       packSize(data.getInjectionProperties(), comm) +
-                       packSize(data.hasSegments(), comm);
-    if (data.hasSegments())
-        size += packSize(data.getSegments(), comm);
-
-    return size;
-}
-
 template<class T>
 std::size_t packSize(const IOrderSet<T>& data,
                      Dune::MPIHelper::MPICommunicator comm)
@@ -799,41 +763,6 @@ void pack(const UnitSystem& data,
     pack(data.getType(), buffer, position, comm);
     pack(data.getDimensions(), buffer, position, comm);
     pack(data.use_count(), buffer, position, comm);
-}
-
-void pack(const Well& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.name(), buffer, position, comm);
-    pack(data.groupName(), buffer, position, comm);
-    pack(data.firstTimeStep(), buffer, position, comm);
-    pack(data.seqIndex(), buffer, position, comm);
-    pack(data.getHeadI(), buffer, position, comm);
-    pack(data.getHeadJ(), buffer, position, comm);
-    pack(data.getRefDepth(), buffer, position, comm);
-    pack(data.wellType(), buffer, position, comm);
-    pack(data.units(), buffer, position, comm);
-    pack(data.udqUndefined(), buffer, position, comm);
-    pack(data.getStatus(), buffer, position, comm);
-    pack(data.getDrainageRadius(), buffer, position, comm);
-    pack(data.getAllowCrossFlow(), buffer, position, comm);
-    pack(data.getAutomaticShutIn(), buffer, position, comm);
-    pack(data.wellGuideRate(), buffer, position, comm);
-    pack(data.getEfficiencyFactor(), buffer, position, comm);
-    pack(data.getSolventFraction(), buffer, position, comm);
-    pack(data.predictionMode(), buffer, position, comm);
-    pack(data.getEconLimits(), buffer, position, comm);
-    pack(data.getFoamProperties(), buffer, position, comm);
-    pack(data.getPolymerProperties(), buffer, position, comm);
-    pack(data.getBrineProperties(), buffer, position, comm);
-    pack(data.getTracerProperties(), buffer, position, comm);
-    pack(data.getConnections(), buffer, position, comm);
-    pack(data.getProductionProperties(), buffer, position, comm);
-    pack(data.getInjectionProperties(), buffer, position, comm);
-    pack(data.hasSegments(), buffer, position, comm);
-    if (data.hasSegments())
-        pack(data.getSegments(), buffer, position, comm);
 }
 
 template<class T>
@@ -1287,74 +1216,6 @@ void unpack(UnitSystem& data,
     data = UnitSystem(name, type, dimensions, use_count);
 }
 
-void unpack(Well& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::string name, groupName;
-    std::size_t firstTimeStep, seqIndex;
-    int headI, headJ;
-    double ref_depth;
-    WellType wtype;
-    UnitSystem units;
-    double udq_undefined;
-    Well::Status status;
-    double drainageRadius;
-    bool allowCrossFlow, automaticShutIn;
-    Well::WellGuideRate guideRate;
-    double efficiencyFactor;
-    double solventFraction;
-    bool prediction_mode;
-    auto econLimits = std::make_shared<WellEconProductionLimits>();
-    auto foamProperties = std::make_shared<WellFoamProperties>();
-    auto polymerProperties = std::make_shared<WellPolymerProperties>();
-    auto brineProperties = std::make_shared<WellBrineProperties>();
-    auto tracerProperties = std::make_shared<WellTracerProperties>();
-    auto connection = std::make_shared<WellConnections>();
-    auto production = std::make_shared<Well::WellProductionProperties>();
-    auto injection = std::make_shared<Well::WellInjectionProperties>();
-    std::shared_ptr<WellSegments> segments;
-
-    unpack(name, buffer, position, comm);
-    unpack(groupName, buffer, position, comm);
-    unpack(firstTimeStep, buffer, position, comm);
-    unpack(seqIndex, buffer, position, comm);
-    unpack(headI, buffer, position, comm);
-    unpack(headJ, buffer, position, comm);
-    unpack(ref_depth, buffer, position, comm);
-    unpack(wtype, buffer, position, comm);
-    unpack(units, buffer, position, comm);
-    unpack(udq_undefined, buffer, position, comm);
-    unpack(status, buffer, position, comm);
-    unpack(drainageRadius, buffer, position, comm);
-    unpack(allowCrossFlow, buffer, position, comm);
-    unpack(automaticShutIn, buffer, position, comm);
-    unpack(guideRate, buffer, position, comm);
-    unpack(efficiencyFactor, buffer, position, comm);
-    unpack(solventFraction, buffer, position, comm);
-    unpack(prediction_mode, buffer, position, comm);
-    unpack(*econLimits, buffer, position, comm);
-    unpack(*foamProperties, buffer, position, comm);
-    unpack(*polymerProperties, buffer, position, comm);
-    unpack(*brineProperties, buffer, position, comm);
-    unpack(*tracerProperties, buffer, position, comm);
-    unpack(*connection, buffer, position, comm);
-    unpack(*production, buffer, position, comm);
-    unpack(*injection, buffer, position, comm);
-    bool hasSegments;
-    unpack(hasSegments, buffer, position, comm);
-    if (hasSegments) {
-        segments = std::make_shared<WellSegments>();
-        unpack(*segments, buffer, position, comm);
-    }
-    data = Well(name, groupName, firstTimeStep, seqIndex, headI, headJ,
-                ref_depth, wtype, units, udq_undefined, status,
-                drainageRadius, allowCrossFlow, automaticShutIn,
-                guideRate, efficiencyFactor, solventFraction, prediction_mode,
-                econLimits, foamProperties, polymerProperties, brineProperties,
-                tracerProperties, connection, production, injection, segments);
-}
-
 template<class T>
 void unpack(IOrderSet<T>& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
@@ -1465,7 +1326,6 @@ INSTANTIATE_PACK_VECTOR(std::pair<bool,double>)
 INSTANTIATE_PACK_VECTOR(std::shared_ptr<Group>)
 INSTANTIATE_PACK_VECTOR(std::shared_ptr<VFPInjTable>)
 INSTANTIATE_PACK_VECTOR(std::shared_ptr<VFPProdTable>)
-INSTANTIATE_PACK_VECTOR(std::shared_ptr<Well>)
 INSTANTIATE_PACK_VECTOR(std::map<std::string,int>)
 INSTANTIATE_PACK_VECTOR(std::pair<std::string,std::vector<size_t>>)
 INSTANTIATE_PACK_VECTOR(std::pair<int,std::vector<int>>)
@@ -1501,7 +1361,6 @@ template void unpack(std::shared_ptr<__VA_ARGS__>& data, \
                      Dune::MPIHelper::MPICommunicator comm);
 
 INSTANTIATE_PACK_SHARED_PTR(VFPInjTable)
-INSTANTIATE_PACK_SHARED_PTR(Well)
 #undef INSTANTIATE_PACK_SHARED_PTR
 
 #define INSTANTIATE_PACK(...) \
