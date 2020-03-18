@@ -1330,7 +1330,7 @@ BOOST_AUTO_TEST_CASE(VFPProdTable)
 {
 #ifdef HAVE_MPI
     Opm::VFPProdTable val1 = getVFPProdTable();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(VFPProdTable)
 #endif
 }

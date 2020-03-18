@@ -26,7 +26,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/icd.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/RFTConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQEnums.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
 #include <dune/common/parallel/mpitraits.hh>
 
 #define HANDLE_AS_POD(T) \
@@ -292,23 +291,6 @@ std::size_t packSize(const data::WellRates& data, Dune::MPIHelper::MPICommunicat
 std::size_t packSize(const RestartValue& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.solution, comm) + packSize(data.wells, comm) + packSize(data.extra, comm);
-}
-
-std::size_t packSize(const VFPProdTable& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getTableNum(), comm) +
-           packSize(data.getDatumDepth(), comm) +
-           packSize(data.getFloType(), comm) +
-           packSize(data.getWFRType(), comm) +
-           packSize(data.getGFRType(), comm) +
-           packSize(data.getALQType(), comm) +
-           packSize(data.getFloAxis(), comm) +
-           packSize(data.getTHPAxis(), comm) +
-           packSize(data.getWFRAxis(), comm) +
-           packSize(data.getGFRAxis(), comm) +
-           packSize(data.getALQAxis(), comm) +
-           packSize(data.getTable(), comm);
 }
 
 template<class T>
@@ -578,24 +560,6 @@ void pack(const RestartValue& data, std::vector<char>& buffer, int& position,
     pack(data.solution, buffer, position, comm);
     pack(data.wells, buffer, position, comm);
     pack(data.extra, buffer, position, comm);
-}
-
-void pack(const VFPProdTable& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getTableNum(), buffer, position, comm);
-    pack(data.getDatumDepth(), buffer, position, comm);
-    pack(data.getFloType(), buffer, position, comm);
-    pack(data.getWFRType(), buffer, position, comm);
-    pack(data.getGFRType(), buffer, position, comm);
-    pack(data.getALQType(), buffer, position, comm);
-    pack(data.getFloAxis(), buffer, position, comm);
-    pack(data.getTHPAxis(), buffer, position, comm);
-    pack(data.getWFRAxis(), buffer, position, comm);
-    pack(data.getGFRAxis(), buffer, position, comm);
-    pack(data.getALQAxis(), buffer, position, comm);
-    pack(data.getTable(), buffer, position, comm);
 }
 
 template<class T>
@@ -885,37 +849,6 @@ void unpack(RestartValue& data, std::vector<char>& buffer, int& position,
     unpack(data.extra, buffer, position, comm);
 }
 
-void unpack(VFPProdTable& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    int tableNum;
-    double datumDepth;
-    VFPProdTable::FLO_TYPE floType;
-    VFPProdTable::WFR_TYPE wfrType;
-    VFPProdTable::GFR_TYPE gfrType;
-    VFPProdTable::ALQ_TYPE alqType;
-    std::vector<double> floAxis, thpAxis, wfrAxis, gfrAxis, alqAxis;
-    VFPProdTable::array_type table;
-
-    unpack(tableNum, buffer, position, comm);
-    unpack(datumDepth, buffer, position, comm);
-    unpack(floType, buffer, position, comm);
-    unpack(wfrType, buffer, position, comm);
-    unpack(gfrType, buffer, position, comm);
-    unpack(alqType, buffer, position, comm);
-    unpack(floAxis, buffer, position, comm);
-    unpack(thpAxis, buffer, position, comm);
-    unpack(wfrAxis, buffer, position, comm);
-    unpack(gfrAxis, buffer, position, comm);
-    unpack(alqAxis, buffer, position, comm);
-    unpack(table, buffer, position, comm);
-
-    data = VFPProdTable(tableNum, datumDepth, floType, wfrType,
-                        gfrType, alqType, floAxis, thpAxis,
-                        wfrAxis, gfrAxis, alqAxis, table);
-}
-
 template<class T>
 void unpack(std::shared_ptr<T>& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
@@ -959,7 +892,6 @@ INSTANTIATE_PACK_VECTOR(size_t)
 INSTANTIATE_PACK_VECTOR(std::time_t)
 INSTANTIATE_PACK_VECTOR(std::array<double, 3>)
 INSTANTIATE_PACK_VECTOR(std::pair<bool,double>)
-INSTANTIATE_PACK_VECTOR(std::shared_ptr<VFPProdTable>)
 INSTANTIATE_PACK_VECTOR(std::map<std::string,int>)
 INSTANTIATE_PACK_VECTOR(std::pair<std::string,std::vector<size_t>>)
 INSTANTIATE_PACK_VECTOR(std::pair<int,std::vector<int>>)
