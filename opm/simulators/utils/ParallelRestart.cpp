@@ -34,7 +34,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Connection.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellConnections.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellPolymerProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTracerProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Util/IOrderSet.hpp>
 #include <dune/common/parallel/mpitraits.hh>
@@ -622,16 +621,6 @@ std::size_t packSize(const Group& data,
            packSize(data.productionProperties(), comm);
 }
 
-std::size_t packSize(const WellPolymerProperties& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.m_polymerConcentration, comm) +
-           packSize(data.m_saltConcentration, comm) +
-           packSize(data.m_plymwinjtable, comm) +
-           packSize(data.m_skprwattable, comm) +
-           packSize(data.m_skprpolytable, comm);
-}
-
 ////// pack routines
 
 template<class T>
@@ -1211,17 +1200,6 @@ void pack(const Group& data,
     pack(data.igroups(), buffer, position, comm);
     pack(data.injectionProperties(), buffer, position, comm);
     pack(data.productionProperties(), buffer, position, comm);
-}
-
-void pack(const WellPolymerProperties& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.m_polymerConcentration, buffer, position, comm);
-    pack(data.m_saltConcentration, buffer, position, comm);
-    pack(data.m_plymwinjtable, buffer, position, comm);
-    pack(data.m_skprwattable, buffer, position, comm);
-    pack(data.m_skprpolytable, buffer, position, comm);
 }
 
 /// unpack routines
@@ -2015,17 +1993,6 @@ void unpack(Group& data,
                  availableForGroupControl,
                  groupNetVFPTable, parent, wells, groups,
                  injection, production);
-}
-
-void unpack(WellPolymerProperties& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    unpack(data.m_polymerConcentration, buffer, position, comm);
-    unpack(data.m_saltConcentration, buffer, position, comm);
-    unpack(data.m_plymwinjtable, buffer, position, comm);
-    unpack(data.m_skprwattable, buffer, position, comm);
-    unpack(data.m_skprpolytable, buffer, position, comm);
 }
 
 #define INSTANTIATE_PACK_VECTOR(...) \

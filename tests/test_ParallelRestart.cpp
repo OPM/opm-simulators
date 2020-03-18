@@ -1363,7 +1363,7 @@ BOOST_AUTO_TEST_CASE(WellPolymerProperties)
 {
 #ifdef HAVE_MPI
     Opm::WellPolymerProperties val1{1.0, 2.0, 3, 4, 5};
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(WellPolymerProperties)
 #endif
 }
