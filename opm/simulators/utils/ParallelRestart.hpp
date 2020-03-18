@@ -42,7 +42,6 @@ namespace Opm
 {
 
 class Dimension;
-template<class T> class IOrderSet;
 class UDAValue;
 class UnitSystem;
 class VFPInjTable;
@@ -134,9 +133,6 @@ std::size_t packSize(const OrderedMap<Key,Value>& data, Dune::MPIHelper::MPIComm
 
 template<class T>
 std::size_t packSize(const DynamicState<T>& data, Dune::MPIHelper::MPICommunicator comm);
-
-template<class T>
-std::size_t packSize(const IOrderSet<T>& data, Dune::MPIHelper::MPICommunicator comm);
 
 ////// pack routines
 
@@ -233,10 +229,6 @@ void pack(const OrderedMap<Key,Value>& data, std::vector<char>& buffer,
 
 template<class T>
 void pack(const DynamicState<T>& data, std::vector<char>& buffer,
-          int& position, Dune::MPIHelper::MPICommunicator comm);
-
-template<class T>
-void pack(const IOrderSet<T>& data, std::vector<char>& buffer,
           int& position, Dune::MPIHelper::MPICommunicator comm);
 
 void pack(const char* str, std::vector<char>& buffer, int& position,
@@ -339,10 +331,6 @@ void unpack(OrderedMap<Key,Value>& data, std::vector<char>& buffer, int& positio
 template<class T>
 void unpack(DynamicState<T>& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm);
-
-template<class T>
-void unpack(IOrderSet<T>& data, std::vector<char>& buffer,
-            int& position, Dune::MPIHelper::MPICommunicator comm);
 
 void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm);

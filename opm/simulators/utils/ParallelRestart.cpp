@@ -29,7 +29,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunctionTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Util/IOrderSet.hpp>
 #include <dune/common/parallel/mpitraits.hh>
 
 #define HANDLE_AS_POD(T) \
@@ -374,14 +373,6 @@ std::size_t packSize(const UnitSystem& data,
            packSize(data.getType(), comm) +
            packSize(data.getDimensions(), comm) +
            packSize(data.use_count(), comm);
-}
-
-template<class T>
-std::size_t packSize(const IOrderSet<T>& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.index(), comm) +
-           packSize(data.data(), comm);
 }
 
 std::size_t packSize(const Group::GroupInjectionProperties& data,
@@ -763,14 +754,6 @@ void pack(const UnitSystem& data,
     pack(data.getType(), buffer, position, comm);
     pack(data.getDimensions(), buffer, position, comm);
     pack(data.use_count(), buffer, position, comm);
-}
-
-template<class T>
-void pack(const IOrderSet<T>& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.index(), buffer, position, comm);
-    pack(data.data(), buffer, position, comm);
 }
 
 void pack(const Group::GroupInjectionProperties& data,
@@ -1216,17 +1199,6 @@ void unpack(UnitSystem& data,
     data = UnitSystem(name, type, dimensions, use_count);
 }
 
-template<class T>
-void unpack(IOrderSet<T>& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    typename IOrderSet<T>::index_type index;
-    typename IOrderSet<T>::storage_type storage;
-    unpack(index, buffer, position, comm);
-    unpack(storage, buffer, position, comm);
-    data = IOrderSet<T>(index, storage);
-}
-
 template void unpack(std::map<Phase,Group::GroupInjectionProperties>& data,
             std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm);
@@ -1379,6 +1351,7 @@ INSTANTIATE_PACK(bool)
 INSTANTIATE_PACK(int)
 INSTANTIATE_PACK(std::array<short,3>)
 INSTANTIATE_PACK(std::array<bool,3>)
+INSTANTIATE_PACK(std::array<int,3>)
 INSTANTIATE_PACK(unsigned char)
 INSTANTIATE_PACK(std::map<std::pair<int,int>,std::pair<bool,double>>)
 INSTANTIATE_PACK(std::map<FaceDir::DirEnum,std::string>)
@@ -1386,6 +1359,8 @@ INSTANTIATE_PACK(std::map<FaceDir::DirEnum,std::vector<double>>)
 INSTANTIATE_PACK(std::map<std::string,std::vector<int>>)
 INSTANTIATE_PACK(std::map<std::string,std::map<std::pair<int,int>,int>>)
 INSTANTIATE_PACK(std::map<std::string,int>)
+INSTANTIATE_PACK(std::map<std::string,double>)
+INSTANTIATE_PACK(std::map<int,int>)
 INSTANTIATE_PACK(std::map<UDQVarType,std::size_t>)
 INSTANTIATE_PACK(std::unordered_map<std::string,size_t>)
 INSTANTIATE_PACK(std::unordered_map<std::string,std::string>)
