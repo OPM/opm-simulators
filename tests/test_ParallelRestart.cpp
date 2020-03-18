@@ -1542,7 +1542,7 @@ BOOST_AUTO_TEST_CASE(Dimension)
 {
 #ifdef HAVE_MPI
     Opm::Dimension val1(1.0, 2.0);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Dimension)
 #endif
 }

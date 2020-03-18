@@ -40,7 +40,6 @@
 namespace Opm
 {
 
-class Dimension;
 class UnitSystem;
 class VFPInjTable;
 class VFPProdTable;
@@ -350,7 +349,6 @@ ADD_PACK_PROTOTYPES(data::Segment)
 ADD_PACK_PROTOTYPES(data::Solution)
 ADD_PACK_PROTOTYPES(data::Well)
 ADD_PACK_PROTOTYPES(data::WellRates)
-ADD_PACK_PROTOTYPES(Dimension)
 ADD_PACK_PROTOTYPES(RestartKey)
 ADD_PACK_PROTOTYPES(RestartValue)
 ADD_PACK_PROTOTYPES(std::string)
