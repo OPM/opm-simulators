@@ -98,16 +98,8 @@ std::size_t packSize(const std::vector<bool,A>& data, Dune::MPIHelper::MPICommun
 template<class... Ts>
 std::size_t packSize(const std::tuple<Ts...>& data, Dune::MPIHelper::MPICommunicator comm);
 
-template<class T>
-std::size_t packSize(const std::shared_ptr<T>& data,
-                     Dune::MPIHelper::MPICommunicator comm);
-
 template<class T, std::size_t N>
 std::size_t packSize(const std::array<T,N>& data, Dune::MPIHelper::MPICommunicator comm);
-
-template<class T>
-std::size_t packSize(const std::unique_ptr<T>& data,
-                     Dune::MPIHelper::MPICommunicator comm);
 
 std::size_t packSize(const char* str, Dune::MPIHelper::MPICommunicator comm);
 
@@ -188,16 +180,8 @@ void pack(const std::unordered_set<T,H,KE,A>& data,
           std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm);
 
-template<class T>
-void pack(const std::shared_ptr<T>& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm);
-
 template<class T, size_t N>
 void pack(const std::array<T,N>& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm);
-
-template<class T>
-void pack(const std::unique_ptr<T>& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm);
 
 template<class T1, class T2, class C, class A>
@@ -281,16 +265,8 @@ void unpack(std::unordered_set<T,H,KE,A>& data,
             std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm);
 
-template<class T>
-void unpack(std::shared_ptr<T>& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm);
-
 template<class T, size_t N>
 void unpack(std::array<T,N>& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm);
-
-template<class T>
-void unpack(std::unique_ptr<T>& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm);
 
 template<class T1, class T2, class C, class A>

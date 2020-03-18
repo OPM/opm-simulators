@@ -243,28 +243,6 @@ std::size_t packSize(const RestartValue& data, Dune::MPIHelper::MPICommunicator 
     return packSize(data.solution, comm) + packSize(data.wells, comm) + packSize(data.extra, comm);
 }
 
-template<class T>
-std::size_t packSize(const std::shared_ptr<T>& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    std::size_t size = packSize(bool(), comm);
-    if (data)
-         size += packSize(*data, comm);
-
-    return size;
-}
-
-template<class T>
-std::size_t packSize(const std::unique_ptr<T>& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    std::size_t size = packSize(bool(), comm);
-    if (data)
-         size += packSize(*data, comm);
-
-    return size;
-}
-
 ////// pack routines
 
 template<class T>
@@ -493,24 +471,6 @@ void pack(const RestartValue& data, std::vector<char>& buffer, int& position,
     pack(data.solution, buffer, position, comm);
     pack(data.wells, buffer, position, comm);
     pack(data.extra, buffer, position, comm);
-}
-
-template<class T>
-void pack(const std::shared_ptr<T>& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data != nullptr, buffer, position, comm);
-    if (data)
-        pack(*data, buffer, position, comm);
-}
-
-template<class T>
-void pack(const std::unique_ptr<T>& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data != nullptr, buffer, position, comm);
-    if (data)
-        pack(*data, buffer, position, comm);
 }
 
 /// unpack routines
@@ -760,30 +720,6 @@ void unpack(RestartValue& data, std::vector<char>& buffer, int& position,
     unpack(data.extra, buffer, position, comm);
 }
 
-template<class T>
-void unpack(std::shared_ptr<T>& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    bool hasVal;
-    unpack(hasVal, buffer, position, comm);
-    if (hasVal) {
-        data = std::make_shared<T>();
-        unpack(*data, buffer, position, comm);
-    }
-}
-
-template<class T>
-void unpack(std::unique_ptr<T>& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    bool hasVal;
-    unpack(hasVal, buffer, position, comm);
-    if (hasVal) {
-        data.reset(new T);
-        unpack(*data, buffer, position, comm);
-    }
-}
-
 #define INSTANTIATE_PACK_VECTOR(...) \
 template std::size_t packSize(const std::vector<__VA_ARGS__>& data, \
                               Dune::MPIHelper::MPICommunicator comm); \
@@ -812,18 +748,6 @@ INSTANTIATE_PACK_VECTOR(std::pair<RFTConfig::PLT,std::size_t>)
 INSTANTIATE_PACK_VECTOR(std::string)
 
 #undef INSTANTIATE_PACK_VECTOR
-
-#define INSTANTIATE_PACK_SET(...) \
-template std::size_t packSize(const std::set<__VA_ARGS__>& data, \
-                              Dune::MPIHelper::MPICommunicator comm); \
-template void pack(const std::set<__VA_ARGS__>& data, \
-                   std::vector<char>& buffer, int& position, \
-                   Dune::MPIHelper::MPICommunicator comm); \
-template void unpack(std::set<__VA_ARGS__>& data, \
-                     std::vector<char>& buffer, int& position, \
-                     Dune::MPIHelper::MPICommunicator comm);
-
-INSTANTIATE_PACK_SET(std::string)
 
 #undef INSTANTIATE_PACK_SET
 
@@ -857,6 +781,7 @@ INSTANTIATE_PACK(std::map<UDQVarType,std::size_t>)
 INSTANTIATE_PACK(std::unordered_map<std::string,size_t>)
 INSTANTIATE_PACK(std::unordered_map<std::string,std::string>)
 INSTANTIATE_PACK(std::unordered_set<std::string>)
+INSTANTIATE_PACK(std::set<std::string>)
 INSTANTIATE_PACK(std::pair<bool,double>)
 INSTANTIATE_PACK(std::pair<bool,std::size_t>)
 INSTANTIATE_PACK(std::pair<Phase,bool>)
