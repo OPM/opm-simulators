@@ -1595,7 +1595,7 @@ BOOST_AUTO_TEST_CASE(GroupInjectionProperties)
                                               Opm::UDAValue(4.0),
                                               "test1", "test2", 5};
 
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Group::GroupInjectionProperties)
 #endif
 }

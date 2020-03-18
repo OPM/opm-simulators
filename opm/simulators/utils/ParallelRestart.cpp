@@ -296,10 +296,6 @@ std::size_t packSize(const RestartValue& data, Dune::MPIHelper::MPICommunicator 
     return packSize(data.solution, comm) + packSize(data.wells, comm) + packSize(data.extra, comm);
 }
 
-template
-std::size_t packSize(const std::map<Phase,Group::GroupInjectionProperties>& data,
-                     Dune::MPIHelper::MPICommunicator comm);
-
 std::size_t packSize(const VFPInjTable& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -373,20 +369,6 @@ std::size_t packSize(const UnitSystem& data,
            packSize(data.getType(), comm) +
            packSize(data.getDimensions(), comm) +
            packSize(data.use_count(), comm);
-}
-
-std::size_t packSize(const Group::GroupInjectionProperties& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.phase, comm) +
-           packSize(data.cmode, comm) +
-           packSize(data.surface_max_rate, comm) +
-           packSize(data.resv_max_rate, comm) +
-           packSize(data.target_reinj_fraction, comm) +
-           packSize(data.target_void_fraction, comm) +
-           packSize(data.reinj_group, comm) +
-           packSize(data.voidage_group, comm) +
-           packSize(data.injection_controls, comm);
 }
 
 std::size_t packSize(const Group::GroupProductionProperties& data,
@@ -616,13 +598,6 @@ void pack(const std::unordered_map<T1,T2,H,P,A>& data, std::vector<char>& buffer
     }
 }
 
-
-template void pack(const std::map<Phase, Group::GroupInjectionProperties>& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm);
-
-
-
 void pack(const data::Well& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
@@ -754,21 +729,6 @@ void pack(const UnitSystem& data,
     pack(data.getType(), buffer, position, comm);
     pack(data.getDimensions(), buffer, position, comm);
     pack(data.use_count(), buffer, position, comm);
-}
-
-void pack(const Group::GroupInjectionProperties& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.phase, buffer, position, comm);
-    pack(data.cmode, buffer, position, comm);
-    pack(data.surface_max_rate, buffer, position, comm);
-    pack(data.resv_max_rate, buffer, position, comm);
-    pack(data.target_reinj_fraction, buffer, position, comm);
-    pack(data.target_void_fraction, buffer, position, comm);
-    pack(data.reinj_group, buffer, position, comm);
-    pack(data.voidage_group, buffer, position, comm);
-    pack(data.injection_controls, buffer, position, comm);
 }
 
 void pack(const Group::GroupProductionProperties& data,
@@ -1198,26 +1158,6 @@ void unpack(UnitSystem& data,
 
     data = UnitSystem(name, type, dimensions, use_count);
 }
-
-template void unpack(std::map<Phase,Group::GroupInjectionProperties>& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm);
-
-void unpack(Group::GroupInjectionProperties& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    unpack(data.phase, buffer, position, comm);
-    unpack(data.cmode, buffer, position, comm);
-    unpack(data.surface_max_rate, buffer, position, comm);
-    unpack(data.resv_max_rate, buffer, position, comm);
-    unpack(data.target_reinj_fraction, buffer, position, comm);
-    unpack(data.target_void_fraction, buffer, position, comm);
-    unpack(data.reinj_group, buffer, position, comm);
-    unpack(data.voidage_group, buffer, position, comm);
-    unpack(data.injection_controls, buffer, position, comm);
-}
-
 
 void unpack(Group::GroupProductionProperties& data,
             std::vector<char>& buffer, int& position,
