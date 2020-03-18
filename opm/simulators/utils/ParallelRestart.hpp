@@ -44,7 +44,6 @@ namespace Opm
 
 class Dimension;
 template<class T> class IOrderSet;
-class Segment;
 class UDAValue;
 class UnitSystem;
 class VFPInjTable;
@@ -373,7 +372,6 @@ ADD_PACK_PROTOTYPES(Group::GroupInjectionProperties)
 ADD_PACK_PROTOTYPES(Group::GroupProductionProperties)
 ADD_PACK_PROTOTYPES(RestartKey)
 ADD_PACK_PROTOTYPES(RestartValue)
-ADD_PACK_PROTOTYPES(Segment)
 ADD_PACK_PROTOTYPES(std::string)
 ADD_PACK_PROTOTYPES(UDAValue)
 ADD_PACK_PROTOTYPES(UnitSystem)

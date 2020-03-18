@@ -1532,7 +1532,7 @@ BOOST_AUTO_TEST_CASE(Segment)
                       Opm::Segment::SegmentType::SICD,
                       std::make_shared<Opm::SpiralICD>(),
                       std::make_shared<Opm::Valve>());
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Segment)
 #endif
 }
