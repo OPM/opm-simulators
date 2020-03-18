@@ -650,17 +650,6 @@ std::size_t packSize(const Group& data,
            packSize(data.productionProperties(), comm);
 }
 
-std::size_t packSize(const Deck& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.keywords(), comm) +
-           packSize(data.getDefaultUnitSystem(), comm) +
-           packSize(data.activeUnitSystem(), comm) +
-           packSize(data.getDataFile(), comm) +
-           packSize(data.getInputPath(), comm) +
-           packSize(data.unitSystemAccessCount(), comm);
-}
-
 std::size_t packSize(const WellPolymerProperties& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -1287,18 +1276,6 @@ void pack(const Group& data,
     pack(data.igroups(), buffer, position, comm);
     pack(data.injectionProperties(), buffer, position, comm);
     pack(data.productionProperties(), buffer, position, comm);
-}
-
-void pack(const Deck& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.keywords(), buffer, position, comm);
-    pack(data.getDefaultUnitSystem(), buffer, position, comm);
-    pack(data.activeUnitSystem(), buffer, position, comm);
-    pack(data.getDataFile(), buffer, position, comm);
-    pack(data.getInputPath(), buffer, position, comm);
-    pack(data.unitSystemAccessCount(), buffer, position, comm);
 }
 
 void pack(const WellPolymerProperties& data,
@@ -2159,25 +2136,6 @@ void unpack(Group& data,
                  injection, production);
 }
 
-void unpack(Deck& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<DeckKeyword> keywords;
-    UnitSystem defaultUnitSystem;
-    std::unique_ptr<UnitSystem> activeUnitSystem;
-    std::string dataFile, inputPath;
-    size_t accessCount;
-
-    unpack(keywords, buffer, position, comm);
-    unpack(defaultUnitSystem, buffer, position, comm);
-    unpack(activeUnitSystem, buffer, position, comm);
-    unpack(dataFile, buffer, position, comm);
-    unpack(inputPath, buffer, position, comm);
-    unpack(accessCount, buffer, position, comm);
-    data = Deck(keywords, defaultUnitSystem,
-                activeUnitSystem.get(), dataFile, inputPath, accessCount);
-}
-
 void unpack(WellPolymerProperties& data,
             std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
@@ -2289,7 +2247,6 @@ INSTANTIATE_PACK(std::pair<bool,double>)
 INSTANTIATE_PACK(std::pair<bool,std::size_t>)
 INSTANTIATE_PACK(DynamicState<int>)
 INSTANTIATE_PACK(DynamicState<Well::ProducerCMode>)
-INSTANTIATE_PACK(DynamicVector<Deck>)
 
 #undef INSTANTIATE_PACK
 

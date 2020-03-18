@@ -1974,7 +1974,7 @@ BOOST_AUTO_TEST_CASE(Deck)
                                      {getDeckRecord(), getDeckRecord()}, true, false)},
                    Opm::UnitSystem(), unitSys.get(),
                    "test2", "test3", 2);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Deck)
 #endif
 }
