@@ -149,7 +149,7 @@ public:
             std::size_t counter{};
             const auto& id = idSet.id(element);
             auto index = elemMapper.index(element);
-            auto data = rcvdElementData_.find(id);
+            auto data = elementData_.find(id);
             assert(data != elementData_.end());
 
             for(const auto& intKey : m_intKeys)
@@ -198,7 +198,7 @@ public:
     void scatter(BufferType& buffer, const EntityType& e, std::size_t n)
     {
         assert(n == m_no_data);
-        auto& array = rcvdElementData_[m_grid.localIdSet().id(e)];
+        auto& array = elementData_[m_grid.localIdSet().id(e)];
         array.resize(n);
         for(auto& data: array)
         {
@@ -217,12 +217,6 @@ private:
     std::vector<std::string> m_doubleKeys;
     /// \brief The data per element as a vector mapped from the local id.
     std::unordered_map<typename LocalIdSet::IdType, std::vector<double> > elementData_;
-    /*! \brief The data received per element as a vector mapped from the local id.
-     *
-     * Needed because CpGrid is in violation of the requirement that local ids
-     * need to be persistent across grid modifications
-     */
-    std::unordered_map<typename LocalIdSet::IdType, std::vector<double> > rcvdElementData_;
     /// \brief The cell centroids of the distributed grid.
     std::vector<double>& m_centroids;
     /// \brief The amount of data to send for each element
