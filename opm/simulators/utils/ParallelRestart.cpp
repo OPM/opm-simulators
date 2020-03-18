@@ -261,7 +261,6 @@ HANDLE_AS_POD(data::Connection)
 HANDLE_AS_POD(data::CurrentControl)
 HANDLE_AS_POD(data::Rates)
 HANDLE_AS_POD(data::Segment)
-HANDLE_AS_POD(WellBrineProperties)
 
 std::size_t packSize(const data::Well& data, Dune::MPIHelper::MPICommunicator comm)
 {

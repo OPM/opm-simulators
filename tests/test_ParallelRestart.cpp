@@ -2223,7 +2223,7 @@ BOOST_AUTO_TEST_CASE(WellBrineProperties)
 {
 #ifdef HAVE_MPI
     Opm::WellBrineProperties val1{1.0};
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(WellBrineProperties)
 #endif
 }
