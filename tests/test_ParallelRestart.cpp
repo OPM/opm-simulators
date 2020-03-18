@@ -1498,7 +1498,7 @@ BOOST_AUTO_TEST_CASE(WellProductionProperties)
                                              true,
                                              Opm::Well::ProducerCMode::CRAT,
                                              Opm::Well::ProducerCMode::BHP, 11);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Well::WellProductionProperties)
 #endif
 }

@@ -367,29 +367,6 @@ std::size_t packSize(const Well::WellInjectionProperties& data,
            packSize(data.controlMode, comm);
 }
 
-std::size_t packSize(const Well::WellProductionProperties& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.name, comm) +
-           packSize(data.OilRate, comm) +
-           packSize(data.WaterRate, comm) +
-           packSize(data.GasRate, comm) +
-           packSize(data.LiquidRate, comm) +
-           packSize(data.ResVRate, comm) +
-           packSize(data.BHPTarget, comm) +
-           packSize(data.THPTarget, comm) +
-           packSize(data.bhp_hist_limit, comm) +
-           packSize(data.thp_hist_limit, comm) +
-           packSize(data.BHPH, comm) +
-           packSize(data.THPH, comm) +
-           packSize(data.VFPTableNumber, comm) +
-           packSize(data.ALQValue, comm) +
-           packSize(data.predictionMode, comm) +
-           packSize(data.controlMode, comm) +
-           packSize(data.whistctl_cmode, comm) +
-           packSize(data.getNumProductionControls(), comm);
-}
-
 std::size_t packSize(const SpiralICD& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -897,30 +874,6 @@ void pack(const Well::WellInjectionProperties& data,
     pack(data.injectionControls, buffer, position, comm);
     pack(data.injectorType, buffer, position, comm);
     pack(data.controlMode, buffer, position, comm);
-}
-
-void pack(const Well::WellProductionProperties& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.name, buffer, position, comm);
-    pack(data.OilRate, buffer, position, comm);
-    pack(data.WaterRate, buffer, position, comm);
-    pack(data.GasRate, buffer, position, comm);
-    pack(data.LiquidRate, buffer, position, comm);
-    pack(data.ResVRate, buffer, position, comm);
-    pack(data.BHPTarget, buffer, position, comm);
-    pack(data.THPTarget, buffer, position, comm);
-    pack(data.bhp_hist_limit, buffer, position, comm);
-    pack(data.thp_hist_limit, buffer, position, comm);
-    pack(data.BHPH, buffer, position, comm);
-    pack(data.THPH, buffer, position, comm);
-    pack(data.VFPTableNumber, buffer, position, comm);
-    pack(data.ALQValue, buffer, position, comm);
-    pack(data.predictionMode, buffer, position, comm);
-    pack(data.controlMode, buffer, position, comm);
-    pack(data.whistctl_cmode, buffer, position, comm);
-    pack(data.getNumProductionControls(), buffer, position, comm);
 }
 
 void pack(const SpiralICD& data,
@@ -1481,47 +1434,6 @@ void unpack(Well::WellInjectionProperties& data,
     unpack(data.injectionControls, buffer, position, comm);
     unpack(data.injectorType, buffer, position, comm);
     unpack(data.controlMode, buffer, position, comm);
-}
-
-void unpack(Well::WellProductionProperties& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::string name;
-    UDAValue OilRate, WaterRate, GasRate, LiquidRate, ResVRate;
-    UDAValue BHPTarget, THPTarget;
-    double bhp_hist_limit, thp_hist_limit;
-    double BHPH, THPH;
-    int VFPTableNumber;
-    double ALQValue;
-    bool predictionMode;
-    Well::ProducerCMode controlMode, whistctl_cmode;
-    int prodCtrls;
-
-    unpack(name, buffer, position, comm);
-    unpack(OilRate, buffer, position, comm);
-    unpack(WaterRate, buffer, position, comm);
-    unpack(GasRate, buffer, position, comm);
-    unpack(LiquidRate, buffer, position, comm);
-    unpack(ResVRate, buffer, position, comm);
-    unpack(BHPTarget, buffer, position, comm);
-    unpack(THPTarget, buffer, position, comm);
-    unpack(bhp_hist_limit, buffer, position, comm);
-    unpack(thp_hist_limit, buffer, position, comm);
-    unpack(BHPH, buffer, position, comm);
-    unpack(THPH, buffer, position, comm);
-    unpack(VFPTableNumber, buffer, position, comm);
-    unpack(ALQValue, buffer, position, comm);
-    unpack(predictionMode, buffer, position, comm);
-    unpack(controlMode, buffer, position, comm);
-    unpack(whistctl_cmode, buffer, position, comm);
-    unpack(prodCtrls, buffer, position, comm);
-    data = Well::WellProductionProperties(name, OilRate, WaterRate, GasRate,
-                                          LiquidRate, ResVRate, BHPTarget,
-                                          THPTarget, bhp_hist_limit, thp_hist_limit,
-                                          BHPH, THPH, VFPTableNumber,
-                                          ALQValue, predictionMode, controlMode,
-                                          whistctl_cmode, prodCtrls);
 }
 
 void unpack(SpiralICD& data,
