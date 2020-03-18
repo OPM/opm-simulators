@@ -511,7 +511,6 @@ std::size_t packSize(const WellConnections& data,
     return packSize(data.ordering(), comm) +
            packSize(data.getHeadI(), comm) +
            packSize(data.getHeadJ(), comm) +
-           packSize(data.getNumRemoved(), comm) +
            packSize(data.getConnections(), comm);
 }
 
@@ -1414,7 +1413,6 @@ void pack(const WellConnections& data,
     pack(data.ordering(), buffer, position, comm);
     pack(data.getHeadI(), buffer, position, comm);
     pack(data.getHeadJ(), buffer, position, comm);
-    pack(data.getNumRemoved(), buffer, position, comm);
     pack(data.getConnections(), buffer, position, comm);
 }
 
@@ -2454,17 +2452,15 @@ void unpack(WellConnections& data,
             Dune::MPIHelper::MPICommunicator comm)
 {
     int headI, headJ;
-    size_t numRemoved;
     Connection::Order ordering;
     std::vector<Connection> connections;
 
     unpack(ordering, buffer, position, comm),
     unpack(headI, buffer, position, comm),
     unpack(headJ, buffer, position, comm),
-    unpack(numRemoved, buffer, position, comm),
     unpack(connections, buffer, position, comm),
 
-    data = WellConnections(ordering, headI, headJ, numRemoved, connections);
+    data = WellConnections(ordering, headI, headJ, connections);
 }
 
 void unpack(Well::WellProductionProperties& data,
