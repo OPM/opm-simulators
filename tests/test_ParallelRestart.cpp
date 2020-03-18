@@ -1383,7 +1383,7 @@ BOOST_AUTO_TEST_CASE(WellTracerProperties)
 {
 #ifdef HAVE_MPI
     Opm::WellTracerProperties val1({{"test", 1.0}, {"test2", 2.0}});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(WellTracerProperties)
 #endif
 }

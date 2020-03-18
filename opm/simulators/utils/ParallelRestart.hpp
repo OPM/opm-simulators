@@ -54,7 +54,6 @@ class VFPInjTable;
 class VFPProdTable;
 class WellConnections;
 class WellSegments;
-class WellTracerProperties;
 
 namespace Mpi
 {
@@ -393,7 +392,6 @@ ADD_PACK_PROTOTYPES(Well::WellInjectionProperties)
 ADD_PACK_PROTOTYPES(Well::WellProductionProperties)
 ADD_PACK_PROTOTYPES(WellConnections)
 ADD_PACK_PROTOTYPES(WellSegments)
-ADD_PACK_PROTOTYPES(WellTracerProperties)
 
 } // end namespace Mpi
 

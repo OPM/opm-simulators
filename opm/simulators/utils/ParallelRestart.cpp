@@ -34,7 +34,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Connection.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellConnections.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTracerProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Util/IOrderSet.hpp>
 #include <dune/common/parallel/mpitraits.hh>
 
@@ -339,12 +338,6 @@ std::size_t packSize(const VFPProdTable& data,
            packSize(data.getGFRAxis(), comm) +
            packSize(data.getALQAxis(), comm) +
            packSize(data.getTable(), comm);
-}
-
-std::size_t packSize(const WellTracerProperties& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getConcentrations(), comm);
 }
 
 std::size_t packSize(const UDAValue& data,
@@ -908,13 +901,6 @@ void pack(const VFPProdTable& data,
     pack(data.getGFRAxis(), buffer, position, comm);
     pack(data.getALQAxis(), buffer, position, comm);
     pack(data.getTable(), buffer, position, comm);
-}
-
-void pack(const WellTracerProperties& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getConcentrations(), buffer, position, comm);
 }
 
 void pack(const UDAValue& data,
@@ -1529,15 +1515,6 @@ void unpack(VFPProdTable& data,
     data = VFPProdTable(tableNum, datumDepth, floType, wfrType,
                         gfrType, alqType, floAxis, thpAxis,
                         wfrAxis, gfrAxis, alqAxis, table);
-}
-
-void unpack(WellTracerProperties& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    WellTracerProperties::ConcentrationMap ddata;
-    unpack(ddata, buffer, position, comm);
-    data = WellTracerProperties(ddata);
 }
 
 void unpack(UDAValue& data,
