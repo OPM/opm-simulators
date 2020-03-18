@@ -32,7 +32,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunctionTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/Connection.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellConnections.hpp>
 #include <opm/parser/eclipse/EclipseState/Util/IOrderSet.hpp>
 #include <dune/common/parallel/mpitraits.hh>
@@ -347,32 +346,6 @@ std::size_t packSize(const UDAValue& data,
            packSize(data.is<double>(), comm) +
            (data.is<double>() ? packSize(data.get<double>(), comm) :
                                 packSize(data.get<std::string>(), comm));
-}
-
-std::size_t packSize(const Connection& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.dir(), comm) +
-           packSize(data.depth(), comm) +
-           packSize(data.state(), comm) +
-           packSize(data.satTableId(), comm) +
-           packSize(data.complnum(), comm) +
-           packSize(data.CF(), comm) +
-           packSize(data.Kh(), comm) +
-           packSize(data.rw(), comm) +
-           packSize(data.r0(), comm) +
-           packSize(data.skinFactor(), comm) +
-           packSize(data.getI(), comm) +
-           packSize(data.getJ(), comm) +
-           packSize(data.getK(), comm) +
-           packSize(data.kind(), comm) +
-           packSize(data.getSeqIndex(), comm) +
-           packSize(data.getSegDistStart(), comm) +
-           packSize(data.getSegDistEnd(), comm) +
-           packSize(data.getDefaultSatTabId(), comm) +
-           packSize(data.getCompSegSeqIndex(), comm) +
-           packSize(data.segment(), comm) +
-           packSize(data.wellPi(), comm);
 }
 
 std::size_t packSize(const Well::WellInjectionProperties& data,
@@ -913,33 +886,6 @@ void pack(const UDAValue& data,
         pack(data.get<double>(), buffer, position, comm);
     else
         pack(data.get<std::string>(), buffer, position, comm);
-}
-
-void pack(const Connection& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.dir(), buffer, position, comm);
-    pack(data.depth(), buffer, position, comm);
-    pack(data.state(), buffer, position, comm);
-    pack(data.satTableId(), buffer, position, comm);
-    pack(data.complnum(), buffer, position, comm);
-    pack(data.CF(), buffer, position, comm);
-    pack(data.Kh(), buffer, position, comm);
-    pack(data.rw(), buffer, position, comm);
-    pack(data.r0(), buffer, position, comm);
-    pack(data.skinFactor(), buffer, position, comm);
-    pack(data.getI(), buffer, position, comm);
-    pack(data.getJ(), buffer, position, comm);
-    pack(data.getK(), buffer, position, comm);
-    pack(data.kind(), buffer, position, comm);
-    pack(data.getSeqIndex(), buffer, position, comm);
-    pack(data.getSegDistStart(), buffer, position, comm);
-    pack(data.getSegDistEnd(), buffer, position, comm);
-    pack(data.getDefaultSatTabId(), buffer, position, comm);
-    pack(data.getCompSegSeqIndex(), buffer, position, comm);
-    pack(data.segment(), buffer, position, comm);
-    pack(data.wellPi(), buffer, position, comm);
 }
 
 void pack(const Well::WellInjectionProperties& data,
@@ -1534,54 +1480,6 @@ void unpack(UDAValue& data,
         unpack(val, buffer, position, comm);
         data = UDAValue(val, dim);
     }
-}
-
-void unpack(Connection& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    Connection::Direction dir;
-    double depth;
-    Connection::State state;
-    int satTableId, complnum;
-    double CF, Kh, rw, r0, skinFactor;
-    int I, J, K;
-    size_t seqIndex;
-    double segDistStart, segDistEnd;
-    bool defaultSatTabId;
-    size_t compSegSeqIndex;
-    int segment;
-    double wellPi;
-    Connection::CTFKind kind;
-
-    unpack(dir, buffer, position, comm);
-    unpack(depth, buffer, position, comm);
-    unpack(state, buffer, position, comm);
-    unpack(satTableId, buffer, position, comm);
-    unpack(complnum, buffer, position, comm);
-    unpack(CF, buffer, position, comm);
-    unpack(Kh, buffer, position, comm);
-    unpack(rw, buffer, position, comm);
-    unpack(r0, buffer, position, comm);
-    unpack(skinFactor, buffer, position, comm);
-    unpack(I, buffer, position, comm);
-    unpack(J, buffer, position, comm);
-    unpack(K, buffer, position, comm);
-    unpack(kind, buffer, position, comm);
-    unpack(seqIndex, buffer, position, comm);
-    unpack(segDistStart, buffer, position, comm);
-    unpack(segDistEnd, buffer, position, comm);
-    unpack(defaultSatTabId, buffer, position, comm);
-    unpack(compSegSeqIndex, buffer, position, comm);
-    unpack(segment, buffer, position, comm);
-    unpack(wellPi, buffer, position, comm);
-
-    data = Connection(dir, depth, state, satTableId,
-                      complnum, CF, Kh, rw, r0,
-                      skinFactor, {I,J,K}, kind, seqIndex,
-                      segDistStart, segDistEnd,
-                      defaultSatTabId, compSegSeqIndex,
-                      segment, wellPi);
 }
 
 void unpack(Well::WellInjectionProperties& data,

@@ -42,7 +42,6 @@
 namespace Opm
 {
 
-class Connection;
 class Dimension;
 template<class T> class IOrderSet;
 class Segment;
@@ -363,7 +362,6 @@ void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& posit
   void unpack(T& data, std::vector<char>& buffer, int& position, \
               Dune::MPIHelper::MPICommunicator comm);
 
-ADD_PACK_PROTOTYPES(Connection)
 ADD_PACK_PROTOTYPES(data::CellData)
 ADD_PACK_PROTOTYPES(data::Connection)
 ADD_PACK_PROTOTYPES(data::CurrentControl)
