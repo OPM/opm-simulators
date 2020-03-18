@@ -346,22 +346,6 @@ std::size_t packSize(const std::unique_ptr<T>& data,
     return size;
 }
 
-std::size_t packSize(const Dimension& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getSIScalingRaw(), comm) +
-           packSize(data.getSIOffset(), comm);
-}
-
-std::size_t packSize(const UnitSystem& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getName(), comm) +
-           packSize(data.getType(), comm) +
-           packSize(data.getDimensions(), comm) +
-           packSize(data.use_count(), comm);
-}
-
 ////// pack routines
 
 template<class T>
@@ -655,24 +639,6 @@ void pack(const std::unique_ptr<T>& data, std::vector<char>& buffer, int& positi
     pack(data != nullptr, buffer, position, comm);
     if (data)
         pack(*data, buffer, position, comm);
-}
-
-void pack(const Dimension& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getSIScalingRaw(), buffer, position, comm);
-    pack(data.getSIOffset(), buffer, position, comm);
-}
-
-void pack(const UnitSystem& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getName(), buffer, position, comm);
-    pack(data.getType(), buffer, position, comm);
-    pack(data.getDimensions(), buffer, position, comm);
-    pack(data.use_count(), buffer, position, comm);
 }
 
 /// unpack routines
@@ -1018,33 +984,6 @@ void unpack(std::unique_ptr<T>& data, std::vector<char>& buffer, int& position,
         data.reset(new T);
         unpack(*data, buffer, position, comm);
     }
-}
-
-void unpack(Dimension& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    double siScaling, siOffset;
-
-    unpack(siScaling, buffer, position, comm);
-    unpack(siOffset, buffer, position, comm);
-    data = Dimension(siScaling, siOffset);
-}
-
-void unpack(UnitSystem& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::string name;
-    UnitSystem::UnitType type;
-    std::map<std::string, Dimension> dimensions;
-    size_t use_count;
-    unpack(name, buffer, position, comm);
-    unpack(type, buffer, position, comm);
-    unpack(dimensions, buffer, position, comm);
-    unpack(use_count, buffer, position, comm);
-
-    data = UnitSystem(name, type, dimensions, use_count);
 }
 
 #define INSTANTIATE_PACK_VECTOR(...) \

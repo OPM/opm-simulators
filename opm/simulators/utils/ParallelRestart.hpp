@@ -40,7 +40,6 @@
 namespace Opm
 {
 
-class UnitSystem;
 class VFPInjTable;
 class VFPProdTable;
 
@@ -352,7 +351,6 @@ ADD_PACK_PROTOTYPES(data::WellRates)
 ADD_PACK_PROTOTYPES(RestartKey)
 ADD_PACK_PROTOTYPES(RestartValue)
 ADD_PACK_PROTOTYPES(std::string)
-ADD_PACK_PROTOTYPES(UnitSystem)
 ADD_PACK_PROTOTYPES(VFPInjTable)
 ADD_PACK_PROTOTYPES(VFPProdTable)
 
