@@ -1373,7 +1373,7 @@ BOOST_AUTO_TEST_CASE(WellFoamProperties)
 {
 #ifdef HAVE_MPI
     Opm::WellFoamProperties val1{1.0};
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(WellFoamProperties)
 #endif
 }
