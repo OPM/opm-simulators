@@ -34,17 +34,17 @@ namespace Opm
 
     // apply WellContributions using y -= C^T * (D^-1 * (B * x))
 #if HAVE_CUDA
-    __global__ void apply_well_contributions( \
-        const double * __restrict__ Cnnzs, \
-        const double * __restrict__ Dnnzs, \
-        const double * __restrict__ Bnnzs, \
-        const int * __restrict__ Ccols, \
-        const int * __restrict__ Bcols, \
-        const double * __restrict__ x, \
-        double * __restrict__ y, \
-        const int dim, \
-        const int dim_wells, \
-        const unsigned int * __restrict__ val_pointers \
+    __global__ void apply_well_contributions(
+        const double * __restrict__ Cnnzs,
+        const double * __restrict__ Dnnzs,
+        const double * __restrict__ Bnnzs,
+        const int * __restrict__ Ccols,
+        const int * __restrict__ Bcols,
+        const double * __restrict__ x,
+        double * __restrict__ y,
+        const int dim,
+        const int dim_wells,
+        const unsigned int * __restrict__ val_pointers
         )
     {
         const int idx_b = blockIdx.x;
@@ -182,14 +182,8 @@ namespace Opm
                 }
                 cudaMemcpy(d_val_pointers, val_pointers, sizeof(int) * (num_wells+1), cudaMemcpyHostToDevice);
                 break;
-            case 3:
-                // store (C*D*B)
-                printf("ERROR unsupported matrix ID for WellContributions::addMatrix()\n");
-                exit(1);
-                break;
             default:
-                printf("ERROR unknown matrix ID for WellContributions::addMatrix()\n");
-                exit(1);
+                OPM_THROW(std::logic_error,"Error unsupported matrix ID for WellContributions::addMatrix()");
             }
             cudaCheckLastError("WellContributions::addMatrix() failed");
             if(idx == 2){
@@ -209,8 +203,7 @@ namespace Opm
         void WellContributions::addSizes(unsigned int nnz, unsigned int numEq, unsigned int numWellEq)
         {
             if(allocated){
-                std::cerr << "Error cannot add more sizes after allocated in WellContributions" << std::endl;
-                exit(1);
+                OPM_THROW(std::logic_error,"Error cannot add more sizes after allocated in WellContributions");
             }
             num_blocks += nnz;
             dim = numEq;

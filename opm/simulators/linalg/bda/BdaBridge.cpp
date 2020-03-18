@@ -205,52 +205,52 @@ void BdaBridge::get_result(BridgeVector &x OPM_UNUSED) {
 #endif
 }
 
-template void BdaBridge::solve_system< \
-Dune::BCRSMatrix<Opm::MatrixBlock<double, 1, 1>, std::allocator<Opm::MatrixBlock<double, 1, 1> > > , \
-Dune::BlockVector<Dune::FieldVector<double, 1>, std::allocator<Dune::FieldVector<double, 1> > > > \
-(Dune::BCRSMatrix<Opm::MatrixBlock<double, 1, 1>, std::allocator<Opm::MatrixBlock<double, 1, 1> > > *mat, \
-    Dune::BlockVector<Dune::FieldVector<double, 1>, std::allocator<Dune::FieldVector<double, 1> > > &b, \
-    WellContributions& wellContribs, \
+template void BdaBridge::solve_system<
+Dune::BCRSMatrix<Opm::MatrixBlock<double, 1, 1>, std::allocator<Opm::MatrixBlock<double, 1, 1> > > ,
+Dune::BlockVector<Dune::FieldVector<double, 1>, std::allocator<Dune::FieldVector<double, 1> > > >
+(Dune::BCRSMatrix<Opm::MatrixBlock<double, 1, 1>, std::allocator<Opm::MatrixBlock<double, 1, 1> > > *mat,
+    Dune::BlockVector<Dune::FieldVector<double, 1>, std::allocator<Dune::FieldVector<double, 1> > > &b,
+    WellContributions& wellContribs,
     InverseOperatorResult &res);
 
-template void BdaBridge::solve_system< \
-Dune::BCRSMatrix<Opm::MatrixBlock<double, 2, 2>, std::allocator<Opm::MatrixBlock<double, 2, 2> > > , \
-Dune::BlockVector<Dune::FieldVector<double, 2>, std::allocator<Dune::FieldVector<double, 2> > > > \
-(Dune::BCRSMatrix<Opm::MatrixBlock<double, 2, 2>, std::allocator<Opm::MatrixBlock<double, 2, 2> > > *mat, \
-    Dune::BlockVector<Dune::FieldVector<double, 2>, std::allocator<Dune::FieldVector<double, 2> > > &b, \
-    WellContributions& wellContribs, \
+template void BdaBridge::solve_system<
+Dune::BCRSMatrix<Opm::MatrixBlock<double, 2, 2>, std::allocator<Opm::MatrixBlock<double, 2, 2> > > ,
+Dune::BlockVector<Dune::FieldVector<double, 2>, std::allocator<Dune::FieldVector<double, 2> > > >
+(Dune::BCRSMatrix<Opm::MatrixBlock<double, 2, 2>, std::allocator<Opm::MatrixBlock<double, 2, 2> > > *mat,
+    Dune::BlockVector<Dune::FieldVector<double, 2>, std::allocator<Dune::FieldVector<double, 2> > > &b,
+    WellContributions& wellContribs,
     InverseOperatorResult &res);
 
-template void BdaBridge::solve_system< \
-Dune::BCRSMatrix<Opm::MatrixBlock<double, 3, 3>, std::allocator<Opm::MatrixBlock<double, 3, 3> > > , \
-Dune::BlockVector<Dune::FieldVector<double, 3>, std::allocator<Dune::FieldVector<double, 3> > > > \
-(Dune::BCRSMatrix<Opm::MatrixBlock<double, 3, 3>, std::allocator<Opm::MatrixBlock<double, 3, 3> > > *mat, \
-    Dune::BlockVector<Dune::FieldVector<double, 3>, std::allocator<Dune::FieldVector<double, 3> > > &b, \
-    WellContributions& wellContribs, \
+template void BdaBridge::solve_system<
+Dune::BCRSMatrix<Opm::MatrixBlock<double, 3, 3>, std::allocator<Opm::MatrixBlock<double, 3, 3> > > ,
+Dune::BlockVector<Dune::FieldVector<double, 3>, std::allocator<Dune::FieldVector<double, 3> > > >
+(Dune::BCRSMatrix<Opm::MatrixBlock<double, 3, 3>, std::allocator<Opm::MatrixBlock<double, 3, 3> > > *mat,
+    Dune::BlockVector<Dune::FieldVector<double, 3>, std::allocator<Dune::FieldVector<double, 3> > > &b,
+    WellContributions& wellContribs,
     InverseOperatorResult &res);
 
-template void BdaBridge::solve_system< \
-Dune::BCRSMatrix<Opm::MatrixBlock<double, 4, 4>, std::allocator<Opm::MatrixBlock<double, 4, 4> > > , \
-Dune::BlockVector<Dune::FieldVector<double, 4>, std::allocator<Dune::FieldVector<double, 4> > > > \
-(Dune::BCRSMatrix<Opm::MatrixBlock<double, 4, 4>, std::allocator<Opm::MatrixBlock<double, 4, 4> > > *mat, \
-    Dune::BlockVector<Dune::FieldVector<double, 4>, std::allocator<Dune::FieldVector<double, 4> > > &b, \
-    WellContributions& wellContribs, \
+template void BdaBridge::solve_system<
+Dune::BCRSMatrix<Opm::MatrixBlock<double, 4, 4>, std::allocator<Opm::MatrixBlock<double, 4, 4> > > ,
+Dune::BlockVector<Dune::FieldVector<double, 4>, std::allocator<Dune::FieldVector<double, 4> > > >
+(Dune::BCRSMatrix<Opm::MatrixBlock<double, 4, 4>, std::allocator<Opm::MatrixBlock<double, 4, 4> > > *mat,
+    Dune::BlockVector<Dune::FieldVector<double, 4>, std::allocator<Dune::FieldVector<double, 4> > > &b,
+    WellContributions& wellContribs,
     InverseOperatorResult &res);
 
-template void BdaBridge::get_result< \
-Dune::BlockVector<Dune::FieldVector<double, 1>, std::allocator<Dune::FieldVector<double, 1> > > > \
+template void BdaBridge::get_result<
+Dune::BlockVector<Dune::FieldVector<double, 1>, std::allocator<Dune::FieldVector<double, 1> > > >
 (Dune::BlockVector<Dune::FieldVector<double, 1>, std::allocator<Dune::FieldVector<double, 1> > > &x);
 
-template void BdaBridge::get_result< \
-Dune::BlockVector<Dune::FieldVector<double, 2>, std::allocator<Dune::FieldVector<double, 2> > > > \
+template void BdaBridge::get_result<
+Dune::BlockVector<Dune::FieldVector<double, 2>, std::allocator<Dune::FieldVector<double, 2> > > >
 (Dune::BlockVector<Dune::FieldVector<double, 2>, std::allocator<Dune::FieldVector<double, 2> > > &x);
 
-template void BdaBridge::get_result< \
-Dune::BlockVector<Dune::FieldVector<double, 3>, std::allocator<Dune::FieldVector<double, 3> > > > \
+template void BdaBridge::get_result<
+Dune::BlockVector<Dune::FieldVector<double, 3>, std::allocator<Dune::FieldVector<double, 3> > > >
 (Dune::BlockVector<Dune::FieldVector<double, 3>, std::allocator<Dune::FieldVector<double, 3> > > &x);
 
-template void BdaBridge::get_result< \
-Dune::BlockVector<Dune::FieldVector<double, 4>, std::allocator<Dune::FieldVector<double, 4> > > > \
+template void BdaBridge::get_result<
+Dune::BlockVector<Dune::FieldVector<double, 4>, std::allocator<Dune::FieldVector<double, 4> > > >
 (Dune::BlockVector<Dune::FieldVector<double, 4>, std::allocator<Dune::FieldVector<double, 4> > > &x);
 
 
