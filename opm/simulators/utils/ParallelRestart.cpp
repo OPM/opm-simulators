@@ -2159,10 +2159,12 @@ INSTANTIATE_PACK_VECTOR(std::shared_ptr<VFPInjTable>)
 INSTANTIATE_PACK_VECTOR(std::shared_ptr<VFPProdTable>)
 INSTANTIATE_PACK_VECTOR(std::shared_ptr<Well>)
 INSTANTIATE_PACK_VECTOR(std::map<std::string,int>)
-INSTANTIATE_PACK_VECTOR(std::pair<std::string,std::vector<int>>)
+INSTANTIATE_PACK_VECTOR(std::pair<std::string,std::vector<size_t>>)
 INSTANTIATE_PACK_VECTOR(std::pair<int,std::vector<int>>)
+INSTANTIATE_PACK_VECTOR(std::pair<int,std::vector<size_t>>)
 INSTANTIATE_PACK_VECTOR(std::pair<RFTConfig::RFT,std::size_t>)
 INSTANTIATE_PACK_VECTOR(std::pair<RFTConfig::PLT,std::size_t>)
+INSTANTIATE_PACK_VECTOR(std::string)
 
 #undef INSTANTIATE_PACK_VECTOR
 
@@ -2217,14 +2219,13 @@ INSTANTIATE_PACK(std::map<FaceDir::DirEnum,std::string>)
 INSTANTIATE_PACK(std::map<FaceDir::DirEnum,std::vector<double>>)
 INSTANTIATE_PACK(std::map<std::string,std::vector<int>>)
 INSTANTIATE_PACK(std::map<std::string,std::map<std::pair<int,int>,int>>)
+INSTANTIATE_PACK(std::map<std::string,int>)
 INSTANTIATE_PACK(std::map<UDQVarType,std::size_t>)
 INSTANTIATE_PACK(std::unordered_map<std::string,size_t>)
 INSTANTIATE_PACK(std::unordered_map<std::string,std::string>)
 INSTANTIATE_PACK(std::unordered_set<std::string>)
 INSTANTIATE_PACK(std::pair<bool,double>)
 INSTANTIATE_PACK(std::pair<bool,std::size_t>)
-INSTANTIATE_PACK(DynamicState<int>)
-INSTANTIATE_PACK(DynamicState<Well::ProducerCMode>)
 
 #undef INSTANTIATE_PACK
 
