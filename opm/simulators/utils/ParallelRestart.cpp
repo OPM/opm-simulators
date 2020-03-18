@@ -23,7 +23,6 @@
 
 #include "ParallelRestart.hpp"
 #include <opm/parser/eclipse/EclipseState/Grid/FaceDir.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Action/Actions.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/icd.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/SpiralICD.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
@@ -660,12 +659,6 @@ std::size_t packSize(const Deck& data,
            packSize(data.getDataFile(), comm) +
            packSize(data.getInputPath(), comm) +
            packSize(data.unitSystemAccessCount(), comm);
-}
-
-std::size_t packSize(const Action::Actions& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getActions(), comm);
 }
 
 std::size_t packSize(const WellPolymerProperties& data,
@@ -1306,13 +1299,6 @@ void pack(const Deck& data,
     pack(data.getDataFile(), buffer, position, comm);
     pack(data.getInputPath(), buffer, position, comm);
     pack(data.unitSystemAccessCount(), buffer, position, comm);
-}
-
-void pack(const Action::Actions& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getActions(), buffer, position, comm);
 }
 
 void pack(const WellPolymerProperties& data,
@@ -2192,14 +2178,6 @@ void unpack(Deck& data, std::vector<char>& buffer, int& position,
                 activeUnitSystem.get(), dataFile, inputPath, accessCount);
 }
 
-void unpack(Action::Actions& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    std::vector<Action::ActionX> actions;
-    unpack(actions, buffer, position, comm);
-    data = Action::Actions(actions);
-}
-
 void unpack(WellPolymerProperties& data,
             std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
@@ -2310,7 +2288,6 @@ INSTANTIATE_PACK(std::unordered_set<std::string>)
 INSTANTIATE_PACK(std::pair<bool,double>)
 INSTANTIATE_PACK(std::pair<bool,std::size_t>)
 INSTANTIATE_PACK(DynamicState<int>)
-INSTANTIATE_PACK(DynamicState<std::shared_ptr<Action::Actions>>)
 INSTANTIATE_PACK(DynamicState<Well::ProducerCMode>)
 INSTANTIATE_PACK(DynamicVector<Deck>)
 

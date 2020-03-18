@@ -2050,7 +2050,7 @@ BOOST_AUTO_TEST_CASE(Actions)
 {
 #ifdef HAVE_MPI
     Opm::Action::Actions val1({getActionX()});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Action::Actions)
 #endif
 }

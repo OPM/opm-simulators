@@ -43,9 +43,6 @@
 namespace Opm
 {
 
-namespace Action {
-    class Actions;
-}
 class Connection;
 class Dimension;
 template<class T> class IOrderSet;
@@ -382,7 +379,6 @@ void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& posit
   void unpack(T& data, std::vector<char>& buffer, int& position, \
               Dune::MPIHelper::MPICommunicator comm);
 
-ADD_PACK_PROTOTYPES(Action::Actions)
 ADD_PACK_PROTOTYPES(Connection)
 ADD_PACK_PROTOTYPES(data::CellData)
 ADD_PACK_PROTOTYPES(data::Connection)
