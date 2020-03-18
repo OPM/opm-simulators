@@ -42,6 +42,8 @@ public:
     {
         if constexpr (is_ptr<T>::value) {
             ptr(data);
+        } else if constexpr (is_pair<T>::value) {
+            pair(data);
         } else {
           if (m_op == Operation::PACKSIZE)
               m_packSize += Mpi::packSize(data, m_comm);
@@ -92,13 +94,15 @@ public:
         auto handle = [&](auto& d)
         {
             if constexpr (is_vector<Data>::value)
-                vector(d);
+                this->template vector<typename Data::value_type,complexType>(d);
             else if constexpr (is_ptr<Data>::value)
                 ptr(d);
-            else if constexpr (!complexType)
-                d.template serializeOp<EclMpiSerializer, false>(*this);
-            else
+            else if constexpr (is_dynamic_state<Data>::value)
+                d.template serializeOp<EclMpiSerializer, complexType>(*this);
+            else if constexpr (complexType)
                 d.serializeOp(*this);
+            else
+                (*this)(d);
         };
 
         if (m_op == Operation::PACKSIZE) {
@@ -209,6 +213,16 @@ protected:
 
     template<class T1>
     struct is_ptr<std::unique_ptr<T1>> {
+        constexpr static bool value = true;
+    };
+
+    template<class T>
+    struct is_dynamic_state {
+        constexpr static bool value = false;
+    };
+
+    template<class T1>
+    struct is_dynamic_state<DynamicState<T1>> {
         constexpr static bool value = true;
     };
 

@@ -22,10 +22,6 @@
 #endif
 
 #include "ParallelRestart.hpp"
-#include <opm/parser/eclipse/EclipseState/Grid/FaceDir.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/MSW/icd.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/RFTConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQEnums.hpp>
 #include <dune/common/parallel/mpitraits.hh>
 
 #define HANDLE_AS_POD(T) \
@@ -743,8 +739,6 @@ INSTANTIATE_PACK_VECTOR(std::map<std::string,int>)
 INSTANTIATE_PACK_VECTOR(std::pair<std::string,std::vector<size_t>>)
 INSTANTIATE_PACK_VECTOR(std::pair<int,std::vector<int>>)
 INSTANTIATE_PACK_VECTOR(std::pair<int,std::vector<size_t>>)
-INSTANTIATE_PACK_VECTOR(std::pair<RFTConfig::RFT,std::size_t>)
-INSTANTIATE_PACK_VECTOR(std::pair<RFTConfig::PLT,std::size_t>)
 INSTANTIATE_PACK_VECTOR(std::string)
 
 #undef INSTANTIATE_PACK_VECTOR
@@ -770,21 +764,15 @@ INSTANTIATE_PACK(std::array<bool,3>)
 INSTANTIATE_PACK(std::array<int,3>)
 INSTANTIATE_PACK(unsigned char)
 INSTANTIATE_PACK(std::map<std::pair<int,int>,std::pair<bool,double>>)
-INSTANTIATE_PACK(std::map<FaceDir::DirEnum,std::string>)
-INSTANTIATE_PACK(std::map<FaceDir::DirEnum,std::vector<double>>)
 INSTANTIATE_PACK(std::map<std::string,std::vector<int>>)
 INSTANTIATE_PACK(std::map<std::string,std::map<std::pair<int,int>,int>>)
 INSTANTIATE_PACK(std::map<std::string,int>)
 INSTANTIATE_PACK(std::map<std::string,double>)
 INSTANTIATE_PACK(std::map<int,int>)
-INSTANTIATE_PACK(std::map<UDQVarType,std::size_t>)
 INSTANTIATE_PACK(std::unordered_map<std::string,size_t>)
 INSTANTIATE_PACK(std::unordered_map<std::string,std::string>)
 INSTANTIATE_PACK(std::unordered_set<std::string>)
 INSTANTIATE_PACK(std::set<std::string>)
-INSTANTIATE_PACK(std::pair<bool,double>)
-INSTANTIATE_PACK(std::pair<bool,std::size_t>)
-INSTANTIATE_PACK(std::pair<Phase,bool>)
 
 #undef INSTANTIATE_PACK
 

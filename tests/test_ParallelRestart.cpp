@@ -483,7 +483,8 @@ Opm::Action::ActionX getActionX()
 }
 
 
-Opm::AquiferCT getAquiferCT() {
+Opm::AquiferCT getAquiferCT()
+{
     Opm::AquiferCT::AQUCT_data data;
     data.aquiferID = 1;
     data.inftableID = 2;
@@ -504,7 +505,9 @@ Opm::AquiferCT getAquiferCT() {
     return Opm::AquiferCT( { data } );
 }
 
-Opm::Aquifetp getAquifetp() {
+
+Opm::Aquifetp getAquifetp()
+{
     Opm::Aquifetp::AQUFETP_data data;
 
     data.aquiferID = 1;
@@ -518,8 +521,8 @@ Opm::Aquifetp getAquifetp() {
 }
 
 
-
-Opm::Aquancon getAquancon() {
+Opm::Aquancon getAquancon()
+{
     Opm::Aquancon::AquancCell cell(1, 100, std::make_pair(false, 0), 100, Opm::FaceDir::XPlus);
     return Opm::Aquancon( std::unordered_map<int, std::vector<Opm::Aquancon::AquancCell>>{{1, {cell}}});
 }
