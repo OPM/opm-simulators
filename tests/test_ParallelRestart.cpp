@@ -2020,7 +2020,7 @@ BOOST_AUTO_TEST_CASE(Quantity)
     Opm::Action::Quantity val1;
     val1.quantity = "test1";
     val1.args = {"test2", "test3"};
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Action::Quantity)
 #endif
 }

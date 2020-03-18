@@ -46,7 +46,6 @@ namespace Opm
 namespace Action {
     class Actions;
     class Condition;
-    class Quantity;
 }
 
 class Connection;
@@ -387,7 +386,6 @@ void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& posit
 
 ADD_PACK_PROTOTYPES(Action::Actions)
 ADD_PACK_PROTOTYPES(Action::Condition)
-ADD_PACK_PROTOTYPES(Action::Quantity)
 ADD_PACK_PROTOTYPES(Connection)
 ADD_PACK_PROTOTYPES(data::CellData)
 ADD_PACK_PROTOTYPES(data::Connection)

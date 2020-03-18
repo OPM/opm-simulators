@@ -663,13 +663,6 @@ std::size_t packSize(const Deck& data,
            packSize(data.unitSystemAccessCount(), comm);
 }
 
-std::size_t packSize(const Action::Quantity& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.quantity, comm) +
-           packSize(data.args, comm);
-}
-
 std::size_t packSize(const Action::Condition& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -1324,14 +1317,6 @@ void pack(const Deck& data,
     pack(data.getDataFile(), buffer, position, comm);
     pack(data.getInputPath(), buffer, position, comm);
     pack(data.unitSystemAccessCount(), buffer, position, comm);
-}
-
-void pack(const Action::Quantity& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.quantity, buffer, position, comm);
-    pack(data.args, buffer, position, comm);
 }
 
 void pack(const Action::Condition& data,
@@ -2227,13 +2212,6 @@ void unpack(Deck& data, std::vector<char>& buffer, int& position,
     unpack(accessCount, buffer, position, comm);
     data = Deck(keywords, defaultUnitSystem,
                 activeUnitSystem.get(), dataFile, inputPath, accessCount);
-}
-
-void unpack(Action::Quantity& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    unpack(data.quantity, buffer, position, comm);
-    unpack(data.args, buffer, position, comm);
 }
 
 void unpack(Action::Condition& data, std::vector<char>& buffer, int& position,
