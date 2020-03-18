@@ -53,7 +53,6 @@ class Valve;
 class VFPInjTable;
 class VFPProdTable;
 class WellConnections;
-class WellEconProductionLimits;
 class WellFoamProperties;
 class WellPolymerProperties;
 class WellSegments;
@@ -396,7 +395,6 @@ ADD_PACK_PROTOTYPES(Well::WellInjectionProperties)
 ADD_PACK_PROTOTYPES(Well::WellProductionProperties)
 ADD_PACK_PROTOTYPES(WellBrineProperties)
 ADD_PACK_PROTOTYPES(WellConnections)
-ADD_PACK_PROTOTYPES(WellEconProductionLimits)
 ADD_PACK_PROTOTYPES(WellFoamProperties)
 ADD_PACK_PROTOTYPES(WellPolymerProperties)
 ADD_PACK_PROTOTYPES(WellSegments)

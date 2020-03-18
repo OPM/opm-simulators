@@ -406,26 +406,6 @@ std::size_t packSize(const Well::WellInjectionProperties& data,
            packSize(data.controlMode, comm);
 }
 
-std::size_t packSize(const WellEconProductionLimits& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.minOilRate(), comm) +
-           packSize(data.minGasRate(), comm) +
-           packSize(data.maxWaterCut(), comm) +
-           packSize(data.maxGasOilRatio(), comm) +
-           packSize(data.maxWaterGasRatio(), comm) +
-           packSize(data.workover(), comm) +
-           packSize(data.endRun(), comm) +
-           packSize(data.followonWell(), comm) +
-           packSize(data.quantityLimit(), comm) +
-           packSize(data.maxSecondaryMaxWaterCut(), comm) +
-           packSize(data.workoverSecondary(), comm) +
-           packSize(data.maxGasLiquidRatio(), comm) +
-           packSize(data.minLiquidRate(), comm) +
-           packSize(data.maxTemperature(), comm) +
-           packSize(data.minReservoirFluidRate(), comm);
-}
-
 std::size_t packSize(const WellConnections& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
@@ -1009,27 +989,6 @@ void pack(const Well::WellInjectionProperties& data,
     pack(data.injectionControls, buffer, position, comm);
     pack(data.injectorType, buffer, position, comm);
     pack(data.controlMode, buffer, position, comm);
-}
-
-void pack(const WellEconProductionLimits& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.minOilRate(), buffer, position, comm);
-    pack(data.minGasRate(), buffer, position, comm);
-    pack(data.maxWaterCut(), buffer, position, comm);
-    pack(data.maxGasOilRatio(), buffer, position, comm);
-    pack(data.maxWaterGasRatio(), buffer, position, comm);
-    pack(data.workover(), buffer, position, comm);
-    pack(data.endRun(), buffer, position, comm);
-    pack(data.followonWell(), buffer, position, comm);
-    pack(data.quantityLimit(), buffer, position, comm);
-    pack(data.maxSecondaryMaxWaterCut(), buffer, position, comm);
-    pack(data.workoverSecondary(), buffer, position, comm);
-    pack(data.maxGasLiquidRatio(), buffer, position, comm);
-    pack(data.minLiquidRate(), buffer, position, comm);
-    pack(data.maxTemperature(), buffer, position, comm);
-    pack(data.minReservoirFluidRate(), buffer, position, comm);
 }
 
 void pack(const WellConnections& data,
@@ -1692,41 +1651,6 @@ void unpack(Well::WellInjectionProperties& data,
     unpack(data.injectionControls, buffer, position, comm);
     unpack(data.injectorType, buffer, position, comm);
     unpack(data.controlMode, buffer, position, comm);
-}
-
-void unpack(WellEconProductionLimits& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    double minOilRate, minGasRate, maxWaterCut, maxGasOilRatio, maxWaterGasRatio;
-    WellEconProductionLimits::EconWorkover workover, workoverSecondary;
-    bool endRun;
-    std::string followonWell;
-    WellEconProductionLimits::QuantityLimit quantityLimit;
-    double secondaryMaxWaterCut, maxGasLiquidRatio, minLiquidRate,
-           maxTemperature, minReservoirFluidRate;
-    unpack(minOilRate, buffer, position, comm);
-    unpack(minGasRate, buffer, position, comm);
-    unpack(maxWaterCut, buffer, position, comm);
-    unpack(maxGasOilRatio, buffer, position, comm);
-    unpack(maxWaterGasRatio, buffer, position, comm);
-    unpack(workover, buffer, position, comm);
-    unpack(endRun, buffer, position, comm);
-    unpack(followonWell, buffer, position, comm);
-    unpack(quantityLimit, buffer, position, comm);
-    unpack(secondaryMaxWaterCut, buffer, position, comm);
-    unpack(workoverSecondary, buffer, position, comm);
-    unpack(maxGasLiquidRatio, buffer, position, comm);
-    unpack(minLiquidRate, buffer, position, comm);
-    unpack(maxTemperature, buffer, position, comm);
-    unpack(minReservoirFluidRate, buffer, position, comm);
-    data = WellEconProductionLimits(minOilRate, minGasRate, maxWaterCut,
-                                    maxGasOilRatio, maxWaterGasRatio,
-                                    workover, endRun, followonWell,
-                                    quantityLimit, secondaryMaxWaterCut,
-                                    workoverSecondary, maxGasLiquidRatio,
-                                    minLiquidRate, maxTemperature,
-                                    minReservoirFluidRate);
 }
 
 void unpack(WellConnections& data,

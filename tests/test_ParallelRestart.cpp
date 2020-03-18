@@ -1448,7 +1448,7 @@ BOOST_AUTO_TEST_CASE(WellEconProductionLimits)
                                        6.0,
                                        Opm::WellEconProductionLimits::EconWorkover::WELL,
                                        7.0, 8.0, 9.0, 10.0);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(WellEconProductionLimits)
 #endif
 }
