@@ -1458,7 +1458,7 @@ BOOST_AUTO_TEST_CASE(WellGuideRate)
 {
 #ifdef HAVE_MPI
     Opm::Well::WellGuideRate val1{true, 1.0, Opm::Well::GuideRateTarget::COMB, 2.0};
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Well::WellGuideRate)
 #endif
 }

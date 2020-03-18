@@ -654,15 +654,6 @@ std::size_t packSize(const WellPolymerProperties& data,
            packSize(data.m_skprpolytable, comm);
 }
 
-std::size_t packSize(const Well::WellGuideRate& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.available, comm) +
-           packSize(data.guide_rate, comm) +
-           packSize(data.guide_phase, comm) +
-           packSize(data.scale_factor, comm);
-}
-
 ////// pack routines
 
 template<class T>
@@ -1274,16 +1265,6 @@ void pack(const WellPolymerProperties& data,
     pack(data.m_plymwinjtable, buffer, position, comm);
     pack(data.m_skprwattable, buffer, position, comm);
     pack(data.m_skprpolytable, buffer, position, comm);
-}
-
-void pack(const Well::WellGuideRate& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.available, buffer, position, comm);
-    pack(data.guide_rate, buffer, position, comm);
-    pack(data.guide_phase, buffer, position, comm);
-    pack(data.scale_factor, buffer, position, comm);
 }
 
 /// unpack routines
@@ -2123,16 +2104,6 @@ void unpack(WellPolymerProperties& data,
     unpack(data.m_plymwinjtable, buffer, position, comm);
     unpack(data.m_skprwattable, buffer, position, comm);
     unpack(data.m_skprpolytable, buffer, position, comm);
-}
-
-void unpack(Well::WellGuideRate& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    unpack(data.available, buffer, position, comm);
-    unpack(data.guide_rate, buffer, position, comm);
-    unpack(data.guide_phase, buffer, position, comm);
-    unpack(data.scale_factor, buffer, position, comm);
 }
 
 #define INSTANTIATE_PACK_VECTOR(...) \
