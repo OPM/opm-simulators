@@ -185,12 +185,6 @@ std::size_t packSize(const std::set<K,C,A>& data,
     return totalSize;
 }
 
-template<class Key, class Value>
-std::size_t packSize(const OrderedMap<Key,Value>& data, Dune::MPIHelper::MPICommunicator comm)
-{
-  return packSize(data.getIndex(), comm) + packSize(data.getStorage(), comm);
-}
-
 template<class T>
 std::size_t packSize(const DynamicState<T>& data, Dune::MPIHelper::MPICommunicator comm)
 {
@@ -441,14 +435,6 @@ void pack(const std::tuple<Ts...>& data, std::vector<char>& buffer,
           int& position, Dune::MPIHelper::MPICommunicator comm)
 {
     pack_tuple_entry(data, buffer, position, comm);
-}
-
-template<class Key, class Value>
-void pack(const OrderedMap<Key, Value>& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getIndex(), buffer, position, comm);
-    pack(data.getStorage(), buffer, position, comm);
 }
 
 template<class T>
@@ -715,17 +701,6 @@ void unpack(std::array<T,N>& data, std::vector<char>& buffer, int& position,
 {
     for (T& entry : data)
         unpack(entry, buffer, position, comm);
-}
-
-template<class Key, class Value>
-void unpack(OrderedMap<Key,Value>& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-  typename OrderedMap<Key,Value>::index_type index;
-  typename OrderedMap<Key,Value>::storage_type storage;
-  unpack(index, buffer, position, comm);
-  unpack(storage, buffer, position, comm);
-  data = OrderedMap<Key,Value>(index, storage);
 }
 
 template<class T>
