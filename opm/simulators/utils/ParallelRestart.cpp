@@ -508,7 +508,8 @@ std::size_t packSize(const WellEconProductionLimits& data,
 std::size_t packSize(const WellConnections& data,
                      Dune::MPIHelper::MPICommunicator comm)
 {
-    return packSize(data.getHeadI(), comm) +
+    return packSize(data.ordering(), comm) +
+           packSize(data.getHeadI(), comm) +
            packSize(data.getHeadJ(), comm) +
            packSize(data.getNumRemoved(), comm) +
            packSize(data.getConnections(), comm);
@@ -641,7 +642,6 @@ std::size_t packSize(const Well& data,
                        packSize(data.getHeadJ(), comm) +
                        packSize(data.getRefDepth(), comm) +
                        packSize(data.wellType(), comm) +
-                       packSize(data.getWellConnectionOrdering(), comm) +
                        packSize(data.units(), comm) +
                        packSize(data.udqUndefined(), comm) +
                        packSize(data.getStatus(), comm) +
@@ -1411,6 +1411,7 @@ void pack(const WellConnections& data,
           std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
+    pack(data.ordering(), buffer, position, comm);
     pack(data.getHeadI(), buffer, position, comm);
     pack(data.getHeadJ(), buffer, position, comm);
     pack(data.getNumRemoved(), buffer, position, comm);
@@ -1548,7 +1549,6 @@ void pack(const Well& data,
     pack(data.getHeadJ(), buffer, position, comm);
     pack(data.getRefDepth(), buffer, position, comm);
     pack(data.wellType(), buffer, position, comm);
-    pack(data.getWellConnectionOrdering(), buffer, position, comm);
     pack(data.units(), buffer, position, comm);
     pack(data.udqUndefined(), buffer, position, comm);
     pack(data.getStatus(), buffer, position, comm);
@@ -2455,14 +2455,16 @@ void unpack(WellConnections& data,
 {
     int headI, headJ;
     size_t numRemoved;
+    Connection::Order ordering;
     std::vector<Connection> connections;
 
+    unpack(ordering, buffer, position, comm),
     unpack(headI, buffer, position, comm),
     unpack(headJ, buffer, position, comm),
     unpack(numRemoved, buffer, position, comm),
     unpack(connections, buffer, position, comm),
 
-    data = WellConnections(headI, headJ, numRemoved, connections);
+    data = WellConnections(ordering, headI, headJ, numRemoved, connections);
 }
 
 void unpack(Well::WellProductionProperties& data,
@@ -2668,7 +2670,6 @@ void unpack(Well& data,
     int headI, headJ;
     double ref_depth;
     WellType wtype;
-    Connection::Order ordering;
     UnitSystem units;
     double udq_undefined;
     Well::Status status;
@@ -2696,7 +2697,6 @@ void unpack(Well& data,
     unpack(headJ, buffer, position, comm);
     unpack(ref_depth, buffer, position, comm);
     unpack(wtype, buffer, position, comm);
-    unpack(ordering, buffer, position, comm);
     unpack(units, buffer, position, comm);
     unpack(udq_undefined, buffer, position, comm);
     unpack(status, buffer, position, comm);
@@ -2722,7 +2722,7 @@ void unpack(Well& data,
         unpack(*segments, buffer, position, comm);
     }
     data = Well(name, groupName, firstTimeStep, seqIndex, headI, headJ,
-                ref_depth, wtype, ordering, units, udq_undefined, status,
+                ref_depth, wtype, units, udq_undefined, status,
                 drainageRadius, allowCrossFlow, automaticShutIn,
                 guideRate, efficiencyFactor, solventFraction, prediction_mode,
                 econLimits, foamProperties, polymerProperties, brineProperties,

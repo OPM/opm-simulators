@@ -330,7 +330,7 @@ Opm::Well getFullWell()
 {
     Opm::UnitSystem unitSystem;
     return Opm::Well("test1", "test2", 1, 2, 3, 4, 5.0,
-                     Opm::WellType(Opm::Phase::WATER), Opm::Connection::Order::DEPTH,
+                     Opm::WellType(Opm::Phase::WATER),
                      unitSystem, 6.0, Opm::Well::Status::SHUT,
                      7.0, true, false,
                      Opm::Well::WellGuideRate{true, 1.0, Opm::Well::GuideRateTarget::COMB, 2.0},
@@ -1473,7 +1473,7 @@ BOOST_AUTO_TEST_CASE(WellConnections)
                          {9, 10, 11}, Opm::Connection::CTFKind::Defaulted,
                          12, 13.0, 14.0, true,
                          15, 16, 17.0);
-    Opm::WellConnections val1(1, 2, 3, {conn, conn});
+    Opm::WellConnections val1(Opm::Connection::Order::TRACK, 1, 2, 3, {conn, conn});
     auto val2 = PackUnpack(val1);
     DO_CHECKS(WellConnections)
 #endif
