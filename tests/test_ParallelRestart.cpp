@@ -1320,7 +1320,7 @@ BOOST_AUTO_TEST_CASE(VFPInjTable)
 {
 #ifdef HAVE_MPI
     Opm::VFPInjTable val1 = getVFPInjTable();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(VFPInjTable)
 #endif
 }

@@ -25,9 +25,7 @@
 #include <opm/parser/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/icd.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/RFTConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunction.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunctionTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQEnums.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
 #include <dune/common/parallel/mpitraits.hh>
 
@@ -294,17 +292,6 @@ std::size_t packSize(const data::WellRates& data, Dune::MPIHelper::MPICommunicat
 std::size_t packSize(const RestartValue& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.solution, comm) + packSize(data.wells, comm) + packSize(data.extra, comm);
-}
-
-std::size_t packSize(const VFPInjTable& data,
-                     Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.getTableNum(), comm) +
-           packSize(data.getDatumDepth(), comm) +
-           packSize(data.getFloType(), comm) +
-           packSize(data.getFloAxis(), comm) +
-           packSize(data.getTHPAxis(), comm) +
-           packSize(data.getTable(), comm);
 }
 
 std::size_t packSize(const VFPProdTable& data,
@@ -591,18 +578,6 @@ void pack(const RestartValue& data, std::vector<char>& buffer, int& position,
     pack(data.solution, buffer, position, comm);
     pack(data.wells, buffer, position, comm);
     pack(data.extra, buffer, position, comm);
-}
-
-void pack(const VFPInjTable& data,
-          std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
-{
-    pack(data.getTableNum(), buffer, position, comm);
-    pack(data.getDatumDepth(), buffer, position, comm);
-    pack(data.getFloType(), buffer, position, comm);
-    pack(data.getFloAxis(), buffer, position, comm);
-    pack(data.getTHPAxis(), buffer, position, comm);
-    pack(data.getTable(), buffer, position, comm);
 }
 
 void pack(const VFPProdTable& data,
@@ -910,27 +885,6 @@ void unpack(RestartValue& data, std::vector<char>& buffer, int& position,
     unpack(data.extra, buffer, position, comm);
 }
 
-void unpack(VFPInjTable& data,
-            std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
-{
-    int tableNum;
-    double datumDepth;
-    VFPInjTable::FLO_TYPE floType;
-    std::vector<double> floAxis, thpAxis;
-    VFPInjTable::array_type table;
-
-    unpack(tableNum, buffer, position, comm);
-    unpack(datumDepth, buffer, position, comm);
-    unpack(floType, buffer, position, comm);
-    unpack(floAxis, buffer, position, comm);
-    unpack(thpAxis, buffer, position, comm);
-    unpack(table, buffer, position, comm);
-
-    data = VFPInjTable(tableNum, datumDepth, floType,
-                       floAxis, thpAxis, table);
-}
-
 void unpack(VFPProdTable& data,
             std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
@@ -1005,7 +959,6 @@ INSTANTIATE_PACK_VECTOR(size_t)
 INSTANTIATE_PACK_VECTOR(std::time_t)
 INSTANTIATE_PACK_VECTOR(std::array<double, 3>)
 INSTANTIATE_PACK_VECTOR(std::pair<bool,double>)
-INSTANTIATE_PACK_VECTOR(std::shared_ptr<VFPInjTable>)
 INSTANTIATE_PACK_VECTOR(std::shared_ptr<VFPProdTable>)
 INSTANTIATE_PACK_VECTOR(std::map<std::string,int>)
 INSTANTIATE_PACK_VECTOR(std::pair<std::string,std::vector<size_t>>)
@@ -1030,19 +983,6 @@ template void unpack(std::set<__VA_ARGS__>& data, \
 INSTANTIATE_PACK_SET(std::string)
 
 #undef INSTANTIATE_PACK_SET
-
-#define INSTANTIATE_PACK_SHARED_PTR(...) \
-template std::size_t packSize(const std::shared_ptr<__VA_ARGS__>& data, \
-                              Dune::MPIHelper::MPICommunicator comm); \
-template void pack(const std::shared_ptr<__VA_ARGS__>& data, \
-                   std::vector<char>& buffer, int& position, \
-                   Dune::MPIHelper::MPICommunicator comm); \
-template void unpack(std::shared_ptr<__VA_ARGS__>& data, \
-                     std::vector<char>& buffer, int& position, \
-                     Dune::MPIHelper::MPICommunicator comm);
-
-INSTANTIATE_PACK_SHARED_PTR(VFPInjTable)
-#undef INSTANTIATE_PACK_SHARED_PTR
 
 #define INSTANTIATE_PACK(...) \
 template std::size_t packSize(const __VA_ARGS__& data, \
@@ -1076,6 +1016,7 @@ INSTANTIATE_PACK(std::unordered_map<std::string,std::string>)
 INSTANTIATE_PACK(std::unordered_set<std::string>)
 INSTANTIATE_PACK(std::pair<bool,double>)
 INSTANTIATE_PACK(std::pair<bool,std::size_t>)
+INSTANTIATE_PACK(std::pair<Phase,bool>)
 
 #undef INSTANTIATE_PACK
 
