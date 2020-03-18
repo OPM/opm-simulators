@@ -129,32 +129,8 @@ namespace Opm
     }
 #endif
 
-        void WellContributions::alloc_all(){
-#if HAVE_CUDA
-            if(gpu_mode){
-                alloc_gpu();
-            }else{
-                alloc_cpu();
-            }
-#else
-            alloc_cpu();
-#endif
-            allocated = true;
-        }
 
-        void WellContributions::alloc_cpu(){
-            Cnnzs = new double[num_blocks * dim * dim_wells];
-            Dnnzs = new double[num_wells * dim_wells * dim_wells];
-            Bnnzs = new double[num_blocks * dim * dim_wells];
-            Ccols = new int[num_blocks];
-            Bcols = new int[num_blocks];
-            val_pointers = new unsigned int[num_wells + 1];
-            z1 = new double[dim_wells];    //        B * x
-            z2 = new double[dim_wells];    // D^-1 * B * x
-        }
-
-#if HAVE_CUDA
-        void WellContributions::alloc_gpu(){
+        void WellContributions::alloc(){
             cudaMalloc((void**)&d_Cnnzs, sizeof(double) * num_blocks * dim * dim_wells);
             cudaMalloc((void**)&d_Dnnzs, sizeof(double) * num_wells * dim_wells * dim_wells);
             cudaMalloc((void**)&d_Bnnzs, sizeof(double) * num_blocks * dim * dim_wells);
@@ -163,36 +139,11 @@ namespace Opm
             val_pointers = new unsigned int[num_wells + 1];
             cudaMalloc((void**)&d_val_pointers, sizeof(int) * (num_wells + 1));
             cudaCheckLastError("apply_gpu malloc failed");
+            allocated = true;
         }
-#endif
 
         WellContributions::~WellContributions()
         {
-#if HAVE_CUDA
-            if(gpu_mode){
-                free_gpu();
-            }else{
-                free_cpu();
-            }
-#else
-            free_cpu();
-#endif
-        }
-
-        void WellContributions::free_cpu(){
-            delete[] Cnnzs;
-            delete[] Dnnzs;
-            delete[] Bnnzs;
-            delete[] Ccols;
-            delete[] Bcols;
-            delete[] val_pointers;
-            delete[] z1;
-            delete[] z2;
-            //delete[] Mnnzs;
-        }
-
-#if HAVE_CUDA
-        void WellContributions::free_gpu(){
             cudaFree(d_Cnnzs);
             cudaFree(d_Dnnzs);
             cudaFree(d_Bnnzs);
@@ -200,165 +151,19 @@ namespace Opm
             cudaFree(d_Bcols);
             delete[] val_pointers;
             cudaFree(d_val_pointers);
-            // cudaFree(d_z1);
-            // cudaFree(d_z2);
-        }
-#endif
-
-
-        void WellContributions::apply(double *x, double *y){
-#if HAVE_CUDA
-            if (gpu_mode){
-                apply_gpu(x, y);
-            }else{
-                apply_cpu(x, y);
-            }
-#else
-            apply_cpu(x, y);
-#endif
-        }
-
-        // Apply the WellContributions, similar to StandardWell::apply()
-        // y -= (C^T *(D^-1*(   B*x)))
-        void WellContributions::apply_cpu(double *x, double *y)
-        {
-#if 0
-            // Mnnzs contains a sparse matrix with a symmetric pattern
-            // Mrows would contain 'i*val_size' for every entry i, since every row has the same number of blocks
-            // Mcols are the same as Ccols, normally, there is an entry for every block, but since all rows have the same sparsity pattern, we only have to store 1 row
-            bool dbg = false;
-            for(int i = 0; i < dim*dim*val_size*val_size; ++i){
-                if(dbg)printf("Mnnzs[%d]: %.5e\n", i, Mnnzs[i]);
-            }
-            if(dbg)printf("row_size: %u, val_size: %u\n", row_size, val_size);
-            for(int r = 0; r < val_size; ++r){
-                for(int c = 0; c < val_size; ++c){
-                    int colIdx = Ccols[c];
-                    if(dbg)printf("colIdx: %d\n", colIdx);
-                    for(int i = 0; i < dim; ++i){
-                        double sum = 0.0;
-                        for(int j = 0; j < dim; ++j){
-                            sum += Mnnzs[r * dim * dim * val_size + c * dim * dim + i * dim + j] * x[colIdx * dim + j];
-                        }
-                        if(dbg)printf("sum: %f\n", sum);
-                        y[colIdx * dim + i] -= sum;
-                    }
-                }
-            }
-            if(dbg)exit(0);
-#else
-            for(int wellID = 0; wellID < num_wells; ++wellID){
-                unsigned int val_size = val_pointers[wellID+1] - val_pointers[wellID];
-
-                // B * x
-                for (unsigned int i = 0; i < dim_wells; ++i) {
-                    z1[i] = 0.0;
-                }
-                for (unsigned int i = 0; i < val_size; ++i) {
-                    unsigned int blockID = i + val_pointers[wellID];
-                    int colIdx = Bcols[blockID];
-                    for (unsigned int j = 0; j < dim_wells; ++j) {
-                        double temp = 0.0;
-                        for (unsigned int k = 0; k < dim; ++k) {
-                            temp += Bnnzs[blockID * dim * dim_wells + j * dim + k] * x[colIdx * dim + k];
-                        }
-                        z1[j] += temp;
-                    }
-                }
-
-                // D^-1 * B * x
-                for (unsigned int i = 0; i < dim_wells; ++i) {
-                    z2[i] = 0.0;
-                }
-                for (unsigned int j = 0; j < dim_wells; ++j) {
-                    double temp = 0.0;
-                    for (unsigned int k = 0; k < dim_wells; ++k) {
-                        temp += Dnnzs[wellID * dim_wells * dim_wells + j * dim_wells + k] * z1[k];
-                    }
-                    z2[j] += temp;
-                }
-
-                // C^T * D^-1 * B * x
-                for (unsigned int i = 0; i < val_size; ++i) {
-                    unsigned int blockID = i + val_pointers[wellID];
-                    int colIdx = Ccols[blockID];
-                    for (unsigned int j = 0; j < dim; ++j) {
-                        double temp = 0.0;
-                        for (unsigned int k = 0; k < dim_wells; ++k) {
-                            temp += Cnnzs[blockID * dim * dim_wells + j + k * dim] * z2[k];
-                        }
-                        y[colIdx * dim + j] -= temp;
-                    }
-                }
-            }
-#endif
         }
 
 
         // Apply the WellContributions, similar to StandardWell::apply()
         // y -= (C^T *(D^-1*(   B*x)))
-#if HAVE_CUDA
-        void WellContributions::apply_gpu(double *d_x, double *d_y)
+        void WellContributions::apply(double *d_x, double *d_y)
         {
             int smem_size = 2 * sizeof(double) * dim_wells;
             apply_well_contributions<<<num_wells, 32, smem_size, stream>>>(d_Cnnzs, d_Dnnzs, d_Bnnzs, d_Ccols, d_Bcols, d_x, d_y, dim, dim_wells, d_val_pointers);
         }
-#endif
+
 
         void WellContributions::addMatrix(int idx, int *colIndices, double *values, unsigned int val_size)
-        {
-#if HAVE_CUDA
-            if(gpu_mode){
-                addMatrix_gpu(idx, colIndices, values, val_size);
-            }else{
-                addMatrix_cpu(idx, colIndices, values, val_size);
-            }
-#else
-            addMatrix_cpu(idx, colIndices, values, val_size);
-#endif
-            if(idx == 2){
-                num_blocks_so_far += val_size;
-            }
-            if(idx == 2){
-                num_wells_so_far++;
-            }
-        }
-
-
-        void WellContributions::addMatrix_cpu(int idx, int *colIndices, double *values, unsigned int val_size)
-        {
-            switch (idx) {
-            case 0:
-                memcpy(Cnnzs + num_blocks_so_far * dim * dim_wells, values, sizeof(double) * val_size * dim * dim_wells);
-                memcpy(Ccols + num_blocks_so_far, colIndices, sizeof(int) * val_size);
-                break;
-            case 1:
-                memcpy(Dnnzs + num_wells_so_far * dim_wells * dim_wells, values, sizeof(double) * dim_wells * dim_wells);
-                break;
-            case 2:
-                memcpy(Bnnzs + num_blocks_so_far * dim * dim_wells, values, sizeof(double) * val_size * dim * dim_wells);
-                memcpy(Bcols + num_blocks_so_far, colIndices, sizeof(int) * val_size);
-                val_pointers[num_wells_so_far] = num_blocks_so_far;
-                if(num_wells_so_far == num_wells - 1){
-                    val_pointers[num_wells] = num_blocks;
-                }
-                break;
-            case 3:
-                // store (C*D*B)
-                printf("ERROR unsupported matrix ID for WellContributions::addMatrix()\n");
-                exit(1);
-                // memcpy(Mnnzs, values, sizeof(double) * dim * dim * val_size * val_size);
-                // memcpy(Ccols, colIndices, sizeof(int) * val_size);
-                break;
-            default:
-                printf("ERROR unknown matrix ID for WellContributions::addMatrix()\n");
-                exit(1);
-            }
-        }
-
-
-#if HAVE_CUDA
-        void WellContributions::addMatrix_gpu(int idx, int *colIndices, double *values, unsigned int val_size)
         {
             switch (idx) {
             case 0:
@@ -387,6 +192,12 @@ namespace Opm
                 exit(1);
             }
             cudaCheckLastError("WellContributions::addMatrix() failed");
+            if(idx == 2){
+                num_blocks_so_far += val_size;
+            }
+            if(idx == 2){
+                num_wells_so_far++;
+            }
         }
 
         void WellContributions::setCudaStream(cudaStream_t stream_)
@@ -394,7 +205,6 @@ namespace Opm
             this->stream = stream_;
         }
 
-#endif
 
         void WellContributions::addSizes(unsigned int nnz, unsigned int numEq, unsigned int numWellEq)
         {
@@ -406,14 +216,6 @@ namespace Opm
             dim = numEq;
             dim_wells = numWellEq;
             num_wells++;
-        }
-
-        // Default value
-        bool WellContributions::gpu_mode = false;
-
-        // If HAVE_CUDA is false, use_gpu must be false too
-        void WellContributions::setMode(bool use_gpu){
-            gpu_mode = use_gpu;
         }
 
 } //namespace Opm

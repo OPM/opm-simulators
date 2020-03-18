@@ -37,7 +37,6 @@ namespace Opm
     {
 
     private:
-        static bool gpu_mode;     // gpu_mode should be initialized in the ISTLSolverEbos constructor, and its value must not change afterwards
         unsigned int num_blocks = 0;    // total number of blocks in all wells
         unsigned int dim;
         unsigned int dim_wells;
@@ -68,33 +67,6 @@ namespace Opm
         double *z1 = nullptr;                // z1 = B * x
         double *z2 = nullptr;                // z2 = D^-1 * B * x
 
-        /// Apply the WellContributions on CPU
-        void apply_cpu(double *x, double *y);
-
-        /// Allocate memory on the CPU
-        void alloc_cpu();
-
-        /// Free memory on the CPU
-        void free_cpu();
-
-        /// Same as addMatrix(), stores matrix on CPU
-        void addMatrix_cpu(int idx, int *colIndices, double *values, unsigned int val_size);
-
-#if HAVE_CUDA
-        /// Apply all wellcontributions on GPU, performs y -= C^T * (D^-1 * (B * x))
-        /// Kernel is asynchronous
-        void apply_gpu(double *d_x, double *d_y);
-
-        /// Allocate memory on the GPU
-        void alloc_gpu();
-
-        /// Free memory on the GPU
-        void free_gpu();
-
-        /// Same as addMatrix(), stores matrix on GPU
-        void addMatrix_gpu(int idx, int *colIndices, double *values, unsigned int val_size);
-#endif
-
     public:
 #if HAVE_CUDA
         /// Set a cudaStream to be used
@@ -112,7 +84,7 @@ namespace Opm
         void apply(double *x, double *y);
 
         /// Allocate memory for the wellcontributions
-        void alloc_all();
+        void alloc();
 
         /// Indicate how large the next wellcontributions are, this function cannot be called after alloc_all() is called
         void addSizes(unsigned int nnz, unsigned int numEq, unsigned int numWellEq);

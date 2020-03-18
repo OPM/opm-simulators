@@ -41,7 +41,6 @@ BdaBridge::BdaBridge(bool use_gpu_, int linear_solver_verbosity, int maxit, doub
 {
     if (use_gpu) {
         backend.reset(new cusparseSolverBackend(linear_solver_verbosity, maxit, tolerance));
-        WellContributions::setMode(use_gpu);
     }
 }
 #else
