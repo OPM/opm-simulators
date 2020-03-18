@@ -2320,7 +2320,7 @@ BOOST_AUTO_TEST_CASE(WellType)
 {
 #ifdef HAVE_MPI
     Opm::WellType val1(true, Opm::Phase::OIL);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(WellType)
 #endif
 }

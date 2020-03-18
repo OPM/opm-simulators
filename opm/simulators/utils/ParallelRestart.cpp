@@ -25,7 +25,6 @@
 #include <opm/parser/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/icd.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/RFTConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/ScheduleTypes.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunction.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunctionTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
@@ -296,12 +295,6 @@ std::size_t packSize(const data::WellRates& data, Dune::MPIHelper::MPICommunicat
 std::size_t packSize(const RestartValue& data, Dune::MPIHelper::MPICommunicator comm)
 {
     return packSize(data.solution, comm) + packSize(data.wells, comm) + packSize(data.extra, comm);
-}
-
-std::size_t packSize(const WellType& data, Dune::MPIHelper::MPICommunicator comm)
-{
-    return packSize(data.producer(), comm) +
-           packSize(data.preferred_phase(), comm);
 }
 
 template
@@ -728,12 +721,6 @@ void pack(const RestartValue& data, std::vector<char>& buffer, int& position,
     pack(data.solution, buffer, position, comm);
     pack(data.wells, buffer, position, comm);
     pack(data.extra, buffer, position, comm);
-}
-
-void pack(const WellType& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm) {
-    pack(data.producer(), buffer, position, comm);
-    pack(data.preferred_phase(), buffer, position, comm);
 }
 
 void pack(const VFPInjTable& data,
@@ -1176,15 +1163,6 @@ void unpack(RestartValue& data, std::vector<char>& buffer, int& position,
     unpack(data.solution, buffer, position, comm);
     unpack(data.wells, buffer, position, comm);
     unpack(data.extra, buffer, position, comm);
-}
-
-void unpack(WellType& data, std::vector<char>& buffer, int& position, Dune::MPIHelper::MPICommunicator comm)
-{
-    Phase preferred_phase;
-    bool producer;
-    unpack(producer, buffer, position, comm);
-    unpack(preferred_phase, buffer, position, comm);
-    data = WellType( producer, preferred_phase );
 }
 
 void unpack(VFPInjTable& data,
