@@ -17,16 +17,18 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef WellContributions_H
-#define WellContributions_H
+#ifndef WELLCONTRIBUTIONS_HEADER_INCLUDED
+#define WELLCONTRIBUTIONS_HEADER_INCLUDED
+
+#include <config.h>
+
+#if ! HAVE_CUDA
+  #error "This file should only be included if CUDA is found"
+#endif
 
 #include <vector>
 
-#if HAVE_CUDA
 #include <cuda_runtime.h>
-#endif
-
-#include <config.h>
 
 namespace Opm
 {
@@ -46,7 +48,6 @@ namespace Opm
         unsigned int *val_pointers = nullptr;     // val_pointers[wellID] == index of first block for this well in Ccols and Bcols
         bool allocated = false;
 
-#if HAVE_CUDA
         double *d_Cnnzs = nullptr;
         double *d_Dnnzs = nullptr;
         double *d_Bnnzs = nullptr;
@@ -56,23 +57,10 @@ namespace Opm
         double *d_z2 = nullptr;
         unsigned int *d_val_pointers = nullptr;
         cudaStream_t stream;
-#endif
-
-        double *Cnnzs = nullptr;
-        double *Dnnzs = nullptr;
-        double *Bnnzs = nullptr;
-        int *Ccols = nullptr;
-        int *Dcols = nullptr;
-        int *Bcols = nullptr;
-        double *z1 = nullptr;                // z1 = B * x
-        double *z2 = nullptr;                // z2 = D^-1 * B * x
-
     public:
-#if HAVE_CUDA
         /// Set a cudaStream to be used
         /// \param[in] stream           the cudaStream that is used to launch the kernel in
         void setCudaStream(cudaStream_t stream);
-#endif
 
         /// Create a new WellContributions, implementation is empty
         WellContributions(){};
@@ -93,7 +81,7 @@ namespace Opm
         void addMatrix(int idx, int *colIndices, double *values, unsigned int val_size);
 
         /// Return the number of wells added to this object
-        unsigned int get_num_wells(){
+        unsigned int getNumWells(){
             return num_wells;
         }
 

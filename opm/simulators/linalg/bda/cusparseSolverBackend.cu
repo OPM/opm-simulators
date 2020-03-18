@@ -76,7 +76,7 @@ namespace Opm
 
         t_total1 = second();
 
-        if(wellContribs.get_num_wells() > 0){
+        if(wellContribs.getNumWells() > 0){
             wellContribs.setCudaStream(stream);
         }
 
@@ -120,7 +120,7 @@ namespace Opm
                 &one, descr_M, d_bVals, d_bRows, d_bCols, block_size, d_pw, &zero, d_v);
 
             // apply wellContributions
-            if(wellContribs.get_num_wells() > 0){
+            if(wellContribs.getNumWells() > 0){
                 wellContribs.apply(d_pw, d_v);
             }
 
@@ -151,7 +151,7 @@ namespace Opm
                 d_bVals, d_bRows, d_bCols, block_size, d_s, &zero, d_t);
 
             // apply wellContributions
-            if(wellContribs.get_num_wells() > 0){
+            if(wellContribs.getNumWells() > 0){
                 wellContribs.apply(d_s, d_t);
             }
 

@@ -27,13 +27,14 @@
 #include <cuda_runtime.h>
 #endif
 
+#include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include "opm/simulators/linalg/bda/WellContributions.hpp"
 
 namespace Opm
 {
 
     // apply WellContributions using y -= C^T * (D^-1 * (B * x))
-#if HAVE_CUDA
     __global__ void apply_well_contributions(
         const double * __restrict__ Cnnzs,
         const double * __restrict__ Dnnzs,
@@ -127,7 +128,6 @@ namespace Opm
         }
 
     }
-#endif
 
 
         void WellContributions::alloc(){

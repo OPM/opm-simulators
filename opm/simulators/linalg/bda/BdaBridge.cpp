@@ -35,7 +35,6 @@ typedef Dune::InverseOperatorResult InverseOperatorResult;
 namespace Opm
 {
 
-#if HAVE_CUDA
 BdaBridge::BdaBridge(bool use_gpu_, int linear_solver_verbosity, int maxit, double tolerance)
     : use_gpu(use_gpu_)
 {
@@ -43,15 +42,9 @@ BdaBridge::BdaBridge(bool use_gpu_, int linear_solver_verbosity, int maxit, doub
         backend.reset(new cusparseSolverBackend(linear_solver_verbosity, maxit, tolerance));
     }
 }
-#else
-BdaBridge::BdaBridge(bool use_gpu_ OPM_UNUSED, int linear_solver_verbosity OPM_UNUSED, int maxit OPM_UNUSED, double tolerance OPM_UNUSED)
-{
-}
-#endif
 
 
 
-#if HAVE_CUDA
 template <class BridgeMatrix>
 int checkZeroDiagonal(BridgeMatrix& mat) {
     static std::vector<typename BridgeMatrix::size_type> diag_indices;   // contains offsets of the diagonal nnzs
@@ -118,13 +111,11 @@ void getSparsityPattern(BridgeMatrix& mat, std::vector<int> &h_rows, std::vector
     }
 } // end getSparsityPattern()
 
-#endif
 
 template <class BridgeMatrix, class BridgeVector>
 void BdaBridge::solve_system(BridgeMatrix *mat OPM_UNUSED, BridgeVector &b OPM_UNUSED, WellContributions& wellContribs OPM_UNUSED, InverseOperatorResult &res OPM_UNUSED)
 {
 
-#if HAVE_CUDA
     if (use_gpu) {
         BdaResult result;
         result.converged = false;
@@ -192,17 +183,14 @@ void BdaBridge::solve_system(BridgeMatrix *mat OPM_UNUSED, BridgeVector &b OPM_U
     }else{
         res.converged = false;
     }
-#endif // HAVE_CUDA
 }
 
 
 template <class BridgeVector>
 void BdaBridge::get_result(BridgeVector &x OPM_UNUSED) {
-#if HAVE_CUDA
     if (use_gpu) {
         backend->post_process(static_cast<double*>(&(x[0][0])));
     }
-#endif
 }
 
 template void BdaBridge::solve_system<

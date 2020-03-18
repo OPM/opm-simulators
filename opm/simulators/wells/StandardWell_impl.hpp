@@ -2735,7 +2735,7 @@ namespace Opm
         duneC_.mmtv(invDrw_, r);
     }
 
-
+#if HAVE_CUDA
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
@@ -2795,7 +2795,7 @@ namespace Opm
         _numEq = numEq;
         _numWellEq = numStaticWellEq;
     }
-
+#endif
 
 
     template<typename TypeTag>

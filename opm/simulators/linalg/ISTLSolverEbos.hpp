@@ -45,7 +45,9 @@
 
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
+#if HAVE_CUDA
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
+#endif
 
 BEGIN_PROPERTIES
 

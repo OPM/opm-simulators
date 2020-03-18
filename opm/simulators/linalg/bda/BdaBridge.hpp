@@ -21,6 +21,11 @@
 #define BDABRIDGE_HEADER_INCLUDED
 
 #include <config.h>
+
+#if ! HAVE_CUDA
+  #error "This file should only be included if CUDA is found"
+#endif
+
 #include "dune/istl/solver.hh" // for struct InverseOperatorResult
 
 #include "dune/istl/bcrsmatrix.hh"
@@ -28,9 +33,7 @@
 
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 
-#if HAVE_CUDA
 #include <opm/simulators/linalg/bda/cusparseSolverBackend.hpp>
-#endif
 
 namespace Opm
 {
@@ -42,10 +45,8 @@ typedef Dune::InverseOperatorResult InverseOperatorResult;
 class BdaBridge
 {
 private:
-#if HAVE_CUDA
     std::unique_ptr<cusparseSolverBackend> backend;
     bool use_gpu;
-#endif
 
 public:
     /// Construct a BdaBridge

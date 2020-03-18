@@ -918,7 +918,7 @@ namespace Opm {
         }
     }
 
-
+#if HAVE_CUDA
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
@@ -938,7 +938,7 @@ namespace Opm {
             derived->addWellContribution(wellContribs);
         }
     }
-
+#endif
 
     // Ax = Ax - alpha * C D^-1 B x
     template<typename TypeTag>
