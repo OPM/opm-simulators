@@ -27,7 +27,6 @@
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/output/eclipse/Summary.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/DynamicState.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
 #include <opm/parser/eclipse/EclipseState/Util/OrderedMap.hpp>
 
 #include <dune/common/parallel/mpihelper.hh>
@@ -353,7 +352,6 @@ ADD_PACK_PROTOTYPES(data::Solution)
 ADD_PACK_PROTOTYPES(data::Well)
 ADD_PACK_PROTOTYPES(data::WellRates)
 ADD_PACK_PROTOTYPES(Dimension)
-ADD_PACK_PROTOTYPES(Group)
 ADD_PACK_PROTOTYPES(RestartKey)
 ADD_PACK_PROTOTYPES(RestartValue)
 ADD_PACK_PROTOTYPES(std::string)

@@ -1633,7 +1633,7 @@ BOOST_AUTO_TEST_CASE(Group)
                     injection,
                     Opm::Group::GroupProductionProperties());
 
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Group)
 #endif
 }
