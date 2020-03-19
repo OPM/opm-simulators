@@ -130,86 +130,92 @@ namespace Opm
     }
 
 
-        void WellContributions::alloc(){
-            cudaMalloc((void**)&d_Cnnzs, sizeof(double) * num_blocks * dim * dim_wells);
-            cudaMalloc((void**)&d_Dnnzs, sizeof(double) * num_wells * dim_wells * dim_wells);
-            cudaMalloc((void**)&d_Bnnzs, sizeof(double) * num_blocks * dim * dim_wells);
-            cudaMalloc((void**)&d_Ccols, sizeof(int) * num_blocks);
-            cudaMalloc((void**)&d_Bcols, sizeof(int) * num_blocks);
-            val_pointers = new unsigned int[num_wells + 1];
-            cudaMalloc((void**)&d_val_pointers, sizeof(int) * (num_wells + 1));
-            cudaCheckLastError("apply_gpu malloc failed");
-            allocated = true;
+    void WellContributions::alloc(){
+        cudaMalloc((void**)&d_Cnnzs, sizeof(double) * num_blocks * dim * dim_wells);
+        cudaMalloc((void**)&d_Dnnzs, sizeof(double) * num_wells * dim_wells * dim_wells);
+        cudaMalloc((void**)&d_Bnnzs, sizeof(double) * num_blocks * dim * dim_wells);
+        cudaMalloc((void**)&d_Ccols, sizeof(int) * num_blocks);
+        cudaMalloc((void**)&d_Bcols, sizeof(int) * num_blocks);
+        val_pointers = new unsigned int[num_wells + 1];
+        cudaMalloc((void**)&d_val_pointers, sizeof(int) * (num_wells + 1));
+        cudaCheckLastError("apply_gpu malloc failed");
+        allocated = true;
+    }
+
+    WellContributions::~WellContributions()
+    {
+        cudaFree(d_Cnnzs);
+        cudaFree(d_Dnnzs);
+        cudaFree(d_Bnnzs);
+        cudaFree(d_Ccols);
+        cudaFree(d_Bcols);
+        delete[] val_pointers;
+        cudaFree(d_val_pointers);
+    }
+
+
+    // Apply the WellContributions, similar to StandardWell::apply()
+    // y -= (C^T *(D^-1*(   B*x)))
+    void WellContributions::apply(double *d_x, double *d_y)
+    {
+        int smem_size = 2 * sizeof(double) * dim_wells;
+        apply_well_contributions<<<num_wells, 32, smem_size, stream>>>(d_Cnnzs, d_Dnnzs, d_Bnnzs, d_Ccols, d_Bcols, d_x, d_y, dim, dim_wells, d_val_pointers);
+    }
+
+
+    void WellContributions::addMatrix(int idx, int *colIndices, double *values, unsigned int val_size)
+    {
+        if (!allocated) {
+            OPM_THROW(std::logic_error,"Error cannot add wellcontribution before allocating memory in WellContributions");
         }
-
-        WellContributions::~WellContributions()
-        {
-            cudaFree(d_Cnnzs);
-            cudaFree(d_Dnnzs);
-            cudaFree(d_Bnnzs);
-            cudaFree(d_Ccols);
-            cudaFree(d_Bcols);
-            delete[] val_pointers;
-            cudaFree(d_val_pointers);
-        }
-
-
-        // Apply the WellContributions, similar to StandardWell::apply()
-        // y -= (C^T *(D^-1*(   B*x)))
-        void WellContributions::apply(double *d_x, double *d_y)
-        {
-            int smem_size = 2 * sizeof(double) * dim_wells;
-            apply_well_contributions<<<num_wells, 32, smem_size, stream>>>(d_Cnnzs, d_Dnnzs, d_Bnnzs, d_Ccols, d_Bcols, d_x, d_y, dim, dim_wells, d_val_pointers);
-        }
-
-
-        void WellContributions::addMatrix(int idx, int *colIndices, double *values, unsigned int val_size)
-        {
-            switch (idx) {
-            case 0:
-                cudaMemcpy(d_Cnnzs + num_blocks_so_far * dim * dim_wells, values, sizeof(double) * val_size * dim * dim_wells, cudaMemcpyHostToDevice);
-                cudaMemcpy(d_Ccols + num_blocks_so_far, colIndices, sizeof(int) * val_size, cudaMemcpyHostToDevice);
-                break;
-            case 1:
-                cudaMemcpy(d_Dnnzs + num_wells_so_far * dim_wells * dim_wells, values, sizeof(double) * dim_wells * dim_wells, cudaMemcpyHostToDevice);
-                break;
-            case 2:
-                cudaMemcpy(d_Bnnzs + num_blocks_so_far * dim * dim_wells, values, sizeof(double) * val_size * dim * dim_wells, cudaMemcpyHostToDevice);
-                cudaMemcpy(d_Bcols + num_blocks_so_far, colIndices, sizeof(int) * val_size, cudaMemcpyHostToDevice);
-                val_pointers[num_wells_so_far] = num_blocks_so_far;
-                if(num_wells_so_far == num_wells - 1){
-                    val_pointers[num_wells] = num_blocks;
-                }
-                cudaMemcpy(d_val_pointers, val_pointers, sizeof(int) * (num_wells+1), cudaMemcpyHostToDevice);
-                break;
-            default:
-                OPM_THROW(std::logic_error,"Error unsupported matrix ID for WellContributions::addMatrix()");
+        switch (idx) {
+        case 0:
+            cudaMemcpy(d_Cnnzs + num_blocks_so_far * dim * dim_wells, values, sizeof(double) * val_size * dim * dim_wells, cudaMemcpyHostToDevice);
+            cudaMemcpy(d_Ccols + num_blocks_so_far, colIndices, sizeof(int) * val_size, cudaMemcpyHostToDevice);
+            break;
+        case 1:
+            cudaMemcpy(d_Dnnzs + num_wells_so_far * dim_wells * dim_wells, values, sizeof(double) * dim_wells * dim_wells, cudaMemcpyHostToDevice);
+            break;
+        case 2:
+            cudaMemcpy(d_Bnnzs + num_blocks_so_far * dim * dim_wells, values, sizeof(double) * val_size * dim * dim_wells, cudaMemcpyHostToDevice);
+            cudaMemcpy(d_Bcols + num_blocks_so_far, colIndices, sizeof(int) * val_size, cudaMemcpyHostToDevice);
+            val_pointers[num_wells_so_far] = num_blocks_so_far;
+            if(num_wells_so_far == num_wells - 1){
+                val_pointers[num_wells] = num_blocks;
             }
-            cudaCheckLastError("WellContributions::addMatrix() failed");
-            if(idx == 2){
-                num_blocks_so_far += val_size;
-            }
-            if(idx == 2){
-                num_wells_so_far++;
-            }
+            cudaMemcpy(d_val_pointers, val_pointers, sizeof(int) * (num_wells+1), cudaMemcpyHostToDevice);
+            break;
+        default:
+            OPM_THROW(std::logic_error,"Error unsupported matrix ID for WellContributions::addMatrix()");
         }
-
-        void WellContributions::setCudaStream(cudaStream_t stream_)
-        {
-            this->stream = stream_;
+        cudaCheckLastError("WellContributions::addMatrix() failed");
+        if(idx == 2){
+            num_blocks_so_far += val_size;
         }
-
-
-        void WellContributions::addSizes(unsigned int nnz, unsigned int numEq, unsigned int numWellEq)
-        {
-            if(allocated){
-                OPM_THROW(std::logic_error,"Error cannot add more sizes after allocated in WellContributions");
-            }
-            num_blocks += nnz;
-            dim = numEq;
-            dim_wells = numWellEq;
-            num_wells++;
+        if(idx == 2){
+            num_wells_so_far++;
         }
+    }
+
+    void WellContributions::setCudaStream(cudaStream_t stream_)
+    {
+        this->stream = stream_;
+    }
+
+    void WellContributions::setBlockSize(unsigned int dim_, unsigned int dim_wells_)
+    {
+        dim = dim_;
+        dim_wells = dim_wells_;
+    }
+
+    void WellContributions::addNumBlocks(unsigned int nnz)
+    {
+        if (allocated) {
+            OPM_THROW(std::logic_error,"Error cannot add more sizes after allocated in WellContributions");
+        }
+        num_blocks += nnz;
+        num_wells++;
+    }
 
 } //namespace Opm
 

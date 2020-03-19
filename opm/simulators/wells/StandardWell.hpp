@@ -188,8 +188,8 @@ namespace Opm
         /// add the contribution (C, D^-1, B matrices) of this Well to the WellContributions object
         void addWellContribution(WellContributions& wellContribs) const;
 
-        /// get the sizes of the C, D^-1 and B matrices, used to allocate memory in a WellContributions object
-        void getWellSizes(unsigned int& _nnzs, unsigned int& _numEq, unsigned int& _numWellEq) const;
+        /// get the number of blocks of the C and B matrices, used to allocate memory in a WellContributions object
+        void getNumBlocks(unsigned int& _nnzs) const;
 #endif
 
         /// using the solution x to recover the solution xw for wells and applying

@@ -924,12 +924,13 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     getWellContributions(WellContributions& wellContribs) const
     {
+        wellContribs.setBlockSize(StandardWell<TypeTag>::numEq, StandardWell<TypeTag>::numStaticWellEq);
         for(unsigned int i = 0; i < well_container_.size(); i++){
             auto& well = well_container_[i];
             std::shared_ptr<StandardWell<TypeTag> > derived = std::dynamic_pointer_cast<StandardWell<TypeTag> >(well);
-            unsigned int nnz, numEq, numWellEq;
-            derived->getWellSizes(nnz, numEq, numWellEq);
-            wellContribs.addSizes(nnz, numEq, numWellEq);
+            unsigned int numBlocks;
+            derived->getNumBlocks(numBlocks);
+            wellContribs.addNumBlocks(numBlocks);
         }
         wellContribs.alloc();
         for(unsigned int i = 0; i < well_container_.size(); i++){

@@ -2789,11 +2789,9 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    getWellSizes(unsigned int& _nnzs, unsigned int& _numEq, unsigned int& _numWellEq) const
+    getNumBlocks(unsigned int& numBlocks) const
     {
-        _nnzs = duneB_.nonzeroes();
-        _numEq = numEq;
-        _numWellEq = numStaticWellEq;
+        numBlocks = duneB_.nonzeroes();
     }
 #endif
 
