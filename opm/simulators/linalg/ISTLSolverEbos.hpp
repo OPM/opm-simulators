@@ -442,28 +442,33 @@ protected:
 #endif
             {
                 // tries to solve linear system
-                // solve_system() does nothing if Dune is selected
 #if HAVE_CUDA
-                WellContributions wellContribs;
-                const bool addWellContribs = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
-                const bool use_gpu = bdaBridge->getUseGpu();
-                if(!addWellContribs && use_gpu)
-                {
-                    simulator_.problem().wellModel().getWellContributions(wellContribs);
-                }
-                bdaBridge->solve_system(matrix_.get(), istlb, wellContribs, result);
-
-                if (result.converged) {
-                    // get result vector x from non-Dune backend, iff solve was successful
-                    bdaBridge->get_result(x);
-                } else {
-                    // CPU fallback, or default case for Dune
-                    if (use_gpu) {
-                        OpmLog::warning("cusparseSolver did not converge, now trying Dune to solve current linear system...");
+                bool use_gpu = bdaBridge->getUseGpu();
+                if (use_gpu) {
+                    WellContributions wellContribs;
+                    const bool addWellContribs = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
+                    if (!addWellContribs) {
+                        simulator_.problem().wellModel().getWellContributions(wellContribs);
                     }
+                    bdaBridge->solve_system(matrix_.get(), istlb, wellContribs, result);
+                    if (result.converged) {
+                        // get result vector x from non-Dune backend, iff solve was successful
+                        bdaBridge->get_result(x);
+                    } else {
+                        // CPU fallback
+                        use_gpu = bdaBridge->getUseGpu();  // update value, BdaBridge might have disabled cusparseSolver
+                        if (use_gpu) {
+                            OpmLog::warning("cusparseSolver did not converge, now trying Dune to solve current linear system...");
+                        }
+
+                        // call Dune
+                        auto precond = constructPrecond(linearOperator, parallelInformation_arg);
+                        solve(linearOperator, x, istlb, *sp, *precond, result);
+                    }
+                } else { // gpu is not selected or disabled
                     auto precond = constructPrecond(linearOperator, parallelInformation_arg);
                     solve(linearOperator, x, istlb, *sp, *precond, result);
-                } // end Dune call
+                }
 #else
                 // Construct preconditioner.
                 auto precond = constructPrecond(linearOperator, parallelInformation_arg);
