@@ -385,7 +385,6 @@ public:
             bool enableDoublePrecisionOutput = EWOMS_GET_PARAM(TypeTag, bool, EclOutputDoublePrecision);
             const Opm::data::Solution& cellData = collectToIORank_.isParallel() ? collectToIORank_.globalCellData() : localCellData;
             const Opm::data::Wells& wellData = collectToIORank_.isParallel() ? collectToIORank_.globalWellData() : localWellData;
-            const Opm::data::Group& groupData = collectToIORank_.isParallel() ? collectToIORank_.globalGroupData() : localGroupData;
             Opm::RestartValue restartValue(cellData, wellData);
 
             if (simConfig.useThresholdPressure())
