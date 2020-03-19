@@ -161,13 +161,15 @@ public:
             // compute the axis specific "centroids" used for the transmissibilities. for
             // consistency with the flow simulator, we use the element centers as
             // computed by opm-parser's Opm::EclipseGrid class for all axes.
-            const double* centroid;
+            std::array<double, 3> centroid;
             if (vanguard_.gridView().comm().rank() == 0) {
                 const auto& eclGrid = eclState.getInputGrid();
                 unsigned cartesianCellIdx = cartMapper.cartesianIndex(elemIdx);
-                centroid = &eclGrid.getCellCenter(cartesianCellIdx)[0];
+                centroid = eclGrid.getCellCenter(cartesianCellIdx);
             } else
-                centroid = &centroids[centroidIdx * dimWorld];
+                std::copy(centroids.begin() + centroidIdx * dimWorld,
+                          centroids.begin() + (centroidIdx + 1) * dimWorld,
+                          centroid.begin());
 
             for (unsigned axisIdx = 0; axisIdx < dimWorld; ++axisIdx)
                 for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
