@@ -50,7 +50,6 @@ namespace Opm
     {
         const int idx_b = blockIdx.x;
         const int idx_t = threadIdx.x;
-        int idx = idx_b * blockDim.x + idx_t;
         const unsigned int val_size = val_pointers[idx_b+1] - val_pointers[idx_b];
 
         const int vals_per_block = dim * dim_wells;        // 12
@@ -59,7 +58,6 @@ namespace Opm
         const int lane = idx_t % 32;
         const int c = lane % dim;                           // col in block
         const int r = (lane / dim) % dim_wells;             // row in block
-        const int NUM_THREADS = gridDim.x * blockDim.x;
 
         extern __shared__ double smem[];
         double * __restrict__ z1 = smem;

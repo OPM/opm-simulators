@@ -46,7 +46,8 @@ if(NOT CMAKE_DISABLE_FIND_PACKAGE_CUDA AND
   # While the documentation says that it is deprecated, FindCUDA seems the
   # only easy way to determine the cublas and cusparse libraries.
   # Hence we call it unconditionally
-  find_package(CUDA)
+  # The WellContributions kernel uses __shfl_down_sync, which was introduced in CUDA 9.0
+  find_package(CUDA 9.0)
 endif()
 
 if(CUDA_FOUND)
