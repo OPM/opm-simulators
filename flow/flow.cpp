@@ -57,9 +57,6 @@
 #include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQAssign.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQActive.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQASTNode.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/ArrayDimChecker.hpp>
@@ -73,8 +70,8 @@
 #endif
 
 #if HAVE_MPI
-#include <ebos/eclmpiserializer.hh>
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
+#include <opm/simulators/utils/ParallelSerialization.hpp>
 #endif
 
 BEGIN_PROPERTIES
@@ -392,10 +389,7 @@ int main(int argc, char** argv)
                 schedule.reset(new Opm::Schedule);
                 eclipseState.reset(new Opm::ParallelEclipseState);
             }
-            Opm::EclMpiSerializer ser(mpiHelper.getCollectiveCommunication());
-            ser.broadcast(*summaryConfig);
-            ser.broadcast(*eclipseState);
-            ser.broadcast(*schedule);
+            Opm::eclStateBroadcast(*eclipseState, *schedule, *summaryConfig);
 #endif
 
             Opm::checkConsistentArrayDimensions(*eclipseState, *schedule, parseContext, errorGuard);

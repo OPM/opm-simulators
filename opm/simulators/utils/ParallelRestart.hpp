@@ -26,16 +26,6 @@
 #include <opm/output/eclipse/RestartValue.hpp>
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/output/eclipse/Summary.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/DynamicState.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/DynamicVector.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/GConSale.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/GConSump.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRateConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/Util/OrderedMap.hpp>
 
 #include <dune/common/parallel/mpihelper.hh>
 
@@ -47,46 +37,6 @@
 
 namespace Opm
 {
-
-namespace Action {
-    class Actions;
-    class ActionX;
-    class AST;
-    class ASTNode;
-    class Condition;
-    class Quantity;
-}
-
-class Connection;
-class DeckItem;
-class DeckRecord;
-class Dimension;
-class Events;
-template<class T> class IOrderSet;
-class Location;
-class MessageLimits;
-class MLimits;
-class OilVaporizationProperties;
-class RestartConfig;
-class RestartSchedule;
-class RFTConfig;
-class Segment;
-class SpiralICD;
-class TimeStampUTC;
-class Tuning;
-class UDAValue;
-class UnitSystem;
-class Valve;
-class VFPInjTable;
-class VFPProdTable;
-class WellConnections;
-class WellEconProductionLimits;
-class WellFoamProperties;
-class WellPolymerProperties;
-class WellSegments;
-class WellTracerProperties;
-class WList;
-class WListManager;
 
 namespace Mpi
 {
@@ -148,16 +98,8 @@ std::size_t packSize(const std::vector<bool,A>& data, Dune::MPIHelper::MPICommun
 template<class... Ts>
 std::size_t packSize(const std::tuple<Ts...>& data, Dune::MPIHelper::MPICommunicator comm);
 
-template<class T>
-std::size_t packSize(const std::shared_ptr<T>& data,
-                     Dune::MPIHelper::MPICommunicator comm);
-
 template<class T, std::size_t N>
 std::size_t packSize(const std::array<T,N>& data, Dune::MPIHelper::MPICommunicator comm);
-
-template<class T>
-std::size_t packSize(const std::unique_ptr<T>& data,
-                     Dune::MPIHelper::MPICommunicator comm);
 
 std::size_t packSize(const char* str, Dune::MPIHelper::MPICommunicator comm);
 
@@ -168,18 +110,6 @@ std::size_t packSize(const std::map<T1,T2,C,A>& data, Dune::MPIHelper::MPICommun
 
 template<class T1, class T2, class H, class P, class A>
 std::size_t packSize(const std::unordered_map<T1,T2,H,P,A>& data, Dune::MPIHelper::MPICommunicator comm);
-
-template<class Key, class Value>
-std::size_t packSize(const OrderedMap<Key,Value>& data, Dune::MPIHelper::MPICommunicator comm);
-
-template<class T>
-std::size_t packSize(const DynamicVector<T>& data, Dune::MPIHelper::MPICommunicator comm);
-
-template<class T>
-std::size_t packSize(const DynamicState<T>& data, Dune::MPIHelper::MPICommunicator comm);
-
-template<class T>
-std::size_t packSize(const IOrderSet<T>& data, Dune::MPIHelper::MPICommunicator comm);
 
 ////// pack routines
 
@@ -250,16 +180,8 @@ void pack(const std::unordered_set<T,H,KE,A>& data,
           std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm);
 
-template<class T>
-void pack(const std::shared_ptr<T>& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm);
-
 template<class T, size_t N>
 void pack(const std::array<T,N>& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm);
-
-template<class T>
-void pack(const std::unique_ptr<T>& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm);
 
 template<class T1, class T2, class C, class A>
@@ -269,22 +191,6 @@ void pack(const std::map<T1,T2,C,A>& data, std::vector<char>& buffer, int& posit
 template<class T1, class T2, class H, class P, class A>
 void pack(const std::unordered_map<T1,T2,H,P,A>& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm);
-
-template<class Key, class Value>
-void pack(const OrderedMap<Key,Value>& data, std::vector<char>& buffer,
-          int& position, Dune::MPIHelper::MPICommunicator comm);
-
-template<class T>
-void pack(const DynamicState<T>& data, std::vector<char>& buffer,
-          int& position, Dune::MPIHelper::MPICommunicator comm);
-
-template<class T>
-void pack(const DynamicVector<T>& data, std::vector<char>& buffer,
-          int& position, Dune::MPIHelper::MPICommunicator comm);
-
-template<class T>
-void pack(const IOrderSet<T>& data, std::vector<char>& buffer,
-          int& position, Dune::MPIHelper::MPICommunicator comm);
 
 void pack(const char* str, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm);
@@ -359,16 +265,8 @@ void unpack(std::unordered_set<T,H,KE,A>& data,
             std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm);
 
-template<class T>
-void unpack(std::shared_ptr<T>& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm);
-
 template<class T, size_t N>
 void unpack(std::array<T,N>& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm);
-
-template<class T>
-void unpack(std::unique_ptr<T>& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm);
 
 template<class T1, class T2, class C, class A>
@@ -378,22 +276,6 @@ void unpack(std::map<T1,T2,C,A>& data, std::vector<char>& buffer, int& position,
 template<class T1, class T2, class H, class P, class A>
 void unpack(std::unordered_map<T1,T2,H,P,A>& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm);
-
-template<class Key, class Value>
-void unpack(OrderedMap<Key,Value>& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm);
-
-template<class T>
-void unpack(DynamicState<T>& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm);
-
-template<class T>
-void unpack(DynamicVector<T>& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm);
-
-template<class T>
-void unpack(IOrderSet<T>& data, std::vector<char>& buffer,
-            int& position, Dune::MPIHelper::MPICommunicator comm);
 
 void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm);
@@ -407,13 +289,6 @@ void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& posit
   void unpack(T& data, std::vector<char>& buffer, int& position, \
               Dune::MPIHelper::MPICommunicator comm);
 
-ADD_PACK_PROTOTYPES(Action::Actions)
-ADD_PACK_PROTOTYPES(Action::ActionX)
-ADD_PACK_PROTOTYPES(Action::AST)
-ADD_PACK_PROTOTYPES(Action::ASTNode)
-ADD_PACK_PROTOTYPES(Action::Condition)
-ADD_PACK_PROTOTYPES(Action::Quantity)
-ADD_PACK_PROTOTYPES(Connection)
 ADD_PACK_PROTOTYPES(data::CellData)
 ADD_PACK_PROTOTYPES(data::Connection)
 ADD_PACK_PROTOTYPES(data::CurrentControl)
@@ -422,59 +297,9 @@ ADD_PACK_PROTOTYPES(data::Segment)
 ADD_PACK_PROTOTYPES(data::Solution)
 ADD_PACK_PROTOTYPES(data::Well)
 ADD_PACK_PROTOTYPES(data::WellRates)
-ADD_PACK_PROTOTYPES(Deck)
-ADD_PACK_PROTOTYPES(DeckItem)
-ADD_PACK_PROTOTYPES(DeckKeyword)
-ADD_PACK_PROTOTYPES(DeckRecord)
-ADD_PACK_PROTOTYPES(Dimension)
-ADD_PACK_PROTOTYPES(Events)
-ADD_PACK_PROTOTYPES(GConSale)
-ADD_PACK_PROTOTYPES(GConSale::GCONSALEGroup)
-ADD_PACK_PROTOTYPES(GConSump)
-ADD_PACK_PROTOTYPES(GConSump::GCONSUMPGroup)
-ADD_PACK_PROTOTYPES(GuideRateConfig)
-ADD_PACK_PROTOTYPES(GuideRateConfig::GroupTarget)
-ADD_PACK_PROTOTYPES(GuideRateConfig::WellTarget)
-ADD_PACK_PROTOTYPES(GuideRateModel)
-ADD_PACK_PROTOTYPES(Group)
-ADD_PACK_PROTOTYPES(Group::GroupInjectionProperties)
-ADD_PACK_PROTOTYPES(Group::GroupProductionProperties)
-ADD_PACK_PROTOTYPES(Location)
-ADD_PACK_PROTOTYPES(MessageLimits)
-ADD_PACK_PROTOTYPES(MLimits)
-ADD_PACK_PROTOTYPES(OilVaporizationProperties)
-ADD_PACK_PROTOTYPES(RestartConfig)
 ADD_PACK_PROTOTYPES(RestartKey)
-ADD_PACK_PROTOTYPES(RestartSchedule)
 ADD_PACK_PROTOTYPES(RestartValue)
-ADD_PACK_PROTOTYPES(RFTConfig)
-ADD_PACK_PROTOTYPES(Segment)
-ADD_PACK_PROTOTYPES(SpiralICD)
 ADD_PACK_PROTOTYPES(std::string)
-ADD_PACK_PROTOTYPES(TimeMap)
-ADD_PACK_PROTOTYPES(TimeStampUTC)
-ADD_PACK_PROTOTYPES(Tuning)
-ADD_PACK_PROTOTYPES(UDAValue)
-ADD_PACK_PROTOTYPES(UnitSystem)
-ADD_PACK_PROTOTYPES(Valve)
-ADD_PACK_PROTOTYPES(VFPInjTable)
-ADD_PACK_PROTOTYPES(VFPProdTable)
-ADD_PACK_PROTOTYPES(Well)
-ADD_PACK_PROTOTYPES(WellType)
-ADD_PACK_PROTOTYPES(Well::WellGuideRate)
-ADD_PACK_PROTOTYPES(Well::WellInjectionProperties)
-ADD_PACK_PROTOTYPES(Well::WellProductionProperties)
-ADD_PACK_PROTOTYPES(WellBrineProperties)
-ADD_PACK_PROTOTYPES(WellConnections)
-ADD_PACK_PROTOTYPES(WellEconProductionLimits)
-ADD_PACK_PROTOTYPES(WellFoamProperties)
-ADD_PACK_PROTOTYPES(WellPolymerProperties)
-ADD_PACK_PROTOTYPES(WellSegments)
-ADD_PACK_PROTOTYPES(WellTestConfig)
-ADD_PACK_PROTOTYPES(WellTestConfig::WTESTWell)
-ADD_PACK_PROTOTYPES(WellTracerProperties)
-ADD_PACK_PROTOTYPES(WList)
-ADD_PACK_PROTOTYPES(WListManager)
 
 } // end namespace Mpi
 

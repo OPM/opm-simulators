@@ -483,7 +483,8 @@ Opm::Action::ActionX getActionX()
 }
 
 
-Opm::AquiferCT getAquiferCT() {
+Opm::AquiferCT getAquiferCT()
+{
     Opm::AquiferCT::AQUCT_data data;
     data.aquiferID = 1;
     data.inftableID = 2;
@@ -504,7 +505,9 @@ Opm::AquiferCT getAquiferCT() {
     return Opm::AquiferCT( { data } );
 }
 
-Opm::Aquifetp getAquifetp() {
+
+Opm::Aquifetp getAquifetp()
+{
     Opm::Aquifetp::AQUFETP_data data;
 
     data.aquiferID = 1;
@@ -518,8 +521,8 @@ Opm::Aquifetp getAquifetp() {
 }
 
 
-
-Opm::Aquancon getAquancon() {
+Opm::Aquancon getAquancon()
+{
     Opm::Aquancon::AquancCell cell(1, 100, std::make_pair(false, 0), 100, Opm::FaceDir::XPlus);
     return Opm::Aquancon( std::unordered_map<int, std::vector<Opm::Aquancon::AquancCell>>{{1, {cell}}});
 }
@@ -866,7 +869,7 @@ BOOST_AUTO_TEST_CASE(RestartSchedule)
 {
 #if HAVE_MPI
     Opm::RestartSchedule val1(1, 2, 3);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(RestartSchedule)
 #endif
 }
@@ -877,7 +880,7 @@ BOOST_AUTO_TEST_CASE(TimeMap)
 {
 #if HAVE_MPI
     Opm::TimeMap val1 = getTimeMap();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(TimeMap)
 #endif
 }
@@ -891,7 +894,7 @@ BOOST_AUTO_TEST_CASE(RestartConfig)
     Opm::IOConfig io(true, false, true, false, false, true, "test1", true,
                      "test2", true, "test3", false);
     Opm::RestartConfig val1(getTimeMap(), 1, true, rsched, rkw, {false, true});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(RestartConfig)
 #endif
 }
@@ -1274,12 +1277,12 @@ BOOST_AUTO_TEST_CASE(OilVaporizationProperties)
     Opm::OilVaporizationProperties val1(VapType::VAPPARS,
                                         1.0, 2.0, {5.0, 6.0},
                                         {false, true}, {7.0, 8.0});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(OilVaporizationProperties)
     val1 = Opm::OilVaporizationProperties(VapType::DRDT,
                                           1.0, 2.0, {5.0, 6.0},
                                           {false, true}, {7.0, 8.0});
-    val2 = PackUnpack(val1);
+    val2 = PackUnpack2(val1);
     DO_CHECKS(OilVaporizationProperties)
 #endif
 }
@@ -1289,7 +1292,7 @@ BOOST_AUTO_TEST_CASE(Events)
 {
 #ifdef HAVE_MPI
     Opm::Events val1(Opm::DynamicVector<uint64_t>({1,2,3,4,5}));
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Events)
 #endif
 }
@@ -1299,7 +1302,7 @@ BOOST_AUTO_TEST_CASE(MLimits)
 {
 #ifdef HAVE_MPI
     Opm::MLimits val1{1,2,3,4,5,6,7,8,9,10,11,12};
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(MLimits)
 #endif
 }
@@ -1310,7 +1313,7 @@ BOOST_AUTO_TEST_CASE(MessageLimits)
 #ifdef HAVE_MPI
     std::vector<Opm::MLimits> limits{Opm::MLimits{1,2,3,4,5,6,7,8,9,10,11,12}};
     Opm::MessageLimits val1(Opm::DynamicState<Opm::MLimits>(limits,2));
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(MessageLimits)
 #endif
 }
@@ -1320,7 +1323,7 @@ BOOST_AUTO_TEST_CASE(VFPInjTable)
 {
 #ifdef HAVE_MPI
     Opm::VFPInjTable val1 = getVFPInjTable();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(VFPInjTable)
 #endif
 }
@@ -1330,7 +1333,7 @@ BOOST_AUTO_TEST_CASE(VFPProdTable)
 {
 #ifdef HAVE_MPI
     Opm::VFPProdTable val1 = getVFPProdTable();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(VFPProdTable)
 #endif
 }
@@ -1341,7 +1344,7 @@ BOOST_AUTO_TEST_CASE(WTESTWell)
 #ifdef HAVE_MPI
     Opm::WellTestConfig::WTESTWell val1{"test", Opm::WellTestConfig::ECONOMIC,
                                          1.0, 2, 3.0, 4};
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(WellTestConfig::WTESTWell)
 #endif
 }
@@ -1353,7 +1356,7 @@ BOOST_AUTO_TEST_CASE(WellTestConfig)
     Opm::WellTestConfig::WTESTWell tw{"test", Opm::WellTestConfig::ECONOMIC,
                                          1.0, 2, 3.0, 4};
     Opm::WellTestConfig val1({tw, tw, tw});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(WellTestConfig)
 #endif
 }
@@ -1363,7 +1366,7 @@ BOOST_AUTO_TEST_CASE(WellPolymerProperties)
 {
 #ifdef HAVE_MPI
     Opm::WellPolymerProperties val1{1.0, 2.0, 3, 4, 5};
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(WellPolymerProperties)
 #endif
 }
@@ -1373,7 +1376,7 @@ BOOST_AUTO_TEST_CASE(WellFoamProperties)
 {
 #ifdef HAVE_MPI
     Opm::WellFoamProperties val1{1.0};
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(WellFoamProperties)
 #endif
 }
@@ -1383,7 +1386,7 @@ BOOST_AUTO_TEST_CASE(WellTracerProperties)
 {
 #ifdef HAVE_MPI
     Opm::WellTracerProperties val1({{"test", 1.0}, {"test2", 2.0}});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(WellTracerProperties)
 #endif
 }
@@ -1393,10 +1396,10 @@ BOOST_AUTO_TEST_CASE(UDAValue)
 {
 #ifdef HAVE_MPI
     Opm::UDAValue val1("test");
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(UDAValue)
     val1 = Opm::UDAValue(1.0);
-    val2 = PackUnpack(val1);
+    val2 = PackUnpack2(val1);
     DO_CHECKS(UDAValue)
 #endif
 }
@@ -1411,7 +1414,7 @@ BOOST_AUTO_TEST_CASE(Connection)
                          {9, 10, 11}, Opm::Connection::CTFKind::Defaulted,
                          12, 13.0, 14.0, true,
                          15, 16, 17.0);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Connection)
 #endif
 }
@@ -1432,7 +1435,7 @@ BOOST_AUTO_TEST_CASE(WellInjectionProperties)
                                             8,
                                             Opm::InjectorType::OIL,
                                             Opm::Well::InjectorCMode::BHP);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Well::WellInjectionProperties)
 #endif
 }
@@ -1448,7 +1451,7 @@ BOOST_AUTO_TEST_CASE(WellEconProductionLimits)
                                        6.0,
                                        Opm::WellEconProductionLimits::EconWorkover::WELL,
                                        7.0, 8.0, 9.0, 10.0);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(WellEconProductionLimits)
 #endif
 }
@@ -1458,7 +1461,7 @@ BOOST_AUTO_TEST_CASE(WellGuideRate)
 {
 #ifdef HAVE_MPI
     Opm::Well::WellGuideRate val1{true, 1.0, Opm::Well::GuideRateTarget::COMB, 2.0};
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Well::WellGuideRate)
 #endif
 }
@@ -1474,7 +1477,7 @@ BOOST_AUTO_TEST_CASE(WellConnections)
                          12, 13.0, 14.0, true,
                          15, 16, 17.0);
     Opm::WellConnections val1(Opm::Connection::Order::TRACK, 1, 2, {conn, conn});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(WellConnections)
 #endif
 }
@@ -1498,7 +1501,7 @@ BOOST_AUTO_TEST_CASE(WellProductionProperties)
                                              true,
                                              Opm::Well::ProducerCMode::CRAT,
                                              Opm::Well::ProducerCMode::BHP, 11);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Well::WellProductionProperties)
 #endif
 }
@@ -1509,7 +1512,7 @@ BOOST_AUTO_TEST_CASE(SpiralICD)
 #ifdef HAVE_MPI
     Opm::SpiralICD val1(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8, 9.0,
                         Opm::ICDStatus::OPEN, 10.0);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(SpiralICD)
 #endif
 }
@@ -1519,7 +1522,7 @@ BOOST_AUTO_TEST_CASE(Valve)
 {
 #ifdef HAVE_MPI
     Opm::Valve val1(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, Opm::ICDStatus::OPEN);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Valve)
 #endif
 }
@@ -1532,7 +1535,7 @@ BOOST_AUTO_TEST_CASE(Segment)
                       Opm::Segment::SegmentType::SICD,
                       std::make_shared<Opm::SpiralICD>(),
                       std::make_shared<Opm::Valve>());
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Segment)
 #endif
 }
@@ -1542,7 +1545,7 @@ BOOST_AUTO_TEST_CASE(Dimension)
 {
 #ifdef HAVE_MPI
     Opm::Dimension val1(1.0, 2.0);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Dimension)
 #endif
 }
@@ -1552,7 +1555,7 @@ BOOST_AUTO_TEST_CASE(UnitSystem)
 {
 #ifdef HAVE_MPI
     Opm::UnitSystem val1(Opm::UnitSystem::UnitType::UNIT_TYPE_METRIC);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(UnitSystem)
 #endif
 }
@@ -1568,7 +1571,7 @@ BOOST_AUTO_TEST_CASE(WellSegments)
     Opm::WellSegments val1(Opm::WellSegments::CompPressureDrop::HF_,
                            {seg, seg});
 
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(WellSegments)
 #endif
 }
@@ -1578,7 +1581,7 @@ BOOST_AUTO_TEST_CASE(Well)
 {
 #ifdef HAVE_MPI
     Opm::Well val1 = getFullWell();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Well)
 #endif
 }
@@ -1595,7 +1598,7 @@ BOOST_AUTO_TEST_CASE(GroupInjectionProperties)
                                               Opm::UDAValue(4.0),
                                               "test1", "test2", 5};
 
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Group::GroupInjectionProperties)
 #endif
 }
@@ -1613,7 +1616,7 @@ BOOST_AUTO_TEST_CASE(GroupProductionProperties)
                                                5.0, Opm::Group::GuideRateTarget::COMB,
                                                6.0, 7};
 
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Group::GroupProductionProperties)
 #endif
 }
@@ -1633,7 +1636,7 @@ BOOST_AUTO_TEST_CASE(Group)
                     injection,
                     Opm::Group::GroupProductionProperties());
 
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Group)
 #endif
 }
@@ -1643,7 +1646,7 @@ BOOST_AUTO_TEST_CASE(WList)
 {
 #ifdef HAVE_MPI
     Opm::WList val1({"test1", "test2", "test3"});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(WList)
 #endif
 }
@@ -1655,7 +1658,7 @@ BOOST_AUTO_TEST_CASE(WListManager)
     Opm::WList wl({"test1", "test2", "test3"});
     std::map<std::string,Opm::WList> data{{"test", wl}, {"test2", wl}};
     Opm::WListManager val1(data);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(WListManager)
 #endif
 }
@@ -1808,7 +1811,7 @@ BOOST_AUTO_TEST_CASE(GuideRateModel)
 {
 #ifdef HAVE_MPI
     Opm::GuideRateModel val1 = getGuideRateModel();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(GuideRateModel)
 #endif
 }
@@ -1818,7 +1821,7 @@ BOOST_AUTO_TEST_CASE(GuideRateConfigGroup)
 {
 #ifdef HAVE_MPI
     Opm::GuideRateConfig::GroupTarget val1 = getGuideRateConfigGroup();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(GuideRateConfig::GroupTarget)
 #endif
 }
@@ -1828,7 +1831,7 @@ BOOST_AUTO_TEST_CASE(GuideRateConfigWell)
 {
 #ifdef HAVE_MPI
     Opm::GuideRateConfig::WellTarget val1 = getGuideRateConfigWell();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(GuideRateConfig::WellTarget)
 #endif
 }
@@ -1841,7 +1844,7 @@ BOOST_AUTO_TEST_CASE(GuideRateConfig)
     Opm::GuideRateConfig val1(model,
                               {{"test1", getGuideRateConfigWell()}},
                               {{"test2", getGuideRateConfigGroup()}});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(GuideRateConfig)
 #endif
 }
@@ -1855,7 +1858,7 @@ BOOST_AUTO_TEST_CASE(GConSaleGroup)
                                       Opm::UDAValue(3.0),
                                       Opm::GConSale::MaxProcedure::PLUG,
                                       4.0, Opm::UnitSystem()};
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(GConSale::GCONSALEGroup)
 #endif
 }
@@ -1870,7 +1873,7 @@ BOOST_AUTO_TEST_CASE(GConSale)
                                        Opm::GConSale::MaxProcedure::PLUG,
                                        4.0, Opm::UnitSystem()};
     Opm::GConSale val1({{"test1", group}, {"test2", group}});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(GConSale)
 #endif
 }
@@ -1883,7 +1886,7 @@ BOOST_AUTO_TEST_CASE(GConSumpGroup)
                                       Opm::UDAValue(2.0),
                                       "test",
                                       3.0, Opm::UnitSystem()};
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(GConSump::GCONSUMPGroup)
 #endif
 }
@@ -1897,7 +1900,7 @@ BOOST_AUTO_TEST_CASE(GConSump)
                                        "test",
                                        3.0, Opm::UnitSystem()};
     Opm::GConSump val1({{"test1", group}, {"test2", group}});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(GConSump)
 #endif
 }
@@ -1913,7 +1916,7 @@ BOOST_AUTO_TEST_CASE(RFTConfig)
                         {{"test3", 2}},
                         {{"test1", {{{Opm::RFTConfig::RFT::TIMESTEP, 3}}, 4}}},
                         {{"test2", {{{Opm::RFTConfig::PLT::REPT, 5}}, 6}}});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(RFTConfig)
 #endif
 }
@@ -1929,7 +1932,7 @@ BOOST_AUTO_TEST_CASE(DeckItem)
                        {Opm::Dimension(7.0, 8.0)},
                        {Opm::Dimension(10.0, 11.0)});
 
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(DeckItem)
 #endif
 }
@@ -1939,7 +1942,7 @@ BOOST_AUTO_TEST_CASE(DeckRecord)
 {
 #ifdef HAVE_MPI
     Opm::DeckRecord val1 = getDeckRecord();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(DeckRecord)
 #endif
 }
@@ -1949,7 +1952,7 @@ BOOST_AUTO_TEST_CASE(Location)
 {
 #ifdef HAVE_MPI
     Opm::Location val1{"test", 1};
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Location)
 #endif
 }
@@ -1960,7 +1963,7 @@ BOOST_AUTO_TEST_CASE(DeckKeyword)
 #ifdef HAVE_MPI
     Opm::DeckKeyword val1("test", {"test",1},
                           {getDeckRecord(), getDeckRecord()}, true, false);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(DeckKeyword)
 #endif
 }
@@ -1974,7 +1977,7 @@ BOOST_AUTO_TEST_CASE(Deck)
                                      {getDeckRecord(), getDeckRecord()}, true, false)},
                    Opm::UnitSystem(), unitSys.get(),
                    "test2", "test3", 2);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Deck)
 #endif
 }
@@ -1984,7 +1987,7 @@ BOOST_AUTO_TEST_CASE(Tuning)
 {
 #ifdef HAVE_MPI
     Opm::Tuning val1 = getTuning();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Tuning)
 #endif
 }
@@ -1995,7 +1998,7 @@ BOOST_AUTO_TEST_CASE(ASTNode)
 #ifdef HAVE_MPI
     Opm::Action::ASTNode child(number, FuncType::field, "test3", {"test2"}, 2.0, {});
     Opm::Action::ASTNode val1(number, FuncType::field, "test1", {"test2"}, 1.0, {child});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Action::ASTNode)
 #endif
 }
@@ -2008,7 +2011,7 @@ BOOST_AUTO_TEST_CASE(AST)
     node.reset(new Opm::Action::ASTNode(number, FuncType::field,
                                         "test1", {"test2"}, 1.0, {}));
     Opm::Action::AST val1(node);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Action::AST)
 #endif
 }
@@ -2020,7 +2023,7 @@ BOOST_AUTO_TEST_CASE(Quantity)
     Opm::Action::Quantity val1;
     val1.quantity = "test1";
     val1.args = {"test2", "test3"};
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Action::Quantity)
 #endif
 }
@@ -2030,7 +2033,7 @@ BOOST_AUTO_TEST_CASE(Condition)
 {
 #ifdef HAVE_MPI
     Opm::Action::Condition val1 = getCondition();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Action::Condition)
 #endif
 }
@@ -2040,7 +2043,7 @@ BOOST_AUTO_TEST_CASE(ActionX)
 {
 #ifdef HAVE_MPI
     Opm::Action::ActionX val1 = getActionX();
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Action::ActionX)
 #endif
 }
@@ -2050,7 +2053,7 @@ BOOST_AUTO_TEST_CASE(Actions)
 {
 #ifdef HAVE_MPI
     Opm::Action::Actions val1({getActionX()});
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(Action::Actions)
 #endif
 }
@@ -2223,7 +2226,7 @@ BOOST_AUTO_TEST_CASE(WellBrineProperties)
 {
 #ifdef HAVE_MPI
     Opm::WellBrineProperties val1{1.0};
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(WellBrineProperties)
 #endif
 }
@@ -2320,7 +2323,7 @@ BOOST_AUTO_TEST_CASE(WellType)
 {
 #ifdef HAVE_MPI
     Opm::WellType val1(true, Opm::Phase::OIL);
-    auto val2 = PackUnpack(val1);
+    auto val2 = PackUnpack2(val1);
     DO_CHECKS(WellType)
 #endif
 }

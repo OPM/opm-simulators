@@ -25,23 +25,29 @@
 
 namespace Opm {
 
+/*! \brief Class for (de-)serializing and broadcasting data in parallel.
+ *!  \details Can be called on any class with a serializeOp member. Such classes
+ *!           are referred to as 'complex types' in the documentation.
+*/
+
 class EclMpiSerializer {
 public:
-    enum class Operation {
-        PACKSIZE,
-        PACK,
-        UNPACK
-    };
-
+    //! \brief Constructor.
+    //! \param comm The global communicator to broadcast using
     explicit EclMpiSerializer(Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> comm) :
         m_comm(comm)
     {}
 
+    //! \brief (De-)serialization for simple types.
+    //! \details The data handled by this depends on the underlying serialization used.
+    //!          Currently you can call this for scalars, and stl containers with scalars.
     template<class T>
     void operator()(const T& data)
     {
-        if constexpr (is_shared_ptr<T>::value) {
-            shared_ptr(data);
+        if constexpr (is_ptr<T>::value) {
+            ptr(data);
+        } else if constexpr (is_pair<T>::value) {
+            pair(data);
         } else {
           if (m_op == Operation::PACKSIZE)
               m_packSize += Mpi::packSize(data, m_comm);
@@ -52,7 +58,11 @@ public:
         }
     }
 
-    template<class T>
+    //! \brief Handler for vectors.
+    //! \tparam T Type for vector elements
+    //! \tparam complexType Whether or not T is a complex type
+    //! \param data The vector to (de-)serialize
+    template<class T, bool complexType = true>
     void vector(std::vector<T>& data)
     {
         auto handle = [&](auto& d)
@@ -60,8 +70,10 @@ public:
             for (auto& it : d) {
               if constexpr (is_pair<T>::value)
                   pair(it);
-              else if constexpr (is_shared_ptr<T>::value)
-                  shared_ptr(it);
+              else if constexpr (is_ptr<T>::value)
+                  ptr(it);
+              else if constexpr (!complexType)
+                  (*this)(it);
               else
                   it.serializeOp(*this);
             }
@@ -81,17 +93,28 @@ public:
         }
     }
 
-    template<template<class Key, class Data> class Map, class Key, class Data>
-    void map(Map<Key, Data>& data)
+    //! \brief Handler for maps.
+    //! \tparam Map map type
+    //! \tparam complexType Whether or not Data in map is a complex type
+    //! \param map The map to (de-)serialize
+    template<class Map, bool complexType = true>
+    void map(Map& data)
     {
+        using Key = typename Map::key_type;
+        using Data = typename Map::mapped_type;
+
         auto handle = [&](auto& d)
         {
             if constexpr (is_vector<Data>::value)
-                vector(d);
-            else if constexpr (is_shared_ptr<Data>::value)
-                shared_ptr(d);
-            else
+                this->template vector<typename Data::value_type,complexType>(d);
+            else if constexpr (is_ptr<Data>::value)
+                ptr(d);
+            else if constexpr (is_dynamic_state<Data>::value)
+                d.template serializeOp<EclMpiSerializer, complexType>(*this);
+            else if constexpr (complexType)
                 d.serializeOp(*this);
+            else
+                (*this)(d);
         };
 
         if (m_op == Operation::PACKSIZE) {
@@ -119,6 +142,9 @@ public:
         }
     }
 
+    //! \brief Call this to serialize data.
+    //! \tparam T Type of class to serialize
+    //! \param data Class to serialize
     template<class T>
     void pack(T& data)
     {
@@ -131,6 +157,9 @@ public:
         data.serializeOp(*this);
     }
 
+    //! \brief Call this to de-serialize data.
+    //! \tparam T Type of class to de-serialize
+    //! \param data Class to de-serialize
     template<class T>
     void unpack(T& data)
     {
@@ -139,13 +168,15 @@ public:
         data.serializeOp(*this);
     }
 
+    //! \brief Serialize and broadcast on root process, de-serialize on others.
+    //! \tparam T Type of class to broadcast
+    //! \param data Class to broadcast
     template<class T>
     void broadcast(T& data)
     {
         if (m_comm.size() == 1)
             return;
 
-#if HAVE_MPI
         if (m_comm.rank() == 0) {
             pack(data);
             m_comm.broadcast(&m_position, 1, 0);
@@ -156,20 +187,29 @@ public:
             m_comm.broadcast(m_buffer.data(), m_packSize, 0);
             unpack(data);
         }
-#endif
     }
 
+    //! \brief Returns current position in buffer.
     size_t position() const
     {
         return m_position;
     }
 
+    //! \brief Returns true if we are currently doing a serialization operation.
     bool isSerializing() const
     {
         return m_op != Operation::UNPACK;
     }
 
 protected:
+    //! \brief Enumeration of operations.
+    enum class Operation {
+        PACKSIZE, //!< Calculating serialization buffer size
+        PACK,     //!< Performing serialization
+        UNPACK    //!< Performing de-serialization
+    };
+
+    //! \brief Predicate for detecting pairs.
     template<class T>
     struct is_pair {
         constexpr static bool value = false;
@@ -180,6 +220,7 @@ protected:
         constexpr static bool value = true;
     };
 
+    //! \brief Predicate for detecting vectors.
     template<class T>
     struct is_vector {
         constexpr static bool value = false;
@@ -190,16 +231,36 @@ protected:
         constexpr static bool value = true;
     };
 
+    //! \brief Predicate for smart pointers.
     template<class T>
-    struct is_shared_ptr {
+    struct is_ptr {
         constexpr static bool value = false;
     };
 
     template<class T1>
-    struct is_shared_ptr<std::shared_ptr<T1>> {
+    struct is_ptr<std::shared_ptr<T1>> {
         constexpr static bool value = true;
     };
 
+    template<class T1>
+    struct is_ptr<std::unique_ptr<T1>> {
+        constexpr static bool value = true;
+    };
+
+    //! \brief Predicate for DynamicState.
+    template<class T>
+    struct is_dynamic_state {
+        constexpr static bool value = false;
+    };
+
+    template<class T1>
+    struct is_dynamic_state<DynamicState<T1>> {
+        constexpr static bool value = true;
+    };
+
+    //! \brief Handler for pairs.
+    //! \details If data is POD or a string, we pass it to the underlying serializer,
+    //!          if not we assume a complex type.
     template<class T1, class T2>
     void pair(const std::pair<T1,T2>& data)
     {
@@ -214,24 +275,27 @@ protected:
             const_cast<T2&>(data.second).serializeOp(*this);
     }
 
-    template<class T1>
-    void shared_ptr(const std::shared_ptr<T1>& data)
+    //! \brief Handler for smart pointers.
+    //! \details If data is POD or a string, we pass it to the underlying serializer,
+    //!          if not we assume a complex type.
+    template<template<class T> class PtrType, class T1>
+    void ptr(const PtrType<T1>& data)
     {
         bool value = data ? true : false;
         (*this)(value);
         if (m_op == Operation::UNPACK && value) {
-            const_cast<std::shared_ptr<T1>&>(data) = std::make_shared<T1>();
+            const_cast<PtrType<T1>&>(data).reset(new T1);
         }
         if (data)
             data->serializeOp(*this);
     }
 
-    Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> m_comm;
+    Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> m_comm; //!< Communicator to broadcast using
 
-    Operation m_op = Operation::PACKSIZE;
-    size_t m_packSize = 0;
-    int m_position = 0;
-    std::vector<char> m_buffer;
+    Operation m_op = Operation::PACKSIZE; //!< Current operation
+    size_t m_packSize = 0; //!< Required buffer size after PACKSIZE has been done
+    int m_position = 0; //!< Current position in buffer
+    std::vector<char> m_buffer; //!< Buffer for serialized data
 };
 
 }
