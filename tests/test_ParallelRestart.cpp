@@ -1413,7 +1413,7 @@ BOOST_AUTO_TEST_CASE(Connection)
                          2, 3, 4.0, 5.0, 6.0, 7.0, 8.0,
                          {9, 10, 11}, Opm::Connection::CTFKind::Defaulted,
                          12, 13.0, 14.0, true,
-                         15, 16, 17.0);
+                         16, 17.0);
     auto val2 = PackUnpack2(val1);
     DO_CHECKS(Connection)
 #endif
@@ -1475,7 +1475,7 @@ BOOST_AUTO_TEST_CASE(WellConnections)
                          2, 3, 4.0, 5.0, 6.0, 7.0, 8.0,
                          {9, 10, 11}, Opm::Connection::CTFKind::Defaulted,
                          12, 13.0, 14.0, true,
-                         15, 16, 17.0);
+                         16, 17.0);
     Opm::WellConnections val1(Opm::Connection::Order::TRACK, 1, 2, {conn, conn});
     auto val2 = PackUnpack2(val1);
     DO_CHECKS(WellConnections)
