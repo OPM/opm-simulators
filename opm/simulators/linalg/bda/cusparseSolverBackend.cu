@@ -256,33 +256,35 @@ namespace Opm
     } // end initialize()
 
     void cusparseSolverBackend::finalize() {
-        cudaFree(d_x);
-        cudaFree(d_b);
-        cudaFree(d_r);
-        cudaFree(d_rw);
-        cudaFree(d_p);
-        cudaFree(d_pw);
-        cudaFree(d_s);
-        cudaFree(d_t);
-        cudaFree(d_v);
-        cudaFree(d_mVals);
-        cudaFree(d_bVals);
-        cudaFree(d_bCols);
-        cudaFree(d_bRows);
-        cudaFree(d_buffer);
-        cusparseDestroyBsrilu02Info(info_M);
-        cusparseDestroyBsrsv2Info(info_L);
-        cusparseDestroyBsrsv2Info(info_U);
-        cusparseDestroyMatDescr(descr_B);
-        cusparseDestroyMatDescr(descr_M);
-        cusparseDestroyMatDescr(descr_L);
-        cusparseDestroyMatDescr(descr_U);
-        cusparseDestroy(cusparseHandle);
-        cublasDestroy(cublasHandle);
+        if (initialized) {
+            cudaFree(d_x);
+            cudaFree(d_b);
+            cudaFree(d_r);
+            cudaFree(d_rw);
+            cudaFree(d_p);
+            cudaFree(d_pw);
+            cudaFree(d_s);
+            cudaFree(d_t);
+            cudaFree(d_v);
+            cudaFree(d_mVals);
+            cudaFree(d_bVals);
+            cudaFree(d_bCols);
+            cudaFree(d_bRows);
+            cudaFree(d_buffer);
+            cusparseDestroyBsrilu02Info(info_M);
+            cusparseDestroyBsrsv2Info(info_L);
+            cusparseDestroyBsrsv2Info(info_U);
+            cusparseDestroyMatDescr(descr_B);
+            cusparseDestroyMatDescr(descr_M);
+            cusparseDestroyMatDescr(descr_L);
+            cusparseDestroyMatDescr(descr_U);
+            cusparseDestroy(cusparseHandle);
+            cublasDestroy(cublasHandle);
 #if COPY_ROW_BY_ROW
-        cudaFreeHost(vals_contiguous);
+            cudaFreeHost(vals_contiguous);
 #endif
-        cudaStreamDestroy(stream);
+            cudaStreamDestroy(stream);
+        }
     } // end finalize()
 
 

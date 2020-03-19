@@ -128,6 +128,7 @@ void BdaBridge::solve_system(BridgeMatrix *mat OPM_UNUSED, BridgeVector &b OPM_U
         if (dim != 3) {
             OpmLog::warning("cusparseSolver only accepts blocksize = 3 at this time, will use Dune for the remainder of the program");
             use_gpu = false;
+            return;
         }
 
         if (h_rows.capacity() == 0) {
