@@ -38,13 +38,7 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/ArrayDimChecker.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Action/ASTNode.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQActive.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQAssign.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQASTNode.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/WList.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
 
 //#include <opm/material/fluidsystems/BlackOilFluidSystemSimple.hpp>
 //#include <opm/material/fluidsystems/BlackOilFluidSystemSimple.hpp>
@@ -59,8 +53,8 @@
 #endif
 
 #if HAVE_MPI
-#include <ebos/eclmpiserializer.hh>
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
+#include <opm/simulators/utils/ParallelSerialization.hpp>
 #endif
 
 
@@ -406,10 +400,7 @@ int mainFlow(int argc, char** argv)
                 schedule.reset(new Opm::Schedule);
                 eclipseState.reset(new Opm::ParallelEclipseState);
             }
-            Opm::EclMpiSerializer ser(mpiHelper.getCollectiveCommunication());
-            ser.broadcast(*summaryConfig);
-            ser.broadcast(*eclipseState);
-            ser.broadcast(*schedule);
+            Opm::eclStateBroadcast(*eclipseState, *schedule, *summaryConfig);
 #endif
 
             Opm::checkConsistentArrayDimensions(*eclipseState, *schedule, parseContext, errorGuard);

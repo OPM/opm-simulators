@@ -46,7 +46,8 @@ if(CUDA_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/cusparseSolverBackend.cu)
 endif()
 if(MPI_FOUND)
-  list(APPEND MAIN_SOURCE_FILES opm/simulators/utils/ParallelEclipseState.cpp)
+  list(APPEND MAIN_SOURCE_FILES opm/simulators/utils/ParallelEclipseState.cpp
+                                opm/simulators/utils/ParallelSerialization.cpp)
 endif()
 
 # originally generated with the command:
