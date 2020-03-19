@@ -22,6 +22,7 @@
 
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/output/data/Wells.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
 

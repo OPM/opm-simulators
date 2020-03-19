@@ -26,6 +26,7 @@
 #include <opm/output/data/Cells.hpp>
 #include <opm/output/data/Solution.hpp>
 #include <opm/output/data/Wells.hpp>
+#include <opm/output/data/Groups.hpp>
 
 #include <opm/grid/common/p2pcommunicator.hh>
 #include <dune/grid/utility/persistentcontainer.hh>
@@ -546,6 +547,46 @@ public:
 
     };
 
+    class PackUnPackGroupData : public P2PCommunicatorType::DataHandleInterface
+    {
+        const Opm::data::Group& localGroupData_;
+        Opm::data::Group& globalGroupData_;
+
+    public:
+        PackUnPackGroupData(const Opm::data::Group& localGroupData,
+                           Opm::data::Group& globalGroupData,
+                           bool isIORank)
+            : localGroupData_(localGroupData)
+            , globalGroupData_(globalGroupData)
+        {
+            if (isIORank) {
+                MessageBufferType buffer;
+                pack(0, buffer);
+
+                // pass a dummy_link to satisfy virtual class
+                int dummyLink = -1;
+                unpack(dummyLink, buffer);
+            }
+        }
+
+        // pack all data associated with link
+        void pack(int link, MessageBufferType& buffer)
+        {
+            // we should only get one link
+            if (link != 0)
+                throw std::logic_error("link in method pack is not 0 as expected");
+
+            // write all group data
+           localGroupData_.write(buffer);
+        }
+
+        // unpack all data associated with link
+        void unpack(int /*link*/, MessageBufferType& buffer)
+        { globalGroupData_.read(buffer); }
+
+    };
+
+
     class PackUnPackBlockData : public P2PCommunicatorType::DataHandleInterface
     {
         const std::map<std::pair<std::string, int>, double>& localBlockData_;
@@ -607,11 +648,13 @@ public:
     // gather solution to rank 0 for EclipseWriter
     void collect(const Opm::data::Solution& localCellData,
                  const std::map<std::pair<std::string, int>, double>& localBlockData,
-                 const Opm::data::Wells& localWellData)
+                 const Opm::data::Wells& localWellData,
+                const Opm::data::Group& localGroupData)
     {
         globalCellData_ = {};
         globalBlockData_.clear();
         globalWellData_.clear();
+        globalGroupData_.clear();
 
         // index maps only have to be build when reordering is needed
         if(!needsReordering && !isParallel())
@@ -635,6 +678,12 @@ public:
                                globalWellData_,
                                isIORank());
 
+        PackUnPackGroupData
+            packUnpackGroupData(localGroupData,
+                               globalGroupData_,
+                               isIORank());
+
+
         PackUnPackBlockData
             packUnpackBlockData(localBlockData,
                                 globalBlockData_,
@@ -642,6 +691,7 @@ public:
 
         toIORankComm_.exchange(packUnpackCellData);
         toIORankComm_.exchange(packUnpackWellData);
+        toIORankComm_.exchange(packUnpackGroupData);
         toIORankComm_.exchange(packUnpackBlockData);
 
 
@@ -660,6 +710,9 @@ public:
 
     const Opm::data::Wells& globalWellData() const
     { return globalWellData_; }
+
+    const Opm::data::Group& globalGroupData() const
+    { return globalGroupData_; }
 
     bool isIORank() const
     { return toIORankComm_.rank() == ioRank; }
@@ -707,6 +760,7 @@ protected:
     Opm::data::Solution globalCellData_;
     std::map<std::pair<std::string, int>, double> globalBlockData_;
     Opm::data::Wells globalWellData_;
+    Opm::data::Group globalGroupData_;
     std::vector<int> localIdxToGlobalIdx_;
 };
 

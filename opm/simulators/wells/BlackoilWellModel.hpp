@@ -33,9 +33,12 @@
 #include <cassert>
 #include <tuple>
 
+#include <opm/parser/eclipse/EclipseState/Runspec.hpp>
+
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRate.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
 
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
@@ -182,6 +185,32 @@ namespace Opm {
             WellInterfacePtr well(const std::string& wellName) const;
 
             void initFromRestartFile(const RestartValue& restartValues);
+
+            Opm::data::Group groupData(const int reportStepIdx, Opm::Schedule& sched) const
+            {
+                Opm::data::Group dw;
+                for (const std::string gname :  sched.groupNames(reportStepIdx))  {
+                    const auto& grup = sched.getGroup(gname, reportStepIdx);
+                    const auto& grup_type = grup.getGroupType();
+                    Opm::data::currentGroupConstraints cgc;
+                    cgc.currentProdConstraint =  Opm::Group::ProductionCMode::NONE;
+                    cgc.currentGasInjectionConstraint = Opm::Group::InjectionCMode::NONE;
+                    cgc.currentWaterInjectionConstraint = Opm::Group::InjectionCMode::NONE;
+                    if (this->well_state_.hasProductionGroupControl(gname)) {
+                        cgc.currentProdConstraint = this->well_state_.currentProductionGroupControl(gname);
+                    }
+                    if ((grup_type == Opm::Group::GroupType::INJECTION) || (grup_type == Opm::Group::GroupType::MIXED))  {
+                        if (this->well_state_.hasInjectionGroupControl(Opm::Phase::WATER, gname)) {
+                            cgc.currentWaterInjectionConstraint = this->well_state_.currentInjectionGroupControl(Opm::Phase::WATER, gname);
+                        }
+                        if (this->well_state_.hasInjectionGroupControl(Opm::Phase::GAS, gname)) {
+                            cgc.currentGasInjectionConstraint = this->well_state_.currentInjectionGroupControl(Opm::Phase::GAS, gname);
+                        }
+                    }
+                    dw.emplace(gname, cgc);
+                }
+                return dw;
+            }
 
             Opm::data::Wells wellData() const
             { return well_state_.report(phase_usage_, Opm::UgGridHelpers::globalCell(grid())); }

@@ -32,6 +32,9 @@
 #include "ecloutputblackoilmodule.hh"
 
 #include <opm/models/blackoil/blackoilmodel.hh>
+
+#include <opm/simulators/wells/BlackoilWellModel.hpp>
+
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 #include <opm/models/io/baseoutputwriter.hh>
 #include <opm/models/parallel/tasklets.hh>
@@ -39,6 +42,7 @@
 #include <ebos/nncsorter.hpp>
 
 #include <opm/output/eclipse/EclipseIO.hpp>
+
 #include <opm/output/eclipse/RestartValue.hpp>
 #include <opm/output/eclipse/Summary.hpp>
 #include <opm/parser/eclipse/Units/UnitSystem.hpp>
@@ -257,6 +261,8 @@ public:
 
         Opm::data::Wells localWellData = simulator_.problem().wellModel().wellData();
 
+        Opm::data::Group localGroupData = simulator_.problem().wellModel().groupData(reportStepNum, simulator_.vanguard().schedule());
+
         const auto& gridView = simulator_.vanguard().gridView();
         int numElements = gridView.size(/*codim=*/0);
         bool log = collectToIORank_.isIORank();
@@ -273,7 +279,7 @@ public:
         }
 
         if (collectToIORank_.isParallel())
-            collectToIORank_.collect({}, eclOutputModule_.getBlockData(), localWellData);
+            collectToIORank_.collect({}, eclOutputModule_.getBlockData(), localWellData, localGroupData);
 
         std::map<std::string, double> miscSummaryData;
         std::map<std::string, std::vector<double>> regionData;
@@ -296,6 +302,7 @@ public:
                 miscSummaryData["TCPU"] = totalCpuTime;
 
             const Opm::data::Wells& wellData = collectToIORank_.isParallel() ? collectToIORank_.globalWellData() : localWellData;
+            const Opm::data::Group& groupData = collectToIORank_.isParallel() ? collectToIORank_.globalGroupData() : localGroupData;
 
             const std::map<std::pair<std::string, int>, double>& blockData
                 = collectToIORank_.isParallel()
@@ -308,6 +315,7 @@ public:
                          eclState,
                          schedule(),
                          wellData,
+                         groupData,
                          miscSummaryData,
                          regionData,
                          blockData);
@@ -333,13 +341,14 @@ public:
 
     void writeOutput(bool isSubStep)
     {
+        int reportStepNum = simulator_.episodeIndex() + 1;
         Scalar curTime = simulator_.time() + simulator_.timeStepSize();
         Scalar nextStepSize = simulator_.problem().nextTimeStepSize();
 
         // output using eclWriter if enabled
         Opm::data::Wells localWellData = simulator_.problem().wellModel().wellData();
+        Opm::data::Group localGroupData = simulator_.problem().wellModel().groupData(reportStepNum, simulator_.vanguard().schedule());
 
-        int reportStepNum = simulator_.episodeIndex() + 1;
         const auto& gridView = simulator_.vanguard().gridView();
         int numElements = gridView.size(/*codim=*/0);
         bool log = collectToIORank_.isIORank();
@@ -366,7 +375,7 @@ public:
             eclOutputModule_.addRftDataToWells(localWellData, reportStepNum);
 
         if (collectToIORank_.isParallel())
-            collectToIORank_.collect(localCellData, eclOutputModule_.getBlockData(), localWellData);
+            collectToIORank_.collect(localCellData, eclOutputModule_.getBlockData(), localWellData, localGroupData);
 
 
         if (collectToIORank_.isIORank()) {

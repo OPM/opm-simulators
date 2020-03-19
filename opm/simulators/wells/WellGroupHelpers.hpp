@@ -21,6 +21,8 @@
 #ifndef OPM_WELLGROUPHELPERS_HEADER_INCLUDED
 #define OPM_WELLGROUPHELPERS_HEADER_INCLUDED
 
+#include <opm/output/data/Groups.hpp>
+
 #include <vector>
 #include <opm/parser/eclipse/EclipseState/Schedule/ScheduleTypes.hpp>
 
@@ -128,7 +130,6 @@ namespace Opm {
             setGroupControl(group, schedule, Phase::GAS, reportStepIdx, /*injector*/true, wellState, ss);
         }
     }
-
 
     inline void accumulateGroupEfficiencyFactor(const Group& group, const Schedule& schedule, const int reportStepIdx, double& factor) {
         factor *= group.getGroupEfficiencyFactor();
