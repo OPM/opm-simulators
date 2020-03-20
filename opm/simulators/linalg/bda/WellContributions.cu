@@ -161,20 +161,21 @@ namespace Opm
     }
 
 
-    void WellContributions::addMatrix(int idx, int *colIndices, double *values, unsigned int val_size)
+    void WellContributions::addMatrix(MatrixType type, int *colIndices, double *values, unsigned int val_size)
     {
         if (!allocated) {
             OPM_THROW(std::logic_error,"Error cannot add wellcontribution before allocating memory in WellContributions");
         }
-        switch (idx) {
-        case 0:
+
+        switch (type) {
+        case MatrixType::C:
             cudaMemcpy(d_Cnnzs + num_blocks_so_far * dim * dim_wells, values, sizeof(double) * val_size * dim * dim_wells, cudaMemcpyHostToDevice);
             cudaMemcpy(d_Ccols + num_blocks_so_far, colIndices, sizeof(int) * val_size, cudaMemcpyHostToDevice);
             break;
-        case 1:
+        case MatrixType::D:
             cudaMemcpy(d_Dnnzs + num_wells_so_far * dim_wells * dim_wells, values, sizeof(double) * dim_wells * dim_wells, cudaMemcpyHostToDevice);
             break;
-        case 2:
+        case MatrixType::B:
             cudaMemcpy(d_Bnnzs + num_blocks_so_far * dim * dim_wells, values, sizeof(double) * val_size * dim * dim_wells, cudaMemcpyHostToDevice);
             cudaMemcpy(d_Bcols + num_blocks_so_far, colIndices, sizeof(int) * val_size, cudaMemcpyHostToDevice);
             val_pointers[num_wells_so_far] = num_blocks_so_far;
@@ -187,10 +188,8 @@ namespace Opm
             OPM_THROW(std::logic_error,"Error unsupported matrix ID for WellContributions::addMatrix()");
         }
         cudaCheckLastError("WellContributions::addMatrix() failed");
-        if(idx == 2){
+        if (MatrixType::B == type) {
             num_blocks_so_far += val_size;
-        }
-        if(idx == 2){
             num_wells_so_far++;
         }
     }

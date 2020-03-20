@@ -68,6 +68,14 @@ namespace Opm
         unsigned int *d_val_pointers = nullptr;
         cudaStream_t stream;
     public:
+
+        /// StandardWell has C, D and B matrices that need to be copied
+        enum class MatrixType {
+            C,
+            D,
+            B
+        };
+
         /// Set a cudaStream to be used
         /// \param[in] stream           the cudaStream that is used to launch the kernel in
         void setCudaStream(cudaStream_t stream);
@@ -97,11 +105,11 @@ namespace Opm
         void addNumBlocks(unsigned int numBlocks);
 
         /// Store a matrix in this object, in blocked csr format, can only be called after alloc() is called
-        /// \param[in] idx         indicate if C, D or B is sent
+        /// \param[in] type        indicate if C, D or B is sent
         /// \param[in] colIndices  columnindices of blocks in C or B, ignored for D
         /// \param[in] values      array of nonzeroes
         /// \param[in] val_size    number of blocks in C or B, ignored for D
-        void addMatrix(int idx, int *colIndices, double *values, unsigned int val_size);
+        void addMatrix(MatrixType type, int *colIndices, double *values, unsigned int val_size);
 
         /// Return the number of wells added to this object
         /// \return the number of wells added to this object

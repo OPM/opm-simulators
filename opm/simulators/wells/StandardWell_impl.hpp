@@ -2756,7 +2756,7 @@ namespace Opm
                 }
             }
         }
-        wellContribs.addMatrix(0, colIndices.data(), nnzValues.data(), duneC_.nonzeroes());
+        wellContribs.addMatrix(WellContributions::MatrixType::C, colIndices.data(), nnzValues.data(), duneC_.nonzeroes());
 
         // invDuneD
         colIndices.clear();
@@ -2768,7 +2768,7 @@ namespace Opm
                 nnzValues.emplace_back(invDuneD_[0][0][i][j]);
             }
         }
-        wellContribs.addMatrix(1, colIndices.data(), nnzValues.data(), 1);
+        wellContribs.addMatrix(WellContributions::MatrixType::D, colIndices.data(), nnzValues.data(), 1);
 
         // duneB
         colIndices.clear();
@@ -2782,7 +2782,7 @@ namespace Opm
                 }
             }
         }
-        wellContribs.addMatrix(2, colIndices.data(), nnzValues.data(), duneB_.nonzeroes());
+        wellContribs.addMatrix(WellContributions::MatrixType::B, colIndices.data(), nnzValues.data(), duneB_.nonzeroes());
     }
 
 
