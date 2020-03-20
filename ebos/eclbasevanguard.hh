@@ -244,8 +244,7 @@ public:
      * as the simulator vanguard object is alive.
      */
     static void setExternalDeck(Opm::Deck* deck)
-    { externalDeck_ = deck; }
-
+    { externalDeck_ = deck; externalDeckSet_ = true; }
     /*!
      * \brief Set the Opm::EclipseState object which ought to be used when the simulator
      *        vanguard is instantiated.
@@ -319,7 +318,7 @@ public:
         else
             errorGuard_ = externalErrorGuard_;
 
-        if (!externalDeck_) {
+        if (!externalDeck_ && !externalDeckSet_) {
             if (myRank == 0)
                 std::cout << "Reading the deck file '" << fileName << "'" << std::endl;
 
@@ -609,6 +608,7 @@ private:
     static Opm::ParseContext* externalParseContext_;
     static Opm::ErrorGuard* externalErrorGuard_;
     static Opm::Deck* externalDeck_;
+    static bool externalDeckSet_;
     static Opm::EclipseState* externalEclState_;
     static Opm::Schedule* externalEclSchedule_;
     static Opm::SummaryConfig* externalEclSummaryConfig_;
@@ -651,6 +651,9 @@ Opm::ErrorGuard* EclBaseVanguard<TypeTag>::externalErrorGuard_ = nullptr;
 
 template <class TypeTag>
 Opm::Deck* EclBaseVanguard<TypeTag>::externalDeck_ = nullptr;
+
+template <class TypeTag>
+bool EclBaseVanguard<TypeTag>::externalDeckSet_ = false;
 
 template <class TypeTag>
 Opm::EclipseState* EclBaseVanguard<TypeTag>::externalEclState_;
