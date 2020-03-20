@@ -47,6 +47,7 @@
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionAST.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/PyAction.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/Actions.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionX.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ASTNode.hpp>
@@ -2048,11 +2049,21 @@ BOOST_AUTO_TEST_CASE(ActionX)
 #endif
 }
 
+BOOST_AUTO_TEST_CASE(PyAction)
+{
+#ifdef HAVE_MPI
+    Opm::Action::PyAction val1("name", Opm::Action::PyAction::RunCount::single, "import opm");
+    auto val2 = PackUnpack2(val1);
+    DO_CHECKS(Action::PyAction)
+#endif
+}
+
+
 
 BOOST_AUTO_TEST_CASE(Actions)
 {
 #ifdef HAVE_MPI
-    Opm::Action::Actions val1({getActionX()});
+    Opm::Action::Actions val1({getActionX()}, {{"name", Opm::Action::PyAction::RunCount::unlimited, "import numpy"}});
     auto val2 = PackUnpack2(val1);
     DO_CHECKS(Action::Actions)
 #endif
@@ -2130,7 +2141,7 @@ BOOST_AUTO_TEST_CASE(Schedule)
                                      3.0, Opm::UnitSystem()};
     Opm::GConSump gcm({{"test1", grp}, {"test2", grp}});
 
-    Opm::Action::Actions acnts({getActionX()});
+    Opm::Action::Actions actions({getActionX()}, {{"pyaction", Opm::Action::PyAction::RunCount::single, "import os"}});
 
     Opm::RFTConfig rftc(getTimeMap(),
                         std::size_t{1729},
@@ -2159,7 +2170,7 @@ BOOST_AUTO_TEST_CASE(Schedule)
                        {{std::make_shared<Opm::GConSale>(gcs)}, 1},
                        {{std::make_shared<Opm::GConSump>(gcm)}, 1},
                        {{Opm::Well::ProducerCMode::CRAT}, 1},
-                       {{std::make_shared<Opm::Action::Actions>(acnts)}, 1},
+                       {{std::make_shared<Opm::Action::Actions>(actions)}, 1},
                        rftc,
                        {std::vector<int>{1}, 1},
                        getRestartConfig(),
