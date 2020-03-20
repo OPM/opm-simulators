@@ -29,7 +29,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/MissingFeatures.cpp
   opm/simulators/linalg/ExtractParallelGridInformationToISTL.cpp
   opm/simulators/linalg/setupPropertyTree.cpp
-  opm/simulators/linalg/bda/BdaBridge.cpp
   opm/simulators/timestepping/TimeStepControl.cpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.cpp
   opm/simulators/timestepping/SimulatorTimer.cpp
@@ -44,6 +43,8 @@ list (APPEND MAIN_SOURCE_FILES
 
 if(CUDA_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/cusparseSolverBackend.cu)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/WellContributions.cu)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BdaBridge.cpp)
 endif()
 if(MPI_FOUND)
   list(APPEND MAIN_SOURCE_FILES opm/simulators/utils/ParallelEclipseState.cpp
@@ -142,6 +143,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/BdaResult.hpp
   opm/simulators/linalg/bda/cuda_header.hpp
   opm/simulators/linalg/bda/cusparseSolverBackend.hpp
+  opm/simulators/linalg/bda/WellContributions.hpp
   opm/simulators/linalg/BlackoilAmg.hpp
   opm/simulators/linalg/BlackoilAmgCpr.hpp
   opm/simulators/linalg/amgcpr.hh

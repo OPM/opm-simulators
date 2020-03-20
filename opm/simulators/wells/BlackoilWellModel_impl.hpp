@@ -918,9 +918,32 @@ namespace Opm {
         }
     }
 
-
-
-
+#if HAVE_CUDA
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    getWellContributions(WellContributions& wellContribs) const
+    {
+        wellContribs.setBlockSize(StandardWell<TypeTag>::numEq, StandardWell<TypeTag>::numStaticWellEq);
+        for(unsigned int i = 0; i < well_container_.size(); i++){
+            auto& well = well_container_[i];
+            std::shared_ptr<StandardWell<TypeTag> > derived = std::dynamic_pointer_cast<StandardWell<TypeTag> >(well);
+            unsigned int numBlocks;
+            derived->getNumBlocks(numBlocks);
+            wellContribs.addNumBlocks(numBlocks);
+        }
+        wellContribs.alloc();
+        for(unsigned int i = 0; i < well_container_.size(); i++){
+            auto& well = well_container_[i];
+            std::shared_ptr<StandardWell<TypeTag> > derived = std::dynamic_pointer_cast<StandardWell<TypeTag> >(well);
+            if (derived) {
+                derived->addWellContribution(wellContribs);
+            } else {
+                OpmLog::warning("Warning only StandardWell is supported by WellContributions for GPU");
+            }
+        }
+    }
+#endif
 
     // Ax = Ax - alpha * C D^-1 B x
     template<typename TypeTag>

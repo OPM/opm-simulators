@@ -221,6 +221,11 @@ namespace Opm {
             // subtract B*inv(D)*C * x from A*x
             void apply(const BVector& x, BVector& Ax) const;
 
+#if HAVE_CUDA
+            // accumulate the contributions of all Wells in the WellContributions object
+            void getWellContributions(WellContributions& x) const;
+#endif
+
             // apply well model with scaling of alpha
             void applyScaleAdd(const Scalar alpha, const BVector& x, BVector& Ax) const;
 

@@ -2735,8 +2735,65 @@ namespace Opm
         duneC_.mmtv(invDrw_, r);
     }
 
+#if HAVE_CUDA
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    addWellContribution(WellContributions& wellContribs) const
+    {
+        std::vector<int> colIndices;
+        std::vector<double> nnzValues;
+        colIndices.reserve(duneB_.nonzeroes());
+        nnzValues.reserve(duneB_.nonzeroes()*numStaticWellEq * numEq);
+
+        // duneC
+        for ( auto colC = duneC_[0].begin(), endC = duneC_[0].end(); colC != endC; ++colC )
+        {
+            colIndices.emplace_back(colC.index());
+            for (int i = 0; i < numStaticWellEq; ++i) {
+                for (int j = 0; j < numEq; ++j) {
+                    nnzValues.emplace_back((*colC)[i][j]);
+                }
+            }
+        }
+        wellContribs.addMatrix(WellContributions::MatrixType::C, colIndices.data(), nnzValues.data(), duneC_.nonzeroes());
+
+        // invDuneD
+        colIndices.clear();
+        nnzValues.clear();
+        colIndices.emplace_back(0);
+        for (int i = 0; i < numStaticWellEq; ++i)
+        {
+            for (int j = 0; j < numStaticWellEq; ++j) {
+                nnzValues.emplace_back(invDuneD_[0][0][i][j]);
+            }
+        }
+        wellContribs.addMatrix(WellContributions::MatrixType::D, colIndices.data(), nnzValues.data(), 1);
+
+        // duneB
+        colIndices.clear();
+        nnzValues.clear();
+        for ( auto colB = duneB_[0].begin(), endB = duneB_[0].end(); colB != endB; ++colB )
+        {
+            colIndices.emplace_back(colB.index());
+            for (int i = 0; i < numStaticWellEq; ++i) {
+                for (int j = 0; j < numEq; ++j) {
+                    nnzValues.emplace_back((*colB)[i][j]);
+                }
+            }
+        }
+        wellContribs.addMatrix(WellContributions::MatrixType::B, colIndices.data(), nnzValues.data(), duneB_.nonzeroes());
+    }
 
 
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    getNumBlocks(unsigned int& numBlocks) const
+    {
+        numBlocks = duneB_.nonzeroes();
+    }
+#endif
 
 
     template<typename TypeTag>

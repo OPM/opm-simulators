@@ -45,7 +45,9 @@
 
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
+#if HAVE_CUDA
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
+#endif
 
 BEGIN_PROPERTIES
 
@@ -338,15 +340,16 @@ protected:
               converged_(false)
         {
             parameters_.template init<TypeTag>();
+            const auto& gridForConn = simulator_.vanguard().grid();
 #if HAVE_CUDA
-            const bool use_gpu = EWOMS_GET_PARAM(TypeTag, bool, UseGpu);
+            bool use_gpu = EWOMS_GET_PARAM(TypeTag, bool, UseGpu);
+            if (gridForConn.comm().size() > 1 && use_gpu) {
+                OpmLog::warning("Warning cannot use GPU with MPI, GPU is disabled");
+                use_gpu = false;
+            }
             const int maxit = EWOMS_GET_PARAM(TypeTag, int, LinearSolverMaxIter);
             const double tolerance = EWOMS_GET_PARAM(TypeTag, double, LinearSolverReduction);
-            const bool matrix_add_well_contributions = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
             const int linear_solver_verbosity = parameters_.linear_solver_verbosity_;
-            if (use_gpu && !matrix_add_well_contributions) {
-                OPM_THROW(std::logic_error,"Error cannot use GPU solver if command line parameter --matrix-add-well-contributions is false, because the GPU solver performs a standard bicgstab");
-            }
             bdaBridge.reset(new BdaBridge(use_gpu, linear_solver_verbosity, maxit, tolerance));
 #else
             const bool use_gpu = EWOMS_GET_PARAM(TypeTag, bool, UseGpu);
@@ -355,7 +358,6 @@ protected:
             }
 #endif
             extractParallelGridInformationToISTL(simulator_.vanguard().grid(), parallelInformation_);
-            const auto& gridForConn = simulator_.vanguard().grid();
             const auto wellsForConn = simulator_.vanguard().schedule().getWellsatEnd();
             const bool useWellConn = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
 
@@ -569,22 +571,33 @@ protected:
 #endif
             {
                 // tries to solve linear system
-                // solve_system() does nothing if Dune is selected
 #if HAVE_CUDA
-                bdaBridge->solve_system(matrix_.get(), istlb, result);
-
-                if (result.converged) {
-                    // get result vector x from non-Dune backend, iff solve was successful
-                    bdaBridge->get_result(x);
-                } else {
-                    // CPU fallback, or default case for Dune
-                    const bool use_gpu = EWOMS_GET_PARAM(TypeTag, bool, UseGpu);
-                    if (use_gpu) {
-                        OpmLog::warning("cusparseSolver did not converge, now trying Dune to solve current linear system...");
+                bool use_gpu = bdaBridge->getUseGpu();
+                if (use_gpu) {
+                    WellContributions wellContribs;
+                    const bool addWellContribs = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
+                    if (!addWellContribs) {
+                        simulator_.problem().wellModel().getWellContributions(wellContribs);
                     }
+                    bdaBridge->solve_system(matrix_.get(), istlb, wellContribs, result);
+                    if (result.converged) {
+                        // get result vector x from non-Dune backend, iff solve was successful
+                        bdaBridge->get_result(x);
+                    } else {
+                        // CPU fallback
+                        use_gpu = bdaBridge->getUseGpu();  // update value, BdaBridge might have disabled cusparseSolver
+                        if (use_gpu) {
+                            OpmLog::warning("cusparseSolver did not converge, now trying Dune to solve current linear system...");
+                        }
+
+                        // call Dune
+                        auto precond = constructPrecond(linearOperator, parallelInformation_arg);
+                        solve(linearOperator, x, istlb, *sp, *precond, result);
+                    }
+                } else { // gpu is not selected or disabled
                     auto precond = constructPrecond(linearOperator, parallelInformation_arg);
                     solve(linearOperator, x, istlb, *sp, *precond, result);
-                } // end Dune call
+                }
 #else
                 // Construct preconditioner.
                 auto precond = constructPrecond(linearOperator, parallelInformation_arg);

@@ -21,14 +21,19 @@
 #define BDABRIDGE_HEADER_INCLUDED
 
 #include <config.h>
+
+#if ! HAVE_CUDA
+  #error "This file should only be included if CUDA is found"
+#endif
+
 #include "dune/istl/solver.hh" // for struct InverseOperatorResult
 
 #include "dune/istl/bcrsmatrix.hh"
 #include <opm/simulators/linalg/matrixblock.hh>
 
-#if HAVE_CUDA
+#include <opm/simulators/linalg/bda/WellContributions.hpp>
+
 #include <opm/simulators/linalg/bda/cusparseSolverBackend.hpp>
-#endif
 
 namespace Opm
 {
@@ -40,10 +45,8 @@ typedef Dune::InverseOperatorResult InverseOperatorResult;
 class BdaBridge
 {
 private:
-#if HAVE_CUDA
     std::unique_ptr<cusparseSolverBackend> backend;
     bool use_gpu;
-#endif
 
 public:
     /// Construct a BdaBridge
@@ -55,16 +58,23 @@ public:
 
 
     /// Solve linear system, A*x = b
-    /// \param[in] mat     matrix A, should be of type Dune::BCRSMatrix
-    /// \param[in] b       vector b, should be of type Dune::BlockVector
-    /// \param[in] result  summary of solver result
+    /// \param[in] mat          matrix A, should be of type Dune::BCRSMatrix
+    /// \param[in] b            vector b, should be of type Dune::BlockVector
+    /// \param[in] wellContribs contains all WellContributions, to apply them separately, instead of adding them to matrix A
+    /// \param[inout] result    summary of solver result
     template <class BridgeMatrix, class BridgeVector>
-    void solve_system(BridgeMatrix *mat, BridgeVector &b, InverseOperatorResult &result);
+    void solve_system(BridgeMatrix *mat, BridgeVector &b, WellContributions& wellContribs, InverseOperatorResult &result);
 
     /// Get the resulting x vector
     /// \param[inout] x    vector x, should be of type Dune::BlockVector
     template <class BridgeVector>
     void get_result(BridgeVector &x);
+
+    /// Return whether the BdaBridge will use the GPU or not
+    /// return whether the BdaBridge will use the GPU or not
+    bool getUseGpu(){
+        return use_gpu;
+    }
 
 }; // end class BdaBridge
 
