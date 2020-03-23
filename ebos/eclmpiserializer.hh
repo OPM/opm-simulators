@@ -242,8 +242,8 @@ protected:
         constexpr static bool value = true;
     };
 
-    template<class T1>
-    struct is_ptr<std::unique_ptr<T1>> {
+    template<class T1, class Deleter>
+    struct is_ptr<std::unique_ptr<T1, Deleter>> {
         constexpr static bool value = true;
     };
 
@@ -278,13 +278,14 @@ protected:
     //! \brief Handler for smart pointers.
     //! \details If data is POD or a string, we pass it to the underlying serializer,
     //!          if not we assume a complex type.
-    template<template<class T> class PtrType, class T1>
-    void ptr(const PtrType<T1>& data)
+    template<class PtrType>
+    void ptr(const PtrType& data)
     {
+        using T1 = typename PtrType::element_type;
         bool value = data ? true : false;
         (*this)(value);
         if (m_op == Operation::UNPACK && value) {
-            const_cast<PtrType<T1>&>(data).reset(new T1);
+            const_cast<PtrType&>(data).reset(new T1);
         }
         if (data)
             data->serializeOp(*this);
