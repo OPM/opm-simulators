@@ -85,12 +85,12 @@ public:
                 assert(entry.index() == entryCoarse.index());
                 double matrix_el = 0;
                 if (transpose) {
-                    auto bw = weights_[entry.index()];
+                    const auto& bw = weights_[entry.index()];
                     for (size_t i = 0; i < bw.size(); ++i) {
                         matrix_el += (*entry)[pressure_var_index_][i] * bw[i];
                     }
                 } else {
-                    auto bw = weights_[row.index()];
+                    const auto& bw = weights_[row.index()];
                     for (size_t i = 0; i < bw.size(); ++i) {
                         matrix_el += (*entry)[i][pressure_var_index_] * bw[i];
                     }
@@ -109,7 +109,7 @@ public:
         auto end = fine.end(), begin = fine.begin();
 
         for (auto block = begin; block != end; ++block) {
-            auto bw = weights_[block.index()];
+            const auto& bw = weights_[block.index()];
             double rhs_el = 0.0;
             if (transpose) {
                 rhs_el = (*block)[pressure_var_index_];
@@ -130,7 +130,7 @@ public:
 
         for (auto block = begin; block != end; ++block) {
             if (transpose) {
-                auto bw = weights_[block.index()];
+                const auto& bw = weights_[block.index()];
                 for (size_t i = 0; i < block->size(); ++i) {
                     (*block)[i] = this->lhs_[block - begin] * bw[i];
                 }
