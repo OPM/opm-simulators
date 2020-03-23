@@ -28,7 +28,7 @@
 #ifndef EWOMS_ECL_TRACER_MODEL_HH
 #define EWOMS_ECL_TRACER_MODEL_HH
 
-#include "tracervdtable.hh"
+#include <opm/parser/eclipse/EclipseState/Tables/TracerVdTable.hpp>
 
 #include <opm/models/blackoil/blackoilmodel.hh>
 
