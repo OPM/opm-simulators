@@ -242,8 +242,8 @@ protected:
         constexpr static bool value = true;
     };
 
-    template<class T1>
-    struct is_ptr<std::unique_ptr<T1>> {
+    template<class T1, class Deleter>
+    struct is_ptr<std::unique_ptr<T1, Deleter>> {
         constexpr static bool value = true;
     };
 
