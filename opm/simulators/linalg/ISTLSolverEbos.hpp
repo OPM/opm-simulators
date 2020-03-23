@@ -235,7 +235,7 @@ public:
 #endif
     }
     
-    virtual void apply( const X& x, Y& y ) const
+    virtual void apply( const X& x, Y& y ) const override
     {
         for (auto row = A_.begin(); row.index() < interiorSize_; ++row)
         {
@@ -252,7 +252,7 @@ public:
     }
 
     // y += \alpha * A * x
-    virtual void applyscaleadd (field_type alpha, const X& x, Y& y) const
+    virtual void applyscaleadd (field_type alpha, const X& x, Y& y) const override
     {
         for (auto row = A_.begin(); row.index() < interiorSize_; ++row)
         {
@@ -266,7 +266,7 @@ public:
         ghostLastProject( y );
     }
 
-    virtual const matrix_type& getmat() const { return A_for_precond_; }
+    virtual const matrix_type& getmat() const override { return A_for_precond_; }
 
     communication_type* comm()
     {
