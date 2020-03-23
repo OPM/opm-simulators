@@ -83,6 +83,47 @@ namespace Amg
         return weights;
     }
 
+    template<class Vector, class GridView, class ElementContext, class Model>
+    void getTrueImpesWeights(int pressureVarIndex, Vector& weights, const GridView& gridView,
+                             ElementContext& elemCtx, const Model& model, std::size_t threadId)
+    {
+        using VectorBlockType = typename Vector::block_type;
+        using Matrix = typename std::decay_t<decltype(model.linearizer().jacobian())>;
+        using MatrixBlockType = typename Matrix::MatrixBlock;
+        constexpr int numEq = VectorBlockType::size();
+        using Evaluation = typename std::decay_t<decltype(model.localLinearizer(threadId).localResidual().residual(0))>
+            ::block_type;
+        VectorBlockType rhs(0.0);
+        rhs[pressureVarIndex] = 1.0;
+        int index = 0;
+        auto elemIt = gridView.template begin</*codim=*/0>();
+        const auto& elemEndIt = gridView.template end</*codim=*/0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            elemCtx.updatePrimaryStencil(*elemIt);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+            Dune::FieldVector<Evaluation, numEq> storage;
+            model.localLinearizer(threadId).localResidual().computeStorage(storage,elemCtx,/*spaceIdx=*/0, /*timeIdx=*/0);
+            auto extrusionFactor = elemCtx.intensiveQuantities(0, /*timeIdx=*/0).extrusionFactor();
+            auto scvVolume = elemCtx.stencil(/*timeIdx=*/0).subControlVolume(0).volume() * extrusionFactor;
+            auto storage_scale = scvVolume / elemCtx.simulator().timeStepSize();
+            MatrixBlockType block;
+            double pressure_scale = 50e5;
+            for (int ii = 0; ii < numEq; ++ii) {
+                for (int jj = 0; jj < numEq; ++jj) {
+                    block[ii][jj] = storage[ii].derivative(jj)/storage_scale;
+                    if (jj == pressureVarIndex) {
+                        block[ii][jj] *= pressure_scale;
+                    }
+                }
+            }
+            VectorBlockType bweights;
+            MatrixBlockType block_transpose = Details::transposeDenseMatrix(block);
+            block_transpose.solve(bweights, rhs);
+            bweights /= 1000.0; // given normal densities this scales weights to about 1.
+            weights[index] = bweights;
+            ++index;
+        }
+    }
 } // namespace Amg
 
 } // namespace Opm
