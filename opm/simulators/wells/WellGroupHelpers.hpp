@@ -900,11 +900,11 @@ namespace Opm {
             x = 0.0;
             return x;
         }
-        template <>
-        static double zero<double>()
-        {
-            return 0.0;
-        }
+        //template <>
+        //static double zero<double>()
+        //{
+        //    return 0.0;
+        //}
         template <typename RateVec>
         auto calcModeRateFromRates(const RateVec& rates) const
         {
