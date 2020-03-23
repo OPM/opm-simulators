@@ -33,6 +33,7 @@
 #include <opm/parser/eclipse/EclipseState/Aquifetp.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
+#include <opm/parser/eclipse/EclipseState/TracerConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/Fault.hpp>
@@ -426,6 +427,7 @@ TEST_FOR_TYPE(TableManager)
 TEST_FOR_TYPE(TableSchema)
 TEST_FOR_TYPE(ThresholdPressure)
 TEST_FOR_TYPE(TimeMap)
+TEST_FOR_TYPE(TracerConfig)
 TEST_FOR_TYPE(TransMult)
 TEST_FOR_TYPE(Tuning)
 TEST_FOR_TYPE(UDAValue)

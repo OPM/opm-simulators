@@ -95,15 +95,10 @@ public:
      */
     void init()
     {
-        const Opm::Deck& deck = simulator_.vanguard().deck();
+        const auto& tracers = simulator_.vanguard().eclState().tracer();
         const auto& comm = simulator_.gridView().comm();
 
-        bool has;
-        if (comm.rank() == 0)
-            has = deck.hasKeyword("TRACERS");
-        comm.broadcast(&has, 1, 0);
-
-        if (!has)
+        if (tracers.size() == 0)
             return; // tracer treatment is supposed to be disabled
 
         if (!EWOMS_GET_PARAM(TypeTag, bool, EnableTracerModel)) {
@@ -115,19 +110,16 @@ public:
             return; // Tracer transport must be enabled by the user
         }
 
-        if (!deck.hasKeyword("TRACER"))
-            throw std::runtime_error("The deck does not contain the TRACER keyword");
-
-        if (simulator_.gridView().comm().size() > 1) {
+        if (comm.size() > 1) {
             tracerNames_.resize(0);
-            if (simulator_.gridView().comm().rank() == 0)
+            if (comm.rank() == 0)
                 std::cout << "Warning: The tracer model currently does not work for parallel runs\n"
                           << std::flush;
             return;
         }
 
         // retrieve the number of tracers from the deck
-        const int numTracers = deck.getKeyword("TRACER").size();
+        const size_t numTracers = tracers.size();
         tracerNames_.resize(numTracers);
         tracerConcentration_.resize(numTracers);
         storageOfTimeIndex1_.resize(numTracers);
@@ -135,60 +127,44 @@ public:
         // the phase where the tracer is
         tracerPhaseIdx_.resize(numTracers);
         size_t numGridDof =  simulator_.model().numGridDof();
-        for (int tracerIdx = 0;  tracerIdx < numTracers; ++tracerIdx) {
-            const auto& tracerRecord = deck.getKeyword("TRACER").getRecord(tracerIdx);
-            tracerNames_[tracerIdx] = tracerRecord.getItem("NAME").template get<std::string>(0);
-            const std::string& fluidName = tracerRecord.getItem("FLUID").template get<std::string>(0);
-            if (fluidName == "WAT")
+        size_t tracerIdx = 0;
+        for (const auto& tracer : tracers) {
+            tracerNames_[tracerIdx] = tracer.name;
+            if (tracer.phase == Phase::WATER)
                 tracerPhaseIdx_[tracerIdx] = waterPhaseIdx;
-            else if (fluidName == "OIL")
+            else if (tracer.phase == Phase::OIL)
                 tracerPhaseIdx_[tracerIdx] = oilPhaseIdx;
-            else if (fluidName == "GAS")
+            else if (tracer.phase == Phase::GAS)
                 tracerPhaseIdx_[tracerIdx] = gasPhaseIdx;
-            else
-                throw std::invalid_argument("Tracer: invalid fluid name "
-                                            +fluidName+" for "+tracerNames_[tracerIdx]);
 
             tracerConcentration_[tracerIdx].resize(numGridDof);
             storageOfTimeIndex1_[tracerIdx].resize(numGridDof);
-            std::string tmp = "TVDPF" +tracerNames_[tracerIdx];
 
 
             //TBLK keyword
-            if (deck.hasKeyword("TBLKF" +tracerNames_[tracerIdx])){
+            if (!tracer.concentration.empty()){
                 const auto& cartMapper = simulator_.vanguard().cartesianIndexMapper();
-                const auto& tblkData =
-                        deck.getKeyword("TBLKF"
-                                        +tracerNames_
-                                        [tracerIdx]).getRecord(0).getItem(0).getSIDoubleData();
-                int tblkDatasize = tblkData.size();
+                int tblkDatasize = tracer.concentration.size();
                 if (tblkDatasize < simulator_.vanguard().cartesianSize()){
-                    throw std::runtime_error("Uninitialized tracer concentration (TBLKF) for tracer "
-                                             + tracerName(tracerIdx));
+                    throw std::runtime_error("Wrong size of TBLK for" + tracer.name);
                 }
                 for (size_t globalDofIdx = 0; globalDofIdx < numGridDof; ++globalDofIdx){
                     int cartDofIdx = cartMapper.cartesianIndex(globalDofIdx);
-                    tracerConcentration_[tracerIdx][globalDofIdx] = tblkData[cartDofIdx];
+                    tracerConcentration_[tracerIdx][globalDofIdx] = tracer.concentration[cartDofIdx];
                 }
             }
             //TVDPF keyword
-            else if (deck.hasKeyword(tmp)){
-                TracerVdTable dtable(deck.getKeyword(tmp).getRecord(0).getItem(0));
+            else {
                 const auto& eclGrid = simulator_.vanguard().eclState().getInputGrid();
                 const auto& cartMapper = simulator_.vanguard().cartesianIndexMapper();
 
                 for (size_t globalDofIdx = 0; globalDofIdx < numGridDof; ++globalDofIdx){
                     int cartDofIdx = cartMapper.cartesianIndex(globalDofIdx);
                     const auto& center = eclGrid.getCellCenter(cartDofIdx);
-                    tracerConcentration_[tracerIdx][globalDofIdx]
-                            = dtable.evaluate("TRACER_CONCENTRATION", center[2]);
+                    tracerConcentration_[tracerIdx][globalDofIdx] = tracer.tvdpf.evaluate("TRACER_CONCENTRATION", center[2]);
                 }
             }
-            else {
-                throw std::runtime_error("Uninitialized tracer concentration for tracer "
-                                         + tracerName(tracerIdx));
-            }
-
+            ++tracerIdx;
         }
 
         // initial tracer concentration
