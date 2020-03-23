@@ -48,7 +48,7 @@ if(NOT CMAKE_DISABLE_FIND_PACKAGE_CUDA AND
   # Hence we call it unconditionally
   # The WellContributions kernel uses __shfl_down_sync, which was introduced in CUDA 9.0
   find_package(CUDA)
-  if(CUDA_VERSION VERSION_LESS "9.7")
+  if(CUDA_VERSION VERSION_LESS "9.0")
     set(CUDA_FOUND OFF)
     message(WARNING "Deactivating CUDA as we require version 9.0 or newer."
       " Found only CUDA version ${CUDA_VERSION}.")
