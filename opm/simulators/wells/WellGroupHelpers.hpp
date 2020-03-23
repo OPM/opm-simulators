@@ -420,6 +420,29 @@ namespace Opm {
         wellState.setCurrentInjectionREINRates(group.name(), rein);
     }
 
+	inline GuideRate::RateVector getRateVector(const WellState& well_state, const PhaseUsage& pu, const std::string& name) {
+
+            const auto& end = well_state.wellMap().end();
+            const auto& it = well_state.wellMap().find( name);
+            if (it == end)  // the well is not found
+                assert(false);
+
+            int well_index = it->second[0];
+	    int np = well_state.numPhases();
+            double oilRate = 0.0;
+            if (pu.phase_used[BlackoilPhases::Liquid])
+                oilRate = well_state.wellRates()[ well_index*np + pu.phase_pos[BlackoilPhases::Liquid]];
+        
+            double gasRate = 0.0;
+            if (pu.phase_used[BlackoilPhases::Vapour])
+                gasRate = well_state.wellRates()[ well_index*np + pu.phase_pos[BlackoilPhases::Vapour]];
+
+            double waterRate = 0.0;
+            if (pu.phase_used[BlackoilPhases::Aqua])
+                waterRate = well_state.wellRates()[well_index*np + pu.phase_pos[BlackoilPhases::Aqua]];
+
+	    return GuideRate::RateVector{oilRate, gasRate, waterRate};
+	}
 
 
     inline double getGuideRate(const std::string& name,
@@ -427,10 +450,11 @@ namespace Opm {
                                const WellStateFullyImplicitBlackoil& wellState,
                                const int reportStepIdx,
                                const GuideRate* guideRate,
-                               const GuideRateModel::Target target)
+                               const GuideRateModel::Target target,
+			       const PhaseUsage& pu)
     {
         if (schedule.hasWell(name, reportStepIdx) || guideRate->has(name)) {
-            return guideRate->get(name, target);
+            return guideRate->get(name, target, getRateVector(wellState, pu, name));
         }
 
         double totalGuideRate = 0.0;
@@ -440,7 +464,7 @@ namespace Opm {
             const Group::ProductionCMode& currentGroupControl = wellState.currentProductionGroupControl(groupName);
             if (currentGroupControl == Group::ProductionCMode::FLD || currentGroupControl == Group::ProductionCMode::NONE) {
                 // accumulate from sub wells/groups
-                totalGuideRate += getGuideRate(groupName, schedule, wellState, reportStepIdx, guideRate, target);
+                totalGuideRate += getGuideRate(groupName, schedule, wellState, reportStepIdx, guideRate, target, pu);
             }
         }
 
@@ -457,7 +481,7 @@ namespace Opm {
             if (!wellState.isProductionGrup(wellName))
                 continue;
 
-            totalGuideRate += guideRate->get(wellName, target);
+            totalGuideRate += guideRate->get(wellName, target, getRateVector(wellState, pu, wellName));
         }
         return totalGuideRate;
    }
@@ -469,10 +493,11 @@ namespace Opm {
                                   const int reportStepIdx,
                                   const GuideRate* guideRate,
                                   const GuideRateModel::Target target,
-                                  const Phase& injectionPhase)
+                                  const Phase& injectionPhase,
+                                  const PhaseUsage& pu)
     {
         if (schedule.hasWell(name, reportStepIdx)) {
-            return guideRate->get(name, target);
+            return guideRate->get(name, target, getRateVector(wellState, pu, name));
         }
 
         double totalGuideRate = 0.0;
@@ -482,7 +507,7 @@ namespace Opm {
             const Group::InjectionCMode& currentGroupControl = wellState.currentInjectionGroupControl(injectionPhase, groupName);
             if (currentGroupControl == Group::InjectionCMode::FLD || currentGroupControl == Group::InjectionCMode::NONE) {
                 // accumulate from sub wells/groups
-                totalGuideRate += getGuideRateInj(groupName, schedule, wellState, reportStepIdx, guideRate, target, injectionPhase);
+                totalGuideRate += getGuideRateInj(groupName, schedule, wellState, reportStepIdx, guideRate, target, injectionPhase, pu);
             }
         }
 
@@ -499,7 +524,7 @@ namespace Opm {
             if (!wellState.isInjectionGrup(wellName))
                 continue;
 
-            totalGuideRate += guideRate->get(wellName, target);
+            totalGuideRate += guideRate->get(wellName, target, getRateVector(wellState, pu, wellName));
         }
         return totalGuideRate;
     }
@@ -540,12 +565,14 @@ namespace Opm {
                            const WellStateFullyImplicitBlackoil& well_state,
                            const int report_step,
                            const GuideRate* guide_rate,
-                           const GuideRateModel::Target target)
+                           const GuideRateModel::Target target,
+                           const PhaseUsage& pu)
             : schedule_(schedule)
             , well_state_(well_state)
             , report_step_(report_step)
             , guide_rate_(guide_rate)
             , target_(target)
+            , pu_(pu)
         {
         }
         double fraction(const std::string& name,
@@ -604,11 +631,11 @@ namespace Opm {
         double guideRate(const std::string& name, const std::string& always_included_child)
         {
             if (schedule_.hasWell(name, report_step_)) {
-                return guide_rate_->get(name, target_);
+                return guide_rate_->get(name, target_, getRateVector(well_state_, pu_, name));
             } else {
                 if (groupControlledWells(name, always_included_child) > 0) {
                     if (guide_rate_->has(name)) {
-                        return guide_rate_->get(name, target_);
+                        return guide_rate_->get(name, target_, getGroupRateVector(name));
                     } else {
                         // We are a group, with default guide rate.
                         // Compute guide rate by accumulating our children's guide rates.
@@ -647,11 +674,33 @@ namespace Opm {
             */
             return ::Opm::wellGroupHelpers::groupControlledWells(schedule_, well_state_, report_step_, group_name, always_included_child);
         }
+
+	inline GuideRate::RateVector getGroupRateVector(const std::string& group_name) {
+
+#warning Does not work in parallell
+            const Group& group = schedule_.getGroup(group_name, report_step_);
+            double oilRate = 0.0;
+            if (pu_.phase_used[BlackoilPhases::Liquid])
+		oilRate = sumWellPhaseRates(well_state_.wellRates(), group, schedule_, well_state_, report_step_, pu_.phase_pos[BlackoilPhases::Liquid], /*isInjector*/ false);
+        
+            double gasRate = 0.0;
+            if (pu_.phase_used[BlackoilPhases::Vapour])
+                gasRate = sumWellPhaseRates(well_state_.wellRates(), group, schedule_, well_state_, report_step_, pu_.phase_pos[BlackoilPhases::Vapour], /*isInjector*/ false);
+
+            double waterRate = 0.0;
+            if (pu_.phase_used[BlackoilPhases::Aqua])
+                waterRate = sumWellPhaseRates(well_state_.wellRates(), group, schedule_, well_state_, report_step_, pu_.phase_pos[BlackoilPhases::Aqua], /*isInjector*/ false);
+
+	    return GuideRate::RateVector{oilRate, gasRate, waterRate};
+	}
+
+
         const Schedule& schedule_;
         const WellStateFullyImplicitBlackoil& well_state_;
         int report_step_;
         const GuideRate* guide_rate_;
         GuideRateModel::Target target_;
+        PhaseUsage pu_;
     };
 
 
@@ -662,9 +711,10 @@ namespace Opm {
                                          const int reportStepIdx,
                                          const GuideRate* guideRate,
                                          const GuideRateModel::Target target,
+					 const PhaseUsage& pu,
                                          const bool alwaysIncludeThis = false)
     {
-        FractionCalculator calc(schedule, wellState, reportStepIdx, guideRate, target);
+        FractionCalculator calc(schedule, wellState, reportStepIdx, guideRate, target, pu);
         return calc.fraction(name, controlGroupName, alwaysIncludeThis);
     }
 
@@ -679,8 +729,8 @@ namespace Opm {
                                                   const Phase& injectionPhase,
                                                   const bool alwaysIncludeThis = false)
     {
-        double thisGuideRate = getGuideRateInj(name, schedule, wellState, reportStepIdx, guideRate, target, injectionPhase);
-        double controlGroupGuideRate = getGuideRateInj(controlGroupName, schedule, wellState, reportStepIdx, guideRate, target, injectionPhase);
+        double thisGuideRate = getGuideRateInj(name, schedule, wellState, reportStepIdx, guideRate, target, injectionPhase, pu);
+        double controlGroupGuideRate = getGuideRateInj(controlGroupName, schedule, wellState, reportStepIdx, guideRate, target, injectionPhase, pu);
         if (alwaysIncludeThis)
             controlGroupGuideRate += thisGuideRate;
 
@@ -1085,7 +1135,7 @@ namespace Opm {
         // If we are here, we are at the topmost group to be visited in the recursion.
         // This is the group containing the control we will check against.
         TargetCalculator tcalc(currentGroupControl, pu, rateConverter, pvtRegionIdx);
-        FractionCalculator fcalc(schedule, wellState, reportStepIdx, guideRate, tcalc.guideTargetMode());
+        FractionCalculator fcalc(schedule, wellState, reportStepIdx, guideRate, tcalc.guideTargetMode(), pu);
 
         auto localFraction = [&](const std::string& child) {
             return fcalc.localFraction(child, name);
