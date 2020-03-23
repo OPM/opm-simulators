@@ -24,6 +24,7 @@
 #include <opm/simulators/linalg/MatrixBlock.hpp>
 #include <opm/simulators/linalg/BlackoilAmg.hpp>
 #include <opm/simulators/linalg/CPRPreconditioner.hpp>
+#include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
 #include <opm/simulators/linalg/ParallelRestrictedAdditiveSchwarz.hpp>
 #include <opm/simulators/linalg/ParallelOverlappingILU0.hpp>
 #include <opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp>
@@ -990,29 +991,7 @@ protected:
 
         Vector getQuasiImpesWeights()
         {
-            Matrix& A = *matrix_;
-            Vector weights(rhs_->size());
-            BlockVector rhs(0.0);
-            rhs[pressureVarIndex] = 1;
-            const auto endi = A.end();
-            for (auto i = A.begin(); i!=endi; ++i) {
-                const auto endj = (*i).end();
-                MatrixBlockType diag_block(0.0);
-                for (auto j=(*i).begin(); j!=endj; ++j) {
-                    if (i.index() == j.index()) {
-                        diag_block = (*j);
-                        break;
-                    }
-                }
-                BlockVector bweights;
-                auto diag_block_transpose = Opm::transposeDenseMatrix(diag_block);
-                diag_block_transpose.solve(bweights, rhs);
-                double abs_max =
-                    *std::max_element(bweights.begin(), bweights.end(), [](double a, double b){ return std::abs(a) < std::abs(b); } );
-                bweights /= std::abs(abs_max);
-                weights[i.index()] = bweights;
-            }
-            return weights;
+            return Amg::getQuasiImpesWeights<Matrix,Vector>(*matrix_, pressureVarIndex, /* transpose=*/ true);
         }
 
         Vector getSimpleWeights(const BlockVector& rhs)
