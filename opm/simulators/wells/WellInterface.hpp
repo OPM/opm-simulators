@@ -510,6 +510,17 @@ namespace Opm
                                       DeferredLogger& deferred_logger) const;
 
         template <class EvalWell>
+        void getGroupInjectionControl(const Group& group,
+                                      const WellState& well_state,
+                                      const Opm::Schedule& schedule,
+                                      const SummaryState& summaryState,
+                                      const InjectorType& injectorType,
+                                      const EvalWell& bhp,
+                                      const EvalWell& injection_rate,
+                                      EvalWell& control_eq,
+                                      double efficiencyFactor);
+
+        template <class EvalWell>
         void getGroupProductionControl(const Group& group,
                                        const WellState& well_state,
                                        const Opm::Schedule& schedule,

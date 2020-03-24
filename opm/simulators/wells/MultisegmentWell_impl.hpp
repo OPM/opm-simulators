@@ -1715,6 +1715,18 @@ namespace Opm
 
 
     template <typename TypeTag>
+    typename MultisegmentWell<TypeTag>::EvalWell
+    MultisegmentWell<TypeTag>::
+    getWQTotal() const
+    {
+        return getSegmentGTotal(0);
+    }
+
+
+
+
+
+    template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
     getMobility(const Simulator& ebosSimulator,
@@ -1787,7 +1799,7 @@ namespace Opm
         double efficiencyFactor = well.getEfficiencyFactor();
 
         if (wellIsStopped_) {
-            control_eq = getSegmentGTotal(0);
+            control_eq = getWQTotal();
         } else if (this->isInjector() ) {
             const Opm::Well::InjectorCMode& current = well_state.currentInjectionControls()[well_index];
             const auto& controls = inj_controls;
@@ -1820,7 +1832,7 @@ namespace Opm
             switch(current) {
             case Well::InjectorCMode::RATE:
             {
-                control_eq = getSegmentGTotal(0) / scaling - controls.surface_rate;
+                control_eq = getWQTotal() / scaling - controls.surface_rate;
                 break;
             }
 
@@ -1852,7 +1864,7 @@ namespace Opm
 
                 }
 
-                control_eq = coeff*getSegmentGTotal(0) / scaling - controls.reservoir_rate;
+                control_eq = coeff*getWQTotal() / scaling - controls.reservoir_rate;
                 break;
             }
 
@@ -2136,168 +2148,54 @@ namespace Opm
 
     template <typename TypeTag>
     void
-    MultisegmentWell<TypeTag>::
-    assembleGroupInjectionControl(const Group& group, const WellState& well_state, const Opm::Schedule& schedule, const SummaryState& summaryState, const InjectorType& injectorType, EvalWell& control_eq, double efficiencyFactor, Opm::DeferredLogger& deferred_logger)
+    MultisegmentWell<TypeTag>::assembleGroupInjectionControl(const Group& group,
+                                                             const WellState& well_state,
+                                                             const Opm::Schedule& schedule,
+                                                             const SummaryState& summaryState,
+                                                             const InjectorType& injectorType,
+                                                             EvalWell& control_eq,
+                                                             double efficiencyFactor,
+                                                             Opm::DeferredLogger& deferred_logger)
     {
-
-        if (!group.isAvailableForGroupControl()) {
-            // We cannot go any further up the hierarchy. This could
-            // be the FIELD group, or any group for which this has
-            // been set in GCONINJE or GCONPROD. If we are here
-            // anyway, it is likely that the deck set inconsistent
-            // requirements, such as GRUP control mode on a well with
-            // no appropriate controls defined on any of its
-            // containing groups. We will therefore use the wells' bhp
-            // limit equation as a fallback.
-            const auto& controls = well_ecl_.injectionControls(summaryState);
-            control_eq = getBhp() - controls.bhp_limit;
-            return;
-        }
-
-        const auto& well = well_ecl_;
+        // The total rate primary variable is the scaled surface rate
+        // sum, also for injectors, so we must scale it to get a
+        // proper surface injection rate. This is different from
+        // standard wells, where the primary variable is unscaled if
+        // the well is an injector.
         const auto& pu = phaseUsage();
-
-        int phasePos;
-        Well::GuideRateTarget wellTarget;
-        Phase injectionPhase;
         double scaling = 1.0;
-
         switch (injectorType) {
         case InjectorType::WATER:
         {
-            phasePos = pu.phase_pos[BlackoilPhases::Aqua];
-            wellTarget = Well::GuideRateTarget::WAT;
-            injectionPhase = Phase::WATER;
             scaling = scalingFactor(pu.phase_pos[BlackoilPhases::Aqua]);
             break;
         }
         case InjectorType::OIL:
         {
-            phasePos = pu.phase_pos[BlackoilPhases::Liquid];
-            wellTarget = Well::GuideRateTarget::OIL;
-            injectionPhase = Phase::OIL;
             scaling = scalingFactor(pu.phase_pos[BlackoilPhases::Liquid]);
             break;
         }
         case InjectorType::GAS:
         {
-            phasePos = pu.phase_pos[BlackoilPhases::Vapour];
-            wellTarget = Well::GuideRateTarget::GAS;
-            injectionPhase = Phase::GAS;
             scaling = scalingFactor(pu.phase_pos[BlackoilPhases::Vapour]);
             break;
         }
         default:
-            throw("Expected WATER, OIL or GAS as type for injectors " + well.name());
-        }
-
-        const Group::InjectionCMode& currentGroupControl = well_state.currentInjectionGroupControl(injectionPhase, group.name());
-        if (currentGroupControl == Group::InjectionCMode::FLD ||
-                currentGroupControl == Group::InjectionCMode::NONE) {
-            // Inject share of parents control
-            const auto& parent = schedule.getGroup( group.parent(), current_step_ );
-
-            efficiencyFactor *= group.getGroupEfficiencyFactor();
-
-            assembleGroupInjectionControl(parent, well_state, schedule, summaryState, injectorType, control_eq, efficiencyFactor, deferred_logger);
-            return;
-        }
-
-        assert(group.hasInjectionControl(injectionPhase));
-        const auto& groupcontrols = group.injectionControls(injectionPhase, summaryState);
-
-        const std::vector<double>& groupInjectionReductions = well_state.currentInjectionGroupReductionRates(group.name());
-        double groupTargetReduction = groupInjectionReductions[phasePos];
-        double fraction = wellGroupHelpers::fractionFromInjectionPotentials(well.name(), group.name(), schedule,well_state, current_step_, Base::guide_rate_, GuideRateModel::convert_target(wellTarget), pu, injectionPhase,false);
-
-        switch(currentGroupControl) {
-        case Group::InjectionCMode::NONE:
-        {
-            // The NONE case is handled earlier
+            // Should not be here.
             assert(false);
-            break;
         }
-        case Group::InjectionCMode::RATE:
-        {
-            double target = std::max(0.0, (groupcontrols.surface_max_rate - groupTargetReduction)) / efficiencyFactor;
-            control_eq = getSegmentGTotal(0) / scaling - fraction * target;
-            break;
-        }
-        case Group::InjectionCMode::RESV:
-        {
-            std::vector<double> convert_coeff(number_of_phases_, 1.0);
-            Base::rateConverter_.calcCoeff(/*fipreg*/ 0, Base::pvtRegionIdx_, convert_coeff);
-            double coeff = convert_coeff[phasePos];
-            double target = std::max(0.0, (groupcontrols.resv_max_rate/coeff - groupTargetReduction)) / efficiencyFactor;
-            control_eq = getSegmentGTotal(0) / scaling - fraction * target;
-            break;
-        }
-        case Group::InjectionCMode::REIN:
-        {
-            double productionRate = well_state.currentInjectionREINRates(groupcontrols.reinj_group)[phasePos];
-            productionRate /= efficiencyFactor;
-            double target = std::max(0.0, (groupcontrols.target_reinj_fraction*productionRate - groupTargetReduction)) / efficiencyFactor;
-            control_eq = getSegmentGTotal(0) / scaling - fraction * target;
-            break;
-        }
-        case Group::InjectionCMode::VREP:
-        {
-            std::vector<double> convert_coeff(number_of_phases_, 1.0);
-            Base::rateConverter_.calcCoeff(/*fipreg*/ 0, Base::pvtRegionIdx_, convert_coeff);
-            double coeff = convert_coeff[phasePos];
-            double voidageRate = well_state.currentInjectionVREPRates(groupcontrols.voidage_group)*groupcontrols.target_void_fraction;
+        const EvalWell injection_rate = getWQTotal() / scaling;
 
-            double injReduction = 0.0;
-            std::vector<double> groupInjectionReservoirRates = well_state.currentInjectionGroupReservoirRates(group.name());
-            if (groupcontrols.phase != Phase::WATER)
-                injReduction += groupInjectionReservoirRates[pu.phase_pos[BlackoilPhases::Aqua]];
-
-            if (groupcontrols.phase != Phase::OIL)
-                injReduction += groupInjectionReservoirRates[pu.phase_pos[BlackoilPhases::Liquid]];
-
-            if (groupcontrols.phase != Phase::GAS)
-                injReduction += groupInjectionReservoirRates[pu.phase_pos[BlackoilPhases::Vapour]];
-
-            voidageRate -= injReduction;
-
-            double target = std::max(0.0, ( voidageRate/coeff - groupTargetReduction)) / efficiencyFactor;
-            control_eq = getSegmentGTotal(0) / scaling  - fraction * target;
-            break;
-        }
-        case Group::InjectionCMode::FLD:
-        {
-            // The FLD case is handled earlier
-            assert(false);
-            break;
-        }
-        case Group::InjectionCMode::SALE:
-        {
-            // only for gas injectors
-            assert (phasePos == pu.phase_pos[BlackoilPhases::Vapour]);
-
-            // Gas injection rate = Total gas production rate + gas import rate - gas consumption rate - sales rate;
-            double inj_rate = well_state.currentInjectionREINRates(group.name())[phasePos];
-            if (schedule.gConSump(current_step_).has(group.name())) {
-                const auto& gconsump = schedule.gConSump(current_step_).get(group.name(), summaryState);
-                if (pu.phase_used[BlackoilPhases::Vapour]) {
-                    inj_rate += gconsump.import_rate;
-                    inj_rate -= gconsump.consumption_rate;
-                }
-            }
-            const auto& gconsale = schedule.gConSale(current_step_).get(group.name(), summaryState);
-            inj_rate -= gconsale.sales_target;
-
-            inj_rate /= efficiencyFactor;
-            double target = std::max(0.0, (inj_rate - groupTargetReduction)) / efficiencyFactor;
-            control_eq = getSegmentGTotal(0) /scaling - fraction * target;
-            break;
-        }
-
-        default:
-            OPM_DEFLOG_THROW(std::runtime_error, "Unvalid group control specified for group "  + well.groupName(), deferred_logger );
-        }
-
-
+        // Call the generic implementation.
+        Base::getGroupInjectionControl(group,
+                                       well_state,
+                                       schedule,
+                                       summaryState,
+                                       injectorType,
+                                       getBhp(),
+                                       injection_rate,
+                                       control_eq,
+                                       efficiencyFactor);
     }
 
 
@@ -4038,5 +3936,4 @@ namespace Opm
         const double sign = mass_rate <= 0. ? 1.0 : -1.0;
         return sign * (friction_pressure_loss + constriction_pressure_loss);
     }
-
-}
+    }

@@ -285,6 +285,7 @@ namespace Opm
 
         EvalWell getBhp() const;
         EvalWell getQs(const int comp_idx) const;
+        EvalWell getWQTotal() const;
 
         // xw = inv(D)*(rw - C*x)
         void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
