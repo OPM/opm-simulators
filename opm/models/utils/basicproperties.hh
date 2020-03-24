@@ -54,6 +54,7 @@
 
 #include <string>
 
+
 BEGIN_PROPERTIES
 
 ///////////////////////////////////
@@ -205,6 +206,75 @@ NEW_PROP_TAG(VtkWriteSolidInternalEnergy);
 NEW_PROP_TAG(VtkWriteThermalConductivity);
 NEW_PROP_TAG(VtkWriteInternalEnergies);
 NEW_PROP_TAG(VtkWriteEnthalpies);
+NEW_PROP_TAG(VtkWriteMassFractions);
+NEW_PROP_TAG(VtkWriteMoleFractions);
+NEW_PROP_TAG(VtkWriteTotalMassFractions);
+NEW_PROP_TAG(VtkWriteTotalMoleFractions);
+NEW_PROP_TAG(VtkWriteMolarities);
+NEW_PROP_TAG(VtkWriteFugacities);
+NEW_PROP_TAG(VtkWriteFugacityCoeffs);
+NEW_PROP_TAG(VtkWriteEffectiveDiffusionCoefficients);
+NEW_PROP_TAG(VtkWriteDiffusionCoefficients);
+NEW_PROP_TAG(VtkWriteTortuosities);
+NEW_PROP_TAG(VtkWritePhasePresence);
+NEW_PROP_TAG(VtkWriteSolventSaturation);
+NEW_PROP_TAG(VtkWriteSolventDensity);
+NEW_PROP_TAG(VtkWriteSolventViscosity);
+NEW_PROP_TAG(VtkWriteSolventMobility);
+NEW_PROP_TAG(EnableSolvent);
+NEW_PROP_TAG(BlackoilConserveSurfaceVolume);
+NEW_PROP_TAG(VtkWritePolymerConcentration);
+NEW_PROP_TAG(VtkWritePolymerDeadPoreVolume);
+NEW_PROP_TAG(VtkWritePolymerViscosityCorrection);
+NEW_PROP_TAG(VtkWriteWaterViscosityCorrection);
+NEW_PROP_TAG(VtkWritePolymerRockDensity);
+NEW_PROP_TAG(VtkWritePolymerAdsorption);
+NEW_PROP_TAG(EnablePolymer);
+NEW_PROP_TAG(EnablePolymerMW);
+NEW_PROP_TAG(VtkWriteRockInternalEnergy);
+NEW_PROP_TAG(VtkWriteTotalThermalConductivity);
+NEW_PROP_TAG(VtkWriteFluidInternalEnergies);
+NEW_PROP_TAG(VtkWriteFluidEnthalpies);
+NEW_PROP_TAG(BlackOilEnergyScalingFactor);
+NEW_PROP_TAG(EnableTemperature);
+NEW_PROP_TAG(EnableFoam);
+NEW_PROP_TAG(EnableBrine);
+NEW_PROP_TAG(DpMaxRel);
+NEW_PROP_TAG(DsMax);
+NEW_PROP_TAG(PriVarOscilationThreshold);
+NEW_PROP_TAG(VtkWriteGasDissolutionFactor);
+NEW_PROP_TAG(VtkWriteOilVaporizationFactor);
+NEW_PROP_TAG(VtkWriteOilFormationVolumeFactor);
+NEW_PROP_TAG(VtkWriteGasFormationVolumeFactor);
+NEW_PROP_TAG(VtkWriteWaterFormationVolumeFactor);
+NEW_PROP_TAG(VtkWriteOilSaturationPressure);
+NEW_PROP_TAG(VtkWriteGasSaturationPressure);
+NEW_PROP_TAG(VtkWriteSaturationRatios);
+NEW_PROP_TAG(VtkWriteSaturatedOilGasDissolutionFactor);
+NEW_PROP_TAG(VtkWriteSaturatedGasOilVaporizationFactor);
+NEW_PROP_TAG(VtkWritePrimaryVarsMeaning);
+NEW_PROP_TAG(VtkWriteFractureSaturations);
+NEW_PROP_TAG(VtkWriteFractureMobilities);
+NEW_PROP_TAG(VtkWriteFractureRelativePermeabilities);
+NEW_PROP_TAG(VtkWriteFracturePorosity);
+NEW_PROP_TAG(VtkWriteFractureIntrinsicPermeabilities);
+NEW_PROP_TAG(VtkWriteFractureFilterVelocities);
+NEW_PROP_TAG(VtkWriteFractureVolumeFraction);
+NEW_PROP_TAG(UseTwoPointGradients);
+
+NEW_PROP_TAG(PvsVerbosity);
+NEW_PROP_TAG(PvsPressureBaseWeight);
+NEW_PROP_TAG(PvsSaturationsBaseWeight);
+NEW_PROP_TAG(PvsMoleFractionsBaseWeight);
+NEW_PROP_TAG(NcpPressureBaseWeight);
+NEW_PROP_TAG(NcpSaturationsBaseWeight);
+NEW_PROP_TAG(NcpFugacitiesBaseWeight);
+NEW_PROP_TAG(FluidSystemPressureLow);
+NEW_PROP_TAG(FluidSystemPressureHigh);
+NEW_PROP_TAG(FluidSystemNumPressure);
+NEW_PROP_TAG(FluidSystemTemperatureLow);
+NEW_PROP_TAG(FluidSystemTemperatureHigh);
+NEW_PROP_TAG(FluidSystemNumTemperature);
 NEW_PROP_TAG(IntensiveQuantities);
 
 NEW_PROP_TAG(BoundaryContext);
@@ -223,6 +293,7 @@ NEW_PROP_TAG(DomainSizeY);
 NEW_PROP_TAG(DomainSizeZ);
 NEW_PROP_TAG(ElementMapper);
 NEW_PROP_TAG(EnableAsyncVtkOutput);
+NEW_PROP_TAG(EnableDiffusion);
 NEW_PROP_TAG(EnableEnergy);
 NEW_PROP_TAG(EnableGravity);
 NEW_PROP_TAG(EnableGridAdaptation);
@@ -253,6 +324,8 @@ NEW_PROP_TAG(UseVolumetricResidual);
 NEW_PROP_TAG(VertexMapper);
 NEW_PROP_TAG(SolidEnergyLawParams);
 NEW_PROP_TAG(ThermalConductionLawParams);
+NEW_PROP_TAG(FlashSolver);
+NEW_PROP_TAG(FlashTolerance);
 
 NEW_PROP_TAG(BaseProblem);
 NEW_PROP_TAG(ConstraintsContext);
@@ -275,10 +348,15 @@ NEW_PROP_TAG(Overlap);
 NEW_PROP_TAG(OverlappingScalarProduct);
 NEW_PROP_TAG(OverlappingLinearOperator);
 
+NEW_PROP_TAG(LiquidPhaseIndex);
+NEW_PROP_TAG(GasPhaseIndex);
+NEW_PROP_TAG(LiquidComponentIndex);
+NEW_PROP_TAG(GasComponentIndex);
+NEW_PROP_TAG(WettingFluid);
+NEW_PROP_TAG(NonWettingFluid);
 
 //! the preconditioner used by the linear solver
 NEW_PROP_TAG(PreconditionerWrapper);
-
 
 //! The floating point type used internally by the linear solver
 NEW_PROP_TAG(LinearSolverScalar);
@@ -315,6 +393,9 @@ NEW_PROP_TAG(LinearSolverVerbosity);
 NEW_PROP_TAG(LinearSolverMaxIterations);
 
 NEW_PROP_TAG(LinearSolverMaxError);
+
+NEW_PROP_TAG(GMResRestart);
+NEW_PROP_TAG(LinearSolverWrapper);
 
 NEW_PROP_TAG(LinearSolverSplice);
 NEW_PROP_TAG(LocalLinearizerSplice);
@@ -427,7 +508,6 @@ SET_SCALAR_PROP(NumericModel, RestartTime, -1e35);
 
 //! By default, do not force any time steps
 SET_STRING_PROP(NumericModel, PredeterminedTimeStepsFile, "");
-
 
 END_PROPERTIES
 

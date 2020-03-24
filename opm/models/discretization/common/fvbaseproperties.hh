@@ -31,10 +31,10 @@
 #define EWOMS_FV_BASE_PROPERTIES_HH
 
 #include "fvbasenewtonmethod.hh"
-#include "fvbaseproperties.hh"
 #include "fvbasefdlocallinearizer.hh"
 
 #include <opm/models/utils/basicproperties.hh>
+#include <opm/models/io/dgfvanguard.hh>
 #include <opm/models/io/vtkprimaryvarsmodule.hh>
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 
@@ -253,6 +253,8 @@ SET_TAG_PROP(FvBaseDiscretization, LocalLinearizerSplice, FiniteDifferenceLocalL
 
 
 //! Specify if experimental features should be enabled or not.
+
+SET_TYPE_PROP(NumericModel, Vanguard, Opm::DgfVanguard<TypeTag>);
 
 END_PROPERTIES
 

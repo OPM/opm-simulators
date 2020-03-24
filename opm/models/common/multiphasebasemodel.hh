@@ -50,11 +50,6 @@ class MultiPhaseBaseModel;
 
 BEGIN_PROPERTIES
 
-namespace TTag {
-struct ParallelBiCGStabLinearSolver;
-struct FiniteDifferenceLocalLinearizer;
-}
-
 //! The generic type tag for problems using the immiscible multi-phase model
 NEW_TYPE_TAG(MultiPhaseBaseModel, INHERITS_FROM(VtkMultiPhase, VtkTemperature));
 

@@ -32,6 +32,7 @@
 #include "config.h"
 
 #include <opm/models/utils/propertysystem.hh>
+#include <opm/models/utils/propertysystemmacros.hh>
 
 #include <iostream>
 
@@ -120,10 +121,6 @@ SET_INT_PROP(Pickup, Payload, 5);
 
 SET_INT_PROP(HummerH1, TopSpeed, GET_PROP_VALUE(TTAG(Pickup), TopSpeed));
 
-///////////////////
-// Unmount the canon from the Hummer
-UNSET_PROP(HummerH1, CanonCaliber);
-
 END_PROPERTIES
 
 
@@ -176,23 +173,6 @@ int main()
     std::cout << "(HummerH1, GasUsage) = " << GET_PROP_VALUE(TTAG(HummerH1), GasUsage) << "\n";
     std::cout << "(HummerH1, Payload) = " << GET_PROP_VALUE(TTAG(HummerH1), Payload) << "\n";
     std::cout << "(HummerH1, AutomaticTransmission) = " << GET_PROP_VALUE(TTAG(HummerH1), AutomaticTransmission) << "\n";
-    // CanonCaliber is explcitly unset for the Hummer -> this would not compile:
-    // std::cout << "(HummerH1, CanonCaliber) = " << GET_PROP_VALUE(TTAG(HummerH1), CanonCaliber) << "\n";
-
-    std::cout << "\n";
-    std::cout << "---------------------------------------\n";
-    std::cout << "-- Diagnostic messages\n";
-    std::cout << "---------------------------------------\n";
-
-    std::cout << "---- All properties for Sedan ---\n";
-    Opm::Properties::printValues<TTAG(Sedan)>();
-
-    std::cout << "---- Message for (HummerH1, CanonCaliber) ---\n"
-              << PROP_DIAGNOSTIC(TTAG(HummerH1), CanonCaliber);
-    std::cout << "---- Message for (HummerH1, GasUsage) ---\n"
-              << PROP_DIAGNOSTIC(TTAG(HummerH1), GasUsage);
-    std::cout << "---- Message for (HummerH1, AutomaticTransmission) ---\n"
-              << PROP_DIAGNOSTIC(TTAG(HummerH1), AutomaticTransmission);
 
     return 0;
 }
