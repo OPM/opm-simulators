@@ -411,7 +411,11 @@ namespace Opm {
             const Well& getWellEcl(const std::string& well_name) const;
 
             void updateGroupIndividualControls(Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
-            void checkGroupConstraints(const Group& group, Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
+            void updateGroupIndividualControl(const Group& group, Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
+            bool checkGroupConstraints(const Group& group, Opm::DeferredLogger& deferred_logger) const;
+            Group::ProductionCMode checkGroupProductionConstraints(const Group& group, Opm::DeferredLogger& deferred_logger) const;            
+            Group::InjectionCMode checkGroupInjectionConstraints(const Group& group, const Phase& phase, Opm::DeferredLogger& deferred_logger) const;
+
             void updateGroupHigherControls(Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
             void checkGroupHigherConstraints(const Group& group, Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
 
