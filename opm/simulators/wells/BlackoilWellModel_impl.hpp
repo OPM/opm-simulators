@@ -1261,7 +1261,8 @@ namespace Opm {
         wellGroupHelpers::updateVREPForGroups(fieldGroup, schedule(), reportStepIdx, well_state_nupcol_, well_state_);
 
         wellGroupHelpers::updateReservoirRatesInjectionGroups(fieldGroup, schedule(), reportStepIdx, well_state_nupcol_, well_state_);
-
+        wellGroupHelpers::updateGroupProductionRates(fieldGroup, schedule(), reportStepIdx, well_state_nupcol_, well_state_);
+        wellGroupHelpers::updateWellRates(fieldGroup, schedule(), reportStepIdx, well_state_nupcol_, well_state_);
         well_state_.communicateGroupRates(comm);
 
         // compute wsolvent fraction for REIN wells

@@ -395,6 +395,39 @@ namespace Opm {
         }
         wellState.setCurrentInjectionGroupReservoirRates(group.name(), resv);
     }
+    
+    inline void updateWellRates(const Group& group, const Schedule& schedule, const int reportStepIdx, const WellStateFullyImplicitBlackoil& wellStateNupcol, WellStateFullyImplicitBlackoil& wellState) {
+        for (const std::string& groupName : group.groups()) {
+            const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
+            updateWellRates(groupTmp, schedule, reportStepIdx, wellStateNupcol, wellState);
+        }
+        const int np = wellState.numPhases();
+        const auto& end = wellState.wellMap().end();
+        for (const std::string& wellName : group.wells()) {
+            std::vector<double> rates(np, 0.0);
+            const auto& it = wellState.wellMap().find(wellName);
+            if (it != end) {  // the well is found on this node 
+                int well_index = it->second[0];
+                for (int phase = 0; phase < np; ++phase) {
+                    rates[phase] = wellStateNupcol.wellRates()[well_index*np + phase];
+                }
+            }
+            wellState.setCurrentWellRates(wellName, rates); 
+        }
+    }
+    
+    inline void updateGroupProductionRates(const Group& group, const Schedule& schedule, const int reportStepIdx, const WellStateFullyImplicitBlackoil& wellStateNupcol, WellStateFullyImplicitBlackoil& wellState) {
+        for (const std::string& groupName : group.groups()) {
+            const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
+            updateGroupProductionRates(groupTmp, schedule, reportStepIdx, wellStateNupcol, wellState);
+        }
+        const int np = wellState.numPhases();
+        std::vector<double> rates(np, 0.0);
+        for (int phase = 0; phase < np; ++phase) {
+            rates[phase] = sumWellPhaseRates(wellStateNupcol.wellRates(), group, schedule, wellState, reportStepIdx, phase, /*isInjector*/ false);
+        }
+        wellState.setCurrentProductionGroupRates(group.name(), rates);
+    }
 
     inline void updateREINForGroups(const Group& group, const Schedule& schedule, const int reportStepIdx, const PhaseUsage& pu, const SummaryState& st, const WellStateFullyImplicitBlackoil& wellStateNupcol, WellStateFullyImplicitBlackoil& wellState) {
         const int np = wellState.numPhases();
@@ -420,29 +453,22 @@ namespace Opm {
         wellState.setCurrentInjectionREINRates(group.name(), rein);
     }
 
-	inline GuideRate::RateVector getRateVector(const WellState& well_state, const PhaseUsage& pu, const std::string& name) {
-
-        const auto& end = well_state.wellMap().end();
-        const auto& it = well_state.wellMap().find( name);
-        if (it == end)  // the well is not found
-            assert(false);
-
-        int well_index = it->second[0];
-		int np = well_state.numPhases();
+    inline GuideRate::RateVector getRateVector(const WellStateFullyImplicitBlackoil& well_state, const PhaseUsage& pu, const std::string& name) {
+        const std::vector<double>& rates = well_state.currentWellRates(name);
         double oilRate = 0.0;
         if (pu.phase_used[BlackoilPhases::Liquid])
-            oilRate = well_state.wellRates()[ well_index*np + pu.phase_pos[BlackoilPhases::Liquid]];
+            oilRate = rates[pu.phase_pos[BlackoilPhases::Liquid]];
         
         double gasRate = 0.0;
         if (pu.phase_used[BlackoilPhases::Vapour])
-            gasRate = well_state.wellRates()[ well_index*np + pu.phase_pos[BlackoilPhases::Vapour]];
+            gasRate = rates[pu.phase_pos[BlackoilPhases::Vapour]];
 
-		double waterRate = 0.0;
+        double waterRate = 0.0;
         if (pu.phase_used[BlackoilPhases::Aqua])
-            waterRate = well_state.wellRates()[well_index*np + pu.phase_pos[BlackoilPhases::Aqua]];
+            waterRate = rates[pu.phase_pos[BlackoilPhases::Aqua]];
 
-	    return GuideRate::RateVector{oilRate, gasRate, waterRate};
-	}
+        return GuideRate::RateVector{oilRate, gasRate, waterRate};
+    }
 
 
     inline double getGuideRate(const std::string& name,
@@ -451,7 +477,7 @@ namespace Opm {
                                const int reportStepIdx,
                                const GuideRate* guideRate,
                                const GuideRateModel::Target target,
-							   const PhaseUsage& pu)
+                               const PhaseUsage& pu)
     {
         if (schedule.hasWell(name, reportStepIdx) || guideRate->has(name)) {
             return guideRate->get(name, target, getRateVector(wellState, pu, name));
@@ -631,6 +657,7 @@ namespace Opm {
         double guideRate(const std::string& name, const std::string& always_included_child)
         {
             if (schedule_.hasWell(name, report_step_)) {
+                std::cout << "getWellRate " << name << std::endl;
                 return guide_rate_->get(name, target_, getRateVector(well_state_, pu_, name));
             } else {
                 if (groupControlledWells(name, always_included_child) > 0) {
@@ -641,6 +668,7 @@ namespace Opm {
                         // Compute guide rate by accumulating our children's guide rates.
                         // (only children not under individual control though).
                         const Group& group = schedule_.getGroup(name, report_step_);
+                        std::cout << " guideRateSUM" << std::endl;
                         return guideRateSum(group, always_included_child);
                     }
                 } else {
@@ -675,24 +703,25 @@ namespace Opm {
             return ::Opm::wellGroupHelpers::groupControlledWells(schedule_, well_state_, report_step_, group_name, always_included_child);
         }
 
-	inline GuideRate::RateVector getGroupRateVector(const std::string& group_name) {
+    inline GuideRate::RateVector getGroupRateVector(const std::string& group_name) {
 
 #warning Does not work in parallell
-        const Group& group = schedule_.getGroup(group_name, report_step_);
+        std::cout << " getGroupRateVector " << group_name <<std::endl;
+        std::vector<double> groupRates = well_state_.currentProductionGroupRates(group_name);
         double oilRate = 0.0;
         if (pu_.phase_used[BlackoilPhases::Liquid])
-			oilRate = sumWellPhaseRates(well_state_.wellRates(), group, schedule_, well_state_, report_step_, pu_.phase_pos[BlackoilPhases::Liquid], /*isInjector*/ false);
+            oilRate = groupRates[pu_.phase_pos[BlackoilPhases::Liquid]];
         
         double gasRate = 0.0;
         if (pu_.phase_used[BlackoilPhases::Vapour])
-            gasRate = sumWellPhaseRates(well_state_.wellRates(), group, schedule_, well_state_, report_step_, pu_.phase_pos[BlackoilPhases::Vapour], /*isInjector*/ false);
+            gasRate = groupRates[pu_.phase_pos[BlackoilPhases::Vapour]];
 
         double waterRate = 0.0;
         if (pu_.phase_used[BlackoilPhases::Aqua])
-            waterRate = sumWellPhaseRates(well_state_.wellRates(), group, schedule_, well_state_, report_step_, pu_.phase_pos[BlackoilPhases::Aqua], /*isInjector*/ false);
-
-	    return GuideRate::RateVector{oilRate, gasRate, waterRate};
-	}
+            waterRate = groupRates[pu_.phase_pos[BlackoilPhases::Aqua]];
+        
+        return GuideRate::RateVector{oilRate, gasRate, waterRate};
+    }
 
 
         const Schedule& schedule_;
@@ -711,7 +740,7 @@ namespace Opm {
                                          const int reportStepIdx,
                                          const GuideRate* guideRate,
                                          const GuideRateModel::Target target,
-										 const PhaseUsage& pu,
+                                         const PhaseUsage& pu,
                                          const bool alwaysIncludeThis = false)
     {
         FractionCalculator calc(schedule, wellState, reportStepIdx, guideRate, target, pu);
