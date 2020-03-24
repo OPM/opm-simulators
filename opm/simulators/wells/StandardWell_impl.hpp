@@ -952,7 +952,7 @@ namespace Opm
                 assert(well.isAvailableForGroupControl());
 
                 const auto& group = schedule.getGroup( well.groupName(), current_step_ );
-                assembleGroupProductionControl(group, well_state, schedule, summaryState, control_eq, efficiencyFactor, deferred_logger);
+                assembleGroupProductionControl(group, well_state, schedule, summaryState, control_eq, efficiencyFactor);
                 break;
             }
             case Well::ProducerCMode::CMODE_UNDEFINED:
@@ -1136,68 +1136,14 @@ namespace Opm
 
     template <typename TypeTag>
     void
-    StandardWell<TypeTag>::
-    assembleGroupProductionControl(const Group& group, const WellState& well_state, const Opm::Schedule& schedule, const SummaryState& summaryState, EvalWell& control_eq, double efficiencyFactor, Opm::DeferredLogger& deferred_logger)
+    StandardWell<TypeTag>::assembleGroupProductionControl(const Group& group,
+                                                          const WellState& well_state,
+                                                          const Opm::Schedule& schedule,
+                                                          const SummaryState& summaryState,
+                                                          EvalWell& control_eq,
+                                                          double efficiencyFactor)
     {
-        const auto& well = well_ecl_;
         const auto pu = phaseUsage();
-
-        const Group::ProductionCMode& currentGroupControl = well_state.currentProductionGroupControl(group.name());
-        if (currentGroupControl == Group::ProductionCMode::FLD ||
-            currentGroupControl == Group::ProductionCMode::NONE) {
-            if (!group.isAvailableForGroupControl()) {
-                // We cannot go any further up the hierarchy. This could
-                // be the FIELD group, or any group for which this has
-                // been set in GCONINJE or GCONPROD. If we are here
-                // anyway, it is likely that the deck set inconsistent
-                // requirements, such as GRUP control mode on a well with
-                // no appropriate controls defined on any of its
-                // containing groups. We will therefore use the wells' bhp
-                // limit equation as a fallback.
-                const auto& controls = well_ecl_.productionControls(summaryState);
-                control_eq = getBhp() - controls.bhp_limit;
-                return;
-            } else {
-                // Produce share of parents control
-                const auto& parent = schedule.getGroup( group.parent(), current_step_ );
-                efficiencyFactor *= group.getGroupEfficiencyFactor();
-                assembleGroupProductionControl(parent, well_state, schedule, summaryState, control_eq, efficiencyFactor, deferred_logger);
-                return;
-            }
-        }
-
-        if (!group.isProductionGroup()) {
-            // use bhp as control eq and let the updateControl code find a vallied control
-            const auto& controls = well.productionControls(summaryState);
-            control_eq = getBhp() - controls.bhp_limit;
-            return;
-        }
-
-        // If we are here, we are at the topmost group to be visited in the recursion.
-        // This is the group containing the control we will check against.
-        wellGroupHelpers::TargetCalculator tcalc(currentGroupControl, pu, Base::rateConverter_, Base::pvtRegionIdx_);
-        wellGroupHelpers::FractionCalculator fcalc(schedule, well_state, current_step_, Base::guide_rate_, tcalc.guideTargetMode(), pu);
-
-        auto localFraction = [&](const std::string& child) {
-            return fcalc.localFraction(child, "");
-        };
-
-        auto localReduction = [&](const std::string& group_name) {
-            const std::vector<double>& groupTargetReductions = well_state.currentProductionGroupReductionRates(group_name);
-            return tcalc.calcModeRateFromRates(groupTargetReductions);
-        };
-
-        const double orig_target = tcalc.groupTarget(group.productionControls(summaryState));
-        const auto chain = wellGroupHelpers::groupChainTopBot(name(), group.name(), schedule, current_step_);
-        // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
-        const size_t num_ancestors = chain.size() - 1;
-        double target = orig_target;
-        for (size_t ii = 0; ii < num_ancestors; ++ii) {
-            target -= localReduction(chain[ii]);
-            target *= localFraction(chain[ii+1]);
-        }
-        const double target_rate = target / efficiencyFactor;
-
         std::vector<EvalWell> rates(pu.num_phases);
         const int compIndices[3] = { FluidSystem::waterCompIdx, FluidSystem::oilCompIdx, FluidSystem::gasCompIdx };
         const BlackoilPhases::PhaseIndex phases[3] = { BlackoilPhases::Aqua, BlackoilPhases::Liquid, BlackoilPhases::Vapour };
@@ -1208,10 +1154,8 @@ namespace Opm
                 rates[pu.phase_pos[phase]] = getQs(Indices::canonicalToActiveComponentIndex(compIdx));
             }
         }
-        const auto current_rate = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
 
-        control_eq = current_rate - target_rate;
-
+        Base::getGroupProductionControl(group, well_state, schedule, summaryState, getBhp(), rates, control_eq, efficiencyFactor);
     }
 
 

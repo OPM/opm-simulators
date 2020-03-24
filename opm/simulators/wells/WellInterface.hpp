@@ -508,6 +508,17 @@ namespace Opm
                                       const Schedule& schedule,
                                       const SummaryState& summaryState,
                                       DeferredLogger& deferred_logger) const;
+
+        template <class EvalWell>
+        void getGroupProductionControl(const Group& group,
+                                       const WellState& well_state,
+                                       const Opm::Schedule& schedule,
+                                       const SummaryState& summaryState,
+                                       const EvalWell& bhp,
+                                       const std::vector<EvalWell>& rates,
+                                       EvalWell& control_eq,
+                                       double efficiencyFactor);
+
     };
 
 
