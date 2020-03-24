@@ -29,6 +29,7 @@
 #include <opm/simulators/linalg/amgcpr.hh>
 
 #include <dune/istl/paamg/amg.hh>
+#include <dune/istl/paamg/kamg.hh>
 #include <dune/istl/paamg/fastamg.hh>
 #include <dune/istl/preconditioners.hh>
 
@@ -129,7 +130,9 @@ private:
         criterion.setAlpha(prm.get<double>("alpha"));
         criterion.setBeta(prm.get<double>("beta"));
         criterion.setMaxLevel(prm.get<int>("maxlevel"));
-        criterion.setSkipIsolated(false);
+        criterion.setSkipIsolated(prm.get<bool>("skip_isolated"));
+	criterion.setNoPreSmoothSteps(prm.get<int>("pre_smooth"));
+	criterion.setNoPostSmoothSteps(prm.get<int>("post_smooth"));
         criterion.setDebugLevel(prm.get<int>("verbosity"));
         return criterion;
     }
@@ -148,11 +151,21 @@ private:
     }
 
     template <class Smoother>
-    static PrecPtr makeAmgPreconditioner(const Operator& op, const boost::property_tree::ptree& prm)
+    static PrecPtr makeAmgPreconditioner(const Operator& op, const boost::property_tree::ptree& prm, bool useKamg = false)
     {
         auto crit = amgCriterion(prm);
         auto sargs = amgSmootherArgs<Smoother>(prm);
-        return std::make_shared<Dune::Amg::AMGCPR<Operator, Vector, Smoother>>(op, crit, sargs);
+	if(useKamg){
+	    return std::make_shared<
+		Dune::DummyUpdatePreconditioner<
+		    Dune::Amg::KAMG< Operator, Vector, Smoother>
+		    >
+		>(op, crit, sargs,
+		  prm.get<size_t>("max_krylov"),
+		  prm.get<double>("min_reduction")  );
+	}else{
+            return std::make_shared<Dune::Amg::AMGCPR<Operator, Vector, Smoother>>(op, crit, sargs);
+        }
     }
 
     // Add a useful default set of preconditioners to the factory.
@@ -207,7 +220,7 @@ private:
         });
         doAddCreator("amg", [](const O& op, const P& prm, const std::function<Vector()>&, const C& comm) {
             const std::string smoother = prm.get<std::string>("smoother");
-            if (smoother == "ILU0") {
+            if (smoother == "ILU0" || smoother == "ParOverILU0") {
                 using Smoother = Opm::ParallelOverlappingILU0<M, V, V, C>;
                 auto crit = amgCriterion(prm);
                 auto sargs = amgSmootherArgs<Smoother>(prm);
@@ -298,6 +311,32 @@ private:
                 using Smoother = SeqILUn<M, V, V>;
 #endif
                 return makeAmgPreconditioner<Smoother>(op, prm);
+            } else {
+                std::string msg("No such smoother: ");
+                msg += smoother;
+                throw std::runtime_error(msg);
+            }
+        });
+	doAddCreator("kamg", [](const O& op, const P& prm, const std::function<Vector()>&) {
+            const std::string smoother = prm.get<std::string>("smoother");
+            if (smoother == "ILU0") {
+                using Smoother = SeqILU0<M, V, V>;
+                return makeAmgPreconditioner<Smoother>(op, prm, true);
+            } else if (smoother == "Jac") {
+                using Smoother = SeqJac<M, V, V>;
+                return makeAmgPreconditioner<Smoother>(op, prm, true);
+            } else if (smoother == "SOR") {
+                using Smoother = SeqSOR<M, V, V>;
+                return makeAmgPreconditioner<Smoother>(op, prm, true);
+	    // } else if (smoother == "GS") {
+            //     using Smoother = SeqGS<M, V, V>;
+            //     return makeAmgPreconditioner<Smoother>(op, prm, true);
+            } else if (smoother == "SSOR") {
+                using Smoother = SeqSSOR<M, V, V>;
+                return makeAmgPreconditioner<Smoother>(op, prm, true);
+            } else if (smoother == "ILUn") {
+                using Smoother = SeqILUn<M, V, V>;
+                return makeAmgPreconditioner<Smoother>(op, prm, true);
             } else {
                 std::string msg("No such smoother: ");
                 msg += smoother;

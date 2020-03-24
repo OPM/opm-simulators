@@ -97,8 +97,8 @@ public:
                            finesmoother_,
                            levelTransferPolicy_,
                            coarseSolverPolicy_,
-                           transpose ? 1 : 0,
-                           transpose ? 0 : 1)
+                           prm.get<int>("pre_smooth"),
+                           prm.get<int>("post_smooth"))
         , prm_(prm)
     {
         if (prm.get<int>("verbosity") > 10) {
