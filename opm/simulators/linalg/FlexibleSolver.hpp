@@ -46,16 +46,27 @@ public:
     using VectorType = VectorTypeT;
 
     /// Create a sequential solver.
-    FlexibleSolver(const boost::property_tree::ptree& prm, const MatrixType& matrix)
+    FlexibleSolver(const boost::property_tree::ptree& prm, const MatrixType& matrix,
+                   const std::function<VectorTypeT()>& weightsCalculator = std::function<VectorTypeT()>())
     {
-        init(prm, matrix, Dune::Amg::SequentialInformation());
+        init(prm, matrix, weightsCalculator, Dune::Amg::SequentialInformation());
     }
 
     /// Create a parallel solver (if Comm is e.g. OwnerOverlapCommunication).
     template <class Comm>
-    FlexibleSolver(const boost::property_tree::ptree& prm, const MatrixType& matrix, const Comm& comm)
+    FlexibleSolver(const boost::property_tree::ptree& prm,
+                   const typename std::enable_if<std::is_function<Comm>::value,MatrixType>::type& matrix,
+                   const Comm& comm)
     {
-        init(prm, matrix, comm);
+        init(prm, matrix, std::function<VectorTypeT()>(), comm);
+    }
+
+    /// Create a parallel solver (if Comm is e.g. OwnerOverlapCommunication).
+    template <class Comm>
+    FlexibleSolver(const boost::property_tree::ptree& prm, const MatrixType& matrix,
+                   const std::function<VectorTypeT()>& weightsCalculator, const Comm& comm)
+    {
+        init(prm, matrix, weightsCalculator, comm);
     }
 
     virtual void apply(VectorType& x, VectorType& rhs, Dune::InverseOperatorResult& res) override
@@ -89,24 +100,28 @@ private:
 
     // Machinery for making sequential or parallel operators/preconditioners/scalar products.
     template <class Comm>
-    void initOpPrecSp(const MatrixType& matrix, const boost::property_tree::ptree& prm, const Comm& comm)
+    void initOpPrecSp(const MatrixType& matrix, const boost::property_tree::ptree& prm,
+                      const std::function<VectorTypeT()> weightsCalculator, const Comm& comm)
     {
         // Parallel case.
         using ParOperatorType = Dune::OverlappingSchwarzOperator<MatrixType, VectorType, VectorType, Comm>;
         auto linop = std::make_shared<ParOperatorType>(matrix, comm);
         linearoperator_ = linop;
         preconditioner_
-            = Opm::PreconditionerFactory<ParOperatorType, Comm>::create(*linop, prm.get_child("preconditioner"), comm);
+            = Opm::PreconditionerFactory<ParOperatorType, Comm>::create(*linop, prm.get_child("preconditioner"),
+                                                                        weightsCalculator, comm);
         scalarproduct_ = Dune::createScalarProduct<VectorType, Comm>(comm, linearoperator_->category());
     }
 
-    void initOpPrecSp(const MatrixType& matrix, const boost::property_tree::ptree& prm, const Dune::Amg::SequentialInformation&)
+    void initOpPrecSp(const MatrixType& matrix, const boost::property_tree::ptree& prm,
+                      const std::function<VectorTypeT()> weightsCalculator, const Dune::Amg::SequentialInformation&)
     {
         // Sequential case.
         using SeqOperatorType = Dune::MatrixAdapter<MatrixType, VectorType, VectorType>;
         auto linop = std::make_shared<SeqOperatorType>(matrix);
         linearoperator_ = linop;
-        preconditioner_ = Opm::PreconditionerFactory<SeqOperatorType>::create(*linop, prm.get_child("preconditioner"));
+        preconditioner_ = Opm::PreconditionerFactory<SeqOperatorType>::create(*linop, prm.get_child("preconditioner"),
+                                                                              weightsCalculator);
         scalarproduct_ = std::make_shared<Dune::SeqScalarProduct<VectorType>>();
     }
 
@@ -155,9 +170,10 @@ private:
     // Main initialization routine.
     // Call with Comm == Dune::Amg::SequentialInformation to get a serial solver.
     template <class Comm>
-    void init(const boost::property_tree::ptree& prm, const MatrixType& matrix, const Comm& comm)
+    void init(const boost::property_tree::ptree& prm, const MatrixType& matrix,
+              const std::function<VectorTypeT()> weightsCalculator, const Comm& comm)
     {
-        initOpPrecSp(matrix, prm, comm);
+        initOpPrecSp(matrix, prm, weightsCalculator, comm);
         initSolver(prm);
     }
 

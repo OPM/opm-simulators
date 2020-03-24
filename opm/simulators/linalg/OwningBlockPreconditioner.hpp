@@ -63,9 +63,9 @@ public:
     }
 
     // The update() function does nothing for a wrapped preconditioner.
-    virtual void update(const X& w) override
+    virtual void update() override
     {
-        orig_precond_.update(w);
+        orig_precond_.update();
     }
 
 private:

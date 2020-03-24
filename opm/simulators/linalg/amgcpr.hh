@@ -239,9 +239,8 @@ namespace Dune
       /**
        * @brief Update the coarse solver and the hierarchies.
        */
-      virtual void update(const X& w);
-
       virtual void update();
+
       /**
        * @brief Check whether the coarse solver used is a direct solver.
        * @return True if the coarse level solver is a direct solver.
@@ -469,11 +468,6 @@ namespace Dune
       update();
     }
 
-    template<class M, class X, class S, class PI, class A>
-    void AMGCPR<M,X,S,PI,A>::update(const X& /*w*/)
-    {
-      update();
-    }
     template<class M, class X, class S, class PI, class A>
     void AMGCPR<M,X,S,PI,A>::update()
     {

@@ -31,7 +31,7 @@ template <class X, class Y>
 class PreconditionerWithUpdate : public Preconditioner<X, Y>
 {
 public:
-    virtual void update(const X& w) = 0;
+    virtual void update() = 0;
 };
 
 template <class OriginalPreconditioner>
@@ -69,7 +69,7 @@ public:
     }
 
     // The update() function does nothing for a wrapped preconditioner.
-    virtual void update(const X& /*w*/) override
+    virtual void update() override
     {
     }
 

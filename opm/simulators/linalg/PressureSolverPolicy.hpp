@@ -61,9 +61,9 @@ namespace Amg
                 : linsolver_()
             {
                 if (op.category() == Dune::SolverCategory::overlapping) {
-                    linsolver_.reset(new Solver(prm, op.getmat(), comm));
+                    linsolver_.reset(new Solver(prm, op.getmat(), std::function<X()>(), comm));
                 } else {
-                    linsolver_.reset(new Solver(prm, op.getmat()));
+                    linsolver_.reset(new Solver(prm, op.getmat(), std::function<X()>()));
                 }
             }
 
@@ -84,8 +84,7 @@ namespace Amg
 
             void updatePreconditioner()
             {
-                X w;
-                linsolver_->preconditioner().update(w);
+                linsolver_->preconditioner().update();
             }
 
         private:

@@ -84,17 +84,13 @@ public:
     using MatrixType = typename OperatorType::matrix_type;
     using PrecFactory = Opm::PreconditionerFactory<OperatorType, Communication>;
 
-    OwningTwoLevelPreconditioner(const OperatorType& linearoperator, const pt& prm)
+    OwningTwoLevelPreconditioner(const OperatorType& linearoperator, const pt& prm,
+                                 const std::function<VectorType()> weightsCalculator)
         : linear_operator_(linearoperator)
         , finesmoother_(PrecFactory::create(linearoperator, prm.get_child("finesmoother")))
         , comm_(nullptr)
-        , weights_(
-            (prm.get<std::string>("weight_type") != "quasiimpes") ?
-            prm.get<VectorType>("weights") :
-            Opm::Amg::getQuasiImpesWeights<MatrixType, VectorType>(linearoperator.getmat(),
-                                                                   prm.get<int>("pressure_var_index"),
-                                                                   transpose)
-            )
+        , weightsCalculator_(weightsCalculator)
+        , weights_(weightsCalculator())
         , levelTransferPolicy_(dummy_comm_, weights_, prm.get<int>("pressure_var_index"))
         , coarseSolverPolicy_(prm.get_child("coarsesolver"))
         , twolevel_method_(linearoperator,
@@ -114,17 +110,13 @@ public:
         }
     }
 
-    OwningTwoLevelPreconditioner(const OperatorType& linearoperator, const pt& prm, const Communication& comm)
+    OwningTwoLevelPreconditioner(const OperatorType& linearoperator, const pt& prm,
+                                 const std::function<VectorType()> weightsCalculator, const Communication& comm)
         : linear_operator_(linearoperator)
         , finesmoother_(PrecFactory::create(linearoperator, prm.get_child("finesmoother"), comm))
         , comm_(&comm)
-        , weights_(
-            (prm.get<std::string>("weight_type") != "quasiimpes") ?
-            prm.get<VectorType>("weights") :
-            Opm::Amg::getQuasiImpesWeights<MatrixType, VectorType>(linearoperator.getmat(),
-                                                                   prm.get<int>("pressure_var_index"),
-                                                                   transpose)
-            )
+        , weightsCalculator_(weightsCalculator)
+        , weights_(weightsCalculator())
         , levelTransferPolicy_(*comm_, weights_, prm.get<int>("pressure_var_index"))
         , coarseSolverPolicy_(prm.get_child("coarsesolver"))
         , twolevel_method_(linearoperator,
@@ -161,9 +153,9 @@ public:
         twolevel_method_.post(x);
     }
 
-    virtual void update(const VectorType& weights) override
+    virtual void update() override
     {
-        weights_ = weights;
+        weights_ = weightsCalculator_();
         updateImpl(comm_);
     }
 
@@ -207,6 +199,7 @@ private:
     const OperatorType& linear_operator_;
     std::shared_ptr<Dune::Preconditioner<VectorType, VectorType>> finesmoother_;
     const Communication* comm_;
+    std::function<VectorType()> weightsCalculator_;
     VectorType weights_;
     LevelTransferPolicy levelTransferPolicy_;
     CoarseSolverPolicy coarseSolverPolicy_;

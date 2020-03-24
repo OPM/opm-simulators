@@ -151,7 +151,7 @@ public:
             // Never recreate solver.
         }
 
-        VectorType weights;
+        std::function<VectorType()> weightsCalculator;
 
         if( prm_.get<std::string>("preconditioner.type") == "cpr" ||
             prm_.get<std::string>("preconditioner.type") == "cprt"
@@ -163,20 +163,21 @@ public:
             }
 
             if(prm_.get<std::string>("preconditioner.weight_type") == "quasiimpes") {
-                if( not( recreate_solver || !solver_) ){
-                    // weighs will be created as default in the solver
-                    weights = Opm::Amg::getQuasiImpesWeights<MatrixType, VectorType>(
-                        mat.istlMatrix(),
-                        prm_.get<int>("preconditioner.pressure_var_index"), transpose);
-                }
+                // weighs will be created as default in the solver
+                weightsCalculator =
+                    [&mat, this, transpose](){
+                        return Opm::Amg::getQuasiImpesWeights<MatrixType,
+                                                              VectorType>(
+                                                                          mat.istlMatrix(),
+                                                                          this->prm_.get<int>("preconditioner.pressure_var_index"),
+                                                                          transpose);
+                    };
 
             }else if(prm_.get<std::string>("preconditioner.weight_type") == "trueimpes"  ){
-                weights =
-                    this->getTrueImpesWeights(b, prm_.get<int>("preconditioner.pressure_var_index"));
-                if( recreate_solver || !solver_){
-                    // need weights for the constructor
-                    prm_.put("preconditioner.weights",weights);
-                }
+                weightsCalculator =
+                    [this, &b](){
+                        return this->getTrueImpesWeights(b, this->prm_.get<int>("preconditioner.pressure_var_index"));
+                    };
             }else{
                 throw std::runtime_error("no such weights implemented for cpr");
             }
@@ -185,14 +186,14 @@ public:
         if (recreate_solver || !solver_) {
             if (isParallel()) {
 #if HAVE_MPI
-                solver_.reset(new SolverType(prm_, mat.istlMatrix(), *comm_));
+                solver_.reset(new SolverType(prm_, mat.istlMatrix(), weightsCalculator, *comm_));
 #endif
             } else {
-                solver_.reset(new SolverType(prm_, mat.istlMatrix()));
+                solver_.reset(new SolverType(prm_, mat.istlMatrix(), weightsCalculator));
             }
             rhs_ = b;
         } else {
-            solver_->preconditioner().update(weights);
+            solver_->preconditioner().update();
             rhs_ = b;
         }
     }

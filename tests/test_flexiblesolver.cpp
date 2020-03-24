@@ -58,7 +58,19 @@ testSolver(const boost::property_tree::ptree& prm, const std::string& matrix_fil
         }
         readMatrixMarket(rhs, rhsfile);
     }
-    Dune::FlexibleSolver<Matrix, Vector> solver(prm, matrix);
+    bool transpose = false;
+
+    if(prm.get<std::string>("preconditioner.type") == "cprt"){
+        transpose = true;
+    }
+    auto wc = [&matrix, &prm, transpose]()
+              {
+                  return Opm::Amg::getQuasiImpesWeights<Matrix,
+                                                        Vector>(matrix,
+                                                                prm.get<int>("preconditioner.pressure_var_index"),
+                                                                transpose);
+              };
+    Dune::FlexibleSolver<Matrix, Vector> solver(prm, matrix, wc);
     Vector x(rhs.size());
     Dune::InverseOperatorResult res;
     solver.apply(x, rhs, res);
