@@ -55,7 +55,7 @@ SET_INT_PROP(EclFlowProblemSimple, CprMaxEllIter, 1);
 SET_INT_PROP(EclFlowProblemSimple, CprEllSolvetype, 3);
 SET_INT_PROP(EclFlowProblemSimple, CprReuseSetup, 3);
 SET_INT_PROP(EclFlowProblemSimple, CprSolverVerbose, 0);
-SET_STRING_PROP(EclFlowProblemSimple, LinearSolverConfiguration, "file");
+SET_STRING_PROP(EclFlowProblemSimple, LinearSolverConfiguration, "ilu0");
 SET_STRING_PROP(EclFlowProblemSimple, SystemStrategy, "quasiimpes");
 END_PROPERTIES
 
