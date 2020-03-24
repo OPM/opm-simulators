@@ -2121,7 +2121,7 @@ namespace Opm {
         std::vector<double> rates(phase_usage_.num_phases, 0.0);
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
 
-        const bool skip = switched_groups.count(group.name());
+        const bool skip = switched_groups.count(group.name()) || group.name() == "FIELD";
 
         if (!skip && group.isInjectionGroup()) {
             // Obtain rates for group.
