@@ -1682,7 +1682,7 @@ namespace Opm
             const auto controls = well.injectionControls(summaryState);
             Opm::Well::InjectorCMode& currentControl = well_state.currentInjectionControls()[well_index];
 
-	    if (currentControl != Well::InjectorCMode::GRUP) {
+            if (currentControl != Well::InjectorCMode::GRUP) {
                 // This checks only the first encountered group limit,
                 // in theory there could be several, and then we should
                 // test all but the one currently applied. At that point,
@@ -1691,22 +1691,26 @@ namespace Opm
                 // control is the active one for the well (if any).
                 const auto& group = schedule.getGroup( well.groupName(), current_step_ );
                 const double efficiencyFactor = well.getEfficiencyFactor();
-                const bool group_constraint_broken = checkGroupConstraintsInj(
+                const std::pair<bool, double> group_constraint = checkGroupConstraintsInj(
                     group, well_state, efficiencyFactor, schedule, summaryState, deferred_logger);
                 // If a group constraint was broken, we set the current well control to
                 // be GRUP.
-                if (group_constraint_broken) {
+                if (group_constraint.first) {
                     well_state.currentInjectionControls()[index_of_well_] = Well::InjectorCMode::GRUP;
+                    const int np = well_state.numPhases();
+                    for (int p = 0; p<np; ++p) {
+                        well_state.wellRates()[index_of_well_*np + p] *= group_constraint.second;
+                    }
                 }
-                return group_constraint_broken;
-	    }
+                return group_constraint.first;
+            }
         }
 
         if (well.isProducer( )) {
             const auto controls = well.productionControls(summaryState);
             Well::ProducerCMode& currentControl = well_state.currentProductionControls()[well_index];
 
-	    if (currentControl != Well::ProducerCMode::GRUP) {
+            if (currentControl != Well::ProducerCMode::GRUP) {
                 // This checks only the first encountered group limit,
                 // in theory there could be several, and then we should
                 // test all but the one currently applied. At that point,
@@ -1715,15 +1719,19 @@ namespace Opm
                 // control is the active one for the well (if any).
                 const auto& group = schedule.getGroup( well.groupName(), current_step_ );
                 const double efficiencyFactor = well.getEfficiencyFactor();
-                const bool group_constraint_broken = checkGroupConstraintsProd(
+                const std::pair<bool, double> group_constraint = checkGroupConstraintsProd(
                     group, well_state, efficiencyFactor, schedule, summaryState, deferred_logger);
                 // If a group constraint was broken, we set the current well control to
                 // be GRUP.
-                if (group_constraint_broken) {
+                if (group_constraint.first) {
                     well_state.currentProductionControls()[index_of_well_] = Well::ProducerCMode::GRUP;
+                    const int np = well_state.numPhases();
+                    for (int p = 0; p<np; ++p) {
+                        well_state.wellRates()[index_of_well_*np + p] *= group_constraint.second;
+                    }
                 }
-                return group_constraint_broken;
-	    }
+                return group_constraint.first;
+            }
         }
 
         return false;
@@ -1734,7 +1742,7 @@ namespace Opm
 
 
     template <typename TypeTag>
-    bool
+    std::pair<bool, double>
     WellInterface<TypeTag>::checkGroupConstraintsInj(const Group& group,
                                                      const WellState& well_state,
                                                      const double efficiencyFactor,
@@ -1788,7 +1796,7 @@ namespace Opm
 
 
     template <typename TypeTag>
-    bool
+    std::pair<bool, double>
     WellInterface<TypeTag>::checkGroupConstraintsProd(const Group& group,
                                                       const WellState& well_state,
                                                       const double efficiencyFactor,

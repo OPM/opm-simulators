@@ -395,6 +395,39 @@ namespace Opm {
         }
         wellState.setCurrentInjectionGroupReservoirRates(group.name(), resv);
     }
+    
+    inline void updateWellRates(const Group& group, const Schedule& schedule, const int reportStepIdx, const WellStateFullyImplicitBlackoil& wellStateNupcol, WellStateFullyImplicitBlackoil& wellState) {
+        for (const std::string& groupName : group.groups()) {
+            const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
+            updateWellRates(groupTmp, schedule, reportStepIdx, wellStateNupcol, wellState);
+        }
+        const int np = wellState.numPhases();
+        const auto& end = wellState.wellMap().end();
+        for (const std::string& wellName : group.wells()) {
+            std::vector<double> rates(np, 0.0);
+            const auto& it = wellState.wellMap().find(wellName);
+            if (it != end) {  // the well is found on this node 
+                int well_index = it->second[0];
+                for (int phase = 0; phase < np; ++phase) {
+                    rates[phase] = wellStateNupcol.wellRates()[well_index*np + phase];
+                }
+            }
+            wellState.setCurrentWellRates(wellName, rates); 
+        }
+    }
+    
+    inline void updateGroupProductionRates(const Group& group, const Schedule& schedule, const int reportStepIdx, const WellStateFullyImplicitBlackoil& wellStateNupcol, WellStateFullyImplicitBlackoil& wellState) {
+        for (const std::string& groupName : group.groups()) {
+            const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
+            updateGroupProductionRates(groupTmp, schedule, reportStepIdx, wellStateNupcol, wellState);
+        }
+        const int np = wellState.numPhases();
+        std::vector<double> rates(np, 0.0);
+        for (int phase = 0; phase < np; ++phase) {
+            rates[phase] = sumWellPhaseRates(wellStateNupcol.wellRates(), group, schedule, wellState, reportStepIdx, phase, /*isInjector*/ false);
+        }
+        wellState.setCurrentProductionGroupRates(group.name(), rates);
+    }
 
     inline void updateREINForGroups(const Group& group, const Schedule& schedule, const int reportStepIdx, const PhaseUsage& pu, const SummaryState& st, const WellStateFullyImplicitBlackoil& wellStateNupcol, WellStateFullyImplicitBlackoil& wellState) {
         const int np = wellState.numPhases();
@@ -420,29 +453,22 @@ namespace Opm {
         wellState.setCurrentInjectionREINRates(group.name(), rein);
     }
 
-	inline GuideRate::RateVector getRateVector(const WellState& well_state, const PhaseUsage& pu, const std::string& name) {
-
-            const auto& end = well_state.wellMap().end();
-            const auto& it = well_state.wellMap().find( name);
-            if (it == end)  // the well is not found
-                assert(false);
-
-            int well_index = it->second[0];
-	    int np = well_state.numPhases();
-            double oilRate = 0.0;
-            if (pu.phase_used[BlackoilPhases::Liquid])
-                oilRate = well_state.wellRates()[ well_index*np + pu.phase_pos[BlackoilPhases::Liquid]];
+    inline GuideRate::RateVector getRateVector(const WellStateFullyImplicitBlackoil& well_state, const PhaseUsage& pu, const std::string& name) {
+        const std::vector<double>& rates = well_state.currentWellRates(name);
+        double oilRate = 0.0;
+        if (pu.phase_used[BlackoilPhases::Liquid])
+            oilRate = rates[pu.phase_pos[BlackoilPhases::Liquid]];
         
-            double gasRate = 0.0;
-            if (pu.phase_used[BlackoilPhases::Vapour])
-                gasRate = well_state.wellRates()[ well_index*np + pu.phase_pos[BlackoilPhases::Vapour]];
+        double gasRate = 0.0;
+        if (pu.phase_used[BlackoilPhases::Vapour])
+            gasRate = rates[pu.phase_pos[BlackoilPhases::Vapour]];
 
-            double waterRate = 0.0;
-            if (pu.phase_used[BlackoilPhases::Aqua])
-                waterRate = well_state.wellRates()[well_index*np + pu.phase_pos[BlackoilPhases::Aqua]];
+        double waterRate = 0.0;
+        if (pu.phase_used[BlackoilPhases::Aqua])
+            waterRate = rates[pu.phase_pos[BlackoilPhases::Aqua]];
 
-	    return GuideRate::RateVector{oilRate, gasRate, waterRate};
-	}
+        return GuideRate::RateVector{oilRate, gasRate, waterRate};
+    }
 
 
     inline double getGuideRate(const std::string& name,
@@ -451,7 +477,7 @@ namespace Opm {
                                const int reportStepIdx,
                                const GuideRate* guideRate,
                                const GuideRateModel::Target target,
-			       const PhaseUsage& pu)
+                               const PhaseUsage& pu)
     {
         if (schedule.hasWell(name, reportStepIdx) || guideRate->has(name)) {
             return guideRate->get(name, target, getRateVector(wellState, pu, name));
@@ -675,24 +701,23 @@ namespace Opm {
             return ::Opm::wellGroupHelpers::groupControlledWells(schedule_, well_state_, report_step_, group_name, always_included_child);
         }
 
-	inline GuideRate::RateVector getGroupRateVector(const std::string& group_name) {
+    inline GuideRate::RateVector getGroupRateVector(const std::string& group_name) {
 
-#warning Does not work in parallell
-            const Group& group = schedule_.getGroup(group_name, report_step_);
-            double oilRate = 0.0;
-            if (pu_.phase_used[BlackoilPhases::Liquid])
-		oilRate = sumWellPhaseRates(well_state_.wellRates(), group, schedule_, well_state_, report_step_, pu_.phase_pos[BlackoilPhases::Liquid], /*isInjector*/ false);
+        std::vector<double> groupRates = well_state_.currentProductionGroupRates(group_name);
+        double oilRate = 0.0;
+        if (pu_.phase_used[BlackoilPhases::Liquid])
+            oilRate = groupRates[pu_.phase_pos[BlackoilPhases::Liquid]];
         
-            double gasRate = 0.0;
-            if (pu_.phase_used[BlackoilPhases::Vapour])
-                gasRate = sumWellPhaseRates(well_state_.wellRates(), group, schedule_, well_state_, report_step_, pu_.phase_pos[BlackoilPhases::Vapour], /*isInjector*/ false);
+        double gasRate = 0.0;
+        if (pu_.phase_used[BlackoilPhases::Vapour])
+            gasRate = groupRates[pu_.phase_pos[BlackoilPhases::Vapour]];
 
-            double waterRate = 0.0;
-            if (pu_.phase_used[BlackoilPhases::Aqua])
-                waterRate = sumWellPhaseRates(well_state_.wellRates(), group, schedule_, well_state_, report_step_, pu_.phase_pos[BlackoilPhases::Aqua], /*isInjector*/ false);
-
-	    return GuideRate::RateVector{oilRate, gasRate, waterRate};
-	}
+        double waterRate = 0.0;
+        if (pu_.phase_used[BlackoilPhases::Aqua])
+            waterRate = groupRates[pu_.phase_pos[BlackoilPhases::Aqua]];
+        
+        return GuideRate::RateVector{oilRate, gasRate, waterRate};
+    }
 
 
         const Schedule& schedule_;
@@ -711,7 +736,7 @@ namespace Opm {
                                          const int reportStepIdx,
                                          const GuideRate* guideRate,
                                          const GuideRateModel::Target target,
-					 const PhaseUsage& pu,
+                                         const PhaseUsage& pu,
                                          const bool alwaysIncludeThis = false)
     {
         FractionCalculator calc(schedule, wellState, reportStepIdx, guideRate, target, pu);
@@ -743,7 +768,7 @@ namespace Opm {
 
 
     template <class RateConverterType>
-    inline bool checkGroupConstraintsInj(const std::string& name,
+    inline std::pair<bool, double> checkGroupConstraintsInj(const std::string& name,
                                          const std::string& parent,
                                          const Group& group,
                                          const WellStateFullyImplicitBlackoil& wellState,
@@ -769,7 +794,7 @@ namespace Opm {
             currentGroupControl == Group::InjectionCMode::NONE) {
             // Return if we are not available for parent group.
             if (!group.isAvailableForGroupControl()) {
-                return false;
+                return std::make_pair(false, 1.0);
             }
             // Otherwise: check injection share of parent's control.
             const auto& parentGroup = schedule.getGroup(group.parent(), reportStepIdx);
@@ -796,7 +821,7 @@ namespace Opm {
         // This can be false for FLD-controlled groups, we must therefore
         // check for FLD first (done above).
         if (!group.isInjectionGroup()) {
-            return false;
+            return std::make_pair(false, 1.0);
         }
 
         int phasePos;
@@ -831,7 +856,7 @@ namespace Opm {
         const std::vector<double>& groupInjectionReductions = wellState.currentInjectionGroupReductionRates(group.name());
         const double groupTargetReduction = groupInjectionReductions[phasePos];
         double fraction = wellGroupHelpers::fractionFromInjectionPotentials(name, group.name(), schedule, wellState, reportStepIdx, guideRate, target, pu, injectionPhase, true);
-
+        double target_fraction = 1.0;
         bool constraint_broken = false;
         switch(currentGroupControl) {
         case Group::InjectionCMode::RATE:
@@ -840,6 +865,7 @@ namespace Opm {
             const double target_rate = fraction * std::max(0.0, (groupcontrols.surface_max_rate - groupTargetReduction + current_rate*efficiencyFactor)) / efficiencyFactor;
             if (current_rate > target_rate) {
                 constraint_broken = true;
+                target_fraction = target_rate / current_rate;
             }
             break;
         }
@@ -852,6 +878,7 @@ namespace Opm {
             const double target_rate = fraction * std::max(0.0, (groupcontrols.resv_max_rate/coeff - groupTargetReduction + current_rate*efficiencyFactor)) / efficiencyFactor;
             if (current_rate > target_rate) {
                 constraint_broken = true;
+                target_fraction = target_rate / current_rate;
             }
             break;
         }
@@ -862,6 +889,7 @@ namespace Opm {
             const double target_rate = fraction * std::max(0.0, (groupcontrols.target_reinj_fraction*productionRate - groupTargetReduction + current_rate*efficiencyFactor)) / efficiencyFactor;
             if (current_rate > target_rate) {
                 constraint_broken = true;
+                target_fraction = target_rate / current_rate;
             }
             break;
         }
@@ -885,6 +913,7 @@ namespace Opm {
             const double target_rate = fraction * std::max(0.0, ( voidageRate/coeff - groupTargetReduction + current_rate*efficiencyFactor)) / efficiencyFactor;
             if (current_rate > target_rate) {
                 constraint_broken = true;
+                target_fraction = target_rate / current_rate;
             }
             break;
         }
@@ -909,6 +938,7 @@ namespace Opm {
             const double target_rate = fraction * std::max(0.0, (inj_rate - groupTargetReduction + current_rate*efficiencyFactor)) / efficiencyFactor;
             if (current_rate > target_rate) {
                 constraint_broken = true;
+                target_fraction = target_rate / current_rate;
             }
             break;
         }
@@ -925,7 +955,7 @@ namespace Opm {
 
         }
 
-        return constraint_broken;
+        return std::make_pair(constraint_broken, target_fraction);
     }
 
     template <class RateConverterType>
@@ -1080,7 +1110,7 @@ namespace Opm {
 
 
     template <class RateConverterType>
-    inline bool checkGroupConstraintsProd(const std::string& name,
+    inline std::pair<bool, double> checkGroupConstraintsProd(const std::string& name,
                                           const std::string& parent,
                                           const Group& group,
                                           const WellStateFullyImplicitBlackoil& wellState,
@@ -1106,7 +1136,7 @@ namespace Opm {
             currentGroupControl == Group::ProductionCMode::NONE) {
             // Return if we are not available for parent group.
             if (!group.isAvailableForGroupControl()) {
-                return false;
+                return std::make_pair(false,1);
             }
             // Otherwise: check production share of parent's control.
             const auto& parentGroup = schedule.getGroup(group.parent(), reportStepIdx);
@@ -1129,7 +1159,7 @@ namespace Opm {
         // This can be false for FLD-controlled groups, we must therefore
         // check for FLD first (done above).
         if (!group.isProductionGroup()) {
-            return false;
+            return std::make_pair(false,1.0);
         }
 
         // If we are here, we are at the topmost group to be visited in the recursion.
@@ -1174,8 +1204,8 @@ namespace Opm {
             }
             target *= localFraction(chain[ii+1]);
         }
-        const double target_rate = target / efficiencyFactor;
-        return current_rate > target_rate;
+        const double target_rate = std::max(0.0, target / efficiencyFactor);
+        return std::make_pair(current_rate > target_rate, target_rate / current_rate);
     }
 
 

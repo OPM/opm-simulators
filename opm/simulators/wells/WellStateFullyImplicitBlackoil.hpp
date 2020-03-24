@@ -350,8 +350,33 @@ namespace Opm
 
             return it->second;
         }
+        
+        void setCurrentWellRates(const std::string& wellName, const std::vector<double>& rates ) {
+            well_rates[wellName] = rates;
+        }
 
+        const std::vector<double>& currentWellRates(const std::string& wellName) const {
+            auto it = well_rates.find(wellName);
 
+            if (it == well_rates.end())
+                OPM_THROW(std::logic_error, "Could not find any rates for well  " << wellName);
+
+            return it->second;
+        }
+
+        void setCurrentProductionGroupRates(const std::string& groupName, const std::vector<double>& rates ) {
+            production_group_rates[groupName] = rates;
+        }
+
+        const std::vector<double>& currentProductionGroupRates(const std::string& groupName) const {
+            auto it = production_group_rates.find(groupName);
+
+            if (it == production_group_rates.end())
+                OPM_THROW(std::logic_error, "Could not find any rates for productino group  " << groupName);
+
+            return it->second;
+        }
+        
         void setCurrentProductionGroupReductionRates(const std::string& groupName, const std::vector<double>& target ) {
             production_group_reduction_rates[groupName] = target;
         }
@@ -880,6 +905,12 @@ namespace Opm
             for (auto& x : injection_group_reservoir_rates) {
                 comm.sum(x.second.data(), x.second.size());
             }
+            for (auto& x : production_group_rates) {
+                comm.sum(x.second.data(), x.second.size());
+            }
+            for (auto& x : well_rates) {
+                comm.sum(x.second.data(), x.second.size());
+            }
         }
 
         template<class Comm>
@@ -952,6 +983,8 @@ namespace Opm
         std::map<std::string, Group::ProductionCMode> current_production_group_controls_;
         std::map<std::pair<Opm::Phase, std::string>, Group::InjectionCMode> current_injection_group_controls_;
 
+        std::map<std::string, std::vector<double>> well_rates;
+        std::map<std::string, std::vector<double>> production_group_rates;
         std::map<std::string, std::vector<double>> production_group_reduction_rates;
         std::map<std::string, std::vector<double>> injection_group_reduction_rates;
         std::map<std::string, std::vector<double>> injection_group_reservoir_rates;
