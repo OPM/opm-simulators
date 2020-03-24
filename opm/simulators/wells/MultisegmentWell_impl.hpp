@@ -690,7 +690,7 @@ namespace Opm
             }
             if (pressure_controlled_well) {
                 for (int compIdx = 0; compIdx < num_components_; ++compIdx) {
-                    const EvalWell rate = this->getSegmentRate(0, compIdx);
+                    const EvalWell rate = this->getQs(compIdx);
                     well_potentials[ebosCompIdxToFlowCompIdx(compIdx)] = rate.value();
                 }
                 return;
@@ -790,7 +790,7 @@ namespace Opm
         const int np = number_of_phases_;
         well_flux.resize(np, 0.0);
         for (int compIdx = 0; compIdx < num_components_; ++compIdx) {
-            const EvalWell rate = well_copy.getSegmentRate(0, compIdx);
+            const EvalWell rate = well_copy.getQs(compIdx);
             well_flux[ebosCompIdxToFlowCompIdx(compIdx)] = rate.value();
         }
         debug_cost_counter_ += well_copy.debug_cost_counter_;
@@ -1624,10 +1624,34 @@ namespace Opm
     template <typename TypeTag>
     typename MultisegmentWell<TypeTag>::EvalWell
     MultisegmentWell<TypeTag>::
+    getBhp() const
+    {
+        return getSegmentPressure(0);
+    }
+
+
+
+
+
+    template <typename TypeTag>
+    typename MultisegmentWell<TypeTag>::EvalWell
+    MultisegmentWell<TypeTag>::
     getSegmentRate(const int seg,
                    const int comp_idx) const
     {
         return primary_variables_evaluation_[seg][GTotal] * volumeFractionScaled(seg, comp_idx);
+    }
+
+
+
+
+
+    template <typename TypeTag>
+    typename MultisegmentWell<TypeTag>::EvalWell
+    MultisegmentWell<TypeTag>::
+    getQs(const int comp_idx) const
+    {
+        return getSegmentRate(0, comp_idx);
     }
 
 
@@ -1836,22 +1860,22 @@ namespace Opm
             {
                 std::vector<EvalWell> rates(3, 0.);
                 if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                    rates[ Water ] = getSegmentRate(0, Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx));
+                    rates[ Water ] = getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx));
                 }
                 if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-                    rates[ Oil ] = getSegmentRate(0, Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx));
+                    rates[ Oil ] = getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx));
                 }
                 if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                    rates[ Gas ] = getSegmentRate(0, Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx));
+                    rates[ Gas ] = getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx));
                 }
-                control_eq = getSegmentPressure(0) - calculateBhpFromThp(rates, well, summaryState, deferred_logger);
+                control_eq = getBhp() - calculateBhpFromThp(rates, well, summaryState, deferred_logger);
                 break;
             }
 
             case Well::InjectorCMode::BHP:
             {
                 const auto& bhp = controls.bhp_limit;
-                control_eq = getSegmentPressure(0) - bhp;
+                control_eq = getBhp() - bhp;
                 break;
             }
 
@@ -1881,21 +1905,21 @@ namespace Opm
             case Well::ProducerCMode::ORAT:
             {
                 assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
-                const EvalWell& rate = -getSegmentRate(0, Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx));
+                const EvalWell& rate = -getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx));
                 control_eq = rate - controls.oil_rate;
                 break;
             }
             case Well::ProducerCMode::WRAT:
             {
                 assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
-                const EvalWell& rate = -getSegmentRate(0, Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx));
+                const EvalWell& rate = -getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx));
                 control_eq = rate - controls.water_rate;
                 break;
             }
             case Well::ProducerCMode::GRAT:
             {
                 assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
-                const EvalWell& rate = -getSegmentRate(0, Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx));
+                const EvalWell& rate = -getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx));
                 control_eq = rate - controls.gas_rate;
                 break;
 
@@ -1904,8 +1928,8 @@ namespace Opm
             {
                 assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
                 assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
-                EvalWell rate = -getSegmentRate(0, Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx))
-                        -getSegmentRate(0, Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx));
+                EvalWell rate = -getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx))
+                        -getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx));
                 control_eq =  rate - controls.liquid_rate;
                 break;
             }
@@ -1919,7 +1943,7 @@ namespace Opm
                 std::vector<double> convert_coeff(number_of_phases_, 1.0);
                 Base::rateConverter_.calcCoeff(/*fipreg*/ 0, Base::pvtRegionIdx_, convert_coeff);
                 for (int phase = 0; phase < number_of_phases_; ++phase) {
-                    total_rate += getSegmentRate(0, flowPhaseToEbosCompIdx(phase) ) * convert_coeff[phase];
+                    total_rate += getQs(flowPhaseToEbosCompIdx(phase) ) * convert_coeff[phase];
                 }
 
                 if (controls.prediction_mode) {
@@ -1945,22 +1969,22 @@ namespace Opm
             }
             case Well::ProducerCMode::BHP:
             {
-                control_eq = getSegmentPressure(0) - controls.bhp_limit;
+                control_eq = getBhp() - controls.bhp_limit;
                 break;
             }
             case Well::ProducerCMode::THP:
             {
                 std::vector<EvalWell> rates(3, 0.);
                 if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                    rates[ Water ] = getSegmentRate(0, Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx));
+                    rates[ Water ] = getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx));
                 }
                 if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-                    rates[ Oil ] = getSegmentRate(0, Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx));
+                    rates[ Oil ] = getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx));
                 }
                 if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                    rates[ Gas ] = getSegmentRate(0, Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx));
+                    rates[ Gas ] = getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx));
                 }
-                control_eq = getSegmentPressure(0) - calculateBhpFromThp(rates, well, summaryState, deferred_logger);
+                control_eq = getBhp() - calculateBhpFromThp(rates, well, summaryState, deferred_logger);
                 break;
             }
             case Well::ProducerCMode::GRUP:
@@ -2126,7 +2150,7 @@ namespace Opm
             // containing groups. We will therefore use the wells' bhp
             // limit equation as a fallback.
             const auto& controls = well_ecl_.injectionControls(summaryState);
-            control_eq = getSegmentPressure(0) - controls.bhp_limit;
+            control_eq = getBhp() - controls.bhp_limit;
             return;
         }
 
@@ -2301,7 +2325,7 @@ namespace Opm
                 // containing groups. We will therefore use the wells' bhp
                 // limit equation as a fallback.
                 const auto& controls = well_ecl_.productionControls(summaryState);
-                control_eq = getSegmentPressure(0) - controls.bhp_limit;
+                control_eq = getBhp() - controls.bhp_limit;
                 return;
             } else {
                 // Produce share of parents control
@@ -2315,7 +2339,7 @@ namespace Opm
         if (!group.isProductionGroup()) {
             // use bhp as control eq and let the updateControl code find a vallied control
             const auto& controls = well.productionControls(summaryState);
-            control_eq = getSegmentPressure(0) - controls.bhp_limit;
+            control_eq = getBhp() - controls.bhp_limit;
             return;
         }
 
@@ -2336,7 +2360,7 @@ namespace Opm
 
             const double rate_target = std::max(0.0, groupcontrols.oil_target - groupTargetReduction) / efficiencyFactor;
             assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
-            const EvalWell& rate = -getSegmentRate(0, Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx));
+            const EvalWell& rate = -getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx));
             control_eq = rate - fraction * rate_target;
             break;
         }
@@ -2347,7 +2371,7 @@ namespace Opm
 
             const double rate_target = std::max(0.0, groupcontrols.gas_target - groupTargetReduction) / efficiencyFactor;
             assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
-            const EvalWell& rate = -getSegmentRate(0, Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx));
+            const EvalWell& rate = -getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx));
             control_eq = rate - fraction * rate_target;
             break;
         }
@@ -2358,7 +2382,7 @@ namespace Opm
 
             const double rate_target = std::max(0.0, groupcontrols.gas_target - groupTargetReduction) / efficiencyFactor;
             assert(FluidSystem::phaseIsActive(FluidSystem::gasCompIdx));
-            const EvalWell& rate = -getSegmentRate(0, Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx));
+            const EvalWell& rate = -getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx));
             control_eq = rate - fraction * rate_target;
             break;
         }
@@ -2368,8 +2392,8 @@ namespace Opm
             double fraction = wellGroupHelpers::fractionFromGuideRates(well.name(), group.name(), schedule, well_state, current_step_, Base::guide_rate_, GuideRateModel::convert_target(Well::GuideRateTarget::LIQ), pu);
 
             const double rate_target = std::max(0.0, groupcontrols.liquid_target - groupTargetReduction) / efficiencyFactor;            assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
-            EvalWell rate = -getSegmentRate(0, Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx))
-                    -getSegmentRate(0, Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx));
+            EvalWell rate = -getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx))
+                    -getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx));
             control_eq = rate - fraction * rate_target;
             break;
         }

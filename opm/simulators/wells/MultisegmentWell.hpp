@@ -283,11 +283,9 @@ namespace Opm
 
         void initMatrixAndVectors(const int num_cells) const;
 
-        // protected functions
-        // EvalWell getBhp(); this one should be something similar to getSegmentPressure();
-        // EvalWell getQs(); this one should be something similar to getSegmentRates()
-        // EValWell wellVolumeFractionScaled, wellVolumeFraction, wellSurfaceVolumeFraction ... these should have different names, and probably will be needed.
-        // bool crossFlowAllowed(const Simulator& ebosSimulator) const; probably will be needed
+        EvalWell getBhp() const;
+        EvalWell getQs(const int comp_idx) const;
+
         // xw = inv(D)*(rw - C*x)
         void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
 
