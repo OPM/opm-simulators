@@ -675,7 +675,7 @@ namespace Opm
         }
 
         // If the well is pressure controlled the potential equals the rate.
-        {
+/*         {
             bool pressure_controlled_well = false;
             if (this->isInjector()) {
                 const Opm::Well::InjectorCMode& current = well_state.currentInjectionControls()[index_of_well_];
@@ -695,7 +695,7 @@ namespace Opm
                 }
                 return;
             }
-        }
+        } */
 
         // creating a copy of the well itself, to avoid messing up the explicit informations
         // during this copy, the only information not copied properly is the well controls
