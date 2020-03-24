@@ -41,7 +41,6 @@
 
 BEGIN_PROPERTIES
 
-
 END_PROPERTIES
 
 namespace Opm {
@@ -67,13 +66,8 @@ public:
      */
     static void registerParameters()
     {
-//         #define EWOMS_REGISTER_PARAM(TypeTag, ParamType, ParamName, Description)
-//         ::Opm::Parameters::registerParam<TypeTag, ParamType, PTAG_(ParamName)>( 
-//         #ParamName, #ParamName, Description)
-//         EWOMS_REGISTER_PARAM(TypeTag, std::string, GridFile,
-//                              "The file name of the DGF file to load");
-        ::Opm::Parameters::template registerParam<TypeTag, std::string, Properties::GridFile>
-            ("GridFile", "GridFile", "The file name of the DGF file to load");
+        EWOMS_REGISTER_PARAM(TypeTag, std::string, GridFile,
+                             "The file name of the DGF file to load");
         EWOMS_REGISTER_PARAM(TypeTag, unsigned, GridGlobalRefinements,
                              "The number of global refinements of the grid "
                              "executed after it was loaded");
@@ -196,10 +190,6 @@ private:
     GridPointer    gridPtr_;
     FractureMapper fractureMapper_;
 };
-
-namespace Properties {
-SET_TYPE_PROP(NumericModel, Vanguard, Opm::DgfVanguard<TypeTag>);
-}
 
 } // namespace Opm
 

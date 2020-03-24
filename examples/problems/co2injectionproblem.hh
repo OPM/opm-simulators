@@ -73,7 +73,9 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(Co2InjectionBaseProblem);
 
 // declare the CO2 injection problem specific property tags
-
+NEW_PROP_TAG(MaxDepth);
+NEW_PROP_TAG(Temperature);
+NEW_PROP_TAG(SimulationName);
 
 // Set the grid type
 SET_TYPE_PROP(Co2InjectionBaseProblem, Grid, Dune::YaspGrid<2>);

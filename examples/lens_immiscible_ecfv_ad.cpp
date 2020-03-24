@@ -28,9 +28,9 @@
  */
 #include "config.h"
 
-#include "lens_immiscible_ecfv_ad.hh"
-
 #include <opm/models/utils/start.hh>
+
+#include "lens_immiscible_ecfv_ad.hh"
 
 int main(int argc, char **argv)
 {
