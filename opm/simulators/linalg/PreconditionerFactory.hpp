@@ -156,26 +156,20 @@ private:
         using C = Comm;
         doAddCreator("ILU0", [](const O& op, const P& prm, const C& comm) {
             const double w = prm.get<double>("relaxation");
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
-            return wrapBlockPreconditioner<DummyUpdatePreconditioner<SeqILU<M, V, V>>>(comm, op.getmat(), w);
-#else
-            return wrapBlockPreconditioner<DummyUpdatePreconditioner<SeqILU0<M, V, V>>>(comm, op.getmat(), w);
-#endif
+            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V, C>>(
+                op.getmat(), comm, 0, w, Opm::MILU_VARIANT::ILU);
         });
         doAddCreator("ParOverILU0", [](const O& op, const P& prm, const C& comm) {
             const double w = prm.get<double>("relaxation");
             // Already a parallel preconditioner. Need to pass comm, but no need to wrap it in a BlockPreconditioner.
-            return wrapPreconditioner<Opm::ParallelOverlappingILU0<M, V, V, C>>(
+            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V, C>>(
                 op.getmat(), comm, 0, w, Opm::MILU_VARIANT::ILU);
         });
         doAddCreator("ILUn", [](const O& op, const P& prm, const C& comm) {
             const int n = prm.get<int>("ilulevel");
             const double w = prm.get<double>("relaxation");
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
-            return wrapBlockPreconditioner<DummyUpdatePreconditioner<SeqILU<M, V, V>>>(comm, op.getmat(), n, w);
-#else
-            return wrapBlockPreconditioner<DummyUpdatePreconditioner<SeqILUn<M, V, V>>>(comm, op.getmat(), n, w);
-#endif
+            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V, C>>(
+                op.getmat(), comm, n, w, Opm::MILU_VARIANT::ILU);
         });
         doAddCreator("Jac", [](const O& op, const P& prm, const C& comm) {
             const int n = prm.get<int>("repeats");
@@ -229,24 +223,19 @@ private:
         using P = boost::property_tree::ptree;
         doAddCreator("ILU0", [](const O& op, const P& prm) {
             const double w = prm.get<double>("relaxation");
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
-            return wrapPreconditioner<SeqILU<M, V, V>>(op.getmat(), w);
-#else
-            return wrapPreconditioner<SeqILU0<M, V, V>>(op.getmat(), w);
-#endif
+            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V>>(
+                op.getmat(), 0, w, Opm::MILU_VARIANT::ILU);
         });
         doAddCreator("ParOverILU0", [](const O& op, const P& prm) {
             const double w = prm.get<double>("relaxation");
-            return wrapPreconditioner<Opm::ParallelOverlappingILU0<M, V, V>>(op.getmat(), 0, w, Opm::MILU_VARIANT::ILU);
+            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V>>(
+                op.getmat(), 0, w, Opm::MILU_VARIANT::ILU);
         });
         doAddCreator("ILUn", [](const O& op, const P& prm) {
             const int n = prm.get<int>("ilulevel");
             const double w = prm.get<double>("relaxation");
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
-            return wrapPreconditioner<SeqILU<M, V, V>>(op.getmat(), n, w);
-#else
-            return wrapPreconditioner<SeqILUn<M, V, V>>(op.getmat(), n, w);
-#endif
+            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V>>(
+                op.getmat(), n, w, Opm::MILU_VARIANT::ILU);
         });
         doAddCreator("Jac", [](const O& op, const P& prm) {
             const int n = prm.get<int>("repeats");
