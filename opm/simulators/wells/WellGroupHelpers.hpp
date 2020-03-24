@@ -657,7 +657,6 @@ namespace Opm {
         double guideRate(const std::string& name, const std::string& always_included_child)
         {
             if (schedule_.hasWell(name, report_step_)) {
-                std::cout << "getWellRate " << name << std::endl;
                 return guide_rate_->get(name, target_, getRateVector(well_state_, pu_, name));
             } else {
                 if (groupControlledWells(name, always_included_child) > 0) {
@@ -668,7 +667,6 @@ namespace Opm {
                         // Compute guide rate by accumulating our children's guide rates.
                         // (only children not under individual control though).
                         const Group& group = schedule_.getGroup(name, report_step_);
-                        std::cout << " guideRateSUM" << std::endl;
                         return guideRateSum(group, always_included_child);
                     }
                 } else {
@@ -705,8 +703,6 @@ namespace Opm {
 
     inline GuideRate::RateVector getGroupRateVector(const std::string& group_name) {
 
-#warning Does not work in parallell
-        std::cout << " getGroupRateVector " << group_name <<std::endl;
         std::vector<double> groupRates = well_state_.currentProductionGroupRates(group_name);
         double oilRate = 0.0;
         if (pu_.phase_used[BlackoilPhases::Liquid])
