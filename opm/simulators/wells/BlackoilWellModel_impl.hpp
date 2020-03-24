@@ -2215,7 +2215,7 @@ namespace Opm {
                 const Group::InjectionCMode& currentControl = well_state_.currentInjectionGroupControl(phase, group.name());
                 if (currentControl != Group::InjectionCMode::FLD) {
                     const Group& parentGroup = schedule().getGroup(group.parent(), reportStepIdx);
-                    const bool changed = wellGroupHelpers::checkGroupConstraintsInj(
+                    const std::pair<bool, double> changed = wellGroupHelpers::checkGroupConstraintsInj(
                         group.name(),
                         group.parent(),
                         parentGroup,
@@ -2231,7 +2231,7 @@ namespace Opm {
                         *rateConverter_,
                         pvtreg,
                         deferred_logger);
-                    if (changed) {
+                    if (changed.first) {
                         switched_groups.insert(group.name());
                         actionOnBrokenConstraints(group, Group::InjectionCMode::FLD, phase, reportStepIdx, deferred_logger);
                     }
@@ -2251,7 +2251,7 @@ namespace Opm {
             const Group::ProductionCMode& currentControl = well_state_.currentProductionGroupControl(group.name());
                 if (currentControl != Group::ProductionCMode::FLD) {
                     const Group& parentGroup = schedule().getGroup(group.parent(), reportStepIdx);
-                    const bool changed = wellGroupHelpers::checkGroupConstraintsProd(
+                    const std::pair<bool, double> changed = wellGroupHelpers::checkGroupConstraintsProd(
                         group.name(),
                         group.parent(),
                         parentGroup,
@@ -2266,7 +2266,7 @@ namespace Opm {
                         *rateConverter_,
                         pvtreg,
                         deferred_logger);
-                    if (changed) {
+                    if (changed.first) {
                         switched_groups.insert(group.name());
                         const auto exceed_action = group.productionControls(summaryState).exceed_action;
                         actionOnBrokenConstraints(group, exceed_action, Group::ProductionCMode::FLD, reportStepIdx, deferred_logger);

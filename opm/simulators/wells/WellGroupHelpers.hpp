@@ -768,7 +768,7 @@ namespace Opm {
 
 
     template <class RateConverterType>
-    inline bool checkGroupConstraintsInj(const std::string& name,
+    inline std::pair<bool, double> checkGroupConstraintsInj(const std::string& name,
                                          const std::string& parent,
                                          const Group& group,
                                          const WellStateFullyImplicitBlackoil& wellState,
@@ -794,7 +794,7 @@ namespace Opm {
             currentGroupControl == Group::InjectionCMode::NONE) {
             // Return if we are not available for parent group.
             if (!group.isAvailableForGroupControl()) {
-                return false;
+                return std::make_pair(false, 1.0);
             }
             // Otherwise: check injection share of parent's control.
             const auto& parentGroup = schedule.getGroup(group.parent(), reportStepIdx);
@@ -821,7 +821,7 @@ namespace Opm {
         // This can be false for FLD-controlled groups, we must therefore
         // check for FLD first (done above).
         if (!group.isInjectionGroup()) {
-            return false;
+            return std::make_pair(false, 1.0);
         }
 
         int phasePos;
@@ -856,7 +856,7 @@ namespace Opm {
         const std::vector<double>& groupInjectionReductions = wellState.currentInjectionGroupReductionRates(group.name());
         const double groupTargetReduction = groupInjectionReductions[phasePos];
         double fraction = wellGroupHelpers::fractionFromInjectionPotentials(name, group.name(), schedule, wellState, reportStepIdx, guideRate, target, pu, injectionPhase, true);
-
+        double target_fraction = 1.0;
         bool constraint_broken = false;
         switch(currentGroupControl) {
         case Group::InjectionCMode::RATE:
@@ -865,6 +865,7 @@ namespace Opm {
             const double target_rate = fraction * std::max(0.0, (groupcontrols.surface_max_rate - groupTargetReduction + current_rate*efficiencyFactor)) / efficiencyFactor;
             if (current_rate > target_rate) {
                 constraint_broken = true;
+                target_fraction = target_rate / current_rate;
             }
             break;
         }
@@ -877,6 +878,7 @@ namespace Opm {
             const double target_rate = fraction * std::max(0.0, (groupcontrols.resv_max_rate/coeff - groupTargetReduction + current_rate*efficiencyFactor)) / efficiencyFactor;
             if (current_rate > target_rate) {
                 constraint_broken = true;
+                target_fraction = target_rate / current_rate;
             }
             break;
         }
@@ -887,6 +889,7 @@ namespace Opm {
             const double target_rate = fraction * std::max(0.0, (groupcontrols.target_reinj_fraction*productionRate - groupTargetReduction + current_rate*efficiencyFactor)) / efficiencyFactor;
             if (current_rate > target_rate) {
                 constraint_broken = true;
+                target_fraction = target_rate / current_rate;
             }
             break;
         }
@@ -910,6 +913,7 @@ namespace Opm {
             const double target_rate = fraction * std::max(0.0, ( voidageRate/coeff - groupTargetReduction + current_rate*efficiencyFactor)) / efficiencyFactor;
             if (current_rate > target_rate) {
                 constraint_broken = true;
+                target_fraction = target_rate / current_rate;
             }
             break;
         }
@@ -934,6 +938,7 @@ namespace Opm {
             const double target_rate = fraction * std::max(0.0, (inj_rate - groupTargetReduction + current_rate*efficiencyFactor)) / efficiencyFactor;
             if (current_rate > target_rate) {
                 constraint_broken = true;
+                target_fraction = target_rate / current_rate;
             }
             break;
         }
@@ -950,7 +955,7 @@ namespace Opm {
 
         }
 
-        return constraint_broken;
+        return std::make_pair(constraint_broken, target_fraction);
     }
 
     template <class RateConverterType>
@@ -1105,7 +1110,7 @@ namespace Opm {
 
 
     template <class RateConverterType>
-    inline bool checkGroupConstraintsProd(const std::string& name,
+    inline std::pair<bool, double> checkGroupConstraintsProd(const std::string& name,
                                           const std::string& parent,
                                           const Group& group,
                                           const WellStateFullyImplicitBlackoil& wellState,
@@ -1131,7 +1136,7 @@ namespace Opm {
             currentGroupControl == Group::ProductionCMode::NONE) {
             // Return if we are not available for parent group.
             if (!group.isAvailableForGroupControl()) {
-                return false;
+                return std::make_pair(false,1);
             }
             // Otherwise: check production share of parent's control.
             const auto& parentGroup = schedule.getGroup(group.parent(), reportStepIdx);
@@ -1154,7 +1159,7 @@ namespace Opm {
         // This can be false for FLD-controlled groups, we must therefore
         // check for FLD first (done above).
         if (!group.isProductionGroup()) {
-            return false;
+            return std::make_pair(false,1.0);
         }
 
         // If we are here, we are at the topmost group to be visited in the recursion.
@@ -1200,7 +1205,7 @@ namespace Opm {
             target *= localFraction(chain[ii+1]);
         }
         const double target_rate = target / efficiencyFactor;
-        return current_rate > target_rate;
+        return std::make_pair(current_rate > target_rate, target_rate / current_rate);
     }
 
 
