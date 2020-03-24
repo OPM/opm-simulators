@@ -1204,7 +1204,7 @@ namespace Opm {
             }
             target *= localFraction(chain[ii+1]);
         }
-        const double target_rate = target / efficiencyFactor;
+        const double target_rate = std::max(0.0, target / efficiencyFactor);
         return std::make_pair(current_rate > target_rate, target_rate / current_rate);
     }
 
