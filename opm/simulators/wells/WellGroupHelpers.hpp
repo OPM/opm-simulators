@@ -422,24 +422,24 @@ namespace Opm {
 
 	inline GuideRate::RateVector getRateVector(const WellState& well_state, const PhaseUsage& pu, const std::string& name) {
 
-            const auto& end = well_state.wellMap().end();
-            const auto& it = well_state.wellMap().find( name);
-            if (it == end)  // the well is not found
-                assert(false);
+        const auto& end = well_state.wellMap().end();
+        const auto& it = well_state.wellMap().find( name);
+        if (it == end)  // the well is not found
+            assert(false);
 
-            int well_index = it->second[0];
-	    int np = well_state.numPhases();
-            double oilRate = 0.0;
-            if (pu.phase_used[BlackoilPhases::Liquid])
-                oilRate = well_state.wellRates()[ well_index*np + pu.phase_pos[BlackoilPhases::Liquid]];
+        int well_index = it->second[0];
+		int np = well_state.numPhases();
+        double oilRate = 0.0;
+        if (pu.phase_used[BlackoilPhases::Liquid])
+            oilRate = well_state.wellRates()[ well_index*np + pu.phase_pos[BlackoilPhases::Liquid]];
         
-            double gasRate = 0.0;
-            if (pu.phase_used[BlackoilPhases::Vapour])
-                gasRate = well_state.wellRates()[ well_index*np + pu.phase_pos[BlackoilPhases::Vapour]];
+        double gasRate = 0.0;
+        if (pu.phase_used[BlackoilPhases::Vapour])
+            gasRate = well_state.wellRates()[ well_index*np + pu.phase_pos[BlackoilPhases::Vapour]];
 
-            double waterRate = 0.0;
-            if (pu.phase_used[BlackoilPhases::Aqua])
-                waterRate = well_state.wellRates()[well_index*np + pu.phase_pos[BlackoilPhases::Aqua]];
+		double waterRate = 0.0;
+        if (pu.phase_used[BlackoilPhases::Aqua])
+            waterRate = well_state.wellRates()[well_index*np + pu.phase_pos[BlackoilPhases::Aqua]];
 
 	    return GuideRate::RateVector{oilRate, gasRate, waterRate};
 	}
@@ -451,7 +451,7 @@ namespace Opm {
                                const int reportStepIdx,
                                const GuideRate* guideRate,
                                const GuideRateModel::Target target,
-			       const PhaseUsage& pu)
+							   const PhaseUsage& pu)
     {
         if (schedule.hasWell(name, reportStepIdx) || guideRate->has(name)) {
             return guideRate->get(name, target, getRateVector(wellState, pu, name));
@@ -678,18 +678,18 @@ namespace Opm {
 	inline GuideRate::RateVector getGroupRateVector(const std::string& group_name) {
 
 #warning Does not work in parallell
-            const Group& group = schedule_.getGroup(group_name, report_step_);
-            double oilRate = 0.0;
-            if (pu_.phase_used[BlackoilPhases::Liquid])
-		oilRate = sumWellPhaseRates(well_state_.wellRates(), group, schedule_, well_state_, report_step_, pu_.phase_pos[BlackoilPhases::Liquid], /*isInjector*/ false);
+        const Group& group = schedule_.getGroup(group_name, report_step_);
+        double oilRate = 0.0;
+        if (pu_.phase_used[BlackoilPhases::Liquid])
+			oilRate = sumWellPhaseRates(well_state_.wellRates(), group, schedule_, well_state_, report_step_, pu_.phase_pos[BlackoilPhases::Liquid], /*isInjector*/ false);
         
-            double gasRate = 0.0;
-            if (pu_.phase_used[BlackoilPhases::Vapour])
-                gasRate = sumWellPhaseRates(well_state_.wellRates(), group, schedule_, well_state_, report_step_, pu_.phase_pos[BlackoilPhases::Vapour], /*isInjector*/ false);
+        double gasRate = 0.0;
+        if (pu_.phase_used[BlackoilPhases::Vapour])
+            gasRate = sumWellPhaseRates(well_state_.wellRates(), group, schedule_, well_state_, report_step_, pu_.phase_pos[BlackoilPhases::Vapour], /*isInjector*/ false);
 
-            double waterRate = 0.0;
-            if (pu_.phase_used[BlackoilPhases::Aqua])
-                waterRate = sumWellPhaseRates(well_state_.wellRates(), group, schedule_, well_state_, report_step_, pu_.phase_pos[BlackoilPhases::Aqua], /*isInjector*/ false);
+        double waterRate = 0.0;
+        if (pu_.phase_used[BlackoilPhases::Aqua])
+            waterRate = sumWellPhaseRates(well_state_.wellRates(), group, schedule_, well_state_, report_step_, pu_.phase_pos[BlackoilPhases::Aqua], /*isInjector*/ false);
 
 	    return GuideRate::RateVector{oilRate, gasRate, waterRate};
 	}
@@ -711,7 +711,7 @@ namespace Opm {
                                          const int reportStepIdx,
                                          const GuideRate* guideRate,
                                          const GuideRateModel::Target target,
-					 const PhaseUsage& pu,
+										 const PhaseUsage& pu,
                                          const bool alwaysIncludeThis = false)
     {
         FractionCalculator calc(schedule, wellState, reportStepIdx, guideRate, target, pu);
