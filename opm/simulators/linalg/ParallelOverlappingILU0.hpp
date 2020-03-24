@@ -921,7 +921,7 @@ public:
         DUNE_UNUSED_PARAMETER(x);
     }
 
-    virtual void update(const Range& = Range(), const boost::property_tree::ptree& = boost::property_tree::ptree()) override
+    virtual void update(const Range& = Range()) override
     {
         // (For older DUNE versions the communicator might be
         // invalid if redistribution in AMG happened on the coarset level.

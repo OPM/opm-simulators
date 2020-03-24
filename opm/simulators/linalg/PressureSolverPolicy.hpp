@@ -84,9 +84,8 @@ namespace Amg
 
             void updatePreconditioner()
             {
-                pt::ptree prm;
                 X w;
-                linsolver_->preconditioner().update(w, prm);
+                linsolver_->preconditioner().update(w);
             }
 
         private:

@@ -161,15 +161,9 @@ public:
         twolevel_method_.post(x);
     }
 
-    virtual void update(const VectorType& weights, const boost::property_tree::ptree& /*prm*/) override
+    virtual void update(const VectorType& weights) override
     {
-        // if(prm.get<std::string>("weight_type") == "quasiimpes"){
-        //     Opm::Amg::getQuasiImpesWeights<MatrixType, VectorType>(
-        //      linear_operator_.getmat(), prm_.get<int>("pressure_var_index"), transpose, weights_);
-        //     weights_ = prm.get<VectorType>("weights");
-        // }else{
-            weights_ = weights;
-            //}
+        weights_ = weights;
         updateImpl(comm_);
     }
 

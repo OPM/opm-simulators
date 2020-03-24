@@ -192,7 +192,7 @@ public:
             }
             rhs_ = b;
         } else {
-            solver_->preconditioner().update(weights, prm_.get_child("preconditioner"));
+            solver_->preconditioner().update(weights);
             rhs_ = b;
         }
     }
