@@ -34,13 +34,11 @@
 #include <flow/flow_ebos_oilwater_polymer_injectivity.hpp>
 #endif
 
-#include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/simulators/flow/FlowMainEbos.hpp>
 #include <opm/simulators/utils/moduleVersion.hpp>
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/simulators/flow/MissingFeatures.hpp>
-#include <opm/material/common/ResetLocale.hpp>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/OpmLog/EclipsePRTLog.hpp>
@@ -56,12 +54,9 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQAssign.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/ArrayDimChecker.hpp>
-
-#include <boost/filesystem.hpp>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
