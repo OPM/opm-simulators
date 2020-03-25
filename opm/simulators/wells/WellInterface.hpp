@@ -530,6 +530,27 @@ namespace Opm
                                        EvalWell& control_eq,
                                        double efficiencyFactor);
 
+        template <class EvalWell, class BhpFromThpFunc>
+        void assembleControlEqInj(const WellState& well_state,
+                                  const Opm::Schedule& schedule,
+                                  const SummaryState& summaryState,
+                                  const Well::InjectionControls& controls,
+                                  const EvalWell& bhp,
+                                  const EvalWell& injection_rate,
+                                  BhpFromThpFunc bhp_from_thp,
+                                  EvalWell& control_eq,
+                                  Opm::DeferredLogger& deferred_logger);
+
+        template <class EvalWell, class BhpFromThpFunc>
+        void assembleControlEqProd(const WellState& well_state,
+                                   const Opm::Schedule& schedule,
+                                   const SummaryState& summaryState,
+                                   const Well::ProductionControls& controls,
+                                   const EvalWell& bhp,
+                                   const std::vector<EvalWell>& rates, // Always 3 canonical rates.
+                                   BhpFromThpFunc bhp_from_thp,
+                                   EvalWell& control_eq,
+                                   Opm::DeferredLogger& deferred_logger);
     };
 
 
