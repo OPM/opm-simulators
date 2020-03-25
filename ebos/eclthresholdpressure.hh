@@ -342,13 +342,6 @@ private:
                 }
             }
         }
-
-        if (enableExperiments) {
-            // apply threshold pressures accross faults (experimental!)
-            if (deck.hasKeyword("THPRESFT"))
-                extractThpresft_(deck.getKeyword("THPRESFT"));
-        }
-
     }
 
     void extractThpresft_(const Opm::DeckKeyword& thpresftKeyword)
