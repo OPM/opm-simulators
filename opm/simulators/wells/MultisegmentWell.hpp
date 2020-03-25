@@ -380,21 +380,6 @@ namespace Opm
                                const Well::ProductionControls& prod_controls,
                                Opm::DeferredLogger& deferred_logger);
 
-        void assembleGroupProductionControl(const Group& group,
-                                            const WellState& well_state,
-                                            const Opm::Schedule& schedule,
-                                            const SummaryState& summaryState,
-                                            EvalWell& control_eq,
-                                            double efficiencyFactor);
-        void assembleGroupInjectionControl(const Group& group,
-                                           const WellState& well_state,
-                                           const Opm::Schedule& schedule,
-                                           const SummaryState& summaryState,
-                                           const InjectorType& injectorType,
-                                           EvalWell& control_eq,
-                                           double efficiencyFactor,
-                                           Opm::DeferredLogger& deferred_logger);
-
         void assemblePressureEq(const int seg) const;
 
         // hytrostatic pressure loss
