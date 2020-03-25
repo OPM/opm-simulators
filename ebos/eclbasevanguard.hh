@@ -35,6 +35,7 @@
 #include <opm/grid/cpgrid/GridHelpers.hpp>
 #include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
 
+#include <opm/parser/eclipse/Python/Python.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
@@ -348,7 +349,7 @@ public:
             // create the schedule object. Note that if eclState is supposed to represent
             // the internalized version of the deck, this constitutes a layering
             // violation.
-            internalEclSchedule_.reset(new Opm::Schedule(*deck_, *eclState_, *parseContext_, *errorGuard_));
+            internalEclSchedule_.reset(new Opm::Schedule(*deck_, *eclState_, *parseContext_, *errorGuard_, python));
             eclSchedule_ = internalEclSchedule_.get();
         }
         else
@@ -629,6 +630,7 @@ private:
     Opm::EclipseState* eclState_;
     Opm::Schedule* eclSchedule_;
     Opm::SummaryConfig* eclSummaryConfig_;
+    Opm::Python python;
 
     Dune::EdgeWeightMethod edgeWeightsMethod_;
     bool ownersFirst_;

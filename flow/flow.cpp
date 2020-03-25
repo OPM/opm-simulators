@@ -331,6 +331,7 @@ int main(int argc, char** argv)
             std::cout << "Reading deck file '" << deckFilename << "'\n";
             std::cout.flush();
         }
+        Opm::Python python;
         std::shared_ptr<Opm::Deck> deck;
         std::shared_ptr<Opm::EclipseState> eclipseState;
         std::shared_ptr<Opm::Schedule> schedule;
@@ -376,9 +377,9 @@ int main(int argc, char** argv)
                     const auto& rst_filename = eclipseState->getIOConfig().getRestartFileName( init_config.getRestartRootName(), report_step, false );
                     Opm::EclIO::ERst rst_file(rst_filename);
                     const auto& rst_state = Opm::RestartIO::RstState::load(rst_file, report_step);
-                    schedule.reset(new Opm::Schedule(*deck, *eclipseState, parseContext, errorGuard, &rst_state) );
+                    schedule.reset(new Opm::Schedule(*deck, *eclipseState, parseContext, errorGuard, python, &rst_state) );
                 } else
-                    schedule.reset(new Opm::Schedule(*deck, *eclipseState, parseContext, errorGuard));
+                    schedule.reset(new Opm::Schedule(*deck, *eclipseState, parseContext, errorGuard, python));
 
                 setupMessageLimiter(schedule->getMessageLimits(), "STDOUT_LOGGER");
                 summaryConfig.reset( new Opm::SummaryConfig(*deck, *schedule, eclipseState->getTableManager(), parseContext, errorGuard));

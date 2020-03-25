@@ -33,6 +33,7 @@
 #include <opm/common/OpmLog/EclipsePRTLog.hpp>
 #include <opm/common/OpmLog/LogUtil.hpp>
 
+#include <opm/parser/eclipse/Python/Python.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
@@ -354,6 +355,7 @@ int mainFlow(int argc, char** argv)
             std::cout << "Reading deck file '" << deckFilename << "'\n";
             std::cout.flush();
         }
+        Opm::Python python;
         std::shared_ptr<Opm::Deck> deck;
         std::shared_ptr<Opm::EclipseState> eclipseState;
         std::shared_ptr<Opm::Schedule> schedule;
@@ -390,7 +392,7 @@ int mainFlow(int argc, char** argv)
 #else
                 eclipseState.reset(new Opm::EclipseState(*deck));
 #endif
-                schedule.reset(new Opm::Schedule(*deck, *eclipseState, parseContext, errorGuard));
+                schedule.reset(new Opm::Schedule(*deck, *eclipseState, parseContext, errorGuard, python));
                 setupMessageLimiter(schedule->getMessageLimits(), "STDOUT_LOGGER");
                 summaryConfig.reset( new Opm::SummaryConfig(*deck, *schedule, eclipseState->getTableManager(), parseContext, errorGuard));
             }

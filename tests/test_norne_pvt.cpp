@@ -29,6 +29,7 @@
 #include <sstream>
 #include <iostream>
 
+#include <opm/parser/eclipse/Python/Python.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
@@ -276,11 +277,12 @@ BOOST_AUTO_TEST_CASE( Test_Norne_PVT) {
     Opm::ParseContext parseContext({{ ParseContext::PARSE_RANDOM_SLASH , InputError::IGNORE }});
     Opm::ErrorGuard errorGuard;
     Opm::Parser parser;
+    Opm::Python python;
 
     auto deck = parser.parseFile("norne_pvt.data", parseContext, errorGuard);
 
     Opm::EclipseState eclState(deck);
-    Opm::Schedule schedule(deck, eclState);
+    Opm::Schedule schedule(deck, eclState, python);
 
     verify_norne_oil_pvt_region1(eclState, schedule);
     verify_norne_oil_pvt_region2(eclState, schedule);
