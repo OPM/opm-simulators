@@ -57,6 +57,9 @@
 // include the tables for CO2 which are delivered with opm-material by default
 #include <opm/material/common/UniformTabulated2DFunction.hpp>
 
+#include <opm/parser/eclipse/Python/Python.hpp>
+
+
 namespace Opm {
 namespace FluidSystemsTest {
 #include <opm/material/components/co2tables.inc>
@@ -72,9 +75,10 @@ void ensureBlackoilApi()
     // that they compile
     while (false) {
 #if HAVE_ECL_INPUT
+        Opm::Python python;
         Opm::Deck deck;
         Opm::EclipseState eclState(deck);
-        Opm::Schedule schedule(deck, eclState);
+        Opm::Schedule schedule(deck, eclState, python);
         FluidSystem::initFromState(eclState, schedule);
 #endif
 

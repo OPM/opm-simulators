@@ -50,6 +50,7 @@
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/parser/eclipse/Python/Python.hpp>
 
 #include <dune/common/parallel/mpihelper.hh>
 
@@ -223,10 +224,11 @@ inline void testAll()
     static const Scalar tolerance = std::numeric_limits<Scalar>::epsilon()*1e3;
 
     Opm::Parser parser;
+    Opm::Python python;
 
     auto deck = parser.parseString(deckString1);
     Opm::EclipseState eclState(deck);
-    Opm::Schedule schedule(deck, eclState);
+    Opm::Schedule schedule(deck, eclState, python);
 
     const auto& pvtwKeyword = deck.getKeyword("PVTW");
     size_t numPvtRegions = pvtwKeyword.size();
