@@ -153,30 +153,33 @@ public:
 
         std::function<VectorType()> weightsCalculator;
 
-        if( prm_.get<std::string>("preconditioner.type") == "cpr" ||
-            prm_.get<std::string>("preconditioner.type") == "cprt"
+        auto preconditionerType = prm_.get("preconditioner.type", "cpr");
+        if( preconditionerType  == "cpr" ||
+            preconditionerType == "cprt"
             )
         {
             bool transpose = false;
-            if(prm_.get<std::string>("preconditioner.type") == "cprt"){
+            if(preconditionerType == "cprt"){
                 transpose = true;
             }
 
-            if(prm_.get<std::string>("preconditioner.weight_type") == "quasiimpes") {
+            auto weightsType = prm_.get("preconditioner.weight_type", "quasiimpes");
+            auto pressureIndex = this->prm_.get("preconditioner.pressure_var_index", 1);
+            if(weightsType == "quasiimpes") {
                 // weighs will be created as default in the solver
                 weightsCalculator =
-                    [&mat, this, transpose](){
+                    [&mat, this, transpose, pressureIndex](){
                         return Opm::Amg::getQuasiImpesWeights<MatrixType,
                                                               VectorType>(
                                                                           mat.istlMatrix(),
-                                                                          this->prm_.get<int>("preconditioner.pressure_var_index"),
+                                                                          pressureIndex,
                                                                           transpose);
                     };
 
-            }else if(prm_.get<std::string>("preconditioner.weight_type") == "trueimpes"  ){
+            }else if(weightsType == "trueimpes"  ){
                 weightsCalculator =
-                    [this, &b](){
-                        return this->getTrueImpesWeights(b, this->prm_.get<int>("preconditioner.pressure_var_index"));
+                    [this, &b, pressureIndex](){
+                        return this->getTrueImpesWeights(b, pressureIndex);
                     };
             }else{
                 throw std::runtime_error("no such weights implemented for cpr");

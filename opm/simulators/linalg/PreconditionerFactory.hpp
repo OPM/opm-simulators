@@ -125,15 +125,15 @@ private:
     // Helpers for creation of AMG preconditioner.
     static Criterion amgCriterion(const boost::property_tree::ptree& prm)
     {
-        Criterion criterion(15, prm.get<int>("coarsenTarget"));
+        Criterion criterion(15, prm.get<int>("coarsenTarget", 1200));
         criterion.setDefaultValuesIsotropic(2);
-        criterion.setAlpha(prm.get<double>("alpha"));
-        criterion.setBeta(prm.get<double>("beta"));
-        criterion.setMaxLevel(prm.get<int>("maxlevel"));
-        criterion.setSkipIsolated(prm.get<bool>("skip_isolated"));
-	criterion.setNoPreSmoothSteps(prm.get<int>("pre_smooth"));
-	criterion.setNoPostSmoothSteps(prm.get<int>("post_smooth"));
-        criterion.setDebugLevel(prm.get<int>("verbosity"));
+        criterion.setAlpha(prm.get<double>("alpha", 0.33));
+        criterion.setBeta(prm.get<double>("beta", 1e-5));
+        criterion.setMaxLevel(prm.get<int>("maxlevel", 15));
+        criterion.setSkipIsolated(prm.get<bool>("skip_isolated", false));
+        criterion.setNoPreSmoothSteps(prm.get<int>("pre_smooth", 1));
+        criterion.setNoPostSmoothSteps(prm.get<int>("post_smooth", 1));
+        criterion.setDebugLevel(prm.get<int>("verbosity", 0));
         return criterion;
     }
 
@@ -142,11 +142,11 @@ private:
     {
         using SmootherArgs = typename Dune::Amg::SmootherTraits<Smoother>::Arguments;
         SmootherArgs smootherArgs;
-        smootherArgs.iterations = prm.get<int>("iterations");
+        smootherArgs.iterations = prm.get<int>("iterations", 1);
         // smootherArgs.overlap=SmootherArgs::vertex;
         // smootherArgs.overlap=SmootherArgs::none;
         // smootherArgs.overlap=SmootherArgs::aggregate;
-        smootherArgs.relaxationFactor = prm.get<double>("relaxation");
+        smootherArgs.relaxationFactor = prm.get<double>("relaxation", 0.9);
         return smootherArgs;
     }
 
@@ -161,8 +161,8 @@ private:
 		    Dune::Amg::KAMG< Operator, Vector, Smoother>
 		    >
 		>(op, crit, sargs,
-		  prm.get<size_t>("max_krylov"),
-		  prm.get<double>("min_reduction")  );
+		  prm.get<size_t>("max_krylov", 1),
+		  prm.get<double>("min_reduction", 1e-1)  );
 	}else{
             return std::make_shared<Dune::Amg::AMGCPR<Operator, Vector, Smoother>>(op, crit, sargs);
         }
@@ -181,45 +181,45 @@ private:
         using P = boost::property_tree::ptree;
         using C = Comm;
         doAddCreator("ILU0", [](const O& op, const P& prm, const std::function<Vector()>&, const C& comm) {
-            const double w = prm.get<double>("relaxation");
+            const double w = prm.get<double>("relaxation", 1.0);
             return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V, C>>(
                 op.getmat(), comm, 0, w, Opm::MILU_VARIANT::ILU);
         });
         doAddCreator("ParOverILU0", [](const O& op, const P& prm, const std::function<Vector()>&, const C& comm) {
-            const double w = prm.get<double>("relaxation");
+            const double w = prm.get<double>("relaxation", 1.0);
             // Already a parallel preconditioner. Need to pass comm, but no need to wrap it in a BlockPreconditioner.
             return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V, C>>(
                 op.getmat(), comm, 0, w, Opm::MILU_VARIANT::ILU);
         });
         doAddCreator("ILUn", [](const O& op, const P& prm, const std::function<Vector()>&, const C& comm) {
-            const int n = prm.get<int>("ilulevel");
-            const double w = prm.get<double>("relaxation");
+            const int n = prm.get<int>("ilulevel", 0);
+            const double w = prm.get<double>("relaxation", 1.0);
             return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V, C>>(
                 op.getmat(), comm, n, w, Opm::MILU_VARIANT::ILU);
         });
         doAddCreator("Jac", [](const O& op, const P& prm, const std::function<Vector()>&,
                                const C& comm) {
-            const int n = prm.get<int>("repeats");
-            const double w = prm.get<double>("relaxation");
+            const int n = prm.get<int>("repeats", 1);
+            const double w = prm.get<double>("relaxation", 1.0);
             return wrapBlockPreconditioner<DummyUpdatePreconditioner<SeqJac<M, V, V>>>(comm, op.getmat(), n, w);
         });
         doAddCreator("GS", [](const O& op, const P& prm, const std::function<Vector()>&, const C& comm) {
-            const int n = prm.get<int>("repeats");
-            const double w = prm.get<double>("relaxation");
+            const int n = prm.get<int>("repeats", 1);
+            const double w = prm.get<double>("relaxation", 1.0);
             return wrapBlockPreconditioner<DummyUpdatePreconditioner<SeqGS<M, V, V>>>(comm, op.getmat(), n, w);
         });
         doAddCreator("SOR", [](const O& op, const P& prm, const std::function<Vector()>&, const C& comm) {
-            const int n = prm.get<int>("repeats");
-            const double w = prm.get<double>("relaxation");
+            const int n = prm.get<int>("repeats", 1);
+            const double w = prm.get<double>("relaxation", 1.0);
             return wrapBlockPreconditioner<DummyUpdatePreconditioner<SeqSOR<M, V, V>>>(comm, op.getmat(), n, w);
         });
         doAddCreator("SSOR", [](const O& op, const P& prm, const std::function<Vector()>&, const C& comm) {
-            const int n = prm.get<int>("repeats");
-            const double w = prm.get<double>("relaxation");
+            const int n = prm.get<int>("repeats", 1);
+            const double w = prm.get<double>("relaxation", 1.0);
             return wrapBlockPreconditioner<DummyUpdatePreconditioner<SeqSSOR<M, V, V>>>(comm, op.getmat(), n, w);
         });
         doAddCreator("amg", [](const O& op, const P& prm, const std::function<Vector()>&, const C& comm) {
-            const std::string smoother = prm.get<std::string>("smoother");
+            const std::string smoother = prm.get<std::string>("smoother", "ParOverILU0");
             if (smoother == "ILU0" || smoother == "ParOverILU0") {
                 using Smoother = Opm::ParallelOverlappingILU0<M, V, V, C>;
                 auto crit = amgCriterion(prm);
@@ -251,44 +251,44 @@ private:
         using V = Vector;
         using P = boost::property_tree::ptree;
         doAddCreator("ILU0", [](const O& op, const P& prm, const std::function<Vector()>&) {
-            const double w = prm.get<double>("relaxation");
+            const double w = prm.get<double>("relaxation", 1.0);
             return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V>>(
                 op.getmat(), 0, w, Opm::MILU_VARIANT::ILU);
         });
         doAddCreator("ParOverILU0", [](const O& op, const P& prm, const std::function<Vector()>&) {
-            const double w = prm.get<double>("relaxation");
+            const double w = prm.get<double>("relaxation", 1.0);
             return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V>>(
                 op.getmat(), 0, w, Opm::MILU_VARIANT::ILU);
         });
         doAddCreator("ILUn", [](const O& op, const P& prm, const std::function<Vector()>&) {
-            const int n = prm.get<int>("ilulevel");
-            const double w = prm.get<double>("relaxation");
+            const int n = prm.get<int>("ilulevel", 0);
+            const double w = prm.get<double>("relaxation", 1.0);
             return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V>>(
                 op.getmat(), n, w, Opm::MILU_VARIANT::ILU);
         });
         doAddCreator("Jac", [](const O& op, const P& prm, const std::function<Vector()>&) {
-            const int n = prm.get<int>("repeats");
-            const double w = prm.get<double>("relaxation");
+            const int n = prm.get<int>("repeats", 1);
+            const double w = prm.get<double>("relaxation", 1.0);
             return wrapPreconditioner<SeqJac<M, V, V>>(op.getmat(), n, w);
         });
         doAddCreator("GS", [](const O& op, const P& prm, const std::function<Vector()>&) {
-            const int n = prm.get<int>("repeats");
-            const double w = prm.get<double>("relaxation");
+            const int n = prm.get<int>("repeats", 1);
+            const double w = prm.get<double>("relaxation", 1.0);
             return wrapPreconditioner<SeqGS<M, V, V>>(op.getmat(), n, w);
         });
         doAddCreator("SOR", [](const O& op, const P& prm, const std::function<Vector()>&) {
-            const int n = prm.get<int>("repeats");
-            const double w = prm.get<double>("relaxation");
+            const int n = prm.get<int>("repeats", 1);
+            const double w = prm.get<double>("relaxation", 1.0);
             return wrapPreconditioner<SeqSOR<M, V, V>>(op.getmat(), n, w);
         });
         doAddCreator("SSOR", [](const O& op, const P& prm, const std::function<Vector()>&) {
-            const int n = prm.get<int>("repeats");
-            const double w = prm.get<double>("relaxation");
+            const int n = prm.get<int>("repeats", 1);
+            const double w = prm.get<double>("relaxation", 1.0);
             return wrapPreconditioner<SeqSSOR<M, V, V>>(op.getmat(), n, w);
         });
         doAddCreator("amg", [](const O& op, const P& prm, const std::function<Vector()>&) {
-            const std::string smoother = prm.get<std::string>("smoother");
-            if (smoother == "ILU0") {
+            const std::string smoother = prm.get<std::string>("smoother", "ParOverILU0");
+            if (smoother == "ILU0" || smoother == "ParOverILU0") {
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
                 using Smoother = SeqILU<M, V, V>;
 #else
@@ -318,8 +318,8 @@ private:
             }
         });
 	doAddCreator("kamg", [](const O& op, const P& prm, const std::function<Vector()>&) {
-            const std::string smoother = prm.get<std::string>("smoother");
-            if (smoother == "ILU0") {
+            const std::string smoother = prm.get<std::string>("smoother", "ParOverILU0");
+            if (smoother == "ILU0" || smoother == "ParOverILU0") {
                 using Smoother = SeqILU0<M, V, V>;
                 return makeAmgPreconditioner<Smoother>(op, prm, true);
             } else if (smoother == "Jac") {
@@ -378,7 +378,7 @@ private:
     PrecPtr doCreate(const Operator& op, const boost::property_tree::ptree& prm,
                      const std::function<Vector()> weightsCalculator)
     {
-        const std::string& type = prm.get<std::string>("type");
+        const std::string& type = prm.get<std::string>("type", "ParOverILU0");
         auto it = creators_.find(type);
         if (it == creators_.end()) {
             std::ostringstream msg;
@@ -395,7 +395,7 @@ private:
     PrecPtr doCreate(const Operator& op, const boost::property_tree::ptree& prm,
                      const std::function<Vector()> weightsCalculator, const Comm& comm)
     {
-        const std::string& type = prm.get<std::string>("type");
+        const std::string& type = prm.get<std::string>("type", "ParOverILU0");
         auto it = parallel_creators_.find(type);
         if (it == parallel_creators_.end()) {
             std::ostringstream msg;

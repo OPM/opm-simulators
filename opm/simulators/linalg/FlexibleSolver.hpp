@@ -105,10 +105,12 @@ private:
     {
         // Parallel case.
         using ParOperatorType = Dune::OverlappingSchwarzOperator<MatrixType, VectorType, VectorType, Comm>;
+        using pt = const boost::property_tree::ptree;
         auto linop = std::make_shared<ParOperatorType>(matrix, comm);
         linearoperator_ = linop;
+        auto child = prm.get_child_optional("preconditioner");
         preconditioner_
-            = Opm::PreconditionerFactory<ParOperatorType, Comm>::create(*linop, prm.get_child("preconditioner"),
+            = Opm::PreconditionerFactory<ParOperatorType, Comm>::create(*linop, child? *child : pt(),
                                                                         weightsCalculator, comm);
         scalarproduct_ = Dune::createScalarProduct<VectorType, Comm>(comm, linearoperator_->category());
     }
@@ -118,19 +120,21 @@ private:
     {
         // Sequential case.
         using SeqOperatorType = Dune::MatrixAdapter<MatrixType, VectorType, VectorType>;
+        using pt = const boost::property_tree::ptree;
         auto linop = std::make_shared<SeqOperatorType>(matrix);
         linearoperator_ = linop;
-        preconditioner_ = Opm::PreconditionerFactory<SeqOperatorType>::create(*linop, prm.get_child("preconditioner"),
+        auto child = prm.get_child_optional("preconditioner");
+        preconditioner_ = Opm::PreconditionerFactory<SeqOperatorType>::create(*linop, child? *child : pt(),
                                                                               weightsCalculator);
         scalarproduct_ = std::make_shared<Dune::SeqScalarProduct<VectorType>>();
     }
 
     void initSolver(const boost::property_tree::ptree& prm)
     {
-        const double tol = prm.get<double>("tol");
-        const int maxiter = prm.get<int>("maxiter");
-        const int verbosity = prm.get<int>("verbosity");
-        const std::string solver_type = prm.get<std::string>("solver");
+        const double tol = prm.get<double>("tol", 1e-2);
+        const int maxiter = prm.get<int>("maxiter", 200);
+        const int verbosity = prm.get<int>("verbosity", 0);
+        const std::string solver_type = prm.get<std::string>("solver", "bicgstab");
         if (solver_type == "bicgstab") {
             linsolver_.reset(new Dune::BiCGSTABSolver<VectorType>(*linearoperator_,
                                                                   *scalarproduct_,
@@ -146,7 +150,7 @@ private:
                                                               maxiter, // maximum number of iterations
                                                               verbosity));
         } else if (solver_type == "gmres") {
-            int restart = prm.get<int>("restart");
+            int restart = prm.get<int>("restart", 15);
             linsolver_.reset(new Dune::RestartedGMResSolver<VectorType>(*linearoperator_,
                                                                         *scalarproduct_,
                                                                         *preconditioner_,

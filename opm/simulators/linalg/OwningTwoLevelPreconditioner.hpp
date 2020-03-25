@@ -87,22 +87,24 @@ public:
     OwningTwoLevelPreconditioner(const OperatorType& linearoperator, const pt& prm,
                                  const std::function<VectorType()> weightsCalculator)
         : linear_operator_(linearoperator)
-        , finesmoother_(PrecFactory::create(linearoperator, prm.get_child("finesmoother")))
+        , finesmoother_(PrecFactory::create(linearoperator,
+                                            prm.get_child_optional("finesmoother")?
+                                            prm.get_child("finesmoother"): pt()))
         , comm_(nullptr)
         , weightsCalculator_(weightsCalculator)
         , weights_(weightsCalculator())
         , levelTransferPolicy_(dummy_comm_, weights_, prm.get<int>("pressure_var_index"))
-        , coarseSolverPolicy_(prm.get_child("coarsesolver"))
+        , coarseSolverPolicy_(prm.get_child_optional("coarsesolver")? prm.get_child("coarsesolver") : pt())
         , twolevel_method_(linearoperator,
                            finesmoother_,
                            levelTransferPolicy_,
                            coarseSolverPolicy_,
-                           prm.get<int>("pre_smooth"),
-                           prm.get<int>("post_smooth"))
+                           prm.get<int>("pre_smooth", transpose? 1 : 0),
+                           prm.get<int>("post_smooth", transpose? 0 : 1))
         , prm_(prm)
     {
-        if (prm.get<int>("verbosity") > 10) {
-            std::ofstream outfile(prm.get<std::string>("weights_filename"));
+        if (prm.get<int>("verbosity", 0) > 10) {
+            std::ofstream outfile(prm.get<std::string>("weights_filename", "impes_weights.txt"));
             if (!outfile) {
                 throw std::runtime_error("Could not write weights");
             }
@@ -113,24 +115,26 @@ public:
     OwningTwoLevelPreconditioner(const OperatorType& linearoperator, const pt& prm,
                                  const std::function<VectorType()> weightsCalculator, const Communication& comm)
         : linear_operator_(linearoperator)
-        , finesmoother_(PrecFactory::create(linearoperator, prm.get_child("finesmoother"), comm))
+        , finesmoother_(PrecFactory::create(linearoperator,
+                                            prm.get_child_optional("finesmoother")?
+                                            prm.get_child("finesmoother"): pt(), comm))
         , comm_(&comm)
         , weightsCalculator_(weightsCalculator)
         , weights_(weightsCalculator())
-        , levelTransferPolicy_(*comm_, weights_, prm.get<int>("pressure_var_index"))
-        , coarseSolverPolicy_(prm.get_child("coarsesolver"))
+        , levelTransferPolicy_(*comm_, weights_, prm.get<int>("pressure_var_index", 1))
+        , coarseSolverPolicy_(prm.get_child_optional("coarsesolver")? prm.get_child("coarsesolver") : pt())
         , twolevel_method_(linearoperator,
                            finesmoother_,
                            levelTransferPolicy_,
                            coarseSolverPolicy_,
-                           transpose ? 1 : 0,
-                           transpose ? 0 : 1)
+                           prm.get<int>("pre_smooth", transpose? 1 : 0),
+                           prm.get<int>("post_smooth", transpose? 0 : 1))
         , prm_(prm)
     {
         //Opm::Amg::getQuasiImpesWeights<MatrixType, VectorType>(
         //      linearoperator.getmat(), prm.get<int>("pressure_var_index"), transpose))
-        if (prm.get<int>("verbosity") > 10) {
-            std::ofstream outfile(prm.get<std::string>("weights_filename"));
+        if (prm.get<int>("verbosity", 0) > 10) {
+            std::ofstream outfile(prm.get<std::string>("weights_filename", "impes_weights.txt"));
             if (!outfile) {
                 throw std::runtime_error("Could not write weights");
             }
@@ -185,14 +189,16 @@ private:
     void updateImpl(const Comm*)
     {
         // Parallel case.
-        finesmoother_ = PrecFactory::create(linear_operator_, prm_.get_child("finesmoother"), *comm_);
+        auto child = prm_.get_child_optional("finesmoother");
+        finesmoother_ = PrecFactory::create(linear_operator_, child ? *child : pt(), *comm_);
         twolevel_method_.updatePreconditioner(finesmoother_, coarseSolverPolicy_);
     }
 
     void updateImpl(const Dune::Amg::SequentialInformation*)
     {
         // Serial case.
-        finesmoother_ = PrecFactory::create(linear_operator_, prm_.get_child("finesmoother"));
+        auto child = prm_.get_child_optional("finesmoother");
+        finesmoother_ = PrecFactory::create(linear_operator_, child ? *child : pt());
         twolevel_method_.updatePreconditioner(finesmoother_, coarseSolverPolicy_);
     }
 
