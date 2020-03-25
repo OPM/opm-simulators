@@ -25,6 +25,8 @@
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/setupPropertyTree.hpp>
 
+#include <opm/common/ErrorMacros.hpp>
+
 #include <boost/property_tree/json_parser.hpp>
 
 #include <memory>
@@ -182,7 +184,8 @@ public:
                         return this->getTrueImpesWeights(b, pressureIndex);
                     };
             }else{
-                throw std::runtime_error("no such weights implemented for cpr");
+                OPM_THROW(std::invalid_argument, "Weights type " << weightsType << "not implemented for cpr."
+                          << " Please use quasiimpes or trueimpes.");
             }
         }
 

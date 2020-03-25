@@ -39,7 +39,8 @@ setupPropertyTree(const FlowLinearSolverParameters& p)
     if (p.linear_solver_configuration_ == "file") {
 #if BOOST_VERSION / 100 % 1000 > 48
         if (p.linear_solver_configuration_json_file_ == "none"){
-            throw std::runtime_error("No linear-solver-configuration-json-file given for linear-solver-configuration=file ");
+            OPM_THROW(std::invalid_argument, p.linear_solver_configuration_  << "is not a valid setting for --linear-solver-configuration."
+                      << " Please use ilu0, cpr_trueimpes, or cpr_quasiimpes");
         }else{
             boost::property_tree::read_json(p.linear_solver_configuration_json_file_, prm);
         }
@@ -78,7 +79,8 @@ setupPropertyTree(const FlowLinearSolverParameters& p)
         }
     } else {
         if(p.linear_solver_configuration_ != "ilu0"){
-            throw std::runtime_error("Not a valid setting for linear_solver_configuration");
+            OPM_THROW(std::invalid_argument, p.linear_solver_configuration_  << "is not a valid setting for --linear-solver-configuration."
+                      << " Please use ilu0, cpr_trueimpes, or cpr_quasiimpes");
         }
         prm.put("tol", p.linear_solver_reduction_);
         prm.put("maxiter", p.linear_solver_maxiter_);

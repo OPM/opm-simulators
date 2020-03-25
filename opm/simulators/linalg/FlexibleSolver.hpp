@@ -164,9 +164,7 @@ private:
             linsolver_.reset(new Dune::UMFPack<MatrixType>(linearoperator_->getmat(), verbosity, dummy));
 #endif
         } else {
-            std::string msg("Solver not known ");
-            msg += solver_type;
-            throw std::runtime_error(msg);
+            OPM_THROW(std::invalid_argument, "Properties: Solver " << solver_type << " not known.");
         }
     }
 

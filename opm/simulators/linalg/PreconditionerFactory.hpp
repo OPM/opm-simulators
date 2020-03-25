@@ -226,9 +226,7 @@ private:
                 auto sargs = amgSmootherArgs<Smoother>(prm);
                 return std::make_shared<Dune::Amg::AMGCPR<O, V, Smoother, C>>(op, crit, sargs, comm);
             } else {
-                std::string msg("No such smoother: ");
-                msg += smoother;
-                throw std::runtime_error(msg);
+                OPM_THROW(std::invalid_argument, "Properties: No smoother with name " << smoother <<".");
             }
         });
         doAddCreator("cpr", [](const O& op, const P& prm, const std::function<Vector()> weightsCalculator, const C& comm) {
@@ -312,9 +310,7 @@ private:
 #endif
                 return makeAmgPreconditioner<Smoother>(op, prm);
             } else {
-                std::string msg("No such smoother: ");
-                msg += smoother;
-                throw std::runtime_error(msg);
+                OPM_THROW(std::invalid_argument, "Properties: No smoother with name " << smoother <<".");
             }
         });
 	doAddCreator("kamg", [](const O& op, const P& prm, const std::function<Vector()>&) {
@@ -338,9 +334,7 @@ private:
                 using Smoother = SeqILUn<M, V, V>;
                 return makeAmgPreconditioner<Smoother>(op, prm, true);
             } else {
-                std::string msg("No such smoother: ");
-                msg += smoother;
-                throw std::runtime_error(msg);
+                OPM_THROW(std::invalid_argument, "Properties: No smoother with name " << smoother <<".");
             }
         });
         doAddCreator("famg", [](const O& op, const P& prm, const std::function<Vector()>&) {
@@ -387,7 +381,7 @@ private:
                 msg << prec.first << ' ';
             }
             msg << std::endl;
-            throw std::runtime_error(msg.str());
+            OPM_THROW(std::invalid_argument, msg.str());
         }
         return it->second(op, prm, weightsCalculator);
     }
@@ -405,7 +399,7 @@ private:
                 msg << prec.first << ' ';
             }
             msg << std::endl;
-            throw std::runtime_error(msg.str());
+            OPM_THROW(std::invalid_argument, msg.str());
         }
         return it->second(op, prm, weightsCalculator, comm);
     }

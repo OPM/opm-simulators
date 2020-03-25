@@ -26,6 +26,8 @@
 #include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
 #include <opm/simulators/linalg/twolevelmethodcpr.hh>
 
+#include <opm/common/ErrorMacros.hpp>
+
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/paamg/amg.hh>
@@ -104,9 +106,10 @@ public:
         , prm_(prm)
     {
         if (prm.get<int>("verbosity", 0) > 10) {
-            std::ofstream outfile(prm.get<std::string>("weights_filename", "impes_weights.txt"));
+            std::string filename = prm.get<std::string>("weights_filename", "impes_weights.txt");
+            std::ofstream outfile(filename);
             if (!outfile) {
-                throw std::runtime_error("Could not write weights");
+                OPM_THROW(std::ofstream::failure, "Could not write weights to file " << filename << ".");
             }
             Dune::writeMatrixMarket(weights_, outfile);
         }
@@ -133,10 +136,11 @@ public:
     {
         //Opm::Amg::getQuasiImpesWeights<MatrixType, VectorType>(
         //      linearoperator.getmat(), prm.get<int>("pressure_var_index"), transpose))
-        if (prm.get<int>("verbosity", 0) > 10) {
-            std::ofstream outfile(prm.get<std::string>("weights_filename", "impes_weights.txt"));
+        if (prm.get<int>("verbosity", 0) > 10 && comm.communicator().rank() == 0) {
+            auto filename = prm.get<std::string>("weights_filename", "impes_weights.txt");
+            std::ofstream outfile(filename);
             if (!outfile) {
-                throw std::runtime_error("Could not write weights");
+                OPM_THROW(std::ofstream::failure, "Could not write weights to file " << filename << ".");
             }
             Dune::writeMatrixMarket(weights_, outfile);
         }
