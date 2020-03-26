@@ -408,8 +408,14 @@ namespace Opm {
             const auto& it = wellState.wellMap().find(wellName);
             if (it != end) {  // the well is found on this node 
                 int well_index = it->second[0];
+                const auto& wellTmp = schedule.getWell(wellName, reportStepIdx);
+                int sign = 1;
+                // production wellRates are negative. The users of currentWellRates uses the convention in 
+                // opm-common that production and injection rates are positive. 
+                if (!wellTmp.isInjector())
+                    sign = -1;
                 for (int phase = 0; phase < np; ++phase) {
-                    rates[phase] = wellStateNupcol.wellRates()[well_index*np + phase];
+                    rates[phase] = sign * wellStateNupcol.wellRates()[well_index*np + phase];
                 }
             }
             wellState.setCurrentWellRates(wellName, rates); 
@@ -1204,7 +1210,8 @@ namespace Opm {
             }
             target *= localFraction(chain[ii+1]);
         }
-        const double target_rate = std::max(0.0, target / efficiencyFactor);
+        // Avoid negative target rates comming from too large local reductions. 
+        const double target_rate = std::max(1e-12, target / efficiencyFactor);
         return std::make_pair(current_rate > target_rate, target_rate / current_rate);
     }
 
