@@ -2033,27 +2033,12 @@ namespace Opm
                                                      EvalWell& control_eq,
                                                      double efficiencyFactor)
     {
-        if (!group.isAvailableForGroupControl()) {
-            // We cannot go any further up the hierarchy. This could
-            // be the FIELD group, or any group for which this has
-            // been set in GCONINJE or GCONPROD. If we are here
-            // anyway, it is likely that the deck set inconsistent
-            // requirements, such as GRUP control mode on a well with
-            // no appropriate controls defined on any of its
-            // containing groups. We will therefore use the wells' bhp
-            // limit equation as a fallback.
-            const auto& controls = well_ecl_.injectionControls(summaryState);
-            control_eq = bhp - controls.bhp_limit;
-            return;
-        }
-
         const auto& well = well_ecl_;
         const auto pu = phaseUsage();
 
         int phasePos = -1;
         Well::GuideRateTarget wellTarget;
         Phase injectionPhase;
-
         switch (injectorType) {
         case InjectorType::WATER:
         {
@@ -2080,15 +2065,30 @@ namespace Opm
             // Should not be here.
             assert(false);
         }
+
         const Group::InjectionCMode& currentGroupControl = well_state.currentInjectionGroupControl(injectionPhase, group.name());
 
         if (currentGroupControl == Group::InjectionCMode::FLD ||
             currentGroupControl == Group::InjectionCMode::NONE) {
-            // Inject share of parents control
-            const auto& parent = schedule.getGroup( group.parent(), current_step_ );
-            efficiencyFactor *= group.getGroupEfficiencyFactor();
-            getGroupInjectionControl(parent, well_state, schedule, summaryState, injectorType, bhp, injection_rate, control_eq, efficiencyFactor);
-            return;
+            if (!group.isAvailableForGroupControl()) {
+                // We cannot go any further up the hierarchy. This could
+                // be the FIELD group, or any group for which this has
+                // been set in GCONINJE or GCONPROD. If we are here
+                // anyway, it is likely that the deck set inconsistent
+                // requirements, such as GRUP control mode on a well with
+                // no appropriate controls defined on any of its
+                // containing groups. We will therefore use the wells' bhp
+                // limit equation as a fallback.
+                const auto& controls = well_ecl_.injectionControls(summaryState);
+                control_eq = bhp - controls.bhp_limit;
+                return;
+            } else {
+                // Inject share of parents control
+                const auto& parent = schedule.getGroup( group.parent(), current_step_ );
+                efficiencyFactor *= group.getGroupEfficiencyFactor();
+                getGroupInjectionControl(parent, well_state, schedule, summaryState, injectorType, bhp, injection_rate, control_eq, efficiencyFactor);
+                return;
+            }
         }
 
         assert(group.hasInjectionControl(injectionPhase));
@@ -2206,9 +2206,6 @@ namespace Opm
                                                       EvalWell& control_eq,
                                                       double efficiencyFactor)
     {
-        const auto& well = well_ecl_;
-        const auto pu = phaseUsage();
-
         const Group::ProductionCMode& currentGroupControl = well_state.currentProductionGroupControl(group.name());
         if (currentGroupControl == Group::ProductionCMode::FLD ||
             currentGroupControl == Group::ProductionCMode::NONE) {
@@ -2233,8 +2230,11 @@ namespace Opm
             }
         }
 
+        const auto& well = well_ecl_;
+        const auto pu = phaseUsage();
+
         if (!group.isProductionGroup()) {
-            // use bhp as control eq and let the updateControl code find a vallied control
+            // use bhp as control eq and let the updateControl code find a valid control
             const auto& controls = well.productionControls(summaryState);
             control_eq = bhp - controls.bhp_limit;
             return;
