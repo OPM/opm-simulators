@@ -1924,26 +1924,26 @@ namespace Opm
         switch (current) {
         case Well::ProducerCMode::ORAT: {
             assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
-            const EvalWell rate = -rates[pu.phase_pos[BlackoilPhases::Liquid]];
+            const EvalWell rate = -rates[BlackoilPhases::Liquid];
             control_eq = rate - controls.oil_rate;
             break;
         }
         case Well::ProducerCMode::WRAT: {
             assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
-            const EvalWell rate = -rates[pu.phase_pos[BlackoilPhases::Aqua]];
+            const EvalWell rate = -rates[BlackoilPhases::Aqua];
             control_eq = rate - controls.water_rate;
             break;
         }
         case Well::ProducerCMode::GRAT: {
             assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
-            const EvalWell rate = -rates[pu.phase_pos[BlackoilPhases::Vapour]];
+            const EvalWell rate = -rates[BlackoilPhases::Vapour];
             control_eq = rate - controls.gas_rate;
             break;
         }
         case Well::ProducerCMode::LRAT: {
             assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
             assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
-            EvalWell rate = -rates[pu.phase_pos[BlackoilPhases::Aqua]] - rates[pu.phase_pos[BlackoilPhases::Liquid]];
+            EvalWell rate = -rates[BlackoilPhases::Aqua] - rates[BlackoilPhases::Liquid];
             control_eq = rate - controls.liquid_rate;
             break;
         }
@@ -1958,7 +1958,7 @@ namespace Opm
             for (int phase = 0; phase < 3; ++phase) {
                 if (pu.phase_used[phase]) {
                     const int pos = pu.phase_pos[phase];
-                    total_rate -= rates[pos] * convert_coeff[pos];
+                    total_rate -= rates[phase] * convert_coeff[pos]; // Note different indices.
                 }
             }
             if (controls.prediction_mode) {
