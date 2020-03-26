@@ -2263,10 +2263,9 @@ namespace Opm
             target -= localReduction(chain[ii]);
             target *= localFraction(chain[ii+1]);
         }
-        const double target_rate = target / efficiencyFactor;
-
+        // Avoid negative target rates comming from too large local reductions. 
+        const double target_rate = std::max(0.0, target / efficiencyFactor);
         const auto current_rate = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
-
         control_eq = current_rate - target_rate;
     }
 
