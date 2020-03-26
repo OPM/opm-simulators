@@ -515,6 +515,13 @@ namespace Opm
                 well.rates.set( rt::dissolved_gas, this->well_dissolved_gas_rates_[w] );
                 well.rates.set( rt::vaporized_oil, this->well_vaporized_oil_rates_[w] );
 
+                {
+                    auto& curr = well.current_control;
+
+                    curr.prod = this->currentProductionControls()[w];
+                    curr.inj  = this->currentInjectionControls() [w];
+                }
+
                 size_t local_comp_index = 0;
                 for( auto& comp : well.connections) {
                     const auto rates = this->perfPhaseRates().begin()
