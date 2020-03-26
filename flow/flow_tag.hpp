@@ -74,7 +74,6 @@ namespace Opm {
   void flowEbosSetDeck(Deck *deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
   {
     typedef typename GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
-    Vanguard::setExternalDeck(deck);
     Vanguard::setExternalEclState(&eclState);
     Vanguard::setExternalSchedule(&schedule);
     Vanguard::setExternalSummaryConfig(&summaryConfig);

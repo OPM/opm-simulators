@@ -17,13 +17,12 @@
 #ifndef FLOW_EBOS_ENERGY_HPP
 #define FLOW_EBOS_ENERGY_HPP
 
-#include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 namespace Opm {
-void flowEbosEnergySetDeck(double setupTime, Deck *deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig);
+void flowEbosEnergySetDeck(double setupTime, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig);
 int flowEbosEnergyMain(int argc, char** argv, bool outputCout, bool outputFiles);
 }
 

@@ -68,7 +68,6 @@ void ebosGasOilSetDeck(Opm::Deck* deck,
     Vanguard::setExternalSetupTime(externalSetupTime);
     Vanguard::setExternalParseContext(parseContext);
     Vanguard::setExternalErrorGuard(errorGuard);
-    Vanguard::setExternalDeck(deck);
 }
 
 int ebosGasOilMain(int argc, char **argv)

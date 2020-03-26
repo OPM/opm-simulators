@@ -52,7 +52,6 @@ void ebosSolventSetDeck(Opm::Deck* deck,
     Vanguard::setExternalSetupTime(externalSetupTime);
     Vanguard::setExternalParseContext(parseContext);
     Vanguard::setExternalErrorGuard(errorGuard);
-    Vanguard::setExternalDeck(deck);
 }
 
 int ebosSolventMain(int argc, char **argv)

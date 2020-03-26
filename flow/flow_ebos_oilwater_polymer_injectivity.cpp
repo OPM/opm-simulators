@@ -85,6 +85,7 @@ int flowEbosOilWaterPolymerInjectivityMain(int argc, char** argv, bool outputCou
 #endif
 
     Opm::FlowMainEbos<TTAG(EclFlowOilWaterPolymerInjectivityProblem)> mainfunc;
+
     return mainfunc.execute(argc, argv, outputCout, outputFiles);
 }
 

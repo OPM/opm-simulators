@@ -36,10 +36,6 @@
 #include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseContext.hpp>
-#include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
-#include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/EclipseGrid.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
@@ -222,30 +218,6 @@ public:
     { return externalSetupTime_; }
 
     /*!
-     * \brief Set the Opm::ParseContext object which ought to be used for parsing the deck and creating the Opm::EclipseState object.
-     */
-    static void setExternalParseContext(Opm::ParseContext* parseContext)
-    { externalParseContext_ = parseContext; }
-
-    /*!
-     * \brief Set the Opm::ErrorGuard object which ought to be used for parsing the deck and creating the Opm::EclipseState object.
-     */
-    static void setExternalErrorGuard(Opm::ErrorGuard* errorGuard)
-    { externalErrorGuard_ = errorGuard; }
-
-    /*!
-     * \brief Set the Opm::Deck object which ought to be used when the simulator vanguard
-     *        is instantiated.
-     *
-     * This is basically an optimization: In cases where the ECL input deck must be
-     * examined to decide which simulator ought to be used, this avoids having to parse
-     * the input twice. When this method is used, the caller is responsible for lifetime
-     * management of these two objects, i.e., they are not allowed to be deleted as long
-     * as the simulator vanguard object is alive.
-     */
-    static void setExternalDeck(Opm::Deck* deck)
-    { externalDeck_ = deck; externalDeckSet_ = true; }
-    /*!
      * \brief Set the Opm::EclipseState object which ought to be used when the simulator
      *        vanguard is instantiated.
      */
@@ -271,111 +243,15 @@ public:
         ownersFirst_ = EWOMS_GET_PARAM(TypeTag, bool, OwnerCellsFirst);
 
         // Skip processing of filename if external deck already exists.
-        if (!externalDeck_)
+        if (!externalEclState_)
         {
-            if (fileName == "")
-                throw std::runtime_error("No input deck file has been specified as a command line argument,"
-                                        " or via '--ecl-deck-file-name=CASE.DATA'");
-
-            fileName = canonicalDeckPath(fileName).string();
-
-            // compute the base name of the input file name
-            const char directorySeparator = '/';
-            long int i;
-            for (i = fileName.size(); i >= 0; -- i)
-                if (fileName[i] == directorySeparator)
-                    break;
-            std::string baseName = fileName.substr(i + 1, fileName.size());
-
-            // remove the extension from the input file
-            for (i = baseName.size(); i >= 0; -- i)
-                if (baseName[i] == '.')
-                    break;
-            std::string rawCaseName;
-            if (i < 0)
-                rawCaseName = baseName;
-            else
-                rawCaseName = baseName.substr(0, i);
-
-            // transform the result to ALL_UPPERCASE
-            caseName_ = rawCaseName;
-            std::transform(caseName_.begin(), caseName_.end(), caseName_.begin(), ::toupper);
+            throw std::logic_error("Sorry - implementation based on internal deck++ in the EclBaseVanguard is no longer supported");
         }
 
-        // create the parser objects for the deck or use their externally specified
-        // versions (if desired)
-        if (!externalParseContext_) {
-            internalParseContext_ = createParseContext();
-            parseContext_ = internalParseContext_.get();
-        }
-        else
-            parseContext_ = externalParseContext_;
-
-        if (!externalParseContext_) {
-            internalErrorGuard_.reset(new Opm::ErrorGuard);
-            errorGuard_ = internalErrorGuard_.get();
-        }
-        else
-            errorGuard_ = externalErrorGuard_;
-
-        if (!externalDeck_ && !externalDeckSet_) {
-            if (myRank == 0)
-                std::cout << "Reading the deck file '" << fileName << "'" << std::endl;
-
-            Opm::Parser parser;
-            internalDeck_.reset(new Opm::Deck(parser.parseFile(fileName, *parseContext_, *errorGuard_)));
-            deck_ = internalDeck_.get();
-
-            if (enableExperiments && myRank == 0)
-                Opm::checkDeck(*deck_, parser,  *parseContext_, *errorGuard_);
-        }
-        else {
-            deck_ = externalDeck_;
-        }
-
-        if (!externalEclState_) {
-            internalEclState_.reset(new Opm::EclipseState(*deck_));
-            eclState_ = internalEclState_.get();
-        }
-        else {
-            assert(externalEclState_);
-
-            deck_ = externalDeck_;
-            eclState_ = externalEclState_;
-        }
-
-        if (!externalEclSchedule_) {
-            // create the schedule object. Note that if eclState is supposed to represent
-            // the internalized version of the deck, this constitutes a layering
-            // violation.
-            internalEclSchedule_.reset(new Opm::Schedule(*deck_, *eclState_, *parseContext_, *errorGuard_));
-            eclSchedule_ = internalEclSchedule_.get();
-        }
-        else
-            eclSchedule_ = externalEclSchedule_;
+        eclState_ = externalEclState_;
+        eclSchedule_ = externalEclSchedule_;
+        eclSummaryConfig_ = externalEclSummaryConfig_;
         this->summaryState_.reset( new Opm::SummaryState( std::chrono::system_clock::from_time_t(this->eclSchedule_->getStartTime() )));
-
-        if (!externalEclSummaryConfig_) {
-            // create the schedule object. Note that if eclState is supposed to represent
-            // the internalized version of the deck, this constitutes a layering
-            // violation.
-            internalEclSummaryConfig_.reset(new Opm::SummaryConfig(*deck_,
-                                                                   *eclSchedule_,
-                                                                   eclState_->getTableManager(),
-                                                                   *parseContext_,
-                                                                   *errorGuard_));
-
-            eclSummaryConfig_ = internalEclSummaryConfig_.get();
-        }
-        else
-            eclSummaryConfig_ = externalEclSummaryConfig_;
-
-        if (*errorGuard_) {
-            errorGuard_->dump();
-            errorGuard_->clear();
-
-            throw std::runtime_error("Unrecoverable errors were encountered while loading input.");
-        }
 
         // Possibly override IOConfig setting for how often RESTART files should get
         // written to disk (every N report step)
@@ -383,15 +259,6 @@ public:
         if (outputInterval >= 0)
             schedule().restart().overrideRestartWriteInterval(outputInterval);
     }
-
-    /*!
-     * \brief Return a reference to the parsed ECL deck.
-     */
-    const Opm::Deck& deck() const
-    { return *deck_; }
-
-    Opm::Deck& deck()
-    { return *deck_; }
 
     /*!
      * \brief Return a reference to the internalized ECL deck.
@@ -461,7 +328,7 @@ public:
      */
     bool ownersFirst() const
     { return ownersFirst_; }
-    
+
     /*!
      * \brief Returns the name of the case.
      *
@@ -605,27 +472,14 @@ private:
 
     static Scalar externalSetupTime_;
 
-    static Opm::ParseContext* externalParseContext_;
-    static Opm::ErrorGuard* externalErrorGuard_;
-    static Opm::Deck* externalDeck_;
-    static bool externalDeckSet_;
     static Opm::EclipseState* externalEclState_;
     static Opm::Schedule* externalEclSchedule_;
     static Opm::SummaryConfig* externalEclSummaryConfig_;
 
-    std::unique_ptr<Opm::ParseContext> internalParseContext_;
-    std::unique_ptr<Opm::ErrorGuard> internalErrorGuard_;
-    std::unique_ptr<Opm::Deck> internalDeck_;
-    std::unique_ptr<Opm::EclipseState> internalEclState_;
-    std::unique_ptr<Opm::Schedule> internalEclSchedule_;
-    std::unique_ptr<Opm::SummaryConfig> internalEclSummaryConfig_;
     std::unique_ptr<Opm::SummaryState> summaryState_;
 
     // these attributes point  either to the internal  or to the external version of the
     // parser objects.
-    Opm::ParseContext* parseContext_;
-    Opm::ErrorGuard* errorGuard_;
-    Opm::Deck* deck_;
     Opm::EclipseState* eclState_;
     Opm::Schedule* eclSchedule_;
     Opm::SummaryConfig* eclSummaryConfig_;
@@ -642,18 +496,6 @@ protected:
 
 template <class TypeTag>
 typename EclBaseVanguard<TypeTag>::Scalar EclBaseVanguard<TypeTag>::externalSetupTime_ = 0.0;
-
-template <class TypeTag>
-Opm::ParseContext* EclBaseVanguard<TypeTag>::externalParseContext_ = nullptr;
-
-template <class TypeTag>
-Opm::ErrorGuard* EclBaseVanguard<TypeTag>::externalErrorGuard_ = nullptr;
-
-template <class TypeTag>
-Opm::Deck* EclBaseVanguard<TypeTag>::externalDeck_ = nullptr;
-
-template <class TypeTag>
-bool EclBaseVanguard<TypeTag>::externalDeckSet_ = false;
 
 template <class TypeTag>
 Opm::EclipseState* EclBaseVanguard<TypeTag>::externalEclState_;

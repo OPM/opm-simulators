@@ -17,14 +17,13 @@
 #ifndef FLOW_EBOS_FOAM_HPP
 #define FLOW_EBOS_FOAM_HPP
 
-#include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 
 namespace Opm {
-void flowEbosFoamSetDeck(double setupTime, Deck *deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig);
+void flowEbosFoamSetDeck(double setupTime, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig);
 int flowEbosFoamMain(int argc, char** argv, bool outputCout, bool outputFiles);
 }
 

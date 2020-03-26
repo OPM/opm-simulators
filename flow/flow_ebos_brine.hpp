@@ -17,14 +17,13 @@
 #ifndef FLOW_EBOS_BRINE_HPP
 #define FLOW_EBOS_BRINE_HPP
 
-#include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 
 namespace Opm {
-void flowEbosBrineSetDeck(double setupTime, Deck *deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig);
+void flowEbosBrineSetDeck(double setupTime, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig);
 int flowEbosBrineMain(int argc, char** argv, bool outputCout, bool outputFiles);
 }
 

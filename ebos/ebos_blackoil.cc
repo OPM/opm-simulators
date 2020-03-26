@@ -98,9 +98,6 @@ void ebosBlackOilSetDeck(Opm::Deck* deck,
     typedef GET_PROP_TYPE(ProblemTypeTag, Vanguard) Vanguard;
 
     Vanguard::setExternalSetupTime(externalSetupTime);
-    Vanguard::setExternalParseContext(parseContext);
-    Vanguard::setExternalErrorGuard(errorGuard);
-    Vanguard::setExternalDeck(deck);
 }
 
 int ebosBlackOilMain(int argc, char **argv)

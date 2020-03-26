@@ -68,7 +68,6 @@ void ebosOilWaterSetDeck(Opm::Deck* deck,
     Vanguard::setExternalSetupTime(externalSetupTime);
     Vanguard::setExternalParseContext(parseContext);
     Vanguard::setExternalErrorGuard(errorGuard);
-    Vanguard::setExternalDeck(deck);
 }
 
 int ebosOilWaterMain(int argc, char **argv)

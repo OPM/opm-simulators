@@ -17,11 +17,8 @@
 #ifndef FLOW_EBOS_OILWATER_POLYMER_INJECTIVITY_HPP
 #define FLOW_EBOS_OILWATER_POLYMER_INJECTIVITY_HPP
 
-#include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
 namespace Opm {
-  // void flowEbosOilWaterPolymerInjectivitySetDeck(Deck& deck, EclipseState& eclState);
 int flowEbosOilWaterPolymerInjectivityMain(int argc, char** argv, bool outputCout, bool outputFiles);
 }
 
