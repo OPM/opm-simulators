@@ -22,6 +22,7 @@
 #define BOOST_TEST_MODULE WellStateFIBOTest
 
 #include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/parser/eclipse/Python/Python.hpp>
 
 #include <boost/test/unit_test.hpp>
 
@@ -51,7 +52,7 @@ struct Setup
         : es   (deck)
         , pu   (Opm::phaseUsageFromDeck(es))
         , grid (es.getInputGrid())
-        , sched(deck, es)
+        , sched(deck, es, python)
         , st(std::chrono::system_clock::from_time_t(sched.getStartTime()))
     {
         initWellPerfData();
@@ -101,6 +102,7 @@ struct Setup
         }
     }
 
+    Opm::Python       python;
     Opm::EclipseState es;
     Opm::PhaseUsage   pu;
     Opm::GridManager  grid;

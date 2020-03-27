@@ -33,6 +33,7 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
+#include <opm/parser/eclipse/Python/Python.hpp>
 
 #include <opm/grid/GridManager.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
@@ -70,12 +71,13 @@ struct SetupTest {
         {
           const Opm::TableManager table ( deck );
           const Opm::Runspec runspec (deck);
-          schedule.reset( new Opm::Schedule(deck, *ecl_state));
+          schedule.reset( new Opm::Schedule(deck, *ecl_state, python));
           summaryState.reset( new Opm::SummaryState(std::chrono::system_clock::from_time_t(schedule->getStartTime())));
         }
         current_timestep = 0;
     };
 
+    Opm::Python python;
     std::unique_ptr<const Opm::EclipseState> ecl_state;
     std::unique_ptr<const Opm::Schedule> schedule;
     std::unique_ptr<Opm::SummaryState> summaryState;
