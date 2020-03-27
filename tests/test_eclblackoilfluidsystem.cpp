@@ -43,6 +43,7 @@
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/parser/eclipse/Python/Python.hpp>
 
 #include <dune/common/parallel/mpihelper.hh>
 
@@ -631,8 +632,9 @@ inline void testAll()
     Opm::Parser parser;
 
     auto deck = parser.parseString(deckString1);
+    Opm::Python python;
     Opm::EclipseState eclState(deck);
-    Opm::Schedule schedule(deck, eclState);
+    Opm::Schedule schedule(deck, eclState, python);
 
     FluidSystem::initFromState(eclState, schedule);
 
