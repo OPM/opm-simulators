@@ -27,6 +27,7 @@
 namespace Opm
 {
 
+template<class TypeTag>
 boost::property_tree::ptree setupPropertyTree(const FlowLinearSolverParameters& p);
 
 } // namespace Opm

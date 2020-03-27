@@ -93,7 +93,7 @@ public:
         : simulator_(simulator)
     {
         parameters_.template init<TypeTag>();
-        prm_ = setupPropertyTree(parameters_);
+        prm_ = setupPropertyTree<TypeTag>(parameters_);
         extractParallelGridInformationToISTL(simulator_.vanguard().grid(), parallelInformation_);
         // For some reason simulator_.model().elementMapper() is not initialized at this stage
         // Hence const auto& elemMapper = simulator_.model().elementMapper(); does not work.

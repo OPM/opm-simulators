@@ -32,6 +32,7 @@ namespace Opm
 /// and preconditioner. If the latter, the parameters --linear-solver-reduction,
 /// --linear-solver-maxiter and --linear-solver-verbosity are used, but if reading
 /// from file the data in the JSON file will override any other options.
+template<class TypeTag>
 boost::property_tree::ptree
 setupPropertyTree(const FlowLinearSolverParameters& p)
 {
@@ -45,49 +46,65 @@ setupPropertyTree(const FlowLinearSolverParameters& p)
             boost::property_tree::read_json(p.linear_solver_configuration_json_file_, prm);
         }
 #endif
-    } else if((p.linear_solver_configuration_ == "cpr_trueimpes") ||
-              (p.linear_solver_configuration_ == "cpr_quasiimpes")){
-        prm.put("tol", p.linear_solver_reduction_);
-        prm.put("maxiter", p.linear_solver_maxiter_);//should we change this
-        prm.put("verbosity", p.linear_solver_verbosity_);
-        prm.put("solver", "bicgstab");
-        prm.put("preconditioner.type", "cpr");
-        prm.put("preconditioner.weight_filename", "cpr_weights.txt");
-        prm.put("preconditioner.weight_type","quasiimpes");
-        prm.put("preconditioner.finesmoother.type", "ParOverILU0");
-        prm.put("preconditioner.finesmoother.relaxation", 1.0);
-        prm.put("preconditioner.pressure_var_index",1);
-        prm.put("preconditioner.verbosity",0);
-        prm.put("preconditioner.coarsesolver.maxiter",1);
-        prm.put("preconditioner.coarsesolver.tol",1e-1);
-        prm.put("preconditioner.coarsesolver.solver","loopsolver");
-        prm.put("preconditioner.coarsesolver.verbosity",0);
-        prm.put("preconditioner.coarsesolver.preconditioner.type","amg");
-        prm.put("preconditioner.coarsesolver.preconditioner.alpha",0.333333333333);
-        prm.put("preconditioner.coarsesolver.preconditioner.relaxation",1.0);
-        prm.put("preconditioner.coarsesolver.preconditioner.iterations",1);
-        prm.put("preconditioner.coarsesolver.preconditioner.coarsenTarget",1200);
-        prm.put("preconditioner.coarsesolver.preconditioner.pre_smooth",1);
-        prm.put("preconditioner.coarsesolver.preconditioner.post_smooth",1);
-        prm.put("preconditioner.coarsesolver.preconditioner.beta",1e-5);
-        prm.put("preconditioner.coarsesolver.preconditioner.smoother","ILU0");
-        prm.put("preconditioner.coarsesolver.preconditioner.verbosity",0);
-        prm.put("preconditioner.coarsesolver.preconditioner.maxlevel",15);
-        prm.put("preconditioner.coarsesolver.preconditioner.skip_isolated",0);
-        if(p.linear_solver_configuration_ == "cpr_trueimpes"){
-            prm.put("preconditioner.weight_type","trueimpes");
+    }
+    else
+    {
+        std::string conf =  p.linear_solver_configuration_;
+        // Support old UseCpr if not configuration was set
+        if (!EWOMS_PARAM_IS_SET(TypeTag, std::string, LinearSolverConfiguration) && p.use_cpr_)
+        {
+            conf = "cpr_quasiimpes";
         }
-    } else {
-        if(p.linear_solver_configuration_ != "ilu0"){
-            OPM_THROW(std::invalid_argument, p.linear_solver_configuration_  << "is not a valid setting for --linear-solver-configuration."
-                      << " Please use ilu0, cpr_trueimpes, or cpr_quasiimpes");
+
+        if((conf == "cpr_trueimpes") || (conf == "cpr_quasiimpes")){
+            prm.put("tol", p.linear_solver_reduction_);
+            if (EWOMS_PARAM_IS_SET(TypeTag, double, LinearSolverMaxIter))
+                prm.put("maxiter", p.linear_solver_maxiter_);// Trust that the user knows what he does
+            else
+                prm.put("maxiter", 20); // Use our own default.
+            prm.put("verbosity", p.linear_solver_verbosity_);
+            prm.put("solver", "bicgstab");
+            prm.put("preconditioner.type", "cpr");
+            prm.put("preconditioner.weight_filename", "cpr_weights.txt");
+            prm.put("preconditioner.weight_type","quasiimpes");
+            prm.put("preconditioner.finesmoother.type", "ParOverILU0");
+            prm.put("preconditioner.finesmoother.relaxation", 1.0);
+            prm.put("preconditioner.pressure_var_index",1);
+            prm.put("preconditioner.verbosity",0);
+            prm.put("preconditioner.coarsesolver.maxiter",1);
+            prm.put("preconditioner.coarsesolver.tol",1e-1);
+            prm.put("preconditioner.coarsesolver.solver","loopsolver");
+            prm.put("preconditioner.coarsesolver.verbosity",0);
+            prm.put("preconditioner.coarsesolver.preconditioner.type","amg");
+            prm.put("preconditioner.coarsesolver.preconditioner.alpha",0.333333333333);
+            prm.put("preconditioner.coarsesolver.preconditioner.relaxation",1.0);
+            if (EWOMS_PARAM_IS_SET(TypeTag, double, CprMaxEllIter))
+                prm.put("preconditioner.coarsesolver.preconditioner.iterations", p.cpr_max_ell_iter_);
+            prm.put("preconditioner.coarsesolver.preconditioner.iterations",1);
+            prm.put("preconditioner.coarsesolver.preconditioner.coarsenTarget",1200);
+            prm.put("preconditioner.coarsesolver.preconditioner.pre_smooth",1);
+            prm.put("preconditioner.coarsesolver.preconditioner.post_smooth",1);
+            prm.put("preconditioner.coarsesolver.preconditioner.beta",1e-5);
+            prm.put("preconditioner.coarsesolver.preconditioner.smoother","ILU0");
+            prm.put("preconditioner.coarsesolver.preconditioner.verbosity",0);
+            prm.put("preconditioner.coarsesolver.preconditioner.maxlevel",15);
+            prm.put("preconditioner.coarsesolver.preconditioner.skip_isolated",0);
+            if(p.linear_solver_configuration_ == "cpr_trueimpes"){
+                prm.put("preconditioner.weight_type","trueimpes");
+            }
+        } else {
+            if(conf != "ilu0"){
+                OPM_THROW(std::invalid_argument, conf  << "is not a valid setting for --linear-solver-configuration."
+                          << " Please use ilu0, cpr_trueimpes, or cpr_quasiimpes");
+            }
+            prm.put("tol", p.linear_solver_reduction_);
+            prm.put("maxiter", p.linear_solver_maxiter_);
+            prm.put("verbosity", p.linear_solver_verbosity_);
+            prm.put("solver", "bicgstab");
+            prm.put("preconditioner.type", "ParOverILU0");
+            prm.put("preconditioner.relaxation", p.ilu_relaxation_);
+            prm.put("preconditioner.ilulevel", p.ilu_fillin_level_);
         }
-        prm.put("tol", p.linear_solver_reduction_);
-        prm.put("maxiter", p.linear_solver_maxiter_);
-        prm.put("verbosity", p.linear_solver_verbosity_);
-        prm.put("solver", "bicgstab");
-        prm.put("preconditioner.type", "ParOverILU0");
-        prm.put("preconditioner.relaxation", 1.0);
     }
     return prm;
 }
