@@ -292,7 +292,7 @@ namespace Opm {
             }
         }
         const Group& fieldGroup = schedule().getGroup("FIELD", timeStepIdx);
-        wellGroupHelpers::setCmodeGroup(fieldGroup, schedule(), summaryState, timeStepIdx, well_state_);
+        WellGroupHelpers::setCmodeGroup(fieldGroup, schedule(), summaryState, timeStepIdx, well_state_);
 
         // Compute reservoir volumes for RESV controls.
         rateConverter_.reset(new RateConverterType (phase_usage_,
@@ -381,7 +381,7 @@ namespace Opm {
 
         //compute well guideRates
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
-        wellGroupHelpers::updateGuideRatesForWells(schedule(), phase_usage_, reportStepIdx, simulationTime, well_state_, comm, guideRate_.get());
+        WellGroupHelpers::updateGuideRatesForWells(schedule(), phase_usage_, reportStepIdx, simulationTime, well_state_, comm, guideRate_.get());
     }
 
 
@@ -408,7 +408,7 @@ namespace Opm {
                 well->init(&phase_usage_, depth_, gravity_, number_of_cells_);
                 const Well& wellEcl = schedule().getWell(well_name, timeStepIdx);
                 double well_efficiency_factor = wellEcl.getEfficiencyFactor();
-                wellGroupHelpers::accumulateGroupEfficiencyFactor(schedule().getGroup(wellEcl.groupName(), timeStepIdx), schedule(), timeStepIdx, well_efficiency_factor);
+                WellGroupHelpers::accumulateGroupEfficiencyFactor(schedule().getGroup(wellEcl.groupName(), timeStepIdx), schedule(), timeStepIdx, well_efficiency_factor);
                 well->setWellEfficiencyFactor(well_efficiency_factor);
                 well->setVFPProperties(vfp_properties_.get());
                 well->setGuideRate(guideRate_.get());
@@ -1231,23 +1231,23 @@ namespace Opm {
         // the group target reduction rates needs to be update since wells may have swicthed to/from GRUP control
         // Currently the group target reduction does not honor NUPCOL. TODO: is that true?
         std::vector<double> groupTargetReduction(numPhases(), 0.0);
-        wellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ false, phase_usage_, well_state_nupcol_, well_state_, groupTargetReduction);
+        WellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ false, phase_usage_, well_state_nupcol_, well_state_, groupTargetReduction);
         std::vector<double> groupTargetReductionInj(numPhases(), 0.0);
-        wellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ true, phase_usage_, well_state_nupcol_, well_state_, groupTargetReductionInj);
+        WellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ true, phase_usage_, well_state_nupcol_, well_state_, groupTargetReductionInj);
 
         const double simulationTime = ebosSimulator_.time();
         std::vector<double> pot(numPhases(), 0.0);
-        wellGroupHelpers::updateGuideRateForGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, /*isInjector*/ false, well_state_, comm, guideRate_.get(), pot);
+        WellGroupHelpers::updateGuideRateForGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, /*isInjector*/ false, well_state_, comm, guideRate_.get(), pot);
         std::vector<double> potInj(numPhases(), 0.0);
-        wellGroupHelpers::updateGuideRateForGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, /*isInjector*/ true, well_state_, comm, guideRate_.get(), potInj);
+        WellGroupHelpers::updateGuideRateForGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, /*isInjector*/ true, well_state_, comm, guideRate_.get(), potInj);
 
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
-        wellGroupHelpers::updateREINForGroups(fieldGroup, schedule(), reportStepIdx, phase_usage_, summaryState, well_state_nupcol_, well_state_);
-        wellGroupHelpers::updateVREPForGroups(fieldGroup, schedule(), reportStepIdx, well_state_nupcol_, well_state_);
+        WellGroupHelpers::updateREINForGroups(fieldGroup, schedule(), reportStepIdx, phase_usage_, summaryState, well_state_nupcol_, well_state_);
+        WellGroupHelpers::updateVREPForGroups(fieldGroup, schedule(), reportStepIdx, well_state_nupcol_, well_state_);
 
-        wellGroupHelpers::updateReservoirRatesInjectionGroups(fieldGroup, schedule(), reportStepIdx, well_state_nupcol_, well_state_);
-        wellGroupHelpers::updateGroupProductionRates(fieldGroup, schedule(), reportStepIdx, well_state_nupcol_, well_state_);
-        wellGroupHelpers::updateWellRates(fieldGroup, schedule(), reportStepIdx, well_state_nupcol_, well_state_);
+        WellGroupHelpers::updateReservoirRatesInjectionGroups(fieldGroup, schedule(), reportStepIdx, well_state_nupcol_, well_state_);
+        WellGroupHelpers::updateGroupProductionRates(fieldGroup, schedule(), reportStepIdx, well_state_nupcol_, well_state_);
+        WellGroupHelpers::updateWellRates(fieldGroup, schedule(), reportStepIdx, well_state_nupcol_, well_state_);
         well_state_.communicateGroupRates(comm);
 
         // compute wsolvent fraction for REIN wells
@@ -1396,7 +1396,7 @@ namespace Opm {
         for (auto& well : well_container_) {
             const Well& wellEcl = well->wellEcl();
             double well_efficiency_factor = wellEcl.getEfficiencyFactor();
-            wellGroupHelpers::accumulateGroupEfficiencyFactor(schedule().getGroup(wellEcl.groupName(), reportStepIdx), schedule(), reportStepIdx, well_efficiency_factor);
+            WellGroupHelpers::accumulateGroupEfficiencyFactor(schedule().getGroup(wellEcl.groupName(), reportStepIdx), schedule(), reportStepIdx, well_efficiency_factor);
             well->setWellEfficiencyFactor(well_efficiency_factor);
         }
     }
@@ -1846,7 +1846,7 @@ namespace Opm {
             if (currentControl != Group::ProductionCMode::ORAT)
             {
                 double current_rate = 0.0;
-                current_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], false);
+                current_rate += WellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], false);
 
                 // sum over all nodes
                 current_rate = comm.sum(current_rate);
@@ -1863,7 +1863,7 @@ namespace Opm {
             {
 
                 double current_rate = 0.0;
-                current_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], false);
+                current_rate += WellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], false);
 
                 // sum over all nodes
                 current_rate = comm.sum(current_rate);
@@ -1878,7 +1878,7 @@ namespace Opm {
             if (currentControl != Group::ProductionCMode::GRAT)
             {
                 double current_rate = 0.0;
-                current_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Vapour], false);
+                current_rate += WellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Vapour], false);
 
                 // sum over all nodes
                 current_rate = comm.sum(current_rate);
@@ -1892,8 +1892,8 @@ namespace Opm {
             if (currentControl != Group::ProductionCMode::LRAT)
             {
                 double current_rate = 0.0;
-                current_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], false);
-                current_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], false);
+                current_rate += WellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], false);
+                current_rate += WellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], false);
 
                 // sum over all nodes
                 current_rate = comm.sum(current_rate);
@@ -1913,9 +1913,9 @@ namespace Opm {
             if (currentControl != Group::ProductionCMode::RESV)
             {
                 double current_rate = 0.0;
-                current_rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], true);
-                current_rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], true);
-                current_rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Vapour], true);
+                current_rate += WellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], true);
+                current_rate += WellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], true);
+                current_rate += WellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Vapour], true);
 
                 // sum over all nodes
                 current_rate = comm.sum(current_rate);
@@ -1962,7 +1962,7 @@ namespace Opm {
             if (currentControl != Group::InjectionCMode::RATE)
             {
                 double current_rate = 0.0;
-                current_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/true);
+                current_rate += WellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/true);
 
                 // sum over all nodes
                 current_rate = comm.sum(current_rate);
@@ -1977,7 +1977,7 @@ namespace Opm {
             if (currentControl != Group::InjectionCMode::RESV)
             {
                 double current_rate = 0.0;
-                current_rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/true);
+                current_rate += WellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/true);
                 // sum over all nodes
                 current_rate = comm.sum(current_rate);
 
@@ -1992,13 +1992,13 @@ namespace Opm {
             {
                 double production_Rate = 0.0;
                 const Group& groupRein = schedule().getGroup(controls.reinj_group, reportStepIdx);
-                production_Rate += wellGroupHelpers::sumWellRates(groupRein, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/false);
+                production_Rate += WellGroupHelpers::sumWellRates(groupRein, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/false);
 
                 // sum over all nodes
                 production_Rate = comm.sum(production_Rate);
 
                 double current_rate = 0.0;
-                current_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/true);
+                current_rate += WellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/true);
 
                 // sum over all nodes
                 current_rate = comm.sum(current_rate);
@@ -2014,17 +2014,17 @@ namespace Opm {
             {
                 double voidage_rate = 0.0;
                 const Group& groupVoidage = schedule().getGroup(controls.voidage_group, reportStepIdx);
-                voidage_rate += wellGroupHelpers::sumWellResRates(groupVoidage, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], false);
-                voidage_rate += wellGroupHelpers::sumWellResRates(groupVoidage, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], false);
-                voidage_rate += wellGroupHelpers::sumWellResRates(groupVoidage, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Vapour], false);
+                voidage_rate += WellGroupHelpers::sumWellResRates(groupVoidage, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], false);
+                voidage_rate += WellGroupHelpers::sumWellResRates(groupVoidage, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], false);
+                voidage_rate += WellGroupHelpers::sumWellResRates(groupVoidage, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Vapour], false);
 
                 // sum over all nodes
                 voidage_rate = comm.sum(voidage_rate);
 
                 double total_rate = 0.0;
-                total_rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], true);
-                total_rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], true);
-                total_rate += wellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Vapour], true);
+                total_rate += WellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], true);
+                total_rate += WellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], true);
+                total_rate += WellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Vapour], true);
 
                 // sum over all nodes
                 total_rate = comm.sum(total_rate);
@@ -2044,8 +2044,8 @@ namespace Opm {
 
             double sales_rate = 0.0;
             int gasPos = phase_usage_.phase_pos[BlackoilPhases::Vapour];
-            sales_rate += wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, gasPos, /*isInjector*/false);
-            sales_rate -= wellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, gasPos, /*isInjector*/true);
+            sales_rate += WellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, gasPos, /*isInjector*/false);
+            sales_rate -= WellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, gasPos, /*isInjector*/true);
 
             // sum over all nodes
             sales_rate = comm.sum(sales_rate);
@@ -2171,13 +2171,17 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     checkGroupHigherConstraints(const Group& group, Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups)
     {
+        // Set up coefficients for RESV <-> surface rate conversion.
         // Use the pvtRegionIdx from the top cell of the first well.
         // TODO fix this!
         // This is only used for converting RESV rates.
         // What is the proper approach?
+        const int fipnum = 0;
         const int pvtreg = well_perf_data_.empty()
             ? pvt_region_idx_[0]
             : pvt_region_idx_[well_perf_data_[0][0].cell_index];
+        std::vector<double> resv_coeff(phase_usage_.num_phases, 0.0);
+        rateConverter_->calcCoeff(fipnum, pvtreg, resv_coeff);
 
         const int reportStepIdx = ebosSimulator_.episodeIndex();
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
@@ -2190,7 +2194,7 @@ namespace Opm {
         if (!skip && group.isInjectionGroup()) {
             // Obtain rates for group.
             for (int phasePos = 0; phasePos < phase_usage_.num_phases; ++phasePos) {
-                const double local_current_rate = wellGroupHelpers::sumWellRates(
+                const double local_current_rate = WellGroupHelpers::sumWellRates(
                     group, schedule(), well_state_, reportStepIdx, phasePos, /* isInjector */ true);
                 // Sum over all processes
                 rates[phasePos] = comm.sum(local_current_rate);
@@ -2201,7 +2205,7 @@ namespace Opm {
                 const Group::InjectionCMode& currentControl = well_state_.currentInjectionGroupControl(phase, group.name());
                 if (currentControl != Group::InjectionCMode::FLD) {
                     const Group& parentGroup = schedule().getGroup(group.parent(), reportStepIdx);
-                    const std::pair<bool, double> changed = wellGroupHelpers::checkGroupConstraintsInj(
+                    const std::pair<bool, double> changed = WellGroupHelpers::checkGroupConstraintsInj(
                         group.name(),
                         group.parent(),
                         parentGroup,
@@ -2214,8 +2218,7 @@ namespace Opm {
                         group.getGroupEfficiencyFactor(),
                         schedule(),
                         summaryState,
-                        *rateConverter_,
-                        pvtreg,
+                        resv_coeff,
                         deferred_logger);
                     if (changed.first) {
                         switched_groups.insert(group.name());
@@ -2228,7 +2231,7 @@ namespace Opm {
         if (!skip && group.isProductionGroup()) {
             // Obtain rates for group.
             for (int phasePos = 0; phasePos < phase_usage_.num_phases; ++phasePos) {
-                const double local_current_rate = wellGroupHelpers::sumWellRates(
+                const double local_current_rate = WellGroupHelpers::sumWellRates(
                     group, schedule(), well_state_, reportStepIdx, phasePos, /* isInjector */ false);
                 // Sum over all processes
                 rates[phasePos] = -comm.sum(local_current_rate);
@@ -2237,7 +2240,7 @@ namespace Opm {
             const Group::ProductionCMode& currentControl = well_state_.currentProductionGroupControl(group.name());
                 if (currentControl != Group::ProductionCMode::FLD) {
                     const Group& parentGroup = schedule().getGroup(group.parent(), reportStepIdx);
-                    const std::pair<bool, double> changed = wellGroupHelpers::checkGroupConstraintsProd(
+                    const std::pair<bool, double> changed = WellGroupHelpers::checkGroupConstraintsProd(
                         group.name(),
                         group.parent(),
                         parentGroup,
@@ -2249,8 +2252,7 @@ namespace Opm {
                         group.getGroupEfficiencyFactor(),
                         schedule(),
                         summaryState,
-                        *rateConverter_,
-                        pvtreg,
+                        resv_coeff,
                         deferred_logger);
                     if (changed.first) {
                         switched_groups.insert(group.name());
@@ -2283,8 +2285,8 @@ namespace Opm {
         const Group::InjectionCMode& currentGroupControl = wellState.currentInjectionGroupControl(Phase::GAS, group.name());
         if( currentGroupControl == Group::InjectionCMode::REIN ) {
             int gasPos = phase_usage_.phase_pos[BlackoilPhases::Vapour];
-            double gasProductionRate = wellGroupHelpers::sumWellRates(group, schedule, wellState, reportStepIdx, gasPos, /*isInjector*/false);
-            double solventProductionRate = wellGroupHelpers::sumSolventRates(group, schedule, wellState, reportStepIdx, /*isInjector*/false);
+            double gasProductionRate = WellGroupHelpers::sumWellRates(group, schedule, wellState, reportStepIdx, gasPos, /*isInjector*/false);
+            double solventProductionRate = WellGroupHelpers::sumSolventRates(group, schedule, wellState, reportStepIdx, /*isInjector*/false);
 
             const auto& comm = ebosSimulator_.vanguard().grid().comm();
             solventProductionRate = comm.sum(solventProductionRate);

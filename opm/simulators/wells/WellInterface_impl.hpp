@@ -21,6 +21,7 @@
 
 #include <opm/parser/eclipse/EclipseState/Schedule/ScheduleTypes.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/simulators/wells/TargetCalculator.hpp>
 
 namespace Opm
 {
@@ -1773,8 +1774,13 @@ namespace Opm
         default:
             throw("Expected WATER, OIL or GAS as type for injector " + name());
         }
+
+        // Make conversion factors for RESV <-> surface rates.
+        std::vector<double> resv_coeff(phaseUsage().num_phases, 1.0);
+        rateConverter_.calcCoeff(0, pvtRegionIdx_, resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
+
         // Call check for the well's injection phase.
-        return wellGroupHelpers::checkGroupConstraintsInj(name(),
+        return WellGroupHelpers::checkGroupConstraintsInj(name(),
                                                           well_ecl_.groupName(),
                                                           group,
                                                           well_state,
@@ -1786,8 +1792,7 @@ namespace Opm
                                                           efficiencyFactor,
                                                           schedule,
                                                           summaryState,
-                                                          rateConverter_,
-                                                          pvtRegionIdx_,
+                                                          resv_coeff,
                                                           deferred_logger);
     }
 
@@ -1804,7 +1809,11 @@ namespace Opm
                                                       const SummaryState& summaryState,
                                                       DeferredLogger& deferred_logger) const
     {
-        return wellGroupHelpers::checkGroupConstraintsProd(name(),
+        // Make conversion factors for RESV <-> surface rates.
+        std::vector<double> resv_coeff(phaseUsage().num_phases, 1.0);
+        rateConverter_.calcCoeff(0, pvtRegionIdx_, resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
+
+        return WellGroupHelpers::checkGroupConstraintsProd(name(),
                                                            well_ecl_.groupName(),
                                                            group,
                                                            well_state,
@@ -1815,8 +1824,7 @@ namespace Opm
                                                            efficiencyFactor,
                                                            schedule,
                                                            summaryState,
-                                                           rateConverter_,
-                                                           pvtRegionIdx_,
+                                                           resv_coeff,
                                                            deferred_logger);
     }
 
@@ -2096,7 +2104,7 @@ namespace Opm
 
         const std::vector<double>& groupInjectionReductions = well_state.currentInjectionGroupReductionRates(group.name());
         double groupTargetReduction = groupInjectionReductions[phasePos];
-        double fraction = wellGroupHelpers::fractionFromInjectionPotentials(well.name(),
+        double fraction = WellGroupHelpers::fractionFromInjectionPotentials(well.name(),
                                                                             group.name(),
                                                                             schedule,
                                                                             well_state,
@@ -2242,8 +2250,13 @@ namespace Opm
 
         // If we are here, we are at the topmost group to be visited in the recursion.
         // This is the group containing the control we will check against.
-        wellGroupHelpers::TargetCalculator tcalc(currentGroupControl, pu, rateConverter_, pvtRegionIdx_);
-        wellGroupHelpers::FractionCalculator fcalc(schedule, well_state, current_step_, guide_rate_, tcalc.guideTargetMode(), pu);
+
+        // Make conversion factors for RESV <-> surface rates.
+        std::vector<double> resv_coeff(phaseUsage().num_phases, 1.0);
+        rateConverter_.calcCoeff(0, pvtRegionIdx_, resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
+
+        WellGroupHelpers::TargetCalculator tcalc(currentGroupControl, pu, resv_coeff);
+        WellGroupHelpers::FractionCalculator fcalc(schedule, well_state, current_step_, guide_rate_, tcalc.guideTargetMode(), pu);
 
         auto localFraction = [&](const std::string& child) {
             return fcalc.localFraction(child, "");
@@ -2255,7 +2268,7 @@ namespace Opm
         };
 
         const double orig_target = tcalc.groupTarget(group.productionControls(summaryState));
-        const auto chain = wellGroupHelpers::groupChainTopBot(name(), group.name(), schedule, current_step_);
+        const auto chain = WellGroupHelpers::groupChainTopBot(name(), group.name(), schedule, current_step_);
         // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
         const size_t num_ancestors = chain.size() - 1;
         double target = orig_target;
