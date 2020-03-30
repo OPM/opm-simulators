@@ -179,7 +179,8 @@ public:
 
         if (m_comm.rank() == 0) {
             pack(data);
-            m_comm.broadcast(&m_position, 1, 0);
+            m_packSize = m_position;
+            m_comm.broadcast(&m_packSize, 1, 0);
             m_comm.broadcast(m_buffer.data(), m_position, 0);
         } else {
             m_comm.broadcast(&m_packSize, 1, 0);
