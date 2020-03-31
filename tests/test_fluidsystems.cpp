@@ -75,7 +75,7 @@ void ensureBlackoilApi()
     // that they compile
     while (false) {
 #if HAVE_ECL_INPUT
-        Opm::Python python;
+        auto python = std::make_shared<Opm::Python>();
         Opm::Deck deck;
         Opm::EclipseState eclState(deck);
         Opm::Schedule schedule(deck, eclState, python);

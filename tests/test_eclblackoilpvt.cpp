@@ -224,7 +224,7 @@ inline void testAll()
     static const Scalar tolerance = std::numeric_limits<Scalar>::epsilon()*1e3;
 
     Opm::Parser parser;
-    Opm::Python python;
+    auto python = std::make_shared<Opm::Python>();
 
     auto deck = parser.parseString(deckString1);
     Opm::EclipseState eclState(deck);
