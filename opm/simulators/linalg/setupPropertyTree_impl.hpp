@@ -47,6 +47,10 @@ setupPropertyTree(const FlowLinearSolverParameters& p)
         }else{
             boost::property_tree::read_json(p.linear_solver_configuration_json_file_, prm);
         }
+#else
+       OPM_THROW(std::invalid_argument,
+                 "--linear-solver-configuration=file not supported with "
+                 << "boost version. Needs versoin > 1.48.");
 #endif
     }
     else
