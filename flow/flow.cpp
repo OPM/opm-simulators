@@ -326,7 +326,7 @@ int main(int argc, char** argv)
             std::cout << "Reading deck file '" << deckFilename << "'\n";
             std::cout.flush();
         }
-        Opm::Python python;
+        auto python = std::make_shared<Opm::Python>();
         std::shared_ptr<Opm::Deck> deck;
         std::shared_ptr<Opm::EclipseState> eclipseState;
         std::shared_ptr<Opm::Schedule> schedule;

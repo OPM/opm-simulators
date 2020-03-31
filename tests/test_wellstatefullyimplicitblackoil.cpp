@@ -52,6 +52,7 @@ struct Setup
         : es   (deck)
         , pu   (Opm::phaseUsageFromDeck(es))
         , grid (es.getInputGrid())
+        , python( std::make_shared<Opm::Python>() )
         , sched(deck, es, python)
         , st(std::chrono::system_clock::from_time_t(sched.getStartTime()))
     {
@@ -102,10 +103,10 @@ struct Setup
         }
     }
 
-    Opm::Python       python;
     Opm::EclipseState es;
     Opm::PhaseUsage   pu;
     Opm::GridManager  grid;
+    std::shared_ptr<Opm::Python> python;
     Opm::Schedule     sched;
     Opm::SummaryState st;
     std::vector<std::vector<Opm::PerforationData>> well_perf_data;
