@@ -40,8 +40,10 @@ setupPropertyTree(const FlowLinearSolverParameters& p)
     if (p.linear_solver_configuration_ == "file") {
 #if BOOST_VERSION / 100 % 1000 > 48
         if (p.linear_solver_configuration_json_file_ == "none"){
-            OPM_THROW(std::invalid_argument, p.linear_solver_configuration_  << " is not a valid setting for --linear-solver-configuration."
-                      << " Please use ilu0, cpr_trueimpes, or cpr_quasiimpes");
+            OPM_THROW(std::invalid_argument,
+                      "--linear-solver-configuration=file requires that a filename "
+                      << "is passed with "
+                      << "--linear-solver-configuration-json-file=filename.");
         }else{
             boost::property_tree::read_json(p.linear_solver_configuration_json_file_, prm);
         }
