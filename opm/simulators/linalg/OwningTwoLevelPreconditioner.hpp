@@ -134,8 +134,6 @@ public:
                            prm.get<int>("post_smooth", transpose? 0 : 1))
         , prm_(prm)
     {
-        //Opm::Amg::getQuasiImpesWeights<MatrixType, VectorType>(
-        //      linearoperator.getmat(), prm.get<int>("pressure_var_index"), transpose))
         if (prm.get<int>("verbosity", 0) > 10 && comm.communicator().rank() == 0) {
             auto filename = prm.get<std::string>("weights_filename", "impes_weights.txt");
             std::ofstream outfile(filename);
