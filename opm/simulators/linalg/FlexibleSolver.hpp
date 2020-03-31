@@ -33,6 +33,17 @@
 namespace Dune
 {
 
+template<class C>
+struct IsComm : std::false_type
+{};
+
+template<>
+struct IsComm<Dune::Amg::SequentialInformation> : std::true_type
+{};
+
+template<class Index>
+struct IsComm<Dune::OwnerOverlapCopyCommunication<Index>> : std::true_type
+{};
 
 /// A solver class that encapsulates all needed objects for a linear solver
 /// (operator, scalar product, iterative solver and preconditioner) and sets
@@ -55,8 +66,8 @@ public:
     /// Create a parallel solver (if Comm is e.g. OwnerOverlapCommunication).
     template <class Comm>
     FlexibleSolver(const boost::property_tree::ptree& prm,
-                   const typename std::enable_if<std::is_function<Comm>::value,MatrixType>::type& matrix,
-                   const Comm& comm)
+                   const MatrixType& matrix,
+                   const typename std::enable_if<IsComm<Comm>::value, Comm>::type& comm)
     {
         init(prm, matrix, std::function<VectorTypeT()>(), comm);
     }
