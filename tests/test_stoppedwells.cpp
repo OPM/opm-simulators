@@ -37,7 +37,7 @@ BOOST_AUTO_TEST_CASE(TestStoppedWells)
     Opm::Parser parser;
     Opm::Deck deck(parser.parseFile(filename));
     Opm::EclipseState eclipseState(deck);
-    Opm::Python python;
+    auto python = std::make_shared<Opm::Python>();
     const Schedule sched(deck, eclipseState, python);
 
     // Both wells are open in the first schedule step

@@ -630,7 +630,7 @@ private:
     Opm::EclipseState* eclState_;
     Opm::Schedule* eclSchedule_;
     Opm::SummaryConfig* eclSummaryConfig_;
-    Opm::Python python;
+    std::shared_ptr<Opm::Python> python = std::make_shared<Opm::Python>();
 
     Dune::EdgeWeightMethod edgeWeightsMethod_;
     bool ownersFirst_;

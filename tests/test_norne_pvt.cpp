@@ -277,7 +277,7 @@ BOOST_AUTO_TEST_CASE( Test_Norne_PVT) {
     Opm::ParseContext parseContext({{ ParseContext::PARSE_RANDOM_SLASH , InputError::IGNORE }});
     Opm::ErrorGuard errorGuard;
     Opm::Parser parser;
-    Opm::Python python;
+    auto python = std::make_shared<Opm::Python>();
 
     auto deck = parser.parseFile("norne_pvt.data", parseContext, errorGuard);
 
