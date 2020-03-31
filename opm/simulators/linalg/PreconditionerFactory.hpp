@@ -190,7 +190,7 @@ private:
             const int n = prm.get<int>("ilulevel", 0);
             // Already a parallel preconditioner. Need to pass comm, but no need to wrap it in a BlockPreconditioner.
             return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V, C>>(
-                op.getmat(), comm, 0, w, Opm::MILU_VARIANT::ILU);
+                op.getmat(), comm, n, w, Opm::MILU_VARIANT::ILU);
         });
         doAddCreator("ILUn", [](const O& op, const P& prm, const std::function<Vector()>&, const C& comm) {
             const int n = prm.get<int>("ilulevel", 0);
@@ -256,8 +256,9 @@ private:
         });
         doAddCreator("ParOverILU0", [](const O& op, const P& prm, const std::function<Vector()>&) {
             const double w = prm.get<double>("relaxation", 1.0);
+            const int n = prm.get<int>("ilulevel", 0);
             return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V>>(
-                op.getmat(), 0, w, Opm::MILU_VARIANT::ILU);
+                op.getmat(), n, w, Opm::MILU_VARIANT::ILU);
         });
         doAddCreator("ILUn", [](const O& op, const P& prm, const std::function<Vector()>&) {
             const int n = prm.get<int>("ilulevel", 0);
