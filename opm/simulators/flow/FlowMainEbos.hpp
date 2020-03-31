@@ -315,6 +315,7 @@ namespace Opm
                  ss << ", Memory size: " << std::fixed << std::setprecision (2) << mem_size << " MB) \n";
                  ss << "Operating system =  " << arch.sysname << " " << arch.machine << " (Kernel: " << arch.release;
                  ss << ", " << arch.version << " )\n";
+                 ss << "Build time       =  " << compileTimestamp() << "\n";
                  }
               if (user) {
                  ss << "User             =  " << user << std::endl;

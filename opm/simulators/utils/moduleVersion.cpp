@@ -46,4 +46,11 @@ namespace Opm
         return PROJECT_VERSION;
     }
 
+    /// Return a string "dd-mm-yyyy at HH::MM::SS hrs" which is the time
+    /// the binary was compiled.
+    std::string compileTimestamp()
+    {
+        return BUILD_TIMESTAMP;
+    }
+
 } // namespace Opm
