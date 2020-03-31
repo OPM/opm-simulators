@@ -195,13 +195,13 @@ BOOST_AUTO_TEST_CASE(TestAddingPreconditioner)
     // Test with 1x1 block solvers.
     {
         const int bz = 1;
-        BOOST_CHECK_THROW(testPrec<bz>(prm, "matr33.txt", "rhs3.txt"), std::runtime_error);
+        BOOST_CHECK_THROW(testPrec<bz>(prm, "matr33.txt", "rhs3.txt"), std::invalid_argument);
     }
 
     // Test with 3x3 block solvers.
     {
         const int bz = 3;
-        BOOST_CHECK_THROW(testPrec<bz>(prm, "matr33.txt", "rhs3.txt"), std::runtime_error);
+        BOOST_CHECK_THROW(testPrec<bz>(prm, "matr33.txt", "rhs3.txt"), std::invalid_argument);
     }
 
 
@@ -217,7 +217,7 @@ BOOST_AUTO_TEST_CASE(TestAddingPreconditioner)
     // Test with 3x3 block solvers.
     {
         const int bz = 3;
-        BOOST_CHECK_THROW(testPrec<bz>(prm, "matr33.txt", "rhs3.txt"), std::runtime_error);
+        BOOST_CHECK_THROW(testPrec<bz>(prm, "matr33.txt", "rhs3.txt"), std::invalid_argument);
     }
 
     // Add preconditioner to factory for block size 3.
