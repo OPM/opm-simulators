@@ -58,7 +58,7 @@ setupPropertyTree(const FlowLinearSolverParameters& p)
 
         if((conf == "cpr_trueimpes") || (conf == "cpr_quasiimpes")){
             prm.put("tol", p.linear_solver_reduction_);
-            if (EWOMS_PARAM_IS_SET(TypeTag, double, LinearSolverMaxIter))
+            if (EWOMS_PARAM_IS_SET(TypeTag, int, LinearSolverMaxIter))
                 prm.put("maxiter", p.linear_solver_maxiter_);// Trust that the user knows what he does
             else
                 prm.put("maxiter", 20); // Use our own default.
@@ -78,7 +78,7 @@ setupPropertyTree(const FlowLinearSolverParameters& p)
             prm.put("preconditioner.coarsesolver.preconditioner.type","amg");
             prm.put("preconditioner.coarsesolver.preconditioner.alpha",0.333333333333);
             prm.put("preconditioner.coarsesolver.preconditioner.relaxation",1.0);
-            if (EWOMS_PARAM_IS_SET(TypeTag, double, CprMaxEllIter))
+            if (EWOMS_PARAM_IS_SET(TypeTag, int, CprMaxEllIter))
                 prm.put("preconditioner.coarsesolver.preconditioner.iterations", p.cpr_max_ell_iter_);
             prm.put("preconditioner.coarsesolver.preconditioner.iterations",1);
             prm.put("preconditioner.coarsesolver.preconditioner.coarsenTarget",1200);
