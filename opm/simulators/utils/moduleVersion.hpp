@@ -39,6 +39,10 @@ namespace Opm
     /// "2016.04-pre (f15be17)" or "2016.04-pre (debug)".
     std::string moduleVersion();
 
+    /// Return a string "dd-mm-yyyy at HH::MM::SS hrs" which is the time
+    /// the binary was compiled.
+    std::string compileTimestamp();
+
 } // namespace Opm
 
 #endif // OPM_MODULEVERSION_HEADER_INCLUDED
