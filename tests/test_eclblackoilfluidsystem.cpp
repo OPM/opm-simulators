@@ -632,7 +632,7 @@ inline void testAll()
     Opm::Parser parser;
 
     auto deck = parser.parseString(deckString1);
-    Opm::Python python;
+    auto python = std::make_shared<Opm::Python>();
     Opm::EclipseState eclState(deck);
     Opm::Schedule schedule(deck, eclState, python);
 
