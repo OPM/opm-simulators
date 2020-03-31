@@ -224,7 +224,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, int, CprMaxEllIter, "MaxIterations of the elliptic pressure part of the cpr solver");
             EWOMS_REGISTER_PARAM(TypeTag, int, CprEllSolvetype, "Solver type of elliptic pressure solve (0: bicgstab, 1: cg, 2: only amg preconditioner)");
             EWOMS_REGISTER_PARAM(TypeTag, int, CprReuseSetup, "Reuse Amg Setup");
-            EWOMS_REGISTER_PARAM(TypeTag, std::string, LinearSolverConfiguration, "Configuration of solver valid is: ilu0 (default), cpr_quasiimpes, cpr_trueimpes or file (given by LinserSolverConfigurationJsonFile) ");
+            EWOMS_REGISTER_PARAM(TypeTag, std::string, LinearSolverConfiguration, "Configuration of solver valid is: ilu0 (default), cpr_quasiimpes, cpr_trueimpes or file (specified in LinearSolverConfigurationJsonFile) ");
             EWOMS_REGISTER_PARAM(TypeTag, std::string, LinearSolverConfigurationJsonFile, "Filename of JSON configuration for flexible linear solver system.");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseGpu, "Use GPU cusparseSolver as the linear solver");
         }
