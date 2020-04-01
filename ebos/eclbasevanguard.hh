@@ -88,7 +88,7 @@ SET_BOOL_PROP(EclBaseVanguard, EnableOpmRstFile, false);
 SET_BOOL_PROP(EclBaseVanguard, EclStrictParsing, false);
 SET_BOOL_PROP(EclBaseVanguard, SchedRestart, true);
 SET_INT_PROP(EclBaseVanguard, EdgeWeightsMethod, 1);
-SET_BOOL_PROP(EclBaseVanguard, OwnerCellsFirst, false);
+SET_BOOL_PROP(EclBaseVanguard, OwnerCellsFirst, true);
 
 END_PROPERTIES
 
