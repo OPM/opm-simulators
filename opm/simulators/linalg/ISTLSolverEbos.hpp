@@ -217,7 +217,7 @@ public:
         return overlapping ?
             Dune::SolverCategory::overlapping : Dune::SolverCategory::sequential;
     }
-    
+
     //! constructor: just store a reference to a matrix
     WellModelGhostLastMatrixAdapter (const M& A,
                                      const M& A_for_precond,
@@ -235,7 +235,7 @@ public:
         }
 #endif
     }
-    
+
     virtual void apply( const X& x, Y& y ) const override
     {
         for (auto row = A_.begin(); row.index() < interiorSize_; ++row)
@@ -245,7 +245,7 @@ public:
             for (auto col = (*row).begin(); col != endc; ++col)
                 (*col).umv(x[col.index()], y[row.index()]);
         }
-        
+
         // add well model modification to y
         wellMod_.apply(x, y );
 
@@ -263,7 +263,7 @@ public:
         }
         // add scaled well model modification to y
         wellMod_.applyScaleAdd( alpha, x, y );
-        
+
         ghostLastProject( y );
     }
 
@@ -273,7 +273,7 @@ public:
     {
         return comm_.operator->();
     }
-    
+
 protected:
     void ghostLastProject(Y& y) const
     {
@@ -281,12 +281,12 @@ protected:
         for (size_t i = interiorSize_; i < end; ++i)
             y[i] = 0;
     }
-    
+
     const matrix_type& A_ ;
     const matrix_type& A_for_precond_ ;
     const WellModel& wellMod_;
     size_t interiorSize_;
-    
+
     std::unique_ptr< communication_type > comm_;
 };
 
@@ -372,7 +372,7 @@ protected:
                 // Set it up manually
                 using ElementMapper =
                     Dune::MultipleCodimMultipleGeomTypeMapper<GridView>;
-                ElementMapper elemMapper(simulator_.vanguard().grid().leafGridView(), Dune::mcmgElementLayout());
+                ElementMapper elemMapper(simulator_.vanguard().gridView(), Dune::mcmgElementLayout());
                 detail::findOverlapAndInterior(gridForConn, elemMapper, overlapRows_, interiorRows_);
                 if (gridForConn.comm().size() > 1) {
 
@@ -465,7 +465,7 @@ protected:
                     typedef WellModelGhostLastMatrixAdapter< Matrix, Vector, Vector, WellModel, true > Operator;
                     Operator opA(*matrix_, *matrix_, wellModel, interiorCellNum_,
                                  parallelInformation_ );
-                    
+
                     assert( opA.comm() );
                     solve( opA, x, *rhs_, *(opA.comm()) );
                 }
@@ -476,10 +476,10 @@ protected:
                     copyJacToNoGhost(*matrix_, *noGhostMat_);
                     Operator opA(*noGhostMat_, *noGhostMat_, wellModel,
                                  parallelInformation_ );
-    
+
                     assert( opA.comm() );
                     solve( opA, x, *rhs_, *(opA.comm()) );
-                    
+
                 }
             }
             else
@@ -807,12 +807,13 @@ protected:
         void noGhostAdjacency()
         {
             const auto& grid = simulator_.vanguard().grid();
+            const auto& gridView = simulator_.vanguard().gridView();
             // For some reason simulator_.model().elementMapper() is not initialized at this stage.
             // Hence const auto& elemMapper = simulator_.model().elementMapper(); does not work.
             // Set it up manually
             using ElementMapper =
                 Dune::MultipleCodimMultipleGeomTypeMapper<GridView>;
-            ElementMapper elemMapper(simulator_.vanguard().grid().leafGridView(), Dune::mcmgElementLayout());
+            ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
             typedef typename Matrix::size_type size_type;
             size_type numCells = grid.size( 0 );
             noGhostMat_.reset(new Matrix(numCells, numCells, Matrix::random));
@@ -820,7 +821,6 @@ protected:
             std::vector<std::set<size_type>> pattern;
             pattern.resize(numCells);
 
-            const auto& gridView = grid.leafGridView();
             auto elemIt = gridView.template begin<0>();
             const auto& elemEndIt = gridView.template end<0>();
 
