@@ -93,7 +93,19 @@ testPrec(const boost::property_tree::ptree& prm, const std::string& matrix_filen
     using Operator = Dune::MatrixAdapter<Matrix, Vector, Vector>;
     Operator op(matrix);
     using PrecFactory = Opm::PreconditionerFactory<Operator>;
-    auto prec = PrecFactory::create(op, prm.get_child("preconditioner"));
+    bool transpose = false;
+
+    if(prm.get<std::string>("preconditioner.type") == "cprt"){
+        transpose = true;
+    }
+    auto wc = [&matrix, &prm, transpose]()
+                    {
+                        return Opm::Amg::getQuasiImpesWeights<Matrix,
+                                                              Vector>(matrix,
+                                                                      prm.get<int>("preconditioner.pressure_var_index"),
+                                                                      transpose);
+                    };
+    auto prec = PrecFactory::create(op, prm.get_child("preconditioner"), wc);
     Dune::BiCGSTABSolver<Vector> solver(op, *prec, prm.get<double>("tol"), prm.get<int>("maxiter"), prm.get<int>("verbosity"));
     Vector x(rhs.size());
     Dune::InverseOperatorResult res;
@@ -183,18 +195,18 @@ BOOST_AUTO_TEST_CASE(TestAddingPreconditioner)
     // Test with 1x1 block solvers.
     {
         const int bz = 1;
-        BOOST_CHECK_THROW(testPrec<bz>(prm, "matr33.txt", "rhs3.txt"), std::runtime_error);
+        BOOST_CHECK_THROW(testPrec<bz>(prm, "matr33.txt", "rhs3.txt"), std::invalid_argument);
     }
 
     // Test with 3x3 block solvers.
     {
         const int bz = 3;
-        BOOST_CHECK_THROW(testPrec<bz>(prm, "matr33.txt", "rhs3.txt"), std::runtime_error);
+        BOOST_CHECK_THROW(testPrec<bz>(prm, "matr33.txt", "rhs3.txt"), std::invalid_argument);
     }
 
 
     // Add preconditioner to factory for block size 1.
-    PF<1>::addCreator("nothing", [](const O<1>&, const pt::ptree&) {
+    PF<1>::addCreator("nothing", [](const O<1>&, const pt::ptree&, const std::function<V<1>()>&) {
             return Dune::wrapPreconditioner<NothingPreconditioner<V<1>>>();
         });
 
@@ -205,11 +217,11 @@ BOOST_AUTO_TEST_CASE(TestAddingPreconditioner)
     // Test with 3x3 block solvers.
     {
         const int bz = 3;
-        BOOST_CHECK_THROW(testPrec<bz>(prm, "matr33.txt", "rhs3.txt"), std::runtime_error);
+        BOOST_CHECK_THROW(testPrec<bz>(prm, "matr33.txt", "rhs3.txt"), std::invalid_argument);
     }
 
     // Add preconditioner to factory for block size 3.
-    PF<3>::addCreator("nothing", [](const O<3>&, const pt::ptree&) {
+    PF<3>::addCreator("nothing", [](const O<3>&, const pt::ptree&, const std::function<V<3>()>&) {
             return Dune::wrapPreconditioner<NothingPreconditioner<V<3>>>();
         });
 

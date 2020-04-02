@@ -25,6 +25,10 @@
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/setupPropertyTree.hpp>
 
+#include <opm/common/ErrorMacros.hpp>
+
+#include <boost/property_tree/json_parser.hpp>
+
 #include <memory>
 #include <utility>
 
@@ -65,6 +69,19 @@ class ISTLSolverEbosFlexible
 #endif
     using SolverType = Dune::FlexibleSolver<MatrixType, VectorType>;
 
+    // for quasiImpesWeights
+    typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) Vector;
+    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    //typedef typename GET_PROP_TYPE(TypeTag, EclWellModel) WellModel;
+    //typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+    typedef typename SparseMatrixAdapter::IstlMatrix Matrix;
+    typedef typename SparseMatrixAdapter::MatrixBlock MatrixBlockType;
+    typedef typename Vector::block_type BlockVector;
+    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
+    typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) ThreadManager;
+    typedef typename GridView::template Codim<0>::Entity Element;
+    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+
 
 public:
     static void registerParameters()
@@ -76,7 +93,7 @@ public:
         : simulator_(simulator)
     {
         parameters_.template init<TypeTag>();
-        prm_ = setupPropertyTree(parameters_);
+        prm_ = setupPropertyTree<TypeTag>(parameters_);
         extractParallelGridInformationToISTL(simulator_.vanguard().grid(), parallelInformation_);
         // For some reason simulator_.model().elementMapper() is not initialized at this stage
         // Hence const auto& elemMapper = simulator_.model().elementMapper(); does not work.
@@ -136,13 +153,49 @@ public:
             // Never recreate solver.
         }
 
+        std::function<VectorType()> weightsCalculator;
+
+        auto preconditionerType = prm_.get("preconditioner.type", "cpr");
+        if( preconditionerType  == "cpr" ||
+            preconditionerType == "cprt"
+            )
+        {
+            bool transpose = false;
+            if(preconditionerType == "cprt"){
+                transpose = true;
+            }
+
+            auto weightsType = prm_.get("preconditioner.weight_type", "quasiimpes");
+            auto pressureIndex = this->prm_.get("preconditioner.pressure_var_index", 1);
+            if(weightsType == "quasiimpes") {
+                // weighs will be created as default in the solver
+                weightsCalculator =
+                    [&mat, this, transpose, pressureIndex](){
+                        return Opm::Amg::getQuasiImpesWeights<MatrixType,
+                                                              VectorType>(
+                                                                          mat.istlMatrix(),
+                                                                          pressureIndex,
+                                                                          transpose);
+                    };
+
+            }else if(weightsType == "trueimpes"  ){
+                weightsCalculator =
+                    [this, &b, pressureIndex](){
+                        return this->getTrueImpesWeights(b, pressureIndex);
+                    };
+            }else{
+                OPM_THROW(std::invalid_argument, "Weights type " << weightsType << "not implemented for cpr."
+                          << " Please use quasiimpes or trueimpes.");
+            }
+        }
+
         if (recreate_solver || !solver_) {
             if (isParallel()) {
 #if HAVE_MPI
-                solver_.reset(new SolverType(prm_, mat.istlMatrix(), *comm_));
+                solver_.reset(new SolverType(prm_, mat.istlMatrix(), weightsCalculator, *comm_));
 #endif
             } else {
-                solver_.reset(new SolverType(prm_, mat.istlMatrix()));
+                solver_.reset(new SolverType(prm_, mat.istlMatrix(), weightsCalculator));
             }
             rhs_ = b;
         } else {
@@ -182,6 +235,7 @@ public:
     }
 
 protected:
+
     /// Zero out off-diagonal blocks on rows corresponding to overlap cells
     /// Diagonal blocks on ovelap rows are set to diag(1.0).
     void makeOverlapRowsInvalid(MatrixType& matrix) const
@@ -204,6 +258,15 @@ protected:
         }
     }
 
+    VectorType getTrueImpesWeights(const VectorType& b,const int pressureVarIndex)
+    {
+        VectorType weights(b.size());
+        ElementContext elemCtx(simulator_);
+        Opm::Amg::getTrueImpesWeights(pressureVarIndex, weights, simulator_.vanguard().gridView(),
+                                      elemCtx, simulator_.model(),
+                                      ThreadManager::threadId());
+        return weights;
+    }
 
     const Simulator& simulator_;
 

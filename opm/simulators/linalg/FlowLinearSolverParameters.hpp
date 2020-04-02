@@ -66,6 +66,7 @@ NEW_PROP_TAG(CprUseDrs);
 NEW_PROP_TAG(CprMaxEllIter);
 NEW_PROP_TAG(CprEllSolvetype);
 NEW_PROP_TAG(CprReuseSetup);
+NEW_PROP_TAG(LinearSolverConfiguration);
 NEW_PROP_TAG(LinearSolverConfigurationJsonFile);
 NEW_PROP_TAG(UseGpu);
 
@@ -92,6 +93,7 @@ SET_BOOL_PROP(FlowIstlSolverParams, CprUseDrs, false);
 SET_INT_PROP(FlowIstlSolverParams, CprMaxEllIter, 20);
 SET_INT_PROP(FlowIstlSolverParams, CprEllSolvetype, 0);
 SET_INT_PROP(FlowIstlSolverParams, CprReuseSetup, 0);
+SET_STRING_PROP(FlowIstlSolverParams, LinearSolverConfiguration, "ilu0");
 SET_STRING_PROP(FlowIstlSolverParams, LinearSolverConfigurationJsonFile, "none");
 SET_BOOL_PROP(FlowIstlSolverParams, UseGpu, false);
 
@@ -164,6 +166,7 @@ namespace Opm
         bool   use_cpr_;
         std::string system_strategy_;
         bool scale_linear_system_;
+        std::string linear_solver_configuration_;
         std::string linear_solver_configuration_json_file_;
         bool use_gpu_;
 
@@ -192,6 +195,7 @@ namespace Opm
             cpr_max_ell_iter_  =  EWOMS_GET_PARAM(TypeTag, int, CprMaxEllIter);
             cpr_ell_solvetype_  =  EWOMS_GET_PARAM(TypeTag, int, CprEllSolvetype);
             cpr_reuse_setup_  =  EWOMS_GET_PARAM(TypeTag, int, CprReuseSetup);
+            linear_solver_configuration_ = EWOMS_GET_PARAM(TypeTag, std::string, LinearSolverConfiguration);
             linear_solver_configuration_json_file_ = EWOMS_GET_PARAM(TypeTag, std::string, LinearSolverConfigurationJsonFile);
             use_gpu_ = EWOMS_GET_PARAM(TypeTag, bool, UseGpu);
         }
@@ -220,6 +224,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, int, CprMaxEllIter, "MaxIterations of the elliptic pressure part of the cpr solver");
             EWOMS_REGISTER_PARAM(TypeTag, int, CprEllSolvetype, "Solver type of elliptic pressure solve (0: bicgstab, 1: cg, 2: only amg preconditioner)");
             EWOMS_REGISTER_PARAM(TypeTag, int, CprReuseSetup, "Reuse Amg Setup");
+            EWOMS_REGISTER_PARAM(TypeTag, std::string, LinearSolverConfiguration, "Configuration of solver valid is: ilu0 (default), cpr_quasiimpes, cpr_trueimpes or file (specified in LinearSolverConfigurationJsonFile) ");
             EWOMS_REGISTER_PARAM(TypeTag, std::string, LinearSolverConfigurationJsonFile, "Filename of JSON configuration for flexible linear solver system.");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseGpu, "Use GPU cusparseSolver as the linear solver");
         }

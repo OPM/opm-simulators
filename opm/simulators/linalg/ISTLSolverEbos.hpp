@@ -902,40 +902,10 @@ protected:
         Vector getStorageWeights() const
         {
             Vector weights(rhs_->size());
-            BlockVector rhs(0.0);
-            rhs[pressureVarIndex] = 1.0;
-            int index = 0;
             ElementContext elemCtx(simulator_);
-            const auto& vanguard = simulator_.vanguard();
-            auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
-            const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
-            for (; elemIt != elemEndIt; ++elemIt) {
-                const Element& elem = *elemIt;
-                elemCtx.updatePrimaryStencil(elem);
-                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-                Dune::FieldVector<Evaluation, numEq> storage;
-                unsigned threadId = ThreadManager::threadId();
-                simulator_.model().localLinearizer(threadId).localResidual().computeStorage(storage,elemCtx,/*spaceIdx=*/0, /*timeIdx=*/0);
-                Scalar extrusionFactor = elemCtx.intensiveQuantities(0, /*timeIdx=*/0).extrusionFactor();
-                Scalar scvVolume = elemCtx.stencil(/*timeIdx=*/0).subControlVolume(0).volume() * extrusionFactor;
-                Scalar storage_scale = scvVolume / elemCtx.simulator().timeStepSize();
-                MatrixBlockType block;
-                double pressure_scale = 50e5;
-                for (int ii = 0; ii < numEq; ++ii) {
-                    for (int jj = 0; jj < numEq; ++jj) {
-                        block[ii][jj] = storage[ii].derivative(jj)/storage_scale;
-                        if (jj == pressureVarIndex) {
-                            block[ii][jj] *= pressure_scale;
-                        }
-                    }
-                }
-                BlockVector bweights;
-                MatrixBlockType block_transpose = Opm::transposeDenseMatrix(block);
-                block_transpose.solve(bweights, rhs);
-                bweights /= 1000.0; // given normal densities this scales weights to about 1.
-                weights[index] = bweights;
-                ++index;
-            }
+            Opm::Amg::getTrueImpesWeights(pressureVarIndex, weights, simulator_.vanguard().gridView(),
+                                          elemCtx, simulator_.model(),
+                                          ThreadManager::threadId());
             return weights;
         }
 

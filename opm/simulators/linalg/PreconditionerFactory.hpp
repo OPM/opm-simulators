@@ -29,6 +29,7 @@
 #include <opm/simulators/linalg/amgcpr.hh>
 
 #include <dune/istl/paamg/amg.hh>
+#include <dune/istl/paamg/kamg.hh>
 #include <dune/istl/paamg/fastamg.hh>
 #include <dune/istl/preconditioners.hh>
 
@@ -57,16 +58,30 @@ public:
     using PrecPtr = std::shared_ptr<Dune::PreconditionerWithUpdate<Vector, Vector>>;
 
     /// The type of creator functions passed to addCreator().
-    using Creator = std::function<PrecPtr(const Operator&, const boost::property_tree::ptree&)>;
-    using ParCreator = std::function<PrecPtr(const Operator&, const boost::property_tree::ptree&, const Comm&)>;
+    using Creator = std::function<PrecPtr(const Operator&, const boost::property_tree::ptree&, const std::function<Vector()>&)>;
+    using ParCreator = std::function<PrecPtr(const Operator&, const boost::property_tree::ptree&, const std::function<Vector()>&, const Comm&)>;
 
     /// Create a new serial preconditioner and return a pointer to it.
     /// \param op    operator to be preconditioned.
     /// \param prm   parameters for the preconditioner, in particular its type.
+    /// \param weightsCalculator Calculator for weights used in CPR.
     /// \return      (smart) pointer to the created preconditioner.
-    static PrecPtr create(const Operator& op, const boost::property_tree::ptree& prm)
+    static PrecPtr create(const Operator& op, const boost::property_tree::ptree& prm,
+                          const std::function<Vector()>& weightsCalculator = std::function<Vector()>())
     {
-        return instance().doCreate(op, prm);
+        return instance().doCreate(op, prm, weightsCalculator);
+    }
+
+    /// Create a new parallel preconditioner and return a pointer to it.
+    /// \param op    operator to be preconditioned.
+    /// \param prm   parameters for the preconditioner, in particular its type.
+    /// \param comm  communication object (typically OwnerOverlapCopyCommunication).
+    /// \param weightsCalculator Calculator for weights used in CPR.
+    /// \return      (smart) pointer to the created preconditioner.
+    static PrecPtr create(const Operator& op, const boost::property_tree::ptree& prm,
+                          const std::function<Vector()>& weightsCalculator, const Comm& comm)
+    {
+        return instance().doCreate(op, prm, weightsCalculator, comm);
     }
 
     /// Create a new parallel preconditioner and return a pointer to it.
@@ -76,9 +91,8 @@ public:
     /// \return      (smart) pointer to the created preconditioner.
     static PrecPtr create(const Operator& op, const boost::property_tree::ptree& prm, const Comm& comm)
     {
-        return instance().doCreate(op, prm, comm);
+        return instance().doCreate(op, prm, std::function<Vector()>(), comm);
     }
-
     /// Add a creator for a serial preconditioner to the PreconditionerFactory.
     /// After the call, the user may obtain a preconditioner by
     /// calling create() with the given type string as a parameter
@@ -111,13 +125,15 @@ private:
     // Helpers for creation of AMG preconditioner.
     static Criterion amgCriterion(const boost::property_tree::ptree& prm)
     {
-        Criterion criterion(15, prm.get<int>("coarsenTarget"));
+        Criterion criterion(15, prm.get<int>("coarsenTarget", 1200));
         criterion.setDefaultValuesIsotropic(2);
-        criterion.setAlpha(prm.get<double>("alpha"));
-        criterion.setBeta(prm.get<double>("beta"));
-        criterion.setMaxLevel(prm.get<int>("maxlevel"));
-        criterion.setSkipIsolated(false);
-        criterion.setDebugLevel(prm.get<int>("verbosity"));
+        criterion.setAlpha(prm.get<double>("alpha", 0.33));
+        criterion.setBeta(prm.get<double>("beta", 1e-5));
+        criterion.setMaxLevel(prm.get<int>("maxlevel", 15));
+        criterion.setSkipIsolated(prm.get<bool>("skip_isolated", false));
+        criterion.setNoPreSmoothSteps(prm.get<int>("pre_smooth", 1));
+        criterion.setNoPostSmoothSteps(prm.get<int>("post_smooth", 1));
+        criterion.setDebugLevel(prm.get<int>("verbosity", 0));
         return criterion;
     }
 
@@ -126,20 +142,30 @@ private:
     {
         using SmootherArgs = typename Dune::Amg::SmootherTraits<Smoother>::Arguments;
         SmootherArgs smootherArgs;
-        smootherArgs.iterations = prm.get<int>("iterations");
+        smootherArgs.iterations = prm.get<int>("iterations", 1);
         // smootherArgs.overlap=SmootherArgs::vertex;
         // smootherArgs.overlap=SmootherArgs::none;
         // smootherArgs.overlap=SmootherArgs::aggregate;
-        smootherArgs.relaxationFactor = prm.get<double>("relaxation");
+        smootherArgs.relaxationFactor = prm.get<double>("relaxation", 0.9);
         return smootherArgs;
     }
 
     template <class Smoother>
-    static PrecPtr makeAmgPreconditioner(const Operator& op, const boost::property_tree::ptree& prm)
+    static PrecPtr makeAmgPreconditioner(const Operator& op, const boost::property_tree::ptree& prm, bool useKamg = false)
     {
         auto crit = amgCriterion(prm);
         auto sargs = amgSmootherArgs<Smoother>(prm);
-        return std::make_shared<Dune::Amg::AMGCPR<Operator, Vector, Smoother>>(op, crit, sargs);
+	if(useKamg){
+	    return std::make_shared<
+		Dune::DummyUpdatePreconditioner<
+		    Dune::Amg::KAMG< Operator, Vector, Smoother>
+		    >
+		>(op, crit, sargs,
+		  prm.get<size_t>("max_krylov", 1),
+		  prm.get<double>("min_reduction", 1e-1)  );
+	}else{
+            return std::make_shared<Dune::Amg::AMGCPR<Operator, Vector, Smoother>>(op, crit, sargs);
+        }
     }
 
     // Add a useful default set of preconditioners to the factory.
@@ -154,61 +180,63 @@ private:
         using V = Vector;
         using P = boost::property_tree::ptree;
         using C = Comm;
-        doAddCreator("ILU0", [](const O& op, const P& prm, const C& comm) {
-            const double w = prm.get<double>("relaxation");
+        doAddCreator("ILU0", [](const O& op, const P& prm, const std::function<Vector()>&, const C& comm) {
+            const double w = prm.get<double>("relaxation", 1.0);
             return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V, C>>(
                 op.getmat(), comm, 0, w, Opm::MILU_VARIANT::ILU);
         });
-        doAddCreator("ParOverILU0", [](const O& op, const P& prm, const C& comm) {
-            const double w = prm.get<double>("relaxation");
+        doAddCreator("ParOverILU0", [](const O& op, const P& prm, const std::function<Vector()>&, const C& comm) {
+            const double w = prm.get<double>("relaxation", 1.0);
+            const int n = prm.get<int>("ilulevel", 0);
             // Already a parallel preconditioner. Need to pass comm, but no need to wrap it in a BlockPreconditioner.
-            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V, C>>(
-                op.getmat(), comm, 0, w, Opm::MILU_VARIANT::ILU);
-        });
-        doAddCreator("ILUn", [](const O& op, const P& prm, const C& comm) {
-            const int n = prm.get<int>("ilulevel");
-            const double w = prm.get<double>("relaxation");
             return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V, C>>(
                 op.getmat(), comm, n, w, Opm::MILU_VARIANT::ILU);
         });
-        doAddCreator("Jac", [](const O& op, const P& prm, const C& comm) {
-            const int n = prm.get<int>("repeats");
-            const double w = prm.get<double>("relaxation");
+        doAddCreator("ILUn", [](const O& op, const P& prm, const std::function<Vector()>&, const C& comm) {
+            const int n = prm.get<int>("ilulevel", 0);
+            const double w = prm.get<double>("relaxation", 1.0);
+            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V, C>>(
+                op.getmat(), comm, n, w, Opm::MILU_VARIANT::ILU);
+        });
+        doAddCreator("Jac", [](const O& op, const P& prm, const std::function<Vector()>&,
+                               const C& comm) {
+            const int n = prm.get<int>("repeats", 1);
+            const double w = prm.get<double>("relaxation", 1.0);
             return wrapBlockPreconditioner<DummyUpdatePreconditioner<SeqJac<M, V, V>>>(comm, op.getmat(), n, w);
         });
-        doAddCreator("GS", [](const O& op, const P& prm, const C& comm) {
-            const int n = prm.get<int>("repeats");
-            const double w = prm.get<double>("relaxation");
+        doAddCreator("GS", [](const O& op, const P& prm, const std::function<Vector()>&, const C& comm) {
+            const int n = prm.get<int>("repeats", 1);
+            const double w = prm.get<double>("relaxation", 1.0);
             return wrapBlockPreconditioner<DummyUpdatePreconditioner<SeqGS<M, V, V>>>(comm, op.getmat(), n, w);
         });
-        doAddCreator("SOR", [](const O& op, const P& prm, const C& comm) {
-            const int n = prm.get<int>("repeats");
-            const double w = prm.get<double>("relaxation");
+        doAddCreator("SOR", [](const O& op, const P& prm, const std::function<Vector()>&, const C& comm) {
+            const int n = prm.get<int>("repeats", 1);
+            const double w = prm.get<double>("relaxation", 1.0);
             return wrapBlockPreconditioner<DummyUpdatePreconditioner<SeqSOR<M, V, V>>>(comm, op.getmat(), n, w);
         });
-        doAddCreator("SSOR", [](const O& op, const P& prm, const C& comm) {
-            const int n = prm.get<int>("repeats");
-            const double w = prm.get<double>("relaxation");
+        doAddCreator("SSOR", [](const O& op, const P& prm, const std::function<Vector()>&, const C& comm) {
+            const int n = prm.get<int>("repeats", 1);
+            const double w = prm.get<double>("relaxation", 1.0);
             return wrapBlockPreconditioner<DummyUpdatePreconditioner<SeqSSOR<M, V, V>>>(comm, op.getmat(), n, w);
         });
-        doAddCreator("amg", [](const O& op, const P& prm, const C& comm) {
-            const std::string smoother = prm.get<std::string>("smoother");
-            if (smoother == "ILU0") {
+        doAddCreator("amg", [](const O& op, const P& prm, const std::function<Vector()>&, const C& comm) {
+            const std::string smoother = prm.get<std::string>("smoother", "ParOverILU0");
+            if (smoother == "ILU0" || smoother == "ParOverILU0") {
                 using Smoother = Opm::ParallelOverlappingILU0<M, V, V, C>;
                 auto crit = amgCriterion(prm);
                 auto sargs = amgSmootherArgs<Smoother>(prm);
                 return std::make_shared<Dune::Amg::AMGCPR<O, V, Smoother, C>>(op, crit, sargs, comm);
             } else {
-                std::string msg("No such smoother: ");
-                msg += smoother;
-                throw std::runtime_error(msg);
+                OPM_THROW(std::invalid_argument, "Properties: No smoother with name " << smoother <<".");
             }
         });
-        doAddCreator("cpr", [](const O& op, const P& prm, const C& comm) {
-            return std::make_shared<OwningTwoLevelPreconditioner<O, V, false, Comm>>(op, prm, comm);
+        doAddCreator("cpr", [](const O& op, const P& prm, const std::function<Vector()> weightsCalculator, const C& comm) {
+            assert(weightsCalculator);
+            return std::make_shared<OwningTwoLevelPreconditioner<O, V, false, Comm>>(op, prm, weightsCalculator, comm);
         });
-        doAddCreator("cprt", [](const O& op, const P& prm, const C& comm) {
-            return std::make_shared<OwningTwoLevelPreconditioner<O, V, true, Comm>>(op, prm, comm);
+        doAddCreator("cprt", [](const O& op, const P& prm, const std::function<Vector()> weightsCalculator, const C& comm) {
+            assert(weightsCalculator);
+            return std::make_shared<OwningTwoLevelPreconditioner<O, V, true, Comm>>(op, prm, weightsCalculator, comm);
         });
     }
 
@@ -221,45 +249,46 @@ private:
         using M = Matrix;
         using V = Vector;
         using P = boost::property_tree::ptree;
-        doAddCreator("ILU0", [](const O& op, const P& prm) {
-            const double w = prm.get<double>("relaxation");
+        doAddCreator("ILU0", [](const O& op, const P& prm, const std::function<Vector()>&) {
+            const double w = prm.get<double>("relaxation", 1.0);
             return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V>>(
                 op.getmat(), 0, w, Opm::MILU_VARIANT::ILU);
         });
-        doAddCreator("ParOverILU0", [](const O& op, const P& prm) {
-            const double w = prm.get<double>("relaxation");
-            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V>>(
-                op.getmat(), 0, w, Opm::MILU_VARIANT::ILU);
-        });
-        doAddCreator("ILUn", [](const O& op, const P& prm) {
-            const int n = prm.get<int>("ilulevel");
-            const double w = prm.get<double>("relaxation");
+        doAddCreator("ParOverILU0", [](const O& op, const P& prm, const std::function<Vector()>&) {
+            const double w = prm.get<double>("relaxation", 1.0);
+            const int n = prm.get<int>("ilulevel", 0);
             return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V>>(
                 op.getmat(), n, w, Opm::MILU_VARIANT::ILU);
         });
-        doAddCreator("Jac", [](const O& op, const P& prm) {
-            const int n = prm.get<int>("repeats");
-            const double w = prm.get<double>("relaxation");
+        doAddCreator("ILUn", [](const O& op, const P& prm, const std::function<Vector()>&) {
+            const int n = prm.get<int>("ilulevel", 0);
+            const double w = prm.get<double>("relaxation", 1.0);
+            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V>>(
+                op.getmat(), n, w, Opm::MILU_VARIANT::ILU);
+        });
+        doAddCreator("Jac", [](const O& op, const P& prm, const std::function<Vector()>&) {
+            const int n = prm.get<int>("repeats", 1);
+            const double w = prm.get<double>("relaxation", 1.0);
             return wrapPreconditioner<SeqJac<M, V, V>>(op.getmat(), n, w);
         });
-        doAddCreator("GS", [](const O& op, const P& prm) {
-            const int n = prm.get<int>("repeats");
-            const double w = prm.get<double>("relaxation");
+        doAddCreator("GS", [](const O& op, const P& prm, const std::function<Vector()>&) {
+            const int n = prm.get<int>("repeats", 1);
+            const double w = prm.get<double>("relaxation", 1.0);
             return wrapPreconditioner<SeqGS<M, V, V>>(op.getmat(), n, w);
         });
-        doAddCreator("SOR", [](const O& op, const P& prm) {
-            const int n = prm.get<int>("repeats");
-            const double w = prm.get<double>("relaxation");
+        doAddCreator("SOR", [](const O& op, const P& prm, const std::function<Vector()>&) {
+            const int n = prm.get<int>("repeats", 1);
+            const double w = prm.get<double>("relaxation", 1.0);
             return wrapPreconditioner<SeqSOR<M, V, V>>(op.getmat(), n, w);
         });
-        doAddCreator("SSOR", [](const O& op, const P& prm) {
-            const int n = prm.get<int>("repeats");
-            const double w = prm.get<double>("relaxation");
+        doAddCreator("SSOR", [](const O& op, const P& prm, const std::function<Vector()>&) {
+            const int n = prm.get<int>("repeats", 1);
+            const double w = prm.get<double>("relaxation", 1.0);
             return wrapPreconditioner<SeqSSOR<M, V, V>>(op.getmat(), n, w);
         });
-        doAddCreator("amg", [](const O& op, const P& prm) {
-            const std::string smoother = prm.get<std::string>("smoother");
-            if (smoother == "ILU0") {
+        doAddCreator("amg", [](const O& op, const P& prm, const std::function<Vector()>&) {
+            const std::string smoother = prm.get<std::string>("smoother", "ParOverILU0");
+            if (smoother == "ILU0" || smoother == "ParOverILU0") {
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
                 using Smoother = SeqILU<M, V, V>;
 #else
@@ -283,23 +312,45 @@ private:
 #endif
                 return makeAmgPreconditioner<Smoother>(op, prm);
             } else {
-                std::string msg("No such smoother: ");
-                msg += smoother;
-                throw std::runtime_error(msg);
+                OPM_THROW(std::invalid_argument, "Properties: No smoother with name " << smoother <<".");
             }
         });
-        doAddCreator("famg", [](const O& op, const P& prm) {
+	doAddCreator("kamg", [](const O& op, const P& prm, const std::function<Vector()>&) {
+            const std::string smoother = prm.get<std::string>("smoother", "ParOverILU0");
+            if (smoother == "ILU0" || smoother == "ParOverILU0") {
+                using Smoother = SeqILU0<M, V, V>;
+                return makeAmgPreconditioner<Smoother>(op, prm, true);
+            } else if (smoother == "Jac") {
+                using Smoother = SeqJac<M, V, V>;
+                return makeAmgPreconditioner<Smoother>(op, prm, true);
+            } else if (smoother == "SOR") {
+                using Smoother = SeqSOR<M, V, V>;
+                return makeAmgPreconditioner<Smoother>(op, prm, true);
+	    // } else if (smoother == "GS") {
+            //     using Smoother = SeqGS<M, V, V>;
+            //     return makeAmgPreconditioner<Smoother>(op, prm, true);
+            } else if (smoother == "SSOR") {
+                using Smoother = SeqSSOR<M, V, V>;
+                return makeAmgPreconditioner<Smoother>(op, prm, true);
+            } else if (smoother == "ILUn") {
+                using Smoother = SeqILUn<M, V, V>;
+                return makeAmgPreconditioner<Smoother>(op, prm, true);
+            } else {
+                OPM_THROW(std::invalid_argument, "Properties: No smoother with name " << smoother <<".");
+            }
+        });
+        doAddCreator("famg", [](const O& op, const P& prm, const std::function<Vector()>&) {
             auto crit = amgCriterion(prm);
             Dune::Amg::Parameters parms;
             parms.setNoPreSmoothSteps(1);
             parms.setNoPostSmoothSteps(1);
             return wrapPreconditioner<Dune::Amg::FastAMG<O, V>>(op, crit, parms);
         });
-        doAddCreator("cpr", [](const O& op, const P& prm) {
-            return std::make_shared<OwningTwoLevelPreconditioner<O, V, false>>(op, prm);
+        doAddCreator("cpr", [](const O& op, const P& prm, const std::function<Vector()>& weightsCalculator) {
+            return std::make_shared<OwningTwoLevelPreconditioner<O, V, false>>(op, prm, weightsCalculator);
         });
-        doAddCreator("cprt", [](const O& op, const P& prm) {
-            return std::make_shared<OwningTwoLevelPreconditioner<O, V, true>>(op, prm);
+        doAddCreator("cprt", [](const O& op, const P& prm, const std::function<Vector()>& weightsCalculator) {
+            return std::make_shared<OwningTwoLevelPreconditioner<O, V, true>>(op, prm, weightsCalculator);
         });
     }
 
@@ -320,9 +371,10 @@ private:
     }
 
     // Actually creates the product object.
-    PrecPtr doCreate(const Operator& op, const boost::property_tree::ptree& prm)
+    PrecPtr doCreate(const Operator& op, const boost::property_tree::ptree& prm,
+                     const std::function<Vector()> weightsCalculator)
     {
-        const std::string& type = prm.get<std::string>("type");
+        const std::string& type = prm.get<std::string>("type", "ParOverILU0");
         auto it = creators_.find(type);
         if (it == creators_.end()) {
             std::ostringstream msg;
@@ -331,14 +383,15 @@ private:
                 msg << prec.first << ' ';
             }
             msg << std::endl;
-            throw std::runtime_error(msg.str());
+            OPM_THROW(std::invalid_argument, msg.str());
         }
-        return it->second(op, prm);
+        return it->second(op, prm, weightsCalculator);
     }
 
-    PrecPtr doCreate(const Operator& op, const boost::property_tree::ptree& prm, const Comm& comm)
+    PrecPtr doCreate(const Operator& op, const boost::property_tree::ptree& prm,
+                     const std::function<Vector()> weightsCalculator, const Comm& comm)
     {
-        const std::string& type = prm.get<std::string>("type");
+        const std::string& type = prm.get<std::string>("type", "ParOverILU0");
         auto it = parallel_creators_.find(type);
         if (it == parallel_creators_.end()) {
             std::ostringstream msg;
@@ -348,9 +401,9 @@ private:
                 msg << prec.first << ' ';
             }
             msg << std::endl;
-            throw std::runtime_error(msg.str());
+            OPM_THROW(std::invalid_argument, msg.str());
         }
-        return it->second(op, prm, comm);
+        return it->second(op, prm, weightsCalculator, comm);
     }
 
     // Actually adds the creator.
