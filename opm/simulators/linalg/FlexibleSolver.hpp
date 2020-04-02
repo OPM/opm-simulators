@@ -27,6 +27,8 @@
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/solvers.hh>
 #include <dune/istl/umfpack.hh>
+#include <dune/istl/owneroverlapcopy.hh>
+#include <dune/istl/paamg/pinfo.hh>
 
 #include <boost/property_tree/ptree.hpp>
 
@@ -41,10 +43,11 @@ template<>
 struct IsComm<Dune::Amg::SequentialInformation> : std::true_type
 {};
 
+#if HAVE_MPI
 template<class Index>
 struct IsComm<Dune::OwnerOverlapCopyCommunication<Index>> : std::true_type
 {};
-
+#endif
 /// A solver class that encapsulates all needed objects for a linear solver
 /// (operator, scalar product, iterative solver and preconditioner) and sets
 /// them up based on runtime parameters, using the PreconditionerFactory for
