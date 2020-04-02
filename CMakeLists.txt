@@ -18,48 +18,6 @@ project(opm-simulators C CXX)
 cmake_minimum_required (VERSION 2.8)
 
 
-# Make sure we are using the same compiler underneath
-# NVCC as for the rest. In the case that NVCC does not support
-# that compiler it will error out. Unfortunately this will only
-# work CMake >= 3.8. We found no way to make FindCUDA.cmake error
-# out. It seems to ignore CMAKE_NVCC_FLAGS and CMAKE. Additionally
-# our way of specifying cuda source files never worked for CMake
-# version < 3.8. Hence we deactivate cuda for these versions.
-# We use "CMAKE_VERSION VERSION_GREATER 3.7.9" instead of
-# CMAKE_VERSION VERSION_GREATER_EQUAL 3.8, because of backwards
-# compatibility to cmake 3.6 and lower.
-if(NOT CMAKE_DISABLE_FIND_PACKAGE_CUDA AND
-    CMAKE_VERSION VERSION_GREATER 3.7.9)
-  if(NOT DEFINED ENV{CUDAHOSTCXX} AND
-      (NOT CMAKE_CUDA_FLAGS OR NOT CMAKE_CUDA_FLAGS MATCHES ".*-ccbin .*"))
-    set(CMAKE_CUDA_FLAGS "-ccbin ${CMAKE_CXX_COMPILER} ${CMAKE_CUDA_FLAGS}")
-  endif()
-  include(CheckLanguage)
-  # Unfortunately check_language(CUDA) will only check whether there is
-  # a nvcc compiler. It will not check whether compilation with the above
-  # option works. Since the OPTIONAL flag of enable_language is currently
-  # ignored CMake will error out below if the options do not work.
-  check_language(CUDA)
-  if(CMAKE_CUDA_COMPILER)
-    enable_language(CUDA OPTIONAL)
-  endif()
-  # While the documentation says that it is deprecated, FindCUDA seems the
-  # only easy way to determine the cublas and cusparse libraries.
-  # Hence we call it unconditionally
-  # The WellContributions kernel uses __shfl_down_sync, which was introduced in CUDA 9.0
-  find_package(CUDA)
-  if(CUDA_VERSION VERSION_LESS "9.0")
-    set(CUDA_FOUND OFF)
-    message(WARNING "Deactivating CUDA as we require version 9.0 or newer."
-      " Found only CUDA version ${CUDA_VERSION}.")
-  endif()
-endif()
-
-if(CUDA_FOUND)
-  set(HAVE_CUDA 1)
-  include_directories(${CUDA_INCLUDE_DIRS})
-endif()
-
 option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
 set( USE_OPENMP_DEFAULT OFF ) # Use of OpenMP is considered experimental
 option(BUILD_FLOW "Build the production oriented flow simulator?" ON)
@@ -122,6 +80,48 @@ include(Findopm-tests)
 # separate file (in cmake/Modules sub-directory) because it is shared
 # with the find module
 include ("${project}-prereqs")
+
+# Make sure we are using the same compiler underneath
+# NVCC as for the rest. In the case that NVCC does not support
+# that compiler it will error out. Unfortunately this will only
+# work CMake >= 3.8. We found no way to make FindCUDA.cmake error
+# out. It seems to ignore CMAKE_NVCC_FLAGS and CMAKE. Additionally
+# our way of specifying cuda source files never worked for CMake
+# version < 3.8. Hence we deactivate cuda for these versions.
+# We use "CMAKE_VERSION VERSION_GREATER 3.7.9" instead of
+# CMAKE_VERSION VERSION_GREATER_EQUAL 3.8, because of backwards
+# compatibility to cmake 3.6 and lower.
+if(NOT CMAKE_DISABLE_FIND_PACKAGE_CUDA AND
+    CMAKE_VERSION VERSION_GREATER 3.7.9)
+  if(NOT DEFINED ENV{CUDAHOSTCXX} AND
+      (NOT CMAKE_CUDA_FLAGS OR NOT CMAKE_CUDA_FLAGS MATCHES ".*-ccbin .*"))
+    set(CMAKE_CUDA_FLAGS "-ccbin ${CMAKE_CXX_COMPILER} ${CMAKE_CUDA_FLAGS}")
+  endif()
+  include(CheckLanguage)
+  # Unfortunately check_language(CUDA) will only check whether there is
+  # a nvcc compiler. It will not check whether compilation with the above
+  # option works. Since the OPTIONAL flag of enable_language is currently
+  # ignored CMake will error out below if the options do not work.
+  check_language(CUDA)
+  if(CMAKE_CUDA_COMPILER)
+    enable_language(CUDA OPTIONAL)
+  endif()
+  # While the documentation says that it is deprecated, FindCUDA seems the
+  # only easy way to determine the cublas and cusparse libraries.
+  # Hence we call it unconditionally
+  # The WellContributions kernel uses __shfl_down_sync, which was introduced in CUDA 9.0
+  find_package(CUDA)
+  if(CUDA_VERSION VERSION_LESS "9.0")
+    set(CUDA_FOUND OFF)
+    message(WARNING "Deactivating CUDA as we require version 9.0 or newer."
+      " Found only CUDA version ${CUDA_VERSION}.")
+  endif()
+endif()
+
+if(CUDA_FOUND)
+  set(HAVE_CUDA 1)
+  include_directories(${CUDA_INCLUDE_DIRS})
+endif()
 
 # read the list of components from this file (in the project directory);
 # it should set various lists with the names of the files to include
