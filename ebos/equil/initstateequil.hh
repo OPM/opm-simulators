@@ -1070,7 +1070,7 @@ private:
     void updateInitialTemperature_(const Opm::EclipseState& eclState)
     {
         // Get the initial temperature data
-        std::vector<double> tempiData = eclState.fieldProps().get_global_double("TEMPI");
+        std::vector<double> tempiData = eclState.fieldProps().get_double("TEMPI");
         temperature_ = tempiData;
     }
 
@@ -1137,8 +1137,10 @@ private:
             if (oil && gas) {
                 const int oilpos = FluidSystem::oilPhaseIdx;
                 const int gaspos = FluidSystem::gasPhaseIdx;
-                const Vec rsVals = computeRs(grid, cells, pressures[oilpos], temperature_, *(rsFunc_[r]), sat[gaspos]);
-                const Vec rvVals = computeRs(grid, cells, pressures[gaspos], temperature_, *(rvFunc_[r]), sat[oilpos]);
+                std::vector<double> regionTemperature(cells.size());
+                copyToRegion(temperature_, cells, regionTemperature);
+                const Vec rsVals = computeRs(grid, cells, pressures[oilpos], regionTemperature, *(rsFunc_[r]), sat[gaspos]);
+                const Vec rvVals = computeRs(grid, cells, pressures[gaspos], regionTemperature, *(rvFunc_[r]), sat[oilpos]);
                 copyFromRegion(rsVals, cells, rs_);
                 copyFromRegion(rvVals, cells, rv_);
             }
@@ -1158,6 +1160,18 @@ private:
         }
     }
 
+    template <class CellRangeType>
+    void copyToRegion(const Vec& source,
+                        const CellRangeType& cells,
+                        Vec& destination)
+    {
+        auto d = destination.begin();
+        auto c = cells.begin();
+        const auto e = cells.end();
+        for (; c != e; ++c, ++d) {
+            *d = source[*c];
+        }
+    }
 };
 } // namespace DeckDependent
 } // namespace EQUIL
