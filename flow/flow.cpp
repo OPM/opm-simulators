@@ -174,7 +174,9 @@ FileOutputMode setupLogging(int mpi_rank_, const std::string& deck_filename, con
 
     std::string output_dir = cmdline_output_dir;
     if (output_dir.empty()) {
-        output_dir = absolute(path(baseName).parent_path()).string();
+        output_dir = fpath.has_parent_path()
+                   ? absolute(fpath.parent_path()).generic_string()
+                   : Opm::filesystem::current_path().generic_string();
     }
 
     logFileStream << output_dir << "/" << baseName;
