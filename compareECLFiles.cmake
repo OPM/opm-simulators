@@ -12,6 +12,35 @@
 set(BASE_RESULT_PATH ${PROJECT_BINARY_DIR}/tests/results)
 
 ###########################################################################
+# TEST: runSim
+###########################################################################
+
+# Input:
+#   - casename: basename (no extension)
+#
+# Details:
+#   - This test class simply runs a simulation.
+function(add_test_runSimulator)
+  set(oneValueArgs CASENAME FILENAME SIMULATOR DIR DIR_PREFIX PROCS)
+  set(multiValueArgs TEST_ARGS)
+  cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
+  if(NOT PARAM_DIR)
+    set(PARAM_DIR ${PARAM_CASENAME})
+  endif()
+  set(RESULT_PATH ${BASE_RESULT_PATH}${PARAM_DIR_PREFIX}/${PARAM_SIMULATOR}+${PARAM_CASENAME})
+  set(TEST_ARGS ${OPM_TESTS_ROOT}/${PARAM_DIR}/${PARAM_FILENAME} ${PARAM_TEST_ARGS})
+  opm_add_test(runSimulator/${PARAM_CASENAME} NO_COMPILE
+               EXE_NAME ${PARAM_SIMULATOR}
+               DRIVER_ARGS ${OPM_TESTS_ROOT}/${PARAM_DIR}
+                           ${RESULT_PATH}
+                           ${PROJECT_BINARY_DIR}/bin
+                           ${PARAM_FILENAME}
+                           ${PARAM_PROCS}
+               TEST_ARGS ${TEST_ARGS}
+               CONFIGURATION extra)
+endfunction()
+
+###########################################################################
 # TEST: compareECLFiles
 ###########################################################################
 
@@ -141,6 +170,19 @@ endfunction()
 if(NOT TARGET test-suite)
   add_custom_target(test-suite)
 endif()
+
+# Simple execution tests
+opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-test.sh "")
+add_test_runSimulator(CASENAME norne
+                      FILENAME NORNE_ATW2013
+                      SIMULATOR flow
+                      PROCS 1)
+
+add_test_runSimulator(CASENAME norne_parallel
+                      FILENAME NORNE_ATW2013
+                      SIMULATOR flow
+                      DIR norne
+                      PROCS 4)
 
 # Regression tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-regressionTest.sh "")
