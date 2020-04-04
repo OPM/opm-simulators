@@ -40,7 +40,7 @@
 #include <opm/common/OpmLog/LogUtil.hpp>
 #endif
 
-#include <opm/parser/eclipse/Utility/String.hpp>
+#include <opm/common/utility/String.hpp>
 
 BEGIN_PROPERTIES
 
