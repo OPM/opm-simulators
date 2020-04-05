@@ -19,7 +19,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "config.h"
-#include "flow/flow_tag.hpp"
+#include <opm/simulators/flow/Main.hpp>
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
 
 
@@ -87,10 +87,9 @@ public:
 // };
 END_PROPERTIES
 
-
-int
-main(int argc, char** argv)
+int main(int argc, char** argv)
 {
-    typedef TTAG(EclFlowProblemSimple) TypeTag;
-    return mainFlow<TypeTag>(argc, argv);
+    using TypeTag = TTAG(EclFlowProblemSimple);
+    auto mainObject = Opm::Main<TypeTag>(argc, argv);
+    return mainObject.run();
 }
