@@ -38,11 +38,15 @@
 #endif
 
 #include <array>
+#include <cmath>
+#include <cstdlib>
+#include <exception>
 #include <iostream>
 #include <limits>
 #include <memory>
 #include <numeric>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 #include <string.h>
@@ -164,7 +168,7 @@ static Opm::EquilRecord mkEquilRecord( double datd, double datp,
     return Opm::EquilRecord( datd, datp, zwoc, pcow_woc, zgoc, pcgo_goc, true, true, 0);
 }
 
-void test_PhasePressure();
+namespace {
 void test_PhasePressure()
 {
     typedef std::vector<double> PVal;
@@ -197,7 +201,6 @@ void test_PhasePressure()
     CHECK_CLOSE(ppress[FluidSystem::oilPhaseIdx][last ] , 166.5e3 , reltol);
 }
 
-void test_CellSubset();
 void test_CellSubset()
 {
     typedef std::vector<double> PVal;
@@ -287,7 +290,6 @@ void test_CellSubset()
     CHECK_CLOSE(ppress[FluidSystem::oilPhaseIdx][last ] , 166.5e3 , reltol);
 }
 
-void test_RegMapping();
 void test_RegMapping()
 {
     typedef std::vector<double> PVal;
@@ -375,7 +377,6 @@ void test_RegMapping()
     CHECK_CLOSE(ppress[FluidSystem::oilPhaseIdx][last ] , 166.5e3 , reltol);
 }
 
-void test_DeckAllDead();
 void test_DeckAllDead()
 {
     typedef TTAG(TestEquilTypeTag) TypeTag;
@@ -401,7 +402,6 @@ void test_DeckAllDead()
     CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last] , 1.504526940e7   , reltol);
 }
 
-void test_CapillaryInversion();
 void test_CapillaryInversion()
 {
     // Test setup.
@@ -453,7 +453,6 @@ void test_CapillaryInversion()
     }
 }
 
-void test_DeckWithCapillary();
 void test_DeckWithCapillary()
 {
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
@@ -475,9 +474,9 @@ void test_DeckWithCapillary()
     // solver, and it is unclear if we should check it against
     // the true answer or something else.
     const double reltol = 1.0e-6;
-    CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first] , 1.469769063e7   , reltol);
-    CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last ] , 15452880.328284413   , reltol);
-    CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last] , 15462880.328284413   , reltol);
+    CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.469769063e7     , reltol);
+    CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last ], 15452880.328284413, reltol);
+    CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx]  [last ], 15462880.328284413, reltol);
 
     const auto& sats = comp.saturation();
     std::vector<double> s[3];
@@ -492,7 +491,6 @@ void test_DeckWithCapillary()
     }
 }
 
-void test_DeckWithCapillaryOverlap();
 void test_DeckWithCapillaryOverlap()
 {
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
@@ -551,7 +549,6 @@ void test_DeckWithCapillaryOverlap()
     }
 }
 
-void test_DeckWithLiveOil();
 void test_DeckWithLiveOil()
 {
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
@@ -628,7 +625,6 @@ void test_DeckWithLiveOil()
     }
 }
 
-void test_DeckWithLiveGas();
 void test_DeckWithLiveGas()
 {
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
@@ -707,7 +703,6 @@ void test_DeckWithLiveGas()
     }
 }
 
-void test_DeckWithRSVDAndRVVD();
 void test_DeckWithRSVDAndRVVD()
 {
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
@@ -806,8 +801,6 @@ void test_DeckWithRSVDAndRVVD()
     }
 }
 
-
-void test_DeckWithPBVDAndPDVD();
 void test_DeckWithPBVDAndPDVD()
 {
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
@@ -898,7 +891,6 @@ void test_DeckWithPBVDAndPDVD()
     }
 }
 
-void test_DeckWithSwatinit();
 void test_DeckWithSwatinit()
 {
 #if 0
@@ -1044,9 +1036,10 @@ void test_DeckWithSwatinit()
     }
 #endif
 }
+}
 
 int main(int argc, char** argv)
-{
+try {
 #if HAVE_DUNE_FEM
     Dune::Fem::MPIManager::initialize(argc, argv);
 #else
@@ -1056,22 +1049,20 @@ int main(int argc, char** argv)
     typedef TTAG(TestEquilTypeTag) TypeTag;
     Opm::registerAllParameters_<TypeTag>();
 
-    /*
     test_PhasePressure();
     test_CellSubset();
     test_RegMapping();
     test_DeckAllDead();
     test_CapillaryInversion();
-    */
     test_DeckWithCapillary();
-    /*
     test_DeckWithCapillaryOverlap();
     test_DeckWithLiveOil();
     test_DeckWithLiveGas();
     test_DeckWithRSVDAndRVVD();
     test_DeckWithPBVDAndPDVD();
-    */
-    //test_DeckWithSwatinit();
-
-    return 0;
+    test_DeckWithSwatinit();
+}
+catch (const std::exception& e) {
+    std::cerr << "Unexpected Termination: " << e.what() << '\n';
+    return EXIT_FAILURE;
 }
