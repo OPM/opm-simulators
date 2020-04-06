@@ -53,8 +53,12 @@
 #include <opm/material/fluidstates/SimpleModularFluidState.hpp>
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 
+#include <algorithm>
 #include <array>
 #include <cassert>
+#include <cstddef>
+#include <limits>
+#include <stdexcept>
 #include <utility>
 #include <vector>
 
@@ -278,191 +282,484 @@ private:
 };
 } // namespace PhasePressODE
 
-
-namespace PhasePressure {
-template <class Grid,
-          class PressFunction,
-          class CellRange>
-void assign(const Grid& grid,
-            const std::array<PressFunction, 2>& f    ,
-            const double split,
-            const CellRange& cells,
-            std::vector<double>& p)
+template <class FluidSystem, class Region>
+class PressureTable
 {
+public:
+    using VSpan = std::array<double, 2>;
 
-    enum { up = 0, down = 1 };
+    /// Constructor
+    ///
+    /// \param[in] gravity Norm of gravity vector (acceleration strength due
+    ///    to gravity).  Normally the standardised value at Tellus equator
+    ///    (9.80665 m/s^2).
+    ///
+    /// \param[in] samplePoints Number of equally spaced depth sample points
+    ///    in each internal phase pressure table.
+    explicit PressureTable(const double gravity,
+                           const int    samplePoints = 2000)
+        : gravity_(gravity)
+        , nsample_(samplePoints)
+    {}
 
-    std::vector<double>::size_type c = 0;
-    for (typename CellRange::const_iterator
-             ci = cells.begin(), ce = cells.end();
-         ci != ce; ++ci, ++c)
+    /// Copy constructor
+    ///
+    /// \param[in] rhs Source object for copy initialization.
+    PressureTable(const PressureTable& rhs)
+        : gravity_(rhs.gravity)
+        , nsample_(rhs.nsample_)
     {
-        assert (c < p.size());
-
-        const double z = Opm::UgGridHelpers::cellCenterDepth(grid, *ci);
-        p[c] = (z < split) ? f[up](z) : f[down](z);
-    }
-}
-
-template <class FluidSystem,
-          class Grid,
-          class Region,
-          class CellRange>
-void water(const Grid& grid,
-           const Region& reg,
-           const std::array<double,2>& span  ,
-           const double grav,
-           double& poWoc,
-           const CellRange& cells,
-           std::vector<double>& press)
-{
-    using PhasePressODE::Water;
-    typedef Water<FluidSystem> ODE;
-
-    const double T = 273.15 + 20; // standard temperature for now
-    ODE drho(T, reg.pvtIdx() , grav);
-
-    double z0;
-    double p0;
-    if (reg.datum() > reg.zwoc()) {//Datum in water zone
-        z0 = reg.datum();
-        p0 = reg.pressure();
-    }
-    else {
-        z0 = reg.zwoc();
-        p0 = poWoc - reg.pcowWoc(); // Water pressure at contact
+        this->copyInPointers(rhs);
     }
 
-    std::array<double,2> up = {{ z0, span[0] }};
-    std::array<double,2> down = {{ z0, span[1] }};
+    /// Move constructor
+    ///
+    /// \param[in,out] rhs Source object for move initialization.  On output,
+    ///    left in a moved-from ("valid but unspecified") state.  Internal
+    ///    pointers in \p rhs are null (\c unique_ptr guarantee).
+    PressureTable(PressureTable&& rhs)
+        : gravity_(rhs.gravity_)
+        , nsample_(rhs.nsample_)
+        , oil_    (std::move(rhs.oil_))
+        , gas_    (std::move(rhs.gas_))
+        , wat_    (std::move(rhs.wat_))
+    {}
 
-    typedef Details::RK4IVP<ODE> WPress;
-    std::array<WPress,2> wpress = {
+    /// Assignment operator
+    ///
+    /// \param[in] rhs Source object.
+    ///
+    /// \return \code *this \endcode.
+    PressureTable& operator=(const PressureTable& rhs)
+    {
+        this->gravity_ = rhs.gravity_;
+        this->nsample_ = rhs.nsample_;
+        this->copyInPointers(rhs);
+
+        return *this;
+    }
+
+    /// Move-assignment operator
+    ///
+    /// \param[in] rhs Source object.  On output, left in a moved-from ("valid
+    ///    but unspecified") state.  Internal pointers in \p rhs are null (\c
+    ///    unique_ptr guarantee).
+    ///
+    /// \return \code *this \endcode.
+    PressureTable& operator=(PressureTable&& rhs)
+    {
+        this->gravity_ = rhs.gravity_;
+        this->nsample_ = rhs.nsample_;
+
+        this->oil_ = std::move(rhs.oil_);
+        this->gas_ = std::move(rhs.gas_);
+        this->wat_ = std::move(rhs.wat_);
+
+        return *this;
+    }
+
+    void equilibrate(const Region& reg,
+                     const VSpan&  span)
+    {
+        // One of the PressureTable::equil_*() member functions.
+        auto equil = this->selectEquilibrationStrategy(reg);
+
+        (this->*equil)(reg, span);
+    }
+
+    /// Predicate for whether or not oil is an active phase
+    bool oilActive() const
+    {
+        return FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
+    }
+
+    /// Predicate for whether or not gas is an active phase
+    bool gasActive() const
+    {
+        return FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
+    }
+
+    /// Predicate for whether or not water is an active phase
+    bool waterActive() const
+    {
+        return FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
+    }
+
+    /// Evaluate oil phase pressure at specified depth.
+    ///
+    /// \param[in] depth Depth of evaluation point.  Should generally be
+    ///    within the \c span from the previous call to \code equilibrate()
+    ///    \endcode.
+    ///
+    /// \return Oil phase pressure at specified depth.
+    double oil(const double depth) const
+    {
+        this->checkPtr(this->oil_.get(), "OIL");
+
+        return this->oil_->value(depth);
+    }
+
+    /// Evaluate gas phase pressure at specified depth.
+    ///
+    /// \param[in] depth Depth of evaluation point.  Should generally be
+    ///    within the \c span from the previous call to \code equilibrate()
+    ///    \endcode.
+    ///
+    /// \return Gas phase pressure at specified depth.
+    double gas(const double depth) const
+    {
+        this->checkPtr(this->gas_.get(), "GAS");
+
+        return this->gas_->value(depth);
+    }
+
+    /// Evaluate water phase pressure at specified depth.
+    ///
+    /// \param[in] depth Depth of evaluation point.  Should generally be
+    ///    within the \c span from the previous call to \code equilibrate()
+    ///    \endcode.
+    ///
+    /// \return Water phase pressure at specified depth.
+    double water(const double depth) const
+    {
+        this->checkPtr(this->wat_.get(), "WATER");
+
+        return this->wat_->value(depth);
+    }
+
+private:
+    template <class ODE>
+    class PressureFunction
+    {
+    public:
+        struct InitCond {
+            double depth;
+            double pressure;
+        };
+
+        explicit PressureFunction(const ODE&      ode,
+                                  const InitCond& ic,
+                                  const int       nsample,
+                                  const VSpan&    span)
+            : initial_(ic)
         {
-            WPress(drho, up  , p0, 2000)
-            ,
-            WPress(drho, down, p0, 2000)
+            this->value_[Direction::Up] = std::make_unique<Distribution>
+                (ode, VSpan {{ ic.depth, span[0] }}, ic.pressure, nsample);
+
+            this->value_[Direction::Down] = std::make_unique<Distribution>
+                (ode, VSpan {{ ic.depth, span[1] }}, ic.pressure, nsample);
         }
+
+        PressureFunction(const PressureFunction& rhs)
+            : initial_(rhs.initial_)
+        {
+            this->value_[Direction::Up] =
+                std::make_unique<Distribution>(*rhs.value_[Direction::Up]);
+
+            this->value_[Direction::Down] =
+                std::make_unique<Distribution>(*rhs.value_[Direction::Down]);
+        }
+
+        PressureFunction(PressureFunction&& rhs) = default;
+
+        PressureFunction& operator=(const PressureFunction& rhs)
+        {
+            this->initial_ = rhs.initial_;
+
+            this->value_[Direction::Up] =
+                std::make_unique<Distribution>(*rhs.value_[Direction::Up]);
+
+            this->value_[Direction::Down] =
+                std::make_unique<Distribution>(*rhs.value_[Direction::Down]);
+
+            return *this;
+        }
+
+        PressureFunction& operator=(PressureFunction&& rhs)
+        {
+            this->initial_ = rhs.initial_;
+            this->value_   = std::move(rhs.value_);
+
+            return *this;
+        }
+
+        double value(const double depth) const
+        {
+            if (depth < this->initial_.depth) {
+                // Value above initial condition depth.
+                return (*this->value_[Direction::Up])(depth);
+            }
+            else if (depth > this->initial_.depth) {
+                // Value below initial condition depth.
+                return (*this->value_[Direction::Down])(depth);
+            }
+            else {
+                // Value *at* initial condition depth.
+                return this->initial_.pressure;
+            }
+        }
+
+    private:
+        enum Direction : std::size_t { Up, Down, NumDir };
+
+        using Distribution = Details::RK4IVP<ODE>;
+        using DistrPtr = std::unique_ptr<Distribution>;
+
+        InitCond initial_;
+        std::array<DistrPtr, Direction::NumDir> value_;
     };
 
-    assign(grid, wpress, z0, cells, press);
+    using OilPressODE = PhasePressODE::Oil<
+        FluidSystem, typename Region::CalcDissolution
+    >;
 
-    if (reg.datum() > reg.zwoc()) {
-        // Return oil pressure at contact
-        poWoc = wpress[0](reg.zwoc()) + reg.pcowWoc();
+    using GasPressODE = PhasePressODE::Gas<
+        FluidSystem, typename Region::CalcEvaporation
+    >;
+
+    using WatPressODE = PhasePressODE::Water<FluidSystem>;
+
+    using OPress = PressureFunction<OilPressODE>;
+    using GPress = PressureFunction<GasPressODE>;
+    using WPress = PressureFunction<WatPressODE>;
+
+    using Strategy = void (PressureTable::*)
+        (const Region&, const VSpan&);
+
+    double gravity_;
+    int    nsample_;
+    double temperature_{ 273.15 + 20 };
+
+    std::unique_ptr<OPress> oil_{};
+    std::unique_ptr<GPress> gas_{};
+    std::unique_ptr<WPress> wat_{};
+
+    template <typename PressFunc>
+    void checkPtr(const PressFunc*   phasePress,
+                  const std::string& phaseName) const
+    {
+        if (phasePress != nullptr) { return; }
+
+        throw std::invalid_argument {
+            "Phase pressure function for \"" + phaseName
+            + "\" most not be null"
+        };
+    }
+
+    Strategy selectEquilibrationStrategy(const Region& reg) const
+    {
+        if (reg.datum() > reg.zwoc()) {      // Datum in water zone
+            return &PressureTable::equil_WOG;
+        }
+        else if (reg.datum() < reg.zgoc()) { // Datum in gas zone
+            return &PressureTable::equil_GOW;
+        }
+        else {                               // Datum in oil zone
+            return &PressureTable::equil_OWG;
+        }
+    }
+
+    void copyInPointers(const PressureTable& rhs)
+    {
+        if (rhs.oil_ != nullptr) {
+            this->oil_ = std::make_unique<OPress>(*rhs.oil_);
+        }
+
+        if (rhs.gas_ != nullptr) {
+            this->gas_ = std::make_unique<GPress>(*rhs.gas_);
+        }
+
+        if (rhs.wat_ != nullptr) {
+            this->wat_ = std::make_unique<WPress>(*rhs.wat_);
+        }
+    }
+
+    void equil_WOG(const Region& reg, const VSpan& span);
+    void equil_GOW(const Region& reg, const VSpan& span);
+    void equil_OWG(const Region& reg, const VSpan& span);
+
+    void makeOilPressure(const typename OPress::InitCond& ic,
+                         const Region&                    reg,
+                         const VSpan&                     span);
+
+    void makeGasPressure(const typename GPress::InitCond& ic,
+                         const Region&                    reg,
+                         const VSpan&                     span);
+
+    void makeWatPressure(const typename WPress::InitCond& ic,
+                         const Region&                    reg,
+                         const VSpan&                     span);
+};
+
+template <class FluidSystem, class Region>
+void PressureTable<FluidSystem, Region>::
+equil_WOG(const Region& reg, const VSpan& span)
+{
+    // Datum depth in water zone.  Calculate phase pressure for water first,
+    // followed by oil and gas if applicable.
+
+    if (! this->waterActive()) {
+        throw std::invalid_argument {
+            "Don't know how to interpret EQUIL datum depth in "
+            "WATER zone in model without active water phase"
+        };
+    }
+
+    {
+        const auto ic = typename WPress::InitCond {
+            reg.datum(), reg.pressure()
+        };
+
+        this->makeWatPressure(ic, reg, span);
+    }
+
+    if (this->oilActive()) {
+        // Pcow = Po - Pw => Po = Pw + Pcow
+        const auto ic = typename OPress::InitCond {
+            reg.zwoc(),
+            this->water(reg.zwoc()) + reg.pcowWoc()
+        };
+
+        this->makeOilPressure(ic, reg, span);
+    }
+
+    if (this->gasActive()) {
+        // Pcgo = Pg - Po => Pg = Po + Pcgo
+        const auto ic = typename GPress::InitCond {
+            reg.zgoc(),
+            this->oil(reg.zgoc()) + reg.pcgoGoc()
+        };
+
+        this->makeGasPressure(ic, reg, span);
     }
 }
 
-template <class FluidSystem,
-          class Grid,
-          class Region,
-          class CellRange>
-void oil(const Grid& grid,
-         const Region& reg,
-         const std::array<double,2>& span  ,
-         const double grav,
-         const CellRange& cells,
-         std::vector<double>& press,
-         double& poWoc,
-         double& poGoc)
+template <class FluidSystem, class Region>
+void PressureTable<FluidSystem, Region>::
+equil_GOW(const Region& reg, const VSpan& span)
 {
-    using PhasePressODE::Oil;
-    typedef Oil<FluidSystem, typename Region::CalcDissolution> ODE;
+    // Datum depth in gas zone.  Calculate phase pressure for gas first,
+    // followed by oil and water if applicable.
 
-    const double T = 273.15 + 20; // standard temperature for now
-    ODE drho(T, reg.dissolutionCalculator(),
-             reg.pvtIdx(), grav);
-
-    double z0;
-    double p0;
-    if (reg.datum() > reg.zwoc()) {//Datum in water zone, poWoc given
-        z0 = reg.zwoc();
-        p0 = poWoc;
-    }
-    else if (reg.datum() < reg.zgoc()) {//Datum in gas zone, poGoc given
-        z0 = reg.zgoc();
-        p0 = poGoc;
-    }
-    else { //Datum in oil zone
-        z0 = reg.datum();
-        p0 = reg.pressure();
+    if (! this->gasActive()) {
+        throw std::invalid_argument {
+            "Don't know how to interpret EQUIL datum depth in "
+            "GAS zone in model without active gas phase"
+        };
     }
 
-    std::array<double,2> up = {{ z0, span[0] }};
-    std::array<double,2> down = {{ z0, span[1] }};
+    {
+        const auto ic = typename GPress::InitCond {
+            reg.datum(), reg.pressure()
+        };
 
-    typedef Details::RK4IVP<ODE> OPress;
-    std::array<OPress,2> opress = {
-        {
-            OPress(drho, up  , p0, 2000)
-            ,
-            OPress(drho, down, p0, 2000)
-        }
+        this->makeGasPressure(ic, reg, span);
+    }
+
+    if (this->oilActive()) {
+        // Pcgo = Pg - Po => Po = Pg - Pcgo
+        const auto ic = typename OPress::InitCond {
+            reg.zgoc(),
+            this->gas(reg.zgoc()) - reg.pcgoGoc()
+        };
+
+        this->makeOilPressure(ic, reg, span);
+    }
+
+    if (this->waterActive()) {
+        // Pcow = Po - Pw => Pw = Po - Pcow
+        const auto ic = typename WPress::InitCond {
+            reg.zwoc(),
+            this->oil(reg.zwoc()) - reg.pcowWoc()
+        };
+
+        this->makeWatPressure(ic, reg, span);
+    }
+}
+
+template <class FluidSystem, class Region>
+void PressureTable<FluidSystem, Region>::
+equil_OWG(const Region& reg, const VSpan& span)
+{
+    // Datum depth in gas zone.  Calculate phase pressure for gas first,
+    // followed by oil and water if applicable.
+
+    if (! this->oilActive()) {
+        throw std::invalid_argument {
+            "Don't know how to interpret EQUIL datum depth in "
+            "OIL zone in model without active oil phase"
+        };
+    }
+
+    {
+        const auto ic = typename OPress::InitCond {
+            reg.datum(), reg.pressure()
+        };
+
+        this->makeOilPressure(ic, reg, span);
+    }
+
+    if (this->waterActive()) {
+        // Pcow = Po - Pw => Pw = Po - Pcow
+        const auto ic = typename WPress::InitCond {
+            reg.zwoc(),
+            this->oil(reg.zwoc()) - reg.pcowWoc()
+        };
+
+        this->makeWatPressure(ic, reg, span);
+    }
+
+    if (this->gasActive()) {
+        // Pcgo = Pg - Po => Pg = Po + Pcgo
+        const auto ic = typename GPress::InitCond {
+            reg.zgoc(),
+            this->oil(reg.zgoc()) + reg.pcgoGoc()
+        };
+
+        this->makeGasPressure(ic, reg, span);
+    }
+}
+
+template <class FluidSystem, class Region>
+void PressureTable<FluidSystem, Region>::
+makeOilPressure(const typename OPress::InitCond& ic,
+                const Region&                    reg,
+                const VSpan&                     span)
+{
+    const auto drho = OilPressODE {
+        this->temperature_, reg.dissolutionCalculator(),
+        reg.pvtIdx(), this->gravity_
     };
 
-    assign(grid, opress, z0, cells, press);
-
-    const double woc = reg.zwoc();
-    if      (z0 > woc) { poWoc = opress[0](woc); } // WOC above datum
-    else if (z0 < woc) { poWoc = opress[1](woc); } // WOC below datum
-    else               { poWoc = p0;             } // WOC *at*  datum
-
-    const double goc = reg.zgoc();
-    if      (z0 > goc) { poGoc = opress[0](goc); } // GOC above datum
-    else if (z0 < goc) { poGoc = opress[1](goc); } // GOC below datum
-    else               { poGoc = p0;             } // GOC *at*  datum
+    this->oil_ = std::make_unique<OPress>(drho, ic, this->nsample_, span);
 }
 
-template <class FluidSystem,
-          class Grid,
-          class Region,
-          class CellRange>
-void gas(const Grid& grid,
-         const Region& reg,
-         const std::array<double,2>& span  ,
-         const double grav,
-         double& poGoc,
-         const CellRange& cells,
-         std::vector<double>& press)
+template <class FluidSystem, class Region>
+void PressureTable<FluidSystem, Region>::
+makeGasPressure(const typename GPress::InitCond& ic,
+                const Region&                    reg,
+                const VSpan&                     span)
 {
-    using PhasePressODE::Gas;
-    typedef Gas<FluidSystem, typename Region::CalcEvaporation> ODE;
-
-    const double T = 273.15 + 20; // standard temperature for now
-    ODE drho(T, reg.evaporationCalculator(),
-             reg.pvtIdx(), grav);
-
-    double z0;
-    double p0;
-    if (reg.datum() < reg.zgoc()) {//Datum in gas zone
-        z0 = reg.datum();
-        p0 = reg.pressure();
-    }
-    else {
-        z0 = reg.zgoc();
-        p0 = poGoc + reg.pcgoGoc(); // Gas pressure at contact
-    }
-
-    std::array<double,2> up = {{ z0, span[0] }};
-    std::array<double,2> down = {{ z0, span[1] }};
-
-    typedef Details::RK4IVP<ODE> GPress;
-    std::array<GPress,2> gpress = {
-        {
-            GPress(drho, up  , p0, 2000)
-            ,
-            GPress(drho, down, p0, 2000)
-        }
+    const auto drho = GasPressODE {
+        this->temperature_, reg.evaporationCalculator(),
+        reg.pvtIdx(), this->gravity_
     };
 
-    assign(grid, gpress, z0, cells, press);
-
-    if (reg.datum() < reg.zgoc()) {
-        // Return oil pressure at contact
-        poGoc = gpress[1](reg.zgoc()) - reg.pcgoGoc();
-    }
+    this->gas_ = std::make_unique<GPress>(drho, ic, this->nsample_, span);
 }
-} // namespace PhasePressure
+
+template <class FluidSystem, class Region>
+void PressureTable<FluidSystem, Region>::
+makeWatPressure(const typename WPress::InitCond& ic,
+                const Region&                    reg,
+                const VSpan&                     span)
+{
+    const auto drho = WatPressODE {
+        this->temperature_, reg.pvtIdx(), this->gravity_
+    };
+
+    this->wat_ = std::make_unique<WPress>(drho, ic, this->nsample_, span);
+}
 
 template <class FluidSystem,
           class Grid,
@@ -475,71 +772,80 @@ void equilibrateOWG(const Grid& grid,
                     const CellRange& cells,
                     std::vector< std::vector<double> >& press)
 {
-    const bool water = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
-    const bool oil = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
-    const bool gas = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
-    const int oilpos = FluidSystem::oilPhaseIdx;
-    const int waterpos = FluidSystem::waterPhaseIdx;
-    const int gaspos = FluidSystem::gasPhaseIdx;
+    using PhaseIX = std::vector<std::vector<double>>::size_type;
+    auto ptable   = PressureTable<FluidSystem, Region>{ grav };
 
-    if (reg.datum() > reg.zwoc()) { // Datum in water zone
-        double poWoc = -1;
-        double poGoc = -1;
+    ptable.equilibrate(reg, span);
 
-        if (water) {
-            PhasePressure::water<FluidSystem>(grid, reg, span, grav, poWoc,
-                                              cells, press[waterpos]);
-        }
+    const auto oilpos   = static_cast<PhaseIX>(FluidSystem::oilPhaseIdx);
+    const auto gaspos   = static_cast<PhaseIX>(FluidSystem::gasPhaseIdx);
+    const auto waterpos = static_cast<PhaseIX>(FluidSystem::waterPhaseIdx);
 
-        if (oil) {
-            PhasePressure::oil<FluidSystem>(grid, reg, span, grav, cells,
-                                            press[oilpos], poWoc, poGoc);
-        }
+    auto ix = std::vector<double>::size_type{0};
+    for (const auto& cell : cells) {
+        const auto depth = Opm::UgGridHelpers::cellCenterDepth(grid, cell);
 
-        if (gas) {
-            PhasePressure::gas<FluidSystem>(grid, reg, span, grav, poGoc,
-                                            cells, press[gaspos]);
-        }
+        if (ptable.oilActive())   { press[oilpos]  [ix] = ptable.oil  (depth); }
+        if (ptable.gasActive())   { press[gaspos]  [ix] = ptable.gas  (depth); }
+        if (ptable.waterActive()) { press[waterpos][ix] = ptable.water(depth); }
+
+        ++ix;
     }
-    else if (reg.datum() < reg.zgoc()) { // Datum in gas zone
-        double poWoc = -1;
-        double poGoc = -1;
+}
 
-        if (gas) {
-            PhasePressure::gas<FluidSystem>(grid, reg, span, grav, poGoc,
-                                            cells, press[gaspos]);
-        }
+template <typename Grid, typename CellRange>
+void verticalExtent(const Grid&           grid,
+                    const CellRange&      cells,
+                    int&                  cellcount,
+                    std::array<double,2>& span)
+{
+    // This code is only supported in three space dimensions
+    assert (Grid::dimensionworld == 3);
 
-        if (oil) {
-            PhasePressure::oil<FluidSystem>(grid, reg, span, grav, cells,
-                                            press[oilpos], poWoc, poGoc);
-        }
+    span[0] = std::numeric_limits<double>::max();
+    span[1] = std::numeric_limits<double>::lowest();
+    cellcount = 0;
 
-        if (water) {
-            PhasePressure::water<FluidSystem>(grid, reg, span, grav, poWoc,
-                                              cells, press[waterpos]);
-        }
-    }
-    else { // Datum in oil zone
-        double poWoc = -1;
-        double poGoc = -1;
+    const int nd = Grid::dimensionworld;
 
-        if (oil) {
-            PhasePressure::oil<FluidSystem>(grid, reg, span, grav, cells,
-                                            press[oilpos], poWoc, poGoc);
-        }
+    // Define vertical span as
+    //
+    //   [minimum(node depth(cells)), maximum(node depth(cells))]
+    //
+    // Note: We use a sledgehammer approach--looping all
+    // the nodes of all the faces of all the 'cells'--to
+    // compute those bounds.  This necessarily entails
+    // visiting some nodes (and faces) multiple times.
+    //
+    // Note: The implementation of 'RK4IVP<>' implicitly
+    // imposes the requirement that cell centroids are all
+    // within this vertical span.  That requirement is not
+    // checked.
+    auto cell2Faces = Opm::UgGridHelpers::cell2Faces(grid);
+    auto faceVertices = Opm::UgGridHelpers::face2Vertices(grid);
 
-        if (water) {
-            PhasePressure::water<FluidSystem>(grid, reg, span, grav, poWoc,
-                                              cells, press[waterpos]);
-        }
+    for (typename CellRange::const_iterator
+             ci = cells.begin(), ce = cells.end();
+         ci != ce; ++ci, ++cellcount)
+    {
+        for (auto fi = cell2Faces[*ci].begin(),
+                  fe = cell2Faces[*ci].end();
+             fi != fe; ++fi)
+        {
+            for (auto i = faceVertices[*fi].begin(),
+                      e = faceVertices[*fi].end();
+                 i != e; ++i)
+            {
+                const double z = Opm::UgGridHelpers::
+                    vertexCoordinates(grid, *i)[nd - 1];
 
-        if (gas) {
-            PhasePressure::gas<FluidSystem>(grid, reg, span, grav, poGoc,
-                                            cells, press[gaspos]);
+                if (z < span[0]) { span[0] = z; }
+                if (z > span[1]) { span[1] = z; }
+            }
         }
     }
 }
+
 } // namespace Details
 
 /**
@@ -582,69 +888,23 @@ void equilibrateOWG(const Grid& grid,
  */
 template <class FluidSystem, class Grid, class Region, class CellRange>
 std::vector< std::vector<double>>
-phasePressures(const Grid& grid,
-               const Region& reg,
+phasePressures(const Grid&      grid,
+               const Region&    reg,
                const CellRange& cells,
-               const double grav = Opm::unit::gravity)
+               const double     grav = Opm::unit::gravity)
 {
-    std::array<double,2> span =
-        {{  std::numeric_limits<double>::max(),
-            -std::numeric_limits<double>::max() }}; // Symm. about 0.
-
     int ncell = 0;
-    {
-        // This code is only supported in three space dimensions
-        assert (Grid::dimensionworld == 3);
+    auto span = std::array<double, 2>{};
+    Details::verticalExtent(grid, cells, ncell, span);
 
-        const int nd = Grid::dimensionworld;
+    using pval = std::vector<double>;
+    auto press = std::vector<pval>
+        (FluidSystem::numPhases, pval(ncell, 0.0));
 
-        // Define vertical span as
-        //
-        //   [minimum(node depth(cells)), maximum(node depth(cells))]
-        //
-        // Note: We use a sledgehammer approach--looping all
-        // the nodes of all the faces of all the 'cells'--to
-        // compute those bounds.  This necessarily entails
-        // visiting some nodes (and faces) multiple times.
-        //
-        // Note: The implementation of 'RK4IVP<>' implicitly
-        // imposes the requirement that cell centroids are all
-        // within this vertical span.  That requirement is not
-        // checked.
-        auto cell2Faces = Opm::UgGridHelpers::cell2Faces(grid);
-        auto faceVertices = Opm::UgGridHelpers::face2Vertices(grid);
-
-        for (typename CellRange::const_iterator
-                 ci = cells.begin(), ce = cells.end();
-             ci != ce; ++ci, ++ncell)
-        {
-            for (auto fi=cell2Faces[*ci].begin(),
-                     fe=cell2Faces[*ci].end();
-                 fi != fe;
-                 ++fi)
-            {
-                for (auto i = faceVertices[*fi].begin(), e = faceVertices[*fi].end();
-                     i != e; ++i)
-                {
-                    const double z = Opm::UgGridHelpers::vertexCoordinates(grid, *i)[nd-1];
-
-                    if (z < span[0]) { span[0] = z; }
-                    if (z > span[1]) { span[1] = z; }
-                }
-            }
-        }
-    }
-    const int np = FluidSystem::numPhases;  //reg.phaseUsage().numPhases;
-
-    typedef std::vector<double> pval;
-    std::vector<pval> press(np, pval(ncell, 0.0));
-
-    const double zwoc = reg.zwoc ();
-    const double zgoc = reg.zgoc ();
-
-    // make sure goc and woc is within the span for the phase pressure calculation
-    span[0] = std::min(span[0],zgoc);
-    span[1] = std::max(span[1],zwoc);
+    // Ensure gas/oil and oil/water contacts are within the span for the
+    // phase pressure calculation.
+    span[0] = std::min(span[0], std::min(reg.zgoc(), reg.zwoc()));
+    span[1] = std::max(span[1], std::max(reg.zgoc(), reg.zwoc()));
 
     Details::equilibrateOWG<FluidSystem>(grid, reg, grav, span, cells, press);
 
