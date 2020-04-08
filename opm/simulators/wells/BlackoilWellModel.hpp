@@ -426,15 +426,15 @@ namespace Opm {
             void updateGroupIndividualControls(Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
             void updateGroupIndividualControl(const Group& group, Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
             bool checkGroupConstraints(const Group& group, Opm::DeferredLogger& deferred_logger) const;
-            Group::ProductionCMode checkGroupProductionConstraints(const Group& group, Opm::DeferredLogger& deferred_logger) const;            
-            Group::InjectionCMode checkGroupInjectionConstraints(const Group& group, const Phase& phase, Opm::DeferredLogger& deferred_logger) const;
+            Group::ProductionCMode checkGroupProductionConstraints(const Group& group, Opm::DeferredLogger& deferred_logger) const;
+            Group::InjectionCMode checkGroupInjectionConstraints(const Group& group, const Phase& phase) const;
 
             void updateGroupHigherControls(Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
             void checkGroupHigherConstraints(const Group& group, Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
 
-            void actionOnBrokenConstraints(const Group& group, const Group::ExceedAction& exceed_action, const Group::ProductionCMode& newControl, const int reportStepIdx, Opm::DeferredLogger& deferred_logger);
+            void actionOnBrokenConstraints(const Group& group, const Group::ExceedAction& exceed_action, const Group::ProductionCMode& newControl, Opm::DeferredLogger& deferred_logger);
 
-            void actionOnBrokenConstraints(const Group& group, const Group::InjectionCMode& newControl, const Phase& topUpPhase, const int reportStepIdx, Opm::DeferredLogger& deferred_logger);
+            void actionOnBrokenConstraints(const Group& group, const Group::InjectionCMode& newControl, const Phase& topUpPhase, Opm::DeferredLogger& deferred_logger);
 
             WellInterfacePtr getWell(const std::string& well_name) const;
 

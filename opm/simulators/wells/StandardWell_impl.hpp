@@ -772,7 +772,6 @@ namespace Opm
         EvalWell control_eq(numWellEq_ + numEq, 0.0);
 
         const auto& well = well_ecl_;
-        const double efficiencyFactor = well.getEfficiencyFactor();
 
         auto getRates = [&]() {
             std::vector<EvalWell> rates(3, EvalWell(numWellEq_ + numEq, 0.0));

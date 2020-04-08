@@ -1131,7 +1131,7 @@ namespace Opm {
                 }
             }
         }
-        
+
         if (checkGroupConvergence) {
             const int reportStepIdx = ebosSimulator_.episodeIndex();
             const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
@@ -1308,7 +1308,6 @@ namespace Opm {
                                                   summaryConfig.hasSummaryKey( "WOPP:" + well->name()) ||
                                                   summaryConfig.hasSummaryKey( "WGPP:" + well->name())) && well->isProducer());
 
-                const Well& eclWell = well->wellEcl();
                 bool needPotentialsForGuideRate = true;//eclWell.getGuideRatePhase() == Well::GuideRateTarget::UNDEFINED;
                 if (write_restart_file || needed_for_summary || needPotentialsForGuideRate)
                 {
@@ -1761,25 +1760,23 @@ namespace Opm {
                 if (!group.hasInjectionControl(phase)) {
                     continue;
                 }
-                Group::InjectionCMode newControl = checkGroupInjectionConstraints(group, phase, deferred_logger);
+                Group::InjectionCMode newControl = checkGroupInjectionConstraints(group, phase);
                 if (newControl != Group::InjectionCMode::NONE)
                 {
                     switched_groups.insert(group.name());
-                    actionOnBrokenConstraints(group, newControl, phase, reportStepIdx, deferred_logger);
+                    actionOnBrokenConstraints(group, newControl, phase, deferred_logger);
                 }
             }
-        } else if (!skip && group.isProductionGroup()) 
-        {
+        }
+        if (!skip && group.isProductionGroup()) {
             Group::ProductionCMode newControl = checkGroupProductionConstraints(group, deferred_logger);
             const auto& summaryState = ebosSimulator_.vanguard().summaryState();
             const auto controls = group.productionControls(summaryState);
             if (newControl != Group::ProductionCMode::NONE)
             {
                 switched_groups.insert(group.name());
-                actionOnBrokenConstraints(group, controls.exceed_action, newControl, reportStepIdx, deferred_logger);
+                actionOnBrokenConstraints(group, controls.exceed_action, newControl, deferred_logger);
             }
-        } else {
-            //neither production or injecting group FIELD?
         }
 
         // call recursively down the group hiearchy
@@ -1794,30 +1791,24 @@ namespace Opm {
     checkGroupConstraints(const Group& group, Opm::DeferredLogger& deferred_logger) const {
 
         const int reportStepIdx = ebosSimulator_.episodeIndex();
-        if (group.isInjectionGroup())
-        {
+        if (group.isInjectionGroup()) {
             const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
             for (Phase phase : all) {
                 if (!group.hasInjectionControl(phase)) {
                     continue;
                 }
-                Group::InjectionCMode newControl = checkGroupInjectionConstraints(group, phase, deferred_logger);
-                if (newControl != Group::InjectionCMode::NONE)
-                {
+                Group::InjectionCMode newControl = checkGroupInjectionConstraints(group, phase);
+                if (newControl != Group::InjectionCMode::NONE) {
                     return true;
                 }
             }
-        } else if (group.isProductionGroup()) 
-        {
+        }
+        if (group.isProductionGroup()) {
             Group::ProductionCMode newControl = checkGroupProductionConstraints(group, deferred_logger);
-            const auto& summaryState = ebosSimulator_.vanguard().summaryState();
-            const auto controls = group.productionControls(summaryState);
             if (newControl != Group::ProductionCMode::NONE)
             {
                 return true;
             }
-        } else {
-            //neither production or injecting group FIELD?
         }
 
         // call recursively down the group hiearchy
@@ -1827,8 +1818,9 @@ namespace Opm {
         }
         return violated;
     }
-    
-    
+
+
+
     template<typename TypeTag>
     Group::ProductionCMode
     BlackoilWellModel<TypeTag>::
@@ -1839,7 +1831,6 @@ namespace Opm {
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
         const auto& well_state = well_state_;
 
-      
         const auto controls = group.productionControls(summaryState);
         const Group::ProductionCMode& currentControl = well_state.currentProductionGroupControl(group.name());
 
@@ -1931,15 +1922,15 @@ namespace Opm {
         if (group.has_control(Group::ProductionCMode::PRBL))
         {
             OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "PRBL control for production groups not implemented", deferred_logger);
-        }               
+        }
         return Group::ProductionCMode::NONE;
     }
-    
-    
+
+
     template<typename TypeTag>
     Group::InjectionCMode
     BlackoilWellModel<TypeTag>::
-    checkGroupInjectionConstraints(const Group& group, const Phase& phase, Opm::DeferredLogger& deferred_logger) const {
+    checkGroupInjectionConstraints(const Group& group, const Phase& phase) const {
 
         const int reportStepIdx = ebosSimulator_.episodeIndex();
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
@@ -2069,15 +2060,15 @@ namespace Opm {
             if (gconsale.sales_target < 0.0) {
                 OPM_THROW(std::runtime_error, "Group " + group.name() + " has sale rate target less then zero. Not implemented in Flow" );
             }
-            
+
         }
-        return Group::InjectionCMode::NONE;  
+        return Group::InjectionCMode::NONE;
     }
 
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    actionOnBrokenConstraints(const Group& group, const Group::ExceedAction& exceed_action, const Group::ProductionCMode& newControl, const int reportStepIdx, Opm::DeferredLogger& deferred_logger) {
+    actionOnBrokenConstraints(const Group& group, const Group::ExceedAction& exceed_action, const Group::ProductionCMode& newControl, Opm::DeferredLogger& deferred_logger) {
 
         auto& well_state = well_state_;
         const Group::ProductionCMode& oldControl = well_state.currentProductionGroupControl(group.name());
@@ -2132,7 +2123,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    actionOnBrokenConstraints(const Group& group, const Group::InjectionCMode& newControl, const Phase& controlPhase, const int reportStepIdx, Opm::DeferredLogger& deferred_logger) {
+    actionOnBrokenConstraints(const Group& group, const Group::InjectionCMode& newControl, const Phase& controlPhase, Opm::DeferredLogger& deferred_logger) {
         auto& well_state = well_state_;
         const Group::InjectionCMode& oldControl = well_state.currentInjectionGroupControl(controlPhase, group.name());
 
@@ -2224,7 +2215,7 @@ namespace Opm {
                         deferred_logger);
                     if (changed.first) {
                         switched_groups.insert(group.name());
-                        actionOnBrokenConstraints(group, Group::InjectionCMode::FLD, phase, reportStepIdx, deferred_logger);
+                        actionOnBrokenConstraints(group, Group::InjectionCMode::FLD, phase, deferred_logger);
                     }
                 }
             }
@@ -2259,7 +2250,7 @@ namespace Opm {
                     if (changed.first) {
                         switched_groups.insert(group.name());
                         const auto exceed_action = group.productionControls(summaryState).exceed_action;
-                        actionOnBrokenConstraints(group, exceed_action, Group::ProductionCMode::FLD, reportStepIdx, deferred_logger);
+                        actionOnBrokenConstraints(group, exceed_action, Group::ProductionCMode::FLD, deferred_logger);
                     }
                 }
         }

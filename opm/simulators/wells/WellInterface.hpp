@@ -486,9 +486,7 @@ namespace Opm
                               DeferredLogger& deferred_logger) const;
 
         bool checkIndividualConstraints(WellState& well_state,
-                                        const Schedule& schedule,
-                                        const SummaryState& summaryState,
-                                        DeferredLogger& deferred_logger) const;
+                                        const SummaryState& summaryState) const;
 
         bool checkGroupConstraints(WellState& well_state,
                                    const Schedule& schedule,

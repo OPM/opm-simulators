@@ -485,7 +485,7 @@ namespace Opm
 
         bool changed = false;
         if (iog == IndividualOrGroup::Individual) {
-            changed = checkIndividualConstraints(well_state, schedule, summaryState, deferred_logger);
+            changed = checkIndividualConstraints(well_state, summaryState);
         } else if (iog == IndividualOrGroup::Group) {
             changed = checkGroupConstraints(well_state, schedule, summaryState, deferred_logger);
         } else {
@@ -1460,7 +1460,7 @@ namespace Opm
                                              const SummaryState& summaryState,
                                              DeferredLogger& deferred_logger) const
     {
-        const bool ind_broken = checkIndividualConstraints(well_state, schedule, summaryState, deferred_logger);
+        const bool ind_broken = checkIndividualConstraints(well_state, summaryState);
         if (ind_broken) {
             return true;
         } else {
@@ -1475,9 +1475,7 @@ namespace Opm
     template <typename TypeTag>
     bool
     WellInterface<TypeTag>::checkIndividualConstraints(WellState& well_state,
-                                                       const Schedule& schedule,
-                                                       const SummaryState& summaryState,
-                                                       DeferredLogger& deferred_logger) const
+                                                       const SummaryState& summaryState) const
     {
         const auto& well = well_ecl_;
         const PhaseUsage& pu = phaseUsage();
@@ -1680,7 +1678,6 @@ namespace Opm
         const int well_index = index_of_well_;
 
         if (well.isInjector()) {
-            const auto controls = well.injectionControls(summaryState);
             Opm::Well::InjectorCMode& currentControl = well_state.currentInjectionControls()[well_index];
 
             if (currentControl != Well::InjectorCMode::GRUP) {
@@ -1708,7 +1705,6 @@ namespace Opm
         }
 
         if (well.isProducer( )) {
-            const auto controls = well.productionControls(summaryState);
             Well::ProducerCMode& currentControl = well_state.currentProductionControls()[well_index];
 
             if (currentControl != Well::ProducerCMode::GRUP) {
@@ -1973,7 +1969,6 @@ namespace Opm
                 control_eq = total_rate - controls.resv_rate;
             } else {
                 std::vector<double> hrates(number_of_phases_, 0.);
-                const PhaseUsage& pu = phaseUsage();
                 if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                     hrates[pu.phase_pos[Water]] = controls.water_rate;
                 }
@@ -2044,9 +2039,11 @@ namespace Opm
         const auto& well = well_ecl_;
         const auto pu = phaseUsage();
 
+        // Setting some defaults to silence warnings below.
+        // Will be overwritten in the switch statement.
         int phasePos = -1;
-        Well::GuideRateTarget wellTarget;
-        Phase injectionPhase;
+        Well::GuideRateTarget wellTarget = Well::GuideRateTarget::UNDEFINED;
+        Phase injectionPhase = Phase::WATER;
         switch (injectorType) {
         case InjectorType::WATER:
         {
