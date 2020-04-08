@@ -38,6 +38,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/utils/ParallelRestart.cpp
   opm/simulators/wells/VFPProdProperties.cpp
   opm/simulators/wells/VFPInjProperties.cpp
+  opm/simulators/wells/WellGroupHelpers.cpp
   )
 
 if(CUDA_FOUND)
@@ -188,6 +189,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/PerforationData.hpp
   opm/simulators/wells/RateConverter.hpp
   opm/simulators/wells/SimFIBODetails.hpp
+  opm/simulators/wells/TargetCalculator.hpp
   opm/simulators/wells/WellConnectionAuxiliaryModule.hpp
   opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp
   opm/simulators/wells/VFPProperties.hpp

@@ -410,10 +410,10 @@ namespace Opm
 
         void updateThp(WellState& well_state, Opm::DeferredLogger& deferred_logger) const;
 
-        void assembleControlEq(const WellState& well_state, const Opm::Schedule& schedule, const SummaryState& summaryState, Opm::DeferredLogger& deferred_logger);
-
-        void assembleGroupProductionControl(const Group& group, const WellState& well_state, const Opm::Schedule& schedule, const SummaryState& summaryState, EvalWell& control_eq, double efficincyFactor, Opm::DeferredLogger& deferred_logger);
-        void assembleGroupInjectionControl(const Group& group, const WellState& well_state, const Opm::Schedule& schedule, const SummaryState& summaryState,  const InjectorType& injectorType, EvalWell& control_eq, double efficincyFactor, Opm::DeferredLogger& deferred_logger);
+        void assembleControlEq(const WellState& well_state,
+                               const Opm::Schedule& schedule,
+                               const SummaryState& summaryState,
+                               Opm::DeferredLogger& deferred_logger);
 
         // handle the non reasonable fractions due to numerical overshoot
         void processFractions() const;

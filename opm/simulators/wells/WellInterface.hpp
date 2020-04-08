@@ -201,7 +201,9 @@ namespace Opm
                                                WellState& well_state,
                                                Opm::DeferredLogger& deferred_logger) const = 0;
 
-        void updateWellControl(const Simulator& ebos_simulator,
+        enum class IndividualOrGroup { Individual, Group, Both };
+        bool updateWellControl(const Simulator& ebos_simulator,
+                               const IndividualOrGroup iog,
                                WellState& well_state,
                                Opm::DeferredLogger& deferred_logger) /* const */;
 
@@ -478,10 +480,75 @@ namespace Opm
         // index calculations
         int well_productivity_index_logger_counter_;
 
-        bool checkConstraints(WellState& well_state, const SummaryState& summaryState);
+        bool checkConstraints(WellState& well_state,
+                              const Schedule& schedule,
+                              const SummaryState& summaryState,
+                              DeferredLogger& deferred_logger) const;
 
+        bool checkIndividualConstraints(WellState& well_state,
+                                        const SummaryState& summaryState) const;
 
+        bool checkGroupConstraints(WellState& well_state,
+                                   const Schedule& schedule,
+                                   const SummaryState& summaryState,
+                                   DeferredLogger& deferred_logger) const;
 
+        std::pair<bool, double> checkGroupConstraintsProd(const Group& group,
+                                       const WellState& well_state,
+                                       const double efficiencyFactor,
+                                       const Schedule& schedule,
+                                       const SummaryState& summaryState,
+                                       DeferredLogger& deferred_logger) const;
+
+        std::pair<bool, double> checkGroupConstraintsInj(const Group& group,
+                                      const WellState& well_state,
+                                      const double efficiencyFactor,
+                                      const Schedule& schedule,
+                                      const SummaryState& summaryState,
+                                      DeferredLogger& deferred_logger) const;
+
+        template <class EvalWell>
+        void getGroupInjectionControl(const Group& group,
+                                      const WellState& well_state,
+                                      const Opm::Schedule& schedule,
+                                      const SummaryState& summaryState,
+                                      const InjectorType& injectorType,
+                                      const EvalWell& bhp,
+                                      const EvalWell& injection_rate,
+                                      EvalWell& control_eq,
+                                      double efficiencyFactor);
+
+        template <class EvalWell>
+        void getGroupProductionControl(const Group& group,
+                                       const WellState& well_state,
+                                       const Opm::Schedule& schedule,
+                                       const SummaryState& summaryState,
+                                       const EvalWell& bhp,
+                                       const std::vector<EvalWell>& rates,
+                                       EvalWell& control_eq,
+                                       double efficiencyFactor);
+
+        template <class EvalWell, class BhpFromThpFunc>
+        void assembleControlEqInj(const WellState& well_state,
+                                  const Opm::Schedule& schedule,
+                                  const SummaryState& summaryState,
+                                  const Well::InjectionControls& controls,
+                                  const EvalWell& bhp,
+                                  const EvalWell& injection_rate,
+                                  BhpFromThpFunc bhp_from_thp,
+                                  EvalWell& control_eq,
+                                  Opm::DeferredLogger& deferred_logger);
+
+        template <class EvalWell, class BhpFromThpFunc>
+        void assembleControlEqProd(const WellState& well_state,
+                                   const Opm::Schedule& schedule,
+                                   const SummaryState& summaryState,
+                                   const Well::ProductionControls& controls,
+                                   const EvalWell& bhp,
+                                   const std::vector<EvalWell>& rates, // Always 3 canonical rates.
+                                   BhpFromThpFunc bhp_from_thp,
+                                   EvalWell& control_eq,
+                                   Opm::DeferredLogger& deferred_logger);
     };
 
 
