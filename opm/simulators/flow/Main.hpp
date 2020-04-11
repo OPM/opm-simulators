@@ -402,7 +402,7 @@ namespace Opm
 #if HAVE_MPI
                     else {
                         summaryConfig.reset(new Opm::SummaryConfig);
-                        schedule.reset(new Opm::Schedule);
+                        schedule.reset(new Opm::Schedule(python));
                         eclipseState.reset(new Opm::ParallelEclipseState);
                     }
                     Opm::eclStateBroadcast(*eclipseState, *schedule, *summaryConfig);
