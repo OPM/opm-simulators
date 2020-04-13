@@ -675,6 +675,17 @@ public:
      */
     double pcgoGoc() const { return this->rec_.gasOilContactCapillaryPressure(); }
 
+    /**
+     * Accuracy/strategy for initial fluid-in-place calculation.
+     *
+     * \return zero (N=0) for centre-point method, negative (N<0) for the
+     *   horizontal subdivision method with 2*(-N) intervals, and positive
+     *   (N>0) for the tilted subdivision method with 2*N intervals.
+     */
+    int equilibrationAccuracy() const
+    {
+        return this->rec_.initializationTargetAccuracy();
+    }
 
     /**
      * Retrieve dissolved gas-oil ratio calculator of current
@@ -694,7 +705,6 @@ public:
      * Retrieve pvtIdx of the region.
      */
     int pvtIdx() const { return this->pvtIdx_; }
-
 
 private:
     Opm::EquilRecord rec_;     /**< Equilibration data */
