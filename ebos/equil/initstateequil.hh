@@ -1396,7 +1396,6 @@ invertCapPress(const double   pc,
 template <typename Grid, typename CellRange>
 void verticalExtent(const Grid&           grid,
                     const CellRange&      cells,
-                    int&                  cellcount,
                     std::array<double,2>& span)
 {
     // This code is only supported in three space dimensions
@@ -1404,7 +1403,6 @@ void verticalExtent(const Grid&           grid,
 
     span[0] = std::numeric_limits<double>::max();
     span[1] = std::numeric_limits<double>::lowest();
-    cellcount = 0;
 
     const int nd = Grid::dimensionworld;
 
@@ -1426,7 +1424,7 @@ void verticalExtent(const Grid&           grid,
 
     for (typename CellRange::const_iterator
              ci = cells.begin(), ce = cells.end();
-         ci != ce; ++ci, ++cellcount)
+         ci != ce; ++ci)
     {
         for (auto fi = cell2Faces[*ci].begin(),
                   fe = cell2Faces[*ci].end();
@@ -1687,9 +1685,7 @@ private:
 
         auto ptable = Details::PressureTable<FluidSystem, EquilReg>{ grav };
         auto psat   = PhaseSat { materialLawManager, this->swatInit_ };
-
-        auto vspan = std::array<double, 2>{};
-        auto ncell = 0;
+        auto vspan  = std::array<double, 2>{};
 
         for (const auto& r : reg.activeRegions()) {
             const auto& cells = reg.cells(r);
@@ -1699,7 +1695,7 @@ private:
                 continue;
             }
 
-            Details::verticalExtent(grid, cells, ncell, vspan);
+            Details::verticalExtent(grid, cells, vspan);
 
             const EqReg eqreg(rec[r], rsFunc_[r], rvFunc_[r], regionPvtIdx_[r]);
 

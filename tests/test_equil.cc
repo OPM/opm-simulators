@@ -192,14 +192,13 @@ void test_PhasePressure()
         0
     };
 
-    auto numCells = 0;
     auto vspan = std::array<double, 2>{};
     {
         auto cells = std::vector<int>(simulator->vanguard().grid().size(0));
         std::iota(cells.begin(), cells.end(), 0);
 
         Opm::EQUIL::Details::verticalExtent(simulator->vanguard().grid(),
-                                            cells, numCells, vspan);
+                                            cells, vspan);
     }
 
     const auto grav = 10.0;
@@ -211,7 +210,7 @@ void test_PhasePressure()
 
     const auto reltol = 1.0e-8;
     const auto first  = centerDepth(*simulator, 0);
-    const auto last   = centerDepth(*simulator, numCells - 1);
+    const auto last   = centerDepth(*simulator, simulator->vanguard().grid().size(0) - 1);
 
     CHECK_CLOSE(ptable.water(first),  90e3  , reltol);
     CHECK_CLOSE(ptable.water(last) , 180e3  , reltol);
@@ -279,14 +278,13 @@ void test_CellSubset()
         cells[ix].push_back(c);
     }
 
-    auto numCells = 0;
     auto vspan = std::array<double, 2>{};
     {
         auto vspancells = std::vector<int>(simulator->vanguard().grid().size(0));
         std::iota(vspancells.begin(), vspancells.end(), 0);
 
         Opm::EQUIL::Details::verticalExtent(simulator->vanguard().grid(),
-                                            vspancells, numCells, vspan);
+                                            vspancells, vspan);
     }
 
     const auto grav = 10.0;
@@ -294,7 +292,7 @@ void test_CellSubset()
         FluidSystem, Opm::EQUIL::EquilReg
     >{ grav };
 
-    auto ppress = PPress(2, PVal(numCells, 0.0));
+    auto ppress = PPress(2, PVal(simulator->vanguard().grid().size(0), 0.0));
     for (auto r = cells.begin(), e = cells.end(); r != e; ++r) {
         const int rno = int(r - cells.begin());
 
@@ -355,14 +353,13 @@ void test_RegMapping()
         0)
         };
 
-    auto numCells = 0;
     auto vspan = std::array<double, 2>{};
     {
         auto cells = std::vector<int>(simulator->vanguard().grid().size(0));
         std::iota(cells.begin(), cells.end(), 0);
 
         Opm::EQUIL::Details::verticalExtent(simulator->vanguard().grid(),
-                                            cells, numCells, vspan);
+                                            cells, vspan);
     }
 
     const auto grav = 10.0;
@@ -393,7 +390,7 @@ void test_RegMapping()
 
     const Opm::RegionMapping<> eqlmap(eqlnum);
 
-    auto ppress = PPress(2, PVal(numCells, 0.0));
+    auto ppress = PPress(2, PVal(simulator->vanguard().grid().size(0), 0.0));
     for (const auto& r : eqlmap.activeRegions()) {
         ptable.equilibrate(region[r], vspan);
 
