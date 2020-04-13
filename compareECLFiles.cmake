@@ -322,6 +322,62 @@ add_test_compareECLFiles(CASENAME base_model2
                          REL_TOL ${rel_tol}
                          DIR model2)
 
+add_test_compareECLFiles(CASENAME 0A1_GRPCTL_STW_model2
+                         FILENAME 0A1_GRCTRL_LRAT_ORAT_BASE_MODEL2_STW
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2)
+
+add_test_compareECLFiles(CASENAME 0A1_GRPCTL_MSW_model2
+                         FILENAME 0A1_GRCTRL_LRAT_ORAT_BASE_MODEL2_MSW
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2)
+
+add_test_compareECLFiles(CASENAME 0A2_GRPCTL_STW_model2
+                         FILENAME 0A2_GRCTRL_LRAT_ORAT_GGR_BASE_MODEL2_STW
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2)
+
+add_test_compareECLFiles(CASENAME 0A2_GRPCTL_MSW_model2
+                         FILENAME 0A2_GRCTRL_LRAT_ORAT_GGR_BASE_MODEL2_MSW
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2)
+
+add_test_compareECLFiles(CASENAME 0A3_GRPCTL_STW_model2
+                         FILENAME 0A3_GRCTRL_LRAT_LRAT_BASE_MODEL2_STW
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2)
+
+add_test_compareECLFiles(CASENAME 0A3_GRPCTL_MSW_model2
+                         FILENAME 0A3_GRCTRL_LRAT_LRAT_BASE_MODEL2_MSW
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2)
+
+add_test_compareECLFiles(CASENAME 0A4_GRPCTL_STW_model2
+                         FILENAME 0A4_GRCTRL_LRAT_LRAT_GGR_BASE_MODEL2_STW
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2)
+
+add_test_compareECLFiles(CASENAME 0A4_GRPCTL_MSW_model2
+                         FILENAME 0A4_GRCTRL_LRAT_LRAT_GGR_BASE_MODEL2_MSW
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2)
+
 add_test_compareECLFiles(CASENAME multregt_model2
                          FILENAME 1_MULTREGT_MODEL2
                          SIMULATOR flow
