@@ -1681,25 +1681,15 @@ private:
                           const Grid& grid,
                           const double grav)
     {
-        using Opm::UgGridHelpers::cellCenterDepth;
         using PhaseSat = Details::PhaseSaturations<
             MaterialLawManager, FluidSystem, EquilReg, typename RMap::CellId
         >;
-        using CellPos  = typename PhaseSat::Position;
 
         auto ptable = Details::PressureTable<FluidSystem, EquilReg>{ grav };
         auto psat   = PhaseSat { materialLawManager, this->swatInit_ };
 
         auto vspan = std::array<double, 2>{};
         auto ncell = 0;
-
-        const auto oilActive = ptable.oilActive();
-        const auto gasActive = ptable.gasActive();
-        const auto watActive = ptable.waterActive();
-
-        const auto oilPos = FluidSystem::oilPhaseIdx;
-        const auto gasPos = FluidSystem::gasPhaseIdx;
-        const auto watPos = FluidSystem::waterPhaseIdx;
 
         for (const auto& r : reg.activeRegions()) {
             const auto& cells = reg.cells(r);
@@ -1720,40 +1710,87 @@ private:
 
             ptable.equilibrate(eqreg, vspan);
 
-            for (const auto& cell : cells) {
-                const auto pos = CellPos {
-                    cell, cellCenterDepth(grid, cell)
-                };
+            // Centre-point method
+            this->equilibrateCellCentres(cells, eqreg, grid,
+                                         ptable, psat);
+        }
+    }
 
-                const auto  saturations = psat.deriveSaturations(pos, eqreg, ptable);
-                const auto& pressures   = psat.correctedPhasePressures();
+    template <class CellRange, class EquilibrationMethod>
+    void cellLoop(const CellRange&      cells,
+                  EquilibrationMethod&& eqmethod)
+    {
+        const auto oilPos = FluidSystem::oilPhaseIdx;
+        const auto gasPos = FluidSystem::gasPhaseIdx;
+        const auto watPos = FluidSystem::waterPhaseIdx;
 
-                if (oilActive) {
-                    this->pp_ [oilPos][cell] = pressures.oil;
-                    this->sat_[oilPos][cell] = saturations.oil;
-                }
+        const auto oilActive = FluidSystem::phaseIsActive(oilPos);
+        const auto gasActive = FluidSystem::phaseIsActive(gasPos);
+        const auto watActive = FluidSystem::phaseIsActive(watPos);
 
-                if (gasActive) {
-                    this->pp_ [gasPos][cell] = pressures.gas;
-                    this->sat_[gasPos][cell] = saturations.gas;
-                }
+        auto pressures   = Details::PhaseQuantityValue{};
+        auto saturations = Details::PhaseQuantityValue{};
+        auto Rs          = 0.0;
+        auto Rv          = 0.0;
 
-                if (watActive) {
-                    this->pp_ [watPos][cell] = pressures.water;
-                    this->sat_[watPos][cell] = saturations.water;
-                }
+        for (const auto& cell : cells) {
+            eqmethod(cell, pressures, saturations, Rs, Rv);
 
-                if (oilActive && gasActive) {
-                    const auto temp = this->temperature_[cell];
+            if (oilActive) {
+                this->pp_ [oilPos][cell] = pressures.oil;
+                this->sat_[oilPos][cell] = saturations.oil;
+            }
 
-                    this->rs_[cell] = (*this->rsFunc_[r])
-                        (pos.depth, pressures.oil, temp, saturations.gas);
+            if (gasActive) {
+                this->pp_ [gasPos][cell] = pressures.gas;
+                this->sat_[gasPos][cell] = saturations.gas;
+            }
 
-                    this->rv_[cell] = (*this->rvFunc_[r])
-                        (pos.depth, pressures.gas, temp, saturations.oil);
-                }
+            if (watActive) {
+                this->pp_ [watPos][cell] = pressures.water;
+                this->sat_[watPos][cell] = saturations.water;
+            }
+
+            if (oilActive && gasActive) {
+                this->rs_[cell] = Rs;
+                this->rv_[cell] = Rv;
             }
         }
+    }
+
+    template <class CellRange, class Grid, class PressTable, class PhaseSat>
+    void equilibrateCellCentres(const CellRange&  cells,
+                                const EquilReg&   eqreg,
+                                const Grid&       grid,
+                                const PressTable& ptable,
+                                PhaseSat&         psat)
+    {
+        using CellPos = typename PhaseSat::Position;
+        using CellID  = std::remove_cv_t<std::remove_reference_t<
+            decltype(std::declval<CellPos>().cell)>>;
+
+        this->cellLoop(cells, [this, &eqreg, &grid, &ptable, &psat]
+            (const CellID                 cell,
+             Details::PhaseQuantityValue& pressures,
+             Details::PhaseQuantityValue& saturations,
+             double&                      Rs,
+             double&                      Rv) -> void
+        {
+            const auto pos = CellPos {
+                cell, UgGridHelpers::cellCenterDepth(grid, cell)
+            };
+
+            saturations = psat.deriveSaturations(pos, eqreg, ptable);
+            pressures   = psat.correctedPhasePressures();
+
+            const auto temp = this->temperature_[cell];
+
+            Rs = eqreg.dissolutionCalculator()
+                (pos.depth, pressures.oil, temp, saturations.gas);
+
+            Rv = eqreg.evaporationCalculator()
+                (pos.depth, pressures.gas, temp, saturations.oil);
+        });
     }
 };
 } // namespace DeckDependent
