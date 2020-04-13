@@ -1468,12 +1468,10 @@ equilnum(const Opm::EclipseState& eclipseState,
     std::vector<int> eqlnum(grid.size(0), 0);
 
     if (eclipseState.fieldProps().has_int("EQLNUM")) {
-        const int nc = grid.size(/*codim=*/0);
-        eqlnum.resize(nc);
-
         const auto& e = eclipseState.fieldProps().get_int("EQLNUM");
         std::transform(e.begin(), e.end(), eqlnum.begin(), [](int n){ return n - 1;});
     }
+
     return eqlnum;
 }
 
@@ -1514,7 +1512,7 @@ public:
         const Opm::RegionMapping<> eqlmap(equilnum(eclipseState, grid));
         const int invalidRegion = -1;
         regionPvtIdx_.resize(rec.size(), invalidRegion);
-        setRegionPvtIdx(grid, eclipseState, eqlmap);
+        setRegionPvtIdx(eclipseState, eqlmap);
 
         // Create Rs functions.
         rsFunc_.reserve(rec.size());
@@ -1616,7 +1614,7 @@ public:
         updateInitialTemperature_(eclipseState);
 
         // Compute pressures, saturations, rs and rv factors.
-        calcPressSatRsRv(eclipseState, eqlmap, rec, materialLawManager, grid, grav);
+        calcPressSatRsRv(eqlmap, rec, materialLawManager, grid, grav);
 
         // Modify oil pressure in no-oil regions so that the pressures of present phases can
         // be recovered from the oil pressure and capillary relations.
@@ -1634,12 +1632,9 @@ public:
 private:
     void updateInitialTemperature_(const Opm::EclipseState& eclState)
     {
-        // Get the initial temperature data
-        std::vector<double> tempiData = eclState.fieldProps().get_double("TEMPI");
-        temperature_ = tempiData;
+        this->temperature_ = eclState.fieldProps().get_double("TEMPI");
     }
 
-    typedef EquilReg EqReg;
     std::vector< std::shared_ptr<Miscibility::RsFunction> > rsFunc_;
     std::vector< std::shared_ptr<Miscibility::RsFunction> > rvFunc_;
     std::vector<int> regionPvtIdx_;
@@ -1651,29 +1646,18 @@ private:
     Vec swatInit_;
 
     template<class RMap>
-    void setRegionPvtIdx(const Grid& grid, const Opm::EclipseState& eclState, const RMap& reg)
+    void setRegionPvtIdx(const Opm::EclipseState& eclState, const RMap& reg)
     {
-        size_t numCompressed = grid.size(/*codim=*/0);
-        std::vector<int> cellPvtRegionIdx(numCompressed);
-
-        //Get the PVTNUM data
         const auto& pvtnumData = eclState.fieldProps().get_int("PVTNUM");
-        // Save pvt indices of regions. Remember
-        // that Eclipse uses Fortran-style indices which start at 1 instead of 0, so we
-        // need to subtract 1.
-        std::transform(pvtnumData.begin(), pvtnumData.end(),
-                       cellPvtRegionIdx.begin(), [](int n){ return n - 1;});
 
         for (const auto& r : reg.activeRegions()) {
             const auto& cells = reg.cells(r);
-            const int cell = *(cells.begin());
-            regionPvtIdx_[r] = pvtnumData[cell] - 1;
+            regionPvtIdx_[r] = pvtnumData[*cells.begin()] - 1;
         }
     }
 
     template <class RMap, class MaterialLawManager>
-    void calcPressSatRsRv(const Opm::EclipseState& eclState OPM_UNUSED,
-                          const RMap& reg,
+    void calcPressSatRsRv(const RMap& reg,
                           const std::vector< Opm::EquilRecord >& rec,
                           MaterialLawManager& materialLawManager,
                           const Grid& grid,
@@ -1697,7 +1681,9 @@ private:
 
             Details::verticalExtent(grid, cells, vspan);
 
-            const EqReg eqreg(rec[r], rsFunc_[r], rvFunc_[r], regionPvtIdx_[r]);
+            const auto eqreg = EquilReg {
+                rec[r], this->rsFunc_[r], this->rvFunc_[r], this->regionPvtIdx_[r]
+            };
 
             // Ensure gas/oil and oil/water contacts are within the span for the
             // phase pressure calculation.
