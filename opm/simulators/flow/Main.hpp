@@ -389,11 +389,9 @@ namespace Opm
 #endif
                 return 1;
             }
-#ifdef OPM_FLOW_MAIN
             if (outputCout) {
                 Opm::FlowMainEbos<PreTypeTag>::printBanner();
             }
-#endif
             // Create Deck and EclipseState.
             try {
                 if (outputCout) {
