@@ -170,7 +170,7 @@ public:
             if(weightsType == "quasiimpes") {
                 // weighs will be created as default in the solver
                 weightsCalculator =
-                    [&mat, this, transpose, pressureIndex](){
+                    [&mat, transpose, pressureIndex](){
                         return Opm::Amg::getQuasiImpesWeights<MatrixType,
                                                               VectorType>(
                                                                           mat.istlMatrix(),
