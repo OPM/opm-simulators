@@ -991,9 +991,11 @@ public:
         eclWriter_->evalSummaryState(isSubStep);
 
         auto& schedule = simulator.vanguard().schedule();
+        auto& ecl_state = simulator.vanguard().eclState();
         int episodeIdx = simulator.episodeIndex();
         this->applyActions(episodeIdx,
                            simulator.time() + simulator.timeStepSize(),
+                           ecl_state,
                            schedule,
                            simulator.vanguard().summaryState());
     }
@@ -1058,8 +1060,9 @@ public:
 
     void applyActions(int reportStep,
                       double sim_time,
+                      Opm::EclipseState& ecl_state,
                       Opm::Schedule& schedule,
-                      const Opm::SummaryState& summaryState) {
+                      Opm::SummaryState& summaryState) {
         const auto& actions = schedule.actions(reportStep);
         if (actions.empty())
             return;
@@ -1074,6 +1077,10 @@ public:
                << std::setw(2) << std::setfill('0') << std::to_string(now.day()) << "  report:" << std::to_string(reportStep);
 
             ts = os.str();
+        }
+
+        for (const auto& pyaction : actions.pending_python()) {
+            pyaction->run(ecl_state, schedule, reportStep, summaryState);
         }
 
         auto simTime = schedule.simTime(reportStep);
