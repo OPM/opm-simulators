@@ -93,7 +93,9 @@ NEW_TYPE_TAG(FlowEarlyBird, INHERITS_FROM(EclFlowProblem));
 
 END_PROPERTIES
 
-#ifndef OPM_FLOW_MAIN
+//#ifndef OPM_FLOW_MAIN  // NOTE: since the methods in this #ifndef block are
+//                          are template functions they will not be included
+//                          in the code if not used, so #ifndef is commented out
 namespace Opm {
   template <class TypeTag>
   void flowEbosSetDeck(Deck *deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
@@ -124,7 +126,7 @@ namespace Opm {
 
 }
 
-#endif  /* #ifndef OPM_FLOW_MAIN */
+//#endif  /* #ifndef OPM_FLOW_MAIN */
 
 namespace Opm
 {
