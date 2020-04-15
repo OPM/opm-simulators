@@ -258,12 +258,12 @@ namespace Opm
                 createSimulator();
 
                 // do the actual work
-                runSimulator(output_cout);
+                int retval = runSimulator(output_cout);
 
                 // clean up
                 mergeParallelLogFiles(output_to_files);
 
-                return EXIT_SUCCESS;
+                return retval;
             }
             catch (const std::exception& e) {
                 std::ostringstream message;
@@ -463,7 +463,7 @@ namespace Opm
         }
 
         // Run the simulator.
-        void runSimulator(bool output_cout)
+        int runSimulator(bool output_cout)
         {
             const auto& schedule = this->schedule();
             const auto& timeMap = schedule.getTimeMap();
@@ -508,12 +508,12 @@ namespace Opm
                     successReport.reportFullyImplicit(ss, &failureReport);
                     OpmLog::info(ss.str());
                 }
-
+                return successReport.exit_status;
             } else {
                 if (output_cout) {
                     std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;
                 }
-
+                return EXIT_SUCCESS;
             }
         }
 
