@@ -331,7 +331,7 @@ namespace Opm
                     std::cerr << "Exception received: " << e.what() << ". Try '--help' for a usage description.\n";
 #else
                     Opm::Parameters::printUsage<PreTypeTag>(PreProblem::helpPreamble(
-                            argc, const_cast<const char**>(argv)), e.what());
+                            argc_, const_cast<const char**>(argv_)), e.what());
 #endif
 #if HAVE_MPI
                 MPI_Finalize();
