@@ -378,7 +378,16 @@ namespace Opm
             if (mpiRank == 0)
                 outputCout_ = EWOMS_GET_PARAM(PreTypeTag, bool, EnableTerminalOutput);
 
-            std::string deckFilename = EWOMS_GET_PARAM(PreTypeTag, std::string, EclDeckFileName);
+            std::string deckFilename;
+            std::string outputDir;
+            if ( eclipseState_ ) {
+                deckFilename = eclipseState_->getIOConfig().fullBasePath();
+                outputDir = eclipseState_->getIOConfig().getOutputDir();
+            }
+            else {
+                deckFilename = EWOMS_GET_PARAM(PreTypeTag, std::string, EclDeckFileName);
+            }
+
             typedef typename GET_PROP_TYPE(PreTypeTag, Vanguard) PreVanguard;
             try {
                 deckFilename = PreVanguard::canonicalDeckPath(deckFilename).string();
@@ -406,10 +415,6 @@ namespace Opm
                     std::cout.flush();
                 }
                 auto python = std::make_shared<Opm::Python>();
-                std::shared_ptr<Opm::Deck> deck;
-                std::shared_ptr<Opm::EclipseState> eclipseState;
-                std::shared_ptr<Opm::Schedule> schedule;
-                std::shared_ptr<Opm::SummaryConfig> summaryConfig;
                 {
                     Opm::Parser parser;
                     Opm::ParseContext parseContext({{Opm::ParseContext::PARSE_RANDOM_SLASH, Opm::InputError::IGNORE},
@@ -417,9 +422,11 @@ namespace Opm
                                                     {Opm::ParseContext::SUMMARY_UNKNOWN_WELL, Opm::InputError::WARN},
                                                     {Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN}});
                     Opm::ErrorGuard errorGuard;
+                    if (outputDir.empty())
+                        outputDir = EWOMS_GET_PARAM(PreTypeTag, std::string, OutputDir);
                     outputMode = setupLogging_(mpiRank,
                                       deckFilename,
-                                      EWOMS_GET_PARAM(PreTypeTag, std::string, OutputDir),
+                                      outputDir,
                                       EWOMS_GET_PARAM(PreTypeTag, std::string, OutputMode),
                                       outputCout_, "STDOUT_LOGGER");
 
@@ -429,16 +436,19 @@ namespace Opm
                     Opm::FlowMainEbos<PreTypeTag>::printPRTHeader(outputCout_);
 
                     if (mpiRank == 0) {
-                        deck.reset( new Opm::Deck( parser.parseFile(deckFilename , parseContext, errorGuard)));
-                        Opm::MissingFeatures::checkKeywords(*deck, parseContext, errorGuard);
+                        if (!deck_)
+                            deck_.reset( new Opm::Deck( parser.parseFile(deckFilename , parseContext, errorGuard)));
+                        Opm::MissingFeatures::checkKeywords(*deck_, parseContext, errorGuard);
                         if ( outputCout_ )
-                            Opm::checkDeck(*deck, parser, parseContext, errorGuard);
+                            Opm::checkDeck(*deck_, parser, parseContext, errorGuard);
 
+                        if (!eclipseState_) {
 #if HAVE_MPI
-                        eclipseState.reset(new Opm::ParallelEclipseState(*deck));
+                            eclipseState_.reset(new Opm::ParallelEclipseState(*deck_));
 #else
-                        eclipseState.reset(new Opm::EclipseState(*deck));
+                            eclipseState_.reset(new Opm::EclipseState(*deck_));
 #endif
+                        }
 #ifdef OPM_FLOW_MAIN
                         /*
                           For the time being initializing wells and groups from the
@@ -446,31 +456,40 @@ namespace Opm
                           included here as a switch.
                         */
                         const bool init_from_restart_file = !EWOMS_GET_PARAM(PreTypeTag, bool, SchedRestart);
-                        const auto& init_config = eclipseState->getInitConfig();
+                        const auto& init_config = eclipseState_->getInitConfig();
                         if (init_config.restartRequested() && init_from_restart_file) {
                             int report_step = init_config.getRestartStep();
-                            const auto& rst_filename = eclipseState->getIOConfig().getRestartFileName( init_config.getRestartRootName(), report_step, false );
+                            const auto& rst_filename = eclipseState_->getIOConfig().getRestartFileName( init_config.getRestartRootName(), report_step, false );
                             Opm::EclIO::ERst rst_file(rst_filename);
                             const auto& rst_state = Opm::RestartIO::RstState::load(rst_file, report_step);
-                            schedule.reset(new Opm::Schedule(*deck, *eclipseState, parseContext, errorGuard, python, &rst_state) );
-                        } else
-                            schedule.reset(new Opm::Schedule(*deck, *eclipseState, parseContext, errorGuard, python));
+                            if (!schedule_)
+                                schedule_.reset(new Opm::Schedule(*deck_, *eclipseState_, parseContext, errorGuard, python, &rst_state) );
+                        }
+                        else {
+                            if (!schedule_)
+                                schedule_.reset(new Opm::Schedule(*deck_, *eclipseState_, parseContext, errorGuard, python));
+                        }
 #else
-                        schedule.reset(new Opm::Schedule(*deck, *eclipseState, parseContext, errorGuard, python));
+                        if (!schedule_)
+                            schedule_.reset(new Opm::Schedule(*deck_, *eclipseState_, parseContext, errorGuard, python));
 #endif /*OPM_FLOW_MAIN */
-                        setupMessageLimiter_(schedule->getMessageLimits(), "STDOUT_LOGGER");
-                        summaryConfig.reset( new Opm::SummaryConfig(*deck, *schedule, eclipseState->getTableManager(), parseContext, errorGuard));
+                        setupMessageLimiter_(schedule_->getMessageLimits(), "STDOUT_LOGGER");
+                        if (!summaryConfig_)
+                            summaryConfig_.reset( new Opm::SummaryConfig(*deck_, *schedule_, eclipseState_->getTableManager(), parseContext, errorGuard));
                     }
 #if HAVE_MPI
                     else {
-                        summaryConfig.reset(new Opm::SummaryConfig);
-                        schedule.reset(new Opm::Schedule(python));
-                        eclipseState.reset(new Opm::ParallelEclipseState);
+                        if (!summaryConfig_)
+                            summaryConfig_.reset(new Opm::SummaryConfig);
+                        if (!schedule_)
+                            schedule_.reset(new Opm::Schedule(python));
+                        if (!eclipseState_)
+                            eclipseState_.reset(new Opm::ParallelEclipseState);
                     }
-                    Opm::eclStateBroadcast(*eclipseState, *schedule, *summaryConfig);
+                    Opm::eclStateBroadcast(*eclipseState_, *schedule_, *summaryConfig_);
 #endif
 
-                    Opm::checkConsistentArrayDimensions(*eclipseState, *schedule, parseContext, errorGuard);
+                    Opm::checkConsistentArrayDimensions(*eclipseState_, *schedule_, parseContext, errorGuard);
 
                     if (errorGuard) {
                         errorGuard.dump();
@@ -482,7 +501,7 @@ namespace Opm
                 setupTime_ = externalSetupTimer.elapsed();
                 outputFiles_ = (outputMode != FileOutputMode::OUTPUT_NONE);
 #ifdef OPM_FLOW_MAIN
-                const auto& phases = eclipseState->runspec().phases();
+                const auto& phases = eclipseState_->runspec().phases();
                 // run the actual simulator
                 //
                 // TODO: make sure that no illegal combinations like thermal and twophase are
@@ -495,13 +514,13 @@ namespace Opm
                     // oil-gas
                     if (phases.active( Opm::Phase::GAS ))
                     {
-                        Opm::flowEbosGasOilSetDeck(setupTime_, deck.get(), *eclipseState, *schedule, *summaryConfig);
+                        Opm::flowEbosGasOilSetDeck(setupTime_, deck_.get(), *eclipseState_, *schedule_, *summaryConfig_);
                         return Opm::flowEbosGasOilMain(argc, argv, outputCout_, outputFiles_);
                     }
                     // oil-water
                     else if ( phases.active( Opm::Phase::WATER ) )
                     {
-                        Opm::flowEbosOilWaterSetDeck(setupTime_, deck.get(), *eclipseState, *schedule, *summaryConfig);
+                        Opm::flowEbosOilWaterSetDeck(setupTime_, deck_.get(), *eclipseState_, *schedule_, *summaryConfig_);
                         return Opm::flowEbosOilWaterMain(argc, argv, outputCout_, outputFiles_);
                     }
                     else {
@@ -529,37 +548,37 @@ namespace Opm
                     }
 
                     if ( phases.size() == 3 ) { // oil water polymer case
-                        Opm::flowEbosOilWaterPolymerSetDeck(setupTime_, deck.get(), *eclipseState, *schedule, *summaryConfig);
+                        Opm::flowEbosOilWaterPolymerSetDeck(setupTime_, deck_.get(), *eclipseState_, *schedule_, *summaryConfig_);
                         return Opm::flowEbosOilWaterPolymerMain(argc, argv, outputCout_, outputFiles_);
                     } else {
-                        Opm::flowEbosPolymerSetDeck(setupTime_, deck.get(), *eclipseState, *schedule, *summaryConfig);
+                        Opm::flowEbosPolymerSetDeck(setupTime_, deck_.get(), *eclipseState_, *schedule_, *summaryConfig_);
                         return Opm::flowEbosPolymerMain(argc, argv, outputCout_, outputFiles_);
                     }
                 }
                 // Foam case
                 else if ( phases.active( Opm::Phase::FOAM ) ) {
-                    Opm::flowEbosFoamSetDeck(setupTime_, deck.get(), *eclipseState, *schedule, *summaryConfig);
+                    Opm::flowEbosFoamSetDeck(setupTime_, deck_.get(), *eclipseState_, *schedule_, *summaryConfig_);
                     return Opm::flowEbosFoamMain(argc, argv, outputCout_, outputFiles_);
                 }
                 // Brine case
                 else if ( phases.active( Opm::Phase::BRINE ) ) {
-                    Opm::flowEbosBrineSetDeck(setupTime_, deck.get(), *eclipseState, *schedule, *summaryConfig);
+                    Opm::flowEbosBrineSetDeck(setupTime_, deck_.get(), *eclipseState_, *schedule_, *summaryConfig_);
                     return Opm::flowEbosBrineMain(argc, argv, outputCout_, outputFiles_);
                 }
                 // Solvent case
                 else if ( phases.active( Opm::Phase::SOLVENT ) ) {
-                    Opm::flowEbosSolventSetDeck(setupTime_, deck.get(), *eclipseState, *schedule, *summaryConfig);
+                    Opm::flowEbosSolventSetDeck(setupTime_, deck_.get(), *eclipseState_, *schedule_, *summaryConfig_);
                     return Opm::flowEbosSolventMain(argc, argv, outputCout_, outputFiles_);
                 }
                 // Energy case
-                else if (eclipseState->getSimulationConfig().isThermal()) {
-                    Opm::flowEbosEnergySetDeck(setupTime_, deck.get(), *eclipseState, *schedule, *summaryConfig);
+                else if (eclipseState_->getSimulationConfig().isThermal()) {
+                    Opm::flowEbosEnergySetDeck(setupTime_, deck_.get(), *eclipseState_, *schedule_, *summaryConfig_);
                     return Opm::flowEbosEnergyMain(argc, argv, outputCout_, outputFiles_);
                 }
 #endif // FLOW_BLACKOIL_ONLY
                 // Blackoil case
                 else if( phases.size() == 3 ) {
-                    Opm::flowEbosBlackoilSetDeck(setupTime_, deck.get(), *eclipseState, *schedule, *summaryConfig);
+                    Opm::flowEbosBlackoilSetDeck(setupTime_, deck_.get(), *eclipseState_, *schedule_, *summaryConfig_);
                     return Opm::flowEbosBlackoilMain(argc, argv, outputCout_, outputFiles_);
                 }
                 else
@@ -569,7 +588,7 @@ namespace Opm
                     return EXIT_FAILURE;
                 }
 #else
-            Opm::flowEbosSetDeck<TypeTag>(deck.get(), *eclipseState, *schedule, *summaryConfig);
+            Opm::flowEbosSetDeck<TypeTag>(deck_.get(), *eclipseState_, *schedule_, *summaryConfig_);
             return Opm::flowEbosMain<TypeTag>(argc, argv, outputCout_, outputFiles_);
 #endif /* OPM_FLOW_MAIN */
             }
