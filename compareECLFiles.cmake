@@ -399,6 +399,15 @@ add_test_compareECLFiles(CASENAME udq_wconprod
                          REL_TOL ${rel_tol}
                          DIR udq_actionx)
 
+if (OPM_ENABLE_EMBEDDED_PYTHON)
+  add_test_compareECLFiles(CASENAME udq_pyaction
+                           FILENAME PYACTION_WCONPROD
+                           SIMULATOR flow
+                           ABS_TOL ${abs_tol}
+                           REL_TOL ${rel_tol}
+                           DIR udq_actionx)
+endif()
+
 add_test_compareECLFiles(CASENAME multxyz_model2
 			  FILENAME 2_MULTXYZ_MODEL2
 			  SIMULATOR flow
