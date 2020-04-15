@@ -19,8 +19,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "config.h"
-#include "flow/flow_tag.hpp"
 
+#include <opm/simulators/flow/Main.hpp>
 #include  <opm/simulators/linalg/ISTLSolverEbosFlexible.hpp>
 
 BEGIN_PROPERTIES
@@ -91,6 +91,7 @@ namespace Opm {
 
 int main(int argc, char** argv)
 {
-    typedef TTAG(EclFlowProblemSimple) TypeTag;
-    return mainFlow<TypeTag>(argc, argv);
+    using TypeTag = TTAG(EclFlowProblemSimple);
+    auto mainObject = Opm::Main<TypeTag>(argc, argv);
+    return mainObject.run();
 }
