@@ -38,11 +38,15 @@
 #endif
 
 #include <array>
+#include <cmath>
+#include <cstdlib>
+#include <exception>
 #include <iostream>
 #include <limits>
 #include <memory>
 #include <numeric>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 #include <string.h>
@@ -164,57 +168,75 @@ static Opm::EquilRecord mkEquilRecord( double datd, double datp,
     return Opm::EquilRecord( datd, datp, zwoc, pcow_woc, zgoc, pcgo_goc, true, true, 0);
 }
 
-void test_PhasePressure();
+template <typename Simulator>
+double centerDepth(const Simulator& sim, const std::size_t cell)
+{
+    return Opm::UgGridHelpers::cellCenterDepth(sim.vanguard().grid(), cell);
+}
+
+namespace {
 void test_PhasePressure()
 {
-    typedef std::vector<double> PVal;
-    typedef std::vector<PVal> PPress;
+    const auto record = mkEquilRecord( 0, 1e5, 5, 0, 0, 0 );
 
-    auto record = mkEquilRecord( 0, 1e5, 5, 0, 0, 0 );
+    using TypeTag     = TTAG(TestEquilTypeTag);
+    using FluidSystem = GET_PROP_TYPE(TypeTag, FluidSystem);
 
-    typedef TTAG(TestEquilTypeTag) TypeTag;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     auto simulator = initSimulator<TypeTag>("equil_base.DATA");
     initDefaultFluidSystem<TypeTag>();
 
-    Opm::EQUIL::EquilReg
-        region(record,
+    const auto region = Opm::EQUIL::EquilReg {
+        record,
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
-        0);
+        0
+    };
 
-    std::vector<int> cells(simulator->vanguard().grid().size(0));
-    std::iota(cells.begin(), cells.end(), 0);
+    auto numCells = 0;
+    auto vspan = std::array<double, 2>{};
+    {
+        auto cells = std::vector<int>(simulator->vanguard().grid().size(0));
+        std::iota(cells.begin(), cells.end(), 0);
 
-    const double grav   = 10;
-    const PPress ppress = Opm::EQUIL::phasePressures<FluidSystem>(simulator->vanguard().grid(), region, cells, grav);
+        Opm::EQUIL::Details::verticalExtent(simulator->vanguard().grid(),
+                                            cells, numCells, vspan);
+    }
 
-    const int first = 0, last = simulator->vanguard().grid().size(0) - 1;
-    const double reltol = 1.0e-8;
-    CHECK_CLOSE(ppress[FluidSystem::waterPhaseIdx][first] ,  90e3   , reltol);
-    CHECK_CLOSE(ppress[FluidSystem::waterPhaseIdx][last ] , 180e3   , reltol);
-    CHECK_CLOSE(ppress[FluidSystem::oilPhaseIdx][first] , 103.5e3 , reltol);
-    CHECK_CLOSE(ppress[FluidSystem::oilPhaseIdx][last ] , 166.5e3 , reltol);
+    const auto grav = 10.0;
+    auto ptable = Opm::EQUIL::Details::PressureTable<
+        FluidSystem, Opm::EQUIL::EquilReg
+    >{ grav };
+
+    ptable.equilibrate(region, vspan);
+
+    const auto reltol = 1.0e-8;
+    const auto first  = centerDepth(*simulator, 0);
+    const auto last   = centerDepth(*simulator, numCells - 1);
+
+    CHECK_CLOSE(ptable.water(first),  90e3  , reltol);
+    CHECK_CLOSE(ptable.water(last) , 180e3  , reltol);
+    CHECK_CLOSE(ptable.oil  (first), 103.5e3, reltol);
+    CHECK_CLOSE(ptable.oil  (last) , 166.5e3, reltol);
 }
 
-void test_CellSubset();
 void test_CellSubset()
 {
-    typedef std::vector<double> PVal;
-    typedef std::vector<PVal> PPress;
+    using PVal        = std::vector<double>;
+    using PPress      = std::vector<PVal>;
+    using TypeTag     = TTAG(TestEquilTypeTag);
+    using FluidSystem = GET_PROP_TYPE(TypeTag, FluidSystem);
 
-    typedef TTAG(TestEquilTypeTag) TypeTag;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     auto simulator = initSimulator<TypeTag>("equil_base.DATA");
     const auto& eclipseState = simulator->vanguard().eclState();
+
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
     initDefaultFluidSystem<TypeTag>();
 
-    Opm::EquilRecord record[] = { mkEquilRecord( 0, 1e5, 2.5, -0.075e5, 0, 0 ),
+    const Opm::EquilRecord record[] = { mkEquilRecord( 0, 1e5, 2.5, -0.075e5, 0, 0 ),
                                   mkEquilRecord( 5, 1.35e5, 7.5, -0.225e5, 5, 0 ) };
 
-    Opm::EQUIL::EquilReg region[] =
+    const Opm::EQUIL::EquilReg region[] =
     {
         Opm::EQUIL::EquilReg(record[0],
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
@@ -257,25 +279,33 @@ void test_CellSubset()
         cells[ix].push_back(c);
     }
 
-    PPress ppress(2, PVal(simulator->vanguard().grid().size(0), 0));
-    for (std::vector< std::vector<int> >::const_iterator
-             r = cells.begin(), e = cells.end();
-         r != e; ++r)
+    auto numCells = 0;
+    auto vspan = std::array<double, 2>{};
     {
-        const int    rno  = int(r - cells.begin());
-        const double grav = 10;
-        const PPress p    =
-            Opm::EQUIL::phasePressures<FluidSystem>(simulator->vanguard().grid(), region[rno], *r, grav);
+        auto vspancells = std::vector<int>(simulator->vanguard().grid().size(0));
+        std::iota(vspancells.begin(), vspancells.end(), 0);
+
+        Opm::EQUIL::Details::verticalExtent(simulator->vanguard().grid(),
+                                            vspancells, numCells, vspan);
+    }
+
+    const auto grav = 10.0;
+    auto ptable = Opm::EQUIL::Details::PressureTable<
+        FluidSystem, Opm::EQUIL::EquilReg
+    >{ grav };
+
+    auto ppress = PPress(2, PVal(numCells, 0.0));
+    for (auto r = cells.begin(), e = cells.end(); r != e; ++r) {
+        const int rno = int(r - cells.begin());
+
+        ptable.equilibrate(region[rno], vspan);
 
         PVal::size_type i = 0;
-        for (std::vector<int>::const_iterator
-                 c = r->begin(), ce = r->end();
-             c != ce; ++c, ++i)
-        {
-            assert (i < p[0].size());
+        for (auto c = r->begin(), ce = r->end(); c != ce; ++c, ++i) {
+            const auto depth = centerDepth(*simulator, *c);
 
-            ppress[0][*c] = p[0][i];
-            ppress[1][*c] = p[1][i];
+            ppress[0][*c] = ptable.water(depth);
+            ppress[1][*c] = ptable.oil  (depth);
         }
     }
 
@@ -287,21 +317,22 @@ void test_CellSubset()
     CHECK_CLOSE(ppress[FluidSystem::oilPhaseIdx][last ] , 166.5e3 , reltol);
 }
 
-void test_RegMapping();
 void test_RegMapping()
 {
-    typedef std::vector<double> PVal;
-    typedef std::vector<PVal> PPress;
+    const Opm::EquilRecord record[] = {
+        mkEquilRecord( 0, 1e5, 2.5, -0.075e5, 0, 0 ),
+        mkEquilRecord( 5, 1.35e5, 7.5, -0.225e5, 5, 0 ),
+    };
 
-    Opm::EquilRecord record[] = { mkEquilRecord( 0, 1e5, 2.5, -0.075e5, 0, 0 ),
-                                  mkEquilRecord( 5, 1.35e5, 7.5, -0.225e5, 5, 0 ) };
+    using PVal        = std::vector<double>;
+    using PPress      = std::vector<PVal>;
+    using TypeTag     = TTAG(TestEquilTypeTag);
+    using FluidSystem = GET_PROP_TYPE(TypeTag, FluidSystem);
 
-    typedef TTAG(TestEquilTypeTag) TypeTag;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     auto simulator = initSimulator<TypeTag>("equil_base.DATA");
     initDefaultFluidSystem<TypeTag>();
 
-    Opm::EQUIL::EquilReg region[] =
+    const Opm::EQUIL::EquilReg region[] =
     {
         Opm::EQUIL::EquilReg(record[0],
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
@@ -324,6 +355,21 @@ void test_RegMapping()
         0)
         };
 
+    auto numCells = 0;
+    auto vspan = std::array<double, 2>{};
+    {
+        auto cells = std::vector<int>(simulator->vanguard().grid().size(0));
+        std::iota(cells.begin(), cells.end(), 0);
+
+        Opm::EQUIL::Details::verticalExtent(simulator->vanguard().grid(),
+                                            cells, numCells, vspan);
+    }
+
+    const auto grav = 10.0;
+    auto ptable = Opm::EQUIL::Details::PressureTable<
+        FluidSystem, Opm::EQUIL::EquilReg
+    >{ grav };
+
     std::vector<int> eqlnum(simulator->vanguard().grid().size(0));
     // [ 0 1; 2 3]
     {
@@ -345,23 +391,18 @@ void test_RegMapping()
         }
     }
 
-    Opm::RegionMapping<> eqlmap(eqlnum);
+    const Opm::RegionMapping<> eqlmap(eqlnum);
 
-    PPress ppress(2, PVal(simulator->vanguard().grid().size(0), 0));
+    auto ppress = PPress(2, PVal(numCells, 0.0));
     for (const auto& r : eqlmap.activeRegions()) {
-        const auto& rng = eqlmap.cells(r);
-
-        const int    rno  = r;
-        const double grav = 10;
-        const PPress p    =
-            Opm::EQUIL::phasePressures<FluidSystem>(simulator->vanguard().grid(), region[rno], rng, grav);
+        ptable.equilibrate(region[r], vspan);
 
         PVal::size_type i = 0;
-        for (const auto& c : rng) {
-            assert (i < p[0].size());
+        for (const auto& c : eqlmap.cells(r)) {
+            const auto depth = centerDepth(*simulator, c);
 
-            ppress[0][c] = p[0][i];
-            ppress[1][c] = p[1][i];
+            ppress[0][c] = ptable.water(depth);
+            ppress[1][c] = ptable.oil  (depth);
 
             ++i;
         }
@@ -375,7 +416,6 @@ void test_RegMapping()
     CHECK_CLOSE(ppress[FluidSystem::oilPhaseIdx][last ] , 166.5e3 , reltol);
 }
 
-void test_DeckAllDead();
 void test_DeckAllDead()
 {
     typedef TTAG(TestEquilTypeTag) TypeTag;
@@ -401,7 +441,6 @@ void test_DeckAllDead()
     CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last] , 1.504526940e7   , reltol);
 }
 
-void test_CapillaryInversion();
 void test_CapillaryInversion()
 {
     // Test setup.
@@ -453,7 +492,6 @@ void test_CapillaryInversion()
     }
 }
 
-void test_DeckWithCapillary();
 void test_DeckWithCapillary()
 {
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
@@ -475,9 +513,9 @@ void test_DeckWithCapillary()
     // solver, and it is unclear if we should check it against
     // the true answer or something else.
     const double reltol = 1.0e-6;
-    CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first] , 1.469769063e7   , reltol);
-    CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last ] , 15452880.328284413   , reltol);
-    CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last] , 15462880.328284413   , reltol);
+    CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.469769063e7     , reltol);
+    CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last ], 15452880.328284413, reltol);
+    CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx]  [last ], 15462880.328284413, reltol);
 
     const auto& sats = comp.saturation();
     std::vector<double> s[3];
@@ -492,7 +530,6 @@ void test_DeckWithCapillary()
     }
 }
 
-void test_DeckWithCapillaryOverlap();
 void test_DeckWithCapillaryOverlap()
 {
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
@@ -551,7 +588,6 @@ void test_DeckWithCapillaryOverlap()
     }
 }
 
-void test_DeckWithLiveOil();
 void test_DeckWithLiveOil()
 {
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
@@ -628,7 +664,6 @@ void test_DeckWithLiveOil()
     }
 }
 
-void test_DeckWithLiveGas();
 void test_DeckWithLiveGas()
 {
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
@@ -707,7 +742,6 @@ void test_DeckWithLiveGas()
     }
 }
 
-void test_DeckWithRSVDAndRVVD();
 void test_DeckWithRSVDAndRVVD()
 {
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
@@ -806,8 +840,6 @@ void test_DeckWithRSVDAndRVVD()
     }
 }
 
-
-void test_DeckWithPBVDAndPDVD();
 void test_DeckWithPBVDAndPDVD()
 {
     typedef typename TTAG(TestEquilTypeTag) TypeTag;
@@ -898,7 +930,6 @@ void test_DeckWithPBVDAndPDVD()
     }
 }
 
-void test_DeckWithSwatinit();
 void test_DeckWithSwatinit()
 {
 #if 0
@@ -1044,9 +1075,10 @@ void test_DeckWithSwatinit()
     }
 #endif
 }
+}
 
 int main(int argc, char** argv)
-{
+try {
 #if HAVE_DUNE_FEM
     Dune::Fem::MPIManager::initialize(argc, argv);
 #else
@@ -1056,22 +1088,20 @@ int main(int argc, char** argv)
     typedef TTAG(TestEquilTypeTag) TypeTag;
     Opm::registerAllParameters_<TypeTag>();
 
-    /*
     test_PhasePressure();
     test_CellSubset();
     test_RegMapping();
     test_DeckAllDead();
     test_CapillaryInversion();
-    */
     test_DeckWithCapillary();
-    /*
     test_DeckWithCapillaryOverlap();
     test_DeckWithLiveOil();
     test_DeckWithLiveGas();
     test_DeckWithRSVDAndRVVD();
     test_DeckWithPBVDAndPDVD();
-    */
-    //test_DeckWithSwatinit();
-
-    return 0;
+    test_DeckWithSwatinit();
+}
+catch (const std::exception& e) {
+    std::cerr << "Unexpected Termination: " << e.what() << '\n';
+    return EXIT_FAILURE;
 }
