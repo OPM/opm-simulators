@@ -146,7 +146,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/cusparseSolverBackend.hpp
   opm/simulators/linalg/bda/WellContributions.hpp
   opm/simulators/linalg/BlackoilAmg.hpp
-  opm/simulators/linalg/BlackoilAmgCpr.hpp
   opm/simulators/linalg/amgcpr.hh
   opm/simulators/linalg/twolevelmethodcpr.hh
   opm/simulators/linalg/CPRPreconditioner.hpp
@@ -155,7 +154,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/FlowLinearSolverParameters.hpp
   opm/simulators/linalg/GraphColoring.hpp
   opm/simulators/linalg/ISTLSolverEbos.hpp
-  opm/simulators/linalg/ISTLSolverEbosCpr.hpp
   opm/simulators/linalg/ISTLSolverEbosFlexible.hpp
   opm/simulators/linalg/MatrixBlock.hpp
   opm/simulators/linalg/OwningBlockPreconditioner.hpp
