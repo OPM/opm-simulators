@@ -173,7 +173,8 @@ Opm::data::Segment getSegment()
     Opm::data::Segment seg1;
     seg1.rates = getRates();
     seg1.segNumber = 1;
-    seg1.pressure = 2.0;
+    const auto pres_idx = Opm::data::SegmentPressures::Value::Pressure;
+    seg1.pressures[pres_idx] = 2.0;
     return seg1;
 }
 

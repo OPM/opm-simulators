@@ -1122,11 +1122,15 @@ namespace Opm
             const auto* rate =
                 &this->segRates()[seg_dof * this->numPhases()];
 
-            seg_res.pressure = this->segPress()[seg_dof];
-            seg_res.pressure_drop = this->segPressDrop()[seg_dof];
-            seg_res.pressure_drop_hydrostatic = this->segPressDropHydroStatic()[seg_dof];
-            seg_res.pressure_drop_friction = this->segPressDropFriction()[seg_dof];
-            seg_res.pressure_drop_acceleration = this->segPressDropAcceleration()[seg_dof];
+            {
+                using Value =::Opm::data::SegmentPressures::Value;
+                auto& segpress = seg_res.pressures;
+                segpress[Value::Pressure] = this->segPress()[seg_dof];
+                segpress[Value::PDrop] = this->segPressDrop()[seg_dof];
+                segpress[Value::PDropHydrostatic] = this->segPressDropHydroStatic()[seg_dof];
+                segpress[Value::PDropFriction] = this->segPressDropFriction()[seg_dof];
+                segpress[Value::PDropAccel] = this->segPressDropAcceleration()[seg_dof];
+            }
 
             if (pu.phase_used[Water]) {
                 seg_res.rates.set(data::Rates::opt::wat,
