@@ -385,6 +385,13 @@ add_test_compareECLFiles(CASENAME multregt_model2
                          REL_TOL ${rel_tol}
                          DIR model2)
 
+add_test_compareECLFiles(CASENAME udq_actionx
+                         FILENAME UDQ_ACTIONX
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR udq_actionx)
+
 add_test_compareECLFiles(CASENAME udq_wconprod
                          FILENAME UDQ_WCONPROD
                          SIMULATOR flow
