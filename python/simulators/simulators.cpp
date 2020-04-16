@@ -3,19 +3,10 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
-#define OPM_FLOW_MAIN
 #include <opm/simulators/flow/Main.hpp>
-#include <opm/models/utils/propertysystem.hh>
-#include <opm/models/utils/parametersystem.hh>
 #include <pybind11/pybind11.h>
 #include <pybind11/embed.h>
 #include <iostream>
-
-BEGIN_PROPERTIES
-
-NEW_TYPE_TAG(EclFlowProblemMain);
-
-END_PROPERTIES
 
 namespace py = pybind11;
 
@@ -37,10 +28,9 @@ public:
     {
         int argc = 1;
         char *argv[1] = {"flow"};
-        using TypeTag = TTAG(EclFlowProblemMain);
-        auto mainObject = Opm::Main<TypeTag>(
+        auto mainObject = Opm::Main(
             argc, argv, deck_, eclipseState_, schedule_, summaryConfig_);
-        return mainObject.run();
+        return mainObject.runDynamic();
     }
     
     void setDeck( const Opm::Deck& deck )
