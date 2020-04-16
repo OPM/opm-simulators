@@ -42,6 +42,7 @@ namespace Opm
           total_newton_iterations( 0 ),
           total_linear_iterations( 0 ),
           converged(false),
+          exit_status(EXIT_SUCCESS),
           verbose_(verbose)
     {
     }

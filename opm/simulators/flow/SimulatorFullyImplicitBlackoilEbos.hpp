@@ -164,6 +164,14 @@ public:
 
         // Main simulation loop.
         while (!timer.done()) {
+            if (schedule().exitStatus().has_value()) {
+                if (terminalOutput_) {
+                    OpmLog::info("Stopping simulation since EXIT was triggered by an action keyword.");
+                }
+                report.exit_status = schedule().exitStatus().value();
+                break;
+            }
+
             // Report timestep.
             if (terminalOutput_) {
                 std::ostringstream ss;
