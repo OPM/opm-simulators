@@ -24,7 +24,6 @@
 
 #include <flow/flow_ebos_blackoil.hpp>
 
-#ifdef OPM_FLOW_MAIN
 # ifndef FLOW_BLACKOIL_ONLY
 #  include <flow/flow_ebos_gasoil.hpp>
 #  include <flow/flow_ebos_oilwater.hpp>
@@ -36,41 +35,23 @@
 #  include <flow/flow_ebos_oilwater_polymer.hpp>
 #  include <flow/flow_ebos_oilwater_polymer_injectivity.hpp>
 # endif
-# include <opm/simulators/utils/moduleVersion.hpp>
-# include <opm/io/eclipse/rst/state.hpp>
-# include <opm/io/eclipse/ERst.hpp>
-# include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
-# include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
-#else  /* OPM_FLOW_MAIN */
-# include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
-# include <opm/common/utility/parameters/ParameterGroup.hpp>
-# include <opm/material/common/ResetLocale.hpp>
-# include <opm/parser/eclipse/Python/Python.hpp>
-# include <opm/parser/eclipse/Parser/ParseContext.hpp>
-# include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
-# include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQAssign.hpp>
-//# include <opm/material/fluidsystems/BlackOilFluidSystemSimple.hpp>
-//# include <opm/material/fluidsystems/BlackOilFluidSystemSimple.hpp>
-# include <opm/models/blackoil/blackoilintensivequantities.hh>
-# include <opm/material/fluidstates/BlackOilFluidState.hpp>
-//# include <opm/material/fluidstates/BlackOilFluidStateSimple.hpp>
-#endif
-
-#include <opm/simulators/flow/FlowMainEbos.hpp>
-#include <opm/models/utils/propertysystem.hh>
-#include <opm/models/utils/parametersystem.hh>
-#include <opm/simulators/flow/MissingFeatures.hpp>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/OpmLog/EclipsePRTLog.hpp>
 #include <opm/common/OpmLog/LogUtil.hpp>
-
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/ArrayDimChecker.hpp>
+
+#include <opm/models/utils/propertysystem.hh>
+#include <opm/models/utils/parametersystem.hh>
+
+#include <opm/simulators/flow/FlowMainEbos.hpp>
+#include <opm/simulators/flow/MissingFeatures.hpp>
+
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
@@ -93,14 +74,11 @@ NEW_TYPE_TAG(FlowEarlyBird, INHERITS_FROM(EclFlowProblem));
 
 END_PROPERTIES
 
-//#ifndef OPM_FLOW_MAIN  // NOTE: since the methods in this #ifndef block are
-//                          are template functions they will not be included
-//                          in the code if not used, so #ifndef is commented out
 namespace Opm {
   template <class TypeTag>
   void flowEbosSetDeck(Deck *deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
   {
-    typedef typename GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
+    using Vanguard = typename GET_PROP_TYPE(TypeTag, Vanguard);
     Vanguard::setExternalDeck(deck);
     Vanguard::setExternalEclState(&eclState);
     Vanguard::setExternalSchedule(&schedule);
@@ -123,10 +101,8 @@ namespace Opm {
     Opm::FlowMainEbos<TypeTag> mainfunc;
     return mainfunc.execute(argc, argv, outputCout, outputFiles);
   }
-
 }
 
-//#endif  /* #ifndef OPM_FLOW_MAIN */
 
 namespace Opm
 {
@@ -137,7 +113,6 @@ namespace Opm
     //   want to run the whole simulation by calling run(), it is also
     //   useful to just run one report step at a time. According to these different
     //   usage scenarios, we refactored the original run() in flow.cpp into this class.
-    template <class TypeTag>
     class Main
     {
     private:
@@ -151,28 +126,45 @@ namespace Opm
         };
     public:
         Main(int argc, char** argv) : argc_(argc), argv_(argv)  {  }
-        Main(int argc, char** argv,
-            std::shared_ptr<Opm::Deck> deck,
-            std::shared_ptr<Opm::EclipseState> eclipseState,
-            std::shared_ptr<Opm::Schedule> schedule,
-            std::shared_ptr<Opm::SummaryConfig> summaryConfig) :
-            argc_(argc), argv_(argv),
-            deck_(deck), eclipseState_(eclipseState), schedule_(schedule) { }
+        Main(int argc,
+             char** argv,
+             std::shared_ptr<Opm::Deck> deck,
+             std::shared_ptr<Opm::EclipseState> eclipseState,
+             std::shared_ptr<Opm::Schedule> schedule,
+             std::shared_ptr<Opm::SummaryConfig> summaryConfig)
+            : argc_(argc)
+            , argv_(argv)
+            , deck_(deck)
+            , eclipseState_(eclipseState)
+            , schedule_(schedule)
+            , summaryConfig_(summaryConfig)
+        {
+        }
 
-        int run() {
+        int runDynamic()
+        {
             int exitCode = EXIT_SUCCESS;
             if (initialize_(exitCode)) {
-                return dispatch_();
+                return dispatchDynamic_();
+            } else {
+                return exitCode;
             }
-            else {
+        }
+
+        template <class TypeTag>
+        int runStatic()
+        {
+            int exitCode = EXIT_SUCCESS;
+            if (initialize_(exitCode)) {
+                return dispatchStatic_<TypeTag>();
+            } else {
                 return exitCode;
             }
         }
 
     private:
-        int dispatch_()
+        int dispatchDynamic_()
         {
-#ifdef OPM_FLOW_MAIN
             const auto& phases = eclipseState_->runspec().phases();
             // run the actual simulator
             //
@@ -255,13 +247,16 @@ namespace Opm
                     std::cerr << "No suitable configuration found, valid are Twophase, polymer, foam, brine, solvent, energy, blackoil." << std::endl;
                 return EXIT_FAILURE;
             }
-#else
-            Opm::flowEbosSetDeck<TypeTag>(deck_.get(), *eclipseState_, *schedule_, *summaryConfig_);
-            return Opm::flowEbosMain<TypeTag>(argc_, argv_, outputCout_, outputFiles_);
-#endif /* OPM_FLOW_MAIN */
         }
 
-        bool initialize_(int &exitCode)
+        template <class TypeTag>
+        int dispatchStatic_()
+        {
+            Opm::flowEbosSetDeck<TypeTag>(deck_.get(), *eclipseState_, *schedule_, *summaryConfig_);
+            return Opm::flowEbosMain<TypeTag>(argc_, argv_, outputCout_, outputFiles_);
+        }
+
+        bool initialize_(int& exitCode)
         {
             Dune::Timer externalSetupTimer;
             externalSetupTimer.start();
@@ -326,13 +321,9 @@ namespace Opm
                 deckFilename = PreVanguard::canonicalDeckPath(deckFilename).string();
             }
             catch (const std::exception& e) {
-                if ( mpiRank == 0 )
-#ifdef OPM_FLOW_MAIN
+                if ( mpiRank == 0 ) {
                     std::cerr << "Exception received: " << e.what() << ". Try '--help' for a usage description.\n";
-#else
-                    Opm::Parameters::printUsage<PreTypeTag>(PreProblem::helpPreamble(
-                            argc_, const_cast<const char**>(argv_)), e.what());
-#endif
+                }
 #if HAVE_MPI
                 MPI_Finalize();
 #endif
@@ -383,7 +374,6 @@ namespace Opm
                             eclipseState_.reset(new Opm::EclipseState(*deck_));
 #endif
                         }
-#ifdef OPM_FLOW_MAIN
                         /*
                           For the time being initializing wells and groups from the
                           restart file is not possible, but work is underways and it is
@@ -403,10 +393,6 @@ namespace Opm
                             if (!schedule_)
                                 schedule_.reset(new Opm::Schedule(*deck_, *eclipseState_, parseContext, errorGuard, python));
                         }
-#else
-                        if (!schedule_)
-                            schedule_.reset(new Opm::Schedule(*deck_, *eclipseState_, parseContext, errorGuard, python));
-#endif /*OPM_FLOW_MAIN */
                         setupMessageLimiter_(schedule_->getMessageLimits(), "STDOUT_LOGGER");
                         if (!summaryConfig_)
                             summaryConfig_.reset( new Opm::SummaryConfig(*deck_, *schedule_, eclipseState_->getTableManager(), parseContext, errorGuard));
@@ -621,7 +607,7 @@ namespace Opm
         std::shared_ptr<Opm::Schedule> schedule_;
         std::shared_ptr<Opm::SummaryConfig> summaryConfig_;
     };
-    
+
 } // namespace Opm
 
 #endif // OPM_MAIN_HEADER_INCLUDED
