@@ -116,6 +116,7 @@ namespace Opm
     class Main
     {
     private:
+        using FlowMainEbosType = Opm::FlowMainEbos<TTAG(EclFlowProblem)>;
         enum class FileOutputMode {
             //! \brief No output to files.
             OUTPUT_NONE = 0,
@@ -159,6 +160,26 @@ namespace Opm
                 return dispatchStatic_<TypeTag>();
             } else {
                 return exitCode;
+            }
+        }
+
+        std::unique_ptr<FlowMainEbosType> initFlowEbosBlackoil(int& exitCode)
+        {
+            exitCode = EXIT_SUCCESS;
+            if (initialize_(exitCode)) {
+                // TODO: check that this deck really represents a blackoil
+                // case. E.g. check that number of phases == 3
+                Opm::flowEbosBlackoilSetDeck(
+                    setupTime_,
+                    deck_.get(),
+                    *eclipseState_,
+                    *schedule_,
+                    *summaryConfig_);
+                return Opm::flowEbosBlackoilMainInit(
+                    argc_, argv_, outputCout_, outputFiles_);
+            } else {
+                exitCode = EXIT_FAILURE;
+                return std::unique_ptr<FlowMainEbosType>(); // nullptr
             }
         }
 
