@@ -89,6 +89,6 @@ END_PROPERTIES
 int main(int argc, char** argv)
 {
     using TypeTag = TTAG(EclFlowProblemSimple);
-    auto mainObject = Opm::Main<TypeTag>(argc, argv);
-    return mainObject.run();
+    auto mainObject = Opm::Main(argc, argv);
+    return mainObject.runStatic<TypeTag>();
 }

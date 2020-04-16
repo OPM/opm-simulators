@@ -18,23 +18,14 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+
 #include "config.h"
-#include <opm/models/utils/propertysystem.hh>
-#include <opm/models/utils/parametersystem.hh>
 
-BEGIN_PROPERTIES
-
-NEW_TYPE_TAG(EclFlowProblemMain);
-
-END_PROPERTIES
-
-#define OPM_FLOW_MAIN
 #include <opm/simulators/flow/Main.hpp>
 
 int main(int argc, char** argv)
 {
-    using TypeTag = TTAG(EclFlowProblemMain);
-    auto mainObject = Opm::Main<TypeTag>(argc, argv);
-    return mainObject.run();
+    auto mainObject = Opm::Main(argc, argv);
+    return mainObject.runDynamic();
 }
 
