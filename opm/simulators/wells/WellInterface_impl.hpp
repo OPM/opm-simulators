@@ -2075,7 +2075,7 @@ namespace Opm
 
         if (currentGroupControl == Group::InjectionCMode::FLD ||
             currentGroupControl == Group::InjectionCMode::NONE) {
-            if (!group.isAvailableForGroupControl()) {
+            if (!group.injectionGroupControlAvailable(injectionPhase)) {
                 // We cannot go any further up the hierarchy. This could
                 // be the FIELD group, or any group for which this has
                 // been set in GCONINJE or GCONPROD. If we are here
@@ -2214,7 +2214,7 @@ namespace Opm
         const Group::ProductionCMode& currentGroupControl = well_state.currentProductionGroupControl(group.name());
         if (currentGroupControl == Group::ProductionCMode::FLD ||
             currentGroupControl == Group::ProductionCMode::NONE) {
-            if (!group.isAvailableForGroupControl()) {
+            if (!group.productionGroupControlAvailable()) {
                 // We cannot go any further up the hierarchy. This could
                 // be the FIELD group, or any group for which this has
                 // been set in GCONINJE or GCONPROD. If we are here
