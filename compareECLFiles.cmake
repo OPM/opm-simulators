@@ -399,7 +399,7 @@ add_test_compareECLFiles(CASENAME udq_wconprod
                          REL_TOL ${rel_tol}
                          DIR udq_actionx)
 
-if (OPM_ENABLE_EMBEDDED_PYTHON)
+if (opm-common_EMBEDDED_PYTHON)
   add_test_compareECLFiles(CASENAME udq_pyaction
                            FILENAME PYACTION_WCONPROD
                            SIMULATOR flow
