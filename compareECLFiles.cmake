@@ -464,6 +464,48 @@ add_test_compareECLFiles(CASENAME editnnc_model2
 			  REL_TOL ${rel_tol}
 			  DIR model2)
 
+add_test_compareECLFiles(CASENAME 9_1a_grpctl_stw_model2
+                         FILENAME 9_1A_DEPL_MAX_RATE_MIN_BHP_STW
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2)
+
+add_test_compareECLFiles(CASENAME 9_1a_grpctl_msw_model2
+                         FILENAME 9_1A_DEPL_MAX_RATE_MIN_BHP_MSW
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2)
+
+add_test_compareECLFiles(CASENAME 9_1b_grpctl_stw_model2
+                         FILENAME 9_1B_DEPL_MAX_RATE_MIN_THP_STW
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2)
+
+add_test_compareECLFiles(CASENAME 9_1b_grpctl_msw_model2
+                         FILENAME 9_1B_DEPL_MAX_RATE_MIN_THP_MSW
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2)
+
+add_test_compareECLFiles(CASENAME 9_2a_grpctl_stw_model2
+                         FILENAME 9_2A_DEPL_GCONPROD_1L_STW
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2)
+
+add_test_compareECLFiles(CASENAME 9_2a_grpctl_msw_model2
+                         FILENAME 9_2A_DEPL_GCONPROD_1L_MSW
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2)
+
 add_test_compareECLFiles(CASENAME wsegsicd
 			  FILENAME TEST_WSEGSICD
 			  SIMULATOR flow
