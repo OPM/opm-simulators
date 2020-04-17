@@ -859,7 +859,7 @@ namespace WellGroupHelpers
             = wellState.currentInjectionGroupControl(injectionPhase, group.name());
         if (currentGroupControl == Group::InjectionCMode::FLD || currentGroupControl == Group::InjectionCMode::NONE) {
             // Return if we are not available for parent group.
-            if (!group.isAvailableForGroupControl()) {
+            if (!group.injectionGroupControlAvailable(injectionPhase)) {
                 return std::make_pair(false, 1.0);
             }
             // Otherwise: check injection share of parent's control.
@@ -1085,7 +1085,7 @@ namespace WellGroupHelpers
 
         if (currentGroupControl == Group::ProductionCMode::FLD || currentGroupControl == Group::ProductionCMode::NONE) {
             // Return if we are not available for parent group.
-            if (!group.isAvailableForGroupControl()) {
+            if (!group.productionGroupControlAvailable()) {
                 return std::make_pair(false, 1);
             }
             // Otherwise: check production share of parent's control.
