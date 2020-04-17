@@ -3,6 +3,7 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+#define FLOW_BLACKOIL_ONLY
 #include <opm/simulators/flow/Main.hpp>
 #include <pybind11/pybind11.h>
 #include <pybind11/embed.h>
