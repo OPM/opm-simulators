@@ -1664,7 +1664,8 @@ namespace Opm {
                     const int segment_index = segment_set.segmentNumberToIndex(segment.first);
 
                     // recovering segment rates and pressure from the restart values
-                    state.segPress()[top_segment_index + segment_index] = segment.second.pressure;
+                    const auto pres_idx = Opm::data::SegmentPressures::Value::Pressure;
+                    state.segPress()[top_segment_index + segment_index] = segment.second.pressures[pres_idx];
 
                     const auto& segment_rates = segment.second.rates;
                     for (int p = 0; p < np; ++p) {

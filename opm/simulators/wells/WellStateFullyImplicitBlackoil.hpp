@@ -279,8 +279,13 @@ namespace Opm
                     top_segment_index_[w] = w;
                     seg_number_[w] = 1; // Top segment is segment #1
                 }
-                segpress_ = bhp();
-                segrates_ = wellRates();
+                seg_press_ = bhp();
+                seg_rates_ = wellRates();
+
+                seg_pressdrop_.assign(nw, 0.);
+                seg_pressdrop_hydorstatic_.assign(nw, 0.);
+                seg_pressdrop_friction_.assign(nw, 0.);
+                seg_pressdrop_acceleration_.assign(nw, 0.);
             }
         }
 
@@ -584,10 +589,10 @@ namespace Opm
 
             top_segment_index_.clear();
             top_segment_index_.reserve(nw);
-            segpress_.clear();
-            segpress_.reserve(nw);
-            segrates_.clear();
-            segrates_.reserve(nw * numPhases());
+            seg_press_.clear();
+            seg_press_.reserve(nw);
+            seg_rates_.clear();
+            seg_rates_.reserve(nw * numPhases());
             seg_number_.clear();
 
             nseg_ = 0;
@@ -601,10 +606,10 @@ namespace Opm
                 if ( !well_ecl.isMultiSegment() ) { // not multi-segment well
                     nseg_ += 1;
                     seg_number_.push_back(1); // Assign single segment (top) as number 1.
-                    segpress_.push_back(bhp()[w]);
+                    seg_press_.push_back(bhp()[w]);
                     const int np = numPhases();
                     for (int p = 0; p < np; ++p) {
-                        segrates_.push_back(wellRates()[np * w + p]);
+                        seg_rates_.push_back(wellRates()[np * w + p]);
                     }
                 } else { // it is a multi-segment well
                     const WellSegments& segment_set = well_ecl.getSegments();
@@ -642,7 +647,7 @@ namespace Opm
                     }
 
 
-                    // for the segrates_, now it becomes a recursive solution procedure.
+                    // for the seg_rates_, now it becomes a recursive solution procedure.
                     {
                         const int np = numPhases();
                         const int start_perf = connpos;
@@ -668,7 +673,7 @@ namespace Opm
                                                                     perfPhaseRates().begin() + np * start_perf_next_well); // the perforation rates for this well
                         std::vector<double> segment_rates;
                         calculateSegmentRates(segment_inlets, segment_perforations, perforation_rates, np, 0 /* top segment */, segment_rates);
-                        std::copy(segment_rates.begin(), segment_rates.end(), std::back_inserter(segrates_));
+                        std::copy(segment_rates.begin(), segment_rates.end(), std::back_inserter(seg_rates_));
                     }
 
                     // for the segment pressure, the segment pressure is the same with the first perforation belongs to the segment
@@ -678,26 +683,32 @@ namespace Opm
                     // improved during the solveWellEq process
                     {
                         // top segment is always the first one, and its pressure is the well bhp
-                        segpress_.push_back(bhp()[w]);
+                        seg_press_.push_back(bhp()[w]);
                         const int top_segment = top_segment_index_[w];
                         const int start_perf = connpos;
                         for (int seg = 1; seg < well_nseg; ++seg) {
                             if ( !segment_perforations[seg].empty() ) {
                                 const int first_perf = segment_perforations[seg][0];
-                                segpress_.push_back(perfPress()[start_perf + first_perf]);
+                                seg_press_.push_back(perfPress()[start_perf + first_perf]);
                             } else {
-                                // segpress_.push_back(bhp); // may not be a good decision
+                                // seg_press_.push_back(bhp); // may not be a good decision
                                 // using the outlet segment pressure // it needs the ordering is correct
                                 const int outlet_seg = segment_set[seg].outletSegment();
-                                segpress_.push_back(segpress_[top_segment + segment_set.segmentNumberToIndex(outlet_seg)]);
+                                seg_press_.push_back(
+                                    seg_press_[top_segment + segment_set.segmentNumberToIndex(outlet_seg)]);
                             }
                         }
                     }
                 }
                 connpos += num_perf_this_well;
             }
-            assert(int(segpress_.size()) == nseg_);
-            assert(int(segrates_.size()) == nseg_ * numPhases() );
+            assert(int(seg_press_.size()) == nseg_);
+            assert(int(seg_rates_.size()) == nseg_ * numPhases() );
+
+            seg_pressdrop_.assign(nseg_, 0.);
+            seg_pressdrop_hydorstatic_.assign(nseg_, 0.);
+            seg_pressdrop_friction_.assign(nseg_, 0.);
+            seg_pressdrop_acceleration_.assign(nseg_, 0.);
 
             if (prev_well_state && !prev_well_state->wellMap().empty()) {
                 // copying MS well related
@@ -723,11 +734,11 @@ namespace Opm
                         }
 
                         for (int i = 0; i < number_of_segment * np; ++i) {
-                            segrates_[new_top_segmnet_index * np + i] = prev_well_state->segRates()[old_top_segment_index * np + i];
+                            seg_rates_[new_top_segmnet_index * np + i] = prev_well_state->segRates()[old_top_segment_index * np + i];
                         }
 
                         for (int i = 0; i < number_of_segment; ++i) {
-                            segpress_[new_top_segmnet_index + i] = prev_well_state->segPress()[old_top_segment_index + i];
+                            seg_press_[new_top_segmnet_index + i] = prev_well_state->segPress()[old_top_segment_index + i];
                         }
                     }
                 }
@@ -810,22 +821,62 @@ namespace Opm
 
         const std::vector<double>& segRates() const
         {
-            return segrates_;
+            return seg_rates_;
         }
 
         std::vector<double>& segRates()
         {
-            return segrates_;
+            return seg_rates_;
         }
 
         const std::vector<double>& segPress() const
         {
-            return segpress_;
+            return seg_press_;
+        }
+
+        std::vector<double>& segPressDrop()
+        {
+            return seg_pressdrop_;
+        }
+
+        const std::vector<double>& segPressDrop() const
+        {
+            return seg_pressdrop_;
+        }
+
+        std::vector<double>& segPressDropFriction()
+        {
+            return seg_pressdrop_friction_;
+        }
+
+        const std::vector<double>& segPressDropFriction() const
+        {
+            return seg_pressdrop_friction_;
+        }
+
+        std::vector<double>& segPressDropHydroStatic()
+        {
+            return seg_pressdrop_hydorstatic_;
+        }
+
+        const std::vector<double>& segPressDropHydroStatic() const
+        {
+            return seg_pressdrop_hydorstatic_;
+        }
+
+        std::vector<double>& segPressDropAcceleration()
+        {
+            return seg_pressdrop_acceleration_;
+        }
+
+        const std::vector<double>& segPressDropAcceleration() const
+        {
+            return seg_pressdrop_acceleration_;
         }
 
         std::vector<double>& segPress()
         {
-            return segpress_;
+            return seg_press_;
         }
 
         int numSegment() const
@@ -1026,8 +1077,17 @@ namespace Opm
 
         // MS well related
         // for StandardWell, the number of segments will be one
-        std::vector<double> segrates_;
-        std::vector<double> segpress_;
+        std::vector<double> seg_rates_;
+        std::vector<double> seg_press_;
+        // The following data are only recorded for output
+        // pressure drop
+        std::vector<double> seg_pressdrop_;
+        // frictional pressure drop
+        std::vector<double> seg_pressdrop_friction_;
+        // hydrostatic pressure drop
+        std::vector<double> seg_pressdrop_hydorstatic_;
+        // accelerational pressure drop
+        std::vector<double> seg_pressdrop_acceleration_;
         // the index of the top segments, which is used to locate the
         // multisegment well related information in WellState
         std::vector<int> top_segment_index_;
@@ -1062,7 +1122,15 @@ namespace Opm
             const auto* rate =
                 &this->segRates()[seg_dof * this->numPhases()];
 
-            seg_res.pressure = this->segPress()[seg_dof];
+            {
+                using Value =::Opm::data::SegmentPressures::Value;
+                auto& segpress = seg_res.pressures;
+                segpress[Value::Pressure] = this->segPress()[seg_dof];
+                segpress[Value::PDrop] = this->segPressDrop()[seg_dof];
+                segpress[Value::PDropHydrostatic] = this->segPressDropHydroStatic()[seg_dof];
+                segpress[Value::PDropFriction] = this->segPressDropFriction()[seg_dof];
+                segpress[Value::PDropAccel] = this->segPressDropAcceleration()[seg_dof];
+            }
 
             if (pu.phase_used[Water]) {
                 seg_res.rates.set(data::Rates::opt::wat,

@@ -261,7 +261,8 @@ BOOST_AUTO_TEST_CASE(Pressure)
         const auto& xseg = xw.segments.at(1);
 
         BOOST_CHECK_EQUAL(xseg.segNumber, 1);
-        BOOST_CHECK_CLOSE(xseg.pressure, prod01_first ? 100.0 : 0.0, 1.0e-10);
+        const auto pres_idx = Opm::data::SegmentPressures::Value::Pressure;
+        BOOST_CHECK_CLOSE(xseg.pressures[pres_idx], prod01_first ? 100.0 : 0.0, 1.0e-10);
     }
 
     {
@@ -276,7 +277,8 @@ BOOST_AUTO_TEST_CASE(Pressure)
             const auto& xseg = xw.segments.at(segID + 1);
 
             BOOST_CHECK_EQUAL(xseg.segNumber, segID + 1);
-            BOOST_CHECK_CLOSE(xseg.pressure, pressTop + 1.0*segID, 1.0e-10);
+            const auto pres_idx = Opm::data::SegmentPressures::Value::Pressure;
+            BOOST_CHECK_CLOSE(xseg.pressures[pres_idx], pressTop + 1.0*segID, 1.0e-10);
         }
     }
 }
