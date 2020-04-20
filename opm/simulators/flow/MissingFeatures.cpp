@@ -122,7 +122,6 @@ namespace MissingFeatures {
             "AQUNUM",
             "AUTOCOAR",
             "AUTOREF",
-            "BDENSITY",
             "BIGMODEL",
             "BGGI",
             "BOGI",
