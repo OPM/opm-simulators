@@ -334,7 +334,8 @@ add_test_compareECLFiles(CASENAME 0a1_grpctl_msw_model2
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR model2)
+                         DIR model2
+                         TEST_ARGS --solver-max-time-step-in-days=3)
 
 add_test_compareECLFiles(CASENAME 0a2_grpctl_stw_model2
                          FILENAME 0A2_GRCTRL_LRAT_ORAT_GGR_BASE_MODEL2_STW
@@ -348,7 +349,8 @@ add_test_compareECLFiles(CASENAME 0a2_grpctl_msw_model2
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR model2)
+                         DIR model2
+                         TEST_ARGS --solver-max-time-step-in-days=3)
 
 add_test_compareECLFiles(CASENAME 0a3_grpctl_stw_model2
                          FILENAME 0A3_GRCTRL_LRAT_LRAT_BASE_MODEL2_STW
@@ -362,7 +364,8 @@ add_test_compareECLFiles(CASENAME 0a3_grpctl_msw_model2
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR model2)
+                         DIR model2
+                         TEST_ARGS --solver-max-time-step-in-days=3)
 
 add_test_compareECLFiles(CASENAME 0a4_grpctl_stw_model2
                          FILENAME 0A4_GRCTRL_LRAT_LRAT_GGR_BASE_MODEL2_STW
@@ -376,7 +379,8 @@ add_test_compareECLFiles(CASENAME 0a4_grpctl_msw_model2
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR model2)
+                         DIR model2
+                         TEST_ARGS --solver-max-time-step-in-days=3)
 
 add_test_compareECLFiles(CASENAME multregt_model2
                          FILENAME 1_MULTREGT_MODEL2
