@@ -32,6 +32,3 @@ test_vec
 
 # emacs directory setting:
 .dir-locals.el
-
-build
-opm/simulators/flow/#Untitled-1#
