@@ -184,7 +184,7 @@ namespace MissingFeatures {
             "DIFFMR",
             "DIFFMR-",
             "DIFFMTHT",
-            "DIFFMTHT-",
+            "DIFFMTH-",
             "DIFFMX",
             "DIFFMX-",
             "DIFFMY",
