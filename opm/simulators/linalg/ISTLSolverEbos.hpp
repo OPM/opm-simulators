@@ -359,14 +359,13 @@ protected:
             }
 #endif
             extractParallelGridInformationToISTL(simulator_.vanguard().grid(), parallelInformation_);
-            const auto wellsForConn = simulator_.vanguard().schedule().getWellsatEnd();
             const bool useWellConn = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
 
             ownersFirst_ = EWOMS_GET_PARAM(TypeTag, bool, OwnerCellsFirst);
             interiorCellNum_ = detail::numMatrixRowsToUseInSolver(simulator_.vanguard().grid(), ownersFirst_);
 
             if (!ownersFirst_ || parameters_.linear_solver_use_amg_  || parameters_.use_cpr_ ) {
-                detail::setWellConnections(gridForConn, wellsForConn, useWellConn, wellConnectionsGraph_);
+                detail::setWellConnections(gridForConn, simulator_.vanguard().schedule().getWellsatEnd(), useWellConn, wellConnectionsGraph_);
                 // For some reason simulator_.model().elementMapper() is not initialized at this stage
                 // Hence const auto& elemMapper = simulator_.model().elementMapper(); does not work.
                 // Set it up manually
