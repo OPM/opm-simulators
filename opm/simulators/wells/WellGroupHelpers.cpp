@@ -194,6 +194,7 @@ namespace WellGroupHelpers
                                     const int reportStepIdx,
                                     const bool isInjector,
                                     const PhaseUsage& pu,
+                                    const GuideRate& guide_rate,
                                     const WellStateFullyImplicitBlackoil& wellStateNupcol,
                                     WellStateFullyImplicitBlackoil& wellState,
                                     std::vector<double>& groupTargetReduction)
@@ -202,8 +203,15 @@ namespace WellGroupHelpers
         for (const std::string& subGroupName : group.groups()) {
             std::vector<double> subGroupTargetReduction(np, 0.0);
             const Group& subGroup = schedule.getGroup(subGroupName, reportStepIdx);
-            updateGroupTargetReduction(
-                subGroup, schedule, reportStepIdx, isInjector, pu, wellStateNupcol, wellState, subGroupTargetReduction);
+            updateGroupTargetReduction(subGroup,
+                                       schedule,
+                                       reportStepIdx,
+                                       isInjector,
+                                       pu,
+                                       guide_rate,
+                                       wellStateNupcol,
+                                       wellState,
+                                       subGroupTargetReduction);
 
             // accumulate group contribution from sub group
             if (isInjector) {
@@ -243,13 +251,21 @@ namespace WellGroupHelpers
                             += sumWellRates(subGroup, schedule, wellStateNupcol, reportStepIdx, phase, isInjector);
                     }
                 } else {
-                    // or accumulate directly from the wells if controled from its parents
-                    for (int phase = 0; phase < np; phase++) {
-                        // groupTargetReduction[phase] += subGroupTargetReduction[phase];
+                    // The subgroup may participate in group control.
+                    if (!guide_rate.has(subGroupName)) {
+                        // Accumulate from this subgroup only if no group guide rate is set for it.
+                        for (int phase = 0; phase < np; phase++) {
+                            groupTargetReduction[phase] += subGroupTargetReduction[phase];
+                        }
                     }
                 }
             }
         }
+
+
+
+
+
         for (const std::string& wellName : group.wells()) {
             const auto& wellTmp = schedule.getWell(wellName, reportStepIdx);
 
@@ -762,7 +778,7 @@ namespace WellGroupHelpers
                     // We are a group, with default guide rate.
                     // Compute guide rate by accumulating our children's guide rates.
                     const Group& group = schedule_.getGroup(name, report_step_);
-                    return guideRateSum(group, always_included_child, true);
+                    return guideRateSum(group, always_included_child, false);
                 }
             } else {
                 // No group-controlled subordinate wells.
@@ -1135,7 +1151,12 @@ namespace WellGroupHelpers
         const size_t num_ancestors = chain.size() - 1;
         double target = orig_target;
         for (size_t ii = 0; ii < num_ancestors; ++ii) {
-            target -= localReduction(chain[ii]);
+            if ((ii == 0) || guideRate->has(chain[ii])) {
+                // Apply local reductions only at the control level
+                // (top) and for levels where we have a specified
+                // group guide rate.
+                target -= localReduction(chain[ii]);
+            }
             if (ii == num_ancestors - 1) {
                 // Final level. Add my reduction back.
                 target += current_rate * efficiencyFactor;
