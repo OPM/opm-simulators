@@ -86,6 +86,7 @@ namespace WellGroupHelpers
                                     const int reportStepIdx,
                                     const bool isInjector,
                                     const PhaseUsage& pu,
+                                    const GuideRate& guide_rate,
                                     const WellStateFullyImplicitBlackoil& wellStateNupcol,
                                     WellStateFullyImplicitBlackoil& wellState,
                                     std::vector<double>& groupTargetReduction);

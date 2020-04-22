@@ -1233,9 +1233,9 @@ namespace Opm {
         // the group target reduction rates needs to be update since wells may have swicthed to/from GRUP control
         // Currently the group target reduction does not honor NUPCOL. TODO: is that true?
         std::vector<double> groupTargetReduction(numPhases(), 0.0);
-        WellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ false, phase_usage_, well_state_nupcol_, well_state_, groupTargetReduction);
+        WellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ false, phase_usage_, *guideRate_, well_state_nupcol_, well_state_, groupTargetReduction);
         std::vector<double> groupTargetReductionInj(numPhases(), 0.0);
-        WellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ true, phase_usage_, well_state_nupcol_, well_state_, groupTargetReductionInj);
+        WellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ true, phase_usage_, *guideRate_, well_state_nupcol_, well_state_, groupTargetReductionInj);
 
         const double simulationTime = ebosSimulator_.time();
         std::vector<double> pot(numPhases(), 0.0);
