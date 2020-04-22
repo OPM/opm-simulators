@@ -27,6 +27,9 @@ test_impestpfa_ad
 test_syntax
 test_vec
 
+# Build directory in source
+build/
+
 # Mac OS X debug info
 *.dSYM
 
