@@ -1145,6 +1145,14 @@ namespace WellGroupHelpers
         const auto chain = groupChainTopBot(name, group.name(), schedule, reportStepIdx);
         // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
         const size_t num_ancestors = chain.size() - 1;
+        // we need to find out the level where the current well is applied to the local reduction 
+        size_t local_reduction_level = 0;
+        for (size_t ii = 0; ii < num_ancestors; ++ii) {
+            if ((ii == 0) || guideRate->has(chain[ii])) {
+                local_reduction_level = ii;
+            }
+        }
+
         double target = orig_target;
         for (size_t ii = 0; ii < num_ancestors; ++ii) {
             if ((ii == 0) || guideRate->has(chain[ii])) {
@@ -1152,11 +1160,12 @@ namespace WellGroupHelpers
                 // (top) and for levels where we have a specified
                 // group guide rate.
                 target -= localReduction(chain[ii]);
+
+                // Add my reduction back at the level where it is included in the local reduction
+                if (local_reduction_level == ii )
+                    target += current_rate * efficiencyFactor;
             }
-            if (ii == num_ancestors - 1) {
-                // Final level. Add my reduction back.
-                target += current_rate * efficiencyFactor;
-            } else {
+            if (ii < num_ancestors - 1) {
                 // Not final level. Add sub-level reduction back, if
                 // it was nonzero due to having no group-controlled
                 // wells.  Note that we make this call without setting
