@@ -770,6 +770,24 @@ struct PhaseQuantityValue {
     double gas{0.0};
     double water{0.0};
 
+    PhaseQuantityValue& axpy(const PhaseQuantityValue& rhs, const double a)
+    {
+        this->oil   += a * rhs.oil;
+        this->gas   += a * rhs.gas;
+        this->water += a * rhs.water;
+
+        return *this;
+    }
+
+    PhaseQuantityValue& operator/=(const double x)
+    {
+        this->oil   /= x;
+        this->gas   /= x;
+        this->water /= x;
+
+        return *this;
+    }
+
     void reset()
     {
         this->oil = this->gas = this->water = 0.0;
@@ -1396,7 +1414,6 @@ invertCapPress(const double   pc,
 template <typename Grid, typename CellRange>
 void verticalExtent(const Grid&           grid,
                     const CellRange&      cells,
-                    int&                  cellcount,
                     std::array<double,2>& span)
 {
     // This code is only supported in three space dimensions
@@ -1404,7 +1421,6 @@ void verticalExtent(const Grid&           grid,
 
     span[0] = std::numeric_limits<double>::max();
     span[1] = std::numeric_limits<double>::lowest();
-    cellcount = 0;
 
     const int nd = Grid::dimensionworld;
 
@@ -1426,7 +1442,7 @@ void verticalExtent(const Grid&           grid,
 
     for (typename CellRange::const_iterator
              ci = cells.begin(), ce = cells.end();
-         ci != ce; ++ci, ++cellcount)
+         ci != ce; ++ci)
     {
         for (auto fi = cell2Faces[*ci].begin(),
                   fe = cell2Faces[*ci].end();
@@ -1444,6 +1460,81 @@ void verticalExtent(const Grid&           grid,
             }
         }
     }
+}
+
+template <typename Grid, typename CellID>
+std::pair<double, double>
+horizontalTopBottomDepths(const Grid& grid, const CellID cell)
+{
+    const auto nd = Grid::dimensionworld;
+
+    auto c2f = Opm::UgGridHelpers::cell2Faces(grid);
+    auto top = std::numeric_limits<double>::max();
+    auto bot = std::numeric_limits<double>::lowest();
+
+    const auto topTag = 4;      // Top face
+    const auto botTag = 5;      // Bottom face
+
+    for (auto f = c2f[cell].begin(), e = c2f[cell].end(); f != e; ++f) {
+        const auto tag = Opm::UgGridHelpers::faceTag(grid, f);
+        if ((tag != topTag) && (tag != botTag)) {
+            // Not top/bottom face.  Skip.
+            continue;
+        }
+
+        const auto depth = Opm::UgGridHelpers::
+            faceCentroid(grid, *f)[nd - 1];
+
+        if (tag == topTag) { // Top face
+            top = std::min(top, depth);
+        }
+        else { // Bottom face (tag == 5)
+            bot = std::max(bot, depth);
+        }
+    }
+
+    return std::make_pair(top, bot);
+}
+
+inline
+void subdivisionCentrePoints(const double                            left,
+                             const double                            right,
+                             const int                               numIntervals,
+                             std::vector<std::pair<double, double>>& subdiv)
+{
+    const auto h = (right - left) / numIntervals;
+
+    auto end = left;
+    for (auto i = 0*numIntervals; i < numIntervals; ++i) {
+        const auto start = end;
+        end = left + (i + 1)*h;
+
+        subdiv.emplace_back((start + end) / 2, h);
+    }
+}
+
+template <typename Grid, typename CellID>
+std::vector<std::pair<double, double>>
+horizontalSubdivision(const Grid&  grid,
+                      const CellID cell,
+                      const int    numIntervals)
+{
+    auto subdiv = std::vector<std::pair<double, double>>{};
+    subdiv.reserve(2 * numIntervals);
+
+    const auto topbot = horizontalTopBottomDepths(grid, cell);
+
+    if (topbot.first > topbot.second) {
+        throw std::out_of_range {
+            "Negative thickness (inverted top/bottom faces) in cell "
+            + std::to_string(cell)
+        };
+    }
+
+    subdivisionCentrePoints(topbot.first, topbot.second,
+                            2*numIntervals, subdiv);
+
+    return subdiv;
 }
 
 } // namespace Details
@@ -1470,12 +1561,10 @@ equilnum(const Opm::EclipseState& eclipseState,
     std::vector<int> eqlnum(grid.size(0), 0);
 
     if (eclipseState.fieldProps().has_int("EQLNUM")) {
-        const int nc = grid.size(/*codim=*/0);
-        eqlnum.resize(nc);
-
         const auto& e = eclipseState.fieldProps().get_int("EQLNUM");
         std::transform(e.begin(), e.end(), eqlnum.begin(), [](int n){ return n - 1;});
     }
+
     return eqlnum;
 }
 
@@ -1516,7 +1605,7 @@ public:
         const Opm::RegionMapping<> eqlmap(equilnum(eclipseState, grid));
         const int invalidRegion = -1;
         regionPvtIdx_.resize(rec.size(), invalidRegion);
-        setRegionPvtIdx(grid, eclipseState, eqlmap);
+        setRegionPvtIdx(eclipseState, eqlmap);
 
         // Create Rs functions.
         rsFunc_.reserve(rec.size());
@@ -1618,7 +1707,7 @@ public:
         updateInitialTemperature_(eclipseState);
 
         // Compute pressures, saturations, rs and rv factors.
-        calcPressSatRsRv(eclipseState, eqlmap, rec, materialLawManager, grid, grav);
+        calcPressSatRsRv(eqlmap, rec, materialLawManager, grid, grav);
 
         // Modify oil pressure in no-oil regions so that the pressures of present phases can
         // be recovered from the oil pressure and capillary relations.
@@ -1636,12 +1725,9 @@ public:
 private:
     void updateInitialTemperature_(const Opm::EclipseState& eclState)
     {
-        // Get the initial temperature data
-        std::vector<double> tempiData = eclState.fieldProps().get_double("TEMPI");
-        temperature_ = tempiData;
+        this->temperature_ = eclState.fieldProps().get_double("TEMPI");
     }
 
-    typedef EquilReg EqReg;
     std::vector< std::shared_ptr<Miscibility::RsFunction> > rsFunc_;
     std::vector< std::shared_ptr<Miscibility::RsFunction> > rvFunc_;
     std::vector<int> regionPvtIdx_;
@@ -1653,53 +1739,30 @@ private:
     Vec swatInit_;
 
     template<class RMap>
-    void setRegionPvtIdx(const Grid& grid, const Opm::EclipseState& eclState, const RMap& reg)
+    void setRegionPvtIdx(const Opm::EclipseState& eclState, const RMap& reg)
     {
-        size_t numCompressed = grid.size(/*codim=*/0);
-        std::vector<int> cellPvtRegionIdx(numCompressed);
-
-        //Get the PVTNUM data
         const auto& pvtnumData = eclState.fieldProps().get_int("PVTNUM");
-        // Save pvt indices of regions. Remember
-        // that Eclipse uses Fortran-style indices which start at 1 instead of 0, so we
-        // need to subtract 1.
-        std::transform(pvtnumData.begin(), pvtnumData.end(),
-                       cellPvtRegionIdx.begin(), [](int n){ return n - 1;});
 
         for (const auto& r : reg.activeRegions()) {
             const auto& cells = reg.cells(r);
-            const int cell = *(cells.begin());
-            regionPvtIdx_[r] = pvtnumData[cell] - 1;
+            regionPvtIdx_[r] = pvtnumData[*cells.begin()] - 1;
         }
     }
 
     template <class RMap, class MaterialLawManager>
-    void calcPressSatRsRv(const Opm::EclipseState& eclState OPM_UNUSED,
-                          const RMap& reg,
+    void calcPressSatRsRv(const RMap& reg,
                           const std::vector< Opm::EquilRecord >& rec,
                           MaterialLawManager& materialLawManager,
                           const Grid& grid,
                           const double grav)
     {
-        using Opm::UgGridHelpers::cellCenterDepth;
         using PhaseSat = Details::PhaseSaturations<
             MaterialLawManager, FluidSystem, EquilReg, typename RMap::CellId
         >;
-        using CellPos  = typename PhaseSat::Position;
 
         auto ptable = Details::PressureTable<FluidSystem, EquilReg>{ grav };
         auto psat   = PhaseSat { materialLawManager, this->swatInit_ };
-
-        auto vspan = std::array<double, 2>{};
-        auto ncell = 0;
-
-        const auto oilActive = ptable.oilActive();
-        const auto gasActive = ptable.gasActive();
-        const auto watActive = ptable.waterActive();
-
-        const auto oilPos = FluidSystem::oilPhaseIdx;
-        const auto gasPos = FluidSystem::gasPhaseIdx;
-        const auto watPos = FluidSystem::waterPhaseIdx;
+        auto vspan  = std::array<double, 2>{};
 
         for (const auto& r : reg.activeRegions()) {
             const auto& cells = reg.cells(r);
@@ -1709,9 +1772,11 @@ private:
                 continue;
             }
 
-            Details::verticalExtent(grid, cells, ncell, vspan);
+            Details::verticalExtent(grid, cells, vspan);
 
-            const EqReg eqreg(rec[r], rsFunc_[r], rvFunc_[r], regionPvtIdx_[r]);
+            const auto eqreg = EquilReg {
+                rec[r], this->rsFunc_[r], this->rvFunc_[r], this->regionPvtIdx_[r]
+            };
 
             // Ensure gas/oil and oil/water contacts are within the span for the
             // phase pressure calculation.
@@ -1720,40 +1785,140 @@ private:
 
             ptable.equilibrate(eqreg, vspan);
 
-            for (const auto& cell : cells) {
-                const auto pos = CellPos {
-                    cell, cellCenterDepth(grid, cell)
-                };
-
-                const auto  saturations = psat.deriveSaturations(pos, eqreg, ptable);
-                const auto& pressures   = psat.correctedPhasePressures();
-
-                if (oilActive) {
-                    this->pp_ [oilPos][cell] = pressures.oil;
-                    this->sat_[oilPos][cell] = saturations.oil;
-                }
-
-                if (gasActive) {
-                    this->pp_ [gasPos][cell] = pressures.gas;
-                    this->sat_[gasPos][cell] = saturations.gas;
-                }
-
-                if (watActive) {
-                    this->pp_ [watPos][cell] = pressures.water;
-                    this->sat_[watPos][cell] = saturations.water;
-                }
-
-                if (oilActive && gasActive) {
-                    const auto temp = this->temperature_[cell];
-
-                    this->rs_[cell] = (*this->rsFunc_[r])
-                        (pos.depth, pressures.oil, temp, saturations.gas);
-
-                    this->rv_[cell] = (*this->rvFunc_[r])
-                        (pos.depth, pressures.gas, temp, saturations.oil);
-                }
+            const auto acc = eqreg.equilibrationAccuracy();
+            if (acc == 0) {
+                // Centre-point method
+                this->equilibrateCellCentres(cells, eqreg, grid, ptable, psat);
+            }
+            else if (acc < 0) {
+                // Horizontal subdivision
+                this->equilibrateHorizontal(cells, eqreg, -acc,
+                                            grid, ptable, psat);
             }
         }
+    }
+
+    template <class CellRange, class EquilibrationMethod>
+    void cellLoop(const CellRange&      cells,
+                  EquilibrationMethod&& eqmethod)
+    {
+        const auto oilPos = FluidSystem::oilPhaseIdx;
+        const auto gasPos = FluidSystem::gasPhaseIdx;
+        const auto watPos = FluidSystem::waterPhaseIdx;
+
+        const auto oilActive = FluidSystem::phaseIsActive(oilPos);
+        const auto gasActive = FluidSystem::phaseIsActive(gasPos);
+        const auto watActive = FluidSystem::phaseIsActive(watPos);
+
+        auto pressures   = Details::PhaseQuantityValue{};
+        auto saturations = Details::PhaseQuantityValue{};
+        auto Rs          = 0.0;
+        auto Rv          = 0.0;
+
+        for (const auto& cell : cells) {
+            eqmethod(cell, pressures, saturations, Rs, Rv);
+
+            if (oilActive) {
+                this->pp_ [oilPos][cell] = pressures.oil;
+                this->sat_[oilPos][cell] = saturations.oil;
+            }
+
+            if (gasActive) {
+                this->pp_ [gasPos][cell] = pressures.gas;
+                this->sat_[gasPos][cell] = saturations.gas;
+            }
+
+            if (watActive) {
+                this->pp_ [watPos][cell] = pressures.water;
+                this->sat_[watPos][cell] = saturations.water;
+            }
+
+            if (oilActive && gasActive) {
+                this->rs_[cell] = Rs;
+                this->rv_[cell] = Rv;
+            }
+        }
+    }
+
+    template <class CellRange, class Grid, class PressTable, class PhaseSat>
+    void equilibrateCellCentres(const CellRange&  cells,
+                                const EquilReg&   eqreg,
+                                const Grid&       grid,
+                                const PressTable& ptable,
+                                PhaseSat&         psat)
+    {
+        using CellPos = typename PhaseSat::Position;
+        using CellID  = std::remove_cv_t<std::remove_reference_t<
+            decltype(std::declval<CellPos>().cell)>>;
+
+        this->cellLoop(cells, [this, &eqreg, &grid, &ptable, &psat]
+            (const CellID                 cell,
+             Details::PhaseQuantityValue& pressures,
+             Details::PhaseQuantityValue& saturations,
+             double&                      Rs,
+             double&                      Rv) -> void
+        {
+            const auto pos = CellPos {
+                cell, UgGridHelpers::cellCenterDepth(grid, cell)
+            };
+
+            saturations = psat.deriveSaturations(pos, eqreg, ptable);
+            pressures   = psat.correctedPhasePressures();
+
+            const auto temp = this->temperature_[cell];
+
+            Rs = eqreg.dissolutionCalculator()
+                (pos.depth, pressures.oil, temp, saturations.gas);
+
+            Rv = eqreg.evaporationCalculator()
+                (pos.depth, pressures.gas, temp, saturations.oil);
+        });
+    }
+
+    template <class CellRange, class Grid, class PressTable, class PhaseSat>
+    void equilibrateHorizontal(const CellRange&  cells,
+                               const EquilReg&   eqreg,
+                               const int         acc,
+                               const Grid&       grid,
+                               const PressTable& ptable,
+                               PhaseSat&         psat)
+    {
+        using CellPos = typename PhaseSat::Position;
+        using CellID  = std::remove_cv_t<std::remove_reference_t<
+            decltype(std::declval<CellPos>().cell)>>;
+
+        this->cellLoop(cells, [this, acc, &eqreg, &grid, &ptable, &psat]
+            (const CellID                 cell,
+             Details::PhaseQuantityValue& pressures,
+             Details::PhaseQuantityValue& saturations,
+             double&                      Rs,
+             double&                      Rv) -> void
+        {
+            pressures  .reset();
+            saturations.reset();
+
+            auto totfrac = 0.0;
+            for (const auto& [depth, frac] : Details::horizontalSubdivision(grid, cell, acc)) {
+                const auto pos = CellPos { cell, depth };
+
+                saturations.axpy(psat.deriveSaturations(pos, eqreg, ptable), frac);
+                pressures  .axpy(psat.correctedPhasePressures(), frac);
+
+                totfrac += frac;
+            }
+
+            saturations /= totfrac;
+            pressures   /= totfrac;
+
+            const auto temp = this->temperature_[cell];
+            const auto cz   = UgGridHelpers::cellCenterDepth(grid, cell);
+
+            Rs = eqreg.dissolutionCalculator()
+                (cz, pressures.oil, temp, saturations.gas);
+
+            Rv = eqreg.evaporationCalculator()
+                (cz, pressures.gas, temp, saturations.oil);
+        });
     }
 };
 } // namespace DeckDependent
