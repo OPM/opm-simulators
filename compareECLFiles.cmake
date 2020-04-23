@@ -335,7 +335,7 @@ add_test_compareECLFiles(CASENAME 0a1_grpctl_msw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --tolerance-pressure-ms-wells=10 --tolerance-wells=1.e-6)
+                         TEST_ARGS --initial-time-step-in-days=0.1 )
 
 add_test_compareECLFiles(CASENAME 0a2_grpctl_stw_model2
                          FILENAME 0A2_GRCTRL_LRAT_ORAT_GGR_BASE_MODEL2_STW
@@ -350,7 +350,7 @@ add_test_compareECLFiles(CASENAME 0a2_grpctl_msw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --tolerance-pressure-ms-wells=10 --tolerance-wells=1.e-6 --max-inner-iter-ms-wells=200)
+                         TEST_ARGS --initial-time-step-in-days=0.1 --tolerance-pressure-ms-wells=10 --tolerance-wells=1.e-6)
 
 add_test_compareECLFiles(CASENAME 0a3_grpctl_stw_model2
                          FILENAME 0A3_GRCTRL_LRAT_LRAT_BASE_MODEL2_STW
@@ -365,7 +365,7 @@ add_test_compareECLFiles(CASENAME 0a3_grpctl_msw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --tolerance-pressure-ms-wells=10 --tolerance-wells=1.e-6 --max-inner-iter-ms-wells=200 --max-pressure-change-ms-wells=1e4)
+                         TEST_ARGS --initial-time-step-in-days=0.1 --solver-max-time-step-in-days=3)
 
 add_test_compareECLFiles(CASENAME 0a4_grpctl_stw_model2
                          FILENAME 0A4_GRCTRL_LRAT_LRAT_GGR_BASE_MODEL2_STW
@@ -380,7 +380,7 @@ add_test_compareECLFiles(CASENAME 0a4_grpctl_msw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --tolerance-pressure-ms-wells=10 --tolerance-wells=1.e-6 --max-inner-iter-ms-wells=200 --max-pressure-change-ms-wells=1e4 --tolerance-well-control=1e-9)
+                         TEST_ARGS --initial-time-step-in-days=0.1 --solver-max-time-step-in-days=3--tolerance-pressure-ms-wells=10 --tolerance-wells=1.e-6)
 
 add_test_compareECLFiles(CASENAME multregt_model2
                          FILENAME 1_MULTREGT_MODEL2
