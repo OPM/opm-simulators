@@ -168,7 +168,7 @@ opm_add_test(test_gatherconvergencereport
   CONDITION
     MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
   DRIVER_ARGS
-    5 ${CMAKE_BINARY_DIR}
+    5 ${PROJECT_BINARY_DIR}
 )
 
 opm_add_test(test_gatherdeferredlogger
@@ -179,7 +179,7 @@ opm_add_test(test_gatherdeferredlogger
   CONDITION
     MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
   DRIVER_ARGS
-    5 ${CMAKE_BINARY_DIR}
+    5 ${PROJECT_BINARY_DIR}
 )
 
 include(OpmBashCompletion)
@@ -351,6 +351,8 @@ endif()
 if (OPM_ENABLE_PYTHON)
   add_subdirectory(python)
 endif()
+
+add_custom_target(extra_test ${CMAKE_CTEST_COMMAND} -C ExtraTests)
 
 # must link libraries after target 'flow' has been defined
 if(CUDA_FOUND)
