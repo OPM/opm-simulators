@@ -456,7 +456,6 @@ namespace MissingFeatures {
             "MESSSRVC",
             "MINNNCT",
             "MINPORV",
-            "MINVALUE",
             "MLANG",
             "MLANGSLV",
             "MONITOR",
