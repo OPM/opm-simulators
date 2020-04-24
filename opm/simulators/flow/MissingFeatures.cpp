@@ -820,6 +820,7 @@ namespace MissingFeatures {
             "WHTEMP",
             "WINJMULT",
             "WLIMTOL",
+            "WLIFT",
             "WLIFTOPT",
             "WLISTARG",
             "WLISTNAM",
