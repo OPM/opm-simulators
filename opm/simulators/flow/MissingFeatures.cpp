@@ -648,7 +648,6 @@ namespace MissingFeatures {
             "SKIP",
             "SKIP100",
             "SKIP300",
-            "SKIPREST",
             "SUMTHIN",
             "SALT",
             "SALTNODE",
