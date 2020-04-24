@@ -347,6 +347,7 @@ namespace MissingFeatures {
             "HMMLTWCN",
             "HMMULTxx",
             "HMMULTFT",
+            "HMMULTSG",
             "HMPROPS",
             "HMROCK",
             "HMROCKT",
