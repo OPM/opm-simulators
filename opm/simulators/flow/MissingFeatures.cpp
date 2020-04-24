@@ -854,7 +854,7 @@ namespace MissingFeatures {
             "WSEGSOLV",
             "WSEGTABL",
             "WSURFACT",
-            "WTAD",
+            "WTADD",
             "WTEMPQ",
             "WTHPMAX",
             "WTMULT",
