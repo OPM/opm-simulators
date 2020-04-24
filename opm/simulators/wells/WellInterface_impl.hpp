@@ -2270,10 +2270,15 @@ namespace Opm
         const size_t num_ancestors = chain.size() - 1;
         double target = orig_target;
         for (size_t ii = 0; ii < num_ancestors; ++ii) {
-            target -= localReduction(chain[ii]);
+            if ((ii == 0) || guide_rate_->has(chain[ii])) {
+                // Apply local reductions only at the control level
+                // (top) and for levels where we have a specified
+                // group guide rate.
+                target -= localReduction(chain[ii]);
+            }
             target *= localFraction(chain[ii+1]);
         }
-        // Avoid negative target rates comming from too large local reductions. 
+        // Avoid negative target rates coming from too large local reductions.
         const double target_rate = std::max(0.0, target / efficiencyFactor);
         const auto current_rate = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
         control_eq = current_rate - target_rate;
