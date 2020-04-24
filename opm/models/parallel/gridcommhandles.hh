@@ -111,14 +111,14 @@ public:
     {
     }
 
-    bool contains(unsigned dim OPM_UNUSED, unsigned codim) const
+    bool contains(int dim OPM_UNUSED, int codim) const
     {
         // return true if the codim is the same as the codim which we
         // are asked to communicate with.
         return codim == commCodim;
     }
 
-    bool fixedsize(unsigned dim OPM_UNUSED, unsigned codim OPM_UNUSED) const
+    bool fixedsize(int dim OPM_UNUSED, int codim OPM_UNUSED) const
     {
         // for each DOF we communicate a single value which has a
         // fixed size
@@ -166,14 +166,14 @@ public:
         : mapper_(mapper), container_(container)
     {}
 
-    bool contains(unsigned dim OPM_UNUSED, unsigned codim) const
+    bool contains(int dim OPM_UNUSED, int codim) const
     {
         // return true if the codim is the same as the codim which we
         // are asked to communicate with.
         return codim == commCodim;
     }
 
-    bool fixedsize(unsigned dim OPM_UNUSED, unsigned codim OPM_UNUSED) const
+    bool fixedsize(int dim OPM_UNUSED, int codim OPM_UNUSED) const
     {
         // for each DOF we communicate a single value which has a
         // fixed size
@@ -223,14 +223,14 @@ public:
         : mapper_(mapper), container_(container)
     {}
 
-    bool contains(unsigned dim OPM_UNUSED, unsigned codim) const
+    bool contains(int dim OPM_UNUSED, int codim) const
     {
         // return true if the codim is the same as the codim which we
         // are asked to communicate with.
         return codim == commCodim;
     }
 
-    bool fixedsize(unsigned dim OPM_UNUSED, unsigned codim OPM_UNUSED) const
+    bool fixedsize(int dim OPM_UNUSED, int codim OPM_UNUSED) const
     {
         // for each DOF we communicate a single value which has a
         // fixed size
