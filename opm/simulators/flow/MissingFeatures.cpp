@@ -486,6 +486,7 @@ namespace MissingFeatures {
             "NMATOPTS",
             "NMATRIX",
             "NODPPM",
+            "NOECHO",
             "NOHMD",
             "NOHMO",
             "NOHYST",
