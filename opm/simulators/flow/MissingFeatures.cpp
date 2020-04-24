@@ -643,7 +643,6 @@ namespace MissingFeatures {
             "SALTPVD",
             "SALTSOL",
             "SAMG",
-            "SATOPTS",
             "SAVE",
             "SKIP",
             "SKIP100",
