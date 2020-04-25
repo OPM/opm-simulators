@@ -110,6 +110,13 @@ public:
             comm_.reset(new Communication(parinfo->communicator()));
         }
 #endif
+        // Print parameters to PRT/DBG logs.
+        if (simulator.gridView().comm().rank() == 0) {
+            std::ostringstream os;
+            os << "Property tree for linear solver:\n";
+            boost::property_tree::write_json(os, prm_, true);
+            OpmLog::note(os.str());
+        }
     }
 
     void eraseMatrix()
