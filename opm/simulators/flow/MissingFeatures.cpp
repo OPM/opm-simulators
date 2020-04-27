@@ -557,6 +557,7 @@ namespace MissingFeatures {
             "PEKTABX",
             "PENUM",
             "PERMAVE",
+            "PERMFACT",
             "PERMR",
             "PERMTHT",
             "PERMXY",
