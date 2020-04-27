@@ -298,14 +298,14 @@ add_test_compareECLFiles(CASENAME msw_3d_hfa
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         TEST_ARGS --tolerance-pressure-ms-wells=10.)
+                         TEST_ARGS --tolerance-pressure-ms-wells=10)
 
 add_test_compareECLFiles(CASENAME polymer_oilwater
                          FILENAME 2D_OILWATER_POLYMER
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         TEST_ARGS --tolerance-mb=1.e-7 )
+                         TEST_ARGS --tolerance-mb=1.e-7)
 
 add_test_compareECLFiles(CASENAME polymer_injectivity
                          FILENAME 2D_POLYMER_INJECTIVITY
