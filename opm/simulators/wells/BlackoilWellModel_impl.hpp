@@ -2068,7 +2068,6 @@ namespace Opm {
         const auto& well_state = well_state_;
 
         const auto& controls = group.injectionControls(Phase::GAS, summaryState);
-        const Group::InjectionCMode& currentControl = well_state.currentInjectionGroupControl(Phase::GAS, group.name());
         const auto& gconsale = schedule().gConSale(reportStepIdx).get(group.name(), summaryState);
 
         double sales_rate = 0.0;
