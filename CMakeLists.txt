@@ -95,7 +95,15 @@ if(NOT CMAKE_DISABLE_FIND_PACKAGE_CUDA AND
     CMAKE_VERSION VERSION_GREATER 3.7.9)
   if(NOT DEFINED ENV{CUDAHOSTCXX} AND
       (NOT CMAKE_CUDA_FLAGS OR NOT CMAKE_CUDA_FLAGS MATCHES ".*-ccbin .*"))
+    message(STATUS "Setting CUDA host compiler to ${CMAKE_CXX_COMPILER} to "
+      "prevent incompatibilities. Note that this might report that there "
+      "is not CUDA compiler if your system's CUDA compiler does not support "
+      "${CMAKE_CXX_COMPILER}.")
     set(CMAKE_CUDA_FLAGS "-ccbin ${CMAKE_CXX_COMPILER} ${CMAKE_CUDA_FLAGS}")
+    # check_language does not seem to care about ${CMAKE_CUDA_FLAGS}, we
+    # need to set the environment variable CUDAHOSTCXX such that cuda
+    # picks up the correct compiler.
+    set(ENV{CUDAHOSTCXX} ${CMAKE_CXX_COMPILER})
   endif()
   include(CheckLanguage)
   # Unfortunately check_language(CUDA) will only check whether there is
@@ -105,12 +113,12 @@ if(NOT CMAKE_DISABLE_FIND_PACKAGE_CUDA AND
   check_language(CUDA)
   if(CMAKE_CUDA_COMPILER)
     enable_language(CUDA OPTIONAL)
+    # While the documentation says that it is deprecated, FindCUDA seems the
+    # only easy way to determine the cublas and cusparse libraries.
+    # Hence we call it unconditionally
+    # The WellContributions kernel uses __shfl_down_sync, which was introduced in CUDA 9.0
+    find_package(CUDA)
   endif()
-  # While the documentation says that it is deprecated, FindCUDA seems the
-  # only easy way to determine the cublas and cusparse libraries.
-  # Hence we call it unconditionally
-  # The WellContributions kernel uses __shfl_down_sync, which was introduced in CUDA 9.0
-  find_package(CUDA)
   if(CUDA_FOUND AND CUDA_VERSION VERSION_LESS "9.0")
     set(CUDA_FOUND OFF)
     message(WARNING "Deactivating CUDA as we require version 9.0 or newer."
