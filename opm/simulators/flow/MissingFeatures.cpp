@@ -769,7 +769,6 @@ namespace MissingFeatures {
             "VFPTABL",
             "VISAGE",
             "VISCD",
-            "VISCREF",
             "VISDATES",
             "VISOPTS",
             "WAGHYSTR",
