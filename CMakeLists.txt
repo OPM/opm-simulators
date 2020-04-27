@@ -93,15 +93,18 @@ include ("${project}-prereqs")
 # compatibility to cmake 3.6 and lower.
 if(NOT CMAKE_DISABLE_FIND_PACKAGE_CUDA AND
     CMAKE_VERSION VERSION_GREATER 3.7.9)
+  if(CMAKE_BUILD_TYPE)
+    set(_flags_suffix "_${CMAKE_BUILD_TYPE}")
+  endif()
   if(NOT DEFINED ENV{CUDAHOSTCXX} AND
-      (NOT CMAKE_CUDA_FLAGS OR NOT CMAKE_CUDA_FLAGS MATCHES ".*-ccbin .*"))
+      (NOT CMAKE_CUDA_FLAGS${_flags_suffix} OR NOT CMAKE_CUDA_FLAGS${_flags_suffix} MATCHES ".*-ccbin .*"))
     message(STATUS "Setting CUDA host compiler to ${CMAKE_CXX_COMPILER} to "
       "prevent incompatibilities. Note that this might report that there "
       "is not CUDA compiler if your system's CUDA compiler does not support "
       "${CMAKE_CXX_COMPILER}.")
     # set(CMAKE_CUDA_FLAGS "-ccbin ${CMAKE_CXX_COMPILER} ${CMAKE_CUDA_FLAGS}")
     # check_language does not seem to care about ${CMAKE_CUDA_FLAGS}.
-    # Hence set(CMAKE_CUDA_FLAGS "-ccbin ${CMAKE_CXX_COMPILER} ${CMAKE_CUDA_FLAGS}")
+    # Hence set(CMAKE_CUDA_FLAGS$(_flags_suffix) "-ccbin ${CMAKE_CXX_COMPILER} ${CMAKE_CUDA_FLAGS${_flags_suffix}}")
     # would have no effect. We need to set the environment variable ENV{CUDAHOSTCXX} such
     # that cuda picks up the correct compiler during check_language.
     # In check_language(CUDA) we will get and error if we set and put
