@@ -2176,14 +2176,8 @@ namespace Opm
             assert (phasePos == pu.phase_pos[BlackoilPhases::Vapour]);
 
             // Gas injection rate = Total gas production rate + gas import rate - gas consumption rate - sales rate;
+            // The import and consumption is already included in the REIN rates.
             double inj_rate = well_state.currentInjectionREINRates(group.name())[phasePos];
-            if (schedule.gConSump(current_step_).has(group.name())) {
-                const auto& gconsump = schedule.gConSump(current_step_).get(group.name(), summaryState);
-                if (pu.phase_used[BlackoilPhases::Vapour]) {
-                    inj_rate += gconsump.import_rate;
-                    inj_rate -= gconsump.consumption_rate;
-                }
-            }
             const auto& gconsale = schedule.gConSale(current_step_).get(group.name(), summaryState);
             inj_rate -= gconsale.sales_target;
 
