@@ -1745,6 +1745,14 @@ namespace Opm {
     updateGroupIndividualControls(Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups)
     {
         const int reportStepIdx = ebosSimulator_.episodeIndex();
+
+        const int nupcol = schedule().getNupcol(reportStepIdx);
+        const int iterationIdx = ebosSimulator_.model().newtonMethod().numIterations();
+        // don't switch group control when iterationIdx > nupcol
+        // to avoid oscilations between group controls
+        if (iterationIdx > nupcol)
+            return;
+
         const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
         updateGroupIndividualControl(fieldGroup, deferred_logger, switched_groups);
     }
