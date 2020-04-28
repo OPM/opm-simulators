@@ -8,4 +8,7 @@ target_sources(simulators
 
 target_link_libraries( simulators PRIVATE opmsimulators )
 
-install(TARGETS simulators DESTINATION ${PYTHON_INSTALL_PREFIX}/simulators)
+set(PYTHON_PACKAGE_PATH "site-packages")
+set(PYTHON_INSTALL_PREFIX "lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/${PYTHON_PACKAGE_PATH}" CACHE STRING "Subdirectory to install Python modules in")
+
+install(TARGETS simulators DESTINATION ${DEST_PREFIX}${CMAKE_INSTALL_PREFIX}/${PYTHON_INSTALL_PREFIX}/opm/simulators)
