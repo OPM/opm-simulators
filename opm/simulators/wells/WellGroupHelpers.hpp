@@ -86,6 +86,7 @@ namespace WellGroupHelpers
                                     const int reportStepIdx,
                                     const bool isInjector,
                                     const PhaseUsage& pu,
+                                    const GuideRate& guide_rate,
                                     const WellStateFullyImplicitBlackoil& wellStateNupcol,
                                     WellStateFullyImplicitBlackoil& wellState,
                                     std::vector<double>& groupTargetReduction);
@@ -301,7 +302,7 @@ namespace WellGroupHelpers
 
     private:
         std::string parent(const std::string& name);
-        double guideRateSum(const Group& group, const std::string& always_included_child, const bool include_all);
+        double guideRateSum(const Group& group, const std::string& always_included_child);
         double guideRate(const std::string& name, const std::string& always_included_child);
         int groupControlledWells(const std::string& group_name, const std::string& always_included_child);
         GuideRate::RateVector getGroupRateVector(const std::string& group_name);

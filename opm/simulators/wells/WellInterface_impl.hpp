@@ -2176,14 +2176,8 @@ namespace Opm
             assert (phasePos == pu.phase_pos[BlackoilPhases::Vapour]);
 
             // Gas injection rate = Total gas production rate + gas import rate - gas consumption rate - sales rate;
+            // The import and consumption is already included in the REIN rates.
             double inj_rate = well_state.currentInjectionREINRates(group.name())[phasePos];
-            if (schedule.gConSump(current_step_).has(group.name())) {
-                const auto& gconsump = schedule.gConSump(current_step_).get(group.name(), summaryState);
-                if (pu.phase_used[BlackoilPhases::Vapour]) {
-                    inj_rate += gconsump.import_rate;
-                    inj_rate -= gconsump.consumption_rate;
-                }
-            }
             const auto& gconsale = schedule.gConSale(current_step_).get(group.name(), summaryState);
             inj_rate -= gconsale.sales_target;
 
@@ -2270,10 +2264,15 @@ namespace Opm
         const size_t num_ancestors = chain.size() - 1;
         double target = orig_target;
         for (size_t ii = 0; ii < num_ancestors; ++ii) {
-            target -= localReduction(chain[ii]);
+            if ((ii == 0) || guide_rate_->has(chain[ii])) {
+                // Apply local reductions only at the control level
+                // (top) and for levels where we have a specified
+                // group guide rate.
+                target -= localReduction(chain[ii]);
+            }
             target *= localFraction(chain[ii+1]);
         }
-        // Avoid negative target rates comming from too large local reductions. 
+        // Avoid negative target rates coming from too large local reductions.
         const double target_rate = std::max(0.0, target / efficiencyFactor);
         const auto current_rate = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
         control_eq = current_rate - target_rate;
