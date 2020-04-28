@@ -29,11 +29,12 @@
 
 #include <dune/common/parallel/mpihelper.hh>
 
+#include <optional>
+#include <map>
 #include <set>
 #include <tuple>
-#include <vector>
-#include <map>
 #include <unordered_map>
+#include <vector>
 
 namespace Opm
 {
@@ -80,6 +81,9 @@ std::size_t packSize(const T& data, Dune::MPIHelper::MPICommunicator comm)
 
 template<class T1, class T2>
 std::size_t packSize(const std::pair<T1,T2>& data, Dune::MPIHelper::MPICommunicator comm);
+
+template<class T>
+std::size_t packSize(const std::optional<T>& data, Dune::MPIHelper::MPICommunicator comm);
 
 template<class T, class A>
 std::size_t packSize(const std::vector<T,A>& data, Dune::MPIHelper::MPICommunicator comm);
@@ -156,6 +160,10 @@ void pack(const T& data, std::vector<char>& buffer, int& position,
 
 template<class T1, class T2>
 void pack(const std::pair<T1,T2>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm);
+
+template<class T>
+void pack(const std::optional<T>& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm);
 
 template<class T, class A>
@@ -241,6 +249,10 @@ void unpack(T& data, std::vector<char>& buffer, int& position,
 
 template<class T1, class T2>
 void unpack(std::pair<T1,T2>& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm);
+
+template<class T>
+void unpack(std::optional<T>& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm);
 
 template<class T, class A>
