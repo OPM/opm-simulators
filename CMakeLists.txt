@@ -96,9 +96,9 @@ if(NOT CMAKE_DISABLE_FIND_PACKAGE_CUDA AND
   if(CMAKE_BUILD_TYPE)
     set(_flags_suffix "_${CMAKE_BUILD_TYPE}")
   endif()
-  if(NOT DEFINED ENV{CUDAHOSTCXX} AND
+  if(NOT DEFINED ENV{CUDAHOSTCXX} AND NOT DEFINED CMAKE_CUDA_HOST_COMPILER AND
       (NOT CMAKE_CUDA_FLAGS${_flags_suffix} OR NOT CMAKE_CUDA_FLAGS${_flags_suffix} MATCHES ".*-ccbin .*"))
-    message(STATUS "Setting CUDA host compiler to ${CMAKE_CXX_COMPILER} to "
+    message(STATUS "Setting CUDA host compiler CMAKE_CUDA_HOST_COMPILER to ${CMAKE_CXX_COMPILER} to "
       "prevent incompatibilities. Note that this might report that there "
       "is not CUDA compiler if your system's CUDA compiler does not support "
       "${CMAKE_CXX_COMPILER}.")
@@ -110,7 +110,7 @@ if(NOT CMAKE_DISABLE_FIND_PACKAGE_CUDA AND
     # In check_language(CUDA) we will get and error if we set and put
     # "-ccbin ${CMAKE_CXX_COMPILER}" into the CMAKE_CUDA_FLAGS as this results
     # in "${NVCC} -ccbin=${CMAKE_CXX_COMPILER}   -ccbin ${CMAKE_CXX_COMPILER}"
-    set(ENV{CUDAHOSTCXX} ${CMAKE_CXX_COMPILER})
+    set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
   endif()
   include(CheckLanguage)
   # Unfortunately check_language(CUDA) will only check whether there is
