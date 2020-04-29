@@ -84,7 +84,7 @@ include ("${project}-prereqs")
 # Make sure we are using the same compiler underneath
 # NVCC as for the rest. In the case that NVCC does not support
 # that compiler it will error out. Unfortunately this will only
-# work CMake >= 3.8. We found no way to make FindCUDA.cmake error
+# work for CMake >= 3.8. We found no way to make FindCUDA.cmake error
 # out. It seems to ignore CMAKE_NVCC_FLAGS and CMAKE. Additionally
 # our way of specifying cuda source files never worked for CMake
 # version < 3.8. Hence we deactivate cuda for these versions.
@@ -102,23 +102,18 @@ if(NOT CMAKE_DISABLE_FIND_PACKAGE_CUDA AND
       "prevent incompatibilities. Note that this might report that there "
       "is not CUDA compiler if your system's CUDA compiler does not support "
       "${CMAKE_CXX_COMPILER}.")
-    # set(CMAKE_CUDA_FLAGS "-ccbin ${CMAKE_CXX_COMPILER} ${CMAKE_CUDA_FLAGS}")
-    # check_language does not seem to care about ${CMAKE_CUDA_FLAGS}.
-    # Hence set(CMAKE_CUDA_FLAGS$(_flags_suffix) "-ccbin ${CMAKE_CXX_COMPILER} ${CMAKE_CUDA_FLAGS${_flags_suffix}}")
-    # would have no effect. We need to set the environment variable ENV{CUDAHOSTCXX} such
-    # that cuda picks up the correct compiler during check_language.
-    # In check_language(CUDA) we will get and error if we set and put
-    # "-ccbin ${CMAKE_CXX_COMPILER}" into the CMAKE_CUDA_FLAGS as this results
+    # check_language does not seem to care about ${CMAKE_CUDA_FLAGS} or $(CUDA_NVCC_FLAGS}.
+    # Hence we set CMAKE_CUDA_HOST_COMPILER to our C++ compiler.
+    # In check_language(CUDA) we will get an error if we in addition put
+    # "-ccbin ${CMAKE_CXX_COMPILER}" into CMAKE_CUDA_FLAGS. It results
     # in "${NVCC} -ccbin=${CMAKE_CXX_COMPILER}   -ccbin ${CMAKE_CXX_COMPILER}"
+    # which causes nvcc to abort
     set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
   endif()
   include(CheckLanguage)
-  # Unfortunately check_language(CUDA) will only check whether there is
-  # a nvcc compiler. It will not check whether compilation with the above
-  # option works. Since the OPTIONAL flag of enable_language is currently
-  # ignored CMake will error out below if the options do not work.
   check_language(CUDA)
   if(CMAKE_CUDA_COMPILER)
+    # OPTIONAL is ignored. Hence the magic above to check whether enabling CUDA works
     enable_language(CUDA OPTIONAL)
     # While the documentation says that it is deprecated, FindCUDA seems the
     # only easy way to determine the cublas and cusparse libraries.
