@@ -89,7 +89,7 @@ include ("${project}-prereqs")
 # our way of specifying cuda source files never worked for CMake
 # version < 3.8. Hence we deactivate cuda for these versions.
 # We use "CMAKE_VERSION VERSION_GREATER 3.7.9" instead of
-# CMAKE_VERSION VERSION_GREATER_EQUAL 3.8, because of backwards
+# CMAKE_VERSION VERSION_GREATER_EQUAL 3.8, because of backwarsd
 # compatibility to cmake 3.6 and lower.
 if(NOT CMAKE_DISABLE_FIND_PACKAGE_CUDA AND
     CMAKE_VERSION VERSION_GREATER 3.7.9)
@@ -282,6 +282,23 @@ opm_add_test(flow_blackoil_dunecpr
   EXE_NAME flow_blackoil_dunecpr
   DEPENDS opmsimulators
   LIBRARIES opmsimulators)
+
+opm_add_test(flow_blackoil_dunecpr_noflex
+  ONLY_COMPILE
+  DEFAULT_ENABLE_IF ${FLOW_VARIANTS_DEFAULT_ENABLE_IF}
+  SOURCES flow/flow_blackoil_dunecpr_noflex.cpp
+  EXE_NAME flow_blackoil_dunecpr_noflex
+  DEPENDS "opmsimulators"
+  LIBRARIES "opmsimulators")
+
+opm_add_test(flow_blackoil_dunecpr_seq
+  ONLY_COMPILE
+  DEFAULT_ENABLE_IF ${FLOW_VARIANTS_DEFAULT_ENABLE_IF}
+  SOURCES flow/flow_blackoil_dunecpr_seq.cpp
+  EXE_NAME flow_blackoil_dunecpr_seq
+  DEPENDS "opmsimulators"
+  LIBRARIES "opmsimulators")
+
 
 opm_add_test(flow_onephase
   ONLY_COMPILE
