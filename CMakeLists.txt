@@ -109,6 +109,7 @@ if(NOT CMAKE_DISABLE_FIND_PACKAGE_CUDA AND
     # in "${NVCC} -ccbin=${CMAKE_CXX_COMPILER}   -ccbin ${CMAKE_CXX_COMPILER}"
     # which causes nvcc to abort
     set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
+    set(ENV{CUDAHOSTCXX} ${CMAKE_CUDA_HOST_COMPILER}) # The only thing honored by check_language(CUDA)!
   endif()
   include(CheckLanguage)
   check_language(CUDA)
