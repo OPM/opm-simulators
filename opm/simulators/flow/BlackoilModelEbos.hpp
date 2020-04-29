@@ -870,17 +870,10 @@ namespace Opm {
         }
 
     protected:
-        const ISTLSolverType& istlSolver() const
-        {
-            assert( istlSolver_ );
-            return *istlSolver_;
-        }
-
         // ---------  Data members  ---------
 
         Simulator& ebosSimulator_;
         const Grid&            grid_;
-        const ISTLSolverType*  istlSolver_;
         const PhaseUsage phaseUsage_;
         const bool has_disgas_;
         const bool has_vapoil_;
