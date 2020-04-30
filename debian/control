@@ -30,7 +30,7 @@ Description: OPM simulators library -- development files
 
 Package: libopm-simulators1
 Section: libs
-Pre-Depends: ${misc:Pre-Depends}, multiarch-support
+Pre-Depends: ${misc:Pre-Depends}
 Architecture: any
 Multi-Arch: same
 Depends: ${shlibs:Depends}, ${misc:Depends}
@@ -40,7 +40,7 @@ Description: OPM simulators library
 
 Package: libopm-simulators1-bin
 Section: science
-Pre-Depends: ${misc:Pre-Depends}, multiarch-support
+Pre-Depends: ${misc:Pre-Depends}
 Architecture: any
 Multi-Arch: same
 Depends: ${shlibs:Depends}, ${misc:Depends}
