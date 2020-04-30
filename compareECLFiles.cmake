@@ -552,6 +552,20 @@ add_test_compareECLFiles(CASENAME 9_2a_grpctl_msw_model2
                          REL_TOL ${rel_tol}
                          DIR model2)
 
+add_test_compareECLFiles(CASENAME 9_2b_grpctl_stw_model2
+                         FILENAME 9_2B_DEPL_GCONPROD_2L_STW
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2)
+
+add_test_compareECLFiles(CASENAME 9_2b_grpctl_msw_model2
+                         FILENAME 9_2B_DEPL_GCONPROD_2L_MSW
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2)
+
 add_test_compareECLFiles(CASENAME 9_3a_grpctl_stw_model2
                          FILENAME 9_3A_GINJ_REIN-G_STW
                          SIMULATOR flow
