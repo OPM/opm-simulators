@@ -52,6 +52,10 @@ struct SingleWellState
     struct Segment {
         int segment_number = -1;
         double pressure = -1e100;
+        double pressure_drop = 0.0;
+        double pressure_drop_hydrostatic = 0.0;
+        double pressure_drop_acceleration = 0.0;
+        double pressure_drop_friction = 0.0;
         PhaseRates surface_rates = {0.0};
     };
 

@@ -287,19 +287,19 @@ private:
             if (well.isInjector()) {
                 if (inj_controls.cmode == Well::InjectorCMode::RATE) {
                     switch (inj_controls.injector_type) {
-                    case Well::InjectorType::WATER:
+                    case InjectorType::WATER:
                         assert(phase_usage.phase_used[BlackoilPhases::Aqua]);
                         wstate.surface_rates[phase_usage.phase_pos[BlackoilPhases::Aqua]] = inj_surf_rate;
                         break;
-                    case Well::InjectorType::GAS:
+                    case InjectorType::GAS:
                         assert(phase_usage.phase_used[BlackoilPhases::Vapour]);
                         wstate.surface_rates[phase_usage.phase_pos[BlackoilPhases::Vapour]] = inj_surf_rate;
                         break;
-                    case Well::InjectorType::OIL:
+                    case InjectorType::OIL:
                         assert(phase_usage.phase_used[BlackoilPhases::Liquid]);
                         wstate.surface_rates[phase_usage.phase_pos[BlackoilPhases::Liquid]] = inj_surf_rate;
                         break;
-                    case Well::InjectorType::MULTI:
+                    case InjectorType::MULTI:
                         // Not currently handled, keep zero init.
                         break;
                     }
@@ -541,7 +541,13 @@ private:
 
         auto seg_res = data::Segment{};
 
-        seg_res.pressure = seg.pressure;
+        using Value = Opm::data::SegmentPressures::Value;
+        auto& segpress = seg_res.pressures;
+        segpress[Value::Pressure] = seg.pressure;
+        segpress[Value::PDrop] = seg.pressure_drop;
+        segpress[Value::PDropHydrostatic] = seg.pressure_drop_hydrostatic;
+        segpress[Value::PDropAccel] = seg.pressure_drop_acceleration;
+        segpress[Value::PDropFriction] = seg.pressure_drop_friction;
 
         if (pu.phase_used[BlackoilPhases::Aqua]) {
             seg_res.rates.set(rt::wat, seg.surface_rates[pu.phase_pos[BlackoilPhases::Aqua]]);

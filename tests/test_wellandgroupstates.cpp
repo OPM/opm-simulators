@@ -88,7 +88,7 @@ struct Setup
                     } else {
                         Opm::PerforationData pd;
                         pd.cell_index = active_index;
-                        pd.connection_transmissibility_factor = completion.CF() * completion.wellPi();
+                        pd.connection_transmissibility_factor = completion.CF();
                         pd.satnum_id = completion.satTableId();
                         well_perf_data[well_index].push_back(pd);
                     }
@@ -264,7 +264,8 @@ BOOST_AUTO_TEST_CASE(Pressure)
             const auto& xseg = xw.segments.at(segID + 1);
 
             BOOST_CHECK_EQUAL(xseg.segNumber, segID + 1);
-            BOOST_CHECK_CLOSE(xseg.pressure, pressTop + 1.0*segID, 1.0e-10);
+            BOOST_CHECK_CLOSE(xseg.pressures[Opm::data::SegmentPressures::Value::Pressure],
+                              pressTop + 1.0*segID, 1.0e-10);
         }
     }
 }
