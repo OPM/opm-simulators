@@ -3574,7 +3574,8 @@ namespace Opm
                 double total_connection_length = 0.;
                 for (const int conn : segment_perforations_[seg]) {
                     const auto& connection = connections.get(conn);
-                    const double connection_length = connection.getSegDistEnd() - connection.getSegDistStart();
+                    const auto& perf_range = connection.perf_range();
+                    const double connection_length = perf_range->second - perf_range->first;
                     assert(connection_length > 0.);
                     total_connection_length += connection_length;
                 }
