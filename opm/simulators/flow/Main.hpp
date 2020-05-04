@@ -144,7 +144,7 @@ namespace Opm
         int runDynamic()
         {
             int exitCode = EXIT_SUCCESS;
-            if (initialize_(exitCode)) {
+            if (initialize_<TTAG(FlowEarlyBird)>(exitCode)) {
                 return dispatchDynamic_();
             } else {
                 return exitCode;
@@ -155,7 +155,7 @@ namespace Opm
         int runStatic()
         {
             int exitCode = EXIT_SUCCESS;
-            if (initialize_(exitCode)) {
+            if (initialize_<TypeTag>(exitCode)) {
                 return dispatchStatic_<TypeTag>();
             } else {
                 return exitCode;
@@ -256,6 +256,7 @@ namespace Opm
             return Opm::flowEbosMain<TypeTag>(argc_, argv_, outputCout_, outputFiles_);
         }
 
+        template <class TypeTagEarlyBird>
         bool initialize_(int& exitCode)
         {
             Dune::Timer externalSetupTimer;
@@ -285,8 +286,8 @@ namespace Opm
             // use a type tag just for parsing the parameters before we instantiate the actual
             // simulator object. (Which parses the parameters again, but since this is done in an
             // identical manner it does not matter.)
-            typedef TTAG(FlowEarlyBird) PreTypeTag;
-            typedef GET_PROP_TYPE(PreTypeTag, Problem) PreProblem;
+            typedef TypeTagEarlyBird PreTypeTag;
+            typedef typename GET_PROP_TYPE(PreTypeTag, Problem) PreProblem;
 
             PreProblem::setBriefDescription("Flow, an advanced reservoir simulator for ECL-decks provided by the Open Porous Media project.");
             int status = Opm::FlowMainEbos<PreTypeTag>::setupParameters_(argc_, argv_);
