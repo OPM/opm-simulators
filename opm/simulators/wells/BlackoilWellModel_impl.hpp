@@ -2312,8 +2312,11 @@ namespace Opm {
         const Group::InjectionCMode& currentGroupControl = wellState.currentInjectionGroupControl(Phase::GAS, group.name());
         if( currentGroupControl == Group::InjectionCMode::REIN ) {
             int gasPos = phase_usage_.phase_pos[BlackoilPhases::Vapour];
-            double gasProductionRate = WellGroupHelpers::sumWellRates(group, schedule, wellState, reportStepIdx, gasPos, /*isInjector*/false);
-            double solventProductionRate = WellGroupHelpers::sumSolventRates(group, schedule, wellState, reportStepIdx, /*isInjector*/false);
+            const auto& summaryState = ebosSimulator_.vanguard().summaryState();
+            const auto& controls = group.injectionControls(Phase::GAS, summaryState);
+            const Group& groupRein = schedule.getGroup(controls.reinj_group, reportStepIdx);
+            double gasProductionRate = WellGroupHelpers::sumWellRates(groupRein, schedule, wellState, reportStepIdx, gasPos, /*isInjector*/false);
+            double solventProductionRate = WellGroupHelpers::sumSolventRates(groupRein, schedule, wellState, reportStepIdx, /*isInjector*/false);
 
             const auto& comm = ebosSimulator_.vanguard().grid().comm();
             solventProductionRate = comm.sum(solventProductionRate);
