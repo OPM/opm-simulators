@@ -2246,7 +2246,13 @@ namespace Opm
         std::vector<double> resv_coeff(phaseUsage().num_phases, 1.0);
         rateConverter_.calcCoeff(0, pvtRegionIdx_, resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
-        WellGroupHelpers::TargetCalculator tcalc(currentGroupControl, pu, resv_coeff);
+        // gconsale may adjust the grat target.
+        // the adjusted rates is send to the targetCalculator
+        double gratTargetFromSales = 0.0;
+        if (well_state.hasGroupGratTargetFromSales(group.name()))
+            gratTargetFromSales = well_state.currentGroupGratTargetFromSales(group.name());
+
+        WellGroupHelpers::TargetCalculator tcalc(currentGroupControl, pu, resv_coeff, gratTargetFromSales);
         WellGroupHelpers::FractionCalculator fcalc(schedule, well_state, current_step_, guide_rate_, tcalc.guideTargetMode(), pu);
 
         auto localFraction = [&](const std::string& child) {
