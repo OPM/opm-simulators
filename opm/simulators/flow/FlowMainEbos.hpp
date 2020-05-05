@@ -83,6 +83,17 @@ namespace Opm
         // Read the command line parameters. Throws an exception if something goes wrong.
         static int setupParameters_(int argc, char** argv)
         {
+            using ParamsMeta = typename GET_PROP(TypeTag, ParameterMetaData);
+            if (!ParamsMeta::registrationOpen()) {
+                // We have already successfully run setupParameters_().
+                // For the dynamically chosen runs (as from the main flow
+                // executable) we must run this function again with the
+                // real typetag to be used, as the first time was with the
+                // "FlowEarlyBird" typetag. However, for the static ones (such
+                // as 'flow_onephase_energy') it has already been run with the
+                // correct typetag.
+                return EXIT_SUCCESS;
+            }
             // register the flow specific parameters
             EWOMS_REGISTER_PARAM(TypeTag, std::string, EnableDryRun,
                                  "Specify if the simulation ought to be actually run, or just pretended to be");
