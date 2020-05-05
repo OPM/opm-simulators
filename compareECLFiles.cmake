@@ -608,6 +608,34 @@ add_test_compareECLFiles(CASENAME 9_3c_grpctl_msw_model2
                          REL_TOL ${rel_tol}
                          DIR model2)
 
+add_test_compareECLFiles(CASENAME 9_3d_grpctl_stw_model2
+                         FILENAME 9_3D_GINJ_GAS_MAX_EXPORT_STW
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2)
+
+add_test_compareECLFiles(CASENAME 9_3d_grpctl_msw_model2
+                         FILENAME 9_3D_GINJ_GAS_MAX_EXPORT_MSW
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2)
+
+add_test_compareECLFiles(CASENAME 9_3e_grpctl_stw_model2
+                         FILENAME 9_3E_GAS_MIN_EXPORT_STW
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2)
+
+add_test_compareECLFiles(CASENAME 9_3e_grpctl_msw_model2
+                         FILENAME 9_3E_GAS_MIN_EXPORT_MSW
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2)
+
 add_test_compareECLFiles(CASENAME 9_4a_grpctl_stw_model2
                          FILENAME 9_4A_WINJ_MAXWRATES_MAXBHP_GCONPROD_1L_STW
                          SIMULATOR flow
