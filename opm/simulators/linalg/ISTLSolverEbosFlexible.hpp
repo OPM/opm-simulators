@@ -24,6 +24,7 @@
 #include <opm/simulators/linalg/findOverlapRowsAndColumns.hpp>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/setupPropertyTree.hpp>
+#include <opm/simulators/linalg/WriteSystemMatrixHelper.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
 
@@ -199,9 +200,11 @@ public:
         if (recreate_solver || !solver_) {
             if (isParallel()) {
 #if HAVE_MPI
+                matrix_ = &mat.istlMatrix();
                 solver_.reset(new SolverType(prm_, mat.istlMatrix(), weightsCalculator, *comm_));
 #endif
             } else {
+                matrix_ = &mat.istlMatrix();
                 solver_.reset(new SolverType(prm_, mat.istlMatrix(), weightsCalculator));
             }
             rhs_ = b;
@@ -214,6 +217,7 @@ public:
     bool solve(VectorType& x)
     {
         solver_->apply(x, rhs_, res_);
+        this->writeMatrix();
         return res_.converged;
     }
 
@@ -275,8 +279,27 @@ protected:
         return weights;
     }
 
-    const Simulator& simulator_;
+    void writeMatrix()
+    {
+#ifdef HAVE_MPI
+        const int verbosity = prm_.get<int>("verbosity");
+        const bool write_matrix = verbosity > 10;
+        if (write_matrix) {
+            using block_type = typename MatrixType::block_type;
+            using value_type = typename block_type::value_type;
+            using BaseBlockType = Dune::FieldMatrix<value_type,block_type::rows,block_type::cols>;
+            using BaseMatrixType = Dune::BCRSMatrix<BaseBlockType>;
+            const BaseMatrixType* matrix =  reinterpret_cast<BaseMatrixType*>(this->matrix_);
+            Opm::Helper::writeSystem(this->simulator_, //simulator is only used to get names
+                                     *matrix,
+                                     this->rhs_,
+                                     comm_.get());
+        }
+#endif
+    }
 
+    const Simulator& simulator_;
+    MatrixType* matrix_;
     std::unique_ptr<SolverType> solver_;
     FlowLinearSolverParameters parameters_;
     boost::property_tree::ptree prm_;
