@@ -31,7 +31,7 @@
 
 #include <memory>
 #include <utility>
-
+#include "WriteSystemMatrixHelper.hpp"
 BEGIN_PROPERTIES
 
 NEW_TYPE_TAG(FlowIstlSolverFlexible, INHERITS_FROM(FlowIstlSolverParams));
@@ -214,6 +214,7 @@ public:
     bool solve(VectorType& x)
     {
         solver_->apply(x, rhs_, res_);
+	this->writeMatrix();
         return res_.converged;
     }
 
@@ -274,7 +275,20 @@ protected:
                                       ThreadManager::threadId());
         return weights;
     }
-
+    void writeMatrix(){
+	int verbosity = prm_.get<int>("verbosity");
+	if(verbosity > 10){
+	    using block_type = MatrixType::block_type;
+	    using BaseBlockType = Dune::FieldMatrix<
+		block_type::value_type,block_type::rows,block_type::cols>;
+	    using BaseMatrixType = Dune::BCRSMatrix<BaseBlockType>;
+	    const BaseMatrixType& matrix =  reinterp_cast<BaseMatrixType>(*this->matrix_);
+	    Opm::Helper::writeSystem(this->simulator_,
+				     matrix,
+				     *this->rhs_);
+	}
+    }
+    
     const Simulator& simulator_;
 
     std::unique_ptr<SolverType> solver_;
