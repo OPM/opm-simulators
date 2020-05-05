@@ -278,11 +278,11 @@ protected:
     void writeMatrix(){
 	int verbosity = prm_.get<int>("verbosity");
 	if(verbosity > 10){
-	    using block_type = MatrixType::block_type;
-	    using BaseBlockType = Dune::FieldMatrix<
-		block_type::value_type,block_type::rows,block_type::cols>;
+	    using block_type = typename MatrixType::block_type;
+	    using value_type = typename block_type::value_type;
+	    using BaseBlockType = Dune::FieldMatrix<value_type,block_type::rows,block_type::cols>;
 	    using BaseMatrixType = Dune::BCRSMatrix<BaseBlockType>;
-	    const BaseMatrixType& matrix =  reinterp_cast<BaseMatrixType>(*this->matrix_);
+	    const BaseMatrixType& matrix =  reinterpret_cast<BaseMatrixType>(*this->matrix_);
 	    Opm::Helper::writeSystem(this->simulator_,
 				     matrix,
 				     *this->rhs_);

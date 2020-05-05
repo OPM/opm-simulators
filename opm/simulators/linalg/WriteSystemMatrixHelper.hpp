@@ -15,7 +15,6 @@
 #ifndef OPM_WRITESYSTEMMATRIXHELPER_HEADER_INCLUDED
 #define OPM_WRITESYSTEMMATRIXHELPER_HEADER_INCLUDED
 #include <dune/istl/matrixmarket.hh>
-#include <ewoms/linear/matrixblock.hh>
 namespace Opm{
     namespace Helper {
 	template<class SimulatorType,
@@ -29,7 +28,7 @@ namespace Opm{
 		dir = "";
 	    else if (!dir.empty() && dir.back() != '/')
 		dir += "/";
-	    namespace fs = boost::filesystem;
+	    namespace fs = Opm::filesystem;
 	    fs::path output_dir(dir);
 	    fs::path subdir("reports");
 	    output_dir = output_dir / subdir;
@@ -58,3 +57,4 @@ namespace Opm{
 	
     } //namespace helper   
 }// namespace Opm
+#endif
