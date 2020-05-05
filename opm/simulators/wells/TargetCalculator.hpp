@@ -46,11 +46,14 @@ namespace WellGroupHelpers
     public:
         TargetCalculator(const Group::ProductionCMode cmode,
                          const PhaseUsage& pu,
-                         const std::vector<double>& resv_coeff)
+                         const std::vector<double>& resv_coeff,
+                         const double group_grat_target_from_sales)
             : cmode_(cmode)
             , pu_(pu)
             , resv_coeff_(resv_coeff)
+            , group_grat_target_from_sales_(group_grat_target_from_sales)
         {
+
         }
 
         template <typename RateVec>
@@ -107,7 +110,13 @@ namespace WellGroupHelpers
             case Group::ProductionCMode::WRAT:
                 return ctrl.water_target;
             case Group::ProductionCMode::GRAT:
+            {
+                // gas target may have been adjusted by GCONSALE
+                if ( group_grat_target_from_sales_ > 0)
+                    return group_grat_target_from_sales_;
+
                 return ctrl.gas_target;
+            }
             case Group::ProductionCMode::LRAT:
                 return ctrl.liquid_target;
             case Group::ProductionCMode::RESV:
@@ -151,6 +160,7 @@ namespace WellGroupHelpers
         Group::ProductionCMode cmode_;
         const PhaseUsage& pu_;
         const std::vector<double>& resv_coeff_;
+        const double group_grat_target_from_sales_;
     };
 
 } // namespace WellGroupHelpers

@@ -464,16 +464,17 @@ namespace Opm {
             const std::string msg = "A zero well potential is returned for output purposes. ";
             local_deferredLogger.warning("WELL_POTENTIAL_CALCULATION_FAILED", msg);
         }
+
+        // check group sales limits at the end of the timestep
+        const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
+        checkGconsaleLimits(fieldGroup, well_state_, local_deferredLogger);
+
         previous_well_state_ = well_state_;
 
         Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
         if (terminal_output_) {
             global_deferredLogger.logMessages();
         }
-
-        // check group sales limits at the end of the timestep
-        const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
-        checkGconsaleLimits(fieldGroup);
     }
 
 
@@ -2046,12 +2047,12 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    checkGconsaleLimits(const Group& group) const
+    checkGconsaleLimits(const Group& group, WellState& well_state, Opm::DeferredLogger& deferred_logger) const
     {
         const int reportStepIdx = ebosSimulator_.episodeIndex();
          // call recursively down the group hiearchy
         for (const std::string& groupName : group.groups()) {
-            checkGconsaleLimits( schedule().getGroup(groupName, reportStepIdx));
+            checkGconsaleLimits( schedule().getGroup(groupName, reportStepIdx), well_state, deferred_logger);
         }
 
         // only for groups with gas injection controls
@@ -2063,20 +2064,26 @@ namespace Opm {
         if (!schedule().gConSale(reportStepIdx).has(group.name()))
             return;
 
+        std::ostringstream ss;
+
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
-        const auto& well_state = well_state_;
 
-        const auto& controls = group.injectionControls(Phase::GAS, summaryState);
+        const auto& inj_controls = group.injectionControls(Phase::GAS, summaryState);
         const auto& gconsale = schedule().gConSale(reportStepIdx).get(group.name(), summaryState);
+        const Group::ProductionCMode& oldProductionControl = well_state.currentProductionGroupControl(group.name());
 
-        double sales_rate = 0.0;
+
         int gasPos = phase_usage_.phase_pos[BlackoilPhases::Vapour];
-        sales_rate += WellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, gasPos, /*isInjector*/false);
-        sales_rate -= WellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, gasPos, /*isInjector*/true);
+        double production_rate = WellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, gasPos, /*isInjector*/false);
+        double injection_rate = WellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, gasPos, /*isInjector*/true);
 
         // sum over all nodes
-        sales_rate = comm.sum(sales_rate);
+        injection_rate = comm.sum(injection_rate);
+        production_rate = comm.sum(production_rate);
+
+        double sales_rate = production_rate - injection_rate;
+        double production_target = gconsale.sales_target + injection_rate;
 
         // add import rate and substract consumption rate for group for gas
         if (schedule().gConSump(reportStepIdx).has(group.name())) {
@@ -2084,17 +2091,79 @@ namespace Opm {
             if (phase_usage_.phase_used[BlackoilPhases::Vapour]) {
                 sales_rate += gconsump.import_rate;
                 sales_rate -= gconsump.consumption_rate;
+                production_target -= gconsump.import_rate;
+                production_target += gconsump.consumption_rate;
             }
         }
         if (sales_rate > gconsale.max_sales_rate) {
-            OPM_THROW(std::runtime_error, "Group " + group.name() + " has sale rate more then the maximum permitted value. Not implemented in Flow" );
+
+            switch(gconsale.max_proc) {
+            case GConSale::MaxProcedure::NONE: {
+                if (oldProductionControl != Group::ProductionCMode::GRAT && oldProductionControl != Group::ProductionCMode::NONE) {
+                    ss << "Group sales exceed maximum limit, but the action is NONE for " + group.name() + ". Nothing happens";
+                }
+                break;
+                }
+            case GConSale::MaxProcedure::CON: {
+                OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GCONSALE exceed limit CON not implemented", deferred_logger);
+                break;
+            }
+            case GConSale::MaxProcedure::CON_P: {
+                OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GCONSALE exceed limit CON_P not implemented", deferred_logger);
+                break;
+            }
+            case GConSale::MaxProcedure::WELL: {
+                OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GCONSALE exceed limit WELL not implemented", deferred_logger);
+                break;
+            }
+            case GConSale::MaxProcedure::PLUG: {
+                OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GCONSALE exceed limit PLUG not implemented", deferred_logger);
+                break;
+            }
+            case GConSale::MaxProcedure::MAXR: {
+                OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GCONSALE exceed limit MAXR not implemented", deferred_logger);
+                break;
+            }
+            case GConSale::MaxProcedure::END: {
+                OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GCONSALE exceed limit END not implemented", deferred_logger);
+                break;
+            }
+            case GConSale::MaxProcedure::RATE: {
+                    well_state.setCurrentProductionGroupControl(group.name(), Group::ProductionCMode::GRAT);
+                    ss << "Maximum GCONSALE limit violated for " << group.name() << ". The group is switched from ";
+                    ss << Group::ProductionCMode2String(oldProductionControl) << " to " << Group::ProductionCMode2String(Group::ProductionCMode::GRAT);
+                    ss << " and limited by the maximum sales rate after consumption and import are considered" ;
+                    well_state.setCurrentGroupGratTargetFromSales(group.name(), production_target);
+                break;
+            }
+            default:
+                throw("Invalid procedure for maximum rate limit selected for group" + group.name());
+            }
         }
         if (sales_rate < gconsale.min_sales_rate) {
-            OPM_THROW(std::runtime_error, "Group " + group.name() + " has sale rate less then minimum permitted value. Not implemented in Flow" );
+            const Group::ProductionCMode& currentProductionControl = well_state.currentProductionGroupControl(group.name());
+            if ( currentProductionControl == Group::ProductionCMode::GRAT ) {
+                ss << "Group " + group.name() + " has sale rate less then minimum permitted value and is under GRAT control. \n";
+                ss << "The GRAT is increased to meet the sales minimum rate. \n";
+                well_state.setCurrentGroupGratTargetFromSales(group.name(), production_target);
+            //} else if () {//TODO add action for WGASPROD
+            //} else if () {//TODO add action for drilling queue
+            } else {
+                ss << "Group " + group.name() + " has sale rate less then minimum permitted value but cannot increase the group production rate \n";
+                ss << "or adjust gas production using WGASPROD or drill new wells to meet the sales target. \n";
+                ss << "Note that WGASPROD and drilling queues are not implemented in Flow. No action is taken. \n ";
+            }
         }
         if (gconsale.sales_target < 0.0) {
-            OPM_THROW(std::runtime_error, "Group " + group.name() + " has sale rate target less then zero. Not implemented in Flow" );
+            OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + " has sale rate target less then zero. Not implemented in Flow" , deferred_logger);
         }
+
+        auto cc = Dune::MPIHelper::getCollectiveCommunication();
+        if (cc.size() > 1) {
+            ss << " on rank " << cc.rank();
+        }
+        if (!ss.str().empty())
+            deferred_logger.info(ss.str());
 
     }
 

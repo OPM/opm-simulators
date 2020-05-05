@@ -1008,14 +1008,8 @@ namespace WellGroupHelpers
             assert(phasePos == pu.phase_pos[BlackoilPhases::Vapour]);
 
             // Gas injection rate = Total gas production rate + gas import rate - gas consumption rate - sales rate;
+            // Gas import and consumption is already included in the REIN rates
             double inj_rate = wellState.currentInjectionREINRates(group.name())[phasePos];
-            if (schedule.gConSump(reportStepIdx).has(group.name())) {
-                const auto& gconsump = schedule.gConSump(reportStepIdx).get(group.name(), summaryState);
-                if (pu.phase_used[BlackoilPhases::Vapour]) {
-                    inj_rate += gconsump.import_rate;
-                    inj_rate -= gconsump.consumption_rate;
-                }
-            }
             const auto& gconsale = schedule.gConSale(reportStepIdx).get(group.name(), summaryState);
             inj_rate -= gconsale.sales_target;
 
@@ -1125,7 +1119,14 @@ namespace WellGroupHelpers
 
         // If we are here, we are at the topmost group to be visited in the recursion.
         // This is the group containing the control we will check against.
-        TargetCalculator tcalc(currentGroupControl, pu, resv_coeff);
+
+        // gconsale may adjust the grat target.
+        // the adjusted rates is send to the targetCalculator
+        double gratTargetFromSales = 0.0;
+        if (wellState.hasGroupGratTargetFromSales(group.name()))
+            gratTargetFromSales = wellState.currentGroupGratTargetFromSales(group.name());
+
+        TargetCalculator tcalc(currentGroupControl, pu, resv_coeff, gratTargetFromSales);
         FractionCalculator fcalc(schedule, wellState, reportStepIdx, guideRate, tcalc.guideTargetMode(), pu);
 
         auto localFraction = [&](const std::string& child) { return fcalc.localFraction(child, name); };

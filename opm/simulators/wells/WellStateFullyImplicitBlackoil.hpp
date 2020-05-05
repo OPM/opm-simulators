@@ -447,6 +447,24 @@ namespace Opm
             return it->second;
         }
 
+        void setCurrentGroupGratTargetFromSales(const std::string& groupName, const double& target ) {
+            group_grat_target_from_sales[groupName] = target;
+        }
+
+        bool hasGroupGratTargetFromSales(const std::string& groupName) const {
+            auto it = group_grat_target_from_sales.find(groupName);
+            return it != group_grat_target_from_sales.end();
+        }
+
+        const double& currentGroupGratTargetFromSales(const std::string& groupName) const {
+            auto it = group_grat_target_from_sales.find(groupName);
+
+            if (it == group_grat_target_from_sales.end())
+                OPM_THROW(std::logic_error, "Could not find any grat target from sales for group " << groupName);
+
+            return it->second;
+        }
+
         void setCurrentGroupInjectionPotentials(const std::string& groupName, const std::vector<double>& pot ) {
             injection_group_potentials[groupName] = pot;
         }
@@ -1042,6 +1060,7 @@ namespace Opm
         std::map<std::string, std::vector<double>> injection_group_potentials;
         std::map<std::string, double> injection_group_vrep_rates;
         std::map<std::string, std::vector<double>> injection_group_rein_rates;
+        std::map<std::string, double> group_grat_target_from_sales;
 
         std::vector<double> perfRateSolvent_;
 
