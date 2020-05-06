@@ -518,8 +518,21 @@ namespace Opm
                     ss << "Threads per MPI process:  " << std::setw(5) << threads << "\n";
                     successReport.reportFullyImplicit(ss, &failureReport);
                     OpmLog::info(ss.str());
+		    const std::string dir = eclState().getIOConfig().getOutputDir();
+		    namespace fs = Opm::filesystem;
+		    fs::path output_dir(dir);
+		    {
+			fs::path fullpath = output_dir / "successreports.txt";
+			std::ofstream os(fullpath.string());
+			successReport.fullReports(os);
+		    }
+		    {
+			fs::path fullpath = output_dir / "failedreports.txt";
+			std::ofstream os(fullpath.string());
+			failureReport.fullReports(os);
+		    }		    
                 }
-                return successReport.exit_status;
+	        return successReport.exit_status;
             } else {
                 if (output_cout) {
                     std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;

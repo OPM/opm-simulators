@@ -229,12 +229,12 @@ namespace Opm {
         /// \param[in, out] reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
         template <class NonlinearSolverType>
-        SimulatorReport nonlinearIteration(const int iteration,
+        SimulatorReportBase nonlinearIteration(const int iteration,
                                            const SimulatorTimerInterface& timer,
                                            NonlinearSolverType& nonlinear_solver)
         {
-            SimulatorReport report;
-            failureReport_ = SimulatorReport();
+            SimulatorReportBase report;
+            failureReport_ = SimulatorReportBase();
             Dune::Timer perfTimer;
 
             perfTimer.start();
@@ -854,7 +854,7 @@ namespace Opm {
         { return ebosSimulator_; }
 
         /// return the statistics if the nonlinearIteration() method failed
-        const SimulatorReport& failureReport() const
+        const SimulatorReportBase& failureReport() const
         { return failureReport_; }
 
         struct StepReport
@@ -885,7 +885,7 @@ namespace Opm {
 	const bool has_brine_;
 
         ModelParameters                 param_;
-        SimulatorReport failureReport_;
+        SimulatorReportBase failureReport_;
 
         // Well Model
         BlackoilWellModel<TypeTag>& well_model_;
