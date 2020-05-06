@@ -27,7 +27,7 @@
 
 namespace Opm
 {
-    SimulatorReport::SimulatorReport(bool verbose)
+    SimulatorReportBase::SimulatorReportBase(bool verbose)
         : pressure_time(0.0),
           transport_time(0.0),
           total_time(0.0),
@@ -43,11 +43,12 @@ namespace Opm
           total_linear_iterations( 0 ),
           converged(false),
           exit_status(EXIT_SUCCESS),
+	  global_time(0),
           verbose_(verbose)
     {
     }
 
-    void SimulatorReport::operator+=(const SimulatorReport& sr)
+    void SimulatorReportBase::operator+=(const SimulatorReportBase& sr)
     {
         pressure_time += sr.pressure_time;
         transport_time += sr.transport_time;
@@ -62,9 +63,10 @@ namespace Opm
         total_linearizations += sr.total_linearizations;
         total_newton_iterations += sr.total_newton_iterations;
         total_linear_iterations += sr.total_linear_iterations;
+	global_time = sr.global_time;
     }
 
-    void SimulatorReport::report(std::ostream& os)
+    void SimulatorReportBase::report(std::ostream& os)
     {
         if ( verbose_ )
         {
@@ -77,7 +79,7 @@ namespace Opm
         }
     }
 
-    void SimulatorReport::reportStep(std::ostringstream& ss)
+    void SimulatorReportBase::reportStep(std::ostringstream& ss)
     {
         if ( verbose_ )
         {
@@ -93,7 +95,7 @@ namespace Opm
         }
     }
 
-    void SimulatorReport::reportFullyImplicit(std::ostream& os, const SimulatorReport* failureReport)
+    void SimulatorReportBase::reportFullyImplicit(std::ostream& os, const SimulatorReportBase* failureReport)
     {
         if ( verbose_ )
         {
@@ -178,7 +180,7 @@ namespace Opm
         }
     }
 
-    void SimulatorReport::reportParam(std::ostream& os)
+    void SimulatorReportBase::reportParam(std::ostream& os)
     {
         if ( verbose_ )
         {
@@ -190,6 +192,32 @@ namespace Opm
                << std::endl;
         }
     }
-
-
+    void SimulatorReport::fullReports(std::ostream& os){
+	SimulatorReportBase all;
+	for(size_t i=0; i < stepreports.size(); ++i){
+	    SimulatorReportBase& sr = stepreports[i];
+	    all += sr;
+	    os << sr.global_time<< " ";
+	    //os << sr.pressure_time<< " ";
+	    //os << sr.transport_time<< " ";
+	    //os << sr.total_time<< " ";
+	    //os << sr.solver_time<< " ";
+	    os << sr.assemble_time<< " ";
+	    os << sr.linear_solve_setup_time<< " ";
+	    os << sr.linear_solve_time<< " ";
+	    os << sr.update_time<< " ";
+	    os << sr.output_write_time<< " ";
+	    os<<  sr.total_well_iterations<< " ";
+	    os << sr.total_linearizations<< " ";
+	    os << sr.total_newton_iterations<< " ";
+	    os << sr.total_linear_iterations<< " ";
+	    os << sr.converged<< " ";
+	    os << sr.exit_status<< " ";
+	    os << std::endl;
+	}
+	if(not(this->linear_solve_time == all.linear_solve_time)){
+	    Opm::debug("Inconsistency between timestep report and total report");
+	}
+    }
+    
 } // namespace Opm

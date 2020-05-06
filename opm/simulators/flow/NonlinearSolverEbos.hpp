@@ -151,10 +151,11 @@ namespace Opm {
 
         SimulatorReport step(const SimulatorTimerInterface& timer)
         {
-            SimulatorReport iterReport;
-            SimulatorReport report;
+            SimulatorReportBase iterReport;
+            SimulatorReportBase report;
+	    report.global_time = timer.simulationTimeElapsed();
             failureReport_ = SimulatorReport();
-
+	    failureReport_.global_time = timer.simulationTimeElapsed();
             // Do model-specific once-per-step calculations.
             model_->prepareStep(timer);
 
@@ -172,7 +173,7 @@ namespace Opm {
                     // model will usually do an early return without an expensive
                     // solve, unless the minIter() count has not been reached yet.
                     iterReport = model_->nonlinearIteration(iteration, timer, *this);
-
+		    iterReport.global_time = timer.simulationTimeElapsed();
                     report += iterReport;
                     report.converged = iterReport.converged;
 
@@ -199,8 +200,10 @@ namespace Opm {
             // Do model-specific post-step actions.
             model_->afterStep(timer);
             report.converged = true;
-
-            return report;
+	    SimulatorReport report_step;
+	    report_step += report;
+	    report_step.converged = true;
+            return report_step;
         }
 
         /// return the statistics if the step() method failed
