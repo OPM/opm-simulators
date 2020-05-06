@@ -278,6 +278,7 @@ protected:
         return weights;
     }
     void writeMatrix(){
+#ifdef HAVE_MPI	
 	int verbosity = prm_.get<int>("verbosity");
 	if(verbosity > 10){
 	    using block_type = typename MatrixType::block_type;
@@ -288,8 +289,9 @@ protected:
 	    Opm::Helper::writeSystem(this->simulator_,//simulator is only used to get names
 				     *matrix,
 				     this->rhs_,
-		                     *comm_);
+		                     comm_.get());
 	}
+#endif	
     }
     
     const Simulator& simulator_;

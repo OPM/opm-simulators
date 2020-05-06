@@ -24,7 +24,7 @@ namespace Opm{
 	void writeSystem(const SimulatorType& simulator,
 			 const MatrixType& matrix,
 			 const VectorType& rhs,
-			 const Communicator& comm){
+			 const Communicator* comm){
 	    std::string dir = simulator.problem().outputDir();
 	    if (dir == ".")
 		dir = "";
@@ -47,12 +47,21 @@ namespace Opm{
 	    {
 		std::string filename = prefix + "matrix_istl";
 		//std::ofstream filem(filename);
-		Dune::storeMatrixMarket(matrix, filename, comm,true);
+		if(comm != nullptr){//comm is not set in serial runs
+		    Dune::storeMatrixMarket(matrix, filename, *comm,true);
+		}else{
+		    Dune::storeMatrixMarket(matrix, filename);
+		}
+		    
 	    }
 	    {		
 		std::string filename = prefix + "rhs_istl";
 		//std::ofstream fileb(filename);
-		Dune::storeMatrixMarket(rhs, filename, comm, true);// got compilation error for store
+		if(comm != nullptr){//comm is not set in serial runs
+		    Dune::storeMatrixMarket(rhs, filename, *comm, true);
+		}else{
+		    Dune::storeMatrixMarket(rhs, filename);
+		}
 	    }
 	}
 
