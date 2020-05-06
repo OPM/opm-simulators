@@ -199,9 +199,11 @@ public:
         if (recreate_solver || !solver_) {
             if (isParallel()) {
 #if HAVE_MPI
+		matrix_ = &mat.istlMatrix();
                 solver_.reset(new SolverType(prm_, mat.istlMatrix(), weightsCalculator, *comm_));
 #endif
             } else {
+		matrix_ = &mat.istlMatrix();
                 solver_.reset(new SolverType(prm_, mat.istlMatrix(), weightsCalculator));
             }
             rhs_ = b;
@@ -282,15 +284,16 @@ protected:
 	    using value_type = typename block_type::value_type;
 	    using BaseBlockType = Dune::FieldMatrix<value_type,block_type::rows,block_type::cols>;
 	    using BaseMatrixType = Dune::BCRSMatrix<BaseBlockType>;
-	    const BaseMatrixType& matrix =  reinterpret_cast<BaseMatrixType>(*this->matrix_);
-	    Opm::Helper::writeSystem(this->simulator_,
-				     matrix,
-				     *this->rhs_);
+	    const BaseMatrixType* matrix =  reinterpret_cast<BaseMatrixType*>(this->matrix_);
+	    Opm::Helper::writeSystem(this->simulator_,//simulator is only used to get names
+				     *matrix,
+				     this->rhs_,
+		                     *comm_);
 	}
     }
     
     const Simulator& simulator_;
-
+    MatrixType* matrix_;
     std::unique_ptr<SolverType> solver_;
     FlowLinearSolverParameters parameters_;
     boost::property_tree::ptree prm_;

@@ -19,10 +19,12 @@ namespace Opm{
     namespace Helper {
 	template<class SimulatorType,
 		 class MatrixType,
-		 class VectorType>
+		 class VectorType,
+		 class Communicator>
 	void writeSystem(const SimulatorType& simulator,
 			 const MatrixType& matrix,
-			 const VectorType& rhs){
+			 const VectorType& rhs,
+			 const Communicator& comm){
 	    std::string dir = simulator.problem().outputDir();
 	    if (dir == ".")
 		dir = "";
@@ -44,13 +46,13 @@ namespace Opm{
 	    std::string prefix = full_path.string();
 	    {
 		std::string filename = prefix + "matrix_istl";
-		std::ofstream filem(filename);
-		Dune::storeMatrixMarket(matrix, filem);
+		//std::ofstream filem(filename);
+		Dune::storeMatrixMarket(matrix, filename, comm,true);
 	    }
 	    {		
 		std::string filename = prefix + "rhs_istl";
-		std::ofstream fileb(filename);
-		Dune::storeMatrixMarket(rhs, fileb);
+		//std::ofstream fileb(filename);
+		Dune::storeMatrixMarket(rhs, filename, comm, true);// got compilation error for store
 	    }
 	}
 
