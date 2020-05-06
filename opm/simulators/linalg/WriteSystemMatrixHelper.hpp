@@ -41,7 +41,7 @@ namespace Opm{
 	    std::ostringstream oss;
 	    oss << "prob_" << simulator.episodeIndex() << "_time_";
 	    oss << simulator.time() << "_";
-	    int nit = simulator_.model().newtonMethod().numIterations();
+	    int nit = simulator.model().newtonMethod().numIterations();
 	    oss << "_nit_" << nit << "_";
 	    std::string output_file(oss.str());
 	    fs::path full_path = output_dir / output_file;
