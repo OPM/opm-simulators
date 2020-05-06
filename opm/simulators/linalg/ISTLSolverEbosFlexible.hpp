@@ -283,7 +283,7 @@ protected:
 	//int nit = this->simulator_.model().newtonMethod().numIterations();
 	//int iters = this->iterations()
 	bool write_matrix = verbosity>10;
-	if(write_matrix > 10){
+	if(write_matrix){
 	    using block_type = typename MatrixType::block_type;
 	    using value_type = typename block_type::value_type;
 	    using BaseBlockType = Dune::FieldMatrix<value_type,block_type::rows,block_type::cols>;
