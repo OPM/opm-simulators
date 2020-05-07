@@ -565,6 +565,83 @@ public:
         return false;
     }
 
+    bool chopAndNormalizeSaturations(){
+        if (primaryVarsMeaning() == OnePhase_p){
+            return false;
+        }
+        Scalar Sw = 0.0;
+        if (waterEnabled)
+            Sw = (*this)[Indices::waterSaturationIdx];
+
+        if (primaryVarsMeaning() == Sw_po_Sg) {
+            Scalar Sg = 0.0;
+            if (compositionSwitchEnabled)
+                Sg = (*this)[Indices::compositionSwitchIdx];
+            Scalar Ssol = 0.0;
+            if (enableSolvent)
+                Ssol =(*this) [Indices::solventSaturationIdx];
+            
+            Scalar So = 1.0 - Sw - Sg - Ssol;
+            Sw = std::min(std::max(Sw,0.0),1.0);
+            So = std::min(std::max(So,0.0),1.0);
+            Sg = std::min(std::max(Sg,0.0),1.0);
+            Ssol = std::min(std::max(Ssol,0.0),1.0);
+            
+            Scalar St = Sw + So + Sg + Ssol;
+            Sw = Sw/St;
+            Sg = Sg/St;
+            Ssol = Ssol/St;
+            assert(St>0.5);
+            if (waterEnabled)
+                (*this)[Indices::waterSaturationIdx]= Sw;
+            if (compositionSwitchEnabled)
+                (*this)[Indices::compositionSwitchIdx] = Sg;
+            if (enableSolvent)
+                (*this)[Indices::solventSaturationIdx] = Ssol;
+            return not(St==1);
+            
+        }else if (primaryVarsMeaning() == Sw_po_Rs) { 
+            Scalar Ssol = 0.0;
+            if (enableSolvent)
+                Ssol = (*this)[Indices::solventSaturationIdx];
+            Scalar So = 1.0 - Sw  - Ssol;
+            Sw = std::min(std::max(Sw,0.0),1.0);
+            So = std::min(std::max(So,0.0),1.0);
+            Ssol = std::min(std::max(Ssol,0.0),1.0);
+            //Sg = 0.0;
+            Scalar St = Sw + So + Ssol;
+            assert(St>0.5);
+            Sw=Sw/St;
+            Ssol=Ssol/St;
+            if (waterEnabled)
+                (*this)[Indices::waterSaturationIdx]= Sw;
+            if (enableSolvent)
+                (*this)[Indices::solventSaturationIdx] = Ssol;            
+            return not(St==1);
+        }else{
+            assert(primaryVarsMeaning() == Sw_pg_Rv);
+            assert(compositionSwitchEnabled);
+            Scalar Ssol=0.0;
+            if (enableSolvent)
+                Ssol = (*this)[Indices::solventSaturationIdx];
+            Scalar Sg = 1.0 - Sw - Ssol;
+            //So = 0.0;
+            Sw = std::min(std::max(Sw,0.0),1.0);
+            Sg = std::min(std::max(Sg,0.0),1.0);
+            Ssol = std::min(std::max(Ssol,0.0),1.0);
+            Scalar St = Sw + Sg + Ssol;
+            assert(St>0.5);
+            Sw=Sw/St;
+            Ssol=Ssol;
+            if (waterEnabled)
+                (*this)[Indices::waterSaturationIdx]= Sw;
+            if (enableSolvent)
+                (*this)[Indices::solventSaturationIdx] = Ssol;
+            return not(St==1);            
+        }
+        assert(false); 
+    }
+    
     BlackOilPrimaryVariables& operator=(const BlackOilPrimaryVariables& other) = default;
     BlackOilPrimaryVariables& operator=(Scalar value)
     {
