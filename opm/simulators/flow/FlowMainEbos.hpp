@@ -521,7 +521,7 @@ namespace Opm
                     namespace fs = Opm::filesystem;
                     fs::path output_dir(dir);
                     {
-                        std::string filename = eclState().getIOConfig().getBaseName() + ".ITERINFO";
+                        std::string filename = eclState().getIOConfig().getBaseName() + ".STEPINFO";
                         fs::path fullpath = output_dir / filename;
                         std::ofstream os(fullpath.string());
                         report.fullReports(os);
