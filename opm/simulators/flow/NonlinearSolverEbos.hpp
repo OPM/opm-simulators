@@ -190,7 +190,7 @@ namespace Opm {
             while ( (!converged && (iteration <= maxIter())) || (iteration <= minIter()));
 
             if (!converged) {
-                failureReport_ += report;
+                failureReport_ = report;
 
                 std::string msg = "Solver convergence failure - Failed to complete a time step within " + std::to_string(maxIter()) + " iterations.";
                 OPM_THROW_NOLOG(Opm::TooManyIterations, msg);

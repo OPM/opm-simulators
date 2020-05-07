@@ -249,40 +249,40 @@ namespace Opm {
                     }
                 }
                 catch (const Opm::TooManyIterations& e) {
-                    substepReport += solver.failureReport();
+                    substepReport = solver.failureReport();
                     causeOfFailure = "Solver convergence failure - Iteration limit reached";
 
                     logException_(e, solverVerbose_);
                     // since linearIterations is < 0 this will restart the solver
                 }
                 catch (const Opm::LinearSolverProblem& e) {
-                    substepReport += solver.failureReport();
+                    substepReport = solver.failureReport();
                     causeOfFailure = "Linear solver convergence failure";
 
                     logException_(e, solverVerbose_);
                     // since linearIterations is < 0 this will restart the solver
                 }
                 catch (const Opm::NumericalIssue& e) {
-                    substepReport += solver.failureReport();
+                    substepReport = solver.failureReport();
                     causeOfFailure = "Solver convergence failure - Numerical problem encountered";
 
                     logException_(e, solverVerbose_);
                     // since linearIterations is < 0 this will restart the solver
                 }
                 catch (const std::runtime_error& e) {
-                    substepReport += solver.failureReport();
+                    substepReport = solver.failureReport();
 
                     logException_(e, solverVerbose_);
                     // also catch linear solver not converged
                 }
                 catch (const Dune::ISTLError& e) {
-                    substepReport += solver.failureReport();
+                    substepReport = solver.failureReport();
 
                     logException_(e, solverVerbose_);
                     // also catch errors in ISTL AMG that occur when time step is too large
                 }
                 catch (const Dune::MatrixBlockError& e) {
-                    substepReport += solver.failureReport();
+                    substepReport = solver.failureReport();
 
                     logException_(e, solverVerbose_);
                     // this can be thrown by ISTL's ILU0 in block mode, yet is not an ISTLError
