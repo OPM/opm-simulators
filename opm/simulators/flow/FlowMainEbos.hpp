@@ -517,16 +517,17 @@ namespace Opm
                     ss << "Threads per MPI process:  " << std::setw(5) << threads << "\n";
                     report.reportFullyImplicit(ss);
                     OpmLog::info(ss.str());
-		    const std::string dir = eclState().getIOConfig().getOutputDir();
-		    namespace fs = Opm::filesystem;
-		    fs::path output_dir(dir);
-		    {
-			fs::path fullpath = output_dir / "confreports.txt";
-			std::ofstream os(fullpath.string());
-			report.fullReports(os);
-		    }
+                    const std::string dir = eclState().getIOConfig().getOutputDir();
+                    namespace fs = Opm::filesystem;
+                    fs::path output_dir(dir);
+                    {
+                        std::string filename = eclState().getIOConfig().getBaseName() + ".ITERINFO";
+                        fs::path fullpath = output_dir / filename;
+                        std::ofstream os(fullpath.string());
+                        report.fullReports(os);
+                    }
                 }
-	        return report.success.exit_status;
+                return report.success.exit_status;
             } else {
                 if (output_cout) {
                     std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;

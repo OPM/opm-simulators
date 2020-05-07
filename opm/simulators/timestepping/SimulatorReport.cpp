@@ -29,7 +29,7 @@
 
 namespace Opm
 {
-    SimulatorReportSingle::SimulatorReportSingle(bool verbose)
+    SimulatorReportSingle::SimulatorReportSingle()
         : pressure_time(0.0),
           transport_time(0.0),
           total_time(0.0),
@@ -46,7 +46,7 @@ namespace Opm
           converged(false),
           exit_status(EXIT_SUCCESS),
           global_time(0),
-          verbose_(verbose)
+          timestep_length(0.0)
     {
     }
 
@@ -71,103 +71,119 @@ namespace Opm
 
     void SimulatorReportSingle::reportStep(std::ostringstream& ss) const
     {
-        if ( verbose_ )
-        {
-            ss << "Time step summary: ";
-            if (total_well_iterations != 0) {
-                ss << "well its = " << std::setw(2) << total_well_iterations << ", ";
-            }
-            ss << "newton its = " << std::setw(2) << total_newton_iterations << ", "
-               << "linearizations = "  << std::setw(2) << total_linearizations
-               << " ("  << std::fixed << std::setprecision(3) << std::setw(6) << assemble_time << " sec), "
-               << "linear its = " << std::setw(3) << total_linear_iterations
-               << " ("  << std::fixed << std::setprecision(3) << std::setw(6) << linear_solve_time << " sec)";
+        ss << "Time step summary: ";
+        if (total_well_iterations != 0) {
+            ss << "well its = " << std::setw(2) << total_well_iterations << ", ";
         }
+        ss << "newton its = " << std::setw(2) << total_newton_iterations << ", "
+           << "linearizations = "  << std::setw(2) << total_linearizations
+           << " ("  << std::fixed << std::setprecision(3) << std::setw(6) << assemble_time << " sec), "
+           << "linear its = " << std::setw(3) << total_linear_iterations
+           << " ("  << std::fixed << std::setprecision(3) << std::setw(6) << linear_solve_time << " sec)";
     }
 
     void SimulatorReportSingle::reportFullyImplicit(std::ostream& os, const SimulatorReportSingle* failureReport) const
     {
-        if ( verbose_ )
-        {
-            double t = total_time;
-            os << "Total time (seconds):         " << t;
-            os << std::endl;
+        double t = total_time;
+        os << "Total time (seconds):         " << t;
+        os << std::endl;
 
-            t = solver_time + (failureReport ? failureReport->solver_time : 0.0);
-            os << "Solver time (seconds):        " << t;
-            os << std::endl;
+        t = solver_time + (failureReport ? failureReport->solver_time : 0.0);
+        os << "Solver time (seconds):        " << t;
+        os << std::endl;
 
-            if (assemble_time > 0.0 || linear_solve_time > 0.0) {
-                t = assemble_time + (failureReport ? failureReport->assemble_time : 0.0);
-                os << " Assembly time (seconds):     " << t;
-                if (failureReport) {
-                    os << " (Failed: " << failureReport->assemble_time << "; "
-                       << 100*failureReport->assemble_time/t << "%)";
-                }
-                os << std::endl;
-
-                t = linear_solve_time + (failureReport ? failureReport->linear_solve_time : 0.0);
-                os << " Linear solve time (seconds): " << t;
-                if (failureReport) {
-                    os << " (Failed: " << failureReport->linear_solve_time << "; "
-                       << 100*failureReport->linear_solve_time/t << "%)";
-                }
-                os << std::endl;
-
-                t = linear_solve_setup_time + (failureReport ? failureReport->linear_solve_setup_time : 0.0);
-                os << " Linear solve setup time (seconds): " << t;
-                if (failureReport) {
-                  os << " (Failed: " << failureReport->linear_solve_setup_time << "; "
-                     << 100*failureReport->linear_solve_setup_time/t << "%)";
-                }
-                os << std::endl;
-
-                t = update_time + (failureReport ? failureReport->update_time : 0.0);
-                os << " Update time (seconds):       " << t;
-                if (failureReport) {
-                    os << " (Failed: " << failureReport->update_time << "; "
-                       << 100*failureReport->update_time/t << "%)";
-                }
-                os << std::endl;
-
-                t = output_write_time + (failureReport ? failureReport->output_write_time : 0.0);
-                os << " Output write time (seconds): " << t;
-                os << std::endl;
-
-            }
-
-            int n = total_well_iterations + (failureReport ? failureReport->total_well_iterations : 0);
-            os << "Overall Well Iterations:      " << n;
+        if (assemble_time > 0.0 || linear_solve_time > 0.0) {
+            t = assemble_time + (failureReport ? failureReport->assemble_time : 0.0);
+            os << " Assembly time (seconds):     " << t;
             if (failureReport) {
-                os << " (Failed: " << failureReport->total_well_iterations << "; "
-                   << 100.0*failureReport->total_well_iterations/n << "%)";
+                os << " (Failed: " << failureReport->assemble_time << "; "
+                   << 100*failureReport->assemble_time/t << "%)";
             }
             os << std::endl;
 
-            n = total_linearizations + (failureReport ? failureReport->total_linearizations : 0);
-            os << "Overall Linearizations:       " << n;
+            t = linear_solve_time + (failureReport ? failureReport->linear_solve_time : 0.0);
+            os << " Linear solve time (seconds): " << t;
             if (failureReport) {
-                os << " (Failed: " << failureReport->total_linearizations << "; "
-                   << 100.0*failureReport->total_linearizations/n << "%)";
+                os << " (Failed: " << failureReport->linear_solve_time << "; "
+                   << 100*failureReport->linear_solve_time/t << "%)";
             }
             os << std::endl;
 
-            n = total_newton_iterations + (failureReport ? failureReport->total_newton_iterations : 0);
-            os << "Overall Newton Iterations:    " << n;
+            t = linear_solve_setup_time + (failureReport ? failureReport->linear_solve_setup_time : 0.0);
+            os << " Linear solve setup time (seconds): " << t;
             if (failureReport) {
-                os << " (Failed: " << failureReport->total_newton_iterations << "; "
-                   << 100.0*failureReport->total_newton_iterations/n << "%)";
+                os << " (Failed: " << failureReport->linear_solve_setup_time << "; "
+                   << 100*failureReport->linear_solve_setup_time/t << "%)";
             }
             os << std::endl;
 
-            n = total_linear_iterations + (failureReport ? failureReport->total_linear_iterations : 0);
-            os << "Overall Linear Iterations:    " << n;
+            t = update_time + (failureReport ? failureReport->update_time : 0.0);
+            os << " Update time (seconds):       " << t;
             if (failureReport) {
-                os << " (Failed: " << failureReport->total_linear_iterations << "; "
-                   << 100.0*failureReport->total_linear_iterations/n << "%)";
+                os << " (Failed: " << failureReport->update_time << "; "
+                   << 100*failureReport->update_time/t << "%)";
             }
             os << std::endl;
+
+            t = output_write_time + (failureReport ? failureReport->output_write_time : 0.0);
+            os << " Output write time (seconds): " << t;
+            os << std::endl;
+
         }
+
+        int n = total_well_iterations + (failureReport ? failureReport->total_well_iterations : 0);
+        os << "Overall Well Iterations:      " << n;
+        if (failureReport) {
+            os << " (Failed: " << failureReport->total_well_iterations << "; "
+               << 100.0*failureReport->total_well_iterations/n << "%)";
+        }
+        os << std::endl;
+
+        n = total_linearizations + (failureReport ? failureReport->total_linearizations : 0);
+        os << "Overall Linearizations:       " << n;
+        if (failureReport) {
+            os << " (Failed: " << failureReport->total_linearizations << "; "
+               << 100.0*failureReport->total_linearizations/n << "%)";
+        }
+        os << std::endl;
+
+        n = total_newton_iterations + (failureReport ? failureReport->total_newton_iterations : 0);
+        os << "Overall Newton Iterations:    " << n;
+        if (failureReport) {
+            os << " (Failed: " << failureReport->total_newton_iterations << "; "
+               << 100.0*failureReport->total_newton_iterations/n << "%)";
+        }
+        os << std::endl;
+
+        n = total_linear_iterations + (failureReport ? failureReport->total_linear_iterations : 0);
+        os << "Overall Linear Iterations:    " << n;
+        if (failureReport) {
+            os << " (Failed: " << failureReport->total_linear_iterations << "; "
+               << 100.0*failureReport->total_linear_iterations/n << "%)";
+        }
+        os << std::endl;
+    }
+
+    void SimulatorReport::operator+=(const SimulatorReportSingle& sr)
+    {
+        if (sr.converged) {
+            success += sr;
+        } else {
+            failure += sr;
+        }
+        stepreports.push_back(sr);
+    }
+
+    void SimulatorReport::operator+=(const SimulatorReport& sr)
+    {
+        success += sr.success;
+        failure += sr.failure;
+        stepreports.insert(stepreports.end(), sr.stepreports.begin(), sr.stepreports.end());
+    }
+
+    void SimulatorReport::reportFullyImplicit(std::ostream& os) const
+    {
+        success.reportFullyImplicit(os, &failure);
     }
 
     void SimulatorReport::fullReports(std::ostream& os) const

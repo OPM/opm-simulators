@@ -48,17 +48,16 @@ namespace Opm
         int exit_status;
 
 	double global_time;
+        double timestep_length;
+
         /// Default constructor initializing all times to 0.0.
-        explicit SimulatorReportSingle(const bool verbose = true);
+        SimulatorReportSingle();
         /// Increment this report's times by those in sr.
         void operator+=(const SimulatorReportSingle& sr);
         /// Print a report suitable for a single simulation step.
         void reportStep(std::ostringstream& os) const;
         /// Print a report suitable for the end of a fully implicit case, leaving out the pressure/transport time.
         void reportFullyImplicit(std::ostream& os, const SimulatorReportSingle* failedReport = nullptr) const;
-    private:
-        // Whether to print statistics to std::cout
-        bool verbose_;
     };
 
     struct SimulatorReport
@@ -67,30 +66,9 @@ namespace Opm
         SimulatorReportSingle failure;
         std::vector<SimulatorReportSingle> stepreports;
 
-        explicit SimulatorReport(bool verbose = true)
-            : success(verbose)
-            , failure(verbose)
-        {
-        }
-        void operator+=(const SimulatorReportSingle& sr)
-        {
-            if (sr.converged) {
-                success += sr;
-            } else {
-                failure += sr;
-            }
-            stepreports.push_back(sr);
-        }
-        void operator+=(const SimulatorReport& sr)
-        {
-            success += sr.success;
-            failure += sr.failure;
-            stepreports.insert(stepreports.end(), sr.stepreports.begin(), sr.stepreports.end());
-        }
-        void reportFullyImplicit(std::ostream& os) const
-        {
-            success.reportFullyImplicit(os, &failure);
-        }
+        void operator+=(const SimulatorReportSingle& sr);
+        void operator+=(const SimulatorReport& sr);
+        void reportFullyImplicit(std::ostream& os) const;
         void fullReports(std::ostream& os) const;
     };
 
