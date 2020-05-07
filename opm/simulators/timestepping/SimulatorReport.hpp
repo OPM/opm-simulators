@@ -51,48 +51,51 @@ namespace Opm
         /// Default constructor initializing all times to 0.0.
         explicit SimulatorReportBase(bool verbose=true);
         /// Copy constructor
-        SimulatorReportBase(const SimulatorReportBase&) = default;
+        // SimulatorReportBase(const SimulatorReportBase&) = default;
         /// Increment this report's times by those in sr.
         void operator+=(const SimulatorReportBase& sr);
         /// Print a report to the given stream.
-        void report(std::ostream& os);
+        // void report(std::ostream& os);
         void reportStep(std::ostringstream& os);
         /// Print a report, leaving out the transport time.
         void reportFullyImplicit(std::ostream& os, const SimulatorReportBase* failedReport = nullptr);
-        void reportParam(std::ostream& os);
+        // void reportParam(std::ostream& os);
     private:
         // Whether to print statistics to std::cout
         bool verbose_;
     };
-    struct SimulatorReport: public SimulatorReportBase{
-	std::vector<SimulatorReportBase> stepreports;
-	explicit SimulatorReport(bool verbose=true) :
-	    SimulatorReportBase(verbose),
-	    stepreports()
-	{	    
-	}
-	void operator+=(const SimulatorReportBase& sr){
-	    SimulatorReportBase::operator+=(sr);
-	    // if(stepreports.size()>0){
-	    // 	assert(stepreports.back().global_time != sr.global_time);
-	    // }
-	    stepreports.push_back(sr);
-	}
-	void operator+=(const SimulatorReport& sr){
-	    SimulatorReportBase::operator+=(sr);
-	    // if(stepreports.size()>0){
-	    // 	assert(stepreports.back().global_time != sr.global_time);
-	    // }
-	    if(sr.stepreports.size()>0){
-		stepreports.insert(stepreports.end(),sr.stepreports.begin(),sr.stepreports.end());
-	    }else{
-		stepreports.push_back(sr);
-	    }
-	    //stepreports.push_back(sr);
-	}
-	void fullReports(std::ostream& os);
+
+    struct SimulatorReport : public SimulatorReportBase {
+        std::vector<SimulatorReportBase> stepreports;
+        explicit SimulatorReport(bool verbose = true)
+            : SimulatorReportBase(verbose)
+            , stepreports()
+        {
+        }
+        void operator+=(const SimulatorReportBase& sr)
+        {
+            SimulatorReportBase::operator+=(sr);
+            // if(stepreports.size()>0){
+            // 	assert(stepreports.back().global_time != sr.global_time);
+            // }
+            stepreports.push_back(sr);
+        }
+        void operator+=(const SimulatorReport& sr)
+        {
+            SimulatorReportBase::operator+=(sr);
+            // if(stepreports.size()>0){
+            // 	assert(stepreports.back().global_time != sr.global_time);
+            // }
+            if (sr.stepreports.size() > 0) {
+                stepreports.insert(stepreports.end(), sr.stepreports.begin(), sr.stepreports.end());
+            } else {
+                stepreports.push_back(sr);
+            }
+            // stepreports.push_back(sr);
+        }
+        void fullReports(std::ostream& os);
     };
-    
-} // namespace Opm
+
+    } // namespace Opm
 
 #endif // OPM_SIMULATORREPORT_HEADER_INCLUDED
