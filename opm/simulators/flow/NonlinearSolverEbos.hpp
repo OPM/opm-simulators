@@ -151,11 +151,10 @@ namespace Opm {
 
         SimulatorReportSingle step(const SimulatorTimerInterface& timer)
         {
-            SimulatorReportSingle iterReport;
             SimulatorReportSingle report;
             report.global_time = timer.simulationTimeElapsed();
-            failureReport_ = SimulatorReportSingle();
-            failureReport_.global_time = timer.simulationTimeElapsed();
+            report.timestep_length = timer.currentStepLength();
+
             // Do model-specific once-per-step calculations.
             model_->prepareStep(timer);
 
@@ -172,7 +171,7 @@ namespace Opm {
                     // Do the nonlinear step. If we are in a converged state, the
                     // model will usually do an early return without an expensive
                     // solve, unless the minIter() count has not been reached yet.
-                    iterReport = model_->nonlinearIteration(iteration, timer, *this);
+                    auto iterReport = model_->nonlinearIteration(iteration, timer, *this);
                     iterReport.global_time = timer.simulationTimeElapsed();
                     report += iterReport;
                     report.converged = iterReport.converged;
@@ -183,7 +182,7 @@ namespace Opm {
                 catch (...) {
                     // if an iteration fails during a time step, all previous iterations
                     // count as a failure as well
-                    failureReport_ += report;
+                    failureReport_ = report;
                     failureReport_ += model_->failureReport();
                     throw;
                 }

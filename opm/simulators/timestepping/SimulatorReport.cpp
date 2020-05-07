@@ -188,13 +188,13 @@ namespace Opm
 
     void SimulatorReport::fullReports(std::ostream& os) const
     {
-        os << "  Time(sec)   Time(day)  Assembly    LSolve    LSetup    Update    Output WellIt Lins NewtIt LinIt Conv\n";
+        os << "  Time(day)  TStep(day) Assembly    LSolve    LSetup    Update    Output WellIt Lins NewtIt LinIt Conv\n";
         for (size_t i = 0; i < this->stepreports.size(); ++i) {
             const SimulatorReportSingle& sr = this->stepreports[i];
             os.precision(10);
             os << std::defaultfloat;
-            os << std::setw(11) << sr.global_time << " ";
             os << std::setw(11) << unit::convert::to(sr.global_time, unit::day) << " ";
+            os << std::setw(11) << unit::convert::to(sr.timestep_length, unit::day) << " ";
             os.precision(4);
             os << std::fixed;
             os << std::setw(9) << sr.assemble_time << " ";
