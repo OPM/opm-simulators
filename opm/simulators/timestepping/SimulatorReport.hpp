@@ -1,5 +1,5 @@
 /*
-  Copyright 2012 SINTEF ICT, Applied Mathematics.
+  Copyright 2012, 2020 SINTEF Digital, Mathematics and Cybernetics.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -27,7 +27,7 @@ namespace Opm
 {
 
     /// A struct for returning timing data from a simulator to its caller.
-    struct SimulatorReportBase
+    struct SimulatorReportSingle
     {
         double pressure_time;
         double transport_time;
@@ -49,51 +49,49 @@ namespace Opm
 
 	double global_time;
         /// Default constructor initializing all times to 0.0.
-        explicit SimulatorReportBase(bool verbose=true);
-        /// Copy constructor
-        // SimulatorReportBase(const SimulatorReportBase&) = default;
+        explicit SimulatorReportSingle(const bool verbose = true);
         /// Increment this report's times by those in sr.
-        void operator+=(const SimulatorReportBase& sr);
-        /// Print a report to the given stream.
-        // void report(std::ostream& os);
-        void reportStep(std::ostringstream& os);
-        /// Print a report, leaving out the transport time.
-        void reportFullyImplicit(std::ostream& os, const SimulatorReportBase* failedReport = nullptr);
-        // void reportParam(std::ostream& os);
+        void operator+=(const SimulatorReportSingle& sr);
+        /// Print a report suitable for a single simulation step.
+        void reportStep(std::ostringstream& os) const;
+        /// Print a report suitable for the end of a fully implicit case, leaving out the pressure/transport time.
+        void reportFullyImplicit(std::ostream& os, const SimulatorReportSingle* failedReport = nullptr) const;
     private:
         // Whether to print statistics to std::cout
         bool verbose_;
     };
 
-    struct SimulatorReport : public SimulatorReportBase {
-        std::vector<SimulatorReportBase> stepreports;
+    struct SimulatorReport
+    {
+        SimulatorReportSingle success;
+        SimulatorReportSingle failure;
+        std::vector<SimulatorReportSingle> stepreports;
+
         explicit SimulatorReport(bool verbose = true)
-            : SimulatorReportBase(verbose)
-            , stepreports()
+            : success(verbose)
+            , failure(verbose)
         {
         }
-        void operator+=(const SimulatorReportBase& sr)
+        void operator+=(const SimulatorReportSingle& sr)
         {
-            SimulatorReportBase::operator+=(sr);
-            // if(stepreports.size()>0){
-            // 	assert(stepreports.back().global_time != sr.global_time);
-            // }
+            if (sr.converged) {
+                success += sr;
+            } else {
+                failure += sr;
+            }
             stepreports.push_back(sr);
         }
         void operator+=(const SimulatorReport& sr)
         {
-            SimulatorReportBase::operator+=(sr);
-            // if(stepreports.size()>0){
-            // 	assert(stepreports.back().global_time != sr.global_time);
-            // }
-            if (sr.stepreports.size() > 0) {
-                stepreports.insert(stepreports.end(), sr.stepreports.begin(), sr.stepreports.end());
-            } else {
-                stepreports.push_back(sr);
-            }
-            // stepreports.push_back(sr);
+            success += sr.success;
+            failure += sr.failure;
+            stepreports.insert(stepreports.end(), sr.stepreports.begin(), sr.stepreports.end());
         }
-        void fullReports(std::ostream& os);
+        void reportFullyImplicit(std::ostream& os) const
+        {
+            success.reportFullyImplicit(os, &failure);
+        }
+        void fullReports(std::ostream& os) const;
     };
 
     } // namespace Opm

@@ -149,13 +149,13 @@ namespace Opm {
         }
 
 
-        SimulatorReport step(const SimulatorTimerInterface& timer)
+        SimulatorReportSingle step(const SimulatorTimerInterface& timer)
         {
-            SimulatorReportBase iterReport;
-            SimulatorReportBase report;
-	    report.global_time = timer.simulationTimeElapsed();
-            failureReport_ = SimulatorReport();
-	    failureReport_.global_time = timer.simulationTimeElapsed();
+            SimulatorReportSingle iterReport;
+            SimulatorReportSingle report;
+            report.global_time = timer.simulationTimeElapsed();
+            failureReport_ = SimulatorReportSingle();
+            failureReport_.global_time = timer.simulationTimeElapsed();
             // Do model-specific once-per-step calculations.
             model_->prepareStep(timer);
 
@@ -173,7 +173,7 @@ namespace Opm {
                     // model will usually do an early return without an expensive
                     // solve, unless the minIter() count has not been reached yet.
                     iterReport = model_->nonlinearIteration(iteration, timer, *this);
-		    iterReport.global_time = timer.simulationTimeElapsed();
+                    iterReport.global_time = timer.simulationTimeElapsed();
                     report += iterReport;
                     report.converged = iterReport.converged;
 
@@ -200,14 +200,11 @@ namespace Opm {
             // Do model-specific post-step actions.
             model_->afterStep(timer);
             report.converged = true;
-	    SimulatorReport report_step;
-	    report_step += report;
-	    report_step.converged = true;
-            return report_step;
+            return report;
         }
 
         /// return the statistics if the step() method failed
-        const SimulatorReport& failureReport() const
+        const SimulatorReportSingle& failureReport() const
         { return failureReport_; }
 
         /// Number of linearizations used in all calls to step().
@@ -356,7 +353,7 @@ namespace Opm {
 
     private:
         // ---------  Data members  ---------
-        SimulatorReport failureReport_;
+        SimulatorReportSingle failureReport_;
         SolverParameters param_;
         std::unique_ptr<PhysicalModel> model_;
         int linearizations_;

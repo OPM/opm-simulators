@@ -29,7 +29,7 @@
 
 namespace Opm
 {
-    SimulatorReportBase::SimulatorReportBase(bool verbose)
+    SimulatorReportSingle::SimulatorReportSingle(bool verbose)
         : pressure_time(0.0),
           transport_time(0.0),
           total_time(0.0),
@@ -50,7 +50,7 @@ namespace Opm
     {
     }
 
-    void SimulatorReportBase::operator+=(const SimulatorReportBase& sr)
+    void SimulatorReportSingle::operator+=(const SimulatorReportSingle& sr)
     {
         pressure_time += sr.pressure_time;
         transport_time += sr.transport_time;
@@ -68,20 +68,8 @@ namespace Opm
         global_time = sr.global_time;
     }
 
-    // void SimulatorReportBase::report(std::ostream& os)
-    // {
-    //     if ( verbose_ )
-    //     {
-    //         os << "Total time taken: " << total_time
-    //            << "\n  Pressure time:  " << pressure_time
-    //            << "\n  Transport time: " << transport_time
-    //            << "\n  Overall Newton Iterations:  " << total_newton_iterations
-    //            << "\n  Overall Linear Iterations:  " << total_linear_iterations
-    //            << std::endl;
-    //     }
-    // }
 
-    void SimulatorReportBase::reportStep(std::ostringstream& ss)
+    void SimulatorReportSingle::reportStep(std::ostringstream& ss) const
     {
         if ( verbose_ )
         {
@@ -97,7 +85,7 @@ namespace Opm
         }
     }
 
-    void SimulatorReportBase::reportFullyImplicit(std::ostream& os, const SimulatorReportBase* failureReport)
+    void SimulatorReportSingle::reportFullyImplicit(std::ostream& os, const SimulatorReportSingle* failureReport) const
     {
         if ( verbose_ )
         {
@@ -182,13 +170,11 @@ namespace Opm
         }
     }
 
-    void SimulatorReport::fullReports(std::ostream& os)
+    void SimulatorReport::fullReports(std::ostream& os) const
     {
         os << "  Time(sec)   Time(day)  Assembly    LSolve    LSetup    Update    Output WellIt Lins NewtIt LinIt Conv\n";
-        SimulatorReportBase all;
-        for (size_t i = 0; i < stepreports.size(); ++i) {
-            SimulatorReportBase& sr = stepreports[i];
-            all += sr;
+        for (size_t i = 0; i < this->stepreports.size(); ++i) {
+            const SimulatorReportSingle& sr = this->stepreports[i];
             os.precision(10);
             os << std::defaultfloat;
             os << std::setw(11) << sr.global_time << " ";
@@ -207,9 +193,6 @@ namespace Opm
             os << std::setw(6) << sr.total_newton_iterations << " ";
             os << std::setw(5) << sr.total_linear_iterations << " ";
             os << std::setw(4) << sr.converged << "\n";
-        }
-        if (not(this->linear_solve_time == all.linear_solve_time)) {
-            OpmLog::debug("Inconsistency between timestep report and total report");
         }
     }
 

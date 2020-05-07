@@ -430,7 +430,7 @@ namespace Opm {
 
     // called at the end of a report step
     template<typename TypeTag>
-    const SimulatorReport&
+    const SimulatorReportSingle&
     BlackoilWellModel<TypeTag>::
     lastReport() const {return last_report_; }
 
@@ -809,7 +809,7 @@ namespace Opm {
              const double dt)
     {
 
-        last_report_ = SimulatorReport();
+        last_report_ = SimulatorReportSingle();
 
         if ( ! wellsActive() ) {
             return;
@@ -1027,7 +1027,7 @@ namespace Opm {
 
 
     template<typename TypeTag>
-    SimulatorReport
+    SimulatorReportSingle
     BlackoilWellModel<TypeTag>::
     solveWellEq(const std::vector<Scalar>& B_avg, const double dt, Opm::DeferredLogger& deferred_logger)
     {
@@ -1095,7 +1095,7 @@ namespace Opm {
 
         logAndCheckForExceptionsAndThrow(deferred_logger, exception_thrown, "solveWellEq() failed.", terminal_output_);
 
-        SimulatorReport report;
+        SimulatorReportSingle report;
         report.converged = converged;
         report.total_well_iterations = it;
         return report;
