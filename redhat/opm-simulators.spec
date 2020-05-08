@@ -2,7 +2,7 @@
 # spec file for package opm-simulators
 #
 
-%define tag rc3
+%define tag rc4
 
 Name:           opm-simulators
 Version:        2020.04
