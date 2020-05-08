@@ -193,9 +193,9 @@ namespace Opm {
         */
         template <class Solver>
         SimulatorReport step(const SimulatorTimer& simulatorTimer,
-                                   Solver& solver,
-                                   const bool isEvent,
-                                   const std::vector<int>* fipnum = nullptr)
+                             Solver& solver,
+                             const bool isEvent,
+                             const std::vector<int>* fipnum = nullptr)
         {
             SimulatorReport report;
             const double timestep = simulatorTimer.currentStepLength();

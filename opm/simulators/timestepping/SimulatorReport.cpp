@@ -65,7 +65,7 @@ namespace Opm
         total_linearizations += sr.total_linearizations;
         total_newton_iterations += sr.total_newton_iterations;
         total_linear_iterations += sr.total_linear_iterations;
-        global_time = sr.global_time;
+        global_time = sr.global_time; // It makes no sense adding time points, so = not += here.
     }
 
 

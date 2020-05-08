@@ -47,7 +47,7 @@ namespace Opm
         bool converged;
         int exit_status;
 
-	double global_time;
+        double global_time;
         double timestep_length;
 
         /// Default constructor initializing all times to 0.0.
