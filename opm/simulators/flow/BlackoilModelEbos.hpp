@@ -229,12 +229,12 @@ namespace Opm {
         /// \param[in, out] reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
         template <class NonlinearSolverType>
-        SimulatorReport nonlinearIteration(const int iteration,
-                                           const SimulatorTimerInterface& timer,
-                                           NonlinearSolverType& nonlinear_solver)
+        SimulatorReportSingle nonlinearIteration(const int iteration,
+                                                 const SimulatorTimerInterface& timer,
+                                                 NonlinearSolverType& nonlinear_solver)
         {
-            SimulatorReport report;
-            failureReport_ = SimulatorReport();
+            SimulatorReportSingle report;
+            failureReport_ = SimulatorReportSingle();
             Dune::Timer perfTimer;
 
             perfTimer.start();
@@ -368,8 +368,8 @@ namespace Opm {
         /// \param[in]      reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
         /// \param[in]      initial_assembly  pass true if this is the first call to assemble() in this timestep
-        SimulatorReport assembleReservoir(const SimulatorTimerInterface& /* timer */,
-                                          const int iterationIdx)
+        SimulatorReportSingle assembleReservoir(const SimulatorTimerInterface& /* timer */,
+                                                const int iterationIdx)
         {
             // -------- Mass balance equations --------
             ebosSimulator_.model().newtonMethod().setIterationIndex(iterationIdx);
@@ -854,7 +854,7 @@ namespace Opm {
         { return ebosSimulator_; }
 
         /// return the statistics if the nonlinearIteration() method failed
-        const SimulatorReport& failureReport() const
+        const SimulatorReportSingle& failureReport() const
         { return failureReport_; }
 
         struct StepReport
@@ -885,7 +885,7 @@ namespace Opm {
 	const bool has_brine_;
 
         ModelParameters                 param_;
-        SimulatorReport failureReport_;
+        SimulatorReportSingle failureReport_;
 
         // Well Model
         BlackoilWellModel<TypeTag>& well_model_;

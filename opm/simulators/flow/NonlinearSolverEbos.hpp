@@ -149,11 +149,11 @@ namespace Opm {
         }
 
 
-        SimulatorReport step(const SimulatorTimerInterface& timer)
+        SimulatorReportSingle step(const SimulatorTimerInterface& timer)
         {
-            SimulatorReport iterReport;
-            SimulatorReport report;
-            failureReport_ = SimulatorReport();
+            SimulatorReportSingle report;
+            report.global_time = timer.simulationTimeElapsed();
+            report.timestep_length = timer.currentStepLength();
 
             // Do model-specific once-per-step calculations.
             model_->prepareStep(timer);
@@ -171,8 +171,8 @@ namespace Opm {
                     // Do the nonlinear step. If we are in a converged state, the
                     // model will usually do an early return without an expensive
                     // solve, unless the minIter() count has not been reached yet.
-                    iterReport = model_->nonlinearIteration(iteration, timer, *this);
-
+                    auto iterReport = model_->nonlinearIteration(iteration, timer, *this);
+                    iterReport.global_time = timer.simulationTimeElapsed();
                     report += iterReport;
                     report.converged = iterReport.converged;
 
@@ -182,7 +182,7 @@ namespace Opm {
                 catch (...) {
                     // if an iteration fails during a time step, all previous iterations
                     // count as a failure as well
-                    failureReport_ += report;
+                    failureReport_ = report;
                     failureReport_ += model_->failureReport();
                     throw;
                 }
@@ -190,7 +190,7 @@ namespace Opm {
             while ( (!converged && (iteration <= maxIter())) || (iteration <= minIter()));
 
             if (!converged) {
-                failureReport_ += report;
+                failureReport_ = report;
 
                 std::string msg = "Solver convergence failure - Failed to complete a time step within " + std::to_string(maxIter()) + " iterations.";
                 OPM_THROW_NOLOG(Opm::TooManyIterations, msg);
@@ -199,12 +199,11 @@ namespace Opm {
             // Do model-specific post-step actions.
             model_->afterStep(timer);
             report.converged = true;
-
             return report;
         }
 
         /// return the statistics if the step() method failed
-        const SimulatorReport& failureReport() const
+        const SimulatorReportSingle& failureReport() const
         { return failureReport_; }
 
         /// Number of linearizations used in all calls to step().
@@ -353,7 +352,7 @@ namespace Opm {
 
     private:
         // ---------  Data members  ---------
-        SimulatorReport failureReport_;
+        SimulatorReportSingle failureReport_;
         SolverParameters param_;
         std::unique_ptr<PhysicalModel> model_;
         int linearizations_;

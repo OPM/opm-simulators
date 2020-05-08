@@ -504,8 +504,7 @@ namespace Opm
                     OpmLog::info(msg);
                 }
 
-                SimulatorReport successReport = simulator_->run(simtimer);
-                SimulatorReport failureReport = simulator_->failureReport();
+                SimulatorReport report = simulator_->run(simtimer);
                 if (output_cout) {
                     std::ostringstream ss;
                     ss << "\n\n================    End of simulation     ===============\n\n";
@@ -516,10 +515,19 @@ namespace Opm
                     int threads = 1;
 #endif
                     ss << "Threads per MPI process:  " << std::setw(5) << threads << "\n";
-                    successReport.reportFullyImplicit(ss, &failureReport);
+                    report.reportFullyImplicit(ss);
                     OpmLog::info(ss.str());
+                    const std::string dir = eclState().getIOConfig().getOutputDir();
+                    namespace fs = Opm::filesystem;
+                    fs::path output_dir(dir);
+                    {
+                        std::string filename = eclState().getIOConfig().getBaseName() + ".INFOSTEP";
+                        fs::path fullpath = output_dir / filename;
+                        std::ofstream os(fullpath.string());
+                        report.fullReports(os);
+                    }
                 }
-                return successReport.exit_status;
+                return report.success.exit_status;
             } else {
                 if (output_cout) {
                     std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;

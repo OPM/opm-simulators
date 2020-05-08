@@ -220,9 +220,6 @@ namespace Opm {
             // create adaptive step timer with previously used sub step size
             AdaptiveSimulatorTimer substepTimer(simulatorTimer, suggestedNextTimestep_, maxTimeStep_);
 
-            // reset the statistics for the failed substeps
-            failureReport_ = SimulatorReport();
-
             // counter for solver restarts
             int restarts = 0;
 
@@ -242,56 +239,56 @@ namespace Opm {
                     OpmLog::info(ss.str());
                 }
 
-                SimulatorReport substepReport;
+                SimulatorReportSingle substepReport;
                 std::string causeOfFailure = "";
                 try {
                     substepReport = solver.step(substepTimer);
-                    report += substepReport;
-
                     if (solverVerbose_) {
                         // report number of linear iterations
                         OpmLog::debug("Overall linear iterations used: " + std::to_string(substepReport.total_linear_iterations));
                     }
                 }
                 catch (const Opm::TooManyIterations& e) {
-                    substepReport += solver.failureReport();
+                    substepReport = solver.failureReport();
                     causeOfFailure = "Solver convergence failure - Iteration limit reached";
 
                     logException_(e, solverVerbose_);
                     // since linearIterations is < 0 this will restart the solver
                 }
                 catch (const Opm::LinearSolverProblem& e) {
-                    substepReport += solver.failureReport();
+                    substepReport = solver.failureReport();
                     causeOfFailure = "Linear solver convergence failure";
 
                     logException_(e, solverVerbose_);
                     // since linearIterations is < 0 this will restart the solver
                 }
                 catch (const Opm::NumericalIssue& e) {
-                    substepReport += solver.failureReport();
+                    substepReport = solver.failureReport();
                     causeOfFailure = "Solver convergence failure - Numerical problem encountered";
 
                     logException_(e, solverVerbose_);
                     // since linearIterations is < 0 this will restart the solver
                 }
                 catch (const std::runtime_error& e) {
-                    substepReport += solver.failureReport();
+                    substepReport = solver.failureReport();
 
                     logException_(e, solverVerbose_);
                     // also catch linear solver not converged
                 }
                 catch (const Dune::ISTLError& e) {
-                    substepReport += solver.failureReport();
+                    substepReport = solver.failureReport();
 
                     logException_(e, solverVerbose_);
                     // also catch errors in ISTL AMG that occur when time step is too large
                 }
                 catch (const Dune::MatrixBlockError& e) {
-                    substepReport += solver.failureReport();
+                    substepReport = solver.failureReport();
 
                     logException_(e, solverVerbose_);
                     // this can be thrown by ISTL's ILU0 in block mode, yet is not an ISTLError
                 }
+
+                report += substepReport;
 
                 if (substepReport.converged) {
                     // advance by current dt
@@ -343,20 +340,18 @@ namespace Opm {
 
                         ebosProblem.writeOutput();
 
-                        report.output_write_time += perfTimer.secsSinceStart();
+                        report.success.output_write_time += perfTimer.secsSinceStart();
                     }
 
                     // set new time step length
                     substepTimer.provideTimeStepEstimate(dtEstimate);
 
-                    report.converged = substepTimer.done();
+                    report.success.converged = substepTimer.done();
                     substepTimer.setLastStepFailed(false);
 
                 }
                 else { // in case of no convergence
                     substepTimer.setLastStepFailed(true);
-
-                    failureReport_ += substepReport;
 
                     // If we have restarted (i.e. cut the timestep) too
                     // many times, we have failed and throw an exception.
@@ -457,9 +452,6 @@ namespace Opm {
         /** \brief Returns the simulator report for the failed substeps of the last
          *         report step.
          */
-        const SimulatorReport& failureReport() const
-        { return failureReport_; };
-
         double suggestedNextStep() const
         { return suggestedNextTimestep_; }
 
@@ -567,11 +559,8 @@ namespace Opm {
             return failing_wells;
         }
 
-
-
         typedef std::unique_ptr<TimeStepControlInterface> TimeStepControlType;
 
-        SimulatorReport failureReport_;       //!< statistics for the failed substeps of the last timestep
         TimeStepControlType timeStepControl_; //!< time step control object
         double restartFactor_;               //!< factor to multiply time step with when solver fails to converge
         double growthFactor_;                //!< factor to multiply time step when solver recovered from failed convergence

@@ -253,7 +253,7 @@ namespace Opm {
             // return the internal well state
             const WellState& wellState() const;
 
-            const SimulatorReport& lastReport() const;
+            const SimulatorReportSingle& lastReport() const;
 
             void addWellContributions(SparseMatrixAdapter& jacobian) const
             {
@@ -317,7 +317,7 @@ namespace Opm {
             std::unique_ptr<RateConverterType> rateConverter_;
             std::unique_ptr<VFPProperties<VFPInjProperties,VFPProdProperties>> vfp_properties_;
 
-            SimulatorReport last_report_;
+            SimulatorReportSingle last_report_;
 
             WellTestState wellTestState_;
             std::unique_ptr<GuideRate> guideRate_;
@@ -377,7 +377,7 @@ namespace Opm {
             /// at the beginning of the time step and no derivatives are included in these quantities
             void calculateExplicitQuantities(Opm::DeferredLogger& deferred_logger) const;
 
-            SimulatorReport solveWellEq(const std::vector<Scalar>& B_avg, const double dt, Opm::DeferredLogger& deferred_logger);
+            SimulatorReportSingle solveWellEq(const std::vector<Scalar>& B_avg, const double dt, Opm::DeferredLogger& deferred_logger);
 
             void initPrimaryVariablesEvaluation() const;
 
