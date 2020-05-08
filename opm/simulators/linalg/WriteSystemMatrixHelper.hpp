@@ -22,6 +22,46 @@
 
 #include <dune/istl/matrixmarket.hh>
 
+namespace Dune
+{
+namespace MatrixMarketImpl
+{
+
+    template <typename Block, typename A>
+    struct mm_header_printer<BCRSMatrix<Block, A>>
+    {
+        static void print(std::ostream& os)
+        {
+            using Value = typename Block::value_type;
+            os << "%%MatrixMarket matrix coordinate ";
+            os << mm_numeric_type<Value>::str() << " general" << std::endl;
+        }
+    };
+
+    template <typename Block, typename A>
+    struct mm_block_structure_header<BCRSMatrix<Block, A>>
+    {
+        using M = BCRSMatrix<Block, A>;
+        static void print(std::ostream& os, const M&)
+        {
+            os << "% ISTL_STRUCT blocked ";
+            os << Block::rows << " " << Block::cols << std::endl;
+        }
+    };
+
+} // namespace MatrixMarketImpl
+
+template <typename Block, typename A>
+struct mm_multipliers<BCRSMatrix<Block, A>>
+{
+    enum {
+        rows = Block::rows,
+        cols = Block::cols
+    };
+};
+
+} // namespace Dune
+
 namespace Opm
 {
 namespace Helper
@@ -30,7 +70,7 @@ namespace Helper
     void writeSystem(const SimulatorType& simulator,
                      const MatrixType& matrix,
                      const VectorType& rhs,
-                     const Communicator* comm)
+                     [[maybe_unused]] const Communicator* comm)
     {
         std::string dir = simulator.problem().outputDir();
         if (dir == ".") {
@@ -56,18 +96,24 @@ namespace Helper
         std::string prefix = full_path.string();
         {
             std::string filename = prefix + "matrix_istl";
+#if HAVE_MPI
             if (comm != nullptr) { // comm is not set in serial runs
                 Dune::storeMatrixMarket(matrix, filename, *comm, true);
-            } else {
-                Dune::storeMatrixMarket(matrix, filename);
+            } else
+#endif
+            {
+                Dune::storeMatrixMarket(matrix, filename + ".mm");
             }
         }
         {
             std::string filename = prefix + "rhs_istl";
+#if HAVE_MPI
             if (comm != nullptr) { // comm is not set in serial runs
                 Dune::storeMatrixMarket(rhs, filename, *comm, true);
-            } else {
-                Dune::storeMatrixMarket(rhs, filename);
+            } else
+#endif
+            {
+                Dune::storeMatrixMarket(rhs, filename + ".mm");
             }
         }
     }

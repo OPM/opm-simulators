@@ -67,6 +67,8 @@ class ISTLSolverEbosFlexible
     using MatrixType = typename SparseMatrixAdapter::IstlMatrix;
 #if HAVE_MPI
     using Communication = Dune::OwnerOverlapCopyCommunication<int, int>;
+#else
+    using Communication = int; // Dummy type.
 #endif
     using SolverType = Dune::FlexibleSolver<MatrixType, VectorType>;
 
@@ -281,21 +283,14 @@ protected:
 
     void writeMatrix()
     {
-#ifdef HAVE_MPI
         const int verbosity = prm_.get<int>("verbosity");
         const bool write_matrix = verbosity > 10;
         if (write_matrix) {
-            using block_type = typename MatrixType::block_type;
-            using value_type = typename block_type::value_type;
-            using BaseBlockType = Dune::FieldMatrix<value_type,block_type::rows,block_type::cols>;
-            using BaseMatrixType = Dune::BCRSMatrix<BaseBlockType>;
-            const BaseMatrixType* matrix =  reinterpret_cast<BaseMatrixType*>(this->matrix_);
             Opm::Helper::writeSystem(this->simulator_, //simulator is only used to get names
-                                     *matrix,
+                                     *(this->matrix_),
                                      this->rhs_,
                                      comm_.get());
         }
-#endif
     }
 
     const Simulator& simulator_;
@@ -306,9 +301,7 @@ protected:
     VectorType rhs_;
     Dune::InverseOperatorResult res_;
     std::any parallelInformation_;
-#if HAVE_MPI
     std::unique_ptr<Communication> comm_;
-#endif
     std::vector<int> overlapRows_;
     std::vector<int> interiorRows_;
 }; // end ISTLSolverEbosFlexible
