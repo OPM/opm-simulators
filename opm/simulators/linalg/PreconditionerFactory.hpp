@@ -143,12 +143,33 @@ private:
         using SmootherArgs = typename Dune::Amg::SmootherTraits<Smoother>::Arguments;
         SmootherArgs smootherArgs;
         smootherArgs.iterations = prm.get<int>("iterations", 1);
+	//int iluwitdh = prm.get<int>("iluwidth", 0);
+	//MILU_VARIANT milu = convertString2Milu(prm.get<std::string>("milutype",std::string("ilu")));
+	//smootherArgs.setMilu(milu);
+	//smootherArgs.setN(iluwitdh);
         // smootherArgs.overlap=SmootherArgs::vertex;
         // smootherArgs.overlap=SmootherArgs::none;
         // smootherArgs.overlap=SmootherArgs::aggregate;
-        smootherArgs.relaxationFactor = prm.get<double>("relaxation", 0.9);
+        smootherArgs.relaxationFactor = prm.get<double>("relaxation", 1.0);
         return smootherArgs;
     }
+    // template <>
+    // static auto amgSmootherArgs< Opm::ParallelOverlappingILU0< Matrix, Vector, Vector, Comm>  >(const boost::property_tree::ptree& prm)
+    // {
+    // 	using Smoother = Opm::ParallelOverlappingILU0<Matrix, Vector, Vector, Comm>;
+    //     using SmootherArgs = typename Dune::Amg::SmootherTraits<  Smoother >::Arguments;
+    //     SmootherArgs smootherArgs;
+    //     smootherArgs.iterations = prm.get<int>("iterations", 1);
+    // 	int iluwitdh = prm.get<int>("iluwidth", 0);
+    // 	MILU_VARIANT milu = convertString2Milu( prm.get<std::string>("milutype",std::string("ilu") ) );
+    // 	smootherArgs.setMilu(milu);
+    // 	smootherArgs.setN(iluwitdh);
+    //     // smootherArgs.overlap=SmootherArgs::vertex;
+    //     // smootherArgs.overlap=SmootherArgs::none;
+    //     // smootherArgs.overlap=SmootherArgs::aggregate;
+    //     smootherArgs.relaxationFactor = prm.get<double>("relaxation", 1.0);
+    //     return smootherArgs;
+    // }
 
     template <class Smoother>
     static PrecPtr makeAmgPreconditioner(const Operator& op, const boost::property_tree::ptree& prm, bool useKamg = false)

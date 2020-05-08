@@ -80,7 +80,7 @@ class ParallelOverlappingILU0Args
 {
  public:
     ParallelOverlappingILU0Args(MILU_VARIANT milu = MILU_VARIANT::ILU )
-        : milu_(milu)
+        : milu_(milu), n_(0)
     {}
     void setMilu(MILU_VARIANT milu)
     {
