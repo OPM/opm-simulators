@@ -2535,13 +2535,7 @@ namespace Opm
         // creating a copy of the well itself, to avoid messing up the explicit informations
         // during this copy, the only information not copied properly is the well controls
         StandardWell<TypeTag> well(*this);
-
-        well.updatePrimaryVariables(well_state, deferred_logger);
-        well.computeWellConnectionPressures(ebosSimulator, well_state);
-
-        // initialize the primary variables in Evaluation, which is used in computePerfRate for computeWellPotentials
-        // TODO: for computeWellPotentials, no derivative is required actually
-        well.initPrimaryVariablesEvaluation();
+        well.calculateExplicitQuantities(ebosSimulator, well_state, deferred_logger);
 
         // does the well have a THP related constraint?
         const auto& summaryState = ebosSimulator.vanguard().summaryState();
@@ -3006,8 +3000,6 @@ namespace Opm
         updateWellStateWithTarget(ebos_simulator, well_state_copy, deferred_logger);
 
         calculateExplicitQuantities(ebos_simulator, well_state_copy, deferred_logger);
-        updatePrimaryVariables(well_state_copy, deferred_logger);
-        initPrimaryVariablesEvaluation();
 
         const bool converged = this->solveWellEqUntilConverged(ebos_simulator, B_avg, well_state_copy, deferred_logger);
 
