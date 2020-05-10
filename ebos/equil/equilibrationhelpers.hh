@@ -824,7 +824,7 @@ double satFromPc(const MaterialLawManager& materialLawManager,
         return s1;
     assert(f0 > 0 && f1 < 0);
     const double tol = 1e-10;
-    const int maxIter = -2*log2(tol);
+    const int maxIter = -2*log2(tol)+10;
     int usedIterations=-1;
     double root = RegulaFalsiBisection<ThrowOnError>::solve(f,s0,s1,maxIter,tol, usedIterations);
     return root;
@@ -907,7 +907,7 @@ double satFromSumOfPcs(const MaterialLawManager& materialLawManager,
 
     assert(f0 > 0.0 && f1 < 0.0);
     const double tol = 1e-10;    
-    const int maxIter = -2*log2(tol);//should at least converge int 2 times bisection
+    const int maxIter = -2*log2(tol)+10;//should at least converge int 2 times bisection but some safety here
     int usedIterations=-1;
     double root = RegulaFalsiBisection<ThrowOnError>::solve(f,s0,s1,maxIter,tol, usedIterations);
     return root;
