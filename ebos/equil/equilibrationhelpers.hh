@@ -816,13 +816,13 @@ double satFromPc(const MaterialLawManager& materialLawManager,
 
     // Create the equation f(s) = pc(s) - targetPc
     const PcEq<FluidSystem, MaterialLaw, MaterialLawManager> f(materialLawManager, phase, cell, targetPc);
-    //double f0 = f(s0);
-    //double f1 = f(s1);
-    // if( not(f0 > 0 && f1 < 0)){
-    //     OPM_THROW(std::runtime_error, "Initialization not possible due to non valid capillary curve.");
-    //     // At this point have a targetPc in range
-    // }
-    
+    double f0 = f(s0);
+    double f1 = f(s1);
+    if (f0 <= 0.0)
+        return s0;
+    else if (f1 >= 0.0)
+        return s1;
+    assert(f0 > 0 && f1 < 0);
     const double tol = 1e-10;
     const int maxIter = -2*log2(tol);
     int usedIterations=-1;
@@ -898,8 +898,14 @@ double satFromSumOfPcs(const MaterialLawManager& materialLawManager,
 
     // Create the equation f(s) = pc1(s) + pc2(1-s) - targetPc
     const PcEqSum<FluidSystem, MaterialLaw, MaterialLawManager> f(materialLawManager, phase1, phase2, cell, targetPc);
-    //double f0 = f(s0);
-    //double f1 = f(s1);
+    double f0 = f(s0);
+    double f1 = f(s1);
+    if (f0 <= 0.0)
+        return s0;
+    else if (f1 >= 0.0)
+        return s1;
+
+    assert(f0 > 0.0 && f1 < 0.0);
     const double tol = 1e-10;    
     const int maxIter = -2*log2(tol);//should at least converge int 2 times bisection
     int usedIterations=-1;
