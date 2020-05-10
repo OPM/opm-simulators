@@ -35,7 +35,9 @@
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
+#include <opm/common/utility/numeric/RootFinders.hpp>
 
+#include <cmath>
 #include <memory>
 
 
@@ -825,45 +827,17 @@ double satFromPc(const MaterialLawManager& materialLawManager,
     const PcEq<FluidSystem, MaterialLaw, MaterialLawManager> f(materialLawManager, phase, cell, targetPc);
     double f0 = f(s0);
     double f1 = f(s1);
-
     if (f0 <= 0.0)
         return s0;
     else if (f1 >= 0.0)
         return s1;
-
     assert(f0 > 0 && f1 < 0);
-
-    const int maxIter = 1000;
     const double tol = 1e-10;
-
-    // regula falsi with the "Pegasus" method to avoid stagnation
-    for (int iter = 0; iter < maxIter; ++ iter) {
-        // determine the pivot
-        double s = (s1*f0 - s0*f1)/(f0 - f1);
-
-        // adapt the interval
-        double fs = f(s);
-        if (fs == 0.0)
-            return s;
-        else if ((fs > 0.0) == (f0 > 0.0)) {
-            // update interval and reverse
-            s0 = s1;
-            f0 = f1;
-        }
-        else
-            // "Pegasus" method
-            f0 *= f1/(f1 + fs);
-
-        s1 = s;
-        f1 = fs;
-
-        // check for convergence
-        if (std::abs(s1 - s0) < tol)
-            return (s1 + s0)/2;
-    }
-
-    throw std::runtime_error("Could not find solution for PcEq = 0.0 after "+std::to_string(maxIter)
-                             +" iterations.");
+    // should at least converge in 2 times bisection but some safety here:
+    const int maxIter = -2*static_cast<int>(std::log2(tol)) + 10;
+    int usedIterations = -1;
+    const double root = RegulaFalsiBisection<ThrowOnError>::solve(f, s0, s1, maxIter, tol, usedIterations);
+    return root;
 }
 
 
@@ -940,38 +914,12 @@ double satFromSumOfPcs(const MaterialLawManager& materialLawManager,
         return s1;
 
     assert(f0 > 0.0 && f1 < 0.0);
-
-    const int maxIter = 60;
     const double tol = 1e-10;
-
-    // regula falsi with the "Pegasus" method to avoid stagnation
-    for (int iter = 0; iter < maxIter; ++ iter) {
-        // determine the pivot
-        double s = (s1*f0 - s0*f1)/(f0 - f1);
-
-        // adapt the interval
-        double fs = f(s);
-        if (fs == 0.0)
-            return s;
-        else if ((fs > 0.0) == (f0 > 0.0)) {
-            // update interval and reverse
-            s0 = s1;
-            f0 = f1;
-        }
-        else
-            // "Pegasus" method
-            f0 *= f1 / (f1 + fs);
-
-        s1 = s;
-        f1 = fs;
-
-        // check for convergence
-        if (std::abs(s1 - s0) < tol)
-            return (s1 + s0)/2;
-    }
-
-    throw std::runtime_error("Could not find solution for PcEqSum = 0.0 after "+std::to_string(maxIter)
-                             +" iterations.");
+    // should at least converge in 2 times bisection but some safety here:
+    const int maxIter = -2*static_cast<int>(std::log2(tol)) + 10;
+    int usedIterations = -1;
+    const double root = RegulaFalsiBisection<ThrowOnError>::solve(f, s0, s1, maxIter, tol, usedIterations);
+    return root;
 }
 
 /// Compute saturation from depth. Used for constant capillary pressure function
