@@ -450,7 +450,6 @@ namespace MissingFeatures {
             "MAPUNITS",
             "MASSFLOW",
             "MATCORR",
-            "MAXVALUE",
             "MEMORY",
             "MESSAGE",
             "MESSOPTS",
