@@ -92,7 +92,7 @@ SET_INT_PROP(FlowIstlSolverParams, CprSolverVerbose, 0);
 SET_BOOL_PROP(FlowIstlSolverParams, CprUseDrs, false);
 SET_INT_PROP(FlowIstlSolverParams, CprMaxEllIter, 20);
 SET_INT_PROP(FlowIstlSolverParams, CprEllSolvetype, 0);
-SET_INT_PROP(FlowIstlSolverParams, CprReuseSetup, 0);
+SET_INT_PROP(FlowIstlSolverParams, CprReuseSetup, 3);
 SET_STRING_PROP(FlowIstlSolverParams, LinearSolverConfiguration, "ilu0");
 SET_STRING_PROP(FlowIstlSolverParams, LinearSolverConfigurationJsonFile, "none");
 SET_BOOL_PROP(FlowIstlSolverParams, UseGpu, false);
