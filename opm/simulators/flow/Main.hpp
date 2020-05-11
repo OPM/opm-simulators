@@ -64,6 +64,7 @@
 #include <opm/simulators/utils/ParallelSerialization.hpp>
 #endif
 
+#include <string>
 #include <type_traits>
 
 BEGIN_PROPERTIES
@@ -126,6 +127,17 @@ namespace Opm
         };
     public:
         Main(int argc, char** argv) : argc_(argc), argv_(argv)  {  }
+
+        Main(const std::string &filename)
+        {
+            deckFilename_.assign(filename);
+            flowProgName_.assign("flow");
+            argc_ = 2;
+            saveArgs_[0] = const_cast<char *>(flowProgName_.c_str());
+            saveArgs_[1] = const_cast<char *>(deckFilename_.c_str());
+            argv_ = saveArgs_;
+        }
+
         Main(int argc,
              char** argv,
              std::shared_ptr<Opm::Deck> deck,
@@ -603,6 +615,9 @@ namespace Opm
         bool outputCout_;
         bool outputFiles_;
         double setupTime_;
+        std::string deckFilename_;
+        std::string flowProgName_;
+        char *saveArgs_[2];
         std::shared_ptr<Opm::Deck> deck_;
         std::shared_ptr<Opm::EclipseState> eclipseState_;
         std::shared_ptr<Opm::Schedule> schedule_;
