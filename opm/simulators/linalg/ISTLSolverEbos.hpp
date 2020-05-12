@@ -350,7 +350,7 @@ protected:
             ownersFirst_ = EWOMS_GET_PARAM(TypeTag, bool, OwnerCellsFirst);
             interiorCellNum_ = detail::numMatrixRowsToUseInSolver(simulator_.vanguard().grid(), ownersFirst_);
 
-            if (!ownersFirst_ || parameters_.linear_solver_use_amg_  || useFlexible_ ) {
+            if ( isParallel() && (!ownersFirst_ || parameters_.linear_solver_use_amg_  || useFlexible_ ) ) {
                 detail::setWellConnections(gridForConn, simulator_.vanguard().schedule().getWellsatEnd(), useWellConn_, wellConnectionsGraph_);
                 // For some reason simulator_.model().elementMapper() is not initialized at this stage
                 // Hence const auto& elemMapper = simulator_.model().elementMapper(); does not work.
@@ -359,11 +359,8 @@ protected:
                     Dune::MultipleCodimMultipleGeomTypeMapper<GridView>;
                 ElementMapper elemMapper(simulator_.vanguard().gridView(), Dune::mcmgElementLayout());
                 detail::findOverlapAndInterior(gridForConn, elemMapper, overlapRows_, interiorRows_);
-                if (gridForConn.comm().size() > 1) {
-
-                    noGhostAdjacency();
-                    setGhostsInNoGhost(*noGhostMat_);
-                }
+                noGhostAdjacency();
+                setGhostsInNoGhost(*noGhostMat_);
                 if (ownersFirst_)
                     OpmLog::warning("OwnerCellsFirst option is true, but ignored.");
             }
@@ -510,7 +507,7 @@ protected:
                 else {
 
                     typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, true > Operator;
-
+                    assert (noGhostMat_);
                     copyJacToNoGhost(*matrix_, *noGhostMat_);
                     Operator opA(*noGhostMat_, *noGhostMat_, wellModel,
                                  comm_ );
