@@ -503,7 +503,7 @@ protected:
 
             if( isParallel() )
             {
-                if ( ownersFirst_ && (!parameters_.linear_solver_use_amg_ || !parameters_.use_cpr_) ) {
+                if ( ownersFirst_ && !parameters_.linear_solver_use_amg_ && !useFlexible_) {
                     typedef WellModelGhostLastMatrixAdapter< Matrix, Vector, Vector, WellModel, true > Operator;
                     Operator opA(*matrix_, *matrix_, wellModel, interiorCellNum_);
 
