@@ -892,7 +892,8 @@ protected:
             if (recreate_solver || !flexibleSolver_) {
                 if (isParallel()) {
 #if HAVE_MPI
-                    flexibleSolver_.reset(new FlexibleSolverType(prm_, *matrix_, weightsCalculator, *comm_));
+                    assert(noGhostMat_);
+                    flexibleSolver_.reset(new FlexibleSolverType(prm_, *noGhostMat_, weightsCalculator, *comm_));
 #endif
                 } else {
                     flexibleSolver_.reset(new FlexibleSolverType(prm_, *matrix_, weightsCalculator));
