@@ -22,41 +22,50 @@
 
 #include <dune/istl/matrixmarket.hh>
 
+namespace Opm
+{
+template<typename T, int i, int j>
+class MatrixBlock;
+}
+
 namespace Dune
 {
+
 namespace MatrixMarketImpl
 {
 
-    template <typename Block, typename A>
-    struct mm_header_printer<BCRSMatrix<Block, A>>
+    template <typename T, int i, int j, typename A>
+    struct mm_header_printer<BCRSMatrix<Opm::MatrixBlock<T,i,j>, A>>
     {
         static void print(std::ostream& os)
         {
-            using Value = typename Block::value_type;
             os << "%%MatrixMarket matrix coordinate ";
-            os << mm_numeric_type<Value>::str() << " general" << std::endl;
+            os << mm_numeric_type<T>::str() << " general" << std::endl;
         }
     };
 
-    template <typename Block, typename A>
-    struct mm_block_structure_header<BCRSMatrix<Block, A>>
+    template <typename T, int i, int j, typename A>
+    struct mm_block_structure_header<BCRSMatrix<Opm::MatrixBlock<T,i,j>, A>>
     {
-        using M = BCRSMatrix<Block, A>;
+        using M = BCRSMatrix<Opm::MatrixBlock<T,i,j>, A>;
         static void print(std::ostream& os, const M&)
         {
             os << "% ISTL_STRUCT blocked ";
-            os << Block::rows << " " << Block::cols << std::endl;
+            os << i << " " << j << std::endl;
         }
     };
 
 } // namespace MatrixMarketImpl
 
-template <typename Block, typename A>
-struct mm_multipliers<BCRSMatrix<Block, A>>
+template<class M>
+struct mm_multipliers;
+
+template <typename T, int i, int j, typename A>
+struct mm_multipliers<BCRSMatrix<Opm::MatrixBlock<T,i,j>, A>>
 {
     enum {
-        rows = Block::rows,
-        cols = Block::cols
+        rows = i,
+        cols = j
     };
 };
 
