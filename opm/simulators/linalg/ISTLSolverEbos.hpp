@@ -823,7 +823,7 @@ protected:
 
         bool isParallel() const {
 #if HAVE_MPI
-            return parallelInformation_.type() == typeid(ParallelISTLInformation);
+            return comm_->communicator().size() > 1;
 #else
             return false;
 #endif
