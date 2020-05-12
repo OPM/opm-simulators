@@ -404,13 +404,18 @@ protected:
             {
                 if (firstcall)
                 {
-                    //Only do this once as flexible solvers wil store a reference.
-                    matrix_.reset(new Matrix(M.istlMatrix()));
+                    // ebos will not change the matrix object. Hence simply store a pointer
+                    // to the original one with a deleter that does nothing.
+                    matrix_.reset(const_cast<Matrix*>(&M.istlMatrix()), [](Matrix*){});
                 }
                 else
                 {
-                    // Pointers stays the same for flexible solver
-                    *matrix_ = M.istlMatrix();
+                    // Pointers should not change
+                    if ( &(M.istlMatrix()) != matrix_.get() )
+                    {
+                        OPM_THROW(std::logic_error, "Matrix objects are expected to be reused when reassembling!"
+                                  <<" old pointer was " << matrix_.get() << ", new one is " << (&M.istlMatrix()) );
+                    }
                 }
             }
             rhs_ = &b;
@@ -1133,7 +1138,7 @@ protected:
         mutable bool converged_;
         std::any parallelInformation_;
 
-        std::unique_ptr<Matrix> matrix_;
+        std::shared_ptr<Matrix> matrix_;
         std::unique_ptr<Matrix> noGhostMat_;
         Vector *rhs_;
         std::unique_ptr<Matrix> matrix_for_preconditioner_;
