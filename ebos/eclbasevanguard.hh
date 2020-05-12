@@ -80,6 +80,9 @@ NEW_PROP_TAG(IgnoreKeywords);
 NEW_PROP_TAG(EnableExperiments);
 NEW_PROP_TAG(EdgeWeightsMethod);
 NEW_PROP_TAG(OwnerCellsFirst);
+NEW_PROP_TAG(OpmRestart);
+NEW_PROP_TAG(OpmRestartBase);
+NEW_PROP_TAG(OpmRestartStep);
 
 SET_STRING_PROP(EclBaseVanguard, IgnoreKeywords, "");
 SET_STRING_PROP(EclBaseVanguard, EclDeckFileName, "");
@@ -89,6 +92,10 @@ SET_BOOL_PROP(EclBaseVanguard, EclStrictParsing, false);
 SET_BOOL_PROP(EclBaseVanguard, SchedRestart, true);
 SET_INT_PROP(EclBaseVanguard, EdgeWeightsMethod, 1);
 SET_BOOL_PROP(EclBaseVanguard, OwnerCellsFirst, true);
+
+SET_BOOL_PROP(EclBaseVanguard,OpmRestart,false);
+SET_STRING_PROP(EclBaseVanguard,OpmRestartBase,"none");
+SET_INT_PROP(EclBaseVanguard,OpmRestartStep,-1);
 
 END_PROPERTIES
 
@@ -138,6 +145,10 @@ public:
                              "Choose edge-weighing strategy: 0=uniform, 1=trans, 2=log(trans).");
         EWOMS_REGISTER_PARAM(TypeTag, bool, OwnerCellsFirst,
                              "Order cells owned by rank before ghost/overlap cells.");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, OpmRestart, "Use opm restart feature");
+        EWOMS_REGISTER_PARAM(TypeTag, std::string, OpmRestartBase,"The base of previous run for OPM restart feature");
+        EWOMS_REGISTER_PARAM(TypeTag, int, OpmRestartStep,"Restart step for OPM restart feature");
+
     }
 
     /*!

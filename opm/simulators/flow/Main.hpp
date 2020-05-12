@@ -418,15 +418,23 @@ namespace Opm
                           included here as a switch.
                         */
                         const bool init_from_restart_file = !EWOMS_GET_PARAM(PreTypeTag, bool, SchedRestart);
-                        const auto& init_config = eclipseState_->getInitConfig();
+                        auto& init_config = eclipseState_->getInitConfig();
+                        const bool opm_restart = EWOMS_GET_PARAM(PreTypeTag, bool, OpmRestart);
+			if( opm_restart ) {
+			    int report_step = EWOMS_GET_PARAM(PreTypeTag, int, OpmRestartStep);
+			    std::string preRunRestartBase = EWOMS_GET_PARAM(PreTypeTag, std::string, OpmRestartBase);
+			    init_config.setRestart(preRunRestartBase,report_step);
+			}
+			
                         if (init_config.restartRequested() && init_from_restart_file) {
                             int report_step = init_config.getRestartStep();
-                            const auto& rst_filename = eclipseState_->getIOConfig().getRestartFileName( init_config.getRestartRootName(), report_step, false );
+                            bool uniform = false;// this experimental feature only work with nonuniform output
+                            const auto& rst_filename = eclipseState_->getIOConfig().getRestartFileName( init_config.getRestartRootName(), report_step, uniform );
                             Opm::EclIO::ERst rst_file(rst_filename);
                             const auto& rst_state = Opm::RestartIO::RstState::load(rst_file, report_step);
                             if (!schedule_)
                                 schedule_.reset(new Opm::Schedule(*deck_, *eclipseState_, parseContext, errorGuard, python, &rst_state) );
-                        }
+			}
                         else {
                             if (!schedule_)
                                 schedule_.reset(new Opm::Schedule(*deck_, *eclipseState_, parseContext, errorGuard, python));
