@@ -2832,8 +2832,8 @@ namespace Opm
             vol_ratio += mix[comp_idx] / b[comp_idx];
         }
 
-        // segment volume
-        const double volume = segmentSet()[seg_idx].volume();
+        // We increase the segment volume with a factor 10 to stabilize the system.
+        const double volume = segmentSet()[seg_idx].volume() * 10;
 
         return volume / vol_ratio;
     }
