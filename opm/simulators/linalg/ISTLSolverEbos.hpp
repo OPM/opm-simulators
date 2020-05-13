@@ -126,10 +126,9 @@ public:
 
   //! constructor: just store a reference to a matrix
   WellModelMatrixAdapter (const M& A,
-                          const M& A_for_precond,
                           const WellModel& wellMod,
                           const std::shared_ptr< communication_type >& comm = std::shared_ptr< communication_type >())
-      : A_( A ), A_for_precond_(A_for_precond), wellMod_( wellMod ), comm_(comm)
+      : A_( A ), wellMod_( wellMod ), comm_(comm)
   {}
 
 
@@ -160,11 +159,10 @@ public:
 #endif
   }
 
-  virtual const matrix_type& getmat() const override { return A_for_precond_; }
+  virtual const matrix_type& getmat() const override { return A_; }
 
 protected:
   const matrix_type& A_ ;
-  const matrix_type& A_for_precond_ ;
   const WellModel& wellMod_;
   std::shared_ptr< communication_type > comm_;
 };
@@ -201,10 +199,9 @@ public:
 
     //! constructor: just store a reference to a matrix
     WellModelGhostLastMatrixAdapter (const M& A,
-                                     const M& A_for_precond,
                                      const WellModel& wellMod,
                                      const size_t interiorSize )
-        : A_( A ), A_for_precond_(A_for_precond), wellMod_( wellMod ), interiorSize_(interiorSize)
+        : A_( A ), wellMod_( wellMod ), interiorSize_(interiorSize)
     {}
 
     virtual void apply( const X& x, Y& y ) const override
@@ -238,7 +235,7 @@ public:
         ghostLastProject( y );
     }
 
-    virtual const matrix_type& getmat() const override { return A_for_precond_; }
+    virtual const matrix_type& getmat() const override { return A_; }
 
 protected:
     void ghostLastProject(Y& y) const
@@ -249,7 +246,6 @@ protected:
     }
 
     const matrix_type& A_ ;
-    const matrix_type& A_for_precond_ ;
     const WellModel& wellMod_;
     size_t interiorSize_;
 };
@@ -380,7 +376,6 @@ protected:
 
         // nothing to clean here
         void eraseMatrix() {
-            matrix_for_preconditioner_.reset();
         }
 
         void prepare(const SparseMatrixAdapter& M, Vector& b)
@@ -507,7 +502,7 @@ protected:
             {
                 if ( ownersFirst_ && !parameters_.linear_solver_use_amg_ && !useFlexible_) {
                     typedef WellModelGhostLastMatrixAdapter< Matrix, Vector, Vector, WellModel, true > Operator;
-                    Operator opA(*matrix_, *matrix_, wellModel, interiorCellNum_);
+                    Operator opA(*matrix_, wellModel, interiorCellNum_);
 
                     solve( opA, x, *rhs_, *comm_ );
                 }
@@ -516,7 +511,7 @@ protected:
                     typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, true > Operator;
                     assert (noGhostMat_);
                     copyJacToNoGhost(*matrix_, *noGhostMat_);
-                    Operator opA(*noGhostMat_, *noGhostMat_, wellModel,
+                    Operator opA(*noGhostMat_, wellModel,
                                  comm_ );
 
                     solve( opA, x, *rhs_, *comm_ );
@@ -526,7 +521,7 @@ protected:
             else
             {
                 typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, false > Operator;
-                Operator opA(*matrix_, *matrix_, wellModel);
+                Operator opA(*matrix_, wellModel);
                 solve( opA, x, *rhs_ );
             }
 
@@ -1145,7 +1140,6 @@ protected:
         Matrix* matrix_;
         std::unique_ptr<Matrix> noGhostMat_;
         Vector *rhs_;
-        std::unique_ptr<Matrix> matrix_for_preconditioner_;
 
         std::unique_ptr<FlexibleSolverType> flexibleSolver_;
         std::vector<int> overlapRows_;
