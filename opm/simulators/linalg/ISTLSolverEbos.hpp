@@ -1137,6 +1137,11 @@ protected:
             return noGhostMat_ ? *noGhostMat_ : *matrix_;
         }
 
+        const Matrix& getMatrix() const
+        {
+            return noGhostMat_ ? *noGhostMat_ : *matrix_;
+        }
+
         const Simulator& simulator_;
         mutable int iterations_;
         mutable bool converged_;
