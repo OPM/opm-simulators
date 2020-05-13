@@ -156,6 +156,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/ISTLSolverEbos.hpp
   opm/simulators/linalg/ISTLSolverEbosFlexible.hpp
   opm/simulators/linalg/MatrixBlock.hpp
+  opm/simulators/linalg/MatrixMarketSpecializations.hpp
   opm/simulators/linalg/OwningBlockPreconditioner.hpp
   opm/simulators/linalg/OwningTwoLevelPreconditioner.hpp
   opm/simulators/linalg/ParallelOverlappingILU0.hpp
@@ -165,6 +166,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/PressureTransferPolicy.hpp
   opm/simulators/linalg/PreconditionerFactory.hpp
   opm/simulators/linalg/PreconditionerWithUpdate.hpp
+  opm/simulators/linalg/WriteSystemMatrixHelper.hpp
   opm/simulators/linalg/findOverlapRowsAndColumns.hpp
   opm/simulators/linalg/getQuasiImpesWeights.hpp
   opm/simulators/linalg/setupPropertyTree.hpp
