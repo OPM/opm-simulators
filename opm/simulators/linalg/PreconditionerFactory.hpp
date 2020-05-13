@@ -157,7 +157,7 @@ private:
         // smootherArgs.overlap=SmootherArgs::vertex;
         // smootherArgs.overlap=SmootherArgs::none;
         // smootherArgs.overlap=SmootherArgs::aggregate;
-        smootherArgs.relaxationFactor = prm.get<double>("relaxation", 0.9);
+        smootherArgs.relaxationFactor = prm.get<double>("relaxation", 1.0);
         return smootherArgs;
     }
 
@@ -175,7 +175,7 @@ private:
         // smootherArgs.overlap=SmootherArgs::vertex;
         // smootherArgs.overlap=SmootherArgs::none;
         // smootherArgs.overlap=SmootherArgs::aggregate;
-        smootherArgs.relaxationFactor = prm.get<double>("relaxation", 0.9);
+        smootherArgs.relaxationFactor = prm.get<double>("relaxation", 1.0);
         return smootherArgs;
     }
 
