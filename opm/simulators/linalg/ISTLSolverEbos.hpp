@@ -502,6 +502,7 @@ protected:
             {
                 if ( ownersFirst_ && !parameters_.linear_solver_use_amg_ && !useFlexible_) {
                     typedef WellModelGhostLastMatrixAdapter< Matrix, Vector, Vector, WellModel, true > Operator;
+                    assert(matrix_);
                     Operator opA(*matrix_, wellModel, interiorCellNum_);
 
                     solve( opA, x, *rhs_, *comm_ );
@@ -615,7 +616,7 @@ protected:
                     if (!useWellConn_) {
                         simulator_.problem().wellModel().getWellContributions(wellContribs);
                     }
-                    bdaBridge->solve_system(matrix_, istlb, wellContribs, result);
+                    bdaBridge->solve_system(&getMatrix(), istlb, wellContribs, result);
                     if (result.converged) {
                         // get result vector x from non-Dune backend, iff solve was successful
                         bdaBridge->get_result(x);
@@ -870,7 +871,7 @@ protected:
                     weightsCalculator =
                         [this, transpose, pressureIndex](){
                             return Opm::Amg::getQuasiImpesWeights<Matrix,
-                                                                  Vector>(*this->matrix_,
+                                                                  Vector>(getMatrix(),
                                                                           pressureIndex,
                                                                           transpose);
                         };
@@ -1018,8 +1019,8 @@ protected:
         void scaleEquationsAndVariables(Vector& weights)
         {
             // loop over primary variables
-            const auto endi = matrix_->end();
-            for (auto i = matrix_->begin(); i != endi; ++i) {
+            const auto endi = getMatrix().end();
+            for (auto i = getMatrix().begin(); i != endi; ++i) {
                 const auto endj = (*i).end();
                 BlockVector& brhs = (*rhs_)[i.index()];
                 for (auto j = (*i).begin(); j != endj; ++j) {
@@ -1035,7 +1036,7 @@ protected:
                 for (std::size_t ii = 0; ii < brhs.size(); ii++) {
                     brhs[ii] *= simulator_.model().eqWeight(i.index(), ii);
                 }
-                if (weights.size() == matrix_->N()) {
+                if (weights.size() == getMatrix().N()) {
                     BlockVector& bw = weights[i.index()];
                     for (std::size_t ii = 0; ii < brhs.size(); ii++) {
                         bw[ii] /= simulator_.model().eqWeight(i.index(), ii);
@@ -1060,7 +1061,7 @@ protected:
 
         Vector getQuasiImpesWeights()
         {
-            return Amg::getQuasiImpesWeights<Matrix,Vector>(*matrix_, pressureVarIndex, /* transpose=*/ true);
+            return Amg::getQuasiImpesWeights<Matrix,Vector>(getMatrix(), pressureVarIndex, /* transpose=*/ true);
         }
 
         Vector getSimpleWeights(const BlockVector& rhs)
@@ -1075,8 +1076,8 @@ protected:
         void scaleMatrixAndRhs(const Vector& weights)
         {
             using Block = typename Matrix::block_type;
-            const auto endi = matrix_->end();
-            for (auto i = matrix_->begin(); i !=endi; ++i) {
+            const auto endi = getMatrix().end();
+            for (auto i = getMatrix().begin(); i !=endi; ++i) {
                 const BlockVector& bweights = weights[i.index()];
                 BlockVector& brhs = (*rhs_)[i.index()];
                 const auto endj = (*i).end();
@@ -1129,6 +1130,11 @@ protected:
         {
             multBlocksInMatrix(M_cp, leftTrans, true);
             multBlocksVector(b_cp, leftTrans);
+        }
+
+        Matrix& getMatrix()
+        {
+            return noGhostMat_ ? *noGhostMat_ : *matrix_;
         }
 
         const Simulator& simulator_;
