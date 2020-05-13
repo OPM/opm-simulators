@@ -137,8 +137,19 @@ private:
         return criterion;
     }
 
+    /// Helper struct to explicitly overload amgSmootherArgs() version for
+    /// ParallelOverlappingILU0, since in-class specialization is not allowed.
+    template <typename X> struct Id { using Type = X; };
+
     template <typename Smoother>
     static auto amgSmootherArgs(const boost::property_tree::ptree& prm)
+    {
+        return amgSmootherArgs(prm, Id<Smoother>());
+    }
+
+    template <typename Smoother>
+    static auto amgSmootherArgs(const boost::property_tree::ptree& prm,
+                                Id<Smoother>)
     {
         using SmootherArgs = typename Dune::Amg::SmootherTraits<Smoother>::Arguments;
         SmootherArgs smootherArgs;
@@ -146,7 +157,25 @@ private:
         // smootherArgs.overlap=SmootherArgs::vertex;
         // smootherArgs.overlap=SmootherArgs::none;
         // smootherArgs.overlap=SmootherArgs::aggregate;
-        smootherArgs.relaxationFactor = prm.get<double>("relaxation", 0.9);
+        smootherArgs.relaxationFactor = prm.get<double>("relaxation", 1.0);
+        return smootherArgs;
+    }
+
+    static auto amgSmootherArgs(const boost::property_tree::ptree& prm,
+                                Id<Opm::ParallelOverlappingILU0<Matrix, Vector, Vector, Comm>>)
+    {
+        using Smoother = Opm::ParallelOverlappingILU0<Matrix, Vector, Vector, Comm>;
+        using SmootherArgs = typename Dune::Amg::SmootherTraits<Smoother>::Arguments;
+        SmootherArgs smootherArgs;
+        smootherArgs.iterations = prm.get<int>("iterations", 1);
+        const int iluwitdh = prm.get<int>("iluwidth", 0);
+        smootherArgs.setN(iluwitdh);
+        const MILU_VARIANT milu = convertString2Milu(prm.get<std::string>("milutype", std::string("ilu")));
+        smootherArgs.setMilu(milu);
+        // smootherArgs.overlap=SmootherArgs::vertex;
+        // smootherArgs.overlap=SmootherArgs::none;
+        // smootherArgs.overlap=SmootherArgs::aggregate;
+        smootherArgs.relaxationFactor = prm.get<double>("relaxation", 1.0);
         return smootherArgs;
     }
 
