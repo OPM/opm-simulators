@@ -616,7 +616,8 @@ protected:
                     if (!useWellConn_) {
                         simulator_.problem().wellModel().getWellContributions(wellContribs);
                     }
-                    bdaBridge->solve_system(&getMatrix(), istlb, wellContribs, result);
+                    // Const_cast needed since the CUDA stuff overwrites values for better matrix condition..
+                    bdaBridge->solve_system(const_cast<Matrix*>(&getMatrix()), istlb, wellContribs, result);
                     if (result.converged) {
                         // get result vector x from non-Dune backend, iff solve was successful
                         bdaBridge->get_result(x);
@@ -1133,6 +1134,11 @@ protected:
         }
 
         Matrix& getMatrix()
+        {
+            return noGhostMat_ ? *noGhostMat_ : *matrix_;
+        }
+
+        const Matrix& getMatrix() const
         {
             return noGhostMat_ ? *noGhostMat_ : *matrix_;
         }
