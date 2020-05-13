@@ -71,7 +71,14 @@ setupPropertyTree(const FlowLinearSolverParameters& p)
             prm.put("verbosity", p.linear_solver_verbosity_);
             prm.put("solver", "bicgstab");
             prm.put("preconditioner.type", "cpr");
-            prm.put("preconditioner.weight_type","quasiimpes");
+            if (conf == "cpr_quasiimpes" )
+            {
+                prm.put("preconditioner.weight_type","quasiimpes");
+            }
+            else
+            {
+                prm.put("preconditioner.weight_type","trueimpes");
+            }
             prm.put("preconditioner.finesmoother.type", "ParOverILU0");
             prm.put("preconditioner.finesmoother.relaxation", 1.0);
             prm.put("preconditioner.pressure_var_index",1);
