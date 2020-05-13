@@ -309,7 +309,8 @@ protected:
         ISTLSolverEbos(const Simulator& simulator)
             : simulator_(simulator),
               iterations_( 0 ),
-              converged_(false)
+              converged_(false),
+              matrix_()
         {
 #if HAVE_MPI
             comm_.reset( new communication_type( simulator_.vanguard().grid().comm() ) );
@@ -406,15 +407,16 @@ protected:
                 {
                     // ebos will not change the matrix object. Hence simply store a pointer
                     // to the original one with a deleter that does nothing.
-                    matrix_.reset(const_cast<Matrix*>(&M.istlMatrix()), [](Matrix*){});
+                    // Outch! We need to be able to scale the linear system! Hence const_cast
+                    matrix_ = const_cast<Matrix*>(&M.istlMatrix());
                 }
                 else
                 {
                     // Pointers should not change
-                    if ( &(M.istlMatrix()) != matrix_.get() )
+                    if ( &(M.istlMatrix()) != matrix_ )
                     {
                         OPM_THROW(std::logic_error, "Matrix objects are expected to be reused when reassembling!"
-                                  <<" old pointer was " << matrix_.get() << ", new one is " << (&M.istlMatrix()) );
+                                  <<" old pointer was " << matrix_ << ", new one is " << (&M.istlMatrix()) );
                     }
                 }
             }
@@ -618,7 +620,7 @@ protected:
                     if (!useWellConn_) {
                         simulator_.problem().wellModel().getWellContributions(wellContribs);
                     }
-                    bdaBridge->solve_system(matrix_.get(), istlb, wellContribs, result);
+                    bdaBridge->solve_system(matrix_, istlb, wellContribs, result);
                     if (result.converged) {
                         // get result vector x from non-Dune backend, iff solve was successful
                         bdaBridge->get_result(x);
@@ -1139,7 +1141,8 @@ protected:
         mutable bool converged_;
         std::any parallelInformation_;
 
-        std::shared_ptr<Matrix> matrix_;
+        // non-const to be able to scale the linear system
+        Matrix* matrix_;
         std::unique_ptr<Matrix> noGhostMat_;
         Vector *rhs_;
         std::unique_ptr<Matrix> matrix_for_preconditioner_;
