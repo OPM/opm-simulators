@@ -46,8 +46,8 @@ void flowEbosBlackoilSetDeck(double setupTime, Deck *deck, EclipseState& eclStat
     Vanguard::setExternalSummaryConfig(&summaryConfig);
 }
 
-// ----------------- Main program -----------------
-int flowEbosBlackoilMain(int argc, char** argv, bool outputCout, bool outputFiles)
+std::unique_ptr<Opm::FlowMainEbos<TTAG(EclFlowProblem)>>
+flowEbosBlackoilMainInit(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
@@ -59,8 +59,14 @@ int flowEbosBlackoilMain(int argc, char** argv, bool outputCout, bool outputFile
     Dune::MPIHelper::instance(argc, argv);
 #endif
 
-    Opm::FlowMainEbos<TTAG(EclFlowProblem)> mainfunc;
-    return mainfunc.execute(argc, argv, outputCout, outputFiles);
+    return std::make_unique<Opm::FlowMainEbos<TTAG(EclFlowProblem)>>();
+}
+
+// ----------------- Main program -----------------
+int flowEbosBlackoilMain(int argc, char** argv, bool outputCout, bool outputFiles)
+{
+    auto mainfunc = flowEbosBlackoilMainInit(argc, argv, outputCout, outputFiles);
+    return mainfunc->execute(argc, argv, outputCout, outputFiles);
 }
 
 }

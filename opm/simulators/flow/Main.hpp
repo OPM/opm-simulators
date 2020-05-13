@@ -117,6 +117,7 @@ namespace Opm
     class Main
     {
     private:
+        using FlowMainEbosType = Opm::FlowMainEbos<TTAG(EclFlowProblem)>;
         enum class FileOutputMode {
             //! \brief No output to files.
             OUTPUT_NONE = 0,
@@ -171,6 +172,30 @@ namespace Opm
                 return dispatchStatic_<TypeTag>();
             } else {
                 return exitCode;
+            }
+        }
+
+        // To be called from the Python interface code. Only do the
+        // initialization and then return a pointer to the FlowEbosMain
+        // object that can later be accessed directly from the Python interface
+        // to e.g. advance the simulator one report step
+        std::unique_ptr<FlowMainEbosType> initFlowEbosBlackoil(int& exitCode)
+        {
+            exitCode = EXIT_SUCCESS;
+            if (initialize_<TTAG(FlowEarlyBird)>(exitCode)) {
+                // TODO: check that this deck really represents a blackoil
+                // case. E.g. check that number of phases == 3
+                Opm::flowEbosBlackoilSetDeck(
+                    setupTime_,
+                    deck_.get(),
+                    *eclipseState_,
+                    *schedule_,
+                    *summaryConfig_);
+                return Opm::flowEbosBlackoilMainInit(
+                    argc_, argv_, outputCout_, outputFiles_);
+            } else {
+                //NOTE: exitCode was set by initialize_() above;
+                return std::unique_ptr<FlowMainEbosType>(); // nullptr
             }
         }
 
