@@ -31,6 +31,9 @@
 
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
+#include <opm/models/utils/basicproperties.hh>
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 
 #include <opm/material/common/Exceptions.hpp>
 
@@ -44,14 +47,14 @@
 
 #include <cstdio>
 
-BEGIN_PROPERTIES
-
-// forward definition of property tags
-
-
-END_PROPERTIES
-
 namespace Opm {
+
+namespace Properties {
+
+template <class TypeTag, class MyTypeTag>
+struct FluidSystem;
+
+} // namespace Properties
 
 #if __GNUC__ || __clang__
 #pragma GCC diagnostic push

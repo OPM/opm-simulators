@@ -44,6 +44,9 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(VtkDiffusion);
 
 // create the property tags needed for the diffusion module
+NEW_PROP_TAG(VtkWriteTortuosities);
+NEW_PROP_TAG(VtkWriteDiffusionCoefficients);
+NEW_PROP_TAG(VtkWriteEffectiveDiffusionCoefficients);
 
 // set default values for what quantities to output
 SET_BOOL_PROP(VtkDiffusion, VtkWriteTortuosities, false);

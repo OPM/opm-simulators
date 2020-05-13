@@ -47,18 +47,8 @@ BEGIN_PROPERTIES
 //! create a type tag for the Newton method of the finite-volume discretization
 NEW_TYPE_TAG(FvBaseNewtonMethod, INHERITS_FROM(NewtonMethod));
 
-//! The class dealing with the balance equations
-
-//! The class storing primary variables plus pseudo primary variables
-
-//! The class storing values of conservation equations (e.g., a "naked" primary varible
-//! vector)
-
-//! The number of balance equations.
-
 //! The discretization specific part of he implementing the Newton algorithm
-
-//! The class implementing the Newton algorithm
+NEW_PROP_TAG(DiscNewtonMethod);
 
 // set default values
 SET_TYPE_PROP(FvBaseNewtonMethod, DiscNewtonMethod,

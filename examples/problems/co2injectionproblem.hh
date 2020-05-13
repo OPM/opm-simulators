@@ -73,6 +73,13 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(Co2InjectionBaseProblem);
 
 // declare the CO2 injection problem specific property tags
+NEW_PROP_TAG(FluidSystemPressureLow);
+NEW_PROP_TAG(FluidSystemPressureHigh);
+NEW_PROP_TAG(FluidSystemNumPressure);
+NEW_PROP_TAG(FluidSystemTemperatureLow);
+NEW_PROP_TAG(FluidSystemTemperatureHigh);
+NEW_PROP_TAG(FluidSystemNumTemperature);
+
 NEW_PROP_TAG(MaxDepth);
 NEW_PROP_TAG(Temperature);
 NEW_PROP_TAG(SimulationName);

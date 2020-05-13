@@ -45,13 +45,9 @@
 
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
+#include <opm/simulators/linalg/linalgproperties.hh>
 
 #include <dune/istl/solvers.hh>
-
-BEGIN_PROPERTIES
-
-
-END_PROPERTIES
 
 namespace Opm {
 

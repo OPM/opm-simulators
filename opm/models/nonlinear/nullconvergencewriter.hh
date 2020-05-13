@@ -34,7 +34,8 @@
 
 BEGIN_PROPERTIES
 
-
+template <class TypeTag, class MyTypeTag>
+struct NewtonMethod;
 
 END_PROPERTIES
 

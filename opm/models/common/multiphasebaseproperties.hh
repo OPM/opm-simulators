@@ -30,26 +30,41 @@
 #ifndef EWOMS_MULTI_PHASE_BASE_PROPERTIES_HH
 #define EWOMS_MULTI_PHASE_BASE_PROPERTIES_HH
 
-#include <opm/models/discretization/common/fvbaseproperties.hh>
-#include <opm/models/io/vtkmultiphasemodule.hh>
-#include <opm/models/io/vtktemperaturemodule.hh>
+#include <opm/models/utils/basicproperties.hh>
 
 BEGIN_PROPERTIES
 
 //! The splice to be used for the spatial discretization
+NEW_PROP_TAG(SpatialDiscretizationSplice);
 //! Number of fluid phases in the system
+NEW_PROP_TAG(NumPhases);
 //! Number of chemical species in the system
+NEW_PROP_TAG(NumComponents);
 //! Enumerations used by the model
+NEW_PROP_TAG(Indices);
 //! The material law which ought to be used (extracted from the spatial parameters)
+NEW_PROP_TAG(MaterialLaw);
 //! The context material law (extracted from the spatial parameters)
+NEW_PROP_TAG(MaterialLawParams);
 //! The material law for the energy stored in the solid matrix
+NEW_PROP_TAG(SolidEnergyLaw);
 //! The parameters of the material law for energy storage of the solid
+NEW_PROP_TAG(SolidEnergyLawParams);
 //! The material law for thermal conduction
+NEW_PROP_TAG(ThermalConductionLaw);
 //! The parameters of the material law for thermal conduction
+NEW_PROP_TAG(ThermalConductionLawParams);
 //!The fluid systems including the information about the phases
+NEW_PROP_TAG(FluidSystem);
 //! Specifies the relation used for velocity
+NEW_PROP_TAG(FluxModule);
 
+//! Specify whether energy should be considered as a conservation quantity or not
+NEW_PROP_TAG(EnableEnergy);
 //! Returns whether gravity is considered in the problem
+NEW_PROP_TAG(EnableGravity);
+//! Enable diffusive fluxes?
+NEW_PROP_TAG(EnableDiffusion);
 
 END_PROPERTIES
 

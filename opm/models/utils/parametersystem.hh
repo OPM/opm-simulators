@@ -222,11 +222,7 @@ private:
 
 BEGIN_PROPERTIES
 
-// type tag which is supposed to spliced in or inherited from if the
-// parameter system is to be used
-//NEW_TYPE_TAG(ParameterSystem);
-
-
+NEW_PROP_TAG(ParameterMetaData);
 
 //! Set the ParameterMetaData property
 SET_PROP(ParameterSystem, ParameterMetaData)

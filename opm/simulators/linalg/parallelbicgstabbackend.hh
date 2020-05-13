@@ -27,6 +27,7 @@
 #ifndef EWOMS_PARALLEL_BICGSTAB_BACKEND_HH
 #define EWOMS_PARALLEL_BICGSTAB_BACKEND_HH
 
+#include "linalgproperties.hh"
 #include "parallelbasebackend.hh"
 #include "bicgstabsolver.hh"
 #include "combinedcriterion.hh"

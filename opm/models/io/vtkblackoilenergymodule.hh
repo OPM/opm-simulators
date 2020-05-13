@@ -46,6 +46,10 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(VtkBlackOilEnergy);
 
 // create the property tags needed for the energy module
+NEW_PROP_TAG(VtkWriteRockInternalEnergy);
+NEW_PROP_TAG(VtkWriteTotalThermalConductivity);
+NEW_PROP_TAG(VtkWriteFluidInternalEnergies);
+NEW_PROP_TAG(VtkWriteFluidEnthalpies);
 
 // set default values for what quantities to output
 SET_BOOL_PROP(VtkBlackOilEnergy, VtkWriteRockInternalEnergy, true);

@@ -46,6 +46,10 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(VtkBlackOilSolvent);
 
 // create the property tags needed for the solvent output module
+NEW_PROP_TAG(VtkWriteSolventSaturation);
+NEW_PROP_TAG(VtkWriteSolventDensity);
+NEW_PROP_TAG(VtkWriteSolventViscosity);
+NEW_PROP_TAG(VtkWriteSolventMobility);
 
 // set default values for what quantities to output
 SET_BOOL_PROP(VtkBlackOilSolvent, VtkWriteSolventSaturation, true);

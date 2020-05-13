@@ -37,15 +37,10 @@
 
 BEGIN_PROPERTIES
 
-//! Provides the thermodynamic relations
 //! The type of the flash constraint solver
+NEW_PROP_TAG(FlashSolver);
 //! The maximum accepted error of the flash solver
-
-//! The thermal conduction law which ought to be used
-//! The parameters of the thermal conduction law
-
-//! Specifies whether energy should be considered as a conservation quantity or not
-//! Enable diffusive fluxes?
+NEW_PROP_TAG(FlashTolerance);
 
 END_PROPERTIES
 
