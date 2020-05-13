@@ -46,6 +46,12 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(VtkBlackOilPolymer);
 
 // create the property tags needed for the polymer output module
+NEW_PROP_TAG(VtkWritePolymerConcentration);
+NEW_PROP_TAG(VtkWritePolymerDeadPoreVolume);
+NEW_PROP_TAG(VtkWritePolymerAdsorption);
+NEW_PROP_TAG(VtkWritePolymerRockDensity);
+NEW_PROP_TAG(VtkWritePolymerViscosityCorrection);
+NEW_PROP_TAG(VtkWriteWaterViscosityCorrection);
 
 // set default values for what quantities to output
 SET_BOOL_PROP(VtkBlackOilPolymer, VtkWritePolymerConcentration, true);

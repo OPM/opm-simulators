@@ -30,10 +30,18 @@
 
 #include "ncpproperties.hh"
 
+#include <opm/models/nonlinear/newtonmethod.hh>
+
 #include <opm/material/common/Unused.hpp>
 #include <opm/material/common/Exceptions.hpp>
-
 #include <algorithm>
+
+BEGIN_PROPERTIES
+
+template <class TypeTag, class MyTypeTag>
+struct DiscNewtonMethod;
+
+END_PROPERTIES
 
 namespace Opm {
 

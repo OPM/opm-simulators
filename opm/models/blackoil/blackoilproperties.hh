@@ -35,24 +35,24 @@ BEGIN_PROPERTIES
 
 //! Specifies if the simulation should write output files that are
 //! compatible with those produced by the commercial Eclipse simulator
-//! The material law for thermal conduction
-//! The parameters of the material law for thermal conduction
-//! The material law for energy storage of the rock
-//! The parameters for material law for energy storage of the rock
+NEW_PROP_TAG(EnableEclipseOutput);
 //! Enable the ECL-blackoil extension for solvents. ("Second gas")
+NEW_PROP_TAG(EnableSolvent);
 //! Enable the ECL-blackoil extension for polymer.
+NEW_PROP_TAG(EnablePolymer);
 //! Enable the tracking polymer molecular weight tracking and related functionalities
+NEW_PROP_TAG(EnablePolymerMW);
 //! Enable surface volume scaling
+NEW_PROP_TAG(BlackoilConserveSurfaceVolume);
 //! Enable the ECL-blackoil extension for foam
+NEW_PROP_TAG(EnableFoam);
 //! Enable the ECL-blackoil extension for salt
+NEW_PROP_TAG(EnableBrine);
 
 
 //! Allow the spatial and temporal domains to exhibit non-constant temperature
 //! in the black-oil model
-
-//! Enable the ECL-blackoil extension for energy conservation
-//!
-//! Setting this property to true implies EnableTemperature.
+NEW_PROP_TAG(EnableTemperature);
 
 //! The relative weight of the residual of the energy equation compared to the mass
 //! residuals
@@ -61,6 +61,7 @@ BEGIN_PROPERTIES
 //! of unmodified dune-istl linear solvers cannot weight the individual equations. if the
 //! energy equation is not scaled, its absolute value is normally several orders of
 //! magnitude larger than that of the mass balance equations
+NEW_PROP_TAG(BlackOilEnergyScalingFactor);
 
 
 END_PROPERTIES

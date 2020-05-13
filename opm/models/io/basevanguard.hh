@@ -39,11 +39,6 @@
 #include <type_traits>
 #include <memory>
 
-BEGIN_PROPERTIES
-
-
-END_PROPERTIES
-
 namespace Opm {
 
 /*!

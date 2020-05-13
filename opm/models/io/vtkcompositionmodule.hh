@@ -41,6 +41,13 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(VtkComposition);
 
 // create the property tags needed for the composition module
+NEW_PROP_TAG(VtkWriteMassFractions);
+NEW_PROP_TAG(VtkWriteMoleFractions);
+NEW_PROP_TAG(VtkWriteTotalMassFractions);
+NEW_PROP_TAG(VtkWriteTotalMoleFractions);
+NEW_PROP_TAG(VtkWriteMolarities);
+NEW_PROP_TAG(VtkWriteFugacities);
+NEW_PROP_TAG(VtkWriteFugacityCoeffs);
 
 // set default values for what quantities to output
 SET_BOOL_PROP(VtkComposition, VtkWriteMassFractions, false);

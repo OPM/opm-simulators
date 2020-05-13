@@ -40,6 +40,7 @@
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/simulators/linalg/matrixblock.hh>
+#include <opm/simulators/linalg/linalgproperties.hh>
 
 #include <dune/grid/io/file/vtk/vtkwriter.hh>
 
@@ -51,47 +52,6 @@
 #include <iostream>
 
 BEGIN_PROPERTIES
-NEW_TYPE_TAG(ParallelBaseLinearSolver);
-
-// forward declaration of the required property tags
-
-
-//! The type of the linear solver to be used
-
-//! the preconditioner used by the linear solver
-
-
-//! The floating point type used internally by the linear solver
-
-/*!
- * \brief The size of the algebraic overlap of the linear solver.
- *
- * Algebraic overlaps can be thought as being the same as the overlap
- * of a grid, but it is only existant for the linear system of
- * equations.
- */
-
-/*!
- * \brief Maximum accepted error of the solution of the linear solver.
- */
-
-/*!
- * \brief Maximum accepted error of the norm of the residual.
- */
-
-/*!
- * \brief Specifies the verbosity of the linear solver
- *
- * By default it is 0, i.e. it doesn't print anything. Setting this
- * property to 1 prints aggregated convergence rates, 2 prints the
- * convergence rate of every iteration of the scheme.
- */
-
-//! Maximum number of iterations eyecuted by the linear solver
-
-//! The order of the sequential preconditioner
-
-//! The relaxation factor of the preconditioner
 
 //! Set the type of a global jacobian matrix for linear solvers that are based on
 //! dune-istl.

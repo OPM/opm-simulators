@@ -31,6 +31,7 @@
 
 #include <opm/models/linear/istlsparsematrixbackend.hh>
 #include <opm/models/utils/parametersystem.hh>
+#include <opm/simulators/linalg/linalgproperties.hh>
 
 #include <opm/material/common/Unused.hpp>
 

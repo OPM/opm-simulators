@@ -36,6 +36,8 @@
 
 #include <opm/models/common/flux.hh>
 #include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
+#include <opm/models/io/vtkmultiphasemodule.hh>
+#include <opm/models/io/vtktemperaturemodule.hh>
 
 #include <opm/material/fluidmatrixinteractions/NullMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>

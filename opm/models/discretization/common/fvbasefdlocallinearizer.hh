@@ -30,6 +30,7 @@
 
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
@@ -54,6 +55,8 @@ BEGIN_PROPERTIES
 // declare the property tags required for the finite differences local linearizer
 NEW_TYPE_TAG(FiniteDifferenceLocalLinearizer);
 
+NEW_PROP_TAG(NumericDifferenceMethod);
+NEW_PROP_TAG(BaseEpsilon);
 
 // set the properties to be spliced in
 SET_TYPE_PROP(FiniteDifferenceLocalLinearizer, LocalLinearizer,

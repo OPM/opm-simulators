@@ -30,6 +30,15 @@
 
 #include "pvsproperties.hh"
 
+#include <opm/models/nonlinear/newtonmethod.hh>
+
+BEGIN_PROPERTIES
+
+template <class TypeTag, class MyTypeTag>
+struct DiscNewtonMethod;
+
+END_PROPERTIES
+
 namespace Opm {
 
 /*!

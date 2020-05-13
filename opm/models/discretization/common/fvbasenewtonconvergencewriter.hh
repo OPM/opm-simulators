@@ -33,13 +33,18 @@
 
 #include <iostream>
 
-//! \cond SKIP_THIS
 BEGIN_PROPERTIES
 
-// forward declaration of the required property tags
+template<class TypeTag, class MyTypeTag>
+struct SolutionVector;
+template<class TypeTag, class MyTypeTag>
+struct GlobalEqVector;
+template<class TypeTag, class MyTypeTag>
+struct NewtonMethod;
+template<class TypeTag, class MyTypeTag>
+struct VtkOutputFormat;
 
 END_PROPERTIES
-//! \endcond
 
 namespace Opm {
 /*!

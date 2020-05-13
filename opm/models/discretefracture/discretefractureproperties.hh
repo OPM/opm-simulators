@@ -36,6 +36,7 @@
 
 BEGIN_PROPERTIES
 
+NEW_PROP_TAG(UseTwoPointGradients);
 
 END_PROPERTIES
 
