@@ -126,10 +126,9 @@ public:
 
   //! constructor: just store a reference to a matrix
   WellModelMatrixAdapter (const M& A,
-                          const M& A_for_precond,
                           const WellModel& wellMod,
                           const std::shared_ptr< communication_type >& comm = std::shared_ptr< communication_type >())
-      : A_( A ), A_for_precond_(A_for_precond), wellMod_( wellMod ), comm_(comm)
+      : A_( A ), wellMod_( wellMod ), comm_(comm)
   {}
 
 
@@ -160,11 +159,10 @@ public:
 #endif
   }
 
-  virtual const matrix_type& getmat() const override { return A_for_precond_; }
+  virtual const matrix_type& getmat() const override { return A_; }
 
 protected:
   const matrix_type& A_ ;
-  const matrix_type& A_for_precond_ ;
   const WellModel& wellMod_;
   std::shared_ptr< communication_type > comm_;
 };
@@ -201,10 +199,9 @@ public:
 
     //! constructor: just store a reference to a matrix
     WellModelGhostLastMatrixAdapter (const M& A,
-                                     const M& A_for_precond,
                                      const WellModel& wellMod,
                                      const size_t interiorSize )
-        : A_( A ), A_for_precond_(A_for_precond), wellMod_( wellMod ), interiorSize_(interiorSize)
+        : A_( A ), wellMod_( wellMod ), interiorSize_(interiorSize)
     {}
 
     virtual void apply( const X& x, Y& y ) const override
@@ -238,7 +235,7 @@ public:
         ghostLastProject( y );
     }
 
-    virtual const matrix_type& getmat() const override { return A_for_precond_; }
+    virtual const matrix_type& getmat() const override { return A_; }
 
 protected:
     void ghostLastProject(Y& y) const
@@ -249,7 +246,6 @@ protected:
     }
 
     const matrix_type& A_ ;
-    const matrix_type& A_for_precond_ ;
     const WellModel& wellMod_;
     size_t interiorSize_;
 };
@@ -380,7 +376,6 @@ protected:
 
         // nothing to clean here
         void eraseMatrix() {
-            matrix_for_preconditioner_.reset();
         }
 
         void prepare(const SparseMatrixAdapter& M, Vector& b)
@@ -507,7 +502,8 @@ protected:
             {
                 if ( ownersFirst_ && !parameters_.linear_solver_use_amg_ && !useFlexible_) {
                     typedef WellModelGhostLastMatrixAdapter< Matrix, Vector, Vector, WellModel, true > Operator;
-                    Operator opA(*matrix_, *matrix_, wellModel, interiorCellNum_);
+                    assert(matrix_);
+                    Operator opA(*matrix_, wellModel, interiorCellNum_);
 
                     solve( opA, x, *rhs_, *comm_ );
                 }
@@ -516,7 +512,7 @@ protected:
                     typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, true > Operator;
                     assert (noGhostMat_);
                     copyJacToNoGhost(*matrix_, *noGhostMat_);
-                    Operator opA(*noGhostMat_, *noGhostMat_, wellModel,
+                    Operator opA(*noGhostMat_, wellModel,
                                  comm_ );
 
                     solve( opA, x, *rhs_, *comm_ );
@@ -526,7 +522,7 @@ protected:
             else
             {
                 typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, false > Operator;
-                Operator opA(*matrix_, *matrix_, wellModel);
+                Operator opA(*matrix_, wellModel);
                 solve( opA, x, *rhs_ );
             }
 
@@ -620,7 +616,7 @@ protected:
                     if (!useWellConn_) {
                         simulator_.problem().wellModel().getWellContributions(wellContribs);
                     }
-                    bdaBridge->solve_system(matrix_, istlb, wellContribs, result);
+                    bdaBridge->solve_system(&getMatrix(), istlb, wellContribs, result);
                     if (result.converged) {
                         // get result vector x from non-Dune backend, iff solve was successful
                         bdaBridge->get_result(x);
@@ -875,7 +871,7 @@ protected:
                     weightsCalculator =
                         [this, transpose, pressureIndex](){
                             return Opm::Amg::getQuasiImpesWeights<Matrix,
-                                                                  Vector>(*this->matrix_,
+                                                                  Vector>(getMatrix(),
                                                                           pressureIndex,
                                                                           transpose);
                         };
@@ -1023,8 +1019,8 @@ protected:
         void scaleEquationsAndVariables(Vector& weights)
         {
             // loop over primary variables
-            const auto endi = matrix_->end();
-            for (auto i = matrix_->begin(); i != endi; ++i) {
+            const auto endi = getMatrix().end();
+            for (auto i = getMatrix().begin(); i != endi; ++i) {
                 const auto endj = (*i).end();
                 BlockVector& brhs = (*rhs_)[i.index()];
                 for (auto j = (*i).begin(); j != endj; ++j) {
@@ -1040,7 +1036,7 @@ protected:
                 for (std::size_t ii = 0; ii < brhs.size(); ii++) {
                     brhs[ii] *= simulator_.model().eqWeight(i.index(), ii);
                 }
-                if (weights.size() == matrix_->N()) {
+                if (weights.size() == getMatrix().N()) {
                     BlockVector& bw = weights[i.index()];
                     for (std::size_t ii = 0; ii < brhs.size(); ii++) {
                         bw[ii] /= simulator_.model().eqWeight(i.index(), ii);
@@ -1065,7 +1061,7 @@ protected:
 
         Vector getQuasiImpesWeights()
         {
-            return Amg::getQuasiImpesWeights<Matrix,Vector>(*matrix_, pressureVarIndex, /* transpose=*/ true);
+            return Amg::getQuasiImpesWeights<Matrix,Vector>(getMatrix(), pressureVarIndex, /* transpose=*/ true);
         }
 
         Vector getSimpleWeights(const BlockVector& rhs)
@@ -1080,8 +1076,8 @@ protected:
         void scaleMatrixAndRhs(const Vector& weights)
         {
             using Block = typename Matrix::block_type;
-            const auto endi = matrix_->end();
-            for (auto i = matrix_->begin(); i !=endi; ++i) {
+            const auto endi = getMatrix().end();
+            for (auto i = getMatrix().begin(); i !=endi; ++i) {
                 const BlockVector& bweights = weights[i.index()];
                 BlockVector& brhs = (*rhs_)[i.index()];
                 const auto endj = (*i).end();
@@ -1136,6 +1132,11 @@ protected:
             multBlocksVector(b_cp, leftTrans);
         }
 
+        Matrix& getMatrix()
+        {
+            return noGhostMat_ ? *noGhostMat_ : *matrix_;
+        }
+
         const Simulator& simulator_;
         mutable int iterations_;
         mutable bool converged_;
@@ -1145,7 +1146,6 @@ protected:
         Matrix* matrix_;
         std::unique_ptr<Matrix> noGhostMat_;
         Vector *rhs_;
-        std::unique_ptr<Matrix> matrix_for_preconditioner_;
 
         std::unique_ptr<FlexibleSolverType> flexibleSolver_;
         std::vector<int> overlapRows_;
