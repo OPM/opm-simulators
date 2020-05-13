@@ -40,11 +40,6 @@
 
 #include <string>
 
-BEGIN_PROPERTIES
-
-
-END_PROPERTIES
-
 namespace Opm {
 /*!
  * \ingroup Energy

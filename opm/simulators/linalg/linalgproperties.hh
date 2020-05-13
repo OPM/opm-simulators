@@ -97,7 +97,6 @@ NEW_PROP_TAG(OverlappingLinearOperator);
 NEW_PROP_TAG(OverlappingMatrix);
 NEW_PROP_TAG(OverlappingScalarProduct);
 NEW_PROP_TAG(OverlappingVector);
-NEW_TYPE_TAG(ParallelBaseLinearSolver);
 
 END_PROPERTIES
 

@@ -42,11 +42,6 @@
 
 #include <cmath>
 
-BEGIN_PROPERTIES
-
-
-END_PROPERTIES
-
 namespace Opm {
 
 template <class TypeTag>

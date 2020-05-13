@@ -52,6 +52,7 @@
 #include <iostream>
 
 BEGIN_PROPERTIES
+NEW_TYPE_TAG(ParallelBaseLinearSolver);
 
 //! Set the type of a global jacobian matrix for linear solvers that are based on
 //! dune-istl.

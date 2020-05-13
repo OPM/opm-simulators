@@ -68,7 +68,6 @@ NEW_PROP_TAG(LensUpperRightX);
 NEW_PROP_TAG(LensUpperRightY);
 NEW_PROP_TAG(LensUpperRightZ);
 
-
 // Set the problem property
 SET_TYPE_PROP(LensBaseProblem, Problem, Opm::LensProblem<TypeTag>);
 

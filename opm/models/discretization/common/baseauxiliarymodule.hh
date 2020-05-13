@@ -38,8 +38,6 @@ BEGIN_PROPERTIES
 
 NEW_TYPE_TAG(AuxModule);
 
-// declare the properties required by the for the ecl grid manager
-
 END_PROPERTIES
 
 namespace Opm {

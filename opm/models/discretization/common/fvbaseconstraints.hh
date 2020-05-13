@@ -31,11 +31,6 @@
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/material/common/Valgrind.hpp>
 
-BEGIN_PROPERTIES
-
-
-END_PROPERTIES
-
 namespace Opm {
 
 /*!

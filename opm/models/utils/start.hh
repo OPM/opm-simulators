@@ -69,12 +69,6 @@
 #include <mpi.h>
 #endif
 
-BEGIN_PROPERTIES
-
-// forward declaration of property tags
-
-END_PROPERTIES
-
 //! \cond SKIP_THIS
 
 namespace Opm {

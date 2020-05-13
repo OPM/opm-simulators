@@ -28,12 +28,10 @@
  */
 #include "config.h"
 
+#include "lens_immiscible_ecfv_ad.hh"
+
 #include <dune/grid/geometrygrid.hh>
 #include <dune/grid/io/file/dgfparser/dgfgeogrid.hh>
-
-#include <opm/models/utils/start.hh>
-
-#include "lens_immiscible_ecfv_ad.hh"
 
 BEGIN_PROPERTIES
 

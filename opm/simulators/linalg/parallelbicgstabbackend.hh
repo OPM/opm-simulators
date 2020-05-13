@@ -45,7 +45,6 @@ BEGIN_PROPERTIES
 
 NEW_TYPE_TAG(ParallelBiCGStabLinearSolver, INHERITS_FROM(ParallelBaseLinearSolver));
 
-
 SET_TYPE_PROP(ParallelBiCGStabLinearSolver,
               LinearSolverBackend,
               Opm::Linear::ParallelBiCGStabSolverBackend<TypeTag>);

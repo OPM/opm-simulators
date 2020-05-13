@@ -38,11 +38,6 @@
 
 #include <dune/common/version.hh>
 
-BEGIN_PROPERTIES
-
-
-END_PROPERTIES
-
 namespace Opm {
 
 /*!

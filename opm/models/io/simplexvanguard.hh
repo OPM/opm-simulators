@@ -36,14 +36,6 @@
 
 #include <memory>
 
-BEGIN_PROPERTIES
-
-
-
-
-
-END_PROPERTIES
-
 namespace Opm {
 /*!
  * \brief Provides a simulator vanguard which a creates regular grid made of simplices.

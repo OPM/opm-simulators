@@ -47,11 +47,6 @@
 #include <string>
 #include <memory>
 
-BEGIN_PROPERTIES
-
-
-END_PROPERTIES
-
 #define EWOMS_CATCH_PARALLEL_EXCEPTIONS_FATAL(code)                      \
     {                                                                   \
         const auto& comm = Dune::MPIHelper::getCollectiveCommunication(); \

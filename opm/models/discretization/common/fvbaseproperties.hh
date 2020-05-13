@@ -60,7 +60,6 @@ SET_TAG_PROP(FvBaseDiscretization, LinearSolverSplice, ParallelBiCGStabLinearSol
 //! by default, use finite differences to linearize the system of PDEs
 SET_TAG_PROP(FvBaseDiscretization, LocalLinearizerSplice, FiniteDifferenceLocalLinearizer);
 
-
 /*!
  * \brief Representation of a function evaluation and all necessary derivatives with
  *        regard to the intensive quantities of the primary variables.

@@ -52,7 +52,6 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(AutoDiffLocalLinearizer);
 
 
-
 // set the properties to be spliced in
 SET_TYPE_PROP(AutoDiffLocalLinearizer, LocalLinearizer,
               Opm::FvBaseAdLocalLinearizer<TypeTag>);
