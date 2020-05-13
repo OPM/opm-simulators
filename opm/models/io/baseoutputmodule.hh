@@ -47,14 +47,14 @@
 
 #include <cstdio>
 
-namespace Opm {
-
-namespace Properties {
+BEGIN_PROPERTIES
 
 template <class TypeTag, class MyTypeTag>
 struct FluidSystem;
 
-} // namespace Properties
+END_PROPERTIES
+
+namespace Opm {
 
 #if __GNUC__ || __clang__
 #pragma GCC diagnostic push

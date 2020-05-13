@@ -37,11 +37,6 @@
 
 #include <dune/common/fvector.hh>
 
-BEGIN_PROPERTIES
-
-
-END_PROPERTIES
-
 namespace Opm {
 
 /*!

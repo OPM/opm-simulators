@@ -35,12 +35,12 @@
 #ifndef OPM_PROPERTY_SYSTEM_HH
 #include <opm/models/utils/propertysystem.hh>
 
-// remove this after release 3.1 to disable macros per default
+// remove this after release 2020.10 to disable macros per default
 #ifndef OPM_ENABLE_OLD_PROPERTY_MACROS
 #define OPM_ENABLE_OLD_PROPERTY_MACROS 1
 #endif
 
-// remove this after release 3.2 to remove macros completely
+// remove this after release 2021.04 to remove macros completely
 #if OPM_ENABLE_OLD_PROPERTY_MACROS
 #include <opm/models/utils/propertysystemmacros.hh>
 #endif // OPM_ENABLE_OLD_PROPERTY_MACROS
@@ -54,12 +54,7 @@
 
 #include <string>
 
-
 BEGIN_PROPERTIES
-
-// type tag which is supposed to spliced in or inherited from if the
-// parameter system is to be used
-NEW_TYPE_TAG(ParameterSystem);
 
 ///////////////////////////////////
 // Type tag definitions:
@@ -236,6 +231,7 @@ SET_SCALAR_PROP(NumericModel, RestartTime, -1e35);
 
 //! By default, do not force any time steps
 SET_STRING_PROP(NumericModel, PredeterminedTimeStepsFile, "");
+
 
 END_PROPERTIES
 

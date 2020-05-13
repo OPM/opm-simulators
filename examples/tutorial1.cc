@@ -27,7 +27,6 @@
  *        immisciblility.
  */
 #include "config.h"              /*@\label{tutorial1:include-begin}@*/
-#include <opm/models/utils/propertysystemmacros.hh>
 #include <opm/models/utils/start.hh> /*@\label{tutorial1:include-end}@*/
 #include "tutorial1problem.hh" /*@\label{tutorial1:include-problem-header}@*/
 

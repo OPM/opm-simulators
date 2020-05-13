@@ -41,7 +41,6 @@
 
 BEGIN_PROPERTIES
 
-// forward declaration of the required property tags
 NEW_TYPE_TAG(SuperLULinearSolver);
 
 END_PROPERTIES

@@ -34,8 +34,6 @@
 // The spatial discretization (VCFV == Vertex-Centered Finite Volumes)
 #include <opm/models/discretization/vcfv/vcfvdiscretization.hh>  /*@\label{tutorial1:include-discretization}@*/
 
-#include <opm/simulators/linalg/parallelamgbackend.hh>
-
 // The chemical species that are used
 #include <opm/material/components/SimpleH2O.hpp>
 #include <opm/material/components/Lnapl.hpp>

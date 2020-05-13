@@ -56,11 +56,6 @@ BEGIN_PROPERTIES
 
 NEW_TYPE_TAG(StructuredGridVanguard);
 
-// declare the properties required by the for the structured grid simulator vanguard
-
-
-
-
 // GRIDDIM is only set by the finger problem
 #ifndef GRIDDIM
 static const int dim = 2;

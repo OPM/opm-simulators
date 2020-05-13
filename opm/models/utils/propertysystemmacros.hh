@@ -38,11 +38,11 @@
  */
 #ifndef OPM_PROPERTY_SYSTEM_MACROS_HH
 #define OPM_PROPERTY_SYSTEM_MACROS_HH
-#warning "Property macros are deprecated and will be removed after release 3.2. \
+#warning "Property macros are deprecated and will be removed after release 2021.04. \
 If you are not using property macros you can disable this warning by \
-setting OPM_ENABLE_OLD_PROPERTY_MACROS to 0 (false) when configuring DuMux. \
-OPM_ENABLE_OLD_PROPERTY_MACROS defaults to 1 (true) until release 3.1. \
-After release 3.1 it will default to 0 (false) so you will have to manually \
+setting OPM_ENABLE_OLD_PROPERTY_MACROS to 0 (false) when configuring OPM. \
+OPM_ENABLE_OLD_PROPERTY_MACROS defaults to 1 (true) until release 2020.10. \
+After release 2020.10 it will default to 0 (false) so you will have to manually \
 enable property macros in order to use them."
 
 #include <opm/models/utils/propertysystem.hh>
