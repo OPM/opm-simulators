@@ -29,6 +29,8 @@
 #include <opm/simulators/linalg/ParallelOverlappingILU0.hpp>
 #include <opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp>
 #include <opm/simulators/linalg/findOverlapRowsAndColumns.hpp>
+#include <opm/simulators/linalg/setupPropertyTree.hpp>
+#include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/simulators/linalg/ParallelIstlInformation.hpp>
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
@@ -126,25 +128,9 @@ public:
   WellModelMatrixAdapter (const M& A,
                           const M& A_for_precond,
                           const WellModel& wellMod,
-                          const std::any& parallelInformation OPM_UNUSED_NOMPI = std::any() )
-      : A_( A ), A_for_precond_(A_for_precond), wellMod_( wellMod ), comm_()
-  {
-#if HAVE_MPI
-    if( parallelInformation.type() == typeid(ParallelISTLInformation) )
-    {
-      const ParallelISTLInformation& info =
-          std::any_cast<const ParallelISTLInformation&>( parallelInformation);
-      comm_.reset( new communication_type( info.communicator() ) );
-    }
-#endif
-  }
-  WellModelMatrixAdapter (const M& A,
-                          const M& A_for_precond,
-                          const WellModel& wellMod,
-                          std::shared_ptr<communication_type> comm )
+                          const std::shared_ptr< communication_type >& comm = std::shared_ptr< communication_type >())
       : A_( A ), A_for_precond_(A_for_precond), wellMod_( wellMod ), comm_(comm)
-  {
-  }
+  {}
 
 
   virtual void apply( const X& x, Y& y ) const override
@@ -175,11 +161,6 @@ public:
   }
 
   virtual const matrix_type& getmat() const override { return A_for_precond_; }
-
-    std::shared_ptr<communication_type> comm()
-  {
-      return comm_;
-  }
 
 protected:
   const matrix_type& A_ ;
@@ -222,19 +203,9 @@ public:
     WellModelGhostLastMatrixAdapter (const M& A,
                                      const M& A_for_precond,
                                      const WellModel& wellMod,
-                                     const size_t interiorSize,
-                                     const std::any& parallelInformation OPM_UNUSED_NOMPI = std::any() )
-        : A_( A ), A_for_precond_(A_for_precond), wellMod_( wellMod ), interiorSize_(interiorSize), comm_()
-    {
-#if HAVE_MPI
-        if( parallelInformation.type() == typeid(ParallelISTLInformation) )
-        {
-            const ParallelISTLInformation& info =
-                std::any_cast<const ParallelISTLInformation&>( parallelInformation);
-            comm_.reset( new communication_type( info.communicator() ) );
-        }
-#endif
-    }
+                                     const size_t interiorSize )
+        : A_( A ), A_for_precond_(A_for_precond), wellMod_( wellMod ), interiorSize_(interiorSize)
+    {}
 
     virtual void apply( const X& x, Y& y ) const override
     {
@@ -269,11 +240,6 @@ public:
 
     virtual const matrix_type& getmat() const override { return A_for_precond_; }
 
-    communication_type* comm()
-    {
-        return comm_.operator->();
-    }
-
 protected:
     void ghostLastProject(Y& y) const
     {
@@ -286,8 +252,6 @@ protected:
     const matrix_type& A_for_precond_ ;
     const WellModel& wellMod_;
     size_t interiorSize_;
-
-    std::unique_ptr< communication_type > comm_;
 };
 
     /// This class solves the fully implicit black-oil system by
@@ -313,6 +277,7 @@ protected:
         typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) ThreadManager;
         typedef typename GridView::template Codim<0>::Entity Element;
         typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+        using FlexibleSolverType = Dune::FlexibleSolver<Matrix, Vector>;
         // Due to miscibility oil <-> gas the water eqn is the one we can replace with a pressure equation.
         static const bool waterEnabled = Indices::waterEnabled;
         static const int pindex = (waterEnabled) ? BlackOilDefaultIndexTraits::waterCompIdx : BlackOilDefaultIndexTraits::oilCompIdx;
@@ -322,6 +287,12 @@ protected:
 
 #if HAVE_CUDA
         std::unique_ptr<BdaBridge> bdaBridge;
+#endif
+
+#if HAVE_MPI
+        typedef Dune::OwnerOverlapCopyCommunication<int,int> communication_type;
+#else
+        typedef Dune::CollectiveCommunication< int > communication_type;
 #endif
 
     public:
@@ -338,9 +309,19 @@ protected:
         ISTLSolverEbos(const Simulator& simulator)
             : simulator_(simulator),
               iterations_( 0 ),
-              converged_(false)
+              converged_(false),
+              matrix_()
         {
+#if HAVE_MPI
+            comm_.reset( new communication_type( simulator_.vanguard().grid().comm() ) );
+#endif
             parameters_.template init<TypeTag>();
+            useFlexible_ = parameters_.use_cpr_ || EWOMS_PARAM_IS_SET(TypeTag, std::string, LinearSolverConfiguration);
+
+            if (useFlexible_)
+            {
+                prm_ = setupPropertyTree<TypeTag>(parameters_);
+            }
             const auto& gridForConn = simulator_.vanguard().grid();
 #if HAVE_CUDA
             bool use_gpu = EWOMS_GET_PARAM(TypeTag, bool, UseGpu);
@@ -359,14 +340,19 @@ protected:
             }
 #endif
             extractParallelGridInformationToISTL(simulator_.vanguard().grid(), parallelInformation_);
-            const auto wellsForConn = simulator_.vanguard().schedule().getWellsatEnd();
-            const bool useWellConn = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
+            useWellConn_ = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
+
+            if (!useWellConn_ && useFlexible_)
+            {
+                OPM_THROW(std::logic_error, "Flexible solvers and CPR need the well contribution in the matrix. Please run with"
+                          " --matrix-add-well-contributions=true");
+            }
 
             ownersFirst_ = EWOMS_GET_PARAM(TypeTag, bool, OwnerCellsFirst);
             interiorCellNum_ = detail::numMatrixRowsToUseInSolver(simulator_.vanguard().grid(), ownersFirst_);
 
-            if (!ownersFirst_ || parameters_.linear_solver_use_amg_  || parameters_.use_cpr_ ) {
-                detail::setWellConnections(gridForConn, wellsForConn, useWellConn, wellConnectionsGraph_);
+            if ( isParallel() && (!ownersFirst_ || parameters_.linear_solver_use_amg_  || useFlexible_ ) ) {
+                detail::setWellConnections(gridForConn, simulator_.vanguard().schedule().getWellsatEnd(), useWellConn_, wellConnectionsGraph_);
                 // For some reason simulator_.model().elementMapper() is not initialized at this stage
                 // Hence const auto& elemMapper = simulator_.model().elementMapper(); does not work.
                 // Set it up manually
@@ -374,13 +360,21 @@ protected:
                     Dune::MultipleCodimMultipleGeomTypeMapper<GridView>;
                 ElementMapper elemMapper(simulator_.vanguard().gridView(), Dune::mcmgElementLayout());
                 detail::findOverlapAndInterior(gridForConn, elemMapper, overlapRows_, interiorRows_);
-                if (gridForConn.comm().size() > 1) {
-
-                    noGhostAdjacency();
-                    setGhostsInNoGhost(*noGhostMat_);
-                }
+                noGhostAdjacency();
+                setGhostsInNoGhost(*noGhostMat_);
                 if (ownersFirst_)
                     OpmLog::warning("OwnerCellsFirst option is true, but ignored.");
+            }
+
+            if (useFlexible_)
+            {
+                // Print parameters to PRT/DBG logs.
+                if (simulator.gridView().comm().rank() == 0) {
+                    std::ostringstream os;
+                    os << "Property tree for linear solver:\n";
+                    boost::property_tree::write_json(os, prm_, true);
+                    OpmLog::note(os.str());
+                }
             }
         }
 
@@ -391,16 +385,57 @@ protected:
 
         void prepare(const SparseMatrixAdapter& M, Vector& b)
         {
-            matrix_.reset(new Matrix(M.istlMatrix()));
+            static bool firstcall = true;
+#if HAVE_MPI
+            if (firstcall && parallelInformation_.type() == typeid(ParallelISTLInformation)) {
+                // Parallel case.
+                const ParallelISTLInformation* parinfo = std::any_cast<ParallelISTLInformation>(&parallelInformation_);
+                assert(parinfo);
+                const size_t size = M.istlMatrix().N();
+                parinfo->copyValuesTo(comm_->indexSet(), comm_->remoteIndices(), size, 1);
+            }
+#endif
+
+            // update matrix entries for solvers.
+            if (noGhostMat_)
+            {
+                copyJacToNoGhost(M.istlMatrix(), *noGhostMat_);
+            }
+            else
+            {
+                if (firstcall)
+                {
+                    // ebos will not change the matrix object. Hence simply store a pointer
+                    // to the original one with a deleter that does nothing.
+                    // Outch! We need to be able to scale the linear system! Hence const_cast
+                    matrix_ = const_cast<Matrix*>(&M.istlMatrix());
+                }
+                else
+                {
+                    // Pointers should not change
+                    if ( &(M.istlMatrix()) != matrix_ )
+                    {
+                        OPM_THROW(std::logic_error, "Matrix objects are expected to be reused when reassembling!"
+                                  <<" old pointer was " << matrix_ << ", new one is " << (&M.istlMatrix()) );
+                    }
+                }
+            }
             rhs_ = &b;
-            this->scaleSystem();
+
+            if (useFlexible_)
+            {
+                prepareFlexibleSolver();
+            }
+            else
+            {
+                this->scaleSystem();
+            }
+            firstcall = false;
         }
 
         void scaleSystem()
         {
-            const bool matrix_cont_added = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
-
-            if (matrix_cont_added) {
+            if (useWellConn_) {
                 bool form_cpr = true;
                 if (parameters_.system_strategy_ == "quasiimpes") {
                     weights_ = getQuasiImpesWeights();
@@ -457,28 +492,34 @@ protected:
         bool solve(Vector& x) {
             // Solve system.
 
+            if (useFlexible_)
+            {
+                Dune::InverseOperatorResult res;
+                assert(flexibleSolver_);
+                flexibleSolver_->apply(x, *rhs_, res);
+                iterations_ = res.iterations;
+                return converged_ = res.converged;
+            }
+
             const WellModel& wellModel = simulator_.problem().wellModel();
 
             if( isParallel() )
             {
-                if ( ownersFirst_ && (!parameters_.linear_solver_use_amg_ || !parameters_.use_cpr_) ) {
+                if ( ownersFirst_ && !parameters_.linear_solver_use_amg_ && !useFlexible_) {
                     typedef WellModelGhostLastMatrixAdapter< Matrix, Vector, Vector, WellModel, true > Operator;
-                    Operator opA(*matrix_, *matrix_, wellModel, interiorCellNum_,
-                                 parallelInformation_ );
+                    Operator opA(*matrix_, *matrix_, wellModel, interiorCellNum_);
 
-                    assert( opA.comm() );
-                    solve( opA, x, *rhs_, *(opA.comm()) );
+                    solve( opA, x, *rhs_, *comm_ );
                 }
                 else {
 
                     typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, true > Operator;
-
+                    assert (noGhostMat_);
                     copyJacToNoGhost(*matrix_, *noGhostMat_);
                     Operator opA(*noGhostMat_, *noGhostMat_, wellModel,
-                                 parallelInformation_ );
+                                 comm_ );
 
-                    assert( opA.comm() );
-                    solve( opA, x, *rhs_, *(opA.comm()) );
+                    solve( opA, x, *rhs_, *comm_ );
 
                 }
             }
@@ -576,11 +617,10 @@ protected:
                 bool use_gpu = bdaBridge->getUseGpu();
                 if (use_gpu) {
                     WellContributions wellContribs;
-                    const bool addWellContribs = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
-                    if (!addWellContribs) {
+                    if (!useWellConn_) {
                         simulator_.problem().wellModel().getWellContributions(wellContribs);
                     }
-                    bdaBridge->solve_system(matrix_.get(), istlb, wellContribs, result);
+                    bdaBridge->solve_system(matrix_, istlb, wellContribs, result);
                     if (result.converged) {
                         // get result vector x from non-Dune backend, iff solve was successful
                         bdaBridge->get_result(x);
@@ -710,14 +750,10 @@ protected:
 #if HAVE_MPI
             if (parallelInformation_.type() == typeid(ParallelISTLInformation))
             {
-                const ParallelISTLInformation& info =
-                    std::any_cast<const ParallelISTLInformation&>( parallelInformation_);
-                Comm istlComm(info.communicator());
-
                 // Construct operator, scalar product and vectors needed.
                 typedef Dune::OverlappingSchwarzOperator<Matrix, Vector, Vector,Comm> Operator;
-                Operator opA(A, istlComm);
-                solve( opA, x, b, istlComm  );
+                Operator opA(A, *comm_);
+                solve( opA, x, b, *comm_  );
             }
             else
 #endif
@@ -745,14 +781,6 @@ protected:
 #if HAVE_MPI
             if (parallelInformation_.type() == typeid(ParallelISTLInformation))
             {
-                const size_t size = opA.getmat().N();
-                const ParallelISTLInformation& info =
-                    std::any_cast<const ParallelISTLInformation&>( parallelInformation_);
-
-                // As we use a dune-istl with block size np the number of components
-                // per parallel is only one.
-                info.copyValuesTo(comm.indexSet(), comm.remoteIndices(),
-                                  size, 1);
                 // Construct operator, scalar product and vectors needed.
                 constructPreconditionerAndSolve<Dune::SolverCategory::overlapping>(opA, x, b, comm, result);
             }
@@ -797,10 +825,86 @@ protected:
 
         bool isParallel() const {
 #if HAVE_MPI
-            return parallelInformation_.type() == typeid(ParallelISTLInformation);
+            return comm_->communicator().size() > 1;
 #else
             return false;
 #endif
+        }
+
+        void prepareFlexibleSolver()
+        {
+            // Decide if we should recreate the solver or just do
+            // a minimal preconditioner update.
+            const int newton_iteration = this->simulator_.model().newtonMethod().numIterations();
+            bool recreate_solver = false;
+            if (this->parameters_.cpr_reuse_setup_ == 0) {
+                // Always recreate solver.
+                recreate_solver = true;
+            } else if (this->parameters_.cpr_reuse_setup_ == 1) {
+                // Recreate solver on the first iteration of every timestep.
+                if (newton_iteration == 0) {
+                    recreate_solver = true;
+                }
+            } else if (this->parameters_.cpr_reuse_setup_ == 2) {
+                // Recreate solver if the last solve used more than 10 iterations.
+                if (this->iterations() > 10) {
+                    recreate_solver = true;
+                }
+            } else {
+                assert(this->parameters_.cpr_reuse_setup_ == 3);
+                assert(recreate_solver == false);
+                // Never recreate solver.
+            }
+
+            std::function<Vector()> weightsCalculator;
+
+            auto preconditionerType = prm_.get("preconditioner.type", "cpr");
+            if( preconditionerType  == "cpr" ||
+                preconditionerType == "cprt"
+                )
+            {
+                bool transpose = false;
+                if(preconditionerType == "cprt"){
+                    transpose = true;
+                }
+
+                auto weightsType = prm_.get("preconditioner.weight_type", "quasiimpes");
+                auto pressureIndex = this->prm_.get("preconditioner.pressure_var_index", 1);
+                if(weightsType == "quasiimpes") {
+                    // weighs will be created as default in the solver
+                    weightsCalculator =
+                        [this, transpose, pressureIndex](){
+                            return Opm::Amg::getQuasiImpesWeights<Matrix,
+                                                                  Vector>(*this->matrix_,
+                                                                          pressureIndex,
+                                                                          transpose);
+                        };
+
+                }else if(weightsType == "trueimpes"  ){
+                    weightsCalculator =
+                        [this](){
+                            return this->getStorageWeights();
+                        };
+                }else{
+                    OPM_THROW(std::invalid_argument, "Weights type " << weightsType << "not implemented for cpr."
+                              << " Please use quasiimpes or trueimpes.");
+                }
+            }
+
+            if (recreate_solver || !flexibleSolver_) {
+                if (isParallel()) {
+#if HAVE_MPI
+                    assert(noGhostMat_);
+                    flexibleSolver_.reset(new FlexibleSolverType(prm_, *noGhostMat_, weightsCalculator, *comm_));
+#endif
+                } else {
+                    flexibleSolver_.reset(new FlexibleSolverType(prm_, *matrix_, weightsCalculator));
+                }
+            }
+            else
+            {
+                flexibleSolver_->preconditioner().update();
+            }
         }
 
         /// Create sparsity pattern of matrix without off-diagonal ghost entries.
@@ -1037,21 +1141,28 @@ protected:
         mutable bool converged_;
         std::any parallelInformation_;
 
-        std::unique_ptr<Matrix> matrix_;
+        // non-const to be able to scale the linear system
+        Matrix* matrix_;
         std::unique_ptr<Matrix> noGhostMat_;
         Vector *rhs_;
         std::unique_ptr<Matrix> matrix_for_preconditioner_;
 
+        std::unique_ptr<FlexibleSolverType> flexibleSolver_;
         std::vector<int> overlapRows_;
         std::vector<int> interiorRows_;
         std::vector<std::set<int>> wellConnectionsGraph_;
 
         bool ownersFirst_;
+        bool useWellConn_;
+        bool useFlexible_;
         size_t interiorCellNum_;
 
         FlowLinearSolverParameters parameters_;
+        boost::property_tree::ptree prm_;
         Vector weights_;
         bool scale_variables_;
+
+        std::shared_ptr< communication_type > comm_;
     }; // end ISTLSolver
 
 } // namespace Opm
