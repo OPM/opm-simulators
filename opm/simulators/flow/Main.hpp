@@ -194,7 +194,7 @@ namespace Opm
                 return Opm::flowEbosBlackoilMainInit(
                     argc_, argv_, outputCout_, outputFiles_);
             } else {
-                exitCode = EXIT_FAILURE;
+                //NOTE: exitCode was set by initialize_() above;
                 return std::unique_ptr<FlowMainEbosType>(); // nullptr
             }
         }
