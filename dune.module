@@ -5,8 +5,8 @@
 
 Module: opm-simulators
 Description: Simulators and utilities for automatic differentiation
-Version: 2020.04-rc4
-Label: 2020.04-rc4
+Version: 2020.04
+Label: 2020.04
 Maintainer: atgeirr@sintef.no
 MaintainerName: Atgeirr F. Rasmussen
 Url: http://opm-project.org
