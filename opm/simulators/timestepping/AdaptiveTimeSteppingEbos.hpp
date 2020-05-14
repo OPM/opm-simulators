@@ -131,14 +131,14 @@ namespace Opm {
             , restartFactor_(tuning.TSFCNV)
             , growthFactor_(tuning.TFDIFF)
             , maxGrowth_(tuning.TSFMAX)
-            , maxTimeStep_(EWOMS_GET_PARAM(TypeTag, double, SolverMaxTimeStepInDays)*24*60*60) // 365.25
+            , maxTimeStep_(tuning.TSMAXZ) // 365.25
             , minTimeStep_(EWOMS_GET_PARAM(TypeTag, double, SolverMinTimeStep)) // 0.0
             , solverRestartMax_(EWOMS_GET_PARAM(TypeTag, int, SolverMaxRestarts)) // 10
             , solverVerbose_(EWOMS_GET_PARAM(TypeTag, int, SolverVerbosity) > 0 && terminalOutput) // 2
             , timestepVerbose_(EWOMS_GET_PARAM(TypeTag, int, TimeStepVerbosity) > 0 && terminalOutput) // 2
-            , suggestedNextTimestep_(EWOMS_GET_PARAM(TypeTag, double, InitialTimeStepInDays)*24*60*60) // 1.0
+            , suggestedNextTimestep_(tuning.TSINIT) // 1.0
             , fullTimestepInitially_(EWOMS_GET_PARAM(TypeTag, bool, FullTimeStepInitially)) // false
-            , timestepAfterEvent_(EWOMS_GET_PARAM(TypeTag, double, TimeStepAfterEventInDays)*24*60*60) // 1e30
+            , timestepAfterEvent_(tuning.TMAXWC) // 1e30
             , useNewtonIteration_(false)
             , minTimeStepBeforeShuttingProblematicWells_(EWOMS_GET_PARAM(TypeTag, double, MinTimeStepBeforeShuttingProblematicWellsInDays)*unit::day)
         {
