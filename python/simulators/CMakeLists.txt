@@ -1,4 +1,4 @@
-pybind11_add_module(simulators simulators.cpp)
+pybind11_add_module(simulators simulators.cpp SYSTEM)
 
 set_target_properties( simulators PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/python/opm2 )
 
