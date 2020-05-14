@@ -39,10 +39,12 @@ BEGIN_PROPERTIES
 NEW_PROP_TAG(DpMaxRel);
 NEW_PROP_TAG(DsMax);
 NEW_PROP_TAG(PriVarOscilationThreshold);
+NEW_PROP_TAG(ProjectSaturations);
 
 SET_SCALAR_PROP(NewtonMethod, DpMaxRel, 0.3);
 SET_SCALAR_PROP(NewtonMethod, DsMax, 0.2);
 SET_SCALAR_PROP(NewtonMethod, PriVarOscilationThreshold, 1e-5);
+SET_BOOL_PROP(NewtonMethod, ProjectSaturations, false);
 
 END_PROPERTIES
 
@@ -74,6 +76,7 @@ public:
         priVarOscilationThreshold_ = EWOMS_GET_PARAM(TypeTag, Scalar, PriVarOscilationThreshold);
         dpMaxRel_ = EWOMS_GET_PARAM(TypeTag, Scalar, DpMaxRel);
         dsMax_ = EWOMS_GET_PARAM(TypeTag, Scalar, DsMax);
+        projectSaturations_ = EWOMS_GET_PARAM(TypeTag, bool, ProjectSaturations);
     }
 
     /*!
@@ -98,6 +101,7 @@ public:
         EWOMS_REGISTER_PARAM(TypeTag, Scalar, DsMax, "Maximum absolute change of any saturation in a single iteration");
         EWOMS_REGISTER_PARAM(TypeTag, Scalar, PriVarOscilationThreshold,
                              "The threshold value for the primary variable switching conditions after its meaning has switched to hinder oscilations");
+        EWOMS_REGISTER_PARAM(TypeTag,bool, ProjectSaturations, "Option for doing saturation projection");
     }
 
     /*!
@@ -309,6 +313,9 @@ protected:
 
         if (wasSwitched_[globalDofIdx])
             ++ numPriVarsSwitched_;
+        if(projectSaturations_){
+            nextValue.chopAndNormalizeSaturations();
+        }
 
         nextValue.checkDefined();
     }
@@ -319,6 +326,7 @@ private:
     Scalar priVarOscilationThreshold_;
     Scalar dpMaxRel_;
     Scalar dsMax_;
+    bool projectSaturations_;
 
     // keep track of cells where the primary variable meaning has changed
     // to detect and hinder oscillations
