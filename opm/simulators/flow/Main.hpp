@@ -423,6 +423,8 @@ namespace Opm
 			if( opm_restart ) {
 			    int report_step = EWOMS_GET_PARAM(PreTypeTag, int, OpmRestartStep);
 			    std::string preRunRestartBase = EWOMS_GET_PARAM(PreTypeTag, std::string, OpmRestartBase);
+                            auto& io_config = eclipseState_->getIOConfig();
+                            io_config.consistentFileFlags();//make consistence between output and input names
 			    init_config.setRestart(preRunRestartBase,report_step);
 			}
 			
