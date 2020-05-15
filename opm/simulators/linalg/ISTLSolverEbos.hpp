@@ -31,6 +31,7 @@
 #include <opm/simulators/linalg/findOverlapRowsAndColumns.hpp>
 #include <opm/simulators/linalg/setupPropertyTree.hpp>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
+#include <opm/simulators/linalg/WriteSystemMatrixHelper.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/simulators/linalg/ParallelIstlInformation.hpp>
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
@@ -485,6 +486,8 @@ protected:
         }
 
         bool solve(Vector& x) {
+            const int verbosity = prm_.get<int>("verbosity");
+            const bool write_matrix = verbosity > 10;
             // Solve system.
 
             if (useFlexible_)
@@ -493,6 +496,13 @@ protected:
                 assert(flexibleSolver_);
                 flexibleSolver_->apply(x, *rhs_, res);
                 iterations_ = res.iterations;
+                if (write_matrix) {
+                    Opm::Helper::writeSystem(simulator_, //simulator is only used to get names
+                                             getMatrix(),
+                                             *rhs_,
+                                             comm_.get());
+                }
+
                 return converged_ = res.converged;
             }
 
@@ -528,6 +538,13 @@ protected:
 
             if (parameters_.scale_linear_system_) {
                 scaleSolution(x);
+            }
+
+            if (write_matrix) {
+                Opm::Helper::writeSystem(simulator_, //simulator is only used to get names
+                                         getMatrix(),
+                                         *rhs_,
+                                         comm_.get());
             }
 
             return converged_;
