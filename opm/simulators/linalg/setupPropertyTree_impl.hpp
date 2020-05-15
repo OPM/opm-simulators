@@ -92,7 +92,8 @@ setupPropertyTree(const FlowLinearSolverParameters& p)
             prm.put("preconditioner.coarsesolver.preconditioner.relaxation",1.0);
             if (EWOMS_PARAM_IS_SET(TypeTag, int, CprMaxEllIter))
                 prm.put("preconditioner.coarsesolver.preconditioner.iterations", p.cpr_max_ell_iter_);
-            prm.put("preconditioner.coarsesolver.preconditioner.iterations",1);
+            else
+                prm.put("preconditioner.coarsesolver.preconditioner.iterations",1);
             prm.put("preconditioner.coarsesolver.preconditioner.coarsenTarget",1200);
             prm.put("preconditioner.coarsesolver.preconditioner.pre_smooth",1);
             prm.put("preconditioner.coarsesolver.preconditioner.post_smooth",1);
