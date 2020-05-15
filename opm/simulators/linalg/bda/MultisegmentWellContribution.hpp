@@ -35,11 +35,7 @@ namespace Opm
     /// D is a MxM matrix, the square blocks have size MultisegmentWell::numWellEq. 
     /// B*x and D*B*x are a vector with M*numWellEq doubles
     /// C*D*B*x is a vector with N*numEq doubles.
-    ///
-    /// This class is used in 3 phases:
-    /// - get total size of all wellcontributions that must be stored here
-    /// - allocate memory
-    /// - copy data of wellcontributions
+    
     class MultisegmentWellContribution
     {
 
