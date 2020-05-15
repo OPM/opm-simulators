@@ -285,70 +285,43 @@ struct Scalar;
 #define GET_PROP_VALUE(TypeTag, PropTagName) ::Opm::Properties::Detail::GetPropImpl<TypeTag, PTAG_(PropTagName)>::type::value
 #define GET_PROP_TYPE(TypeTag, PropTagName) ::Opm::Properties::Detail::GetPropImpl<TypeTag, PTAG_(PropTagName)>::type::type
 
-    /*!
-     * \ingroup Properties
-     * \brief Define splices for a given type tag.
-     *
-     * Splices can be seen as children which can be overridden lower in
-     * the hierarchy.  It can thus be seen as a "deferred inheritance"
-     * mechanism. Example:
-     *
-     * \code
-     * // First, define type tags for two different linear solvers:
-     * // BiCGStab and SuperLU. The first needs the "MaxIterations"
-     * // property, the second defines the "UsePivoting" property.
-     * NEW_TYPE_TAG(BiCGStabSolver);
-     * NEW_PROP_TAG(MaxIterations);
-     * SET_INT_PROP(BiCGStabSolver, MaxIterations, 100);
-     *
-     * NEW_TYPE_TAG(SuperLUSolver);
-     * NEW_PROP_TAG(UsePivoting);
-     * SET_BOOL_PROP(SuperLUSolver, UsePivoting, true);
-     *
-     * // The model type tag defines the splice 'LinearSolver' and sets it
-     * // to the 'BiCGStabSolver' type tag.
-     * NEW_TYPE_TAG(ModelTypeTag);
-     * NEW_PROP_TAG(LinearSolver);
-     * SET_SPLICES(ModelTypeTag, LinearSolver);
-     * SET_TAG_PROP(ModelTypeTag, LinearSolver, BiCGStabSolver);
-     *
-     * // The problem type tag is derived from the model type tag, but uses
-     * // the SuperLU solver. Since this is done using a splice, all properties
-     * // defined for the "SuperLUSolver" are inherited and the ones for the
-     * // BiCGStabSolver type tag are undefined
-     * NEW_TYPE_TAG(ProblemTypeTag, INHERITS_FROM(ModelTypeTag));
-     * SET_TAG_PROP(ProblemTypeTag, LinearSolver, SuperLUSolver);
-     * \endcode
-     */
+/*!
+ * \ingroup Properties
+ * \brief Define splices for a given type tag.
+ *
+ * Splices can be seen as children which can be overridden lower in
+ * the hierarchy.  It can thus be seen as a "deferred inheritance"
+ * mechanism. Example:
+ *
+ * \code
+ * // First, define type tags for two different linear solvers:
+ * // BiCGStab and SuperLU. The first needs the "MaxIterations"
+ * // property, the second defines the "UsePivoting" property.
+ * NEW_TYPE_TAG(BiCGStabSolver);
+ * NEW_PROP_TAG(MaxIterations);
+ * SET_INT_PROP(BiCGStabSolver, MaxIterations, 100);
+ *
+ * NEW_TYPE_TAG(SuperLUSolver);
+ * NEW_PROP_TAG(UsePivoting);
+ * SET_BOOL_PROP(SuperLUSolver, UsePivoting, true);
+ *
+ * // The model type tag defines the splice 'LinearSolver' and sets it
+ * // to the 'BiCGStabSolver' type tag.
+ * NEW_TYPE_TAG(ModelTypeTag);
+ * NEW_PROP_TAG(LinearSolver);
+ * SET_SPLICES(ModelTypeTag, LinearSolver);
+ * SET_TAG_PROP(ModelTypeTag, LinearSolver, BiCGStabSolver);
+ *
+ * // The problem type tag is derived from the model type tag, but uses
+ * // the SuperLU solver. Since this is done using a splice, all properties
+ * // defined for the "SuperLUSolver" are inherited and the ones for the
+ * // BiCGStabSolver type tag are undefined
+ * NEW_TYPE_TAG(ProblemTypeTag, INHERITS_FROM(ModelTypeTag));
+ * SET_TAG_PROP(ProblemTypeTag, LinearSolver, SuperLUSolver);
+ * \endcode
+ */
 
-    // template class to revert the order or a std::tuple's arguments. This is required to
-    // make the properties of children defined on the right overwrite the properties of the
-    // children on the left. See https://sydius.me/2011/07/reverse-tuple-in-c/
-    template<typename... Args>
-    class RevertedTuple
-    {
-    private:
-        template<unsigned int N, typename... All>
-        struct RevertedTupleOuter
-        {
-            template<typename Head, typename... Tail>
-            struct RevertedTupleInner: RevertedTupleOuter<N-1, Head, All...>::template RevertedTupleInner<Tail...> { };
-        };
-        
-        template<typename... All>
-        struct RevertedTupleOuter<0, All...>
-        {
-            template<typename... Tail>
-            struct RevertedTupleInner {
-                typedef std::tuple<All...> type;
-            };
-        };
-        
-    public:
-        typedef typename RevertedTupleOuter<sizeof...(Args)>::template RevertedTupleInner<Args...>::type type;
-    };
-    
-#define SET_SPLICE(TypeTagName, SpliceName)                               \
+#define SET_ONE_SPLICE(TypeTagName, SpliceName)                               \
 template<class TypeTag> \
 struct Splices<TypeTag, TTag::TypeTagName> \
 { \
@@ -356,7 +329,7 @@ struct Splices<TypeTag, TTag::TypeTagName> \
 }; \
 extern int semicolonHack_
 
-#define SET_SPLICES(TypeTagName, SpliceName1, SpliceName2)                               \
+#define SET_TWO_SPLICES(TypeTagName, SpliceName1, SpliceName2)                               \
 template<class TypeTag> \
 struct Splices<TypeTag, TTag::TypeTagName> \
 { \
@@ -365,6 +338,19 @@ struct Splices<TypeTag, TTag::TypeTagName> \
 }; \
 extern int semicolonHack_
 
+#define SET_THREE_SPLICES(TypeTagName, SpliceName1, SpliceName2, SpliceName3)                               \
+template<class TypeTag> \
+struct Splices<TypeTag, TTag::TypeTagName> \
+{ \
+    using type = std::tuple<GetSplicePropType<TypeTag, TTag::TypeTagName, Properties::SpliceName1>, \
+                            GetSplicePropType<TypeTag, TTag::TypeTagName, Properties::SpliceName2>, \
+                            GetSplicePropType<TypeTag, TTag::TypeTagName, Properties::SpliceName3>>; \
+}; \
+extern int semicolonHack_
+
+// From https://stackoverflow.com/questions/11761703/overloading-macro-on-number-of-arguments
+#define GET_MACRO(_1, _2, _3, _4, NAME, ...) NAME
+#define SET_SPLICES(...) GET_MACRO(__VA_ARGS__, SET_THREE_SPLICES, SET_TWO_SPLICES, SET_ONE_SPLICE)(__VA_ARGS__)
 
 #define SET_PROP_(EffTypeTagName, PropKind, PropTagName, ...)   \
 template <class TypeTag>                                    \
