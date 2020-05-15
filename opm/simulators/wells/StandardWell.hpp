@@ -296,6 +296,10 @@ namespace Opm
         using Base::phaseUsage;
         using Base::vfp_properties_;
 
+        virtual void updateWellStateRates(const Simulator& ebosSimulator,
+                                          WellState& well_state,
+                                          DeferredLogger& deferred_logger) const override;
+
     protected:
 
         // protected functions from the Base class

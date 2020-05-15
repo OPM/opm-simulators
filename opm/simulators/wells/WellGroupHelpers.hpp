@@ -26,10 +26,13 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
 
 #include <algorithm>
 #include <cassert>
+#include <map>
+#include <string>
 #include <type_traits>
 #include <vector>
 
@@ -257,6 +260,11 @@ namespace WellGroupHelpers
                              const SummaryState& st,
                              const WellStateFullyImplicitBlackoil& wellStateNupcol,
                              WellStateFullyImplicitBlackoil& wellState);
+
+    std::map<std::string, double>
+    computeNetworkPressures(const Opm::Network::ExtNetwork& network,
+                            const WellStateFullyImplicitBlackoil& well_state,
+                            const VFPProdProperties& vfp_prod_props);
 
     GuideRate::RateVector
     getRateVector(const WellStateFullyImplicitBlackoil& well_state, const PhaseUsage& pu, const std::string& name);

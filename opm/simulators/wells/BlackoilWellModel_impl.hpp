@@ -329,6 +329,8 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     beginTimeStep() {
 
+        updatePerforationIntensiveQuantities();
+
         Opm::DeferredLogger local_deferredLogger;
 
         well_state_ = previous_well_state_;
@@ -390,6 +392,11 @@ namespace Opm {
         } catch ( std::runtime_error& e ) {
             const std::string msg = "A zero well potential is returned for output purposes. ";
             local_deferredLogger.warning("WELL_POTENTIAL_CALCULATION_FAILED", msg);
+        }
+
+        // Update the well rates to match state, if only single-phase rates.
+        for (auto& well : well_container_) {
+            well->updateWellStateRates(ebosSimulator_, well_state_, local_deferredLogger);
         }
 
         //compute well guideRates
@@ -1219,6 +1226,8 @@ namespace Opm {
 
         updateAndCommunicateGroupData();
 
+        updateNetworkPressures();
+
         std::set<std::string> switched_wells;
         std::set<std::string> switched_groups;
 
@@ -1254,6 +1263,44 @@ namespace Opm {
 
     }
 
+
+
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    updateNetworkPressures()
+    {
+        // Get the network and return if inactive.
+        const int reportStepIdx = ebosSimulator_.episodeIndex();
+        const auto& network = schedule().network(reportStepIdx);
+        if (!network.active()) {
+            return;
+        }
+        node_pressures_ = WellGroupHelpers::computeNetworkPressures(network, well_state_, *(vfp_properties_->getProd()));
+
+        // Set the thp limits of wells (producers only, TODO address injectors).
+        for (auto& well : well_container_) {
+            if (well->isProducer()) {
+                const auto it = node_pressures_.find(well->wellEcl().groupName());
+                if (it != node_pressures_.end()) {
+                    // The well belongs to a group with has a network pressure constraint,
+                    // set the dynamic THP constraint of the well accordingly.
+                    well->setDynamicThpLimit(it->second);
+                }
+            }
+        }
+
+        // Output debug info.
+        if (terminal_output_) {
+            std::ostringstream oss;
+            oss << "Node pressures in network nodes, in bar:\n";
+            for (const auto& [name, pressure] : node_pressures_) {
+                oss << name << "  " << unit::convert::to(pressure, unit::barsa) << '\n';
+            }
+            OpmLog::debug(oss.str());
+        }
+    }
 
 
 
@@ -2500,6 +2547,19 @@ namespace Opm {
             auto& gdata = gvalues[gname];
             this->assignGroupControl(grup, gdata);
             this->assignGroupGuideRates(grup, groupGuideRates, gdata);
+        }
+    }
+
+    template <typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    assignNodeValues(const int                              reportStepIdx,
+                     const Schedule&                        sched,
+                     std::map<std::string, data::NodeData>& nodevalues) const
+    {
+        nodevalues.clear();
+        for (const auto& [node, pressure] : node_pressures_) {
+            nodevalues.emplace(node, data::NodeData{pressure});
         }
     }
 

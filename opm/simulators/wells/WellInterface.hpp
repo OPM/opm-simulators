@@ -275,6 +275,14 @@ namespace Opm
         // update perforation water throughput based on solved water rate
         virtual void updateWaterThroughput(const double dt, WellState& well_state) const = 0;
 
+        virtual void updateWellStateRates(const Simulator& ebosSimulator,
+                                          WellState& well_state,
+                                          DeferredLogger& deferred_logger) const
+        {
+            // Default: do nothing.
+            // TODO: make this a pure virtual.
+        }
+
         void stopWell() {
             wellIsStopped_ = true;
         }
@@ -288,6 +296,7 @@ namespace Opm
 
         void setWsolvent(const double wsolvent);
 
+        void setDynamicThpLimit(const double thp_limit);
 
     protected:
 
@@ -383,6 +392,8 @@ namespace Opm
         bool wellIsStopped_;
 
         double wsolvent_;
+
+        std::optional<double> dynamic_thp_limit_;
 
         const PhaseUsage& phaseUsage() const;
 

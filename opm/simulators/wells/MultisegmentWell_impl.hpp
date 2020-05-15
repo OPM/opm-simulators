@@ -2026,13 +2026,13 @@ namespace Opm
             const auto& controls = well.injectionControls(summaryState);
             const double vfp_ref_depth = vfp_properties_->getInj()->getTable(controls.vfp_table_number)->getDatumDepth();
             const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
-            return vfp_properties_->getInj()->bhp(controls.vfp_table_number, aqua, liquid, vapour, controls.thp_limit) - dp;
+            return vfp_properties_->getInj()->bhp(controls.vfp_table_number, aqua, liquid, vapour, this->getTHPConstraint(summaryState)) - dp;
          }
          else if (well.isProducer()) {
              const auto& controls = well.productionControls(summaryState);
              const double vfp_ref_depth = vfp_properties_->getProd()->getTable(controls.vfp_table_number)->getDatumDepth();
              const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
-             return vfp_properties_->getProd()->bhp(controls.vfp_table_number, aqua, liquid, vapour, controls.thp_limit, controls.alq_value) - dp;
+             return vfp_properties_->getProd()->bhp(controls.vfp_table_number, aqua, liquid, vapour, this->getTHPConstraint(summaryState), controls.alq_value) - dp;
          }
          else {
              OPM_DEFLOG_THROW(std::logic_error, "Expected INJECTOR or PRODUCER well", deferred_logger);
@@ -3306,11 +3306,12 @@ namespace Opm
         const auto& table = *(vfp_properties_->getProd()->getTable(controls.vfp_table_number));
         const double vfp_ref_depth = table.getDatumDepth();
         const double rho = segment_densities_[0].value(); // Use the density at the top perforation.
+        const double thp_limit = this->getTHPConstraint(summary_state);
         const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
-        auto fbhp = [this, &controls, dp](const std::vector<double>& rates) {
+        auto fbhp = [this, &controls, thp_limit, dp](const std::vector<double>& rates) {
             assert(rates.size() == 3);
             return this->vfp_properties_->getProd()
-            ->bhp(controls.vfp_table_number, rates[Water], rates[Oil], rates[Gas], controls.thp_limit, controls.alq_value) - dp;
+            ->bhp(controls.vfp_table_number, rates[Water], rates[Oil], rates[Gas], thp_limit, controls.alq_value) - dp;
         };
 
         // Make the flo() function.
@@ -3529,11 +3530,12 @@ namespace Opm
         const auto& table = *(vfp_properties_->getInj()->getTable(controls.vfp_table_number));
         const double vfp_ref_depth = table.getDatumDepth();
         const double rho = segment_densities_[0].value(); // Use the density at the top perforation.
+        const double thp_limit = this->getTHPConstraint(summary_state);
         const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
-        auto fbhp = [this, &controls, dp](const std::vector<double>& rates) {
+        auto fbhp = [this, &controls, thp_limit, dp](const std::vector<double>& rates) {
             assert(rates.size() == 3);
             return this->vfp_properties_->getInj()
-                    ->bhp(controls.vfp_table_number, rates[Water], rates[Oil], rates[Gas], controls.thp_limit) - dp;
+                    ->bhp(controls.vfp_table_number, rates[Water], rates[Oil], rates[Gas], thp_limit) - dp;
         };
 
         // Make the flo() function.

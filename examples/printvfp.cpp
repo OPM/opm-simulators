@@ -93,10 +93,11 @@ int main(int argc, char** argv)
     }
     Setup setup(argv[1]);
 
-//    const int table_id = 1;
+//     const int table_id = 1;
     const int table_id = 4;
     const double wct = 0.0;
-    const double gor = 35.2743;
+//    const double gor = 35.2743;
+    const double gor = 0.0;
     const double alq = 0.0;
     const int n = 51;
     const double m3pd = unit::cubic(unit::meter)/unit::day;

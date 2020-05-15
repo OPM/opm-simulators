@@ -329,6 +329,18 @@ namespace Opm
 
 
     template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    setDynamicThpLimit(const double thp_limit)
+    {
+       dynamic_thp_limit_ = thp_limit;
+    }
+
+
+
+
+
+    template<typename TypeTag>
     double
     WellInterface<TypeTag>::
     wpolymer() const
@@ -403,6 +415,10 @@ namespace Opm
     WellInterface<TypeTag>::
     wellHasTHPConstraints(const SummaryState& summaryState) const
     {
+        if (dynamic_thp_limit_) {
+            return true;
+        }
+
         if (well_ecl_.isInjector()) {
             const auto controls = well_ecl_.injectionControls(summaryState);
             if (controls.hasControl(Well::InjectorCMode::THP))
@@ -442,6 +458,9 @@ namespace Opm
     WellInterface<TypeTag>::
     getTHPConstraint(const SummaryState& summaryState) const
     {
+        if (dynamic_thp_limit_) {
+            return *dynamic_thp_limit_;
+        }
         if (well_ecl_.isInjector()) {
             const auto& controls = well_ecl_.injectionControls(summaryState);
             return controls.thp_limit;
@@ -1531,7 +1550,7 @@ namespace Opm
 
             if (controls.hasControl(Well::InjectorCMode::THP) && currentControl != Well::InjectorCMode::THP)
             {
-                const auto& thp = controls.thp_limit;
+                const auto& thp = this->getTHPConstraint(summaryState);
                 double current_thp = well_state.thp()[well_index];
                 if (thp < current_thp) {
                     currentControl = Well::InjectorCMode::THP;
@@ -1633,7 +1652,7 @@ namespace Opm
 
             if (controls.hasControl(Well::ProducerCMode::THP) && currentControl != Well::ProducerCMode::THP)
             {
-                const auto& thp = controls.thp_limit;
+                const auto& thp = this->getTHPConstraint(summaryState);
                 double current_thp =  well_state.thp()[well_index];
                 if (thp > current_thp) {
                     currentControl = Well::ProducerCMode::THP;
