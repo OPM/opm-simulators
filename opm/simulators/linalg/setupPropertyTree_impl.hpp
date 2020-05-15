@@ -101,9 +101,6 @@ setupPropertyTree(const FlowLinearSolverParameters& p)
             prm.put("preconditioner.coarsesolver.preconditioner.verbosity",0);
             prm.put("preconditioner.coarsesolver.preconditioner.maxlevel",15);
             prm.put("preconditioner.coarsesolver.preconditioner.skip_isolated",0);
-            if(p.linear_solver_configuration_ == "cpr_trueimpes"){
-                prm.put("preconditioner.weight_type","trueimpes");
-            }
         } else {
             if(conf != "ilu0"){
                 OPM_THROW(std::invalid_argument, conf  << "is not a valid setting for --linear-solver-configuration."
