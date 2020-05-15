@@ -49,17 +49,6 @@
 #include <vector>
 #include <unordered_map>
 
-BEGIN_PROPERTIES
-
-NEW_PROP_TAG(Simulator);
-NEW_PROP_TAG(Scalar);
-NEW_PROP_TAG(Evaluation);
-NEW_PROP_TAG(ElementContext);
-NEW_PROP_TAG(FluidSystem);
-NEW_PROP_TAG(EnableExperiments);
-
-END_PROPERTIES
-
 namespace Opm {
 
 /*!

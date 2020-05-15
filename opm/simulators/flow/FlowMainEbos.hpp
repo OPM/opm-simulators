@@ -52,7 +52,6 @@ BEGIN_PROPERTIES
 
 NEW_PROP_TAG(EnableDryRun);
 NEW_PROP_TAG(OutputInterval);
-NEW_PROP_TAG(UseAmg);
 NEW_PROP_TAG(EnableLoggingFalloutWarning);
 
 // TODO: enumeration parameters. we use strings for now.

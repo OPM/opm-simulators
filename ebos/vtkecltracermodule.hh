@@ -46,8 +46,6 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(VtkEclTracer);
 
 // create the property tags needed for the tracer model
-NEW_PROP_TAG(EnableVtkOutput);
-NEW_PROP_TAG(VtkOutputFormat);
 NEW_PROP_TAG(VtkWriteEclTracerConcentration);
 
 // set default values for what quantities to output

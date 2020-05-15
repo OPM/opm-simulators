@@ -31,6 +31,7 @@
 #include <ebos/nncsorter.hpp>
 
 #include <opm/models/utils/propertysystem.hh>
+#include <opm/models/common/multiphasebaseproperties.hh>
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
@@ -53,17 +54,6 @@
 #include <array>
 #include <vector>
 #include <unordered_map>
-
-BEGIN_PROPERTIES
-
-NEW_PROP_TAG(Scalar);
-NEW_PROP_TAG(Vanguard);
-NEW_PROP_TAG(Grid);
-NEW_PROP_TAG(GridView);
-NEW_PROP_TAG(ElementMapper);
-NEW_PROP_TAG(EnableEnergy);
-
-END_PROPERTIES
 
 namespace Opm {
 

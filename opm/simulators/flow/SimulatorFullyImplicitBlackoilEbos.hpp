@@ -36,7 +36,6 @@
 
 BEGIN_PROPERTIES
 
-NEW_PROP_TAG(EnableTerminalOutput);
 NEW_PROP_TAG(EnableAdaptiveTimeStepping);
 NEW_PROP_TAG(EnableTuning);
 
