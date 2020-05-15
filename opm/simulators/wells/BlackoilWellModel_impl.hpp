@@ -907,22 +907,34 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     getWellContributions(WellContributions& wellContribs) const
     {
+        // prepare for StandardWells
         wellContribs.setBlockSize(StandardWell<TypeTag>::numEq, StandardWell<TypeTag>::numStaticWellEq);
         for(unsigned int i = 0; i < well_container_.size(); i++){
             auto& well = well_container_[i];
             std::shared_ptr<StandardWell<TypeTag> > derived = std::dynamic_pointer_cast<StandardWell<TypeTag> >(well);
-            unsigned int numBlocks;
-            derived->getNumBlocks(numBlocks);
-            wellContribs.addNumBlocks(numBlocks);
+            if (derived) {
+                unsigned int numBlocks;
+                derived->getNumBlocks(numBlocks);
+                wellContribs.addNumBlocks(numBlocks);
+            }
         }
+
+        // allocate memory for data from StandardWells
         wellContribs.alloc();
+
         for(unsigned int i = 0; i < well_container_.size(); i++){
             auto& well = well_container_[i];
-            std::shared_ptr<StandardWell<TypeTag> > derived = std::dynamic_pointer_cast<StandardWell<TypeTag> >(well);
-            if (derived) {
-                derived->addWellContribution(wellContribs);
+            // maybe WellInterface could implement addWellContribution()
+            auto derived_std = std::dynamic_pointer_cast<StandardWell<TypeTag> >(well);
+            if (derived_std) {
+                derived_std->addWellContribution(wellContribs);
             } else {
-                OpmLog::warning("Warning only StandardWell is supported by WellContributions for GPU");
+                auto derived_ms = std::dynamic_pointer_cast<MultisegmentWell<TypeTag> >(well);
+                if (derived_ms) {
+                    derived_ms->addWellContribution(wellContribs);
+                } else {
+                    OpmLog::warning("Warning unknown type of well");
+                }
             }
         }
     }

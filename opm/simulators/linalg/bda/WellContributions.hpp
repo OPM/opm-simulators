@@ -28,6 +28,8 @@
 
 #include <vector>
 
+#include <opm/simulators/linalg/bda/MultisegmentWellContribution.hpp>
+
 #include <cuda_runtime.h>
 
 namespace Opm
@@ -35,6 +37,10 @@ namespace Opm
 
     /// This class serves to eliminate the need to include the WellContributions into the matrix (with --matrix-add-well-contributions=true) for the cusparseSolver
     /// If the --matrix-add-well-contributions commandline parameter is true, this class should not be used
+    /// So far, StandardWell and MultisegmentWell are supported
+    /// A single instance (or pointer) of this class is passed to the cusparseSolver.
+    /// For StandardWell, this class contains all the data and handles the computation. For MultisegmentWell, the vector 'multisegments' contains all the data. For more information, check the MultisegmentWellContribution class.
+
     /// A StandardWell uses C, D and B and performs y -= (C^T * (D^-1 * (B*x)))
     /// B and C are vectors, disguised as matrices and contain blocks of StandardWell::numEq by StandardWell::numStaticWellEq
     /// D is a block, disguised as matrix, the square block has size StandardWell::numStaticWellEq. D is actually stored as D^-1
@@ -50,14 +56,18 @@ namespace Opm
 
     private:
         unsigned int num_blocks = 0;             // total number of blocks in all wells
-        unsigned int dim;                        // number of columns of blocks in B and C, equal to StandardWell::numEq
-        unsigned int dim_wells;                  // number of rows of blocks in B and C, equal to StandardWell::numStaticWellEq
-        unsigned int num_wells = 0;              // number of wellcontributions in this object
+        unsigned int dim;                        // number of columns in blocks in B and C, equal to StandardWell::numEq
+        unsigned int dim_wells;                  // number of rows in blocks in B and C, equal to StandardWell::numStaticWellEq
+        unsigned int num_std_wells = 0;          // number of StandardWells in this object
+        unsigned int num_ms_wells = 0;           // number of MultisegmentWells in this object, must equal multisegments.size()
         unsigned int num_blocks_so_far = 0;      // keep track of where next data is written
-        unsigned int num_wells_so_far = 0;       // keep track of where next data is written
+        unsigned int num_std_wells_so_far = 0;   // keep track of where next data is written
         unsigned int *val_pointers = nullptr;    // val_pointers[wellID] == index of first block for this well in Ccols and Bcols
         bool allocated = false;
+        std::vector<MultisegmentWellContribution*> multisegments;
+        cudaStream_t stream;
 
+        // data for StandardWells, could remain nullptrs if not used
         double *d_Cnnzs = nullptr;
         double *d_Dnnzs = nullptr;
         double *d_Bnnzs = nullptr;
@@ -66,7 +76,7 @@ namespace Opm
         double *d_z1 = nullptr;
         double *d_z2 = nullptr;
         unsigned int *d_val_pointers = nullptr;
-        cudaStream_t stream;
+
     public:
 
         /// StandardWell has C, D and B matrices that need to be copied
@@ -86,22 +96,22 @@ namespace Opm
         /// Destroy a WellContributions, and free memory
         ~WellContributions();
 
-        /// Apply all wellcontributions in this object
-        /// performs y -= (C^T * (D^-1 * (B*x))) for StandardWell
+        /// Apply all Wells in this object
+        /// performs y -= (C^T * (D^-1 * (B*x))) for all Wells
         /// \param[in] x          vector x
         /// \param[inout] y       vector y
         void apply(double *x, double *y);
 
-        /// Allocate memory for the wellcontributions
+        /// Allocate memory for the StandardWells
         void alloc();
 
-        /// Indicate how large the blocks of the wellcontributions (C and B) are
+        /// Indicate how large the blocks of the StandardWell (C and B) are
         /// \param[in] dim         number of columns
         /// \param[in] dim_wells   number of rows
         void setBlockSize(unsigned int dim, unsigned int dim_wells);
 
-        /// Indicate how large the next wellcontribution is, this function cannot be called after alloc() is called
-        /// \param[in] numBlocks   number of blocks in C and B of next wellcontribution
+        /// Indicate how large the next StandardWell is, this function cannot be called after alloc() is called
+        /// \param[in] numBlocks   number of blocks in C and B of next StandardWell
         void addNumBlocks(unsigned int numBlocks);
 
         /// Store a matrix in this object, in blocked csr format, can only be called after alloc() is called
@@ -111,10 +121,31 @@ namespace Opm
         /// \param[in] val_size    number of blocks in C or B, ignored for D
         void addMatrix(MatrixType type, int *colIndices, double *values, unsigned int val_size);
 
+        /// Add a MultisegmentWellContribution, actually creates an object on heap that is destroyed in the destructor
+        /// Matrices C and B are passed in Blocked CSR, matrix D in CSC
+        /// \param[in] dim              size of blocks in vectors x and y, equal to MultisegmentWell::numEq
+        /// \param[in] dim_wells        size of blocks of C, B and D, equal to MultisegmentWell::numWellEq
+        /// \param[in] Nb               number of blocks in vectors x and y
+        /// \param[in] Mb               number of blockrows in C, B and D
+        /// \param[in] BnumBlocks       number of blocks in C and B
+        /// \param[in] Bvalues          nonzero values of matrix B
+        /// \param[in] BcolIndices      columnindices of blocks of matrix B
+        /// \param[in] BrowPointers     rowpointers of matrix B
+        /// \param[in] DnumBlocks       number of blocks in D
+        /// \param[in] Dvalues          nonzero values of matrix D
+        /// \param[in] DcolPointers     columnpointers of matrix D
+        /// \param[in] DrowIndices      rowindices of matrix D
+        /// \param[in] Cvalues          nonzero values of matrix C
+        void addMultisegmentWellContribution(unsigned int dim, unsigned int dim_wells,
+            unsigned int Nb, unsigned int Mb,
+            unsigned int BnumBlocks, double *Bvalues, unsigned int *BcolIndices, unsigned int *BrowPointers,
+            unsigned int DnumBlocks, double *Dvalues, int *DcolPointers, int *DrowIndices,
+            double *Cvalues);
+
         /// Return the number of wells added to this object
         /// \return the number of wells added to this object
         unsigned int getNumWells(){
-            return num_wells;
+            return num_std_wells + num_ms_wells;
         }
     };
 

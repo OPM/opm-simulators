@@ -128,27 +128,39 @@ namespace Opm
     }
 
 
-    void WellContributions::alloc(){
-        cudaMalloc((void**)&d_Cnnzs, sizeof(double) * num_blocks * dim * dim_wells);
-        cudaMalloc((void**)&d_Dnnzs, sizeof(double) * num_wells * dim_wells * dim_wells);
-        cudaMalloc((void**)&d_Bnnzs, sizeof(double) * num_blocks * dim * dim_wells);
-        cudaMalloc((void**)&d_Ccols, sizeof(int) * num_blocks);
-        cudaMalloc((void**)&d_Bcols, sizeof(int) * num_blocks);
-        val_pointers = new unsigned int[num_wells + 1];
-        cudaMalloc((void**)&d_val_pointers, sizeof(int) * (num_wells + 1));
-        cudaCheckLastError("apply_gpu malloc failed");
-        allocated = true;
+    void WellContributions::alloc()
+    {
+        if (num_std_wells > 0) {
+            cudaMalloc((void**)&d_Cnnzs, sizeof(double) * num_blocks * dim * dim_wells);
+            cudaMalloc((void**)&d_Dnnzs, sizeof(double) * num_std_wells * dim_wells * dim_wells);
+            cudaMalloc((void**)&d_Bnnzs, sizeof(double) * num_blocks * dim * dim_wells);
+            cudaMalloc((void**)&d_Ccols, sizeof(int) * num_blocks);
+            cudaMalloc((void**)&d_Bcols, sizeof(int) * num_blocks);
+            val_pointers = new unsigned int[num_std_wells + 1];
+            cudaMalloc((void**)&d_val_pointers, sizeof(int) * (num_std_wells + 1));
+            cudaCheckLastError("apply_gpu malloc failed");
+            allocated = true;
+        }
     }
 
     WellContributions::~WellContributions()
     {
-        cudaFree(d_Cnnzs);
-        cudaFree(d_Dnnzs);
-        cudaFree(d_Bnnzs);
-        cudaFree(d_Ccols);
-        cudaFree(d_Bcols);
-        delete[] val_pointers;
-        cudaFree(d_val_pointers);
+        // delete MultisegmentWellContributions
+        for (auto ms : multisegments) {
+            delete ms;
+        }
+        multisegments.clear();
+
+        // delete data for StandardWell
+        if (num_std_wells > 0) {
+            cudaFree(d_Cnnzs);
+            cudaFree(d_Dnnzs);
+            cudaFree(d_Bnnzs);
+            cudaFree(d_Ccols);
+            cudaFree(d_Bcols);
+            delete[] val_pointers;
+            cudaFree(d_val_pointers);
+        }
     }
 
 
@@ -156,8 +168,16 @@ namespace Opm
     // y -= (C^T *(D^-1*(   B*x)))
     void WellContributions::apply(double *d_x, double *d_y)
     {
-        int smem_size = 2 * sizeof(double) * dim_wells;
-        apply_well_contributions<<<num_wells, 32, smem_size, stream>>>(d_Cnnzs, d_Dnnzs, d_Bnnzs, d_Ccols, d_Bcols, d_x, d_y, dim, dim_wells, d_val_pointers);
+        // apply MultisegmentWells
+        for(MultisegmentWellContribution *well : multisegments){
+            well->apply(d_x, d_y);
+        }
+
+        // apply StandardWells
+        if (num_std_wells > 0) {
+            int smem_size = 2 * sizeof(double) * dim_wells;
+            apply_well_contributions<<<num_std_wells, 32, smem_size, stream>>>(d_Cnnzs, d_Dnnzs, d_Bnnzs, d_Ccols, d_Bcols, d_x, d_y, dim, dim_wells, d_val_pointers);
+        }
     }
 
 
@@ -173,16 +193,16 @@ namespace Opm
             cudaMemcpy(d_Ccols + num_blocks_so_far, colIndices, sizeof(int) * val_size, cudaMemcpyHostToDevice);
             break;
         case MatrixType::D:
-            cudaMemcpy(d_Dnnzs + num_wells_so_far * dim_wells * dim_wells, values, sizeof(double) * dim_wells * dim_wells, cudaMemcpyHostToDevice);
+            cudaMemcpy(d_Dnnzs + num_std_wells_so_far * dim_wells * dim_wells, values, sizeof(double) * dim_wells * dim_wells, cudaMemcpyHostToDevice);
             break;
         case MatrixType::B:
             cudaMemcpy(d_Bnnzs + num_blocks_so_far * dim * dim_wells, values, sizeof(double) * val_size * dim * dim_wells, cudaMemcpyHostToDevice);
             cudaMemcpy(d_Bcols + num_blocks_so_far, colIndices, sizeof(int) * val_size, cudaMemcpyHostToDevice);
-            val_pointers[num_wells_so_far] = num_blocks_so_far;
-            if(num_wells_so_far == num_wells - 1){
-                val_pointers[num_wells] = num_blocks;
+            val_pointers[num_std_wells_so_far] = num_blocks_so_far;
+            if(num_std_wells_so_far == num_std_wells - 1){
+                val_pointers[num_std_wells] = num_blocks;
             }
-            cudaMemcpy(d_val_pointers, val_pointers, sizeof(int) * (num_wells+1), cudaMemcpyHostToDevice);
+            cudaMemcpy(d_val_pointers, val_pointers, sizeof(int) * (num_std_wells+1), cudaMemcpyHostToDevice);
             break;
         default:
             OPM_THROW(std::logic_error,"Error unsupported matrix ID for WellContributions::addMatrix()");
@@ -190,13 +210,16 @@ namespace Opm
         cudaCheckLastError("WellContributions::addMatrix() failed");
         if (MatrixType::B == type) {
             num_blocks_so_far += val_size;
-            num_wells_so_far++;
+            num_std_wells_so_far++;
         }
     }
 
     void WellContributions::setCudaStream(cudaStream_t stream_)
     {
         this->stream = stream_;
+        for(MultisegmentWellContribution *well : multisegments){
+            well->setCudaStream(stream_);
+        }
     }
 
     void WellContributions::setBlockSize(unsigned int dim_, unsigned int dim_wells_)
@@ -211,7 +234,18 @@ namespace Opm
             OPM_THROW(std::logic_error,"Error cannot add more sizes after allocated in WellContributions");
         }
         num_blocks += nnz;
-        num_wells++;
+        num_std_wells++;
+    }
+
+    void WellContributions::addMultisegmentWellContribution(unsigned int dim, unsigned int dim_wells,
+        unsigned int Nb, unsigned int Mb,
+        unsigned int BnumBlocks, double *Bvalues, unsigned int *BcolIndices, unsigned int *BrowPointers,
+        unsigned int DnumBlocks, double *Dvalues, int *DcolPointers, int *DrowIndices,
+        double *Cvalues)
+    {
+        MultisegmentWellContribution *well = new MultisegmentWellContribution(dim, dim_wells, Nb, Mb, BnumBlocks, Bvalues, BcolIndices, BrowPointers, DnumBlocks, Dvalues, DcolPointers, DrowIndices, Cvalues);
+        multisegments.emplace_back(well);
+        ++num_ms_wells;
     }
 
 } //namespace Opm

@@ -74,9 +74,9 @@ private:
     void gpu_pbicgstab(WellContributions& wellContribs, BdaResult& res);
 
     /// Initialize GPU and allocate memory
-    /// \param[in] N         number of nonzeroes, divide by dim*dim to get number of blocks
-    /// \param[in] nnz         number of nonzeroes, divide by dim*dim to get number of blocks
-    /// \param[in] dim         size of block
+    /// \param[in] N                number of nonzeroes, divide by dim*dim to get number of blocks
+    /// \param[in] nnz              number of nonzeroes, divide by dim*dim to get number of blocks
+    /// \param[in] dim              size of block
     void initialize(int N, int nnz, int dim);
 
     /// Clean memory

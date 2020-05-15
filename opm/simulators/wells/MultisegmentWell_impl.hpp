@@ -639,6 +639,66 @@ namespace Opm
 
 
 
+#if HAVE_CUDA
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    addWellContribution(WellContributions& wellContribs) const
+    {
+        unsigned int Nb = duneB_.M();       // number of blockrows in matrix A
+        unsigned int Mb = duneB_.N();       // number of blockrows in duneB_, duneC_ and duneD_
+        unsigned int BnumBlocks = duneB_.nonzeroes();
+        unsigned int DnumBlocks = duneD_.nonzeroes();
+
+        // duneC
+        std::vector<unsigned int> Ccols;
+        std::vector<double> Cvals;
+        Ccols.reserve(BnumBlocks);
+        Cvals.reserve(BnumBlocks * numEq * numWellEq);
+        for (auto rowC = duneC_.begin(); rowC != duneC_.end(); ++rowC) {
+            for (auto colC = rowC->begin(), endC = rowC->end(); colC != endC; ++colC) {
+                Ccols.emplace_back(colC.index());
+                for (int i = 0; i < numWellEq; ++i) {
+                    for (int j = 0; j < numEq; ++j) {
+                        Cvals.emplace_back((*colC)[i][j]);
+                    }
+                }
+            }
+        }
+
+        // duneD
+        Dune::UMFPack<DiagMatWell> umfpackMatrix(duneD_, 0);
+        double *Dvals = umfpackMatrix.getInternalMatrix().getValues();
+        int *Dcols = umfpackMatrix.getInternalMatrix().getColStart();
+        int *Drows = umfpackMatrix.getInternalMatrix().getRowIndex();
+
+        // duneB
+        std::vector<unsigned int> Bcols;
+        std::vector<unsigned int> Brows;
+        std::vector<double> Bvals;
+        Bcols.reserve(BnumBlocks);
+        Brows.reserve(Mb+1);
+        Bvals.reserve(BnumBlocks * numEq * numWellEq);
+        Brows.emplace_back(0);
+        unsigned int sumBlocks = 0;
+        for (auto rowB = duneB_.begin(); rowB != duneB_.end(); ++rowB) {
+            int sizeRow = 0;
+            for (auto colB = rowB->begin(), endB = rowB->end(); colB != endB; ++colB) {
+                Bcols.emplace_back(colB.index());
+                for (int i = 0; i < numWellEq; ++i) {
+                    for (int j = 0; j < numEq; ++j) {
+                        Bvals.emplace_back((*colB)[i][j]);
+                    }
+                }
+                sizeRow++;
+            }
+            sumBlocks += sizeRow;
+            Brows.emplace_back(sumBlocks);
+        }
+
+        wellContribs.addMultisegmentWellContribution(numEq, numWellEq, Nb, Mb, BnumBlocks, Bvals.data(), Bcols.data(), Brows.data(), DnumBlocks, Dvals, Dcols, Drows, Cvals.data());
+    }
+#endif
 
 
     template <typename TypeTag>

@@ -135,6 +135,11 @@ namespace Opm
         /// r = r - C D^-1 Rw
         virtual void apply(BVector& r) const override;
 
+#if HAVE_CUDA
+        /// add the contribution (C, D, B matrices) of this Well to the WellContributions object
+        void addWellContribution(WellContributions& wellContribs) const;
+#endif
+
         /// using the solution x to recover the solution xw for wells and applying
         /// xw to update Well State
         virtual void recoverWellSolutionAndUpdateWellState(const BVector& x,
