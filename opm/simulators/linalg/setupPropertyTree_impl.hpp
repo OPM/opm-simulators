@@ -59,7 +59,7 @@ setupPropertyTree(const FlowLinearSolverParameters& p)
         // Support old UseCpr if not configuration was set
         if (!EWOMS_PARAM_IS_SET(TypeTag, std::string, LinearSolverConfiguration) && p.use_cpr_)
         {
-            conf = "cpr_quasiimpes";
+            conf = "cpr_trueimpes";
         }
 
         if((conf == "cpr_trueimpes") || (conf == "cpr_quasiimpes")){
