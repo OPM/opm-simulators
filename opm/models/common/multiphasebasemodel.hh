@@ -56,7 +56,7 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(MultiPhaseBaseModel, INHERITS_FROM(VtkMultiPhase, VtkTemperature));
 
 //! Specify the splices of the MultiPhaseBaseModel type tag
-SET_SPLICE(MultiPhaseBaseModel, SpatialDiscretizationSplice);
+SET_SPLICES(MultiPhaseBaseModel, SpatialDiscretizationSplice);
 
 //! Set the default spatial discretization
 //!
