@@ -85,7 +85,7 @@
  * This allows to deal with unused parameters
  */
 #define EWOMS_HIDE_PARAM(TypeTag, ParamName)                \
-    ::Opm::Parameters::hideParam<TypeTag, PTAG_(ParamName)>(#ParamName)
+    ::Opm::Parameters::hideParam<TypeTag>(#ParamName, GET_PROP_VALUE(TypeTag, ParamName))
 
 /*!
  * \ingroup Parameter
@@ -148,8 +148,7 @@
  * If the parameter in question has not been registered, this throws an exception.
  */
 #define EWOMS_PARAM_IS_SET(TypeTag, ParamType, ParamName)               \
-    (::Opm::Parameters::isSet<TypeTag, ParamType, PTAG_(ParamName)>(#ParamName, \
-                                                                   #ParamName))
+    (::Opm::Parameters::isSet<TypeTag, ParamType>(#ParamName, #ParamName))
 
 namespace Opm {
 namespace Parameters {
@@ -969,7 +968,7 @@ public:
         ParamsMeta::clear();
     }
 
-    template <class ParamType, class PropTag>
+    template <class ParamType>
     static bool isSet(const char *propTagName OPM_OPTIM_UNUSED,
                       const char *paramName OPM_OPTIM_UNUSED,
                       bool errorIfNotRegistered = true)
@@ -1130,12 +1129,12 @@ void reset()
     return Param<TypeTag>::clear();
 }
 
-template <class TypeTag, class ParamType, class PropTag>
+template <class TypeTag, class ParamType>
 bool isSet(const char *propTagName, const char *paramName, bool errorIfNotRegistered = true)
 {
-    return Param<TypeTag>::template isSet<ParamType, PropTag>(propTagName,
-                                                              paramName,
-                                                              errorIfNotRegistered);
+    return Param<TypeTag>::template isSet<ParamType>(propTagName,
+                                                     paramName,
+                                                     errorIfNotRegistered);
 }
 
 template <class TypeTag, class ParamType>
@@ -1172,13 +1171,9 @@ void registerParam(const char *paramName, const char *propertyName, const ParamT
     ParamsMeta::mutableRegistry()[paramName] = paramInfo;
 }
 
-template <class TypeTag, class PropTag>
-void hideParam(const char *paramName)
+template <class TypeTag, class ParamType>
+void hideParam(const char *paramName, const ParamType& defaultValue)
 {
-    // make sure that a property with the parameter name exists. we cannot check if a
-    // parameter exists at compile time, so this will only be caught at runtime
-    static const auto defaultValue OPM_UNUSED = getPropValue<TypeTag, PropTag>;
-
     typedef typename GET_PROP(TypeTag, ParameterMetaData) ParamsMeta;
     if (!ParamsMeta::registrationOpen())
         throw std::logic_error("Parameter '"+std::string(paramName)+"' declared as hidden"
