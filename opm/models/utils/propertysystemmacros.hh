@@ -236,6 +236,9 @@ struct GetTypeTagInheritance<std::tuple<FirstTypeTag, OtherTypeTags...>>
         using type = __VA_ARGS__;                                 \
     }
 
+template <class TypeTag, class MyTypeTag>
+struct Scalar;
+
 /*!
  * \ingroup Properties
  * \brief Set a property to a simple constant scalar value.
