@@ -268,4 +268,14 @@ void printValues(std::ostream& os = std::cout)
 
 } // end namespace Opm
 
+// remove this after release 2020.10 to disable macros per default
+#ifndef OPM_ENABLE_OLD_PROPERTY_MACROS
+#define OPM_ENABLE_OLD_PROPERTY_MACROS 1
+#endif
+
+// remove this after release 2021.04 to remove macros completely
+#if OPM_ENABLE_OLD_PROPERTY_MACROS
+#include <opm/models/utils/propertysystemmacros.hh>
+#endif // OPM_ENABLE_OLD_PROPERTY_MACROS
+
 #endif

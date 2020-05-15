@@ -27,7 +27,7 @@
 #ifndef EWOMS_BASE_VANGUARD_HH
 #define EWOMS_BASE_VANGUARD_HH
 
-#include <opm/models/utils/propertysystem.hh>
+#include <opm/models/utils/basicproperties.hh>
 #include <opm/models/utils/parametersystem.hh>
 
 #include <dune/common/version.hh>
