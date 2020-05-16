@@ -31,6 +31,7 @@ namespace Opm
     SimulatorTimer::SimulatorTimer()
         : current_step_(0),
           current_time_(0.0),
+          end_step_(std::numeric_limits<size_t>::max()),
           start_date_(2012,1,1)    // A really arbitrary default starting value?!
     {
     }
@@ -42,6 +43,7 @@ namespace Opm
     {
         const int num_psteps = param.getDefault("num_psteps", 1);
         const double stepsize_days = param.getDefault("stepsize_days", 1.0);
+        const double end_step_ = std::numeric_limits<size_t>::max();
         const double stepsize = Opm::unit::convert::from(stepsize_days, Opm::unit::day);
         timesteps_.clear();
         timesteps_.resize(num_psteps, stepsize);
@@ -49,7 +51,7 @@ namespace Opm
     }
 
     /// Use the SimulatorTimer as a shim around opm-parser's Opm::TimeMap
-    void SimulatorTimer::init(const TimeMap& timeMap, size_t report_step)
+    void SimulatorTimer::init(const TimeMap& timeMap, size_t report_step, size_t end_step)
     {
         total_time_ = timeMap.getTotalTime();
         timesteps_.resize(timeMap.numTimesteps());
@@ -58,6 +60,7 @@ namespace Opm
         }
 
         setCurrentStepNum(report_step);
+        end_step_ = end_step;
         start_date_ = boost::posix_time::from_time_t( timeMap.getStartTime(0)).date();
     }
 
@@ -158,7 +161,7 @@ namespace Opm
     /// Return true if op++() has been called numSteps() times.
     bool SimulatorTimer::done() const
     {
-        return int(timesteps_.size()) == current_step_;
+        return int(timesteps_.size()) == current_step_ || (current_step_ == end_step_);
     }
 
     /// return copy of object

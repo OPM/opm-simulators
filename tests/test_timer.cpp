@@ -47,7 +47,7 @@ BOOST_AUTO_TEST_CASE(CreateTimer)
     boost::gregorian::date defaultStartDate( 2012, 1, 1);
     BOOST_CHECK_EQUAL(  boost::posix_time::ptime(defaultStartDate), simtimer.currentDateTime() );
 
-    simtimer.init(timeMap);
+    simtimer.init(timeMap,0,std::numeric_limits<int>::max());
     boost::gregorian::date startDate( 2014, 3, 26);
     BOOST_CHECK_EQUAL(  boost::posix_time::ptime(startDate), simtimer.currentDateTime() );
 

@@ -47,7 +47,7 @@ namespace Opm
         void init(const ParameterGroup& param);
 
         /// Use the SimulatorTimer as a shim around opm-parser's Opm::TimeMap
-        void init(const TimeMap& timeMap, size_t report_step = 0);
+        void init(const TimeMap& timeMap, size_t report_step, size_t end_step);
 
         /// Whether the current step is the first step.
         bool initialStep() const;
@@ -121,6 +121,7 @@ namespace Opm
         std::vector<double> timesteps_;
         int current_step_;
         double current_time_;
+        double end_step_;
         double total_time_;
         boost::gregorian::date start_date_;
     };
