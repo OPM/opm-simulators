@@ -127,7 +127,6 @@ namespace Opm
 
     }
 
-
     void WellContributions::alloc()
     {
         if (num_std_wells > 0) {
@@ -145,6 +144,12 @@ namespace Opm
 
     WellContributions::~WellContributions()
     {
+        // free pinned memory for MultisegmentWellContributions
+        if (h_x) {
+            cudaFreeHost(h_x);
+            cudaFreeHost(h_y);
+        }
+
         // delete MultisegmentWellContributions
         for (auto ms : multisegments) {
             delete ms;
@@ -169,8 +174,29 @@ namespace Opm
     void WellContributions::apply(double *d_x, double *d_y)
     {
         // apply MultisegmentWells
-        for(MultisegmentWellContribution *well : multisegments){
-            well->apply(d_x, d_y);
+        if (num_ms_wells > 0) {
+            // allocate pinned memory on host if not yet done
+            if (h_x == nullptr) {
+                cudaMallocHost(&h_x, sizeof(double) * N);
+                cudaMallocHost(&h_y, sizeof(double) * N);
+            }
+
+            // make sure the stream is empty to start timing
+            cudaStreamSynchronize(stream);
+
+            // copy vectors x and y from GPU to CPU
+            cudaMemcpyAsync(h_x, d_x, sizeof(double) * N, cudaMemcpyDeviceToHost, stream);
+            cudaMemcpyAsync(h_y, d_y, sizeof(double) * N, cudaMemcpyDeviceToHost, stream);
+            cudaStreamSynchronize(stream);
+
+            // actually apply MultisegmentWells
+            for (MultisegmentWellContribution *well : multisegments) {
+                well->apply(h_x, h_y);
+            }
+
+            // copy vector y from CPU to GPU
+            cudaMemcpyAsync(d_y, h_y, sizeof(double) * N, cudaMemcpyHostToDevice, stream);
+            cudaStreamSynchronize(stream);
         }
 
         // apply StandardWells
@@ -243,6 +269,7 @@ namespace Opm
         unsigned int DnumBlocks, double *Dvalues, int *DcolPointers, int *DrowIndices,
         double *Cvalues)
     {
+        this->N = Nb * dim;
         MultisegmentWellContribution *well = new MultisegmentWellContribution(dim, dim_wells, Nb, Mb, BnumBlocks, Bvalues, BcolIndices, BrowPointers, DnumBlocks, Dvalues, DcolPointers, DrowIndices, Cvalues);
         multisegments.emplace_back(well);
         ++num_ms_wells;

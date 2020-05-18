@@ -19,16 +19,10 @@
 
 
 #include <cstdlib>
-#include <cstring>
 #include <config.h> // CMake
-#include <fstream>
-
-#include <opm/common/OpmLog/OpmLog.hpp>
-#include <opm/common/ErrorMacros.hpp>
 
 #if HAVE_UMFPACK
 #include <dune/istl/umfpack.hh>
-#include <opm/simulators/linalg/bda/cuda_header.hpp>
 #endif // HAVE_UMFPACK
 
 #include <opm/simulators/linalg/bda/MultisegmentWellContribution.hpp>
@@ -63,33 +57,22 @@ namespace Opm
             z1.resize(Mb * dim_wells);
             z2.resize(Mb * dim_wells);
 
-            // allocate pinned memory on host
-            cudaMallocHost(&h_x, sizeof(double) * N);
-            cudaMallocHost(&h_y, sizeof(double) * N);
-
             umfpack_di_symbolic(M, M, Dcols.data(), Drows.data(), Dvals.data(), &UMFPACK_Symbolic, nullptr, nullptr);
             umfpack_di_numeric(Dcols.data(), Drows.data(), Dvals.data(), UMFPACK_Symbolic, &UMFPACK_Numeric, nullptr, nullptr);
         }
 
         MultisegmentWellContribution::~MultisegmentWellContribution()
         {
-            cudaFreeHost(h_x);
-            cudaFreeHost(h_y);
-
             umfpack_di_free_symbolic(&UMFPACK_Symbolic);
             umfpack_di_free_numeric(&UMFPACK_Numeric);
         }
 
 
         // Apply the MultisegmentWellContribution, similar to MultisegmentWell::apply()
+        // h_x and h_y reside on host
         // y -= (C^T * (D^-1 * (B * x)))
-        void MultisegmentWellContribution::apply(double *d_x, double *d_y)
+        void MultisegmentWellContribution::apply(double *h_x, double *h_y)
         {
-            // copy vectors x and y from GPU to CPU
-            cudaMemcpyAsync(h_x, d_x, sizeof(double) * N, cudaMemcpyDeviceToHost, stream);
-            cudaMemcpyAsync(h_y, d_y, sizeof(double) * N, cudaMemcpyDeviceToHost, stream);
-            cudaStreamSynchronize(stream);
-
             // reset z1 and z2
             std::fill(z1.begin(), z1.end(), 0.0);
             std::fill(z2.begin(), z2.end(), 0.0);
@@ -128,10 +111,6 @@ namespace Opm
                     }
                 }
             }
-
-            // copy vector y from CPU to GPU
-            cudaMemcpyAsync(d_y, h_y, sizeof(double) * N, cudaMemcpyHostToDevice, stream);
-            cudaStreamSynchronize(stream);
         }
 
         void MultisegmentWellContribution::setCudaStream(cudaStream_t stream_)

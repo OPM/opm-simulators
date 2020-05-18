@@ -47,8 +47,7 @@ namespace Opm
         unsigned int M;                          // number of rows, M == dim_wells*Mb
         unsigned int Mb;                         // number of blockrows in C, D and B
 
-        cudaStream_t stream;
-        double *h_x = nullptr, *h_y = nullptr;  // CUDA pinned memory for GPU memcpy
+        cudaStream_t stream; // not actually used yet, will be when MultisegmentWellContribution are applied on GPU
 
         // C and B are stored in BCRS format, D is stored in CSC format (Dune::UMFPack)
         // Sparsity pattern for C is not stored, since it is the same as B
@@ -96,11 +95,11 @@ namespace Opm
         /// Destroy a MultisegmentWellContribution, and free memory
         ~MultisegmentWellContribution();
 
-        /// Apply the MultisegmentWellContribution on GPU
+        /// Apply the MultisegmentWellContribution on CPU
         /// performs y -= (C^T * (D^-1 * (B*x))) for MultisegmentWell
-        /// \param[in] d_x          vector x, must be on GPU
-        /// \param[inout] d_y       vector y, must be on GPU
-        void apply(double *d_x, double *d_y);
+        /// \param[in] h_x          vector x, must be on CPU
+        /// \param[inout] h_y       vector y, must be on CPU
+        void apply(double *h_x, double *h_y);
 
     };
 

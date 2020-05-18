@@ -63,6 +63,7 @@ namespace Opm
         unsigned int num_blocks_so_far = 0;      // keep track of where next data is written
         unsigned int num_std_wells_so_far = 0;   // keep track of where next data is written
         unsigned int *val_pointers = nullptr;    // val_pointers[wellID] == index of first block for this well in Ccols and Bcols
+        unsigned int N;                          // number of rows (not blockrows) in vectors x and y
         bool allocated = false;
         std::vector<MultisegmentWellContribution*> multisegments;
         cudaStream_t stream;
@@ -76,6 +77,9 @@ namespace Opm
         double *d_z1 = nullptr;
         double *d_z2 = nullptr;
         unsigned int *d_val_pointers = nullptr;
+
+        double *h_x = nullptr, *h_y = nullptr;  // CUDA pinned memory for GPU memcpy
+
 
     public:
 
@@ -98,9 +102,9 @@ namespace Opm
 
         /// Apply all Wells in this object
         /// performs y -= (C^T * (D^-1 * (B*x))) for all Wells
-        /// \param[in] x          vector x
-        /// \param[inout] y       vector y
-        void apply(double *x, double *y);
+        /// \param[in] d_x        vector x, must be on GPU
+        /// \param[inout] d_y     vector y, must be on GPU
+        void apply(double *d_x, double *d_y);
 
         /// Allocate memory for the StandardWells
         void alloc();
