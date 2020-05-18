@@ -50,16 +50,15 @@ namespace Opm
         cudaStream_t stream;
         double *h_x = nullptr, *h_y = nullptr;  // CUDA pinned memory for GPU memcpy
 
-        // C and B are stored in BCRS format, D is stored in CSC format (Dune::UMFPack).
+        // C and B are stored in BCRS format, D is stored in CSC format (Dune::UMFPack)
+        // Sparsity pattern for C is not stored, since it is the same as B
         unsigned int DnumBlocks;
         unsigned int BnumBlocks;
         std::vector<double> Cvals;
         std::vector<double> Dvals;
         std::vector<double> Bvals;
-        std::vector<unsigned int> Ccols;
         std::vector<int> Dcols;              // Columnpointers, contains M+1 entries
         std::vector<unsigned int> Bcols;
-        std::vector<unsigned int> Crows;
         std::vector<int> Drows;              // Rowindicies, contains DnumBlocks*dim*dim_wells entries
         std::vector<unsigned int> Brows;
         std::vector<double> z1;          // z1 = B * x

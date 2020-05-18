@@ -41,14 +41,20 @@ namespace Opm
             unsigned int BnumBlocks_, double *Bvalues, unsigned int *BcolIndices, unsigned int *BrowPointers,
             unsigned int DnumBlocks_, double *Dvalues, int *DcolPointers, int *DrowIndices,
             double *Cvalues)
-            : dim(dim_), dim_wells(dim_wells_), N(Nb_*dim), Nb(Nb_), M(Mb_*dim_wells), Mb(Mb_), DnumBlocks(DnumBlocks_), BnumBlocks(BnumBlocks_)
+        :
+            dim(dim_),
+            dim_wells(dim_wells_),
+            N(Nb_*dim),
+            Nb(Nb_),
+            M(Mb_*dim_wells),
+            Mb(Mb_),
+            DnumBlocks(DnumBlocks_),
+            BnumBlocks(BnumBlocks_)
         {
             Cvals.insert(Cvals.end(), Cvalues, Cvalues + BnumBlocks*dim*dim_wells);
             Dvals.insert(Dvals.end(), Dvalues, Dvalues + DnumBlocks*dim_wells*dim_wells);
             Bvals.insert(Bvals.end(), Bvalues, Bvalues + BnumBlocks*dim*dim_wells);
-            Ccols.insert(Ccols.end(), BcolIndices, BcolIndices + BnumBlocks);
             Bcols.insert(Bcols.end(), BcolIndices, BcolIndices + BnumBlocks);
-            Crows.insert(Crows.end(), BrowPointers, BrowPointers + M + 1);
             Brows.insert(Brows.end(), BrowPointers, BrowPointers + M + 1);
 
             Dcols.insert(Dcols.end(), DcolPointers, DcolPointers + M + 1);
