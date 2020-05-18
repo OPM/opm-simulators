@@ -486,7 +486,7 @@ protected:
         }
 
         bool solve(Vector& x) {
-            const int verbosity = prm_.get<int>("verbosity");
+            const int verbosity = useFlexible_ ? prm_.get<int>("verbosity", 0) : parameters_.linear_solver_verbosity_;
             const bool write_matrix = verbosity > 10;
             // Solve system.
 
