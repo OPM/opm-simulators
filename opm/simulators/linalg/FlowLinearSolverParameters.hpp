@@ -27,6 +27,7 @@
 #include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/simulators/linalg/ParallelOverlappingILU0.hpp>
 
+#include <opm/simulators/linalg/linalgproperties.hh>
 #include <opm/models/utils/parametersystem.hh>
 
 #include <array>
