@@ -115,12 +115,12 @@
  * \endcode
  */
 #define EWOMS_GET_PARAM(TypeTag, ParamType, ParamName)                         \
-    (::Opm::Parameters::get<TypeTag, ParamType>(#ParamName, \
+    (::Opm::Parameters::get<TypeTag, ParamType>(#ParamName, #ParamName, \
                                                 GET_PROP_VALUE(TypeTag, ParamName)))
 
 //!\cond SKIP_THIS
 #define EWOMS_GET_PARAM_(TypeTag, ParamType, ParamName)                 \
-    (::Opm::Parameters::get<TypeTag, ParamType>(#ParamName, \
+    (::Opm::Parameters::get<TypeTag, ParamType>(#ParamName, #ParamName, \
                                                 GET_PROP_VALUE(TypeTag, ParamName), \
                                                 /*errorIfNotRegistered=*/false))
 
@@ -180,7 +180,8 @@ const ParamType get(const char *propTagName,
                     const char *paramName,
                     bool errorIfNotRegistered = true);
 template <class TypeTag, class ParamType>
-const ParamType get(const char *paramName,
+const ParamType get(const char *propTagName,
+                    const char *paramName,
                     const ParamType& defaultValue,
                     bool errorIfNotRegistered = true);
 
@@ -206,7 +207,8 @@ public:
         // retrieve the parameter once to make sure that its value does
         // not contain a syntax error.
         ParamType __attribute__((unused)) dummy =
-            get<TypeTag, ParamType>(paramName_.data(),
+            get<TypeTag, ParamType>(/*propTagName=*/paramName_.data(),
+                                    paramName_.data(),
                                     defaultValue_,
                                     /*errorIfNotRegistered=*/true);
     }
@@ -952,15 +954,16 @@ public:
                     const char *paramName,
                     bool errorIfNotRegistered = true)
     {
-        return retrieve_<ParamType>(paramName, getPropValue<TypeTag, PropTag>(), errorIfNotRegistered);
+        return retrieve_<ParamType>(propTagName, paramName, getPropValue<TypeTag, PropTag>(), errorIfNotRegistered);
     }
     
     template <class ParamType>
-    static ParamType get(const char *paramName,
+    static ParamType get(const char *propTagName,
+                         const char *paramName,
                          const ParamType& defaultValue,
                          bool errorIfNotRegistered = true)
     {
-        return retrieve_<ParamType>(paramName, defaultValue, errorIfNotRegistered);
+        return retrieve_<ParamType>(propTagName, paramName, defaultValue, errorIfNotRegistered);
     }
     
     static void clear()
@@ -1047,9 +1050,10 @@ private:
     }
 
     template <class ParamType>
-    static ParamType retrieve_(const char *paramName,
-                          const ParamType& defaultValue,
-                          bool errorIfNotRegistered = true)
+    static ParamType retrieve_(const char OPM_OPTIM_UNUSED *propTagName,
+                               const char *paramName,
+                               const ParamType& defaultValue,
+                               bool errorIfNotRegistered = true)
     {
 #ifndef NDEBUG
         // make sure that the parameter is used consistently. since
@@ -1090,9 +1094,9 @@ const ParamType get(const char *propTagName, const char *paramName, bool errorIf
 }
 
 template <class TypeTag, class ParamType>
-const ParamType get(const char *paramName, const ParamType& defaultValue, bool errorIfNotRegistered)
+const ParamType get(const char *propTagName, const char *paramName, const ParamType& defaultValue, bool errorIfNotRegistered)
 {
-    return Param<TypeTag>::template get<ParamType>(paramName, defaultValue, errorIfNotRegistered);
+    return Param<TypeTag>::template get<ParamType>(propTagName, paramName, defaultValue, errorIfNotRegistered);
 }
 
 template <class TypeTag, class Container>
