@@ -209,3 +209,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/BlackoilWellModel.hpp
   opm/simulators/wells/BlackoilWellModel_impl.hpp
   )
+
+list (APPEND EXAMPLE_SOURCE_FILES
+  examples/printvfp.cpp
+  )
