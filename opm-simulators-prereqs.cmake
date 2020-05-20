@@ -30,7 +30,7 @@ set (opm-simulators_DEPS
   # Look for MPI support
   "MPI"
   # Tim Davis' SuiteSparse archive
-  "SuiteSparse COMPONENTS umfpack"
+  "SuiteSparse REQUIRED COMPONENTS umfpack"
   # SuperLU direct solver
   "SuperLU"
   # OPM dependency
