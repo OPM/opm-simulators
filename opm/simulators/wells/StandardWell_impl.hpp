@@ -2088,7 +2088,7 @@ namespace Opm
     getWellConvergence(const WellState& well_state,
                        const std::vector<double>& B_avg,
                        Opm::DeferredLogger& deferred_logger,
-                       const bool relax_tolerance) const
+                       const bool /*relax_tolerance*/) const
     {
         // the following implementation assume that the polymer is always after the w-o-g phases
         // For the polymer, energy and foam cases, there is one more mass balance equations of reservoir than wells

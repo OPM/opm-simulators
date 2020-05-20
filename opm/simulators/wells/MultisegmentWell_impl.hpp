@@ -578,27 +578,25 @@ namespace Opm
                 const double flux_residual = maximum_residual[eq_idx];
                 // TODO: the report can not handle the segment number yet.
 
-                double relax_factor = 1.0;
-                if (relax_tolerance)
-                    relax_factor = 1.e4;
                 if (std::isnan(flux_residual)) {
                     report.setWellFailed({CR::WellFailure::Type::MassBalance, CR::Severity::NotANumber, eq_idx, name()});
                 } else if (flux_residual > param_.max_residual_allowed_) {
                     report.setWellFailed({CR::WellFailure::Type::MassBalance, CR::Severity::TooLarge, eq_idx, name()});
-                } else if (flux_residual > param_.tolerance_wells_ * relax_factor) {
+                } else if (!relax_tolerance && flux_residual > param_.tolerance_wells_) {
+                    report.setWellFailed({CR::WellFailure::Type::MassBalance, CR::Severity::Normal, eq_idx, name()});
+                } else if (flux_residual > param_.relaxed_inner_tolerance_flow_ms_well_) {
                     report.setWellFailed({CR::WellFailure::Type::MassBalance, CR::Severity::Normal, eq_idx, name()});
                 }
             } else { // pressure equation
                 const double pressure_residual = maximum_residual[eq_idx];
                 const int dummy_component = -1;
-                double relax_factor = 1.0;
-                if (relax_tolerance)
-                    relax_factor = 50;
                 if (std::isnan(pressure_residual)) {
                     report.setWellFailed({CR::WellFailure::Type::Pressure, CR::Severity::NotANumber, dummy_component, name()});
                 } else if (std::isinf(pressure_residual)) {
                     report.setWellFailed({CR::WellFailure::Type::Pressure, CR::Severity::TooLarge, dummy_component, name()});
-                } else if (pressure_residual > param_.tolerance_pressure_ms_wells_ * relax_factor) {
+                } else if (!relax_tolerance && pressure_residual > param_.tolerance_pressure_ms_wells_) {
+                    report.setWellFailed({CR::WellFailure::Type::Pressure, CR::Severity::Normal, dummy_component, name()});
+                } else if (pressure_residual > param_.relaxed_inner_tolerance_pressure_ms_well_) {
                     report.setWellFailed({CR::WellFailure::Type::Pressure, CR::Severity::Normal, dummy_component, name()});
                 }
             }
@@ -2386,7 +2384,7 @@ namespace Opm
 
             const BVectorWell dx_well = mswellhelpers::invDXDirect(duneD_, resWell_);
 
-            if (it > 40)
+            if (it > param_.strict_inner_iter_ms_wells_)
                 relax_convergence = true;
 
             const auto report = getWellConvergence(well_state, B_avg, deferred_logger, relax_convergence);
@@ -2412,11 +2410,11 @@ namespace Opm
                     // Still stagnating, terminate iterations if 5 iterations pass.
                     ++stagnate_count;
                     if (stagnate_count == 6) {
-                        sstr << " well " << name() << " observes sever stagnation and/or oscillation. We relax the tolerance and check for convergence. \n";
+                        sstr << " well " << name() << " observes severe stagnation and/or oscillation. We relax the tolerance and check for convergence. \n";
                         const auto reportStag = getWellConvergence(well_state, B_avg, deferred_logger, true);
                         if (reportStag.converged()) {
                             converged = true;
-                            sstr << " well " << name() << " manage to get converged with relaxed tolerances in " << it << " inner iterations";
+                            sstr << " well " << name() << " manages to get converged with relaxed tolerances in " << it << " inner iterations";
                             deferred_logger.debug(sstr.str());
                             return;
                         }
@@ -2509,9 +2507,14 @@ namespace Opm
             // TODO: without considering the efficiencty factor for now
             {
                 const EvalWell segment_surface_volume = getSegmentSurfaceVolume(ebosSimulator, seg);
+
+                // Add a regularization_factor to increase the accumulation term
+                // This will make the system less stiff and help convergence for 
+                // difficult cases
+                const Scalar regularization_factor =  param_.regularization_factor_ms_wells_;
                 // for each component
                 for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
-                    const EvalWell accumulation_term = (segment_surface_volume * surfaceVolumeFraction(seg, comp_idx)
+                    const EvalWell accumulation_term = regularization_factor * (segment_surface_volume * surfaceVolumeFraction(seg, comp_idx)
                                                      - segment_fluid_initial_[seg][comp_idx]) / dt;
 
                     resWell_[seg][comp_idx] += accumulation_term.value();
@@ -2833,7 +2836,7 @@ namespace Opm
         }
 
         // We increase the segment volume with a factor 10 to stabilize the system.
-        const double volume = segmentSet()[seg_idx].volume() * 10;
+        const double volume = segmentSet()[seg_idx].volume();
 
         return volume / vol_ratio;
     }
