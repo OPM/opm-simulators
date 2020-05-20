@@ -36,14 +36,14 @@ namespace Opm
             unsigned int DnumBlocks_, double *Dvalues, int *DcolPointers, int *DrowIndices,
             double *Cvalues)
         :
-            dim(dim_),
-            dim_wells(dim_wells_),
-            N(Nb_*dim),
-            Nb(Nb_),
-            M(Mb_*dim_wells),
-            Mb(Mb_),
-            DnumBlocks(DnumBlocks_),
-            BnumBlocks(BnumBlocks_)
+            dim(dim_),                // size of blockvectors in vectors x and y, equal to MultisegmentWell::numEq
+            dim_wells(dim_wells_),    // size of blocks in C, B and D, equal to MultisegmentWell::numWellEq
+            N(Nb_*dim),               // number of rows in vectors x and y, N == dim*Nb
+            Nb(Nb_),                  // number of blockrows in x and y
+            M(Mb_*dim_wells),         // number of rows, M == dim_wells*Mb
+            Mb(Mb_),                  // number of blockrows in C, D and B
+            DnumBlocks(DnumBlocks_),  // number of blocks in D
+            BnumBlocks(BnumBlocks_)   // number of blocks in C and B
         {
             Cvals.insert(Cvals.end(), Cvalues, Cvalues + BnumBlocks*dim*dim_wells);
             Dvals.insert(Dvals.end(), Dvalues, Dvalues + DnumBlocks*dim_wells*dim_wells);

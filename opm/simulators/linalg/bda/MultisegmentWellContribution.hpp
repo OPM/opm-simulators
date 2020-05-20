@@ -40,8 +40,8 @@ namespace Opm
     {
 
     private:
-        unsigned int dim;                        // number of columns of blocks in B and C, equal to MultisegmentWell::numEq
-        unsigned int dim_wells;                  // number of rows of blocks in B and C, equal to MultisegmentWell::numWellEq
+        unsigned int dim;                        // size of blockvectors in vectors x and y, equal to MultisegmentWell::numEq
+        unsigned int dim_wells;                  // size of blocks in C, B and D, equal to MultisegmentWell::numWellEq
         unsigned int N;                          // number of rows in vectors x and y, N == dim*Nb
         unsigned int Nb;                         // number of blockrows in x and y
         unsigned int M;                          // number of rows, M == dim_wells*Mb
@@ -51,8 +51,8 @@ namespace Opm
 
         // C and B are stored in BCRS format, D is stored in CSC format (Dune::UMFPack)
         // Sparsity pattern for C is not stored, since it is the same as B
-        unsigned int DnumBlocks;
-        unsigned int BnumBlocks;
+        unsigned int DnumBlocks;             // number of blocks in D
+        unsigned int BnumBlocks;             // number of blocks in C and B
         std::vector<double> Cvals;
         std::vector<double> Dvals;
         std::vector<double> Bvals;
@@ -73,7 +73,7 @@ namespace Opm
 
         /// Create a new MultisegmentWellContribution
         /// Matrices C and B are passed in Blocked CSR, matrix D in CSC
-        /// \param[in] dim              size of blocks in vectors x and y, equal to MultisegmentWell::numEq
+        /// \param[in] dim              size of blocks in blockvectors x and y, equal to MultisegmentWell::numEq
         /// \param[in] dim_wells        size of blocks of C, B and D, equal to MultisegmentWell::numWellEq
         /// \param[in] Nb               number of blocks in vectors x and y
         /// \param[in] Mb               number of blockrows in C, B and D

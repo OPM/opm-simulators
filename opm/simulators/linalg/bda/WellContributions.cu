@@ -174,6 +174,10 @@ namespace Opm
     void WellContributions::apply(double *d_x, double *d_y)
     {
         // apply MultisegmentWells
+
+        // make sure the stream is empty if timing measurements are done
+        cudaStreamSynchronize(stream);
+
         if (num_ms_wells > 0) {
             // allocate pinned memory on host if not yet done
             if (h_x == nullptr) {
@@ -181,8 +185,6 @@ namespace Opm
                 cudaMallocHost(&h_y, sizeof(double) * N);
             }
 
-            // make sure the stream is empty to start timing
-            cudaStreamSynchronize(stream);
 
             // copy vectors x and y from GPU to CPU
             cudaMemcpyAsync(h_x, d_x, sizeof(double) * N, cudaMemcpyDeviceToHost, stream);
