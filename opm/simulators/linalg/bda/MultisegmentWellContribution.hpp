@@ -73,6 +73,7 @@ namespace Opm
 
         /// Create a new MultisegmentWellContribution
         /// Matrices C and B are passed in Blocked CSR, matrix D in CSC
+        /// The variables representing C, B and D will go out of scope when MultisegmentWell::addWellContribution() ends
         /// \param[in] dim              size of blocks in blockvectors x and y, equal to MultisegmentWell::numEq
         /// \param[in] dim_wells        size of blocks of C, B and D, equal to MultisegmentWell::numWellEq
         /// \param[in] Nb               number of blocks in vectors x and y
@@ -88,9 +89,9 @@ namespace Opm
         /// \param[in] Cvalues          nonzero values of matrix C
         MultisegmentWellContribution(unsigned int dim, unsigned int dim_wells,
             unsigned int Nb, unsigned int Mb,
-            unsigned int BnumBlocks, double *Bvalues, unsigned int *BcolIndices, unsigned int *BrowPointers,
+            unsigned int BnumBlocks, std::vector<double> &Bvalues, std::vector<unsigned int> &BcolIndices, std::vector<unsigned int> &BrowPointers,
             unsigned int DnumBlocks, double *Dvalues, int *DcolPointers, int *DrowIndices,
-            double *Cvalues);
+            std::vector<double> &Cvalues);
 
         /// Destroy a MultisegmentWellContribution, and free memory
         ~MultisegmentWellContribution();

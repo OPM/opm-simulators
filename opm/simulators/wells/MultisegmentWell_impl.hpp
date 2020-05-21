@@ -696,7 +696,7 @@ namespace Opm
             Brows.emplace_back(sumBlocks);
         }
 
-        wellContribs.addMultisegmentWellContribution(numEq, numWellEq, Nb, Mb, BnumBlocks, Bvals.data(), Bcols.data(), Brows.data(), DnumBlocks, Dvals, Dcols, Drows, Cvals.data());
+        wellContribs.addMultisegmentWellContribution(numEq, numWellEq, Nb, Mb, BnumBlocks, Bvals, Bcols, Brows, DnumBlocks, Dvals, Dcols, Drows, Cvals);
     }
 #endif
 

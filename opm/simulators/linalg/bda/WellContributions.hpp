@@ -142,9 +142,9 @@ namespace Opm
         /// \param[in] Cvalues          nonzero values of matrix C
         void addMultisegmentWellContribution(unsigned int dim, unsigned int dim_wells,
             unsigned int Nb, unsigned int Mb,
-            unsigned int BnumBlocks, double *Bvalues, unsigned int *BcolIndices, unsigned int *BrowPointers,
+            unsigned int BnumBlocks, std::vector<double> &Bvalues, std::vector<unsigned int> &BcolIndices, std::vector<unsigned int> &BrowPointers,
             unsigned int DnumBlocks, double *Dvalues, int *DcolPointers, int *DrowIndices,
-            double *Cvalues);
+            std::vector<double> &Cvalues);
 
         /// Return the number of wells added to this object
         /// \return the number of wells added to this object

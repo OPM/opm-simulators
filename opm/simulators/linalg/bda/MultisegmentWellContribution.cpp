@@ -32,9 +32,9 @@ namespace Opm
 
         MultisegmentWellContribution::MultisegmentWellContribution(unsigned int dim_, unsigned int dim_wells_,
             unsigned int Nb_, unsigned int Mb_,
-            unsigned int BnumBlocks_, double *Bvalues, unsigned int *BcolIndices, unsigned int *BrowPointers,
+            unsigned int BnumBlocks_, std::vector<double> &Bvalues, std::vector<unsigned int> &BcolIndices, std::vector<unsigned int> &BrowPointers,
             unsigned int DnumBlocks_, double *Dvalues, int *DcolPointers, int *DrowIndices,
-            double *Cvalues)
+            std::vector<double> &Cvalues)
         :
             dim(dim_),                // size of blockvectors in vectors x and y, equal to MultisegmentWell::numEq
             dim_wells(dim_wells_),    // size of blocks in C, B and D, equal to MultisegmentWell::numWellEq
@@ -43,16 +43,16 @@ namespace Opm
             M(Mb_*dim_wells),         // number of rows, M == dim_wells*Mb
             Mb(Mb_),                  // number of blockrows in C, D and B
             DnumBlocks(DnumBlocks_),  // number of blocks in D
-            BnumBlocks(BnumBlocks_)   // number of blocks in C and B
+            BnumBlocks(BnumBlocks_),  // number of blocks in C and B
+            // copy data for matrix D into vectors to prevent it going out of scope
+            Dvals(Dvalues, Dvalues + DnumBlocks*dim_wells*dim_wells),
+            Dcols(DcolPointers, DcolPointers + M + 1),
+            Drows(DrowIndices, DrowIndices + DnumBlocks*dim_wells*dim_wells)
         {
-            Cvals.insert(Cvals.end(), Cvalues, Cvalues + BnumBlocks*dim*dim_wells);
-            Dvals.insert(Dvals.end(), Dvalues, Dvalues + DnumBlocks*dim_wells*dim_wells);
-            Bvals.insert(Bvals.end(), Bvalues, Bvalues + BnumBlocks*dim*dim_wells);
-            Bcols.insert(Bcols.end(), BcolIndices, BcolIndices + BnumBlocks);
-            Brows.insert(Brows.end(), BrowPointers, BrowPointers + M + 1);
-
-            Dcols.insert(Dcols.end(), DcolPointers, DcolPointers + M + 1);
-            Drows.insert(Drows.end(), DrowIndices, DrowIndices + DnumBlocks*dim_wells*dim_wells);
+            Cvals = std::move(Cvalues);
+            Bvals = std::move(Bvalues);
+            Bcols = std::move(BcolIndices);
+            Brows = std::move(BrowPointers);
 
             z1.resize(Mb * dim_wells);
             z2.resize(Mb * dim_wells);

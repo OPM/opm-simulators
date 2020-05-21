@@ -267,9 +267,9 @@ namespace Opm
 
     void WellContributions::addMultisegmentWellContribution(unsigned int dim, unsigned int dim_wells,
         unsigned int Nb, unsigned int Mb,
-        unsigned int BnumBlocks, double *Bvalues, unsigned int *BcolIndices, unsigned int *BrowPointers,
+        unsigned int BnumBlocks, std::vector<double> &Bvalues, std::vector<unsigned int> &BcolIndices, std::vector<unsigned int> &BrowPointers,
         unsigned int DnumBlocks, double *Dvalues, int *DcolPointers, int *DrowIndices,
-        double *Cvalues)
+        std::vector<double> &Cvalues)
     {
         this->N = Nb * dim;
         MultisegmentWellContribution *well = new MultisegmentWellContribution(dim, dim_wells, Nb, Mb, BnumBlocks, Bvalues, BcolIndices, BrowPointers, DnumBlocks, Dvalues, DcolPointers, DrowIndices, Cvalues);
