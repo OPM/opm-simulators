@@ -44,6 +44,7 @@ list (APPEND MAIN_SOURCE_FILES
 if(CUDA_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/cusparseSolverBackend.cu)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/WellContributions.cu)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/MultisegmentWellContribution.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BdaBridge.cpp)
 endif()
 if(MPI_FOUND)
@@ -144,6 +145,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/BdaResult.hpp
   opm/simulators/linalg/bda/cuda_header.hpp
   opm/simulators/linalg/bda/cusparseSolverBackend.hpp
+  opm/simulators/linalg/bda/MultisegmentWellContribution.hpp
   opm/simulators/linalg/bda/WellContributions.hpp
   opm/simulators/linalg/BlackoilAmg.hpp
   opm/simulators/linalg/amgcpr.hh

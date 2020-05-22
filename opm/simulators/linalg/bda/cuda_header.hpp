@@ -20,6 +20,7 @@
 #ifndef CUDA_HEADER_HEADER_INCLUDED
 #define CUDA_HEADER_HEADER_INCLUDED
 
+#include <cuda_runtime.h>
 #include <iostream>
 
 /// Runtime error checking of CUDA functions
