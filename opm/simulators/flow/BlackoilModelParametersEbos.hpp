@@ -81,7 +81,7 @@ SET_SCALAR_PROP(FlowModelParameters, MaxPressureChangeMsWells, 10*1e5);
 SET_BOOL_PROP(FlowModelParameters, UseInnerIterationsMsWells, true);
 SET_INT_PROP(FlowModelParameters, MaxInnerIterMsWells, 100);
 SET_INT_PROP(FlowModelParameters, StrictInnerIterMsWells, 40);
-SET_SCALAR_PROP(FlowModelParameters, RegularizationFactorMsw, 10);
+SET_SCALAR_PROP(FlowModelParameters, RegularizationFactorMsw, 1);
 SET_BOOL_PROP(FlowModelParameters, EnableWellOperabilityCheck, true);
 
 SET_SCALAR_PROP(FlowModelParameters, RelaxedFlowTolInnerIterMsw, 1);
