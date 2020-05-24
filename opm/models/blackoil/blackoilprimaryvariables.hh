@@ -632,7 +632,7 @@ public:
             Scalar St = Sw + Sg + Ssol;
             assert(St>0.5);
             Sw=Sw/St;
-            Ssol=Ssol;
+            Ssol=Ssol/St;
             if (waterEnabled)
                 (*this)[Indices::waterSaturationIdx]= Sw;
             if (enableSolvent)
