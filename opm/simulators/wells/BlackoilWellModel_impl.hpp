@@ -2081,7 +2081,6 @@ namespace Opm {
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
 
-        const auto& inj_controls = group.injectionControls(Phase::GAS, summaryState);
         const auto& gconsale = schedule().gConSale(reportStepIdx).get(group.name(), summaryState);
         const Group::ProductionCMode& oldProductionControl = well_state.currentProductionGroupControl(group.name());
 
