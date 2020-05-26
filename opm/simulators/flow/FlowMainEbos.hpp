@@ -151,7 +151,7 @@ namespace Opm
             EWOMS_HIDE_PARAM(TypeTag, RestartTime);
             EWOMS_HIDE_PARAM(TypeTag, RestartWritingInterval);
             // hide all vtk related it is not currently possible to do this dependet on if the vtk writing is used
-            //if(not(EWOMS_GET_PARAM(TypeTag,bool,EnableAsyncVtkOutput))){
+            //if(not(EWOMS_GET_PARAM(TypeTag,bool,EnableVtkOutput))){
                 EWOMS_HIDE_PARAM(TypeTag, VtkWriteOilFormationVolumeFactor);
                 EWOMS_HIDE_PARAM(TypeTag, VtkWriteOilSaturationPressure);
                 EWOMS_HIDE_PARAM(TypeTag, VtkWriteOilVaporizationFactor);
