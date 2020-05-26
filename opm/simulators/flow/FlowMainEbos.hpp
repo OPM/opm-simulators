@@ -150,7 +150,44 @@ namespace Opm
             // the default eWoms checkpoint/restart mechanism does not work with flow
             EWOMS_HIDE_PARAM(TypeTag, RestartTime);
             EWOMS_HIDE_PARAM(TypeTag, RestartWritingInterval);
-
+            // hide all vtk related
+            if(not(EWOMS_GET_PARAM(TypeTag,bool,EnableAsyncVtkOutput))){
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteAverageMolarMasses);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteDensities);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteDofIndex);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteEclTracerConcentration);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteExtrusionFactor);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteFilterVelocities);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteFugacities);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteFugacityCoeffs);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteGasDissolutionFactor);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteGasFormationVolumeFactor);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteGasSaturationPressure);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteIntrinsicPermeabilities);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteMassFractions);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteMobilities);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteMolarities);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteMoleFractions);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteOilFormationVolumeFactor);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteOilSaturationPressure);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteOilVaporizationFactor);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWritePorosity);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWritePotentialGradients);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWritePressures);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWritePrimaryVars);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWritePrimaryVarsMeaning);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteProcessRank);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteRelativePermeabilities);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteSaturatedGasOilVaporizationFactor);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteSaturatedOilGasDissolutionFactor);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteSaturationRatios);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteSaturations);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteTemperature);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteTotalMassFractions);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteTotalMoleFractions);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteViscosities);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteWaterFormationVolumeFactor);
+            }
             EWOMS_END_PARAM_REGISTRATION(TypeTag);
 
             int mpiRank = 0;
