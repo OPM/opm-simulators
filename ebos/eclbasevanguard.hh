@@ -86,7 +86,7 @@ SET_STRING_PROP(EclBaseVanguard, EclDeckFileName, "");
 SET_INT_PROP(EclBaseVanguard, EclOutputInterval, -1); // use the deck-provided value
 SET_BOOL_PROP(EclBaseVanguard, EnableOpmRstFile, false);
 SET_BOOL_PROP(EclBaseVanguard, EclStrictParsing, false);
-SET_BOOL_PROP(EclBaseVanguard, SchedRestart, true);
+SET_BOOL_PROP(EclBaseVanguard, SchedRestart, false);
 SET_INT_PROP(EclBaseVanguard, EdgeWeightsMethod, 1);
 SET_BOOL_PROP(EclBaseVanguard, OwnerCellsFirst, true);
 
