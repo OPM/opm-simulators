@@ -38,12 +38,6 @@
 
 #include <dune/common/version.hh>
 
-BEGIN_PROPERTIES
-
-NEW_PROP_TAG(ThreadsPerProcess);
-
-END_PROPERTIES
-
 namespace Opm {
 
 /*!

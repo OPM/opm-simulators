@@ -58,8 +58,6 @@ NEW_PROP_TAG(VtkWritePorosity);
 NEW_PROP_TAG(VtkWriteIntrinsicPermeabilities);
 NEW_PROP_TAG(VtkWritePotentialGradients);
 NEW_PROP_TAG(VtkWriteFilterVelocities);
-NEW_PROP_TAG(VtkOutputFormat);
-NEW_PROP_TAG(EnableVtkOutput);
 
 // set default values for what quantities to output
 SET_BOOL_PROP(VtkMultiPhase, VtkWriteExtrusionFactor, false);

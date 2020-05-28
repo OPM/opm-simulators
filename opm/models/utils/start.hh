@@ -27,6 +27,7 @@
 #ifndef EWOMS_START_HH
 #define EWOMS_START_HH
 
+#include <opm/models/utils/propertysystemmacros.hh>
 #include <opm/models/utils/propertysystem.hh>
 // the following header is not required here, but it must be included before
 // dune/common/densematrix.hh because of some c++ ideosyncrasies
@@ -67,19 +68,6 @@
 #if HAVE_MPI
 #include <mpi.h>
 #endif
-
-BEGIN_PROPERTIES
-
-// forward declaration of property tags
-NEW_PROP_TAG(Scalar);
-NEW_PROP_TAG(Simulator);
-NEW_PROP_TAG(ThreadManager);
-NEW_PROP_TAG(PrintProperties);
-NEW_PROP_TAG(PrintParameters);
-NEW_PROP_TAG(ParameterFile);
-NEW_PROP_TAG(Problem);
-
-END_PROPERTIES
 
 //! \cond SKIP_THIS
 

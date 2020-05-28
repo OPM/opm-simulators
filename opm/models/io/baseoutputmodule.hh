@@ -31,6 +31,9 @@
 
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
+#include <opm/models/utils/basicproperties.hh>
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 
 #include <opm/material/common/Exceptions.hpp>
 
@@ -46,19 +49,8 @@
 
 BEGIN_PROPERTIES
 
-// forward definition of property tags
-NEW_PROP_TAG(NumPhases);
-NEW_PROP_TAG(NumComponents);
-NEW_PROP_TAG(NumEq);
-
-NEW_PROP_TAG(Model);
-NEW_PROP_TAG(Simulator);
-NEW_PROP_TAG(Scalar);
-NEW_PROP_TAG(Evaluation);
-NEW_PROP_TAG(GridView);
-NEW_PROP_TAG(ElementContext);
-NEW_PROP_TAG(FluidSystem);
-NEW_PROP_TAG(DiscBaseOutputModule);
+template <class TypeTag, class MyTypeTag>
+struct FluidSystem;
 
 END_PROPERTIES
 

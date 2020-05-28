@@ -37,12 +37,6 @@
 
 #include <dune/common/fvector.hh>
 
-BEGIN_PROPERTIES
-
-NEW_PROP_TAG(Indices);
-
-END_PROPERTIES
-
 namespace Opm {
 
 /*!

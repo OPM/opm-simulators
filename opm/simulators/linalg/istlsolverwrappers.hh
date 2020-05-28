@@ -45,21 +45,9 @@
 
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
+#include <opm/simulators/linalg/linalgproperties.hh>
 
 #include <dune/istl/solvers.hh>
-
-BEGIN_PROPERTIES
-
-NEW_PROP_TAG(Scalar);
-NEW_PROP_TAG(SparseMatrixAdapter);
-NEW_PROP_TAG(OverlappingMatrix);
-NEW_PROP_TAG(OverlappingVector);
-NEW_PROP_TAG(GMResRestart);
-NEW_PROP_TAG(LinearSolverTolerance);
-NEW_PROP_TAG(LinearSolverMaxIterations);
-NEW_PROP_TAG(LinearSolverVerbosity);
-
-END_PROPERTIES
 
 namespace Opm {
 

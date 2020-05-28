@@ -27,6 +27,7 @@
 #ifndef EWOMS_PARALLEL_AMG_BACKEND_HH
 #define EWOMS_PARALLEL_AMG_BACKEND_HH
 
+#include "linalgproperties.hh"
 #include "parallelbasebackend.hh"
 #include "bicgstabsolver.hh"
 #include "combinedcriterion.hh"
@@ -50,9 +51,6 @@ class ParallelAmgBackend;
 BEGIN_PROPERTIES
 
 NEW_TYPE_TAG(ParallelAmgLinearSolver, INHERITS_FROM(ParallelBaseLinearSolver));
-
-NEW_PROP_TAG(AmgCoarsenTarget);
-NEW_PROP_TAG(LinearSolverMaxError);
 
 //! The target number of DOFs per processor for the parallel algebraic
 //! multi-grid solver

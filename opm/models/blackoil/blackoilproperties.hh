@@ -36,14 +36,6 @@ BEGIN_PROPERTIES
 //! Specifies if the simulation should write output files that are
 //! compatible with those produced by the commercial Eclipse simulator
 NEW_PROP_TAG(EnableEclipseOutput);
-//! The material law for thermal conduction
-NEW_PROP_TAG(ThermalConductionLaw);
-//! The parameters of the material law for thermal conduction
-NEW_PROP_TAG(ThermalConductionLawParams);
-//! The material law for energy storage of the rock
-NEW_PROP_TAG(SolidEnergyLaw);
-//! The parameters for material law for energy storage of the rock
-NEW_PROP_TAG(SolidEnergyLawParams);
 //! Enable the ECL-blackoil extension for solvents. ("Second gas")
 NEW_PROP_TAG(EnableSolvent);
 //! Enable the ECL-blackoil extension for polymer.
@@ -61,11 +53,6 @@ NEW_PROP_TAG(EnableBrine);
 //! Allow the spatial and temporal domains to exhibit non-constant temperature
 //! in the black-oil model
 NEW_PROP_TAG(EnableTemperature);
-
-//! Enable the ECL-blackoil extension for energy conservation
-//!
-//! Setting this property to true implies EnableTemperature.
-NEW_PROP_TAG(EnableEnergy);
 
 //! The relative weight of the residual of the energy equation compared to the mass
 //! residuals

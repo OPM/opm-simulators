@@ -31,6 +31,7 @@
 
 #include <opm/models/linear/istlsparsematrixbackend.hh>
 #include <opm/models/utils/parametersystem.hh>
+#include <opm/simulators/linalg/linalgproperties.hh>
 
 #include <opm/material/common/Unused.hpp>
 
@@ -40,14 +41,6 @@
 
 BEGIN_PROPERTIES
 
-// forward declaration of the required property tags
-NEW_PROP_TAG(Scalar);
-NEW_PROP_TAG(NumEq);
-NEW_PROP_TAG(Simulator);
-NEW_PROP_TAG(SparseMatrixAdapter);
-NEW_PROP_TAG(GlobalEqVector);
-NEW_PROP_TAG(LinearSolverVerbosity);
-NEW_PROP_TAG(LinearSolverBackend);
 NEW_TYPE_TAG(SuperLULinearSolver);
 
 END_PROPERTIES

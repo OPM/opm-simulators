@@ -31,10 +31,14 @@
 #include "blackoilproperties.hh"
 
 #include <opm/models/utils/signum.hh>
+#include <opm/models/nonlinear/newtonmethod.hh>
 
 #include <opm/material/common/Unused.hpp>
 
 BEGIN_PROPERTIES
+
+template <class TypeTag, class MyTypeTag>
+struct DiscNewtonMethod;
 
 NEW_PROP_TAG(DpMaxRel);
 NEW_PROP_TAG(DsMax);

@@ -153,11 +153,8 @@ private:
 
 public:
     typedef Scalar type;
-    static const Scalar value;
+    static constexpr Scalar value = 1.0/(30.0*4184.0*alpha);
 };
-
-PROP_STATIC_CONST_MEMBER_DEFINITION_PREFIX_(BlackOilModel, BlackOilEnergyScalingFactor)
-    ::value = 1.0/(30*4184.0*alpha);
 
 // by default, ebos formulates the conservation equations in terms of mass not surface
 // volumes

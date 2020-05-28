@@ -34,9 +34,6 @@
 // \{
 BEGIN_PROPERTIES
 
-//! The fluid system used for the problem
-NEW_PROP_TAG(FluidSystem);
-
 //! The fluid used as the wetting phase (by default, we set the fluid
 //! system to the immiscible one, which requires this property.)
 NEW_PROP_TAG(WettingFluid);

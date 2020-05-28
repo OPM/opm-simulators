@@ -30,9 +30,7 @@
 #ifndef EWOMS_MULTI_PHASE_BASE_PROPERTIES_HH
 #define EWOMS_MULTI_PHASE_BASE_PROPERTIES_HH
 
-#include <opm/models/discretization/common/fvbaseproperties.hh>
-#include <opm/models/io/vtkmultiphasemodule.hh>
-#include <opm/models/io/vtktemperaturemodule.hh>
+#include <opm/models/utils/basicproperties.hh>
 
 BEGIN_PROPERTIES
 
@@ -61,8 +59,12 @@ NEW_PROP_TAG(FluidSystem);
 //! Specifies the relation used for velocity
 NEW_PROP_TAG(FluxModule);
 
+//! Specify whether energy should be considered as a conservation quantity or not
+NEW_PROP_TAG(EnableEnergy);
 //! Returns whether gravity is considered in the problem
 NEW_PROP_TAG(EnableGravity);
+//! Enable diffusive fluxes?
+NEW_PROP_TAG(EnableDiffusion);
 
 END_PROPERTIES
 

@@ -40,17 +40,6 @@
 
 #include <string>
 
-BEGIN_PROPERTIES
-
-NEW_PROP_TAG(Indices);
-NEW_PROP_TAG(EnableEnergy);
-NEW_PROP_TAG(ThermalConductionLaw);
-NEW_PROP_TAG(ThermalConductionLawParams);
-NEW_PROP_TAG(SolidEnergyLaw);
-NEW_PROP_TAG(SolidEnergyLawParams);
-
-END_PROPERTIES
-
 namespace Opm {
 /*!
  * \ingroup Energy

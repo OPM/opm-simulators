@@ -27,6 +27,7 @@
 #ifndef EWOMS_PARALLEL_ISTL_BACKEND_HH
 #define EWOMS_PARALLEL_ISTL_BACKEND_HH
 
+#include "linalgproperties.hh"
 #include "parallelbasebackend.hh"
 #include "istlsolverwrappers.hh"
 #include "istlsparsematrixadapter.hh"
@@ -36,12 +37,6 @@
 BEGIN_PROPERTIES
 
 NEW_TYPE_TAG(ParallelIstlLinearSolver, INHERITS_FROM(ParallelBaseLinearSolver));
-
-NEW_PROP_TAG(LinearSolverWrapper);
-NEW_PROP_TAG(SparseMatrixAdapter);
-
-//! number of iterations between solver restarts for the GMRES solver
-NEW_PROP_TAG(GMResRestart);
 
 END_PROPERTIES
 

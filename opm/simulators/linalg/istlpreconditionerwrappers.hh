@@ -45,19 +45,11 @@
 
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
+#include <opm/simulators/linalg/linalgproperties.hh>
 
 #include <dune/istl/preconditioners.hh>
 
 #include <dune/common/version.hh>
-
-BEGIN_PROPERTIES
-NEW_PROP_TAG(Scalar);
-NEW_PROP_TAG(SparseMatrixAdapter);
-NEW_PROP_TAG(OverlappingMatrix);
-NEW_PROP_TAG(OverlappingVector);
-NEW_PROP_TAG(PreconditionerOrder);
-NEW_PROP_TAG(PreconditionerRelaxation);
-END_PROPERTIES
 
 namespace Opm {
 namespace Linear {

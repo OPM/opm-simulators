@@ -27,7 +27,7 @@
 #ifndef EWOMS_BASE_VANGUARD_HH
 #define EWOMS_BASE_VANGUARD_HH
 
-#include <opm/models/utils/propertysystem.hh>
+#include <opm/models/utils/basicproperties.hh>
 #include <opm/models/utils/parametersystem.hh>
 
 #include <dune/common/version.hh>
@@ -38,19 +38,6 @@
 
 #include <type_traits>
 #include <memory>
-
-BEGIN_PROPERTIES
-
-NEW_PROP_TAG(Grid);
-NEW_PROP_TAG(Vanguard);
-NEW_PROP_TAG(GridView);
-NEW_PROP_TAG(GridPart);
-NEW_PROP_TAG(GridViewLevel);
-NEW_PROP_TAG(GridFile);
-NEW_PROP_TAG(GridGlobalRefinements);
-NEW_PROP_TAG(Simulator);
-
-END_PROPERTIES
 
 namespace Opm {
 

@@ -74,8 +74,8 @@
  * \endcode
  */
 #define EWOMS_REGISTER_PARAM(TypeTag, ParamType, ParamName, Description)       \
-    ::Opm::Parameters::registerParam<TypeTag, ParamType, PTAG(ParamName)>( \
-        #ParamName, #ParamName, Description)
+    ::Opm::Parameters::registerParam<TypeTag, ParamType>( \
+        #ParamName, #ParamName, GET_PROP_VALUE(TypeTag, ParamName), Description)
 
 /*!
  * \ingroup Parameter
@@ -85,7 +85,7 @@
  * This allows to deal with unused parameters
  */
 #define EWOMS_HIDE_PARAM(TypeTag, ParamName)                \
-    ::Opm::Parameters::hideParam<TypeTag, PTAG(ParamName)>(#ParamName)
+    ::Opm::Parameters::hideParam<TypeTag>(#ParamName, GET_PROP_VALUE(TypeTag, ParamName))
 
 /*!
  * \ingroup Parameter
@@ -115,14 +115,14 @@
  * \endcode
  */
 #define EWOMS_GET_PARAM(TypeTag, ParamType, ParamName)                         \
-    (::Opm::Parameters::get<TypeTag, ParamType, PTAG(ParamName)>(#ParamName, \
-                                                                 #ParamName))
+    (::Opm::Parameters::get<TypeTag, ParamType>(#ParamName, #ParamName, \
+                                                GET_PROP_VALUE(TypeTag, ParamName)))
 
 //!\cond SKIP_THIS
 #define EWOMS_GET_PARAM_(TypeTag, ParamType, ParamName)                 \
-    (::Opm::Parameters::get<TypeTag, ParamType, PTAG(ParamName)>(     \
-        #ParamName, #ParamName,                                         \
-        /*errorIfNotRegistered=*/false))
+    (::Opm::Parameters::get<TypeTag, ParamType>(#ParamName, #ParamName, \
+                                                GET_PROP_VALUE(TypeTag, ParamName), \
+                                                /*errorIfNotRegistered=*/false))
 
 /*!
  * \ingroup Parameter
@@ -148,8 +148,7 @@
  * If the parameter in question has not been registered, this throws an exception.
  */
 #define EWOMS_PARAM_IS_SET(TypeTag, ParamType, ParamName)               \
-    (::Opm::Parameters::isSet<TypeTag, ParamType, PTAG(ParamName)>(#ParamName, \
-                                                                   #ParamName))
+    (::Opm::Parameters::isSet<TypeTag, ParamType>(#ParamName, #ParamName))
 
 namespace Opm {
 namespace Parameters {
@@ -180,6 +179,11 @@ template <class TypeTag, class ParamType, class PropTag>
 const ParamType get(const char *propTagName,
                     const char *paramName,
                     bool errorIfNotRegistered = true);
+template <class TypeTag, class ParamType>
+const ParamType get(const char *propTagName,
+                    const char *paramName,
+                    const ParamType& defaultValue,
+                    bool errorIfNotRegistered = true);
 
 class ParamRegFinalizerBase_
 {
@@ -189,12 +193,13 @@ public:
     virtual void retrieve() = 0;
 };
 
-template <class TypeTag, class ParamType, class PropTag>
+template <class TypeTag, class ParamType>
 class ParamRegFinalizer_ : public ParamRegFinalizerBase_
 {
 public:
-    ParamRegFinalizer_(const std::string& paramName)
+    ParamRegFinalizer_(const std::string& paramName, const ParamType& defaultValue)
         : paramName_(paramName)
+        , defaultValue_(defaultValue)
     {}
 
     virtual void retrieve() override
@@ -202,13 +207,15 @@ public:
         // retrieve the parameter once to make sure that its value does
         // not contain a syntax error.
         ParamType __attribute__((unused)) dummy =
-            get<TypeTag, ParamType, PropTag>(/*propTagName=*/paramName_.data(),
-                                             paramName_.data(),
-                                             /*errorIfNotRegistered=*/true);
+            get<TypeTag, ParamType>(/*propTagName=*/paramName_.data(),
+                                    paramName_.data(),
+                                    defaultValue_,
+                                    /*errorIfNotRegistered=*/true);
     }
 
 private:
     std::string paramName_;
+    ParamType defaultValue_;
 };
 } // namespace Parameters
 
@@ -943,21 +950,28 @@ class Param
 
 public:
     template <class ParamType, class PropTag>
-    static const ParamType get(const char *propTagName,
-                               const char *paramName,
-                               bool errorIfNotRegistered = true)
+    static ParamType get(const char *propTagName,
+                    const char *paramName,
+                    bool errorIfNotRegistered = true)
     {
-        return retrieve_<ParamType, PropTag>(propTagName,
-                                             paramName,
-                                             errorIfNotRegistered);
+        return retrieve_<ParamType>(propTagName, paramName, getPropValue<TypeTag, PropTag>(), errorIfNotRegistered);
     }
-
+    
+    template <class ParamType>
+    static ParamType get(const char *propTagName,
+                         const char *paramName,
+                         const ParamType& defaultValue,
+                         bool errorIfNotRegistered = true)
+    {
+        return retrieve_<ParamType>(propTagName, paramName, defaultValue, errorIfNotRegistered);
+    }
+    
     static void clear()
     {
         ParamsMeta::clear();
     }
 
-    template <class ParamType, class PropTag>
+    template <class ParamType>
     static bool isSet(const char *propTagName OPM_OPTIM_UNUSED,
                       const char *paramName OPM_OPTIM_UNUSED,
                       bool errorIfNotRegistered = true)
@@ -1035,10 +1049,11 @@ private:
         }
     }
 
-    template <class ParamType, class PropTag>
-    static const ParamType retrieve_(const char OPM_OPTIM_UNUSED *propTagName,
-                                     const char *paramName,
-                                     bool errorIfNotRegistered = true)
+    template <class ParamType>
+    static ParamType retrieve_(const char OPM_OPTIM_UNUSED *propTagName,
+                               const char *paramName,
+                               const ParamType& defaultValue,
+                               bool errorIfNotRegistered = true)
     {
 #ifndef NDEBUG
         // make sure that the parameter is used consistently. since
@@ -1066,8 +1081,7 @@ private:
         std::string canonicalName(paramName);
 
         // retrieve actual parameter from the parameter tree
-        const ParamType defaultValue = GET_PROP_VALUE_(TypeTag, PropTag);
-        return ParamsMeta::tree().template get<ParamType>(canonicalName, defaultValue  );
+        return ParamsMeta::tree().template get<ParamType>(canonicalName, defaultValue);
     }
 };
 
@@ -1077,6 +1091,12 @@ const ParamType get(const char *propTagName, const char *paramName, bool errorIf
     return Param<TypeTag>::template get<ParamType, PropTag>(propTagName,
                                                             paramName,
                                                             errorIfNotRegistered);
+}
+
+template <class TypeTag, class ParamType>
+const ParamType get(const char *propTagName, const char *paramName, const ParamType& defaultValue, bool errorIfNotRegistered)
+{
+    return Param<TypeTag>::template get<ParamType>(propTagName, paramName, defaultValue, errorIfNotRegistered);
 }
 
 template <class TypeTag, class Container>
@@ -1113,16 +1133,16 @@ void reset()
     return Param<TypeTag>::clear();
 }
 
-template <class TypeTag, class ParamType, class PropTag>
+template <class TypeTag, class ParamType>
 bool isSet(const char *propTagName, const char *paramName, bool errorIfNotRegistered = true)
 {
-    return Param<TypeTag>::template isSet<ParamType, PropTag>(propTagName,
-                                                              paramName,
-                                                              errorIfNotRegistered);
+    return Param<TypeTag>::template isSet<ParamType>(propTagName,
+                                                     paramName,
+                                                     errorIfNotRegistered);
 }
 
-template <class TypeTag, class ParamType, class PropTag>
-void registerParam(const char *paramName, const char *propertyName, const char *usageString)
+template <class TypeTag, class ParamType>
+void registerParam(const char *paramName, const char *propertyName, const ParamType& defaultValue, const char *usageString)
 {
     typedef typename GET_PROP(TypeTag, ParameterMetaData) ParamsMeta;
     if (!ParamsMeta::registrationOpen())
@@ -1130,7 +1150,7 @@ void registerParam(const char *paramName, const char *propertyName, const char *
                                "the parameter '"+std::string(paramName)+"' was registered.");
 
     ParamsMeta::registrationFinalizers().emplace_back(
-        new ParamRegFinalizer_<TypeTag, ParamType, PropTag>(paramName));
+        new ParamRegFinalizer_<TypeTag, ParamType>(paramName, defaultValue));
 
     ParamInfo paramInfo;
     paramInfo.paramName = paramName;
@@ -1140,7 +1160,7 @@ void registerParam(const char *paramName, const char *propertyName, const char *
     paramInfo.propertyName = propertyName;
     paramInfo.usageString = usageString;
     std::ostringstream oss;
-    oss << GET_PROP_VALUE_(TypeTag, PropTag);
+    oss << defaultValue;
     paramInfo.compileTimeValue = oss.str();
     paramInfo.isHidden = false;
     if (ParamsMeta::registry().find(paramName) != ParamsMeta::registry().end()) {
@@ -1155,13 +1175,9 @@ void registerParam(const char *paramName, const char *propertyName, const char *
     ParamsMeta::mutableRegistry()[paramName] = paramInfo;
 }
 
-template <class TypeTag, class PropTag>
-void hideParam(const char *paramName)
+template <class TypeTag, class ParamType>
+void hideParam(const char *paramName, const ParamType& defaultValue)
 {
-    // make sure that a property with the parameter name exists. we cannot check if a
-    // parameter exists at compile time, so this will only be caught at runtime
-    static const auto defaultValue OPM_UNUSED = GET_PROP_VALUE_(TypeTag, PropTag);
-
     typedef typename GET_PROP(TypeTag, ParameterMetaData) ParamsMeta;
     if (!ParamsMeta::registrationOpen())
         throw std::logic_error("Parameter '"+std::string(paramName)+"' declared as hidden"

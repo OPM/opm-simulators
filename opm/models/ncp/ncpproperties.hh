@@ -37,12 +37,6 @@
 
 BEGIN_PROPERTIES
 
-//! Enable the energy equation?
-NEW_PROP_TAG(EnableEnergy);
-
-//! Enable diffusive fluxes?
-NEW_PROP_TAG(EnableDiffusion);
-
 //! The unmodified weight for the pressure primary variable
 NEW_PROP_TAG(NcpPressureBaseWeight);
 //! The weight for the saturation primary variables
