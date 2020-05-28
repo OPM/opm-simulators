@@ -43,12 +43,6 @@
 
 #include <cmath>
 
-BEGIN_PROPERTIES
-
-NEW_PROP_TAG(MaterialLaw);
-
-END_PROPERTIES
-
 namespace Opm {
 template <class TypeTag>
 class ForchheimerIntensiveQuantities;

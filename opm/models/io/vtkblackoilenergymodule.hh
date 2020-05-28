@@ -50,8 +50,6 @@ NEW_PROP_TAG(VtkWriteRockInternalEnergy);
 NEW_PROP_TAG(VtkWriteTotalThermalConductivity);
 NEW_PROP_TAG(VtkWriteFluidInternalEnergies);
 NEW_PROP_TAG(VtkWriteFluidEnthalpies);
-NEW_PROP_TAG(VtkOutputFormat);
-NEW_PROP_TAG(EnableVtkOutput);
 
 // set default values for what quantities to output
 SET_BOOL_PROP(VtkBlackOilEnergy, VtkWriteRockInternalEnergy, true);

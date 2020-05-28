@@ -32,7 +32,6 @@
 
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
-#include <opm/models/io/dgfvanguard.hh>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/gridpart/adaptiveleafgridpart.hh>
@@ -65,14 +64,23 @@ NEW_TYPE_TAG(ImplicitModel, INHERITS_FROM(NumericModel));
 //! Property to specify the type of scalar values.
 NEW_PROP_TAG(Scalar);
 
+//! Number of equations in the system of PDEs
+NEW_PROP_TAG(NumEq);
+
 //! Property which provides a Dune::ParameterTree.
 NEW_PROP_TAG(ParameterTree);
+
+//! The type of the model
+NEW_PROP_TAG(Model);
 
 //! Property which defines the group that is queried for parameters by default
 NEW_PROP_TAG(ModelParameterGroup);
 
 //! Property which provides a Vanguard (manages grids)
 NEW_PROP_TAG(Vanguard);
+
+//! The type of the DUNE grid
+NEW_PROP_TAG(Grid);
 
 NEW_PROP_TAG(GridView);
 
@@ -116,6 +124,33 @@ NEW_PROP_TAG(RestartTime);
 //! The name of the file with a number of forced time step lengths
 NEW_PROP_TAG(PredeterminedTimeStepsFile);
 
+//! domain size
+NEW_PROP_TAG(DomainSizeX);
+NEW_PROP_TAG(DomainSizeY);
+NEW_PROP_TAG(DomainSizeZ);
+
+//! grid resolution
+NEW_PROP_TAG(CellsX);
+NEW_PROP_TAG(CellsY);
+NEW_PROP_TAG(CellsZ);
+
+//! name of the grid file
+NEW_PROP_TAG(GridFile);
+
+//! level of the grid view
+NEW_PROP_TAG(GridViewLevel);
+
+//! Manages the simulation time
+NEW_PROP_TAG(Simulator);
+
+/*!
+ * \brief The class which marks the border indices associated with the
+ *        degrees of freedom on a process boundary.
+ *
+ * This is required for the algebraic overlap stuff.
+ */
+NEW_PROP_TAG(BorderListCreator);
+
 ///////////////////////////////////
 // Values for the properties
 ///////////////////////////////////
@@ -137,9 +172,6 @@ SET_PROP(NumericModel, ParameterTree)
 
 //! use the global group as default for the model's parameter group
 SET_STRING_PROP(NumericModel, ModelParameterGroup, "");
-
-//! Use the DgfVanguard by default
-SET_TYPE_PROP(NumericModel, Vanguard, Opm::DgfVanguard<TypeTag>);
 
 //! Set a value for the GridFile property
 SET_STRING_PROP(NumericModel, GridFile, "");

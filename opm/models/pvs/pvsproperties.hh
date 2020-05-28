@@ -40,11 +40,6 @@
 
 BEGIN_PROPERTIES
 
-//! Specifies whether energy is considered as a conservation quantity or not
-NEW_PROP_TAG(EnableEnergy);
-//! Enable diffusive fluxes?
-NEW_PROP_TAG(EnableDiffusion);
-
 //! The verbosity of the model (0 -> do not print anything, 2 -> spam stdout a lot)
 NEW_PROP_TAG(PvsVerbosity);
 //! The basis value for the weight of the pressure primary variable

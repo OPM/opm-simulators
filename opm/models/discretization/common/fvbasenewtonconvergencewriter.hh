@@ -37,11 +37,14 @@
 BEGIN_PROPERTIES
 
 // forward declaration of the required property tags
-NEW_PROP_TAG(GridView);
-NEW_PROP_TAG(NewtonMethod);
-NEW_PROP_TAG(SolutionVector);
-NEW_PROP_TAG(GlobalEqVector);
-NEW_PROP_TAG(VtkOutputFormat);
+template<class TypeTag, class MyTypeTag>
+struct SolutionVector;
+template<class TypeTag, class MyTypeTag>
+struct GlobalEqVector;
+template<class TypeTag, class MyTypeTag>
+struct NewtonMethod;
+template<class TypeTag, class MyTypeTag>
+struct VtkOutputFormat;
 
 END_PROPERTIES
 //! \endcond

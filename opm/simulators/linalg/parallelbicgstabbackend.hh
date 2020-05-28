@@ -27,6 +27,7 @@
 #ifndef EWOMS_PARALLEL_BICGSTAB_BACKEND_HH
 #define EWOMS_PARALLEL_BICGSTAB_BACKEND_HH
 
+#include "linalgproperties.hh"
 #include "parallelbasebackend.hh"
 #include "bicgstabsolver.hh"
 #include "combinedcriterion.hh"
@@ -43,8 +44,6 @@ class ParallelBiCGStabSolverBackend;
 BEGIN_PROPERTIES
 
 NEW_TYPE_TAG(ParallelBiCGStabLinearSolver, INHERITS_FROM(ParallelBaseLinearSolver));
-
-NEW_PROP_TAG(LinearSolverMaxError);
 
 SET_TYPE_PROP(ParallelBiCGStabLinearSolver,
               LinearSolverBackend,

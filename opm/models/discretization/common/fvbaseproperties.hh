@@ -30,15 +30,17 @@
 #ifndef EWOMS_FV_BASE_PROPERTIES_HH
 #define EWOMS_FV_BASE_PROPERTIES_HH
 
-#include "fvbasenewtonmethod.hh"
-#include "fvbaseproperties.hh"
-#include "fvbasefdlocallinearizer.hh"
-
 #include <opm/models/utils/basicproperties.hh>
-#include <opm/models/io/vtkprimaryvarsmodule.hh>
+#include <opm/models/io/dgfvanguard.hh>
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 
 BEGIN_PROPERTIES
+
+namespace TTag {
+struct FvBaseNewtonMethod;
+struct VtkPrimaryVars;
+struct FiniteDifferenceLocalLinearizer;
+}
 
 //! The type tag for models based on the finite volume schemes
 NEW_TYPE_TAG(FvBaseDiscretization,
@@ -49,11 +51,7 @@ NEW_TYPE_TAG(FvBaseDiscretization,
 
 //! set the splices for the finite volume discretizations
 NEW_PROP_TAG(LinearSolverSplice);
-NEW_PROP_TAG(ParallelBiCGStabLinearSolver);
-
 NEW_PROP_TAG(LocalLinearizerSplice);
-NEW_PROP_TAG(FiniteDifferenceLocalLinearizer);
-
 SET_SPLICES(FvBaseDiscretization, LinearSolverSplice, LocalLinearizerSplice);
 
 //! use a parallel BiCGStab linear solver by default
@@ -72,11 +70,6 @@ SET_TAG_PROP(FvBaseDiscretization, LocalLinearizerSplice, FiniteDifferenceLocalL
  */
 NEW_PROP_TAG(Evaluation);
 
-//! The type of the DUNE grid
-NEW_PROP_TAG(Grid);
-//! The type of the grid view
-NEW_PROP_TAG(GridView);
-
 //! The class describing the stencil of the spatial discretization
 NEW_PROP_TAG(Stencil);
 
@@ -87,10 +80,6 @@ NEW_PROP_TAG(DiscreteFunctionSpace);
 NEW_PROP_TAG(Problem);
 //! The type of the base class for all problems which use this model
 NEW_PROP_TAG(BaseProblem);
-//! The type of the model
-NEW_PROP_TAG(Model);
-//! Number of equations in the system of PDEs
-NEW_PROP_TAG(NumEq);
 
 //! The type of the spatial discretization used by the model
 NEW_PROP_TAG(Discretization);
@@ -106,15 +95,11 @@ NEW_PROP_TAG(LinearizeNonLocalElements);
 
 //! Linearizes the global non-linear system of equations
 NEW_PROP_TAG(BaseLinearizer);
-//! The class that allows to manipulate sparse matrices
-NEW_PROP_TAG(SparseMatrixAdapter);
 
 //! A vector of holding a quantity for each equation (usually at a given spatial location)
 NEW_PROP_TAG(EqVector);
 //! A vector of holding a quantity for each equation for each DOF of an element
 NEW_PROP_TAG(ElementEqVector);
-//! Vector containing a quantity of for equation for each DOF of the whole grid
-NEW_PROP_TAG(GlobalEqVector);
 
 //! Vector containing volumetric or areal rates of quantities
 NEW_PROP_TAG(RateVector);
@@ -169,9 +154,6 @@ NEW_PROP_TAG(ThreadsPerProcess);
 NEW_PROP_TAG(UseLinearizationLock);
 
 // high-level simulation control
-
-//! Manages the simulation time
-NEW_PROP_TAG(Simulator);
 
 /*!
  * \brief Switch to enable or disable grid adaptation
@@ -293,14 +275,6 @@ NEW_PROP_TAG(ElementMapper);
 NEW_PROP_TAG(DofMapper);
 
 /*!
- * \brief The class which marks the border indices associated with the
- *        degrees of freedom on a process boundary.
- *
- * This is required for the algebraic overlap stuff.
- */
-NEW_PROP_TAG(BorderListCreator);
-
-/*!
  * \brief The history size required by the time discretization
  */
 NEW_PROP_TAG(TimeDiscHistorySize);
@@ -318,6 +292,8 @@ NEW_PROP_TAG(UseVolumetricResidual);
 
 //! Specify if experimental features should be enabled or not.
 NEW_PROP_TAG(EnableExperiments);
+
+SET_TYPE_PROP(NumericModel, Vanguard, Opm::DgfVanguard<TypeTag>);
 
 END_PROPERTIES
 

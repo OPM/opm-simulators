@@ -33,6 +33,7 @@
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/timer.hh>
 #include <opm/models/utils/timerguard.hh>
+#include <opm/simulators/linalg/linalgproperties.hh>
 
 #include <opm/material/densead/Math.hpp>
 #include <opm/material/common/Unused.hpp>
@@ -65,47 +66,11 @@ BEGIN_PROPERTIES
 //! are attached
 NEW_TYPE_TAG(NewtonMethod);
 
-//! The simulation management class of the simulation
-NEW_PROP_TAG(Simulator);
-
-//! The physical model which we would like to solve
-NEW_PROP_TAG(Problem);
-
-//! The model describing the PDEs for the conservation quantities
-NEW_PROP_TAG(Model);
-
-//! The type of scalar values
-NEW_PROP_TAG(Scalar);
-
 //! Specifies the type of the actual Newton method
 NEW_PROP_TAG(NewtonMethod);
 
-//! Specifies the type of a solution
-NEW_PROP_TAG(SolutionVector);
-
-//! Specifies the type of a solution for a single degee of freedom
-NEW_PROP_TAG(PrimaryVariables);
-
-//! Specifies whether the problem to be simulated exhibits contraint degrees of freedom
-NEW_PROP_TAG(EnableConstraints);
-
-//! Specifies the type of objects which specify constraints for a single degee of freedom
-NEW_PROP_TAG(Constraints);
-
-//! Vector containing a quantity of for equation on the whole grid
-NEW_PROP_TAG(GlobalEqVector);
-
-//! Vector containing a quantity of for equation for a single degee of freedom
-NEW_PROP_TAG(EqVector);
-
 //! The class which linearizes the non-linear system of equations
 NEW_PROP_TAG(Linearizer);
-
-//! Specifies the type of a global Jacobian matrix
-NEW_PROP_TAG(SparseMatrixAdapter);
-
-//! Specifies the type of the linear solver to be used
-NEW_PROP_TAG(LinearSolverBackend);
 
 //! Specifies whether the Newton method should print messages or not
 NEW_PROP_TAG(NewtonVerbose);

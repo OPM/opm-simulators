@@ -35,6 +35,7 @@
 #include <opm/models/utils/timer.hh>
 #include <opm/models/utils/timerguard.hh>
 #include <opm/models/parallel/mpiutil.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 
 #include <dune/common/version.hh>
 #include <dune/common/parallel/mpihelper.hh>
@@ -45,20 +46,6 @@
 #include <vector>
 #include <string>
 #include <memory>
-
-BEGIN_PROPERTIES
-
-NEW_PROP_TAG(Scalar);
-NEW_PROP_TAG(Vanguard);
-NEW_PROP_TAG(GridView);
-NEW_PROP_TAG(Model);
-NEW_PROP_TAG(Problem);
-NEW_PROP_TAG(EndTime);
-NEW_PROP_TAG(RestartTime);
-NEW_PROP_TAG(InitialTimeStepSize);
-NEW_PROP_TAG(PredeterminedTimeStepsFile);
-
-END_PROPERTIES
 
 #define EWOMS_CATCH_PARALLEL_EXCEPTIONS_FATAL(code)                      \
     {                                                                   \
@@ -984,6 +971,11 @@ private:
     bool finished_;
     bool verbose_;
 };
+
+namespace Properties {
+SET_TYPE_PROP(NumericModel, Simulator, Opm::Simulator<TypeTag>);
+}
+
 } // namespace Opm
 
 #endif
