@@ -25,25 +25,6 @@
 
 BEGIN_PROPERTIES
 NEW_TYPE_TAG(EclFlowProblemSimple, INHERITS_FROM(EclFlowProblem));
-NEW_PROP_TAG(FluidState);
-//SET_TYPE_PROP(EclBaseProblem, Problem, Opm::EclProblem<TypeTag>);
-SET_PROP(EclFlowProblemSimple, FluidState)
-    {
-    private:
-      typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-      typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
-      enum { enableTemperature = GET_PROP_VALUE(TypeTag, EnableTemperature) };
-      enum { enableSolvent = GET_PROP_VALUE(TypeTag, EnableSolvent) };
-      enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
-      enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
-      typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-      typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-      static const bool compositionSwitchEnabled = Indices::gasEnabled;
-
-    public:
-//typedef Opm::BlackOilFluidSystemSimple<Scalar> type;
-       typedef Opm::BlackOilFluidState<Evaluation, FluidSystem, enableTemperature, enableEnergy, compositionSwitchEnabled,  Indices::numPhases > type;
-};
 
 SET_BOOL_PROP(EclFlowProblemSimple, MatrixAddWellContributions, true);
 SET_INT_PROP(EclFlowProblemSimple, LinearSolverVerbosity,0);

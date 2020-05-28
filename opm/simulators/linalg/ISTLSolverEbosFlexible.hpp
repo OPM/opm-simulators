@@ -37,10 +37,6 @@ BEGIN_PROPERTIES
 
 NEW_TYPE_TAG(FlowIstlSolverFlexible, INHERITS_FROM(FlowIstlSolverParams));
 
-NEW_PROP_TAG(GlobalEqVector);
-NEW_PROP_TAG(SparseMatrixAdapter);
-NEW_PROP_TAG(Simulator);
-
 END_PROPERTIES
 
 

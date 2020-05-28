@@ -29,9 +29,6 @@ BEGIN_PROPERTIES
 
 NEW_TYPE_TAG(FlowModelParameters);
 
-NEW_PROP_TAG(Scalar);
-NEW_PROP_TAG(EclDeckFileName);
-
 NEW_PROP_TAG(DbhpMaxRel);
 NEW_PROP_TAG(DwellFractionMax);
 NEW_PROP_TAG(MaxResidualAllowed);

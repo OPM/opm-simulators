@@ -21,8 +21,6 @@ BEGIN_PROPERTIES
 
 NEW_TYPE_TAG(FlowTimeSteppingParameters);
 
-NEW_PROP_TAG(Scalar);
-
 NEW_PROP_TAG(SolverRestartFactor);
 NEW_PROP_TAG(SolverGrowthFactor);
 NEW_PROP_TAG(SolverMaxGrowth);

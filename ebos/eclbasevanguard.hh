@@ -30,6 +30,7 @@
 #include <opm/models/io/basevanguard.hh>
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/cpgrid/GridHelpers.hpp>
@@ -67,17 +68,13 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(EclBaseVanguard);
 
 // declare the properties required by the for the ecl simulator vanguard
-NEW_PROP_TAG(Grid);
 NEW_PROP_TAG(EquilGrid);
-NEW_PROP_TAG(Scalar);
 NEW_PROP_TAG(EclDeckFileName);
-NEW_PROP_TAG(OutputDir);
 NEW_PROP_TAG(EnableOpmRstFile);
 NEW_PROP_TAG(EclStrictParsing);
 NEW_PROP_TAG(SchedRestart);
 NEW_PROP_TAG(EclOutputInterval);
 NEW_PROP_TAG(IgnoreKeywords);
-NEW_PROP_TAG(EnableExperiments);
 NEW_PROP_TAG(EdgeWeightsMethod);
 NEW_PROP_TAG(OwnerCellsFirst);
 

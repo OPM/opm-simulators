@@ -41,12 +41,6 @@
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
-BEGIN_PROPERTIES
-
-NEW_PROP_TAG(MaterialLaw);
-
-END_PROPERTIES
-
 namespace Opm {
 
 template <class TypeTag>

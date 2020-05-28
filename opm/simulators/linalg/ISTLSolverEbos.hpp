@@ -57,12 +57,8 @@ BEGIN_PROPERTIES
 
 NEW_TYPE_TAG(FlowIstlSolver, INHERITS_FROM(FlowIstlSolverParams));
 
-NEW_PROP_TAG(Scalar);
-NEW_PROP_TAG(GlobalEqVector);
-NEW_PROP_TAG(SparseMatrixAdapter);
-NEW_PROP_TAG(Indices);
-NEW_PROP_TAG(Simulator);
-NEW_PROP_TAG(EclWellModel);
+template <class TypeTag, class MyTypeTag>
+struct EclWellModel;
 
 //! Set the type of a global jacobian matrix for linear solvers that are based on
 //! dune-istl.

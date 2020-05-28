@@ -42,18 +42,6 @@
 
 #include <opm/common/utility/String.hpp>
 
-BEGIN_PROPERTIES
-
-// forward declaration of property tags
-NEW_PROP_TAG(Scalar);
-NEW_PROP_TAG(Simulator);
-NEW_PROP_TAG(ThreadManager);
-NEW_PROP_TAG(PrintProperties);
-NEW_PROP_TAG(PrintParameters);
-NEW_PROP_TAG(ParameterFile);
-NEW_PROP_TAG(Problem);
-END_PROPERTIES
-
 //! \cond SKIP_THIS
 
 namespace Opm {

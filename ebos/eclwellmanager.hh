@@ -54,12 +54,6 @@
 #include <string>
 #include <vector>
 
-BEGIN_PROPERTIES
-
-NEW_PROP_TAG(Grid);
-
-END_PROPERTIES
-
 namespace Opm {
 
 /*!

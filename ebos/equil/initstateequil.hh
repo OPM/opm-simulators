@@ -63,14 +63,6 @@
 #include <utility>
 #include <vector>
 
-BEGIN_PROPERTIES
-
-NEW_PROP_TAG(Simulator);
-NEW_PROP_TAG(Grid);
-NEW_PROP_TAG(FluidSystem);
-
-END_PROPERTIES
-
 namespace Opm {
 
 /**

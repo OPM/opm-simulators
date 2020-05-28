@@ -38,7 +38,6 @@ BEGIN_PROPERTIES
 
 NEW_TYPE_TAG(FlowNonLinearSolver);
 
-NEW_PROP_TAG(Scalar);
 NEW_PROP_TAG(NewtonMaxRelax);
 NEW_PROP_TAG(FlowNewtonMaxIterations);
 NEW_PROP_TAG(FlowNewtonMinIterations);
