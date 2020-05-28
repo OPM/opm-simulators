@@ -58,10 +58,22 @@ double VFPProdProperties::thp(int table_id,
                               const double& alq) const {
     const VFPProdTable* table = detail::getTable(m_tables, table_id);
 
-    //Find interpolation variables
-    double flo = detail::getFlo(aqua, liquid, vapour, table->getFloType());
-    double wfr = detail::getWFR(aqua, liquid, vapour, table->getWFRType());
-    double gfr = detail::getGFR(aqua, liquid, vapour, table->getGFRType());
+    // Find interpolation variables.
+    double flo = 0.0;
+    double wfr = 0.0;
+    double gfr = 0.0;
+    if (aqua == 0.0 && liquid == 0.0 && vapour == 0.0) {
+        // All zero, likely at initial state.
+        // Set FLO variable to minimum to avoid extrapolation.
+        // The water and gas fractions are kept at 0.0.
+        flo = table->getFloAxis().front();
+    } else {
+        // The usual case.
+        // Recall that production rate is negative in Opm, so switch the sign.
+        flo = -detail::getFlo(aqua, liquid, vapour, table->getFloType());
+        wfr = detail::getWFR(aqua, liquid, vapour, table->getWFRType());
+        gfr = detail::getGFR(aqua, liquid, vapour, table->getGFRType());
+    }
 
     const std::vector<double> thp_array = table->getTHPAxis();
     int nthp = thp_array.size();
@@ -69,10 +81,9 @@ double VFPProdProperties::thp(int table_id,
     /**
      * Find the function bhp_array(thp) by creating a 1D view of the data
      * by interpolating for every value of thp. This might be somewhat
-     * expensive, but let us assome that nthp is small
-     * Recall that flo is negative in Opm, so switch the sign
+     * expensive, but let us assome that nthp is small.
      */
-    auto flo_i = detail::findInterpData(-flo, table->getFloAxis());
+    auto flo_i = detail::findInterpData( flo, table->getFloAxis());
     auto wfr_i = detail::findInterpData( wfr, table->getWFRAxis());
     auto gfr_i = detail::findInterpData( gfr, table->getGFRAxis());
     auto alq_i = detail::findInterpData( alq, table->getALQAxis());
