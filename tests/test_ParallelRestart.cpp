@@ -59,7 +59,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRateModel.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MessageLimits.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/icd.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/MSW/SpiralICD.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/MSW/SICD.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/RFTConfig.hpp>
@@ -417,7 +417,7 @@ TEST_FOR_TYPE(SimpleTable)
 TEST_FOR_TYPE(SimulationConfig)
 TEST_FOR_TYPE(SkprpolyTable)
 TEST_FOR_TYPE(SkprwatTable)
-TEST_FOR_TYPE(SpiralICD)
+TEST_FOR_TYPE(SICD)
 TEST_FOR_TYPE(SolventDensityTable)
 TEST_FOR_TYPE(SummaryConfig)
 TEST_FOR_TYPE(SummaryConfigNode)
