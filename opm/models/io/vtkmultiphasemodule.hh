@@ -229,6 +229,9 @@ public:
             }
 
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                    continue;
+                }
                 if (pressureOutput_())
                     pressure_[phaseIdx][I] = Opm::getValue(fs.pressure(phaseIdx));
                 if (densityOutput_())
