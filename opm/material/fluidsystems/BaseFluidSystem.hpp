@@ -274,6 +274,13 @@ public:
     {
         throw std::runtime_error("Not implemented: The fluid system '"+Dune::className<Implementation>()+"'  does not provide a heatCapacity() method!");
     }
+
+
+    //! \brief Returns whether a fluid phase is active
+    static unsigned phaseIsActive(unsigned /*phaseIdx*/)
+    {
+        return true;
+    }
 };
 
 } // namespace Opm
