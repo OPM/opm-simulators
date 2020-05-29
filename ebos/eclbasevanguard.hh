@@ -268,8 +268,7 @@ public:
         edgeWeightsMethod_   = Dune::EdgeWeightMethod(EWOMS_GET_PARAM(TypeTag, int, EdgeWeightsMethod));
         ownersFirst_ = EWOMS_GET_PARAM(TypeTag, bool, OwnerCellsFirst);
 
-        // Skip processing of filename if external deck already exists.
-        if (!externalDeck_)
+        // Make proper case name.
         {
             if (fileName == "")
                 throw std::runtime_error("No input deck file has been specified as a command line argument,"
