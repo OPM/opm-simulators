@@ -2445,7 +2445,7 @@ namespace Opm
             std::ostringstream sstr;
             sstr << " well " << name() << " manage to get converged within " << it << " inner iterations \n";
             if (relax_convergence)
-                sstr << "A relaxed tolerance is used after 40 iterations";
+                sstr << "A relaxed tolerance is used after "<< param_.strict_inner_iter_ms_wells_ << " iterations";
             deferred_logger.debug(sstr.str());
         } else {
             std::ostringstream sstr;
