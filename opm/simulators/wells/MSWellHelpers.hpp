@@ -25,7 +25,7 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/MSW/SpiralICD.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/MSW/SICD.hpp>
 #include <dune/istl/solvers.hh>
 #if HAVE_UMFPACK
 #include <dune/istl/umfpack.hh>
@@ -254,7 +254,7 @@ namespace mswellhelpers
     template <typename ValueType>
     ValueType emulsionViscosity(const ValueType& water_fraction, const ValueType& water_viscosity,
                                 const ValueType& oil_fraction, const ValueType& oil_viscosity,
-                                const SpiralICD& sicd)
+                                const SICD& sicd)
     {
         const double width_transition = sicd.widthTransitionRegion();
 
