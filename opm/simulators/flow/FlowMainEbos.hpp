@@ -487,14 +487,58 @@ namespace Opm
         // Run the simulator.
         int runSimulator(bool output_cout)
         {
+            return runSimulatorInitOrRun_(output_cout, &FlowMainEbos::runSimulatorRunCallback_);
+        }
+
+    private:
+        // Callback that will be called from runSimulatorInitOrRun_().
+        int runSimulatorRunCallback_(bool output_cout)
+        {
+            SimulatorReport report = simulator_->run(*simtimer_);
+            runSimulatorAfterSim_(output_cout, report);
+            return report.success.exit_status;
+        }
+
+        // Output summary after simulation has completed
+        void runSimulatorAfterSim_(bool output_cout, SimulatorReport &report)
+        {
+            if (output_cout) {
+                std::ostringstream ss;
+                ss << "\n\n================    End of simulation     ===============\n\n";
+                ss << "Number of MPI processes: " << std::setw(6) << mpi_size_ << "\n";
+#if _OPENMP
+                int threads = omp_get_max_threads();
+#else
+                int threads = 1;
+#endif
+                ss << "Threads per MPI process:  " << std::setw(5) << threads << "\n";
+                report.reportFullyImplicit(ss);
+                OpmLog::info(ss.str());
+                const std::string dir = eclState().getIOConfig().getOutputDir();
+                namespace fs = Opm::filesystem;
+                fs::path output_dir(dir);
+                {
+                    std::string filename = eclState().getIOConfig().getBaseName() + ".INFOSTEP";
+                    fs::path fullpath = output_dir / filename;
+                    std::ofstream os(fullpath.string());
+                    report.fullReports(os);
+                }
+            }
+        }
+
+        // Run the simulator.
+        int runSimulatorInitOrRun_(
+             bool output_cout, int (FlowMainEbos::* initOrRunFunc)(bool))
+        {
+
             const auto& schedule = this->schedule();
             const auto& timeMap = schedule.getTimeMap();
             auto& ioConfig = eclState().getIOConfig();
-            SimulatorTimer simtimer;
+            simtimer_ = std::make_unique<SimulatorTimer>();
 
             // initialize variables
             const auto& initConfig = eclState().getInitConfig();
-            simtimer.init(timeMap, (size_t)initConfig.getRestartStep());
+            simtimer_->init(timeMap, (size_t)initConfig.getRestartStep());
 
             if (output_cout) {
                 std::ostringstream oss;
@@ -515,37 +559,17 @@ namespace Opm
                     OpmLog::info(msg);
                 }
 
-                SimulatorReport report = simulator_->run(simtimer);
-                if (output_cout) {
-                    std::ostringstream ss;
-                    ss << "\n\n================    End of simulation     ===============\n\n";
-                    ss << "Number of MPI processes: " << std::setw(6) << mpi_size_ << "\n";
-#if _OPENMP
-                    int threads = omp_get_max_threads();
-#else
-                    int threads = 1;
-#endif
-                    ss << "Threads per MPI process:  " << std::setw(5) << threads << "\n";
-                    report.reportFullyImplicit(ss);
-                    OpmLog::info(ss.str());
-                    const std::string dir = eclState().getIOConfig().getOutputDir();
-                    namespace fs = Opm::filesystem;
-                    fs::path output_dir(dir);
-                    {
-                        std::string filename = eclState().getIOConfig().getBaseName() + ".INFOSTEP";
-                        fs::path fullpath = output_dir / filename;
-                        std::ofstream os(fullpath.string());
-                        report.fullReports(os);
-                    }
-                }
-                return report.success.exit_status;
-            } else {
+                return (this->*initOrRunFunc)(output_cout);
+            }
+            else {
                 if (output_cout) {
                     std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;
                 }
                 return EXIT_SUCCESS;
             }
         }
+
+    protected:
 
         /// This is the main function of Flow.
         // Create simulator instance.
@@ -574,6 +598,7 @@ namespace Opm
         int  mpi_size_ = 1;
         std::any parallel_information_;
         std::unique_ptr<Simulator> simulator_;
+        std::unique_ptr<SimulatorTimer> simtimer_;
     };
 } // namespace Opm
 
