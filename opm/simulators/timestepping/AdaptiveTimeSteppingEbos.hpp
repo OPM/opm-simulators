@@ -59,7 +59,7 @@ SET_INT_PROP(FlowTimeSteppingParameters, TimeStepControlTargetNewtonIterations, 
 SET_SCALAR_PROP(FlowTimeSteppingParameters, TimeStepControlDecayRate, 0.75);
 SET_SCALAR_PROP(FlowTimeSteppingParameters, TimeStepControlGrowthRate, 1.25);
 SET_STRING_PROP(FlowTimeSteppingParameters, TimeStepControlFileName, "timesteps");
-SET_SCALAR_PROP(FlowTimeSteppingParameters, MinTimeStepBeforeShuttingProblematicWellsInDays, 0.25);
+SET_SCALAR_PROP(FlowTimeSteppingParameters, MinTimeStepBeforeShuttingProblematicWellsInDays, 0.001);
 
 
 END_PROPERTIES
@@ -533,10 +533,10 @@ namespace Opm {
             const int rep_step = sr.back().report_step;
             const int sub_step = sr.back().current_step;
             const int sr_size = sr.size();
-            for (const auto& wf : wfs) {
-                failing_wells.insert(wf.wellName());
-            }
             if (sr_size >= num_steps) {
+                for (const auto& wf : wfs) {
+                    failing_wells.insert(wf.wellName());
+                }
                 for (int s = 1; s < num_steps; ++s) {
                     const auto& srep = sr[sr_size - 1 - s];
                     // Report must be from same report step and substep, otherwise we have
