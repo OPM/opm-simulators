@@ -3627,8 +3627,6 @@ namespace Opm
 
 
 
-
-
     template<typename TypeTag>
     double
     MultisegmentWell<TypeTag>::
@@ -3658,7 +3656,7 @@ namespace Opm
     pressureDropSpiralICD(const int seg) const
     {
         // TODO: We have to consider the upwinding here
-        const SICD& sicd = *segmentSet()[seg].spiralICD();
+        const SICD& sicd = segmentSet()[seg].spiralICD();
 
         const std::vector<EvalWell>& phase_fractions = segment_phase_fractions_[seg];
         const std::vector<EvalWell>& phase_viscosities = segment_phase_viscosities_[seg];
@@ -3722,7 +3720,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     pressureDropValve(const int seg) const
     {
-        const Valve& valve = *segmentSet()[seg].valve();
+        const Valve& valve = segmentSet()[seg].valve();
 
         const EvalWell& mass_rate = segment_mass_rates_[seg];
         const EvalWell& visc = segment_viscosities_[seg];
