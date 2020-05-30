@@ -52,6 +52,10 @@ NEW_PROP_TAG(TolerancePressureMsWells);
 NEW_PROP_TAG(MaxPressureChangeMsWells);
 NEW_PROP_TAG(UseInnerIterationsMsWells);
 NEW_PROP_TAG(MaxInnerIterMsWells);
+NEW_PROP_TAG(StrictInnerIterMsWells);
+NEW_PROP_TAG(RelaxedFlowTolInnerIterMsw);
+NEW_PROP_TAG(RelaxedPressureTolInnerIterMsw);
+NEW_PROP_TAG(RegularizationFactorMsw);
 
 SET_SCALAR_PROP(FlowModelParameters, DbhpMaxRel, 1.0);
 SET_SCALAR_PROP(FlowModelParameters, DwellFractionMax, 0.2);
@@ -73,7 +77,12 @@ SET_SCALAR_PROP(FlowModelParameters, TolerancePressureMsWells, 0.01*1e5);
 SET_SCALAR_PROP(FlowModelParameters, MaxPressureChangeMsWells, 10*1e5);
 SET_BOOL_PROP(FlowModelParameters, UseInnerIterationsMsWells, true);
 SET_INT_PROP(FlowModelParameters, MaxInnerIterMsWells, 100);
+SET_INT_PROP(FlowModelParameters, StrictInnerIterMsWells, 40);
+SET_SCALAR_PROP(FlowModelParameters, RegularizationFactorMsw, 1);
 SET_BOOL_PROP(FlowModelParameters, EnableWellOperabilityCheck, true);
+
+SET_SCALAR_PROP(FlowModelParameters, RelaxedFlowTolInnerIterMsw, 1);
+SET_SCALAR_PROP(FlowModelParameters, RelaxedPressureTolInnerIterMsw, 0.5e5);
 
 // if openMP is available, determine the number threads per process automatically.
 #if _OPENMP
@@ -111,6 +120,12 @@ namespace Opm
         double tolerance_well_control_;
         /// Tolerance for the pressure equations for multisegment wells
         double tolerance_pressure_ms_wells_;
+
+        /// Relaxed tolerance for the inner iteration for the MSW flow solution
+        double relaxed_inner_tolerance_flow_ms_well_;
+        /// Relaxed tolerance for the inner iteration for the MSW pressure solution
+        double relaxed_inner_tolerance_pressure_ms_well_;
+
         /// Maximum pressure change over an iteratio for ms wells
         double max_pressure_change_ms_wells_;
 
@@ -119,6 +134,12 @@ namespace Opm
 
         /// Maximum inner iteration number for ms wells
         int max_inner_iter_ms_wells_;
+
+        /// Strict inner iteration number for ms wells
+        int strict_inner_iter_ms_wells_;
+
+        /// Regularization factor for ms wells
+        int regularization_factor_ms_wells_;
 
         /// Maximum iteration number of the well equation solution
         int max_welleq_iter_;
@@ -166,9 +187,13 @@ namespace Opm
             max_welleq_iter_ = EWOMS_GET_PARAM(TypeTag, int, MaxWelleqIter);
             use_multisegment_well_ = EWOMS_GET_PARAM(TypeTag, bool, UseMultisegmentWell);
             tolerance_pressure_ms_wells_ = EWOMS_GET_PARAM(TypeTag, Scalar, TolerancePressureMsWells);
+            relaxed_inner_tolerance_flow_ms_well_ = EWOMS_GET_PARAM(TypeTag, Scalar, RelaxedFlowTolInnerIterMsw);
+            relaxed_inner_tolerance_pressure_ms_well_ = EWOMS_GET_PARAM(TypeTag, Scalar, RelaxedPressureTolInnerIterMsw);
             max_pressure_change_ms_wells_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxPressureChangeMsWells);
             use_inner_iterations_ms_wells_ = EWOMS_GET_PARAM(TypeTag, bool, UseInnerIterationsMsWells);
             max_inner_iter_ms_wells_ = EWOMS_GET_PARAM(TypeTag, int, MaxInnerIterMsWells);
+            strict_inner_iter_ms_wells_ = EWOMS_GET_PARAM(TypeTag, int, StrictInnerIterMsWells);
+            regularization_factor_ms_wells_ = EWOMS_GET_PARAM(TypeTag, Scalar, RegularizationFactorMsw);
             maxSinglePrecisionTimeStep_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxSinglePrecisionDays) *24*60*60;
             max_strict_iter_ = EWOMS_GET_PARAM(TypeTag, int, MaxStrictIter);
             solve_welleq_initially_ = EWOMS_GET_PARAM(TypeTag, bool, SolveWelleqInitially);
@@ -192,9 +217,13 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, int, MaxWelleqIter, "Maximum number of iterations to determine solution the  well equations");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseMultisegmentWell, "Use the well model for multi-segment wells instead of the one for single-segment wells");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, TolerancePressureMsWells, "Tolerance for the pressure equations for multi-segment wells");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, RelaxedFlowTolInnerIterMsw, "Relaxed tolerance for the inner iteration for the MSW flow solution");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, RelaxedPressureTolInnerIterMsw, "Relaxed tolerance for the inner iteration for the MSW pressure solution");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaxPressureChangeMsWells, "Maximum relative pressure change for a single iteration of the multi-segment well model");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseInnerIterationsMsWells, "Use nested iterations for multi-segment wells");
             EWOMS_REGISTER_PARAM(TypeTag, int, MaxInnerIterMsWells, "Maximum number of inner iterations for multi-segment wells");
+            EWOMS_REGISTER_PARAM(TypeTag, int, StrictInnerIterMsWells, "Number of inner iterations for multi-segment wells with strict tolerance");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, RegularizationFactorMsw, "Regularization factor for ms wells");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaxSinglePrecisionDays, "Maximum time step size where single precision floating point arithmetic can be used solving for the linear systems of equations");
             EWOMS_REGISTER_PARAM(TypeTag, int, MaxStrictIter, "Maximum number of Newton iterations before relaxed tolerances are used for the CNV convergence criterion");
             EWOMS_REGISTER_PARAM(TypeTag, bool, SolveWelleqInitially, "Fully solve the well equations before each iteration of the reservoir model");
