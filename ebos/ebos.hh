@@ -136,6 +136,8 @@ public:
         EWOMS_HIDE_PARAM(TypeTag, UseMultisegmentWell);
         EWOMS_HIDE_PARAM(TypeTag, TolerancePressureMsWells);
         EWOMS_HIDE_PARAM(TypeTag, MaxPressureChangeMsWells);
+        EWOMS_HIDE_PARAM(TypeTag, UseInnerIterationsMsWells);
+        EWOMS_HIDE_PARAM(TypeTag, MaxInnerIterMsWells);
         EWOMS_HIDE_PARAM(TypeTag, UseInnerIterationsWells);
         EWOMS_HIDE_PARAM(TypeTag, MaxInnerIterWells);
         EWOMS_HIDE_PARAM(TypeTag, MaxSinglePrecisionDays);

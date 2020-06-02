@@ -407,14 +407,13 @@ namespace Opm
 
         bool accelerationalPressureLossConsidered() const;
 
-        // TODO: try to make ebosSimulator const, as it should be
-        void iterateWellEquations(const Simulator& ebosSimulator,
-                                  const std::vector<Scalar>& B_avg,
-                                  const double dt,
-                                  const Well::InjectionControls& inj_controls,
-                                  const Well::ProductionControls& prod_controls,
-                                  WellState& well_state,
-                                  Opm::DeferredLogger& deferred_logger);
+        bool iterateWellEqWithControl(const Simulator& ebosSimulator,
+                                      const std::vector<Scalar>& B_avg,
+                                      const double dt,
+                                      const Well::InjectionControls& inj_controls,
+                                      const Well::ProductionControls& prod_controls,
+                                      WellState& well_state,
+                                      Opm::DeferredLogger& deferred_logger);
 
         virtual void wellTestingPhysical(const Simulator& simulator, const std::vector<double>& B_avg,
                                          const double simulation_time, const int report_step,

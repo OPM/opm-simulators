@@ -1282,46 +1282,6 @@ namespace Opm
 
 
     template<typename TypeTag>
-    bool
-    WellInterface<TypeTag>::
-    solveWellEqUntilConverged(const Simulator& ebosSimulator,
-                              const std::vector<double>& B_avg,
-                              WellState& well_state,
-                              Opm::DeferredLogger& deferred_logger)
-    {
-        const int max_iter = param_.max_welleq_iter_;
-        int it = 0;
-        const double dt = ebosSimulator.timeStepSize();
-        const auto& summary_state = ebosSimulator.vanguard().summaryState();
-        const auto inj_controls = well_ecl_.isInjector() ? well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
-        const auto prod_controls = well_ecl_.isProducer() ? well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
-        bool converged;
-        do {
-            assembleWellEqWithoutIteration(ebosSimulator, B_avg, dt, inj_controls, prod_controls, well_state, deferred_logger);
-
-            auto report = getWellConvergence(well_state, B_avg, deferred_logger);
-
-            converged = report.converged();
-            if (converged) {
-                break;
-            }
-
-            ++it;
-            solveEqAndUpdateWellState(well_state, deferred_logger);
-
-            // We don't allow for switching well controls while computing well potentials and testing wells
-            // updateWellControl(ebosSimulator, well_state, deferred_logger);
-            initPrimaryVariablesEvaluation();
-        } while (it < max_iter);
-
-        return converged;
-    }
-
-
-
-
-
-    template<typename TypeTag>
     void
     WellInterface<TypeTag>::calculateReservoirRates(WellState& well_state) const
     {
@@ -1367,7 +1327,12 @@ namespace Opm
     {
         // keep a copy of the original well state
         const WellState well_state0 = well_state;
-        const bool converged = solveWellEqUntilConverged(ebosSimulator, B_avg, well_state, deferred_logger);
+        const double dt = ebosSimulator.timeStepSize();
+        const auto& summary_state = ebosSimulator.vanguard().summaryState();
+        const auto inj_controls = well_ecl_.isInjector() ? well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
+        const auto prod_controls = well_ecl_.isProducer() ? well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
+        const bool converged = iterateWellEqWithControl(ebosSimulator, B_avg, dt, inj_controls, prod_controls,
+                                                        well_state, deferred_logger);
         if (converged) {
             deferred_logger.debug("WellTest: Well equation for well " + name() +  " converged");
         } else {

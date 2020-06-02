@@ -218,6 +218,15 @@ namespace Opm
 
         virtual void  addWellContributions(SparseMatrixAdapter& mat) const override;
 
+        // iterate well equations with the specified control until converged
+        bool iterateWellEqWithControl(const Simulator& ebosSimulator,
+                                      const std::vector<double>& B_avg,
+                                      const double dt,
+                                      const Well::InjectionControls& inj_controls,
+                                      const Well::ProductionControls& prod_controls,
+                                      WellState& well_state,
+                                      Opm::DeferredLogger& deferred_logger) override;
+
         /// \brief Wether the Jacobian will also have well contributions in it.
         virtual bool jacobianContainsWellContributions() const override
         {
