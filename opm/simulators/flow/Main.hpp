@@ -398,42 +398,53 @@ namespace Opm
 
                     Opm::FlowMainEbos<PreTypeTag>::printPRTHeader(outputCout_);
 
-                    if (mpiRank == 0) {
-                        if (!deck_)
-                            deck_.reset( new Opm::Deck( parser.parseFile(deckFilename , parseContext, errorGuard)));
-                        Opm::MissingFeatures::checkKeywords(*deck_, parseContext, errorGuard);
-                        if ( outputCout_ )
-                            Opm::checkDeck(*deck_, parser, parseContext, errorGuard);
+                    int parseSuccess = 0;
+                    std::string failureMessage;
 
-                        if (!eclipseState_) {
+                    if (mpiRank == 0) {
+                        try
+                        {
+                            if (!deck_)
+                                deck_.reset( new Opm::Deck( parser.parseFile(deckFilename , parseContext, errorGuard)));
+                            Opm::MissingFeatures::checkKeywords(*deck_, parseContext, errorGuard);
+                            if ( outputCout_ )
+                                Opm::checkDeck(*deck_, parser, parseContext, errorGuard);
+
+                            if (!eclipseState_) {
 #if HAVE_MPI
-                            eclipseState_.reset(new Opm::ParallelEclipseState(*deck_));
+                                eclipseState_.reset(new Opm::ParallelEclipseState(*deck_));
 #else
-                            eclipseState_.reset(new Opm::EclipseState(*deck_));
+                                eclipseState_.reset(new Opm::EclipseState(*deck_));
 #endif
+                            }
+                            /*
+                              For the time being initializing wells and groups from the
+                              restart file is not possible, but work is underways and it is
+                              included here as a switch.
+                            */
+                            const bool init_from_restart_file = !EWOMS_GET_PARAM(PreTypeTag, bool, SchedRestart);
+                            const auto& init_config = eclipseState_->getInitConfig();
+                            if (init_config.restartRequested() && init_from_restart_file) {
+                                int report_step = init_config.getRestartStep();
+                                const auto& rst_filename = eclipseState_->getIOConfig().getRestartFileName( init_config.getRestartRootName(), report_step, false );
+                                Opm::EclIO::ERst rst_file(rst_filename);
+                                const auto& rst_state = Opm::RestartIO::RstState::load(rst_file, report_step);
+                                if (!schedule_)
+                                    schedule_.reset(new Opm::Schedule(*deck_, *eclipseState_, parseContext, errorGuard, python, &rst_state) );
+                            }
+                            else {
+                                if (!schedule_)
+                                    schedule_.reset(new Opm::Schedule(*deck_, *eclipseState_, parseContext, errorGuard, python));
+                            }
+                            setupMessageLimiter_(schedule_->getMessageLimits(), "STDOUT_LOGGER");
+                            if (!summaryConfig_)
+                                summaryConfig_.reset( new Opm::SummaryConfig(*deck_, *schedule_, eclipseState_->getTableManager(), parseContext, errorGuard));
+                            parseSuccess = 1;
                         }
-                        /*
-                          For the time being initializing wells and groups from the
-                          restart file is not possible, but work is underways and it is
-                          included here as a switch.
-                        */
-                        const bool init_from_restart_file = !EWOMS_GET_PARAM(PreTypeTag, bool, SchedRestart);
-                        const auto& init_config = eclipseState_->getInitConfig();
-                        if (init_config.restartRequested() && init_from_restart_file) {
-                            int report_step = init_config.getRestartStep();
-                            const auto& rst_filename = eclipseState_->getIOConfig().getRestartFileName( init_config.getRestartRootName(), report_step, false );
-                            Opm::EclIO::ERst rst_file(rst_filename);
-                            const auto& rst_state = Opm::RestartIO::RstState::load(rst_file, report_step);
-                            if (!schedule_)
-                                schedule_.reset(new Opm::Schedule(*deck_, *eclipseState_, parseContext, errorGuard, python, &rst_state) );
+                        catch(const std::exception& e)
+                        {
+                            failureMessage = e.what();
                         }
-                        else {
-                            if (!schedule_)
-                                schedule_.reset(new Opm::Schedule(*deck_, *eclipseState_, parseContext, errorGuard, python));
-                        }
-                        setupMessageLimiter_(schedule_->getMessageLimits(), "STDOUT_LOGGER");
-                        if (!summaryConfig_)
-                            summaryConfig_.reset( new Opm::SummaryConfig(*deck_, *schedule_, eclipseState_->getTableManager(), parseContext, errorGuard));
                     }
 #if HAVE_MPI
                     else {
@@ -444,6 +455,18 @@ namespace Opm
                         if (!eclipseState_)
                             eclipseState_.reset(new Opm::ParallelEclipseState);
                     }
+
+                    auto comm = Dune::MPIHelper::getCollectiveCommunication();
+                    parseSuccess = comm.max(parseSuccess);
+                    if (!parseSuccess)
+                    {
+                        if (errorGuard) {
+                            errorGuard.dump();
+                            errorGuard.clear();
+                        }
+                        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+                    }
+
                     Opm::eclStateBroadcast(*eclipseState_, *schedule_, *summaryConfig_);
 #endif
 
