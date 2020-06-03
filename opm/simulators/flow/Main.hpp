@@ -293,6 +293,10 @@ namespace Opm
             return Opm::flowEbosMain<TypeTag>(argc_, argv_, outputCout_, outputFiles_);
         }
 
+        /// \brief Initialize
+        /// \param exitCode The exitCode of the program.
+        /// \return Whether to actually run the simulator. I.e. true if parsing of command line
+        /// was successful and no --help, --print-properties, or --print-parameters have been found.
         template <class TypeTagEarlyBird>
         bool initialize_(int& exitCode)
         {
@@ -333,10 +337,13 @@ namespace Opm
                 // the program should abort. This is the case e.g. for the --help and the
                 // --print-properties parameters.
 #if HAVE_MPI
-                MPI_Abort(MPI_COMM_WORLD, status);
+                if (status < 0)
+                    MPI_Finalize(); // graceful stop for --help or --print-properties command line.
+                else
+                    MPI_Abort(MPI_COMM_WORLD, status);
 #endif
-                exitCode = (status >= 0) ? status : EXIT_SUCCESS;
-                return false;
+                exitCode = (status > 0) ? status : EXIT_SUCCESS;
+                return false; //  Whether to run the simulator
             }
 
             FileOutputMode outputMode = FileOutputMode::OUTPUT_NONE;
