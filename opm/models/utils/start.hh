@@ -104,6 +104,8 @@ static inline void registerAllParameters_(bool finalizeRegistration = true)
  *
  * \param argc The number of command line arguments
  * \param argv Array with the command line argument strings
+ * \return A negative value if --help or --print-properties was provided,
+ *         a positive value for errors or 0 for success.
  */
 template <class TypeTag>
 static inline int setupParameters_(int argc,
@@ -129,7 +131,7 @@ static inline int setupParameters_(int argc,
 
     // fill the parameter tree with the options from the command line
     const auto& positionalParamCallback = Problem::handlePositionalParameter;
-    std::string helpPreamble = "";
+    std::string helpPreamble = ""; // print help if non-empty!
     if (myRank == 0 && handleHelp)
         helpPreamble = Problem::helpPreamble(argc, argv);
     std::string s =
@@ -138,7 +140,16 @@ static inline int setupParameters_(int argc,
                                                      helpPreamble,
                                                      positionalParamCallback);
     if (!s.empty())
-        return /*status=*/1;
+    {
+        int status = 1, globalStatus = 1;
+        if (s == "Help called") // only on master process
+            status = globalStatus = -1; // Use negative values to indicate --help argument
+#if HAVE_MPI
+        // Force -1 if the master process has that.
+        MPI_Allreduce(&status, &globalStatus, 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD);
+#endif
+        return globalStatus;
+    }
 
     std::string paramFileName = EWOMS_GET_PARAM_(TypeTag, std::string, ParameterFile);
     if (paramFileName != "") {
