@@ -333,7 +333,7 @@ namespace Opm
                 // the program should abort. This is the case e.g. for the --help and the
                 // --print-properties parameters.
 #if HAVE_MPI
-                MPI_Finalize();
+                MPI_Abort(MPI_COMM_WORLD, status);
 #endif
                 exitCode = (status >= 0) ? status : EXIT_SUCCESS;
                 return false;
@@ -363,7 +363,7 @@ namespace Opm
                     std::cerr << "Exception received: " << e.what() << ". Try '--help' for a usage description.\n";
                 }
 #if HAVE_MPI
-                MPI_Finalize();
+                MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 #endif
                 exitCode = EXIT_FAILURE;
                 return false;
@@ -488,6 +488,9 @@ namespace Opm
                     std::cerr << "Failed to create valid EclipseState object." << std::endl;
                     std::cerr << "Exception caught: " << e.what() << std::endl;
                 }
+#if HAVE_MPI
+                MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+#endif
                 exitCode = EXIT_FAILURE;
                 return false;
             }
