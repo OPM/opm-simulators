@@ -902,7 +902,7 @@ public:
     {
         const PrimaryVariables& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
         auto& fs = asImp_().fluidState_;
-        solventSaturation_ = priVars.makeEvaluation(solventSaturationIdx, timeIdx);
+        solventSaturation_ = priVars.makeEvaluation(solventSaturationIdx, timeIdx, elemCtx.linearizationType());
         hydrocarbonSaturation_ = fs.saturation(gasPhaseIdx);
 
         // apply a cut-off. Don't waste calculations if no solvent
@@ -951,10 +951,11 @@ public:
             MaterialLaw::capillaryPressures(pC, materialParams, fs);
 
             //oil is the reference phase for pressure
+            const auto linearizationType = elemCtx.linearizationType();
             if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_pg_Rv)
-                pgMisc = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx);
+                pgMisc = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx, linearizationType);
             else {
-                const Evaluation& po = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx);
+                const Evaluation& po = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx, linearizationType);
                 pgMisc = po + (pC[gasPhaseIdx] - pC[oilPhaseIdx]);
             }
 
