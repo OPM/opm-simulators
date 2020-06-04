@@ -884,6 +884,7 @@ public:
         // Use log(v0) as initial value for u
         auto u = v0AbsLog;
         bool converged = false;
+        // TODO make this into parameters
         for (int i = 0; i < 20; ++i) {
             auto f = F(u);
             auto df = dF(u);
@@ -1044,10 +1045,11 @@ public:
                                   unsigned dofIdx,
                                   unsigned timeIdx)
     {
+        const auto linearizationType = elemCtx.linearizationType();
         const PrimaryVariables& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
-        polymerConcentration_ = priVars.makeEvaluation(polymerConcentrationIdx, timeIdx);
+        polymerConcentration_ = priVars.makeEvaluation(polymerConcentrationIdx, timeIdx, linearizationType);
         if (enablePolymerMolarWeight) {
-            polymerMoleWeight_ = priVars.makeEvaluation(polymerMoleWeightIdx, timeIdx);
+            polymerMoleWeight_ = priVars.makeEvaluation(polymerMoleWeightIdx, timeIdx, linearizationType);
         }
         const Scalar cmax = PolymerModule::plymaxMaxConcentration(elemCtx, dofIdx, timeIdx);
 
