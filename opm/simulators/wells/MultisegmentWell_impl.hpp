@@ -111,9 +111,6 @@ namespace Opm
             const double outlet_depth = outlet_segment.depth();
             segment_depth_diffs_[seg] = segment_depth - outlet_depth;
         }
-
-        // update the flow scaling factors for sicd segments
-        calculateSICDFlowScalingFactors();
     }
 
 
@@ -3628,38 +3625,6 @@ namespace Opm
 
 
 
-
-
-    template<typename TypeTag>
-    void
-    MultisegmentWell<TypeTag>::
-    calculateSICDFlowScalingFactors()
-    {
-        // top segment will not be spiral ICD segment
-        for (int seg = 1; seg < numberOfSegments(); ++seg) {
-            const Segment& segment = segmentSet()[seg];
-            if (segment.segmentType() == Segment::SegmentType::SICD) {
-                // getting the segment length related to this ICD
-                const int parental_segment_number = segmentSet()[seg].outletSegment();
-                const double segment_length = segmentSet().segmentLength(parental_segment_number);
-
-                // getting the total completion length related to this ICD
-                // it should be connections
-                const auto& connections = well_ecl_.getConnections();
-                double total_connection_length = 0.;
-                for (const int conn : segment_perforations_[seg]) {
-                    const auto& connection = connections.get(conn);
-                    const auto& perf_range = connection.perf_range();
-                    const double connection_length = perf_range->second - perf_range->first;
-                    assert(connection_length > 0.);
-                    total_connection_length += connection_length;
-                }
-
-                SICD& sicd = *segment.spiralICD();
-                sicd.updateScalingFactor(segment_length, total_connection_length);
-            }
-        }
-    }
 
 
 
