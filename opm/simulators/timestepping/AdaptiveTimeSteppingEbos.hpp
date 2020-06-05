@@ -239,7 +239,7 @@ namespace Opm {
                 SimulatorReportSingle substepReport;
                 std::string causeOfFailure = "";
                 try {
-                    substepReport = solver.step(substepTimer);
+                    substepReport = solver.stepFull(substepTimer);
                     if (solverVerbose_) {
                         // report number of linear iterations
                         OpmLog::debug("Overall linear iterations used: " + std::to_string(substepReport.total_linear_iterations));

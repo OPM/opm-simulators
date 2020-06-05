@@ -339,6 +339,7 @@ namespace Opm {
 
                 // Apply the update, with considering model-dependent limitations and
                 // chopping of the update.
+                // NB !! should be set model().linearizer().constraintsMap();
                 updateSolution(x);
 
                 report.update_time += perfTimer.stop();
@@ -373,7 +374,7 @@ namespace Opm {
             ebosSimulator_.model().newtonMethod().setIterationIndex(iterationIdx);
             ebosSimulator_.problem().beginIteration();
             //use default linearization 
-            ebosSimulator_.model().linearizer().linearizeDomain(/*LinearizationType*/ LinearizationType());
+            ebosSimulator_.model().linearizer().linearizeDomain();
             ebosSimulator_.problem().endIteration();
 
             return wellModel().lastReport();
@@ -474,25 +475,45 @@ namespace Opm {
         /// r is the residual.
         void solveJacobianSystem(BVector& x)
         {
+            if(ebosSimulator_.model().linearizer().getLinearizationType().type == Opm::LinearizationType::pressure){
+                 OPM_THROW(Opm::NumericalIssue, "Not implemented!");
+                /*
+                auto& ebosJac = ebosSimulator_.model().linearizer().jacobian();
+                auto& ebosResid = ebosSimulator_.model().linearizer().residual();
 
-            auto& ebosJac = ebosSimulator_.model().linearizer().jacobian();
-            auto& ebosResid = ebosSimulator_.model().linearizer().residual();
+                // set initial guess
+                x = 0.0;
+                auto& ebosSolver = ebosSimulator_.model().newtonMethod().linearSolver();
+                PressureMatrixType mat;
+                auto weights = ebosSolver.getTrueImpesWeights();
+                auto pmat = makePressureMatrix(weights,matrix)
+                auto prhs = makePressureRhs(weights,matrix)
+                FlexibleSolver pSolver(matrix);
+                psolver.apply(prhs,dp);
+                for(size_t i=0; i < x.size(); ++i){
+                    x[i][pinx]=dp[i];
+                }
+                */
+            }else{
+                auto&  ebosJac = ebosSimulator_.model().linearizer().jacobian();
+                auto& ebosResid = ebosSimulator_.model().linearizer().residual();
 
-            // set initial guess
-            x = 0.0;
+                // set initial guess
+                x = 0.0;
 
-            auto& ebosSolver = ebosSimulator_.model().newtonMethod().linearSolver();
-            Dune::Timer perfTimer;
-            perfTimer.start();
-            ebosSolver.prepare(ebosJac, ebosResid);
-            linear_solve_setup_time_ = perfTimer.stop();
-            ebosSolver.setResidual(ebosResid);
-            // actually, the error needs to be calculated after setResidual in order to
-            // account for parallelization properly. since the residual of ECFV
-            // discretizations does not need to be synchronized across processes to be
-            // consistent, this is not relevant for OPM-flow...
-            ebosSolver.setMatrix(ebosJac);
-            ebosSolver.solve(x);
+                auto& ebosSolver = ebosSimulator_.model().newtonMethod().linearSolver();
+                Dune::Timer perfTimer;
+                perfTimer.start();
+                ebosSolver.prepare(ebosJac, ebosResid);
+                linear_solve_setup_time_ = perfTimer.stop();
+                ebosSolver.setResidual(ebosResid);
+                // actually, the error needs to be calculated after setResidual in order to
+                // account for parallelization properly. since the residual of ECFV
+                // discretizations does not need to be synchronized across processes to be
+                // consistent, this is not relevant for OPM-flow...
+                ebosSolver.setMatrix(ebosJac);
+                ebosSolver.solve(x);
+            }
        }
 
 

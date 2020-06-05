@@ -26,7 +26,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
-
+#include <opm/models/discretization/common/linearizationtype.hh>
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
 
@@ -147,8 +147,25 @@ namespace Opm {
             }
         }
 
+        SimulatorReportSingle stepSequential(const SimulatorTimerInterface& timer){
+            LinearizationType linearizationType;
+            linearizationType.type = Opm::LinearizationType::pressure;
+            model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);  
+            this->stepDefault(timer);
+            linearizationType.type = Opm::LinearizationType::seqtransport;
+            model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);
+            this->stepDefault(timer);
+        }
 
-        SimulatorReportSingle step(const SimulatorTimerInterface& timer)
+        SimulatorReportSingle stepFull(const SimulatorTimerInterface& timer){
+            LinearizationType linearizationType;// use default
+            model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);
+            this->stepDefault(timer);
+        }
+            
+
+        
+        SimulatorReportSingle stepDefault(const SimulatorTimerInterface& timer)
         {
             SimulatorReportSingle report;
             report.global_time = timer.simulationTimeElapsed();
