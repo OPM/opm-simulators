@@ -372,7 +372,8 @@ namespace Opm {
             // -------- Mass balance equations --------
             ebosSimulator_.model().newtonMethod().setIterationIndex(iterationIdx);
             ebosSimulator_.problem().beginIteration();
-            ebosSimulator_.model().linearizer().linearizeDomain();
+            //use default linearization 
+            ebosSimulator_.model().linearizer().linearizeDomain(/*LinearizationType*/ LinearizationType());
             ebosSimulator_.problem().endIteration();
 
             return wellModel().lastReport();
