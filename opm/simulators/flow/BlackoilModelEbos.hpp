@@ -476,24 +476,37 @@ namespace Opm {
         void solveJacobianSystem(BVector& x)
         {
             if(ebosSimulator_.model().linearizer().getLinearizationType().type == Opm::LinearizationType::pressure){
-                 OPM_THROW(Opm::NumericalIssue, "Not implemented!");
-                /*
+                OPM_THROW(Opm::NumericalIssue, "Not implemented!");                
                 auto& ebosJac = ebosSimulator_.model().linearizer().jacobian();
                 auto& ebosResid = ebosSimulator_.model().linearizer().residual();
-
+                // NB when tested the linear solver an the martrix could be part of linearizer
+                using PressureMatrixType = Dune::BCRSMatrix< Dune::FieldMatrix<double,1,1>>;
+                using PressureVectorType = Dune::BlockVector<Dune::FieldVector<double,1>>;
+                int pressureVarIndex=1;
+                // true impes case could add case with trivial weighs i equations is modifind with weights
+                // this would make a newton based method if derivative of the weights are takein into account
+                PressureVectorType weights(x.size());
+                ElementContext elemCtx(ebosSimulator_);
+                Opm::Amg::getTrueImpesWeights(pressureVarIndex,
+                                              weights,
+                                              ebsSimulator_.vanguard().gridView(),
+                                              elemCtx, simulator_.model(),
+                                              ThreadManager::threadId());
+                PresssureMatrixType pmatrix =
+                    PressureHelper::makePressureMatrix<MatrixType,PressureMatrixType>(
+                        ebosJac,
+                        weights,
+                        pressureVarIndex);
+                PressureVectorType rhs(ebosResid.size(),0);
+                PressureHelper::moveToPressure(ebosResid,rhs);
+                boost::property_tree::ptree prm;
+                boost::property_tree::read_json("pressuresolver.json", prm);
+                Dune::FlexibleSolver<PressureMatrixType,PressureVectorType> pressureSolver(pmatrix,prm);
+                PressureVectorType xp(x.size(),0);
+                pressureSolver.apply(rhs, xp);
+                x=0;
+                PressureHelper::moveToBlock(xp, x, pressureVarIndex);
                 // set initial guess
-                x = 0.0;
-                auto& ebosSolver = ebosSimulator_.model().newtonMethod().linearSolver();
-                PressureMatrixType mat;
-                auto weights = ebosSolver.getTrueImpesWeights();
-                auto pmat = makePressureMatrix(weights,matrix)
-                auto prhs = makePressureRhs(weights,matrix)
-                FlexibleSolver pSolver(matrix);
-                psolver.apply(prhs,dp);
-                for(size_t i=0; i < x.size(); ++i){
-                    x[i][pinx]=dp[i];
-                }
-                */
             }else{
                 auto&  ebosJac = ebosSimulator_.model().linearizer().jacobian();
                 auto& ebosResid = ebosSimulator_.model().linearizer().residual();
