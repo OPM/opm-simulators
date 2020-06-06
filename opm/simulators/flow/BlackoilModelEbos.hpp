@@ -35,6 +35,7 @@
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
 #include <opm/simulators/wells/WellConnectionAuxiliaryModule.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>
+#include <opm/simulators/flow/PressureMatrixHelper.hpp>
 
 #include <opm/grid/UnstructuredGrid.h>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
@@ -119,7 +120,7 @@ namespace Opm {
         typedef typename GET_PROP_TYPE(TypeTag, Indices)           Indices;
         typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw)       MaterialLaw;
         typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
-
+        
         typedef double Scalar;
         static const int numEq = Indices::numEq;
         static const int contiSolventEqIdx = Indices::contiSolventEqIdx;
@@ -485,27 +486,32 @@ namespace Opm {
                 int pressureVarIndex=1;
                 // true impes case could add case with trivial weighs i equations is modifind with weights
                 // this would make a newton based method if derivative of the weights are takein into account
-                PressureVectorType weights(x.size());
+                BVector weights(x.size());
                 ElementContext elemCtx(ebosSimulator_);
+                typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) ThreadManager;
                 Opm::Amg::getTrueImpesWeights(pressureVarIndex,
                                               weights,
-                                              ebsSimulator_.vanguard().gridView(),
-                                              elemCtx, simulator_.model(),
+                                              ebosSimulator_.vanguard().gridView(),
+                                              elemCtx, ebosSimulator_.model(),
                                               ThreadManager::threadId());
-                PresssureMatrixType pmatrix =
-                    PressureHelper::makePressureMatrix<MatrixType,PressureMatrixType>(
-                        ebosJac,
-                        weights,
-                        pressureVarIndex);
+                PressureMatrixType pmatrix =
+                    PressureHelper::makePressureMatrix<Mat,
+                                                       PressureMatrixType,
+                                                       BVector>(
+                                                           ebosJac.istlMatrix(),
+                                                           pressureVarIndex,
+                                                           weights);
                 PressureVectorType rhs(ebosResid.size(),0);
-                PressureHelper::moveToPressure(ebosResid,rhs);
+                PressureHelper::moveToPressureEqn(ebosResid, rhs, weights);
                 boost::property_tree::ptree prm;
                 boost::property_tree::read_json("pressuresolver.json", prm);
-                Dune::FlexibleSolver<PressureMatrixType,PressureVectorType> pressureSolver(pmatrix,prm);
+                std::function<BVector()> weightsCalculator;
+                Dune::FlexibleSolver<PressureMatrixType,PressureVectorType> pressureSolver(prm,pmatrix,weightsCalculator,comm);
                 PressureVectorType xp(x.size(),0);
-                pressureSolver.apply(rhs, xp);
+                Dune::InverseOperatorResult res;
+                pressureSolver.apply(rhs, xp, res);
                 x=0;
-                PressureHelper::moveToBlock(xp, x, pressureVarIndex);
+                PressureHelper::movePressureToBlock(x, xp, pressureVarIndex);
                 // set initial guess
             }else{
                 auto&  ebosJac = ebosSimulator_.model().linearizer().jacobian();
