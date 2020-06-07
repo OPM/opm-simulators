@@ -24,28 +24,11 @@ namespace Opm{
     namespace PressureHelper{
         // this make pressure equations or jacobi of pressure equation
         // it is identical to the cpr PressureTransferPolicy.hpp  placed not in a linear solver setting
-        template<class MatrixType,class PressureMatrixType,class PressureVectorType>
-        PressureMatrixType makePressureMatrix(const MatrixType& fineLevelMatrix,
-                                              int pressureVarIndex,
-                                              const PressureVectorType& weights)
-        {
-            PressureMatrixType pressureMatrix(fineLevelMatrix.N(), fineLevelMatrix.M(), PressureMatrixType::row_wise);
-            auto createIter = pressureMatrix.createbegin();
-            
-            for (const auto& row : fineLevelMatrix) {
-                for (auto col = row.begin(), cend = row.end(); col != cend; ++col) {
-                    createIter.insert(col.index());
-                }
-                ++createIter;
-            }
-            makePressureMatrixEntries(pressureMatrix,fineLevelMatrix,pressureVarIndex, weights);
-            return pressureMatrix;
-        }
-        template<class MatrixType,class PressureMatrixType,class BlockVectorType>
+                template<class MatrixType,class PressureMatrixType,class VectorType>
         void makePressureMatrixEntries(PressureMatrixType& pmatrix,
                                        const MatrixType& fineMatrix,
                                        const int pressure_var_index,
-                                       const BlockVectorType& weights){
+                                       const VectorType& weights){
             pmatrix = 0;
             auto rowCoarse = pmatrix.begin();
             for (auto row = fineMatrix.begin(), rowEnd = fineMatrix.end(); row != rowEnd; ++row, ++rowCoarse) {
@@ -64,8 +47,34 @@ namespace Opm{
             assert(rowCoarse == pmatrix.end());
         }
         
-        template<class BlockVectorType, class PressureVectorType>
-        void moveToPressureEqn(const BlockVectorType& fine,PressureVectorType& rhs,const BlockVectorType& weights) 
+
+
+        
+        template<class MatrixType,
+                 class VectorType,
+                 class PressureMatrixType,
+                 class PressureVectorType>
+        PressureMatrixType makePressureMatrix(const MatrixType& fineLevelMatrix,
+                                              int pressureVarIndex,
+                                              const VectorType& weights)
+        {
+            PressureMatrixType pressureMatrix(fineLevelMatrix.N(), fineLevelMatrix.M(), PressureMatrixType::row_wise);
+            auto createIter = pressureMatrix.createbegin();
+            
+            for (const auto& row : fineLevelMatrix) {
+                for (auto col = row.begin(), cend = row.end(); col != cend; ++col) {
+                    createIter.insert(col.index());
+                }
+                ++createIter;
+            }
+            makePressureMatrixEntries<MatrixType,
+                                     PressureMatrixType,
+                                     VectorType>
+                                     (pressureMatrix,fineLevelMatrix,pressureVarIndex, weights);
+            return pressureMatrix;
+        }
+        template<class VectorType, class PressureVectorType>
+        void moveToPressureEqn(const VectorType& fine,PressureVectorType& rhs,const VectorType& weights) 
         {
             // Set coarse vector to zero
             rhs = 0;    
@@ -80,8 +89,8 @@ namespace Opm{
                 rhs[block - begin] = rhs_el;
             }
         }
-        template<class BlockVectorType, class PressureVectorType>
-        void movePressureToBlock(BlockVectorType& fine,const PressureVectorType& lhs,int pressure_var_index)
+        template<class VectorType, class PressureVectorType>
+        void movePressureToBlock(VectorType& fine,const PressureVectorType& lhs,int pressure_var_index)
         {
             auto end = fine.end(), begin = fine.begin();
             for (auto block = begin; block != end; ++block) {

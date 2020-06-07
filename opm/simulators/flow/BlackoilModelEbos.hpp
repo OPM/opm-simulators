@@ -496,8 +496,9 @@ namespace Opm {
                                               ThreadManager::threadId());
                 PressureMatrixType pmatrix =
                     PressureHelper::makePressureMatrix<Mat,
+                                                       BVector,
                                                        PressureMatrixType,
-                                                       BVector>(
+                                                       PressureVectorType>(
                                                            ebosJac.istlMatrix(),
                                                            pressureVarIndex,
                                                            weights);
@@ -505,8 +506,25 @@ namespace Opm {
                 PressureHelper::moveToPressureEqn(ebosResid, rhs, weights);
                 boost::property_tree::ptree prm;
                 boost::property_tree::read_json("pressuresolver.json", prm);
-                std::function<BVector()> weightsCalculator;
-                Dune::FlexibleSolver<PressureMatrixType,PressureVectorType> pressureSolver(prm,pmatrix,weightsCalculator,comm);
+                std::any parallelInformation;               
+                extractParallelGridInformationToISTL(ebosSimulator_.vanguard().grid(), parallelInformation);
+#if HAVE_MPI
+                using Communication = Dune::OwnerOverlapCopyCommunication<int, int>;
+                Communication comm;
+                if (parallelInformation_.type() == typeid(ParallelISTLInformation)) {
+                    // Parallel case.
+                    const ParallelISTLInformation* parinfo = std::any_cast<ParallelISTLInformation>(&parallelInformation_);
+                    assert(parinfo);
+                    comm = Communication(parinfo->communicator());
+                }
+#else
+                using Communication = Dune::Amg::SequentialInformation; // Dummy type
+                Communication comm;
+#endif
+
+
+                std::function<PressureVectorType()> weightsCalculator;// dummy
+                Dune::FlexibleSolver<PressureMatrixType,PressureVectorType> pressureSolver(prm,pmatrix, weightsCalculator, comm);
                 PressureVectorType xp(x.size(),0);
                 Dune::InverseOperatorResult res;
                 pressureSolver.apply(rhs, xp, res);
