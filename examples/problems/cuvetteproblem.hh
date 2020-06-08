@@ -56,7 +56,7 @@ template <class TypeTag>
 class CuvetteProblem;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 
 // create a new type tag for the cuvette steam injection problem
@@ -126,7 +126,7 @@ SET_SCALAR_PROP(CuvetteBaseProblem, InitialTimeStepSize, 1);
 // The default DGF file to load
 SET_STRING_PROP(CuvetteBaseProblem, GridFile, "./data/cuvette_11x4.dgf");
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!

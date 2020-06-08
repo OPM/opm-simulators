@@ -57,7 +57,7 @@ template <class TypeTag>
 class Tutorial1Problem;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // Create a new type tag for the problem
 // Create new type tags
@@ -137,7 +137,7 @@ struct CellsY<TypeTag, TTag::Tutorial1Problem> { static constexpr int value = 1;
 template<class TypeTag>
 struct CellsZ<TypeTag, TTag::Tutorial1Problem> { static constexpr int value = 1; }; /*@\label{tutorial1:default-params-end}@*/
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 //! Tutorial problem using the "immiscible" model.

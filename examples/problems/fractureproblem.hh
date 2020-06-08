@@ -65,7 +65,7 @@ template <class TypeTag>
 class FractureProblem;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // Create a type tag for the problem
 // Create new type tags
@@ -170,7 +170,7 @@ SET_SCALAR_PROP(FractureProblem, EndTime, 3e3);
 // Set the default value for the initial time step size
 SET_SCALAR_PROP(FractureProblem, InitialTimeStepSize, 100);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!

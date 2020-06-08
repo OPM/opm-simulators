@@ -31,7 +31,7 @@
 #include <opm/models/pvs/pvsmodel.hh>
 #include "problems/waterairproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
@@ -41,7 +41,7 @@ struct WaterAirProblem { using InheritsFrom = std::tuple<WaterAirBaseProblem, Pv
 template<class TypeTag>
 struct EnableEnergy<TypeTag, TTag::WaterAirProblem> { static constexpr bool value = true; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {

@@ -55,7 +55,7 @@ template <class TypeTag>
 class ImmiscibleModel;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
@@ -174,7 +174,7 @@ public:
 };
 
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

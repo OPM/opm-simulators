@@ -31,14 +31,14 @@
 #include <opm/models/flash/flashmodel.hh>
 #include "problems/diffusionproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
 struct DiffusionProblem { using InheritsFrom = std::tuple<DiffusionBaseProblem, FlashModel>; };
 } // end namespace TTag
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {

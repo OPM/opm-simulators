@@ -60,7 +60,7 @@ namespace Opm {
 // forward declaration of property tags
 } // namespace Opm
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 //! The type tag on which the default properties for the Newton method
 //! are attached
@@ -139,7 +139,7 @@ struct NewtonTargetIterations<TypeTag, TTag::NewtonMethod> { static constexpr in
 template<class TypeTag>
 struct NewtonMaxIterations<TypeTag, TTag::NewtonMethod> { static constexpr int value = 18; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!

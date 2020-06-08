@@ -34,7 +34,7 @@
 
 #include "problems/co2injectionproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
@@ -42,7 +42,7 @@ struct Co2InjectionNcpVcfvProblem { using InheritsFrom = std::tuple<Co2Injection
 } // end namespace TTag
 SET_TAG_PROP(Co2InjectionNcpVcfvProblem, SpatialDiscretizationSplice, VcfvDiscretization);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {

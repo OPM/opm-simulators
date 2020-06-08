@@ -31,14 +31,14 @@
 #include <opm/models/immiscible/immisciblemodel.hh>
 #include "problems/groundwaterproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
 struct GroundWaterProblem { using InheritsFrom = std::tuple<GroundWaterBaseProblem, ImmiscibleSinglePhaseModel>; };
 } // end namespace TTag
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {

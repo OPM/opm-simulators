@@ -33,7 +33,7 @@
 #include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/io/vtkenergymodule.hh>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // these properties only make sense for the ImmiscibleTwoPhase type tag
 //! The wetting phase for two-phase models
@@ -48,6 +48,6 @@ struct NonwettingPhase { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct Fluid { using type = UndefinedProperty; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 #endif

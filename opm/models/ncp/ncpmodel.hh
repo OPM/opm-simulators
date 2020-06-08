@@ -62,7 +62,7 @@ template <class TypeTag>
 class NcpModel;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 /*!
  * \brief Define the type tag for the compositional NCP model.
@@ -128,7 +128,7 @@ SET_SCALAR_PROP(NcpModel, NcpSaturationsBaseWeight, 1.0);
 //! The unmodified weight for the fugacity primary variables
 SET_SCALAR_PROP(NcpModel, NcpFugacitiesBaseWeight, 1.0e-6);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

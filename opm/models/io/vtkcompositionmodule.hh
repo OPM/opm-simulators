@@ -35,7 +35,7 @@
 
 #include <opm/material/common/MathToolbox.hpp>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // create new type tag for the VTK composition output
 NEW_TYPE_TAG(VtkComposition);
@@ -72,7 +72,7 @@ struct VtkWriteFugacities<TypeTag, TTag::VtkComposition> { static constexpr bool
 template<class TypeTag>
 struct VtkWriteFugacityCoeffs<TypeTag, TTag::VtkComposition> { static constexpr bool value = false; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

@@ -50,7 +50,7 @@ class FvBaseFdLocalLinearizer;
 
 } // namespace Opm
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // declare the property tags required for the finite differences local linearizer
 NEW_TYPE_TAG(FiniteDifferenceLocalLinearizer);
@@ -82,7 +82,7 @@ SET_SCALAR_PROP(FiniteDifferenceLocalLinearizer,
                 BaseEpsilon,
                 std::max<Scalar>(0.9123e-10, std::numeric_limits<Scalar>::epsilon()*1.23e3));
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

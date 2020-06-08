@@ -62,7 +62,7 @@ class FingerProblem;
 
 } // namespace Opm
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
@@ -160,7 +160,7 @@ SET_SCALAR_PROP(FingerBaseProblem, EndTime, 215);
 // The default for the initial time step size of the simulation
 SET_SCALAR_PROP(FingerBaseProblem, InitialTimeStepSize, 10);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

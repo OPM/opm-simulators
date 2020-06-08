@@ -40,7 +40,7 @@
 
 #include <cstdio>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // create new type tag for the VTK multi-phase output
 NEW_TYPE_TAG(VtkBlackOilPolymer);
@@ -73,7 +73,7 @@ struct VtkWritePolymerRockDensity<TypeTag, TTag::VtkBlackOilPolymer> { static co
 template<class TypeTag>
 struct VtkWritePolymerAdsorption<TypeTag, TTag::VtkBlackOilPolymer> { static constexpr bool value = true; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!

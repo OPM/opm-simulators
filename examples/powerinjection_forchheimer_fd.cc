@@ -31,7 +31,7 @@
 #include <opm/models/immiscible/immisciblemodel.hh>
 #include "problems/powerinjectionproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_TYPE_TAG(PowerInjectionForchheimerFdProblem,
              INHERITS_FROM(ImmiscibleTwoPhaseModel,
@@ -41,7 +41,7 @@ template<class TypeTag>
 struct FluxModule<TypeTag, TTag::PowerInjectionForchheimerFdProblem> { using type = Opm::ForchheimerFluxModule<TypeTag>; };
 SET_TAG_PROP(PowerInjectionForchheimerFdProblem, LocalLinearizerSplice, FiniteDifferenceLocalLinearizer);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {

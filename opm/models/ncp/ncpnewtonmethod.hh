@@ -37,12 +37,12 @@
 
 #include <algorithm>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 template <class TypeTag, class MyTypeTag>
 struct DiscNewtonMethod;
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

@@ -61,7 +61,7 @@ template <class TypeTag>
 class PvsModel;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 //! The type tag for the isothermal single phase problems
 NEW_TYPE_TAG(PvsModel, INHERITS_FROM(MultiPhaseBaseModel,
@@ -128,7 +128,7 @@ SET_SCALAR_PROP(PvsModel, PvsSaturationsBaseWeight, 1.0);
 //! The basis value for the weight of the mole fraction primary variables
 SET_SCALAR_PROP(PvsModel, PvsMoleFractionsBaseWeight, 1.0);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

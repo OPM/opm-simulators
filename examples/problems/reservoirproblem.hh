@@ -56,7 +56,7 @@ class ReservoirProblem;
 
 } // namespace Opm
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 
 NEW_TYPE_TAG(ReservoirBaseProblem);
@@ -149,7 +149,7 @@ SET_STRING_PROP(ReservoirBaseProblem, GridFile, "data/reservoir.dgf");
 // increase the tolerance for this problem to get larger time steps
 SET_SCALAR_PROP(ReservoirBaseProblem, NewtonTolerance, 1e-6);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

@@ -32,7 +32,7 @@
 
 #include "problems/richardslensproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
@@ -40,7 +40,7 @@ struct RichardsLensVcfvProblem { using InheritsFrom = std::tuple<RichardsLensPro
 } // end namespace TTag
 SET_TAG_PROP(RichardsLensVcfvProblem, SpatialDiscretizationSplice, VcfvDiscretization);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {

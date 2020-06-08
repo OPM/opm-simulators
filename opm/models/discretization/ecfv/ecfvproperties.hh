@@ -33,7 +33,7 @@
 
 #include <opm/models/utils/propertysystem.hh>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 //! The type tag for models based on the ECFV-scheme
 // Create new type tags
@@ -41,6 +41,6 @@ namespace TTag {
 struct EcfvDiscretization { using InheritsFrom = std::tuple<FvBaseDiscretization>; };
 } // end namespace TTag
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 #endif

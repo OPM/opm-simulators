@@ -48,7 +48,7 @@ template <class TypeTag>
 class ParallelAmgBackend;
 }}
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
@@ -65,7 +65,7 @@ SET_SCALAR_PROP(ParallelAmgLinearSolver, LinearSolverMaxError, 1e7);
 SET_TYPE_PROP(ParallelAmgLinearSolver, LinearSolverBackend,
               Opm::Linear::ParallelAmgBackend<TypeTag>);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 namespace Linear {

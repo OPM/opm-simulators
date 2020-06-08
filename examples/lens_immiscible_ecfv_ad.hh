@@ -33,7 +33,7 @@
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 #include "problems/lensproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
@@ -50,6 +50,6 @@ SET_TAG_PROP(LensProblemEcfvAd, LocalLinearizerSplice, AutoDiffLocalLinearizer);
 template<class TypeTag>
 struct LinearSolverScalar<TypeTag, TTag::LensProblemEcfvAd> { using type = float; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 #endif // EWOMS_LENS_IMMISCIBLE_ECFV_AD_HH

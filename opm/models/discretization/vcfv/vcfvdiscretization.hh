@@ -50,7 +50,7 @@ class VcfvDiscretization;
 
 } // namespace Opm
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 //! Set the stencil
 template<class TypeTag>
@@ -125,7 +125,7 @@ template<class TypeTag>
 struct LinearizeNonLocalElements<TypeTag, TTag::VcfvDiscretization> { static constexpr bool value = false; };
 
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

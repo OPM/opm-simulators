@@ -35,7 +35,7 @@
 
 #include <opm/material/common/MathToolbox.hpp>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // create new type tag for the VTK energy output
 NEW_TYPE_TAG(VtkEnergy);
@@ -60,7 +60,7 @@ struct VtkWriteInternalEnergies<TypeTag, TTag::VtkEnergy> { static constexpr boo
 template<class TypeTag>
 struct VtkWriteEnthalpies<TypeTag, TTag::VtkEnergy> { static constexpr bool value = false; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!

@@ -33,7 +33,7 @@
 #include <dune/grid/geometrygrid.hh>
 #include <dune/grid/io/file/dgfparser/dgfgeogrid.hh>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // Use Dune-grid's GeometryGrid< YaspGrid >
 template<class TypeTag>
@@ -81,7 +81,7 @@ public:
                                                 MyYaspGrid::dimensionworld+1> >  type;
 };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 #include <opm/models/utils/start.hh>
 

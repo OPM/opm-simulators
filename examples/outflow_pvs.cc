@@ -31,7 +31,7 @@
 #include <opm/models/pvs/pvsmodel.hh>
 #include "problems/outflowproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
@@ -42,7 +42,7 @@ struct OutflowProblem { using InheritsFrom = std::tuple<OutflowBaseProblem, PvsM
 template<class TypeTag>
 struct PvsVerbosity<TypeTag, TTag::OutflowProblem> { static constexpr int value = 1; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {

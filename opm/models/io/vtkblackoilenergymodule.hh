@@ -40,7 +40,7 @@
 
 #include <cstdio>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // create new type tag for the VTK multi-phase output
 NEW_TYPE_TAG(VtkBlackOilEnergy);
@@ -65,7 +65,7 @@ struct VtkWriteFluidInternalEnergies<TypeTag, TTag::VtkBlackOilEnergy> { static 
 template<class TypeTag>
 struct VtkWriteFluidEnthalpies<TypeTag, TTag::VtkBlackOilEnergy> { static constexpr bool value = true; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!

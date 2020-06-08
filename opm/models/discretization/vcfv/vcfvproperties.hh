@@ -33,7 +33,7 @@
 
 #include <opm/models/utils/propertysystem.hh>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 //! The type tag for models based on the VCFV-scheme
 // Create new type tags
@@ -46,6 +46,6 @@ struct VcfvDiscretization { using InheritsFrom = std::tuple<FvBaseDiscretization
 template<class TypeTag, class MyTypeTag>
 struct UseP1FiniteElementGradients { using type = UndefinedProperty; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 #endif

@@ -221,7 +221,7 @@ private:
 
 } // namespace Opm
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // type tag which is supposed to spliced in or inherited from if the
 // parameter system is to be used
@@ -284,7 +284,7 @@ private:
 };
 
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

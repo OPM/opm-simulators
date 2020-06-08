@@ -40,7 +40,7 @@
 
 #include <cstdio>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // create new type tag for the VTK multi-phase output
 NEW_TYPE_TAG(VtkMultiPhase);
@@ -97,7 +97,7 @@ struct VtkWritePotentialGradients<TypeTag, TTag::VtkMultiPhase> { static constex
 template<class TypeTag>
 struct VtkWriteFilterVelocities<TypeTag, TTag::VtkMultiPhase> { static constexpr bool value = false; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

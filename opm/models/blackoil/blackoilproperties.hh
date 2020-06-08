@@ -31,7 +31,7 @@
 
 #include <opm/models/common/multiphasebaseproperties.hh>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 //! Specifies if the simulation should write output files that are
 //! compatible with those produced by the commercial Eclipse simulator
@@ -73,6 +73,6 @@ template<class TypeTag, class MyTypeTag>
 struct BlackOilEnergyScalingFactor { using type = UndefinedProperty; };
 
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 #endif

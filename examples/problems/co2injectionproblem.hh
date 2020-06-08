@@ -68,7 +68,7 @@ namespace Co2Injection {
 //! \endcond
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_TYPE_TAG(Co2InjectionBaseProblem);
 
@@ -188,7 +188,7 @@ SET_SCALAR_PROP(Co2InjectionBaseProblem, InitialTimeStepSize, 250);
 // The default DGF file to load
 SET_STRING_PROP(Co2InjectionBaseProblem, GridFile, "data/co2injection.dgf");
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!

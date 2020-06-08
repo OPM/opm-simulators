@@ -33,7 +33,7 @@
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 #include "problems/co2injectionproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
@@ -41,7 +41,7 @@ struct Co2InjectionPvsEcfvProblem { using InheritsFrom = std::tuple<Co2Injection
 } // end namespace TTag
 SET_TAG_PROP(Co2InjectionPvsEcfvProblem, SpatialDiscretizationSplice, EcfvDiscretization);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {

@@ -51,7 +51,7 @@ class RichardsLensProblem;
 
 } // namespace Opm
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
@@ -130,7 +130,7 @@ SET_SCALAR_PROP(RichardsLensProblem, InitialTimeStepSize, 100);
 // The default DGF file to load
 SET_STRING_PROP(RichardsLensProblem, GridFile, "./data/richardslens_24x16.dgf");
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

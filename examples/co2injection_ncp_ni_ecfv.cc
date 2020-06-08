@@ -33,7 +33,7 @@
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 #include "problems/co2injectionproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
@@ -46,7 +46,7 @@ struct EnableEnergy<TypeTag, TTag::Co2InjectionNcpNiEcfvProblem> { static conste
 //! Use automatic differentiation to linearize the system of PDEs
 SET_TAG_PROP(Co2InjectionNcpNiEcfvProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {

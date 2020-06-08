@@ -32,7 +32,7 @@
 #include <opm/models/common/multiphasebaseproperties.hh>
 
 // \{
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 //! The fluid used as the wetting phase (by default, we set the fluid
 //! system to the immiscible one, which requires this property.)
@@ -62,6 +62,6 @@ struct GasComponentIndex { using type = UndefinedProperty; };
 
 // \}
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 #endif

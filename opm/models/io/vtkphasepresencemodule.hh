@@ -33,7 +33,7 @@
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // create new type tag for the VTK primary variables output
 NEW_TYPE_TAG(VtkPhasePresence);
@@ -45,7 +45,7 @@ struct VtkWritePhasePresence { using type = UndefinedProperty; };
 template<class TypeTag>
 struct VtkWritePhasePresence<TypeTag, TTag::VtkPhasePresence> { static constexpr bool value = false; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!

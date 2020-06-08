@@ -32,14 +32,14 @@
 
 #include "problems/obstacleproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
 struct ObstacleProblem { using InheritsFrom = std::tuple<ObstacleBaseProblem, NcpModel>; };
 } // end namespace TTag
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {

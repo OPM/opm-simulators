@@ -57,7 +57,7 @@ template <class TypeTag>
 class PowerInjectionProblem;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_TYPE_TAG(PowerInjectionBaseProblem);
 
@@ -145,7 +145,7 @@ SET_SCALAR_PROP(PowerInjectionBaseProblem, EndTime, 100);
 // The default for the initial time step size of the simulation
 SET_SCALAR_PROP(PowerInjectionBaseProblem, InitialTimeStepSize, 1e-3);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!

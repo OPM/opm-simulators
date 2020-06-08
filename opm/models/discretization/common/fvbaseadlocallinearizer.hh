@@ -46,7 +46,7 @@ template<class TypeTag>
 class FvBaseAdLocalLinearizer;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // declare the property tags required for the finite differences local linearizer
 NEW_TYPE_TAG(AutoDiffLocalLinearizer);
@@ -69,7 +69,7 @@ public:
     typedef Opm::DenseAd::Evaluation<Scalar, numEq> type;
 };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 
