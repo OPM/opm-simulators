@@ -173,7 +173,8 @@ namespace Opm {
         SimulatorReportSingle stepFull(const SimulatorTimerInterface& timer){
             LinearizationType linearizationType;// use default
             model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);
-            this->stepDefault(timer);
+            SimulatorReportSingle report = this->stepDefault(timer);
+            return report;
         }
             
 
