@@ -34,7 +34,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/timestepping/gatherConvergenceReport.cpp
   opm/simulators/utils/DeferredLogger.cpp
   opm/simulators/utils/gatherDeferredLogger.cpp
-  opm/simulators/utils/moduleVersion.cpp
   opm/simulators/utils/ParallelRestart.cpp
   opm/simulators/wells/VFPProdProperties.cpp
   opm/simulators/wells/VFPInjProperties.cpp

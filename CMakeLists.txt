@@ -201,13 +201,15 @@ else()
   set(FLOW_DEFAULT_ENABLE_IF "TRUE")
 endif()
 
+add_library(moduleVersion OBJECT opm/simulators/utils/moduleVersion.cpp)
+
 # the production oriented general-purpose ECL simulator
 opm_add_test(flow
   ONLY_COMPILE
   ALWAYS_ENABLE
   DEFAULT_ENABLE_IF ${FLOW_DEFAULT_ENABLE_IF}
-  DEPENDS "opmsimulators"
-  LIBRARIES "opmsimulators"
+  DEPENDS opmsimulators
+  LIBRARIES opmsimulators
   SOURCES
   flow/flow.cpp
   flow/flow_ebos_blackoil.cpp
@@ -219,7 +221,9 @@ opm_add_test(flow
   flow/flow_ebos_solvent.cpp
   flow/flow_ebos_energy.cpp
   flow/flow_ebos_oilwater_polymer.cpp
-  flow/flow_ebos_oilwater_polymer_injectivity.cpp)
+  flow/flow_ebos_oilwater_polymer_injectivity.cpp
+  $<TARGET_OBJECTS:moduleVersion>)
+
 
 if (NOT BUILD_FLOW_BLACKOIL_ONLY)
   set(FLOW_BLACKOIL_ONLY_DEFAULT_ENABLE_IF "FALSE")
@@ -232,11 +236,12 @@ opm_add_test(flow_blackoil
   ONLY_COMPILE
   ALWAYS_ENABLE
   DEFAULT_ENABLE_IF ${FLOW_BLACKOIL_ONLY_DEFAULT_ENABLE_IF}
-  DEPENDS "opmsimulators"
-  LIBRARIES "opmsimulators"
+  DEPENDS opmsimulators
+  LIBRARIES opmsimulators
   SOURCES
   flow/flow.cpp
-  flow/flow_ebos_blackoil.cpp)
+  flow/flow_ebos_blackoil.cpp
+  $<TARGET_OBJECTS:moduleVersion>)
 target_compile_definitions(flow_blackoil PRIVATE "FLOW_BLACKOIL_ONLY")
 
 if (NOT BUILD_FLOW_VARIANTS)
@@ -249,26 +254,32 @@ endif()
 opm_add_test(flow_blackoil_dunecpr
   ONLY_COMPILE
   DEFAULT_ENABLE_IF ${FLOW_VARIANTS_DEFAULT_ENABLE_IF}
-  SOURCES flow/flow_blackoil_dunecpr.cpp
+  SOURCES
+  flow/flow_blackoil_dunecpr.cpp
+  $<TARGET_OBJECTS:moduleVersion>
   EXE_NAME flow_blackoil_dunecpr
-  DEPENDS "opmsimulators"
-  LIBRARIES "opmsimulators")
+  DEPENDS opmsimulators
+  LIBRARIES opmsimulators)
 
 opm_add_test(flow_onephase
   ONLY_COMPILE
   DEFAULT_ENABLE_IF ${FLOW_VARIANTS_DEFAULT_ENABLE_IF}
-  SOURCES flow/flow_onephase.cpp
+  SOURCES
+  flow/flow_onephase.cpp
+  $<TARGET_OBJECTS:moduleVersion>
   EXE_NAME flow_onephase
-  DEPENDS "opmsimulators"
-  LIBRARIES "opmsimulators")
+  DEPENDS opmsimulators
+  LIBRARIES opmsimulators)
 
 opm_add_test(flow_onephase_energy
   ONLY_COMPILE
   DEFAULT_ENABLE_IF ${FLOW_VARIANTS_DEFAULT_ENABLE_IF}
-  SOURCES flow/flow_onephase_energy.cpp
+  SOURCES
+  flow/flow_onephase_energy.cpp
+  $<TARGET_OBJECTS:moduleVersion>
   EXE_NAME flow_onephase_energy
-  DEPENDS "opmsimulators"
-  LIBRARIES "opmsimulators")
+  DEPENDS opmsimulators
+  LIBRARIES opmsimulators)
 
 if (BUILD_FLOW)
   install(TARGETS flow DESTINATION bin)

@@ -18,6 +18,7 @@
 */
 
 #include <opm/simulators/utils/moduleVersion.hpp>
+#include "project-timestamp.h"
 #include "project-version.h"
 
 namespace Opm
