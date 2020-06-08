@@ -96,7 +96,6 @@ function(add_test_compare_restarted_simulation)
                            ${PARAM_ABS_TOL} ${PARAM_REL_TOL}
                            ${COMPARE_ECL_COMMAND}
                            ${OPM_PACK_COMMAND}
-                           0
                TEST_ARGS ${PARAM_TEST_ARGS})
 endfunction()
 
@@ -161,7 +160,6 @@ function(add_test_compare_parallel_restarted_simulation)
                            ${PARAM_ABS_TOL} ${PARAM_REL_TOL}
                            ${COMPARE_ECL_COMMAND}
                            ${OPM_PACK_COMMAND}
-                           1
                TEST_ARGS ${PARAM_TEST_ARGS})
   set_tests_properties(compareParallelRestartedSim_${PARAM_SIMULATOR}+${PARAM_FILENAME}
                        PROPERTIES RUN_SERIAL 1)
@@ -749,7 +747,7 @@ add_test_compare_restarted_simulation(CASENAME msw_3d_hfa
                                       SIMULATOR flow
                                       ABS_TOL ${abs_tol_restart}
                                       REL_TOL ${rel_tol_restart}
-                                      TEST_ARGS --sched-restart=false)
+                                      TEST_ARGS --enable-adaptive-time-stepping=false --sched-restart=false)
 
 # PORV test
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-porv-acceptanceTest.sh "")
@@ -774,7 +772,7 @@ add_test_compareECLFiles(CASENAME norne
 
 # Parallel tests
 if(MPI_FOUND)
-  opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
+  opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-parallel-restart-regressionTest.sh "")
   add_test_compare_parallel_restarted_simulation(CASENAME spe1
                                                  FILENAME SPE1CASE2_ACTNUM
                                                  SIMULATOR flow
