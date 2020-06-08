@@ -149,12 +149,25 @@ namespace Opm {
 
         SimulatorReportSingle stepSequential(const SimulatorTimerInterface& timer){
             LinearizationType linearizationType;
-            linearizationType.type = Opm::LinearizationType::pressure;
-            model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);  
-            this->stepDefault(timer);
-            linearizationType.type = Opm::LinearizationType::seqtransport;
-            model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);
-            this->stepDefault(timer);
+            bool converged = false;
+            SimulatorReportSingle reportpre;
+            SimulatorReportSingle reportseq;
+            while(not converged){
+                linearizationType.type = Opm::LinearizationType::pressure;
+                model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);  
+                SimulatorReportSingle lreportpre = this->stepDefault(timer);
+                linearizationType.type = Opm::LinearizationType::seqtransport;
+                model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);
+                SimulatorReportSingle lreportseq = this->stepDefault(timer);
+                reportpre += lreportpre;
+                reportseq += lreportseq;
+                // for no not seq implicit
+                converged = true;               
+            }
+            SimulatorReportSingle report;
+            //todo fill this report correctly
+            return report;
+                
         }
 
         SimulatorReportSingle stepFull(const SimulatorTimerInterface& timer){
