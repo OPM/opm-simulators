@@ -21,8 +21,8 @@
 #include "config.h"
 
 #include <opm/simulators/flow/Main.hpp>
-#include  <opm/simulators/linalg/ISTLSolverEbosFlexible.hpp>
-
+#include <opm/simulators/linalg/ISTLSolverEbosFlexible.hpp>
+#include <opm/ebos/eclfluxmoduleseq.hh>
 BEGIN_PROPERTIES
 NEW_TYPE_TAG(EclFlowProblemSimple, INHERITS_FROM(EclFlowProblem));
 NEW_PROP_TAG(FluidState);
@@ -61,9 +61,9 @@ SET_STRING_PROP(EclFlowProblemSimple, SystemStrategy, "quasiimpes");
 END_PROPERTIES
 
 namespace Opm {
-    template <class TypeTag>
-    class EclTransExtensiveQuantitiesSeq : public EclTransExtensiveQuantities<TypeTag>
-    {};
+    //template <class TypeTag>
+    //class EclTransExtensiveQuantitiesSeq : public EclTransExtensiveQuantitise<TypeTag>
+    //{};
 
     // template <class TypeTag>
     // BlackOilIntensiveQuantitiesSeq    :  public BlackOilIntensiveQuantities<TypeTag>
