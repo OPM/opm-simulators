@@ -1651,13 +1651,9 @@ namespace Opm
             segment_densities_[seg] = density / volrat;
 
             // calculate the mass rates
-            // TODO: for now, we are not considering the upwinding for this amount
-            // since how to address the fact that the derivatives is not trivial for now
-            // and segment_mass_rates_ goes a long way with the frictional pressure loss
-            // and accelerational pressure loss, which needs some work to handle
             segment_mass_rates_[seg] = 0.;
             for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
-                const EvalWell rate = getSegmentRate(seg, comp_idx);
+                const EvalWell rate = getSegmentRateUpwinding(seg, comp_idx);
                 segment_mass_rates_[seg] += rate * surf_dens[comp_idx];
             }
 
@@ -2066,9 +2062,11 @@ namespace Opm
         }
 
         resWell_[seg][SPres] = pressure_equation.value();
-        for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-            duneD_[seg][seg][SPres][pv_idx] = pressure_equation.derivative(pv_idx + numEq);
-        }
+        const int seg_upwind = upwinding_segments_[seg];
+        duneD_[seg][seg][SPres][SPres] += pressure_equation.derivative(SPres + numEq);
+        duneD_[seg][seg][SPres][GTotal] += pressure_equation.derivative(GTotal + numEq);
+        duneD_[seg][seg_upwind][SPres][WFrac] += pressure_equation.derivative(WFrac + numEq);
+        duneD_[seg][seg_upwind][SPres][GFrac] += pressure_equation.derivative(GFrac + numEq);
 
         // contribution from the outlet segment
         const int outlet_segment_index = segmentNumberToIndex(segmentSet()[seg].outletSegment());
@@ -2106,8 +2104,16 @@ namespace Opm
     getFrictionPressureLoss(const int seg) const
     {
         const EvalWell mass_rate = segment_mass_rates_[seg];
-        const EvalWell density = segment_densities_[seg];
-        const EvalWell visc = segment_viscosities_[seg];
+        const int seg_upwind = upwinding_segments_[seg];
+        EvalWell density = segment_densities_[seg_upwind];
+        EvalWell visc = segment_viscosities_[seg_upwind];
+        // WARNING
+        // We disregard the derivatives from the upwind density to make sure derivatives
+        // wrt. to different segments dont get mixed.
+        if (seg != seg_upwind) {
+            density.clearDerivatives();
+            visc.clearDerivatives();
+        }
         const int outlet_segment_index = segmentNumberToIndex(segmentSet()[seg].outletSegment());
         const double length = segmentSet()[seg].totalLength() - segmentSet()[outlet_segment_index].totalLength();
         assert(length > 0.);
@@ -2129,38 +2135,45 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     handleAccelerationPressureLoss(const int seg, WellState& well_state) const
     {
-        // TODO: this pressure loss is not significant enough to be well tested yet.
-        // handle the out velcocity head
         const double area = segmentSet()[seg].crossArea();
         const EvalWell mass_rate = segment_mass_rates_[seg];
-        const EvalWell density = segment_densities_[seg];
-        const EvalWell out_velocity_head = mswellhelpers::velocityHead(area, mass_rate, density);
-
-        resWell_[seg][SPres] -= out_velocity_head.value();
-        for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-            duneD_[seg][seg][SPres][pv_idx] -= out_velocity_head.derivative(pv_idx + numEq);
+        const int seg_upwind = upwinding_segments_[seg];
+        EvalWell density = segment_densities_[seg_upwind];
+        // WARNING
+        // We disregard the derivatives from the upwind density to make sure derivatives
+        // wrt. to different segments dont get mixed.
+        if (seg != seg_upwind) {
+            density.clearDerivatives();
         }
 
-        // calcuate the maximum cross-area among the segment and its inlet segments
-        double max_area = area;
-        for (const int inlet : segment_inlets_[seg]) {
-            const double inlet_area = segmentSet()[inlet].crossArea();
-            if (inlet_area > max_area) {
-                max_area = inlet_area;
-            }
-        }
-
+        EvalWell accelerationPressureLoss = mswellhelpers::velocityHead(area, mass_rate, density);
         // handling the velocity head of intlet segments
         for (const int inlet : segment_inlets_[seg]) {
-            const EvalWell inlet_density = segment_densities_[inlet];
-            const EvalWell inlet_mass_rate = segment_mass_rates_[inlet];
-            const EvalWell inlet_velocity_head = mswellhelpers::velocityHead(area, inlet_mass_rate, inlet_density);
-            well_state.segPressDropAcceleration()[seg] = inlet_velocity_head.value();
-            resWell_[seg][SPres] += inlet_velocity_head.value();
-            for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-                duneD_[seg][inlet][SPres][pv_idx] += inlet_velocity_head.derivative(pv_idx + numEq);
+            const int seg_upwind_inlet = upwinding_segments_[inlet];
+            const double inlet_area = segmentSet()[inlet].crossArea();
+            EvalWell inlet_density = segment_densities_[seg_upwind_inlet];
+            // WARNING
+            // We disregard the derivatives from the upwind density to make sure derivatives
+            // wrt. to different segments dont get mixed.
+            if (inlet != seg_upwind_inlet) {
+                inlet_density.clearDerivatives();
             }
+            const EvalWell inlet_mass_rate = segment_mass_rates_[inlet];
+            accelerationPressureLoss -= mswellhelpers::velocityHead(std::max(inlet_area, area), inlet_mass_rate, inlet_density);
         }
+        
+        // We change the sign of the accelerationPressureLoss for injectors. 
+        // Is this correct? Testing indicates that this is what the reference simulator does
+        const double sign = mass_rate < 0. ? 1.0 : - 1.0;
+        accelerationPressureLoss *= sign;
+
+        well_state.segPressDropAcceleration()[seg] = accelerationPressureLoss.value();
+
+        resWell_[seg][SPres] -= accelerationPressureLoss.value();
+        duneD_[seg][seg][SPres][SPres] -= accelerationPressureLoss.derivative(SPres + numEq);
+        duneD_[seg][seg][SPres][GTotal] -= accelerationPressureLoss.derivative(GTotal + numEq);
+        duneD_[seg][seg_upwind][SPres][WFrac] -= accelerationPressureLoss.derivative(WFrac + numEq);
+        duneD_[seg][seg_upwind][SPres][GFrac] -= accelerationPressureLoss.derivative(GFrac + numEq);
     }
 
 
@@ -2477,11 +2490,12 @@ namespace Opm
                                    WellState& well_state,
                                    Opm::DeferredLogger& deferred_logger)
     {
-        // calculate the fluid properties needed.
-        computeSegmentFluidProperties(ebosSimulator);
 
         // update the upwinding segments
         updateUpwindingSegments();
+
+        // calculate the fluid properties needed.
+        computeSegmentFluidProperties(ebosSimulator);
 
         // clear all entries
         duneB_ = 0.0;
@@ -3166,10 +3180,12 @@ namespace Opm
         pressure_equation = pressure_equation - sicd_pressure_drop;
         well_state.segPressDropFriction()[seg] = sicd_pressure_drop.value();
 
+        const int seg_upwind = upwinding_segments_[seg];
         resWell_[seg][SPres] = pressure_equation.value();
-        for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-            duneD_[seg][seg][SPres][pv_idx] = pressure_equation.derivative(pv_idx + numEq);
-        }
+        duneD_[seg][seg][SPres][SPres] += pressure_equation.derivative(SPres + numEq);
+        duneD_[seg][seg][SPres][GTotal] += pressure_equation.derivative(GTotal + numEq);
+        duneD_[seg][seg_upwind][SPres][WFrac] += pressure_equation.derivative(WFrac + numEq);
+        duneD_[seg][seg_upwind][SPres][GFrac] += pressure_equation.derivative(GFrac + numEq);
 
         // contribution from the outlet segment
         const int outlet_segment_index = segmentNumberToIndex(segmentSet()[seg].outletSegment());
@@ -3190,7 +3206,6 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     assembleValvePressureEq(const int seg, WellState& well_state) const
     {
-        // TODO: upwinding needs to be taken care of
         // top segment can not be a spiral ICD device
         assert(seg != 0);
 
@@ -3202,16 +3217,17 @@ namespace Opm
 
         EvalWell pressure_equation = getSegmentPressure(seg);
 
-        // const int seg_upwind = upwinding_segments_[seg];
+        const int seg_upwind = upwinding_segments_[seg];
 
         const auto valve_pressure_drop = pressureDropValve(seg);
         pressure_equation = pressure_equation - valve_pressure_drop;
         well_state.segPressDropFriction()[seg] = valve_pressure_drop.value();
 
         resWell_[seg][SPres] = pressure_equation.value();
-        for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-            duneD_[seg][seg][SPres][pv_idx] = pressure_equation.derivative(pv_idx + numEq);
-        }
+        duneD_[seg][seg][SPres][SPres] += pressure_equation.derivative(SPres + numEq);
+        duneD_[seg][seg][SPres][GTotal] += pressure_equation.derivative(GTotal + numEq);
+        duneD_[seg][seg_upwind][SPres][WFrac] += pressure_equation.derivative(WFrac + numEq);
+        duneD_[seg][seg_upwind][SPres][GFrac] += pressure_equation.derivative(GFrac + numEq);
 
         // contribution from the outlet segment
         const int outlet_segment_index = segmentNumberToIndex(segmentSet()[seg].outletSegment());
@@ -3658,11 +3674,11 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     pressureDropSpiralICD(const int seg) const
     {
-        // TODO: We have to consider the upwinding here
         const SICD& sicd = segmentSet()[seg].spiralICD();
 
-        const std::vector<EvalWell>& phase_fractions = segment_phase_fractions_[seg];
-        const std::vector<EvalWell>& phase_viscosities = segment_phase_viscosities_[seg];
+        const int seg_upwind = upwinding_segments_[seg];
+        const std::vector<EvalWell>& phase_fractions = segment_phase_fractions_[seg_upwind];
+        const std::vector<EvalWell>& phase_viscosities = segment_phase_viscosities_[seg_upwind];
 
         EvalWell water_fraction = 0.;
         EvalWell water_viscosity = 0.;
@@ -3681,18 +3697,32 @@ namespace Opm
         }
 
         EvalWell gas_fraction = 0.;
-        EvalWell gas_viscosities = 0.;
+        EvalWell gas_viscosity = 0.;
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
             const int gas_pos = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
             gas_fraction = phase_fractions[gas_pos];
-            gas_viscosities = phase_viscosities[gas_pos];
+            gas_viscosity = phase_viscosities[gas_pos];
+        }
+
+        EvalWell density = segment_densities_[seg_upwind];
+        // WARNING
+        // We disregard the derivatives from the upwind density to make sure derivatives
+        // wrt. to different segments dont get mixed.
+        if (seg != seg_upwind) {
+            water_fraction.clearDerivatives();
+            water_viscosity.clearDerivatives();
+            oil_fraction.clearDerivatives();
+            oil_viscosity.clearDerivatives();
+            gas_fraction.clearDerivatives();
+            gas_viscosity.clearDerivatives();
+            density.clearDerivatives();
         }
 
         const EvalWell liquid_emulsion_viscosity = mswellhelpers::emulsionViscosity(water_fraction, water_viscosity,
                                                      oil_fraction, oil_viscosity, sicd);
-        const EvalWell mixture_viscosity = (water_fraction + oil_fraction) * liquid_emulsion_viscosity + gas_fraction * gas_viscosities;
+        const EvalWell mixture_viscosity = (water_fraction + oil_fraction) * liquid_emulsion_viscosity + gas_fraction * gas_viscosity;
 
-        const EvalWell& reservoir_rate = segment_reservoir_volume_rates_[seg];
+        const EvalWell reservoir_rate = segment_mass_rates_[seg] / density;
 
         const EvalWell reservoir_rate_icd = reservoir_rate * sicd.scalingFactor();
 
@@ -3700,7 +3730,6 @@ namespace Opm
 
         using MathTool = MathToolbox<EvalWell>;
 
-        const EvalWell& density = segment_densities_[seg];
         const double density_cali = sicd.densityCalibration();
         const EvalWell temp_value1 = MathTool::pow(density / density_cali, 0.75);
         const EvalWell temp_value2 = MathTool::pow(mixture_viscosity / viscosity_cali, 0.25);
@@ -3726,8 +3755,17 @@ namespace Opm
         const Valve& valve = segmentSet()[seg].valve();
 
         const EvalWell& mass_rate = segment_mass_rates_[seg];
-        const EvalWell& visc = segment_viscosities_[seg];
-        const EvalWell& density = segment_densities_[seg];
+        const int seg_upwind = upwinding_segments_[seg];
+        EvalWell visc = segment_viscosities_[seg_upwind];
+        EvalWell density = segment_densities_[seg_upwind];
+        // WARNING
+        // We disregard the derivatives from the upwind density to make sure derivatives
+        // wrt. to different segments dont get mixed.
+        if (seg != seg_upwind) {
+            visc.clearDerivatives();
+            density.clearDerivatives();
+        }
+
         const double additional_length = valve.pipeAdditionalLength();
         const double roughness = valve.pipeRoughness();
         const double diameter = valve.pipeDiameter();

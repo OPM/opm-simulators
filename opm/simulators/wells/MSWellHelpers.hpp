@@ -206,7 +206,7 @@ namespace mswellhelpers
     template <typename ValueType>
     ValueType velocityHead(const double area, const ValueType& mass_rate, const ValueType& density)
     {
-        return (0.5 * mass_rate * mass_rate / (area * area * density));
+        return (mass_rate * mass_rate / (area * area * density));
     }
 
 
