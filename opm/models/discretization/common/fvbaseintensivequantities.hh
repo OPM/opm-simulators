@@ -44,9 +44,9 @@ namespace Opm {
 template <class TypeTag>
 class FvBaseIntensiveQuantities
 {
-    typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) Implementation;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+    typedef GetPropType<TypeTag, Properties::IntensiveQuantities> Implementation;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
 
 public:
     // default constructor

@@ -34,6 +34,6 @@
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(LensProblemEcfvAd) ProblemTypeTag;
+    typedef Opm::Properties::TTag::LensProblemEcfvAd ProblemTypeTag;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

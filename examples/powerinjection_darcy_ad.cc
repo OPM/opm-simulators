@@ -37,13 +37,14 @@ NEW_TYPE_TAG(PowerInjectionDarcyAdProblem,
              INHERITS_FROM(ImmiscibleTwoPhaseModel,
                            PowerInjectionBaseProblem));
 
-SET_TYPE_PROP(PowerInjectionDarcyAdProblem, FluxModule, Opm::DarcyFluxModule<TypeTag>);
+template<class TypeTag>
+struct FluxModule<TypeTag, TTag::PowerInjectionDarcyAdProblem> { using type = Opm::DarcyFluxModule<TypeTag>; };
 SET_TAG_PROP(PowerInjectionDarcyAdProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
 
 END_PROPERTIES
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(PowerInjectionDarcyAdProblem) ProblemTypeTag;
+    typedef Opm::Properties::TTag::PowerInjectionDarcyAdProblem ProblemTypeTag;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

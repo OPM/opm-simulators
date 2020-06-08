@@ -46,19 +46,19 @@ namespace Opm {
  */
 template <class TypeTag>
 class NcpRateVector
-    : public Dune::FieldVector<typename GET_PROP_TYPE(TypeTag, Evaluation),
-                               GET_PROP_VALUE(TypeTag, NumEq)>
+    : public Dune::FieldVector<GetPropType<TypeTag, Properties::Evaluation>,
+                               getPropValue<TypeTag, Properties::NumEq>()>
 {
-    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
+    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
     typedef Dune::FieldVector<Evaluation, numEq> ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    typedef GetPropType<TypeTag, Properties::Indices> Indices;
 
     enum { conti0EqIdx = Indices::conti0EqIdx };
-    enum { numComponents = GET_PROP_VALUE(TypeTag, NumComponents) };
-    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
+    enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
     typedef Opm::EnergyModule<TypeTag, enableEnergy> EnergyModule;
 

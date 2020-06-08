@@ -48,11 +48,11 @@ template <class TypeTag>
 class DiscreteFractureIntensiveQuantities : public ImmiscibleIntensiveQuantities<TypeTag>
 {
     typedef ImmiscibleIntensiveQuantities<TypeTag> ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::MaterialLaw> MaterialLaw;
+    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
+    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
 
     enum { numPhases = FluidSystem::numPhases };
     enum { dimWorld = GridView::dimensionworld };
@@ -62,7 +62,7 @@ class DiscreteFractureIntensiveQuantities : public ImmiscibleIntensiveQuantities
     static_assert(numPhases == 2, "The fracture module currently is only "
                                   "implemented for two fluid phases!");
 
-    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { wettingPhaseIdx = MaterialLaw::wettingPhaseIdx };
     enum { nonWettingPhaseIdx = MaterialLaw::nonWettingPhaseIdx };
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;

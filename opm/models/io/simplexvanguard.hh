@@ -44,9 +44,9 @@ template <class TypeTag>
 class SimplexGridVanguard
 {
     typedef BaseVanguard<TypeTag> ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::Grid> Grid;
 
     typedef std::unique_ptr<Grid> GridPointer;
     typedef typename Grid::ctype CoordScalar;

@@ -44,7 +44,7 @@ namespace Opm {
 template<class TypeTag>
 class EcfvGridCommHandleFactory
 {
-    typedef typename GET_PROP_TYPE(TypeTag, DofMapper) DofMapper;
+    typedef GetPropType<TypeTag, Properties::DofMapper> DofMapper;
 
 public:
     /*!

@@ -36,7 +36,8 @@
 BEGIN_PROPERTIES
 
 // Use Dune-grid's GeometryGrid< YaspGrid >
-SET_PROP(LensProblemEcfvAd, Grid )
+template<class TypeTag>
+struct Grid <TypeTag, TTag::LensProblemEcfvAd>
 {
   template< class ctype, unsigned int dim, unsigned int dimworld >
   class IdentityCoordFct
@@ -86,6 +87,6 @@ END_PROPERTIES
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(LensProblemEcfvAd) ProblemTypeTag;
+    typedef Opm::Properties::TTag::LensProblemEcfvAd ProblemTypeTag;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

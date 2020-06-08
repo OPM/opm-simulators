@@ -48,16 +48,16 @@ namespace Opm {
  *        multi-phase PVS model.
  */
 template <class TypeTag>
-class PvsNewtonMethod : public GET_PROP_TYPE(TypeTag, DiscNewtonMethod)
+class PvsNewtonMethod : public GetPropType<TypeTag, Properties::DiscNewtonMethod>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, DiscNewtonMethod) ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, SolutionVector) SolutionVector;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    typedef GetPropType<TypeTag, Properties::DiscNewtonMethod> ParentType;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::SolutionVector> SolutionVector;
+    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
+    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::Indices> Indices;
+    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
 
     enum { numPhases = FluidSystem::numPhases };
 

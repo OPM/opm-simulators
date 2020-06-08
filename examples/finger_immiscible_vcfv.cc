@@ -34,13 +34,16 @@
 
 BEGIN_PROPERTIES
 
-NEW_TYPE_TAG(FingerProblemVcfv, INHERITS_FROM(ImmiscibleTwoPhaseModel, FingerBaseProblem));
+// Create new type tags
+namespace TTag {
+struct FingerProblemVcfv { using InheritsFrom = std::tuple<FingerBaseProblem, ImmiscibleTwoPhaseModel>; };
+} // end namespace TTag
 SET_TAG_PROP(FingerProblemVcfv, SpatialDiscretizationSplice, VcfvDiscretization);
 
 END_PROPERTIES
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(FingerProblemVcfv) ProblemTypeTag;
+    typedef Opm::Properties::TTag::FingerProblemVcfv ProblemTypeTag;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

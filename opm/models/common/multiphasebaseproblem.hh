@@ -52,23 +52,23 @@ namespace Opm {
 template<class TypeTag>
 class MultiPhaseBaseProblem
     : public FvBaseProblem<TypeTag>
-    , public GET_PROP_TYPE(TypeTag, FluxModule)::FluxBaseProblem
+    , public GetPropType<TypeTag, Properties::FluxModule>::FluxBaseProblem
 {
 //! \cond SKIP_THIS
     typedef Opm::FvBaseProblem<TypeTag> ParentType;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Problem) Implementation;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, SolidEnergyLawParams) SolidEnergyLawParams;
-    typedef typename GET_PROP_TYPE(TypeTag, ThermalConductionLawParams) ThermalConductionLawParams;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw)::Params MaterialLawParams;
+    typedef GetPropType<TypeTag, Properties::Problem> Implementation;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::SolidEnergyLawParams> SolidEnergyLawParams;
+    typedef GetPropType<TypeTag, Properties::ThermalConductionLawParams> ThermalConductionLawParams;
+    typedef typename GetPropType<TypeTag, Properties::MaterialLaw>::Params MaterialLawParams;
 
     enum { dimWorld = GridView::dimensionworld };
-    enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     typedef Dune::FieldVector<Scalar, dimWorld> DimVector;
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
 //! \endcond

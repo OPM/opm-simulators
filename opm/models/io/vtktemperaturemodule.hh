@@ -41,10 +41,12 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(VtkTemperature);
 
 // create the property tags needed for the temperature module
-NEW_PROP_TAG(VtkWriteTemperature);
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteTemperature { using type = UndefinedProperty; };
 
 // set default values for what quantities to output
-SET_BOOL_PROP(VtkTemperature, VtkWriteTemperature, true);
+template<class TypeTag>
+struct VtkWriteTemperature<TypeTag, TTag::VtkTemperature> { static constexpr bool value = true; };
 
 END_PROPERTIES
 
@@ -61,15 +63,15 @@ class VtkTemperatureModule : public BaseOutputModule<TypeTag>
 {
     typedef BaseOutputModule<TypeTag> ParentType;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
 
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
 
     typedef typename ParentType::ScalarBuffer ScalarBuffer;
 
-    static const int vtkFormat = GET_PROP_VALUE(TypeTag, VtkOutputFormat);
+    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     typedef Opm::VtkMultiWriter<GridView, vtkFormat> VtkMultiWriter;
 
 public:

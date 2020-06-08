@@ -50,16 +50,19 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(OutflowBaseProblem);
 
 // Set the grid type
-SET_TYPE_PROP(OutflowBaseProblem, Grid, Dune::YaspGrid<2>);
+template<class TypeTag>
+struct Grid<TypeTag, TTag::OutflowBaseProblem> { using type = Dune::YaspGrid<2>; };
 
 // Set the problem property
-SET_TYPE_PROP(OutflowBaseProblem, Problem, Opm::OutflowProblem<TypeTag>);
+template<class TypeTag>
+struct Problem<TypeTag, TTag::OutflowBaseProblem> { using type = Opm::OutflowProblem<TypeTag>; };
 
 // Set fluid system
-SET_PROP(OutflowBaseProblem, FluidSystem)
+template<class TypeTag>
+struct FluidSystem<TypeTag, TTag::OutflowBaseProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
 
 public:
     // Two-component single phase fluid system
@@ -67,10 +70,12 @@ public:
 };
 
 // Disable gravity
-SET_BOOL_PROP(OutflowBaseProblem, EnableGravity, false);
+template<class TypeTag>
+struct EnableGravity<TypeTag, TTag::OutflowBaseProblem> { static constexpr bool value = false; };
 
 // Also write mass fractions to the output
-SET_BOOL_PROP(OutflowBaseProblem, VtkWriteMassFractions, true);
+template<class TypeTag>
+struct VtkWriteMassFractions<TypeTag, TTag::OutflowBaseProblem> { static constexpr bool value = true; };
 
 // The default for the end time of the simulation
 SET_SCALAR_PROP(OutflowBaseProblem, EndTime, 100);
@@ -102,19 +107,19 @@ namespace Opm {
  * used.
  */
 template <class TypeTag>
-class OutflowProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
+class OutflowProblem : public GetPropType<TypeTag, Properties::BaseProblem>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
+    typedef GetPropType<TypeTag, Properties::BaseProblem> ParentType;
 
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
+    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
+    typedef GetPropType<TypeTag, Properties::RateVector> RateVector;
+    typedef GetPropType<TypeTag, Properties::BoundaryRateVector> BoundaryRateVector;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    typedef GetPropType<TypeTag, Properties::MaterialLawParams> MaterialLawParams;
 
     // copy some indices for convenience
     enum {

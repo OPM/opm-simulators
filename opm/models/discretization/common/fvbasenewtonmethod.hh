@@ -45,16 +45,20 @@ class FvBaseNewtonConvergenceWriter;
 BEGIN_PROPERTIES
 
 //! create a type tag for the Newton method of the finite-volume discretization
-NEW_TYPE_TAG(FvBaseNewtonMethod, INHERITS_FROM(NewtonMethod));
+// Create new type tags
+namespace TTag {
+struct FvBaseNewtonMethod { using InheritsFrom = std::tuple<NewtonMethod>; };
+} // end namespace TTag
 
 //! The discretization specific part of he implementing the Newton algorithm
-NEW_PROP_TAG(DiscNewtonMethod);
+template<class TypeTag, class MyTypeTag>
+struct DiscNewtonMethod { using type = UndefinedProperty; };
 
 // set default values
 SET_TYPE_PROP(FvBaseNewtonMethod, DiscNewtonMethod,
               Opm::FvBaseNewtonMethod<TypeTag>);
 SET_TYPE_PROP(FvBaseNewtonMethod, NewtonMethod,
-              typename GET_PROP_TYPE(TypeTag, DiscNewtonMethod));
+              GetPropType<TypeTag, Properties::DiscNewtonMethod>);
 SET_TYPE_PROP(FvBaseNewtonMethod, NewtonConvergenceWriter,
               Opm::FvBaseNewtonConvergenceWriter<TypeTag>);
 
@@ -74,17 +78,17 @@ template <class TypeTag>
 class FvBaseNewtonMethod : public NewtonMethod<TypeTag>
 {
     typedef Opm::NewtonMethod<TypeTag> ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, NewtonMethod) Implementation;
+    typedef GetPropType<TypeTag, Properties::NewtonMethod> Implementation;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
-    typedef typename GET_PROP_TYPE(TypeTag, Linearizer) Linearizer;
-    typedef typename GET_PROP_TYPE(TypeTag, NewtonMethod) NewtonMethod;
-    typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) GlobalEqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, SolutionVector) SolutionVector;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::Model> Model;
+    typedef GetPropType<TypeTag, Properties::Linearizer> Linearizer;
+    typedef GetPropType<TypeTag, Properties::NewtonMethod> NewtonMethod;
+    typedef GetPropType<TypeTag, Properties::GlobalEqVector> GlobalEqVector;
+    typedef GetPropType<TypeTag, Properties::SolutionVector> SolutionVector;
+    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
+    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
 
 
 public:

@@ -33,12 +33,15 @@
 
 BEGIN_PROPERTIES
 
-NEW_TYPE_TAG(DiffusionProblem, INHERITS_FROM(NcpModel, DiffusionBaseProblem));
+// Create new type tags
+namespace TTag {
+struct DiffusionProblem { using InheritsFrom = std::tuple<DiffusionBaseProblem, NcpModel>; };
+} // end namespace TTag
 
 END_PROPERTIES
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(DiffusionProblem) ProblemTypeTag;
+    typedef Opm::Properties::TTag::DiffusionProblem ProblemTypeTag;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

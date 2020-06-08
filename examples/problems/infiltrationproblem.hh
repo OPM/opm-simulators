@@ -57,7 +57,8 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(InfiltrationBaseProblem);
 
 // Set the grid type
-SET_TYPE_PROP(InfiltrationBaseProblem, Grid, Dune::YaspGrid<2>);
+template<class TypeTag>
+struct Grid<TypeTag, TTag::InfiltrationBaseProblem> { using type = Dune::YaspGrid<2>; };
 
 // Set the problem property
 SET_TYPE_PROP(InfiltrationBaseProblem, Problem,
@@ -66,23 +67,27 @@ SET_TYPE_PROP(InfiltrationBaseProblem, Problem,
 // Set the fluid system
 SET_TYPE_PROP(
     InfiltrationBaseProblem, FluidSystem,
-    Opm::H2OAirMesityleneFluidSystem<typename GET_PROP_TYPE(TypeTag, Scalar)>);
+    Opm::H2OAirMesityleneFluidSystem<GetPropType<TypeTag, Properties::Scalar>>);
 
 // Enable gravity?
-SET_BOOL_PROP(InfiltrationBaseProblem, EnableGravity, true);
+template<class TypeTag>
+struct EnableGravity<TypeTag, TTag::InfiltrationBaseProblem> { static constexpr bool value = true; };
 
 // Write newton convergence?
-SET_BOOL_PROP(InfiltrationBaseProblem, NewtonWriteConvergence, false);
+template<class TypeTag>
+struct NewtonWriteConvergence<TypeTag, TTag::InfiltrationBaseProblem> { static constexpr bool value = false; };
 
 // -1 backward differences, 0: central differences, +1: forward differences
-SET_INT_PROP(InfiltrationBaseProblem, NumericDifferenceMethod, 1);
+template<class TypeTag>
+struct NumericDifferenceMethod<TypeTag, TTag::InfiltrationBaseProblem> { static constexpr int value = 1; };
 
 // Set the material Law
-SET_PROP(InfiltrationBaseProblem, MaterialLaw)
+template<class TypeTag>
+struct MaterialLaw<TypeTag, TTag::InfiltrationBaseProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
 
     typedef Opm::ThreePhaseMaterialTraits<
         Scalar,
@@ -130,24 +135,24 @@ namespace Opm {
  * except for the small infiltration zone in the upper left part.
  */
 template <class TypeTag>
-class InfiltrationProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
+class InfiltrationProblem : public GetPropType<TypeTag, Properties::BaseProblem>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
+    typedef GetPropType<TypeTag, Properties::BaseProblem> ParentType;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    typedef GetPropType<TypeTag, Properties::MaterialLaw> MaterialLaw;
+    typedef GetPropType<TypeTag, Properties::MaterialLawParams> MaterialLawParams;
+    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
+    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
+    typedef GetPropType<TypeTag, Properties::RateVector> RateVector;
+    typedef GetPropType<TypeTag, Properties::BoundaryRateVector> BoundaryRateVector;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    typedef GetPropType<TypeTag, Properties::Model> Model;
 
     // copy some indices for convenience
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    typedef GetPropType<TypeTag, Properties::Indices> Indices;
     enum {
         // equation indices
         conti0EqIdx = Indices::conti0EqIdx,

@@ -36,7 +36,10 @@
 
 BEGIN_PROPERTIES
 
-NEW_TYPE_TAG(ParallelIstlLinearSolver, INHERITS_FROM(ParallelBaseLinearSolver));
+// Create new type tags
+namespace TTag {
+struct ParallelIstlLinearSolver { using InheritsFrom = std::tuple<ParallelBaseLinearSolver>; };
+} // end namespace TTag
 
 END_PROPERTIES
 
@@ -80,10 +83,10 @@ class ParallelIstlSolverBackend : public ParallelBaseBackend<TypeTag>
 {
     typedef ParallelBaseBackend<TypeTag> ParentType;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, LinearSolverWrapper) LinearSolverWrapper;
-    typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::LinearSolverWrapper> LinearSolverWrapper;
+    typedef GetPropType<TypeTag, Properties::SparseMatrixAdapter> SparseMatrixAdapter;
 
     typedef typename ParentType::ParallelOperator ParallelOperator;
     typedef typename ParentType::OverlappingVector OverlappingVector;
@@ -161,7 +164,8 @@ SET_TYPE_PROP(ParallelIstlLinearSolver,
 #endif
 
 //! set the GMRes restart parameter to 10 by default
-SET_INT_PROP(ParallelIstlLinearSolver, GMResRestart, 10);
+template<class TypeTag>
+struct GMResRestart<TypeTag, TTag::ParallelIstlLinearSolver> { static constexpr int value = 10; };
 
 END_PROPERTIES
 

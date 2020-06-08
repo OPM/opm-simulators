@@ -46,20 +46,32 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(VtkBlackOilPolymer);
 
 // create the property tags needed for the polymer output module
-NEW_PROP_TAG(VtkWritePolymerConcentration);
-NEW_PROP_TAG(VtkWritePolymerDeadPoreVolume);
-NEW_PROP_TAG(VtkWritePolymerAdsorption);
-NEW_PROP_TAG(VtkWritePolymerRockDensity);
-NEW_PROP_TAG(VtkWritePolymerViscosityCorrection);
-NEW_PROP_TAG(VtkWriteWaterViscosityCorrection);
+template<class TypeTag, class MyTypeTag>
+struct VtkWritePolymerConcentration { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWritePolymerDeadPoreVolume { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWritePolymerAdsorption { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWritePolymerRockDensity { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWritePolymerViscosityCorrection { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteWaterViscosityCorrection { using type = UndefinedProperty; };
 
 // set default values for what quantities to output
-SET_BOOL_PROP(VtkBlackOilPolymer, VtkWritePolymerConcentration, true);
-SET_BOOL_PROP(VtkBlackOilPolymer, VtkWritePolymerDeadPoreVolume, true);
-SET_BOOL_PROP(VtkBlackOilPolymer, VtkWritePolymerViscosityCorrection, true);
-SET_BOOL_PROP(VtkBlackOilPolymer, VtkWriteWaterViscosityCorrection, true);
-SET_BOOL_PROP(VtkBlackOilPolymer, VtkWritePolymerRockDensity, true);
-SET_BOOL_PROP(VtkBlackOilPolymer, VtkWritePolymerAdsorption, true);
+template<class TypeTag>
+struct VtkWritePolymerConcentration<TypeTag, TTag::VtkBlackOilPolymer> { static constexpr bool value = true; };
+template<class TypeTag>
+struct VtkWritePolymerDeadPoreVolume<TypeTag, TTag::VtkBlackOilPolymer> { static constexpr bool value = true; };
+template<class TypeTag>
+struct VtkWritePolymerViscosityCorrection<TypeTag, TTag::VtkBlackOilPolymer> { static constexpr bool value = true; };
+template<class TypeTag>
+struct VtkWriteWaterViscosityCorrection<TypeTag, TTag::VtkBlackOilPolymer> { static constexpr bool value = true; };
+template<class TypeTag>
+struct VtkWritePolymerRockDensity<TypeTag, TTag::VtkBlackOilPolymer> { static constexpr bool value = true; };
+template<class TypeTag>
+struct VtkWritePolymerAdsorption<TypeTag, TTag::VtkBlackOilPolymer> { static constexpr bool value = true; };
 
 END_PROPERTIES
 
@@ -74,16 +86,16 @@ class VtkBlackOilPolymerModule : public BaseOutputModule<TypeTag>
 {
     typedef BaseOutputModule<TypeTag> ParentType;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
+    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
 
-    static const int vtkFormat = GET_PROP_VALUE(TypeTag, VtkOutputFormat);
+    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     typedef Opm::VtkMultiWriter<GridView, vtkFormat> VtkMultiWriter;
 
-    enum { enablePolymer = GET_PROP_VALUE(TypeTag, EnablePolymer) };
+    enum { enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>() };
 
     typedef typename ParentType::ScalarBuffer ScalarBuffer;
 

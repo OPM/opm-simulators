@@ -48,27 +48,27 @@ namespace Opm {
  * \brief Contains the high level supplements required to extend the black oil
  *        model by energy.
  */
-template <class TypeTag, bool enableEnergyV = GET_PROP_VALUE(TypeTag, EnableEnergy)>
+template <class TypeTag, bool enableEnergyV = getPropValue<TypeTag, Properties::EnableEnergy>()>
 class BlackOilEnergyModule
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) IntensiveQuantities;
-    typedef typename GET_PROP_TYPE(TypeTag, ExtensiveQuantities) ExtensiveQuantities;
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
+    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
+    typedef GetPropType<TypeTag, Properties::IntensiveQuantities> IntensiveQuantities;
+    typedef GetPropType<TypeTag, Properties::ExtensiveQuantities> ExtensiveQuantities;
+    typedef GetPropType<TypeTag, Properties::Model> Model;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
+    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
+    typedef GetPropType<TypeTag, Properties::RateVector> RateVector;
+    typedef GetPropType<TypeTag, Properties::Indices> Indices;
 
     static constexpr unsigned temperatureIdx = Indices::temperatureIdx;
     static constexpr unsigned contiEnergyEqIdx = Indices::contiEnergyEqIdx;
 
     static constexpr unsigned enableEnergy = enableEnergyV;
-    static constexpr unsigned numEq = GET_PROP_VALUE(TypeTag, NumEq);
+    static constexpr unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
     static constexpr unsigned numPhases = FluidSystem::numPhases;
 
 public:
@@ -170,7 +170,7 @@ public:
         Scalar refPoro = intQuants.referencePorosity();
         const auto& uRock = Opm::decay<LhsEval>(intQuants.rockInternalEnergy());
         storage[contiEnergyEqIdx] += (1.0 - refPoro)*uRock;
-        storage[contiEnergyEqIdx] *= GET_PROP_VALUE(TypeTag, BlackOilEnergyScalingFactor);
+        storage[contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
     }
 
     static void computeFlux(RateVector& flux,
@@ -198,7 +198,7 @@ public:
 
         // diffusive energy flux
         flux[contiEnergyEqIdx] += extQuants.energyFlux();
-        flux[contiEnergyEqIdx] *= GET_PROP_VALUE(TypeTag, BlackOilEnergyScalingFactor);
+        flux[contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
     }
 
     template <class UpstreamEval>
@@ -324,23 +324,23 @@ public:
  * \brief Provides the volumetric quantities required for the equations needed by the
  *        energys extension of the black-oil model.
  */
-template <class TypeTag, bool enableEnergyV = GET_PROP_VALUE(TypeTag, EnableEnergy)>
+template <class TypeTag, bool enableEnergyV = getPropValue<TypeTag, Properties::EnableEnergy>()>
 class BlackOilEnergyIntensiveQuantities
 {
-    typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) Implementation;
+    typedef GetPropType<TypeTag, Properties::IntensiveQuantities> Implementation;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, SolidEnergyLaw) SolidEnergyLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, ThermalConductionLaw) ThermalConductionLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
+    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
+    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    typedef GetPropType<TypeTag, Properties::SolidEnergyLaw> SolidEnergyLaw;
+    typedef GetPropType<TypeTag, Properties::ThermalConductionLaw> ThermalConductionLaw;
+    typedef GetPropType<TypeTag, Properties::Indices> Indices;
+    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
 
     typedef BlackOilEnergyModule<TypeTag> EnergyModule;
 
-    enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     static constexpr int temperatureIdx = Indices::temperatureIdx;
     static constexpr int waterPhaseIdx = FluidSystem::waterPhaseIdx;
 
@@ -407,14 +407,14 @@ protected:
 template <class TypeTag>
 class BlackOilEnergyIntensiveQuantities<TypeTag, false>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) Implementation;
+    typedef GetPropType<TypeTag, Properties::IntensiveQuantities> Implementation;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
+    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
+    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
 
-    static constexpr bool enableTemperature = GET_PROP_VALUE(TypeTag, EnableTemperature);
+    static constexpr bool enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>();
 
 public:
     void updateTemperature_(const ElementContext& elemCtx,
@@ -457,18 +457,18 @@ protected:
  * \brief Provides the energy specific extensive quantities to the generic black-oil
  *        module's extensive quantities.
  */
-template <class TypeTag, bool enableEnergyV = GET_PROP_VALUE(TypeTag, EnableEnergy)>
+template <class TypeTag, bool enableEnergyV = getPropValue<TypeTag, Properties::EnableEnergy>()>
 class BlackOilEnergyExtensiveQuantities
 {
-    typedef typename GET_PROP_TYPE(TypeTag, ExtensiveQuantities) Implementation;
+    typedef GetPropType<TypeTag, Properties::ExtensiveQuantities> Implementation;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) IntensiveQuantities;
-    typedef typename GET_PROP_TYPE(TypeTag, ExtensiveQuantities) ExtensiveQuantities;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
+    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
+    typedef GetPropType<TypeTag, Properties::IntensiveQuantities> IntensiveQuantities;
+    typedef GetPropType<TypeTag, Properties::ExtensiveQuantities> ExtensiveQuantities;
+    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
 
     typedef Opm::MathToolbox<Evaluation> Toolbox;
 
@@ -597,8 +597,8 @@ private:
 template <class TypeTag>
 class BlackOilEnergyExtensiveQuantities<TypeTag, false>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
+    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
+    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
 
 public:
     void updateEnergy(const ElementContext& elemCtx OPM_UNUSED,

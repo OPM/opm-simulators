@@ -41,22 +41,36 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(VtkComposition);
 
 // create the property tags needed for the composition module
-NEW_PROP_TAG(VtkWriteMassFractions);
-NEW_PROP_TAG(VtkWriteMoleFractions);
-NEW_PROP_TAG(VtkWriteTotalMassFractions);
-NEW_PROP_TAG(VtkWriteTotalMoleFractions);
-NEW_PROP_TAG(VtkWriteMolarities);
-NEW_PROP_TAG(VtkWriteFugacities);
-NEW_PROP_TAG(VtkWriteFugacityCoeffs);
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteMassFractions { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteMoleFractions { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteTotalMassFractions { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteTotalMoleFractions { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteMolarities { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteFugacities { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteFugacityCoeffs { using type = UndefinedProperty; };
 
 // set default values for what quantities to output
-SET_BOOL_PROP(VtkComposition, VtkWriteMassFractions, false);
-SET_BOOL_PROP(VtkComposition, VtkWriteMoleFractions, true);
-SET_BOOL_PROP(VtkComposition, VtkWriteTotalMassFractions, false);
-SET_BOOL_PROP(VtkComposition, VtkWriteTotalMoleFractions, false);
-SET_BOOL_PROP(VtkComposition, VtkWriteMolarities, false);
-SET_BOOL_PROP(VtkComposition, VtkWriteFugacities, false);
-SET_BOOL_PROP(VtkComposition, VtkWriteFugacityCoeffs, false);
+template<class TypeTag>
+struct VtkWriteMassFractions<TypeTag, TTag::VtkComposition> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteMoleFractions<TypeTag, TTag::VtkComposition> { static constexpr bool value = true; };
+template<class TypeTag>
+struct VtkWriteTotalMassFractions<TypeTag, TTag::VtkComposition> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteTotalMoleFractions<TypeTag, TTag::VtkComposition> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteMolarities<TypeTag, TTag::VtkComposition> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteFugacities<TypeTag, TTag::VtkComposition> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteFugacityCoeffs<TypeTag, TTag::VtkComposition> { static constexpr bool value = false; };
 
 END_PROPERTIES
 
@@ -79,17 +93,17 @@ class VtkCompositionModule : public BaseOutputModule<TypeTag>
 {
     typedef BaseOutputModule<TypeTag> ParentType;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
+    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
 
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
 
-    enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
-    enum { numComponents = GET_PROP_VALUE(TypeTag, NumComponents) };
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
+    enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
 
-    static const int vtkFormat = GET_PROP_VALUE(TypeTag, VtkOutputFormat);
+    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     typedef Opm::VtkMultiWriter<GridView, vtkFormat> VtkMultiWriter;
 
     typedef typename ParentType::ComponentBuffer ComponentBuffer;

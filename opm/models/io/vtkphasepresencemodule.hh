@@ -39,9 +39,11 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(VtkPhasePresence);
 
 // create the property tags needed for the primary variables module
-NEW_PROP_TAG(VtkWritePhasePresence);
+template<class TypeTag, class MyTypeTag>
+struct VtkWritePhasePresence { using type = UndefinedProperty; };
 
-SET_BOOL_PROP(VtkPhasePresence, VtkWritePhasePresence, false);
+template<class TypeTag>
+struct VtkWritePhasePresence<TypeTag, TTag::VtkPhasePresence> { static constexpr bool value = false; };
 
 END_PROPERTIES
 
@@ -56,12 +58,12 @@ class VtkPhasePresenceModule : public BaseOutputModule<TypeTag>
 {
     typedef BaseOutputModule<TypeTag> ParentType;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
 
-    static const int vtkFormat = GET_PROP_VALUE(TypeTag, VtkOutputFormat);
+    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     typedef Opm::VtkMultiWriter<GridView, vtkFormat> VtkMultiWriter;
 
     typedef typename ParentType::ScalarBuffer ScalarBuffer;

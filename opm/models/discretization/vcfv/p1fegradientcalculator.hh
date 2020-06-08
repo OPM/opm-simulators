@@ -65,10 +65,10 @@ template<class TypeTag>
 class P1FeGradientCalculator : public FvBaseGradientCalculator<TypeTag>
 {
     typedef FvBaseGradientCalculator<TypeTag> ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
 
     enum { dim = GridView::dimension };
 
@@ -99,7 +99,7 @@ public:
     void prepare(const ElementContext& elemCtx EWOMS_NO_LOCALFUNCTIONS_UNUSED,
                  unsigned timeIdx EWOMS_NO_LOCALFUNCTIONS_UNUSED)
     {
-        if (GET_PROP_VALUE(TypeTag, UseP1FiniteElementGradients)) {
+        if (getPropValue<TypeTag, Properties::UseP1FiniteElementGradients>()) {
 #if !HAVE_DUNE_LOCALFUNCTIONS
             // The dune-localfunctions module is required for P1 finite element gradients
             throw std::logic_error("The dune-localfunctions module is required in oder to use"
@@ -161,7 +161,7 @@ public:
                               const QuantityCallback& quantityCallback EWOMS_NO_LOCALFUNCTIONS_UNUSED) const
         ->  typename std::remove_reference<typename QuantityCallback::ResultType>::type
     {
-        if (GET_PROP_VALUE(TypeTag, UseP1FiniteElementGradients)) {
+        if (getPropValue<TypeTag, Properties::UseP1FiniteElementGradients>()) {
 #if !HAVE_DUNE_LOCALFUNCTIONS
             // The dune-localfunctions module is required for P1 finite element gradients
             throw std::logic_error("The dune-localfunctions module is required in oder to use"
@@ -206,7 +206,7 @@ public:
                               const QuantityCallback& quantityCallback EWOMS_NO_LOCALFUNCTIONS_UNUSED) const
         ->  typename std::remove_reference<typename QuantityCallback::ResultType>::type
     {
-        if (GET_PROP_VALUE(TypeTag, UseP1FiniteElementGradients)) {
+        if (getPropValue<TypeTag, Properties::UseP1FiniteElementGradients>()) {
 #if !HAVE_DUNE_LOCALFUNCTIONS
             // The dune-localfunctions module is required for P1 finite element gradients
             throw std::logic_error("The dune-localfunctions module is required in oder to use"
@@ -262,7 +262,7 @@ public:
                            unsigned fapIdx EWOMS_NO_LOCALFUNCTIONS_UNUSED,
                            const QuantityCallback& quantityCallback EWOMS_NO_LOCALFUNCTIONS_UNUSED) const
     {
-        if (GET_PROP_VALUE(TypeTag, UseP1FiniteElementGradients)) {
+        if (getPropValue<TypeTag, Properties::UseP1FiniteElementGradients>()) {
 #if !HAVE_DUNE_LOCALFUNCTIONS
             // The dune-localfunctions module is required for P1 finite element gradients
             throw std::logic_error("The dune-localfunctions module is required in oder to use"

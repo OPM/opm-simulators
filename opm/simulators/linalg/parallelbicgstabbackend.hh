@@ -43,7 +43,10 @@ class ParallelBiCGStabSolverBackend;
 
 BEGIN_PROPERTIES
 
-NEW_TYPE_TAG(ParallelBiCGStabLinearSolver, INHERITS_FROM(ParallelBaseLinearSolver));
+// Create new type tags
+namespace TTag {
+struct ParallelBiCGStabLinearSolver { using InheritsFrom = std::tuple<ParallelBaseLinearSolver>; };
+} // end namespace TTag
 
 SET_TYPE_PROP(ParallelBiCGStabLinearSolver,
               LinearSolverBackend,
@@ -86,9 +89,9 @@ class ParallelBiCGStabSolverBackend : public ParallelBaseBackend<TypeTag>
 {
     typedef ParallelBaseBackend<TypeTag> ParentType;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::SparseMatrixAdapter> SparseMatrixAdapter;
 
     typedef typename ParentType::ParallelOperator ParallelOperator;
     typedef typename ParentType::OverlappingVector OverlappingVector;

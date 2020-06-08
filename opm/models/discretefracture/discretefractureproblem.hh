@@ -52,10 +52,10 @@ class DiscreteFractureProblem
 {
     typedef Opm::MultiPhaseBaseProblem<TypeTag> ParentType;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Problem) Implementation;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+    typedef GetPropType<TypeTag, Properties::Problem> Implementation;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
 
     enum { dimWorld = GridView::dimensionworld };
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;

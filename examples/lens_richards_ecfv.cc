@@ -34,7 +34,10 @@
 
 BEGIN_PROPERTIES
 
-NEW_TYPE_TAG(RichardsLensEcfvProblem, INHERITS_FROM(RichardsLensProblem));
+// Create new type tags
+namespace TTag {
+struct RichardsLensEcfvProblem { using InheritsFrom = std::tuple<RichardsLensProblem>; };
+} // end namespace TTag
 SET_TAG_PROP(RichardsLensEcfvProblem, SpatialDiscretizationSplice, EcfvDiscretization);
 
 //! Use automatic differentiation to linearize the system of PDEs
@@ -44,6 +47,6 @@ END_PROPERTIES
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(RichardsLensEcfvProblem) ProblemTypeTag;
+    typedef Opm::Properties::TTag::RichardsLensEcfvProblem ProblemTypeTag;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

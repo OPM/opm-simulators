@@ -50,8 +50,10 @@ NEW_TYPE_TAG(FvBaseDiscretization,
 
 
 //! set the splices for the finite volume discretizations
-NEW_PROP_TAG(LinearSolverSplice);
-NEW_PROP_TAG(LocalLinearizerSplice);
+template<class TypeTag, class MyTypeTag>
+struct LinearSolverSplice { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct LocalLinearizerSplice { using type = UndefinedProperty; };
 SET_SPLICES(FvBaseDiscretization, LinearSolverSplice, LocalLinearizerSplice);
 
 //! use a parallel BiCGStab linear solver by default
@@ -68,90 +70,122 @@ SET_TAG_PROP(FvBaseDiscretization, LocalLinearizerSplice, FiniteDifferenceLocalL
  * "Scalar" property (if the finite difference linearizer is used), or it may be more
  * complex (for the linearizer which uses automatic differentiation).
  */
-NEW_PROP_TAG(Evaluation);
+template<class TypeTag, class MyTypeTag>
+struct Evaluation { using type = UndefinedProperty; };
 
 //! The class describing the stencil of the spatial discretization
-NEW_PROP_TAG(Stencil);
+template<class TypeTag, class MyTypeTag>
+struct Stencil { using type = UndefinedProperty; };
 
 //! The class describing the discrete function space when dune-fem is used, otherwise it points to the stencil class
-NEW_PROP_TAG(DiscreteFunctionSpace);
+template<class TypeTag, class MyTypeTag>
+struct DiscreteFunctionSpace { using type = UndefinedProperty; };
 
 //! The type of the problem
-NEW_PROP_TAG(Problem);
+template<class TypeTag, class MyTypeTag>
+struct Problem { using type = UndefinedProperty; };
 //! The type of the base class for all problems which use this model
-NEW_PROP_TAG(BaseProblem);
+template<class TypeTag, class MyTypeTag>
+struct BaseProblem { using type = UndefinedProperty; };
 
 //! The type of the spatial discretization used by the model
-NEW_PROP_TAG(Discretization);
+template<class TypeTag, class MyTypeTag>
+struct Discretization { using type = UndefinedProperty; };
 //! The discretization specific part of the local residual
-NEW_PROP_TAG(DiscLocalResidual);
+template<class TypeTag, class MyTypeTag>
+struct DiscLocalResidual { using type = UndefinedProperty; };
 //! The type of the local residual function
-NEW_PROP_TAG(LocalResidual);
+template<class TypeTag, class MyTypeTag>
+struct LocalResidual { using type = UndefinedProperty; };
 //! The type of the local linearizer
-NEW_PROP_TAG(LocalLinearizer);
+template<class TypeTag, class MyTypeTag>
+struct LocalLinearizer { using type = UndefinedProperty; };
 //! Specify if elements that do not belong to the local process' grid partition should be
 //! skipped
-NEW_PROP_TAG(LinearizeNonLocalElements);
+template<class TypeTag, class MyTypeTag>
+struct LinearizeNonLocalElements { using type = UndefinedProperty; };
 
 //! Linearizes the global non-linear system of equations
-NEW_PROP_TAG(BaseLinearizer);
+template<class TypeTag, class MyTypeTag>
+struct BaseLinearizer { using type = UndefinedProperty; };
 
 //! A vector of holding a quantity for each equation (usually at a given spatial location)
-NEW_PROP_TAG(EqVector);
+template<class TypeTag, class MyTypeTag>
+struct EqVector { using type = UndefinedProperty; };
 //! A vector of holding a quantity for each equation for each DOF of an element
-NEW_PROP_TAG(ElementEqVector);
+template<class TypeTag, class MyTypeTag>
+struct ElementEqVector { using type = UndefinedProperty; };
 
 //! Vector containing volumetric or areal rates of quantities
-NEW_PROP_TAG(RateVector);
+template<class TypeTag, class MyTypeTag>
+struct RateVector { using type = UndefinedProperty; };
 //! Type of object for specifying boundary conditions
-NEW_PROP_TAG(BoundaryRateVector);
+template<class TypeTag, class MyTypeTag>
+struct BoundaryRateVector { using type = UndefinedProperty; };
 //! The class which represents a constraint degree of freedom
-NEW_PROP_TAG(Constraints);
+template<class TypeTag, class MyTypeTag>
+struct Constraints { using type = UndefinedProperty; };
 
 //! Vector containing all primary variables of the grid
-NEW_PROP_TAG(SolutionVector);
+template<class TypeTag, class MyTypeTag>
+struct SolutionVector { using type = UndefinedProperty; };
 
 //! A vector of primary variables within a sub-control volume
-NEW_PROP_TAG(PrimaryVariables);
+template<class TypeTag, class MyTypeTag>
+struct PrimaryVariables { using type = UndefinedProperty; };
 //! The secondary variables within a sub-control volume
-NEW_PROP_TAG(IntensiveQuantities);
+template<class TypeTag, class MyTypeTag>
+struct IntensiveQuantities { using type = UndefinedProperty; };
 //! The discretization specific part of the intensive quantities
-NEW_PROP_TAG(DiscIntensiveQuantities);
+template<class TypeTag, class MyTypeTag>
+struct DiscIntensiveQuantities { using type = UndefinedProperty; };
 
 //! The secondary variables of all degrees of freedom in an element's stencil
-NEW_PROP_TAG(ElementContext);
+template<class TypeTag, class MyTypeTag>
+struct ElementContext { using type = UndefinedProperty; };
 //! The secondary variables of a boundary segment
-NEW_PROP_TAG(BoundaryContext);
+template<class TypeTag, class MyTypeTag>
+struct BoundaryContext { using type = UndefinedProperty; };
 //! The secondary variables of a constraint degree of freedom
-NEW_PROP_TAG(ConstraintsContext);
+template<class TypeTag, class MyTypeTag>
+struct ConstraintsContext { using type = UndefinedProperty; };
 //! Data required to calculate a flux over a face
-NEW_PROP_TAG(ExtensiveQuantities);
+template<class TypeTag, class MyTypeTag>
+struct ExtensiveQuantities { using type = UndefinedProperty; };
 //! Calculates gradients of arbitrary quantities at flux integration points
-NEW_PROP_TAG(GradientCalculator);
+template<class TypeTag, class MyTypeTag>
+struct GradientCalculator { using type = UndefinedProperty; };
 
 //! The part of the intensive quantities which is specific to the spatial discretization
-NEW_PROP_TAG(DiscBaseIntensiveQuantities);
+template<class TypeTag, class MyTypeTag>
+struct DiscBaseIntensiveQuantities { using type = UndefinedProperty; };
 
 //! The part of the extensive quantities which is specific to the spatial discretization
-NEW_PROP_TAG(DiscExtensiveQuantities);
+template<class TypeTag, class MyTypeTag>
+struct DiscExtensiveQuantities { using type = UndefinedProperty; };
 
 //! The part of the VTK ouput modules which is specific to the spatial discretization
-NEW_PROP_TAG(DiscBaseOutputModule);
+template<class TypeTag, class MyTypeTag>
+struct DiscBaseOutputModule { using type = UndefinedProperty; };
 
 //! The class to create grid communication handles
-NEW_PROP_TAG(GridCommHandleFactory);
+template<class TypeTag, class MyTypeTag>
+struct GridCommHandleFactory { using type = UndefinedProperty; };
 
 /*!
  * \brief The OpenMP threads manager
  */
-NEW_PROP_TAG(ThreadManager);
-NEW_PROP_TAG(ThreadsPerProcess);
+template<class TypeTag, class MyTypeTag>
+struct ThreadManager { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct ThreadsPerProcess { using type = UndefinedProperty; };
 
 //! use locking to prevent race conditions when linearizing the global system of
 //! equations in multi-threaded mode. (setting this property to true is always save, but
 //! it may slightly deter performance in multi-threaded simlations and some
 //! discretizations do not need this.)
-NEW_PROP_TAG(UseLinearizationLock);
+template<class TypeTag, class MyTypeTag>
+struct UseLinearizationLock { using type = UndefinedProperty; };
 
 // high-level simulation control
 
@@ -161,12 +195,14 @@ NEW_PROP_TAG(UseLinearizationLock);
  * Currently grid adaptation requires the presence of the dune-FEM module. If it is not
  * available and grid adaptation is enabled, an exception is thrown.
  */
-NEW_PROP_TAG(EnableGridAdaptation);
+template<class TypeTag, class MyTypeTag>
+struct EnableGridAdaptation { using type = UndefinedProperty; };
 
 /*!
  * \brief The directory to which simulation output ought to be written to.
  */
-NEW_PROP_TAG(OutputDir);
+template<class TypeTag, class MyTypeTag>
+struct OutputDir { using type = UndefinedProperty; };
 
 /*!
  * \brief Global switch to enable or disable the writing of VTK output files
@@ -174,7 +210,8 @@ NEW_PROP_TAG(OutputDir);
  * If writing VTK files is disabled, then the WriteVtk$FOO options do
  * not have any effect...
  */
-NEW_PROP_TAG(EnableVtkOutput);
+template<class TypeTag, class MyTypeTag>
+struct EnableVtkOutput { using type = UndefinedProperty; };
 
 /*!
  * \brief Determines if the VTK output is written to disk asynchronously
@@ -185,7 +222,8 @@ NEW_PROP_TAG(EnableVtkOutput);
  * not support multi-threaded multi-process VTK output and even if it would, the result
  * would be slower than when using synchronous output.
  */
-NEW_PROP_TAG(EnableAsyncVtkOutput);
+template<class TypeTag, class MyTypeTag>
+struct EnableAsyncVtkOutput { using type = UndefinedProperty; };
 
 /*!
  * \brief Specify the format the VTK output is written to disk
@@ -196,37 +234,43 @@ NEW_PROP_TAG(EnableAsyncVtkOutput);
  *   - Dune::VTK::appendedraw
  *   - Dune::VTK::appendedbase64
  */
-NEW_PROP_TAG(VtkOutputFormat);
+template<class TypeTag, class MyTypeTag>
+struct VtkOutputFormat { using type = UndefinedProperty; };
 
 //! Specify whether the some degrees of fredom can be constraint
-NEW_PROP_TAG(EnableConstraints);
+template<class TypeTag, class MyTypeTag>
+struct EnableConstraints { using type = UndefinedProperty; };
 
 /*!
  * \brief Specify the maximum size of a time integration [s].
  *
  * The default is to not limit the step size.
  */
-NEW_PROP_TAG(MaxTimeStepSize);
+template<class TypeTag, class MyTypeTag>
+struct MaxTimeStepSize { using type = UndefinedProperty; };
 
 /*!
  * \brief Specify the minimal size of a time integration [s].
  *
  * The default is to not limit the step size.
  */
-NEW_PROP_TAG(MinTimeStepSize);
+template<class TypeTag, class MyTypeTag>
+struct MinTimeStepSize { using type = UndefinedProperty; };
 
 /*!
  * \brief The maximum allowed number of timestep divisions for the
  *        Newton solver.
  */
-NEW_PROP_TAG(MaxTimeStepDivisions);
+template<class TypeTag, class MyTypeTag>
+struct MaxTimeStepDivisions { using type = UndefinedProperty; };
 
 /*!
  * \brief Continue with a non-converged solution instead of giving up
  *        if we encounter a time step size smaller than the minimum time
  *        step size.
  */
-NEW_PROP_TAG(ContinueOnConvergenceError);
+template<class TypeTag, class MyTypeTag>
+struct ContinueOnConvergenceError { using type = UndefinedProperty; };
 
 /*!
  * \brief Specify whether all intensive quantities for the grid should be
@@ -237,7 +281,8 @@ NEW_PROP_TAG(ContinueOnConvergenceError);
  * may cause the simulation to exhibit worse cache coherence behavior
  * which eats some of the computational benefits again.
  */
-NEW_PROP_TAG(EnableIntensiveQuantityCache);
+template<class TypeTag, class MyTypeTag>
+struct EnableIntensiveQuantityCache { using type = UndefinedProperty; };
 
 /*!
  * \brief Specify whether the storage terms for previous solutions should be cached.
@@ -245,7 +290,8 @@ NEW_PROP_TAG(EnableIntensiveQuantityCache);
  * This potentially reduces the CPU time, but comes at the cost of higher memory
  * consumption.
  */
-NEW_PROP_TAG(EnableStorageCache);
+template<class TypeTag, class MyTypeTag>
+struct EnableStorageCache { using type = UndefinedProperty; };
 
 /*!
  * \brief Specify whether to use the already calculated solutions as
@@ -255,45 +301,54 @@ NEW_PROP_TAG(EnableStorageCache);
  * very expensive (e.g. for non-linear fugacity functions where the
  * solver converges faster).
  */
-NEW_PROP_TAG(EnableThermodynamicHints);
+template<class TypeTag, class MyTypeTag>
+struct EnableThermodynamicHints { using type = UndefinedProperty; };
 
 // mappers from local to global DOF indices
 
 /*!
  * \brief The mapper to find the global index of a vertex.
  */
-NEW_PROP_TAG(VertexMapper);
+template<class TypeTag, class MyTypeTag>
+struct VertexMapper { using type = UndefinedProperty; };
 
 /*!
  * \brief The mapper to find the global index of an element.
  */
-NEW_PROP_TAG(ElementMapper);
+template<class TypeTag, class MyTypeTag>
+struct ElementMapper { using type = UndefinedProperty; };
 
 /*!
  * \brief The mapper to find the global index of a degree of freedom.
  */
-NEW_PROP_TAG(DofMapper);
+template<class TypeTag, class MyTypeTag>
+struct DofMapper { using type = UndefinedProperty; };
 
 /*!
  * \brief The history size required by the time discretization
  */
-NEW_PROP_TAG(TimeDiscHistorySize);
+template<class TypeTag, class MyTypeTag>
+struct TimeDiscHistorySize { using type = UndefinedProperty; };
 
 /*!
  * \brief Specify whether the storage terms use extensive quantities or not.
  *
  * Most models don't need this, but the (Navier-)Stokes ones do...
  */
-NEW_PROP_TAG(ExtensiveStorageTerm);
+template<class TypeTag, class MyTypeTag>
+struct ExtensiveStorageTerm { using type = UndefinedProperty; };
 
 //! \brief Specify whether to use volumetric residuals or not
-NEW_PROP_TAG(UseVolumetricResidual);
+template<class TypeTag, class MyTypeTag>
+struct UseVolumetricResidual { using type = UndefinedProperty; };
 
 
 //! Specify if experimental features should be enabled or not.
-NEW_PROP_TAG(EnableExperiments);
+template<class TypeTag, class MyTypeTag>
+struct EnableExperiments { using type = UndefinedProperty; };
 
-SET_TYPE_PROP(NumericModel, Vanguard, Opm::DgfVanguard<TypeTag>);
+template<class TypeTag>
+struct Vanguard<TypeTag, TTag::NumericModel> { using type = Opm::DgfVanguard<TypeTag>; };
 
 END_PROPERTIES
 

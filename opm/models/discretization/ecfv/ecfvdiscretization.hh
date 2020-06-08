@@ -51,21 +51,24 @@ class EcfvDiscretization;
 BEGIN_PROPERTIES
 
 //! Set the stencil
-SET_PROP(EcfvDiscretization, Stencil)
+template<class TypeTag>
+struct Stencil<TypeTag, TTag::EcfvDiscretization>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
 
 public:
     typedef Opm::EcfvStencil<Scalar, GridView> type;
 };
 
 //! Mapper for the degrees of freedoms.
-SET_TYPE_PROP(EcfvDiscretization, DofMapper, typename GET_PROP_TYPE(TypeTag, ElementMapper));
+template<class TypeTag>
+struct DofMapper<TypeTag, TTag::EcfvDiscretization> { using type = GetPropType<TypeTag, Properties::ElementMapper>; };
 
 //! The concrete class which manages the spatial discretization
-SET_TYPE_PROP(EcfvDiscretization, Discretization, Opm::EcfvDiscretization<TypeTag>);
+template<class TypeTag>
+struct Discretization<TypeTag, TTag::EcfvDiscretization> { using type = Opm::EcfvDiscretization<TypeTag>; };
 
 //! The base class for the output modules (decides whether to write
 //! element or vertex based fields)
@@ -78,12 +81,13 @@ SET_TYPE_PROP(EcfvDiscretization, GridCommHandleFactory,
 
 #if HAVE_DUNE_FEM
 //! Set the DiscreteFunctionSpace
-SET_PROP(EcfvDiscretization, DiscreteFunctionSpace)
+template<class TypeTag>
+struct DiscreteFunctionSpace<TypeTag, TTag::EcfvDiscretization>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar)   Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, GridPart) GridPart;
-    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
+    typedef GetPropType<TypeTag, Properties::Scalar>   Scalar;
+    typedef GetPropType<TypeTag, Properties::GridPart> GridPart;
+    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     typedef Dune::Fem::FunctionSpace<typename GridPart::GridType::ctype,
                                      Scalar,
                                      GridPart::GridType::dimensionworld,
@@ -95,10 +99,11 @@ public:
 
 //! Set the border list creator for to the one of an element based
 //! method
-SET_PROP(EcfvDiscretization, BorderListCreator)
+template<class TypeTag>
+struct BorderListCreator<TypeTag, TTag::EcfvDiscretization>
 { private:
-    typedef typename GET_PROP_TYPE(TypeTag, ElementMapper) ElementMapper;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    typedef GetPropType<TypeTag, Properties::ElementMapper> ElementMapper;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
 public:
     typedef Opm::Linear::ElementBorderListFromGrid<GridView, ElementMapper> type;
 };
@@ -106,11 +111,13 @@ public:
 //! For the element centered finite volume method, ghost and overlap elements must be
 //! assembled to calculate the fluxes over the process boundary faces of the local
 //! process' grid partition
-SET_BOOL_PROP(EcfvDiscretization, LinearizeNonLocalElements, true);
+template<class TypeTag>
+struct LinearizeNonLocalElements<TypeTag, TTag::EcfvDiscretization> { static constexpr bool value = true; };
 
 //! locking is not required for the element centered finite volume method because race
 //! conditions cannot occur since each matrix/vector entry is written exactly once
-SET_BOOL_PROP(EcfvDiscretization, UseLinearizationLock, false);
+template<class TypeTag>
+struct UseLinearizationLock<TypeTag, TTag::EcfvDiscretization> { static constexpr bool value = false; };
 
 END_PROPERTIES
 
@@ -125,12 +132,12 @@ class EcfvDiscretization : public FvBaseDiscretization<TypeTag>
 {
     typedef FvBaseDiscretization<TypeTag> ParentType;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Implementation;
-    typedef typename GET_PROP_TYPE(TypeTag, DofMapper) DofMapper;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, SolutionVector) SolutionVector;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+    typedef GetPropType<TypeTag, Properties::Model> Implementation;
+    typedef GetPropType<TypeTag, Properties::DofMapper> DofMapper;
+    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
+    typedef GetPropType<TypeTag, Properties::SolutionVector> SolutionVector;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
 
 public:
     EcfvDiscretization(Simulator& simulator)

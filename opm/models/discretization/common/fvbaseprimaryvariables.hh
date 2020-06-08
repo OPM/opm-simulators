@@ -47,13 +47,13 @@ namespace Opm {
  */
 template <class TypeTag>
 class FvBasePrimaryVariables
-    : public Dune::FieldVector<typename GET_PROP_TYPE(TypeTag, Scalar),
-                               GET_PROP_VALUE(TypeTag, NumEq)>
+    : public Dune::FieldVector<GetPropType<TypeTag, Properties::Scalar>,
+                               getPropValue<TypeTag, Properties::NumEq>()>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
 
-    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
+    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
 
     typedef Opm::MathToolbox<Evaluation> Toolbox;
     typedef Dune::FieldVector<Scalar, numEq> ParentType;
@@ -139,8 +139,8 @@ namespace Dune {
    * Opm::FvBasePrimaryVariables: use FieldVector's FieldTraits implementation) */
   template<class TypeTag>
   struct FieldTraitsImpl< TypeTag, true >
-      : public FieldTraits<FieldVector<typename GET_PROP_TYPE(TypeTag, Scalar),
-                                       GET_PROP_VALUE(TypeTag, NumEq)> >
+      : public FieldTraits<FieldVector<Opm::GetPropType<TypeTag, Opm::Properties::Scalar>,
+                                       Opm::getPropValue<TypeTag, Opm::Properties::NumEq>()> >
   {
   };
 

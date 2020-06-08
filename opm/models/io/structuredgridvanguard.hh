@@ -65,12 +65,15 @@ static const int dim = GRIDDIM;
 
 // set the Grid and Vanguard properties
 #if HAVE_DUNE_ALUGRID
-SET_TYPE_PROP(StructuredGridVanguard, Grid, Dune::ALUGrid< dim, dim, Dune::cube, Dune::nonconforming >);
+template<class TypeTag>
+struct Grid<TypeTag, TTag::StructuredGridVanguard> { using type = Dune::ALUGrid< dim, dim, Dune::cube, Dune::nonconforming >; };
 #else
-SET_TYPE_PROP(StructuredGridVanguard, Grid, Dune::YaspGrid< dim >);
+template<class TypeTag>
+struct Grid<TypeTag, TTag::StructuredGridVanguard> { using type = Dune::YaspGrid< dim >; };
 #endif
 
-SET_TYPE_PROP(StructuredGridVanguard, Vanguard, Opm::StructuredGridVanguard<TypeTag>);
+template<class TypeTag>
+struct Vanguard<TypeTag, TTag::StructuredGridVanguard> { using type = Opm::StructuredGridVanguard<TypeTag>; };
 
 END_PROPERTIES
 
@@ -85,9 +88,9 @@ template <class TypeTag>
 class StructuredGridVanguard : public BaseVanguard<TypeTag>
 {
     typedef BaseVanguard<TypeTag> ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::Grid> Grid;
 
     typedef std::unique_ptr<Grid> GridPointer;
 

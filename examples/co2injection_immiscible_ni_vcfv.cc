@@ -39,7 +39,8 @@ NEW_TYPE_TAG(Co2InjectionImmiscibleNiVcfvProblem, INHERITS_FROM(ImmiscibleModel,
                                                                 Co2InjectionBaseProblem));
 SET_TAG_PROP(Co2InjectionImmiscibleNiVcfvProblem, SpatialDiscretizationSplice, VcfvDiscretization);
 
-SET_BOOL_PROP(Co2InjectionImmiscibleNiVcfvProblem, EnableEnergy, true);
+template<class TypeTag>
+struct EnableEnergy<TypeTag, TTag::Co2InjectionImmiscibleNiVcfvProblem> { static constexpr bool value = true; };
 
 END_PROPERTIES
 
@@ -48,6 +49,6 @@ END_PROPERTIES
 ////////////////////////
 int main(int argc, char **argv)
 {
-    typedef TTAG(Co2InjectionImmiscibleNiVcfvProblem) VcfvProblemTypeTag;
+    typedef Opm::Properties::TTag::Co2InjectionImmiscibleNiVcfvProblem VcfvProblemTypeTag;
     return Opm::start<VcfvProblemTypeTag>(argc, argv);
 }

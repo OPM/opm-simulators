@@ -44,8 +44,8 @@ namespace Opm {
 template<class TypeTag>
 class VcfvGridCommHandleFactory
 {
-    typedef typename GET_PROP_TYPE(TypeTag, DofMapper) DofMapper;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    typedef GetPropType<TypeTag, Properties::DofMapper> DofMapper;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
 
     static const int dim = GridView::dimension;
 

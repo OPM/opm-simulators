@@ -70,9 +70,9 @@ struct BlackOilDarcyFluxModule
 template <class TypeTag>
 class BlackOilDarcyExtensiveQuantities : public DarcyExtensiveQuantities<TypeTag>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, ExtensiveQuantities) Implementation;
+    typedef GetPropType<TypeTag, Properties::ExtensiveQuantities> Implementation;
 
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
 
 public:
     /*!

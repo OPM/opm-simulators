@@ -47,11 +47,11 @@ class EcfvDiscretization;
 template<class TypeTag>
 class FvBaseGradientCalculator
 {
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, Discretization) Discretization;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
+    typedef GetPropType<TypeTag, Properties::Discretization> Discretization;
+    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
 
     enum { dim = GridView::dimension };
     enum { dimWorld = GridView::dimensionworld };

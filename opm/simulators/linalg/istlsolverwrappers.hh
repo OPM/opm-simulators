@@ -60,7 +60,7 @@ namespace Linear {
     template <class TypeTag>                                                       \
     class SolverWrapper##SOLVER_NAME                                               \
     {                                                                              \
-        typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;                    \
+        typedef GetPropType<TypeTag, Properties::Scalar> Scalar;                    \
         typedef typename GET_PROP_TYPE(TypeTag,                                    \
                                        OverlappingMatrix) OverlappingMatrix;       \
         typedef typename GET_PROP_TYPE(TypeTag,                                    \
@@ -115,9 +115,9 @@ EWOMS_WRAP_ISTL_SOLVER(MinRes, Dune::MINRESSolver)
 template <class TypeTag>
 class SolverWrapperRestartedGMRes
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, OverlappingMatrix) OverlappingMatrix;
-    typedef typename GET_PROP_TYPE(TypeTag, OverlappingVector) OverlappingVector;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::OverlappingMatrix> OverlappingMatrix;
+    typedef GetPropType<TypeTag, Properties::OverlappingVector> OverlappingVector;
 
 public:
     typedef Dune::RestartedGMResSolver<OverlappingVector> RawSolver;

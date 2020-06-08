@@ -53,10 +53,11 @@ class VcfvDiscretization;
 BEGIN_PROPERTIES
 
 //! Set the stencil
-SET_PROP(VcfvDiscretization, Stencil)
+template<class TypeTag>
+struct Stencil<TypeTag, TTag::VcfvDiscretization>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
     typedef typename GridView::ctype CoordScalar;
 
 public:
@@ -64,10 +65,12 @@ public:
 };
 
 //! Mapper for the degrees of freedoms.
-SET_TYPE_PROP(VcfvDiscretization, DofMapper, typename GET_PROP_TYPE(TypeTag, VertexMapper));
+template<class TypeTag>
+struct DofMapper<TypeTag, TTag::VcfvDiscretization> { using type = GetPropType<TypeTag, Properties::VertexMapper>; };
 
 //! The concrete class which manages the spatial discretization
-SET_TYPE_PROP(VcfvDiscretization, Discretization, Opm::VcfvDiscretization<TypeTag>);
+template<class TypeTag>
+struct Discretization<TypeTag, TTag::VcfvDiscretization> { using type = Opm::VcfvDiscretization<TypeTag>; };
 
 //! The base class for the output modules (decides whether to write
 //! element or vertex based fields)
@@ -83,16 +86,18 @@ SET_TYPE_PROP(VcfvDiscretization, GridCommHandleFactory,
               Opm::VcfvGridCommHandleFactory<TypeTag>);
 
 //! Use two-point gradients by default for the vertex centered finite volume scheme.
-SET_BOOL_PROP(VcfvDiscretization, UseP1FiniteElementGradients, false);
+template<class TypeTag>
+struct UseP1FiniteElementGradients<TypeTag, TTag::VcfvDiscretization> { static constexpr bool value = false; };
 
 #if HAVE_DUNE_FEM
 //! Set the DiscreteFunctionSpace
-SET_PROP(VcfvDiscretization, DiscreteFunctionSpace)
+template<class TypeTag>
+struct DiscreteFunctionSpace<TypeTag, TTag::VcfvDiscretization>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar)   Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, GridPart) GridPart;
-    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
+    typedef GetPropType<TypeTag, Properties::Scalar>   Scalar;
+    typedef GetPropType<TypeTag, Properties::GridPart> GridPart;
+    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     typedef Dune::Fem::FunctionSpace<typename GridPart::GridType::ctype,
                                      Scalar,
                                      GridPart::GridType::dimensionworld,
@@ -104,10 +109,11 @@ public:
 #endif
 
 //! Set the border list creator for vertices
-SET_PROP(VcfvDiscretization, BorderListCreator)
+template<class TypeTag>
+struct BorderListCreator<TypeTag, TTag::VcfvDiscretization>
 { private:
-    typedef typename GET_PROP_TYPE(TypeTag, VertexMapper) VertexMapper;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    typedef GetPropType<TypeTag, Properties::VertexMapper> VertexMapper;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
 public:
     typedef Opm::Linear::VertexBorderListFromGrid<GridView, VertexMapper> type;
 };
@@ -115,7 +121,8 @@ public:
 //! For the vertex centered finite volume method, ghost and overlap elements must _not_
 //! be assembled to avoid accounting twice for the fluxes over the process boundary faces
 //! of the local process' grid partition
-SET_BOOL_PROP(VcfvDiscretization, LinearizeNonLocalElements, false);
+template<class TypeTag>
+struct LinearizeNonLocalElements<TypeTag, TTag::VcfvDiscretization> { static constexpr bool value = false; };
 
 
 END_PROPERTIES
@@ -131,10 +138,10 @@ template<class TypeTag>
 class VcfvDiscretization : public FvBaseDiscretization<TypeTag>
 {
     typedef FvBaseDiscretization<TypeTag> ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Implementation;
-    typedef typename GET_PROP_TYPE(TypeTag, DofMapper) DofMapper;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+    typedef GetPropType<TypeTag, Properties::Model> Implementation;
+    typedef GetPropType<TypeTag, Properties::DofMapper> DofMapper;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
 
     enum { dim = GridView::dimension };
 

@@ -58,51 +58,65 @@ class LensProblem;
 
 BEGIN_PROPERTIES
 
-NEW_TYPE_TAG(LensBaseProblem, INHERITS_FROM(StructuredGridVanguard));
+// Create new type tags
+namespace TTag {
+struct LensBaseProblem { using InheritsFrom = std::tuple<StructuredGridVanguard>; };
+} // end namespace TTag
 
 // declare the properties specific for the lens problem
-NEW_PROP_TAG(LensLowerLeftX);
-NEW_PROP_TAG(LensLowerLeftY);
-NEW_PROP_TAG(LensLowerLeftZ);
-NEW_PROP_TAG(LensUpperRightX);
-NEW_PROP_TAG(LensUpperRightY);
-NEW_PROP_TAG(LensUpperRightZ);
+template<class TypeTag, class MyTypeTag>
+struct LensLowerLeftX { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct LensLowerLeftY { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct LensLowerLeftZ { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct LensUpperRightX { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct LensUpperRightY { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct LensUpperRightZ { using type = UndefinedProperty; };
 
 // Set the problem property
-SET_TYPE_PROP(LensBaseProblem, Problem, Opm::LensProblem<TypeTag>);
+template<class TypeTag>
+struct Problem<TypeTag, TTag::LensBaseProblem> { using type = Opm::LensProblem<TypeTag>; };
 
 // Use Dune-grid's YaspGrid
-SET_TYPE_PROP(LensBaseProblem, Grid, Dune::YaspGrid<2>);
+template<class TypeTag>
+struct Grid<TypeTag, TTag::LensBaseProblem> { using type = Dune::YaspGrid<2>; };
 
 // Set the wetting phase
-SET_PROP(LensBaseProblem, WettingPhase)
+template<class TypeTag>
+struct WettingPhase<TypeTag, TTag::LensBaseProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
 
 public:
     typedef Opm::LiquidPhase<Scalar, Opm::SimpleH2O<Scalar> > type;
 };
 
 // Set the non-wetting phase
-SET_PROP(LensBaseProblem, NonwettingPhase)
+template<class TypeTag>
+struct NonwettingPhase<TypeTag, TTag::LensBaseProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
 
 public:
     typedef Opm::LiquidPhase<Scalar, Opm::DNAPL<Scalar> > type;
 };
 
 // Set the material Law
-SET_PROP(LensBaseProblem, MaterialLaw)
+template<class TypeTag>
+struct MaterialLaw<TypeTag, TTag::LensBaseProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
     enum { wettingPhaseIdx = FluidSystem::wettingPhaseIdx };
     enum { nonWettingPhaseIdx = FluidSystem::nonWettingPhaseIdx };
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
     typedef Opm::TwoPhaseMaterialTraits<Scalar,
                                         /*wettingPhaseIdx=*/FluidSystem::wettingPhaseIdx,
                                         /*nonWettingPhaseIdx=*/FluidSystem::nonWettingPhaseIdx> Traits;
@@ -117,13 +131,16 @@ public:
 };
 
 // Write the solutions of individual newton iterations?
-SET_BOOL_PROP(LensBaseProblem, NewtonWriteConvergence, false);
+template<class TypeTag>
+struct NewtonWriteConvergence<TypeTag, TTag::LensBaseProblem> { static constexpr bool value = false; };
 
 // Use forward differences instead of central differences
-SET_INT_PROP(LensBaseProblem, NumericDifferenceMethod, +1);
+template<class TypeTag>
+struct NumericDifferenceMethod<TypeTag, TTag::LensBaseProblem> { static constexpr int value = +1; };
 
 // Enable gravity
-SET_BOOL_PROP(LensBaseProblem, EnableGravity, true);
+template<class TypeTag>
+struct EnableGravity<TypeTag, TTag::LensBaseProblem> { static constexpr bool value = true; };
 
 // define the properties specific for the lens problem
 SET_SCALAR_PROP(LensBaseProblem, LensLowerLeftX, 1.0);
@@ -137,9 +154,12 @@ SET_SCALAR_PROP(LensBaseProblem, DomainSizeX, 6.0);
 SET_SCALAR_PROP(LensBaseProblem, DomainSizeY, 4.0);
 SET_SCALAR_PROP(LensBaseProblem, DomainSizeZ, 1.0);
 
-SET_INT_PROP(LensBaseProblem, CellsX, 48);
-SET_INT_PROP(LensBaseProblem, CellsY, 32);
-SET_INT_PROP(LensBaseProblem, CellsZ, 16);
+template<class TypeTag>
+struct CellsX<TypeTag, TTag::LensBaseProblem> { static constexpr int value = 48; };
+template<class TypeTag>
+struct CellsY<TypeTag, TTag::LensBaseProblem> { static constexpr int value = 32; };
+template<class TypeTag>
+struct CellsZ<TypeTag, TTag::LensBaseProblem> { static constexpr int value = 16; };
 
 // The default for the end time of the simulation
 SET_SCALAR_PROP(LensBaseProblem, EndTime, 30e3);
@@ -148,13 +168,16 @@ SET_SCALAR_PROP(LensBaseProblem, EndTime, 30e3);
 SET_SCALAR_PROP(LensBaseProblem, InitialTimeStepSize, 250);
 
 // By default, include the intrinsic permeability tensor to the VTK output files
-SET_BOOL_PROP(LensBaseProblem, VtkWriteIntrinsicPermeabilities, true);
+template<class TypeTag>
+struct VtkWriteIntrinsicPermeabilities<TypeTag, TTag::LensBaseProblem> { static constexpr bool value = true; };
 
 // enable the storage cache by default for this problem
-SET_BOOL_PROP(LensBaseProblem, EnableStorageCache, true);
+template<class TypeTag>
+struct EnableStorageCache<TypeTag, TTag::LensBaseProblem> { static constexpr bool value = true; };
 
 // enable the cache for intensive quantities by default for this problem
-SET_BOOL_PROP(LensBaseProblem, EnableIntensiveQuantityCache, true);
+template<class TypeTag>
+struct EnableIntensiveQuantityCache<TypeTag, TTag::LensBaseProblem> { static constexpr bool value = true; };
 
 END_PROPERTIES
 
@@ -184,19 +207,19 @@ namespace Opm {
  * saturation on both sides is zero.
  */
 template <class TypeTag>
-class LensProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
+class LensProblem : public GetPropType<TypeTag, Properties::BaseProblem>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
+    typedef GetPropType<TypeTag, Properties::BaseProblem> ParentType;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, WettingPhase) WettingPhase;
-    typedef typename GET_PROP_TYPE(TypeTag, NonwettingPhase) NonwettingPhase;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    typedef GetPropType<TypeTag, Properties::Indices> Indices;
+    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    typedef GetPropType<TypeTag, Properties::WettingPhase> WettingPhase;
+    typedef GetPropType<TypeTag, Properties::NonwettingPhase> NonwettingPhase;
+    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::Model> Model;
 
     enum {
         // number of phases
@@ -214,11 +237,11 @@ class LensProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
         dimWorld = GridView::dimensionworld
     };
 
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
+    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
+    typedef GetPropType<TypeTag, Properties::RateVector> RateVector;
+    typedef GetPropType<TypeTag, Properties::BoundaryRateVector> BoundaryRateVector;
+    typedef GetPropType<TypeTag, Properties::MaterialLaw> MaterialLaw;
+    typedef GetPropType<TypeTag, Properties::MaterialLawParams> MaterialLawParams;
 
     typedef typename GridView::ctype CoordScalar;
     typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
@@ -314,18 +337,18 @@ public:
     static std::string briefDescription()
     {
         std::string thermal = "isothermal";
-        bool enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy);
+        bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
         if (enableEnergy)
             thermal = "non-isothermal";
 
         std::string deriv = "finite difference";
-        typedef typename GET_PROP_TYPE(TypeTag, LocalLinearizerSplice) LLS;
-        bool useAutoDiff = std::is_same<LLS, TTAG(AutoDiffLocalLinearizer)>::value;
+        typedef GetPropType<TypeTag, Properties::LocalLinearizerSplice> LLS;
+        bool useAutoDiff = std::is_same<LLS, Properties::TTag::AutoDiffLocalLinearizer>::value;
         if (useAutoDiff)
             deriv = "automatic differentiation";
 
         std::string disc = "vertex centered finite volume";
-        typedef typename GET_PROP_TYPE(TypeTag, Discretization) D;
+        typedef GetPropType<TypeTag, Properties::Discretization> D;
         bool useEcfv = std::is_same<D, Opm::EcfvDiscretization<TypeTag>>::value;
         if (useEcfv)
             disc = "element centered finite volume";
@@ -400,9 +423,9 @@ public:
      */
     std::string name() const
     {
-        typedef typename GET_PROP_TYPE(TypeTag, LocalLinearizerSplice) LLS;
+        typedef GetPropType<TypeTag, Properties::LocalLinearizerSplice> LLS;
 
-        bool useAutoDiff = std::is_same<LLS, TTAG(AutoDiffLocalLinearizer)>::value;
+        bool useAutoDiff = std::is_same<LLS, Properties::TTag::AutoDiffLocalLinearizer>::value;
 
         std::ostringstream oss;
         oss << "lens_" << Model::name()

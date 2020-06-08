@@ -34,7 +34,10 @@
 
 BEGIN_PROPERTIES
 
-NEW_TYPE_TAG(ReservoirNcpEcfvProblem, INHERITS_FROM(NcpModel, ReservoirBaseProblem));
+// Create new type tags
+namespace TTag {
+struct ReservoirNcpEcfvProblem { using InheritsFrom = std::tuple<ReservoirBaseProblem, NcpModel>; };
+} // end namespace TTag
 
 // Select the element centered finite volume method as spatial discretization
 SET_TAG_PROP(ReservoirNcpEcfvProblem, SpatialDiscretizationSplice, EcfvDiscretization);
@@ -46,6 +49,6 @@ END_PROPERTIES
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(ReservoirNcpEcfvProblem) ProblemTypeTag;
+    typedef Opm::Properties::TTag::ReservoirNcpEcfvProblem ProblemTypeTag;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

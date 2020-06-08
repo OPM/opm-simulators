@@ -78,8 +78,8 @@ namespace Opm {
 template <class TypeTag>
 static inline void registerAllParameters_(bool finalizeRegistration = true)
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) ThreadManager;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::ThreadManager> ThreadManager;
 
     EWOMS_REGISTER_PARAM(TypeTag, std::string, ParameterFile,
                          "An .ini file which contains a set of run-time "
@@ -114,7 +114,7 @@ static inline int setupParameters_(int argc,
                                    bool allowUnused=false,
                                    bool handleHelp = true)
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Problem) Problem;
+    typedef GetPropType<TypeTag, Properties::Problem> Problem;
 
     // first, get the MPI rank of the current process
     int myRank = 0;
@@ -280,10 +280,10 @@ static inline void resetTerminal_(int signum)
 template <class TypeTag>
 static inline int start(int argc, char **argv,  bool registerParams=true)
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Problem) Problem;
-    typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) ThreadManager;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::Problem> Problem;
+    typedef GetPropType<TypeTag, Properties::ThreadManager> ThreadManager;
 
     // set the signal handlers to reset the TTY to a well defined state on unexpected
     // program aborts

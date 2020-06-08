@@ -37,22 +37,27 @@
 
 BEGIN_PROPERTIES
 
-NEW_TYPE_TAG(Co2InjectionFlashNiVcfvProblem, INHERITS_FROM(FlashModel, Co2InjectionBaseProblem));
+// Create new type tags
+namespace TTag {
+struct Co2InjectionFlashNiVcfvProblem { using InheritsFrom = std::tuple<Co2InjectionBaseProblem, FlashModel>; };
+} // end namespace TTag
 SET_TAG_PROP(Co2InjectionFlashNiVcfvProblem, SpatialDiscretizationSplice, VcfvDiscretization);
 
-SET_BOOL_PROP(Co2InjectionFlashNiVcfvProblem, EnableEnergy, true);
+template<class TypeTag>
+struct EnableEnergy<TypeTag, TTag::Co2InjectionFlashNiVcfvProblem> { static constexpr bool value = true; };
 
 // use the CO2 injection problem adapted flash solver
 SET_TYPE_PROP(
     Co2InjectionFlashNiVcfvProblem, FlashSolver,
-    Opm::Co2InjectionFlash<typename GET_PROP_TYPE(TypeTag, Scalar),
-                           typename GET_PROP_TYPE(TypeTag, FluidSystem)>);
+    Opm::Co2InjectionFlash<GetPropType<TypeTag, Properties::Scalar>,
+                           GetPropType<TypeTag, Properties::FluidSystem>>);
 
 // the flash model has serious problems with the numerical
 // precision. if quadruple precision math is available, we use it,
 // else we increase the tolerance of the Newton solver
 #if HAVE_QUAD
-SET_TYPE_PROP(Co2InjectionFlashNiVcfvProblem, Scalar, quad);
+template<class TypeTag>
+struct Scalar<TypeTag, TTag::Co2InjectionFlashNiVcfvProblem> { using type = quad; };
 
 // the default linear solver used for this problem (-> AMG) cannot be used with quadruple
 // precision scalars... (this seems to only apply to Dune >= 2.4)
@@ -65,6 +70,6 @@ END_PROPERTIES
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(Co2InjectionFlashNiVcfvProblem) VcfvProblemTypeTag;
+    typedef Opm::Properties::TTag::Co2InjectionFlashNiVcfvProblem VcfvProblemTypeTag;
     return Opm::start<VcfvProblemTypeTag>(argc, argv);
 }

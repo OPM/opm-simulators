@@ -50,15 +50,15 @@ namespace Opm {
 template<class TypeTag>
 class FvBaseElementContext
 {
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) Implementation;
+    typedef GetPropType<TypeTag, Properties::ElementContext> Implementation;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) IntensiveQuantities;
-    typedef typename GET_PROP_TYPE(TypeTag, ExtensiveQuantities) ExtensiveQuantities;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
+    typedef GetPropType<TypeTag, Properties::IntensiveQuantities> IntensiveQuantities;
+    typedef GetPropType<TypeTag, Properties::ExtensiveQuantities> ExtensiveQuantities;
 
     // the history size of the time discretization in number of steps
-    enum { timeDiscHistorySize = GET_PROP_VALUE(TypeTag, TimeDiscHistorySize) };
+    enum { timeDiscHistorySize = getPropValue<TypeTag, Properties::TimeDiscHistorySize>() };
 
     struct DofStore_ {
         IntensiveQuantities intensiveQuantities[timeDiscHistorySize];
@@ -68,18 +68,18 @@ class FvBaseElementContext
     typedef std::vector<DofStore_> DofVarsVector;
     typedef std::vector<ExtensiveQuantities> ExtensiveQuantitiesVector;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Problem) Problem;
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
-    typedef typename GET_PROP_TYPE(TypeTag, Stencil) Stencil;
-    typedef typename GET_PROP_TYPE(TypeTag, GradientCalculator) GradientCalculator;
-    typedef typename GET_PROP_TYPE(TypeTag, SolutionVector) SolutionVector;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::Problem> Problem;
+    typedef GetPropType<TypeTag, Properties::Model> Model;
+    typedef GetPropType<TypeTag, Properties::Stencil> Stencil;
+    typedef GetPropType<TypeTag, Properties::GradientCalculator> GradientCalculator;
+    typedef GetPropType<TypeTag, Properties::SolutionVector> SolutionVector;
 
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
     typedef typename GridView::template Codim<0>::Entity Element;
 
     static const unsigned dimWorld = GridView::dimensionworld;
-    static const unsigned numEq = GET_PROP_VALUE(TypeTag, NumEq);
+    static const unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
 
     typedef typename GridView::ctype CoordScalar;
     typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;

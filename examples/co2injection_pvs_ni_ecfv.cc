@@ -35,10 +35,14 @@
 
 BEGIN_PROPERTIES
 
-NEW_TYPE_TAG(Co2InjectionPvsNiEcfvProblem, INHERITS_FROM(PvsModel, Co2InjectionBaseProblem));
+// Create new type tags
+namespace TTag {
+struct Co2InjectionPvsNiEcfvProblem { using InheritsFrom = std::tuple<Co2InjectionBaseProblem, PvsModel>; };
+} // end namespace TTag
 SET_TAG_PROP(Co2InjectionPvsNiEcfvProblem, SpatialDiscretizationSplice, EcfvDiscretization);
 
-SET_BOOL_PROP(Co2InjectionPvsNiEcfvProblem, EnableEnergy, true);
+template<class TypeTag>
+struct EnableEnergy<TypeTag, TTag::Co2InjectionPvsNiEcfvProblem> { static constexpr bool value = true; };
 
 //! Use automatic differentiation to linearize the system of PDEs
 SET_TAG_PROP(Co2InjectionPvsNiEcfvProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
@@ -47,6 +51,6 @@ END_PROPERTIES
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(Co2InjectionPvsNiEcfvProblem) EcfvProblemTypeTag;
+    typedef Opm::Properties::TTag::Co2InjectionPvsNiEcfvProblem EcfvProblemTypeTag;
     return Opm::start<EcfvProblemTypeTag>(argc, argv);
 }
