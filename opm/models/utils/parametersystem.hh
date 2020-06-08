@@ -1176,7 +1176,7 @@ void registerParam(const char *paramName, const char *propertyName, const ParamT
 }
 
 template <class TypeTag, class ParamType>
-void hideParam(const char *paramName, const ParamType& defaultValue)
+void hideParam(const char *paramName, const ParamType&)
 {
     typedef typename GET_PROP(TypeTag, ParameterMetaData) ParamsMeta;
     if (!ParamsMeta::registrationOpen())
