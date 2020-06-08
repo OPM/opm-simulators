@@ -34,13 +34,16 @@
 
 BEGIN_PROPERTIES
 
-NEW_TYPE_TAG(RichardsLensVcfvProblem, INHERITS_FROM(RichardsLensProblem));
+// Create new type tags
+namespace TTag {
+struct RichardsLensVcfvProblem { using InheritsFrom = std::tuple<RichardsLensProblem>; };
+} // end namespace TTag
 SET_TAG_PROP(RichardsLensVcfvProblem, SpatialDiscretizationSplice, VcfvDiscretization);
 
 END_PROPERTIES
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(RichardsLensVcfvProblem) ProblemTypeTag;
+    typedef Opm::Properties::TTag::RichardsLensVcfvProblem ProblemTypeTag;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

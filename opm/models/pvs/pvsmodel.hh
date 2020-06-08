@@ -76,37 +76,48 @@ SET_TYPE_PROP(PvsModel,
               Opm::PvsLocalResidual<TypeTag>);
 
 //! Use the PVS specific newton method for the PVS model
-SET_TYPE_PROP(PvsModel, NewtonMethod, Opm::PvsNewtonMethod<TypeTag>);
+template<class TypeTag>
+struct NewtonMethod<TypeTag, TTag::PvsModel> { using type = Opm::PvsNewtonMethod<TypeTag>; };
 
 //! the Model property
-SET_TYPE_PROP(PvsModel, Model, Opm::PvsModel<TypeTag>);
+template<class TypeTag>
+struct Model<TypeTag, TTag::PvsModel> { using type = Opm::PvsModel<TypeTag>; };
 
 //! the PrimaryVariables property
-SET_TYPE_PROP(PvsModel, PrimaryVariables, Opm::PvsPrimaryVariables<TypeTag>);
+template<class TypeTag>
+struct PrimaryVariables<TypeTag, TTag::PvsModel> { using type = Opm::PvsPrimaryVariables<TypeTag>; };
 
 //! the RateVector property
-SET_TYPE_PROP(PvsModel, RateVector, Opm::PvsRateVector<TypeTag>);
+template<class TypeTag>
+struct RateVector<TypeTag, TTag::PvsModel> { using type = Opm::PvsRateVector<TypeTag>; };
 
 //! the BoundaryRateVector property
-SET_TYPE_PROP(PvsModel, BoundaryRateVector, Opm::PvsBoundaryRateVector<TypeTag>);
+template<class TypeTag>
+struct BoundaryRateVector<TypeTag, TTag::PvsModel> { using type = Opm::PvsBoundaryRateVector<TypeTag>; };
 
 //! the IntensiveQuantities property
-SET_TYPE_PROP(PvsModel, IntensiveQuantities, Opm::PvsIntensiveQuantities<TypeTag>);
+template<class TypeTag>
+struct IntensiveQuantities<TypeTag, TTag::PvsModel> { using type = Opm::PvsIntensiveQuantities<TypeTag>; };
 
 //! the ExtensiveQuantities property
-SET_TYPE_PROP(PvsModel, ExtensiveQuantities, Opm::PvsExtensiveQuantities<TypeTag>);
+template<class TypeTag>
+struct ExtensiveQuantities<TypeTag, TTag::PvsModel> { using type = Opm::PvsExtensiveQuantities<TypeTag>; };
 
 //! The indices required by the isothermal PVS model
-SET_TYPE_PROP(PvsModel, Indices, Opm::PvsIndices<TypeTag, /*PVIdx=*/0>);
+template<class TypeTag>
+struct Indices<TypeTag, TTag::PvsModel> { using type = Opm::PvsIndices<TypeTag, /*PVIdx=*/0>; };
 
 // set the model to a medium verbosity
-SET_INT_PROP(PvsModel, PvsVerbosity, 1);
+template<class TypeTag>
+struct PvsVerbosity<TypeTag, TTag::PvsModel> { static constexpr int value = 1; };
 
 //! Disable the energy equation by default
-SET_BOOL_PROP(PvsModel, EnableEnergy, false);
+template<class TypeTag>
+struct EnableEnergy<TypeTag, TTag::PvsModel> { static constexpr bool value = false; };
 
 // disable molecular diffusion by default
-SET_BOOL_PROP(PvsModel, EnableDiffusion, false);
+template<class TypeTag>
+struct EnableDiffusion<TypeTag, TTag::PvsModel> { static constexpr bool value = false; };
 
 //! The basis value for the weight of the pressure primary variable
 SET_SCALAR_PROP(PvsModel, PvsPressureBaseWeight, 1.0);
@@ -141,7 +152,8 @@ namespace Opm {
  * \c FluxModule property. For example, the velocity model can by
  * changed to the Forchheimer approach by
  * \code
- * SET_TYPE_PROP(MyProblemTypeTag, FluxModule, Opm::ForchheimerFluxModule<TypeTag>);
+ * template<class TypeTag>
+struct FluxModule<TypeTag, TTag::MyProblemTypeTag> { using type = Opm::ForchheimerFluxModule<TypeTag>; };
  * \endcode
  *
  * The core of the model is the conservation mass of each component by
@@ -222,20 +234,20 @@ class PvsModel
 {
     typedef MultiPhaseBaseModel<TypeTag> ParentType;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
 
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) IntensiveQuantities;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
+    typedef GetPropType<TypeTag, Properties::IntensiveQuantities> IntensiveQuantities;
+    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
+    typedef GetPropType<TypeTag, Properties::Indices> Indices;
 
-    enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
-    enum { numComponents = GET_PROP_VALUE(TypeTag, NumComponents) };
-    enum { enableDiffusion = GET_PROP_VALUE(TypeTag, EnableDiffusion) };
-    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
+    enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
+    enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
     typedef typename GridView::template Codim<0>::Entity Element;
     typedef typename GridView::template Codim<0>::Iterator ElementIterator;
@@ -377,12 +389,12 @@ public:
 
             // for saturations, the PvsMoleSaturationsBaseWeight
             // property determines the weight
-            return GET_PROP_VALUE(TypeTag, PvsSaturationsBaseWeight);
+            return getPropValue<TypeTag, Properties::PvsSaturationsBaseWeight>();
         }
 
         // for mole fractions, the PvsMoleFractionsBaseWeight
         // property determines the weight
-        return GET_PROP_VALUE(TypeTag, PvsMoleFractionsBaseWeight);
+        return getPropValue<TypeTag, Properties::PvsMoleFractionsBaseWeight>();
     }
 
     /*!

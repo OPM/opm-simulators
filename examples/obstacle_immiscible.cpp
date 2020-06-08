@@ -34,12 +34,15 @@
 
 BEGIN_PROPERTIES
 
-NEW_TYPE_TAG(ObstacleProblem, INHERITS_FROM(ImmiscibleModel, ObstacleBaseProblem));
+// Create new type tags
+namespace TTag {
+struct ObstacleProblem { using InheritsFrom = std::tuple<ObstacleBaseProblem, ImmiscibleModel>; };
+} // end namespace TTag
 
 END_PROPERTIES
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(ObstacleProblem) ProblemTypeTag;
+    typedef Opm::Properties::TTag::ObstacleProblem ProblemTypeTag;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

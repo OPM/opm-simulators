@@ -40,7 +40,8 @@ NEW_TYPE_TAG(Co2InjectionImmiscibleNiEcfvProblem, INHERITS_FROM(ImmiscibleModel,
 SET_TAG_PROP(Co2InjectionImmiscibleNiEcfvProblem, SpatialDiscretizationSplice,
              EcfvDiscretization);
 
-SET_BOOL_PROP(Co2InjectionImmiscibleNiEcfvProblem, EnableEnergy, true);
+template<class TypeTag>
+struct EnableEnergy<TypeTag, TTag::Co2InjectionImmiscibleNiEcfvProblem> { static constexpr bool value = true; };
 
 //! Use automatic differentiation to linearize the system of PDEs
 SET_TAG_PROP(Co2InjectionImmiscibleNiEcfvProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
@@ -52,6 +53,6 @@ END_PROPERTIES
 ////////////////////////
 int main(int argc, char **argv)
 {
-    typedef TTAG(Co2InjectionImmiscibleNiEcfvProblem) EcfvProblemTypeTag;
+    typedef Opm::Properties::TTag::Co2InjectionImmiscibleNiEcfvProblem EcfvProblemTypeTag;
     return Opm::start<EcfvProblemTypeTag>(argc, argv);
 }

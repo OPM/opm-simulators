@@ -57,12 +57,13 @@ SET_TYPE_PROP(AutoDiffLocalLinearizer, LocalLinearizer,
               Opm::FvBaseAdLocalLinearizer<TypeTag>);
 
 //! Set the function evaluation w.r.t. the primary variables
-SET_PROP(AutoDiffLocalLinearizer, Evaluation)
+template<class TypeTag>
+struct Evaluation<TypeTag, TTag::AutoDiffLocalLinearizer>
 {
 private:
-    static const unsigned numEq = GET_PROP_VALUE(TypeTag, NumEq);
+    static const unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
 
 public:
     typedef Opm::DenseAd::Evaluation<Scalar, numEq> type;
@@ -84,22 +85,22 @@ template<class TypeTag>
 class FvBaseAdLocalLinearizer
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, LocalLinearizer) Implementation;
-    typedef typename GET_PROP_TYPE(TypeTag, LocalResidual) LocalResidual;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Problem) Problem;
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    typedef GetPropType<TypeTag, Properties::LocalLinearizer> Implementation;
+    typedef GetPropType<TypeTag, Properties::LocalResidual> LocalResidual;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::Problem> Problem;
+    typedef GetPropType<TypeTag, Properties::Model> Model;
+    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
+    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
     typedef typename GridView::template Codim<0>::Entity Element;
 
-    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
+    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
 
     typedef Dune::FieldVector<Scalar, numEq> ScalarVectorBlock;
     // extract local matrices from jacobian matrix for consistency
-    typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter)::MatrixBlock ScalarMatrixBlock;
+    typedef typename GetPropType<TypeTag, Properties::SparseMatrixAdapter>::MatrixBlock ScalarMatrixBlock;
 
     typedef Dune::BlockVector<ScalarVectorBlock> ScalarLocalBlockVector;
     typedef Dune::Matrix<ScalarMatrixBlock> ScalarLocalBlockMatrix;

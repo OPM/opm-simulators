@@ -47,13 +47,13 @@ namespace Opm {
 template <class TypeTag>
 class BaseVanguard
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Vanguard) Implementation;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::Grid> Grid;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    typedef GetPropType<TypeTag, Properties::Vanguard> Implementation;
 
 #if HAVE_DUNE_FEM
-    typedef typename GET_PROP_TYPE(TypeTag, GridPart) GridPart;
+    typedef GetPropType<TypeTag, Properties::GridPart> GridPart;
 #endif
 
 public:

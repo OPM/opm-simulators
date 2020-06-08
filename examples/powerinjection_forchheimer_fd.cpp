@@ -37,13 +37,14 @@ NEW_TYPE_TAG(PowerInjectionForchheimerFdProblem,
              INHERITS_FROM(ImmiscibleTwoPhaseModel,
                            PowerInjectionBaseProblem));
 
-SET_TYPE_PROP(PowerInjectionForchheimerFdProblem, FluxModule, Opm::ForchheimerFluxModule<TypeTag>);
+template<class TypeTag>
+struct FluxModule<TypeTag, TTag::PowerInjectionForchheimerFdProblem> { using type = Opm::ForchheimerFluxModule<TypeTag>; };
 SET_TAG_PROP(PowerInjectionForchheimerFdProblem, LocalLinearizerSplice, FiniteDifferenceLocalLinearizer);
 
 END_PROPERTIES
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(PowerInjectionForchheimerFdProblem) ProblemTypeTag;
+    typedef Opm::Properties::TTag::PowerInjectionForchheimerFdProblem ProblemTypeTag;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

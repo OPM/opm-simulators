@@ -46,30 +46,52 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(VtkBlackOil);
 
 // create the property tags needed for the multi phase module
-NEW_PROP_TAG(VtkWriteGasDissolutionFactor);
-NEW_PROP_TAG(VtkWriteOilVaporizationFactor);
-NEW_PROP_TAG(VtkWriteOilFormationVolumeFactor);
-NEW_PROP_TAG(VtkWriteGasFormationVolumeFactor);
-NEW_PROP_TAG(VtkWriteWaterFormationVolumeFactor);
-NEW_PROP_TAG(VtkWriteOilSaturationPressure);
-NEW_PROP_TAG(VtkWriteGasSaturationPressure);
-NEW_PROP_TAG(VtkWriteSaturationRatios);
-NEW_PROP_TAG(VtkWriteSaturatedOilGasDissolutionFactor);
-NEW_PROP_TAG(VtkWriteSaturatedGasOilVaporizationFactor);
-NEW_PROP_TAG(VtkWritePrimaryVarsMeaning);
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteGasDissolutionFactor { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteOilVaporizationFactor { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteOilFormationVolumeFactor { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteGasFormationVolumeFactor { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteWaterFormationVolumeFactor { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteOilSaturationPressure { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteGasSaturationPressure { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteSaturationRatios { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteSaturatedOilGasDissolutionFactor { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteSaturatedGasOilVaporizationFactor { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWritePrimaryVarsMeaning { using type = UndefinedProperty; };
 
 // set default values for what quantities to output
-SET_BOOL_PROP(VtkBlackOil, VtkWriteGasDissolutionFactor, false);
-SET_BOOL_PROP(VtkBlackOil, VtkWriteOilVaporizationFactor, false);
-SET_BOOL_PROP(VtkBlackOil, VtkWriteOilFormationVolumeFactor, false);
-SET_BOOL_PROP(VtkBlackOil, VtkWriteGasFormationVolumeFactor, false);
-SET_BOOL_PROP(VtkBlackOil, VtkWriteWaterFormationVolumeFactor, false);
-SET_BOOL_PROP(VtkBlackOil, VtkWriteOilSaturationPressure, false);
-SET_BOOL_PROP(VtkBlackOil, VtkWriteGasSaturationPressure, false);
-SET_BOOL_PROP(VtkBlackOil, VtkWriteSaturationRatios, false);
-SET_BOOL_PROP(VtkBlackOil, VtkWriteSaturatedOilGasDissolutionFactor, false);
-SET_BOOL_PROP(VtkBlackOil, VtkWriteSaturatedGasOilVaporizationFactor, false);
-SET_BOOL_PROP(VtkBlackOil, VtkWritePrimaryVarsMeaning, false);
+template<class TypeTag>
+struct VtkWriteGasDissolutionFactor<TypeTag, TTag::VtkBlackOil> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteOilVaporizationFactor<TypeTag, TTag::VtkBlackOil> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteOilFormationVolumeFactor<TypeTag, TTag::VtkBlackOil> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteGasFormationVolumeFactor<TypeTag, TTag::VtkBlackOil> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteWaterFormationVolumeFactor<TypeTag, TTag::VtkBlackOil> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteOilSaturationPressure<TypeTag, TTag::VtkBlackOil> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteGasSaturationPressure<TypeTag, TTag::VtkBlackOil> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteSaturationRatios<TypeTag, TTag::VtkBlackOil> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteSaturatedOilGasDissolutionFactor<TypeTag, TTag::VtkBlackOil> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteSaturatedGasOilVaporizationFactor<TypeTag, TTag::VtkBlackOil> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWritePrimaryVarsMeaning<TypeTag, TTag::VtkBlackOil> { static constexpr bool value = false; };
 END_PROPERTIES
 
 namespace Opm {
@@ -83,15 +105,15 @@ class VtkBlackOilModule : public BaseOutputModule<TypeTag>
 {
     typedef BaseOutputModule<TypeTag> ParentType;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
+    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
 
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
 
-    static const int vtkFormat = GET_PROP_VALUE(TypeTag, VtkOutputFormat);
+    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     typedef Opm::VtkMultiWriter<GridView, vtkFormat> VtkMultiWriter;
 
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };

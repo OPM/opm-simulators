@@ -35,15 +35,19 @@
 
 BEGIN_PROPERTIES
 
-NEW_TYPE_TAG(ObstacleProblem, INHERITS_FROM(PvsModel, ObstacleBaseProblem));
+// Create new type tags
+namespace TTag {
+struct ObstacleProblem { using InheritsFrom = std::tuple<ObstacleBaseProblem, PvsModel>; };
+} // end namespace TTag
 
 // Verbosity of the PVS model (0=silent, 1=medium, 2=chatty)
-SET_INT_PROP(ObstacleProblem, PvsVerbosity, 1);
+template<class TypeTag>
+struct PvsVerbosity<TypeTag, TTag::ObstacleProblem> { static constexpr int value = 1; };
 
 END_PROPERTIES
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(ObstacleProblem) ProblemTypeTag;
+    typedef Opm::Properties::TTag::ObstacleProblem ProblemTypeTag;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

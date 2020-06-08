@@ -64,7 +64,10 @@ class FingerProblem;
 
 BEGIN_PROPERTIES
 
-NEW_TYPE_TAG(FingerBaseProblem, INHERITS_FROM(StructuredGridVanguard));
+// Create new type tags
+namespace TTag {
+struct FingerBaseProblem { using InheritsFrom = std::tuple<StructuredGridVanguard>; };
+} // end namespace TTag
 
 #if HAVE_DUNE_ALUGRID
 // use dune-alugrid if available
@@ -77,36 +80,41 @@ SET_TYPE_PROP(FingerBaseProblem,
 #endif
 
 // declare the properties used by the finger problem
-NEW_PROP_TAG(InitialWaterSaturation);
+template<class TypeTag, class MyTypeTag>
+struct InitialWaterSaturation { using type = UndefinedProperty; };
 
 // Set the problem property
-SET_TYPE_PROP(FingerBaseProblem, Problem, Opm::FingerProblem<TypeTag>);
+template<class TypeTag>
+struct Problem<TypeTag, TTag::FingerBaseProblem> { using type = Opm::FingerProblem<TypeTag>; };
 
 // Set the wetting phase
-SET_PROP(FingerBaseProblem, WettingPhase)
+template<class TypeTag>
+struct WettingPhase<TypeTag, TTag::FingerBaseProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
 
 public:
     typedef Opm::LiquidPhase<Scalar, Opm::SimpleH2O<Scalar> > type;
 };
 
 // Set the non-wetting phase
-SET_PROP(FingerBaseProblem, NonwettingPhase)
+template<class TypeTag>
+struct NonwettingPhase<TypeTag, TTag::FingerBaseProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
 
 public:
     typedef Opm::GasPhase<Scalar, Opm::Air<Scalar> > type;
 };
 
 // Set the material Law
-SET_PROP(FingerBaseProblem, MaterialLaw)
+template<class TypeTag>
+struct MaterialLaw<TypeTag, TTag::FingerBaseProblem>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
     typedef Opm::TwoPhaseMaterialTraits<Scalar,
                                         /*wettingPhaseIdx=*/FluidSystem::wettingPhaseIdx,
                                         /*nonWettingPhaseIdx=*/FluidSystem::nonWettingPhaseIdx> Traits;
@@ -117,16 +125,20 @@ SET_PROP(FingerBaseProblem, MaterialLaw)
 };
 
 // Write the solutions of individual newton iterations?
-SET_BOOL_PROP(FingerBaseProblem, NewtonWriteConvergence, false);
+template<class TypeTag>
+struct NewtonWriteConvergence<TypeTag, TTag::FingerBaseProblem> { static constexpr bool value = false; };
 
 // Use forward differences instead of central differences
-SET_INT_PROP(FingerBaseProblem, NumericDifferenceMethod, +1);
+template<class TypeTag>
+struct NumericDifferenceMethod<TypeTag, TTag::FingerBaseProblem> { static constexpr int value = +1; };
 
 // Enable constraints
-SET_INT_PROP(FingerBaseProblem, EnableConstraints, true);
+template<class TypeTag>
+struct EnableConstraints<TypeTag, TTag::FingerBaseProblem> { static constexpr int value = true; };
 
 // Enable gravity
-SET_BOOL_PROP(FingerBaseProblem, EnableGravity, true);
+template<class TypeTag>
+struct EnableGravity<TypeTag, TTag::FingerBaseProblem> { static constexpr bool value = true; };
 
 // define the properties specific for the finger problem
 SET_SCALAR_PROP(FingerBaseProblem, DomainSizeX, 0.1);
@@ -135,9 +147,12 @@ SET_SCALAR_PROP(FingerBaseProblem, DomainSizeZ, 0.1);
 
 SET_SCALAR_PROP(FingerBaseProblem, InitialWaterSaturation, 0.01);
 
-SET_INT_PROP(FingerBaseProblem, CellsX, 20);
-SET_INT_PROP(FingerBaseProblem, CellsY, 70);
-SET_INT_PROP(FingerBaseProblem, CellsZ, 1);
+template<class TypeTag>
+struct CellsX<TypeTag, TTag::FingerBaseProblem> { static constexpr int value = 20; };
+template<class TypeTag>
+struct CellsY<TypeTag, TTag::FingerBaseProblem> { static constexpr int value = 70; };
+template<class TypeTag>
+struct CellsZ<TypeTag, TTag::FingerBaseProblem> { static constexpr int value = 1; };
 
 // The default for the end time of the simulation
 SET_SCALAR_PROP(FingerBaseProblem, EndTime, 215);
@@ -165,21 +180,21 @@ namespace Opm {
  * discretization is fine enough.
  */
 template <class TypeTag>
-class FingerProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
+class FingerProblem : public GetPropType<TypeTag, Properties::BaseProblem>
 {
     //!\cond SKIP_THIS
-    typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
+    typedef GetPropType<TypeTag, Properties::BaseProblem> ParentType;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, WettingPhase) WettingPhase;
-    typedef typename GET_PROP_TYPE(TypeTag, NonwettingPhase) NonwettingPhase;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Constraints) Constraints;
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    typedef GetPropType<TypeTag, Properties::Indices> Indices;
+    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    typedef GetPropType<TypeTag, Properties::WettingPhase> WettingPhase;
+    typedef GetPropType<TypeTag, Properties::NonwettingPhase> NonwettingPhase;
+    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::Constraints> Constraints;
+    typedef GetPropType<TypeTag, Properties::Model> Model;
 
     enum {
         // number of phases
@@ -197,16 +212,16 @@ class FingerProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
         dimWorld = GridView::dimensionworld
     };
 
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, Stencil)  Stencil;
+    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
+    typedef GetPropType<TypeTag, Properties::Stencil>  Stencil;
     enum { codim = Stencil::Entity::codimension };
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
+    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
+    typedef GetPropType<TypeTag, Properties::RateVector> RateVector;
+    typedef GetPropType<TypeTag, Properties::BoundaryRateVector> BoundaryRateVector;
 
     typedef typename GET_PROP(TypeTag, MaterialLaw)::ParkerLenhard ParkerLenhard;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
+    typedef GetPropType<TypeTag, Properties::MaterialLaw> MaterialLaw;
+    typedef GetPropType<TypeTag, Properties::MaterialLawParams> MaterialLawParams;
 
     typedef typename GridView::ctype CoordScalar;
     typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;

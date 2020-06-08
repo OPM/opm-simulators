@@ -75,7 +75,7 @@
  */
 #define EWOMS_REGISTER_PARAM(TypeTag, ParamType, ParamName, Description)       \
     ::Opm::Parameters::registerParam<TypeTag, ParamType>( \
-        #ParamName, #ParamName, GET_PROP_VALUE(TypeTag, ParamName), Description)
+        #ParamName, #ParamName, getPropValue<TypeTag, Properties::ParamName>(), Description)
 
 /*!
  * \ingroup Parameter
@@ -85,7 +85,7 @@
  * This allows to deal with unused parameters
  */
 #define EWOMS_HIDE_PARAM(TypeTag, ParamName)                \
-    ::Opm::Parameters::hideParam<TypeTag>(#ParamName, GET_PROP_VALUE(TypeTag, ParamName))
+    ::Opm::Parameters::hideParam<TypeTag>(#ParamName, getPropValue<TypeTag, Properties::ParamName>())
 
 /*!
  * \ingroup Parameter
@@ -116,12 +116,12 @@
  */
 #define EWOMS_GET_PARAM(TypeTag, ParamType, ParamName)                         \
     (::Opm::Parameters::get<TypeTag, ParamType>(#ParamName, #ParamName, \
-                                                GET_PROP_VALUE(TypeTag, ParamName)))
+                                                getPropValue<TypeTag, Properties::ParamName>()))
 
 //!\cond SKIP_THIS
 #define EWOMS_GET_PARAM_(TypeTag, ParamType, ParamName)                 \
     (::Opm::Parameters::get<TypeTag, ParamType>(#ParamName, #ParamName, \
-                                                GET_PROP_VALUE(TypeTag, ParamName), \
+                                                getPropValue<TypeTag, Properties::ParamName>(), \
                                                 /*errorIfNotRegistered=*/false))
 
 /*!
@@ -227,11 +227,13 @@ BEGIN_PROPERTIES
 // parameter system is to be used
 NEW_TYPE_TAG(ParameterSystem);
 
-NEW_PROP_TAG(ParameterMetaData);
+template<class TypeTag, class MyTypeTag>
+struct ParameterMetaData { using type = UndefinedProperty; };
 
 
 //! Set the ParameterMetaData property
-SET_PROP(ParameterSystem, ParameterMetaData)
+template<class TypeTag>
+struct ParameterMetaData<TypeTag, TTag::ParameterSystem>
 {
     typedef Dune::ParameterTree type;
 

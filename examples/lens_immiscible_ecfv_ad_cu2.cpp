@@ -43,6 +43,6 @@ int mainCU2(int argc, char **argv);
 
 int mainCU2(int argc, char **argv)
 {
-    typedef TTAG(LensProblemEcfvAd) ProblemTypeTag;
+    typedef Opm::Properties::TTag::LensProblemEcfvAd ProblemTypeTag;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

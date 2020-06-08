@@ -34,14 +34,17 @@
 BEGIN_PROPERTIES
 
 //! The type of the linear solver to be used
-NEW_PROP_TAG(LinearSolverBackend);
+template<class TypeTag, class MyTypeTag>
+struct LinearSolverBackend { using type = UndefinedProperty; };
 
 //! the preconditioner used by the linear solver
-NEW_PROP_TAG(PreconditionerWrapper);
+template<class TypeTag, class MyTypeTag>
+struct PreconditionerWrapper { using type = UndefinedProperty; };
 
 
 //! The floating point type used internally by the linear solver
-NEW_PROP_TAG(LinearSolverScalar);
+template<class TypeTag, class MyTypeTag>
+struct LinearSolverScalar { using type = UndefinedProperty; };
 
 /*!
  * \brief The size of the algebraic overlap of the linear solver.
@@ -50,17 +53,20 @@ NEW_PROP_TAG(LinearSolverScalar);
  * of a grid, but it is only existant for the linear system of
  * equations.
  */
-NEW_PROP_TAG(LinearSolverOverlapSize);
+template<class TypeTag, class MyTypeTag>
+struct LinearSolverOverlapSize { using type = UndefinedProperty; };
 
 /*!
  * \brief Maximum accepted error of the solution of the linear solver.
  */
-NEW_PROP_TAG(LinearSolverTolerance);
+template<class TypeTag, class MyTypeTag>
+struct LinearSolverTolerance { using type = UndefinedProperty; };
 
 /*!
  * \brief Maximum accepted error of the norm of the residual.
  */
-NEW_PROP_TAG(LinearSolverAbsTolerance);
+template<class TypeTag, class MyTypeTag>
+struct LinearSolverAbsTolerance { using type = UndefinedProperty; };
 
 /*!
  * \brief Specifies the verbosity of the linear solver
@@ -69,34 +75,49 @@ NEW_PROP_TAG(LinearSolverAbsTolerance);
  * property to 1 prints aggregated convergence rates, 2 prints the
  * convergence rate of every iteration of the scheme.
  */
-NEW_PROP_TAG(LinearSolverVerbosity);
+template<class TypeTag, class MyTypeTag>
+struct LinearSolverVerbosity { using type = UndefinedProperty; };
 
 //! Maximum number of iterations eyecuted by the linear solver
-NEW_PROP_TAG(LinearSolverMaxIterations);
+template<class TypeTag, class MyTypeTag>
+struct LinearSolverMaxIterations { using type = UndefinedProperty; };
 
 //! The order of the sequential preconditioner
-NEW_PROP_TAG(PreconditionerOrder);
+template<class TypeTag, class MyTypeTag>
+struct PreconditionerOrder { using type = UndefinedProperty; };
 
 //! The relaxation factor of the preconditioner
-NEW_PROP_TAG(PreconditionerRelaxation);
+template<class TypeTag, class MyTypeTag>
+struct PreconditionerRelaxation { using type = UndefinedProperty; };
 
 //! number of iterations between solver restarts for the GMRES solver
-NEW_PROP_TAG(GMResRestart);
+template<class TypeTag, class MyTypeTag>
+struct GMResRestart { using type = UndefinedProperty; };
 
 //! The class that allows to manipulate sparse matrices
-NEW_PROP_TAG(SparseMatrixAdapter);
+template<class TypeTag, class MyTypeTag>
+struct SparseMatrixAdapter { using type = UndefinedProperty; };
 
 //! Vector containing a quantity of for equation for each DOF of the whole grid
-NEW_PROP_TAG(GlobalEqVector);
+template<class TypeTag, class MyTypeTag>
+struct GlobalEqVector { using type = UndefinedProperty; };
 
-NEW_PROP_TAG(AmgCoarsenTarget);
-NEW_PROP_TAG(LinearSolverMaxError);
-NEW_PROP_TAG(LinearSolverWrapper);
-NEW_PROP_TAG(Overlap);
-NEW_PROP_TAG(OverlappingLinearOperator);
-NEW_PROP_TAG(OverlappingMatrix);
-NEW_PROP_TAG(OverlappingScalarProduct);
-NEW_PROP_TAG(OverlappingVector);
+template<class TypeTag, class MyTypeTag>
+struct AmgCoarsenTarget { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct LinearSolverMaxError { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct LinearSolverWrapper { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct Overlap { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct OverlappingLinearOperator { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct OverlappingMatrix { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct OverlappingScalarProduct { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct OverlappingVector { using type = UndefinedProperty; };
 
 END_PROPERTIES
 

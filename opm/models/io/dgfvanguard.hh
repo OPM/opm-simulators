@@ -49,9 +49,9 @@ template <class TypeTag>
 class DgfVanguard : public BaseVanguard<TypeTag>
 {
     typedef BaseVanguard<TypeTag> ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::Grid> Grid;
     typedef Opm::FractureMapper<TypeTag> FractureMapper;
 
     typedef std::unique_ptr< Grid > GridPointer;

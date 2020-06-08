@@ -35,36 +35,51 @@
 BEGIN_PROPERTIES
 
 //! The splice to be used for the spatial discretization
-NEW_PROP_TAG(SpatialDiscretizationSplice);
+template<class TypeTag, class MyTypeTag>
+struct SpatialDiscretizationSplice { using type = UndefinedProperty; };
 //! Number of fluid phases in the system
-NEW_PROP_TAG(NumPhases);
+template<class TypeTag, class MyTypeTag>
+struct NumPhases { using type = UndefinedProperty; };
 //! Number of chemical species in the system
-NEW_PROP_TAG(NumComponents);
+template<class TypeTag, class MyTypeTag>
+struct NumComponents { using type = UndefinedProperty; };
 //! Enumerations used by the model
-NEW_PROP_TAG(Indices);
+template<class TypeTag, class MyTypeTag>
+struct Indices { using type = UndefinedProperty; };
 //! The material law which ought to be used (extracted from the spatial parameters)
-NEW_PROP_TAG(MaterialLaw);
+template<class TypeTag, class MyTypeTag>
+struct MaterialLaw { using type = UndefinedProperty; };
 //! The context material law (extracted from the spatial parameters)
-NEW_PROP_TAG(MaterialLawParams);
+template<class TypeTag, class MyTypeTag>
+struct MaterialLawParams { using type = UndefinedProperty; };
 //! The material law for the energy stored in the solid matrix
-NEW_PROP_TAG(SolidEnergyLaw);
+template<class TypeTag, class MyTypeTag>
+struct SolidEnergyLaw { using type = UndefinedProperty; };
 //! The parameters of the material law for energy storage of the solid
-NEW_PROP_TAG(SolidEnergyLawParams);
+template<class TypeTag, class MyTypeTag>
+struct SolidEnergyLawParams { using type = UndefinedProperty; };
 //! The material law for thermal conduction
-NEW_PROP_TAG(ThermalConductionLaw);
+template<class TypeTag, class MyTypeTag>
+struct ThermalConductionLaw { using type = UndefinedProperty; };
 //! The parameters of the material law for thermal conduction
-NEW_PROP_TAG(ThermalConductionLawParams);
+template<class TypeTag, class MyTypeTag>
+struct ThermalConductionLawParams { using type = UndefinedProperty; };
 //!The fluid systems including the information about the phases
-NEW_PROP_TAG(FluidSystem);
+template<class TypeTag, class MyTypeTag>
+struct FluidSystem { using type = UndefinedProperty; };
 //! Specifies the relation used for velocity
-NEW_PROP_TAG(FluxModule);
+template<class TypeTag, class MyTypeTag>
+struct FluxModule { using type = UndefinedProperty; };
 
 //! Specify whether energy should be considered as a conservation quantity or not
-NEW_PROP_TAG(EnableEnergy);
+template<class TypeTag, class MyTypeTag>
+struct EnableEnergy { using type = UndefinedProperty; };
 //! Returns whether gravity is considered in the problem
-NEW_PROP_TAG(EnableGravity);
+template<class TypeTag, class MyTypeTag>
+struct EnableGravity { using type = UndefinedProperty; };
 //! Enable diffusive fluxes?
-NEW_PROP_TAG(EnableDiffusion);
+template<class TypeTag, class MyTypeTag>
+struct EnableDiffusion { using type = UndefinedProperty; };
 
 END_PROPERTIES
 

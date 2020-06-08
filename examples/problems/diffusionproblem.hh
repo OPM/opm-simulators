@@ -57,30 +57,35 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(DiffusionBaseProblem);
 
 // Set the grid implementation to be used
-SET_TYPE_PROP(DiffusionBaseProblem, Grid, Dune::YaspGrid</*dim=*/1>);
+template<class TypeTag>
+struct Grid<TypeTag, TTag::DiffusionBaseProblem> { using type = Dune::YaspGrid</*dim=*/1>; };
 
 // set the Vanguard property
-SET_TYPE_PROP(DiffusionBaseProblem, Vanguard, Opm::CubeGridVanguard<TypeTag>);
+template<class TypeTag>
+struct Vanguard<TypeTag, TTag::DiffusionBaseProblem> { using type = Opm::CubeGridVanguard<TypeTag>; };
 
 // Set the problem property
-SET_TYPE_PROP(DiffusionBaseProblem, Problem, Opm::DiffusionProblem<TypeTag>);
+template<class TypeTag>
+struct Problem<TypeTag, TTag::DiffusionBaseProblem> { using type = Opm::DiffusionProblem<TypeTag>; };
 
 // Set the fluid system
-SET_PROP(DiffusionBaseProblem, FluidSystem)
+template<class TypeTag>
+struct FluidSystem<TypeTag, TTag::DiffusionBaseProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
 
 public:
     typedef Opm::H2ON2FluidSystem<Scalar> type;
 };
 
 // Set the material Law
-SET_PROP(DiffusionBaseProblem, MaterialLaw)
+template<class TypeTag>
+struct MaterialLaw<TypeTag, TTag::DiffusionBaseProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
 
     static_assert(FluidSystem::numPhases == 2,
                   "A fluid system with two phases is required "
@@ -95,19 +100,24 @@ public:
 };
 
 // Enable molecular diffusion for this problem
-SET_BOOL_PROP(DiffusionBaseProblem, EnableDiffusion, true);
+template<class TypeTag>
+struct EnableDiffusion<TypeTag, TTag::DiffusionBaseProblem> { static constexpr bool value = true; };
 
 // Disable gravity
-SET_BOOL_PROP(DiffusionBaseProblem, EnableGravity, false);
+template<class TypeTag>
+struct EnableGravity<TypeTag, TTag::DiffusionBaseProblem> { static constexpr bool value = false; };
 
 // define the properties specific for the diffusion problem
 SET_SCALAR_PROP(DiffusionBaseProblem, DomainSizeX, 1.0);
 SET_SCALAR_PROP(DiffusionBaseProblem, DomainSizeY, 1.0);
 SET_SCALAR_PROP(DiffusionBaseProblem, DomainSizeZ, 1.0);
 
-SET_INT_PROP(DiffusionBaseProblem, CellsX, 250);
-SET_INT_PROP(DiffusionBaseProblem, CellsY, 1);
-SET_INT_PROP(DiffusionBaseProblem, CellsZ, 1);
+template<class TypeTag>
+struct CellsX<TypeTag, TTag::DiffusionBaseProblem> { static constexpr int value = 250; };
+template<class TypeTag>
+struct CellsY<TypeTag, TTag::DiffusionBaseProblem> { static constexpr int value = 1; };
+template<class TypeTag>
+struct CellsZ<TypeTag, TTag::DiffusionBaseProblem> { static constexpr int value = 1; };
 
 // The default for the end time of the simulation
 SET_SCALAR_PROP(DiffusionBaseProblem, EndTime, 1e6);
@@ -129,16 +139,16 @@ namespace Opm {
  * diffusion.
  */
 template <class TypeTag>
-class DiffusionProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
+class DiffusionProblem : public GetPropType<TypeTag, Properties::BaseProblem>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
+    typedef GetPropType<TypeTag, Properties::BaseProblem> ParentType;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::Model> Model;
 
     enum {
         // number of phases
@@ -157,12 +167,12 @@ class DiffusionProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
         dimWorld = GridView::dimensionworld
     };
 
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
+    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
+    typedef GetPropType<TypeTag, Properties::RateVector> RateVector;
+    typedef GetPropType<TypeTag, Properties::BoundaryRateVector> BoundaryRateVector;
 
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
+    typedef GetPropType<TypeTag, Properties::MaterialLaw> MaterialLaw;
+    typedef GetPropType<TypeTag, Properties::MaterialLawParams> MaterialLawParams;
 
     typedef typename GridView::ctype CoordScalar;
     typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;

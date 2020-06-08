@@ -49,31 +49,40 @@ BEGIN_PROPERTIES
 //         \                                         \.
 //          +- Tank ----------------------------------+- HummerH1
 ///////////////////
-NEW_TYPE_TAG(Vehicle);
+namespace TTag {
+struct Vehicle {};
 
-NEW_TYPE_TAG(CompactCar, INHERITS_FROM(Vehicle));
-NEW_TYPE_TAG(Truck, INHERITS_FROM(Vehicle));
-NEW_TYPE_TAG(Tank, INHERITS_FROM(Vehicle));
+struct CompactCar { using InheritsFrom = std::tuple<Vehicle>; };
+struct Truck { using InheritsFrom = std::tuple<Vehicle>; };
+struct Tank { using InheritsFrom = std::tuple<Vehicle>; };
 
-NEW_TYPE_TAG(Sedan, INHERITS_FROM(CompactCar));
-NEW_TYPE_TAG(Pickup, INHERITS_FROM(Sedan, Truck));
+struct Sedan { using InheritsFrom = std::tuple<CompactCar>; };
+struct Pickup { using InheritsFrom = std::tuple<Truck, Sedan>; };
 
-NEW_TYPE_TAG(HummerH1, INHERITS_FROM(Sedan, Pickup, Tank));
+struct HummerH1 { using InheritsFrom = std::tuple<Pickup, Tank, Sedan>; };
+} // end namespace TTag
 
 ///////////////////
 // Define the property tags:
 // TopSpeed, NumSeats, CanonCaliber, GasUsage, AutomaticTransmission, Payload
 ///////////////////
-NEW_PROP_TAG(TopSpeed); // [km/h]
-NEW_PROP_TAG(NumSeats); // []
-NEW_PROP_TAG(CanonCaliber); // [mm]
-NEW_PROP_TAG(GasUsage); // [l/100km]
-NEW_PROP_TAG(AutomaticTransmission); // true/false
-NEW_PROP_TAG(Payload); // [t]
+template<class TypeTag, class MyTypeTag>
+struct TopSpeed { using type = UndefinedProperty; }; // [km/h]
+template<class TypeTag, class MyTypeTag>
+struct NumSeats { using type = UndefinedProperty; }; // []
+template<class TypeTag, class MyTypeTag>
+struct CanonCaliber { using type = UndefinedProperty; }; // [mm]
+template<class TypeTag, class MyTypeTag>
+struct GasUsage { using type = UndefinedProperty; }; // [l/100km]
+template<class TypeTag, class MyTypeTag>
+struct AutomaticTransmission { using type = UndefinedProperty; }; // true/false
+template<class TypeTag, class MyTypeTag>
+struct Payload { using type = UndefinedProperty; }; // [t]
 
 ///////////////////
 // Make the AutomaticTransmission default to false
-SET_BOOL_PROP(Vehicle, AutomaticTransmission, false);
+template<class TypeTag>
+struct AutomaticTransmission<TypeTag, TTag::Vehicle> { static constexpr bool value = false; };
 
 ///////////////////
 // Define some values for the properties on the type tags:
@@ -100,32 +109,50 @@ SET_BOOL_PROP(Vehicle, AutomaticTransmission, false);
 // (HummmerH1, TopSpeed) = (Pickup, TopSpeed)
 ///////////////////
 
-SET_INT_PROP(CompactCar, TopSpeed, GET_PROP_VALUE(TypeTag, GasUsage) * 30);
-SET_INT_PROP(CompactCar, NumSeats, 5);
-SET_INT_PROP(CompactCar, GasUsage, 4);
+template<class TypeTag>
+struct TopSpeed<TypeTag, TTag::CompactCar> { static constexpr int value = getPropValue<TypeTag, GasUsage>() * 30; };
+template<class TypeTag>
+struct NumSeats<TypeTag, TTag::CompactCar> { static constexpr int value = 5; };
+template<class TypeTag>
+struct GasUsage<TypeTag, TTag::CompactCar> { static constexpr int value = 4; };
 
-SET_INT_PROP(Truck, TopSpeed, 100);
-SET_INT_PROP(Truck, NumSeats, 2);
-SET_INT_PROP(Truck, GasUsage, 12);
-SET_INT_PROP(Truck, Payload, 35);
+template<class TypeTag>
+struct TopSpeed<TypeTag, TTag::Truck> { static constexpr int value = 100; };
+template<class TypeTag>
+struct NumSeats<TypeTag, TTag::Truck> { static constexpr int value = 2; };
+template<class TypeTag>
+struct GasUsage<TypeTag, TTag::Truck> { static constexpr int value = 12; };
+template<class TypeTag>
+struct Payload<TypeTag, TTag::Truck> { static constexpr int value = 35; };
 
-SET_INT_PROP(Tank, TopSpeed, 60);
-SET_INT_PROP(Tank, GasUsage, 65);
-SET_INT_PROP(Tank, CanonCaliber, 120);
+template<class TypeTag>
+struct TopSpeed<TypeTag, TTag::Tank> { static constexpr int value = 60; };
+template<class TypeTag>
+struct GasUsage<TypeTag, TTag::Tank> { static constexpr int value = 65; };
+template<class TypeTag>
+struct CanonCaliber<TypeTag, TTag::Tank> { static constexpr int value = 120; };
 
-SET_INT_PROP(Sedan, GasUsage, 7);
-SET_BOOL_PROP(Sedan, AutomaticTransmission, true);
+template<class TypeTag>
+struct GasUsage<TypeTag, TTag::Sedan> { static constexpr int value = 7; };
+template<class TypeTag>
+struct AutomaticTransmission<TypeTag, TTag::Sedan> { static constexpr bool value = true; };
 
-SET_INT_PROP(Pickup, TopSpeed, 120);
-SET_INT_PROP(Pickup, Payload, 5);
+template<class TypeTag>
+struct TopSpeed<TypeTag, TTag::Pickup> { static constexpr int value = 120; };
+template<class TypeTag>
+struct Payload<TypeTag, TTag::Pickup> { static constexpr int value = 5; };
 
-SET_INT_PROP(HummerH1, TopSpeed, GET_PROP_VALUE(TTAG(Pickup), TopSpeed));
+template<class TypeTag>
+struct TopSpeed<TypeTag, TTag::HummerH1> { static constexpr int value = getPropValue<TTag::Pickup, TopSpeed>(); };
 
 END_PROPERTIES
 
 
 int main()
 {
+    using namespace Opm;
+    using namespace Opm::Properties;
+
     // print all properties for all type tags
     std::cout << "---------------------------------------\n";
     std::cout << "-- Property values\n";
@@ -133,46 +160,46 @@ int main()
 
     std::cout << "---------- Values for CompactCar ----------\n";
 
-    std::cout << "(CompactCar, TopSpeed) = " << GET_PROP_VALUE(TTAG(CompactCar), TopSpeed) << "\n";
-    std::cout << "(CompactCar, NumSeats) = " << GET_PROP_VALUE(TTAG(CompactCar), NumSeats) << "\n";
-    std::cout << "(CompactCar, GasUsage) = " << GET_PROP_VALUE(TTAG(CompactCar), GasUsage) << "\n";
-    std::cout << "(CompactCar, AutomaticTransmission) = " << GET_PROP_VALUE(TTAG(CompactCar), AutomaticTransmission) << "\n";
+    std::cout << "(CompactCar, TopSpeed) = " << getPropValue<TTag::CompactCar, TopSpeed>() << "\n";
+    std::cout << "(CompactCar, NumSeats) = " << getPropValue<TTag::CompactCar, NumSeats>() << "\n";
+    std::cout << "(CompactCar, GasUsage) = " << getPropValue<TTag::CompactCar, GasUsage>() << "\n";
+    std::cout << "(CompactCar, AutomaticTransmission) = " << getPropValue<TTag::CompactCar, AutomaticTransmission>() << "\n";
 
     std::cout << "---------- Values for Truck ----------\n";
 
-    std::cout << "(Truck, TopSpeed) = " << GET_PROP_VALUE(TTAG(Truck), TopSpeed) << "\n";
-    std::cout << "(Truck, NumSeats) = " << GET_PROP_VALUE(TTAG(Truck), NumSeats) << "\n";
-    std::cout << "(Truck, GasUsage) = " << GET_PROP_VALUE(TTAG(Truck), GasUsage) << "\n";
-    std::cout << "(Truck, Payload) = " << GET_PROP_VALUE(TTAG(Truck), Payload) << "\n";
-    std::cout << "(Truck, AutomaticTransmission) = " << GET_PROP_VALUE(TTAG(Truck), AutomaticTransmission) << "\n";
+    std::cout << "(Truck, TopSpeed) = " << getPropValue<TTag::Truck, TopSpeed>() << "\n";
+    std::cout << "(Truck, NumSeats) = " << getPropValue<TTag::Truck, NumSeats>() << "\n";
+    std::cout << "(Truck, GasUsage) = " << getPropValue<TTag::Truck, GasUsage>() << "\n";
+    std::cout << "(Truck, Payload) = " << getPropValue<TTag::Truck, Payload>() << "\n";
+    std::cout << "(Truck, AutomaticTransmission) = " << getPropValue<TTag::Truck, AutomaticTransmission>() << "\n";
 
     std::cout << "---------- Values for Tank ----------\n";
 
-    std::cout << "(Tank, TopSpeed) = " << GET_PROP_VALUE(TTAG(Tank), TopSpeed) << "\n";
-    std::cout << "(Tank, GasUsage) = " << GET_PROP_VALUE(TTAG(Tank), GasUsage) << "\n";
-    std::cout << "(Tank, AutomaticTransmission) = " << GET_PROP_VALUE(TTAG(Tank), AutomaticTransmission) << "\n";
-    std::cout << "(Tank, CanonCaliber) = " << GET_PROP_VALUE(TTAG(Tank), CanonCaliber) << "\n";
+    std::cout << "(Tank, TopSpeed) = " << getPropValue<TTag::Tank, TopSpeed>() << "\n";
+    std::cout << "(Tank, GasUsage) = " << getPropValue<TTag::Tank, GasUsage>() << "\n";
+    std::cout << "(Tank, AutomaticTransmission) = " << getPropValue<TTag::Tank, AutomaticTransmission>() << "\n";
+    std::cout << "(Tank, CanonCaliber) = " << getPropValue<TTag::Tank, CanonCaliber>() << "\n";
 
     std::cout << "---------- Values for Sedan ----------\n";
 
-    std::cout << "(Sedan, TopSpeed) = " << GET_PROP_VALUE(TTAG(Sedan), TopSpeed) << "\n";
-    std::cout << "(Sedan, NumSeats) = " << GET_PROP_VALUE(TTAG(Sedan), NumSeats) << "\n";
-    std::cout << "(Sedan, GasUsage) = " << GET_PROP_VALUE(TTAG(Sedan), GasUsage) << "\n";
-    std::cout << "(Sedan, AutomaticTransmission) = " << GET_PROP_VALUE(TTAG(Sedan), AutomaticTransmission) << "\n";
+    std::cout << "(Sedan, TopSpeed) = " << getPropValue<TTag::Sedan, TopSpeed>() << "\n";
+    std::cout << "(Sedan, NumSeats) = " << getPropValue<TTag::Sedan, NumSeats>() << "\n";
+    std::cout << "(Sedan, GasUsage) = " << getPropValue<TTag::Sedan, GasUsage>() << "\n";
+    std::cout << "(Sedan, AutomaticTransmission) = " << getPropValue<TTag::Sedan, AutomaticTransmission>() << "\n";
 
     std::cout << "---------- Values for Pickup ----------\n";
-    std::cout << "(Pickup, TopSpeed) = " << GET_PROP_VALUE(TTAG(Pickup), TopSpeed) << "\n";
-    std::cout << "(Pickup, NumSeats) = " << GET_PROP_VALUE(TTAG(Pickup), NumSeats) << "\n";
-    std::cout << "(Pickup, GasUsage) = " << GET_PROP_VALUE(TTAG(Pickup), GasUsage) << "\n";
-    std::cout << "(Pickup, Payload) = " << GET_PROP_VALUE(TTAG(Pickup), Payload) << "\n";
-    std::cout << "(Pickup, AutomaticTransmission) = " << GET_PROP_VALUE(TTAG(Pickup), AutomaticTransmission) << "\n";
+    std::cout << "(Pickup, TopSpeed) = " << getPropValue<TTag::Pickup, TopSpeed>() << "\n";
+    std::cout << "(Pickup, NumSeats) = " << getPropValue<TTag::Pickup, NumSeats>() << "\n";
+    std::cout << "(Pickup, GasUsage) = " << getPropValue<TTag::Pickup, GasUsage>() << "\n";
+    std::cout << "(Pickup, Payload) = " << getPropValue<TTag::Pickup, Payload>() << "\n";
+    std::cout << "(Pickup, AutomaticTransmission) = " << getPropValue<TTag::Pickup, AutomaticTransmission>() << "\n";
 
     std::cout << "---------- Values for HummerH1 ----------\n";
-    std::cout << "(HummerH1, TopSpeed) = " << GET_PROP_VALUE(TTAG(HummerH1), TopSpeed) << "\n";
-    std::cout << "(HummerH1, NumSeats) = " << GET_PROP_VALUE(TTAG(HummerH1), NumSeats) << "\n";
-    std::cout << "(HummerH1, GasUsage) = " << GET_PROP_VALUE(TTAG(HummerH1), GasUsage) << "\n";
-    std::cout << "(HummerH1, Payload) = " << GET_PROP_VALUE(TTAG(HummerH1), Payload) << "\n";
-    std::cout << "(HummerH1, AutomaticTransmission) = " << GET_PROP_VALUE(TTAG(HummerH1), AutomaticTransmission) << "\n";
+    std::cout << "(HummerH1, TopSpeed) = " << getPropValue<TTag::HummerH1, TopSpeed>() << "\n";
+    std::cout << "(HummerH1, NumSeats) = " << getPropValue<TTag::HummerH1, NumSeats>() << "\n";
+    std::cout << "(HummerH1, GasUsage) = " << getPropValue<TTag::HummerH1, GasUsage>() << "\n";
+    std::cout << "(HummerH1, Payload) = " << getPropValue<TTag::HummerH1, Payload>() << "\n";
+    std::cout << "(HummerH1, AutomaticTransmission) = " << getPropValue<TTag::HummerH1, AutomaticTransmission>() << "\n";
 
     return 0;
 }

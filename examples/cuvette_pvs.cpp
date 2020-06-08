@@ -33,12 +33,15 @@
 
 BEGIN_PROPERTIES
 
-NEW_TYPE_TAG(CuvetteProblem, INHERITS_FROM(PvsModel, CuvetteBaseProblem));
+// Create new type tags
+namespace TTag {
+struct CuvetteProblem { using InheritsFrom = std::tuple<CuvetteBaseProblem, PvsModel>; };
+} // end namespace TTag
 
 END_PROPERTIES
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(CuvetteProblem) ProblemTypeTag;
+    typedef Opm::Properties::TTag::CuvetteProblem ProblemTypeTag;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

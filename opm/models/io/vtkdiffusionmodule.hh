@@ -44,14 +44,20 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(VtkDiffusion);
 
 // create the property tags needed for the diffusion module
-NEW_PROP_TAG(VtkWriteTortuosities);
-NEW_PROP_TAG(VtkWriteDiffusionCoefficients);
-NEW_PROP_TAG(VtkWriteEffectiveDiffusionCoefficients);
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteTortuosities { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteDiffusionCoefficients { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteEffectiveDiffusionCoefficients { using type = UndefinedProperty; };
 
 // set default values for what quantities to output
-SET_BOOL_PROP(VtkDiffusion, VtkWriteTortuosities, false);
-SET_BOOL_PROP(VtkDiffusion, VtkWriteDiffusionCoefficients, false);
-SET_BOOL_PROP(VtkDiffusion, VtkWriteEffectiveDiffusionCoefficients, false);
+template<class TypeTag>
+struct VtkWriteTortuosities<TypeTag, TTag::VtkDiffusion> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteDiffusionCoefficients<TypeTag, TTag::VtkDiffusion> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteEffectiveDiffusionCoefficients<TypeTag, TTag::VtkDiffusion> { static constexpr bool value = false; };
 
 END_PROPERTIES
 
@@ -72,21 +78,21 @@ class VtkDiffusionModule : public BaseOutputModule<TypeTag>
 {
     typedef BaseOutputModule<TypeTag> ParentType;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
 
     typedef Opm::MathToolbox<Evaluation> Toolbox;
 
     typedef typename ParentType::PhaseComponentBuffer PhaseComponentBuffer;
     typedef typename ParentType::PhaseBuffer PhaseBuffer;
 
-    static const int vtkFormat = GET_PROP_VALUE(TypeTag, VtkOutputFormat);
+    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     typedef Opm::VtkMultiWriter<GridView, vtkFormat> VtkMultiWriter;
 
-    enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
-    enum { numComponents = GET_PROP_VALUE(TypeTag, NumComponents) };
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
+    enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
 
 public:
     VtkDiffusionModule(const Simulator& simulator)

@@ -33,12 +33,15 @@
 
 BEGIN_PROPERTIES
 
-NEW_TYPE_TAG(GroundWaterProblem, INHERITS_FROM(ImmiscibleSinglePhaseModel, GroundWaterBaseProblem));
+// Create new type tags
+namespace TTag {
+struct GroundWaterProblem { using InheritsFrom = std::tuple<GroundWaterBaseProblem, ImmiscibleSinglePhaseModel>; };
+} // end namespace TTag
 
 END_PROPERTIES
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(GroundWaterProblem) ProblemTypeTag;
+    typedef Opm::Properties::TTag::GroundWaterProblem ProblemTypeTag;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

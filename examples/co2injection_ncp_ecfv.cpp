@@ -35,13 +35,16 @@
 
 BEGIN_PROPERTIES
 
-NEW_TYPE_TAG(Co2InjectionNcpEcfvProblem, INHERITS_FROM(NcpModel, Co2InjectionBaseProblem));
+// Create new type tags
+namespace TTag {
+struct Co2InjectionNcpEcfvProblem { using InheritsFrom = std::tuple<Co2InjectionBaseProblem, NcpModel>; };
+} // end namespace TTag
 SET_TAG_PROP(Co2InjectionNcpEcfvProblem, SpatialDiscretizationSplice, EcfvDiscretization);
 
 END_PROPERTIES
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(Co2InjectionNcpEcfvProblem) EcfvProblemTypeTag;
+    typedef Opm::Properties::TTag::Co2InjectionNcpEcfvProblem EcfvProblemTypeTag;
     return Opm::start<EcfvProblemTypeTag>(argc, argv);
 }

@@ -63,17 +63,20 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(WaterAirBaseProblem);
 
 // Set the grid type
-SET_TYPE_PROP(WaterAirBaseProblem, Grid, Dune::YaspGrid<2>);
+template<class TypeTag>
+struct Grid<TypeTag, TTag::WaterAirBaseProblem> { using type = Dune::YaspGrid<2>; };
 
 // Set the problem property
-SET_TYPE_PROP(WaterAirBaseProblem, Problem, Opm::WaterAirProblem<TypeTag>);
+template<class TypeTag>
+struct Problem<TypeTag, TTag::WaterAirBaseProblem> { using type = Opm::WaterAirProblem<TypeTag>; };
 
 // Set the material Law
-SET_PROP(WaterAirBaseProblem, MaterialLaw)
+template<class TypeTag>
+struct MaterialLaw<TypeTag, TTag::WaterAirBaseProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
     typedef Opm::TwoPhaseMaterialTraits<Scalar,
                                         /*wettingPhaseIdx=*/FluidSystem::liquidPhaseIdx,
                                         /*nonWettingPhaseIdx=*/FluidSystem::gasPhaseIdx> Traits;
@@ -89,11 +92,12 @@ public:
 };
 
 // Set the thermal conduction law
-SET_PROP(WaterAirBaseProblem, ThermalConductionLaw)
+template<class TypeTag>
+struct ThermalConductionLaw<TypeTag, TTag::WaterAirBaseProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
 
 public:
     // define the material law parameterized by absolute saturations
@@ -102,21 +106,24 @@ public:
 
 // set the energy storage law for the solid phase
 SET_TYPE_PROP(WaterAirBaseProblem, SolidEnergyLaw,
-              Opm::ConstantSolidHeatCapLaw<typename GET_PROP_TYPE(TypeTag, Scalar)>);
+              Opm::ConstantSolidHeatCapLaw<GetPropType<TypeTag, Properties::Scalar>>);
 
 // Set the fluid system. in this case, we use the one which describes
 // air and water
 SET_TYPE_PROP(WaterAirBaseProblem, FluidSystem,
-              Opm::H2OAirFluidSystem<typename GET_PROP_TYPE(TypeTag, Scalar)>);
+              Opm::H2OAirFluidSystem<GetPropType<TypeTag, Properties::Scalar>>);
 
 // Enable gravity
-SET_BOOL_PROP(WaterAirBaseProblem, EnableGravity, true);
+template<class TypeTag>
+struct EnableGravity<TypeTag, TTag::WaterAirBaseProblem> { static constexpr bool value = true; };
 
 // Use forward differences instead of central differences
-SET_INT_PROP(WaterAirBaseProblem, NumericDifferenceMethod, +1);
+template<class TypeTag>
+struct NumericDifferenceMethod<TypeTag, TTag::WaterAirBaseProblem> { static constexpr int value = +1; };
 
 // Write newton convergence
-SET_BOOL_PROP(WaterAirBaseProblem, NewtonWriteConvergence, false);
+template<class TypeTag>
+struct NewtonWriteConvergence<TypeTag, TTag::WaterAirBaseProblem> { static constexpr bool value = false; };
 
 // The default for the end time of the simulation (1 year)
 SET_SCALAR_PROP(WaterAirBaseProblem, EndTime, 1.0 * 365 * 24 * 60 * 60);
@@ -138,7 +145,8 @@ SET_TYPE_PROP(WaterAirBaseProblem, PreconditionerWrapper,
 SET_TYPE_PROP(WaterAirBaseProblem, PreconditionerWrapper,
               Opm::Linear::PreconditionerWrapperILUn<TypeTag>);
 #endif
-SET_INT_PROP(WaterAirBaseProblem, PreconditionerOrder, 2);
+template<class TypeTag>
+struct PreconditionerOrder<TypeTag, TTag::WaterAirBaseProblem> { static constexpr int value = 2; };
 
 END_PROPERTIES
 
@@ -172,16 +180,16 @@ namespace Opm {
  * K/m.
  */
 template <class TypeTag >
-class WaterAirProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
+class WaterAirProblem : public GetPropType<TypeTag, Properties::BaseProblem>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
+    typedef GetPropType<TypeTag, Properties::BaseProblem> ParentType;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
 
     // copy some indices for convenience
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    typedef GetPropType<TypeTag, Properties::Indices> Indices;
     enum {
         numPhases = FluidSystem::numPhases,
 
@@ -205,19 +213,19 @@ class WaterAirProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
         dimWorld = GridView::dimensionworld
     };
 
-    static const bool enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy);
+    static const bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
 
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, Constraints) Constraints;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
-    typedef typename GET_PROP_TYPE(TypeTag, ThermalConductionLawParams) ThermalConductionLawParams;
-    typedef typename GET_PROP_TYPE(TypeTag, SolidEnergyLawParams) SolidEnergyLawParams;
+    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
+    typedef GetPropType<TypeTag, Properties::RateVector> RateVector;
+    typedef GetPropType<TypeTag, Properties::BoundaryRateVector> BoundaryRateVector;
+    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
+    typedef GetPropType<TypeTag, Properties::Constraints> Constraints;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::Model> Model;
+    typedef GetPropType<TypeTag, Properties::MaterialLaw> MaterialLaw;
+    typedef GetPropType<TypeTag, Properties::MaterialLawParams> MaterialLawParams;
+    typedef GetPropType<TypeTag, Properties::ThermalConductionLawParams> ThermalConductionLawParams;
+    typedef GetPropType<TypeTag, Properties::SolidEnergyLawParams> SolidEnergyLawParams;
 
     typedef typename GridView::ctype CoordScalar;
     typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
@@ -292,7 +300,7 @@ public:
     {
         std::ostringstream oss;
         oss << "waterair_" << Model::name();
-        if (GET_PROP_VALUE(TypeTag, EnableEnergy))
+        if (getPropValue<TypeTag, Properties::EnableEnergy>())
             oss << "_ni";
 
         return oss.str();

@@ -67,26 +67,26 @@ template<class TypeTag>
 class FvBaseLinearizer
 {
 //! \cond SKIP_THIS
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
-    typedef typename GET_PROP_TYPE(TypeTag, Discretization) Discretization;
-    typedef typename GET_PROP_TYPE(TypeTag, Problem) Problem;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, DofMapper) DofMapper;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementMapper) ElementMapper;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+    typedef GetPropType<TypeTag, Properties::Model> Model;
+    typedef GetPropType<TypeTag, Properties::Discretization> Discretization;
+    typedef GetPropType<TypeTag, Properties::Problem> Problem;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
+    typedef GetPropType<TypeTag, Properties::DofMapper> DofMapper;
+    typedef GetPropType<TypeTag, Properties::ElementMapper> ElementMapper;
+    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
 
-    typedef typename GET_PROP_TYPE(TypeTag, SolutionVector) SolutionVector;
-    typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) GlobalEqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, Constraints) Constraints;
-    typedef typename GET_PROP_TYPE(TypeTag, Stencil) Stencil;
-    typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) ThreadManager;
+    typedef GetPropType<TypeTag, Properties::SolutionVector> SolutionVector;
+    typedef GetPropType<TypeTag, Properties::GlobalEqVector> GlobalEqVector;
+    typedef GetPropType<TypeTag, Properties::SparseMatrixAdapter> SparseMatrixAdapter;
+    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
+    typedef GetPropType<TypeTag, Properties::Constraints> Constraints;
+    typedef GetPropType<TypeTag, Properties::Stencil> Stencil;
+    typedef GetPropType<TypeTag, Properties::ThreadManager> ThreadManager;
 
-    typedef typename GET_PROP_TYPE(TypeTag, GridCommHandleFactory) GridCommHandleFactory;
+    typedef GetPropType<TypeTag, Properties::GridCommHandleFactory> GridCommHandleFactory;
 
     typedef Opm::MathToolbox<Evaluation> Toolbox;
 
@@ -97,13 +97,13 @@ class FvBaseLinearizer
 
     typedef typename SparseMatrixAdapter::IstlMatrix IstlMatrix;
 
-    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
-    enum { historySize = GET_PROP_VALUE(TypeTag, TimeDiscHistorySize) };
+    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
+    enum { historySize = getPropValue<TypeTag, Properties::TimeDiscHistorySize>() };
 
     typedef typename SparseMatrixAdapter::MatrixBlock MatrixBlock;
     typedef Dune::FieldVector<Scalar, numEq> VectorBlock;
 
-    static const bool linearizeNonLocalElements = GET_PROP_VALUE(TypeTag, LinearizeNonLocalElements);
+    static const bool linearizeNonLocalElements = getPropValue<TypeTag, Properties::LinearizeNonLocalElements>();
 
     // copying the linearizer is not a good idea
     FvBaseLinearizer(const FvBaseLinearizer&);
@@ -495,7 +495,7 @@ private:
         localLinearizer.linearize(*elementCtx, elem);
 
         // update the right hand side and the Jacobian matrix
-        if (GET_PROP_VALUE(TypeTag, UseLinearizationLock))
+        if (getPropValue<TypeTag, Properties::UseLinearizationLock>())
             globalMatrixMutex_.lock();
 
         size_t numPrimaryDof = elementCtx->numPrimaryDof(/*timeIdx=*/0);
@@ -513,7 +513,7 @@ private:
             }
         }
 
-        if (GET_PROP_VALUE(TypeTag, UseLinearizationLock))
+        if (getPropValue<TypeTag, Properties::UseLinearizationLock>())
             globalMatrixMutex_.unlock();
     }
 
@@ -558,7 +558,7 @@ private:
     }
 
     static bool enableConstraints_()
-    { return GET_PROP_VALUE(TypeTag, EnableConstraints); }
+    { return getPropValue<TypeTag, Properties::EnableConstraints>(); }
 
     Simulator *simulatorPtr_;
     std::vector<ElementContext*> elementCtx_;

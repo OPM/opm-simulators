@@ -57,9 +57,9 @@ class SuperLUSolve_;
 template <class TypeTag>
 class SuperLUBackend
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::SparseMatrixAdapter> SparseMatrixAdapter;
     typedef typename SparseMatrixAdapter::block_type Matrix;
 
     static_assert(std::is_same<SparseMatrixAdapter, IstlSparseMatrixAdapter<MatrixBlock>::value,
@@ -145,7 +145,7 @@ public:
                        Vector& x,
                        const Vector& b)
     {
-        static const int numEq = GET_PROP_VALUE(TypeTag, NumEq);
+        static const int numEq = getPropValue<TypeTag, Properties::NumEq>();
         typedef Dune::FieldVector<double, numEq> DoubleEqVector;
         typedef Dune::FieldMatrix<double, numEq, numEq> DoubleEqMatrix;
         typedef Dune::BlockVector<DoubleEqVector> DoubleVector;
@@ -174,7 +174,8 @@ public:
 
 BEGIN_PROPERTIES
 
-SET_INT_PROP(SuperLULinearSolver, LinearSolverVerbosity, 0);
+template<class TypeTag>
+struct LinearSolverVerbosity<TypeTag, TTag::SuperLULinearSolver> { static constexpr int value = 0; };
 SET_TYPE_PROP(SuperLULinearSolver, LinearSolverBackend,
               Opm::Linear::SuperLUBackend<TypeTag>);
 

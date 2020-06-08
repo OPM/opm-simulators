@@ -50,11 +50,15 @@ class ParallelAmgBackend;
 
 BEGIN_PROPERTIES
 
-NEW_TYPE_TAG(ParallelAmgLinearSolver, INHERITS_FROM(ParallelBaseLinearSolver));
+// Create new type tags
+namespace TTag {
+struct ParallelAmgLinearSolver { using InheritsFrom = std::tuple<ParallelBaseLinearSolver>; };
+} // end namespace TTag
 
 //! The target number of DOFs per processor for the parallel algebraic
 //! multi-grid solver
-SET_INT_PROP(ParallelAmgLinearSolver, AmgCoarsenTarget, 5000);
+template<class TypeTag>
+struct AmgCoarsenTarget<TypeTag, TTag::ParallelAmgLinearSolver> { static constexpr int value = 5000; };
 
 SET_SCALAR_PROP(ParallelAmgLinearSolver, LinearSolverMaxError, 1e7);
 
@@ -76,19 +80,19 @@ class ParallelAmgBackend : public ParallelBaseBackend<TypeTag>
 {
     typedef ParallelBaseBackend<TypeTag> ParentType;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, LinearSolverScalar) LinearSolverScalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Overlap) Overlap;
-    typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::LinearSolverScalar> LinearSolverScalar;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    typedef GetPropType<TypeTag, Properties::Overlap> Overlap;
+    typedef GetPropType<TypeTag, Properties::SparseMatrixAdapter> SparseMatrixAdapter;
 
     typedef typename ParentType::ParallelOperator ParallelOperator;
     typedef typename ParentType::OverlappingVector OverlappingVector;
     typedef typename ParentType::ParallelPreconditioner ParallelPreconditioner;
     typedef typename ParentType::ParallelScalarProduct ParallelScalarProduct;
 
-    static constexpr int numEq = GET_PROP_VALUE(TypeTag, NumEq);
+    static constexpr int numEq = getPropValue<TypeTag, Properties::NumEq>();
     typedef Dune::FieldVector<LinearSolverScalar, numEq> VectorBlock;
     typedef typename SparseMatrixAdapter::MatrixBlock MatrixBlock;
     typedef typename SparseMatrixAdapter::IstlMatrix IstlMatrix;

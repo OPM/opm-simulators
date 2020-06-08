@@ -46,16 +46,24 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(VtkBlackOilSolvent);
 
 // create the property tags needed for the solvent output module
-NEW_PROP_TAG(VtkWriteSolventSaturation);
-NEW_PROP_TAG(VtkWriteSolventDensity);
-NEW_PROP_TAG(VtkWriteSolventViscosity);
-NEW_PROP_TAG(VtkWriteSolventMobility);
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteSolventSaturation { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteSolventDensity { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteSolventViscosity { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteSolventMobility { using type = UndefinedProperty; };
 
 // set default values for what quantities to output
-SET_BOOL_PROP(VtkBlackOilSolvent, VtkWriteSolventSaturation, true);
-SET_BOOL_PROP(VtkBlackOilSolvent, VtkWriteSolventDensity, true);
-SET_BOOL_PROP(VtkBlackOilSolvent, VtkWriteSolventViscosity, true);
-SET_BOOL_PROP(VtkBlackOilSolvent, VtkWriteSolventMobility, true);
+template<class TypeTag>
+struct VtkWriteSolventSaturation<TypeTag, TTag::VtkBlackOilSolvent> { static constexpr bool value = true; };
+template<class TypeTag>
+struct VtkWriteSolventDensity<TypeTag, TTag::VtkBlackOilSolvent> { static constexpr bool value = true; };
+template<class TypeTag>
+struct VtkWriteSolventViscosity<TypeTag, TTag::VtkBlackOilSolvent> { static constexpr bool value = true; };
+template<class TypeTag>
+struct VtkWriteSolventMobility<TypeTag, TTag::VtkBlackOilSolvent> { static constexpr bool value = true; };
 
 END_PROPERTIES
 
@@ -70,16 +78,16 @@ class VtkBlackOilSolventModule : public BaseOutputModule<TypeTag>
 {
     typedef BaseOutputModule<TypeTag> ParentType;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
+    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
 
-    static const int vtkFormat = GET_PROP_VALUE(TypeTag, VtkOutputFormat);
+    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     typedef Opm::VtkMultiWriter<GridView, vtkFormat> VtkMultiWriter;
 
-    enum { enableSolvent = GET_PROP_VALUE(TypeTag, EnableSolvent) };
+    enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
 
     typedef typename ParentType::ScalarBuffer ScalarBuffer;
 

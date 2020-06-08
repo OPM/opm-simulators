@@ -35,14 +35,18 @@
 
 BEGIN_PROPERTIES
 
-NEW_TYPE_TAG(Co2InjectionNcpNiVcfvProblem, INHERITS_FROM(NcpModel, Co2InjectionBaseProblem));
+// Create new type tags
+namespace TTag {
+struct Co2InjectionNcpNiVcfvProblem { using InheritsFrom = std::tuple<Co2InjectionBaseProblem, NcpModel>; };
+} // end namespace TTag
 SET_TAG_PROP(Co2InjectionNcpNiVcfvProblem, SpatialDiscretizationSplice, VcfvDiscretization);
-SET_BOOL_PROP(Co2InjectionNcpNiVcfvProblem, EnableEnergy, true);
+template<class TypeTag>
+struct EnableEnergy<TypeTag, TTag::Co2InjectionNcpNiVcfvProblem> { static constexpr bool value = true; };
 
 END_PROPERTIES
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(Co2InjectionNcpNiVcfvProblem) VcfvProblemTypeTag;
+    typedef Opm::Properties::TTag::Co2InjectionNcpNiVcfvProblem VcfvProblemTypeTag;
     return Opm::start<VcfvProblemTypeTag>(argc, argv);
 }

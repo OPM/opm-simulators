@@ -32,6 +32,6 @@
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(FractureProblem) ProblemTypeTag;
+    typedef Opm::Properties::TTag::FractureProblem ProblemTypeTag;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

@@ -36,7 +36,8 @@
 
 BEGIN_PROPERTIES
 
-NEW_PROP_TAG(UseTwoPointGradients);
+template<class TypeTag, class MyTypeTag>
+struct UseTwoPointGradients { using type = UndefinedProperty; };
 
 END_PROPERTIES
 

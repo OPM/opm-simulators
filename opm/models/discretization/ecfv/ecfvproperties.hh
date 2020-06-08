@@ -36,7 +36,10 @@
 BEGIN_PROPERTIES
 
 //! The type tag for models based on the ECFV-scheme
-NEW_TYPE_TAG(EcfvDiscretization, INHERITS_FROM(FvBaseDiscretization));
+// Create new type tags
+namespace TTag {
+struct EcfvDiscretization { using InheritsFrom = std::tuple<FvBaseDiscretization>; };
+} // end namespace TTag
 
 END_PROPERTIES
 

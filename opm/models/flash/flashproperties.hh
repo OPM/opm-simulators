@@ -38,9 +38,11 @@
 BEGIN_PROPERTIES
 
 //! The type of the flash constraint solver
-NEW_PROP_TAG(FlashSolver);
+template<class TypeTag, class MyTypeTag>
+struct FlashSolver { using type = UndefinedProperty; };
 //! The maximum accepted error of the flash solver
-NEW_PROP_TAG(FlashTolerance);
+template<class TypeTag, class MyTypeTag>
+struct FlashTolerance { using type = UndefinedProperty; };
 
 END_PROPERTIES
 

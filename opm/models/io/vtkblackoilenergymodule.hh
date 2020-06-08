@@ -46,16 +46,24 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(VtkBlackOilEnergy);
 
 // create the property tags needed for the energy module
-NEW_PROP_TAG(VtkWriteRockInternalEnergy);
-NEW_PROP_TAG(VtkWriteTotalThermalConductivity);
-NEW_PROP_TAG(VtkWriteFluidInternalEnergies);
-NEW_PROP_TAG(VtkWriteFluidEnthalpies);
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteRockInternalEnergy { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteTotalThermalConductivity { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteFluidInternalEnergies { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteFluidEnthalpies { using type = UndefinedProperty; };
 
 // set default values for what quantities to output
-SET_BOOL_PROP(VtkBlackOilEnergy, VtkWriteRockInternalEnergy, true);
-SET_BOOL_PROP(VtkBlackOilEnergy, VtkWriteTotalThermalConductivity, true);
-SET_BOOL_PROP(VtkBlackOilEnergy, VtkWriteFluidInternalEnergies, true);
-SET_BOOL_PROP(VtkBlackOilEnergy, VtkWriteFluidEnthalpies, true);
+template<class TypeTag>
+struct VtkWriteRockInternalEnergy<TypeTag, TTag::VtkBlackOilEnergy> { static constexpr bool value = true; };
+template<class TypeTag>
+struct VtkWriteTotalThermalConductivity<TypeTag, TTag::VtkBlackOilEnergy> { static constexpr bool value = true; };
+template<class TypeTag>
+struct VtkWriteFluidInternalEnergies<TypeTag, TTag::VtkBlackOilEnergy> { static constexpr bool value = true; };
+template<class TypeTag>
+struct VtkWriteFluidEnthalpies<TypeTag, TTag::VtkBlackOilEnergy> { static constexpr bool value = true; };
 
 END_PROPERTIES
 
@@ -70,17 +78,17 @@ class VtkBlackOilEnergyModule : public BaseOutputModule<TypeTag>
 {
     typedef BaseOutputModule<TypeTag> ParentType;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
+    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
 
-    static const int vtkFormat = GET_PROP_VALUE(TypeTag, VtkOutputFormat);
+    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     typedef Opm::VtkMultiWriter<GridView, vtkFormat> VtkMultiWriter;
 
-    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
-    enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
 
     typedef typename ParentType::ScalarBuffer ScalarBuffer;
     typedef typename ParentType::PhaseBuffer PhaseBuffer;

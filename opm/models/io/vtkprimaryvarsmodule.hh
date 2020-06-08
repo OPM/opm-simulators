@@ -39,13 +39,19 @@ BEGIN_PROPERTIES
 NEW_TYPE_TAG(VtkPrimaryVars);
 
 // create the property tags needed for the primary variables module
-NEW_PROP_TAG(VtkWritePrimaryVars);
-NEW_PROP_TAG(VtkWriteProcessRank);
-NEW_PROP_TAG(VtkWriteDofIndex);
+template<class TypeTag, class MyTypeTag>
+struct VtkWritePrimaryVars { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteProcessRank { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteDofIndex { using type = UndefinedProperty; };
 
-SET_BOOL_PROP(VtkPrimaryVars, VtkWritePrimaryVars, false);
-SET_BOOL_PROP(VtkPrimaryVars, VtkWriteProcessRank, false);
-SET_BOOL_PROP(VtkPrimaryVars, VtkWriteDofIndex, false);
+template<class TypeTag>
+struct VtkWritePrimaryVars<TypeTag, TTag::VtkPrimaryVars> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteProcessRank<TypeTag, TTag::VtkPrimaryVars> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteDofIndex<TypeTag, TTag::VtkPrimaryVars> { static constexpr bool value = false; };
 
 END_PROPERTIES
 
@@ -61,17 +67,17 @@ class VtkPrimaryVarsModule : public BaseOutputModule<TypeTag>
 {
     typedef BaseOutputModule<TypeTag> ParentType;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
 
-    static const int vtkFormat = GET_PROP_VALUE(TypeTag, VtkOutputFormat);
+    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     typedef Opm::VtkMultiWriter<GridView, vtkFormat> VtkMultiWriter;
 
     typedef typename ParentType::ScalarBuffer ScalarBuffer;
     typedef typename ParentType::EqBuffer EqBuffer;
 
-    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
+    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
 
 public:
     VtkPrimaryVarsModule(const Simulator& simulator)

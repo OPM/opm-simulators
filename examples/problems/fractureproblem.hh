@@ -68,7 +68,10 @@ class FractureProblem;
 BEGIN_PROPERTIES
 
 // Create a type tag for the problem
-NEW_TYPE_TAG(FractureProblem, INHERITS_FROM(DiscreteFractureModel));
+// Create new type tags
+namespace TTag {
+struct FractureProblem { using InheritsFrom = std::tuple<DiscreteFractureModel>; };
+} // end namespace TTag
 
 // Set the grid type
 SET_TYPE_PROP(
@@ -76,40 +79,45 @@ SET_TYPE_PROP(
     Dune::ALUGrid</*dim=*/2, /*dimWorld=*/2, Dune::simplex, Dune::nonconforming>);
 
 // Set the Vanguard property
-SET_TYPE_PROP(FractureProblem, Vanguard, Opm::DgfVanguard<TypeTag>);
+template<class TypeTag>
+struct Vanguard<TypeTag, TTag::FractureProblem> { using type = Opm::DgfVanguard<TypeTag>; };
 
 // Set the problem property
-SET_TYPE_PROP(FractureProblem, Problem, Opm::FractureProblem<TypeTag>);
+template<class TypeTag>
+struct Problem<TypeTag, TTag::FractureProblem> { using type = Opm::FractureProblem<TypeTag>; };
 
 // Set the wetting phase
-SET_PROP(FractureProblem, WettingPhase)
+template<class TypeTag>
+struct WettingPhase<TypeTag, TTag::FractureProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
 
 public:
     typedef Opm::LiquidPhase<Scalar, Opm::SimpleH2O<Scalar> > type;
 };
 
 // Set the non-wetting phase
-SET_PROP(FractureProblem, NonwettingPhase)
+template<class TypeTag>
+struct NonwettingPhase<TypeTag, TTag::FractureProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
 
 public:
     typedef Opm::LiquidPhase<Scalar, Opm::DNAPL<Scalar> > type;
 };
 
 // Set the material Law
-SET_PROP(FractureProblem, MaterialLaw)
+template<class TypeTag>
+struct MaterialLaw<TypeTag, TTag::FractureProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
     enum { wettingPhaseIdx = FluidSystem::wettingPhaseIdx };
     enum { nonWettingPhaseIdx = FluidSystem::nonWettingPhaseIdx };
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
     typedef Opm::TwoPhaseMaterialTraits<Scalar,
                                         /*wettingPhaseIdx=*/FluidSystem::wettingPhaseIdx,
                                         /*nonWettingPhaseIdx=*/FluidSystem::nonWettingPhaseIdx>
@@ -125,14 +133,16 @@ public:
 };
 
 // Enable the energy equation
-SET_BOOL_PROP(FractureProblem, EnableEnergy, true);
+template<class TypeTag>
+struct EnableEnergy<TypeTag, TTag::FractureProblem> { static constexpr bool value = true; };
 
 // Set the thermal conduction law
-SET_PROP(FractureProblem, ThermalConductionLaw)
+template<class TypeTag>
+struct ThermalConductionLaw<TypeTag, TTag::FractureProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
 
 public:
     // define the material law parameterized by absolute saturations
@@ -141,13 +151,15 @@ public:
 
 // set the energy storage law for the solid phase
 SET_TYPE_PROP(FractureProblem, SolidEnergyLaw,
-              Opm::ConstantSolidHeatCapLaw<typename GET_PROP_TYPE(TypeTag, Scalar)>);
+              Opm::ConstantSolidHeatCapLaw<GetPropType<TypeTag, Properties::Scalar>>);
 
 // Disable gravity
-SET_BOOL_PROP(FractureProblem, EnableGravity, false);
+template<class TypeTag>
+struct EnableGravity<TypeTag, TTag::FractureProblem> { static constexpr bool value = false; };
 
 // For this problem, we use constraints to specify the left boundary
-SET_BOOL_PROP(FractureProblem, EnableConstraints, true);
+template<class TypeTag>
+struct EnableConstraints<TypeTag, TTag::FractureProblem> { static constexpr bool value = true; };
 
 // Set the default value for the file name of the grid
 SET_STRING_PROP(FractureProblem, GridFile, "data/fracture.art.dgf");
@@ -174,25 +186,25 @@ namespace Opm {
  * where the pressure is kept constant.
  */
 template <class TypeTag>
-class FractureProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
+class FractureProblem : public GetPropType<TypeTag, Properties::BaseProblem>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, WettingPhase) WettingPhase;
-    typedef typename GET_PROP_TYPE(TypeTag, NonwettingPhase) NonwettingPhase;
-    typedef typename GET_PROP_TYPE(TypeTag, Constraints) Constraints;
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
-    typedef typename GET_PROP_TYPE(TypeTag, ThermalConductionLawParams) ThermalConductionLawParams;
-    typedef typename GET_PROP_TYPE(TypeTag, SolidEnergyLawParams) SolidEnergyLawParams;
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
+    typedef GetPropType<TypeTag, Properties::BaseProblem> ParentType;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    typedef GetPropType<TypeTag, Properties::WettingPhase> WettingPhase;
+    typedef GetPropType<TypeTag, Properties::NonwettingPhase> NonwettingPhase;
+    typedef GetPropType<TypeTag, Properties::Constraints> Constraints;
+    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
+    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
+    typedef GetPropType<TypeTag, Properties::BoundaryRateVector> BoundaryRateVector;
+    typedef GetPropType<TypeTag, Properties::RateVector> RateVector;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    typedef GetPropType<TypeTag, Properties::MaterialLaw> MaterialLaw;
+    typedef GetPropType<TypeTag, Properties::MaterialLawParams> MaterialLawParams;
+    typedef GetPropType<TypeTag, Properties::ThermalConductionLawParams> ThermalConductionLawParams;
+    typedef GetPropType<TypeTag, Properties::SolidEnergyLawParams> SolidEnergyLawParams;
+    typedef GetPropType<TypeTag, Properties::Model> Model;
 
     enum {
         // phase indices

@@ -53,33 +53,40 @@ class RichardsLensProblem;
 
 BEGIN_PROPERTIES
 
-NEW_TYPE_TAG(RichardsLensProblem, INHERITS_FROM(Richards));
+// Create new type tags
+namespace TTag {
+struct RichardsLensProblem { using InheritsFrom = std::tuple<Richards>; };
+} // end namespace TTag
 
 // Use 2d YaspGrid
-SET_TYPE_PROP(RichardsLensProblem, Grid, Dune::YaspGrid<2>);
+template<class TypeTag>
+struct Grid<TypeTag, TTag::RichardsLensProblem> { using type = Dune::YaspGrid<2>; };
 
 // Set the physical problem to be solved
-SET_TYPE_PROP(RichardsLensProblem, Problem, Opm::RichardsLensProblem<TypeTag>);
+template<class TypeTag>
+struct Problem<TypeTag, TTag::RichardsLensProblem> { using type = Opm::RichardsLensProblem<TypeTag>; };
 
 // Set the wetting phase
-SET_PROP(RichardsLensProblem, WettingFluid)
+template<class TypeTag>
+struct WettingFluid<TypeTag, TTag::RichardsLensProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
 
 public:
     typedef Opm::LiquidPhase<Scalar, Opm::SimpleH2O<Scalar> > type;
 };
 
 // Set the material Law
-SET_PROP(RichardsLensProblem, MaterialLaw)
+template<class TypeTag>
+struct MaterialLaw<TypeTag, TTag::RichardsLensProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
     enum { wettingPhaseIdx = FluidSystem::wettingPhaseIdx };
     enum { nonWettingPhaseIdx = FluidSystem::nonWettingPhaseIdx };
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
     typedef Opm::TwoPhaseMaterialTraits<Scalar,
                                         /*wettingPhaseIdx=*/FluidSystem::wettingPhaseIdx,
                                         /*nonWettingPhaseIdx=*/FluidSystem::nonWettingPhaseIdx>
@@ -95,19 +102,24 @@ public:
 };
 
 // Enable gravitational acceleration
-SET_BOOL_PROP(RichardsLensProblem, EnableGravity, true);
+template<class TypeTag>
+struct EnableGravity<TypeTag, TTag::RichardsLensProblem> { static constexpr bool value = true; };
 
 // Use central differences to approximate the Jacobian matrix
-SET_INT_PROP(RichardsLensProblem, NumericDifferenceMethod, 0);
+template<class TypeTag>
+struct NumericDifferenceMethod<TypeTag, TTag::RichardsLensProblem> { static constexpr int value = 0; };
 
 // Set the maximum number of newton iterations of a time step
-SET_INT_PROP(RichardsLensProblem, NewtonMaxIterations, 28);
+template<class TypeTag>
+struct NewtonMaxIterations<TypeTag, TTag::RichardsLensProblem> { static constexpr int value = 28; };
 
 // Set the "desireable" number of newton iterations of a time step
-SET_INT_PROP(RichardsLensProblem, NewtonTargetIterations, 18);
+template<class TypeTag>
+struct NewtonTargetIterations<TypeTag, TTag::RichardsLensProblem> { static constexpr int value = 18; };
 
 // Do not write the intermediate results of the newton method
-SET_BOOL_PROP(RichardsLensProblem, NewtonWriteConvergence, false);
+template<class TypeTag>
+struct NewtonWriteConvergence<TypeTag, TTag::RichardsLensProblem> { static constexpr bool value = false; };
 
 // The default for the end time of the simulation
 SET_SCALAR_PROP(RichardsLensProblem, EndTime, 3000);
@@ -139,22 +151,22 @@ namespace Opm {
  * instead of a \c DNAPL infiltrates from the top.
  */
 template <class TypeTag>
-class RichardsLensProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
+class RichardsLensProblem : public GetPropType<TypeTag, Properties::BaseProblem>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
+    typedef GetPropType<TypeTag, Properties::BaseProblem> ParentType;
 
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, Stencil) Stencil;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
+    typedef GetPropType<TypeTag, Properties::RateVector> RateVector;
+    typedef GetPropType<TypeTag, Properties::BoundaryRateVector> BoundaryRateVector;
+    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
+    typedef GetPropType<TypeTag, Properties::Stencil> Stencil;
+    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    typedef GetPropType<TypeTag, Properties::Model> Model;
+    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    typedef GetPropType<TypeTag, Properties::Indices> Indices;
     enum {
         // copy some indices for convenience
         pressureWIdx = Indices::pressureWIdx,
@@ -168,7 +180,7 @@ class RichardsLensProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     };
 
     // get the material law from the property system
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
+    typedef GetPropType<TypeTag, Properties::MaterialLaw> MaterialLaw;
     //! The parameters of the material law to be used
     typedef typename MaterialLaw::Params MaterialLawParams;
 
