@@ -57,7 +57,7 @@ template <class TypeTag>
 class ObstacleProblem;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_TYPE_TAG(ObstacleBaseProblem);
 
@@ -122,7 +122,7 @@ SET_SCALAR_PROP(ObstacleBaseProblem, InitialTimeStepSize, 250);
 // The default DGF file to load
 SET_STRING_PROP(ObstacleBaseProblem, GridFile, "./data/obstacle_24x16.dgf");
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!

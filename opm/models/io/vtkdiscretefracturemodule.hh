@@ -39,7 +39,7 @@
 
 #include <cstdio>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // create new type tag for the VTK multi-phase output
 NEW_TYPE_TAG(VtkDiscreteFracture);
@@ -76,7 +76,7 @@ struct VtkWriteFractureFilterVelocities<TypeTag, TTag::VtkDiscreteFracture> { st
 template<class TypeTag>
 struct VtkWriteFractureVolumeFraction<TypeTag, TTag::VtkDiscreteFracture> { static constexpr bool value = true; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!

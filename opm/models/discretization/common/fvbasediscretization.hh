@@ -86,7 +86,7 @@ class FvBaseDiscretization;
 
 } // namespace Opm
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 //! Set the default type for the time manager
 template<class TypeTag>
@@ -293,7 +293,7 @@ struct UseVolumetricResidual<TypeTag, TTag::FvBaseDiscretization> { static const
 template<class TypeTag>
 struct EnableExperiments<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = true; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

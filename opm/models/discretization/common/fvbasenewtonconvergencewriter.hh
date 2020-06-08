@@ -34,7 +34,7 @@
 #include <iostream>
 
 //! \cond SKIP_THIS
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // forward declaration of the required property tags
 template<class TypeTag, class MyTypeTag>
@@ -46,7 +46,7 @@ struct NewtonMethod;
 template<class TypeTag, class MyTypeTag>
 struct VtkOutputFormat;
 
-END_PROPERTIES
+} // namespace Opm::Properties
 //! \endcond
 
 namespace Opm {

@@ -66,7 +66,7 @@ template <class TypeTag>
 class EclVanguard;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 //! The type tag for the black-oil problems
 NEW_TYPE_TAG(BlackOilModel, INHERITS_FROM(MultiPhaseBaseModel,
@@ -179,7 +179,7 @@ public:
 template<class TypeTag>
 struct BlackoilConserveSurfaceVolume<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

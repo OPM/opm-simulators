@@ -34,7 +34,7 @@
 
 #include "problems/co2injectionproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_TYPE_TAG(Co2InjectionImmiscibleEcfvProblem,
              INHERITS_FROM(ImmiscibleModel,
@@ -42,7 +42,7 @@ NEW_TYPE_TAG(Co2InjectionImmiscibleEcfvProblem,
 SET_TAG_PROP(Co2InjectionImmiscibleEcfvProblem, SpatialDiscretizationSplice,
              EcfvDiscretization);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 ////////////////////////
 // the main function

@@ -38,7 +38,7 @@
 #include "problems/co2injectionflash.hh"
 #include "problems/co2injectionproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
@@ -69,7 +69,7 @@ SET_TAG_PROP(Co2InjectionFlashEcfvProblem, LinearSolverSplice, ParallelBiCGStabL
 SET_SCALAR_PROP(Co2InjectionFlashEcfvProblem, NewtonTolerance, 1e-5);
 #endif
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {

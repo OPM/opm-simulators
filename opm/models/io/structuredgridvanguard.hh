@@ -52,7 +52,7 @@ class StructuredGridVanguard;
 
 } // namespace Opm
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_TYPE_TAG(StructuredGridVanguard);
 
@@ -75,7 +75,7 @@ struct Grid<TypeTag, TTag::StructuredGridVanguard> { using type = Dune::YaspGrid
 template<class TypeTag>
 struct Vanguard<TypeTag, TTag::StructuredGridVanguard> { using type = Opm::StructuredGridVanguard<TypeTag>; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

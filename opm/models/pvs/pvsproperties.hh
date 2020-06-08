@@ -38,7 +38,7 @@
 #include <opm/models/io/vtkdiffusionmodule.hh>
 #include <opm/models/io/vtkenergymodule.hh>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 //! The verbosity of the model (0 -> do not print anything, 2 -> spam stdout a lot)
 template<class TypeTag, class MyTypeTag>
@@ -53,6 +53,6 @@ struct PvsSaturationsBaseWeight { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct PvsMoleFractionsBaseWeight { using type = UndefinedProperty; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 #endif

@@ -35,7 +35,7 @@
 
 #include <opm/material/common/MathToolbox.hpp>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // create new type tag for the VTK temperature output
 NEW_TYPE_TAG(VtkTemperature);
@@ -48,7 +48,7 @@ struct VtkWriteTemperature { using type = UndefinedProperty; };
 template<class TypeTag>
 struct VtkWriteTemperature<TypeTag, TTag::VtkTemperature> { static constexpr bool value = true; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

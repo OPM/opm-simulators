@@ -45,7 +45,7 @@ template <class TypeTag>
 class OutflowProblem;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_TYPE_TAG(OutflowBaseProblem);
 
@@ -86,7 +86,7 @@ SET_SCALAR_PROP(OutflowBaseProblem, InitialTimeStepSize, 1);
 // The default DGF file to load
 SET_STRING_PROP(OutflowBaseProblem, GridFile, "./data/outflow.dgf");
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!

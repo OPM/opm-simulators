@@ -35,7 +35,7 @@
 #include <opm/models/io/vtkenergymodule.hh>
 #include <opm/models/io/vtkdiffusionmodule.hh>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 //! The type of the flash constraint solver
 template<class TypeTag, class MyTypeTag>
@@ -44,6 +44,6 @@ struct FlashSolver { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct FlashTolerance { using type = UndefinedProperty; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 #endif

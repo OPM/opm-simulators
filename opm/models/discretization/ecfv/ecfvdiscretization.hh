@@ -48,7 +48,7 @@ template <class TypeTag>
 class EcfvDiscretization;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 //! Set the stencil
 template<class TypeTag>
@@ -119,7 +119,7 @@ struct LinearizeNonLocalElements<TypeTag, TTag::EcfvDiscretization> { static con
 template<class TypeTag>
 struct UseLinearizationLock<TypeTag, TTag::EcfvDiscretization> { static constexpr bool value = false; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!

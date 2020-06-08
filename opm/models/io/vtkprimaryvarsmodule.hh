@@ -33,7 +33,7 @@
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // create new type tag for the VTK primary variables output
 NEW_TYPE_TAG(VtkPrimaryVars);
@@ -53,7 +53,7 @@ struct VtkWriteProcessRank<TypeTag, TTag::VtkPrimaryVars> { static constexpr boo
 template<class TypeTag>
 struct VtkWriteDofIndex<TypeTag, TTag::VtkPrimaryVars> { static constexpr bool value = false; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

@@ -32,7 +32,7 @@
 #include <opm/models/immiscible/immisciblemodel.hh>
 #include "problems/lensproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
@@ -48,7 +48,7 @@ template<class TypeTag>
 struct UseP1FiniteElementGradients<TypeTag, TTag::LensProblemVcfvFd> { static constexpr bool value = true; };
 #endif
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {

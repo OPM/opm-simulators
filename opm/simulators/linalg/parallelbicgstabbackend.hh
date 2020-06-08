@@ -41,7 +41,7 @@ template <class TypeTag>
 class ParallelBiCGStabSolverBackend;
 }} // namespace Linear, Opm
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
@@ -54,7 +54,7 @@ SET_TYPE_PROP(ParallelBiCGStabLinearSolver,
 
 SET_SCALAR_PROP(ParallelBiCGStabLinearSolver, LinearSolverMaxError, 1e7);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 namespace Linear {

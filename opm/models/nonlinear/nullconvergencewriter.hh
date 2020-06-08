@@ -32,12 +32,12 @@
 
 #include <opm/material/common/Unused.hpp>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 template <class TypeTag, class MyTypeTag>
 struct NewtonMethod;
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!

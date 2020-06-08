@@ -42,7 +42,7 @@ template <class TypeTag>
 class FvBaseNewtonConvergenceWriter;
 } // namespace Opm
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 //! create a type tag for the Newton method of the finite-volume discretization
 // Create new type tags
@@ -62,7 +62,7 @@ SET_TYPE_PROP(FvBaseNewtonMethod, NewtonMethod,
 SET_TYPE_PROP(FvBaseNewtonMethod, NewtonConvergenceWriter,
               Opm::FvBaseNewtonConvergenceWriter<TypeTag>);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

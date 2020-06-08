@@ -33,7 +33,7 @@
 #include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
 #include "problems/co2injectionproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
@@ -43,7 +43,7 @@ SET_TAG_PROP(Co2InjectionNcpNiVcfvProblem, SpatialDiscretizationSplice, VcfvDisc
 template<class TypeTag>
 struct EnableEnergy<TypeTag, TTag::Co2InjectionNcpNiVcfvProblem> { static constexpr bool value = true; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {

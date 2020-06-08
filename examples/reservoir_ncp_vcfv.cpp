@@ -33,7 +33,7 @@
 #include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
 #include "problems/reservoirproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
@@ -53,7 +53,7 @@ struct EnableStorageCache<TypeTag, TTag::ReservoirNcpVcfvProblem> { static const
 SET_SCALAR_PROP(ReservoirNcpVcfvProblem, BaseEpsilon, 1e-11);
 
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {

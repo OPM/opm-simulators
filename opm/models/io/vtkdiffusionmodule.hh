@@ -37,7 +37,7 @@
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // create new type tag for the VTK output of the quantities for molecular
 // diffusion
@@ -59,7 +59,7 @@ struct VtkWriteDiffusionCoefficients<TypeTag, TTag::VtkDiffusion> { static const
 template<class TypeTag>
 struct VtkWriteEffectiveDiffusionCoefficients<TypeTag, TTag::VtkDiffusion> { static constexpr bool value = false; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!

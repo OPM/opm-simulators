@@ -35,7 +35,7 @@
 #include <opm/models/io/vtkenergymodule.hh>
 #include <opm/models/io/vtkdiffusionmodule.hh>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 //! The unmodified weight for the pressure primary variable
 template<class TypeTag, class MyTypeTag>
@@ -52,6 +52,6 @@ struct NcpFugacitiesBaseWeight { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct NcpCompositionFromFugacitiesSolver { using type = UndefinedProperty; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 #endif

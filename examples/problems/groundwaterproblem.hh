@@ -51,7 +51,7 @@ template <class TypeTag>
 class GroundWaterProblem;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 namespace TTag {
 struct GroundWaterBaseProblem {};
@@ -120,7 +120,7 @@ SET_TAG_PROP(GroundWaterBaseProblem, LinearSolverSplice, ParallelIstlLinearSolve
 SET_TYPE_PROP(GroundWaterBaseProblem, LinearSolverWrapper,
               Opm::Linear::SolverWrapperConjugatedGradients<TypeTag>);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!

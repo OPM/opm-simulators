@@ -56,7 +56,7 @@ template <class TypeTag>
 class FlashModel;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 //! The type tag for the isothermal single phase problems
 NEW_TYPE_TAG(FlashModel, INHERITS_FROM(MultiPhaseBaseModel,
@@ -123,7 +123,7 @@ struct EnableDiffusion<TypeTag, TTag::FlashModel> { static constexpr bool value 
 template<class TypeTag>
 struct EnableEnergy<TypeTag, TTag::FlashModel> { static constexpr bool value = false; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

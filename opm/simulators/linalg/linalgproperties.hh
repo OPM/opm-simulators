@@ -31,7 +31,7 @@
 
 #include <opm/models/utils/basicproperties.hh>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 //! The type of the linear solver to be used
 template<class TypeTag, class MyTypeTag>
@@ -119,6 +119,6 @@ struct OverlappingScalarProduct { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct OverlappingVector { using type = UndefinedProperty; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 #endif

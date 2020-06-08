@@ -56,7 +56,7 @@ template <class TypeTag>
 class LensProblem;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
@@ -179,7 +179,7 @@ struct EnableStorageCache<TypeTag, TTag::LensBaseProblem> { static constexpr boo
 template<class TypeTag>
 struct EnableIntensiveQuantityCache<TypeTag, TTag::LensBaseProblem> { static constexpr bool value = true; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

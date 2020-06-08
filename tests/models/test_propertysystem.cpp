@@ -36,7 +36,7 @@
 
 #include <iostream>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 ///////////////////
 // Define some hierarchy of type tags:
@@ -145,7 +145,7 @@ struct Payload<TypeTag, TTag::Pickup> { static constexpr int value = 5; };
 template<class TypeTag>
 struct TopSpeed<TypeTag, TTag::HummerH1> { static constexpr int value = getPropValue<TTag::Pickup, TopSpeed>(); };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 
 int main()

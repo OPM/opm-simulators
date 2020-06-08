@@ -33,7 +33,7 @@
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 #include "problems/co2injectionproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_TYPE_TAG(Co2InjectionImmiscibleNiEcfvProblem, INHERITS_FROM(ImmiscibleModel,
                                                                 Co2InjectionBaseProblem));
@@ -46,7 +46,7 @@ struct EnableEnergy<TypeTag, TTag::Co2InjectionImmiscibleNiEcfvProblem> { static
 //! Use automatic differentiation to linearize the system of PDEs
 SET_TAG_PROP(Co2InjectionImmiscibleNiEcfvProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 ////////////////////////
 // the main function

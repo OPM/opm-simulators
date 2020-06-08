@@ -52,7 +52,7 @@ template <class TypeTag>
 class InfiltrationProblem;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_TYPE_TAG(InfiltrationBaseProblem);
 
@@ -109,7 +109,7 @@ SET_SCALAR_PROP(InfiltrationBaseProblem, InitialTimeStepSize, 60);
 SET_STRING_PROP(InfiltrationBaseProblem, GridFile,
                 "./data/infiltration_50x3.dgf");
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!

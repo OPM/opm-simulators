@@ -34,7 +34,7 @@
 #include <opm/models/io/dgfvanguard.hh>
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 namespace TTag {
 struct FvBaseNewtonMethod;
@@ -350,6 +350,6 @@ struct EnableExperiments { using type = UndefinedProperty; };
 template<class TypeTag>
 struct Vanguard<TypeTag, TTag::NumericModel> { using type = Opm::DgfVanguard<TypeTag>; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 #endif

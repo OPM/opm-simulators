@@ -47,12 +47,12 @@
 
 #include <cstdio>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 template <class TypeTag, class MyTypeTag>
 struct FluidSystem;
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

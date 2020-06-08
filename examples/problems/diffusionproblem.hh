@@ -52,7 +52,7 @@ template <class TypeTag>
 class DiffusionProblem;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_TYPE_TAG(DiffusionBaseProblem);
 
@@ -125,7 +125,7 @@ SET_SCALAR_PROP(DiffusionBaseProblem, EndTime, 1e6);
 // The default for the initial time step size of the simulation
 SET_SCALAR_PROP(DiffusionBaseProblem, InitialTimeStepSize, 1000);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!

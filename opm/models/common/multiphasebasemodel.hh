@@ -50,7 +50,7 @@ template <class TypeTag>
 class MultiPhaseBaseModel;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 //! The generic type tag for problems using the immiscible multi-phase model
 // Create new type tags
@@ -135,7 +135,7 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, TTag::MultiPhaseBaseModel> { static constexpr bool value = false; };
 
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

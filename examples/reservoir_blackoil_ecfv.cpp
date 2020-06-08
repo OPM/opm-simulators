@@ -33,7 +33,7 @@
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 #include "problems/reservoirproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
@@ -46,7 +46,7 @@ SET_TAG_PROP(ReservoirBlackOilEcfvProblem, SpatialDiscretizationSplice, EcfvDisc
 // Use automatic differentiation to linearize the system of PDEs
 SET_TAG_PROP(ReservoirBlackOilEcfvProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {

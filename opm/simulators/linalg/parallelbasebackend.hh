@@ -51,7 +51,7 @@
 #include <memory>
 #include <iostream>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 NEW_TYPE_TAG(ParallelBaseLinearSolver);
 
 //! Set the type of a global jacobian matrix for linear solvers that are based on
@@ -68,7 +68,7 @@ public:
     typedef typename Opm::Linear::IstlSparseMatrixAdapter<Block> type;
 };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 namespace Linear {
@@ -385,7 +385,7 @@ protected:
 };
 }} // namespace Linear, Opm
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 //! make the linear solver shut up by default
 template<class TypeTag>
@@ -466,6 +466,6 @@ struct LinearSolverOverlapSize<TypeTag, TTag::ParallelBaseLinearSolver> { static
 template<class TypeTag>
 struct LinearSolverMaxIterations<TypeTag, TTag::ParallelBaseLinearSolver> { static constexpr int value = 1000; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 #endif

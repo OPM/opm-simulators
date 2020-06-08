@@ -39,7 +39,7 @@
 
 #include <string>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 ///////////////////////////////////
 // Type tag definitions:
@@ -256,6 +256,6 @@ SET_SCALAR_PROP(NumericModel, RestartTime, -1e35);
 SET_STRING_PROP(NumericModel, PredeterminedTimeStepsFile, "");
 
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 #endif

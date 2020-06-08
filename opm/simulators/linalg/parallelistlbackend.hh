@@ -34,14 +34,14 @@
 
 #include <dune/common/version.hh>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
 struct ParallelIstlLinearSolver { using InheritsFrom = std::tuple<ParallelBaseLinearSolver>; };
 } // end namespace TTag
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 namespace Linear {
@@ -143,7 +143,7 @@ protected:
 
 }} // namespace Linear, Opm
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 SET_TYPE_PROP(ParallelIstlLinearSolver,
               LinearSolverBackend,
@@ -167,6 +167,6 @@ SET_TYPE_PROP(ParallelIstlLinearSolver,
 template<class TypeTag>
 struct GMResRestart<TypeTag, TTag::ParallelIstlLinearSolver> { static constexpr int value = 10; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 #endif

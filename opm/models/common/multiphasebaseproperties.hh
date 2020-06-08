@@ -32,7 +32,7 @@
 
 #include <opm/models/utils/basicproperties.hh>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 //! The splice to be used for the spatial discretization
 template<class TypeTag, class MyTypeTag>
@@ -81,6 +81,6 @@ struct EnableGravity { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct EnableDiffusion { using type = UndefinedProperty; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 #endif

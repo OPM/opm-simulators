@@ -58,7 +58,7 @@ template <class TypeTag>
 class WaterAirProblem;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_TYPE_TAG(WaterAirBaseProblem);
 
@@ -148,7 +148,7 @@ SET_TYPE_PROP(WaterAirBaseProblem, PreconditionerWrapper,
 template<class TypeTag>
 struct PreconditionerOrder<TypeTag, TTag::WaterAirBaseProblem> { static constexpr int value = 2; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!

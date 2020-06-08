@@ -49,7 +49,7 @@ template <class TypeTag>
 class DiscreteFractureModel;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 //! The generic type tag for problems using the immiscible multi-phase model
 // Create new type tags
@@ -98,7 +98,7 @@ struct UseTwoPointGradients<TypeTag, TTag::DiscreteFractureModel> { static const
 template<class TypeTag>
 struct EnableIntensiveQuantityCache<TypeTag, TTag::DiscreteFractureModel> { static constexpr bool value = false; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

@@ -33,7 +33,7 @@
 #include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
 #include "problems/co2injectionproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_TYPE_TAG(Co2InjectionImmiscibleNiVcfvProblem, INHERITS_FROM(ImmiscibleModel,
                                                                 Co2InjectionBaseProblem));
@@ -42,7 +42,7 @@ SET_TAG_PROP(Co2InjectionImmiscibleNiVcfvProblem, SpatialDiscretizationSplice, V
 template<class TypeTag>
 struct EnableEnergy<TypeTag, TTag::Co2InjectionImmiscibleNiVcfvProblem> { static constexpr bool value = true; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 ////////////////////////
 // the main function

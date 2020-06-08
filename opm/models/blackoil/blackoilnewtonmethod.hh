@@ -35,7 +35,7 @@
 
 #include <opm/material/common/Unused.hpp>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 template <class TypeTag, class MyTypeTag>
 struct DiscNewtonMethod;
@@ -55,7 +55,7 @@ SET_SCALAR_PROP(NewtonMethod, PriVarOscilationThreshold, 1e-5);
 template<class TypeTag>
 struct ProjectSaturations<TypeTag, TTag::NewtonMethod> { static constexpr bool value = false; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

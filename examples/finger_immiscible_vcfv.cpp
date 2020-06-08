@@ -32,7 +32,7 @@
 #include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
 #include "problems/fingerproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
@@ -40,7 +40,7 @@ struct FingerProblemVcfv { using InheritsFrom = std::tuple<FingerBaseProblem, Im
 } // end namespace TTag
 SET_TAG_PROP(FingerProblemVcfv, SpatialDiscretizationSplice, VcfvDiscretization);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {
