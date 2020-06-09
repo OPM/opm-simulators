@@ -220,10 +220,20 @@ template<class TypeTag>
 struct Linearizer<TypeTag, TTag::FvBaseDiscretization> { using type = Opm::FvBaseLinearizer<TypeTag>; };
 
 //! use an unlimited time step size by default
-SET_SCALAR_PROP(FvBaseDiscretization, MaxTimeStepSize, std::numeric_limits<Scalar>::infinity());
+template<class TypeTag>
+struct MaxTimeStepSize<TypeTag, TTag::FvBaseDiscretization>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = std::numeric_limits<type>::infinity();
+};
 
 //! By default, accept any time step larger than zero
-SET_SCALAR_PROP(FvBaseDiscretization, MinTimeStepSize, 0.0);
+template<class TypeTag>
+struct MinTimeStepSize<TypeTag, TTag::FvBaseDiscretization>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.0;
+};
 
 //! Disable grid adaptation by default
 template<class TypeTag>
@@ -270,10 +280,20 @@ struct EnableThermodynamicHints<TypeTag, TTag::FvBaseDiscretization> { static co
 // approximation accurately. Assuming that the value for the current solution is quite
 // close to the final value, a reduction of 3 orders of magnitude in the defect should be
 // sufficient...
-SET_SCALAR_PROP(FvBaseDiscretization, LinearSolverTolerance, 1e-3);
+template<class TypeTag>
+struct LinearSolverTolerance<TypeTag, TTag::FvBaseDiscretization>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-3;
+};
 
 // use default initialization based on rule-of-thumb of Newton tolerance
-SET_SCALAR_PROP(FvBaseDiscretization, LinearSolverAbsTolerance, -1.);
+template<class TypeTag>
+struct LinearSolverAbsTolerance<TypeTag, TTag::FvBaseDiscretization>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = -1.;
+};
 
 //! Set the history size of the time discretization to 2 (for implicit euler)
 template<class TypeTag>

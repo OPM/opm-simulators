@@ -49,9 +49,24 @@ struct PriVarOscilationThreshold { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct ProjectSaturations { using type = UndefinedProperty; };
 
-SET_SCALAR_PROP(NewtonMethod, DpMaxRel, 0.3);
-SET_SCALAR_PROP(NewtonMethod, DsMax, 0.2);
-SET_SCALAR_PROP(NewtonMethod, PriVarOscilationThreshold, 1e-5);
+template<class TypeTag>
+struct DpMaxRel<TypeTag, TTag::NewtonMethod>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.3;
+};
+template<class TypeTag>
+struct DsMax<TypeTag, TTag::NewtonMethod>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.2;
+};
+template<class TypeTag>
+struct PriVarOscilationThreshold<TypeTag, TTag::NewtonMethod>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-5;
+};
 template<class TypeTag>
 struct ProjectSaturations<TypeTag, TTag::NewtonMethod> { static constexpr bool value = false; };
 

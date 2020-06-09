@@ -141,11 +141,31 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, TTag::FingerBaseProblem> { static constexpr bool value = true; };
 
 // define the properties specific for the finger problem
-SET_SCALAR_PROP(FingerBaseProblem, DomainSizeX, 0.1);
-SET_SCALAR_PROP(FingerBaseProblem, DomainSizeY, 0.3);
-SET_SCALAR_PROP(FingerBaseProblem, DomainSizeZ, 0.1);
+template<class TypeTag>
+struct DomainSizeX<TypeTag, TTag::FingerBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.1;
+};
+template<class TypeTag>
+struct DomainSizeY<TypeTag, TTag::FingerBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.3;
+};
+template<class TypeTag>
+struct DomainSizeZ<TypeTag, TTag::FingerBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.1;
+};
 
-SET_SCALAR_PROP(FingerBaseProblem, InitialWaterSaturation, 0.01);
+template<class TypeTag>
+struct InitialWaterSaturation<TypeTag, TTag::FingerBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.01;
+};
 
 template<class TypeTag>
 struct CellsX<TypeTag, TTag::FingerBaseProblem> { static constexpr int value = 20; };
@@ -155,10 +175,20 @@ template<class TypeTag>
 struct CellsZ<TypeTag, TTag::FingerBaseProblem> { static constexpr int value = 1; };
 
 // The default for the end time of the simulation
-SET_SCALAR_PROP(FingerBaseProblem, EndTime, 215);
+template<class TypeTag>
+struct EndTime<TypeTag, TTag::FingerBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 215;
+};
 
 // The default for the initial time step size of the simulation
-SET_SCALAR_PROP(FingerBaseProblem, InitialTimeStepSize, 10);
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, TTag::FingerBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 10;
+};
 
 } // namespace Opm::Properties
 

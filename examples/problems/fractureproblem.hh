@@ -165,10 +165,20 @@ struct EnableConstraints<TypeTag, TTag::FractureProblem> { static constexpr bool
 SET_STRING_PROP(FractureProblem, GridFile, "data/fracture.art.dgf");
 
 // Set the default value for the end time
-SET_SCALAR_PROP(FractureProblem, EndTime, 3e3);
+template<class TypeTag>
+struct EndTime<TypeTag, TTag::FractureProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 3e3;
+};
 
 // Set the default value for the initial time step size
-SET_SCALAR_PROP(FractureProblem, InitialTimeStepSize, 100);
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, TTag::FractureProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 100;
+};
 
 } // namespace Opm::Properties
 

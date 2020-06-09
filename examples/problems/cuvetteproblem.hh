@@ -80,7 +80,12 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, TTag::CuvetteBaseProblem> { static constexpr bool value = true; };
 
 // Set the maximum time step
-SET_SCALAR_PROP(CuvetteBaseProblem, MaxTimeStepSize, 600.);
+template<class TypeTag>
+struct MaxTimeStepSize<TypeTag, TTag::CuvetteBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 600.;
+};
 
 // Set the material Law
 template<class TypeTag>
@@ -118,10 +123,20 @@ public:
 };
 
 // The default for the end time of the simulation
-SET_SCALAR_PROP(CuvetteBaseProblem, EndTime, 180);
+template<class TypeTag>
+struct EndTime<TypeTag, TTag::CuvetteBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 180;
+};
 
 // The default for the initial time step size of the simulation
-SET_SCALAR_PROP(CuvetteBaseProblem, InitialTimeStepSize, 1);
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, TTag::CuvetteBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1;
+};
 
 // The default DGF file to load
 SET_STRING_PROP(CuvetteBaseProblem, GridFile, "./data/cuvette_11x4.dgf");

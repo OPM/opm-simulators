@@ -100,10 +100,20 @@ public:
 };
 
 // The default for the end time of the simulation
-SET_SCALAR_PROP(InfiltrationBaseProblem, EndTime, 6e3);
+template<class TypeTag>
+struct EndTime<TypeTag, TTag::InfiltrationBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 6e3;
+};
 
 // The default for the initial time step size of the simulation
-SET_SCALAR_PROP(InfiltrationBaseProblem, InitialTimeStepSize, 60);
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, TTag::InfiltrationBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 60;
+};
 
 // The default DGF file to load
 SET_STRING_PROP(InfiltrationBaseProblem, GridFile,

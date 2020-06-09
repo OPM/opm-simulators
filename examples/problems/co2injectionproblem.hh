@@ -166,24 +166,64 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, TTag::Co2InjectionBaseProblem> { static constexpr bool value = true; };
 
 // set the defaults for the problem specific properties
-SET_SCALAR_PROP(Co2InjectionBaseProblem, FluidSystemPressureLow, 3e7);
-SET_SCALAR_PROP(Co2InjectionBaseProblem, FluidSystemPressureHigh, 4e7);
+template<class TypeTag>
+struct FluidSystemPressureLow<TypeTag, TTag::Co2InjectionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 3e7;
+};
+template<class TypeTag>
+struct FluidSystemPressureHigh<TypeTag, TTag::Co2InjectionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 4e7;
+};
 template<class TypeTag>
 struct FluidSystemNumPressure<TypeTag, TTag::Co2InjectionBaseProblem> { static constexpr int value = 100; };
-SET_SCALAR_PROP(Co2InjectionBaseProblem, FluidSystemTemperatureLow, 290);
-SET_SCALAR_PROP(Co2InjectionBaseProblem, FluidSystemTemperatureHigh, 500);
+template<class TypeTag>
+struct FluidSystemTemperatureLow<TypeTag, TTag::Co2InjectionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 290;
+};
+template<class TypeTag>
+struct FluidSystemTemperatureHigh<TypeTag, TTag::Co2InjectionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 500;
+};
 template<class TypeTag>
 struct FluidSystemNumTemperature<TypeTag, TTag::Co2InjectionBaseProblem> { static constexpr int value = 100; };
 
-SET_SCALAR_PROP(Co2InjectionBaseProblem, MaxDepth, 2500);
-SET_SCALAR_PROP(Co2InjectionBaseProblem, Temperature, 293.15);
+template<class TypeTag>
+struct MaxDepth<TypeTag, TTag::Co2InjectionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 2500;
+};
+template<class TypeTag>
+struct Temperature<TypeTag, TTag::Co2InjectionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 293.15;
+};
 SET_STRING_PROP(Co2InjectionBaseProblem, SimulationName, "co2injection");
 
 // The default for the end time of the simulation
-SET_SCALAR_PROP(Co2InjectionBaseProblem, EndTime, 1e4);
+template<class TypeTag>
+struct EndTime<TypeTag, TTag::Co2InjectionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e4;
+};
 
 // The default for the initial time step size of the simulation
-SET_SCALAR_PROP(Co2InjectionBaseProblem, InitialTimeStepSize, 250);
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, TTag::Co2InjectionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 250;
+};
 
 // The default DGF file to load
 SET_STRING_PROP(Co2InjectionBaseProblem, GridFile, "data/co2injection.dgf");

@@ -78,10 +78,20 @@ template<class TypeTag>
 struct VtkWriteMassFractions<TypeTag, TTag::OutflowBaseProblem> { static constexpr bool value = true; };
 
 // The default for the end time of the simulation
-SET_SCALAR_PROP(OutflowBaseProblem, EndTime, 100);
+template<class TypeTag>
+struct EndTime<TypeTag, TTag::OutflowBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 100;
+};
 
 // The default for the initial time step size of the simulation
-SET_SCALAR_PROP(OutflowBaseProblem, InitialTimeStepSize, 1);
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, TTag::OutflowBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1;
+};
 
 // The default DGF file to load
 SET_STRING_PROP(OutflowBaseProblem, GridFile, "./data/outflow.dgf");

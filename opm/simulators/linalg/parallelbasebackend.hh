@@ -392,7 +392,12 @@ template<class TypeTag>
 struct LinearSolverVerbosity<TypeTag, TTag::ParallelBaseLinearSolver> { static constexpr int value = 0; };
 
 //! set the preconditioner relaxation parameter to 1.0 by default
-SET_SCALAR_PROP(ParallelBaseLinearSolver, PreconditionerRelaxation, 1.0);
+template<class TypeTag>
+struct PreconditionerRelaxation<TypeTag, TTag::ParallelBaseLinearSolver>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.0;
+};
 
 //! set the preconditioner order to 0 by default
 template<class TypeTag>

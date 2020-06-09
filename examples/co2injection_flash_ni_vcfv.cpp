@@ -63,7 +63,12 @@ struct Scalar<TypeTag, TTag::Co2InjectionFlashNiVcfvProblem> { using type = quad
 // precision scalars... (this seems to only apply to Dune >= 2.4)
 SET_TAG_PROP(Co2InjectionFlashNiVcfvProblem, LinearSolverSplice, ParallelBiCGStabLinearSolver);
 #else
-SET_SCALAR_PROP(Co2InjectionFlashNiVcfvProblem, NewtonTolerance, 1e-5);
+template<class TypeTag>
+struct NewtonTolerance<TypeTag, TTag::Co2InjectionFlashNiVcfvProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-5;
+};
 #endif
 
 } // namespace Opm::Properties

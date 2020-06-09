@@ -74,7 +74,12 @@ SET_TYPE_PROP(FlashModel, FlashSolver,
                             GetPropType<TypeTag, Properties::FluidSystem>>);
 
 //! Let the flash solver choose its tolerance by default
-SET_SCALAR_PROP(FlashModel, FlashTolerance, -1.0);
+template<class TypeTag>
+struct FlashTolerance<TypeTag, TTag::FlashModel>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = -1.0;
+};
 
 //! the Model property
 template<class TypeTag>

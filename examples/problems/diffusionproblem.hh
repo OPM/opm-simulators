@@ -108,9 +108,24 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, TTag::DiffusionBaseProblem> { static constexpr bool value = false; };
 
 // define the properties specific for the diffusion problem
-SET_SCALAR_PROP(DiffusionBaseProblem, DomainSizeX, 1.0);
-SET_SCALAR_PROP(DiffusionBaseProblem, DomainSizeY, 1.0);
-SET_SCALAR_PROP(DiffusionBaseProblem, DomainSizeZ, 1.0);
+template<class TypeTag>
+struct DomainSizeX<TypeTag, TTag::DiffusionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.0;
+};
+template<class TypeTag>
+struct DomainSizeY<TypeTag, TTag::DiffusionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.0;
+};
+template<class TypeTag>
+struct DomainSizeZ<TypeTag, TTag::DiffusionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.0;
+};
 
 template<class TypeTag>
 struct CellsX<TypeTag, TTag::DiffusionBaseProblem> { static constexpr int value = 250; };
@@ -120,10 +135,20 @@ template<class TypeTag>
 struct CellsZ<TypeTag, TTag::DiffusionBaseProblem> { static constexpr int value = 1; };
 
 // The default for the end time of the simulation
-SET_SCALAR_PROP(DiffusionBaseProblem, EndTime, 1e6);
+template<class TypeTag>
+struct EndTime<TypeTag, TTag::DiffusionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e6;
+};
 
 // The default for the initial time step size of the simulation
-SET_SCALAR_PROP(DiffusionBaseProblem, InitialTimeStepSize, 1000);
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, TTag::DiffusionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1000;
+};
 
 } // namespace Opm::Properties
 

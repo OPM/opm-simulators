@@ -244,13 +244,28 @@ template<class TypeTag>
 struct PrintParameters<TypeTag, TTag::NumericModel> { static constexpr int value = 2; };
 
 //! The default value for the simulation's end time
-SET_SCALAR_PROP(NumericModel, EndTime, -1e35);
+template<class TypeTag>
+struct EndTime<TypeTag, TTag::NumericModel>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = -1e35;
+};
 
 //! The default value for the simulation's initial time step size
-SET_SCALAR_PROP(NumericModel, InitialTimeStepSize, -1e35);
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, TTag::NumericModel>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = -1e35;
+};
 
 //! The default value for the simulation's restart time
-SET_SCALAR_PROP(NumericModel, RestartTime, -1e35);
+template<class TypeTag>
+struct RestartTime<TypeTag, TTag::NumericModel>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = -1e35;
+};
 
 //! By default, do not force any time steps
 SET_STRING_PROP(NumericModel, PredeterminedTimeStepsFile, "");
