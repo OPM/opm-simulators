@@ -128,9 +128,24 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, TTag::PowerInjectionBaseProblem> { static constexpr bool value = false; };
 
 // define the properties specific for the power injection problem
-SET_SCALAR_PROP(PowerInjectionBaseProblem, DomainSizeX, 100.0);
-SET_SCALAR_PROP(PowerInjectionBaseProblem, DomainSizeY, 1.0);
-SET_SCALAR_PROP(PowerInjectionBaseProblem, DomainSizeZ, 1.0);
+template<class TypeTag>
+struct DomainSizeX<TypeTag, TTag::PowerInjectionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 100.0;
+};
+template<class TypeTag>
+struct DomainSizeY<TypeTag, TTag::PowerInjectionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.0;
+};
+template<class TypeTag>
+struct DomainSizeZ<TypeTag, TTag::PowerInjectionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.0;
+};
 
 template<class TypeTag>
 struct CellsX<TypeTag, TTag::PowerInjectionBaseProblem> { static constexpr int value = 250; };
@@ -140,10 +155,20 @@ template<class TypeTag>
 struct CellsZ<TypeTag, TTag::PowerInjectionBaseProblem> { static constexpr int value = 1; };
 
 // The default for the end time of the simulation
-SET_SCALAR_PROP(PowerInjectionBaseProblem, EndTime, 100);
+template<class TypeTag>
+struct EndTime<TypeTag, TTag::PowerInjectionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 100;
+};
 
 // The default for the initial time step size of the simulation
-SET_SCALAR_PROP(PowerInjectionBaseProblem, InitialTimeStepSize, 1e-3);
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, TTag::PowerInjectionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-3;
+};
 
 } // namespace Opm::Properties
 

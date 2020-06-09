@@ -60,7 +60,12 @@ struct ParallelAmgLinearSolver { using InheritsFrom = std::tuple<ParallelBaseLin
 template<class TypeTag>
 struct AmgCoarsenTarget<TypeTag, TTag::ParallelAmgLinearSolver> { static constexpr int value = 5000; };
 
-SET_SCALAR_PROP(ParallelAmgLinearSolver, LinearSolverMaxError, 1e7);
+template<class TypeTag>
+struct LinearSolverMaxError<TypeTag, TTag::ParallelAmgLinearSolver>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e7;
+};
 
 SET_TYPE_PROP(ParallelAmgLinearSolver, LinearSolverBackend,
               Opm::Linear::ParallelAmgBackend<TypeTag>);

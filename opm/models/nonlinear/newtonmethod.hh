@@ -130,10 +130,20 @@ template<class TypeTag>
 struct NewtonWriteConvergence<TypeTag, TTag::NewtonMethod> { static constexpr bool value = false; };
 template<class TypeTag>
 struct NewtonVerbose<TypeTag, TTag::NewtonMethod> { static constexpr bool value = true; };
-SET_SCALAR_PROP(NewtonMethod, NewtonTolerance, 1e-8);
+template<class TypeTag>
+struct NewtonTolerance<TypeTag, TTag::NewtonMethod>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-8;
+};
 // set the abortion tolerace to some very large value. if not
 // overwritten at run-time this basically disables abortions
-SET_SCALAR_PROP(NewtonMethod, NewtonMaxError, 1e100);
+template<class TypeTag>
+struct NewtonMaxError<TypeTag, TTag::NewtonMethod>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e100;
+};
 template<class TypeTag>
 struct NewtonTargetIterations<TypeTag, TTag::NewtonMethod> { static constexpr int value = 10; };
 template<class TypeTag>

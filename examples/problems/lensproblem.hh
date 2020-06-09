@@ -143,16 +143,61 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, TTag::LensBaseProblem> { static constexpr bool value = true; };
 
 // define the properties specific for the lens problem
-SET_SCALAR_PROP(LensBaseProblem, LensLowerLeftX, 1.0);
-SET_SCALAR_PROP(LensBaseProblem, LensLowerLeftY, 2.0);
-SET_SCALAR_PROP(LensBaseProblem, LensLowerLeftZ, 0.0);
-SET_SCALAR_PROP(LensBaseProblem, LensUpperRightX, 4.0);
-SET_SCALAR_PROP(LensBaseProblem, LensUpperRightY, 3.0);
-SET_SCALAR_PROP(LensBaseProblem, LensUpperRightZ, 1.0);
+template<class TypeTag>
+struct LensLowerLeftX<TypeTag, TTag::LensBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.0;
+};
+template<class TypeTag>
+struct LensLowerLeftY<TypeTag, TTag::LensBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 2.0;
+};
+template<class TypeTag>
+struct LensLowerLeftZ<TypeTag, TTag::LensBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.0;
+};
+template<class TypeTag>
+struct LensUpperRightX<TypeTag, TTag::LensBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 4.0;
+};
+template<class TypeTag>
+struct LensUpperRightY<TypeTag, TTag::LensBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 3.0;
+};
+template<class TypeTag>
+struct LensUpperRightZ<TypeTag, TTag::LensBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.0;
+};
 
-SET_SCALAR_PROP(LensBaseProblem, DomainSizeX, 6.0);
-SET_SCALAR_PROP(LensBaseProblem, DomainSizeY, 4.0);
-SET_SCALAR_PROP(LensBaseProblem, DomainSizeZ, 1.0);
+template<class TypeTag>
+struct DomainSizeX<TypeTag, TTag::LensBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 6.0;
+};
+template<class TypeTag>
+struct DomainSizeY<TypeTag, TTag::LensBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 4.0;
+};
+template<class TypeTag>
+struct DomainSizeZ<TypeTag, TTag::LensBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.0;
+};
 
 template<class TypeTag>
 struct CellsX<TypeTag, TTag::LensBaseProblem> { static constexpr int value = 48; };
@@ -162,10 +207,20 @@ template<class TypeTag>
 struct CellsZ<TypeTag, TTag::LensBaseProblem> { static constexpr int value = 16; };
 
 // The default for the end time of the simulation
-SET_SCALAR_PROP(LensBaseProblem, EndTime, 30e3);
+template<class TypeTag>
+struct EndTime<TypeTag, TTag::LensBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 30e3;
+};
 
 // The default for the initial time step size of the simulation
-SET_SCALAR_PROP(LensBaseProblem, InitialTimeStepSize, 250);
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, TTag::LensBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 250;
+};
 
 // By default, include the intrinsic permeability tensor to the VTK output files
 template<class TypeTag>

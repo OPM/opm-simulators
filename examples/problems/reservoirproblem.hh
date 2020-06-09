@@ -110,20 +110,45 @@ template<class TypeTag>
 struct EnableConstraints<TypeTag, TTag::ReservoirBaseProblem> { static constexpr bool value = true; };
 
 // set the defaults for some problem specific properties
-SET_SCALAR_PROP(ReservoirBaseProblem, MaxDepth, 2500);
-SET_SCALAR_PROP(ReservoirBaseProblem, Temperature, 293.15);
+template<class TypeTag>
+struct MaxDepth<TypeTag, TTag::ReservoirBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 2500;
+};
+template<class TypeTag>
+struct Temperature<TypeTag, TTag::ReservoirBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 293.15;
+};
 
 //! The default for the end time of the simulation [s].
 //!
 //! By default this problem spans 1000 days (100 "settle down" days and 900 days of
 //! production)
-SET_SCALAR_PROP(ReservoirBaseProblem, EndTime, 1000.0*24*60*60);
+template<class TypeTag>
+struct EndTime<TypeTag, TTag::ReservoirBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1000.0*24*60*60;
+};
 
 // The default for the initial time step size of the simulation [s]
-SET_SCALAR_PROP(ReservoirBaseProblem, InitialTimeStepSize, 100e3);
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, TTag::ReservoirBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 100e3;
+};
 
 // The width of producer/injector wells as a fraction of the width of the spatial domain
-SET_SCALAR_PROP(ReservoirBaseProblem, WellWidth, 0.01);
+template<class TypeTag>
+struct WellWidth<TypeTag, TTag::ReservoirBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.01;
+};
 
 /*!
  * \brief Explicitly set the fluid system to the black-oil fluid system
@@ -147,7 +172,12 @@ public:
 SET_STRING_PROP(ReservoirBaseProblem, GridFile, "data/reservoir.dgf");
 
 // increase the tolerance for this problem to get larger time steps
-SET_SCALAR_PROP(ReservoirBaseProblem, NewtonTolerance, 1e-6);
+template<class TypeTag>
+struct NewtonTolerance<TypeTag, TTag::ReservoirBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-6;
+};
 
 } // namespace Opm::Properties
 

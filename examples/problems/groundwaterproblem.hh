@@ -92,24 +92,74 @@ struct Grid<TypeTag, TTag::GroundWaterBaseProblem> { using type = Dune::YaspGrid
 SET_TYPE_PROP(GroundWaterBaseProblem, Problem,
               Opm::GroundWaterProblem<TypeTag>);
 
-SET_SCALAR_PROP(GroundWaterBaseProblem, LensLowerLeftX, 0.25);
-SET_SCALAR_PROP(GroundWaterBaseProblem, LensLowerLeftY, 0.25);
-SET_SCALAR_PROP(GroundWaterBaseProblem, LensLowerLeftZ, 0.25);
-SET_SCALAR_PROP(GroundWaterBaseProblem, LensUpperRightX, 0.75);
-SET_SCALAR_PROP(GroundWaterBaseProblem, LensUpperRightY, 0.75);
-SET_SCALAR_PROP(GroundWaterBaseProblem, LensUpperRightZ, 0.75);
-SET_SCALAR_PROP(GroundWaterBaseProblem, Permeability, 1e-10);
-SET_SCALAR_PROP(GroundWaterBaseProblem, PermeabilityLens, 1e-12);
+template<class TypeTag>
+struct LensLowerLeftX<TypeTag, TTag::GroundWaterBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.25;
+};
+template<class TypeTag>
+struct LensLowerLeftY<TypeTag, TTag::GroundWaterBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.25;
+};
+template<class TypeTag>
+struct LensLowerLeftZ<TypeTag, TTag::GroundWaterBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.25;
+};
+template<class TypeTag>
+struct LensUpperRightX<TypeTag, TTag::GroundWaterBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.75;
+};
+template<class TypeTag>
+struct LensUpperRightY<TypeTag, TTag::GroundWaterBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.75;
+};
+template<class TypeTag>
+struct LensUpperRightZ<TypeTag, TTag::GroundWaterBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.75;
+};
+template<class TypeTag>
+struct Permeability<TypeTag, TTag::GroundWaterBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-10;
+};
+template<class TypeTag>
+struct PermeabilityLens<TypeTag, TTag::GroundWaterBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-12;
+};
 
 // Enable gravity
 template<class TypeTag>
 struct EnableGravity<TypeTag, TTag::GroundWaterBaseProblem> { static constexpr bool value = true; };
 
 // The default for the end time of the simulation
-SET_SCALAR_PROP(GroundWaterBaseProblem, EndTime, 1);
+template<class TypeTag>
+struct EndTime<TypeTag, TTag::GroundWaterBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1;
+};
 
 // The default for the initial time step size of the simulation
-SET_SCALAR_PROP(GroundWaterBaseProblem, InitialTimeStepSize, 1);
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, TTag::GroundWaterBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1;
+};
 
 // The default DGF file to load
 SET_STRING_PROP(GroundWaterBaseProblem, GridFile, "./data/groundwater_2d.dgf");

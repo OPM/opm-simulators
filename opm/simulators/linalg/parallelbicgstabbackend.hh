@@ -52,7 +52,12 @@ SET_TYPE_PROP(ParallelBiCGStabLinearSolver,
               LinearSolverBackend,
               Opm::Linear::ParallelBiCGStabSolverBackend<TypeTag>);
 
-SET_SCALAR_PROP(ParallelBiCGStabLinearSolver, LinearSolverMaxError, 1e7);
+template<class TypeTag>
+struct LinearSolverMaxError<TypeTag, TTag::ParallelBiCGStabLinearSolver>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e7;
+};
 
 } // namespace Opm::Properties
 

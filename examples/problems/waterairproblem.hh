@@ -126,10 +126,20 @@ template<class TypeTag>
 struct NewtonWriteConvergence<TypeTag, TTag::WaterAirBaseProblem> { static constexpr bool value = false; };
 
 // The default for the end time of the simulation (1 year)
-SET_SCALAR_PROP(WaterAirBaseProblem, EndTime, 1.0 * 365 * 24 * 60 * 60);
+template<class TypeTag>
+struct EndTime<TypeTag, TTag::WaterAirBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.0 * 365 * 24 * 60 * 60;
+};
 
 // The default for the initial time step size of the simulation
-SET_SCALAR_PROP(WaterAirBaseProblem, InitialTimeStepSize, 250);
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, TTag::WaterAirBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 250;
+};
 
 // The default DGF file to load
 SET_STRING_PROP(WaterAirBaseProblem, GridFile, "./data/waterair.dgf");

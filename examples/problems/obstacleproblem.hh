@@ -114,10 +114,20 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, TTag::ObstacleBaseProblem> { static constexpr bool value = true; };
 
 // The default for the end time of the simulation
-SET_SCALAR_PROP(ObstacleBaseProblem, EndTime, 1e4);
+template<class TypeTag>
+struct EndTime<TypeTag, TTag::ObstacleBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e4;
+};
 
 // The default for the initial time step size of the simulation
-SET_SCALAR_PROP(ObstacleBaseProblem, InitialTimeStepSize, 250);
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, TTag::ObstacleBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 250;
+};
 
 // The default DGF file to load
 SET_STRING_PROP(ObstacleBaseProblem, GridFile, "./data/obstacle_24x16.dgf");

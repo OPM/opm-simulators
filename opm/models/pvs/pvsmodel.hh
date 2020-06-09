@@ -120,13 +120,28 @@ template<class TypeTag>
 struct EnableDiffusion<TypeTag, TTag::PvsModel> { static constexpr bool value = false; };
 
 //! The basis value for the weight of the pressure primary variable
-SET_SCALAR_PROP(PvsModel, PvsPressureBaseWeight, 1.0);
+template<class TypeTag>
+struct PvsPressureBaseWeight<TypeTag, TTag::PvsModel>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.0;
+};
 
 //! The basis value for the weight of the saturation primary variables
-SET_SCALAR_PROP(PvsModel, PvsSaturationsBaseWeight, 1.0);
+template<class TypeTag>
+struct PvsSaturationsBaseWeight<TypeTag, TTag::PvsModel>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.0;
+};
 
 //! The basis value for the weight of the mole fraction primary variables
-SET_SCALAR_PROP(PvsModel, PvsMoleFractionsBaseWeight, 1.0);
+template<class TypeTag>
+struct PvsMoleFractionsBaseWeight<TypeTag, TTag::PvsModel>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.0;
+};
 
 } // namespace Opm::Properties
 

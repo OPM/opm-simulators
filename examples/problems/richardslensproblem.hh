@@ -122,10 +122,20 @@ template<class TypeTag>
 struct NewtonWriteConvergence<TypeTag, TTag::RichardsLensProblem> { static constexpr bool value = false; };
 
 // The default for the end time of the simulation
-SET_SCALAR_PROP(RichardsLensProblem, EndTime, 3000);
+template<class TypeTag>
+struct EndTime<TypeTag, TTag::RichardsLensProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 3000;
+};
 
 // The default for the initial time step size of the simulation
-SET_SCALAR_PROP(RichardsLensProblem, InitialTimeStepSize, 100);
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, TTag::RichardsLensProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 100;
+};
 
 // The default DGF file to load
 SET_STRING_PROP(RichardsLensProblem, GridFile, "./data/richardslens_24x16.dgf");

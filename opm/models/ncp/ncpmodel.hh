@@ -122,11 +122,26 @@ template<class TypeTag>
 struct Indices<TypeTag, TTag::NcpModel> { using type = Opm::NcpIndices<TypeTag, 0>; };
 
 //! The unmodified weight for the pressure primary variable
-SET_SCALAR_PROP(NcpModel, NcpPressureBaseWeight, 1.0);
+template<class TypeTag>
+struct NcpPressureBaseWeight<TypeTag, TTag::NcpModel>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.0;
+};
 //! The weight for the saturation primary variables
-SET_SCALAR_PROP(NcpModel, NcpSaturationsBaseWeight, 1.0);
+template<class TypeTag>
+struct NcpSaturationsBaseWeight<TypeTag, TTag::NcpModel>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.0;
+};
 //! The unmodified weight for the fugacity primary variables
-SET_SCALAR_PROP(NcpModel, NcpFugacitiesBaseWeight, 1.0e-6);
+template<class TypeTag>
+struct NcpFugacitiesBaseWeight<TypeTag, TTag::NcpModel>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.0e-6;
+};
 
 } // namespace Opm::Properties
 

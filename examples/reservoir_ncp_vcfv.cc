@@ -50,7 +50,12 @@ struct EnableStorageCache<TypeTag, TTag::ReservoirNcpVcfvProblem> { static const
 
 // reduce the base epsilon for the finite difference method to 10^-11. for some reason
 // the simulator converges better with this. (TODO: use automatic differentiation?)
-SET_SCALAR_PROP(ReservoirNcpVcfvProblem, BaseEpsilon, 1e-11);
+template<class TypeTag>
+struct BaseEpsilon<TypeTag, TTag::ReservoirNcpVcfvProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-11;
+};
 
 
 } // namespace Opm::Properties
