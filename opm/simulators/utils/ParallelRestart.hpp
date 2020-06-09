@@ -34,6 +34,7 @@
 #include <set>
 #include <tuple>
 #include <unordered_map>
+#include <variant>
 #include <vector>
 
 namespace Opm

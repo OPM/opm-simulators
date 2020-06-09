@@ -79,6 +79,14 @@ std::size_t packSize(const std::pair<T1,T2>& data, Dune::MPIHelper::MPICommunica
     return packSize(data.first, comm) + packSize(data.second, comm);
 }
 
+template<>
+std::size_t packSize(const std::monostate& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    int monostate_value;
+    return packSize(monostate_value, comm);
+}
+
+
 template<class T>
 std::size_t packSize(const std::optional<T>& data, Dune::MPIHelper::MPICommunicator comm)
 {
@@ -292,6 +300,15 @@ void pack(const std::pair<T1,T2>& data, std::vector<char>& buffer, int& position
     pack(data.first, buffer, position, comm);
     pack(data.second, buffer, position, comm);
 }
+
+template<>
+void pack(const std::monostate& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    int monostate_value = 77;
+    pack(monostate_value, buffer, position, comm);
+}
+
 
 template<class T>
 void pack(const std::optional<T>& data, std::vector<char>& buffer, int& position,
@@ -530,6 +547,14 @@ void unpack(std::pair<T1,T2>& data, std::vector<char>& buffer, int& position,
 {
     unpack(data.first, buffer, position, comm);
     unpack(data.second, buffer, position, comm);
+}
+
+template<>
+void unpack(std::monostate&, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    int monostate_value;
+    unpack(monostate_value, buffer, position, comm);
 }
 
 template<class T>
