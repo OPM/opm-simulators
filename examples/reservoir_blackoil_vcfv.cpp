@@ -40,7 +40,8 @@ struct ReservoirBlackOilVcfvProblem { using InheritsFrom = std::tuple<ReservoirB
 } // end namespace TTag
 
 // Select the vertex centered finite volume method as spatial discretization
-SET_TAG_PROP(ReservoirBlackOilVcfvProblem, SpatialDiscretizationSplice, VcfvDiscretization);
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::ReservoirBlackOilVcfvProblem> { using type = TTag::VcfvDiscretization; };
 
 } // namespace Opm::Properties
 

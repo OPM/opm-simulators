@@ -39,7 +39,8 @@ NEW_TYPE_TAG(PowerInjectionForchheimerAdProblem,
 
 template<class TypeTag>
 struct FluxModule<TypeTag, TTag::PowerInjectionForchheimerAdProblem> { using type = Opm::ForchheimerFluxModule<TypeTag>; };
-SET_TAG_PROP(PowerInjectionForchheimerAdProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::PowerInjectionForchheimerAdProblem> { using type = TTag::AutoDiffLocalLinearizer; };
 
 } // namespace Opm::Properties
 

@@ -57,10 +57,12 @@ struct LocalLinearizerSplice { using type = UndefinedProperty; };
 SET_SPLICES(FvBaseDiscretization, LinearSolverSplice, LocalLinearizerSplice);
 
 //! use a parallel BiCGStab linear solver by default
-SET_TAG_PROP(FvBaseDiscretization, LinearSolverSplice, ParallelBiCGStabLinearSolver);
+template<class TypeTag>
+struct LinearSolverSplice<TypeTag, TTag::FvBaseDiscretization> { using type = TTag::ParallelBiCGStabLinearSolver; };
 
 //! by default, use finite differences to linearize the system of PDEs
-SET_TAG_PROP(FvBaseDiscretization, LocalLinearizerSplice, FiniteDifferenceLocalLinearizer);
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::FvBaseDiscretization> { using type = TTag::FiniteDifferenceLocalLinearizer; };
 
 /*!
  * \brief Representation of a function evaluation and all necessary derivatives with

@@ -40,10 +40,12 @@ struct ReservoirNcpEcfvProblem { using InheritsFrom = std::tuple<ReservoirBasePr
 } // end namespace TTag
 
 // Select the element centered finite volume method as spatial discretization
-SET_TAG_PROP(ReservoirNcpEcfvProblem, SpatialDiscretizationSplice, EcfvDiscretization);
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::ReservoirNcpEcfvProblem> { using type = TTag::EcfvDiscretization; };
 
 //! use automatic differentiation to linearize the system of PDEs
-SET_TAG_PROP(ReservoirNcpEcfvProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::ReservoirNcpEcfvProblem> { using type = TTag::AutoDiffLocalLinearizer; };
 
 } // namespace Opm::Properties
 

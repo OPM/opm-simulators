@@ -38,7 +38,8 @@ namespace Opm::Properties {
 namespace TTag {
 struct FingerProblemEcfv { using InheritsFrom = std::tuple<FingerBaseProblem, ImmiscibleTwoPhaseModel>; };
 } // end namespace TTag
-SET_TAG_PROP(FingerProblemEcfv, SpatialDiscretizationSplice, EcfvDiscretization);
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::FingerProblemEcfv> { using type = TTag::EcfvDiscretization; };
 
 } // namespace Opm::Properties
 

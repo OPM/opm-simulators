@@ -39,7 +39,8 @@ NEW_TYPE_TAG(PowerInjectionDarcyFdProblem,
 
 template<class TypeTag>
 struct FluxModule<TypeTag, TTag::PowerInjectionDarcyFdProblem> { using type = Opm::DarcyFluxModule<TypeTag>; };
-SET_TAG_PROP(PowerInjectionDarcyFdProblem, LocalLinearizerSplice, FiniteDifferenceLocalLinearizer);
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::PowerInjectionDarcyFdProblem> { using type = TTag::FiniteDifferenceLocalLinearizer; };
 
 } // namespace Opm::Properties
 

@@ -145,7 +145,8 @@ struct InitialTimeStepSize<TypeTag, TTag::WaterAirBaseProblem>
 SET_STRING_PROP(WaterAirBaseProblem, GridFile, "./data/waterair.dgf");
 
 // Use the restarted GMRES linear solver with the ILU-2 preconditioner from dune-istl
-SET_TAG_PROP(WaterAirBaseProblem, LinearSolverSplice, ParallelIstlLinearSolver);
+template<class TypeTag>
+struct LinearSolverSplice<TypeTag, TTag::WaterAirBaseProblem> { using type = TTag::ParallelIstlLinearSolver; };
 SET_TYPE_PROP(WaterAirBaseProblem, LinearSolverWrapper,
               Opm::Linear::SolverWrapperRestartedGMRes<TypeTag>);
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2,7)

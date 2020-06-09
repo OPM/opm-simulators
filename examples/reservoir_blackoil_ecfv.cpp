@@ -41,10 +41,12 @@ struct ReservoirBlackOilEcfvProblem { using InheritsFrom = std::tuple<ReservoirB
 } // end namespace TTag
 
 // Select the element centered finite volume method as spatial discretization
-SET_TAG_PROP(ReservoirBlackOilEcfvProblem, SpatialDiscretizationSplice, EcfvDiscretization);
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::ReservoirBlackOilEcfvProblem> { using type = TTag::EcfvDiscretization; };
 
 // Use automatic differentiation to linearize the system of PDEs
-SET_TAG_PROP(ReservoirBlackOilEcfvProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::ReservoirBlackOilEcfvProblem> { using type = TTag::AutoDiffLocalLinearizer; };
 
 } // namespace Opm::Properties
 

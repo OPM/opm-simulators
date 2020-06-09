@@ -41,7 +41,8 @@ struct ReservoirNcpVcfvProblem { using InheritsFrom = std::tuple<ReservoirBasePr
 } // end namespace TTag
 
 // Select the vertex centered finite volume method as spatial discretization
-SET_TAG_PROP(ReservoirNcpVcfvProblem, SpatialDiscretizationSplice, VcfvDiscretization);
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::ReservoirNcpVcfvProblem> { using type = TTag::VcfvDiscretization; };
 
 // enable the storage cache for this problem so that the storage cache receives wider
 // testing
