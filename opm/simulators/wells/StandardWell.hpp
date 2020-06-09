@@ -440,7 +440,6 @@ namespace Opm
                                           Opm::DeferredLogger& deferred_logger) override;
 
         virtual void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
-                                                    const std::vector<Scalar>& B_avg,
                                                     const double dt,
                                                     const Well::InjectionControls& inj_controls,
                                                     const Well::ProductionControls& prod_controls,

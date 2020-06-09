@@ -1282,6 +1282,26 @@ namespace Opm
 
 
     template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::
+    iterateWellEquations(const Simulator& ebosSimulator,
+                         const std::vector<double>& B_avg,
+                         const double dt,
+                         WellState& well_state,
+                         Opm::DeferredLogger& deferred_logger)
+    {
+        const auto& summary_state = ebosSimulator.vanguard().summaryState();
+        const auto inj_controls = well_ecl_.isInjector() ? well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
+        const auto prod_controls = well_ecl_.isProducer() ? well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
+
+        return this->iterateWellEqWithControl(ebosSimulator, B_avg, dt, inj_controls, prod_controls, well_state, deferred_logger);
+    }
+
+
+
+
+
+    template<typename TypeTag>
     void
     WellInterface<TypeTag>::calculateReservoirRates(WellState& well_state) const
     {
@@ -1328,11 +1348,7 @@ namespace Opm
         // keep a copy of the original well state
         const WellState well_state0 = well_state;
         const double dt = ebosSimulator.timeStepSize();
-        const auto& summary_state = ebosSimulator.vanguard().summaryState();
-        const auto inj_controls = well_ecl_.isInjector() ? well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
-        const auto prod_controls = well_ecl_.isProducer() ? well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
-        const bool converged = iterateWellEqWithControl(ebosSimulator, B_avg, dt, inj_controls, prod_controls,
-                                                        well_state, deferred_logger);
+        const bool converged = iterateWellEquations(ebosSimulator, B_avg, dt, well_state, deferred_logger);
         if (converged) {
             deferred_logger.debug("WellTest: Well equation for well " + name() +  " converged");
         } else {

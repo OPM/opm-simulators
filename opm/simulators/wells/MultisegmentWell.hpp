@@ -407,25 +407,24 @@ namespace Opm
 
         bool accelerationalPressureLossConsidered() const;
 
-        bool iterateWellEqWithControl(const Simulator& ebosSimulator,
-                                      const std::vector<Scalar>& B_avg,
-                                      const double dt,
-                                      const Well::InjectionControls& inj_controls,
-                                      const Well::ProductionControls& prod_controls,
-                                      WellState& well_state,
-                                      Opm::DeferredLogger& deferred_logger);
-
-        virtual void wellTestingPhysical(const Simulator& simulator, const std::vector<double>& B_avg,
-                                         const double simulation_time, const int report_step,
-                                         WellState& well_state, WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger) override;
+        virtual bool iterateWellEqWithControl(const Simulator& ebosSimulator,
+                                              const std::vector<Scalar>& B_avg,
+                                              const double dt,
+                                              const Well::InjectionControls& inj_controls,
+                                              const Well::ProductionControls& prod_controls,
+                                              WellState& well_state,
+                                              Opm::DeferredLogger& deferred_logger) override;
 
         virtual void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
-                                    const std::vector<Scalar>& B_avg,
                                     const double dt,
                                     const Well::InjectionControls& inj_controls,
                                     const Well::ProductionControls& prod_controls,
                                     WellState& well_state,
                                     Opm::DeferredLogger& deferred_logger) override;
+
+        virtual void wellTestingPhysical(const Simulator& simulator, const std::vector<double>& B_avg,
+                                         const double simulation_time, const int report_step,
+                                         WellState& well_state, WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger) override;
 
         virtual void updateWaterThroughput(const double dt, WellState& well_state) const override;
 
