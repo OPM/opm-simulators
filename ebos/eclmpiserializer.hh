@@ -93,6 +93,39 @@ public:
         }
     }
 
+
+    //! \brief Handler for std::variant<> with three types
+    template<class T1, class T2, class T3>
+    void variant(std::variant<T1,T2,T3>& data)
+    {
+        auto handle = [&](auto& d)
+        {
+            d.serializeOp(*this);
+        };
+
+
+        if (m_op == Operation::PACKSIZE) {
+            m_packSize += Mpi::packSize(data.index(), m_comm);
+            std::visit( [&] (const auto& arg) { handle(arg); }, data);
+        } else if (m_op == Operation::PACK) {
+            Mpi::pack(data.index(), m_buffer, m_position, m_comm);
+            std::visit([&](const auto& arg) { handle(arg); }, data);
+        } else if (m_op == Operation::UNPACK) {
+            size_t index;
+            Mpi::unpack(index, m_buffer, m_position, m_comm);
+
+            if (index == 0)
+                handle(std::get<0>(data));
+            else if (index == 1)
+                handle(std::get<1>(data));
+            else if (index == 2)
+                handle(std::get<2>(data));
+            else
+                std::logic_error("Internal meltdown in std::variant<T1,T2,T3> unpack");
+        }
+    }
+
+
     //! \brief Handler for maps.
     //! \tparam Map map type
     //! \tparam complexType Whether or not Data in map is a complex type
