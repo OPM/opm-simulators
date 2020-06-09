@@ -39,12 +39,14 @@ namespace Opm::Properties {
 namespace TTag {
 struct Co2InjectionNcpNiEcfvProblem { using InheritsFrom = std::tuple<Co2InjectionBaseProblem, NcpModel>; };
 } // end namespace TTag
-SET_TAG_PROP(Co2InjectionNcpNiEcfvProblem, SpatialDiscretizationSplice, EcfvDiscretization);
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::Co2InjectionNcpNiEcfvProblem> { using type = TTag::EcfvDiscretization; };
 template<class TypeTag>
 struct EnableEnergy<TypeTag, TTag::Co2InjectionNcpNiEcfvProblem> { static constexpr bool value = true; };
 
 //! Use automatic differentiation to linearize the system of PDEs
-SET_TAG_PROP(Co2InjectionNcpNiEcfvProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::Co2InjectionNcpNiEcfvProblem> { using type = TTag::AutoDiffLocalLinearizer; };
 
 } // namespace Opm::Properties
 

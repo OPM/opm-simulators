@@ -38,10 +38,12 @@ namespace Opm::Properties {
 namespace TTag {
 struct RichardsLensEcfvProblem { using InheritsFrom = std::tuple<RichardsLensProblem>; };
 } // end namespace TTag
-SET_TAG_PROP(RichardsLensEcfvProblem, SpatialDiscretizationSplice, EcfvDiscretization);
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::RichardsLensEcfvProblem> { using type = TTag::EcfvDiscretization; };
 
 //! Use automatic differentiation to linearize the system of PDEs
-SET_TAG_PROP(RichardsLensEcfvProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::RichardsLensEcfvProblem> { using type = TTag::AutoDiffLocalLinearizer; };
 
 } // namespace Opm::Properties
 

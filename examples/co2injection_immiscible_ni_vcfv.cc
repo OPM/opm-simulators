@@ -37,7 +37,8 @@ namespace Opm::Properties {
 
 NEW_TYPE_TAG(Co2InjectionImmiscibleNiVcfvProblem, INHERITS_FROM(ImmiscibleModel,
                                                                 Co2InjectionBaseProblem));
-SET_TAG_PROP(Co2InjectionImmiscibleNiVcfvProblem, SpatialDiscretizationSplice, VcfvDiscretization);
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::Co2InjectionImmiscibleNiVcfvProblem> { using type = TTag::VcfvDiscretization; };
 
 template<class TypeTag>
 struct EnableEnergy<TypeTag, TTag::Co2InjectionImmiscibleNiVcfvProblem> { static constexpr bool value = true; };

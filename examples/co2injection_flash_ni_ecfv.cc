@@ -41,13 +41,15 @@ namespace Opm::Properties {
 namespace TTag {
 struct Co2InjectionFlashNiEcfvProblem { using InheritsFrom = std::tuple<Co2InjectionBaseProblem, FlashModel>; };
 } // end namespace TTag
-SET_TAG_PROP(Co2InjectionFlashNiEcfvProblem, SpatialDiscretizationSplice, EcfvDiscretization);
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::Co2InjectionFlashNiEcfvProblem> { using type = TTag::EcfvDiscretization; };
 
 template<class TypeTag>
 struct EnableEnergy<TypeTag, TTag::Co2InjectionFlashNiEcfvProblem> { static constexpr bool value = true; };
 
 //! Use automatic differentiation to linearize the system of PDEs
-SET_TAG_PROP(Co2InjectionFlashNiEcfvProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::Co2InjectionFlashNiEcfvProblem> { using type = TTag::AutoDiffLocalLinearizer; };
 
 // use the CO2 injection problem adapted flash solver
 SET_TYPE_PROP(
@@ -64,7 +66,8 @@ struct Scalar<TypeTag, TTag::Co2InjectionFlashNiEcfvProblem> { using type = quad
 
 // the default linear solver used for this problem (-> AMG) cannot be used with quadruple
 // precision scalars... (this seems to only apply to Dune >= 2.4)
-SET_TAG_PROP(Co2InjectionFlashNiEcfvProblem, LinearSolverSplice, ParallelBiCGStabLinearSolver);
+template<class TypeTag>
+struct LinearSolverSplice<TypeTag, TTag::Co2InjectionFlashNiEcfvProblem> { using type = TTag::ParallelBiCGStabLinearSolver; };
 #else
 template<class TypeTag>
 struct NewtonTolerance<TypeTag, TTag::Co2InjectionFlashNiEcfvProblem>

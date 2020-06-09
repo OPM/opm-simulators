@@ -155,7 +155,8 @@ SET_TYPE_PROP(Co2InjectionBaseProblem, SolidEnergyLaw,
               Opm::ConstantSolidHeatCapLaw<GetPropType<TypeTag, Properties::Scalar>>);
 
 // Use the algebraic multi-grid linear solver for this problem
-SET_TAG_PROP(Co2InjectionBaseProblem, LinearSolverSplice, ParallelAmgLinearSolver);
+template<class TypeTag>
+struct LinearSolverSplice<TypeTag, TTag::Co2InjectionBaseProblem> { using type = TTag::ParallelAmgLinearSolver; };
 
 // Write the Newton convergence behavior to disk?
 template<class TypeTag>

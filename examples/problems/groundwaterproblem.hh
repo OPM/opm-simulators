@@ -166,7 +166,8 @@ SET_STRING_PROP(GroundWaterBaseProblem, GridFile, "./data/groundwater_2d.dgf");
 
 // Use the conjugated gradient linear solver with the default preconditioner (i.e.,
 // ILU-0) from dune-istl
-SET_TAG_PROP(GroundWaterBaseProblem, LinearSolverSplice, ParallelIstlLinearSolver);
+template<class TypeTag>
+struct LinearSolverSplice<TypeTag, TTag::GroundWaterBaseProblem> { using type = TTag::ParallelIstlLinearSolver; };
 SET_TYPE_PROP(GroundWaterBaseProblem, LinearSolverWrapper,
               Opm::Linear::SolverWrapperConjugatedGradients<TypeTag>);
 

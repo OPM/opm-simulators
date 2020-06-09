@@ -40,7 +40,8 @@ struct LensProblemVcfvFd { using InheritsFrom = std::tuple<LensBaseProblem, Immi
 } // end namespace TTag
 
 // use the finite difference methodfor this simulator
-SET_TAG_PROP(LensProblemVcfvFd, LocalLinearizerSplice, FiniteDifferenceLocalLinearizer);
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::LensProblemVcfvFd> { using type = TTag::FiniteDifferenceLocalLinearizer; };
 
 // use linear finite element gradients if dune-localfunctions is available
 #if HAVE_DUNE_LOCALFUNCTIONS

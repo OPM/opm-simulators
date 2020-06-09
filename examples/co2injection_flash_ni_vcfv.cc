@@ -41,7 +41,8 @@ namespace Opm::Properties {
 namespace TTag {
 struct Co2InjectionFlashNiVcfvProblem { using InheritsFrom = std::tuple<Co2InjectionBaseProblem, FlashModel>; };
 } // end namespace TTag
-SET_TAG_PROP(Co2InjectionFlashNiVcfvProblem, SpatialDiscretizationSplice, VcfvDiscretization);
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::Co2InjectionFlashNiVcfvProblem> { using type = TTag::VcfvDiscretization; };
 
 template<class TypeTag>
 struct EnableEnergy<TypeTag, TTag::Co2InjectionFlashNiVcfvProblem> { static constexpr bool value = true; };
@@ -61,7 +62,8 @@ struct Scalar<TypeTag, TTag::Co2InjectionFlashNiVcfvProblem> { using type = quad
 
 // the default linear solver used for this problem (-> AMG) cannot be used with quadruple
 // precision scalars... (this seems to only apply to Dune >= 2.4)
-SET_TAG_PROP(Co2InjectionFlashNiVcfvProblem, LinearSolverSplice, ParallelBiCGStabLinearSolver);
+template<class TypeTag>
+struct LinearSolverSplice<TypeTag, TTag::Co2InjectionFlashNiVcfvProblem> { using type = TTag::ParallelBiCGStabLinearSolver; };
 #else
 template<class TypeTag>
 struct NewtonTolerance<TypeTag, TTag::Co2InjectionFlashNiVcfvProblem>

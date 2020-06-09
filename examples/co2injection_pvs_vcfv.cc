@@ -40,7 +40,8 @@ namespace Opm::Properties {
 namespace TTag {
 struct Co2InjectionPvsVcfvProblem { using InheritsFrom = std::tuple<Co2InjectionBaseProblem, PvsModel>; };
 } // end namespace TTag
-SET_TAG_PROP(Co2InjectionPvsVcfvProblem, SpatialDiscretizationSplice, VcfvDiscretization);
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::Co2InjectionPvsVcfvProblem> { using type = TTag::VcfvDiscretization; };
 
 } // namespace Opm::Properties
 

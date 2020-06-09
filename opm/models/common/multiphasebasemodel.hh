@@ -64,7 +64,8 @@ SET_SPLICES(MultiPhaseBaseModel, SpatialDiscretizationSplice);
 //! Set the default spatial discretization
 //!
 //! We use a vertex centered finite volume method by default
-SET_TAG_PROP(MultiPhaseBaseModel, SpatialDiscretizationSplice, VcfvDiscretization);
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::MultiPhaseBaseModel> { using type = TTag::VcfvDiscretization; };
 
 //! set the number of equations to the number of phases
 template<class TypeTag>

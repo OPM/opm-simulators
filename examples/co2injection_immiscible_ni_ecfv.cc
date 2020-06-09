@@ -44,7 +44,8 @@ template<class TypeTag>
 struct EnableEnergy<TypeTag, TTag::Co2InjectionImmiscibleNiEcfvProblem> { static constexpr bool value = true; };
 
 //! Use automatic differentiation to linearize the system of PDEs
-SET_TAG_PROP(Co2InjectionImmiscibleNiEcfvProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::Co2InjectionImmiscibleNiEcfvProblem> { using type = TTag::AutoDiffLocalLinearizer; };
 
 } // namespace Opm::Properties
 
