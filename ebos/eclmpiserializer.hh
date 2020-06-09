@@ -22,6 +22,7 @@
 #define ECL_MPI_SERIALIZER_HH
 
 #include <opm/simulators/utils/ParallelRestart.hpp>
+#include <variant>
 
 namespace Opm {
 
@@ -48,6 +49,8 @@ public:
             ptr(data);
         } else if constexpr (is_pair<T>::value) {
             pair(data);
+        } else if constexpr (is_variant<T>::value) {
+            variant(data);
         } else {
           if (m_op == Operation::PACKSIZE)
               m_packSize += Mpi::packSize(data, m_comm);
@@ -92,6 +95,54 @@ public:
             handle(data);
         }
     }
+
+
+    //! \brief Handler for std::variant<> with three types
+
+    /*
+      The std::variant<> serialization is a first attempt and *not* particularly
+      general. In particular that implies:
+
+        1. It is hardcoded to hold exactly three alternative types T1, T2 and
+           T3.
+
+        2. All the three types T1, T2 and T3 must implement the ::serializeOp( )
+           method. This implies that a variant with a fundamental type like e.g.
+           std::variant<int, Opm::Well, Opm::Group> will *not* work in the
+           current implementation.
+    */
+    template<class T1, class T2, class T3>
+    void variant(const std::variant<T1,T2,T3>& _data)
+    {
+        auto handle = [&](auto& d) {
+            d.serializeOp(*this);
+        };
+
+        std::variant<T1,T2,T3>& data = const_cast<std::variant<T1,T2,T3>&>(_data);
+        if (m_op == Operation::PACKSIZE) {
+            m_packSize += Mpi::packSize(data.index(), m_comm);
+            std::visit( [&] (auto& arg) { handle(arg); }, data);
+        } else if (m_op == Operation::PACK) {
+            Mpi::pack(data.index(), m_buffer, m_position, m_comm);
+            std::visit([&](auto& arg) { handle(arg); }, data);
+        } else if (m_op == Operation::UNPACK) {
+            size_t index;
+            Mpi::unpack(index, m_buffer, m_position, m_comm);
+
+            if (index == 0) {
+                data = T1();
+                handle(std::get<0>(data));
+            } else if (index == 1) {
+                data = T2();
+                handle(std::get<1>(data));
+            } else if (index == 2) {
+                data = T3();
+                handle(std::get<2>(data));
+            } else
+                std::logic_error("Internal meltdown in std::variant<T1,T2,T3> unpack");
+        }
+    }
+
 
     //! \brief Handler for maps.
     //! \tparam Map map type
@@ -229,6 +280,17 @@ protected:
 
     template<class T1>
     struct is_vector<std::vector<T1>> {
+        constexpr static bool value = true;
+    };
+
+    //! \brief Predicate for detecting variants.
+    template<class T>
+    struct is_variant {
+        constexpr static bool value = false;
+    };
+
+    template<class... Ts>
+    struct is_variant<std::variant<Ts...>> {
         constexpr static bool value = true;
     };
 
