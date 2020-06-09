@@ -240,7 +240,8 @@ template<class TypeTag>
 struct EnableGridAdaptation<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = false; };
 
 //! By default, write the simulation output to the current working directory
-SET_STRING_PROP(FvBaseDiscretization, OutputDir, ".");
+template<class TypeTag>
+struct OutputDir<TypeTag, TTag::FvBaseDiscretization> { static constexpr auto value = "."; };
 
 //! Enable the VTK output by default
 template<class TypeTag>

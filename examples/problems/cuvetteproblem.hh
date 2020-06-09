@@ -139,7 +139,8 @@ struct InitialTimeStepSize<TypeTag, TTag::CuvetteBaseProblem>
 };
 
 // The default DGF file to load
-SET_STRING_PROP(CuvetteBaseProblem, GridFile, "./data/cuvette_11x4.dgf");
+template<class TypeTag>
+struct GridFile<TypeTag, TTag::CuvetteBaseProblem> { static constexpr auto value = "./data/cuvette_11x4.dgf"; };
 
 } // namespace Opm::Properties
 

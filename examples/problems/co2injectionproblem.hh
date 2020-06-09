@@ -208,7 +208,8 @@ struct Temperature<TypeTag, TTag::Co2InjectionBaseProblem>
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 293.15;
 };
-SET_STRING_PROP(Co2InjectionBaseProblem, SimulationName, "co2injection");
+template<class TypeTag>
+struct SimulationName<TypeTag, TTag::Co2InjectionBaseProblem> { static constexpr auto value = "co2injection"; };
 
 // The default for the end time of the simulation
 template<class TypeTag>
@@ -227,7 +228,8 @@ struct InitialTimeStepSize<TypeTag, TTag::Co2InjectionBaseProblem>
 };
 
 // The default DGF file to load
-SET_STRING_PROP(Co2InjectionBaseProblem, GridFile, "data/co2injection.dgf");
+template<class TypeTag>
+struct GridFile<TypeTag, TTag::Co2InjectionBaseProblem> { static constexpr auto value = "data/co2injection.dgf"; };
 
 } // namespace Opm::Properties
 

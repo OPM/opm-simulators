@@ -169,7 +169,8 @@ public:
 };
 
 // The default DGF file to load
-SET_STRING_PROP(ReservoirBaseProblem, GridFile, "data/reservoir.dgf");
+template<class TypeTag>
+struct GridFile<TypeTag, TTag::ReservoirBaseProblem> { static constexpr auto value = "data/reservoir.dgf"; };
 
 // increase the tolerance for this problem to get larger time steps
 template<class TypeTag>

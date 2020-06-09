@@ -94,7 +94,8 @@ struct InitialTimeStepSize<TypeTag, TTag::OutflowBaseProblem>
 };
 
 // The default DGF file to load
-SET_STRING_PROP(OutflowBaseProblem, GridFile, "./data/outflow.dgf");
+template<class TypeTag>
+struct GridFile<TypeTag, TTag::OutflowBaseProblem> { static constexpr auto value = "./data/outflow.dgf"; };
 
 } // namespace Opm::Properties
 
