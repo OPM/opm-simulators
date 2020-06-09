@@ -22,7 +22,7 @@
 
 #include <opm/simulators/flow/Main.hpp>
 #include <opm/simulators/linalg/ISTLSolverEbosFlexible.hpp>
-#include <opm/ebos/eclfluxmoduleseq.hh>
+#include <ebos/eclfluxmoduleseq.hh>
 BEGIN_PROPERTIES
 NEW_TYPE_TAG(EclFlowProblemSimple, INHERITS_FROM(EclFlowProblem));
 NEW_PROP_TAG(FluidState);

@@ -42,7 +42,7 @@
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 */
-
+#include "totalfluxupwind.hh"
 namespace Opm {
 
    
@@ -176,13 +176,8 @@ public:
      * \param phaseIdx The index of the fluid phase
      */
     const Evaluation& volumeFlux(unsigned phaseIdx) const
-    { // could be used to check in the fully implicit cas
-        Scalar control = volumeFlux_[phaseIdx];
-        Scalar fmob =1;
-        Scalar mobT =1;    
-        
-
-
+    { 
+        return volumeFlux_[phaseIdx];
     }
 
 protected:
@@ -375,8 +370,10 @@ protected:
      */
     void calculateGradientsSeq_(const ElementContext& elemCtx, unsigned scvfIdx, unsigned timeIdx)
     {
+        //NB a bit hacky
+        LinearizationType linearizationType = elemCtx.simulator().model().linearizer().getLinearizationType(); 
         Opm::Valgrind::SetUndefined(*this);
-
+        
         const auto& problem = elemCtx.problem();
         const auto& stencil = elemCtx.stencil(timeIdx);
         const auto& scvf = stencil.interiorFace(scvfIdx);
@@ -385,11 +382,11 @@ protected:
         exteriorDofIdx_ = scvf.exteriorIndex();
         assert(interiorDofIdx_ != exteriorDofIdx_);
 
-        unsigned I = stencil.globalSpaceIndex(interiorDofIdx_);
-        unsigned J = stencil.globalSpaceIndex(exteriorDofIdx_);
+        //unsigned I = stencil.globalSpaceIndex(interiorDofIdx_);
+        //unsigned J = stencil.globalSpaceIndex(exteriorDofIdx_);
 
-        Scalar trans = problem.transmissibility(elemCtx, interiorDofIdx_, exteriorDofIdx_);
-        Scalar faceArea = scvf.area();
+        Evaluation trans = problem.transmissibility(elemCtx, interiorDofIdx_, exteriorDofIdx_);
+        Scalar faceArea = scvf.area();//NB check definition of flux
         
         // estimate the gravity correction: for performance reasons we use a simplified
         // approach for this flux module that assumes that gravity is constant and always
@@ -449,20 +446,20 @@ protected:
             Scalar rhoEx = Toolbox::value(intQuantsEx.fluidState().density(phaseIdx));
             Evaluation rhoAvg = (rhoIn + rhoEx)/2;
 
-            headDiff2[phaseIdx] = rhoAvg*(distZ*g);
+            headDiff[phaseIdx] = rhoAvg*(distZ*g);
             mob1[phaseIdx] = intQuantsIn.mobility(phaseIdx);
             mob2[phaseIdx] = Toolbox::value(intQuantsEx.mobility(phaseIdx));
         }
-        Evaluation ST1 = intQuantsIn.totalSaturation();
-        Evaluation ST2 = Toolbox::value(intQuantsEx.totalSaturation(phaseIdx));
+        Evaluation ST1 = intQuantsIn.fluidState().totalSaturation();
+        Evaluation ST2 = Toolbox::value(intQuantsEx.fluidState().totalSaturation());
         
-        std::array<int, NumPhases> upwind;
+        std::array<int, numPhases> upwind;
         connectionMultiPhaseUpwind(upwind,
-                                   headDiff_,
+                                   headDiff,
                                    mob1,
                                    mob2,
                                    trans,
-                                   totalFlux_);
+                                   totalFlux_);//NB! taken from the object it self..
         
         Evaluation fmob[numPhases];//upwind weighted total saturation
         Evaluation fst[numPhases];// upwindweighted total saturation
@@ -471,13 +468,17 @@ protected:
             if (!FluidSystem::phaseIsActive(phaseIdx))
                 continue;
             if(upwind[phaseIdx] > 0){
-                assert(upIdx_[phaseIdx_] == interieorDofIdx_);
+                if(linearizationType.type == Opm::LinearizationType::implicit){   
+                    assert(upIdx_[phaseIdx] == interiorDofIdx_);//NB test for implicit
+                }
                 upIdx_[phaseIdx] = interiorDofIdx_;
                 dnIdx_[phaseIdx] = exteriorDofIdx_;
                 fmob[phaseIdx] = mob1[phaseIdx];
                 fst[phaseIdx] = ST1;
             }else{
-                assert(upIdx_[phaseIdx_] == exteriorDofIdx_);
+             if(linearizationType.type == Opm::LinearizationType::implicit){   
+                assert(upIdx_[phaseIdx] == exteriorDofIdx_);//NB test for implicit
+             }
                 upIdx_[phaseIdx] = exteriorDofIdx_;
                 dnIdx_[phaseIdx] = interiorDofIdx_;
                 fmob[phaseIdx] = mob2[phaseIdx];
@@ -487,25 +488,138 @@ protected:
         }
         if(linearizationType.type == Opm::LinearizationType::seqtransport){
             //needed? where should volumeFlux_ should probably be a scalar
-            volumeFlux_ = Toolbox::value(volumeFlux_);
+            totalFlux_ = Toolbox::value(totalFlux_);
         }
         
         
         for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
             if (!FluidSystem::phaseIsActive(phaseIdx))
                 continue;
-            mobG = 0;
+            Evaluation mobG = 0;
             for (unsigned phaseIdx1=0; phaseIdx1 < numPhases; phaseIdx1++) {
-                if( phaseIdx ~= phaseIdx1 ){
-                    mobG = mobG + fmob*(headDiff_[phaseIdx] - headDiff_[phaseIdx1]);
+                if( not(phaseIdx == phaseIdx1) ){
+                    mobG = mobG + fmob[phaseIdx]*(headDiff[phaseIdx] - headDiff[phaseIdx1]);
                 }
             }
-            Evaluation pFlux = (1.0./mobT) * (totalFlux_ + trans * mobG);
-            assert(pFlux == volumeFlux_[phaseIdx]); // for testing code in fully implit mode 
-            volumeFlux_[phaseIdx] = fst[phaseIdx] * mobTinv * (totalFlux_ + trans * fmob);
+            Evaluation pFlux = (1.0/mobT) * (totalFlux_ + trans * mobG);
+            if(linearizationType.type == Opm::LinearizationType::implicit){   
+                assert(pFlux == volumeFlux_[phaseIdx]); // for testing code in fully implit mode
+            }    
+            volumeFlux_[phaseIdx] = fst[phaseIdx] * pFlux;
         }          
     }
 
+
+    /*!
+     * \brief Update the required gradients for boundary faces
+     */
+    template <class FluidState>
+    void calculateBoundaryGradients_(const ElementContext& elemCtx,
+                                     unsigned scvfIdx,
+                                     unsigned timeIdx,
+                                     const FluidState& exFluidState)
+    {
+        const auto& problem = elemCtx.problem();
+
+        bool enableBoundaryMassFlux = problem.nonTrivialBoundaryConditions();
+        if (!enableBoundaryMassFlux)
+            return;
+
+        const auto& stencil = elemCtx.stencil(timeIdx);
+        const auto& scvf = stencil.boundaryFace(scvfIdx);
+
+        interiorDofIdx_ = scvf.interiorIndex();
+
+        Scalar trans = problem.transmissibilityBoundary(elemCtx, scvfIdx);
+        Scalar faceArea = scvf.area();
+
+        // estimate the gravity correction: for performance reasons we use a simplified
+        // approach for this flux module that assumes that gravity is constant and always
+        // acts into the downwards direction. (i.e., no centrifuge experiments, sorry.)
+        Scalar g = elemCtx.problem().gravity()[dimWorld - 1];
+
+        const auto& intQuantsIn = elemCtx.intensiveQuantities(interiorDofIdx_, timeIdx);
+
+        // this is quite hacky because the dune grid interface does not provide a
+        // cellCenterDepth() method (so we ask the problem to provide it). The "good"
+        // solution would be to take the Z coordinate of the element centroids, but since
+        // ECL seems to like to be inconsistent on that front, it needs to be done like
+        // here...
+        Scalar zIn = problem.dofCenterDepth(elemCtx, interiorDofIdx_, timeIdx);
+        Scalar zEx = scvf.integrationPos()[dimWorld - 1];
+
+        // the distances from the DOF's depths. (i.e., the additional depth of the
+        // exterior DOF)
+        Scalar distZ = zIn - zEx;
+
+        for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
+            if (!FluidSystem::phaseIsActive(phaseIdx))
+                continue;
+
+            // do the gravity correction: compute the hydrostatic pressure for the
+            // integration position
+            const Evaluation& rhoIn = intQuantsIn.fluidState().density(phaseIdx);
+            const auto& rhoEx = exFluidState.density(phaseIdx);
+            Evaluation rhoAvg = (rhoIn + rhoEx)/2;
+
+            const Evaluation& pressureInterior = intQuantsIn.fluidState().pressure(phaseIdx);
+            Evaluation pressureExterior = exFluidState.pressure(phaseIdx);
+            pressureExterior += rhoAvg*(distZ*g);
+
+            pressureDifference_[phaseIdx] = pressureExterior - pressureInterior;
+
+            // decide the upstream index for the phase. for this we make sure that the
+            // degree of freedom which is regarded upstream if both pressures are equal
+            // is always the same: if the pressure is equal, the DOF with the lower
+            // global index is regarded to be the upstream one.
+            if (pressureDifference_[phaseIdx] > 0.0) {
+                upIdx_[phaseIdx] = -1;
+                dnIdx_[phaseIdx] = interiorDofIdx_;
+            }
+            else {
+                upIdx_[phaseIdx] = interiorDofIdx_;
+                dnIdx_[phaseIdx] = -1;
+            }
+
+            Evaluation transModified = trans;
+
+            short upstreamIdx = upstreamIndex_(phaseIdx);
+            if (upstreamIdx == interiorDofIdx_) {
+
+                // this is slightly hacky because in the automatic differentiation case, it
+                // only works for the element centered finite volume method. for ebos this
+                // does not matter, though.
+                const auto& up = elemCtx.intensiveQuantities(upstreamIdx, timeIdx);
+
+                // deal with water induced rock compaction
+                transModified *= problem.template rockCompTransMultiplier<double>(up, stencil.globalSpaceIndex(upstreamIdx));
+
+                volumeFlux_[phaseIdx] =
+                    pressureDifference_[phaseIdx]*up.mobility(phaseIdx)*(-transModified/faceArea);
+
+                if (enableSolvent && phaseIdx == gasPhaseIdx)
+                    asImp_().setSolventVolumeFlux( pressureDifference_[phaseIdx]*up.solventMobility()*(-transModified/faceArea));
+            }
+            else {
+                // compute the phase mobility using the material law parameters of the
+                // interior element. TODO: this could probably be done more efficiently
+                const auto& matParams =
+                    elemCtx.problem().materialLawParams(elemCtx,
+                                                        interiorDofIdx_,
+                                                        /*timeIdx=*/0);
+                typename FluidState::Scalar kr[numPhases];
+                MaterialLaw::relativePermeabilities(kr, matParams, exFluidState);
+
+                const auto& mob = kr[phaseIdx]/exFluidState.viscosity(phaseIdx);
+                volumeFlux_[phaseIdx] =
+                    pressureDifference_[phaseIdx]*mob*(-transModified/faceArea);
+
+                // Solvent inflow is not yet supported
+                if (enableSolvent && phaseIdx == gasPhaseIdx)
+                    asImp_().setSolventVolumeFlux(0.0);
+            }
+        }
+    }
 
     /*!
      * \brief Update the volumetric fluxes for all fluid phases on the interior faces of the context

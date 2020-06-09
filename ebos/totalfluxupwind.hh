@@ -15,7 +15,7 @@
 */
 
 
-#include <opm/autodiff/multiPhaseUpwind.hpp>
+//#include <opm/autodiff/multiPhaseUpwind.hpp>
 #include <algorithm>
 #include <utility>
 
@@ -23,8 +23,8 @@
 namespace Opm
 {
     
-    template<class Scalar,class VectorType,class IntVectorType>
-    VectorType connectionMultiPhaseUpwind(IntVectorType& upwind,
+    template<class Scalar, class VectorType,class IntVectorType>
+    void connectionMultiPhaseUpwind(IntVectorType& upwind,
                                           const VectorType& head_diff,
                                           const VectorType& mob1,
                                           const VectorType& mob2,
