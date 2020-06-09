@@ -138,7 +138,8 @@ struct InitialTimeStepSize<TypeTag, TTag::RichardsLensProblem>
 };
 
 // The default DGF file to load
-SET_STRING_PROP(RichardsLensProblem, GridFile, "./data/richardslens_24x16.dgf");
+template<class TypeTag>
+struct GridFile<TypeTag, TTag::RichardsLensProblem> { static constexpr auto value = "./data/richardslens_24x16.dgf"; };
 
 } // namespace Opm::Properties
 

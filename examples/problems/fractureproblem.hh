@@ -162,7 +162,8 @@ template<class TypeTag>
 struct EnableConstraints<TypeTag, TTag::FractureProblem> { static constexpr bool value = true; };
 
 // Set the default value for the file name of the grid
-SET_STRING_PROP(FractureProblem, GridFile, "data/fracture.art.dgf");
+template<class TypeTag>
+struct GridFile<TypeTag, TTag::FractureProblem> { static constexpr auto value = "data/fracture.art.dgf"; };
 
 // Set the default value for the end time
 template<class TypeTag>

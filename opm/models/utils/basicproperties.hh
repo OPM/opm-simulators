@@ -203,10 +203,12 @@ struct ParameterTree<TypeTag, TTag::NumericModel>
 };
 
 //! use the global group as default for the model's parameter group
-SET_STRING_PROP(NumericModel, ModelParameterGroup, "");
+template<class TypeTag>
+struct ModelParameterGroup<TypeTag, TTag::NumericModel> { static constexpr auto value = ""; };
 
 //! Set a value for the GridFile property
-SET_STRING_PROP(NumericModel, GridFile, "");
+template<class TypeTag>
+struct GridFile<TypeTag, TTag::NumericModel> { static constexpr auto value = ""; };
 
 #if HAVE_DUNE_FEM
 template<class TypeTag>
@@ -228,7 +230,8 @@ struct GridView<TypeTag, TTag::NumericModel> { using type = typename GetPropType
 #endif
 
 //! Set a value for the ParameterFile property
-SET_STRING_PROP(NumericModel, ParameterFile, "");
+template<class TypeTag>
+struct ParameterFile<TypeTag, TTag::NumericModel> { static constexpr auto value = ""; };
 
 //! Set the number of refinement levels of the grid to 0. This does not belong
 //! here, strictly speaking.
@@ -268,7 +271,8 @@ struct RestartTime<TypeTag, TTag::NumericModel>
 };
 
 //! By default, do not force any time steps
-SET_STRING_PROP(NumericModel, PredeterminedTimeStepsFile, "");
+template<class TypeTag>
+struct PredeterminedTimeStepsFile<TypeTag, TTag::NumericModel> { static constexpr auto value = ""; };
 
 
 } // namespace Opm::Properties

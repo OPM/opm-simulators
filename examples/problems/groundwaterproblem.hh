@@ -162,7 +162,8 @@ struct InitialTimeStepSize<TypeTag, TTag::GroundWaterBaseProblem>
 };
 
 // The default DGF file to load
-SET_STRING_PROP(GroundWaterBaseProblem, GridFile, "./data/groundwater_2d.dgf");
+template<class TypeTag>
+struct GridFile<TypeTag, TTag::GroundWaterBaseProblem> { static constexpr auto value = "./data/groundwater_2d.dgf"; };
 
 // Use the conjugated gradient linear solver with the default preconditioner (i.e.,
 // ILU-0) from dune-istl

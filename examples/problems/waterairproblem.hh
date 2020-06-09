@@ -142,7 +142,8 @@ struct InitialTimeStepSize<TypeTag, TTag::WaterAirBaseProblem>
 };
 
 // The default DGF file to load
-SET_STRING_PROP(WaterAirBaseProblem, GridFile, "./data/waterair.dgf");
+template<class TypeTag>
+struct GridFile<TypeTag, TTag::WaterAirBaseProblem> { static constexpr auto value = "./data/waterair.dgf"; };
 
 // Use the restarted GMRES linear solver with the ILU-2 preconditioner from dune-istl
 template<class TypeTag>

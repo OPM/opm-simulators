@@ -130,7 +130,8 @@ struct InitialTimeStepSize<TypeTag, TTag::ObstacleBaseProblem>
 };
 
 // The default DGF file to load
-SET_STRING_PROP(ObstacleBaseProblem, GridFile, "./data/obstacle_24x16.dgf");
+template<class TypeTag>
+struct GridFile<TypeTag, TTag::ObstacleBaseProblem> { static constexpr auto value = "./data/obstacle_24x16.dgf"; };
 
 } // namespace Opm::Properties
 
