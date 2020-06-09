@@ -387,7 +387,7 @@ protected:
 
         Evaluation trans = problem.transmissibility(elemCtx, interiorDofIdx_, exteriorDofIdx_);
         Scalar faceArea = scvf.area();//NB check definition of flux
-        
+        trans /= faceArea; // all calculations here is done for pr area
         // estimate the gravity correction: for performance reasons we use a simplified
         // approach for this flux module that assumes that gravity is constant and always
         // acts into the downwards direction. (i.e., no centrifuge experiments, sorry.)
@@ -444,9 +444,14 @@ protected:
             // external at the depth of the internal one
             const Evaluation& rhoIn = intQuantsIn.fluidState().density(phaseIdx);
             Scalar rhoEx = Toolbox::value(intQuantsEx.fluidState().density(phaseIdx));
-            Evaluation rhoAvg = (rhoIn + rhoEx)/2;
-
+            Evaluation rhoAvg = (rhoIn + rhoEx)/2;            
             headDiff[phaseIdx] = rhoAvg*(distZ*g);
+
+            // also add capillary part
+            const Evaluation& pcIn = intQuantsIn.fluidState().pc(phaseIdx);
+            Scalar pcEx = Toolbox::value(intQuantsEx.fluidState().pc(phaseIdx));
+            headDiff[phaseIdx] -= (pcIn-pcEx);
+            
             mob1[phaseIdx] = intQuantsIn.mobility(phaseIdx);
             mob2[phaseIdx] = Toolbox::value(intQuantsEx.mobility(phaseIdx));
         }
@@ -468,16 +473,20 @@ protected:
             if (!FluidSystem::phaseIsActive(phaseIdx))
                 continue;
             if(upwind[phaseIdx] > 0){
-                if(linearizationType.type == Opm::LinearizationType::implicit){   
-                    assert(upIdx_[phaseIdx] == interiorDofIdx_);//NB test for implicit
+                if(linearizationType.type == Opm::LinearizationType::implicit){
+                    if(not(pressureDifference_[phaseIdx] == 0.0)){
+                        assert(upIdx_[phaseIdx] == interiorDofIdx_);//NB test for implicit
+                    }
                 }
                 upIdx_[phaseIdx] = interiorDofIdx_;
                 dnIdx_[phaseIdx] = exteriorDofIdx_;
                 fmob[phaseIdx] = mob1[phaseIdx];
                 fst[phaseIdx] = ST1;
             }else{
-             if(linearizationType.type == Opm::LinearizationType::implicit){   
-                assert(upIdx_[phaseIdx] == exteriorDofIdx_);//NB test for implicit
+             if(linearizationType.type == Opm::LinearizationType::implicit){
+                 if(not(pressureDifference_[phaseIdx] == 0.0)){
+                     assert(upIdx_[phaseIdx] == exteriorDofIdx_);//NB test for implicit
+                 }
              }
                 upIdx_[phaseIdx] = exteriorDofIdx_;
                 dnIdx_[phaseIdx] = interiorDofIdx_;
@@ -501,7 +510,7 @@ protected:
                     mobG = mobG + fmob[phaseIdx]*(headDiff[phaseIdx] - headDiff[phaseIdx1]);
                 }
             }
-            Evaluation pFlux = (1.0/mobT) * (totalFlux_ + trans * mobG);
+            Evaluation pFlux = fmob[phaseIdx]*(1.0/mobT) * (totalFlux_ + trans * mobG);
             if(linearizationType.type == Opm::LinearizationType::implicit){   
                 assert(pFlux == volumeFlux_[phaseIdx]); // for testing code in fully implit mode
             }    
