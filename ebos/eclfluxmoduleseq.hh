@@ -450,7 +450,7 @@ protected:
             // also add capillary part
             const Evaluation& pcIn = intQuantsIn.fluidState().pc(phaseIdx);
             Scalar pcEx = Toolbox::value(intQuantsEx.fluidState().pc(phaseIdx));
-            headDiff[phaseIdx] -= (pcIn-pcEx);
+            headDiff[phaseIdx] += (pcIn-pcEx);
             
             mob1[phaseIdx] = intQuantsIn.mobility(phaseIdx);
             mob2[phaseIdx] = Toolbox::value(intQuantsEx.mobility(phaseIdx));
@@ -507,12 +507,12 @@ protected:
             Evaluation mobG = 0;
             for (unsigned phaseIdx1=0; phaseIdx1 < numPhases; phaseIdx1++) {
                 if( not(phaseIdx == phaseIdx1) ){
-                    mobG = mobG + fmob[phaseIdx]*(headDiff[phaseIdx] - headDiff[phaseIdx1]);
+                    mobG = mobG + fmob[phaseIdx1]*(headDiff[phaseIdx] - headDiff[phaseIdx1]);
                 }
             }
             Evaluation pFlux = fmob[phaseIdx]*(1.0/mobT) * (totalFlux_ + trans * mobG);
             if(linearizationType.type == Opm::LinearizationType::implicit){   
-                assert(pFlux == volumeFlux_[phaseIdx]); // for testing code in fully implit mode
+                assert(Toolbox::isSame(pFlux,volumeFlux_[phaseIdx],1e-6)); // for testing code in fully implit mode
             }    
             volumeFlux_[phaseIdx] = fst[phaseIdx] * pFlux;
         }          
