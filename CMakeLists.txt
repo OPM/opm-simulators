@@ -203,6 +203,10 @@ endif()
 
 add_library(moduleVersion OBJECT opm/simulators/utils/moduleVersion.cpp)
 
+# Strictly we only depend on the update-version target,
+# but this is not exposed in a super-build.
+add_dependencies(moduleVersion opmsimulators)
+
 # the production oriented general-purpose ECL simulator
 opm_add_test(flow
   ONLY_COMPILE
