@@ -907,7 +907,7 @@ public:
         // used when ROCKCOMP is activated
         const bool invalidateFromMaxWaterSat = updateMaxWaterSaturation_();
         const bool invalidateFromMinPressure = updateMinPressure_();
-        updatePressure_();//update stored pressure in case of sequential do not need to recalculate chach
+        updatePressure();//update stored pressure in case of sequential do not need to recalculate chach
         invalidateIntensiveQuantities = invalidateFromMaxWaterSat || invalidateFromMinPressure;
 
         if (invalidateIntensiveQuantities)
@@ -1777,7 +1777,13 @@ public:
     {
         return totalSaturation_[globalDofIdx];
     }
-    
+
+    Scalar totalFlux(unsigned globalIndex,unsigned loc_index) const{
+        //unsigned globalIndx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+        //for (unsigned scvfIdx = 0; scvfIdx < numInteriorFaces; scvfIdx++) {
+        return totalFlux_[globalIndex][loc_index];
+    }
+
     /*!
      * \brief Returns a reference to the ECL well manager used by the problem.
      *
@@ -1931,6 +1937,7 @@ public:
      */
     bool updatePressure(){
         this->updatePressure_();
+        this->updateFluxes_();
     }
 
 private:
@@ -2195,8 +2202,7 @@ private:
     }
 
     bool updatePressure_()
-    {
-
+    {        
         ElementContext elemCtx(this->simulator());
         const auto& vanguard = this->simulator().vanguard();
         auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
@@ -2883,7 +2889,7 @@ private:
     {
         Opm::ConditionalStorage<enableEnergy, Scalar> thermalHalfTrans;
         Scalar transmissibility;
-    };
+     };
 
     // update the prefetch friendly data object
     void updatePffDofData_()
@@ -2909,6 +2915,41 @@ private:
         pffDofData_.update(distFn);
     }
 
+    
+        
+    void updateFluxes_(){
+        const auto& vanguard = this->simulator().vanguard();
+        unsigned numElems = vanguard.gridView().size(/*codim=*/0);
+        totalFlux_.resize(numElems);
+        ElementContext elemCtx(this->simulator());
+        auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
+        const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            const Element& elem = *elemIt;
+            
+            //elemCtx.updatePrimaryStencil(elem);
+            //elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+            elemCtx.updateStencil(elem);
+            elemCtx.updateAllIntensiveQuantities();
+            elemCtx.updateAllExtensiveQuantities();
+            unsigned compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+            //const auto& stencil = elemCtx.stencil(timeIdx);
+            size_t numInteriorFaces = elemCtx.numInteriorFaces(/*timeIdx*/ 0);
+            totalFlux_[compressedDofIdx].resize(numInteriorFaces);
+            for (unsigned scvfIdx = 0; scvfIdx < numInteriorFaces; scvfIdx++) {
+                /*
+                  const auto& face = stencil.interiorFace(scvfIdx);
+                  unsigned i = face.interiorIndex();
+                  unsigned j = face.exteriorIndex();
+                */
+                const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, /*timeIdx*/ 0);
+                // this is what I want
+                const auto& totalflux = extQuants.totalFlux();
+                totalFlux_[compressedDofIdx][scvfIdx] = Toolbox::value(totalflux);
+            }   
+        }
+    }
+     
     void readBoundaryConditions_()
     {
         nonTrivialBoundaryConditions_ = false;
@@ -3132,6 +3173,7 @@ private:
     std::vector<Scalar> minOilPressure_;
     std::vector<Scalar> pressure_;
     std::vector<Scalar> totalSaturation_;
+    std::vector< std::vector<Scalar> > totalFlux_;
 
     std::vector<TabulatedTwoDFunction> rockCompPoroMult_;
     std::vector<TabulatedTwoDFunction> rockCompTransMult_;

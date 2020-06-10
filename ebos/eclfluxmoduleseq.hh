@@ -180,6 +180,12 @@ public:
         return volumeFlux_[phaseIdx];
     }
 
+    const Evaluation& totalFlux() const
+    { 
+        return totalFlux_;
+    }
+
+    
 protected:
     /*!
      * \brief Returns the local index of the degree of freedom in which is
@@ -457,6 +463,15 @@ protected:
         }
         Evaluation ST1 = intQuantsIn.fluidState().totalSaturation();
         Evaluation ST2 = Toolbox::value(intQuantsEx.fluidState().totalSaturation());
+        Evaluation totalflux;
+        if(linearizationType.type == Opm::LinearizationType::seqtransport){
+            unsigned gIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+            //const auto& problem = elemCtx.problem();
+            double flux = problem.totalFlux(gIdx,  scvfIdx); 
+            totalflux = flux;
+        }else{
+            totalflux = totalFlux_;
+        }
         
         std::array<int, numPhases> upwind;
         connectionMultiPhaseUpwind(upwind,
@@ -464,7 +479,7 @@ protected:
                                    mob1,
                                    mob2,
                                    trans,
-                                   totalFlux_);//NB! taken from the object it self..
+                                   totalflux);//NB! taken from the object it self..
         
         Evaluation fmob[numPhases];//upwind weighted total saturation
         Evaluation fst[numPhases];// upwindweighted total saturation
@@ -497,12 +512,7 @@ protected:
             }
             mobT += fmob[phaseIdx];
         }
-        if(linearizationType.type == Opm::LinearizationType::seqtransport){
-            //needed? where should volumeFlux_ should probably be a scalar
-            totalFlux_ = Toolbox::value(totalFlux_);
-        }
-        
-        
+          
         for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
             if (!FluidSystem::phaseIsActive(phaseIdx))
                 continue;
@@ -512,7 +522,7 @@ protected:
                     mobG = mobG + fmob[phaseIdx1]*(headDiff[phaseIdx] - headDiff[phaseIdx1]);
                 }
             }
-            Evaluation pFlux = fmob[phaseIdx]*(1.0/mobT) * (totalFlux_ + trans * mobG);
+            Evaluation pFlux = fmob[phaseIdx]*(1.0/mobT) * (totalflux + trans * mobG);
             if(linearizationType.type == Opm::LinearizationType::implicit){
                 // Does this test derivatives??
                 assert(Toolbox::isSame(pFlux,volumeFlux_[phaseIdx],1e-6)); // for testing code in fully implit mode

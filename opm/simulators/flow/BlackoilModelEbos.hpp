@@ -549,7 +549,7 @@ namespace Opm {
         void updateSolution(){
             unsigned numDof = ebosSimulator_.model().numGridDof();
             BVector dx(numDof,0);
-            this->updateSolution();
+            this->updateSolution(dx);
         }
 
         /// Apply an update to the primary variables.
