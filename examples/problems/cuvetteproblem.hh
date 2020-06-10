@@ -60,7 +60,9 @@ namespace Opm::Properties {
 
 
 // create a new type tag for the cuvette steam injection problem
-NEW_TYPE_TAG(CuvetteBaseProblem);
+namespace TTag {
+struct CuvetteBaseProblem {};
+}
 
 // Set the grid type
 template<class TypeTag>
@@ -71,9 +73,9 @@ template<class TypeTag>
 struct Problem<TypeTag, TTag::CuvetteBaseProblem> { using type = Opm::CuvetteProblem<TypeTag>; };
 
 // Set the fluid system
-SET_TYPE_PROP(
-    CuvetteBaseProblem, FluidSystem,
-    Opm::H2OAirMesityleneFluidSystem<GetPropType<TypeTag, Properties::Scalar>>);
+template<class TypeTag>
+struct FluidSystem<TypeTag, TTag::CuvetteBaseProblem>
+{ using type = Opm::H2OAirMesityleneFluidSystem<GetPropType<TypeTag, Properties::Scalar>>; };
 
 // Enable gravity
 template<class TypeTag>
@@ -106,8 +108,9 @@ public:
 };
 
 // set the energy storage law for the solid phase
-SET_TYPE_PROP(CuvetteBaseProblem, SolidEnergyLaw,
-              Opm::ConstantSolidHeatCapLaw<GetPropType<TypeTag, Properties::Scalar>>);
+template<class TypeTag>
+struct SolidEnergyLaw<TypeTag, TTag::CuvetteBaseProblem>
+{ using type = Opm::ConstantSolidHeatCapLaw<GetPropType<TypeTag, Properties::Scalar>>; };
 
 // Set the thermal conduction law
 template<class TypeTag>

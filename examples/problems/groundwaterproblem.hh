@@ -89,8 +89,9 @@ template<class TypeTag>
 struct Grid<TypeTag, TTag::GroundWaterBaseProblem> { using type = Dune::YaspGrid<2>; };
 // struct Grid<TypeTag, TTag::GroundWaterBaseProblem> { using type = Dune::SGrid<2, 2>; };
 
-SET_TYPE_PROP(GroundWaterBaseProblem, Problem,
-              Opm::GroundWaterProblem<TypeTag>);
+template<class TypeTag>
+struct Problem<TypeTag, TTag::GroundWaterBaseProblem>
+{ using type = Opm::GroundWaterProblem<TypeTag>; };
 
 template<class TypeTag>
 struct LensLowerLeftX<TypeTag, TTag::GroundWaterBaseProblem>
@@ -169,8 +170,10 @@ struct GridFile<TypeTag, TTag::GroundWaterBaseProblem> { static constexpr auto v
 // ILU-0) from dune-istl
 template<class TypeTag>
 struct LinearSolverSplice<TypeTag, TTag::GroundWaterBaseProblem> { using type = TTag::ParallelIstlLinearSolver; };
-SET_TYPE_PROP(GroundWaterBaseProblem, LinearSolverWrapper,
-              Opm::Linear::SolverWrapperConjugatedGradients<TypeTag>);
+
+template<class TypeTag>
+struct LinearSolverWrapper<TypeTag, TTag::GroundWaterBaseProblem>
+{ using type = Opm::Linear::SolverWrapperConjugatedGradients<TypeTag>; };
 
 } // namespace Opm::Properties
 

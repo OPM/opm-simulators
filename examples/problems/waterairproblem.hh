@@ -60,7 +60,9 @@ class WaterAirProblem;
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(WaterAirBaseProblem);
+namespace TTag {
+struct WaterAirBaseProblem {};
+}
 
 // Set the grid type
 template<class TypeTag>
@@ -105,13 +107,15 @@ public:
 };
 
 // set the energy storage law for the solid phase
-SET_TYPE_PROP(WaterAirBaseProblem, SolidEnergyLaw,
-              Opm::ConstantSolidHeatCapLaw<GetPropType<TypeTag, Properties::Scalar>>);
+template<class TypeTag>
+struct SolidEnergyLaw<TypeTag, TTag::WaterAirBaseProblem>
+{ using type = Opm::ConstantSolidHeatCapLaw<GetPropType<TypeTag, Properties::Scalar>>; };
 
 // Set the fluid system. in this case, we use the one which describes
 // air and water
-SET_TYPE_PROP(WaterAirBaseProblem, FluidSystem,
-              Opm::H2OAirFluidSystem<GetPropType<TypeTag, Properties::Scalar>>);
+template<class TypeTag>
+struct FluidSystem<TypeTag, TTag::WaterAirBaseProblem>
+{ using type = Opm::H2OAirFluidSystem<GetPropType<TypeTag, Properties::Scalar>>; };
 
 // Enable gravity
 template<class TypeTag>
@@ -147,15 +151,21 @@ struct GridFile<TypeTag, TTag::WaterAirBaseProblem> { static constexpr auto valu
 
 // Use the restarted GMRES linear solver with the ILU-2 preconditioner from dune-istl
 template<class TypeTag>
-struct LinearSolverSplice<TypeTag, TTag::WaterAirBaseProblem> { using type = TTag::ParallelIstlLinearSolver; };
-SET_TYPE_PROP(WaterAirBaseProblem, LinearSolverWrapper,
-              Opm::Linear::SolverWrapperRestartedGMRes<TypeTag>);
+struct LinearSolverSplice<TypeTag, TTag::WaterAirBaseProblem>
+{ using type = TTag::ParallelIstlLinearSolver; };
+
+template<class TypeTag>
+struct LinearSolverWrapper<TypeTag, TTag::WaterAirBaseProblem>
+{ using type = Opm::Linear::SolverWrapperRestartedGMRes<TypeTag>; };
+
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2,7)
-SET_TYPE_PROP(WaterAirBaseProblem, PreconditionerWrapper,
-              Opm::Linear::PreconditionerWrapperILU<TypeTag>);
+template<class TypeTag>
+struct PreconditionerWrapper<TypeTag, TTag::WaterAirBaseProblem>
+{ using type = Opm::Linear::PreconditionerWrapperILU<TypeTag>; };
 #else
-SET_TYPE_PROP(WaterAirBaseProblem, PreconditionerWrapper,
-              Opm::Linear::PreconditionerWrapperILUn<TypeTag>);
+template<class TypeTag>
+struct PreconditionerWrapper<TypeTag, TTag::WaterAirBaseProblem>
+{ using type = Opm::Linear::PreconditionerWrapperILUn<TypeTag>; };
 #endif
 template<class TypeTag>
 struct PreconditionerOrder<TypeTag, TTag::WaterAirBaseProblem> { static constexpr int value = 2; };

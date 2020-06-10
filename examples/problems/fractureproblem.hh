@@ -74,9 +74,9 @@ struct FractureProblem { using InheritsFrom = std::tuple<DiscreteFractureModel>;
 } // end namespace TTag
 
 // Set the grid type
-SET_TYPE_PROP(
-    FractureProblem, Grid,
-    Dune::ALUGrid</*dim=*/2, /*dimWorld=*/2, Dune::simplex, Dune::nonconforming>);
+template<class TypeTag>
+struct Grid<TypeTag, TTag::FractureProblem>
+{ using type = Dune::ALUGrid</*dim=*/2, /*dimWorld=*/2, Dune::simplex, Dune::nonconforming>; };
 
 // Set the Vanguard property
 template<class TypeTag>
@@ -150,8 +150,9 @@ public:
 };
 
 // set the energy storage law for the solid phase
-SET_TYPE_PROP(FractureProblem, SolidEnergyLaw,
-              Opm::ConstantSolidHeatCapLaw<GetPropType<TypeTag, Properties::Scalar>>);
+template<class TypeTag>
+struct SolidEnergyLaw<TypeTag, TTag::FractureProblem>
+{ using type = Opm::ConstantSolidHeatCapLaw<GetPropType<TypeTag, Properties::Scalar>>; };
 
 // Disable gravity
 template<class TypeTag>

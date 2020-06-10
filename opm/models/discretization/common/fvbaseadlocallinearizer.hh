@@ -49,12 +49,15 @@ class FvBaseAdLocalLinearizer;
 namespace Opm::Properties {
 
 // declare the property tags required for the finite differences local linearizer
-NEW_TYPE_TAG(AutoDiffLocalLinearizer);
 
+namespace TTag {
+struct AutoDiffLocalLinearizer {};
+} // namespace TTag
 
 // set the properties to be spliced in
-SET_TYPE_PROP(AutoDiffLocalLinearizer, LocalLinearizer,
-              Opm::FvBaseAdLocalLinearizer<TypeTag>);
+template<class TypeTag>
+struct LocalLinearizer<TypeTag, TTag::AutoDiffLocalLinearizer>
+{ using type = Opm::FvBaseAdLocalLinearizer<TypeTag>; };
 
 //! Set the function evaluation w.r.t. the primary variables
 template<class TypeTag>

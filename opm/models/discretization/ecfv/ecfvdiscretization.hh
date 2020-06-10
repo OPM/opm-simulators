@@ -72,12 +72,14 @@ struct Discretization<TypeTag, TTag::EcfvDiscretization> { using type = Opm::Ecf
 
 //! The base class for the output modules (decides whether to write
 //! element or vertex based fields)
-SET_TYPE_PROP(EcfvDiscretization, DiscBaseOutputModule,
-              Opm::EcfvBaseOutputModule<TypeTag>);
+template<class TypeTag>
+struct DiscBaseOutputModule<TypeTag, TTag::EcfvDiscretization>
+{ using type = Opm::EcfvBaseOutputModule<TypeTag>; };
 
 //! The class to create grid communication handles
-SET_TYPE_PROP(EcfvDiscretization, GridCommHandleFactory,
-              Opm::EcfvGridCommHandleFactory<TypeTag>);
+template<class TypeTag>
+struct GridCommHandleFactory<TypeTag, TTag::EcfvDiscretization>
+{ using type = Opm::EcfvGridCommHandleFactory<TypeTag>; };
 
 #if HAVE_DUNE_FEM
 //! Set the DiscreteFunctionSpace

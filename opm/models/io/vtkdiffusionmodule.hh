@@ -39,9 +39,13 @@
 
 namespace Opm::Properties {
 
+namespace TTag {
+
 // create new type tag for the VTK output of the quantities for molecular
 // diffusion
-NEW_TYPE_TAG(VtkDiffusion);
+struct VtkDiffusion {};
+
+} // namespace TTag
 
 // create the property tags needed for the diffusion module
 template<class TypeTag, class MyTypeTag>

@@ -48,10 +48,10 @@ template<class TypeTag>
 struct SpatialDiscretizationSplice<TypeTag, TTag::Co2InjectionFlashVcfvProblem> { using type = TTag::VcfvDiscretization; };
 
 // use the flash solver adapted to the CO2 injection problem
-SET_TYPE_PROP(
-    Co2InjectionFlashVcfvProblem, FlashSolver,
-    Opm::Co2InjectionFlash<GetPropType<TypeTag, Properties::Scalar>,
-                           GetPropType<TypeTag, Properties::FluidSystem>>);
+template<class TypeTag>
+struct FlashSolver<TypeTag, TTag::Co2InjectionFlashVcfvProblem>
+{ using type = Opm::Co2InjectionFlash<GetPropType<TypeTag, Properties::Scalar>,
+                                      GetPropType<TypeTag, Properties::FluidSystem>>; };
 
 // the flash model has serious problems with the numerical
 // precision. if quadruple precision math is available, we use it,

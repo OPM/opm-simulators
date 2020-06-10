@@ -42,11 +42,13 @@ struct VtkPrimaryVars;
 struct FiniteDifferenceLocalLinearizer;
 }
 
+namespace TTag {
+
 //! The type tag for models based on the finite volume schemes
-NEW_TYPE_TAG(FvBaseDiscretization,
-             INHERITS_FROM(ImplicitModel,
-                           FvBaseNewtonMethod,
-                           VtkPrimaryVars));
+struct FvBaseDiscretization
+{ using InheritsFrom = std::tuple<VtkPrimaryVars, FvBaseNewtonMethod, ImplicitModel>; };
+
+} // namespace TTag
 
 
 //! set the splices for the finite volume discretizations
@@ -54,7 +56,12 @@ template<class TypeTag, class MyTypeTag>
 struct LinearSolverSplice { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct LocalLinearizerSplice { using type = UndefinedProperty; };
-SET_SPLICES(FvBaseDiscretization, LinearSolverSplice, LocalLinearizerSplice);
+template<class TypeTag>
+struct Splices<TypeTag, TTag::FvBaseDiscretization>
+{
+    using type = std::tuple<GetSplicePropType<TypeTag, TTag::FvBaseDiscretization, Properties::LinearSolverSplice>,
+                            GetSplicePropType<TypeTag, TTag::FvBaseDiscretization, Properties::LocalLinearizerSplice>>;
+};
 
 //! use a parallel BiCGStab linear solver by default
 template<class TypeTag>

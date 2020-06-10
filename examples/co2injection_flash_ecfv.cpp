@@ -52,10 +52,10 @@ template<class TypeTag>
 struct LocalLinearizerSplice<TypeTag, TTag::Co2InjectionFlashEcfvProblem> { using type = TTag::AutoDiffLocalLinearizer; };
 
 // use the flash solver adapted to the CO2 injection problem
-SET_TYPE_PROP(
-    Co2InjectionFlashEcfvProblem, FlashSolver,
-    Opm::Co2InjectionFlash<GetPropType<TypeTag, Properties::Scalar>,
-                           GetPropType<TypeTag, Properties::FluidSystem>>);
+template<class TypeTag>
+struct FlashSolver<TypeTag, TTag::Co2InjectionFlashEcfvProblem>
+{ using type = Opm::Co2InjectionFlash<GetPropType<TypeTag, Properties::Scalar>,
+                                      GetPropType<TypeTag, Properties::FluidSystem>>; };
 
 // the flash model has serious problems with the numerical
 // precision. if quadruple precision math is available, we use it,

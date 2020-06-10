@@ -70,8 +70,8 @@ struct ImmiscibleTwoPhaseModel { using InheritsFrom = std::tuple<ImmiscibleModel
 } // end namespace TTag
 
 //! Use the immiscible multi-phase local jacobian operator for the immiscible multi-phase model
-SET_TYPE_PROP(ImmiscibleModel, LocalResidual,
-              Opm::ImmiscibleLocalResidual<TypeTag>);
+template<class TypeTag>
+struct LocalResidual<TypeTag, TTag::ImmiscibleModel> { using type = Opm::ImmiscibleLocalResidual<TypeTag>; };
 
 //! the Model property
 template<class TypeTag>

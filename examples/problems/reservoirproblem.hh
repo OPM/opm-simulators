@@ -59,7 +59,11 @@ class ReservoirProblem;
 namespace Opm::Properties {
 
 
-NEW_TYPE_TAG(ReservoirBaseProblem);
+namespace TTag {
+
+struct ReservoirBaseProblem {};
+
+} // namespace TTag
 
 // Maximum depth of the reservoir
 template<class TypeTag, class MyTypeTag>

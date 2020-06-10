@@ -37,8 +37,12 @@
 
 namespace Opm::Properties {
 
+namespace TTag {
+
 // create new type tag for the VTK composition output
-NEW_TYPE_TAG(VtkComposition);
+struct VtkComposition {};
+
+} // namespace TTag
 
 // create the property tags needed for the composition module
 template<class TypeTag, class MyTypeTag>

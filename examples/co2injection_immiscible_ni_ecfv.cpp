@@ -35,10 +35,14 @@
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(Co2InjectionImmiscibleNiEcfvProblem, INHERITS_FROM(ImmiscibleModel,
-                                                                Co2InjectionBaseProblem));
-SET_TAG_PROP(Co2InjectionImmiscibleNiEcfvProblem, SpatialDiscretizationSplice,
-             EcfvDiscretization);
+// Create new type tags
+namespace TTag {
+struct Co2InjectionImmiscibleNiEcfvProblem { using InheritsFrom = std::tuple<Co2InjectionBaseProblem, ImmiscibleModel>; };
+} // end namespace TTag
+
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::Co2InjectionImmiscibleNiEcfvProblem>
+{ using type = TTag::EcfvDiscretization; };
 
 template<class TypeTag>
 struct EnableEnergy<TypeTag, TTag::Co2InjectionImmiscibleNiEcfvProblem> { static constexpr bool value = true; };

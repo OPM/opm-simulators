@@ -39,11 +39,9 @@
 #include <dune/common/fmatrix.hh>
 #include <dune/common/version.hh>
 
-namespace Opm::Properties {
-
-NEW_TYPE_TAG(SuperLULinearSolver);
-
-} // namespace Opm::Properties
+namespace Opm::Properties::TTag {
+struct SuperLULinearSolver {};
+} // namespace Opm::Properties::TTag
 
 namespace Opm {
 namespace Linear {
@@ -176,8 +174,8 @@ namespace Opm::Properties {
 
 template<class TypeTag>
 struct LinearSolverVerbosity<TypeTag, TTag::SuperLULinearSolver> { static constexpr int value = 0; };
-SET_TYPE_PROP(SuperLULinearSolver, LinearSolverBackend,
-              Opm::Linear::SuperLUBackend<TypeTag>);
+template<class TypeTag>
+struct LinearSolverBackend<TypeTag, TTag::SuperLULinearSolver> { using type = Opm::Linear::SuperLUBackend<TypeTag>; };
 
 } // namespace Opm::Properties
 

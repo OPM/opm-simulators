@@ -68,17 +68,19 @@ class EclVanguard;
 
 namespace Opm::Properties {
 
+namespace TTag {
 //! The type tag for the black-oil problems
-NEW_TYPE_TAG(BlackOilModel, INHERITS_FROM(MultiPhaseBaseModel,
-                                          VtkBlackOil,
-                                          VtkBlackOilSolvent,
-                                          VtkBlackOilPolymer,
-                                          VtkBlackOilEnergy,
-                                          VtkComposition));
+struct BlackOilModel { using InheritsFrom = std::tuple<VtkComposition,
+                                                       VtkBlackOilEnergy,
+                                                       VtkBlackOilPolymer,
+                                                       VtkBlackOilSolvent,
+                                                       VtkBlackOil,
+                                                       MultiPhaseBaseModel>; };
+} // namespace TTag
 
 //! Set the local residual function
-SET_TYPE_PROP(BlackOilModel, LocalResidual,
-              Opm::BlackOilLocalResidual<TypeTag>);
+template<class TypeTag>
+struct LocalResidual<TypeTag, TTag::BlackOilModel> { using type = Opm::BlackOilLocalResidual<TypeTag>; };
 
 //! Use the black-oil specific newton method
 template<class TypeTag>
@@ -118,13 +120,14 @@ template<class TypeTag>
 struct FluxModule<TypeTag, TTag::BlackOilModel> { using type = Opm::BlackOilDarcyFluxModule<TypeTag>; };
 
 //! The indices required by the model
-SET_TYPE_PROP(BlackOilModel, Indices,
-              Opm::BlackOilIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
-                                   getPropValue<TypeTag, Properties::EnablePolymer>(),
-                                   getPropValue<TypeTag, Properties::EnableEnergy>(),
-                                   getPropValue<TypeTag, Properties::EnableFoam>(),
-                                   getPropValue<TypeTag, Properties::EnableBrine>(),
-                                   /*PVOffset=*/0>);
+template<class TypeTag>
+struct Indices<TypeTag, TTag::BlackOilModel>
+{ using type = Opm::BlackOilIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
+                                    getPropValue<TypeTag, Properties::EnablePolymer>(),
+                                    getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                    getPropValue<TypeTag, Properties::EnableFoam>(),
+                                    getPropValue<TypeTag, Properties::EnableBrine>(),
+                                    /*PVOffset=*/0>; };
 
 //! Set the fluid system to the black-oil fluid system by default
 template<class TypeTag>

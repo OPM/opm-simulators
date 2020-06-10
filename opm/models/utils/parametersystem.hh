@@ -223,9 +223,13 @@ private:
 
 namespace Opm::Properties {
 
+namespace TTag {
+
 // type tag which is supposed to spliced in or inherited from if the
 // parameter system is to be used
-NEW_TYPE_TAG(ParameterSystem);
+struct ParameterSystem {};
+
+} // namespace TTag
 
 template<class TypeTag, class MyTypeTag>
 struct ParameterMetaData { using type = UndefinedProperty; };
@@ -477,7 +481,7 @@ inline void getFlattenedKeyList_(std::list<std::string>& dest,
 template <class TypeTag>
 void printParamList_(std::ostream& os, const std::list<std::string>& keyList, bool printDefaults = false)
 {
-    typedef typename GET_PROP(TypeTag, ParameterMetaData) ParamsMeta;
+    typedef GetProp<TypeTag, Properties::ParameterMetaData> ParamsMeta;
 
     const Dune::ParameterTree& tree = ParamsMeta::tree();
 
@@ -512,7 +516,7 @@ void printUsage(const std::string& helpPreamble,
                 const std::string& errorMsg = "",
                 std::ostream& os = std::cerr)
 {
-    typedef typename GET_PROP(TypeTag, ParameterMetaData) ParamsMeta;
+    typedef GetProp<TypeTag, Properties::ParameterMetaData> ParamsMeta;
 
     if (errorMsg != "") {
         os << errorMsg << "\n"
@@ -680,7 +684,7 @@ std::string parseCommandLineOptions(int argc,
                                     const std::string& helpPreamble = "",
                                     const PositionalArgumentCallback& posArgCallback = noPositionalParameters_)
 {
-    Dune::ParameterTree& paramTree = GET_PROP(TypeTag, ParameterMetaData)::tree();
+    Dune::ParameterTree& paramTree = GetProp<TypeTag, Properties::ParameterMetaData>::tree();
 
     // handle the "--help" parameter
     if (!helpPreamble.empty()) {
@@ -781,7 +785,7 @@ std::string parseCommandLineOptions(int argc,
 template <class TypeTag>
 void parseParameterFile(const std::string& fileName, bool overwrite = true)
 {
-    Dune::ParameterTree& paramTree = GET_PROP(TypeTag, ParameterMetaData)::tree();
+    Dune::ParameterTree& paramTree = GetProp<TypeTag, Properties::ParameterMetaData>::tree();
 
     std::set<std::string> seenKeys;
     std::ifstream ifs(fileName);
@@ -848,7 +852,7 @@ void parseParameterFile(const std::string& fileName, bool overwrite = true)
 template <class TypeTag>
 void printValues(std::ostream& os = std::cout)
 {
-    typedef typename GET_PROP(TypeTag, ParameterMetaData) ParamsMeta;
+    typedef GetProp<TypeTag, Properties::ParameterMetaData> ParamsMeta;
 
     const Dune::ParameterTree& tree = ParamsMeta::tree();
 
@@ -916,7 +920,7 @@ void printValues(std::ostream& os = std::cout)
 template <class TypeTag>
 bool printUnused(std::ostream& os = std::cout)
 {
-    typedef typename GET_PROP(TypeTag, ParameterMetaData) ParamsMeta;
+    typedef GetProp<TypeTag, Properties::ParameterMetaData> ParamsMeta;
 
     const Dune::ParameterTree& tree = ParamsMeta::tree();
     std::list<std::string> runTimeAllKeyList;
@@ -948,7 +952,7 @@ bool printUnused(std::ostream& os = std::cout)
 template <class TypeTag>
 class Param
 {
-    typedef typename GET_PROP(TypeTag, ParameterMetaData) ParamsMeta;
+    typedef GetProp<TypeTag, Properties::ParameterMetaData> ParamsMeta;
 
 public:
     template <class ParamType, class PropTag>
@@ -1107,7 +1111,7 @@ void getLists(Container& usedParams, Container& unusedParams)
     usedParams.clear();
     unusedParams.clear();
 
-    typedef typename GET_PROP(TypeTag, ParameterMetaData) ParamsMeta;
+    typedef GetProp<TypeTag, Properties::ParameterMetaData> ParamsMeta;
     if (ParamsMeta::registrationOpen())
         throw std::runtime_error("Parameter lists can only retieved after _all_ of them have "
                                  "been registered.");
@@ -1146,7 +1150,7 @@ bool isSet(const char *propTagName, const char *paramName, bool errorIfNotRegist
 template <class TypeTag, class ParamType>
 void registerParam(const char *paramName, const char *propertyName, const ParamType& defaultValue, const char *usageString)
 {
-    typedef typename GET_PROP(TypeTag, ParameterMetaData) ParamsMeta;
+    typedef GetProp<TypeTag, Properties::ParameterMetaData> ParamsMeta;
     if (!ParamsMeta::registrationOpen())
         throw std::logic_error("Parameter registration was already closed before "
                                "the parameter '"+std::string(paramName)+"' was registered.");
@@ -1180,7 +1184,7 @@ void registerParam(const char *paramName, const char *propertyName, const ParamT
 template <class TypeTag, class ParamType>
 void hideParam(const char *paramName, const ParamType& defaultValue)
 {
-    typedef typename GET_PROP(TypeTag, ParameterMetaData) ParamsMeta;
+    typedef GetProp<TypeTag, Properties::ParameterMetaData> ParamsMeta;
     if (!ParamsMeta::registrationOpen())
         throw std::logic_error("Parameter '"+std::string(paramName)+"' declared as hidden"
                                " when parameter registration was already closed.");
@@ -1197,7 +1201,7 @@ void hideParam(const char *paramName, const ParamType& defaultValue)
 template <class TypeTag>
 void endParamRegistration()
 {
-    typedef typename GET_PROP(TypeTag, ParameterMetaData) ParamsMeta;
+    typedef GetProp<TypeTag, Properties::ParameterMetaData> ParamsMeta;
     if (!ParamsMeta::registrationOpen())
         throw std::logic_error("Parameter registration was already closed. It is only possible "
                                "to close it once.");

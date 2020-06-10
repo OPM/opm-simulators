@@ -64,18 +64,19 @@ class NcpModel;
 
 namespace Opm::Properties {
 
+namespace TTag {
 /*!
  * \brief Define the type tag for the compositional NCP model.
  */
-NEW_TYPE_TAG(NcpModel, INHERITS_FROM(MultiPhaseBaseModel,
-                                     VtkComposition,
-                                     VtkEnergy,
-                                     VtkDiffusion));
+struct NcpModel { using InheritsFrom = std::tuple<VtkDiffusion,
+                                                  VtkEnergy,
+                                                  VtkComposition,
+                                                  MultiPhaseBaseModel>; };
+} // namespace TTag
 
 //! Use the Ncp local jacobian operator for the compositional NCP model
-SET_TYPE_PROP(NcpModel,
-              LocalResidual,
-              Opm::NcpLocalResidual<TypeTag>);
+template<class TypeTag>
+struct LocalResidual<TypeTag, TTag::NcpModel> { using type = Opm::NcpLocalResidual<TypeTag>; };
 
 //! Use the Ncp specific newton method for the compositional NCP model
 template<class TypeTag>

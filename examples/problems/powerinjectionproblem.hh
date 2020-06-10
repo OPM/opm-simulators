@@ -59,19 +59,21 @@ class PowerInjectionProblem;
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(PowerInjectionBaseProblem);
+namespace TTag {
+struct PowerInjectionBaseProblem {};
+}
 
 // Set the grid implementation to be used
 template<class TypeTag>
 struct Grid<TypeTag, TTag::PowerInjectionBaseProblem> { using type = Dune::YaspGrid</*dim=*/1>; };
 
 // set the Vanguard property
-SET_TYPE_PROP(PowerInjectionBaseProblem, Vanguard,
-              Opm::CubeGridVanguard<TypeTag>);
+template<class TypeTag>
+struct Vanguard<TypeTag, TTag::PowerInjectionBaseProblem> { using type = Opm::CubeGridVanguard<TypeTag>; };
 
 // Set the problem property
-SET_TYPE_PROP(PowerInjectionBaseProblem, Problem,
-              Opm::PowerInjectionProblem<TypeTag>);
+template<class TypeTag>
+struct Problem<TypeTag, TTag::PowerInjectionBaseProblem> { using type = Opm::PowerInjectionProblem<TypeTag>; };
 
 // Set the wetting phase
 template<class TypeTag>

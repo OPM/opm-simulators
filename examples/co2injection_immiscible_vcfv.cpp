@@ -36,8 +36,13 @@
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(Co2InjectionImmiscibleVcfvProblem, INHERITS_FROM(ImmiscibleModel,
-                                                              Co2InjectionBaseProblem));
+namespace TTag {
+
+struct Co2InjectionImmiscibleVcfvProblem
+{ using InheritsFrom = std::tuple<Co2InjectionBaseProblem, ImmiscibleModel>; };
+
+} // namespace TTag
+
 template<class TypeTag>
 struct SpatialDiscretizationSplice<TypeTag, TTag::Co2InjectionImmiscibleVcfvProblem> { using type = TTag::VcfvDiscretization; };
 
