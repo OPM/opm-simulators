@@ -48,7 +48,7 @@ namespace Opm
         class ReservoirFailure
         {
         public:
-            enum struct Type { Invalid, MassBalance, Cnv };
+            enum struct Type { Invalid, MassBalance, Cnv , Pressure};
             ReservoirFailure(Type t, Severity s, int phase)
                 : type_(t), severity_(s), phase_(phase)
             {
