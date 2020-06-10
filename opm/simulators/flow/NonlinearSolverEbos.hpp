@@ -147,17 +147,27 @@ namespace Opm {
             }
         }
 
+        
+
         SimulatorReportSingle stepSequential(const SimulatorTimerInterface& timer){
             LinearizationType linearizationType;
             bool converged = false;
             SimulatorReportSingle reportpre;
             SimulatorReportSingle reportseq;
             while(not converged){
+                // do pressure step
                 linearizationType.type = Opm::LinearizationType::pressure;
+                model_->ebosSimulator().problem().updatePressure();//update pressure ans ST
                 model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);  
+                model_->updateSolution();// should conver to the new solution time         
                 SimulatorReportSingle lreportpre = this->stepDefault(timer);
+
+                // do transport step
+                model_->ebosSimulator().problem().updatePressure();//update pressure ans ST                               
                 linearizationType.type = Opm::LinearizationType::seqtransport;
                 model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);
+
+                model_->updateSolution();
                 SimulatorReportSingle lreportseq = this->stepDefault(timer);
                 reportpre += lreportpre;
                 reportseq += lreportseq;
@@ -170,9 +180,30 @@ namespace Opm {
                 
         }
 
+        SimulatorReportSingle stepPressure(const SimulatorTimerInterface& timer){
+            LinearizationType linearizationType;
+            bool converged = false;
+            SimulatorReportSingle reportpre;
+            // do pressure step
+            linearizationType.type = Opm::LinearizationType::pressure;
+            model_->ebosSimulator().problem().updatePressure();//update pressure ans ST
+            model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);  
+            model_->updateSolution();// should conver to the new solution time         
+            SimulatorReportSingle lreportpre = this->stepDefault(timer);
+            SimulatorReportSingle report = lreportpre;
+            //todo fill this report correctly
+            return report;
+                
+        }
+        
+
+        
         SimulatorReportSingle stepFull(const SimulatorTimerInterface& timer){
             LinearizationType linearizationType;// use default
             model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);
+            // incase previous step was not fully implicit
+            model_->ebosSimulator().problem().updatePressure();//update pressure ans ST                               
+            model_->updateSolution();
             SimulatorReportSingle report = this->stepDefault(timer);
             return report;
         }
