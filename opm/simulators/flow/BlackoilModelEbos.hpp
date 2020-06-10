@@ -207,7 +207,7 @@ namespace Opm {
             ebosSimulator_.setTimeStepSize(timer.currentStepLength());
             ebosSimulator_.problem().beginTimeStep();
 
-            unsigned numDof = ebosSimulator_.model().numGridDof();
+             unsigned numDof = ebosSimulator_.model().numGridDof();
             wasSwitched_.resize(numDof);
             std::fill(wasSwitched_.begin(), wasSwitched_.end(), false);
 
@@ -486,14 +486,7 @@ namespace Opm {
                 int pressureVarIndex=1;
                 // true impes case could add case with trivial weighs i equations is modifind with weights
                 // this would make a newton based method if derivative of the weights are takein into account
-                BVector weights(x.size());
-                ElementContext elemCtx(ebosSimulator_);
-                typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) ThreadManager;
-                Opm::Amg::getTrueImpesWeights(pressureVarIndex,
-                                              weights,
-                                              ebosSimulator_.vanguard().gridView(),
-                                              elemCtx, ebosSimulator_.model(),
-                                              ThreadManager::threadId());
+                BVector weights = this->getPressureWeights(pressureVarIndex);
                 PressureMatrixType pmatrix =
                     PressureHelper::makePressureMatrix<Mat,
                                                        BVector,
@@ -553,7 +546,11 @@ namespace Opm {
             }
        }
 
-
+        void updateSolution(){
+            unsigned numDof = ebosSimulator_.model().numGridDof();
+            BVector dx(numDof,0);
+            this->updateSolution();
+        }
 
         /// Apply an update to the primary variables.
         void updateSolution(const BVector& dx)
@@ -862,6 +859,54 @@ namespace Opm {
             return report;
         }
 
+        BVector getPressureWeights(int pressureVarIndex){
+            size_t nocells = ebosSimulator_.model().linearizer().residual().size();
+            BVector weights(nocells);
+            ElementContext elemCtx(ebosSimulator_);
+            typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) ThreadManager;
+            Opm::Amg::getTrueImpesWeights(pressureVarIndex,
+                                          weights,
+                                          ebosSimulator_.vanguard().gridView(),
+                                          elemCtx, ebosSimulator_.model(),
+                                          ThreadManager::threadId());
+            return weights;
+            
+        }
+
+        ConvergenceReport getPressureConvergence(const int iteration)
+        {
+            //should be globaly defined
+            int pressureVarIndex = 1;
+            BVector weights = this->getPressureWeights(pressureVarIndex);
+            const auto& ebosResid = ebosSimulator_.model().linearizer().residual();
+            double norm=0.0;
+            for(size_t i = 0; i< weights.size(); i++){
+                auto& wb = weights[i];
+                auto& resb= ebosResid[i];
+                double lnorm=0.0;
+                for(int j = 0; j< wb.size(); j++){
+                    lnorm += wb[j]*resb[j];
+                }
+                norm = std::max(lnorm,norm);
+            }
+            std::ostringstream ss;
+            ss << "Iteration " << iteration << "Norm of pressure equation " << norm;
+            OpmLog::info(ss.str());
+            // NB need better convergence criteria
+            const double tol_cnv = param_.tolerance_cnv_;
+            bool converged = norm < tol_cnv;
+            ConvergenceReport report;
+            
+            if(not(converged)){
+                ConvergenceReport::ReservoirFailure   rv(
+                    ConvergenceReport::ReservoirFailure::Type::Pressure,
+                    ConvergenceReport::Severity::Normal, -1);
+                report.setReservoirFailed(rv); 
+            }
+            //report.converged = converged;
+            return report;
+        }
+        
         /// Compute convergence based on total mass balance (tol_mb) and maximum
         /// residual mass balance (tol_cnv).
         /// \param[in]   timer       simulation timer
@@ -874,6 +919,12 @@ namespace Opm {
             // Get convergence reports for reservoir and wells.
             std::vector<Scalar> B_avg(numEq, 0.0);
             auto report = getReservoirConvergence(timer.currentStepLength(), iteration, B_avg, residual_norms);
+
+            // overwrite the convergence report if it is a pressure solve
+            if(ebosSimulator_.model().linearizer().getLinearizationType().type == Opm::LinearizationType::pressure){
+                report = getPressureConvergence(iteration);
+            }
+
             report += wellModel().getWellConvergence(B_avg);
 
             return report;
