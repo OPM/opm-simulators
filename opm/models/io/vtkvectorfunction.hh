@@ -50,10 +50,10 @@ template <class GridView, class Mapper>
 class VtkVectorFunction : public Dune::VTKFunction<GridView>
 {
     enum { dim = GridView::dimension };
-    typedef typename GridView::ctype ctype;
-    typedef typename GridView::template Codim<0>::Entity Element;
+    using ctype = typename GridView::ctype;
+    using Element = typename GridView::template Codim<0>::Entity;
 
-    typedef BaseOutputWriter::VectorBuffer VectorBuffer;
+    using VectorBuffer = BaseOutputWriter::VectorBuffer;
 
 public:
     VtkVectorFunction(std::string name,

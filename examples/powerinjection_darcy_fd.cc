@@ -49,6 +49,6 @@ struct LocalLinearizerSplice<TypeTag, TTag::PowerInjectionDarcyFdProblem> { usin
 
 int main(int argc, char **argv)
 {
-    typedef Opm::Properties::TTag::PowerInjectionDarcyFdProblem ProblemTypeTag;
+    using ProblemTypeTag = Opm::Properties::TTag::PowerInjectionDarcyFdProblem;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

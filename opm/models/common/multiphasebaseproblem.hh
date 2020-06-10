@@ -55,22 +55,22 @@ class MultiPhaseBaseProblem
     , public GetPropType<TypeTag, Properties::FluxModule>::FluxBaseProblem
 {
 //! \cond SKIP_THIS
-    typedef Opm::FvBaseProblem<TypeTag> ParentType;
+    using ParentType = Opm::FvBaseProblem<TypeTag>;
 
-    typedef GetPropType<TypeTag, Properties::Problem> Implementation;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
-    typedef GetPropType<TypeTag, Properties::SolidEnergyLawParams> SolidEnergyLawParams;
-    typedef GetPropType<TypeTag, Properties::ThermalConductionLawParams> ThermalConductionLawParams;
-    typedef typename GetPropType<TypeTag, Properties::MaterialLaw>::Params MaterialLawParams;
+    using Implementation = GetPropType<TypeTag, Properties::Problem>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using SolidEnergyLawParams = GetPropType<TypeTag, Properties::SolidEnergyLawParams>;
+    using ThermalConductionLawParams = GetPropType<TypeTag, Properties::ThermalConductionLawParams>;
+    using MaterialLawParams = typename GetPropType<TypeTag, Properties::MaterialLaw>::Params;
 
     enum { dimWorld = GridView::dimensionworld };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
-    typedef Dune::FieldVector<Scalar, dimWorld> DimVector;
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
+    using DimVector = Dune::FieldVector<Scalar, dimWorld>;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 //! \endcond
 
 public:
@@ -306,7 +306,7 @@ public:
      */
     unsigned markForGridAdaptation()
     {
-        typedef Opm::MathToolbox<Evaluation> Toolbox;
+        using Toolbox = Opm::MathToolbox<Evaluation>;
 
         unsigned numMarked = 0;
         ElementContext elemCtx( this->simulator() );

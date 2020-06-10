@@ -59,14 +59,14 @@ namespace Opm {
 template <class TypeTag>
 class FvBaseNewtonConvergenceWriter
 {
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
 
-    typedef GetPropType<TypeTag, Properties::SolutionVector> SolutionVector;
-    typedef GetPropType<TypeTag, Properties::GlobalEqVector> GlobalEqVector;
-    typedef GetPropType<TypeTag, Properties::NewtonMethod> NewtonMethod;
+    using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
+    using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
+    using NewtonMethod = GetPropType<TypeTag, Properties::NewtonMethod>;
 
     static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
-    typedef Opm::VtkMultiWriter<GridView, vtkFormat> VtkMultiWriter;
+    using VtkMultiWriter = Opm::VtkMultiWriter<GridView, vtkFormat>;
 
 public:
     FvBaseNewtonConvergenceWriter(NewtonMethod& nm)

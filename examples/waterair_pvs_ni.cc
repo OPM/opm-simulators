@@ -45,6 +45,6 @@ struct EnableEnergy<TypeTag, TTag::WaterAirProblem> { static constexpr bool valu
 
 int main(int argc, char **argv)
 {
-    typedef Opm::Properties::TTag::WaterAirProblem ProblemTypeTag;
+    using ProblemTypeTag = Opm::Properties::TTag::WaterAirProblem;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

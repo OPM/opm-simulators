@@ -83,66 +83,65 @@ namespace Linear {
 template <class TypeTag>
 class ParallelAmgBackend : public ParallelBaseBackend<TypeTag>
 {
-    typedef ParallelBaseBackend<TypeTag> ParentType;
+    using ParentType = ParallelBaseBackend<TypeTag>;
 
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::LinearSolverScalar> LinearSolverScalar;
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
-    typedef GetPropType<TypeTag, Properties::Overlap> Overlap;
-    typedef GetPropType<TypeTag, Properties::SparseMatrixAdapter> SparseMatrixAdapter;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using LinearSolverScalar = GetPropType<TypeTag, Properties::LinearSolverScalar>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Overlap = GetPropType<TypeTag, Properties::Overlap>;
+    using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
 
-    typedef typename ParentType::ParallelOperator ParallelOperator;
-    typedef typename ParentType::OverlappingVector OverlappingVector;
-    typedef typename ParentType::ParallelPreconditioner ParallelPreconditioner;
-    typedef typename ParentType::ParallelScalarProduct ParallelScalarProduct;
+    using ParallelOperator = typename ParentType::ParallelOperator;
+    using OverlappingVector = typename ParentType::OverlappingVector;
+    using ParallelPreconditioner = typename ParentType::ParallelPreconditioner;
+    using ParallelScalarProduct = typename ParentType::ParallelScalarProduct;
 
     static constexpr int numEq = getPropValue<TypeTag, Properties::NumEq>();
-    typedef Dune::FieldVector<LinearSolverScalar, numEq> VectorBlock;
-    typedef typename SparseMatrixAdapter::MatrixBlock MatrixBlock;
-    typedef typename SparseMatrixAdapter::IstlMatrix IstlMatrix;
+    using VectorBlock = Dune::FieldVector<LinearSolverScalar, numEq>;
+    using MatrixBlock = typename SparseMatrixAdapter::MatrixBlock;
+    using IstlMatrix = typename SparseMatrixAdapter::IstlMatrix;
 
-    typedef Dune::BlockVector<VectorBlock> Vector;
+    using Vector = Dune::BlockVector<VectorBlock>;
 
     // define the smoother used for the AMG and specify its
     // arguments
-    typedef Dune::SeqSOR<IstlMatrix, Vector, Vector> SequentialSmoother;
-// typedef Dune::SeqSSOR<IstlMatrix,Vector,Vector> SequentialSmoother;
-// typedef Dune::SeqJac<IstlMatrix,Vector,Vector> SequentialSmoother;
+    using SequentialSmoother = Dune::SeqSOR<IstlMatrix, Vector, Vector>;
+// using SequentialSmoother = Dune::SeqSSOR<IstlMatrix,Vector,Vector>;
+// using SequentialSmoother = Dune::SeqJac<IstlMatrix,Vector,Vector>;
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2,7)
-// typedef Dune::SeqILU<IstlMatrix,Vector,Vector> SequentialSmoother;
+// using SequentialSmoother = Dune::SeqILU<IstlMatrix,Vector,Vector>;
 #else
-// typedef Dune::SeqILU0<IstlMatrix,Vector,Vector> SequentialSmoother;
-// typedef Dune::SeqILUn<IstlMatrix,Vector,Vector> SequentialSmoother;
+// using SequentialSmoother = Dune::SeqILU0<IstlMatrix,Vector,Vector>;
+// using SequentialSmoother = Dune::SeqILUn<IstlMatrix,Vector,Vector>;
 #endif
 
 #if HAVE_MPI
-    typedef Dune::OwnerOverlapCopyCommunication<Opm::Linear::Index>
-    OwnerOverlapCopyCommunication;
-    typedef Dune::OverlappingSchwarzOperator<IstlMatrix,
-                                             Vector,
-                                             Vector,
-                                             OwnerOverlapCopyCommunication> FineOperator;
-    typedef Dune::OverlappingSchwarzScalarProduct<Vector,
-                                                  OwnerOverlapCopyCommunication> FineScalarProduct;
-    typedef Dune::BlockPreconditioner<Vector,
-                                      Vector,
-                                      OwnerOverlapCopyCommunication,
-                                      SequentialSmoother> ParallelSmoother;
-    typedef Dune::Amg::AMG<FineOperator,
-                           Vector,
-                           ParallelSmoother,
-                           OwnerOverlapCopyCommunication> AMG;
+    using OwnerOverlapCopyCommunication = Dune::OwnerOverlapCopyCommunication<Opm::Linear::Index>;
+    using FineOperator = Dune::OverlappingSchwarzOperator<IstlMatrix,
+                                                          Vector,
+                                                          Vector,
+                                                          OwnerOverlapCopyCommunication>;
+    using FineScalarProduct = Dune::OverlappingSchwarzScalarProduct<Vector,
+                                                                    OwnerOverlapCopyCommunication>;
+    using ParallelSmoother = Dune::BlockPreconditioner<Vector,
+                                                       Vector,
+                                                       OwnerOverlapCopyCommunication,
+                                                       SequentialSmoother>;
+    using AMG = Dune::Amg::AMG<FineOperator,
+                               Vector,
+                               ParallelSmoother,
+                               OwnerOverlapCopyCommunication>;
 #else
-    typedef Dune::MatrixAdapter<IstlMatrix, Vector, Vector> FineOperator;
-    typedef Dune::SeqScalarProduct<Vector> FineScalarProduct;
-    typedef SequentialSmoother ParallelSmoother;
-    typedef Dune::Amg::AMG<FineOperator, Vector, ParallelSmoother> AMG;
+    using FineOperator = Dune::MatrixAdapter<IstlMatrix, Vector, Vector>;
+    using FineScalarProduct = Dune::SeqScalarProduct<Vector>;
+    using ParallelSmoother = SequentialSmoother;
+    using AMG = Dune::Amg::AMG<FineOperator, Vector, ParallelSmoother>;
 #endif
 
-    typedef BiCGStabSolver<ParallelOperator,
-                           OverlappingVector,
-                           AMG> RawLinearSolver;
+    using RawLinearSolver = BiCGStabSolver<ParallelOperator,
+                                           OverlappingVector,
+                                           AMG> ;
 
     static_assert(std::is_same<SparseMatrixAdapter, IstlSparseMatrixAdapter<MatrixBlock> >::value,
                   "The ParallelAmgBackend linear solver backend requires the IstlSparseMatrixAdapter");
@@ -197,7 +196,7 @@ protected:
                                                     AMG& parPreCond)
     {
         const auto& gridView = this->simulator_.gridView();
-        typedef CombinedCriterion<OverlappingVector, decltype(gridView.comm())> CCC;
+        using CCC = CombinedCriterion<OverlappingVector, decltype(gridView.comm())>;
 
         Scalar linearSolverTolerance = EWOMS_GET_PARAM(TypeTag, Scalar, LinearSolverTolerance);
         Scalar linearSolverAbsTolerance = EWOMS_GET_PARAM(TypeTag, Scalar, LinearSolverAbsTolerance);
@@ -236,8 +235,8 @@ protected:
     template <class ParallelIndexSet>
     void setupAmgIndexSet_(const Overlap& overlap, ParallelIndexSet& istlIndices)
     {
-        typedef Dune::OwnerOverlapCopyAttributeSet GridAttributes;
-        typedef Dune::OwnerOverlapCopyAttributeSet::AttributeSet GridAttributeSet;
+        using GridAttributes = Dune::OwnerOverlapCopyAttributeSet;
+        using GridAttributeSet = Dune::OwnerOverlapCopyAttributeSet::AttributeSet;
 
         // create DUNE's ParallelIndexSet from a domestic overlap
         istlIndices.beginResize();
@@ -270,7 +269,7 @@ protected:
         if (this->simulator_.vanguard().gridView().comm().rank() == 0)
             verbosity = EWOMS_GET_PARAM(TypeTag, int, LinearSolverVerbosity);
 
-        typedef typename Dune::Amg::SmootherTraits<ParallelSmoother>::Arguments SmootherArgs;
+        using SmootherArgs = typename Dune::Amg::SmootherTraits<ParallelSmoother>::Arguments;
 
         SmootherArgs smootherArgs;
         smootherArgs.iterations = 1;
@@ -278,12 +277,11 @@ protected:
 
         // specify the coarsen criterion:
         //
-        // typedef
+        // using CoarsenCriterion =
         // Dune::Amg::CoarsenCriterion<Dune::Amg::SymmetricCriterion<IstlMatrix,
         //                             Dune::Amg::FirstDiagonal>>
-        typedef Dune::Amg::
-            CoarsenCriterion<Dune::Amg::SymmetricCriterion<IstlMatrix, Dune::Amg::FrobeniusNorm> >
-            CoarsenCriterion;
+        using CoarsenCriterion = Dune::Amg::
+            CoarsenCriterion<Dune::Amg::SymmetricCriterion<IstlMatrix, Dune::Amg::FrobeniusNorm> >;
         int coarsenTarget = EWOMS_GET_PARAM(TypeTag, int, AmgCoarsenTarget);
         CoarsenCriterion coarsenCriterion(/*maxLevel=*/15, coarsenTarget);
         coarsenCriterion.setDefaultValuesAnisotropic(GridView::dimension,

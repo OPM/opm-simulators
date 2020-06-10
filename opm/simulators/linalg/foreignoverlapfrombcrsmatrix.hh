@@ -387,7 +387,7 @@ protected:
             // find all column indices in the row. The indices of the
             // columns are the additional indices of the overlap which
             // we would like to add
-            typedef typename BCRSMatrix::ConstColIterator ColIterator;
+            using ColIterator = typename BCRSMatrix::ConstColIterator;
             ColIterator colIt = A[static_cast<unsigned>(nativeRowIdx)].begin();
             ColIterator colEndIt = A[static_cast<unsigned>(nativeRowIdx)].end();
             for (; colIt != colEndIt; ++colIt) {

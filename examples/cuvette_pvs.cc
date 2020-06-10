@@ -42,6 +42,6 @@ struct CuvetteProblem { using InheritsFrom = std::tuple<CuvetteBaseProblem, PvsM
 
 int main(int argc, char **argv)
 {
-    typedef Opm::Properties::TTag::CuvetteProblem ProblemTypeTag;
+    using ProblemTypeTag = Opm::Properties::TTag::CuvetteProblem;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

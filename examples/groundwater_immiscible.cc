@@ -42,6 +42,6 @@ struct GroundWaterProblem { using InheritsFrom = std::tuple<GroundWaterBaseProbl
 
 int main(int argc, char **argv)
 {
-    typedef Opm::Properties::TTag::GroundWaterProblem ProblemTypeTag;
+    using ProblemTypeTag = Opm::Properties::TTag::GroundWaterProblem;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

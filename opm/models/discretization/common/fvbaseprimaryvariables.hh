@@ -50,13 +50,13 @@ class FvBasePrimaryVariables
     : public Dune::FieldVector<GetPropType<TypeTag, Properties::Scalar>,
                                getPropValue<TypeTag, Properties::NumEq>()>
 {
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
 
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
 
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
-    typedef Dune::FieldVector<Scalar, numEq> ParentType;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using ParentType = Dune::FieldVector<Scalar, numEq>;
 
 public:
     FvBasePrimaryVariables()

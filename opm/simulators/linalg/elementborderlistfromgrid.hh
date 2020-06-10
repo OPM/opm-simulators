@@ -51,11 +51,11 @@ namespace Linear {
 template <class GridView, class ElementMapper>
 class ElementBorderListFromGrid
 {
-    typedef BlackList::PeerBlackListedEntry PeerBlackListedEntry;
-    typedef BlackList::PeerBlackList PeerBlackList;
-    typedef BlackList::PeerBlackLists PeerBlackLists;
+    using PeerBlackListedEntry = BlackList::PeerBlackListedEntry;
+    using PeerBlackList = BlackList::PeerBlackList;
+    using PeerBlackLists = BlackList::PeerBlackLists;
 
-    typedef typename GridView::template Codim<0>::Entity Element;
+    using Element = typename GridView::template Codim<0>::Entity;
 
     class BorderListHandle_
         : public Dune::CommDataHandleIF<BorderListHandle_, ProcessRank>

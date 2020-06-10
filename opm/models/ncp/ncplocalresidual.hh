@@ -45,14 +45,14 @@ namespace Opm {
 template <class TypeTag>
 class NcpLocalResidual : public GetPropType<TypeTag, Properties::DiscLocalResidual>
 {
-    typedef GetPropType<TypeTag, Properties::DiscLocalResidual> ParentType;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
-    typedef GetPropType<TypeTag, Properties::RateVector> RateVector;
-    typedef GetPropType<TypeTag, Properties::IntensiveQuantities> IntensiveQuantities;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
+    using ParentType = GetPropType<TypeTag, Properties::DiscLocalResidual>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
@@ -61,14 +61,14 @@ class NcpLocalResidual : public GetPropType<TypeTag, Properties::DiscLocalResidu
     enum { conti0EqIdx = Indices::conti0EqIdx };
 
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
-    typedef Opm::DiffusionModule<TypeTag, enableDiffusion> DiffusionModule;
+    using DiffusionModule = Opm::DiffusionModule<TypeTag, enableDiffusion>;
 
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
-    typedef Opm::EnergyModule<TypeTag, enableEnergy> EnergyModule;
+    using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
 
-    typedef Dune::FieldVector<Evaluation, numEq> EvalEqVector;
-    typedef Dune::BlockVector<EvalEqVector> ElemEvalEqVector;
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
+    using EvalEqVector = Dune::FieldVector<Evaluation, numEq>;
+    using ElemEvalEqVector = Dune::BlockVector<EvalEqVector>;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
 
 public:
     /*!
@@ -217,9 +217,9 @@ public:
                      unsigned phaseIdx) const
     {
         const auto& fluidState = elemCtx.intensiveQuantities(dofIdx, timeIdx).fluidState();
-        typedef typename std::remove_const<typename std::remove_reference<decltype(fluidState)>::type>::type FluidState;
+        using FluidState = typename std::remove_const<typename std::remove_reference<decltype(fluidState)>::type>::type;
 
-        typedef Opm::MathToolbox<LhsEval> LhsToolbox;
+        using LhsToolbox = Opm::MathToolbox<LhsEval>;
 
         const LhsEval& a = phaseNotPresentIneq_<FluidState, LhsEval>(fluidState, phaseIdx);
         const LhsEval& b = phasePresentIneq_<FluidState, LhsEval>(fluidState, phaseIdx);
@@ -234,7 +234,7 @@ private:
     template <class FluidState, class LhsEval>
     LhsEval phasePresentIneq_(const FluidState& fluidState, unsigned phaseIdx) const
     {
-        typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
+        using FsToolbox = Opm::MathToolbox<typename FluidState::Scalar>;
 
         return FsToolbox::template decay<LhsEval>(fluidState.saturation(phaseIdx));
     }
@@ -246,7 +246,7 @@ private:
     template <class FluidState, class LhsEval>
     LhsEval phaseNotPresentIneq_(const FluidState& fluidState, unsigned phaseIdx) const
     {
-        typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
+        using FsToolbox = Opm::MathToolbox<typename FluidState::Scalar>;
 
         // difference of sum of mole fractions in the phase from 100%
         LhsEval a = 1.0;

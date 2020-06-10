@@ -44,18 +44,18 @@ namespace Opm {
 template <class TypeTag>
 class DiscreteFractureExtensiveQuantities : public ImmiscibleExtensiveQuantities<TypeTag>
 {
-    typedef ImmiscibleExtensiveQuantities<TypeTag> ParentType;
+    using ParentType = ImmiscibleExtensiveQuantities<TypeTag>;
 
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
     enum { dimWorld = GridView::dimensionworld };
     enum { numPhases = FluidSystem::numPhases };
 
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
-    typedef Dune::FieldVector<Scalar, dimWorld> DimVector;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
+    using DimVector = Dune::FieldVector<Scalar, dimWorld>;
 
 public:
     /*!

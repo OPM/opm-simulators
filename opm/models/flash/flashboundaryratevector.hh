@@ -45,12 +45,12 @@ namespace Opm {
 template <class TypeTag>
 class FlashBoundaryRateVector : public GetPropType<TypeTag, Properties::RateVector>
 {
-    typedef GetPropType<TypeTag, Properties::RateVector> ParentType;
-    typedef GetPropType<TypeTag, Properties::ExtensiveQuantities> ExtensiveQuantities;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
+    using ParentType = GetPropType<TypeTag, Properties::RateVector>;
+    using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
@@ -58,8 +58,8 @@ class FlashBoundaryRateVector : public GetPropType<TypeTag, Properties::RateVect
     enum { conti0EqIdx = Indices::conti0EqIdx };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
-    typedef Opm::EnergyModule<TypeTag, enableEnergy> EnergyModule;
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
+    using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
 
 public:
     FlashBoundaryRateVector() : ParentType()

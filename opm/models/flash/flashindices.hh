@@ -48,7 +48,7 @@ class FlashIndices
 {
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
-    typedef Opm::EnergyIndices<PVOffset + numComponents, enableEnergy> EnergyIndices;
+    using EnergyIndices = Opm::EnergyIndices<PVOffset + numComponents, enableEnergy>;
 
 public:
     //! number of equations/primary variables

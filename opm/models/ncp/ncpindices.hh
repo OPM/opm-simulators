@@ -47,12 +47,12 @@ struct NcpIndices
                            getPropValue<TypeTag, Properties::EnableEnergy>()>
 {
 private:
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
-    typedef Opm::EnergyIndices<PVOffset + numComponents + numPhases, enableEnergy> EnergyIndices;
+    using EnergyIndices = Opm::EnergyIndices<PVOffset + numComponents + numPhases, enableEnergy>;
 
 public:
     /*!

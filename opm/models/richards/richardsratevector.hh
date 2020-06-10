@@ -50,17 +50,17 @@ class RichardsRateVector
     : public Dune::FieldVector<GetPropType<TypeTag, Properties::Evaluation>,
                                getPropValue<TypeTag, Properties::NumEq>()>
 {
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::IntensiveQuantities> EnergyModule;
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using EnergyModule = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
     enum { contiEqIdx = Indices::contiEqIdx };
     enum { liquidCompIdx = getPropValue<TypeTag, Properties::LiquidComponentIndex>() };
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
 
-    typedef Dune::FieldVector<Evaluation, numEq> ParentType;
+    using ParentType = Dune::FieldVector<Evaluation, numEq>;
 
 public:
     RichardsRateVector() : ParentType()

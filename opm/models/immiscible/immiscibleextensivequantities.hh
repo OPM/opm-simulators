@@ -50,15 +50,15 @@ class ImmiscibleExtensiveQuantities
     : public MultiPhaseBaseExtensiveQuantities<TypeTag>
     , public EnergyExtensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableEnergy>()>
 {
-    typedef MultiPhaseBaseExtensiveQuantities<TypeTag> ParentType;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
+    using ParentType = MultiPhaseBaseExtensiveQuantities<TypeTag>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
 
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
-    typedef typename FluidSystem::template ParameterCache<Evaluation> ParameterCache;
-    typedef Opm::EnergyExtensiveQuantities<TypeTag, enableEnergy> EnergyExtensiveQuantities;
+    using ParameterCache = typename FluidSystem::template ParameterCache<Evaluation>;
+    using EnergyExtensiveQuantities = Opm::EnergyExtensiveQuantities<TypeTag, enableEnergy>;
 
 public:
     /*!

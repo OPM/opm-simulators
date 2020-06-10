@@ -63,12 +63,12 @@ template<class TypeTag>
 struct SparseMatrixAdapter<TypeTag, TTag::ParallelBaseLinearSolver>
 {
 private:
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
-    typedef Opm::MatrixBlock<Scalar, numEq, numEq> Block;
+    using Block = Opm::MatrixBlock<Scalar, numEq, numEq>;
 
 public:
-    typedef typename Opm::Linear::IstlSparseMatrixAdapter<Block> type;
+    using type = typename Opm::Linear::IstlSparseMatrixAdapter<Block>;
 };
 
 } // namespace Opm::Properties
@@ -106,28 +106,28 @@ template <class TypeTag>
 class ParallelBaseBackend
 {
 protected:
-    typedef GetPropType<TypeTag, Properties::LinearSolverBackend> Implementation;
+    using Implementation = GetPropType<TypeTag, Properties::LinearSolverBackend>;
 
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::LinearSolverScalar> LinearSolverScalar;
-    typedef GetPropType<TypeTag, Properties::SparseMatrixAdapter> SparseMatrixAdapter;
-    typedef GetPropType<TypeTag, Properties::GlobalEqVector> Vector;
-    typedef GetPropType<TypeTag, Properties::BorderListCreator> BorderListCreator;
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using LinearSolverScalar = GetPropType<TypeTag, Properties::LinearSolverScalar>;
+    using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
+    using Vector = GetPropType<TypeTag, Properties::GlobalEqVector>;
+    using BorderListCreator = GetPropType<TypeTag, Properties::BorderListCreator>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
 
-    typedef GetPropType<TypeTag, Properties::Overlap> Overlap;
-    typedef GetPropType<TypeTag, Properties::OverlappingVector> OverlappingVector;
-    typedef GetPropType<TypeTag, Properties::OverlappingMatrix> OverlappingMatrix;
+    using Overlap = GetPropType<TypeTag, Properties::Overlap>;
+    using OverlappingVector = GetPropType<TypeTag, Properties::OverlappingVector>;
+    using OverlappingMatrix = GetPropType<TypeTag, Properties::OverlappingMatrix>;
 
-    typedef GetPropType<TypeTag, Properties::PreconditionerWrapper> PreconditionerWrapper;
-    typedef typename PreconditionerWrapper::SequentialPreconditioner SequentialPreconditioner;
+    using PreconditionerWrapper = GetPropType<TypeTag, Properties::PreconditionerWrapper>;
+    using SequentialPreconditioner = typename PreconditionerWrapper::SequentialPreconditioner;
 
-    typedef Opm::Linear::OverlappingPreconditioner<SequentialPreconditioner, Overlap> ParallelPreconditioner;
-    typedef Opm::Linear::OverlappingScalarProduct<OverlappingVector, Overlap> ParallelScalarProduct;
-    typedef Opm::Linear::OverlappingOperator<OverlappingMatrix,
-                                             OverlappingVector,
-                                             OverlappingVector> ParallelOperator;
+    using ParallelPreconditioner = Opm::Linear::OverlappingPreconditioner<SequentialPreconditioner, Overlap>;
+    using ParallelScalarProduct = Opm::Linear::OverlappingScalarProduct<OverlappingVector, Overlap>;
+    using ParallelOperator = Opm::Linear::OverlappingOperator<OverlappingMatrix,
+                                                              OverlappingVector,
+                                                              OverlappingVector>;
 
     enum { dimWorld = GridView::dimensionworld };
 
@@ -345,7 +345,7 @@ protected:
         for (int lookedAtRank = 0;
              lookedAtRank < simulator_.gridView().comm().size(); ++lookedAtRank) {
             std::cout << "writing overlap for rank " << lookedAtRank << "\n"  << std::flush;
-            typedef Dune::BlockVector<Dune::FieldVector<Scalar, 1> > VtkField;
+            using VtkField = Dune::BlockVector<Dune::FieldVector<Scalar, 1> >;
             int n = simulator_.gridView().size(/*codim=*/dimWorld);
             VtkField isInOverlap(n);
             VtkField rankField(n);
@@ -366,7 +366,7 @@ protected:
                     isInOverlap[nativeIdx] = 1.0;
             }
 
-            typedef Dune::VTKWriter<GridView> VtkWriter;
+            using VtkWriter = Dune::VTKWriter<GridView>;
             VtkWriter writer(simulator_.gridView(), Dune::VTK::conforming);
             writer.addVertexData(isInOverlap, "overlap");
             writer.addVertexData(rankField, "rank");
@@ -418,12 +418,12 @@ struct OverlappingMatrix<TypeTag, TTag::ParallelBaseLinearSolver>
 {
 private:
     static constexpr int numEq = getPropValue<TypeTag, Properties::NumEq>();
-    typedef GetPropType<TypeTag, Properties::LinearSolverScalar> LinearSolverScalar;
-    typedef Opm::MatrixBlock<LinearSolverScalar, numEq, numEq> MatrixBlock;
-    typedef Dune::BCRSMatrix<MatrixBlock> NonOverlappingMatrix;
+    using LinearSolverScalar = GetPropType<TypeTag, Properties::LinearSolverScalar>;
+    using MatrixBlock = Opm::MatrixBlock<LinearSolverScalar, numEq, numEq>;
+    using NonOverlappingMatrix = Dune::BCRSMatrix<MatrixBlock>;
 
 public:
-    typedef Opm::Linear::OverlappingBCRSMatrix<NonOverlappingMatrix> type;
+    using type = Opm::Linear::OverlappingBCRSMatrix<NonOverlappingMatrix>;
 };
 
 template<class TypeTag>
@@ -434,27 +434,27 @@ template<class TypeTag>
 struct OverlappingVector<TypeTag, TTag::ParallelBaseLinearSolver>
 {
     static constexpr int numEq = getPropValue<TypeTag, Properties::NumEq>();
-    typedef GetPropType<TypeTag, Properties::LinearSolverScalar> LinearSolverScalar;
-    typedef Dune::FieldVector<LinearSolverScalar, numEq> VectorBlock;
-    typedef GetPropType<TypeTag, Properties::Overlap> Overlap;
-    typedef Opm::Linear::OverlappingBlockVector<VectorBlock, Overlap> type;
+    using LinearSolverScalar = GetPropType<TypeTag, Properties::LinearSolverScalar>;
+    using VectorBlock = Dune::FieldVector<LinearSolverScalar, numEq>;
+    using Overlap = GetPropType<TypeTag, Properties::Overlap>;
+    using type = Opm::Linear::OverlappingBlockVector<VectorBlock, Overlap>;
 };
 
 template<class TypeTag>
 struct OverlappingScalarProduct<TypeTag, TTag::ParallelBaseLinearSolver>
 {
-    typedef GetPropType<TypeTag, Properties::OverlappingVector> OverlappingVector;
-    typedef GetPropType<TypeTag, Properties::Overlap> Overlap;
-    typedef Opm::Linear::OverlappingScalarProduct<OverlappingVector, Overlap> type;
+    using OverlappingVector = GetPropType<TypeTag, Properties::OverlappingVector>;
+    using Overlap = GetPropType<TypeTag, Properties::Overlap>;
+    using type = Opm::Linear::OverlappingScalarProduct<OverlappingVector, Overlap>;
 };
 
 template<class TypeTag>
 struct OverlappingLinearOperator<TypeTag, TTag::ParallelBaseLinearSolver>
 {
-    typedef GetPropType<TypeTag, Properties::OverlappingMatrix> OverlappingMatrix;
-    typedef GetPropType<TypeTag, Properties::OverlappingVector> OverlappingVector;
-    typedef Opm::Linear::OverlappingOperator<OverlappingMatrix, OverlappingVector,
-                                             OverlappingVector> type;
+    using OverlappingMatrix = GetPropType<TypeTag, Properties::OverlappingMatrix>;
+    using OverlappingVector = GetPropType<TypeTag, Properties::OverlappingVector>;
+    using type = Opm::Linear::OverlappingOperator<OverlappingMatrix, OverlappingVector,
+                                                  OverlappingVector>;
 };
 
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2,7)

@@ -45,6 +45,6 @@ struct SpatialDiscretizationSplice<TypeTag, TTag::FingerProblemVcfv> { using typ
 
 int main(int argc, char **argv)
 {
-    typedef Opm::Properties::TTag::FingerProblemVcfv ProblemTypeTag;
+    using ProblemTypeTag = Opm::Properties::TTag::FingerProblemVcfv;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

@@ -66,10 +66,10 @@ struct Evaluation<TypeTag, TTag::AutoDiffLocalLinearizer>
 private:
     static const unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
 
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    typedef Opm::DenseAd::Evaluation<Scalar, numEq> type;
+    using type = Opm::DenseAd::Evaluation<Scalar, numEq>;
 };
 
 } // namespace Opm::Properties
@@ -88,25 +88,25 @@ template<class TypeTag>
 class FvBaseAdLocalLinearizer
 {
 private:
-    typedef GetPropType<TypeTag, Properties::LocalLinearizer> Implementation;
-    typedef GetPropType<TypeTag, Properties::LocalResidual> LocalResidual;
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
-    typedef GetPropType<TypeTag, Properties::Problem> Problem;
-    typedef GetPropType<TypeTag, Properties::Model> Model;
-    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
-    typedef typename GridView::template Codim<0>::Entity Element;
+    using Implementation = GetPropType<TypeTag, Properties::LocalLinearizer>;
+    using LocalResidual = GetPropType<TypeTag, Properties::LocalResidual>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Problem = GetPropType<TypeTag, Properties::Problem>;
+    using Model = GetPropType<TypeTag, Properties::Model>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Element = typename GridView::template Codim<0>::Entity;
 
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
 
-    typedef Dune::FieldVector<Scalar, numEq> ScalarVectorBlock;
+    using ScalarVectorBlock = Dune::FieldVector<Scalar, numEq>;
     // extract local matrices from jacobian matrix for consistency
-    typedef typename GetPropType<TypeTag, Properties::SparseMatrixAdapter>::MatrixBlock ScalarMatrixBlock;
+    using ScalarMatrixBlock = typename GetPropType<TypeTag, Properties::SparseMatrixAdapter>::MatrixBlock;
 
-    typedef Dune::BlockVector<ScalarVectorBlock> ScalarLocalBlockVector;
-    typedef Dune::Matrix<ScalarMatrixBlock> ScalarLocalBlockMatrix;
+    using ScalarLocalBlockVector = Dune::BlockVector<ScalarVectorBlock>;
+    using ScalarLocalBlockMatrix = Dune::Matrix<ScalarMatrixBlock>;
 
 public:
     FvBaseAdLocalLinearizer()

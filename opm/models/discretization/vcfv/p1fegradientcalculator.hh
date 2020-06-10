@@ -64,11 +64,11 @@ namespace Opm {
 template<class TypeTag>
 class P1FeGradientCalculator : public FvBaseGradientCalculator<TypeTag>
 {
-    typedef FvBaseGradientCalculator<TypeTag> ParentType;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
+    using ParentType = FvBaseGradientCalculator<TypeTag>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
     enum { dim = GridView::dimension };
 
@@ -78,14 +78,14 @@ class P1FeGradientCalculator : public FvBaseGradientCalculator<TypeTag>
     enum { maxDof = (2 << dim) };
     enum { maxFap = maxDof };
 
-    typedef typename GridView::ctype CoordScalar;
-    typedef Dune::FieldVector<Scalar, dim> DimVector;
+    using CoordScalar = typename GridView::ctype;
+    using DimVector = Dune::FieldVector<Scalar, dim>;
 
 #if HAVE_DUNE_LOCALFUNCTIONS
-    typedef Dune::PQkLocalFiniteElementCache<CoordScalar, Scalar, dim, 1> LocalFiniteElementCache;
-    typedef typename LocalFiniteElementCache::FiniteElementType LocalFiniteElement;
-    typedef typename LocalFiniteElement::Traits::LocalBasisType::Traits LocalBasisTraits;
-    typedef typename LocalBasisTraits::JacobianType ShapeJacobian;
+    using LocalFiniteElementCache = Dune::PQkLocalFiniteElementCache<CoordScalar, Scalar, dim, 1>;
+    using LocalFiniteElement = typename LocalFiniteElementCache::FiniteElementType;
+    using LocalBasisTraits = typename LocalFiniteElement::Traits::LocalBasisType::Traits;
+    using ShapeJacobian = typename LocalBasisTraits::JacobianType;
 #endif // HAVE_DUNE_LOCALFUNCTIONS
 
 public:
@@ -167,9 +167,9 @@ public:
             throw std::logic_error("The dune-localfunctions module is required in oder to use"
                                    " finite element gradients");
 #else
-            typedef typename std::remove_reference<typename QuantityCallback::ResultType>::type QuantityConstType;
-            typedef typename std::remove_const<QuantityConstType>::type QuantityType;
-            typedef Opm::MathToolbox<QuantityType> Toolbox;
+            using QuantityConstType = typename std::remove_reference<typename QuantityCallback::ResultType>::type;
+            using QuantityType = typename std::remove_const<QuantityConstType>::type;
+            using Toolbox = Opm::MathToolbox<QuantityType>;
 
             // If the user does not want to use two-point gradients, we
             // use P1 finite element gradients..
@@ -212,13 +212,13 @@ public:
             throw std::logic_error("The dune-localfunctions module is required in oder to use"
                                    " finite element gradients");
 #else
-            typedef typename std::remove_reference<typename QuantityCallback::ResultType>::type QuantityConstType;
-            typedef typename std::remove_const<QuantityConstType>::type QuantityType;
+            using QuantityConstType = typename std::remove_reference<typename QuantityCallback::ResultType>::type;
+            using QuantityType = typename std::remove_const<QuantityConstType>::type;
 
-            typedef decltype(std::declval<QuantityType>()[0]) RawFieldType;
-            typedef typename std::remove_const<typename std::remove_reference<RawFieldType>::type>::type FieldType;
+            using RawFieldType = decltype(std::declval<QuantityType>()[0]);
+            using FieldType = typename std::remove_const<typename std::remove_reference<RawFieldType>::type>::type;
 
-            typedef Opm::MathToolbox<FieldType> Toolbox;
+            using Toolbox = Opm::MathToolbox<FieldType>;
 
             // If the user does not want to use two-point gradients, we
             // use P1 finite element gradients..
@@ -268,8 +268,8 @@ public:
             throw std::logic_error("The dune-localfunctions module is required in oder to use"
                                    " finite element gradients");
 #else
-            typedef typename std::remove_reference<typename QuantityCallback::ResultType>::type QuantityConstType;
-            typedef typename std::remove_const<QuantityConstType>::type QuantityType;
+            using QuantityConstType = typename std::remove_reference<typename QuantityCallback::ResultType>::type;
+            using QuantityType = typename std::remove_const<QuantityConstType>::type;
 
             // If the user does not want two-point gradients, we use P1 finite element
             // gradients...

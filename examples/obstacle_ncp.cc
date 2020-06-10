@@ -43,6 +43,6 @@ struct ObstacleProblem { using InheritsFrom = std::tuple<ObstacleBaseProblem, Nc
 
 int main(int argc, char **argv)
 {
-    typedef Opm::Properties::TTag::ObstacleProblem ProblemTypeTag;
+    using ProblemTypeTag = Opm::Properties::TTag::ObstacleProblem;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

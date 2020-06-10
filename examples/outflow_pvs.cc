@@ -46,6 +46,6 @@ struct PvsVerbosity<TypeTag, TTag::OutflowProblem> { static constexpr int value 
 
 int main(int argc, char **argv)
 {
-    typedef Opm::Properties::TTag::OutflowProblem ProblemTypeTag;
+    using ProblemTypeTag = Opm::Properties::TTag::OutflowProblem;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

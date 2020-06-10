@@ -44,12 +44,12 @@ struct Grid <TypeTag, TTag::LensProblemEcfvAd>
     : public Dune::AnalyticalCoordFunction
       < ctype, dim, dimworld, IdentityCoordFct< ctype, dim, dimworld > >
   {
-    typedef IdentityCoordFct< ctype, dim, dimworld > This;
-    typedef Dune::AnalyticalCoordFunction< ctype, dim, dimworld, This > Base;
+    using This = IdentityCoordFct< ctype, dim, dimworld >;
+    using Base = Dune::AnalyticalCoordFunction< ctype, dim, dimworld, This >;
 
   public:
-    typedef typename Base :: DomainVector DomainVector;
-    typedef typename Base :: RangeVector  RangeVector;
+    using DomainVector = typename Base :: DomainVector;
+    using RangeVector = typename Base :: RangeVector ;
 
     template< typename... Args >
     IdentityCoordFct( Args&... )
@@ -71,14 +71,13 @@ struct Grid <TypeTag, TTag::LensProblemEcfvAd>
 
   };
 
-  typedef Dune::YaspGrid< 2 > MyYaspGrid;
+  using MyYaspGrid = Dune::YaspGrid< 2 >;
 
 public:
-  //typedef MyYaspGrid type;
-  typedef Dune::GeometryGrid< MyYaspGrid,
-                              IdentityCoordFct< typename MyYaspGrid::ctype,
-                                                MyYaspGrid::dimension,
-                                                MyYaspGrid::dimensionworld+1> >  type;
+  using type = Dune::GeometryGrid< MyYaspGrid,
+                                   IdentityCoordFct< typename MyYaspGrid::ctype,
+                                                     MyYaspGrid::dimension,
+                                                     MyYaspGrid::dimensionworld+1> >;
 };
 
 } // namespace Opm::Properties
@@ -87,6 +86,6 @@ public:
 
 int main(int argc, char **argv)
 {
-    typedef Opm::Properties::TTag::LensProblemEcfvAd ProblemTypeTag;
+    using ProblemTypeTag = Opm::Properties::TTag::LensProblemEcfvAd;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

@@ -44,14 +44,14 @@ namespace Opm {
 template <class TypeTag>
 class BlackOilBoundaryRateVector : public GetPropType<TypeTag, Properties::RateVector>
 {
-    typedef GetPropType<TypeTag, Properties::RateVector> ParentType;
-    typedef GetPropType<TypeTag, Properties::ExtensiveQuantities> ExtensiveQuantities;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::LocalResidual> LocalResidual;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::RateVector> RateVector;
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
+    using ParentType = GetPropType<TypeTag, Properties::RateVector>;
+    using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using LocalResidual = GetPropType<TypeTag, Properties::LocalResidual>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
@@ -65,7 +65,7 @@ class BlackOilBoundaryRateVector : public GetPropType<TypeTag, Properties::RateV
 
     static constexpr bool blackoilConserveSurfaceVolume = getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>();
 
-    typedef Opm::BlackOilEnergyModule<TypeTag, enableEnergy> EnergyModule;
+    using EnergyModule = Opm::BlackOilEnergyModule<TypeTag, enableEnergy>;
 
 public:
     /*!
@@ -120,8 +120,8 @@ public:
                                                                      extQuants,
                                                                      insideIntQuants.fluidState());
             else if (pBoundary > pInside) {
-                typedef typename std::conditional<std::is_same<typename FluidState::Scalar, Evaluation>::value,
-                                                  Evaluation, Scalar>::type RhsEval;
+                using RhsEval = typename std::conditional<std::is_same<typename FluidState::Scalar, Evaluation>::value,
+                                                          Evaluation, Scalar>::type;
                 // influx
                 LocalResidual::template evalPhaseFluxes_<RhsEval>(tmp,
                                                                   phaseIdx,

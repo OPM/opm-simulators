@@ -52,8 +52,8 @@ namespace Linear {
 template <class LinearOperator, class Vector, class Preconditioner>
 class BiCGStabSolver
 {
-    typedef Opm::Linear::ConvergenceCriterion<Vector> ConvergenceCriterion;
-    typedef typename LinearOperator::field_type Scalar;
+    using ConvergenceCriterion = Opm::Linear::ConvergenceCriterion<Vector>;
+    using Scalar = typename LinearOperator::field_type;
 
 public:
     BiCGStabSolver(Preconditioner& preconditioner,

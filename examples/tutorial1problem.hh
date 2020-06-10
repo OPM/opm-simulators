@@ -104,20 +104,20 @@ struct MaterialLaw<TypeTag, TTag::Tutorial1Problem>
 private:
     // create a class holding the necessary information for a
     // two-phase capillary pressure law
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     enum { wettingPhaseIdx = FluidSystem::wettingPhaseIdx };
     enum { nonWettingPhaseIdx = FluidSystem::nonWettingPhaseIdx };
-    typedef Opm::TwoPhaseMaterialTraits<Scalar, wettingPhaseIdx, nonWettingPhaseIdx> Traits;
+    using Traits = Opm::TwoPhaseMaterialTraits<Scalar, wettingPhaseIdx, nonWettingPhaseIdx>;
 
     // define the material law which is parameterized by effective
     // saturations
-    typedef Opm::RegularizedBrooksCorey<Traits> RawMaterialLaw; /*@\label{tutorial1:rawlaw}@*/
+    using RawMaterialLaw = Opm::RegularizedBrooksCorey<Traits>; /*@\label{tutorial1:rawlaw}@*/
 
 public:
     // Convert absolute saturations into effective ones before passing
     // it to the base capillary pressure law
-    typedef Opm::EffToAbsLaw<RawMaterialLaw> type; /*@\label{tutorial1:eff2abs}@*/
+    using type = Opm::EffToAbsLaw<RawMaterialLaw>; /*@\label{tutorial1:eff2abs}@*/
 };
 
 // Disable gravity
@@ -176,25 +176,25 @@ template <class TypeTag>
 class Tutorial1Problem
     : public GetPropType<TypeTag, Properties::BaseProblem> /*@\label{tutorial1:def-problem}@*/
 {
-    typedef GetPropType<TypeTag, Properties::BaseProblem> ParentType;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
 
     // Grid dimension
     enum { dimWorld = GridView::dimensionworld };
 
     // The type of the intrinsic permeability tensor
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
     // eWoms specific types are specified via the property system
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
-    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
-    typedef GetPropType<TypeTag, Properties::RateVector> RateVector;
-    typedef GetPropType<TypeTag, Properties::BoundaryRateVector> BoundaryRateVector;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
-    typedef GetPropType<TypeTag, Properties::MaterialLaw> MaterialLaw;
-    typedef GetPropType<TypeTag, Properties::MaterialLawParams> MaterialLawParams; /*@\label{tutorial1:matLawObjectType}@*/
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using BoundaryRateVector = GetPropType<TypeTag, Properties::BoundaryRateVector>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>; /*@\label{tutorial1:matLawObjectType}@*/
 
     // phase indices
     enum { numPhases = FluidSystem::numPhases };

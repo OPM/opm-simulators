@@ -55,11 +55,11 @@ template<class TypeTag>
 struct Stencil<TypeTag, TTag::EcfvDiscretization>
 {
 private:
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
 
 public:
-    typedef Opm::EcfvStencil<Scalar, GridView> type;
+    using type = Opm::EcfvStencil<Scalar, GridView>;
 };
 
 //! Mapper for the degrees of freedoms.
@@ -87,15 +87,15 @@ template<class TypeTag>
 struct DiscreteFunctionSpace<TypeTag, TTag::EcfvDiscretization>
 {
 private:
-    typedef GetPropType<TypeTag, Properties::Scalar>   Scalar;
-    typedef GetPropType<TypeTag, Properties::GridPart> GridPart;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>  ;
+    using GridPart = GetPropType<TypeTag, Properties::GridPart>;
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
-    typedef Dune::Fem::FunctionSpace<typename GridPart::GridType::ctype,
-                                     Scalar,
-                                     GridPart::GridType::dimensionworld,
-                                     numEq> FunctionSpace;
+    using FunctionSpace = Dune::Fem::FunctionSpace<typename GridPart::GridType::ctype,
+                                                   Scalar,
+                                                   GridPart::GridType::dimensionworld,
+                                                   numEq>;
 public:
-    typedef Dune::Fem::FiniteVolumeSpace< FunctionSpace, GridPart, 0 > type;
+    using type = Dune::Fem::FiniteVolumeSpace< FunctionSpace, GridPart, 0 >;
 };
 #endif
 
@@ -104,10 +104,10 @@ public:
 template<class TypeTag>
 struct BorderListCreator<TypeTag, TTag::EcfvDiscretization>
 { private:
-    typedef GetPropType<TypeTag, Properties::ElementMapper> ElementMapper;
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
 public:
-    typedef Opm::Linear::ElementBorderListFromGrid<GridView, ElementMapper> type;
+    using type = Opm::Linear::ElementBorderListFromGrid<GridView, ElementMapper>;
 };
 
 //! For the element centered finite volume method, ghost and overlap elements must be
@@ -132,14 +132,14 @@ namespace Opm {
 template<class TypeTag>
 class EcfvDiscretization : public FvBaseDiscretization<TypeTag>
 {
-    typedef FvBaseDiscretization<TypeTag> ParentType;
+    using ParentType = FvBaseDiscretization<TypeTag>;
 
-    typedef GetPropType<TypeTag, Properties::Model> Implementation;
-    typedef GetPropType<TypeTag, Properties::DofMapper> DofMapper;
-    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
-    typedef GetPropType<TypeTag, Properties::SolutionVector> SolutionVector;
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    using Implementation = GetPropType<TypeTag, Properties::Model>;
+    using DofMapper = GetPropType<TypeTag, Properties::DofMapper>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
 public:
     EcfvDiscretization(Simulator& simulator)
@@ -177,10 +177,10 @@ public:
     void syncOverlap()
     {
         // syncronize the solution on the ghost and overlap elements
-        typedef GridCommHandleGhostSync<PrimaryVariables,
-                                        SolutionVector,
-                                        DofMapper,
-                                        /*commCodim=*/0> GhostSyncHandle;
+        using GhostSyncHandle = GridCommHandleGhostSync<PrimaryVariables,
+                                                        SolutionVector,
+                                                        DofMapper,
+                                                        /*commCodim=*/0>;
 
         auto ghostSync = GhostSyncHandle(this->solution(/*timeIdx=*/0),
                                          asImp_().dofMapper());

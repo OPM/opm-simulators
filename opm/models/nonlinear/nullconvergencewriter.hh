@@ -48,10 +48,10 @@ namespace Opm {
 template <class TypeTag>
 class NullConvergenceWriter
 {
-    typedef GetPropType<TypeTag, Properties::NewtonMethod> NewtonMethod;
+    using NewtonMethod = GetPropType<TypeTag, Properties::NewtonMethod>;
 
-    typedef GetPropType<TypeTag, Properties::SolutionVector> SolutionVector;
-    typedef GetPropType<TypeTag, Properties::GlobalEqVector> GlobalEqVector;
+    using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
+    using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
 
 public:
     NullConvergenceWriter(NewtonMethod& method  OPM_UNUSED)

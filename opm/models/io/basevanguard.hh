@@ -47,13 +47,13 @@ namespace Opm {
 template <class TypeTag>
 class BaseVanguard
 {
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
-    typedef GetPropType<TypeTag, Properties::Grid> Grid;
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
-    typedef GetPropType<TypeTag, Properties::Vanguard> Implementation;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Grid = GetPropType<TypeTag, Properties::Grid>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Implementation = GetPropType<TypeTag, Properties::Vanguard>;
 
 #if HAVE_DUNE_FEM
-    typedef GetPropType<TypeTag, Properties::GridPart> GridPart;
+    using GridPart = GetPropType<TypeTag, Properties::GridPart>;
 #endif
 
 public:
@@ -92,7 +92,7 @@ public:
     int gridSequenceNumber () const
     {
 #if HAVE_DUNE_FEM
-        typedef Dune::Fem::DofManager< Grid > FemDofManager;
+        using FemDofManager = Dune::Fem::DofManager< Grid >;
         return FemDofManager::instance( asImp_().grid() ).sequence();
 #else
         return 0; // return the same sequence number >= 0 means the grid never changes

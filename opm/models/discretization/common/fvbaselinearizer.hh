@@ -67,41 +67,41 @@ template<class TypeTag>
 class FvBaseLinearizer
 {
 //! \cond SKIP_THIS
-    typedef GetPropType<TypeTag, Properties::Model> Model;
-    typedef GetPropType<TypeTag, Properties::Discretization> Discretization;
-    typedef GetPropType<TypeTag, Properties::Problem> Problem;
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::DofMapper> DofMapper;
-    typedef GetPropType<TypeTag, Properties::ElementMapper> ElementMapper;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
+    using Model = GetPropType<TypeTag, Properties::Model>;
+    using Discretization = GetPropType<TypeTag, Properties::Discretization>;
+    using Problem = GetPropType<TypeTag, Properties::Problem>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using DofMapper = GetPropType<TypeTag, Properties::DofMapper>;
+    using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
-    typedef GetPropType<TypeTag, Properties::SolutionVector> SolutionVector;
-    typedef GetPropType<TypeTag, Properties::GlobalEqVector> GlobalEqVector;
-    typedef GetPropType<TypeTag, Properties::SparseMatrixAdapter> SparseMatrixAdapter;
-    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
-    typedef GetPropType<TypeTag, Properties::Constraints> Constraints;
-    typedef GetPropType<TypeTag, Properties::Stencil> Stencil;
-    typedef GetPropType<TypeTag, Properties::ThreadManager> ThreadManager;
+    using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
+    using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
+    using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using Constraints = GetPropType<TypeTag, Properties::Constraints>;
+    using Stencil = GetPropType<TypeTag, Properties::Stencil>;
+    using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;
 
-    typedef GetPropType<TypeTag, Properties::GridCommHandleFactory> GridCommHandleFactory;
+    using GridCommHandleFactory = GetPropType<TypeTag, Properties::GridCommHandleFactory>;
 
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
 
-    typedef typename GridView::template Codim<0>::Entity Element;
-    typedef typename GridView::template Codim<0>::Iterator ElementIterator;
+    using Element = typename GridView::template Codim<0>::Entity;
+    using ElementIterator = typename GridView::template Codim<0>::Iterator;
 
-    typedef GlobalEqVector Vector;
+    using Vector = GlobalEqVector;
 
-    typedef typename SparseMatrixAdapter::IstlMatrix IstlMatrix;
+    using IstlMatrix = typename SparseMatrixAdapter::IstlMatrix;
 
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { historySize = getPropValue<TypeTag, Properties::TimeDiscHistorySize>() };
 
-    typedef typename SparseMatrixAdapter::MatrixBlock MatrixBlock;
-    typedef Dune::FieldVector<Scalar, numEq> VectorBlock;
+    using MatrixBlock = typename SparseMatrixAdapter::MatrixBlock;
+    using VectorBlock = Dune::FieldVector<Scalar, numEq>;
 
     static const bool linearizeNonLocalElements = getPropValue<TypeTag, Properties::LinearizeNonLocalElements>();
 
@@ -319,7 +319,7 @@ private:
 
         // for the main model, find out the global indices of the neighboring degrees of
         // freedom of each primary degree of freedom
-        typedef std::set< unsigned > NeighborSet;
+        using NeighborSet = std::set< unsigned >;
         std::vector<NeighborSet> sparsityPattern(model.numTotalDof());
 
         ElementIterator elemIt = gridView_().template begin<0>();

@@ -45,11 +45,11 @@ template<class TypeTag>
 class VcfvBaseOutputModule
 {
 public:
-    typedef BaseOutputWriter::Scalar Scalar;
-    typedef BaseOutputWriter::Vector Vector;
-    typedef BaseOutputWriter::ScalarBuffer ScalarBuffer;
-    typedef BaseOutputWriter::VectorBuffer VectorBuffer;
-    typedef BaseOutputWriter::TensorBuffer TensorBuffer;
+    using Scalar = BaseOutputWriter::Scalar;
+    using Vector = BaseOutputWriter::Vector;
+    using ScalarBuffer = BaseOutputWriter::ScalarBuffer;
+    using VectorBuffer = BaseOutputWriter::VectorBuffer;
+    using TensorBuffer = BaseOutputWriter::TensorBuffer;
 
     /*!
      * \brief Add a buffer where the data is associated with the

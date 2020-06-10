@@ -45,6 +45,6 @@ struct SpatialDiscretizationSplice<TypeTag, TTag::RichardsLensVcfvProblem> { usi
 
 int main(int argc, char **argv)
 {
-    typedef Opm::Properties::TTag::RichardsLensVcfvProblem ProblemTypeTag;
+    using ProblemTypeTag = Opm::Properties::TTag::RichardsLensVcfvProblem;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

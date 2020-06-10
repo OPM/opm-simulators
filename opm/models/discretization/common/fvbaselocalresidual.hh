@@ -59,35 +59,35 @@ template<class TypeTag>
 class FvBaseLocalResidual
 {
 private:
-    typedef GetPropType<TypeTag, Properties::LocalResidual> Implementation;
+    using Implementation = GetPropType<TypeTag, Properties::LocalResidual>;
 
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
-    typedef typename GridView::template Codim<0>::Entity Element;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Element = typename GridView::template Codim<0>::Entity;
 
-    typedef GetPropType<TypeTag, Properties::Problem> Problem;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::BoundaryRateVector> BoundaryRateVector;
-    typedef GetPropType<TypeTag, Properties::RateVector> RateVector;
-    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
-    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::BoundaryContext> BoundaryContext;
+    using Problem = GetPropType<TypeTag, Properties::Problem>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using BoundaryRateVector = GetPropType<TypeTag, Properties::BoundaryRateVector>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using BoundaryContext = GetPropType<TypeTag, Properties::BoundaryContext>;
 
     static constexpr bool useVolumetricResidual = getPropValue<TypeTag, Properties::UseVolumetricResidual>();
 
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { extensiveStorageTerm = getPropValue<TypeTag, Properties::ExtensiveStorageTerm>() };
 
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
-    typedef Dune::FieldVector<Evaluation, numEq> EvalVector;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using EvalVector = Dune::FieldVector<Evaluation, numEq>;
 
     // copying the local residual class is not a good idea
     FvBaseLocalResidual(const FvBaseLocalResidual& )
     {}
 
 public:
-    typedef Dune::BlockVector<EvalVector, Opm::aligned_allocator<EvalVector, alignof(EvalVector)> > LocalEvalBlockVector;
+    using LocalEvalBlockVector = Dune::BlockVector<EvalVector, Opm::aligned_allocator<EvalVector, alignof(EvalVector)> >;
 
     FvBaseLocalResidual()
     { }

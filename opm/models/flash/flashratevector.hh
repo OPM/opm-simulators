@@ -48,17 +48,17 @@ class FlashRateVector
     : public Dune::FieldVector<GetPropType<TypeTag, Properties::Evaluation>,
                                getPropValue<TypeTag, Properties::NumEq>()>
 {
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
     enum { conti0EqIdx = Indices::conti0EqIdx };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
 
-    typedef Dune::FieldVector<Evaluation, numEq> ParentType;
-    typedef Opm::EnergyModule<TypeTag, getPropValue<TypeTag, Properties::EnableEnergy>()> EnergyModule;
+    using ParentType = Dune::FieldVector<Evaluation, numEq>;
+    using EnergyModule = Opm::EnergyModule<TypeTag, getPropValue<TypeTag, Properties::EnableEnergy>()>;
 
 public:
     FlashRateVector() : ParentType()
