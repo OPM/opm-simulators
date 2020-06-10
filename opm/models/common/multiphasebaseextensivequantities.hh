@@ -51,15 +51,15 @@ class MultiPhaseBaseExtensiveQuantities
     : public GetPropType<TypeTag, Properties::DiscExtensiveQuantities>
     , public GetPropType<TypeTag, Properties::FluxModule>::FluxExtensiveQuantities
 {
-    typedef GetPropType<TypeTag, Properties::DiscExtensiveQuantities> ParentType;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    using ParentType = GetPropType<TypeTag, Properties::DiscExtensiveQuantities>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
 
-    typedef GetPropType<TypeTag, Properties::FluxModule> FluxModule;
-    typedef typename FluxModule::FluxExtensiveQuantities FluxExtensiveQuantities;
+    using FluxModule = GetPropType<TypeTag, Properties::FluxModule>;
+    using FluxExtensiveQuantities = typename FluxModule::FluxExtensiveQuantities;
 
 public:
     /*!

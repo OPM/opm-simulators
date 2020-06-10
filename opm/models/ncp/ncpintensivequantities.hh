@@ -56,18 +56,18 @@ class NcpIntensiveQuantities
     , public EnergyIntensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableEnergy>() >
     , public GetPropType<TypeTag, Properties::FluxModule>::FluxIntensiveQuantities
 {
-    typedef GetPropType<TypeTag, Properties::DiscIntensiveQuantities> ParentType;
+    using ParentType = GetPropType<TypeTag, Properties::DiscIntensiveQuantities>;
 
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::MaterialLaw> MaterialLaw;
-    typedef GetPropType<TypeTag, Properties::MaterialLawParams> MaterialLawParams;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
-    typedef GetPropType<TypeTag, Properties::FluxModule> FluxModule;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using FluxModule = GetPropType<TypeTag, Properties::FluxModule>;
 
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
@@ -78,15 +78,13 @@ class NcpIntensiveQuantities
     enum { pressure0Idx = Indices::pressure0Idx };
     enum { dimWorld = GridView::dimensionworld };
 
-    typedef Opm::CompositionFromFugacities<Scalar, FluidSystem, Evaluation>
-        CompositionFromFugacitiesSolver;
-    typedef Opm::CompositionalFluidState<Evaluation, FluidSystem,
-                                         /*storeEnthalpy=*/enableEnergy> FluidState;
-    typedef Dune::FieldVector<Evaluation, numComponents> ComponentVector;
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
-    typedef Opm::DiffusionIntensiveQuantities<TypeTag, enableDiffusion> DiffusionIntensiveQuantities;
-    typedef Opm::EnergyIntensiveQuantities<TypeTag, enableEnergy> EnergyIntensiveQuantities;
-    typedef typename FluxModule::FluxIntensiveQuantities FluxIntensiveQuantities;
+    using CompositionFromFugacitiesSolver = Opm::CompositionFromFugacities<Scalar, FluidSystem, Evaluation>;
+    using FluidState = Opm::CompositionalFluidState<Evaluation, FluidSystem, /*storeEnthalpy=*/enableEnergy>;
+    using ComponentVector = Dune::FieldVector<Evaluation, numComponents>;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
+    using DiffusionIntensiveQuantities = Opm::DiffusionIntensiveQuantities<TypeTag, enableDiffusion>;
+    using EnergyIntensiveQuantities = Opm::EnergyIntensiveQuantities<TypeTag, enableEnergy>;
+    using FluxIntensiveQuantities = typename FluxModule::FluxIntensiveQuantities;
 
 public:
     NcpIntensiveQuantities()

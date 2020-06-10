@@ -83,22 +83,22 @@ namespace Opm {
 template <class TypeTag>
 class VtkEnergyModule : public BaseOutputModule<TypeTag>
 {
-    typedef BaseOutputModule<TypeTag> ParentType;
+    using ParentType = BaseOutputModule<TypeTag>;
 
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
 
-    typedef typename ParentType::ScalarBuffer ScalarBuffer;
-    typedef typename ParentType::PhaseBuffer PhaseBuffer;
+    using ScalarBuffer = typename ParentType::ScalarBuffer;
+    using PhaseBuffer = typename ParentType::PhaseBuffer;
 
     static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
 
-    typedef typename Opm::MathToolbox<Evaluation> Toolbox;
-    typedef Opm::VtkMultiWriter<GridView, vtkFormat> VtkMultiWriter;
+    using Toolbox = typename Opm::MathToolbox<Evaluation>;
+    using VtkMultiWriter = Opm::VtkMultiWriter<GridView, vtkFormat>;
 
 public:
     VtkEnergyModule(const Simulator& simulator)

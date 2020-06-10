@@ -126,8 +126,8 @@ namespace Opm {
 template <class TypeTag>
 class DiscreteFractureModel : public ImmiscibleModel<TypeTag>
 {
-    typedef ImmiscibleModel<TypeTag> ParentType;
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    using ParentType = ImmiscibleModel<TypeTag>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
 public:
     DiscreteFractureModel(Simulator& simulator)

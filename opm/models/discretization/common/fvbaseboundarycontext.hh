@@ -44,26 +44,26 @@ namespace Opm {
 template<class TypeTag>
 class FvBaseBoundaryContext
 {
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Problem> Problem;
-    typedef GetPropType<TypeTag, Properties::Model> Model;
-    typedef GetPropType<TypeTag, Properties::Stencil> Stencil;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::IntensiveQuantities> IntensiveQuantities;
-    typedef GetPropType<TypeTag, Properties::ExtensiveQuantities> ExtensiveQuantities;
-    typedef GetPropType<TypeTag, Properties::GradientCalculator> GradientCalculator;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Problem = GetPropType<TypeTag, Properties::Problem>;
+    using Model = GetPropType<TypeTag, Properties::Model>;
+    using Stencil = GetPropType<TypeTag, Properties::Stencil>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
+    using GradientCalculator = GetPropType<TypeTag, Properties::GradientCalculator>;
 
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
-    typedef typename GridView::template Codim<0>::Entity Element;
-    typedef typename GridView::IntersectionIterator IntersectionIterator;
-    typedef typename GridView::Intersection Intersection;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Element = typename GridView::template Codim<0>::Entity;
+    using IntersectionIterator = typename GridView::IntersectionIterator;
+    using Intersection = typename GridView::Intersection;
 
     enum { dim = GridView::dimension };
     enum { dimWorld = GridView::dimensionworld };
 
-    typedef typename GridView::ctype CoordScalar;
-    typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
-    typedef Dune::FieldVector<Scalar, dimWorld> Vector;
+    using CoordScalar = typename GridView::ctype;
+    using GlobalPosition = Dune::FieldVector<CoordScalar, dimWorld>;
+    using Vector = Dune::FieldVector<Scalar, dimWorld>;
 
 public:
     /*!

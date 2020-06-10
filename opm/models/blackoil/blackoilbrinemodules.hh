@@ -58,23 +58,23 @@ namespace Opm {
 template <class TypeTag, bool enableBrineV = getPropValue<TypeTag, Properties::EnableBrine>()>
 class BlackOilBrineModule
 {
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
-    typedef GetPropType<TypeTag, Properties::IntensiveQuantities> IntensiveQuantities;
-    typedef GetPropType<TypeTag, Properties::ExtensiveQuantities> ExtensiveQuantities;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::Model> Model;
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
-    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
-    typedef GetPropType<TypeTag, Properties::RateVector> RateVector;
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Model = GetPropType<TypeTag, Properties::Model>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
 
-    typedef typename Opm::Tabulated1DFunction<Scalar> TabulatedFunction;
-    typedef typename Opm::IntervalTabulated2DFunction<Scalar> TabulatedTwoDFunction;
+    using TabulatedFunction = typename Opm::Tabulated1DFunction<Scalar>;
+    using TabulatedTwoDFunction = typename Opm::IntervalTabulated2DFunction<Scalar>;
 
     static constexpr unsigned saltConcentrationIdx = Indices::saltConcentrationIdx;
     static constexpr unsigned contiBrineEqIdx = Indices::contiBrineEqIdx;
@@ -340,17 +340,17 @@ BlackOilBrineModule<TypeTag, enableBrineV>::referencePressure_;
 template <class TypeTag, bool enableBrineV = getPropValue<TypeTag, Properties::EnableBrine>()>
 class BlackOilBrineIntensiveQuantities
 {
-    typedef GetPropType<TypeTag, Properties::IntensiveQuantities> Implementation;
+    using Implementation = GetPropType<TypeTag, Properties::IntensiveQuantities>;
 
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::MaterialLaw> MaterialLaw;
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
-    typedef BlackOilBrineModule<TypeTag> BrineModule;
+    using BrineModule = BlackOilBrineModule<TypeTag>;
 
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     static constexpr int saltConcentrationIdx = Indices::saltConcentrationIdx;
@@ -396,9 +396,9 @@ protected:
 template <class TypeTag>
 class BlackOilBrineIntensiveQuantities<TypeTag, false>
 {
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
     void updateSaltConcentration_(const ElementContext& elemCtx OPM_UNUSED,

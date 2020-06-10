@@ -60,18 +60,18 @@ class BlackOilIntensiveQuantities
     , public BlackOilBrineIntensiveQuantities<TypeTag>
     , public BlackOilEnergyIntensiveQuantities<TypeTag>
 {
-    typedef GetPropType<TypeTag, Properties::DiscIntensiveQuantities> ParentType;
-    typedef GetPropType<TypeTag, Properties::IntensiveQuantities> Implementation;
+    using ParentType = GetPropType<TypeTag, Properties::DiscIntensiveQuantities>;
+    using Implementation = GetPropType<TypeTag, Properties::IntensiveQuantities>;
 
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::MaterialLaw> MaterialLaw;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
-    typedef GetPropType<TypeTag, Properties::FluxModule> FluxModule;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using FluxModule = GetPropType<TypeTag, Properties::FluxModule>;
 
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
@@ -94,10 +94,10 @@ class BlackOilIntensiveQuantities
     static const bool compositionSwitchEnabled = Indices::gasEnabled;
     static const bool waterEnabled = Indices::waterEnabled;
 
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
-    typedef typename FluxModule::FluxIntensiveQuantities FluxIntensiveQuantities;
-    typedef Opm::BlackOilFluidState<Evaluation, FluidSystem, enableTemperature, enableEnergy, compositionSwitchEnabled,  enableBrine, Indices::numPhases > FluidState;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
+    using FluxIntensiveQuantities = typename FluxModule::FluxIntensiveQuantities;
+    using FluidState = Opm::BlackOilFluidState<Evaluation, FluidSystem, enableTemperature, enableEnergy, compositionSwitchEnabled,  enableBrine, Indices::numPhases >;
 
 public:
     BlackOilIntensiveQuantities()

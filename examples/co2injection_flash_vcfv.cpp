@@ -77,6 +77,6 @@ struct NewtonTolerance<TypeTag, TTag::Co2InjectionFlashVcfvProblem>
 
 int main(int argc, char **argv)
 {
-    typedef Opm::Properties::TTag::Co2InjectionFlashVcfvProblem VcfvProblemTypeTag;
+    using VcfvProblemTypeTag = Opm::Properties::TTag::Co2InjectionFlashVcfvProblem;
     return Opm::start<VcfvProblemTypeTag>(argc, argv);
 }

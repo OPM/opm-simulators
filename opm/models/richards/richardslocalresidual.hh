@@ -41,17 +41,17 @@ namespace Opm {
 template <class TypeTag>
 class RichardsLocalResidual : public GetPropType<TypeTag, Properties::DiscLocalResidual>
 {
-    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::RateVector> RateVector;
-    typedef GetPropType<TypeTag, Properties::IntensiveQuantities> IntensiveQuantities;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
     enum { contiEqIdx = Indices::contiEqIdx };
     enum { liquidPhaseIdx = getPropValue<TypeTag, Properties::LiquidPhaseIndex>() };
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
 
 public:
     /*!

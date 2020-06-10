@@ -109,12 +109,12 @@ template<class TypeTag>
 struct FluidSystem<TypeTag, TTag::Co2InjectionBaseProblem>
 {
 private:
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef Opm::Co2Injection::CO2Tables CO2Tables;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using CO2Tables = Opm::Co2Injection::CO2Tables;
 
 public:
-    typedef Opm::BrineCO2FluidSystem<Scalar, CO2Tables> type;
-    //typedef Opm::H2ON2FluidSystem<Scalar, /*useComplexRelations=*/false> type;
+    using type = Opm::BrineCO2FluidSystem<Scalar, CO2Tables>;
+    //using type = Opm::H2ON2FluidSystem<Scalar, /*useComplexRelations=*/false>;
 };
 
 // Set the material Law
@@ -122,22 +122,22 @@ template<class TypeTag>
 struct MaterialLaw<TypeTag, TTag::Co2InjectionBaseProblem>
 {
 private:
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     enum { liquidPhaseIdx = FluidSystem::liquidPhaseIdx };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
 
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef Opm::TwoPhaseMaterialTraits<Scalar,
-                                        /*wettingPhaseIdx=*/FluidSystem::liquidPhaseIdx,
-                                        /*nonWettingPhaseIdx=*/FluidSystem::gasPhaseIdx> Traits;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Traits = Opm::TwoPhaseMaterialTraits<Scalar,
+                                               /*wettingPhaseIdx=*/FluidSystem::liquidPhaseIdx,
+                                               /*nonWettingPhaseIdx=*/FluidSystem::gasPhaseIdx>;
 
     // define the material law which is parameterized by effective
     // saturations
-    typedef Opm::RegularizedBrooksCorey<Traits> EffMaterialLaw;
+    using EffMaterialLaw = Opm::RegularizedBrooksCorey<Traits>;
 
 public:
     // define the material law parameterized by absolute saturations
-    typedef Opm::EffToAbsLaw<EffMaterialLaw> type;
+    using type = Opm::EffToAbsLaw<EffMaterialLaw>;
 };
 
 // Set the thermal conduction law
@@ -145,12 +145,12 @@ template<class TypeTag>
 struct ThermalConductionLaw<TypeTag, TTag::Co2InjectionBaseProblem>
 {
 private:
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
 public:
     // define the material law parameterized by absolute saturations
-    typedef Opm::SomertonThermalConductionLaw<FluidSystem, Scalar> type;
+    using type = Opm::SomertonThermalConductionLaw<FluidSystem, Scalar>;
 };
 
 // set the energy storage law for the solid phase
@@ -263,18 +263,18 @@ namespace Opm {
 template <class TypeTag>
 class Co2InjectionProblem : public GetPropType<TypeTag, Properties::BaseProblem>
 {
-    typedef GetPropType<TypeTag, Properties::BaseProblem> ParentType;
+    using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
 
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
     enum { dim = GridView::dimension };
     enum { dimWorld = GridView::dimensionworld };
 
     // copy some indices for convenience
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
     enum { numPhases = FluidSystem::numPhases };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
     enum { liquidPhaseIdx = FluidSystem::liquidPhaseIdx };
@@ -283,21 +283,21 @@ class Co2InjectionProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     enum { conti0EqIdx = Indices::conti0EqIdx };
     enum { contiCO2EqIdx = conti0EqIdx + CO2Idx };
 
-    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
-    typedef GetPropType<TypeTag, Properties::RateVector> RateVector;
-    typedef GetPropType<TypeTag, Properties::BoundaryRateVector> BoundaryRateVector;
-    typedef GetPropType<TypeTag, Properties::MaterialLaw> MaterialLaw;
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
-    typedef GetPropType<TypeTag, Properties::Model> Model;
-    typedef GetPropType<TypeTag, Properties::MaterialLawParams> MaterialLawParams;
-    typedef GetPropType<TypeTag, Properties::ThermalConductionLaw> ThermalConductionLaw;
-    typedef GetPropType<TypeTag, Properties::SolidEnergyLawParams> SolidEnergyLawParams;
-    typedef typename ThermalConductionLaw::Params ThermalConductionLawParams;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using BoundaryRateVector = GetPropType<TypeTag, Properties::BoundaryRateVector>;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Model = GetPropType<TypeTag, Properties::Model>;
+    using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
+    using ThermalConductionLaw = GetPropType<TypeTag, Properties::ThermalConductionLaw>;
+    using SolidEnergyLawParams = GetPropType<TypeTag, Properties::SolidEnergyLawParams>;
+    using ThermalConductionLawParams = typename ThermalConductionLaw::Params;
 
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
-    typedef typename GridView::ctype CoordScalar;
-    typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using CoordScalar = typename GridView::ctype;
+    using GlobalPosition = Dune::FieldVector<CoordScalar, dimWorld>;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
 public:
     /*!
@@ -552,7 +552,7 @@ public:
             RateVector massRate(0.0);
             massRate[contiCO2EqIdx] = -1e-3; // [kg/(m^3 s)]
 
-            typedef Opm::ImmiscibleFluidState<Scalar, FluidSystem> FluidState;
+            using FluidState = Opm::ImmiscibleFluidState<Scalar, FluidSystem>;
             FluidState fs;
             fs.setSaturation(gasPhaseIdx, 1.0);
             const auto& pg =
@@ -653,7 +653,7 @@ private:
                            1.0 - fs.moleFraction(liquidPhaseIdx, CO2Idx));
 
         typename FluidSystem::template ParameterCache<Scalar> paramCache;
-        typedef Opm::ComputeFromReferencePhase<Scalar, FluidSystem> CFRP;
+        using CFRP = Opm::ComputeFromReferencePhase<Scalar, FluidSystem>;
         CFRP::solve(fs, paramCache,
                     /*refPhaseIdx=*/liquidPhaseIdx,
                     /*setViscosity=*/true,

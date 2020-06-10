@@ -43,18 +43,18 @@ namespace Opm {
 template <class TypeTag>
 class RichardsBoundaryRateVector : public GetPropType<TypeTag, Properties::RateVector>
 {
-    typedef GetPropType<TypeTag, Properties::RateVector> ParentType;
-    typedef GetPropType<TypeTag, Properties::ExtensiveQuantities> ExtensiveQuantities;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
+    using ParentType = GetPropType<TypeTag, Properties::RateVector>;
+    using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { contiEqIdx = Indices::contiEqIdx };
     enum { liquidPhaseIdx = getPropValue<TypeTag, Properties::LiquidPhaseIndex>() };
 
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
 
 public:
     RichardsBoundaryRateVector() : ParentType()

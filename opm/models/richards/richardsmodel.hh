@@ -138,10 +138,10 @@ template<class TypeTag>
 struct WettingFluid<TypeTag, TTag::Richards>
 {
 private:
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    typedef Opm::LiquidPhase<Scalar, Opm::NullComponent<Scalar> > type;
+    using type = Opm::LiquidPhase<Scalar, Opm::NullComponent<Scalar> >;
 };
 
 /*!
@@ -156,10 +156,10 @@ template<class TypeTag>
 struct NonWettingFluid<TypeTag, TTag::Richards>
 {
 private:
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    typedef Opm::GasPhase<Scalar, Opm::NullComponent<Scalar> > type;
+    using type = Opm::GasPhase<Scalar, Opm::NullComponent<Scalar> >;
 };
 
 /*!
@@ -175,12 +175,12 @@ template<class TypeTag>
 struct FluidSystem<TypeTag, TTag::Richards>
 {
 private:
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::WettingFluid> WettingFluid;
-    typedef GetPropType<TypeTag, Properties::NonWettingFluid> NonWettingFluid;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using WettingFluid = GetPropType<TypeTag, Properties::WettingFluid>;
+    using NonWettingFluid = GetPropType<TypeTag, Properties::NonWettingFluid>;
 
 public:
-    typedef Opm::TwoPhaseImmiscibleFluidSystem<Scalar, WettingFluid, NonWettingFluid> type;
+    using type = Opm::TwoPhaseImmiscibleFluidSystem<Scalar, WettingFluid, NonWettingFluid>;
 };
 
 
@@ -249,13 +249,13 @@ template <class TypeTag>
 class RichardsModel
     : public MultiPhaseBaseModel<TypeTag>
 {
-    typedef MultiPhaseBaseModel<TypeTag> ParentType;
+    using ParentType = MultiPhaseBaseModel<TypeTag>;
 
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
      static const unsigned numPhases = FluidSystem::numPhases;
      static const unsigned numComponents = FluidSystem::numComponents;

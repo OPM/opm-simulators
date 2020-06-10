@@ -73,7 +73,7 @@ class VcfvScvGeometries<Scalar, /*dim=*/1, ElementType::cube>
     enum { numScv = 2 };
 
 public:
-    typedef Opm::QuadrialteralQuadratureGeometry<Scalar, dim> ScvLocalGeometry;
+    using ScvLocalGeometry = Opm::QuadrialteralQuadratureGeometry<Scalar, dim>;
 
     static void init()
     {
@@ -112,7 +112,7 @@ class VcfvScvGeometries<Scalar, /*dim=*/1, ElementType::simplex>
     enum { numScv = 2 };
 
 public:
-    typedef Opm::QuadrialteralQuadratureGeometry<Scalar, dim> ScvLocalGeometry;
+    using ScvLocalGeometry = Opm::QuadrialteralQuadratureGeometry<Scalar, dim>;
 
     static const ScvLocalGeometry& get(unsigned scvIdx OPM_UNUSED)
     {
@@ -130,7 +130,7 @@ class VcfvScvGeometries<Scalar, /*dim=*/2, ElementType::simplex>
     enum { numScv = 3 };
 
 public:
-    typedef Opm::QuadrialteralQuadratureGeometry<Scalar, dim> ScvLocalGeometry;
+    using ScvLocalGeometry = Opm::QuadrialteralQuadratureGeometry<Scalar, dim>;
 
     static const ScvLocalGeometry& get(unsigned scvIdx)
     { return scvGeoms_[scvIdx]; }
@@ -182,7 +182,7 @@ class VcfvScvGeometries<Scalar, /*dim=*/2, ElementType::cube>
     enum { numScv = 4 };
 
 public:
-    typedef Opm::QuadrialteralQuadratureGeometry<Scalar, dim> ScvLocalGeometry;
+    using ScvLocalGeometry = Opm::QuadrialteralQuadratureGeometry<Scalar, dim>;
 
     static const ScvLocalGeometry& get(unsigned scvIdx)
     { return scvGeoms_[scvIdx]; }
@@ -243,7 +243,7 @@ class VcfvScvGeometries<Scalar, /*dim=*/3, ElementType::simplex>
     enum { numScv = 4 };
 
 public:
-    typedef Opm::QuadrialteralQuadratureGeometry<Scalar, dim> ScvLocalGeometry;
+    using ScvLocalGeometry = Opm::QuadrialteralQuadratureGeometry<Scalar, dim>;
 
     static const ScvLocalGeometry& get(unsigned scvIdx)
     { return scvGeoms_[scvIdx]; }
@@ -322,7 +322,7 @@ class VcfvScvGeometries<Scalar, /*dim=*/3, ElementType::cube>
     enum { numScv = 8 };
 
 public:
-    typedef Opm::QuadrialteralQuadratureGeometry<Scalar, dim> ScvLocalGeometry;
+    using ScvLocalGeometry = Opm::QuadrialteralQuadratureGeometry<Scalar, dim>;
 
     static const ScvLocalGeometry& get(unsigned scvIdx)
     { return scvGeoms_[scvIdx]; }
@@ -473,24 +473,24 @@ class VcfvStencil
     enum{maxNE = (dim < 3 ? 4 : 12)};
     enum{maxNF = (dim < 3 ? 1 : 6)};
     enum{maxBF = (dim < 3 ? 8 : 24)};
-    typedef typename GridView::ctype CoordScalar;
-    typedef typename GridView::Traits::template Codim<0>::Entity            Element;
+    using CoordScalar = typename GridView::ctype;
+    using Element = typename GridView::Traits::template Codim<0>::Entity           ;
 public:
-    typedef typename GridView::Traits::template Codim<dim>::Entity          Entity;
+    using Entity = typename GridView::Traits::template Codim<dim>::Entity         ;
 private:
-    typedef typename Element::Geometry Geometry;
-    typedef Dune::FieldVector<Scalar,dimWorld> DimVector;
-    typedef Dune::FieldVector<CoordScalar,dimWorld> GlobalPosition;
-    typedef Dune::FieldVector<CoordScalar,dim> LocalPosition;
-    typedef typename GridView::IntersectionIterator IntersectionIterator;
+    using Geometry = typename Element::Geometry;
+    using DimVector = Dune::FieldVector<Scalar,dimWorld>;
+    using GlobalPosition = Dune::FieldVector<CoordScalar,dimWorld>;
+    using LocalPosition = Dune::FieldVector<CoordScalar,dim>;
+    using IntersectionIterator = typename GridView::IntersectionIterator;
 
-    typedef Opm::QuadrialteralQuadratureGeometry<Scalar, dim> ScvLocalGeometry;
+    using ScvLocalGeometry = Opm::QuadrialteralQuadratureGeometry<Scalar, dim>;
 
 #if HAVE_DUNE_LOCALFUNCTIONS
-    typedef Dune::PQkLocalFiniteElementCache<CoordScalar, Scalar, dim, 1> LocalFiniteElementCache;
-    typedef typename LocalFiniteElementCache::FiniteElementType LocalFiniteElement;
-    typedef typename LocalFiniteElement::Traits::LocalBasisType::Traits LocalBasisTraits;
-    typedef typename LocalBasisTraits::JacobianType ShapeJacobian;
+    using LocalFiniteElementCache = Dune::PQkLocalFiniteElementCache<CoordScalar, Scalar, dim, 1>;
+    using LocalFiniteElement = typename LocalFiniteElementCache::FiniteElementType;
+    using LocalBasisTraits = typename LocalFiniteElement::Traits::LocalBasisType::Traits;
+    using ShapeJacobian = typename LocalBasisTraits::JacobianType;
 #endif // HAVE_DUNE_LOCALFUNCTIONS
 
     Scalar quadrilateralArea(const GlobalPosition& p0,
@@ -724,7 +724,7 @@ private:
 
 public:
     //! exported Mapper type
-    typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView> Mapper;
+    using Mapper = Dune::MultipleCodimMultipleGeomTypeMapper<GridView>;
 
     class ScvGeometry
     {
@@ -807,8 +807,8 @@ public:
         Scalar area_;
     };
 
-    //! compatibility typedef
-    typedef SubControlVolumeFace BoundaryFace;
+    //! compatibility alias
+    using BoundaryFace = SubControlVolumeFace;
 
     VcfvStencil(const GridView& gridView, const Mapper& mapper)
         : gridView_(gridView)

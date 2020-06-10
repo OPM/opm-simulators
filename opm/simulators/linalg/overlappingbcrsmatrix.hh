@@ -53,19 +53,19 @@ namespace Linear {
 template <class BCRSMatrix>
 class OverlappingBCRSMatrix : public BCRSMatrix
 {
-    typedef BCRSMatrix ParentType;
+    using ParentType = BCRSMatrix;
 
 public:
-    typedef Opm::Linear::DomesticOverlapFromBCRSMatrix Overlap;
+    using Overlap = Opm::Linear::DomesticOverlapFromBCRSMatrix;
 
 private:
-    typedef std::vector<std::set<Index> > Entries;
+    using Entries = std::vector<std::set<Index> >;
 
 public:
-    typedef typename ParentType::ColIterator ColIterator;
-    typedef typename ParentType::ConstColIterator ConstColIterator;
-    typedef typename ParentType::block_type block_type;
-    typedef typename ParentType::field_type field_type;
+    using ColIterator = typename ParentType::ColIterator;
+    using ConstColIterator = typename ParentType::ConstColIterator;
+    using block_type = typename ParentType::block_type;
+    using field_type = typename ParentType::field_type;
 
     // no real copying done at the moment
     OverlappingBCRSMatrix(const OverlappingBCRSMatrix& other)
@@ -193,7 +193,7 @@ public:
                 std::cout << "*";
             std::cout << "row " << i << " ";
 
-            typedef typename BCRSMatrix::ConstColIterator ColIt;
+            using ColIt = typename BCRSMatrix::ConstColIterator;
             ColIt colIt = (*this)[i].begin();
             ColIt colEndIt = (*this)[i].end();
             for (int j = 0; j < this->M(); ++j) {
@@ -464,8 +464,8 @@ private:
         rowSizesSendBuff_[peerRank] = new MpiBuffer<unsigned>(numOverlapRows);
 
         // compute the sets of the indices of the entries which need to be send to the peer
-        typedef std::set<int> ColumnIndexSet;
-        typedef std::map<int, ColumnIndexSet> EntryTuples;
+        using ColumnIndexSet = std::set<int>;
+        using EntryTuples = std::map<int, ColumnIndexSet>;
 
         EntryTuples entryIndices;
         unsigned numEntries = 0; // <- total number of matrix entries to be send to the peer

@@ -52,7 +52,7 @@ namespace Linear {
 template <class Vector>
 class ResidReductionCriterion : public ConvergenceCriterion<Vector>
 {
-    typedef typename Vector::field_type Scalar;
+    using Scalar = typename Vector::field_type;
 
 public:
     ResidReductionCriterion(Dune::ScalarProduct<Vector>& scalarProduct,

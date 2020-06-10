@@ -53,13 +53,13 @@ namespace Opm {
 template <class TypeTag>
 class BaseAuxiliaryModule
 {
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
-    typedef GetPropType<TypeTag, Properties::GlobalEqVector> GlobalEqVector;
-    typedef GetPropType<TypeTag, Properties::SparseMatrixAdapter> SparseMatrixAdapter;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
+    using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
 
 protected:
-    typedef std::set<unsigned> NeighborSet;
+    using NeighborSet = std::set<unsigned>;
 
 public:
     virtual ~BaseAuxiliaryModule()

@@ -113,20 +113,20 @@ struct EnableEnergy<TypeTag, TTag::ImmiscibleModel> { static constexpr bool valu
 template<class TypeTag>
 struct FluidSystem<TypeTag, TTag::ImmiscibleSinglePhaseModel>
 { private:
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Fluid> Fluid;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Fluid = GetPropType<TypeTag, Properties::Fluid>;
 public:
-    typedef Opm::SinglePhaseFluidSystem<Scalar , Fluid> type;
+    using type = Opm::SinglePhaseFluidSystem<Scalar , Fluid>;
 };
 
 template<class TypeTag>
 struct Fluid<TypeTag, TTag::ImmiscibleSinglePhaseModel>
 {
 private:
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    typedef Opm::LiquidPhase<Scalar, Opm::NullComponent<Scalar> > type;
+    using type = Opm::LiquidPhase<Scalar, Opm::NullComponent<Scalar> >;
 };
 
 // disable output of a few quantities which make sense in a
@@ -145,32 +145,32 @@ template<class TypeTag>
 struct WettingPhase<TypeTag, TTag::ImmiscibleTwoPhaseModel>
 {
 private:
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    typedef Opm::LiquidPhase<Scalar, Opm::NullComponent<Scalar> > type;
+    using type = Opm::LiquidPhase<Scalar, Opm::NullComponent<Scalar> >;
 };
 
 template<class TypeTag>
 struct NonwettingPhase<TypeTag, TTag::ImmiscibleTwoPhaseModel>
 {
 private:
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    typedef Opm::LiquidPhase<Scalar, Opm::NullComponent<Scalar> > type;
+    using type = Opm::LiquidPhase<Scalar, Opm::NullComponent<Scalar> >;
 };
 
 template<class TypeTag>
 struct FluidSystem<TypeTag, TTag::ImmiscibleTwoPhaseModel>
 {
 private:
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::WettingPhase> WettingPhase;
-    typedef GetPropType<TypeTag, Properties::NonwettingPhase> NonwettingPhase;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using WettingPhase = GetPropType<TypeTag, Properties::WettingPhase>;
+    using NonwettingPhase = GetPropType<TypeTag, Properties::NonwettingPhase>;
 
 public:
-    typedef Opm::TwoPhaseImmiscibleFluidSystem<Scalar, WettingPhase, NonwettingPhase> type;
+    using type = Opm::TwoPhaseImmiscibleFluidSystem<Scalar, WettingPhase, NonwettingPhase>;
 };
 
 
@@ -219,13 +219,13 @@ template <class TypeTag>
 class ImmiscibleModel
     : public Opm::MultiPhaseBaseModel<TypeTag>
 {
-    typedef Opm::MultiPhaseBaseModel<TypeTag> ParentType;
-    typedef GetPropType<TypeTag, Properties::Model> Implementation;
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    using ParentType = Opm::MultiPhaseBaseModel<TypeTag>;
+    using Implementation = GetPropType<TypeTag, Properties::Model>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
     enum { numComponents = FluidSystem::numComponents };
 
@@ -233,7 +233,7 @@ class ImmiscibleModel
 
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
-    typedef Opm::EnergyModule<TypeTag, enableEnergy> EnergyModule;
+    using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
 
 public:
     ImmiscibleModel(Simulator& simulator)

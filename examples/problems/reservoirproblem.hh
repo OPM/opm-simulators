@@ -88,17 +88,17 @@ template<class TypeTag>
 struct MaterialLaw<TypeTag, TTag::ReservoirBaseProblem>
 {
 private:
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
-    typedef Opm::
+    using Traits = Opm::
         ThreePhaseMaterialTraits<Scalar,
                                  /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
                                  /*nonWettingPhaseIdx=*/FluidSystem::oilPhaseIdx,
-                                 /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx> Traits;
+                                 /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx>;
 
 public:
-    typedef Opm::LinearMaterial<Traits> type;
+    using type = Opm::LinearMaterial<Traits>;
 };
 
 // Write the Newton convergence behavior to disk?
@@ -166,10 +166,10 @@ template<class TypeTag>
 struct FluidSystem<TypeTag, TTag::ReservoirBaseProblem>
 {
 private:
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    typedef Opm::BlackOilFluidSystem<Scalar> type;
+    using type = Opm::BlackOilFluidSystem<Scalar>;
 };
 
 // The default DGF file to load
@@ -207,12 +207,12 @@ namespace Opm {
 template <class TypeTag>
 class ReservoirProblem : public GetPropType<TypeTag, Properties::BaseProblem>
 {
-    typedef GetPropType<TypeTag, Properties::BaseProblem> ParentType;
+    using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
 
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
     // Grid and world dimension
     enum { dim = GridView::dimension };
@@ -228,25 +228,25 @@ class ReservoirProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     enum { oilCompIdx = FluidSystem::oilCompIdx };
     enum { waterCompIdx = FluidSystem::waterCompIdx };
 
-    typedef GetPropType<TypeTag, Properties::Model> Model;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
-    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
-    typedef GetPropType<TypeTag, Properties::RateVector> RateVector;
-    typedef GetPropType<TypeTag, Properties::BoundaryRateVector> BoundaryRateVector;
-    typedef GetPropType<TypeTag, Properties::Constraints> Constraints;
-    typedef GetPropType<TypeTag, Properties::MaterialLaw> MaterialLaw;
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
-    typedef GetPropType<TypeTag, Properties::MaterialLawParams> MaterialLawParams;
+    using Model = GetPropType<TypeTag, Properties::Model>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using BoundaryRateVector = GetPropType<TypeTag, Properties::BoundaryRateVector>;
+    using Constraints = GetPropType<TypeTag, Properties::Constraints>;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
 
-    typedef typename GridView::ctype CoordScalar;
-    typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
-    typedef Dune::FieldVector<Scalar, numPhases> PhaseVector;
+    using CoordScalar = typename GridView::ctype;
+    using GlobalPosition = Dune::FieldVector<CoordScalar, dimWorld>;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
+    using PhaseVector = Dune::FieldVector<Scalar, numPhases>;
 
-    typedef Opm::CompositionalFluidState<Scalar,
-                                         FluidSystem,
-                                         /*enableEnthalpy=*/true> InitialFluidState;
+    using InitialFluidState = Opm::CompositionalFluidState<Scalar,
+                                                           FluidSystem,
+                                                           /*enableEnthalpy=*/true>;
 
 public:
     /*!
@@ -362,13 +362,13 @@ public:
         oilPvt->initEnd();
         waterPvt->initEnd();
 
-        typedef std::shared_ptr<Opm::GasPvtMultiplexer<Scalar> > GasPvtSharedPtr;
+        using GasPvtSharedPtr = std::shared_ptr<Opm::GasPvtMultiplexer<Scalar> >;
         FluidSystem::setGasPvt(GasPvtSharedPtr(gasPvt));
 
-        typedef std::shared_ptr<Opm::OilPvtMultiplexer<Scalar> > OilPvtSharedPtr;
+        using OilPvtSharedPtr = std::shared_ptr<Opm::OilPvtMultiplexer<Scalar> >;
         FluidSystem::setOilPvt(OilPvtSharedPtr(oilPvt));
 
-        typedef std::shared_ptr<Opm::WaterPvtMultiplexer<Scalar> > WaterPvtSharedPtr;
+        using WaterPvtSharedPtr = std::shared_ptr<Opm::WaterPvtMultiplexer<Scalar> >;
         FluidSystem::setWaterPvt(WaterPvtSharedPtr(waterPvt));
 
         FluidSystem::initEnd();
@@ -684,7 +684,7 @@ private:
         fs.setMoleFraction(oilPhaseIdx, gasCompIdx, xoG);
         fs.setMoleFraction(oilPhaseIdx, oilCompIdx, xoO);
 
-        typedef Opm::ComputeFromReferencePhase<Scalar, FluidSystem> CFRP;
+        using CFRP = Opm::ComputeFromReferencePhase<Scalar, FluidSystem>;
         typename FluidSystem::template ParameterCache<Scalar> paramCache;
         CFRP::solve(fs,
                     paramCache,

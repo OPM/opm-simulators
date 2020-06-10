@@ -107,18 +107,18 @@ namespace Opm {
 template <class TypeTag>
 class VtkBlackOilModule : public BaseOutputModule<TypeTag>
 {
-    typedef BaseOutputModule<TypeTag> ParentType;
+    using ParentType = BaseOutputModule<TypeTag>;
 
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
     static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
-    typedef Opm::VtkMultiWriter<GridView, vtkFormat> VtkMultiWriter;
+    using VtkMultiWriter = Opm::VtkMultiWriter<GridView, vtkFormat>;
 
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
@@ -128,7 +128,7 @@ class VtkBlackOilModule : public BaseOutputModule<TypeTag>
     enum { oilCompIdx = FluidSystem::oilCompIdx };
     enum { waterCompIdx = FluidSystem::waterCompIdx };
 
-    typedef typename ParentType::ScalarBuffer ScalarBuffer;
+    using ScalarBuffer = typename ParentType::ScalarBuffer;
 
 public:
     VtkBlackOilModule(const Simulator& simulator)
@@ -219,7 +219,7 @@ public:
 
         for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
             const auto& fs = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0).fluidState();
-            typedef typename std::remove_const<typename std::remove_reference<decltype(fs)>::type>::type FluidState;
+            using FluidState = typename std::remove_const<typename std::remove_reference<decltype(fs)>::type>::type;
             unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
 
             const auto& primaryVars = elemCtx.primaryVars(dofIdx, /*timeIdx=*/0);

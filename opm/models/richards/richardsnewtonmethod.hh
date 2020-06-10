@@ -45,24 +45,24 @@ namespace Opm {
 template <class TypeTag>
 class RichardsNewtonMethod : public GetPropType<TypeTag, Properties::DiscNewtonMethod>
 {
-    typedef GetPropType<TypeTag, Properties::DiscNewtonMethod> ParentType;
+    using ParentType = GetPropType<TypeTag, Properties::DiscNewtonMethod>;
 
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
-    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::MaterialLaw> MaterialLaw;
-    typedef GetPropType<TypeTag, Properties::MaterialLawParams> MaterialLawParams;
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
-    typedef GetPropType<TypeTag, Properties::Linearizer> Linearizer;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Linearizer = GetPropType<TypeTag, Properties::Linearizer>;
 
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
     enum { pressureWIdx = Indices::pressureWIdx };
     enum { numPhases = FluidSystem::numPhases };
     enum { liquidPhaseIdx = getPropValue<TypeTag, Properties::LiquidPhaseIndex>() };
     enum { gasPhaseIdx = getPropValue<TypeTag, Properties::GasPhaseIndex>() };
 
-    typedef Dune::FieldVector<Scalar, numPhases> PhaseVector;
+    using PhaseVector = Dune::FieldVector<Scalar, numPhases>;
 
 public:
     RichardsNewtonMethod(Simulator& simulator) : ParentType(simulator)

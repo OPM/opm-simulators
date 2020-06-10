@@ -61,23 +61,23 @@ namespace Opm {
 template <class TypeTag, bool enablePolymerV = getPropValue<TypeTag, Properties::EnablePolymer>()>
 class BlackOilPolymerModule
 {
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
-    typedef GetPropType<TypeTag, Properties::IntensiveQuantities> IntensiveQuantities;
-    typedef GetPropType<TypeTag, Properties::ExtensiveQuantities> ExtensiveQuantities;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::Model> Model;
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
-    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
-    typedef GetPropType<TypeTag, Properties::RateVector> RateVector;
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Model = GetPropType<TypeTag, Properties::Model>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
 
-    typedef typename Opm::Tabulated1DFunction<Scalar> TabulatedFunction;
-    typedef typename Opm::IntervalTabulated2DFunction<Scalar> TabulatedTwoDFunction;
+    using TabulatedFunction = typename Opm::Tabulated1DFunction<Scalar>;
+    using TabulatedTwoDFunction = typename Opm::IntervalTabulated2DFunction<Scalar>;
 
     static constexpr unsigned polymerConcentrationIdx = Indices::polymerConcentrationIdx;
     static constexpr unsigned polymerMoleWeightIdx = Indices::polymerMoleWeightIdx;
@@ -834,7 +834,7 @@ public:
                                          unsigned pvtnumRegionIdx,
                                          const Evaluation& v0)
     {
-        typedef Opm::MathToolbox<Evaluation> ToolboxLocal;
+        using ToolboxLocal = Opm::MathToolbox<Evaluation>;
 
         const auto& viscosityMultiplierTable = plyviscViscosityMultiplierTable_[pvtnumRegionIdx];
         Scalar viscosityMultiplier = viscosityMultiplierTable.eval(Opm::scalarValue(polymerConcentration), /*extrapolate=*/true);
@@ -1014,17 +1014,17 @@ BlackOilPolymerModule<TypeTag, enablePolymerV>::skprpolyTables_;
 template <class TypeTag, bool enablePolymerV = getPropValue<TypeTag, Properties::EnablePolymer>()>
 class BlackOilPolymerIntensiveQuantities
 {
-    typedef GetPropType<TypeTag, Properties::IntensiveQuantities> Implementation;
+    using Implementation = GetPropType<TypeTag, Properties::IntensiveQuantities>;
 
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::MaterialLaw> MaterialLaw;
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
-    typedef BlackOilPolymerModule<TypeTag> PolymerModule;
+    using PolymerModule = BlackOilPolymerModule<TypeTag>;
 
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     static constexpr int polymerConcentrationIdx = Indices::polymerConcentrationIdx;
@@ -1154,9 +1154,9 @@ protected:
 template <class TypeTag>
 class BlackOilPolymerIntensiveQuantities<TypeTag, false>
 {
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
     void polymerPropertiesUpdate_(const ElementContext& elemCtx OPM_UNUSED,
@@ -1197,24 +1197,24 @@ public:
 template <class TypeTag, bool enablePolymerV = getPropValue<TypeTag, Properties::EnablePolymer>()>
 class BlackOilPolymerExtensiveQuantities
 {
-    typedef GetPropType<TypeTag, Properties::ExtensiveQuantities> Implementation;
+    using Implementation = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
 
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::IntensiveQuantities> IntensiveQuantities;
-    typedef GetPropType<TypeTag, Properties::ExtensiveQuantities> ExtensiveQuantities;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
 
     static constexpr unsigned gasPhaseIdx = FluidSystem::gasPhaseIdx;
     static constexpr int dimWorld = GridView::dimensionworld;
     static constexpr unsigned waterPhaseIdx =  FluidSystem::waterPhaseIdx;
 
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
-    typedef BlackOilPolymerModule<TypeTag> PolymerModule;
-    typedef Dune::FieldVector<Scalar, dimWorld> DimVector;
-    typedef Dune::FieldVector<Evaluation, dimWorld> DimEvalVector;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using PolymerModule = BlackOilPolymerModule<TypeTag>;
+    using DimVector = Dune::FieldVector<Scalar, dimWorld>;
+    using DimEvalVector = Dune::FieldVector<Evaluation, dimWorld>;
 
 public:
     /*!
@@ -1320,8 +1320,8 @@ private:
 template <class TypeTag>
 class BlackOilPolymerExtensiveQuantities<TypeTag, false>
 {
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
 
 public:
     void updateShearMultipliers(const ElementContext& elemCtx OPM_UNUSED,

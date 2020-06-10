@@ -50,15 +50,15 @@ namespace Opm {
 template <class TypeTag>
 class CubeGridVanguard : public BaseVanguard<TypeTag>
 {
-    typedef BaseVanguard<TypeTag> ParentType;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
-    typedef GetPropType<TypeTag, Properties::Grid> Grid;
+    using ParentType = BaseVanguard<TypeTag>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Grid = GetPropType<TypeTag, Properties::Grid>;
 
-    typedef std::unique_ptr<Grid> GridPointer;
-    typedef typename Grid::ctype CoordScalar;
+    using GridPointer = std::unique_ptr<Grid>;
+    using CoordScalar = typename Grid::ctype;
     enum { dimWorld = Grid::dimensionworld };
-    typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
+    using GlobalPosition = Dune::FieldVector<CoordScalar, dimWorld>;
 
 public:
     /*!

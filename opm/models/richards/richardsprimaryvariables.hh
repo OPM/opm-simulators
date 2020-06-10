@@ -52,14 +52,14 @@ namespace Opm {
 template <class TypeTag>
 class RichardsPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
 {
-    typedef FvBasePrimaryVariables<TypeTag> ParentType;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::MaterialLaw> MaterialLaw;
-    typedef GetPropType<TypeTag, Properties::MaterialLawParams> MaterialLawParams;
-    typedef GetPropType<TypeTag, Properties::IntensiveQuantities> EnergyModule;
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
+    using ParentType = FvBasePrimaryVariables<TypeTag>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
+    using EnergyModule = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
     // primary variable indices
     enum { pressureWIdx = Indices::pressureWIdx };
@@ -70,10 +70,10 @@ class RichardsPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
 
-    typedef Dune::FieldVector<Scalar, numComponents> ComponentVector;
-    typedef Dune::FieldVector<Scalar, numPhases> PhaseVector;
-    typedef typename Opm::MathToolbox<Evaluation> Toolbox;
-    typedef Opm::ImmiscibleFlash<Scalar, FluidSystem> ImmiscibleFlash;
+    using ComponentVector = Dune::FieldVector<Scalar, numComponents>;
+    using PhaseVector = Dune::FieldVector<Scalar, numPhases>;
+    using Toolbox = typename Opm::MathToolbox<Evaluation>;
+    using ImmiscibleFlash = Opm::ImmiscibleFlash<Scalar, FluidSystem>;
 
 public:
     RichardsPrimaryVariables() : ParentType()

@@ -45,9 +45,9 @@ namespace Opm {
 template <class TypeTag>
 class FvBaseExtensiveQuantities
 {
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
 public:
     /*!

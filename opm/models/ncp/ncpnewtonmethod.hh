@@ -54,15 +54,15 @@ namespace Opm {
 template <class TypeTag>
 class NcpNewtonMethod : public GetPropType<TypeTag, Properties::DiscNewtonMethod>
 {
-    typedef GetPropType<TypeTag, Properties::DiscNewtonMethod> ParentType;
+    using ParentType = GetPropType<TypeTag, Properties::DiscNewtonMethod>;
 
-    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
-    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
-    typedef GetPropType<TypeTag, Properties::SolutionVector> SolutionVector;
-    typedef GetPropType<TypeTag, Properties::GlobalEqVector> GlobalEqVector;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
+    using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
 
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };

@@ -66,11 +66,11 @@ template<class TypeTag>
 struct FluidSystem<TypeTag, TTag::OutflowBaseProblem>
 {
 private:
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
     // Two-component single phase fluid system
-    typedef Opm::H2ON2LiquidPhaseFluidSystem<Scalar> type;
+    using type = Opm::H2ON2LiquidPhaseFluidSystem<Scalar>;
 };
 
 // Disable gravity
@@ -124,17 +124,17 @@ namespace Opm {
 template <class TypeTag>
 class OutflowProblem : public GetPropType<TypeTag, Properties::BaseProblem>
 {
-    typedef GetPropType<TypeTag, Properties::BaseProblem> ParentType;
+    using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
 
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
-    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
-    typedef GetPropType<TypeTag, Properties::RateVector> RateVector;
-    typedef GetPropType<TypeTag, Properties::BoundaryRateVector> BoundaryRateVector;
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::MaterialLawParams> MaterialLawParams;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using BoundaryRateVector = GetPropType<TypeTag, Properties::BoundaryRateVector>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
 
     // copy some indices for convenience
     enum {
@@ -149,10 +149,10 @@ class OutflowProblem : public GetPropType<TypeTag, Properties::BaseProblem>
         N2Idx = FluidSystem::N2Idx
     };
 
-    typedef typename GridView::ctype CoordScalar;
-    typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
+    using CoordScalar = typename GridView::ctype;
+    using GlobalPosition = Dune::FieldVector<CoordScalar, dimWorld>;
 
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
 public:
     /*!

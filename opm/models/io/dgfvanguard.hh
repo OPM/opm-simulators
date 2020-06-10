@@ -48,13 +48,13 @@ namespace Opm {
 template <class TypeTag>
 class DgfVanguard : public BaseVanguard<TypeTag>
 {
-    typedef BaseVanguard<TypeTag> ParentType;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
-    typedef GetPropType<TypeTag, Properties::Grid> Grid;
-    typedef Opm::FractureMapper<TypeTag> FractureMapper;
+    using ParentType = BaseVanguard<TypeTag>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Grid = GetPropType<TypeTag, Properties::Grid>;
+    using FractureMapper = Opm::FractureMapper<TypeTag>;
 
-    typedef std::unique_ptr< Grid > GridPointer;
+    using GridPointer = std::unique_ptr< Grid >;
 
 public:
     /*!
@@ -136,7 +136,7 @@ public:
 protected:
     void addFractures_(Dune::GridPtr<Grid>& dgfPointer)
     {
-        typedef typename Grid::LevelGridView LevelGridView;
+        using LevelGridView = typename Grid::LevelGridView;
 
         // check if fractures are available (only 2d currently)
         if (dgfPointer.nofParameters(static_cast<int>(Grid::dimension)) == 0)
@@ -145,7 +145,7 @@ protected:
         LevelGridView gridView = dgfPointer->levelGridView(/*level=*/0);
         const unsigned edgeCodim = Grid::dimension - 1;
 
-        typedef Dune::MultipleCodimMultipleGeomTypeMapper<LevelGridView> VertexMapper;
+        using VertexMapper = Dune::MultipleCodimMultipleGeomTypeMapper<LevelGridView>;
         VertexMapper vertexMapper(gridView, Dune::mcmgVertexLayout());
 
         // first create a map of the dune to ART vertex indices

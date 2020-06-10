@@ -134,11 +134,11 @@ template<class TypeTag>
 struct FluidSystem<TypeTag, TTag::BlackOilModel>
 {
 private:
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
 
 public:
-    typedef Opm::BlackOilFluidSystem<Scalar> type;
+    using type = Opm::BlackOilFluidSystem<Scalar>;
 };
 
 // by default, all ECL extension modules are disabled
@@ -169,11 +169,11 @@ template<class TypeTag>
 struct BlackOilEnergyScalingFactor<TypeTag, TTag::BlackOilModel>
 {
 private:
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr Scalar alpha = getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>() ? 1000.0 : 1.0;
 
 public:
-    typedef Scalar type;
+    using type = Scalar;
     static constexpr Scalar value = 1.0/(30.0*4184.0*alpha);
 };
 
@@ -253,16 +253,16 @@ template<class TypeTag >
 class BlackOilModel
     : public MultiPhaseBaseModel<TypeTag>
 {
-    typedef GetPropType<TypeTag, Properties::Model> Implementation;
-    typedef MultiPhaseBaseModel<TypeTag> ParentType;
+    using Implementation = GetPropType<TypeTag, Properties::Model>;
+    using ParentType = MultiPhaseBaseModel<TypeTag>;
 
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
-    typedef GetPropType<TypeTag, Properties::Discretization> Discretization;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Discretization = GetPropType<TypeTag, Properties::Discretization>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
 
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = FluidSystem::numComponents };
@@ -271,9 +271,9 @@ class BlackOilModel
     static const bool compositionSwitchEnabled = Indices::gasEnabled;
     static const bool waterEnabled = Indices::waterEnabled;
 
-    typedef BlackOilSolventModule<TypeTag> SolventModule;
-    typedef BlackOilPolymerModule<TypeTag> PolymerModule;
-    typedef BlackOilEnergyModule<TypeTag> EnergyModule;
+    using SolventModule = BlackOilSolventModule<TypeTag>;
+    using PolymerModule = BlackOilPolymerModule<TypeTag>;
+    using EnergyModule = BlackOilEnergyModule<TypeTag>;
 public:
     BlackOilModel(Simulator& simulator)
         : ParentType(simulator)
@@ -504,7 +504,7 @@ public:
         PolymerModule::deserializeEntity(*this, instream, dof);
         EnergyModule::deserializeEntity(*this, instream, dof);
 
-        typedef typename PrimaryVariables::PrimaryVarsMeaning PVM;
+        using PVM = typename PrimaryVariables::PrimaryVarsMeaning;
         priVars.setPrimaryVarsMeaning(static_cast<PVM>(primaryVarsMeaning));
         priVars.setPvtRegionIndex(pvtRegionIdx);
     }

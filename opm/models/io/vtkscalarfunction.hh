@@ -52,10 +52,10 @@ template <class GridView, class Mapper>
 class VtkScalarFunction : public Dune::VTKFunction<GridView>
 {
     enum { dim = GridView::dimension };
-    typedef typename GridView::ctype ctype;
-    typedef typename GridView::template Codim<0>::Entity Element;
+    using ctype = typename GridView::ctype;
+    using Element = typename GridView::template Codim<0>::Entity;
 
-    typedef BaseOutputWriter::ScalarBuffer ScalarBuffer;
+    using ScalarBuffer = BaseOutputWriter::ScalarBuffer;
 
 public:
     VtkScalarFunction(std::string name,

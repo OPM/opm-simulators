@@ -193,7 +193,7 @@ struct Scalar<TypeTag, TTag::NumericModel> { using type = double; };
 template<class TypeTag>
 struct ParameterTree<TypeTag, TTag::NumericModel>
 {
-    typedef Dune::ParameterTree type;
+    using type = Dune::ParameterTree;
 
     static Dune::ParameterTree& tree()
     {
@@ -214,8 +214,8 @@ struct GridFile<TypeTag, TTag::NumericModel> { static constexpr auto value = "";
 template<class TypeTag>
 struct GridPart<TypeTag, TTag::NumericModel>
 {
-    typedef GetPropType<TypeTag, Properties::Grid> Grid;
-    typedef Dune::Fem::AdaptiveLeafGridPart<Grid> type;
+    using Grid = GetPropType<TypeTag, Properties::Grid>;
+    using type = Dune::Fem::AdaptiveLeafGridPart<Grid>;
 };
 
 template<class TypeTag>

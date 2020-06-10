@@ -50,10 +50,10 @@
 #endif
 
 const unsigned dim = 3;
-typedef double Scalar;
-typedef Opm::QuadrialteralQuadratureGeometry<Scalar, dim> QuadratureGeom;
-typedef QuadratureGeom::LocalPosition LocalPosition;
-typedef QuadratureGeom::GlobalPosition GlobalPosition;
+using Scalar = double;
+using QuadratureGeom = Opm::QuadrialteralQuadratureGeometry<Scalar, dim>;
+using LocalPosition = QuadratureGeom::LocalPosition;
+using GlobalPosition = QuadratureGeom::GlobalPosition;
 
 // function prototypes
 GlobalPosition::field_type f(const GlobalPosition &pos);
@@ -113,16 +113,16 @@ template <class Grid>
 void writeTetrahedronSubControlVolumes(const Grid& EWOMS_NO_ALUGRID_UNUSED grid)
 {
 #if HAVE_DUNE_ALUGRID
-    typedef typename Grid::LeafGridView GridView;
+    using GridView = typename Grid::LeafGridView;
 
-    typedef Dune::ALUGrid<dim, dim, Dune::cube, Dune::nonconforming> Grid2;
-    typedef typename Grid2::LeafGridView GridView2;
-    typedef Dune::GridFactory<Grid2> GridFactory2;
+    using Grid2 = Dune::ALUGrid<dim, dim, Dune::cube, Dune::nonconforming>;
+    using GridView2 = typename Grid2::LeafGridView;
+    using GridFactory2 = Dune::GridFactory<Grid2>;
 
     GridFactory2 gf2;
     const auto &gridView = grid.leafView();
-    typedef Opm::VcfvStencil<Scalar, GridView> Stencil;
-    typedef typename Stencil :: Mapper Mapper;
+    using Stencil = Opm::VcfvStencil<Scalar, GridView>;
+    using Mapper = typename Stencil :: Mapper;
 
 #if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
     Mapper mapper(gridView, Dune::mcmgVertexLayout());
@@ -165,7 +165,7 @@ void writeTetrahedronSubControlVolumes(const Grid& EWOMS_NO_ALUGRID_UNUSED grid)
     }
 
     const auto &grid2 = *gf2.createGrid();
-    typedef Dune::VTKWriter<GridView2> VtkWriter;
+    using VtkWriter = Dune::VTKWriter<GridView2>;
     VtkWriter writer(grid2.leafView(), Dune::VTK::conforming);
     writer.write("tetrahedron-scvs", Dune::VTK::ascii);
 #endif // HAVE_DUNE_ALUGRID
@@ -174,8 +174,8 @@ void writeTetrahedronSubControlVolumes(const Grid& EWOMS_NO_ALUGRID_UNUSED grid)
 void testTetrahedron()
 {
 #if HAVE_DUNE_ALUGRID
-    typedef Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming> Grid;
-    typedef Dune::GridFactory<Grid> GridFactory;
+    using Grid = Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming>;
+    using GridFactory = Dune::GridFactory<Grid>;
     GridFactory gf;
     Scalar corners[][3] = { { 0, 0, 0 }, { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 } };
 
@@ -199,21 +199,21 @@ template <class Grid>
 void writeCubeSubControlVolumes(const Grid& EWOMS_NO_ALUGRID_UNUSED grid)
 {
 #if HAVE_DUNE_ALUGRID
-    typedef typename Grid::LeafGridView GridView;
+    using GridView = typename Grid::LeafGridView;
 
-    typedef Dune::ALUGrid<dim, dim, Dune::cube, Dune::nonconforming> Grid2;
-    typedef typename Grid2::LeafGridView GridView2;
-    typedef Dune::GridFactory<Grid2> GridFactory2;
-    typedef Opm::VcfvStencil<Scalar, GridView> Stencil;
+    using Grid2 = Dune::ALUGrid<dim, dim, Dune::cube, Dune::nonconforming>;
+    using GridView2 = typename Grid2::LeafGridView;
+    using GridFactory2 = Dune::GridFactory<Grid2>;
+    using Stencil = Opm::VcfvStencil<Scalar, GridView>;
 
     GridFactory2 gf2;
     const auto &gridView = grid.leafView();
 
 #if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
-    typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView> VertexMapper;
+    using VertexMapper = Dune::MultipleCodimMultipleGeomTypeMapper<GridView>;
     VertexMapper vertexMapper(gridView, Dune::mcmgVertexLayout());
 #else
-    typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGVertexLayout> VertexMapper;
+    using VertexMapper = Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGVertexLayout>;
     VertexMapper vertexMapper(gridView);
 #endif
     Stencil stencil(gridView, vertexMapper);
@@ -251,7 +251,7 @@ void writeCubeSubControlVolumes(const Grid& EWOMS_NO_ALUGRID_UNUSED grid)
     }
 
     const auto &grid2 = *gf2.createGrid();
-    typedef Dune::VTKWriter<GridView2> VtkWriter;
+    using VtkWriter = Dune::VTKWriter<GridView2>;
     VtkWriter writer(grid2.leafView(), Dune::VTK::conforming);
     writer.write("cube-scvs", Dune::VTK::ascii);
 #endif // HAVE_DUNE_ALUGRID
@@ -260,8 +260,8 @@ void writeCubeSubControlVolumes(const Grid& EWOMS_NO_ALUGRID_UNUSED grid)
 void testCube()
 {
 #if HAVE_DUNE_ALUGRID
-    typedef Dune::ALUGrid<dim, dim, Dune::cube, Dune::nonconforming> Grid;
-    typedef Dune::GridFactory<Grid> GridFactory;
+    using Grid = Dune::ALUGrid<dim, dim, Dune::cube, Dune::nonconforming>;
+    using GridFactory = Dune::GridFactory<Grid>;
     GridFactory gf;
     Scalar corners[][3] = { { 0, 0, 0 },
                             { 1, 0, 0 },
@@ -298,8 +298,8 @@ void testQuadrature()
 
     GlobalPosition upperRight(1.0);
 
-    typedef Dune::YaspGrid<dim> Grid;
-    typedef Grid::LeafGridView GridView;
+    using Grid = Dune::YaspGrid<dim>;
+    using GridView = Grid::LeafGridView;
     Grid grid(upperRight, cellRes);
 
     // compute approximate integral
@@ -308,8 +308,8 @@ void testQuadrature()
     const auto eEndIt = gridView.end<0>();
     Scalar result = 0;
     // instanciate a stencil
-    typedef Opm::VcfvStencil<Scalar, GridView> Stencil;
-    typedef typename Stencil :: Mapper Mapper;
+    using Stencil = Opm::VcfvStencil<Scalar, GridView>;
+    using Mapper = typename Stencil :: Mapper;
 
 #if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
     Mapper mapper(gridView, Dune::mcmgVertexLayout());

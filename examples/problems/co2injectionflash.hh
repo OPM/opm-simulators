@@ -41,7 +41,7 @@ namespace Opm {
 template <class Scalar, class FluidSystem>
 class Co2InjectionFlash : public Opm::NcpFlash<Scalar, FluidSystem>
 {
-    typedef Opm::NcpFlash<Scalar, FluidSystem> ParentType;
+    using ParentType = Opm::NcpFlash<Scalar, FluidSystem>;
 
     enum { numPhases = FluidSystem::numPhases };
 

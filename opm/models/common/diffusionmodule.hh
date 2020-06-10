@@ -54,9 +54,9 @@ class DiffusionModule;
 template <class TypeTag>
 class DiffusionModule<TypeTag, /*enableDiffusion=*/false>
 {
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::RateVector> RateVector;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
 
 public:
     /*!
@@ -83,17 +83,17 @@ public:
 template <class TypeTag>
 class DiffusionModule<TypeTag, /*enableDiffusion=*/true>
 {
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::RateVector> RateVector;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
     enum { conti0EqIdx = Indices::conti0EqIdx };
 
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
 
 public:
     /*!
@@ -147,9 +147,9 @@ class DiffusionIntensiveQuantities;
 template <class TypeTag>
 class DiffusionIntensiveQuantities<TypeTag, /*enableDiffusion=*/false>
 {
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
 public:
     /*!
@@ -202,10 +202,10 @@ protected:
 template <class TypeTag>
 class DiffusionIntensiveQuantities<TypeTag, /*enableDiffusion=*/true>
 {
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
@@ -244,7 +244,7 @@ protected:
                  unsigned dofIdx,
                  unsigned timeIdx)
     {
-        typedef Opm::MathToolbox<Evaluation> Toolbox;
+        using Toolbox = Opm::MathToolbox<Evaluation>;
 
         const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, timeIdx);
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
@@ -292,9 +292,9 @@ class DiffusionExtensiveQuantities;
 template <class TypeTag>
 class DiffusionExtensiveQuantities<TypeTag, /*enableDiffusion=*/false>
 {
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
 protected:
     /*!
@@ -348,17 +348,17 @@ public:
 template <class TypeTag>
 class DiffusionExtensiveQuantities<TypeTag, /*enableDiffusion=*/true>
 {
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
 
     enum { dimWorld = GridView::dimensionworld };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
 
-    typedef Dune::FieldVector<Scalar, dimWorld> DimVector;
-    typedef Dune::FieldVector<Evaluation, dimWorld> DimEvalVector;
+    using DimVector = Dune::FieldVector<Scalar, dimWorld>;
+    using DimEvalVector = Dune::FieldVector<Evaluation, dimWorld>;
 
 protected:
     /*!

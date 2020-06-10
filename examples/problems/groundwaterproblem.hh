@@ -78,10 +78,10 @@ template<class TypeTag>
 struct Fluid<TypeTag, TTag::GroundWaterBaseProblem>
 {
 private:
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    typedef Opm::LiquidPhase<Scalar, Opm::SimpleH2O<Scalar> > type;
+    using type = Opm::LiquidPhase<Scalar, Opm::SimpleH2O<Scalar> >;
 };
 
 // Set the grid type
@@ -193,14 +193,14 @@ namespace Opm {
 template <class TypeTag>
 class GroundWaterProblem : public GetPropType<TypeTag, Properties::BaseProblem>
 {
-    typedef GetPropType<TypeTag, Properties::BaseProblem> ParentType;
+    using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
 
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
     // copy some indices for convenience
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
     enum {
         numPhases = FluidSystem::numPhases,
 
@@ -212,17 +212,17 @@ class GroundWaterProblem : public GetPropType<TypeTag, Properties::BaseProblem>
         pressure0Idx = Indices::pressure0Idx
     };
 
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
-    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
-    typedef GetPropType<TypeTag, Properties::RateVector> RateVector;
-    typedef GetPropType<TypeTag, Properties::BoundaryRateVector> BoundaryRateVector;
-    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
-    typedef GetPropType<TypeTag, Properties::Model> Model;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using BoundaryRateVector = GetPropType<TypeTag, Properties::BoundaryRateVector>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using Model = GetPropType<TypeTag, Properties::Model>;
 
-    typedef typename GridView::ctype CoordScalar;
-    typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
+    using CoordScalar = typename GridView::ctype;
+    using GlobalPosition = Dune::FieldVector<CoordScalar, dimWorld>;
 
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
 public:
     /*!

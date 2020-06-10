@@ -80,20 +80,20 @@ namespace Opm {
 template <class TypeTag>
 class VtkDiffusionModule : public BaseOutputModule<TypeTag>
 {
-    typedef BaseOutputModule<TypeTag> ParentType;
+    using ParentType = BaseOutputModule<TypeTag>;
 
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
 
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
 
-    typedef typename ParentType::PhaseComponentBuffer PhaseComponentBuffer;
-    typedef typename ParentType::PhaseBuffer PhaseBuffer;
+    using PhaseComponentBuffer = typename ParentType::PhaseComponentBuffer;
+    using PhaseBuffer = typename ParentType::PhaseBuffer;
 
     static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
-    typedef Opm::VtkMultiWriter<GridView, vtkFormat> VtkMultiWriter;
+    using VtkMultiWriter = Opm::VtkMultiWriter<GridView, vtkFormat>;
 
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };

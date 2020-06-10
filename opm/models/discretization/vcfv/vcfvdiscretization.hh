@@ -57,11 +57,11 @@ template<class TypeTag>
 struct Stencil<TypeTag, TTag::VcfvDiscretization>
 {
 private:
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
-    typedef typename GridView::ctype CoordScalar;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using CoordScalar = typename GridView::ctype;
 
 public:
-    typedef Opm::VcfvStencil<CoordScalar, GridView> type;
+    using type = Opm::VcfvStencil<CoordScalar, GridView>;
 };
 
 //! Mapper for the degrees of freedoms.
@@ -98,16 +98,16 @@ template<class TypeTag>
 struct DiscreteFunctionSpace<TypeTag, TTag::VcfvDiscretization>
 {
 private:
-    typedef GetPropType<TypeTag, Properties::Scalar>   Scalar;
-    typedef GetPropType<TypeTag, Properties::GridPart> GridPart;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>  ;
+    using GridPart = GetPropType<TypeTag, Properties::GridPart>;
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
-    typedef Dune::Fem::FunctionSpace<typename GridPart::GridType::ctype,
-                                     Scalar,
-                                     GridPart::GridType::dimensionworld,
-                                     numEq> FunctionSpace;
+    using FunctionSpace = Dune::Fem::FunctionSpace<typename GridPart::GridType::ctype,
+                                                   Scalar,
+                                                   GridPart::GridType::dimensionworld,
+                                                   numEq>;
 public:
     // Lagrange discrete function space with unknowns at the cell vertices
-    typedef Dune::Fem::LagrangeDiscreteFunctionSpace< FunctionSpace, GridPart, 1 > type;
+    using type = Dune::Fem::LagrangeDiscreteFunctionSpace< FunctionSpace, GridPart, 1 >;
 };
 #endif
 
@@ -115,10 +115,10 @@ public:
 template<class TypeTag>
 struct BorderListCreator<TypeTag, TTag::VcfvDiscretization>
 { private:
-    typedef GetPropType<TypeTag, Properties::VertexMapper> VertexMapper;
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    using VertexMapper = GetPropType<TypeTag, Properties::VertexMapper>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
 public:
-    typedef Opm::Linear::VertexBorderListFromGrid<GridView, VertexMapper> type;
+    using type = Opm::Linear::VertexBorderListFromGrid<GridView, VertexMapper>;
 };
 
 //! For the vertex centered finite volume method, ghost and overlap elements must _not_
@@ -140,11 +140,11 @@ namespace Opm {
 template<class TypeTag>
 class VcfvDiscretization : public FvBaseDiscretization<TypeTag>
 {
-    typedef FvBaseDiscretization<TypeTag> ParentType;
-    typedef GetPropType<TypeTag, Properties::Model> Implementation;
-    typedef GetPropType<TypeTag, Properties::DofMapper> DofMapper;
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    using ParentType = FvBaseDiscretization<TypeTag>;
+    using Implementation = GetPropType<TypeTag, Properties::Model>;
+    using DofMapper = GetPropType<TypeTag, Properties::DofMapper>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
     enum { dim = GridView::dimension };
 

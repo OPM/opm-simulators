@@ -63,6 +63,6 @@ struct BaseEpsilon<TypeTag, TTag::ReservoirNcpVcfvProblem>
 
 int main(int argc, char **argv)
 {
-    typedef Opm::Properties::TTag::ReservoirNcpVcfvProblem ProblemTypeTag;
+    using ProblemTypeTag = Opm::Properties::TTag::ReservoirNcpVcfvProblem;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

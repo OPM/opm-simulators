@@ -166,23 +166,23 @@ namespace Opm {
 template <class TypeTag>
 class NewtonMethod
 {
-    typedef GetPropType<TypeTag, Properties::NewtonMethod> Implementation;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
-    typedef GetPropType<TypeTag, Properties::Problem> Problem;
-    typedef GetPropType<TypeTag, Properties::Model> Model;
+    using Implementation = GetPropType<TypeTag, Properties::NewtonMethod>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Problem = GetPropType<TypeTag, Properties::Problem>;
+    using Model = GetPropType<TypeTag, Properties::Model>;
 
-    typedef GetPropType<TypeTag, Properties::SolutionVector> SolutionVector;
-    typedef GetPropType<TypeTag, Properties::GlobalEqVector> GlobalEqVector;
-    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
-    typedef GetPropType<TypeTag, Properties::Constraints> Constraints;
-    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
-    typedef GetPropType<TypeTag, Properties::Linearizer> Linearizer;
-    typedef GetPropType<TypeTag, Properties::LinearSolverBackend> LinearSolverBackend;
-    typedef GetPropType<TypeTag, Properties::NewtonConvergenceWriter> ConvergenceWriter;
+    using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
+    using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using Constraints = GetPropType<TypeTag, Properties::Constraints>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using Linearizer = GetPropType<TypeTag, Properties::Linearizer>;
+    using LinearSolverBackend = GetPropType<TypeTag, Properties::LinearSolverBackend>;
+    using ConvergenceWriter = GetPropType<TypeTag, Properties::NewtonConvergenceWriter>;
 
-    typedef typename Dune::MPIHelper::MPICommunicator Communicator;
-    typedef Dune::CollectiveCommunication<Communicator> CollectiveCommunication;
+    using Communicator = typename Dune::MPIHelper::MPICommunicator;
+    using CollectiveCommunication = Dune::CollectiveCommunication<Communicator>;
 
 public:
     NewtonMethod(Simulator& simulator)

@@ -59,12 +59,12 @@ namespace Opm::Linear {
     template <class TypeTag>                                                       \
     class SolverWrapper##SOLVER_NAME                                               \
     {                                                                              \
-        typedef GetPropType<TypeTag, Properties::Scalar> Scalar;                    \
-        typedef GetPropType<TypeTag, Properties::OverlappingMatrix> OverlappingMatrix;       \
-        typedef GetPropType<TypeTag, Properties::OverlappingVector> OverlappingVector;       \
+        using Scalar = GetPropType<TypeTag, Properties::Scalar>;                    \
+        using OverlappingMatrix = GetPropType<TypeTag, Properties::OverlappingMatrix>;       \
+        using OverlappingVector = GetPropType<TypeTag, Properties::OverlappingVector>;       \
                                                                                    \
     public:                                                                        \
-        typedef ISTL_SOLVER_NAME<OverlappingVector> RawSolver;                     \
+        using RawSolver = ISTL_SOLVER_NAME<OverlappingVector>;                     \
                                                                                    \
         SolverWrapper##SOLVER_NAME()                                               \
         {}                                                                         \
@@ -112,12 +112,12 @@ EWOMS_WRAP_ISTL_SOLVER(MinRes, Dune::MINRESSolver)
 template <class TypeTag>
 class SolverWrapperRestartedGMRes
 {
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::OverlappingMatrix> OverlappingMatrix;
-    typedef GetPropType<TypeTag, Properties::OverlappingVector> OverlappingVector;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using OverlappingMatrix = GetPropType<TypeTag, Properties::OverlappingMatrix>;
+    using OverlappingVector = GetPropType<TypeTag, Properties::OverlappingVector>;
 
 public:
-    typedef Dune::RestartedGMResSolver<OverlappingVector> RawSolver;
+    using RawSolver = Dune::RestartedGMResSolver<OverlappingVector>;
 
     SolverWrapperRestartedGMRes()
     {}

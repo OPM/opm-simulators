@@ -52,8 +52,8 @@ public:
         Index nativeIndexOfPeer;
         Index myOwnNativeIndex;
     };
-    typedef std::vector<PeerBlackListedEntry> PeerBlackList;
-    typedef std::map<ProcessRank, PeerBlackList> PeerBlackLists;
+    using PeerBlackList = std::vector<PeerBlackListedEntry>;
+    using PeerBlackLists = std::map<ProcessRank, PeerBlackList>;
 
     BlackList()
     { }

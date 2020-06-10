@@ -49,6 +49,6 @@ struct EnableEnergy<TypeTag, TTag::Co2InjectionPvsNiVcfvProblem> { static conste
 
 int main(int argc, char **argv)
 {
-    typedef Opm::Properties::TTag::Co2InjectionPvsNiVcfvProblem VcfvProblemTypeTag;
+    using VcfvProblemTypeTag = Opm::Properties::TTag::Co2InjectionPvsNiVcfvProblem;
     return Opm::start<VcfvProblemTypeTag>(argc, argv);
 }

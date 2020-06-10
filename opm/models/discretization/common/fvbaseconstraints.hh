@@ -44,7 +44,7 @@ namespace Opm {
 template <class TypeTag>
 class FvBaseConstraints : public GetPropType<TypeTag, Properties::PrimaryVariables>
 {
-    typedef GetPropType<TypeTag, Properties::PrimaryVariables> ParentType;
+    using ParentType = GetPropType<TypeTag, Properties::PrimaryVariables>;
 
 public:
     FvBaseConstraints()

@@ -60,9 +60,9 @@ class ForchheimerBaseProblem;
 template <class TypeTag>
 struct ForchheimerFluxModule
 {
-    typedef ForchheimerIntensiveQuantities<TypeTag> FluxIntensiveQuantities;
-    typedef ForchheimerExtensiveQuantities<TypeTag> FluxExtensiveQuantities;
-    typedef ForchheimerBaseProblem<TypeTag> FluxBaseProblem;
+    using FluxIntensiveQuantities = ForchheimerIntensiveQuantities<TypeTag>;
+    using FluxExtensiveQuantities = ForchheimerExtensiveQuantities<TypeTag>;
+    using FluxBaseProblem = ForchheimerBaseProblem<TypeTag>;
 
     /*!
      * \brief Register all run-time parameters for the flux module.
@@ -79,8 +79,8 @@ struct ForchheimerFluxModule
 template <class TypeTag>
 class ForchheimerBaseProblem
 {
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
 
 public:
     /*!
@@ -128,9 +128,9 @@ public:
 template <class TypeTag>
 class ForchheimerIntensiveQuantities
 {
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
 
@@ -213,24 +213,24 @@ template <class TypeTag>
 class ForchheimerExtensiveQuantities
     : public DarcyExtensiveQuantities<TypeTag>
 {
-    typedef DarcyExtensiveQuantities<TypeTag> DarcyExtQuants;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::MaterialLaw> MaterialLaw;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
-    typedef GetPropType<TypeTag, Properties::ExtensiveQuantities> Implementation;
+    using DarcyExtQuants = DarcyExtensiveQuantities<TypeTag>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Implementation = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
 
     enum { dimWorld = GridView::dimensionworld };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
 
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
 
-    typedef Dune::FieldVector<Scalar, dimWorld> DimVector;
-    typedef Dune::FieldVector<Evaluation, dimWorld> DimEvalVector;
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
-    typedef Dune::FieldMatrix<Evaluation, dimWorld, dimWorld> DimEvalMatrix;
+    using DimVector = Dune::FieldVector<Scalar, dimWorld>;
+    using DimEvalVector = Dune::FieldVector<Evaluation, dimWorld>;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
+    using DimEvalMatrix = Dune::FieldMatrix<Evaluation, dimWorld, dimWorld>;
 
 public:
     /*!

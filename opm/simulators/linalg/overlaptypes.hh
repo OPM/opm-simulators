@@ -41,17 +41,17 @@ namespace Linear {
 /*!
  * \brief The type of an index of a degree of freedom.
  */
-typedef int Index;
+using Index = int;
 
 /*!
  * \brief The type of the rank of a process.
  */
-typedef unsigned ProcessRank;
+using ProcessRank = unsigned;
 
 /*!
  * \brief The type representing the distance of an index to the border.
  */
-typedef unsigned BorderDistance;
+using BorderDistance = unsigned;
 
 /*!
  * \brief This structure stores an index and a process rank
@@ -117,7 +117,7 @@ struct BorderIndex
  * \brief This class managages a list of indices which are on the
  *        border of a process' partition of the grid
  */
-typedef std::list<BorderIndex> BorderList;
+using BorderList = std::list<BorderIndex>;
 
 /*!
  * \brief The list of indices which are on the process boundary.
@@ -162,29 +162,29 @@ public:
 /*!
  * \brief The list of indices which overlap with a peer rank.
  */
-typedef std::vector<IndexDistanceNpeers> OverlapWithPeer;
+using OverlapWithPeer = std::vector<IndexDistanceNpeers>;
 
 /*!
  * \brief A type mapping the process rank to the list of indices
  *        shared with this peer.
  */
-typedef std::map<ProcessRank, OverlapWithPeer> OverlapByRank;
+using OverlapByRank = std::map<ProcessRank, OverlapWithPeer>;
 
 /*!
  * \brief Maps each index to a list of processes .
  */
-typedef std::vector<std::map<ProcessRank, BorderDistance> > OverlapByIndex;
+using OverlapByIndex = std::vector<std::map<ProcessRank, BorderDistance> >;
 
 /*!
  * \brief The list of domestic indices are owned by peer rank.
  */
-typedef std::vector<Index> DomesticOverlapWithPeer;
+using DomesticOverlapWithPeer = std::vector<Index>;
 
 /*!
  * \brief A type mapping the process rank to the list of domestic indices
  *        which are owned by the peer.
  */
-typedef std::map<ProcessRank, DomesticOverlapWithPeer> DomesticOverlapByRank;
+using DomesticOverlapByRank = std::map<ProcessRank, DomesticOverlapWithPeer>;
 
 } // namespace Linear
 } // namespace Opm

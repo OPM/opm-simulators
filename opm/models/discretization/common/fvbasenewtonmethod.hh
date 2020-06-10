@@ -82,18 +82,18 @@ namespace Opm {
 template <class TypeTag>
 class FvBaseNewtonMethod : public NewtonMethod<TypeTag>
 {
-    typedef Opm::NewtonMethod<TypeTag> ParentType;
-    typedef GetPropType<TypeTag, Properties::NewtonMethod> Implementation;
+    using ParentType = Opm::NewtonMethod<TypeTag>;
+    using Implementation = GetPropType<TypeTag, Properties::NewtonMethod>;
 
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
-    typedef GetPropType<TypeTag, Properties::Model> Model;
-    typedef GetPropType<TypeTag, Properties::Linearizer> Linearizer;
-    typedef GetPropType<TypeTag, Properties::NewtonMethod> NewtonMethod;
-    typedef GetPropType<TypeTag, Properties::GlobalEqVector> GlobalEqVector;
-    typedef GetPropType<TypeTag, Properties::SolutionVector> SolutionVector;
-    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
-    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Model = GetPropType<TypeTag, Properties::Model>;
+    using Linearizer = GetPropType<TypeTag, Properties::Linearizer>;
+    using NewtonMethod = GetPropType<TypeTag, Properties::NewtonMethod>;
+    using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
+    using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
 
 
 public:

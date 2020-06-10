@@ -96,12 +96,12 @@ template<class TypeTag>
 struct MaterialLaw<TypeTag, TTag::MultiPhaseBaseModel>
 {
 private:
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef Opm::NullMaterialTraits<Scalar, FluidSystem::numPhases> Traits;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Traits = Opm::NullMaterialTraits<Scalar, FluidSystem::numPhases>;
 
 public:
-    typedef Opm::NullMaterial<Traits> type;
+    using type = Opm::NullMaterial<Traits>;
 };
 
 /*!
@@ -152,19 +152,19 @@ namespace Opm {
 template <class TypeTag>
 class MultiPhaseBaseModel : public GetPropType<TypeTag, Properties::Discretization>
 {
-    typedef GetPropType<TypeTag, Properties::Discretization> ParentType;
-    typedef GetPropType<TypeTag, Properties::Model> Implementation;
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
-    typedef GetPropType<TypeTag, Properties::ThreadManager> ThreadManager;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    using ParentType = GetPropType<TypeTag, Properties::Discretization>;
+    using Implementation = GetPropType<TypeTag, Properties::Model>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
 
-    typedef typename GridView::template Codim<0>::Iterator ElementIterator;
-    typedef typename GridView::template Codim<0>::Entity Element;
+    using ElementIterator = typename GridView::template Codim<0>::Iterator;
+    using Element = typename GridView::template Codim<0>::Entity;
 
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = FluidSystem::numComponents };

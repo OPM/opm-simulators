@@ -82,17 +82,16 @@ struct MaterialLaw<TypeTag, TTag::ObstacleBaseProblem>
 {
 private:
     // define the material law
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef Opm::TwoPhaseMaterialTraits<Scalar,
-                                        /*wettingPhaseIdx=*/FluidSystem::liquidPhaseIdx,
-                                        /*nonWettingPhaseIdx=*/FluidSystem::gasPhaseIdx>
-    MaterialTraits;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using MaterialTraits = Opm::TwoPhaseMaterialTraits<Scalar,
+                                                       /*wettingPhaseIdx=*/FluidSystem::liquidPhaseIdx,
+                                                       /*nonWettingPhaseIdx=*/FluidSystem::gasPhaseIdx>;
 
-    typedef Opm::LinearMaterial<MaterialTraits> EffMaterialLaw;
+    using EffMaterialLaw = Opm::LinearMaterial<MaterialTraits>;
 
 public:
-    typedef Opm::EffToAbsLaw<EffMaterialLaw> type;
+    using type = Opm::EffToAbsLaw<EffMaterialLaw>;
 };
 
 // Set the thermal conduction law
@@ -100,12 +99,12 @@ template<class TypeTag>
 struct ThermalConductionLaw<TypeTag, TTag::ObstacleBaseProblem>
 {
 private:
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
 public:
     // define the material law parameterized by absolute saturations
-    typedef Opm::SomertonThermalConductionLaw<FluidSystem, Scalar> type;
+    using type = Opm::SomertonThermalConductionLaw<FluidSystem, Scalar>;
 };
 
 // set the energy storage law for the solid phase
@@ -169,19 +168,19 @@ namespace Opm {
 template <class TypeTag>
 class ObstacleProblem : public GetPropType<TypeTag, Properties::BaseProblem>
 {
-    typedef GetPropType<TypeTag, Properties::BaseProblem> ParentType;
+    using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
 
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
-    typedef GetPropType<TypeTag, Properties::RateVector> RateVector;
-    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
-    typedef GetPropType<TypeTag, Properties::BoundaryRateVector> BoundaryRateVector;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::MaterialLaw> MaterialLaw;
-    typedef GetPropType<TypeTag, Properties::MaterialLawParams> MaterialLawParams;
-    typedef GetPropType<TypeTag, Properties::ThermalConductionLawParams> ThermalConductionLawParams;
-    typedef GetPropType<TypeTag, Properties::SolidEnergyLawParams> SolidEnergyLawParams;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using BoundaryRateVector = GetPropType<TypeTag, Properties::BoundaryRateVector>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
+    using ThermalConductionLawParams = GetPropType<TypeTag, Properties::ThermalConductionLawParams>;
+    using SolidEnergyLawParams = GetPropType<TypeTag, Properties::SolidEnergyLawParams>;
 
     enum {
         // Grid and world dimension
@@ -194,11 +193,11 @@ class ObstacleProblem : public GetPropType<TypeTag, Properties::BaseProblem>
         N2Idx = FluidSystem::N2Idx
     };
 
-    typedef Dune::FieldVector<typename GridView::ctype, dimWorld> GlobalPosition;
-    typedef Dune::FieldVector<Scalar, numPhases> PhaseVector;
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
-    typedef GetPropType<TypeTag, Properties::Model> Model;
+    using GlobalPosition = Dune::FieldVector<typename GridView::ctype, dimWorld>;
+    using PhaseVector = Dune::FieldVector<Scalar, numPhases>;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Model = GetPropType<TypeTag, Properties::Model>;
 
 public:
     /*!
@@ -548,7 +547,7 @@ private:
 
         // make the fluid state consistent with local thermodynamic
         // equilibrium
-        typedef Opm::ComputeFromReferencePhase<Scalar, FluidSystem> ComputeFromReferencePhase;
+        using ComputeFromReferencePhase = Opm::ComputeFromReferencePhase<Scalar, FluidSystem>;
 
         typename FluidSystem::template ParameterCache<Scalar> paramCache;
         ComputeFromReferencePhase::solve(fs, paramCache, refPhaseIdx,

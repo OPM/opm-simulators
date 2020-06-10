@@ -90,10 +90,10 @@ template<class TypeTag>
 struct WettingPhase<TypeTag, TTag::LensBaseProblem>
 {
 private:
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    typedef Opm::LiquidPhase<Scalar, Opm::SimpleH2O<Scalar> > type;
+    using type = Opm::LiquidPhase<Scalar, Opm::SimpleH2O<Scalar> >;
 };
 
 // Set the non-wetting phase
@@ -101,10 +101,10 @@ template<class TypeTag>
 struct NonwettingPhase<TypeTag, TTag::LensBaseProblem>
 {
 private:
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    typedef Opm::LiquidPhase<Scalar, Opm::DNAPL<Scalar> > type;
+    using type = Opm::LiquidPhase<Scalar, Opm::DNAPL<Scalar> >;
 };
 
 // Set the material Law
@@ -112,22 +112,22 @@ template<class TypeTag>
 struct MaterialLaw<TypeTag, TTag::LensBaseProblem>
 {
 private:
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     enum { wettingPhaseIdx = FluidSystem::wettingPhaseIdx };
     enum { nonWettingPhaseIdx = FluidSystem::nonWettingPhaseIdx };
 
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef Opm::TwoPhaseMaterialTraits<Scalar,
-                                        /*wettingPhaseIdx=*/FluidSystem::wettingPhaseIdx,
-                                        /*nonWettingPhaseIdx=*/FluidSystem::nonWettingPhaseIdx> Traits;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Traits = Opm::TwoPhaseMaterialTraits<Scalar,
+                                               /*wettingPhaseIdx=*/FluidSystem::wettingPhaseIdx,
+                                               /*nonWettingPhaseIdx=*/FluidSystem::nonWettingPhaseIdx>;
 
     // define the material law which is parameterized by effective
     // saturations
-    typedef Opm::RegularizedVanGenuchten<Traits> EffectiveLaw;
+    using EffectiveLaw = Opm::RegularizedVanGenuchten<Traits>;
 
 public:
     // define the material law parameterized by absolute saturations
-    typedef Opm::EffToAbsLaw<EffectiveLaw> type;
+    using type = Opm::EffToAbsLaw<EffectiveLaw>;
 };
 
 // Write the solutions of individual newton iterations?
@@ -264,17 +264,17 @@ namespace Opm {
 template <class TypeTag>
 class LensProblem : public GetPropType<TypeTag, Properties::BaseProblem>
 {
-    typedef GetPropType<TypeTag, Properties::BaseProblem> ParentType;
+    using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
 
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::WettingPhase> WettingPhase;
-    typedef GetPropType<TypeTag, Properties::NonwettingPhase> NonwettingPhase;
-    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
-    typedef GetPropType<TypeTag, Properties::Model> Model;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using WettingPhase = GetPropType<TypeTag, Properties::WettingPhase>;
+    using NonwettingPhase = GetPropType<TypeTag, Properties::NonwettingPhase>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Model = GetPropType<TypeTag, Properties::Model>;
 
     enum {
         // number of phases
@@ -292,16 +292,16 @@ class LensProblem : public GetPropType<TypeTag, Properties::BaseProblem>
         dimWorld = GridView::dimensionworld
     };
 
-    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
-    typedef GetPropType<TypeTag, Properties::RateVector> RateVector;
-    typedef GetPropType<TypeTag, Properties::BoundaryRateVector> BoundaryRateVector;
-    typedef GetPropType<TypeTag, Properties::MaterialLaw> MaterialLaw;
-    typedef GetPropType<TypeTag, Properties::MaterialLawParams> MaterialLawParams;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using BoundaryRateVector = GetPropType<TypeTag, Properties::BoundaryRateVector>;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
 
-    typedef typename GridView::ctype CoordScalar;
-    typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
+    using CoordScalar = typename GridView::ctype;
+    using GlobalPosition = Dune::FieldVector<CoordScalar, dimWorld>;
 
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
 public:
     /*!
@@ -397,13 +397,13 @@ public:
             thermal = "non-isothermal";
 
         std::string deriv = "finite difference";
-        typedef GetPropType<TypeTag, Properties::LocalLinearizerSplice> LLS;
+        using LLS = GetPropType<TypeTag, Properties::LocalLinearizerSplice>;
         bool useAutoDiff = std::is_same<LLS, Properties::TTag::AutoDiffLocalLinearizer>::value;
         if (useAutoDiff)
             deriv = "automatic differentiation";
 
         std::string disc = "vertex centered finite volume";
-        typedef GetPropType<TypeTag, Properties::Discretization> D;
+        using D = GetPropType<TypeTag, Properties::Discretization>;
         bool useEcfv = std::is_same<D, Opm::EcfvDiscretization<TypeTag>>::value;
         if (useEcfv)
             disc = "element centered finite volume";
@@ -478,7 +478,7 @@ public:
      */
     std::string name() const
     {
-        typedef GetPropType<TypeTag, Properties::LocalLinearizerSplice> LLS;
+        using LLS = GetPropType<TypeTag, Properties::LocalLinearizerSplice>;
 
         bool useAutoDiff = std::is_same<LLS, Properties::TTag::AutoDiffLocalLinearizer>::value;
 

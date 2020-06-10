@@ -198,20 +198,20 @@ template <class TypeTag>
 class FlashModel
     : public MultiPhaseBaseModel<TypeTag>
 {
-    typedef MultiPhaseBaseModel<TypeTag> ParentType;
+    using ParentType = MultiPhaseBaseModel<TypeTag>;
 
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
 
-    typedef Opm::EnergyModule<TypeTag, enableEnergy> EnergyModule;
+    using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
 
 public:
     FlashModel(Simulator& simulator)

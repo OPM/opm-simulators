@@ -55,18 +55,18 @@ class EnergyModule;
 template <class TypeTag>
 class EnergyModule<TypeTag, /*enableEnergy=*/false>
 {
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::RateVector> RateVector;
-    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
-    typedef GetPropType<TypeTag, Properties::ExtensiveQuantities> ExtensiveQuantities;
-    typedef GetPropType<TypeTag, Properties::IntensiveQuantities> IntensiveQuantities;
-    typedef GetPropType<TypeTag, Properties::Model> Model;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
+    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using Model = GetPropType<TypeTag, Properties::Model>;
 
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
 
-    typedef Dune::FieldVector<Evaluation, numEq> EvalEqVector;
+    using EvalEqVector = Dune::FieldVector<Evaluation, numEq>;
 
 public:
     /*!
@@ -222,24 +222,24 @@ public:
 template <class TypeTag>
 class EnergyModule<TypeTag, /*enableEnergy=*/true>
 {
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
-    typedef GetPropType<TypeTag, Properties::RateVector> RateVector;
-    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
-    typedef GetPropType<TypeTag, Properties::IntensiveQuantities> IntensiveQuantities;
-    typedef GetPropType<TypeTag, Properties::ExtensiveQuantities> ExtensiveQuantities;
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
-    typedef GetPropType<TypeTag, Properties::Model> Model;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using Model = GetPropType<TypeTag, Properties::Model>;
 
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { numPhases = FluidSystem::numPhases };
     enum { energyEqIdx = Indices::energyEqIdx };
     enum { temperatureIdx = Indices::temperatureIdx };
 
-    typedef Dune::FieldVector<Evaluation, numEq> EvalEqVector;
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
+    using EvalEqVector = Dune::FieldVector<Evaluation, numEq>;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
 
 public:
     /*!
@@ -537,12 +537,12 @@ class EnergyIntensiveQuantities;
 template <class TypeTag>
 class EnergyIntensiveQuantities<TypeTag, /*enableEnergy=*/false>
 {
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
 
 public:
     /*!
@@ -596,19 +596,19 @@ protected:
 template <class TypeTag>
 class EnergyIntensiveQuantities<TypeTag, /*enableEnergy=*/true>
 {
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::ThermalConductionLaw> ThermalConductionLaw;
-    typedef GetPropType<TypeTag, Properties::SolidEnergyLaw> SolidEnergyLaw;
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using ThermalConductionLaw = GetPropType<TypeTag, Properties::ThermalConductionLaw>;
+    using SolidEnergyLaw = GetPropType<TypeTag, Properties::SolidEnergyLaw>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
     enum { numPhases = FluidSystem::numPhases };
     enum { energyEqIdx = Indices::energyEqIdx };
     enum { temperatureIdx = Indices::temperatureIdx };
 
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
 
 protected:
     /*!
@@ -701,8 +701,8 @@ class EnergyExtensiveQuantities;
 template <class TypeTag>
 class EnergyExtensiveQuantities<TypeTag, /*enableEnergy=*/false>
 {
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
 protected:
     /*!
@@ -747,14 +747,14 @@ public:
 template <class TypeTag>
 class EnergyExtensiveQuantities<TypeTag, /*enableEnergy=*/true>
 {
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
 
     enum { dimWorld = GridView::dimensionworld };
-    typedef Dune::FieldVector<Evaluation, dimWorld> EvalDimVector;
-    typedef Dune::FieldVector<Scalar, dimWorld> DimVector;
+    using EvalDimVector = Dune::FieldVector<Evaluation, dimWorld>;
+    using DimVector = Dune::FieldVector<Scalar, dimWorld>;
 
 protected:
     /*!

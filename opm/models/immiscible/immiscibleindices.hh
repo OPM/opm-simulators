@@ -45,7 +45,7 @@ struct ImmiscibleIndices
 {
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
-    typedef Opm::EnergyIndices<PVOffset + numPhases, enableEnergy> EnergyIndices;
+    using EnergyIndices = Opm::EnergyIndices<PVOffset + numPhases, enableEnergy>;
 
 public:
     // number of equations/primary variables

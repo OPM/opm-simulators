@@ -46,15 +46,15 @@ namespace Opm {
 template <class TypeTag>
 class BlackOilLocalResidual : public GetPropType<TypeTag, Properties::DiscLocalResidual>
 {
-    typedef GetPropType<TypeTag, Properties::IntensiveQuantities> IntensiveQuantities;
-    typedef GetPropType<TypeTag, Properties::ExtensiveQuantities> ExtensiveQuantities;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
-    typedef GetPropType<TypeTag, Properties::RateVector> RateVector;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
     enum { conti0EqIdx = Indices::conti0EqIdx };
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
@@ -78,12 +78,12 @@ class BlackOilLocalResidual : public GetPropType<TypeTag, Properties::DiscLocalR
     static constexpr bool blackoilConserveSurfaceVolume = getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>();
     static constexpr bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
 
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
-    typedef BlackOilSolventModule<TypeTag> SolventModule;
-    typedef BlackOilPolymerModule<TypeTag> PolymerModule;
-    typedef BlackOilEnergyModule<TypeTag> EnergyModule;
-    typedef BlackOilFoamModule<TypeTag> FoamModule;
-    typedef BlackOilBrineModule<TypeTag> BrineModule;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using SolventModule = BlackOilSolventModule<TypeTag>;
+    using PolymerModule = BlackOilPolymerModule<TypeTag>;
+    using EnergyModule = BlackOilEnergyModule<TypeTag>;
+    using FoamModule = BlackOilFoamModule<TypeTag>;
+    using BrineModule = BlackOilBrineModule<TypeTag>;
 
 public:
     /*!

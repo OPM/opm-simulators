@@ -63,16 +63,16 @@ class BlackOilBrineModule;
 template <class TypeTag>
 class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
 {
-    typedef FvBasePrimaryVariables<TypeTag> ParentType;
-    typedef GetPropType<TypeTag, Properties::PrimaryVariables> Implementation;
+    using ParentType = FvBasePrimaryVariables<TypeTag>;
+    using Implementation = GetPropType<TypeTag, Properties::PrimaryVariables>;
 
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
-    typedef GetPropType<TypeTag, Properties::Problem> Problem;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::MaterialLaw> MaterialLaw;
-    typedef GetPropType<TypeTag, Properties::MaterialLawParams> MaterialLawParams;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using Problem = GetPropType<TypeTag, Properties::Problem>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
 
     // number of equations
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
@@ -102,13 +102,13 @@ class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
     enum { waterCompIdx = FluidSystem::waterCompIdx };
     enum { oilCompIdx = FluidSystem::oilCompIdx };
 
-    typedef typename Opm::MathToolbox<Evaluation> Toolbox;
-    typedef Dune::FieldVector<Scalar, numComponents> ComponentVector;
-    typedef BlackOilSolventModule<TypeTag, enableSolvent> SolventModule;
-    typedef BlackOilPolymerModule<TypeTag, enablePolymer> PolymerModule;
-    typedef BlackOilEnergyModule<TypeTag, enableEnergy> EnergyModule;
-    typedef BlackOilFoamModule<TypeTag, enableFoam> FoamModule;
-    typedef BlackOilBrineModule<TypeTag, enableBrine> BrineModule;
+    using Toolbox = typename Opm::MathToolbox<Evaluation>;
+    using ComponentVector = Dune::FieldVector<Scalar, numComponents>;
+    using SolventModule = BlackOilSolventModule<TypeTag, enableSolvent>;
+    using PolymerModule = BlackOilPolymerModule<TypeTag, enablePolymer>;
+    using EnergyModule = BlackOilEnergyModule<TypeTag, enableEnergy>;
+    using FoamModule = BlackOilFoamModule<TypeTag, enableFoam>;
+    using BrineModule = BlackOilBrineModule<TypeTag, enableBrine>;
 
     static_assert(numPhases == 3, "The black-oil model assumes three phases!");
     static_assert(numComponents == 3, "The black-oil model assumes three components!");
@@ -182,9 +182,9 @@ public:
                                 const MaterialLawParams& matParams,
                                 bool isInEquilibrium = false)
     {
-        typedef typename std::remove_reference<typename FluidState::Scalar>::type ConstEvaluation;
-        typedef typename std::remove_const<ConstEvaluation>::type FsEvaluation;
-        typedef typename Opm::MathToolbox<FsEvaluation> FsToolbox;
+        using ConstEvaluation = typename std::remove_reference<typename FluidState::Scalar>::type;
+        using FsEvaluation = typename std::remove_const<ConstEvaluation>::type;
+        using FsToolbox = typename Opm::MathToolbox<FsEvaluation>;
 
 #ifndef NDEBUG
         // make sure the temperature is the same in all fluid phases
@@ -210,8 +210,8 @@ public:
         paramCache.setMaxOilSat(FsToolbox::value(fluidState.saturation(oilPhaseIdx)));
 
         // create a mutable fluid state with well defined densities based on the input
-        typedef Opm::NcpFlash<Scalar, FluidSystem> NcpFlash;
-        typedef Opm::CompositionalFluidState<Scalar, FluidSystem> FlashFluidState;
+        using NcpFlash = Opm::NcpFlash<Scalar, FluidSystem>;
+        using FlashFluidState = Opm::CompositionalFluidState<Scalar, FluidSystem>;
         FlashFluidState fsFlash;
         fsFlash.setTemperature(FsToolbox::value(fluidState.temperature(/*phaseIdx=*/0)));
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
@@ -258,9 +258,9 @@ public:
     template <class FluidState>
     void assignNaive(const FluidState& fluidState)
     {
-        typedef typename std::remove_reference<typename FluidState::Scalar>::type ConstEvaluation;
-        typedef typename std::remove_const<ConstEvaluation>::type FsEvaluation;
-        typedef typename Opm::MathToolbox<FsEvaluation> FsToolbox;
+        using ConstEvaluation = typename std::remove_reference<typename FluidState::Scalar>::type;
+        using FsEvaluation = typename std::remove_const<ConstEvaluation>::type;
+        using FsToolbox = typename Opm::MathToolbox<FsEvaluation>;
 
         bool gasPresent = FluidSystem::phaseIsActive(gasPhaseIdx)?(fluidState.saturation(gasPhaseIdx) > 0.0):false;
         bool oilPresent = FluidSystem::phaseIsActive(oilPhaseIdx)?(fluidState.saturation(oilPhaseIdx) > 0.0):false;
@@ -725,18 +725,18 @@ private:
                                     Scalar Sw,
                                     const MaterialLawParams& matParams) const
     {
-        typedef Opm::SimpleModularFluidState<Scalar,
-                                             numPhases,
-                                             numComponents,
-                                             FluidSystem,
-                                             /*storePressure=*/false,
-                                             /*storeTemperature=*/false,
-                                             /*storeComposition=*/false,
-                                             /*storeFugacity=*/false,
-                                             /*storeSaturation=*/true,
-                                             /*storeDensity=*/false,
-                                             /*storeViscosity=*/false,
-                                             /*storeEnthalpy=*/false> SatOnlyFluidState;
+        using SatOnlyFluidState = Opm::SimpleModularFluidState<Scalar,
+                                                               numPhases,
+                                                               numComponents,
+                                                               FluidSystem,
+                                                               /*storePressure=*/false,
+                                                               /*storeTemperature=*/false,
+                                                               /*storeComposition=*/false,
+                                                               /*storeFugacity=*/false,
+                                                               /*storeSaturation=*/true,
+                                                               /*storeDensity=*/false,
+                                                               /*storeViscosity=*/false,
+                                                               /*storeEnthalpy=*/false>;
         SatOnlyFluidState fluidState;
         fluidState.setSaturation(waterPhaseIdx, Sw);
         fluidState.setSaturation(oilPhaseIdx, So);

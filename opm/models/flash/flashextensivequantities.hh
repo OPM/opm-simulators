@@ -54,16 +54,16 @@ class FlashExtensiveQuantities
     , public EnergyExtensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableEnergy>()>
     , public DiffusionExtensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableDiffusion>()>
 {
-    typedef MultiPhaseBaseExtensiveQuantities<TypeTag> ParentType;
+    using ParentType = MultiPhaseBaseExtensiveQuantities<TypeTag>;
 
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
-    typedef Opm::DiffusionExtensiveQuantities<TypeTag, enableDiffusion> DiffusionExtensiveQuantities;
+    using DiffusionExtensiveQuantities = Opm::DiffusionExtensiveQuantities<TypeTag, enableDiffusion>;
 
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
-    typedef Opm::EnergyExtensiveQuantities<TypeTag, enableEnergy> EnergyExtensiveQuantities;
+    using EnergyExtensiveQuantities = Opm::EnergyExtensiveQuantities<TypeTag, enableEnergy>;
 
 public:
     /*!

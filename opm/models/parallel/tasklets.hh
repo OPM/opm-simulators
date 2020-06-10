@@ -258,7 +258,7 @@ public:
     template <class Fn>
     std::shared_ptr<FunctionRunnerTasklet<Fn> > dispatchFunction(Fn &fn, int numInvocations=1)
     {
-        typedef FunctionRunnerTasklet<Fn> Tasklet;
+        using Tasklet = FunctionRunnerTasklet<Fn>;
         auto tasklet = std::make_shared<Tasklet>(numInvocations, fn);
         this->dispatch(tasklet);
         return tasklet;

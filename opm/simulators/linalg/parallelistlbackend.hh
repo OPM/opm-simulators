@@ -80,20 +80,20 @@ namespace Opm::Linear {
 template <class TypeTag>
 class ParallelIstlSolverBackend : public ParallelBaseBackend<TypeTag>
 {
-    typedef ParallelBaseBackend<TypeTag> ParentType;
+    using ParentType = ParallelBaseBackend<TypeTag>;
 
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
-    typedef GetPropType<TypeTag, Properties::LinearSolverWrapper> LinearSolverWrapper;
-    typedef GetPropType<TypeTag, Properties::SparseMatrixAdapter> SparseMatrixAdapter;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using LinearSolverWrapper = GetPropType<TypeTag, Properties::LinearSolverWrapper>;
+    using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
 
-    typedef typename ParentType::ParallelOperator ParallelOperator;
-    typedef typename ParentType::OverlappingVector OverlappingVector;
-    typedef typename ParentType::ParallelPreconditioner ParallelPreconditioner;
-    typedef typename ParentType::ParallelScalarProduct ParallelScalarProduct;
+    using ParallelOperator = typename ParentType::ParallelOperator;
+    using OverlappingVector = typename ParentType::OverlappingVector;
+    using ParallelPreconditioner = typename ParentType::ParallelPreconditioner;
+    using ParallelScalarProduct = typename ParentType::ParallelScalarProduct;
 
-    typedef typename SparseMatrixAdapter::MatrixBlock MatrixBlock;
-    typedef typename LinearSolverWrapper::RawSolver RawLinearSolver;
+    using MatrixBlock = typename SparseMatrixAdapter::MatrixBlock;
+    using RawLinearSolver = typename LinearSolverWrapper::RawSolver;
 
     static_assert(std::is_same<SparseMatrixAdapter, IstlSparseMatrixAdapter<MatrixBlock> >::value,
                   "The ParallelIstlSolverBackend linear solver backend requires the IstlSparseMatrixAdapter");

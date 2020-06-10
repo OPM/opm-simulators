@@ -43,11 +43,11 @@ template <class TypeTag>
 class DiscreteFracturePrimaryVariables
     : public ImmisciblePrimaryVariables<TypeTag>
 {
-    typedef ImmisciblePrimaryVariables<TypeTag> ParentType;
+    using ParentType = ImmisciblePrimaryVariables<TypeTag>;
 
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::MaterialLaw> MaterialLaw;
-    typedef GetPropType<TypeTag, Properties::MaterialLawParams> MaterialLawParams;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
 
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
 

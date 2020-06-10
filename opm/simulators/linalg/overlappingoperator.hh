@@ -40,12 +40,12 @@ template <class OverlappingMatrix, class DomainVector, class RangeVector>
 class OverlappingOperator
     : public Dune::AssembledLinearOperator<OverlappingMatrix, DomainVector, RangeVector>
 {
-    typedef typename OverlappingMatrix::Overlap Overlap;
+    using Overlap = typename OverlappingMatrix::Overlap;
 
 public:
     //! export types
-    typedef DomainVector domain_type;
-    typedef typename domain_type::field_type field_type;
+    using domain_type = DomainVector;
+    using field_type = typename domain_type::field_type;
 
     OverlappingOperator(const OverlappingMatrix& A) : A_(A)
     {}

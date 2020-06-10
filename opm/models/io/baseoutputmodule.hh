@@ -72,13 +72,13 @@ namespace Opm {
 template<class TypeTag>
 class BaseOutputModule
 {
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
-    typedef GetPropType<TypeTag, Properties::Model> Model;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::DiscBaseOutputModule> DiscBaseOutputModule;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Model = GetPropType<TypeTag, Properties::Model>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using DiscBaseOutputModule = GetPropType<TypeTag, Properties::DiscBaseOutputModule>;
 
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
@@ -86,19 +86,19 @@ class BaseOutputModule
     enum { dim = GridView::dimension };
     enum { dimWorld = GridView::dimensionworld };
 
-    typedef BaseOutputWriter::Tensor Tensor;
+    using Tensor = BaseOutputWriter::Tensor;
 
 public:
-    typedef BaseOutputWriter::ScalarBuffer ScalarBuffer;
-    typedef BaseOutputWriter::VectorBuffer VectorBuffer;
-    typedef BaseOutputWriter::TensorBuffer TensorBuffer;
+    using ScalarBuffer = BaseOutputWriter::ScalarBuffer;
+    using VectorBuffer = BaseOutputWriter::VectorBuffer;
+    using TensorBuffer = BaseOutputWriter::TensorBuffer;
 
-    typedef std::array<ScalarBuffer, numEq> EqBuffer;
-    typedef std::array<ScalarBuffer, numPhases> PhaseBuffer;
-    typedef std::array<ScalarBuffer, numComponents> ComponentBuffer;
-    typedef std::array<std::array<ScalarBuffer, numComponents>, numPhases> PhaseComponentBuffer;
+    using EqBuffer = std::array<ScalarBuffer, numEq>;
+    using PhaseBuffer = std::array<ScalarBuffer, numPhases>;
+    using ComponentBuffer = std::array<ScalarBuffer, numComponents>;
+    using PhaseComponentBuffer = std::array<std::array<ScalarBuffer, numComponents>, numPhases>;
 
-    typedef std::array<VectorBuffer, numPhases> PhaseVectorBuffer;
+    using PhaseVectorBuffer = std::array<VectorBuffer, numPhases>;
 
     BaseOutputModule(const Simulator& simulator)
         : simulator_(simulator)

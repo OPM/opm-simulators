@@ -71,10 +71,10 @@ template<class TypeTag>
 struct WettingFluid<TypeTag, TTag::RichardsLensProblem>
 {
 private:
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    typedef Opm::LiquidPhase<Scalar, Opm::SimpleH2O<Scalar> > type;
+    using type = Opm::LiquidPhase<Scalar, Opm::SimpleH2O<Scalar> >;
 };
 
 // Set the material Law
@@ -82,23 +82,22 @@ template<class TypeTag>
 struct MaterialLaw<TypeTag, TTag::RichardsLensProblem>
 {
 private:
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     enum { wettingPhaseIdx = FluidSystem::wettingPhaseIdx };
     enum { nonWettingPhaseIdx = FluidSystem::nonWettingPhaseIdx };
 
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef Opm::TwoPhaseMaterialTraits<Scalar,
-                                        /*wettingPhaseIdx=*/FluidSystem::wettingPhaseIdx,
-                                        /*nonWettingPhaseIdx=*/FluidSystem::nonWettingPhaseIdx>
-        Traits;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Traits = Opm::TwoPhaseMaterialTraits<Scalar,
+                                               /*wettingPhaseIdx=*/FluidSystem::wettingPhaseIdx,
+                                               /*nonWettingPhaseIdx=*/FluidSystem::nonWettingPhaseIdx>;
 
     // define the material law which is parameterized by effective
     // saturations
-    typedef Opm::RegularizedVanGenuchten<Traits> EffectiveLaw;
+    using EffectiveLaw = Opm::RegularizedVanGenuchten<Traits>;
 
 public:
     // define the material law parameterized by absolute saturations
-    typedef Opm::EffToAbsLaw<EffectiveLaw> type;
+    using type = Opm::EffToAbsLaw<EffectiveLaw>;
 };
 
 // Enable gravitational acceleration
@@ -164,20 +163,20 @@ namespace Opm {
 template <class TypeTag>
 class RichardsLensProblem : public GetPropType<TypeTag, Properties::BaseProblem>
 {
-    typedef GetPropType<TypeTag, Properties::BaseProblem> ParentType;
+    using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
 
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
-    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
-    typedef GetPropType<TypeTag, Properties::RateVector> RateVector;
-    typedef GetPropType<TypeTag, Properties::BoundaryRateVector> BoundaryRateVector;
-    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
-    typedef GetPropType<TypeTag, Properties::Stencil> Stencil;
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
-    typedef GetPropType<TypeTag, Properties::Model> Model;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using BoundaryRateVector = GetPropType<TypeTag, Properties::BoundaryRateVector>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using Stencil = GetPropType<TypeTag, Properties::Stencil>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Model = GetPropType<TypeTag, Properties::Model>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
     enum {
         // copy some indices for convenience
         pressureWIdx = Indices::pressureWIdx,
@@ -191,14 +190,14 @@ class RichardsLensProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     };
 
     // get the material law from the property system
-    typedef GetPropType<TypeTag, Properties::MaterialLaw> MaterialLaw;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
     //! The parameters of the material law to be used
-    typedef typename MaterialLaw::Params MaterialLawParams;
+    using MaterialLawParams = typename MaterialLaw::Params;
 
-    typedef typename GridView::ctype CoordScalar;
-    typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
-    typedef Dune::FieldVector<Scalar, numPhases> PhaseVector;
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
+    using CoordScalar = typename GridView::ctype;
+    using GlobalPosition = Dune::FieldVector<CoordScalar, dimWorld>;
+    using PhaseVector = Dune::FieldVector<Scalar, numPhases>;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
 public:
     /*!

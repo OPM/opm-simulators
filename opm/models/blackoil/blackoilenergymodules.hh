@@ -51,18 +51,18 @@ namespace Opm {
 template <class TypeTag, bool enableEnergyV = getPropValue<TypeTag, Properties::EnableEnergy>()>
 class BlackOilEnergyModule
 {
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
-    typedef GetPropType<TypeTag, Properties::IntensiveQuantities> IntensiveQuantities;
-    typedef GetPropType<TypeTag, Properties::ExtensiveQuantities> ExtensiveQuantities;
-    typedef GetPropType<TypeTag, Properties::Model> Model;
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::EqVector> EqVector;
-    typedef GetPropType<TypeTag, Properties::RateVector> RateVector;
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
+    using Model = GetPropType<TypeTag, Properties::Model>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
     static constexpr unsigned temperatureIdx = Indices::temperatureIdx;
     static constexpr unsigned contiEnergyEqIdx = Indices::contiEnergyEqIdx;
@@ -327,18 +327,18 @@ public:
 template <class TypeTag, bool enableEnergyV = getPropValue<TypeTag, Properties::EnableEnergy>()>
 class BlackOilEnergyIntensiveQuantities
 {
-    typedef GetPropType<TypeTag, Properties::IntensiveQuantities> Implementation;
+    using Implementation = GetPropType<TypeTag, Properties::IntensiveQuantities>;
 
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::PrimaryVariables> PrimaryVariables;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::SolidEnergyLaw> SolidEnergyLaw;
-    typedef GetPropType<TypeTag, Properties::ThermalConductionLaw> ThermalConductionLaw;
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using SolidEnergyLaw = GetPropType<TypeTag, Properties::SolidEnergyLaw>;
+    using ThermalConductionLaw = GetPropType<TypeTag, Properties::ThermalConductionLaw>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
-    typedef BlackOilEnergyModule<TypeTag> EnergyModule;
+    using EnergyModule = BlackOilEnergyModule<TypeTag>;
 
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     static constexpr int temperatureIdx = Indices::temperatureIdx;
@@ -407,12 +407,12 @@ protected:
 template <class TypeTag>
 class BlackOilEnergyIntensiveQuantities<TypeTag, false>
 {
-    typedef GetPropType<TypeTag, Properties::IntensiveQuantities> Implementation;
+    using Implementation = GetPropType<TypeTag, Properties::IntensiveQuantities>;
 
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
     static constexpr bool enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>();
 
@@ -460,23 +460,23 @@ protected:
 template <class TypeTag, bool enableEnergyV = getPropValue<TypeTag, Properties::EnableEnergy>()>
 class BlackOilEnergyExtensiveQuantities
 {
-    typedef GetPropType<TypeTag, Properties::ExtensiveQuantities> Implementation;
+    using Implementation = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
 
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::IntensiveQuantities> IntensiveQuantities;
-    typedef GetPropType<TypeTag, Properties::ExtensiveQuantities> ExtensiveQuantities;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
 
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
 
-    typedef BlackOilEnergyModule<TypeTag> EnergyModule;
+    using EnergyModule = BlackOilEnergyModule<TypeTag>;
 
     static const int dimWorld = GridView::dimensionworld;
-    typedef Dune::FieldVector<Scalar, dimWorld> DimVector;
-    typedef Dune::FieldVector<Evaluation, dimWorld> DimEvalVector;
+    using DimVector = Dune::FieldVector<Scalar, dimWorld>;
+    using DimEvalVector = Dune::FieldVector<Evaluation, dimWorld>;
 
 public:
     void updateEnergy(const ElementContext& elemCtx,
@@ -597,8 +597,8 @@ private:
 template <class TypeTag>
 class BlackOilEnergyExtensiveQuantities<TypeTag, false>
 {
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
 
 public:
     void updateEnergy(const ElementContext& elemCtx OPM_UNUSED,

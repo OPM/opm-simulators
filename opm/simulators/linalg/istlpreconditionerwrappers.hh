@@ -58,14 +58,15 @@ namespace Linear {
     template <class TypeTag>                                                    \
     class PreconditionerWrapper##PREC_NAME                                      \
     {                                                                           \
-        typedef GetPropType<TypeTag, Properties::Scalar> Scalar;                 \
-        typedef GetPropType<TypeTag, Properties::SparseMatrixAdapter> SparseMatrixAdapter; \
-        typedef typename SparseMatrixAdapter::IstlMatrix IstlMatrix;            \
-        typedef GetPropType<TypeTag, Properties::OverlappingVector> OverlappingVector; \
+        using Scalar = GetPropType<TypeTag, Properties::Scalar>;                 \
+        using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>; \
+        using IstlMatrix = typename SparseMatrixAdapter::IstlMatrix;            \
+        using OverlappingVector = GetPropType<TypeTag, Properties::OverlappingVector>; \
                                                                                 \
     public:                                                                     \
-        typedef ISTL_PREC_TYPE<IstlMatrix, OverlappingVector,                   \
-                               OverlappingVector> SequentialPreconditioner;     \
+        using SequentialPreconditioner = ISTL_PREC_TYPE<IstlMatrix,             \
+                                                        OverlappingVector,      \
+                                                        OverlappingVector>;     \
         PreconditionerWrapper##PREC_NAME()                                      \
         {}                                                                      \
                                                                                 \
@@ -102,13 +103,14 @@ namespace Linear {
     template <class TypeTag>                                                    \
     class PreconditionerWrapper##PREC_NAME                                      \
     {                                                                           \
-        typedef GetPropType<TypeTag, Properties::Scalar> Scalar;                 \
-        typedef GetPropType<TypeTag, Properties::OverlappingMatrix> OverlappingMatrix; \
-        typedef GetPropType<TypeTag, Properties::OverlappingVector> OverlappingVector; \
+        using Scalar = GetPropType<TypeTag, Properties::Scalar>;                 \
+        using OverlappingMatrix = GetPropType<TypeTag, Properties::OverlappingMatrix>; \
+        using OverlappingVector = GetPropType<TypeTag, Properties::OverlappingVector>; \
                                                                                 \
     public:                                                                     \
-        typedef ISTL_PREC_TYPE<OverlappingMatrix, OverlappingVector,            \
-                               OverlappingVector> SequentialPreconditioner;     \
+        using SequentialPreconditioner = ISTL_PREC_TYPE<OverlappingMatrix,      \
+                                                        OverlappingVector,      \
+                                                        OverlappingVector>;     \
         PreconditionerWrapper##PREC_NAME()                                      \
         {}                                                                      \
                                                                                 \
@@ -150,15 +152,14 @@ EWOMS_WRAP_ISTL_PRECONDITIONER(SSOR, Dune::SeqSSOR)
 template <class TypeTag>
 class PreconditionerWrapperILU
 {
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::OverlappingMatrix> OverlappingMatrix;
-    typedef GetPropType<TypeTag, Properties::OverlappingVector> OverlappingVector;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using OverlappingMatrix = GetPropType<TypeTag, Properties::OverlappingMatrix>;
+    using OverlappingVector = GetPropType<TypeTag, Properties::OverlappingVector>;
 
     static constexpr int order = getPropValue<TypeTag, Properties::PreconditionerOrder>();
 
 public:
-    typedef Dune::SeqILU<OverlappingMatrix, OverlappingVector, OverlappingVector, order>
-           SequentialPreconditioner;
+    using SequentialPreconditioner = Dune::SeqILU<OverlappingMatrix, OverlappingVector, OverlappingVector, order>;
 
     PreconditionerWrapperILU()
     {}

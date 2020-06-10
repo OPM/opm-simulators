@@ -369,7 +369,7 @@ SET_PROP_(EffTypeTagName,                                     \
           PropTagName,                                        \
           /*value=*/TTAG(ValueTypeTagName))                   \
 {                                                             \
-   typedef TTAG(ValueTypeTagName) type;                      \
+   using type = TTAG(ValueTypeTagName);                      \
 }
 
 } // namespace Properties

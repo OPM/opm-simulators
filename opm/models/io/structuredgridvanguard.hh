@@ -91,12 +91,12 @@ namespace Opm {
 template <class TypeTag>
 class StructuredGridVanguard : public BaseVanguard<TypeTag>
 {
-    typedef BaseVanguard<TypeTag> ParentType;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Simulator> Simulator;
-    typedef GetPropType<TypeTag, Properties::Grid> Grid;
+    using ParentType = BaseVanguard<TypeTag>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Grid = GetPropType<TypeTag, Properties::Grid>;
 
-    typedef std::unique_ptr<Grid> GridPointer;
+    using GridPointer = std::unique_ptr<Grid>;
 
     static const int dim = Grid::dimension;
 
@@ -135,7 +135,7 @@ public:
     {
         Dune::FieldVector<int, dim> cellRes;
 
-        typedef double GridScalar;
+        using GridScalar = double;
         Dune::FieldVector<GridScalar, dim> upperRight;
         Dune::FieldVector<GridScalar, dim> lowerLeft( 0 );
 

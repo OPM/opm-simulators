@@ -51,15 +51,15 @@ class BlackOilRateVector
     : public Dune::FieldVector<GetPropType<TypeTag, Properties::Evaluation>,
                                getPropValue<TypeTag, Properties::NumEq>()>
 {
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::Evaluation> Evaluation;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::Indices> Indices;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
-    typedef BlackOilSolventModule<TypeTag> SolventModule;
-    typedef BlackOilPolymerModule<TypeTag> PolymerModule;
-    typedef BlackOilFoamModule<TypeTag> FoamModule;
-    typedef BlackOilBrineModule<TypeTag> BrineModule;
+    using SolventModule = BlackOilSolventModule<TypeTag>;
+    using PolymerModule = BlackOilPolymerModule<TypeTag>;
+    using FoamModule = BlackOilFoamModule<TypeTag>;
+    using BrineModule = BlackOilBrineModule<TypeTag>;
 
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
@@ -72,8 +72,8 @@ class BlackOilRateVector
     enum { enableFoam = getPropValue<TypeTag, Properties::EnableFoam>() };
     enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
 
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
-    typedef Dune::FieldVector<Evaluation, numEq> ParentType;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using ParentType = Dune::FieldVector<Evaluation, numEq>;
 
 public:
     BlackOilRateVector() : ParentType()

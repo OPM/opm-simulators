@@ -42,6 +42,6 @@ struct InfiltrationProblem { using InheritsFrom = std::tuple<InfiltrationBasePro
 
 int main(int argc, char **argv)
 {
-    typedef Opm::Properties::TTag::InfiltrationProblem ProblemTypeTag;
+    using ProblemTypeTag = Opm::Properties::TTag::InfiltrationProblem;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

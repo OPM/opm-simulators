@@ -47,12 +47,12 @@ namespace Opm {
 template <class TypeTag>
 class DiscreteFractureIntensiveQuantities : public ImmiscibleIntensiveQuantities<TypeTag>
 {
-    typedef ImmiscibleIntensiveQuantities<TypeTag> ParentType;
-    typedef GetPropType<TypeTag, Properties::Scalar> Scalar;
-    typedef GetPropType<TypeTag, Properties::MaterialLaw> MaterialLaw;
-    typedef GetPropType<TypeTag, Properties::ElementContext> ElementContext;
-    typedef GetPropType<TypeTag, Properties::FluidSystem> FluidSystem;
-    typedef GetPropType<TypeTag, Properties::GridView> GridView;
+    using ParentType = ImmiscibleIntensiveQuantities<TypeTag>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
 
     enum { numPhases = FluidSystem::numPhases };
     enum { dimWorld = GridView::dimensionworld };
@@ -65,9 +65,9 @@ class DiscreteFractureIntensiveQuantities : public ImmiscibleIntensiveQuantities
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { wettingPhaseIdx = MaterialLaw::wettingPhaseIdx };
     enum { nonWettingPhaseIdx = MaterialLaw::nonWettingPhaseIdx };
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
-    typedef Opm::ImmiscibleFluidState<Scalar, FluidSystem,
-                                      /*storeEnthalpy=*/enableEnergy> FluidState;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
+    using FluidState = Opm::ImmiscibleFluidState<Scalar, FluidSystem,
+                                                 /*storeEnthalpy=*/enableEnergy>;
 
 public:
     DiscreteFractureIntensiveQuantities()

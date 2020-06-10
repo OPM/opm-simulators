@@ -57,8 +57,8 @@ namespace Linear {
 template <class Vector, class CollectiveCommunication>
 class FixPointCriterion : public ConvergenceCriterion<Vector>
 {
-    typedef typename Vector::field_type Scalar;
-    typedef typename Vector::block_type BlockType;
+    using Scalar = typename Vector::field_type;
+    using BlockType = typename Vector::block_type;
 
 public:
     FixPointCriterion(const CollectiveCommunication& comm) : comm_(comm)
