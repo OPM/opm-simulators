@@ -475,6 +475,7 @@ protected:
             if(upwind[phaseIdx] > 0){
                 if(linearizationType.type == Opm::LinearizationType::implicit){
                     if(not(pressureDifference_[phaseIdx] == 0.0)){
+                        // check faild in non significant flow 
                         assert(upIdx_[phaseIdx] == interiorDofIdx_);//NB test for implicit
                     }
                 }
@@ -485,6 +486,7 @@ protected:
             }else{
              if(linearizationType.type == Opm::LinearizationType::implicit){
                  if(not(pressureDifference_[phaseIdx] == 0.0)){
+                     // check faild in non significant flow 
                      assert(upIdx_[phaseIdx] == exteriorDofIdx_);//NB test for implicit
                  }
              }
@@ -511,7 +513,8 @@ protected:
                 }
             }
             Evaluation pFlux = fmob[phaseIdx]*(1.0/mobT) * (totalFlux_ + trans * mobG);
-            if(linearizationType.type == Opm::LinearizationType::implicit){   
+            if(linearizationType.type == Opm::LinearizationType::implicit){
+                // Does this test derivatives??
                 assert(Toolbox::isSame(pFlux,volumeFlux_[phaseIdx],1e-6)); // for testing code in fully implit mode
             }    
             volumeFlux_[phaseIdx] = fst[phaseIdx] * pFlux;

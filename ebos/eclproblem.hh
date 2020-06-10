@@ -689,7 +689,9 @@ public:
             lastRv_.resize(numDof, 0.0);
             maxOilSaturation_.resize(numDof, 0.0);
         }
-
+        pressure_.resize(numDof, 0.0);
+        totalSaturation_.resize(numDof, 1.0);
+  
         updateElementDepths_();
         readRockParameters_();
         readMaterialParameters_();
@@ -905,6 +907,7 @@ public:
         // used when ROCKCOMP is activated
         const bool invalidateFromMaxWaterSat = updateMaxWaterSaturation_();
         const bool invalidateFromMinPressure = updateMinPressure_();
+        updatePressure_();//update stored pressure in case of sequential do not need to recalculate chach
         invalidateIntensiveQuantities = invalidateFromMaxWaterSat || invalidateFromMinPressure;
 
         if (invalidateIntensiveQuantities)
@@ -1760,7 +1763,21 @@ public:
         return minOilPressure_[globalDofIdx];
     }
 
-
+    /*!
+     * \brief Returns an element's pressure of the oil phase that was at the begining
+     * of the timestep need for sequential       
+     *
+     */
+    Scalar pressure(unsigned globalDofIdx,unsigned phaseIndex) const
+    {
+        // phase index is unused for now will give warning in compilation
+        return pressure_[globalDofIdx];
+    }
+    Scalar totalSaturation(unsigned globalDofIdx) const
+    {
+        return totalSaturation_[globalDofIdx];
+    }
+    
     /*!
      * \brief Returns a reference to the ECL well manager used by the problem.
      *
@@ -1908,7 +1925,13 @@ public:
 
         return overburdenPressure_[elementIdx];
     }
-
+    /*!
+     * \brief update pressure and totalSaturation 
+     * update copy of pressure and total saturation for sequential solve
+     */
+    bool updatePressure(){
+        this->updatePressure_();
+    }
 
 private:
     void checkDeckCompatibility_() const
@@ -2166,6 +2189,36 @@ private:
             minOilPressure_[compressedDofIdx] =
                 std::min(minOilPressure_[compressedDofIdx],
                          Opm::getValue(fs.pressure(oilPhaseIdx)));
+        }
+
+        return true;
+    }
+
+    bool updatePressure_()
+    {
+
+        ElementContext elemCtx(this->simulator());
+        const auto& vanguard = this->simulator().vanguard();
+        auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
+        const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            const Element& elem = *elemIt;
+
+            elemCtx.updatePrimaryStencil(elem);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
+            unsigned compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto& iq = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto& fs = iq.fluidState();
+
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                pressure_[compressedDofIdx] = Opm::getValue(fs.pressure(oilPhaseIdx));
+            }else if( FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)){
+                pressure_[compressedDofIdx] = Opm::getValue(fs.pressure(gasPhaseIdx));
+            }else{
+                pressure_[compressedDofIdx] = Opm::getValue(fs.pressure(waterPhaseIdx));
+            }
+            totalSaturation_[compressedDofIdx] = Opm::getValue(fs.totalSaturation());
         }
 
         return true;
@@ -3077,6 +3130,8 @@ private:
     std::vector<Scalar> maxWaterSaturation_;
     std::vector<Scalar> overburdenPressure_;
     std::vector<Scalar> minOilPressure_;
+    std::vector<Scalar> pressure_;
+    std::vector<Scalar> totalSaturation_;
 
     std::vector<TabulatedTwoDFunction> rockCompPoroMult_;
     std::vector<TabulatedTwoDFunction> rockCompTransMult_;
