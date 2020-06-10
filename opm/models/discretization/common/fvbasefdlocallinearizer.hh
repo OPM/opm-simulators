@@ -53,7 +53,10 @@ class FvBaseFdLocalLinearizer;
 namespace Opm::Properties {
 
 // declare the property tags required for the finite differences local linearizer
-NEW_TYPE_TAG(FiniteDifferenceLocalLinearizer);
+
+namespace TTag {
+struct FiniteDifferenceLocalLinearizer {};
+} // namespace TTag
 
 template<class TypeTag, class MyTypeTag>
 struct NumericDifferenceMethod { using type = UndefinedProperty; };
@@ -61,11 +64,13 @@ template<class TypeTag, class MyTypeTag>
 struct BaseEpsilon { using type = UndefinedProperty; };
 
 // set the properties to be spliced in
-SET_TYPE_PROP(FiniteDifferenceLocalLinearizer, LocalLinearizer,
-              Opm::FvBaseFdLocalLinearizer<TypeTag>);
+template<class TypeTag>
+struct LocalLinearizer<TypeTag, TTag::FiniteDifferenceLocalLinearizer>
+{ using type = Opm::FvBaseFdLocalLinearizer<TypeTag>; };
 
-SET_TYPE_PROP(FiniteDifferenceLocalLinearizer, Evaluation,
-              GetPropType<TypeTag, Properties::Scalar>);
+template<class TypeTag>
+struct Evaluation<TypeTag, TTag::FiniteDifferenceLocalLinearizer>
+{ using type = GetPropType<TypeTag, Properties::Scalar>; };
 
 /*!
  * \brief Specify which kind of method should be used to numerically
@@ -78,9 +83,12 @@ template<class TypeTag>
 struct NumericDifferenceMethod<TypeTag, TTag::FiniteDifferenceLocalLinearizer> { static constexpr int value = +1; };
 
 //! The base epsilon value for finite difference calculations
-SET_SCALAR_PROP(FiniteDifferenceLocalLinearizer,
-                BaseEpsilon,
-                std::max<Scalar>(0.9123e-10, std::numeric_limits<Scalar>::epsilon()*1.23e3));
+template<class TypeTag>
+struct BaseEpsilon<TypeTag, TTag::FiniteDifferenceLocalLinearizer>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = std::max<type>(0.9123e-10, std::numeric_limits<type>::epsilon()*1.23e3);
+};
 
 } // namespace Opm::Properties
 

@@ -28,8 +28,9 @@
  * In conjunction with a suitable solver backend, preconditioner wrappers work by
  * specifying the "PreconditionerWrapper" property:
  * \code
- * SET_TYPE_PROP(YourTypeTag, PreconditionerWrapper,
- *               Opm::Linear::PreconditionerWrapper$PRECONDITIONER<TypeTag>);
+ * template<class TypeTag>
+ * struct PreconditionerWrapper<TypeTag, TTag::YourTypeTag>
+ * { using type = Opm::Linear::PreconditionerWrapper$PRECONDITIONER<TypeTag>; };
  * \endcode
  *
  * Where the choices possible for '\c $PRECONDITIONER' are:

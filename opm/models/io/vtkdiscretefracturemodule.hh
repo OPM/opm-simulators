@@ -41,8 +41,12 @@
 
 namespace Opm::Properties {
 
+namespace TTag {
+
 // create new type tag for the VTK multi-phase output
-NEW_TYPE_TAG(VtkDiscreteFracture);
+struct VtkDiscreteFracture {};
+
+} // namespace TTag
 
 // create the property tags needed for the multi phase module
 template<class TypeTag, class MyTypeTag>

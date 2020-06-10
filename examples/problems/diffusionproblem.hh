@@ -54,7 +54,11 @@ class DiffusionProblem;
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(DiffusionBaseProblem);
+namespace TTag {
+
+struct DiffusionBaseProblem {};
+
+} // namespace TTag
 
 // Set the grid implementation to be used
 template<class TypeTag>

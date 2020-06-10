@@ -62,9 +62,13 @@ namespace Opm {
 
 namespace Opm::Properties {
 
+namespace TTag {
+
 //! The type tag on which the default properties for the Newton method
 //! are attached
-NEW_TYPE_TAG(NewtonMethod);
+struct NewtonMethod {};
+
+} // namespace TTag
 
 //! Specifies the type of the actual Newton method
 template<class TypeTag, class MyTypeTag>

@@ -48,10 +48,10 @@ template<class TypeTag>
 struct EnableEnergy<TypeTag, TTag::Co2InjectionFlashNiVcfvProblem> { static constexpr bool value = true; };
 
 // use the CO2 injection problem adapted flash solver
-SET_TYPE_PROP(
-    Co2InjectionFlashNiVcfvProblem, FlashSolver,
-    Opm::Co2InjectionFlash<GetPropType<TypeTag, Properties::Scalar>,
-                           GetPropType<TypeTag, Properties::FluidSystem>>);
+template<class TypeTag>
+struct FlashSolver<TypeTag, TTag::Co2InjectionFlashNiVcfvProblem>
+{ using type = Opm::Co2InjectionFlash<GetPropType<TypeTag, Properties::Scalar>,
+                                      GetPropType<TypeTag, Properties::FluidSystem>>; };
 
 // the flash model has serious problems with the numerical
 // precision. if quadruple precision math is available, we use it,

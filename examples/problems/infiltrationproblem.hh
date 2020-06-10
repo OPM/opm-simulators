@@ -54,20 +54,22 @@ class InfiltrationProblem;
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(InfiltrationBaseProblem);
+namespace TTag {
+struct InfiltrationBaseProblem {};
+}
 
 // Set the grid type
 template<class TypeTag>
 struct Grid<TypeTag, TTag::InfiltrationBaseProblem> { using type = Dune::YaspGrid<2>; };
 
 // Set the problem property
-SET_TYPE_PROP(InfiltrationBaseProblem, Problem,
-              Opm::InfiltrationProblem<TypeTag>);
+template<class TypeTag>
+struct Problem<TypeTag, TTag::InfiltrationBaseProblem> { using type = Opm::InfiltrationProblem<TypeTag>; };
 
 // Set the fluid system
-SET_TYPE_PROP(
-    InfiltrationBaseProblem, FluidSystem,
-    Opm::H2OAirMesityleneFluidSystem<GetPropType<TypeTag, Properties::Scalar>>);
+template<class TypeTag>
+struct FluidSystem<TypeTag, TTag::InfiltrationBaseProblem>
+{ using type = Opm::H2OAirMesityleneFluidSystem<GetPropType<TypeTag, Properties::Scalar>>; };
 
 // Enable gravity?
 template<class TypeTag>
@@ -116,8 +118,9 @@ struct InitialTimeStepSize<TypeTag, TTag::InfiltrationBaseProblem>
 };
 
 // The default DGF file to load
-SET_STRING_PROP(InfiltrationBaseProblem, GridFile,
-                "./data/infiltration_50x3.dgf");
+template<class TypeTag>
+struct GridFile<TypeTag, TTag::InfiltrationBaseProblem>
+{ static constexpr auto value = "./data/infiltration_50x3.dgf"; };
 
 } // namespace Opm::Properties
 

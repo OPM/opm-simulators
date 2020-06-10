@@ -55,12 +55,17 @@ template<class TypeTag, class MyTypeTag>
 struct DiscNewtonMethod { using type = UndefinedProperty; };
 
 // set default values
-SET_TYPE_PROP(FvBaseNewtonMethod, DiscNewtonMethod,
-              Opm::FvBaseNewtonMethod<TypeTag>);
-SET_TYPE_PROP(FvBaseNewtonMethod, NewtonMethod,
-              GetPropType<TypeTag, Properties::DiscNewtonMethod>);
-SET_TYPE_PROP(FvBaseNewtonMethod, NewtonConvergenceWriter,
-              Opm::FvBaseNewtonConvergenceWriter<TypeTag>);
+template<class TypeTag>
+struct DiscNewtonMethod<TypeTag, TTag::FvBaseNewtonMethod>
+{ using type = Opm::FvBaseNewtonMethod<TypeTag>; };
+
+template<class TypeTag>
+struct NewtonMethod<TypeTag, TTag::FvBaseNewtonMethod>
+{ using type = GetPropType<TypeTag, Properties::DiscNewtonMethod>; };
+
+template<class TypeTag>
+struct NewtonConvergenceWriter<TypeTag, TTag::FvBaseNewtonMethod>
+{ using type = Opm::FvBaseNewtonConvergenceWriter<TypeTag>; };
 
 } // namespace Opm::Properties
 

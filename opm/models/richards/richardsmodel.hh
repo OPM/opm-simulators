@@ -89,9 +89,8 @@ template<class TypeTag>
 struct GasComponentIndex<TypeTag, TTag::Richards> { static constexpr int value = 1 - getPropValue<TypeTag, Properties::LiquidComponentIndex>(); };
 
 //! The local residual operator
-SET_TYPE_PROP(Richards,
-              LocalResidual,
-              Opm::RichardsLocalResidual<TypeTag>);
+template<class TypeTag>
+struct LocalResidual<TypeTag, TTag::Richards> { using type = Opm::RichardsLocalResidual<TypeTag>; };
 
 //! The global model used
 template<class TypeTag>

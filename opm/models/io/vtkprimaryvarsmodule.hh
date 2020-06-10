@@ -35,8 +35,12 @@
 
 namespace Opm::Properties {
 
+namespace TTag {
+
 // create new type tag for the VTK primary variables output
-NEW_TYPE_TAG(VtkPrimaryVars);
+struct VtkPrimaryVars {};
+
+} // namespace TTag
 
 // create the property tags needed for the primary variables module
 template<class TypeTag, class MyTypeTag>

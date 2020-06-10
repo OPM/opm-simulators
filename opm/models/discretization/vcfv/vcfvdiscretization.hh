@@ -74,16 +74,19 @@ struct Discretization<TypeTag, TTag::VcfvDiscretization> { using type = Opm::Vcf
 
 //! The base class for the output modules (decides whether to write
 //! element or vertex based fields)
-SET_TYPE_PROP(VcfvDiscretization, DiscBaseOutputModule,
-              Opm::VcfvBaseOutputModule<TypeTag>);
+template<class TypeTag>
+struct DiscBaseOutputModule<TypeTag, TTag::VcfvDiscretization>
+{ using type = Opm::VcfvBaseOutputModule<TypeTag>; };
 
 //! Calculates the gradient of any quantity given the index of a flux approximation point
-SET_TYPE_PROP(VcfvDiscretization, GradientCalculator,
-              Opm::P1FeGradientCalculator<TypeTag>);
+template<class TypeTag>
+struct GradientCalculator<TypeTag, TTag::VcfvDiscretization>
+{ using type = Opm::P1FeGradientCalculator<TypeTag>; };
 
 //! The class to create grid communication handles
-SET_TYPE_PROP(VcfvDiscretization, GridCommHandleFactory,
-              Opm::VcfvGridCommHandleFactory<TypeTag>);
+template<class TypeTag>
+struct GridCommHandleFactory<TypeTag, TTag::VcfvDiscretization>
+{ using type = Opm::VcfvGridCommHandleFactory<TypeTag>; };
 
 //! Use two-point gradients by default for the vertex centered finite volume scheme.
 template<class TypeTag>

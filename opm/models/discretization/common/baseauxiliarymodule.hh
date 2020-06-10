@@ -34,11 +34,11 @@
 #include <set>
 #include <vector>
 
-namespace Opm::Properties {
+namespace Opm::Properties::Tag {
 
-NEW_TYPE_TAG(AuxModule);
+struct AuxModule {};
 
-} // namespace Opm::Properties
+} // namespace Opm::Properties::TTag
 
 namespace Opm {
 

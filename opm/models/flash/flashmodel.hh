@@ -58,20 +58,23 @@ class FlashModel;
 
 namespace Opm::Properties {
 
+namespace TTag {
 //! The type tag for the isothermal single phase problems
-NEW_TYPE_TAG(FlashModel, INHERITS_FROM(MultiPhaseBaseModel,
-                                       VtkComposition,
-                                       VtkEnergy,
-                                       VtkDiffusion));
+struct FlashModel { using InheritsFrom = std::tuple<VtkDiffusion,
+                                                    VtkEnergy,
+                                                    VtkComposition,
+                                                    MultiPhaseBaseModel>; };
+} // namespace TTag
 
 //! Use the FlashLocalResidual function for the flash model
-SET_TYPE_PROP(FlashModel, LocalResidual,
-              Opm::FlashLocalResidual<TypeTag>);
+template<class TypeTag>
+struct LocalResidual<TypeTag, TTag::FlashModel> { using type = Opm::FlashLocalResidual<TypeTag>; };
 
 //! Use the NCP flash solver by default
-SET_TYPE_PROP(FlashModel, FlashSolver,
-              Opm::NcpFlash<GetPropType<TypeTag, Properties::Scalar>,
-                            GetPropType<TypeTag, Properties::FluidSystem>>);
+template<class TypeTag>
+struct FlashSolver<TypeTag, TTag::FlashModel>
+{ using type = Opm::NcpFlash<GetPropType<TypeTag, Properties::Scalar>,
+                             GetPropType<TypeTag, Properties::FluidSystem>>; };
 
 //! Let the flash solver choose its tolerance by default
 template<class TypeTag>

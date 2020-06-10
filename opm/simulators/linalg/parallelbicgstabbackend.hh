@@ -35,11 +35,10 @@
 
 #include <memory>
 
-namespace Opm {
-namespace Linear {
+namespace Opm::Linear {
 template <class TypeTag>
 class ParallelBiCGStabSolverBackend;
-}} // namespace Linear, Opm
+} // namespace Opm::Linear
 
 namespace Opm::Properties {
 
@@ -48,9 +47,9 @@ namespace TTag {
 struct ParallelBiCGStabLinearSolver { using InheritsFrom = std::tuple<ParallelBaseLinearSolver>; };
 } // end namespace TTag
 
-SET_TYPE_PROP(ParallelBiCGStabLinearSolver,
-              LinearSolverBackend,
-              Opm::Linear::ParallelBiCGStabSolverBackend<TypeTag>);
+template<class TypeTag>
+struct LinearSolverBackend<TypeTag, TTag::ParallelBiCGStabLinearSolver>
+{ using type = Opm::Linear::ParallelBiCGStabSolverBackend<TypeTag>; };
 
 template<class TypeTag>
 struct LinearSolverMaxError<TypeTag, TTag::ParallelBiCGStabLinearSolver>
@@ -71,8 +70,9 @@ namespace Linear {
  * Chosing the preconditioner works by setting the "PreconditionerWrapper" property:
  *
  * \code
- * SET_TYPE_PROP(YourTypeTag, PreconditionerWrapper,
- *               Opm::Linear::PreconditionerWrapper$PRECONDITIONER<TypeTag>);
+ * template<class TypeTag>
+ * struct PreconditionerWrapper<TypeTag, TTag::YourTypeTag>
+ * { using type = Opm::Linear::PreconditionerWrapper$PRECONDITIONER<TypeTag>; };
  * \endcode
  *
  * Where the choices possible for '\c $PRECONDITIONER' are:

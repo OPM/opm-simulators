@@ -93,12 +93,14 @@ template<class TypeTag>
 struct Simulator<TypeTag, TTag::FvBaseDiscretization> { using type = Opm::Simulator<TypeTag>; };
 
 //! Mapper for the grid view's vertices.
-SET_TYPE_PROP(FvBaseDiscretization, VertexMapper,
-              Dune::MultipleCodimMultipleGeomTypeMapper<GetPropType<TypeTag, Properties::GridView>>);
+template<class TypeTag>
+struct VertexMapper<TypeTag, TTag::FvBaseDiscretization>
+{ using type = Dune::MultipleCodimMultipleGeomTypeMapper<GetPropType<TypeTag, Properties::GridView>>; };
 
 //! Mapper for the grid view's elements.
-SET_TYPE_PROP(FvBaseDiscretization, ElementMapper,
-              Dune::MultipleCodimMultipleGeomTypeMapper<GetPropType<TypeTag, Properties::GridView>>);
+template<class TypeTag>
+struct ElementMapper<TypeTag, TTag::FvBaseDiscretization>
+{ using type = Dune::MultipleCodimMultipleGeomTypeMapper<GetPropType<TypeTag, Properties::GridView>>; };
 
 //! marks the border indices (required for the algebraic overlap stuff)
 template<class TypeTag>
@@ -137,23 +139,26 @@ struct ContinueOnConvergenceError<TypeTag, TTag::FvBaseDiscretization> { static 
 /*!
  * \brief A vector of quanties, each for one equation.
  */
-SET_TYPE_PROP(FvBaseDiscretization, EqVector,
-              Dune::FieldVector<GetPropType<TypeTag, Properties::Scalar>,
-                                getPropValue<TypeTag, Properties::NumEq>()>);
+template<class TypeTag>
+struct EqVector<TypeTag, TTag::FvBaseDiscretization>
+{ using type = Dune::FieldVector<GetPropType<TypeTag, Properties::Scalar>,
+                                 getPropValue<TypeTag, Properties::NumEq>()>; };
 
 /*!
  * \brief A vector for mass/energy rates.
  *
  * E.g. Neumann fluxes or source terms
  */
-SET_TYPE_PROP(FvBaseDiscretization, RateVector,
-              GetPropType<TypeTag, Properties::EqVector>);
+template<class TypeTag>
+struct RateVector<TypeTag, TTag::FvBaseDiscretization>
+{ using type = GetPropType<TypeTag, Properties::EqVector>; };
 
 /*!
  * \brief Type of object for specifying boundary conditions.
  */
-SET_TYPE_PROP(FvBaseDiscretization, BoundaryRateVector,
-              GetPropType<TypeTag, Properties::RateVector>);
+template<class TypeTag>
+struct BoundaryRateVector<TypeTag, TTag::FvBaseDiscretization>
+{ using type = GetPropType<TypeTag, Properties::RateVector>; };
 
 /*!
  * \brief The class which represents constraints.
@@ -164,14 +169,16 @@ struct Constraints<TypeTag, TTag::FvBaseDiscretization> { using type = Opm::FvBa
 /*!
  * \brief The type for storing a residual for an element.
  */
-SET_TYPE_PROP(FvBaseDiscretization, ElementEqVector,
-              Dune::BlockVector<GetPropType<TypeTag, Properties::EqVector>>);
+template<class TypeTag>
+struct ElementEqVector<TypeTag, TTag::FvBaseDiscretization>
+{ using type = Dune::BlockVector<GetPropType<TypeTag, Properties::EqVector>>; };
 
 /*!
  * \brief The type for storing a residual for the whole grid.
  */
-SET_TYPE_PROP(FvBaseDiscretization, GlobalEqVector,
-              Dune::BlockVector<GetPropType<TypeTag, Properties::EqVector>>);
+template<class TypeTag>
+struct GlobalEqVector<TypeTag, TTag::FvBaseDiscretization>
+{ using type = Dune::BlockVector<GetPropType<TypeTag, Properties::EqVector>>; };
 
 /*!
  * \brief An object representing a local set of primary variables.
@@ -182,8 +189,9 @@ struct PrimaryVariables<TypeTag, TTag::FvBaseDiscretization> { using type = Opm:
 /*!
  * \brief The type of a solution for the whole grid at a fixed time.
  */
-SET_TYPE_PROP(FvBaseDiscretization, SolutionVector,
-              Dune::BlockVector<GetPropType<TypeTag, Properties::PrimaryVariables>>);
+template<class TypeTag>
+struct SolutionVector<TypeTag, TTag::FvBaseDiscretization>
+{ using type = Dune::BlockVector<GetPropType<TypeTag, Properties::PrimaryVariables>>; };
 
 /*!
  * \brief The class representing intensive quantities.

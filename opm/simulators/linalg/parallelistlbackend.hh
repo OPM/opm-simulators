@@ -34,17 +34,14 @@
 
 #include <dune/common/version.hh>
 
-namespace Opm::Properties {
+namespace Opm::Properties::TTag {
 
-// Create new type tags
-namespace TTag {
+// Create new type tag
 struct ParallelIstlLinearSolver { using InheritsFrom = std::tuple<ParallelBaseLinearSolver>; };
-} // end namespace TTag
 
-} // namespace Opm::Properties
+} // namespace Opm::Properties::TTag
 
-namespace Opm {
-namespace Linear {
+namespace Opm::Linear {
 /*!
  * \ingroup Linear
  *
@@ -52,8 +49,9 @@ namespace Linear {
  *
  * To set the linear solver, use
  * \code
- * SET_TYPE_PROP(YourTypeTag, LinearSolverWrapper,
- *               Opm::Linear::SolverWrapper$SOLVER<TypeTag>);
+ * template<class TypeTag>
+ * struct LinearSolverWrapper<TypeTag, TTag::YourTypeTag>
+ * { using type = Opm::Linear::SolverWrapper$SOLVER<TypeTag>; };
  * \endcode
  *
  * The possible choices for '\c $SOLVER' are:
@@ -66,8 +64,9 @@ namespace Linear {
  *
  * Chosing the preconditioner works in an analogous way:
  * \code
- * SET_TYPE_PROP(YourTypeTag, PreconditionerWrapper,
- *               Opm::Linear::PreconditionerWrapper$PRECONDITIONER<TypeTag>);
+ * template<class TypeTag>
+ * struct PreconditionerWrapper<TypeTag, TTag::YourTypeTag>
+ * { using type = Opm::Linear::PreconditionerWrapper$PRECONDITIONER<TypeTag>; };
  * \endcode
  *
  * Where the choices possible for '\c $PRECONDITIONER' are:
@@ -141,26 +140,26 @@ protected:
     LinearSolverWrapper solverWrapper_;
 };
 
-}} // namespace Linear, Opm
+} // namespace Opm::Linear
 
 namespace Opm::Properties {
 
-SET_TYPE_PROP(ParallelIstlLinearSolver,
-              LinearSolverBackend,
-              Opm::Linear::ParallelIstlSolverBackend<TypeTag>);
+template<class TypeTag>
+struct LinearSolverBackend<TypeTag, TTag::ParallelIstlLinearSolver>
+{ using type = Opm::Linear::ParallelIstlSolverBackend<TypeTag>; };
 
-SET_TYPE_PROP(ParallelIstlLinearSolver,
-              LinearSolverWrapper,
-              Opm::Linear::SolverWrapperBiCGStab<TypeTag>);
+template<class TypeTag>
+struct LinearSolverWrapper<TypeTag, TTag::ParallelIstlLinearSolver>
+{ using type = Opm::Linear::SolverWrapperBiCGStab<TypeTag>; };
 
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2,7)
-SET_TYPE_PROP(ParallelIstlLinearSolver,
-              PreconditionerWrapper,
-              Opm::Linear::PreconditionerWrapperILU<TypeTag>);
+template<class TypeTag>
+struct PreconditionerWrapper<TypeTag, TTag::ParallelIstlLinearSolver>
+{ using type = Opm::Linear::PreconditionerWrapperILU<TypeTag>; };
 #else
-SET_TYPE_PROP(ParallelIstlLinearSolver,
-              PreconditionerWrapper,
-              Opm::Linear::PreconditionerWrapperILU0<TypeTag>);
+template<class TypeTag>
+struct PreconditionerWrapper<TypeTag, TTag::ParallelIstlLinearSolver>
+{ using type = Opm::Linear::PreconditionerWrapperILU0<TypeTag>; };
 #endif
 
 //! set the GMRes restart parameter to 10 by default

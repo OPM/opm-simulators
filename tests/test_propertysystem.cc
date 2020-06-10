@@ -32,7 +32,6 @@
 #include "config.h"
 
 #include <opm/models/utils/propertysystem.hh>
-#include <opm/models/utils/propertysystemmacros.hh>
 
 #include <iostream>
 

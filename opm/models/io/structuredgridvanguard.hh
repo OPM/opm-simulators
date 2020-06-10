@@ -54,7 +54,11 @@ class StructuredGridVanguard;
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(StructuredGridVanguard);
+namespace TTag {
+
+struct StructuredGridVanguard {};
+
+} // namespace TTag
 
 // GRIDDIM is only set by the finger problem
 #ifndef GRIDDIM

@@ -47,7 +47,11 @@ class OutflowProblem;
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(OutflowBaseProblem);
+namespace TTag {
+
+struct OutflowBaseProblem {};
+
+} // namespace TTag
 
 // Set the grid type
 template<class TypeTag>

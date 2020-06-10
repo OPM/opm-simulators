@@ -71,12 +71,12 @@ struct FingerBaseProblem { using InheritsFrom = std::tuple<StructuredGridVanguar
 
 #if HAVE_DUNE_ALUGRID
 // use dune-alugrid if available
-SET_TYPE_PROP(FingerBaseProblem,
-              Grid,
-              Dune::ALUGrid</*dim=*/2,
-                            /*dimWorld=*/2,
-                            Dune::cube,
-                            Dune::nonconforming>);
+template<class TypeTag>
+struct Grid<TypeTag, TTag::FingerBaseProblem>
+{ using type = Dune::ALUGrid</*dim=*/2,
+                             /*dimWorld=*/2,
+                             Dune::cube,
+                             Dune::nonconforming>; };
 #endif
 
 // declare the properties used by the finger problem
@@ -249,7 +249,7 @@ class FingerProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     typedef GetPropType<TypeTag, Properties::RateVector> RateVector;
     typedef GetPropType<TypeTag, Properties::BoundaryRateVector> BoundaryRateVector;
 
-    typedef typename GET_PROP(TypeTag, MaterialLaw)::ParkerLenhard ParkerLenhard;
+    typedef typename GetProp<TypeTag, Properties::MaterialLaw>::ParkerLenhard ParkerLenhard;
     typedef GetPropType<TypeTag, Properties::MaterialLaw> MaterialLaw;
     typedef GetPropType<TypeTag, Properties::MaterialLawParams> MaterialLawParams;
 

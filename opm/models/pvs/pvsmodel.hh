@@ -63,17 +63,18 @@ class PvsModel;
 
 namespace Opm::Properties {
 
+namespace TTag {
 //! The type tag for the isothermal single phase problems
-NEW_TYPE_TAG(PvsModel, INHERITS_FROM(MultiPhaseBaseModel,
-                                     VtkPhasePresence,
-                                     VtkComposition,
-                                     VtkEnergy,
-                                     VtkDiffusion));
+struct PvsModel { using InheritsFrom = std::tuple<VtkDiffusion,
+                                                  VtkEnergy,
+                                                  VtkComposition,
+                                                  VtkPhasePresence,
+                                                  MultiPhaseBaseModel>; };
+} // namespace TTag
 
 //! Use the PVS local jacobian operator for the PVS model
-SET_TYPE_PROP(PvsModel,
-              LocalResidual,
-              Opm::PvsLocalResidual<TypeTag>);
+template<class TypeTag>
+struct LocalResidual<TypeTag, TTag::PvsModel> { using type = Opm::PvsLocalResidual<TypeTag>; };
 
 //! Use the PVS specific newton method for the PVS model
 template<class TypeTag>

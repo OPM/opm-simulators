@@ -59,7 +59,9 @@ class ObstacleProblem;
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(ObstacleBaseProblem);
+namespace TTag {
+struct ObstacleBaseProblem {};
+}
 
 // Set the grid type
 template<class TypeTag>
@@ -70,8 +72,9 @@ template<class TypeTag>
 struct Problem<TypeTag, TTag::ObstacleBaseProblem> { using type = Opm::ObstacleProblem<TypeTag>; };
 
 // Set fluid configuration
-SET_TYPE_PROP(ObstacleBaseProblem, FluidSystem,
-              Opm::H2ON2FluidSystem<GetPropType<TypeTag, Properties::Scalar>>);
+template<class TypeTag>
+struct FluidSystem<TypeTag, TTag::ObstacleBaseProblem>
+{ using type = Opm::H2ON2FluidSystem<GetPropType<TypeTag, Properties::Scalar>>; };
 
 // Set the material Law
 template<class TypeTag>
@@ -106,8 +109,9 @@ public:
 };
 
 // set the energy storage law for the solid phase
-SET_TYPE_PROP(ObstacleBaseProblem, SolidEnergyLaw,
-              Opm::ConstantSolidHeatCapLaw<GetPropType<TypeTag, Properties::Scalar>>);
+template<class TypeTag>
+struct SolidEnergyLaw<TypeTag, TTag::ObstacleBaseProblem>
+{ using type = Opm::ConstantSolidHeatCapLaw<GetPropType<TypeTag, Properties::Scalar>>; };
 
 // Enable gravity
 template<class TypeTag>

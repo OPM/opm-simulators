@@ -70,7 +70,9 @@ namespace Co2Injection {
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(Co2InjectionBaseProblem);
+namespace TTag {
+struct Co2InjectionBaseProblem {};
+}
 
 // declare the CO2 injection problem specific property tags
 template<class TypeTag, class MyTypeTag>
@@ -98,8 +100,9 @@ template<class TypeTag>
 struct Grid<TypeTag, TTag::Co2InjectionBaseProblem> { using type = Dune::YaspGrid<2>; };
 
 // Set the problem property
-SET_TYPE_PROP(Co2InjectionBaseProblem, Problem,
-              Opm::Co2InjectionProblem<TypeTag>);
+template<class TypeTag>
+struct Problem<TypeTag, TTag::Co2InjectionBaseProblem>
+{ using type = Opm::Co2InjectionProblem<TypeTag>; };
 
 // Set fluid configuration
 template<class TypeTag>
@@ -151,8 +154,9 @@ public:
 };
 
 // set the energy storage law for the solid phase
-SET_TYPE_PROP(Co2InjectionBaseProblem, SolidEnergyLaw,
-              Opm::ConstantSolidHeatCapLaw<GetPropType<TypeTag, Properties::Scalar>>);
+template<class TypeTag>
+struct SolidEnergyLaw<TypeTag, TTag::Co2InjectionBaseProblem>
+{ using type = Opm::ConstantSolidHeatCapLaw<GetPropType<TypeTag, Properties::Scalar>>; };
 
 // Use the algebraic multi-grid linear solver for this problem
 template<class TypeTag>

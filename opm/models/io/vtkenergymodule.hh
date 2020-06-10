@@ -37,8 +37,12 @@
 
 namespace Opm::Properties {
 
+namespace TTag {
+
 // create new type tag for the VTK energy output
-NEW_TYPE_TAG(VtkEnergy);
+struct VtkEnergy {};
+
+} // namespace TTag
 
 // create the property tags needed for the energy module
 template<class TypeTag, class MyTypeTag>

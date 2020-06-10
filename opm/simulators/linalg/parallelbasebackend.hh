@@ -52,7 +52,10 @@
 #include <iostream>
 
 namespace Opm::Properties {
-NEW_TYPE_TAG(ParallelBaseLinearSolver);
+
+namespace TTag {
+struct ParallelBaseLinearSolver {};
+}
 
 //! Set the type of a global jacobian matrix for linear solvers that are based on
 //! dune-istl.
@@ -80,8 +83,9 @@ namespace Linear {
  * This class provides access to all preconditioners offered by dune-istl using the
  * PreconditionerWrapper property:
  * \code
- * SET_TYPE_PROP(YourTypeTag, PreconditionerWrapper,
- *               Opm::Linear::PreconditionerWrapper$PRECONDITIONER<TypeTag>);
+ * template<class TypeTag>
+ * struct PreconditionerWrapper<TypeTag, TTag::YourTypeTag>
+ * { using type = Opm::Linear::PreconditionerWrapper$PRECONDITIONER<TypeTag>; };
  * \endcode
  *
  * Where the choices possible for '\c $PRECONDITIONER' are:
@@ -405,9 +409,9 @@ struct PreconditionerOrder<TypeTag, TTag::ParallelBaseLinearSolver> { static con
 
 //! by default use the same kind of floating point values for the linearization and for
 //! the linear solve
-SET_TYPE_PROP(ParallelBaseLinearSolver,
-              LinearSolverScalar,
-              GetPropType<TypeTag, Properties::Scalar>);
+template<class TypeTag>
+struct LinearSolverScalar<TypeTag, TTag::ParallelBaseLinearSolver>
+{ using type = GetPropType<TypeTag, Properties::Scalar>; };
 
 template<class TypeTag>
 struct OverlappingMatrix<TypeTag, TTag::ParallelBaseLinearSolver>
@@ -422,9 +426,9 @@ public:
     typedef Opm::Linear::OverlappingBCRSMatrix<NonOverlappingMatrix> type;
 };
 
-SET_TYPE_PROP(ParallelBaseLinearSolver,
-              Overlap,
-              typename GetPropType<TypeTag, Properties::OverlappingMatrix>::Overlap);
+template<class TypeTag>
+struct Overlap<TypeTag, TTag::ParallelBaseLinearSolver>
+{ using type = typename GetPropType<TypeTag, Properties::OverlappingMatrix>::Overlap; };
 
 template<class TypeTag>
 struct OverlappingVector<TypeTag, TTag::ParallelBaseLinearSolver>
@@ -454,13 +458,13 @@ struct OverlappingLinearOperator<TypeTag, TTag::ParallelBaseLinearSolver>
 };
 
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2,7)
-SET_TYPE_PROP(ParallelBaseLinearSolver,
-              PreconditionerWrapper,
-              Opm::Linear::PreconditionerWrapperILU<TypeTag>);
+template<class TypeTag>
+struct PreconditionerWrapper<TypeTag, TTag::ParallelBaseLinearSolver>
+{ using type = Opm::Linear::PreconditionerWrapperILU<TypeTag>; };
 #else
-SET_TYPE_PROP(ParallelBaseLinearSolver,
-              PreconditionerWrapper,
-              Opm::Linear::PreconditionerWrapperILU0<TypeTag>);
+template<class TypeTag>
+struct PreconditionerWrapper<TypeTag, TTag::ParallelBaseLinearSolver>
+{ using type = Opm::Linear::PreconditionerWrapperILU0<TypeTag>; };
 #endif
 
 //! set the default overlap size to 2

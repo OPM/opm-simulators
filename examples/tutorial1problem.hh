@@ -66,12 +66,14 @@ struct Tutorial1Problem { using InheritsFrom = std::tuple<ImmiscibleTwoPhaseMode
 } // end namespace TTag
 
 // Select the vertex centered finite volume method as spatial discretization
-SET_TAG_PROP(Tutorial1Problem, SpatialDiscretizationSplice,
-             VcfvDiscretization); /*@\label{tutorial1:set-spatial-discretization}@*/
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::Tutorial1Problem>
+{ using type = TTag::VcfvDiscretization; }; /*@\label{tutorial1:set-spatial-discretization}@*/
 
 // Set the "Problem" property
-SET_TYPE_PROP(Tutorial1Problem, Problem,
-              Opm::Tutorial1Problem<TypeTag>); /*@\label{tutorial1:set-problem}@*/
+template<class TypeTag>
+struct Problem<TypeTag, TTag::Tutorial1Problem>
+{ using type = Opm::Tutorial1Problem<TypeTag>; }; /*@\label{tutorial1:set-problem}@*/
 
 // Set grid and the grid manager to be used
 template<class TypeTag>
@@ -80,16 +82,20 @@ template<class TypeTag>
 struct Vanguard<TypeTag, TTag::Tutorial1Problem> { using type = Opm::CubeGridVanguard<TypeTag>; }; /*@\label{tutorial1:set-grid-manager}@*/
 
 // Set the wetting phase /*@\label{tutorial1:2p-system-start}@*/
-SET_TYPE_PROP(Tutorial1Problem,
-              WettingPhase, /*@\label{tutorial1:wettingPhase}@*/
-              Opm::LiquidPhase<GetPropType<TypeTag, Properties::Scalar>,
-                               Opm::SimpleH2O<GetPropType<TypeTag, Properties::Scalar>> >);
+template<class TypeTag>
+struct WettingPhase<TypeTag, TTag::Tutorial1Problem> /*@\label{tutorial1:wettingPhase}@*/
+{
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using type = Opm::LiquidPhase<Scalar, Opm::SimpleH2O<Scalar> >;
+};
 
 // Set the non-wetting phase
-SET_TYPE_PROP(Tutorial1Problem,
-              NonwettingPhase, /*@\label{tutorial1:nonwettingPhase}@*/
-              Opm::LiquidPhase<GetPropType<TypeTag, Properties::Scalar>,
-                               Opm::LNAPL<GetPropType<TypeTag, Properties::Scalar>> >); /*@\label{tutorial1:2p-system-end}@*/
+template<class TypeTag>
+struct NonwettingPhase<TypeTag, TTag::Tutorial1Problem> /*@\label{tutorial1:nonwettingPhase}@*/
+{
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using type = Opm::LiquidPhase<Scalar, Opm::LNAPL<Scalar> >;
+}; /*@\label{tutorial1:2p-system-end}@*/
 
 // Set the material law
 template<class TypeTag>

@@ -42,8 +42,12 @@
 
 namespace Opm::Properties {
 
+namespace TTag {
+
 // create new type tag for the VTK multi-phase output
-NEW_TYPE_TAG(VtkBlackOilSolvent);
+struct VtkBlackOilSolvent {};
+
+} // namespace TTag
 
 // create the property tags needed for the solvent output module
 template<class TypeTag, class MyTypeTag>

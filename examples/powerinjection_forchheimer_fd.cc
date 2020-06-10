@@ -33,9 +33,12 @@
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(PowerInjectionForchheimerFdProblem,
-             INHERITS_FROM(ImmiscibleTwoPhaseModel,
-                           PowerInjectionBaseProblem));
+namespace TTag {
+
+struct PowerInjectionForchheimerFdProblem
+{ using InheritsFrom = std::tuple<PowerInjectionBaseProblem, ImmiscibleTwoPhaseModel>; };
+
+} // namespace TTag
 
 template<class TypeTag>
 struct FluxModule<TypeTag, TTag::PowerInjectionForchheimerFdProblem> { using type = Opm::ForchheimerFluxModule<TypeTag>; };

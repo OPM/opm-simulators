@@ -27,7 +27,6 @@
 #ifndef EWOMS_START_HH
 #define EWOMS_START_HH
 
-#include <opm/models/utils/propertysystemmacros.hh>
 #include <opm/models/utils/propertysystem.hh>
 // the following header is not required here, but it must be included before
 // dune/common/densematrix.hh because of some c++ ideosyncrasies
@@ -35,8 +34,6 @@
 
 #include "parametersystem.hh"
 
-#include <opm/models/utils/parametersystem.hh>
-#include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/simulator.hh>
 #include <opm/models/utils/timer.hh>
 

@@ -59,7 +59,11 @@ struct MultiPhaseBaseModel { using InheritsFrom = std::tuple<VtkTemperature, Vtk
 } // end namespace TTag
 
 //! Specify the splices of the MultiPhaseBaseModel type tag
-SET_SPLICES(MultiPhaseBaseModel, SpatialDiscretizationSplice);
+template<class TypeTag>
+struct Splices<TypeTag, TTag::MultiPhaseBaseModel>
+{
+    using type = std::tuple<GetSplicePropType<TypeTag, TTag::MultiPhaseBaseModel, Properties::SpatialDiscretizationSplice>>;
+};
 
 //! Set the default spatial discretization
 //!
@@ -104,32 +108,32 @@ public:
  * \brief Set the property for the material parameters by extracting
  *        it from the material law.
  */
-SET_TYPE_PROP(MultiPhaseBaseModel,
-              MaterialLawParams,
-              typename GetPropType<TypeTag, Properties::MaterialLaw>::Params);
+template<class TypeTag>
+struct MaterialLawParams<TypeTag, TTag::MultiPhaseBaseModel>
+{ using type = typename GetPropType<TypeTag, Properties::MaterialLaw>::Params; };
 
 //! set the energy storage law for the solid to the one which assumes zero heat capacity
 //! by default
-SET_TYPE_PROP(MultiPhaseBaseModel,
-              SolidEnergyLaw,
-              Opm::NullSolidEnergyLaw<GetPropType<TypeTag, Properties::Scalar>>);
+template<class TypeTag>
+struct SolidEnergyLaw<TypeTag, TTag::MultiPhaseBaseModel>
+{ using type = Opm::NullSolidEnergyLaw<GetPropType<TypeTag, Properties::Scalar>>; };
 
 //! extract the type of the parameter objects for the solid energy storage law from the
 //! law itself
-SET_TYPE_PROP(MultiPhaseBaseModel,
-              SolidEnergyLawParams,
-              typename GetPropType<TypeTag, Properties::SolidEnergyLaw>::Params);
+template<class TypeTag>
+struct SolidEnergyLawParams<TypeTag, TTag::MultiPhaseBaseModel>
+{ using type = typename GetPropType<TypeTag, Properties::SolidEnergyLaw>::Params; };
 
 //! set the thermal conduction law to a dummy one by default
-SET_TYPE_PROP(MultiPhaseBaseModel,
-              ThermalConductionLaw,
-              Opm::NullThermalConductionLaw<GetPropType<TypeTag, Properties::Scalar>>);
+template<class TypeTag>
+struct ThermalConductionLaw<TypeTag, TTag::MultiPhaseBaseModel>
+{ using type = Opm::NullThermalConductionLaw<GetPropType<TypeTag, Properties::Scalar>>; };
 
 //! extract the type of the parameter objects for the thermal conduction law from the law
 //! itself
-SET_TYPE_PROP(MultiPhaseBaseModel,
-              ThermalConductionLawParams,
-              typename GetPropType<TypeTag, Properties::ThermalConductionLaw>::Params);
+template<class TypeTag>
+struct ThermalConductionLawParams<TypeTag, TTag::MultiPhaseBaseModel>
+{ using type = typename GetPropType<TypeTag, Properties::ThermalConductionLaw>::Params; };
 
 //! disable gravity by default
 template<class TypeTag>

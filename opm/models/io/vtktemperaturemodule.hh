@@ -37,8 +37,12 @@
 
 namespace Opm::Properties {
 
+namespace TTag {
+
 // create new type tag for the VTK temperature output
-NEW_TYPE_TAG(VtkTemperature);
+struct VtkTemperature {};
+
+} // namespace TTag
 
 // create the property tags needed for the temperature module
 template<class TypeTag, class MyTypeTag>

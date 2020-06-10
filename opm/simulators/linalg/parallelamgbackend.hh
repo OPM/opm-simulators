@@ -42,11 +42,10 @@
 
 #include <iostream>
 
-namespace Opm {
-namespace Linear {
+namespace Opm::Linear {
 template <class TypeTag>
 class ParallelAmgBackend;
-}}
+} // namespace Opm::Linear
 
 namespace Opm::Properties {
 
@@ -67,8 +66,9 @@ struct LinearSolverMaxError<TypeTag, TTag::ParallelAmgLinearSolver>
     static constexpr type value = 1e7;
 };
 
-SET_TYPE_PROP(ParallelAmgLinearSolver, LinearSolverBackend,
-              Opm::Linear::ParallelAmgBackend<TypeTag>);
+template<class TypeTag>
+struct LinearSolverBackend<TypeTag, TTag::ParallelAmgLinearSolver>
+{ using type = Opm::Linear::ParallelAmgBackend<TypeTag>; };
 
 } // namespace Opm::Properties
 
