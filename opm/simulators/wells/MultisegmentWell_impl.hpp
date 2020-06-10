@@ -2443,14 +2443,16 @@ namespace Opm
         // TODO: we should decide whether to keep the updated well_state, or recover to use the old well_state
         if (converged) {
             std::ostringstream sstr;
-            sstr << " well " << name() << " manage to get converged within " << it << " inner iterations \n";
+            sstr << "     Well " << name() << " converged in " << it << " inner iterations.";
             if (relax_convergence)
-                sstr << "A relaxed tolerance is used after "<< param_.strict_inner_iter_ms_wells_ << " iterations";
+                sstr << "      (A relaxed tolerance was used after "<< param_.strict_inner_iter_ms_wells_ << " iterations)";
             deferred_logger.debug(sstr.str());
         } else {
             std::ostringstream sstr;
-            sstr << " well " << name() << " did not get converged within " << it << " inner iterations \n";
-            sstr << " outputting the residual history for well " << name() << " during inner iterations \n";
+            sstr << "     Well " << name() << " did not converge in " << it << " inner iterations.";
+#define EXTRA_DEBUG_MSW 0
+#if EXTRA_DEBUG_MSW
+            sstr << "***** Outputting the residual history for well " << name() << " during inner iterations:";
             for (int i = 0; i < it; ++i) {
                 const auto& residual = residual_history[i];
                 sstr << " residual at " << i << "th iteration ";
@@ -2459,6 +2461,7 @@ namespace Opm
                 }
                 sstr << " " << measure_history[i] << " \n";
             }
+#endif
             deferred_logger.debug(sstr.str());
         }
     }
