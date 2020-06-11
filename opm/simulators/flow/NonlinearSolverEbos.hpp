@@ -20,7 +20,7 @@
 
 #ifndef OPM_NON_LINEAR_SOLVER_EBOS_HPP
 #define OPM_NON_LINEAR_SOLVER_EBOS_HPP
-
+#include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/common/ErrorMacros.hpp>
@@ -37,7 +37,6 @@
 namespace Opm::Properties {
 
 NEW_TYPE_TAG(FlowNonLinearSolver);
-
 NEW_PROP_TAG(NewtonMaxRelax);
 NEW_PROP_TAG(FlowNewtonMaxIterations);
 NEW_PROP_TAG(FlowNewtonMinIterations);
@@ -179,90 +178,22 @@ namespace Opm {
             return report;
                 
         }
-
-        SimulatorReportSingle stepPressure(const SimulatorTimerInterface& timer){
-            LinearizationType linearizationType;
-            bool converged = false;
-            SimulatorReportSingle reportpre;
-            // do pressure step
-            linearizationType.type = Opm::LinearizationType::pressure;
-            model_->ebosSimulator().problem().updatePressure();//update pressure ans ST
-            model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);  
-            model_->updateSolution();// should conver to the new solution time         
-            SimulatorReportSingle lreportpre = this->stepDefault(timer);
-            SimulatorReportSingle report = lreportpre;
-            //todo fill this report correctly
-            return report;
-                
-        }
-        
-
-        
-        SimulatorReportSingle stepFull(const SimulatorTimerInterface& timer){
-            LinearizationType linearizationType;// use default
-            model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);
-            // incase previous step was not fully implicit
-            model_->ebosSimulator().problem().updatePressure();//update pressure ans ST                               
-            model_->updateSolution();
-            SimulatorReportSingle report = this->stepDefault(timer);
-            return report;
-        }
-            
-
-        
-        SimulatorReportSingle stepDefault(const SimulatorTimerInterface& timer)
-        {
-            SimulatorReportSingle report;
-            report.global_time = timer.simulationTimeElapsed();
-            report.timestep_length = timer.currentStepLength();
-
-            // Do model-specific once-per-step calculations.
-            model_->prepareStep(timer);
-
-            int iteration = 0;
-
-            // Let the model do one nonlinear iteration.
-
-            // Set up for main solver loop.
-            bool converged = false;
-
-            // ----------  Main nonlinear solver loop  ----------
-            do {
-                try {
-                    // Do the nonlinear step. If we are in a converged state, the
-                    // model will usually do an early return without an expensive
-                    // solve, unless the minIter() count has not been reached yet.
-                    auto iterReport = model_->nonlinearIteration(iteration, timer, *this);
-                    iterReport.global_time = timer.simulationTimeElapsed();
-                    report += iterReport;
-                    report.converged = iterReport.converged;
-
-                    converged = report.converged;
-                    iteration += 1;
-                }
-                catch (...) {
-                    // if an iteration fails during a time step, all previous iterations
-                    // count as a failure as well
-                    failureReport_ = report;
-                    failureReport_ += model_->failureReport();
-                    throw;
-                }
+        SimulatorReportSingle step(const SimulatorTimerInterface& timer){
+            std::string simulationtype  = EWOMS_GET_PARAM(TypeTag, std::string, SimulationType);
+            if(simulationtype == "implicit"){
+                this->stepFull(timer);
+            }else if(simulationtype == "pressure"){
+                this->stepPressure(timer);
+            }else if(simulationtype == "seqtransport"){
+                this->stepSequential(timer);
+            }else if(simulationtype == "seqtransport"){
+                this->stepSequential(timer);
+            }else{
+                OPM_THROW(std::runtime_error, "No such simulation type");
             }
-            while ( (!converged && (iteration <= maxIter())) || (iteration <= minIter()));
-
-            if (!converged) {
-                failureReport_ = report;
-
-                std::string msg = "Solver convergence failure - Failed to complete a time step within " + std::to_string(maxIter()) + " iterations.";
-                OPM_THROW_NOLOG(Opm::TooManyIterations, msg);
-            }
-
-            // Do model-specific post-step actions.
-            model_->afterStep(timer);
-            report.converged = true;
-            return report;
+                    
         }
-
+                         
         /// return the statistics if the step() method failed
         const SimulatorReportSingle& failureReport() const
         { return failureReport_; }
@@ -412,6 +343,85 @@ namespace Opm {
         { param_ = param; }
 
     private:
+        SimulatorReportSingle stepFull(const SimulatorTimerInterface& timer){
+            LinearizationType linearizationType;// use default
+            model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);
+            // incase previous step was not fully implicit
+            model_->ebosSimulator().problem().updatePressure();//update pressure ans ST                               
+            model_->updateSolution();
+            SimulatorReportSingle report = this->stepDefault(timer);
+            return report;
+        }
+
+        SimulatorReportSingle stepPressure(const SimulatorTimerInterface& timer){
+            LinearizationType linearizationType;
+            bool converged = false;
+            SimulatorReportSingle reportpre;
+            // do pressure step
+            linearizationType.type = Opm::LinearizationType::pressure;
+            model_->ebosSimulator().problem().updatePressure();//update pressure ans ST
+            model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);  
+            model_->updateSolution();// should conver to the new solution time         
+            SimulatorReportSingle lreportpre = this->stepDefault(timer);
+            SimulatorReportSingle report = lreportpre;
+            //todo fill this report correctly
+            return report;
+                
+        }
+                
+        SimulatorReportSingle stepDefault(const SimulatorTimerInterface& timer)
+        {
+            SimulatorReportSingle report;
+            report.global_time = timer.simulationTimeElapsed();
+            report.timestep_length = timer.currentStepLength();
+
+            // Do model-specific once-per-step calculations.
+            model_->prepareStep(timer);
+
+            int iteration = 0;
+
+            // Let the model do one nonlinear iteration.
+
+            // Set up for main solver loop.
+            bool converged = false;
+
+            // ----------  Main nonlinear solver loop  ----------
+            do {
+                try {
+                    // Do the nonlinear step. If we are in a converged state, the
+                    // model will usually do an early return without an expensive
+                    // solve, unless the minIter() count has not been reached yet.
+                    auto iterReport = model_->nonlinearIteration(iteration, timer, *this);
+                    iterReport.global_time = timer.simulationTimeElapsed();
+                    report += iterReport;
+                    report.converged = iterReport.converged;
+
+                    converged = report.converged;
+                    iteration += 1;
+                }
+                catch (...) {
+                    // if an iteration fails during a time step, all previous iterations
+                    // count as a failure as well
+                    failureReport_ = report;
+                    failureReport_ += model_->failureReport();
+                    throw;
+                }
+            }
+            while ( (!converged && (iteration <= maxIter())) || (iteration <= minIter()));
+
+            if (!converged) {
+                failureReport_ = report;
+
+                std::string msg = "Solver convergence failure - Failed to complete a time step within " + std::to_string(maxIter()) + " iterations.";
+                OPM_THROW_NOLOG(Opm::TooManyIterations, msg);
+            }
+
+            // Do model-specific post-step actions.
+            model_->afterStep(timer);
+            report.converged = true;
+            return report;
+        }
+
         // ---------  Data members  ---------
         SimulatorReportSingle failureReport_;
         SolverParameters param_;

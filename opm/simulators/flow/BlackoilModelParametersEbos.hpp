@@ -22,7 +22,8 @@
 
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
-
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <ebos/eclbasevanguard.hh>
 #include <string>
 
 namespace Opm::Properties {
@@ -46,6 +47,7 @@ NEW_PROP_TAG(UpdateEquationsScaling);
 NEW_PROP_TAG(UseUpdateStabilization);
 NEW_PROP_TAG(MatrixAddWellContributions);
 NEW_PROP_TAG(EnableWellOperabilityCheck);
+NEW_PROP_TAG(SimulationType);
 
 // parameters for multisegment wells
 NEW_PROP_TAG(TolerancePressureMsWells);
@@ -84,6 +86,7 @@ SET_INT_PROP(FlowModelParameters, MaxInnerIterWells, 50);
 SET_INT_PROP(FlowModelParameters, StrictInnerIterMsWells, 40);
 SET_SCALAR_PROP(FlowModelParameters, RegularizationFactorMsw, 1);
 SET_BOOL_PROP(FlowModelParameters, EnableWellOperabilityCheck, true);
+SET_STRING_PROP(FlowModelParameters, SimulationType, "implicit");
 
 SET_SCALAR_PROP(FlowModelParameters, RelaxedFlowTolInnerIterMsw, 1);
 SET_SCALAR_PROP(FlowModelParameters, RelaxedPressureTolInnerIterMsw, 0.5e5);
@@ -245,6 +248,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseUpdateStabilization, "Try to detect and correct oscillations or stagnation during the Newton method");
             EWOMS_REGISTER_PARAM(TypeTag, bool, MatrixAddWellContributions, "Explicitly specify the influences of wells between cells in the Jacobian and preconditioner matrices");
             EWOMS_REGISTER_PARAM(TypeTag, bool, EnableWellOperabilityCheck, "Enable the well operability checking");
+            EWOMS_REGISTER_PARAM(TypeTag, std::string, SimulationType, "Define simulation type: default implicit");
         }
     };
 } // namespace Opm
