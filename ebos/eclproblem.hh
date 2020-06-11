@@ -341,9 +341,7 @@ SET_INT_PROP(EclBaseProblem, RestartWritingInterval, 0xffffff); // disable
 // Drift compensation is an experimental feature, i.e., systematic errors in the
 // conservation quantities are only compensated for
 // as default if experimental mode is enabled.
-SET_BOOL_PROP(EclBaseProblem,
-              EclEnableDriftCompensation,
-              GET_PROP_VALUE(TypeTag, EnableExperiments));
+SET_BOOL_PROP(EclBaseProblem, EclEnableDriftCompensation, true);
 
 // By default, we enable the debugging checks if we're compiled in debug mode
 SET_BOOL_PROP(EclBaseProblem, EnableDebuggingChecks, true);
