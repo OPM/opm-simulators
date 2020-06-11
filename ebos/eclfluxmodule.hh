@@ -171,6 +171,10 @@ public:
     const Evaluation& volumeFlux(unsigned phaseIdx) const
     { return volumeFlux_[phaseIdx]; }
 
+    const Evaluation& totalFlux() const{
+        throw std::invalid_argument("The ECL transmissibility module does not provide totalflux: see totalfluxupwind.hh");
+    }
+    
 protected:
     /*!
      * \brief Returns the local index of the degree of freedom in which is
