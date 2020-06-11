@@ -477,7 +477,6 @@ namespace Opm {
         void solveJacobianSystem(BVector& x)
         {
             if(ebosSimulator_.model().linearizer().getLinearizationType().type == Opm::LinearizationType::pressure){
-                OPM_THROW(Opm::NumericalIssue, "Not implemented!");                
                 auto& ebosJac = ebosSimulator_.model().linearizer().jacobian();
                 auto& ebosResid = ebosSimulator_.model().linearizer().residual();
                 // NB when tested the linear solver an the martrix could be part of linearizer
@@ -890,7 +889,7 @@ namespace Opm {
                 norm = std::max(lnorm,norm);
             }
             std::ostringstream ss;
-            ss << "Iteration " << iteration << "Norm of pressure equation " << norm;
+            ss << "Iteration " << iteration << " Norm of pressure equation " << norm;
             OpmLog::info(ss.str());
             // NB need better convergence criteria
             const double tol_cnv = param_.tolerance_cnv_;

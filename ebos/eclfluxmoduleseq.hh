@@ -508,7 +508,7 @@ protected:
                 upIdx_[phaseIdx] = exteriorDofIdx_;
                 dnIdx_[phaseIdx] = interiorDofIdx_;
                 fmob[phaseIdx] = mob2[phaseIdx];
-                fst[phaseIdx] = ST1;
+                fst[phaseIdx] = ST2;
             }
             mobT += fmob[phaseIdx];
         }
