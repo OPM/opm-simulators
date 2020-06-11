@@ -180,18 +180,19 @@ namespace Opm {
         }
         SimulatorReportSingle step(const SimulatorTimerInterface& timer){
             std::string simulationtype  = EWOMS_GET_PARAM(TypeTag, std::string, SimulationType);
+            SimulatorReportSingle report;
             if(simulationtype == "implicit"){
-                this->stepFull(timer);
+                report = this->stepFull(timer);
             }else if(simulationtype == "pressure"){
-                this->stepPressure(timer);
+                report = this->stepPressure(timer);
             }else if(simulationtype == "seqtransport"){
-                this->stepSequential(timer);
+                report = this->stepSequential(timer);
             }else if(simulationtype == "seqtransport"){
-                this->stepSequential(timer);
+                report = this->stepSequential(timer);
             }else{
                 OPM_THROW(std::runtime_error, "No such simulation type");
             }
-                    
+            return report;        
         }
                          
         /// return the statistics if the step() method failed
