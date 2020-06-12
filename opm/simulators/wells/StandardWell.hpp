@@ -369,15 +369,35 @@ namespace Opm
         void computeWellConnectionPressures(const Simulator& ebosSimulator,
                                                     const WellState& well_state);
 
+        struct PerfRates {
+            // surface perforation rates
+            std::vector<EvalWell> cq_s;
+            // reservoir perforation rates
+            std::vector<EvalWell> cq_r;
+            // reservor perfration total rates
+            EvalWell cq_r_t;
+
+            double perf_dis_gas_rate;
+
+            double perf_vap_oil_rate;
+
+            PerfRates(int num_components, int num_welleq)
+            : cq_s(num_components, {num_welleq + numEq, 0.})
+            , cq_r(num_components, {num_welleq + numEq, 0.})
+            , cq_r_t(num_welleq + numEq, 0.)
+            , perf_dis_gas_rate(0.)
+            , perf_vap_oil_rate(0.)
+            {
+            }
+        };
+
         void computePerfRate(const IntensiveQuantities& intQuants,
                              const std::vector<EvalWell>& mob,
                              const EvalWell& bhp,
                              const double Tw,
                              const int perf,
                              const bool allow_cf,
-                             std::vector<EvalWell>& cq_s,
-                             double& perf_dis_gas_rate,
-                             double& perf_vap_oil_rate,
+                             PerfRates& perf_rates,
                              Opm::DeferredLogger& deferred_logger) const;
 
         void computeWellRatesWithBhp(const Simulator& ebosSimulator,

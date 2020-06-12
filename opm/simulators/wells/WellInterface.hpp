@@ -374,6 +374,12 @@ namespace Opm
 
         std::vector<RateVector> connectionRates_;
 
+        // rates under reservoir condtion for each phase/component?
+        // RateVector is based on Dune::FieldVector<Evaluation, numEq>
+        std::vector<RateVector> conResRates_;
+
+        std::vector<Eval> conTotalResRates_;
+
         bool wellIsStopped_;
 
         double wsolvent_;

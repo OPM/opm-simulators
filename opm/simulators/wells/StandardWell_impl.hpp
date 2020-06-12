@@ -350,11 +350,12 @@ namespace Opm
                     const double Tw,
                     const int perf,
                     const bool allow_cf,
-                    std::vector<EvalWell>& cq_s,
-                    double& perf_dis_gas_rate,
-                    double& perf_vap_oil_rate,
+                    PerfRates& perf_rates,
                     Opm::DeferredLogger& deferred_logger) const
     {
+        auto& cq_s = perf_rates.cq_s;
+        auto& cq_r = perf_rates.cq_r;
+        auto& cq_r_t = perf_rates.cq_r_t;
 
         const auto& fs = intQuants.fluidState();
         const EvalWell pressure = extendEval(getPerfCellPressure(fs));
@@ -393,7 +394,9 @@ namespace Opm
             // compute component volumetric rates at standard conditions
             for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
                 const EvalWell cq_p = - Tw * (mob[componentIdx] * drawdown);
-                cq_s[componentIdx] = b_perfcells_dense[componentIdx] * cq_p;
+                perf_rates.cq_s[componentIdx] = b_perfcells_dense[componentIdx] * cq_p;
+                perf_rates.cq_r[componentIdx] = cq_p;
+                perf_rates.cq_r_t += cq_p;
             }
 
             if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
@@ -404,13 +407,13 @@ namespace Opm
                 const EvalWell dis_gas = rs * cq_sOil;
                 const EvalWell vap_oil = rv * cq_sGas;
 
-                cq_s[gasCompIdx] += dis_gas;
+                perf_rates.cq_s[gasCompIdx] += dis_gas;
                 cq_s[oilCompIdx] += vap_oil;
 
                 // recording the perforation solution gas rate and solution oil rates
                 if (this->isProducer()) {
-                    perf_dis_gas_rate = dis_gas.value();
-                    perf_vap_oil_rate = vap_oil.value();
+                    perf_rates.perf_dis_gas_rate = dis_gas.value();
+                    perf_rates.perf_vap_oil_rate = vap_oil.value();
                 }
             }
 
@@ -424,8 +427,11 @@ namespace Opm
             EvalWell total_mob_dense = mob[0];
             for (int componentIdx = 1; componentIdx < num_components_; ++componentIdx) {
                 total_mob_dense += mob[componentIdx];
+                cq_r[componentIdx] = - Tw * (mob[componentIdx] * drawdown);
+                cq_r_t += cq_r[componentIdx];
             }
 
+            // TODO: cqt_i should be same with cq_r_t, there is some repeated computation here
             // injection perforations total volume rates
             const EvalWell cqt_i = - Tw * (total_mob_dense * drawdown);
 
@@ -499,10 +505,10 @@ namespace Opm
                     const double d = 1.0 - rv.value() * rs.value();
                     // vaporized oil into gas
                     // rv * q_gr * b_g = rv * (q_gs - rs * q_os) / d
-                    perf_vap_oil_rate = rv.value() * (cq_s[gasCompIdx].value() - rs.value() * cq_s[oilCompIdx].value()) / d;
+                    perf_rates.perf_vap_oil_rate = rv.value() * (cq_s[gasCompIdx].value() - rs.value() * cq_s[oilCompIdx].value()) / d;
                     // dissolved of gas in oil
                     // rs * q_or * b_o = rs * (q_os - rv * q_gs) / d
-                    perf_dis_gas_rate = rs.value() * (cq_s[oilCompIdx].value() - rv.value() * cq_s[gasCompIdx].value()) / d;
+                    perf_rates.perf_dis_gas_rate = rs.value() * (cq_s[oilCompIdx].value() - rv.value() * cq_s[gasCompIdx].value()) / d;
                 }
             }
         }
@@ -580,34 +586,35 @@ namespace Opm
             std::vector<EvalWell> mob(num_components_, {numWellEq_ + numEq, 0.});
             getMobility(ebosSimulator, perf, mob, deferred_logger);
 
-            std::vector<EvalWell> cq_s(num_components_, {numWellEq_ + numEq, 0.});
-            double perf_dis_gas_rate = 0.;
-            double perf_vap_oil_rate = 0.;
+            PerfRates perf_rates(num_components_, numWellEq_);
             double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(intQuants,  cell_idx);
             const double Tw = well_index_[perf] * trans_mult;
             computePerfRate(intQuants, mob, bhp, Tw, perf, allow_cf,
-                            cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
+                            perf_rates, deferred_logger);
 
             // better way to do here is that use the cq_s and then replace the cq_s_water here?
             if (has_polymer && this->has_polymermw && this->isInjector()) {
-                handleInjectivityRateAndEquations(intQuants, well_state, perf, cq_s, deferred_logger);
+                // TODO: we strictly, we probably should handle cq_r here too
+                handleInjectivityRateAndEquations(intQuants, well_state, perf, perf_rates.cq_s, deferred_logger);
             }
 
             // updating the solution gas rate and solution oil rate
             if (this->isProducer()) {
-                well_state.wellDissolvedGasRates()[index_of_well_] += perf_dis_gas_rate;
-                well_state.wellVaporizedOilRates()[index_of_well_] += perf_vap_oil_rate;
+                well_state.wellDissolvedGasRates()[index_of_well_] += perf_rates.perf_dis_gas_rate;
+                well_state.wellVaporizedOilRates()[index_of_well_] += perf_rates.perf_vap_oil_rate;
             }
 
             if (has_energy) {
                 connectionRates_[perf][contiEnergyEqIdx] = 0.0;
             }
 
+            const auto& cq_s = perf_rates.cq_s;
             for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
                 // the cq_s entering mass balance equations need to consider the efficiency factors.
                 const EvalWell cq_s_effective = cq_s[componentIdx] * well_efficiency_factor_;
 
                 connectionRates_[perf][componentIdx] = Base::restrictEval(cq_s_effective);
+                this->conResRates_[perf][componentIdx] = this->restrictEval(perf_rates.cq_r[componentIdx] * well_efficiency_factor_);
 
                 // subtract sum of phase fluxes in the well equations.
                 resWell_[0][componentIdx] += cq_s_effective.value();
@@ -630,6 +637,8 @@ namespace Opm
                     well_state.perfPhaseRates()[(first_perf_ + perf) * np + ebosCompIdxToFlowCompIdx(componentIdx)] = cq_s[componentIdx].value();
                 }
             }
+            this->conTotalResRates_[perf] = this->restrictEval(perf_rates.cq_r_t * well_efficiency_factor_);
+
             if (has_energy) {
 
                 auto fs = intQuants.fluidState();
@@ -2471,14 +2480,12 @@ namespace Opm
             double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(intQuants, cell_idx);
             const double Tw = well_index_[perf] * trans_mult;
 
-            std::vector<EvalWell> cq_s(num_components_, {numWellEq_ + numEq, 0.});
-            double perf_dis_gas_rate = 0.;
-            double perf_vap_oil_rate = 0.;
+            PerfRates perf_rates(num_components_, numWellEq_);
             computePerfRate(intQuants, mob, EvalWell(numWellEq_ + numEq, bhp), Tw, perf, allow_cf,
-                            cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
+                            perf_rates, deferred_logger);
 
             for(int p = 0; p < np; ++p) {
-                well_flux[ebosCompIdxToFlowCompIdx(p)] += cq_s[p].value();
+                well_flux[ebosCompIdxToFlowCompIdx(p)] += perf_rates.cq_s[p].value();
             }
         }
     }
@@ -2854,13 +2861,10 @@ namespace Opm
             const bool allow_cf = getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebos_simulator);
             const EvalWell& bhp = getBhp();
 
-            std::vector<EvalWell> cq_s(num_components_, {numWellEq_ + numEq, 0.});
-            double perf_dis_gas_rate = 0.;
-            double perf_vap_oil_rate = 0.;
+            PerfRates perf_rates(num_components_, numWellEq_);
             double trans_mult = ebos_simulator.problem().template rockCompTransMultiplier<double>(int_quant, cell_idx);
             const double Tw = well_index_[perf] * trans_mult;
-            computePerfRate(int_quant, mob, bhp, Tw, perf, allow_cf,
-                            cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
+            computePerfRate(int_quant, mob, bhp, Tw, perf, allow_cf, perf_rates, deferred_logger);
             // TODO: make area a member
             const double area = 2 * M_PI * perf_rep_radius_[perf] * perf_length_[perf];
             const auto& material_law_manager = ebos_simulator.problem().materialLawManager();
@@ -2872,7 +2876,7 @@ namespace Opm
             // guard against zero porosity and no water
             const EvalWell denom = Opm::max( (area * poro * (sw - swcr)), 1e-12);
             const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-            EvalWell water_velocity = cq_s[waterCompIdx] / denom * extendEval(int_quant.fluidState().invB(FluidSystem::waterPhaseIdx));
+            EvalWell water_velocity = perf_rates.cq_s[waterCompIdx] / denom * extendEval(int_quant.fluidState().invB(FluidSystem::waterPhaseIdx));
 
             if (PolymerModule::hasShrate()) {
                 // the equation for the water velocity conversion for the wells and reservoir are from different version

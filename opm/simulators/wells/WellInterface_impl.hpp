@@ -90,6 +90,10 @@ namespace Opm
 
         connectionRates_.resize(number_of_perforations_);
 
+        conResRates_.resize(number_of_perforations_);
+
+        conTotalResRates_.resize(number_of_perforations_);
+
         well_productivity_index_logger_counter_ = 0;
 
         wellIsStopped_ = false;
