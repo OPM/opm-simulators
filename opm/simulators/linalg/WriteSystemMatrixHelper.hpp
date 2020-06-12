@@ -32,7 +32,9 @@ namespace Helper
     void writeSystem(const SimulatorType& simulator,
                      const MatrixType& matrix,
                      const VectorType& rhs,
-                     [[maybe_unused]] const Communicator* comm)
+                     [[maybe_unused]] const Communicator* comm,
+                     std::string ename = std::string("")
+        )
     {
         std::string dir = simulator.problem().outputDir();
         if (dir == ".") {
@@ -57,7 +59,7 @@ namespace Helper
         fs::path full_path = output_dir / output_file;
         std::string prefix = full_path.string();
         {
-            std::string filename = prefix + "matrix_istl";
+            std::string filename = prefix + ename + "matrix_istl";
 #if HAVE_MPI
             if (comm != nullptr) { // comm is not set in serial runs
                 Dune::storeMatrixMarket(matrix, filename, *comm, true);
@@ -68,7 +70,7 @@ namespace Helper
             }
         }
         {
-            std::string filename = prefix + "rhs_istl";
+            std::string filename = prefix + ename + "rhs_istl";
 #if HAVE_MPI
             if (comm != nullptr) { // comm is not set in serial runs
                 Dune::storeMatrixMarket(rhs, filename, *comm, true);

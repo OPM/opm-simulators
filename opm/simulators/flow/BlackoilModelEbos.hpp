@@ -502,24 +502,30 @@ namespace Opm {
                 extractParallelGridInformationToISTL(ebosSimulator_.vanguard().grid(), parallelInformation);
 #if HAVE_MPI
                 using Communication = Dune::OwnerOverlapCopyCommunication<int, int>;
-                Communication comm;
+                std::unique_ptr<Communication> comm;
                 if (parallelInformation_.type() == typeid(ParallelISTLInformation)) {
                     // Parallel case.
                     const ParallelISTLInformation* parinfo = std::any_cast<ParallelISTLInformation>(&parallelInformation_);
                     assert(parinfo);
-                    comm = Communication(parinfo->communicator());
+                    comm.reset(new Communication(parinfo->communicator()));
                 }
 #else
                 using Communication = Dune::Amg::SequentialInformation; // Dummy type
-                Communication comm;
+                std::unique_ptr<Communication> comm;
 #endif
 
 
                 std::function<PressureVectorType()> weightsCalculator;// dummy
-                Dune::FlexibleSolver<PressureMatrixType,PressureVectorType> pressureSolver(prm,pmatrix, weightsCalculator, comm);
+                Dune::FlexibleSolver<PressureMatrixType,PressureVectorType> pressureSolver(prm,pmatrix, weightsCalculator, *comm);
                 PressureVectorType xp(x.size(),0);
                 Dune::InverseOperatorResult res;
-                pressureSolver.apply(rhs, xp, res);
+                pressureSolver.apply(xp,rhs, res);
+                Opm::Helper::writeSystem(this->ebosSimulator_, //simulator is only used to get names
+                                                     pmatrix,
+                                                     rhs,
+                                                     comm.get(),
+                                                     std::string("pressure_")
+                                         );
                 x=0;
                 PressureHelper::movePressureToBlock(x, xp, pressureVarIndex);
                 // set initial guess
@@ -883,7 +889,7 @@ namespace Opm {
                 auto& wb = weights[i];
                 auto& resb= ebosResid[i];
                 double lnorm=0.0;
-                for(int j = 0; j< wb.size(); j++){
+                for(size_t j = 0; j< wb.size(); j++){
                     lnorm += wb[j]*resb[j];
                 }
                 norm = std::max(lnorm,norm);

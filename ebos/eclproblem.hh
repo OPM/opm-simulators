@@ -1938,10 +1938,13 @@ public:
     bool updatePressure(){
         LinearizationType linearizationType = this->simulator().model().linearizer().getLinearizationType();
         // maybe use simulation type instead
+        bool updated = false;
         if(not(linearizationType.type == Opm::LinearizationType::implicit)){
             this->updatePressure_();
             this->updateFluxes_();
+            updated = true;
         }
+        return updated;
     }
 
 private:

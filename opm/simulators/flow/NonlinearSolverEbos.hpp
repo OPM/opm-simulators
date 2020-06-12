@@ -356,7 +356,6 @@ namespace Opm {
 
         SimulatorReportSingle stepPressure(const SimulatorTimerInterface& timer){
             LinearizationType linearizationType;
-            bool converged = false;
             SimulatorReportSingle reportpre;
             // do pressure step
             linearizationType.type = Opm::LinearizationType::pressure;
