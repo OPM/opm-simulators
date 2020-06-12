@@ -148,12 +148,14 @@ namespace Opm {
 
         
 
-        SimulatorReportSingle stepSequential(const SimulatorTimerInterface& timer){
+        SimulatorReportSingle stepSequential(const SimulatorTimerInterface& timer,bool implicit){
             LinearizationType linearizationType;
             bool converged = false;
             SimulatorReportSingle reportpre;
             SimulatorReportSingle reportseq;
-            while(not converged){
+            int seqiterations  = 0;
+            int maxseqiterations = 10;
+            while(not(converged) && (seqiterations < maxseqiterations) ){
                 // do pressure step
                 linearizationType.type = Opm::LinearizationType::pressure;
                 model_->ebosSimulator().problem().updatePressure();//update pressure ans ST
@@ -171,9 +173,26 @@ namespace Opm {
                 reportpre += lreportpre;
                 reportseq += lreportseq;
                 // for no not seq implicit
-                converged = true;               
+                if(implicit){
+                    // for now do full implicit solve
+                    linearizationType.type = Opm::LinearizationType::pressure;
+                    model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);
+
+                    model_->updateSolution();
+                    SimulatorReportSingle lreportsim = this->stepDefault(timer);
+                    converged = lreportsim.converged;
+                }else{
+                    converged = true;
+                }
+                std::cout << "Sequantial iteration " << seqiterations << std::endl;
+                seqiterations += 1;
             }
             SimulatorReportSingle report;
+            if(not(converged)){
+                report.converged = false;
+            }else{
+                report.converged = true;
+            }
             //todo fill this report correctly
             return report;
                 
@@ -185,12 +204,12 @@ namespace Opm {
                 report = this->stepFull(timer);
             }else if(simulationtype == "pressure"){
                 report = this->stepPressure(timer);
-            }else if(simulationtype == "seqtransport"){
-                report = this->stepSequential(timer);
-            }else if(simulationtype == "seqtransport"){
-                report = this->stepSequential(timer);
+            }else if(simulationtype == "seq"){
+                report = this->stepSequential(timer,false);
+            }else if(simulationtype == "fimseq"){
+                report = this->stepSequential(timer,true);
             }else{
-                OPM_THROW(std::runtime_error, "No such simulation type");
+                OPM_THROW(std::logic_error, "No such simulation type valid is: implicit, pressure, seq,  fimseq ");
             }
             return report;        
         }
