@@ -107,8 +107,6 @@ std::size_t packSize(const std::array<T,N>& data, Dune::MPIHelper::MPICommunicat
 
 std::size_t packSize(const char* str, Dune::MPIHelper::MPICommunicator comm);
 
-std::size_t packSize(const std::string& str, Dune::MPIHelper::MPICommunicator comm);
-
 template<class T1, class T2, class C, class A>
 std::size_t packSize(const std::map<T1,T2,C,A>& data, Dune::MPIHelper::MPICommunicator comm);
 
