@@ -778,8 +778,12 @@ namespace Opm
 
         const auto& summaryState = ebosSimulator.vanguard().summaryState();
         const Opm::Schedule& schedule = ebosSimulator.vanguard().schedule();
-        assembleControlEq(well_state, schedule, summaryState, deferred_logger);
 
+        if(ebosSimulator.model().linearizer().getLinearizationType().type == Opm::LinearizationType::seqtransport) {
+            assembleControlEqSeqTrans(well_state);
+        } else {
+            assembleControlEq(well_state, schedule, summaryState, deferred_logger);
+        }
 
         // do the local inversion of D.
         try {
@@ -790,6 +794,26 @@ namespace Opm
 
 
     }
+
+
+
+
+
+    template <typename TypeTag>
+    void
+    StandardWell<TypeTag>::assembleControlEqSeqTrans(const WellState& /* well_state */)
+    {
+        // TODO: we can get the current bhp value from well_state
+        // If the primary variables are well synchronized, they should have the same value.
+        EvalWell control_eq(numWellEq_ + numEq, 0.0);
+        const EvalWell& bhp = getBhp();
+        control_eq = bhp - bhp.value();
+        resWell_[0][Bhp] = control_eq.value();
+        for (int pv_idx = 0; pv_idx < numWellEq_; ++pv_idx) {
+            invDuneD_[0][0][Bhp][pv_idx] = control_eq.derivative(pv_idx + numEq);
+        }
+    }
+
 
 
 

@@ -545,6 +545,9 @@ namespace Opm
                                                       const SummaryState& summary_state,
                                                       DeferredLogger& deferred_logger) const;
 
+        // assembling the control equation for sequential transport solution
+        void assembleControlEqSeqTrans(const WellState& well_state);
+
     };
 
 }
