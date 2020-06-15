@@ -167,7 +167,7 @@ copyToReferenceDir \
 test $? -eq 0 && changed_tests="$changed_tests norne_init"
 
 changed_tests=`echo $changed_tests | xargs`
-echo -e "update reference data for $changed_tests\n" > /tmp/cmsg
+echo -e "Automatic Reference Data Update for PR ${REASON:-(Unknown)}\n" > /tmp/cmsg
 if [ -z "$REASON" ]
 then
   echo -e "Reason: fill in this\n" >> /tmp/cmsg
@@ -183,6 +183,12 @@ do
   popd > /dev/null
 done
 echo -e "opm-simulators = `git rev-parse HEAD`" >> /tmp/cmsg
+
+echo -e "\n### Changed Tests ###\n" >> /tmp/cmsg
+for t in ${changed_tests}
+do
+  echo "  * ${t}" >> /tmp/cmsg
+done
 
 cd $OPM_TESTS_ROOT
 if [ -n "$BRANCH_NAME" ]
