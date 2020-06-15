@@ -279,7 +279,6 @@ private:
         const auto& gridView = vanguard.gridView();
         const auto& elementMapper = simulator_.model().elementMapper();
         const auto& eclState = simulator_.vanguard().eclState();
-        const auto& deck = simulator_.vanguard().deck();
         const Opm::SimulationConfig& simConfig = eclState.getSimulationConfig();
         const auto& thpres = simConfig.getThresholdPressure();
 
@@ -334,6 +333,7 @@ private:
 
         if (enableExperiments) {
             // apply threshold pressures accross faults (experimental!)
+            const auto& deck = simulator_.vanguard().deck();
             if (deck.hasKeyword("THPRESFT"))
                 extractThpresft_(deck.getKeyword("THPRESFT"));
         }
