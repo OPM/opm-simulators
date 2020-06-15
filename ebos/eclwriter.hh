@@ -552,12 +552,12 @@ private:
                 int gc1 = std::min(cartIdx1, cartIdx2);
                 int gc2 = std::max(cartIdx1, cartIdx2);
 
-                if (gc2 - gc1 == 1) {
+                if (gc2 - gc1 == 1 && cartDims[0] > 1 ) {
                     tranx.data[gc1] = globalTrans->transmissibility(c1, c2);
                     continue; // skip other if clauses as they are false, last one needs some computation
                 }
 
-                if (gc2 - gc1 == cartDims[0]) {
+                if (gc2 - gc1 == cartDims[0] && cartDims[1] > 1) {
                     trany.data[gc1] = globalTrans->transmissibility(c1, c2);
                     continue; // skipt next if clause as it needs some computation
                 }

@@ -530,7 +530,7 @@ private:
                 int gc1 = std::min(cartMapper.cartesianIndex(c1), cartMapper.cartesianIndex(c2));
                 int gc2 = std::max(cartMapper.cartesianIndex(c1), cartMapper.cartesianIndex(c2));
 
-                if (gc2 - gc1 == 1) {
+                if (gc2 - gc1 == 1 && cartDims[0] > 1) {
                     if (tranx_deckAssigned)
                         // set simulator internal transmissibilities to values from inputTranx
                         trans_[isId] = inputTranxData[c1];
@@ -538,7 +538,7 @@ private:
                         // Scale transmissibilities with scale factor from inputTranx
                         trans_[isId] *= inputTranxData[c1];
                 }
-                else if (gc2 - gc1 == cartDims[0]) {
+                else if (gc2 - gc1 == cartDims[0] && cartDims[1] > 1) {
                     if (trany_deckAssigned)
                         // set simulator internal transmissibilities to values from inputTrany
                         trans_[isId] = inputTranyData[c1];
