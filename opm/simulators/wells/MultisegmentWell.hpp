@@ -278,9 +278,6 @@ namespace Opm
 
         mutable int debug_cost_counter_ = 0;
 
-        // TODO: this is the old implementation, it is possible the new value does not need it anymore
-        std::vector<EvalWell> segment_reservoir_volume_rates_;
-
         std::vector<std::vector<EvalWell>> segment_phase_fractions_;
 
         std::vector<std::vector<EvalWell>> segment_phase_viscosities_;

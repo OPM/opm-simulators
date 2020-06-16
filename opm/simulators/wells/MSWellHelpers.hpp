@@ -206,6 +206,8 @@ namespace mswellhelpers
     template <typename ValueType>
     ValueType velocityHead(const double area, const ValueType& mass_rate, const ValueType& density)
     {
+        // \Note: a factor of 2 is added to the formulation in order to match results from the
+        // reference simulator. This is inline with what is done for the friction loss.
         return (mass_rate * mass_rate / (area * area * density));
     }
 

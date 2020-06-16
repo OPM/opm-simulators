@@ -50,7 +50,6 @@ namespace Opm
     , segment_mass_rates_(numberOfSegments(), 0.0)
     , segment_depth_diffs_(numberOfSegments(), 0.0)
     , upwinding_segments_(numberOfSegments(), 0)
-    , segment_reservoir_volume_rates_(numberOfSegments(), 0.0)
     , segment_phase_fractions_(numberOfSegments(), std::vector<EvalWell>(num_components_, 0.0)) // number of phase here?
     , segment_phase_viscosities_(numberOfSegments(), std::vector<EvalWell>(num_components_, 0.0)) // number of phase here?
     {
@@ -1656,8 +1655,6 @@ namespace Opm
                 const EvalWell rate = getSegmentRateUpwinding(seg, comp_idx);
                 segment_mass_rates_[seg] += rate * surf_dens[comp_idx];
             }
-
-            segment_reservoir_volume_rates_[seg] = segment_mass_rates_[seg] / segment_densities_[seg];
         }
     }
 
