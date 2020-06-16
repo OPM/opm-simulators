@@ -747,7 +747,7 @@ add_test_compare_restarted_simulation(CASENAME msw_3d_hfa
                                       SIMULATOR flow
                                       ABS_TOL ${abs_tol_restart}
                                       REL_TOL ${rel_tol_restart}
-                                      TEST_ARGS --enable-adaptive-time-stepping=false --sched-restart=false)
+                                      TEST_ARGS --enable-adaptive-time-stepping=false --sched-restart=true)
 
 # PORV test
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-porv-acceptanceTest.sh "")
