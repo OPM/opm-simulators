@@ -818,7 +818,7 @@ INSTANTIATE_PACK(std::set<std::string>)
 
 } // end namespace Mpi
 
-RestartValue loadParallelRestart(const EclipseIO* eclIO, SummaryState& summaryState,
+RestartValue loadParallelRestart(const EclipseIO* eclIO, Action::State& actionState, SummaryState& summaryState,
                                  const std::vector<Opm::RestartKey>& solutionKeys,
                                  const std::vector<Opm::RestartKey>& extraKeys,
                                  Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> comm)
@@ -831,7 +831,7 @@ RestartValue loadParallelRestart(const EclipseIO* eclIO, SummaryState& summarySt
     if (eclIO)
     {
         assert(comm.rank() == 0);
-        restartValues = eclIO->loadRestart(summaryState, solutionKeys, extraKeys);
+        restartValues = eclIO->loadRestart(actionState, summaryState, solutionKeys, extraKeys);
         int packedSize = Mpi::packSize(restartValues, comm);
         std::vector<char> buffer(packedSize);
         int position=0;

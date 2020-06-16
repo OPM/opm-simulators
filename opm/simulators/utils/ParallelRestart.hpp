@@ -26,6 +26,7 @@
 #include <opm/output/eclipse/RestartValue.hpp>
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/output/eclipse/Summary.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/State.hpp>
 
 #include <dune/common/parallel/mpihelper.hh>
 
@@ -313,7 +314,7 @@ ADD_PACK_PROTOTYPES(std::string)
 
 } // end namespace Mpi
 
-RestartValue loadParallelRestart(const EclipseIO* eclIO, SummaryState& summaryState,
+RestartValue loadParallelRestart(const EclipseIO* eclIO, Action::State& actionState, SummaryState& summaryState,
                                  const std::vector<Opm::RestartKey>& solutionKeys,
                                  const std::vector<Opm::RestartKey>& extraKeys,
                                  Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> comm);

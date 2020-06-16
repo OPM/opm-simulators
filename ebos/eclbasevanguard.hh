@@ -47,6 +47,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/State.hpp>
 
 
 #if HAVE_MPI
@@ -351,6 +352,7 @@ public:
         else
             eclSchedule_ = externalEclSchedule_;
         this->summaryState_.reset( new Opm::SummaryState( std::chrono::system_clock::from_time_t(this->eclSchedule_->getStartTime() )));
+        this->actionState_.reset( new Opm::Action::State() );
 
         if (!externalEclSummaryConfig_) {
             // create the schedule object. Note that if eclState is supposed to represent
@@ -446,6 +448,18 @@ public:
 
     const Opm::SummaryState& summaryState() const
     { return *summaryState_; }
+
+
+    /*!
+     * \brief Returns the action state
+     *
+     * The ActionState keeps track of how many times the various actions have run.
+     */
+    Opm::Action::State& actionState()
+    { return *actionState_; }
+
+    const Opm::Action::State& actionState() const
+    { return *actionState_; }
 
     /*!
      * \brief Parameter deciding the edge-weight strategy of the load balancer.
@@ -617,6 +631,7 @@ private:
     std::unique_ptr<Opm::Schedule> internalEclSchedule_;
     std::unique_ptr<Opm::SummaryConfig> internalEclSummaryConfig_;
     std::unique_ptr<Opm::SummaryState> summaryState_;
+    std::unique_ptr<Opm::Action::State> actionState_;
 
     // these attributes point  either to the internal  or to the external version of the
     // parser objects.

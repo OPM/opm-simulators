@@ -37,6 +37,7 @@
 #include <ebos/collecttoiorank.hh>
 #include <ebos/ecloutputblackoilmodule.hh>
 #include <ebos/eclwriter.hh>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/State.hpp>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
