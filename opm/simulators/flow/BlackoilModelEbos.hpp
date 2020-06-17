@@ -497,7 +497,11 @@ namespace Opm {
                 PressureVectorType rhs(ebosResid.size(),0);
                 PressureHelper::moveToPressureEqn(ebosResid, rhs, weights);
                 boost::property_tree::ptree prm;
-                boost::property_tree::read_json("pressuresolver.json", prm);
+                try{    
+                    boost::property_tree::read_json("pressuresolver.json", prm);
+                }catch(...){
+                    OPM_THROW(std::logic_error,"Configuration file pressuresolver.json not pressent");
+                }
                 std::any parallelInformation;               
                 extractParallelGridInformationToISTL(ebosSimulator_.vanguard().grid(), parallelInformation);
 #if HAVE_MPI

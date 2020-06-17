@@ -23,6 +23,11 @@
 #include <opm/simulators/flow/Main.hpp>
 #include <opm/simulators/linalg/ISTLSolverEbosFlexible.hpp>
 #include <ebos/eclfluxmoduleseq.hh>
+#include <ebos/eclblackoilprimaryvariables.hh>
+#include <ebos/eclblackoilnewtonmethod.hh>
+#include <ebos/eclnewtonmethodseq.hh>
+#include <ebos/eclblackoilintensivequantities.hh>
+
 BEGIN_PROPERTIES
 NEW_TYPE_TAG(EclFlowProblemSimple, INHERITS_FROM(EclFlowProblem));
 NEW_PROP_TAG(FluidState);
@@ -106,9 +111,10 @@ namespace Opm {
      // template <class TypeTag>
     // BlackOilIntensiveQuantitiesSeq    :  public BlackOilIntensiveQuantities<TypeTag>
     // {};
-    SET_TYPE_PROP(EclFlowProblemSimple, PrimaryVariables, Opm::BlackOilPrimaryVariables<TypeTag>);
-    SET_TYPE_PROP(EclFlowProblemSimple, IntensiveQuantities, Opm::BlackOilIntensiveQuantities<TypeTag>);
+    SET_TYPE_PROP(EclFlowProblemSimple, PrimaryVariables, Opm::EclBlackOilPrimaryVariables<TypeTag>);
+    SET_TYPE_PROP(EclFlowProblemSimple, IntensiveQuantities, Opm::EclBlackOilIntensiveQuantities<TypeTag>);
     SET_TYPE_PROP(EclFlowProblemSimple, FluxModule, Opm::EclTransFluxModuleSeq<TypeTag>);
+    SET_TYPE_PROP(EclFlowProblemSimple, NewtonMethod, Opm::EclNewtonMethodSeq<TypeTag>);  
     //SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Opm::ISTLSolverEbos<TypeTag>);
     //SET_TAG_PROP(EclFlowProblemSimple, LinearSolverSplice, ParallelBiCGStabLinearSolver);
     //SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Opm::Linear::ParallelBiCGStabSolverBackend<TypeTag>);//not work
