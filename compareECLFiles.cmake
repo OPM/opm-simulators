@@ -730,6 +730,7 @@ opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh ""
 # Cruder tolerances for the restarted tests
 set(abs_tol_restart 2e-1)
 set(rel_tol_restart 4e-5)
+
 add_test_compare_restarted_simulation(CASENAME spe1
                                       FILENAME SPE1CASE2_ACTNUM
                                       SIMULATOR flow
@@ -742,11 +743,19 @@ add_test_compare_restarted_simulation(CASENAME spe9
                                       ABS_TOL ${abs_tol_restart}
                                       REL_TOL ${rel_tol_restart}
                                       TEST_ARGS --sched-restart=false)
+
+# The dynamic MSW data is not written to /read from the restart file
+# We therefore accept significant deviation in the results.
+# Note also that we use --sched-restart=true since some necessary
+# MSW info is still lacking in the restart file.
+set(abs_tol_restart_msw 2e2)
+set(rel_tol_restart_msw 1e-3)
+
 add_test_compare_restarted_simulation(CASENAME msw_3d_hfa
                                       FILENAME 3D_MSW
                                       SIMULATOR flow
-                                      ABS_TOL ${abs_tol_restart}
-                                      REL_TOL ${rel_tol_restart}
+                                      ABS_TOL ${abs_tol_restart_msw}
+                                      REL_TOL ${rel_tol_restart_msw}
                                       TEST_ARGS --enable-adaptive-time-stepping=false --sched-restart=true)
 
 # PORV test
