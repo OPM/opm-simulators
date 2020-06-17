@@ -36,32 +36,23 @@ namespace Dune
     /// Create a sequential solver.
     template <class MatrixType, class VectorType>
     FlexibleSolver<MatrixType, VectorType>::
-    FlexibleSolver(const boost::property_tree::ptree& prm, const MatrixType& matrix,
+    FlexibleSolver(const MatrixType& matrix,
+                   const boost::property_tree::ptree& prm,
                    const std::function<VectorType()>& weightsCalculator)
     {
-        init(prm, matrix, weightsCalculator, Dune::Amg::SequentialInformation());
+        init(matrix, Dune::Amg::SequentialInformation(), prm, weightsCalculator);
     }
 
     /// Create a parallel solver (if Comm is e.g. OwnerOverlapCommunication).
     template <class MatrixType, class VectorType>
     template <class Comm>
     FlexibleSolver<MatrixType, VectorType>::
-    FlexibleSolver(const boost::property_tree::ptree& prm,
-                   const MatrixType& matrix,
-                   // const Comm& comm)
-                   const typename std::enable_if<IsComm<Comm>::value, Comm>::type& comm)
+    FlexibleSolver(const MatrixType& matrix,
+                   const Comm& comm,
+                   const boost::property_tree::ptree& prm,
+                   const std::function<VectorType()>& weightsCalculator)
     {
-        init(prm, matrix, std::function<VectorType()>(), comm);
-    }
-
-    /// Create a parallel solver (if Comm is e.g. OwnerOverlapCommunication).
-    template <class MatrixType, class VectorType>
-    template <class Comm>
-    FlexibleSolver<MatrixType, VectorType>::
-    FlexibleSolver(const boost::property_tree::ptree& prm, const MatrixType& matrix,
-                   const std::function<VectorType()>& weightsCalculator, const Comm& comm)
-    {
-        init(prm, matrix, weightsCalculator, comm);
+        init(matrix, comm, prm, weightsCalculator);
     }
 
     template <class MatrixType, class VectorType>
@@ -183,8 +174,10 @@ namespace Dune
     template <class Comm>
     void
     FlexibleSolver<MatrixType, VectorType>::
-    init(const boost::property_tree::ptree& prm, const MatrixType& matrix,
-         const std::function<VectorType()> weightsCalculator, const Comm& comm)
+    init(const MatrixType& matrix,
+         const Comm& comm,
+         const boost::property_tree::ptree& prm,
+         const std::function<VectorType()> weightsCalculator)
     {
         initOpPrecSp(matrix, prm, weightsCalculator, comm);
         initSolver(prm, comm.communicator().rank()==0);
@@ -203,45 +196,36 @@ template <int N>
 using OBM = Dune::BCRSMatrix<Opm::MatrixBlock<double, N, N>>;
 
 // Variants using Dune::FieldMatrix blocks.
-// template class Dune::FlexibleSolver<BM<1>, BV<1>>;
-// template class Dune::FlexibleSolver<BM<2>, BV<2>>;
+template class Dune::FlexibleSolver<BM<1>, BV<1>>;
+template class Dune::FlexibleSolver<BM<2>, BV<2>>;
 template class Dune::FlexibleSolver<BM<3>, BV<3>>;
-// template class Dune::FlexibleSolver<BM<4>, BV<4>>;
-/*
+template class Dune::FlexibleSolver<BM<4>, BV<4>>;
+
 // Variants using Opm::MatrixBlock blocks.
 template class Dune::FlexibleSolver<OBM<1>, BV<1>>;
 template class Dune::FlexibleSolver<OBM<2>, BV<2>>;
 template class Dune::FlexibleSolver<OBM<3>, BV<3>>;
 template class Dune::FlexibleSolver<OBM<4>, BV<4>>;
 
+
 using Comm = Dune::OwnerOverlapCopyCommunication<int, int>;
 
-template Dune::FlexibleSolver<OBM<1>, BV<1>>::FlexibleSolver(const boost::property_tree::ptree& prm,
-                                                             const OBM<1>& matrix,
-                                                             const Comm&);
-template Dune::FlexibleSolver<OBM<1>, BV<1>>::FlexibleSolver(const boost::property_tree::ptree& prm,
-                                                             const MatrixType& matrix,
-                                                             const std::function<BV<1>()>& weightsCalculator,
-                                                             const Comm& comm);
-template Dune::FlexibleSolver<OBM<2>, BV<2>>::FlexibleSolver(const boost::property_tree::ptree& prm,
-                                                             const OBM<2>& matrix,
-                                                             const Comm&);
-template Dune::FlexibleSolver<OBM<2>, BV<2>>::FlexibleSolver(const boost::property_tree::ptree& prm,
-                                                             const MatrixType& matrix,
-                                                             const std::function<BV<2>()>& weightsCalculator,
-                                                             const Comm& comm);
-template Dune::FlexibleSolver<OBM<3>, BV<3>>::FlexibleSolver(const boost::property_tree::ptree& prm,
-                                                             const OBM<3>& matrix,
-                                                             const Comm&);
-template Dune::FlexibleSolver<OBM<3>, BV<3>>::FlexibleSolver(const boost::property_tree::ptree& prm,
-                                                             const MatrixType& matrix,
-                                                             const std::function<BV<3>()>& weightsCalculator,
-                                                             const Comm& comm);
-template Dune::FlexibleSolver<OBM<4>, BV<4>>::FlexibleSolver(const boost::property_tree::ptree& prm,
-                                                             const OBM<4>& matrix,
-                                                             const Comm&);
-template Dune::FlexibleSolver<OBM<4>, BV<4>>::FlexibleSolver(const boost::property_tree::ptree& prm,
-                                                             const MatrixType& matrix,
-                                                             const std::function<BV<4>()>& weightsCalculator,
-                                                             const Comm& comm);
-*/
+template Dune::FlexibleSolver<OBM<1>, BV<1>>::FlexibleSolver(const MatrixType& matrix,
+                                                             const Comm& comm,
+                                                             const boost::property_tree::ptree& prm,
+                                                             const std::function<BV<1>()>& weightsCalculator);
+
+template Dune::FlexibleSolver<OBM<2>, BV<2>>::FlexibleSolver(const MatrixType& matrix,
+                                                             const Comm& comm,
+                                                             const boost::property_tree::ptree& prm,
+                                                             const std::function<BV<2>()>& weightsCalculator);
+
+template Dune::FlexibleSolver<OBM<3>, BV<3>>::FlexibleSolver(const MatrixType& matrix,
+                                                             const Comm& comm,
+                                                             const boost::property_tree::ptree& prm,
+                                                             const std::function<BV<3>()>& weightsCalculator);
+
+template Dune::FlexibleSolver<OBM<4>, BV<4>>::FlexibleSolver(const MatrixType& matrix,
+                                                             const Comm& comm,
+                                                             const boost::property_tree::ptree& prm,
+                                                             const std::function<BV<4>()>& weightsCalculator);

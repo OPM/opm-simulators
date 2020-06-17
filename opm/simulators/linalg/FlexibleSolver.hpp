@@ -35,19 +35,6 @@
 namespace Dune
 {
 
-template<class C>
-struct IsComm : std::false_type
-{};
-
-template<>
-struct IsComm<Dune::Amg::SequentialInformation> : std::true_type
-{};
-
-#if HAVE_MPI
-template<class Index>
-struct IsComm<Dune::OwnerOverlapCopyCommunication<Index>> : std::true_type
-{};
-#endif
 /// A solver class that encapsulates all needed objects for a linear solver
 /// (operator, scalar product, iterative solver and preconditioner) and sets
 /// them up based on runtime parameters, using the PreconditionerFactory for
@@ -60,20 +47,16 @@ public:
     using VectorType = VectorTypeT;
 
     /// Create a sequential solver.
-    FlexibleSolver(const boost::property_tree::ptree& prm, const MatrixType& matrix,
+    FlexibleSolver(const MatrixType& matrix,
+                   const boost::property_tree::ptree& prm,
                    const std::function<VectorTypeT()>& weightsCalculator = std::function<VectorTypeT()>());
 
     /// Create a parallel solver (if Comm is e.g. OwnerOverlapCommunication).
     template <class Comm>
-    FlexibleSolver(const boost::property_tree::ptree& prm,
-                   const MatrixType& matrix,
-//                   const Comm& comm);
-                   const typename std::enable_if<IsComm<Comm>::value, Comm>::type& comm);
-
-    /// Create a parallel solver (if Comm is e.g. OwnerOverlapCommunication).
-    template <class Comm>
-    FlexibleSolver(const boost::property_tree::ptree& prm, const MatrixType& matrix,
-                   const std::function<VectorTypeT()>& weightsCalculator, const Comm& comm);
+    FlexibleSolver(const MatrixType& matrix,
+                   const Comm& comm,
+                   const boost::property_tree::ptree& prm,
+                   const std::function<VectorTypeT()>& weightsCalculator = std::function<VectorTypeT()>());
 
     virtual void apply(VectorType& x, VectorType& rhs, Dune::InverseOperatorResult& res) override;
 
@@ -105,8 +88,10 @@ private:
     // Main initialization routine.
     // Call with Comm == Dune::Amg::SequentialInformation to get a serial solver.
     template <class Comm>
-    void init(const boost::property_tree::ptree& prm, const MatrixType& matrix,
-              const std::function<VectorTypeT()> weightsCalculator, const Comm& comm);
+    void init(const MatrixType& matrix,
+              const Comm& comm,
+              const boost::property_tree::ptree& prm,
+              const std::function<VectorTypeT()> weightsCalculator);
 
     std::shared_ptr<AbstractOperatorType> linearoperator_;
     std::shared_ptr<AbstractPrecondType> preconditioner_;

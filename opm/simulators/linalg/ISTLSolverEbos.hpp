@@ -905,10 +905,10 @@ protected:
                 if (isParallel()) {
 #if HAVE_MPI
                     assert(noGhostMat_);
-                    flexibleSolver_.reset(new FlexibleSolverType(prm_, *noGhostMat_, weightsCalculator, *comm_));
+                    flexibleSolver_.reset(new FlexibleSolverType(*noGhostMat_, *comm_, prm_, weightsCalculator));
 #endif
                 } else {
-                    flexibleSolver_.reset(new FlexibleSolverType(prm_, *matrix_, weightsCalculator));
+                    flexibleSolver_.reset(new FlexibleSolverType(*matrix_, prm_, weightsCalculator));
                 }
             }
             else

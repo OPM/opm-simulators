@@ -70,7 +70,7 @@ testSolver(const boost::property_tree::ptree& prm, const std::string& matrix_fil
                                                                 prm.get<int>("preconditioner.pressure_var_index"),
                                                                 transpose);
               };
-    Dune::FlexibleSolver<Matrix, Vector> solver(prm, matrix, wc);
+    Dune::FlexibleSolver<Matrix, Vector> solver(matrix, prm, wc);
     Vector x(rhs.size());
     Dune::InverseOperatorResult res;
     solver.apply(x, rhs, res);

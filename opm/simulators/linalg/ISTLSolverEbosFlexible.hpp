@@ -199,11 +199,11 @@ public:
             if (isParallel()) {
 #if HAVE_MPI
                 matrix_ = &mat.istlMatrix();
-                solver_.reset(new SolverType(prm_, mat.istlMatrix(), weightsCalculator, *comm_));
+                solver_.reset(new SolverType(mat.istlMatrix(), *comm_, prm_, weightsCalculator));
 #endif
             } else {
                 matrix_ = &mat.istlMatrix();
-                solver_.reset(new SolverType(prm_, mat.istlMatrix(), weightsCalculator));
+                solver_.reset(new SolverType(mat.istlMatrix(), prm_, weightsCalculator));
             }
             rhs_ = b;
         } else {
