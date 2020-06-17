@@ -29,6 +29,7 @@
     BOOST_VERSION / 100 % 1000 > 48
 
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
+#include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
 
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
