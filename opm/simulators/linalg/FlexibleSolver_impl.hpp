@@ -1,5 +1,6 @@
 /*
   Copyright 2019, 2020 SINTEF Digital, Mathematics and Cybernetics.
+  Copyright 2020 Equinor.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -17,7 +18,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "config.h"
+#ifndef OPM_FLEXIBLE_SOLVER_IMPL_HEADER_INCLUDED
+#define OPM_FLEXIBLE_SOLVER_IMPL_HEADER_INCLUDED
 
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/PreconditionerFactory.hpp>
@@ -185,3 +187,5 @@ namespace Dune
     }
 
 } // namespace Dune
+
+#endif // OPM_FLEXIBLE_SOLVER_IMPL_HEADER_INCLUDED
