@@ -120,6 +120,7 @@ tests[9_4c_grpctl_msw_model2]="flow model2 9_4C_WINJ_GINJ_VREP-W_REIN-G_MSW 9_4c
 tests[9_4d_grpctl_stw_model2]="flow model2 9_4D_WINJ_GINJ_GAS_EXPORT_STW 9_4d_grpctl_stw_model2"
 tests[9_4d_grpctl_msw_model2]="flow model2 9_4D_WINJ_GINJ_GAS_EXPORT_MSW 9_4d_grpctl_msw_model2"
 tests[model4_group]="flow model4 MOD4_GRP model4_group"
+tests[model4_udq_group]="flow model4 MOD4_UDQ_ACTIONX model4_udq_group"
 tests[polymer_injectivity]="flow polymer_injectivity 2D_POLYMER_INJECTIVITY"
 tests[nnc]="flow editnnc NNC_AND_EDITNNC nnc"
 tests[udq_wconprod]="flow udq_actionx UDQ_WCONPROD udq_wconprod"

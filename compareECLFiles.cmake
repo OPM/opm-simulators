@@ -697,6 +697,13 @@ add_test_compareECLFiles(CASENAME model4_group
                          REL_TOL ${rel_tol}
                          DIR model4)
 
+add_test_compareECLFiles(CASENAME model4_udq_group
+                         FILENAME MOD4_UDQ_ACTIONX
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model4)
+
 add_test_compareECLFiles(CASENAME wsegsicd
 			  FILENAME TEST_WSEGSICD
 			  SIMULATOR flow
