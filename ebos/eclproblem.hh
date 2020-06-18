@@ -997,6 +997,7 @@ public:
                            simulator.time() + simulator.timeStepSize(),
                            ecl_state,
                            schedule,
+                           simulator.vanguard().actionState(),
                            simulator.vanguard().summaryState());
     }
 
@@ -1062,6 +1063,7 @@ public:
                       double sim_time,
                       Opm::EclipseState& ecl_state,
                       Opm::Schedule& schedule,
+                      Opm::Action::State& actionState,
                       Opm::SummaryState& summaryState) {
         const auto& actions = schedule.actions(reportStep);
         if (actions.empty())
@@ -1084,8 +1086,8 @@ public:
         }
 
         auto simTime = schedule.simTime(reportStep);
-        for (const auto& action : actions.pending(simTime)) {
-            auto actionResult = action->eval(simTime, context);
+        for (const auto& action : actions.pending(actionState, simTime)) {
+            auto actionResult = action->eval(context);
             if (actionResult) {
                 std::string wells_string;
                 const auto& matching_wells = actionResult.wells();
@@ -1097,6 +1099,7 @@ public:
                 std::string msg = "The action: " + action->name() + " evaluated to true at " + ts + " wells: " + wells_string;
                 Opm::OpmLog::info(msg);
                 schedule.applyAction(reportStep, *action, actionResult);
+                actionState.add_run(*action, simTime);
             } else {
                 std::string msg = "The action: " + action->name() + " evaluated to false at " + ts;
                 Opm::OpmLog::info(msg);

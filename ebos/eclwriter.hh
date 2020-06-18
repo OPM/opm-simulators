@@ -46,6 +46,7 @@
 #include <opm/output/eclipse/RestartValue.hpp>
 #include <opm/output/eclipse/Summary.hpp>
 #include <opm/parser/eclipse/Units/UnitSystem.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/State.hpp>
 
 #include <opm/simulators/utils/ParallelRestart.hpp>
 #include <opm/grid/GridHelpers.hpp>
@@ -395,7 +396,8 @@ public:
                 restartValue.addExtra("OPMEXTRA", std::vector<double>(1, nextStepSize));
 
             // first, create a tasklet to write the data for the current time step to disk
-            auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(summaryState(),
+            auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(actionState(),
+                                                                     summaryState(),
                                                                      *eclIO_,
                                                                      reportStepNum,
                                                                      isSubStep,
@@ -449,7 +451,8 @@ public:
 
         {
             Opm::SummaryState& summaryState = simulator_.vanguard().summaryState();
-            auto restartValues = loadParallelRestart(eclIO_.get(), summaryState, solutionKeys, extraKeys,
+            Opm::Action::State& actionState = simulator_.vanguard().actionState();
+            auto restartValues = loadParallelRestart(eclIO_.get(), actionState, summaryState, solutionKeys, extraKeys,
                                                      gridView.grid().comm());
 
             for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
@@ -688,6 +691,7 @@ private:
     struct EclWriteTasklet
         : public TaskletInterface
     {
+        Opm::Action::State actionState_;
         Opm::SummaryState summaryState_;
         Opm::EclipseIO& eclIO_;
         int reportStepNum_;
@@ -696,14 +700,16 @@ private:
         Opm::RestartValue restartValue_;
         bool writeDoublePrecision_;
 
-        explicit EclWriteTasklet(const Opm::SummaryState& summaryState,
+        explicit EclWriteTasklet(const Opm::Action::State& actionState,
+                                 const Opm::SummaryState& summaryState,
                                  Opm::EclipseIO& eclIO,
                                  int reportStepNum,
                                  bool isSubStep,
                                  double secondsElapsed,
                                  Opm::RestartValue restartValue,
                                  bool writeDoublePrecision)
-            : summaryState_(summaryState)
+            : actionState_(actionState)
+            , summaryState_(summaryState)
             , eclIO_(eclIO)
             , reportStepNum_(reportStepNum)
             , isSubStep_(isSubStep)
@@ -715,7 +721,8 @@ private:
         // callback to eclIO serial writeTimeStep method
         void run()
         {
-            eclIO_.writeTimeStep(summaryState_,
+            eclIO_.writeTimeStep(actionState_,
+                                 summaryState_,
                                  reportStepNum_,
                                  isSubStep_,
                                  secondsElapsed_,
@@ -729,6 +736,9 @@ private:
 
     Opm::SummaryState& summaryState()
     { return simulator_.vanguard().summaryState(); }
+
+    Opm::Action::State& actionState()
+    { return simulator_.vanguard().actionState(); }
 
     const Opm::Schedule& schedule() const
     { return simulator_.vanguard().schedule(); }
