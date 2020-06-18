@@ -453,7 +453,8 @@ public:
     /*!
      * \brief Returns the action state
      *
-     * The ActionState keeps track of how many times the various actions have run.
+     * The ActionState keeps track of how many times the various actions have
+     * run.
      */
     Opm::Action::State& actionState()
     { return *actionState_; }
