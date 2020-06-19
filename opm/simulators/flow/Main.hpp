@@ -405,7 +405,9 @@ namespace Opm
 
                     Opm::FlowMainEbos<PreTypeTag>::printPRTHeader(outputCout_);
 
+#if HAVE_MPI
                     int parseSuccess = 0;
+#endif
                     std::string failureMessage;
 
                     if (mpiRank == 0) {
@@ -446,7 +448,9 @@ namespace Opm
                             setupMessageLimiter_(schedule_->getMessageLimits(), "STDOUT_LOGGER");
                             if (!summaryConfig_)
                                 summaryConfig_.reset( new Opm::SummaryConfig(*deck_, *schedule_, eclipseState_->getTableManager(), parseContext, errorGuard));
+#if HAVE_MPI
                             parseSuccess = 1;
+#endif
                         }
                         catch(const std::exception& e)
                         {
