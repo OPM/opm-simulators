@@ -44,6 +44,7 @@ template class Dune::FlexibleSolver<BM<1>, BV<1>>;
 // Variants using Opm::MatrixBlock blocks.
 template class Dune::FlexibleSolver<OBM<1>, BV<1>>;
 
+#if HAVE_MPI
 
 using Comm = Dune::OwnerOverlapCopyCommunication<int, int>;
 
@@ -52,3 +53,4 @@ template Dune::FlexibleSolver<OBM<1>, BV<1>>::FlexibleSolver(const MatrixType& m
                                                              const boost::property_tree::ptree& prm,
                                                              const std::function<BV<1>()>& weightsCalculator);
 
+#endif // HAVE_MPI
