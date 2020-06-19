@@ -113,6 +113,8 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
         typedef typename GridView::template Codim<0>::Entity Element;
         typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
         using FlexibleSolverType = Dune::FlexibleSolver<Matrix, Vector>;
+        using AbstractOperatorType = Dune::AssembledLinearOperator<Matrix, Vector, Vector>;
+        using WellModelOperator = WellModelAsLinearOperator<WellModel, Vector, Vector>;
         // Due to miscibility oil <-> gas the water eqn is the one we can replace with a pressure equation.
         static const bool waterEnabled = Indices::waterEnabled;
         static const int pindex = (waterEnabled) ? BlackOilDefaultIndexTraits::waterCompIdx : BlackOilDefaultIndexTraits::oilCompIdx;
@@ -176,17 +178,10 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
 #endif
             extractParallelGridInformationToISTL(simulator_.vanguard().grid(), parallelInformation_);
             useWellConn_ = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
-
-            if (!useWellConn_ && useFlexible_)
-            {
-                OPM_THROW(std::logic_error, "Flexible solvers and CPR need the well contribution in the matrix. Please run with"
-                          " --matrix-add-well-contributions=true");
-            }
-
             ownersFirst_ = EWOMS_GET_PARAM(TypeTag, bool, OwnerCellsFirst);
             interiorCellNum_ = detail::numMatrixRowsToUseInSolver(simulator_.vanguard().grid(), ownersFirst_);
 
-            if ( isParallel() && (!ownersFirst_ || parameters_.linear_solver_use_amg_  || useFlexible_ ) ) {
+            if ( isParallel() && (!ownersFirst_ || parameters_.linear_solver_use_amg_) ) {
                 detail::setWellConnections(gridForConn, simulator_.vanguard().schedule().getWellsatEnd(), useWellConn_, wellConnectionsGraph_);
                 // For some reason simulator_.model().elementMapper() is not initialized at this stage
                 // Hence const auto& elemMapper = simulator_.model().elementMapper(); does not work.
@@ -741,11 +736,26 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
             if (recreate_solver || !flexibleSolver_) {
                 if (isParallel()) {
 #if HAVE_MPI
-                    assert(noGhostMat_);
-                    flexibleSolver_.reset(new FlexibleSolverType(getMatrix(), *comm_, prm_, weightsCalculator));
+                    if (useWellConn_) {
+                        assert(noGhostMat_);
+                        using ParOperatorType = Dune::OverlappingSchwarzOperator<Matrix, Vector, Vector, Comm>;
+                        linearOperatorForFlexibleSolver_ = std::make_unique<ParOperatorType>(getMatrix(), *comm_);
+                        flexibleSolver_ = std::make_unique<FlexibleSolverType>(*linearOperatorForFlexibleSolver_, *comm_, prm_, weightsCalculator);
+                    } else {
+                        if (!ownersFirst_) {
+                            OPM_THROW(std::runtime_error, "In parallel, the flexible solver requires "
+                                      "--owner-cells-first=true when --matrix-add-well-contributions=false is used.");
+                        }
+                        using ParOperatorType = WellModelGhostLastMatrixAdapter<Matrix, Vector, Vector, true>;
+                        wellOperator_ = std::make_unique<WellModelOperator>(simulator_.problem().wellModel());
+                        linearOperatorForFlexibleSolver_ = std::make_unique<ParOperatorType>(getMatrix(), *wellOperator_, interiorCellNum_);
+                        flexibleSolver_ = std::make_unique<FlexibleSolverType>(*linearOperatorForFlexibleSolver_, *comm_, prm_, weightsCalculator);
+                    }
 #endif
                 } else {
-                    flexibleSolver_.reset(new FlexibleSolverType(getMatrix(), prm_, weightsCalculator));
+                    using SeqLinearOperator = Dune::MatrixAdapter<Matrix, Vector, Vector>;
+                    linearOperatorForFlexibleSolver_ = std::make_unique<SeqLinearOperator>(getMatrix());
+                    flexibleSolver_ = std::make_unique<FlexibleSolverType>(*linearOperatorForFlexibleSolver_, prm_, weightsCalculator);
                 }
             }
             else
@@ -1004,6 +1014,8 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
         Vector *rhs_;
 
         std::unique_ptr<FlexibleSolverType> flexibleSolver_;
+        std::unique_ptr<AbstractOperatorType> linearOperatorForFlexibleSolver_;
+        std::unique_ptr<WellModelAsLinearOperator<WellModel, Vector, Vector>> wellOperator_;
         std::vector<int> overlapRows_;
         std::vector<int> interiorRows_;
         std::vector<std::set<int>> wellConnectionsGraph_;

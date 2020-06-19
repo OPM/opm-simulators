@@ -25,6 +25,7 @@
 #include <boost/property_tree/ptree.hpp>
 
 #include <dune/istl/solver.hh>
+#include <dune/istl/owneroverlapcopy.hh>
 
 namespace Dune
 {
@@ -55,19 +56,24 @@ namespace Amg
          * The operator will use one step of AMG to approximately solve
          * the coarse level system.
          */
-        struct PressureInverseOperator : public Dune::InverseOperator<X, X> {
-            template <class Comm>
-            PressureInverseOperator(Operator& op, const boost::property_tree::ptree& prm, const Comm& comm)
+        struct PressureInverseOperator : public Dune::InverseOperator<X, X>
+        {
+            template <typename GlobalIndex, typename LocalIndex>
+            PressureInverseOperator(Operator& op,
+                                    const boost::property_tree::ptree& prm,
+                                    const Dune::OwnerOverlapCopyCommunication<GlobalIndex, LocalIndex>& comm)
                 : linsolver_()
             {
                 assert(op.category() == Dune::SolverCategory::overlapping);
-                linsolver_ = std::make_unique<Solver>(op.getmat(), comm, prm, std::function<X()>());
+                linsolver_ = std::make_unique<Solver>(op, comm, prm, std::function<X()>());
             }
-            PressureInverseOperator(Operator& op, const boost::property_tree::ptree& prm, const SequentialInformation&)
+            PressureInverseOperator(Operator& op,
+                                    const boost::property_tree::ptree& prm,
+                                    const SequentialInformation&)
                 : linsolver_()
             {
                 assert(op.category() != Dune::SolverCategory::overlapping);
-                linsolver_ = std::make_unique<Solver>(op.getmat(), prm, std::function<X()>());
+                linsolver_ = std::make_unique<Solver>(op, prm, std::function<X()>());
             }
 
 
