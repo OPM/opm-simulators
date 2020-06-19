@@ -60,12 +60,16 @@ namespace Amg
             PressureInverseOperator(Operator& op, const boost::property_tree::ptree& prm, const Comm& comm)
                 : linsolver_()
             {
-                if (op.category() == Dune::SolverCategory::overlapping) {
-                    linsolver_.reset(new Solver(prm, op.getmat(), std::function<X()>(), comm));
-                } else {
-                    linsolver_.reset(new Solver(prm, op.getmat(), std::function<X()>()));
-                }
+                assert(op.category() == Dune::SolverCategory::overlapping);
+                linsolver_.reset(new Solver(op.getmat(), comm, prm, std::function<X()>()));
             }
+            PressureInverseOperator(Operator& op, const boost::property_tree::ptree& prm, const SequentialInformation&)
+                : linsolver_()
+            {
+                assert(op.category() != Dune::SolverCategory::overlapping);
+                linsolver_.reset(new Solver(op.getmat(), prm, std::function<X()>()));
+            }
+
 
             Dune::SolverCategory::Category category() const override
             {
