@@ -33,17 +33,22 @@
 #include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
 #include "problems/co2injectionproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(Co2InjectionPvsNiVcfvProblem, INHERITS_FROM(PvsModel, Co2InjectionBaseProblem));
-SET_TAG_PROP(Co2InjectionPvsNiVcfvProblem, SpatialDiscretizationSplice, VcfvDiscretization);
+// Create new type tags
+namespace TTag {
+struct Co2InjectionPvsNiVcfvProblem { using InheritsFrom = std::tuple<Co2InjectionBaseProblem, PvsModel>; };
+} // end namespace TTag
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::Co2InjectionPvsNiVcfvProblem> { using type = TTag::VcfvDiscretization; };
 
-SET_BOOL_PROP(Co2InjectionPvsNiVcfvProblem, EnableEnergy, true);
+template<class TypeTag>
+struct EnableEnergy<TypeTag, TTag::Co2InjectionPvsNiVcfvProblem> { static constexpr bool value = true; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(Co2InjectionPvsNiVcfvProblem) VcfvProblemTypeTag;
+    using VcfvProblemTypeTag = Opm::Properties::TTag::Co2InjectionPvsNiVcfvProblem;
     return Opm::start<VcfvProblemTypeTag>(argc, argv);
 }

@@ -35,39 +35,52 @@
 #include "problems/co2injectionflash.hh"
 #include "problems/co2injectionproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(Co2InjectionFlashNiEcfvProblem, INHERITS_FROM(FlashModel, Co2InjectionBaseProblem));
-SET_TAG_PROP(Co2InjectionFlashNiEcfvProblem, SpatialDiscretizationSplice, EcfvDiscretization);
+// Create new type tags
+namespace TTag {
+struct Co2InjectionFlashNiEcfvProblem { using InheritsFrom = std::tuple<Co2InjectionBaseProblem, FlashModel>; };
+} // end namespace TTag
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::Co2InjectionFlashNiEcfvProblem> { using type = TTag::EcfvDiscretization; };
 
-SET_BOOL_PROP(Co2InjectionFlashNiEcfvProblem, EnableEnergy, true);
+template<class TypeTag>
+struct EnableEnergy<TypeTag, TTag::Co2InjectionFlashNiEcfvProblem> { static constexpr bool value = true; };
 
 //! Use automatic differentiation to linearize the system of PDEs
-SET_TAG_PROP(Co2InjectionFlashNiEcfvProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::Co2InjectionFlashNiEcfvProblem> { using type = TTag::AutoDiffLocalLinearizer; };
 
 // use the CO2 injection problem adapted flash solver
-SET_TYPE_PROP(
-    Co2InjectionFlashNiEcfvProblem, FlashSolver,
-    Opm::Co2InjectionFlash<typename GET_PROP_TYPE(TypeTag, Scalar),
-                           typename GET_PROP_TYPE(TypeTag, FluidSystem)>);
+template<class TypeTag>
+struct FlashSolver<TypeTag, TTag::Co2InjectionFlashNiEcfvProblem>
+{ using type = Opm::Co2InjectionFlash<GetPropType<TypeTag, Properties::Scalar>,
+                                      GetPropType<TypeTag, Properties::FluidSystem>>; };
 
 // the flash model has serious problems with the numerical
 // precision. if quadruple precision math is available, we use it,
 // else we increase the tolerance of the Newton solver
 #if HAVE_QUAD
-SET_TYPE_PROP(Co2InjectionFlashNiEcfvProblem, Scalar, quad);
+template<class TypeTag>
+struct Scalar<TypeTag, TTag::Co2InjectionFlashNiEcfvProblem> { using type = quad; };
 
 // the default linear solver used for this problem (-> AMG) cannot be used with quadruple
 // precision scalars... (this seems to only apply to Dune >= 2.4)
-SET_TAG_PROP(Co2InjectionFlashNiEcfvProblem, LinearSolverSplice, ParallelBiCGStabLinearSolver);
+template<class TypeTag>
+struct LinearSolverSplice<TypeTag, TTag::Co2InjectionFlashNiEcfvProblem> { using type = TTag::ParallelBiCGStabLinearSolver; };
 #else
-SET_SCALAR_PROP(Co2InjectionFlashNiEcfvProblem, NewtonTolerance, 1e-5);
+template<class TypeTag>
+struct NewtonTolerance<TypeTag, TTag::Co2InjectionFlashNiEcfvProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-5;
+};
 #endif
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(Co2InjectionFlashNiEcfvProblem) EcfvProblemTypeTag;
+    using EcfvProblemTypeTag = Opm::Properties::TTag::Co2InjectionFlashNiEcfvProblem;
     return Opm::start<EcfvProblemTypeTag>(argc, argv);
 }

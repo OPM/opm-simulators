@@ -43,15 +43,15 @@ class IstlSparseMatrixAdapter
 {
 public:
     //! \brief Implementation of matrix
-    typedef Dune::BCRSMatrix<MatrixBlockType, AllocatorType> IstlMatrix;
+    using IstlMatrix = Dune::BCRSMatrix<MatrixBlockType, AllocatorType>;
 
     //! \brief block type forming the matrix entries
-    typedef typename IstlMatrix::block_type MatrixBlock;
+    using MatrixBlock = typename IstlMatrix::block_type;
     static_assert(std::is_same<MatrixBlock, MatrixBlockType>::value,
                   "IstlMatrix::block_type and MatrixBlockType must be identical");
 
     //! \brief type of scalar
-    typedef typename MatrixBlock::field_type Scalar;
+    using Scalar = typename MatrixBlock::field_type;
 
     /*!
      * \brief Constructor creating an empty matrix.

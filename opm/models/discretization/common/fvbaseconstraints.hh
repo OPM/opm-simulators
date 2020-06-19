@@ -42,9 +42,9 @@ namespace Opm {
  * must be constraint or none.)
  */
 template <class TypeTag>
-class FvBaseConstraints : public GET_PROP_TYPE(TypeTag, PrimaryVariables)
+class FvBaseConstraints : public GetPropType<TypeTag, Properties::PrimaryVariables>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) ParentType;
+    using ParentType = GetPropType<TypeTag, Properties::PrimaryVariables>;
 
 public:
     FvBaseConstraints()

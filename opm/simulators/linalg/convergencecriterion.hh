@@ -57,9 +57,9 @@ template <class Vector>
 class ConvergenceCriterion
 {
     //! \brief The real type of the field type (is the same if using real numbers, but differs for std::complex)
-    typedef typename Dune::FieldTraits<typename Vector::field_type>::real_type real_type;
+    using real_type = typename Dune::FieldTraits<typename Vector::field_type>::real_type;
 
-    typedef real_type Scalar;
+    using Scalar = real_type;
 
 public:
     /*!

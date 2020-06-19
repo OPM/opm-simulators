@@ -44,27 +44,27 @@ namespace Opm {
  *        compositional multi-phase primary variable switching model.
  */
 template <class TypeTag>
-class PvsLocalResidual : public GET_PROP_TYPE(TypeTag, DiscLocalResidual)
+class PvsLocalResidual : public GetPropType<TypeTag, Properties::DiscLocalResidual>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
-    typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) IntensiveQuantities;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
-    enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
-    enum { numComponents = GET_PROP_VALUE(TypeTag, NumComponents) };
-    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
+    enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
+    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { conti0EqIdx = Indices::conti0EqIdx };
 
-    enum { enableDiffusion = GET_PROP_VALUE(TypeTag, EnableDiffusion) };
-    typedef Opm::DiffusionModule<TypeTag, enableDiffusion> DiffusionModule;
+    enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
+    using DiffusionModule = Opm::DiffusionModule<TypeTag, enableDiffusion>;
 
-    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
-    typedef Opm::EnergyModule<TypeTag, enableEnergy> EnergyModule;
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
 
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
 
 public:
     /*!

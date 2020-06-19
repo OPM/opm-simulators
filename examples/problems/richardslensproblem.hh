@@ -51,74 +51,96 @@ class RichardsLensProblem;
 
 } // namespace Opm
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(RichardsLensProblem, INHERITS_FROM(Richards));
+// Create new type tags
+namespace TTag {
+struct RichardsLensProblem { using InheritsFrom = std::tuple<Richards>; };
+} // end namespace TTag
 
 // Use 2d YaspGrid
-SET_TYPE_PROP(RichardsLensProblem, Grid, Dune::YaspGrid<2>);
+template<class TypeTag>
+struct Grid<TypeTag, TTag::RichardsLensProblem> { using type = Dune::YaspGrid<2>; };
 
 // Set the physical problem to be solved
-SET_TYPE_PROP(RichardsLensProblem, Problem, Opm::RichardsLensProblem<TypeTag>);
+template<class TypeTag>
+struct Problem<TypeTag, TTag::RichardsLensProblem> { using type = Opm::RichardsLensProblem<TypeTag>; };
 
 // Set the wetting phase
-SET_PROP(RichardsLensProblem, WettingFluid)
+template<class TypeTag>
+struct WettingFluid<TypeTag, TTag::RichardsLensProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    typedef Opm::LiquidPhase<Scalar, Opm::SimpleH2O<Scalar> > type;
+    using type = Opm::LiquidPhase<Scalar, Opm::SimpleH2O<Scalar> >;
 };
 
 // Set the material Law
-SET_PROP(RichardsLensProblem, MaterialLaw)
+template<class TypeTag>
+struct MaterialLaw<TypeTag, TTag::RichardsLensProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     enum { wettingPhaseIdx = FluidSystem::wettingPhaseIdx };
     enum { nonWettingPhaseIdx = FluidSystem::nonWettingPhaseIdx };
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef Opm::TwoPhaseMaterialTraits<Scalar,
-                                        /*wettingPhaseIdx=*/FluidSystem::wettingPhaseIdx,
-                                        /*nonWettingPhaseIdx=*/FluidSystem::nonWettingPhaseIdx>
-        Traits;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Traits = Opm::TwoPhaseMaterialTraits<Scalar,
+                                               /*wettingPhaseIdx=*/FluidSystem::wettingPhaseIdx,
+                                               /*nonWettingPhaseIdx=*/FluidSystem::nonWettingPhaseIdx>;
 
     // define the material law which is parameterized by effective
     // saturations
-    typedef Opm::RegularizedVanGenuchten<Traits> EffectiveLaw;
+    using EffectiveLaw = Opm::RegularizedVanGenuchten<Traits>;
 
 public:
     // define the material law parameterized by absolute saturations
-    typedef Opm::EffToAbsLaw<EffectiveLaw> type;
+    using type = Opm::EffToAbsLaw<EffectiveLaw>;
 };
 
 // Enable gravitational acceleration
-SET_BOOL_PROP(RichardsLensProblem, EnableGravity, true);
+template<class TypeTag>
+struct EnableGravity<TypeTag, TTag::RichardsLensProblem> { static constexpr bool value = true; };
 
 // Use central differences to approximate the Jacobian matrix
-SET_INT_PROP(RichardsLensProblem, NumericDifferenceMethod, 0);
+template<class TypeTag>
+struct NumericDifferenceMethod<TypeTag, TTag::RichardsLensProblem> { static constexpr int value = 0; };
 
 // Set the maximum number of newton iterations of a time step
-SET_INT_PROP(RichardsLensProblem, NewtonMaxIterations, 28);
+template<class TypeTag>
+struct NewtonMaxIterations<TypeTag, TTag::RichardsLensProblem> { static constexpr int value = 28; };
 
 // Set the "desireable" number of newton iterations of a time step
-SET_INT_PROP(RichardsLensProblem, NewtonTargetIterations, 18);
+template<class TypeTag>
+struct NewtonTargetIterations<TypeTag, TTag::RichardsLensProblem> { static constexpr int value = 18; };
 
 // Do not write the intermediate results of the newton method
-SET_BOOL_PROP(RichardsLensProblem, NewtonWriteConvergence, false);
+template<class TypeTag>
+struct NewtonWriteConvergence<TypeTag, TTag::RichardsLensProblem> { static constexpr bool value = false; };
 
 // The default for the end time of the simulation
-SET_SCALAR_PROP(RichardsLensProblem, EndTime, 3000);
+template<class TypeTag>
+struct EndTime<TypeTag, TTag::RichardsLensProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 3000;
+};
 
 // The default for the initial time step size of the simulation
-SET_SCALAR_PROP(RichardsLensProblem, InitialTimeStepSize, 100);
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, TTag::RichardsLensProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 100;
+};
 
 // The default DGF file to load
-SET_STRING_PROP(RichardsLensProblem, GridFile, "./data/richardslens_24x16.dgf");
+template<class TypeTag>
+struct GridFile<TypeTag, TTag::RichardsLensProblem> { static constexpr auto value = "./data/richardslens_24x16.dgf"; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -139,22 +161,22 @@ namespace Opm {
  * instead of a \c DNAPL infiltrates from the top.
  */
 template <class TypeTag>
-class RichardsLensProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
+class RichardsLensProblem : public GetPropType<TypeTag, Properties::BaseProblem>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
+    using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, Stencil) Stencil;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using BoundaryRateVector = GetPropType<TypeTag, Properties::BoundaryRateVector>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using Stencil = GetPropType<TypeTag, Properties::Stencil>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Model = GetPropType<TypeTag, Properties::Model>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
     enum {
         // copy some indices for convenience
         pressureWIdx = Indices::pressureWIdx,
@@ -168,14 +190,14 @@ class RichardsLensProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     };
 
     // get the material law from the property system
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
     //! The parameters of the material law to be used
-    typedef typename MaterialLaw::Params MaterialLawParams;
+    using MaterialLawParams = typename MaterialLaw::Params;
 
-    typedef typename GridView::ctype CoordScalar;
-    typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
-    typedef Dune::FieldVector<Scalar, numPhases> PhaseVector;
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
+    using CoordScalar = typename GridView::ctype;
+    using GlobalPosition = Dune::FieldVector<CoordScalar, dimWorld>;
+    using PhaseVector = Dune::FieldVector<Scalar, numPhases>;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
 public:
     /*!

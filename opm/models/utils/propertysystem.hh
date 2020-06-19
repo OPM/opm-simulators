@@ -254,18 +254,6 @@ void printValues(std::ostream& os = std::cout)
 }
 }
 
-/*!
- * \ingroup Properties
- * \brief Indicates that property definitions follow
- */
-#define BEGIN_PROPERTIES namespace Opm { namespace Properties {
-
-/*!
- * \ingroup Properties
- * \brief Indicates that all properties have been specified (for now)
- */
-#define END_PROPERTIES }}
-
 } // end namespace Opm
 
 // remove this after release 2020.10 to disable macros per default

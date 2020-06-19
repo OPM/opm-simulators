@@ -41,19 +41,19 @@ namespace Opm {
 template <class TypeTag>
 class DiscreteFractureLocalResidual : public ImmiscibleLocalResidual<TypeTag>
 {
-    typedef ImmiscibleLocalResidual<TypeTag> ParentType;
+    using ParentType = ImmiscibleLocalResidual<TypeTag>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
     enum { conti0EqIdx = Indices::conti0EqIdx };
-    enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
-    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
-    typedef Opm::EnergyModule<TypeTag, enableEnergy> EnergyModule;
+    using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
 
 public:
     /*!

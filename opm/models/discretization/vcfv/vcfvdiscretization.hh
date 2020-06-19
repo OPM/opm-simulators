@@ -50,75 +50,85 @@ class VcfvDiscretization;
 
 } // namespace Opm
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 //! Set the stencil
-SET_PROP(VcfvDiscretization, Stencil)
+template<class TypeTag>
+struct Stencil<TypeTag, TTag::VcfvDiscretization>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GridView::ctype CoordScalar;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using CoordScalar = typename GridView::ctype;
 
 public:
-    typedef Opm::VcfvStencil<CoordScalar, GridView> type;
+    using type = Opm::VcfvStencil<CoordScalar, GridView>;
 };
 
 //! Mapper for the degrees of freedoms.
-SET_TYPE_PROP(VcfvDiscretization, DofMapper, typename GET_PROP_TYPE(TypeTag, VertexMapper));
+template<class TypeTag>
+struct DofMapper<TypeTag, TTag::VcfvDiscretization> { using type = GetPropType<TypeTag, Properties::VertexMapper>; };
 
 //! The concrete class which manages the spatial discretization
-SET_TYPE_PROP(VcfvDiscretization, Discretization, Opm::VcfvDiscretization<TypeTag>);
+template<class TypeTag>
+struct Discretization<TypeTag, TTag::VcfvDiscretization> { using type = Opm::VcfvDiscretization<TypeTag>; };
 
 //! The base class for the output modules (decides whether to write
 //! element or vertex based fields)
-SET_TYPE_PROP(VcfvDiscretization, DiscBaseOutputModule,
-              Opm::VcfvBaseOutputModule<TypeTag>);
+template<class TypeTag>
+struct DiscBaseOutputModule<TypeTag, TTag::VcfvDiscretization>
+{ using type = Opm::VcfvBaseOutputModule<TypeTag>; };
 
 //! Calculates the gradient of any quantity given the index of a flux approximation point
-SET_TYPE_PROP(VcfvDiscretization, GradientCalculator,
-              Opm::P1FeGradientCalculator<TypeTag>);
+template<class TypeTag>
+struct GradientCalculator<TypeTag, TTag::VcfvDiscretization>
+{ using type = Opm::P1FeGradientCalculator<TypeTag>; };
 
 //! The class to create grid communication handles
-SET_TYPE_PROP(VcfvDiscretization, GridCommHandleFactory,
-              Opm::VcfvGridCommHandleFactory<TypeTag>);
+template<class TypeTag>
+struct GridCommHandleFactory<TypeTag, TTag::VcfvDiscretization>
+{ using type = Opm::VcfvGridCommHandleFactory<TypeTag>; };
 
 //! Use two-point gradients by default for the vertex centered finite volume scheme.
-SET_BOOL_PROP(VcfvDiscretization, UseP1FiniteElementGradients, false);
+template<class TypeTag>
+struct UseP1FiniteElementGradients<TypeTag, TTag::VcfvDiscretization> { static constexpr bool value = false; };
 
 #if HAVE_DUNE_FEM
 //! Set the DiscreteFunctionSpace
-SET_PROP(VcfvDiscretization, DiscreteFunctionSpace)
+template<class TypeTag>
+struct DiscreteFunctionSpace<TypeTag, TTag::VcfvDiscretization>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar)   Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, GridPart) GridPart;
-    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
-    typedef Dune::Fem::FunctionSpace<typename GridPart::GridType::ctype,
-                                     Scalar,
-                                     GridPart::GridType::dimensionworld,
-                                     numEq> FunctionSpace;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>  ;
+    using GridPart = GetPropType<TypeTag, Properties::GridPart>;
+    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
+    using FunctionSpace = Dune::Fem::FunctionSpace<typename GridPart::GridType::ctype,
+                                                   Scalar,
+                                                   GridPart::GridType::dimensionworld,
+                                                   numEq>;
 public:
     // Lagrange discrete function space with unknowns at the cell vertices
-    typedef Dune::Fem::LagrangeDiscreteFunctionSpace< FunctionSpace, GridPart, 1 > type;
+    using type = Dune::Fem::LagrangeDiscreteFunctionSpace< FunctionSpace, GridPart, 1 >;
 };
 #endif
 
 //! Set the border list creator for vertices
-SET_PROP(VcfvDiscretization, BorderListCreator)
+template<class TypeTag>
+struct BorderListCreator<TypeTag, TTag::VcfvDiscretization>
 { private:
-    typedef typename GET_PROP_TYPE(TypeTag, VertexMapper) VertexMapper;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    using VertexMapper = GetPropType<TypeTag, Properties::VertexMapper>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
 public:
-    typedef Opm::Linear::VertexBorderListFromGrid<GridView, VertexMapper> type;
+    using type = Opm::Linear::VertexBorderListFromGrid<GridView, VertexMapper>;
 };
 
 //! For the vertex centered finite volume method, ghost and overlap elements must _not_
 //! be assembled to avoid accounting twice for the fluxes over the process boundary faces
 //! of the local process' grid partition
-SET_BOOL_PROP(VcfvDiscretization, LinearizeNonLocalElements, false);
+template<class TypeTag>
+struct LinearizeNonLocalElements<TypeTag, TTag::VcfvDiscretization> { static constexpr bool value = false; };
 
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -130,11 +140,11 @@ namespace Opm {
 template<class TypeTag>
 class VcfvDiscretization : public FvBaseDiscretization<TypeTag>
 {
-    typedef FvBaseDiscretization<TypeTag> ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Implementation;
-    typedef typename GET_PROP_TYPE(TypeTag, DofMapper) DofMapper;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+    using ParentType = FvBaseDiscretization<TypeTag>;
+    using Implementation = GetPropType<TypeTag, Properties::Model>;
+    using DofMapper = GetPropType<TypeTag, Properties::DofMapper>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
     enum { dim = GridView::dimension };
 

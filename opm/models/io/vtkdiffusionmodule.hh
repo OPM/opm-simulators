@@ -37,23 +37,33 @@
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
+
+namespace TTag {
 
 // create new type tag for the VTK output of the quantities for molecular
 // diffusion
-NEW_TYPE_TAG(VtkDiffusion);
+struct VtkDiffusion {};
+
+} // namespace TTag
 
 // create the property tags needed for the diffusion module
-NEW_PROP_TAG(VtkWriteTortuosities);
-NEW_PROP_TAG(VtkWriteDiffusionCoefficients);
-NEW_PROP_TAG(VtkWriteEffectiveDiffusionCoefficients);
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteTortuosities { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteDiffusionCoefficients { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteEffectiveDiffusionCoefficients { using type = UndefinedProperty; };
 
 // set default values for what quantities to output
-SET_BOOL_PROP(VtkDiffusion, VtkWriteTortuosities, false);
-SET_BOOL_PROP(VtkDiffusion, VtkWriteDiffusionCoefficients, false);
-SET_BOOL_PROP(VtkDiffusion, VtkWriteEffectiveDiffusionCoefficients, false);
+template<class TypeTag>
+struct VtkWriteTortuosities<TypeTag, TTag::VtkDiffusion> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteDiffusionCoefficients<TypeTag, TTag::VtkDiffusion> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteEffectiveDiffusionCoefficients<TypeTag, TTag::VtkDiffusion> { static constexpr bool value = false; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!
@@ -70,23 +80,23 @@ namespace Opm {
 template <class TypeTag>
 class VtkDiffusionModule : public BaseOutputModule<TypeTag>
 {
-    typedef BaseOutputModule<TypeTag> ParentType;
+    using ParentType = BaseOutputModule<TypeTag>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
 
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
 
-    typedef typename ParentType::PhaseComponentBuffer PhaseComponentBuffer;
-    typedef typename ParentType::PhaseBuffer PhaseBuffer;
+    using PhaseComponentBuffer = typename ParentType::PhaseComponentBuffer;
+    using PhaseBuffer = typename ParentType::PhaseBuffer;
 
-    static const int vtkFormat = GET_PROP_VALUE(TypeTag, VtkOutputFormat);
-    typedef Opm::VtkMultiWriter<GridView, vtkFormat> VtkMultiWriter;
+    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    using VtkMultiWriter = Opm::VtkMultiWriter<GridView, vtkFormat>;
 
-    enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
-    enum { numComponents = GET_PROP_VALUE(TypeTag, NumComponents) };
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
+    enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
 
 public:
     VtkDiffusionModule(const Simulator& simulator)

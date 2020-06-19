@@ -47,9 +47,9 @@ class BlackOilDarcyExtensiveQuantities;
 template <class TypeTag>
 struct BlackOilDarcyFluxModule
 {
-    typedef DarcyIntensiveQuantities<TypeTag> FluxIntensiveQuantities;
-    typedef BlackOilDarcyExtensiveQuantities<TypeTag> FluxExtensiveQuantities;
-    typedef DarcyBaseProblem<TypeTag> FluxBaseProblem;
+    using FluxIntensiveQuantities = DarcyIntensiveQuantities<TypeTag>;
+    using FluxExtensiveQuantities = BlackOilDarcyExtensiveQuantities<TypeTag>;
+    using FluxBaseProblem = DarcyBaseProblem<TypeTag>;
 
     /*!
      * \brief Register all run-time parameters for the flux module.
@@ -70,9 +70,9 @@ struct BlackOilDarcyFluxModule
 template <class TypeTag>
 class BlackOilDarcyExtensiveQuantities : public DarcyExtensiveQuantities<TypeTag>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, ExtensiveQuantities) Implementation;
+    using Implementation = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
 public:
     /*!

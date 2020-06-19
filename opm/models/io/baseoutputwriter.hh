@@ -43,12 +43,12 @@ namespace Opm {
 class BaseOutputWriter
 {
 public:
-    typedef double Scalar;
-    typedef Dune::DynamicVector<double> Vector;
-    typedef Dune::DynamicMatrix<double> Tensor;
-    typedef std::vector<Scalar> ScalarBuffer;
-    typedef std::vector<Vector> VectorBuffer;
-    typedef std::vector<Tensor> TensorBuffer;
+    using Scalar = double;
+    using Vector = Dune::DynamicVector<double>;
+    using Tensor = Dune::DynamicMatrix<double>;
+    using ScalarBuffer = std::vector<Scalar>;
+    using VectorBuffer = std::vector<Vector>;
+    using TensorBuffer = std::vector<Tensor>;
 
     BaseOutputWriter()
     {}

@@ -32,15 +32,19 @@
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 #include "problems/fingerproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(FingerProblemEcfv, INHERITS_FROM(ImmiscibleTwoPhaseModel, FingerBaseProblem));
-SET_TAG_PROP(FingerProblemEcfv, SpatialDiscretizationSplice, EcfvDiscretization);
+// Create new type tags
+namespace TTag {
+struct FingerProblemEcfv { using InheritsFrom = std::tuple<FingerBaseProblem, ImmiscibleTwoPhaseModel>; };
+} // end namespace TTag
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::FingerProblemEcfv> { using type = TTag::EcfvDiscretization; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(FingerProblemEcfv) ProblemTypeTag;
+    using ProblemTypeTag = Opm::Properties::TTag::FingerProblemEcfv;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

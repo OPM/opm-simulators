@@ -45,12 +45,12 @@
 
 #include <sys/stat.h>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 template <class TypeTag, class MyTypeTag>
 struct NewtonMethod;
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -67,41 +67,41 @@ template<class TypeTag>
 class FvBaseProblem
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Problem) Implementation;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    using Implementation = GetPropType<TypeTag, Properties::Problem>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
 
-    static const int vtkOutputFormat = GET_PROP_VALUE(TypeTag, VtkOutputFormat);
-    typedef Opm::VtkMultiWriter<GridView, vtkOutputFormat> VtkMultiWriter;
+    static const int vtkOutputFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    using VtkMultiWriter = Opm::VtkMultiWriter<GridView, vtkOutputFormat>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) ThreadManager;
-    typedef typename GET_PROP_TYPE(TypeTag, NewtonMethod) NewtonMethod;
+    using Model = GetPropType<TypeTag, Properties::Model>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;
+    using NewtonMethod = GetPropType<TypeTag, Properties::NewtonMethod>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, VertexMapper) VertexMapper;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementMapper) ElementMapper;
+    using VertexMapper = GetPropType<TypeTag, Properties::VertexMapper>;
+    using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, Constraints) Constraints;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using BoundaryRateVector = GetPropType<TypeTag, Properties::BoundaryRateVector>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using Constraints = GetPropType<TypeTag, Properties::Constraints>;
 
     enum {
         dim = GridView::dimension,
         dimWorld = GridView::dimensionworld
     };
 
-    typedef typename GridView::template Codim<0>::Entity Element;
-    typedef typename GridView::template Codim<dim>::Entity Vertex;
-    typedef typename GridView::template Codim<dim>::Iterator VertexIterator;
+    using Element = typename GridView::template Codim<0>::Entity;
+    using Vertex = typename GridView::template Codim<dim>::Entity;
+    using VertexIterator = typename GridView::template Codim<dim>::Iterator;
 
-    typedef typename GridView::Grid::ctype CoordScalar;
-    typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
+    using CoordScalar = typename GridView::Grid::ctype;
+    using GlobalPosition = Dune::FieldVector<CoordScalar, dimWorld>;
 
 public:
     // the default restriction and prolongation for adaptation is simply an empty one
-    typedef EmptyRestrictProlong  RestrictProlongOperator;
+    using RestrictProlongOperator = EmptyRestrictProlong ;
 
 private:
     // copying a problem is not a good idea

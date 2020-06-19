@@ -52,59 +52,77 @@ template <class TypeTag>
 class InfiltrationProblem;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(InfiltrationBaseProblem);
+namespace TTag {
+struct InfiltrationBaseProblem {};
+}
 
 // Set the grid type
-SET_TYPE_PROP(InfiltrationBaseProblem, Grid, Dune::YaspGrid<2>);
+template<class TypeTag>
+struct Grid<TypeTag, TTag::InfiltrationBaseProblem> { using type = Dune::YaspGrid<2>; };
 
 // Set the problem property
-SET_TYPE_PROP(InfiltrationBaseProblem, Problem,
-              Opm::InfiltrationProblem<TypeTag>);
+template<class TypeTag>
+struct Problem<TypeTag, TTag::InfiltrationBaseProblem> { using type = Opm::InfiltrationProblem<TypeTag>; };
 
 // Set the fluid system
-SET_TYPE_PROP(
-    InfiltrationBaseProblem, FluidSystem,
-    Opm::H2OAirMesityleneFluidSystem<typename GET_PROP_TYPE(TypeTag, Scalar)>);
+template<class TypeTag>
+struct FluidSystem<TypeTag, TTag::InfiltrationBaseProblem>
+{ using type = Opm::H2OAirMesityleneFluidSystem<GetPropType<TypeTag, Properties::Scalar>>; };
 
 // Enable gravity?
-SET_BOOL_PROP(InfiltrationBaseProblem, EnableGravity, true);
+template<class TypeTag>
+struct EnableGravity<TypeTag, TTag::InfiltrationBaseProblem> { static constexpr bool value = true; };
 
 // Write newton convergence?
-SET_BOOL_PROP(InfiltrationBaseProblem, NewtonWriteConvergence, false);
+template<class TypeTag>
+struct NewtonWriteConvergence<TypeTag, TTag::InfiltrationBaseProblem> { static constexpr bool value = false; };
 
 // -1 backward differences, 0: central differences, +1: forward differences
-SET_INT_PROP(InfiltrationBaseProblem, NumericDifferenceMethod, 1);
+template<class TypeTag>
+struct NumericDifferenceMethod<TypeTag, TTag::InfiltrationBaseProblem> { static constexpr int value = 1; };
 
 // Set the material Law
-SET_PROP(InfiltrationBaseProblem, MaterialLaw)
+template<class TypeTag>
+struct MaterialLaw<TypeTag, TTag::InfiltrationBaseProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
-    typedef Opm::ThreePhaseMaterialTraits<
+    using Traits= Opm::ThreePhaseMaterialTraits<
         Scalar,
         /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
         /*nonWettingPhaseIdx=*/FluidSystem::naplPhaseIdx,
-        /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx> Traits;
+        /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx>;
 
 public:
-    typedef Opm::ThreePhaseParkerVanGenuchten<Traits> type;
+    using type = Opm::ThreePhaseParkerVanGenuchten<Traits>;
 };
 
 // The default for the end time of the simulation
-SET_SCALAR_PROP(InfiltrationBaseProblem, EndTime, 6e3);
+template<class TypeTag>
+struct EndTime<TypeTag, TTag::InfiltrationBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 6e3;
+};
 
 // The default for the initial time step size of the simulation
-SET_SCALAR_PROP(InfiltrationBaseProblem, InitialTimeStepSize, 60);
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, TTag::InfiltrationBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 60;
+};
 
 // The default DGF file to load
-SET_STRING_PROP(InfiltrationBaseProblem, GridFile,
-                "./data/infiltration_50x3.dgf");
+template<class TypeTag>
+struct GridFile<TypeTag, TTag::InfiltrationBaseProblem>
+{ static constexpr auto value = "./data/infiltration_50x3.dgf"; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!
@@ -130,24 +148,24 @@ namespace Opm {
  * except for the small infiltration zone in the upper left part.
  */
 template <class TypeTag>
-class InfiltrationProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
+class InfiltrationProblem : public GetPropType<TypeTag, Properties::BaseProblem>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
+    using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using BoundaryRateVector = GetPropType<TypeTag, Properties::BoundaryRateVector>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Model = GetPropType<TypeTag, Properties::Model>;
 
     // copy some indices for convenience
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
     enum {
         // equation indices
         conti0EqIdx = Indices::conti0EqIdx,
@@ -170,9 +188,9 @@ class InfiltrationProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
         dimWorld = GridView::dimensionworld
     };
 
-    typedef typename GridView::ctype CoordScalar;
-    typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
+    using CoordScalar = typename GridView::ctype;
+    using GlobalPosition = Dune::FieldVector<CoordScalar, dimWorld>;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
 public:
     /*!
@@ -446,7 +464,7 @@ private:
                            1 - fs.moleFraction(gasPhaseIdx, H2OIdx));
         fs.setMoleFraction(gasPhaseIdx, NAPLIdx, 0);
 
-        typedef Opm::ComputeFromReferencePhase<Scalar, FluidSystem> CFRP;
+        using CFRP = Opm::ComputeFromReferencePhase<Scalar, FluidSystem>;
         typename FluidSystem::template ParameterCache<Scalar> paramCache;
         CFRP::solve(fs, paramCache, gasPhaseIdx,
                     /*setViscosity=*/true,

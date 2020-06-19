@@ -47,12 +47,12 @@
 
 #include <cstdio>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 template <class TypeTag, class MyTypeTag>
 struct FluidSystem;
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -72,33 +72,33 @@ namespace Opm {
 template<class TypeTag>
 class BaseOutputModule
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, DiscBaseOutputModule) DiscBaseOutputModule;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Model = GetPropType<TypeTag, Properties::Model>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using DiscBaseOutputModule = GetPropType<TypeTag, Properties::DiscBaseOutputModule>;
 
-    enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
-    enum { numComponents = GET_PROP_VALUE(TypeTag, NumComponents) };
-    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
+    enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
+    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { dim = GridView::dimension };
     enum { dimWorld = GridView::dimensionworld };
 
-    typedef BaseOutputWriter::Tensor Tensor;
+    using Tensor = BaseOutputWriter::Tensor;
 
 public:
-    typedef BaseOutputWriter::ScalarBuffer ScalarBuffer;
-    typedef BaseOutputWriter::VectorBuffer VectorBuffer;
-    typedef BaseOutputWriter::TensorBuffer TensorBuffer;
+    using ScalarBuffer = BaseOutputWriter::ScalarBuffer;
+    using VectorBuffer = BaseOutputWriter::VectorBuffer;
+    using TensorBuffer = BaseOutputWriter::TensorBuffer;
 
-    typedef std::array<ScalarBuffer, numEq> EqBuffer;
-    typedef std::array<ScalarBuffer, numPhases> PhaseBuffer;
-    typedef std::array<ScalarBuffer, numComponents> ComponentBuffer;
-    typedef std::array<std::array<ScalarBuffer, numComponents>, numPhases> PhaseComponentBuffer;
+    using EqBuffer = std::array<ScalarBuffer, numEq>;
+    using PhaseBuffer = std::array<ScalarBuffer, numPhases>;
+    using ComponentBuffer = std::array<ScalarBuffer, numComponents>;
+    using PhaseComponentBuffer = std::array<std::array<ScalarBuffer, numComponents>, numPhases>;
 
-    typedef std::array<VectorBuffer, numPhases> PhaseVectorBuffer;
+    using PhaseVectorBuffer = std::array<VectorBuffer, numPhases>;
 
     BaseOutputModule(const Simulator& simulator)
         : simulator_(simulator)

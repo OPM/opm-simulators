@@ -33,22 +33,23 @@
 #include <dune/grid/geometrygrid.hh>
 #include <dune/grid/io/file/dgfparser/dgfgeogrid.hh>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // Use Dune-grid's GeometryGrid< YaspGrid >
-SET_PROP(LensProblemEcfvAd, Grid )
+template<class TypeTag>
+struct Grid <TypeTag, TTag::LensProblemEcfvAd>
 {
   template< class ctype, unsigned int dim, unsigned int dimworld >
   class IdentityCoordFct
     : public Dune::AnalyticalCoordFunction
       < ctype, dim, dimworld, IdentityCoordFct< ctype, dim, dimworld > >
   {
-    typedef IdentityCoordFct< ctype, dim, dimworld > This;
-    typedef Dune::AnalyticalCoordFunction< ctype, dim, dimworld, This > Base;
+    using This = IdentityCoordFct< ctype, dim, dimworld >;
+    using Base = Dune::AnalyticalCoordFunction< ctype, dim, dimworld, This >;
 
   public:
-    typedef typename Base :: DomainVector DomainVector;
-    typedef typename Base :: RangeVector  RangeVector;
+    using DomainVector = typename Base :: DomainVector;
+    using RangeVector = typename Base :: RangeVector ;
 
     template< typename... Args >
     IdentityCoordFct( Args&... )
@@ -70,22 +71,21 @@ SET_PROP(LensProblemEcfvAd, Grid )
 
   };
 
-  typedef Dune::YaspGrid< 2 > MyYaspGrid;
+  using MyYaspGrid = Dune::YaspGrid< 2 >;
 
 public:
-  //typedef MyYaspGrid type;
-  typedef Dune::GeometryGrid< MyYaspGrid,
-                              IdentityCoordFct< typename MyYaspGrid::ctype,
-                                                MyYaspGrid::dimension,
-                                                MyYaspGrid::dimensionworld+1> >  type;
+  using type = Dune::GeometryGrid< MyYaspGrid,
+                                   IdentityCoordFct< typename MyYaspGrid::ctype,
+                                                     MyYaspGrid::dimension,
+                                                     MyYaspGrid::dimensionworld+1> >;
 };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 #include <opm/models/utils/start.hh>
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(LensProblemEcfvAd) ProblemTypeTag;
+    using ProblemTypeTag = Opm::Properties::TTag::LensProblemEcfvAd;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

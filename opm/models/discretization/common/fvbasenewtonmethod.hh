@@ -42,23 +42,32 @@ template <class TypeTag>
 class FvBaseNewtonConvergenceWriter;
 } // namespace Opm
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 //! create a type tag for the Newton method of the finite-volume discretization
-NEW_TYPE_TAG(FvBaseNewtonMethod, INHERITS_FROM(NewtonMethod));
+// Create new type tags
+namespace TTag {
+struct FvBaseNewtonMethod { using InheritsFrom = std::tuple<NewtonMethod>; };
+} // end namespace TTag
 
 //! The discretization specific part of he implementing the Newton algorithm
-NEW_PROP_TAG(DiscNewtonMethod);
+template<class TypeTag, class MyTypeTag>
+struct DiscNewtonMethod { using type = UndefinedProperty; };
 
 // set default values
-SET_TYPE_PROP(FvBaseNewtonMethod, DiscNewtonMethod,
-              Opm::FvBaseNewtonMethod<TypeTag>);
-SET_TYPE_PROP(FvBaseNewtonMethod, NewtonMethod,
-              typename GET_PROP_TYPE(TypeTag, DiscNewtonMethod));
-SET_TYPE_PROP(FvBaseNewtonMethod, NewtonConvergenceWriter,
-              Opm::FvBaseNewtonConvergenceWriter<TypeTag>);
+template<class TypeTag>
+struct DiscNewtonMethod<TypeTag, TTag::FvBaseNewtonMethod>
+{ using type = Opm::FvBaseNewtonMethod<TypeTag>; };
 
-END_PROPERTIES
+template<class TypeTag>
+struct NewtonMethod<TypeTag, TTag::FvBaseNewtonMethod>
+{ using type = GetPropType<TypeTag, Properties::DiscNewtonMethod>; };
+
+template<class TypeTag>
+struct NewtonConvergenceWriter<TypeTag, TTag::FvBaseNewtonMethod>
+{ using type = Opm::FvBaseNewtonConvergenceWriter<TypeTag>; };
+
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -73,18 +82,18 @@ namespace Opm {
 template <class TypeTag>
 class FvBaseNewtonMethod : public NewtonMethod<TypeTag>
 {
-    typedef Opm::NewtonMethod<TypeTag> ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, NewtonMethod) Implementation;
+    using ParentType = Opm::NewtonMethod<TypeTag>;
+    using Implementation = GetPropType<TypeTag, Properties::NewtonMethod>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
-    typedef typename GET_PROP_TYPE(TypeTag, Linearizer) Linearizer;
-    typedef typename GET_PROP_TYPE(TypeTag, NewtonMethod) NewtonMethod;
-    typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) GlobalEqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, SolutionVector) SolutionVector;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Model = GetPropType<TypeTag, Properties::Model>;
+    using Linearizer = GetPropType<TypeTag, Properties::Linearizer>;
+    using NewtonMethod = GetPropType<TypeTag, Properties::NewtonMethod>;
+    using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
+    using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
 
 
 public:

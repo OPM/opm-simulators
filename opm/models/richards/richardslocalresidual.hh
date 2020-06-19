@@ -39,19 +39,19 @@ namespace Opm {
  * \brief Element-wise calculation of the residual for the Richards model.
  */
 template <class TypeTag>
-class RichardsLocalResidual : public GET_PROP_TYPE(TypeTag, DiscLocalResidual)
+class RichardsLocalResidual : public GetPropType<TypeTag, Properties::DiscLocalResidual>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) IntensiveQuantities;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
     enum { contiEqIdx = Indices::contiEqIdx };
-    enum { liquidPhaseIdx = GET_PROP_VALUE(TypeTag, LiquidPhaseIndex) };
-    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
+    enum { liquidPhaseIdx = getPropValue<TypeTag, Properties::LiquidPhaseIndex>() };
+    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
+    using Toolbox = Opm::MathToolbox<Evaluation>;
 
 public:
     /*!

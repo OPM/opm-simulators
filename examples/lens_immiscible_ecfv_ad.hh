@@ -33,19 +33,25 @@
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 #include "problems/lensproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(LensProblemEcfvAd, INHERITS_FROM(ImmiscibleTwoPhaseModel, LensBaseProblem));
+// Create new type tags
+namespace TTag {
+struct LensProblemEcfvAd { using InheritsFrom = std::tuple<LensBaseProblem, ImmiscibleTwoPhaseModel>; };
+} // end namespace TTag
 
 // use the element centered finite volume spatial discretization
-SET_TAG_PROP(LensProblemEcfvAd, SpatialDiscretizationSplice, EcfvDiscretization);
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::LensProblemEcfvAd> { using type = TTag::EcfvDiscretization; };
 
 // use automatic differentiation for this simulator
-SET_TAG_PROP(LensProblemEcfvAd, LocalLinearizerSplice, AutoDiffLocalLinearizer);
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::LensProblemEcfvAd> { using type = TTag::AutoDiffLocalLinearizer; };
 
 // this problem works fine if the linear solver uses single precision scalars
-SET_TYPE_PROP(LensProblemEcfvAd, LinearSolverScalar, float);
+template<class TypeTag>
+struct LinearSolverScalar<TypeTag, TTag::LensProblemEcfvAd> { using type = float; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 #endif // EWOMS_LENS_IMMISCIBLE_ECFV_AD_HH

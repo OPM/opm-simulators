@@ -47,9 +47,9 @@ namespace Opm {
 template <class GridView, class Stencil, class Data, class DofMapper>
 class PffGridVector
 {
-    typedef typename GridView::template Codim<0>::Entity Element;
+    using Element = typename GridView::template Codim<0>::Entity;
 
-    typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView> ElementMapper;
+    using ElementMapper = Dune::MultipleCodimMultipleGeomTypeMapper<GridView>;
 
 public:
     PffGridVector(const GridView& gridView, const DofMapper& dofMapper)

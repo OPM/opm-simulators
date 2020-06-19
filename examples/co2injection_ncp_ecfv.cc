@@ -33,15 +33,19 @@
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 #include "problems/co2injectionproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(Co2InjectionNcpEcfvProblem, INHERITS_FROM(NcpModel, Co2InjectionBaseProblem));
-SET_TAG_PROP(Co2InjectionNcpEcfvProblem, SpatialDiscretizationSplice, EcfvDiscretization);
+// Create new type tags
+namespace TTag {
+struct Co2InjectionNcpEcfvProblem { using InheritsFrom = std::tuple<Co2InjectionBaseProblem, NcpModel>; };
+} // end namespace TTag
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::Co2InjectionNcpEcfvProblem> { using type = TTag::EcfvDiscretization; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(Co2InjectionNcpEcfvProblem) EcfvProblemTypeTag;
+    using EcfvProblemTypeTag = Opm::Properties::TTag::Co2InjectionNcpEcfvProblem;
     return Opm::start<EcfvProblemTypeTag>(argc, argv);
 }

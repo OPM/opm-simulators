@@ -48,71 +48,80 @@ template <class TypeTag>
 class EcfvDiscretization;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 //! Set the stencil
-SET_PROP(EcfvDiscretization, Stencil)
+template<class TypeTag>
+struct Stencil<TypeTag, TTag::EcfvDiscretization>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
 
 public:
-    typedef Opm::EcfvStencil<Scalar, GridView> type;
+    using type = Opm::EcfvStencil<Scalar, GridView>;
 };
 
 //! Mapper for the degrees of freedoms.
-SET_TYPE_PROP(EcfvDiscretization, DofMapper, typename GET_PROP_TYPE(TypeTag, ElementMapper));
+template<class TypeTag>
+struct DofMapper<TypeTag, TTag::EcfvDiscretization> { using type = GetPropType<TypeTag, Properties::ElementMapper>; };
 
 //! The concrete class which manages the spatial discretization
-SET_TYPE_PROP(EcfvDiscretization, Discretization, Opm::EcfvDiscretization<TypeTag>);
+template<class TypeTag>
+struct Discretization<TypeTag, TTag::EcfvDiscretization> { using type = Opm::EcfvDiscretization<TypeTag>; };
 
 //! The base class for the output modules (decides whether to write
 //! element or vertex based fields)
-SET_TYPE_PROP(EcfvDiscretization, DiscBaseOutputModule,
-              Opm::EcfvBaseOutputModule<TypeTag>);
+template<class TypeTag>
+struct DiscBaseOutputModule<TypeTag, TTag::EcfvDiscretization>
+{ using type = Opm::EcfvBaseOutputModule<TypeTag>; };
 
 //! The class to create grid communication handles
-SET_TYPE_PROP(EcfvDiscretization, GridCommHandleFactory,
-              Opm::EcfvGridCommHandleFactory<TypeTag>);
+template<class TypeTag>
+struct GridCommHandleFactory<TypeTag, TTag::EcfvDiscretization>
+{ using type = Opm::EcfvGridCommHandleFactory<TypeTag>; };
 
 #if HAVE_DUNE_FEM
 //! Set the DiscreteFunctionSpace
-SET_PROP(EcfvDiscretization, DiscreteFunctionSpace)
+template<class TypeTag>
+struct DiscreteFunctionSpace<TypeTag, TTag::EcfvDiscretization>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar)   Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, GridPart) GridPart;
-    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
-    typedef Dune::Fem::FunctionSpace<typename GridPart::GridType::ctype,
-                                     Scalar,
-                                     GridPart::GridType::dimensionworld,
-                                     numEq> FunctionSpace;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>  ;
+    using GridPart = GetPropType<TypeTag, Properties::GridPart>;
+    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
+    using FunctionSpace = Dune::Fem::FunctionSpace<typename GridPart::GridType::ctype,
+                                                   Scalar,
+                                                   GridPart::GridType::dimensionworld,
+                                                   numEq>;
 public:
-    typedef Dune::Fem::FiniteVolumeSpace< FunctionSpace, GridPart, 0 > type;
+    using type = Dune::Fem::FiniteVolumeSpace< FunctionSpace, GridPart, 0 >;
 };
 #endif
 
 //! Set the border list creator for to the one of an element based
 //! method
-SET_PROP(EcfvDiscretization, BorderListCreator)
+template<class TypeTag>
+struct BorderListCreator<TypeTag, TTag::EcfvDiscretization>
 { private:
-    typedef typename GET_PROP_TYPE(TypeTag, ElementMapper) ElementMapper;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
 public:
-    typedef Opm::Linear::ElementBorderListFromGrid<GridView, ElementMapper> type;
+    using type = Opm::Linear::ElementBorderListFromGrid<GridView, ElementMapper>;
 };
 
 //! For the element centered finite volume method, ghost and overlap elements must be
 //! assembled to calculate the fluxes over the process boundary faces of the local
 //! process' grid partition
-SET_BOOL_PROP(EcfvDiscretization, LinearizeNonLocalElements, true);
+template<class TypeTag>
+struct LinearizeNonLocalElements<TypeTag, TTag::EcfvDiscretization> { static constexpr bool value = true; };
 
 //! locking is not required for the element centered finite volume method because race
 //! conditions cannot occur since each matrix/vector entry is written exactly once
-SET_BOOL_PROP(EcfvDiscretization, UseLinearizationLock, false);
+template<class TypeTag>
+struct UseLinearizationLock<TypeTag, TTag::EcfvDiscretization> { static constexpr bool value = false; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!
@@ -123,14 +132,14 @@ namespace Opm {
 template<class TypeTag>
 class EcfvDiscretization : public FvBaseDiscretization<TypeTag>
 {
-    typedef FvBaseDiscretization<TypeTag> ParentType;
+    using ParentType = FvBaseDiscretization<TypeTag>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Implementation;
-    typedef typename GET_PROP_TYPE(TypeTag, DofMapper) DofMapper;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, SolutionVector) SolutionVector;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+    using Implementation = GetPropType<TypeTag, Properties::Model>;
+    using DofMapper = GetPropType<TypeTag, Properties::DofMapper>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
 public:
     EcfvDiscretization(Simulator& simulator)
@@ -168,10 +177,10 @@ public:
     void syncOverlap()
     {
         // syncronize the solution on the ghost and overlap elements
-        typedef GridCommHandleGhostSync<PrimaryVariables,
-                                        SolutionVector,
-                                        DofMapper,
-                                        /*commCodim=*/0> GhostSyncHandle;
+        using GhostSyncHandle = GridCommHandleGhostSync<PrimaryVariables,
+                                                        SolutionVector,
+                                                        DofMapper,
+                                                        /*commCodim=*/0>;
 
         auto ghostSync = GhostSyncHandle(this->solution(/*timeIdx=*/0),
                                          asImp_().dofMapper());

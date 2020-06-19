@@ -56,8 +56,8 @@ class GlobalIndices
 {
     GlobalIndices(const GlobalIndices& ) = delete;
 
-    typedef std::map<Index, Index> GlobalToDomesticMap;
-    typedef std::map<Index, Index> DomesticToGlobalMap;
+    using GlobalToDomesticMap = std::map<Index, Index>;
+    using DomesticToGlobalMap = std::map<Index, Index>;
 
 public:
     GlobalIndices(const ForeignOverlap& foreignOverlap)

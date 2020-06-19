@@ -50,8 +50,8 @@ namespace Ewoms {
                          std::ostream& dgfFile,
                          const unsigned precision = 16 )
     {
-        typedef double Scalar;
-        typedef Dune::FieldVector< Scalar, 2 > GlobalPosition;
+        using Scalar = double;
+        using GlobalPosition = Dune::FieldVector< Scalar, 2 >;
         enum ParseMode { Vertex, Edge, Element, Finished };
         std::vector< std::pair<GlobalPosition, unsigned> > vertexPos;
         std::vector<std::pair<unsigned, unsigned> > edges;

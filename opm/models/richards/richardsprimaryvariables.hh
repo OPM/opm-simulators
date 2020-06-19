@@ -52,28 +52,28 @@ namespace Opm {
 template <class TypeTag>
 class RichardsPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
 {
-    typedef FvBasePrimaryVariables<TypeTag> ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
-    typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) EnergyModule;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    using ParentType = FvBasePrimaryVariables<TypeTag>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
+    using EnergyModule = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
     // primary variable indices
     enum { pressureWIdx = Indices::pressureWIdx };
 
-    enum { liquidPhaseIdx = GET_PROP_VALUE(TypeTag, LiquidPhaseIndex) };
-    enum { gasPhaseIdx = GET_PROP_VALUE(TypeTag, GasPhaseIndex) };
+    enum { liquidPhaseIdx = getPropValue<TypeTag, Properties::LiquidPhaseIndex>() };
+    enum { gasPhaseIdx = getPropValue<TypeTag, Properties::GasPhaseIndex>() };
 
-    enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
-    enum { numComponents = GET_PROP_VALUE(TypeTag, NumComponents) };
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
+    enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
 
-    typedef Dune::FieldVector<Scalar, numComponents> ComponentVector;
-    typedef Dune::FieldVector<Scalar, numPhases> PhaseVector;
-    typedef typename Opm::MathToolbox<Evaluation> Toolbox;
-    typedef Opm::ImmiscibleFlash<Scalar, FluidSystem> ImmiscibleFlash;
+    using ComponentVector = Dune::FieldVector<Scalar, numComponents>;
+    using PhaseVector = Dune::FieldVector<Scalar, numPhases>;
+    using Toolbox = typename Opm::MathToolbox<Evaluation>;
+    using ImmiscibleFlash = Opm::ImmiscibleFlash<Scalar, FluidSystem>;
 
 public:
     RichardsPrimaryVariables() : ParentType()

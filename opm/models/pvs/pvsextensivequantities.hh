@@ -49,19 +49,19 @@ namespace Opm {
 template <class TypeTag>
 class PvsExtensiveQuantities
     : public MultiPhaseBaseExtensiveQuantities<TypeTag>
-    , public EnergyExtensiveQuantities<TypeTag, GET_PROP_VALUE(TypeTag, EnableEnergy)>
-    , public DiffusionExtensiveQuantities<TypeTag, GET_PROP_VALUE(TypeTag, EnableDiffusion)>
+    , public EnergyExtensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableEnergy>()>
+    , public DiffusionExtensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableDiffusion>()>
 {
-    typedef MultiPhaseBaseExtensiveQuantities<TypeTag> ParentType;
+    using ParentType = MultiPhaseBaseExtensiveQuantities<TypeTag>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
-    enum { enableDiffusion = GET_PROP_VALUE(TypeTag, EnableDiffusion) };
-    typedef Opm::DiffusionExtensiveQuantities<TypeTag, enableDiffusion> DiffusionExtensiveQuantities;
+    enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
+    using DiffusionExtensiveQuantities = Opm::DiffusionExtensiveQuantities<TypeTag, enableDiffusion>;
 
-    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
-    typedef Opm::EnergyExtensiveQuantities<TypeTag, enableEnergy> EnergyExtensiveQuantities;
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    using EnergyExtensiveQuantities = Opm::EnergyExtensiveQuantities<TypeTag, enableEnergy>;
 
 public:
     /*!

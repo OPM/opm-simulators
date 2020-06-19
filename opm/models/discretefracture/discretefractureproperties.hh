@@ -34,10 +34,11 @@
 
 #include <opm/models/io/vtkdiscretefracturemodule.hh>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_PROP_TAG(UseTwoPointGradients);
+template<class TypeTag, class MyTypeTag>
+struct UseTwoPointGradients { using type = UndefinedProperty; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 #endif

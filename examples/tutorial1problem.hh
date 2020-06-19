@@ -57,103 +57,144 @@ template <class TypeTag>
 class Tutorial1Problem;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // Create a new type tag for the problem
-NEW_TYPE_TAG(Tutorial1Problem, INHERITS_FROM(ImmiscibleTwoPhaseModel)); /*@\label{tutorial1:create-type-tag}@*/
+// Create new type tags
+namespace TTag {
+struct Tutorial1Problem { using InheritsFrom = std::tuple<ImmiscibleTwoPhaseModel>; };
+} // end namespace TTag
 
 // Select the vertex centered finite volume method as spatial discretization
-SET_TAG_PROP(Tutorial1Problem, SpatialDiscretizationSplice,
-             VcfvDiscretization); /*@\label{tutorial1:set-spatial-discretization}@*/
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::Tutorial1Problem>
+{ using type = TTag::VcfvDiscretization; }; /*@\label{tutorial1:set-spatial-discretization}@*/
 
 // Set the "Problem" property
-SET_TYPE_PROP(Tutorial1Problem, Problem,
-              Opm::Tutorial1Problem<TypeTag>); /*@\label{tutorial1:set-problem}@*/
+template<class TypeTag>
+struct Problem<TypeTag, TTag::Tutorial1Problem>
+{ using type = Opm::Tutorial1Problem<TypeTag>; }; /*@\label{tutorial1:set-problem}@*/
 
 // Set grid and the grid manager to be used
-SET_TYPE_PROP(Tutorial1Problem, Grid, Dune::YaspGrid</*dim=*/2>); /*@\label{tutorial1:set-grid}@*/
-SET_TYPE_PROP(Tutorial1Problem, Vanguard, Opm::CubeGridVanguard<TypeTag>); /*@\label{tutorial1:set-grid-manager}@*/
+template<class TypeTag>
+struct Grid<TypeTag, TTag::Tutorial1Problem> { using type = Dune::YaspGrid</*dim=*/2>; }; /*@\label{tutorial1:set-grid}@*/
+template<class TypeTag>
+struct Vanguard<TypeTag, TTag::Tutorial1Problem> { using type = Opm::CubeGridVanguard<TypeTag>; }; /*@\label{tutorial1:set-grid-manager}@*/
 
 // Set the wetting phase /*@\label{tutorial1:2p-system-start}@*/
-SET_TYPE_PROP(Tutorial1Problem,
-              WettingPhase, /*@\label{tutorial1:wettingPhase}@*/
-              Opm::LiquidPhase<typename GET_PROP_TYPE(TypeTag, Scalar),
-                               Opm::SimpleH2O<typename GET_PROP_TYPE(TypeTag, Scalar)> >);
+template<class TypeTag>
+struct WettingPhase<TypeTag, TTag::Tutorial1Problem> /*@\label{tutorial1:wettingPhase}@*/
+{
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using type = Opm::LiquidPhase<Scalar, Opm::SimpleH2O<Scalar> >;
+};
 
 // Set the non-wetting phase
-SET_TYPE_PROP(Tutorial1Problem,
-              NonwettingPhase, /*@\label{tutorial1:nonwettingPhase}@*/
-              Opm::LiquidPhase<typename GET_PROP_TYPE(TypeTag, Scalar),
-                               Opm::LNAPL<typename GET_PROP_TYPE(TypeTag, Scalar)> >); /*@\label{tutorial1:2p-system-end}@*/
+template<class TypeTag>
+struct NonwettingPhase<TypeTag, TTag::Tutorial1Problem> /*@\label{tutorial1:nonwettingPhase}@*/
+{
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using type = Opm::LiquidPhase<Scalar, Opm::LNAPL<Scalar> >;
+}; /*@\label{tutorial1:2p-system-end}@*/
 
 // Set the material law
-SET_PROP(Tutorial1Problem, MaterialLaw)
+template<class TypeTag>
+struct MaterialLaw<TypeTag, TTag::Tutorial1Problem>
 {
 private:
     // create a class holding the necessary information for a
     // two-phase capillary pressure law
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     enum { wettingPhaseIdx = FluidSystem::wettingPhaseIdx };
     enum { nonWettingPhaseIdx = FluidSystem::nonWettingPhaseIdx };
-    typedef Opm::TwoPhaseMaterialTraits<Scalar, wettingPhaseIdx, nonWettingPhaseIdx> Traits;
+    using Traits = Opm::TwoPhaseMaterialTraits<Scalar, wettingPhaseIdx, nonWettingPhaseIdx>;
 
     // define the material law which is parameterized by effective
     // saturations
-    typedef Opm::RegularizedBrooksCorey<Traits> RawMaterialLaw; /*@\label{tutorial1:rawlaw}@*/
+    using RawMaterialLaw = Opm::RegularizedBrooksCorey<Traits>; /*@\label{tutorial1:rawlaw}@*/
 
 public:
     // Convert absolute saturations into effective ones before passing
     // it to the base capillary pressure law
-    typedef Opm::EffToAbsLaw<RawMaterialLaw> type; /*@\label{tutorial1:eff2abs}@*/
+    using type = Opm::EffToAbsLaw<RawMaterialLaw>; /*@\label{tutorial1:eff2abs}@*/
 };
 
 // Disable gravity
-SET_BOOL_PROP(Tutorial1Problem, EnableGravity, false); /*@\label{tutorial1:gravity}@*/
+template<class TypeTag>
+struct EnableGravity<TypeTag, TTag::Tutorial1Problem> { static constexpr bool value = false; }; /*@\label{tutorial1:gravity}@*/
 
 // define how long the simulation should run [s]
-SET_SCALAR_PROP(Tutorial1Problem, EndTime, 100e3); /*@\label{tutorial1:default-params-begin}@*/
+template<class TypeTag>
+struct EndTime<TypeTag, TTag::Tutorial1Problem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 100e3;
+}; /*@\label{tutorial1:default-params-begin}@*/
 
 // define the size of the initial time step [s]
-SET_SCALAR_PROP(Tutorial1Problem, InitialTimeStepSize, 125.0);
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, TTag::Tutorial1Problem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 125.0;
+};
 
 // define the physical size of the problem's domain [m]
-SET_SCALAR_PROP(Tutorial1Problem, DomainSizeX, 300.0); /*@\label{tutorial1:grid-default-params-begin}@*/
-SET_SCALAR_PROP(Tutorial1Problem, DomainSizeY, 60.0);
-SET_SCALAR_PROP(Tutorial1Problem, DomainSizeZ, 0.0);
+template<class TypeTag>
+struct DomainSizeX<TypeTag, TTag::Tutorial1Problem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 300.0;
+}; /*@\label{tutorial1:grid-default-params-begin}@*/
+template<class TypeTag>
+struct DomainSizeY<TypeTag, TTag::Tutorial1Problem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 60.0;
+};
+template<class TypeTag>
+struct DomainSizeZ<TypeTag, TTag::Tutorial1Problem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.0;
+};
 
 // // define the number of cells used for discretizing the physical domain
-SET_INT_PROP(Tutorial1Problem, CellsX, 100);
-SET_INT_PROP(Tutorial1Problem, CellsY, 1);
-SET_INT_PROP(Tutorial1Problem, CellsZ, 1); /*@\label{tutorial1:default-params-end}@*/
+template<class TypeTag>
+struct CellsX<TypeTag, TTag::Tutorial1Problem> { static constexpr int value = 100; };
+template<class TypeTag>
+struct CellsY<TypeTag, TTag::Tutorial1Problem> { static constexpr int value = 1; };
+template<class TypeTag>
+struct CellsZ<TypeTag, TTag::Tutorial1Problem> { static constexpr int value = 1; }; /*@\label{tutorial1:default-params-end}@*/
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 //! Tutorial problem using the "immiscible" model.
 template <class TypeTag>
 class Tutorial1Problem
-    : public GET_PROP_TYPE(TypeTag, BaseProblem) /*@\label{tutorial1:def-problem}@*/
+    : public GetPropType<TypeTag, Properties::BaseProblem> /*@\label{tutorial1:def-problem}@*/
 {
-    typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
 
     // Grid dimension
     enum { dimWorld = GridView::dimensionworld };
 
     // The type of the intrinsic permeability tensor
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
     // eWoms specific types are specified via the property system
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams; /*@\label{tutorial1:matLawObjectType}@*/
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using BoundaryRateVector = GetPropType<TypeTag, Properties::BoundaryRateVector>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>; /*@\label{tutorial1:matLawObjectType}@*/
 
     // phase indices
     enum { numPhases = FluidSystem::numPhases };

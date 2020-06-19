@@ -60,9 +60,9 @@ class DarcyBaseProblem;
 template <class TypeTag>
 struct DarcyFluxModule
 {
-    typedef DarcyIntensiveQuantities<TypeTag> FluxIntensiveQuantities;
-    typedef DarcyExtensiveQuantities<TypeTag> FluxExtensiveQuantities;
-    typedef DarcyBaseProblem<TypeTag> FluxBaseProblem;
+    using FluxIntensiveQuantities = DarcyIntensiveQuantities<TypeTag>;
+    using FluxExtensiveQuantities = DarcyExtensiveQuantities<TypeTag>;
+    using FluxBaseProblem = DarcyBaseProblem<TypeTag>;
 
     /*!
      * \brief Register all run-time parameters for the flux module.
@@ -87,7 +87,7 @@ class DarcyBaseProblem
 template <class TypeTag>
 class DarcyIntensiveQuantities
 {
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 protected:
     void update_(const ElementContext& elemCtx OPM_UNUSED,
                  unsigned dofIdx OPM_UNUSED,
@@ -114,22 +114,22 @@ protected:
 template <class TypeTag>
 class DarcyExtensiveQuantities
 {
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, ExtensiveQuantities) Implementation;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Implementation = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
 
     enum { dimWorld = GridView::dimensionworld };
-    enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
 
-    typedef typename Opm::MathToolbox<Evaluation> Toolbox;
-    typedef typename FluidSystem::template ParameterCache<Evaluation> ParameterCache;
-    typedef Dune::FieldVector<Evaluation, dimWorld> EvalDimVector;
-    typedef Dune::FieldVector<Scalar, dimWorld> DimVector;
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
+    using Toolbox = typename Opm::MathToolbox<Evaluation>;
+    using ParameterCache = typename FluidSystem::template ParameterCache<Evaluation>;
+    using EvalDimVector = Dune::FieldVector<Evaluation, dimWorld>;
+    using DimVector = Dune::FieldVector<Scalar, dimWorld>;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
 public:
     /*!

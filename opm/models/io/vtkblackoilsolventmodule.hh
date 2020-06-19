@@ -40,24 +40,36 @@
 
 #include <cstdio>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
+
+namespace TTag {
 
 // create new type tag for the VTK multi-phase output
-NEW_TYPE_TAG(VtkBlackOilSolvent);
+struct VtkBlackOilSolvent {};
+
+} // namespace TTag
 
 // create the property tags needed for the solvent output module
-NEW_PROP_TAG(VtkWriteSolventSaturation);
-NEW_PROP_TAG(VtkWriteSolventDensity);
-NEW_PROP_TAG(VtkWriteSolventViscosity);
-NEW_PROP_TAG(VtkWriteSolventMobility);
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteSolventSaturation { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteSolventDensity { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteSolventViscosity { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteSolventMobility { using type = UndefinedProperty; };
 
 // set default values for what quantities to output
-SET_BOOL_PROP(VtkBlackOilSolvent, VtkWriteSolventSaturation, true);
-SET_BOOL_PROP(VtkBlackOilSolvent, VtkWriteSolventDensity, true);
-SET_BOOL_PROP(VtkBlackOilSolvent, VtkWriteSolventViscosity, true);
-SET_BOOL_PROP(VtkBlackOilSolvent, VtkWriteSolventMobility, true);
+template<class TypeTag>
+struct VtkWriteSolventSaturation<TypeTag, TTag::VtkBlackOilSolvent> { static constexpr bool value = true; };
+template<class TypeTag>
+struct VtkWriteSolventDensity<TypeTag, TTag::VtkBlackOilSolvent> { static constexpr bool value = true; };
+template<class TypeTag>
+struct VtkWriteSolventViscosity<TypeTag, TTag::VtkBlackOilSolvent> { static constexpr bool value = true; };
+template<class TypeTag>
+struct VtkWriteSolventMobility<TypeTag, TTag::VtkBlackOilSolvent> { static constexpr bool value = true; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!
@@ -68,20 +80,20 @@ namespace Opm {
 template <class TypeTag>
 class VtkBlackOilSolventModule : public BaseOutputModule<TypeTag>
 {
-    typedef BaseOutputModule<TypeTag> ParentType;
+    using ParentType = BaseOutputModule<TypeTag>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
-    static const int vtkFormat = GET_PROP_VALUE(TypeTag, VtkOutputFormat);
-    typedef Opm::VtkMultiWriter<GridView, vtkFormat> VtkMultiWriter;
+    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    using VtkMultiWriter = Opm::VtkMultiWriter<GridView, vtkFormat>;
 
-    enum { enableSolvent = GET_PROP_VALUE(TypeTag, EnableSolvent) };
+    enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
 
-    typedef typename ParentType::ScalarBuffer ScalarBuffer;
+    using ScalarBuffer = typename ParentType::ScalarBuffer;
 
 public:
     VtkBlackOilSolventModule(const Simulator& simulator)
@@ -145,7 +157,7 @@ public:
         if (!enableSolvent)
             return;
 
-        typedef Opm::MathToolbox<Evaluation> Toolbox;
+        using Toolbox = Opm::MathToolbox<Evaluation>;
         for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
             const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
             unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);

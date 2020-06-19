@@ -27,7 +27,6 @@
 #ifndef EWOMS_START_HH
 #define EWOMS_START_HH
 
-#include <opm/models/utils/propertysystemmacros.hh>
 #include <opm/models/utils/propertysystem.hh>
 // the following header is not required here, but it must be included before
 // dune/common/densematrix.hh because of some c++ ideosyncrasies
@@ -35,8 +34,6 @@
 
 #include "parametersystem.hh"
 
-#include <opm/models/utils/parametersystem.hh>
-#include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/simulator.hh>
 #include <opm/models/utils/timer.hh>
 
@@ -78,8 +75,8 @@ namespace Opm {
 template <class TypeTag>
 static inline void registerAllParameters_(bool finalizeRegistration = true)
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) ThreadManager;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;
 
     EWOMS_REGISTER_PARAM(TypeTag, std::string, ParameterFile,
                          "An .ini file which contains a set of run-time "
@@ -114,7 +111,7 @@ static inline int setupParameters_(int argc,
                                    bool allowUnused=false,
                                    bool handleHelp = true)
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Problem) Problem;
+    using Problem = GetPropType<TypeTag, Properties::Problem>;
 
     // first, get the MPI rank of the current process
     int myRank = 0;
@@ -175,8 +172,8 @@ static inline int setupParameters_(int argc,
     }
 
     // make sure that no unknown parameters are encountered
-    typedef std::pair<std::string, std::string> KeyValuePair;
-    typedef std::list<KeyValuePair> ParamList;
+    using KeyValuePair = std::pair<std::string, std::string>;
+    using ParamList = std::list<KeyValuePair>;
 
     ParamList usedParams;
     ParamList unusedParams;
@@ -280,10 +277,10 @@ static inline void resetTerminal_(int signum)
 template <class TypeTag>
 static inline int start(int argc, char **argv,  bool registerParams=true)
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Problem) Problem;
-    typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) ThreadManager;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Problem = GetPropType<TypeTag, Properties::Problem>;
+    using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;
 
     // set the signal handlers to reset the TTY to a well defined state on unexpected
     // program aborts

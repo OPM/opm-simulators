@@ -42,17 +42,17 @@ namespace Opm {
 template <class TypeTag, int PVOffset = 0>
 struct NcpIndices
     : public EnergyIndices<PVOffset
-                           + GET_PROP_VALUE(TypeTag, NumComponents)
-                           + GET_PROP_VALUE(TypeTag, NumPhases),
-                           GET_PROP_VALUE(TypeTag, EnableEnergy)>
+                           + getPropValue<TypeTag, Properties::NumComponents>()
+                           + getPropValue<TypeTag, Properties::NumPhases>(),
+                           getPropValue<TypeTag, Properties::EnableEnergy>()>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
-    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
-    typedef Opm::EnergyIndices<PVOffset + numComponents + numPhases, enableEnergy> EnergyIndices;
+    using EnergyIndices = Opm::EnergyIndices<PVOffset + numComponents + numPhases, enableEnergy>;
 
 public:
     /*!

@@ -32,30 +32,36 @@
 #include <opm/models/common/multiphasebaseproperties.hh>
 
 // \{
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 //! The fluid used as the wetting phase (by default, we set the fluid
 //! system to the immiscible one, which requires this property.)
-NEW_PROP_TAG(WettingFluid);
+template<class TypeTag, class MyTypeTag>
+struct WettingFluid { using type = UndefinedProperty; };
 
 //! The fluid used as the non-wetting phase (by default, we set the
 //! fluid system to the immiscible one, which requires this property.)
-NEW_PROP_TAG(NonWettingFluid);
+template<class TypeTag, class MyTypeTag>
+struct NonWettingFluid { using type = UndefinedProperty; };
 
 //! Index of the fluid which represents the wetting phase
-NEW_PROP_TAG(LiquidPhaseIndex);
+template<class TypeTag, class MyTypeTag>
+struct LiquidPhaseIndex { using type = UndefinedProperty; };
 
 //! Index of the fluid which represents the non-wetting phase
-NEW_PROP_TAG(GasPhaseIndex);
+template<class TypeTag, class MyTypeTag>
+struct GasPhaseIndex { using type = UndefinedProperty; };
 
 //! Index of the component which constitutes the liquid
-NEW_PROP_TAG(LiquidComponentIndex);
+template<class TypeTag, class MyTypeTag>
+struct LiquidComponentIndex { using type = UndefinedProperty; };
 
 //! Index of the component which constitutes the gas
-NEW_PROP_TAG(GasComponentIndex);
+template<class TypeTag, class MyTypeTag>
+struct GasComponentIndex { using type = UndefinedProperty; };
 
 // \}
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 #endif

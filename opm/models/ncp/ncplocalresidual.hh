@@ -43,32 +43,32 @@ namespace Opm {
  *        compositional multi-phase NCP-model .
  */
 template <class TypeTag>
-class NcpLocalResidual : public GET_PROP_TYPE(TypeTag, DiscLocalResidual)
+class NcpLocalResidual : public GetPropType<TypeTag, Properties::DiscLocalResidual>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, DiscLocalResidual) ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) IntensiveQuantities;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    using ParentType = GetPropType<TypeTag, Properties::DiscLocalResidual>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
-    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
-    enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
-    enum { numComponents = GET_PROP_VALUE(TypeTag, NumComponents) };
+    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
+    enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
     enum { ncp0EqIdx = Indices::ncp0EqIdx };
     enum { conti0EqIdx = Indices::conti0EqIdx };
 
-    enum { enableDiffusion = GET_PROP_VALUE(TypeTag, EnableDiffusion) };
-    typedef Opm::DiffusionModule<TypeTag, enableDiffusion> DiffusionModule;
+    enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
+    using DiffusionModule = Opm::DiffusionModule<TypeTag, enableDiffusion>;
 
-    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
-    typedef Opm::EnergyModule<TypeTag, enableEnergy> EnergyModule;
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
 
-    typedef Dune::FieldVector<Evaluation, numEq> EvalEqVector;
-    typedef Dune::BlockVector<EvalEqVector> ElemEvalEqVector;
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
+    using EvalEqVector = Dune::FieldVector<Evaluation, numEq>;
+    using ElemEvalEqVector = Dune::BlockVector<EvalEqVector>;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
 
 public:
     /*!
@@ -217,9 +217,9 @@ public:
                      unsigned phaseIdx) const
     {
         const auto& fluidState = elemCtx.intensiveQuantities(dofIdx, timeIdx).fluidState();
-        typedef typename std::remove_const<typename std::remove_reference<decltype(fluidState)>::type>::type FluidState;
+        using FluidState = typename std::remove_const<typename std::remove_reference<decltype(fluidState)>::type>::type;
 
-        typedef Opm::MathToolbox<LhsEval> LhsToolbox;
+        using LhsToolbox = Opm::MathToolbox<LhsEval>;
 
         const LhsEval& a = phaseNotPresentIneq_<FluidState, LhsEval>(fluidState, phaseIdx);
         const LhsEval& b = phasePresentIneq_<FluidState, LhsEval>(fluidState, phaseIdx);
@@ -234,7 +234,7 @@ private:
     template <class FluidState, class LhsEval>
     LhsEval phasePresentIneq_(const FluidState& fluidState, unsigned phaseIdx) const
     {
-        typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
+        using FsToolbox = Opm::MathToolbox<typename FluidState::Scalar>;
 
         return FsToolbox::template decay<LhsEval>(fluidState.saturation(phaseIdx));
     }
@@ -246,7 +246,7 @@ private:
     template <class FluidState, class LhsEval>
     LhsEval phaseNotPresentIneq_(const FluidState& fluidState, unsigned phaseIdx) const
     {
-        typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
+        using FsToolbox = Opm::MathToolbox<typename FluidState::Scalar>;
 
         // difference of sum of mole fractions in the phase from 100%
         LhsEval a = 1.0;

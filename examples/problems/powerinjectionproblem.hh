@@ -57,86 +57,121 @@ template <class TypeTag>
 class PowerInjectionProblem;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(PowerInjectionBaseProblem);
+namespace TTag {
+struct PowerInjectionBaseProblem {};
+}
 
 // Set the grid implementation to be used
-SET_TYPE_PROP(PowerInjectionBaseProblem, Grid, Dune::YaspGrid</*dim=*/1>);
+template<class TypeTag>
+struct Grid<TypeTag, TTag::PowerInjectionBaseProblem> { using type = Dune::YaspGrid</*dim=*/1>; };
 
 // set the Vanguard property
-SET_TYPE_PROP(PowerInjectionBaseProblem, Vanguard,
-              Opm::CubeGridVanguard<TypeTag>);
+template<class TypeTag>
+struct Vanguard<TypeTag, TTag::PowerInjectionBaseProblem> { using type = Opm::CubeGridVanguard<TypeTag>; };
 
 // Set the problem property
-SET_TYPE_PROP(PowerInjectionBaseProblem, Problem,
-              Opm::PowerInjectionProblem<TypeTag>);
+template<class TypeTag>
+struct Problem<TypeTag, TTag::PowerInjectionBaseProblem> { using type = Opm::PowerInjectionProblem<TypeTag>; };
 
 // Set the wetting phase
-SET_PROP(PowerInjectionBaseProblem, WettingPhase)
+template<class TypeTag>
+struct WettingPhase<TypeTag, TTag::PowerInjectionBaseProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    typedef Opm::LiquidPhase<Scalar, Opm::SimpleH2O<Scalar> > type;
+    using type = Opm::LiquidPhase<Scalar, Opm::SimpleH2O<Scalar> >;
 };
 
 // Set the non-wetting phase
-SET_PROP(PowerInjectionBaseProblem, NonwettingPhase)
+template<class TypeTag>
+struct NonwettingPhase<TypeTag, TTag::PowerInjectionBaseProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    typedef Opm::GasPhase<Scalar, Opm::Air<Scalar> > type;
+    using type = Opm::GasPhase<Scalar, Opm::Air<Scalar> >;
 };
 
 // Set the material Law
-SET_PROP(PowerInjectionBaseProblem, MaterialLaw)
+template<class TypeTag>
+struct MaterialLaw<TypeTag, TTag::PowerInjectionBaseProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     enum { wettingPhaseIdx = FluidSystem::wettingPhaseIdx };
     enum { nonWettingPhaseIdx = FluidSystem::nonWettingPhaseIdx };
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef Opm::TwoPhaseMaterialTraits<Scalar,
-                                        /*wettingPhaseIdx=*/FluidSystem::wettingPhaseIdx,
-                                        /*nonWettingPhaseIdx=*/FluidSystem::nonWettingPhaseIdx>
-        Traits;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Traits = Opm::TwoPhaseMaterialTraits<Scalar,
+                                               /*wettingPhaseIdx=*/FluidSystem::wettingPhaseIdx,
+                                               /*nonWettingPhaseIdx=*/FluidSystem::nonWettingPhaseIdx>;
 
     // define the material law which is parameterized by effective
     // saturations
-    typedef Opm::RegularizedVanGenuchten<Traits> EffectiveLaw;
+    using EffectiveLaw = Opm::RegularizedVanGenuchten<Traits>;
 
 public:
     // define the material law parameterized by absolute saturations
-    typedef Opm::EffToAbsLaw<EffectiveLaw> type;
+    using type = Opm::EffToAbsLaw<EffectiveLaw>;
 };
 
 // Write out the filter velocities for this problem
-SET_BOOL_PROP(PowerInjectionBaseProblem, VtkWriteFilterVelocities, true);
+template<class TypeTag>
+struct VtkWriteFilterVelocities<TypeTag, TTag::PowerInjectionBaseProblem> { static constexpr bool value = true; };
 
 // Disable gravity
-SET_BOOL_PROP(PowerInjectionBaseProblem, EnableGravity, false);
+template<class TypeTag>
+struct EnableGravity<TypeTag, TTag::PowerInjectionBaseProblem> { static constexpr bool value = false; };
 
 // define the properties specific for the power injection problem
-SET_SCALAR_PROP(PowerInjectionBaseProblem, DomainSizeX, 100.0);
-SET_SCALAR_PROP(PowerInjectionBaseProblem, DomainSizeY, 1.0);
-SET_SCALAR_PROP(PowerInjectionBaseProblem, DomainSizeZ, 1.0);
+template<class TypeTag>
+struct DomainSizeX<TypeTag, TTag::PowerInjectionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 100.0;
+};
+template<class TypeTag>
+struct DomainSizeY<TypeTag, TTag::PowerInjectionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.0;
+};
+template<class TypeTag>
+struct DomainSizeZ<TypeTag, TTag::PowerInjectionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.0;
+};
 
-SET_INT_PROP(PowerInjectionBaseProblem, CellsX, 250);
-SET_INT_PROP(PowerInjectionBaseProblem, CellsY, 1);
-SET_INT_PROP(PowerInjectionBaseProblem, CellsZ, 1);
+template<class TypeTag>
+struct CellsX<TypeTag, TTag::PowerInjectionBaseProblem> { static constexpr int value = 250; };
+template<class TypeTag>
+struct CellsY<TypeTag, TTag::PowerInjectionBaseProblem> { static constexpr int value = 1; };
+template<class TypeTag>
+struct CellsZ<TypeTag, TTag::PowerInjectionBaseProblem> { static constexpr int value = 1; };
 
 // The default for the end time of the simulation
-SET_SCALAR_PROP(PowerInjectionBaseProblem, EndTime, 100);
+template<class TypeTag>
+struct EndTime<TypeTag, TTag::PowerInjectionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 100;
+};
 
 // The default for the initial time step size of the simulation
-SET_SCALAR_PROP(PowerInjectionBaseProblem, InitialTimeStepSize, 1e-3);
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, TTag::PowerInjectionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-3;
+};
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!
@@ -152,21 +187,21 @@ namespace Opm {
  * Systems, University of Stuttgart, 2011
  */
 template <class TypeTag>
-class PowerInjectionProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
+class PowerInjectionProblem : public GetPropType<TypeTag, Properties::BaseProblem>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
+    using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, WettingPhase) WettingPhase;
-    typedef typename GET_PROP_TYPE(TypeTag, NonwettingPhase) NonwettingPhase;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using WettingPhase = GetPropType<TypeTag, Properties::WettingPhase>;
+    using NonwettingPhase = GetPropType<TypeTag, Properties::NonwettingPhase>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using BoundaryRateVector = GetPropType<TypeTag, Properties::BoundaryRateVector>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
     enum {
         // number of phases
@@ -184,13 +219,13 @@ class PowerInjectionProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
         dimWorld = GridView::dimensionworld
     };
 
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
 
-    typedef typename GridView::ctype CoordScalar;
-    typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
+    using CoordScalar = typename GridView::ctype;
+    using GlobalPosition = Dune::FieldVector<CoordScalar, dimWorld>;
 
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
 public:
     /*!
@@ -235,14 +270,14 @@ public:
     {
         std::ostringstream oss;
         oss << "powerinjection_";
-        if (std::is_same<typename GET_PROP_TYPE(TypeTag, FluxModule),
+        if (std::is_same<GetPropType<TypeTag, Properties::FluxModule>,
                          Opm::DarcyFluxModule<TypeTag> >::value)
             oss << "darcy";
         else
             oss << "forchheimer";
 
-        if (std::is_same<typename GET_PROP_TYPE(TypeTag, LocalLinearizerSplice),
-                         TTAG(AutoDiffLocalLinearizer)>::value)
+        if (std::is_same<GetPropType<TypeTag, Properties::LocalLinearizerSplice>,
+                         Properties::TTag::AutoDiffLocalLinearizer>::value)
             oss << "_" << "ad";
         else
             oss << "_" << "fd";

@@ -38,34 +38,45 @@
 #include "problems/co2injectionflash.hh"
 #include "problems/co2injectionproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(Co2InjectionFlashVcfvProblem, INHERITS_FROM(FlashModel, Co2InjectionBaseProblem));
-SET_TAG_PROP(Co2InjectionFlashVcfvProblem, SpatialDiscretizationSplice, VcfvDiscretization);
+// Create new type tags
+namespace TTag {
+struct Co2InjectionFlashVcfvProblem { using InheritsFrom = std::tuple<Co2InjectionBaseProblem, FlashModel>; };
+} // end namespace TTag
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::Co2InjectionFlashVcfvProblem> { using type = TTag::VcfvDiscretization; };
 
 // use the flash solver adapted to the CO2 injection problem
-SET_TYPE_PROP(
-    Co2InjectionFlashVcfvProblem, FlashSolver,
-    Opm::Co2InjectionFlash<typename GET_PROP_TYPE(TypeTag, Scalar),
-                           typename GET_PROP_TYPE(TypeTag, FluidSystem)>);
+template<class TypeTag>
+struct FlashSolver<TypeTag, TTag::Co2InjectionFlashVcfvProblem>
+{ using type = Opm::Co2InjectionFlash<GetPropType<TypeTag, Properties::Scalar>,
+                                      GetPropType<TypeTag, Properties::FluidSystem>>; };
 
 // the flash model has serious problems with the numerical
 // precision. if quadruple precision math is available, we use it,
 // else we increase the tolerance of the Newton solver
 #if HAVE_QUAD
-SET_TYPE_PROP(Co2InjectionFlashVcfvProblem, Scalar, quad);
+template<class TypeTag>
+struct Scalar<TypeTag, TTag::Co2InjectionFlashVcfvProblem> { using type = quad; };
 
 // the default linear solver used for this problem (-> AMG) cannot be used with quadruple
 // precision scalars... (this seems to only apply to Dune >= 2.4)
-SET_TAG_PROP(Co2InjectionFlashVcfvProblem, LinearSolverSplice, ParallelBiCGStabLinearSolver);
+template<class TypeTag>
+struct LinearSolverSplice<TypeTag, TTag::Co2InjectionFlashVcfvProblem> { using type = TTag::ParallelBiCGStabLinearSolver; };
 #else
-SET_SCALAR_PROP(Co2InjectionFlashVcfvProblem, NewtonTolerance, 1e-5);
+template<class TypeTag>
+struct NewtonTolerance<TypeTag, TTag::Co2InjectionFlashVcfvProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-5;
+};
 #endif
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(Co2InjectionFlashVcfvProblem) VcfvProblemTypeTag;
+    using VcfvProblemTypeTag = Opm::Properties::TTag::Co2InjectionFlashVcfvProblem;
     return Opm::start<VcfvProblemTypeTag>(argc, argv);
 }

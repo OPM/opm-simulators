@@ -47,8 +47,8 @@ class OverlappingPreconditioner
                                   typename SeqPreCond::range_type>
 {
 public:
-    typedef typename SeqPreCond::domain_type domain_type;
-    typedef typename SeqPreCond::range_type range_type;
+    using domain_type = typename SeqPreCond::domain_type;
+    using range_type = typename SeqPreCond::range_type;
 
     //! the kind of computations supported by the operator. Either overlapping or non-overlapping
     Dune::SolverCategory::Category category() const override

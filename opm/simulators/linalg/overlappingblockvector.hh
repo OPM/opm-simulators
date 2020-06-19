@@ -48,8 +48,8 @@ namespace Linear {
 template <class FieldVector, class Overlap>
 class OverlappingBlockVector : public Dune::BlockVector<FieldVector>
 {
-    typedef Dune::BlockVector<FieldVector> ParentType;
-    typedef Dune::BlockVector<FieldVector> BlockVector;
+    using ParentType = Dune::BlockVector<FieldVector>;
+    using BlockVector = Dune::BlockVector<FieldVector>;
 
 public:
     /*!

@@ -33,19 +33,25 @@
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 #include "problems/co2injectionproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(Co2InjectionNcpNiEcfvProblem, INHERITS_FROM(NcpModel, Co2InjectionBaseProblem));
-SET_TAG_PROP(Co2InjectionNcpNiEcfvProblem, SpatialDiscretizationSplice, EcfvDiscretization);
-SET_BOOL_PROP(Co2InjectionNcpNiEcfvProblem, EnableEnergy, true);
+// Create new type tags
+namespace TTag {
+struct Co2InjectionNcpNiEcfvProblem { using InheritsFrom = std::tuple<Co2InjectionBaseProblem, NcpModel>; };
+} // end namespace TTag
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::Co2InjectionNcpNiEcfvProblem> { using type = TTag::EcfvDiscretization; };
+template<class TypeTag>
+struct EnableEnergy<TypeTag, TTag::Co2InjectionNcpNiEcfvProblem> { static constexpr bool value = true; };
 
 //! Use automatic differentiation to linearize the system of PDEs
-SET_TAG_PROP(Co2InjectionNcpNiEcfvProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::Co2InjectionNcpNiEcfvProblem> { using type = TTag::AutoDiffLocalLinearizer; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(Co2InjectionNcpNiEcfvProblem) EcfvProblemTypeTag;
+    using EcfvProblemTypeTag = Opm::Properties::TTag::Co2InjectionNcpNiEcfvProblem;
     return Opm::start<EcfvProblemTypeTag>(argc, argv);
 }

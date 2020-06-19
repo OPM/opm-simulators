@@ -115,23 +115,23 @@ class aligned_allocator {
     static_assert(detail::is_alignment_constant<Alignment>::value, "Alignment must be powers of two!");
 
 public:
-    typedef T value_type;
-    typedef T* pointer;
-    typedef const T* const_pointer;
-    typedef void* void_pointer;
-    typedef const void* const_void_pointer;
-    typedef std::size_t size_type;
-    typedef std::ptrdiff_t difference_type;
-    typedef T& reference;
-    typedef const T& const_reference;
+    using value_type = T;
+    using pointer = T*;
+    using const_pointer = const T*;
+    using void_pointer = void*;
+    using const_void_pointer = const void*;
+    using size_type = std::size_t;
+    using difference_type = std::ptrdiff_t;
+    using reference = T&;
+    using const_reference = const T&;
 
 private:
-    typedef detail::max_align<Alignment, detail::alignment_of<value_type>::value> MaxAlign;
+    using MaxAlign = detail::max_align<Alignment, detail::alignment_of<value_type>::value>;
 
 public:
     template<class U>
     struct rebind {
-        typedef aligned_allocator<U, Alignment> other;
+        using other = aligned_allocator<U, Alignment>;
     };
 
     aligned_allocator()
@@ -196,13 +196,13 @@ class aligned_allocator<void, Alignment> {
                   "The specified alignment is not a power of two!");
 
 public:
-    typedef void value_type;
-    typedef void* pointer;
-    typedef const void* const_pointer;
+    using value_type = void;
+    using pointer = void*;
+    using const_pointer = const void*;
 
     template<class U>
     struct rebind {
-        typedef aligned_allocator<U, Alignment> other;
+        using other = aligned_allocator<U, Alignment>;
     };
 };
 

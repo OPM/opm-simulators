@@ -52,25 +52,25 @@ namespace Opm {
 template<class TypeTag>
 class MultiPhaseBaseProblem
     : public FvBaseProblem<TypeTag>
-    , public GET_PROP_TYPE(TypeTag, FluxModule)::FluxBaseProblem
+    , public GetPropType<TypeTag, Properties::FluxModule>::FluxBaseProblem
 {
 //! \cond SKIP_THIS
-    typedef Opm::FvBaseProblem<TypeTag> ParentType;
+    using ParentType = Opm::FvBaseProblem<TypeTag>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Problem) Implementation;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, SolidEnergyLawParams) SolidEnergyLawParams;
-    typedef typename GET_PROP_TYPE(TypeTag, ThermalConductionLawParams) ThermalConductionLawParams;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw)::Params MaterialLawParams;
+    using Implementation = GetPropType<TypeTag, Properties::Problem>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using SolidEnergyLawParams = GetPropType<TypeTag, Properties::SolidEnergyLawParams>;
+    using ThermalConductionLawParams = GetPropType<TypeTag, Properties::ThermalConductionLawParams>;
+    using MaterialLawParams = typename GetPropType<TypeTag, Properties::MaterialLaw>::Params;
 
     enum { dimWorld = GridView::dimensionworld };
-    enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
-    typedef Dune::FieldVector<Scalar, dimWorld> DimVector;
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
+    using DimVector = Dune::FieldVector<Scalar, dimWorld>;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 //! \endcond
 
 public:
@@ -306,7 +306,7 @@ public:
      */
     unsigned markForGridAdaptation()
     {
-        typedef Opm::MathToolbox<Evaluation> Toolbox;
+        using Toolbox = Opm::MathToolbox<Evaluation>;
 
         unsigned numMarked = 0;
         ElementContext elemCtx( this->simulator() );

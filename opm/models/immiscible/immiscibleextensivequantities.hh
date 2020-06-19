@@ -48,17 +48,17 @@ namespace Opm {
 template <class TypeTag>
 class ImmiscibleExtensiveQuantities
     : public MultiPhaseBaseExtensiveQuantities<TypeTag>
-    , public EnergyExtensiveQuantities<TypeTag, GET_PROP_VALUE(TypeTag, EnableEnergy)>
+    , public EnergyExtensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableEnergy>()>
 {
-    typedef MultiPhaseBaseExtensiveQuantities<TypeTag> ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
+    using ParentType = MultiPhaseBaseExtensiveQuantities<TypeTag>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
 
-    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
-    typedef typename FluidSystem::template ParameterCache<Evaluation> ParameterCache;
-    typedef Opm::EnergyExtensiveQuantities<TypeTag, enableEnergy> EnergyExtensiveQuantities;
+    using ParameterCache = typename FluidSystem::template ParameterCache<Evaluation>;
+    using EnergyExtensiveQuantities = Opm::EnergyExtensiveQuantities<TypeTag, enableEnergy>;
 
 public:
     /*!

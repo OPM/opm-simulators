@@ -210,7 +210,7 @@ template <class Scalar, int n, int m>
 class MatrixBlock : public Dune::FieldMatrix<Scalar, n, m>
 {
 public:
-    typedef Dune::FieldMatrix<Scalar, n, m>  BaseType;
+    using BaseType = Dune::FieldMatrix<Scalar, n, m> ;
 
     using BaseType::operator= ;
     using BaseType::rows;
@@ -265,11 +265,11 @@ template <typename T, typename A, int n, int m>
 class UMFPack<BCRSMatrix<Opm::MatrixBlock<T, n, m>, A> >
     : public UMFPack<BCRSMatrix<FieldMatrix<T, n, m>, A> >
 {
-    typedef UMFPack<BCRSMatrix<FieldMatrix<T, n, m>, A> > Base;
-    typedef BCRSMatrix<FieldMatrix<T, n, m>, A> Matrix;
+    using Base = UMFPack<BCRSMatrix<FieldMatrix<T, n, m>, A> >;
+    using Matrix = BCRSMatrix<FieldMatrix<T, n, m>, A>;
 
 public:
-    typedef BCRSMatrix<Opm::MatrixBlock<T, n, m>, A> RealMatrix;
+    using RealMatrix = BCRSMatrix<Opm::MatrixBlock<T, n, m>, A>;
 
     UMFPack(const RealMatrix& matrix, int verbose, bool)
         : Base(reinterpret_cast<const Matrix&>(matrix), verbose)
@@ -285,11 +285,11 @@ template <typename T, typename A, int n, int m>
 class SuperLU<BCRSMatrix<Opm::MatrixBlock<T, n, m>, A> >
     : public SuperLU<BCRSMatrix<FieldMatrix<T, n, m>, A> >
 {
-    typedef SuperLU<BCRSMatrix<FieldMatrix<T, n, m>, A> > Base;
-    typedef BCRSMatrix<FieldMatrix<T, n, m>, A> Matrix;
+    using Base = SuperLU<BCRSMatrix<FieldMatrix<T, n, m>, A> >;
+    using Matrix = BCRSMatrix<FieldMatrix<T, n, m>, A>;
 
 public:
-    typedef BCRSMatrix<Opm::MatrixBlock<T, n, m>, A> RealMatrix;
+    using RealMatrix = BCRSMatrix<Opm::MatrixBlock<T, n, m>, A>;
 
     SuperLU(const RealMatrix& matrix, int verb, bool reuse=true)
         : Base(reinterpret_cast<const Matrix&>(matrix), verb, reuse)

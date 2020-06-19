@@ -56,63 +56,82 @@ template <class TypeTag>
 class FlashModel;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
+namespace TTag {
 //! The type tag for the isothermal single phase problems
-NEW_TYPE_TAG(FlashModel, INHERITS_FROM(MultiPhaseBaseModel,
-                                       VtkComposition,
-                                       VtkEnergy,
-                                       VtkDiffusion));
+struct FlashModel { using InheritsFrom = std::tuple<VtkDiffusion,
+                                                    VtkEnergy,
+                                                    VtkComposition,
+                                                    MultiPhaseBaseModel>; };
+} // namespace TTag
 
 //! Use the FlashLocalResidual function for the flash model
-SET_TYPE_PROP(FlashModel, LocalResidual,
-              Opm::FlashLocalResidual<TypeTag>);
+template<class TypeTag>
+struct LocalResidual<TypeTag, TTag::FlashModel> { using type = Opm::FlashLocalResidual<TypeTag>; };
 
 //! Use the NCP flash solver by default
-SET_TYPE_PROP(FlashModel, FlashSolver,
-              Opm::NcpFlash<typename GET_PROP_TYPE(TypeTag, Scalar),
-                            typename GET_PROP_TYPE(TypeTag, FluidSystem)>);
+template<class TypeTag>
+struct FlashSolver<TypeTag, TTag::FlashModel>
+{ using type = Opm::NcpFlash<GetPropType<TypeTag, Properties::Scalar>,
+                             GetPropType<TypeTag, Properties::FluidSystem>>; };
 
 //! Let the flash solver choose its tolerance by default
-SET_SCALAR_PROP(FlashModel, FlashTolerance, -1.0);
+template<class TypeTag>
+struct FlashTolerance<TypeTag, TTag::FlashModel>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = -1.0;
+};
 
 //! the Model property
-SET_TYPE_PROP(FlashModel, Model, Opm::FlashModel<TypeTag>);
+template<class TypeTag>
+struct Model<TypeTag, TTag::FlashModel> { using type = Opm::FlashModel<TypeTag>; };
 
 //! the PrimaryVariables property
-SET_TYPE_PROP(FlashModel, PrimaryVariables, Opm::FlashPrimaryVariables<TypeTag>);
+template<class TypeTag>
+struct PrimaryVariables<TypeTag, TTag::FlashModel> { using type = Opm::FlashPrimaryVariables<TypeTag>; };
 
 //! the RateVector property
-SET_TYPE_PROP(FlashModel, RateVector, Opm::FlashRateVector<TypeTag>);
+template<class TypeTag>
+struct RateVector<TypeTag, TTag::FlashModel> { using type = Opm::FlashRateVector<TypeTag>; };
 
 //! the BoundaryRateVector property
-SET_TYPE_PROP(FlashModel, BoundaryRateVector, Opm::FlashBoundaryRateVector<TypeTag>);
+template<class TypeTag>
+struct BoundaryRateVector<TypeTag, TTag::FlashModel> { using type = Opm::FlashBoundaryRateVector<TypeTag>; };
 
 //! the IntensiveQuantities property
-SET_TYPE_PROP(FlashModel, IntensiveQuantities, Opm::FlashIntensiveQuantities<TypeTag>);
+template<class TypeTag>
+struct IntensiveQuantities<TypeTag, TTag::FlashModel> { using type = Opm::FlashIntensiveQuantities<TypeTag>; };
 
 //! the ExtensiveQuantities property
-SET_TYPE_PROP(FlashModel, ExtensiveQuantities, Opm::FlashExtensiveQuantities<TypeTag>);
+template<class TypeTag>
+struct ExtensiveQuantities<TypeTag, TTag::FlashModel> { using type = Opm::FlashExtensiveQuantities<TypeTag>; };
 
 //! The indices required by the flash-baseed isothermal compositional model
-SET_TYPE_PROP(FlashModel, Indices, Opm::FlashIndices<TypeTag, /*PVIdx=*/0>);
+template<class TypeTag>
+struct Indices<TypeTag, TTag::FlashModel> { using type = Opm::FlashIndices<TypeTag, /*PVIdx=*/0>; };
 
 // The updates of intensive quantities tend to be _very_ expensive for this
 // model, so let's try to minimize the number of required ones
-SET_BOOL_PROP(FlashModel, EnableIntensiveQuantityCache, true);
+template<class TypeTag>
+struct EnableIntensiveQuantityCache<TypeTag, TTag::FlashModel> { static constexpr bool value = true; };
 
 // since thermodynamic hints are basically free if the cache for intensive quantities is
 // enabled, and this model usually shows quite a performance improvment if they are
 // enabled, let's enable them by default.
-SET_BOOL_PROP(FlashModel, EnableThermodynamicHints, true);
+template<class TypeTag>
+struct EnableThermodynamicHints<TypeTag, TTag::FlashModel> { static constexpr bool value = true; };
 
 // disable molecular diffusion by default
-SET_BOOL_PROP(FlashModel, EnableDiffusion, false);
+template<class TypeTag>
+struct EnableDiffusion<TypeTag, TTag::FlashModel> { static constexpr bool value = false; };
 
 //! Disable the energy equation by default
-SET_BOOL_PROP(FlashModel, EnableEnergy, false);
+template<class TypeTag>
+struct EnableEnergy<TypeTag, TTag::FlashModel> { static constexpr bool value = false; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -137,7 +156,8 @@ namespace Opm {
  * \c FluxModule property. For example, the velocity model can by
  * changed to the Forchheimer approach by
  * \code
- * SET_TYPE_PROP(MyProblemTypeTag, FluxModule, Opm::ForchheimerFluxModule<TypeTag>);
+ * template<class TypeTag>
+struct FluxModule<TypeTag, TTag::MyProblemTypeTag> { using type = Opm::ForchheimerFluxModule<TypeTag>; };
  * \endcode
  *
  * The core of the model is the conservation mass of each component by
@@ -178,20 +198,20 @@ template <class TypeTag>
 class FlashModel
     : public MultiPhaseBaseModel<TypeTag>
 {
-    typedef MultiPhaseBaseModel<TypeTag> ParentType;
+    using ParentType = MultiPhaseBaseModel<TypeTag>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
-    enum { numComponents = GET_PROP_VALUE(TypeTag, NumComponents) };
-    enum { enableDiffusion = GET_PROP_VALUE(TypeTag, EnableDiffusion) };
-    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
+    enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
+    enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
 
-    typedef Opm::EnergyModule<TypeTag, enableEnergy> EnergyModule;
+    using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
 
 public:
     FlashModel(Simulator& simulator)

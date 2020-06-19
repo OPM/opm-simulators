@@ -35,19 +35,23 @@
 #include <opm/models/io/vtkenergymodule.hh>
 #include <opm/models/io/vtkdiffusionmodule.hh>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 //! The unmodified weight for the pressure primary variable
-NEW_PROP_TAG(NcpPressureBaseWeight);
+template<class TypeTag, class MyTypeTag>
+struct NcpPressureBaseWeight { using type = UndefinedProperty; };
 //! The weight for the saturation primary variables
-NEW_PROP_TAG(NcpSaturationsBaseWeight);
+template<class TypeTag, class MyTypeTag>
+struct NcpSaturationsBaseWeight { using type = UndefinedProperty; };
 //! The unmodified weight for the fugacity primary variables
-NEW_PROP_TAG(NcpFugacitiesBaseWeight);
+template<class TypeTag, class MyTypeTag>
+struct NcpFugacitiesBaseWeight { using type = UndefinedProperty; };
 
 //! The themodynamic constraint solver which calculates the
 //! composition of any phase given all component fugacities.
-NEW_PROP_TAG(NcpCompositionFromFugacitiesSolver);
+template<class TypeTag, class MyTypeTag>
+struct NcpCompositionFromFugacitiesSolver { using type = UndefinedProperty; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 #endif

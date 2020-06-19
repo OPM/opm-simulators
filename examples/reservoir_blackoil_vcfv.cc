@@ -32,17 +32,21 @@
 #include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
 #include "problems/reservoirproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(ReservoirBlackOilVcfvProblem, INHERITS_FROM(BlackOilModel, ReservoirBaseProblem));
+// Create new type tags
+namespace TTag {
+struct ReservoirBlackOilVcfvProblem { using InheritsFrom = std::tuple<ReservoirBaseProblem, BlackOilModel>; };
+} // end namespace TTag
 
 // Select the vertex centered finite volume method as spatial discretization
-SET_TAG_PROP(ReservoirBlackOilVcfvProblem, SpatialDiscretizationSplice, VcfvDiscretization);
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::ReservoirBlackOilVcfvProblem> { using type = TTag::VcfvDiscretization; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(ReservoirBlackOilVcfvProblem) ProblemTypeTag;
+    using ProblemTypeTag = Opm::Properties::TTag::ReservoirBlackOilVcfvProblem;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

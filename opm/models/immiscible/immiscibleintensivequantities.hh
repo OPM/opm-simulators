@@ -48,36 +48,36 @@ namespace Opm {
  */
 template <class TypeTag>
 class ImmiscibleIntensiveQuantities
-    : public GET_PROP_TYPE(TypeTag, DiscIntensiveQuantities)
-    , public EnergyIntensiveQuantities<TypeTag, GET_PROP_VALUE(TypeTag, EnableEnergy)>
-    , public GET_PROP_TYPE(TypeTag, FluxModule)::FluxIntensiveQuantities
+    : public GetPropType<TypeTag, Properties::DiscIntensiveQuantities>
+    , public EnergyIntensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableEnergy>()>
+    , public GetPropType<TypeTag, Properties::FluxModule>::FluxIntensiveQuantities
 {
-    typedef typename GET_PROP_TYPE(TypeTag, DiscIntensiveQuantities) ParentType;
+    using ParentType = GetPropType<TypeTag, Properties::DiscIntensiveQuantities>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, FluxModule) FluxModule;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using FluxModule = GetPropType<TypeTag, Properties::FluxModule>;
 
-    enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { pressure0Idx = Indices::pressure0Idx };
     enum { saturation0Idx = Indices::saturation0Idx };
-    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { dimWorld = GridView::dimensionworld };
 
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
-    typedef Dune::FieldVector<Scalar, numPhases> PhaseVector;
-    typedef Dune::FieldVector<Evaluation, numPhases> EvalPhaseVector;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
+    using PhaseVector = Dune::FieldVector<Scalar, numPhases>;
+    using EvalPhaseVector = Dune::FieldVector<Evaluation, numPhases>;
 
-    typedef typename FluxModule::FluxIntensiveQuantities FluxIntensiveQuantities;
-    typedef Opm::EnergyIntensiveQuantities<TypeTag, enableEnergy> EnergyIntensiveQuantities;
-    typedef Opm::ImmiscibleFluidState<Evaluation, FluidSystem,
-                                      /*storeEnthalpy=*/enableEnergy> FluidState;
+    using FluxIntensiveQuantities = typename FluxModule::FluxIntensiveQuantities;
+    using EnergyIntensiveQuantities = Opm::EnergyIntensiveQuantities<TypeTag, enableEnergy>;
+    using FluidState = Opm::ImmiscibleFluidState<Evaluation, FluidSystem,
+                                                 /*storeEnthalpy=*/enableEnergy>;
 
 public:
     ImmiscibleIntensiveQuantities()

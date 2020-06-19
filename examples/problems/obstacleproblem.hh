@@ -57,67 +57,86 @@ template <class TypeTag>
 class ObstacleProblem;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(ObstacleBaseProblem);
+namespace TTag {
+struct ObstacleBaseProblem {};
+}
 
 // Set the grid type
-SET_TYPE_PROP(ObstacleBaseProblem, Grid, Dune::YaspGrid<2>);
+template<class TypeTag>
+struct Grid<TypeTag, TTag::ObstacleBaseProblem> { using type = Dune::YaspGrid<2>; };
 
 // Set the problem property
-SET_TYPE_PROP(ObstacleBaseProblem, Problem, Opm::ObstacleProblem<TypeTag>);
+template<class TypeTag>
+struct Problem<TypeTag, TTag::ObstacleBaseProblem> { using type = Opm::ObstacleProblem<TypeTag>; };
 
 // Set fluid configuration
-SET_TYPE_PROP(ObstacleBaseProblem, FluidSystem,
-              Opm::H2ON2FluidSystem<typename GET_PROP_TYPE(TypeTag, Scalar)>);
+template<class TypeTag>
+struct FluidSystem<TypeTag, TTag::ObstacleBaseProblem>
+{ using type = Opm::H2ON2FluidSystem<GetPropType<TypeTag, Properties::Scalar>>; };
 
 // Set the material Law
-SET_PROP(ObstacleBaseProblem, MaterialLaw)
+template<class TypeTag>
+struct MaterialLaw<TypeTag, TTag::ObstacleBaseProblem>
 {
 private:
     // define the material law
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef Opm::TwoPhaseMaterialTraits<Scalar,
-                                        /*wettingPhaseIdx=*/FluidSystem::liquidPhaseIdx,
-                                        /*nonWettingPhaseIdx=*/FluidSystem::gasPhaseIdx>
-    MaterialTraits;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using MaterialTraits = Opm::TwoPhaseMaterialTraits<Scalar,
+                                                       /*wettingPhaseIdx=*/FluidSystem::liquidPhaseIdx,
+                                                       /*nonWettingPhaseIdx=*/FluidSystem::gasPhaseIdx>;
 
-    typedef Opm::LinearMaterial<MaterialTraits> EffMaterialLaw;
+    using EffMaterialLaw = Opm::LinearMaterial<MaterialTraits>;
 
 public:
-    typedef Opm::EffToAbsLaw<EffMaterialLaw> type;
+    using type = Opm::EffToAbsLaw<EffMaterialLaw>;
 };
 
 // Set the thermal conduction law
-SET_PROP(ObstacleBaseProblem, ThermalConductionLaw)
+template<class TypeTag>
+struct ThermalConductionLaw<TypeTag, TTag::ObstacleBaseProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
 public:
     // define the material law parameterized by absolute saturations
-    typedef Opm::SomertonThermalConductionLaw<FluidSystem, Scalar> type;
+    using type = Opm::SomertonThermalConductionLaw<FluidSystem, Scalar>;
 };
 
 // set the energy storage law for the solid phase
-SET_TYPE_PROP(ObstacleBaseProblem, SolidEnergyLaw,
-              Opm::ConstantSolidHeatCapLaw<typename GET_PROP_TYPE(TypeTag, Scalar)>);
+template<class TypeTag>
+struct SolidEnergyLaw<TypeTag, TTag::ObstacleBaseProblem>
+{ using type = Opm::ConstantSolidHeatCapLaw<GetPropType<TypeTag, Properties::Scalar>>; };
 
 // Enable gravity
-SET_BOOL_PROP(ObstacleBaseProblem, EnableGravity, true);
+template<class TypeTag>
+struct EnableGravity<TypeTag, TTag::ObstacleBaseProblem> { static constexpr bool value = true; };
 
 // The default for the end time of the simulation
-SET_SCALAR_PROP(ObstacleBaseProblem, EndTime, 1e4);
+template<class TypeTag>
+struct EndTime<TypeTag, TTag::ObstacleBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e4;
+};
 
 // The default for the initial time step size of the simulation
-SET_SCALAR_PROP(ObstacleBaseProblem, InitialTimeStepSize, 250);
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, TTag::ObstacleBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 250;
+};
 
 // The default DGF file to load
-SET_STRING_PROP(ObstacleBaseProblem, GridFile, "./data/obstacle_24x16.dgf");
+template<class TypeTag>
+struct GridFile<TypeTag, TTag::ObstacleBaseProblem> { static constexpr auto value = "./data/obstacle_24x16.dgf"; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!
@@ -147,38 +166,38 @@ namespace Opm {
  * and the right boundary where a free flow condition is assumed.
  */
 template <class TypeTag>
-class ObstacleProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
+class ObstacleProblem : public GetPropType<TypeTag, Properties::BaseProblem>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
+    using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
-    typedef typename GET_PROP_TYPE(TypeTag, ThermalConductionLawParams) ThermalConductionLawParams;
-    typedef typename GET_PROP_TYPE(TypeTag, SolidEnergyLawParams) SolidEnergyLawParams;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using BoundaryRateVector = GetPropType<TypeTag, Properties::BoundaryRateVector>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
+    using ThermalConductionLawParams = GetPropType<TypeTag, Properties::ThermalConductionLawParams>;
+    using SolidEnergyLawParams = GetPropType<TypeTag, Properties::SolidEnergyLawParams>;
 
     enum {
         // Grid and world dimension
         dim = GridView::dimension,
         dimWorld = GridView::dimensionworld,
-        numPhases = GET_PROP_VALUE(TypeTag, NumPhases),
+        numPhases = getPropValue<TypeTag, Properties::NumPhases>(),
         gasPhaseIdx = FluidSystem::gasPhaseIdx,
         liquidPhaseIdx = FluidSystem::liquidPhaseIdx,
         H2OIdx = FluidSystem::H2OIdx,
         N2Idx = FluidSystem::N2Idx
     };
 
-    typedef Dune::FieldVector<typename GridView::ctype, dimWorld> GlobalPosition;
-    typedef Dune::FieldVector<Scalar, numPhases> PhaseVector;
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
+    using GlobalPosition = Dune::FieldVector<typename GridView::ctype, dimWorld>;
+    using PhaseVector = Dune::FieldVector<Scalar, numPhases>;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Model = GetPropType<TypeTag, Properties::Model>;
 
 public:
     /*!
@@ -528,7 +547,7 @@ private:
 
         // make the fluid state consistent with local thermodynamic
         // equilibrium
-        typedef Opm::ComputeFromReferencePhase<Scalar, FluidSystem> ComputeFromReferencePhase;
+        using ComputeFromReferencePhase = Opm::ComputeFromReferencePhase<Scalar, FluidSystem>;
 
         typename FluidSystem::template ParameterCache<Scalar> paramCache;
         ComputeFromReferencePhase::solve(fs, paramCache, refPhaseIdx,

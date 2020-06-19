@@ -45,43 +45,63 @@ template <class TypeTag>
 class OutflowProblem;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(OutflowBaseProblem);
+namespace TTag {
+
+struct OutflowBaseProblem {};
+
+} // namespace TTag
 
 // Set the grid type
-SET_TYPE_PROP(OutflowBaseProblem, Grid, Dune::YaspGrid<2>);
+template<class TypeTag>
+struct Grid<TypeTag, TTag::OutflowBaseProblem> { using type = Dune::YaspGrid<2>; };
 
 // Set the problem property
-SET_TYPE_PROP(OutflowBaseProblem, Problem, Opm::OutflowProblem<TypeTag>);
+template<class TypeTag>
+struct Problem<TypeTag, TTag::OutflowBaseProblem> { using type = Opm::OutflowProblem<TypeTag>; };
 
 // Set fluid system
-SET_PROP(OutflowBaseProblem, FluidSystem)
+template<class TypeTag>
+struct FluidSystem<TypeTag, TTag::OutflowBaseProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
     // Two-component single phase fluid system
-    typedef Opm::H2ON2LiquidPhaseFluidSystem<Scalar> type;
+    using type = Opm::H2ON2LiquidPhaseFluidSystem<Scalar>;
 };
 
 // Disable gravity
-SET_BOOL_PROP(OutflowBaseProblem, EnableGravity, false);
+template<class TypeTag>
+struct EnableGravity<TypeTag, TTag::OutflowBaseProblem> { static constexpr bool value = false; };
 
 // Also write mass fractions to the output
-SET_BOOL_PROP(OutflowBaseProblem, VtkWriteMassFractions, true);
+template<class TypeTag>
+struct VtkWriteMassFractions<TypeTag, TTag::OutflowBaseProblem> { static constexpr bool value = true; };
 
 // The default for the end time of the simulation
-SET_SCALAR_PROP(OutflowBaseProblem, EndTime, 100);
+template<class TypeTag>
+struct EndTime<TypeTag, TTag::OutflowBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 100;
+};
 
 // The default for the initial time step size of the simulation
-SET_SCALAR_PROP(OutflowBaseProblem, InitialTimeStepSize, 1);
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, TTag::OutflowBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1;
+};
 
 // The default DGF file to load
-SET_STRING_PROP(OutflowBaseProblem, GridFile, "./data/outflow.dgf");
+template<class TypeTag>
+struct GridFile<TypeTag, TTag::OutflowBaseProblem> { static constexpr auto value = "./data/outflow.dgf"; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!
@@ -102,19 +122,19 @@ namespace Opm {
  * used.
  */
 template <class TypeTag>
-class OutflowProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
+class OutflowProblem : public GetPropType<TypeTag, Properties::BaseProblem>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
+    using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using BoundaryRateVector = GetPropType<TypeTag, Properties::BoundaryRateVector>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
 
     // copy some indices for convenience
     enum {
@@ -129,10 +149,10 @@ class OutflowProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
         N2Idx = FluidSystem::N2Idx
     };
 
-    typedef typename GridView::ctype CoordScalar;
-    typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
+    using CoordScalar = typename GridView::ctype;
+    using GlobalPosition = Dune::FieldVector<CoordScalar, dimWorld>;
 
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
 public:
     /*!

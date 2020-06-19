@@ -44,7 +44,7 @@ namespace Opm {
 template<class TypeTag>
 class EcfvGridCommHandleFactory
 {
-    typedef typename GET_PROP_TYPE(TypeTag, DofMapper) DofMapper;
+    using DofMapper = GetPropType<TypeTag, Properties::DofMapper>;
 
 public:
     /*!
@@ -55,7 +55,7 @@ public:
     static std::shared_ptr<GridCommHandleMin<ValueType, ArrayType,  DofMapper, /*commCodim=*/0> >
     minHandle(ArrayType& array, const DofMapper& dofMapper)
     {
-        typedef GridCommHandleMin<ValueType, ArrayType,  DofMapper, /*commCodim=*/0> Handle;
+        using Handle = GridCommHandleMin<ValueType, ArrayType,  DofMapper, /*commCodim=*/0>;
         return  std::shared_ptr<Handle>(new Handle(array, dofMapper));
     }
 
@@ -67,7 +67,7 @@ public:
     static std::shared_ptr<GridCommHandleMax<ValueType, ArrayType,  DofMapper, /*commCodim=*/0> >
     maxHandle(ArrayType& array, const DofMapper& dofMapper)
     {
-        typedef GridCommHandleMax<ValueType, ArrayType,  DofMapper, /*commCodim=*/0> Handle;
+        using Handle = GridCommHandleMax<ValueType, ArrayType,  DofMapper, /*commCodim=*/0>;
         return  std::shared_ptr<Handle>(new Handle(array, dofMapper));
     }
 
@@ -79,7 +79,7 @@ public:
     static std::shared_ptr<GridCommHandleSum<ValueType, ArrayType,  DofMapper, /*commCodim=*/0> >
     sumHandle(ArrayType& array, const DofMapper& dofMapper)
     {
-        typedef GridCommHandleSum<ValueType, ArrayType,  DofMapper, /*commCodim=*/0> Handle;
+        using Handle = GridCommHandleSum<ValueType, ArrayType,  DofMapper, /*commCodim=*/0>;
         return  std::shared_ptr<Handle>(new Handle(array, dofMapper));
     }
 };

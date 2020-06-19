@@ -31,19 +31,24 @@
 #include <opm/models/immiscible/immisciblemodel.hh>
 #include "problems/powerinjectionproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(PowerInjectionForchheimerFdProblem,
-             INHERITS_FROM(ImmiscibleTwoPhaseModel,
-                           PowerInjectionBaseProblem));
+namespace TTag {
 
-SET_TYPE_PROP(PowerInjectionForchheimerFdProblem, FluxModule, Opm::ForchheimerFluxModule<TypeTag>);
-SET_TAG_PROP(PowerInjectionForchheimerFdProblem, LocalLinearizerSplice, FiniteDifferenceLocalLinearizer);
+struct PowerInjectionForchheimerFdProblem
+{ using InheritsFrom = std::tuple<PowerInjectionBaseProblem, ImmiscibleTwoPhaseModel>; };
 
-END_PROPERTIES
+} // namespace TTag
+
+template<class TypeTag>
+struct FluxModule<TypeTag, TTag::PowerInjectionForchheimerFdProblem> { using type = Opm::ForchheimerFluxModule<TypeTag>; };
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::PowerInjectionForchheimerFdProblem> { using type = TTag::FiniteDifferenceLocalLinearizer; };
+
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(PowerInjectionForchheimerFdProblem) ProblemTypeTag;
+    using ProblemTypeTag = Opm::Properties::TTag::PowerInjectionForchheimerFdProblem;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

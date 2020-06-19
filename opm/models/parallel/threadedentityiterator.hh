@@ -41,8 +41,8 @@ namespace Opm {
 template <class GridView, int codim>
 class ThreadedEntityIterator
 {
-    typedef typename GridView::template Codim<codim>::Entity Entity;
-    typedef typename GridView::template Codim<codim>::Iterator EntityIterator;
+    using Entity = typename GridView::template Codim<codim>::Entity;
+    using EntityIterator = typename GridView::template Codim<codim>::Iterator;
 public:
     ThreadedEntityIterator(const GridView& gridView)
         : gridView_(gridView)

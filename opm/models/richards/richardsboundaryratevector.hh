@@ -41,20 +41,20 @@ namespace Opm {
  * \brief Implements a boundary vector for the fully implicit Richards model.
  */
 template <class TypeTag>
-class RichardsBoundaryRateVector : public GET_PROP_TYPE(TypeTag, RateVector)
+class RichardsBoundaryRateVector : public GetPropType<TypeTag, Properties::RateVector>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, ExtensiveQuantities) ExtensiveQuantities;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    using ParentType = GetPropType<TypeTag, Properties::RateVector>;
+    using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
-    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
+    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { contiEqIdx = Indices::contiEqIdx };
-    enum { liquidPhaseIdx = GET_PROP_VALUE(TypeTag, LiquidPhaseIndex) };
+    enum { liquidPhaseIdx = getPropValue<TypeTag, Properties::LiquidPhaseIndex>() };
 
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
 
 public:
     RichardsBoundaryRateVector() : ParentType()
