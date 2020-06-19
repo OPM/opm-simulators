@@ -851,7 +851,7 @@ RestartValue loadParallelRestart(const EclipseIO* eclIO, Action::State& actionSt
     return restartValues;
 #else
     (void) comm;
-    return eclIO->loadRestart(summaryState, solutionKeys, extraKeys);
+    return eclIO->loadRestart(actionState, summaryState, solutionKeys, extraKeys);
 #endif
 }
 
