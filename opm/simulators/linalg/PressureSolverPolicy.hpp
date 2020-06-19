@@ -61,13 +61,13 @@ namespace Amg
                 : linsolver_()
             {
                 assert(op.category() == Dune::SolverCategory::overlapping);
-                linsolver_.reset(new Solver(op.getmat(), comm, prm, std::function<X()>()));
+                linsolver_ = std::make_unique<Solver>(op.getmat(), comm, prm, std::function<X()>());
             }
             PressureInverseOperator(Operator& op, const boost::property_tree::ptree& prm, const SequentialInformation&)
                 : linsolver_()
             {
                 assert(op.category() != Dune::SolverCategory::overlapping);
-                linsolver_.reset(new Solver(op.getmat(), prm, std::function<X()>()));
+                linsolver_ = std::make_unique<Solver>(op.getmat(), prm, std::function<X()>());
             }
 
 
@@ -92,7 +92,7 @@ namespace Amg
             }
 
         private:
-            std::shared_ptr<Solver> linsolver_;
+            std::unique_ptr<Solver> linsolver_;
         };
 
     public:
