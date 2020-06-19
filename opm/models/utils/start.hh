@@ -141,14 +141,16 @@ static inline int setupParameters_(int argc,
                                                      positionalParamCallback);
     if (!s.empty())
     {
-        int status = 1, globalStatus = 1;
+        int status = 1;
         if (s == "Help called") // only on master process
-            status = globalStatus = -1; // Use negative values to indicate --help argument
+            status = -1; // Use negative values to indicate --help argument
 #if HAVE_MPI
         // Force -1 if the master process has that.
+        int globalStatus;
         MPI_Allreduce(&status, &globalStatus, 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD);
-#endif
         return globalStatus;
+#endif
+        return status;
     }
 
     std::string paramFileName = EWOMS_GET_PARAM_(TypeTag, std::string, ParameterFile);
