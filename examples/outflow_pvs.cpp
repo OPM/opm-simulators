@@ -31,17 +31,21 @@
 #include <opm/models/pvs/pvsmodel.hh>
 #include "problems/outflowproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(OutflowProblem, INHERITS_FROM(PvsModel, OutflowBaseProblem));
+// Create new type tags
+namespace TTag {
+struct OutflowProblem { using InheritsFrom = std::tuple<OutflowBaseProblem, PvsModel>; };
+} // end namespace TTag
 
 // Verbosity of the PVS model (0=silent, 1=medium, 2=chatty)
-SET_INT_PROP(OutflowProblem, PvsVerbosity, 1);
+template<class TypeTag>
+struct PvsVerbosity<TypeTag, TTag::OutflowProblem> { static constexpr int value = 1; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(OutflowProblem) ProblemTypeTag;
+    using ProblemTypeTag = Opm::Properties::TTag::OutflowProblem;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

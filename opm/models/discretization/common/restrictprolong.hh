@@ -37,8 +37,8 @@ namespace Opm
     template < class Grid, class Container >
     struct CopyRestrictProlongTraits
     {
-      typedef typename Grid::ctype DomainFieldType;
-      typedef CopyRestrictProlong< Grid, Container >  RestProlImp;
+      using DomainFieldType = typename Grid::ctype;
+      using RestProlImp = CopyRestrictProlong< Grid, Container > ;
     };
 
     template< class Grid, class Container >
@@ -47,11 +47,11 @@ namespace Opm
     : public Dune::Fem::RestrictProlongInterfaceDefault< CopyRestrictProlongTraits< Grid, Container > >
 #endif
     {
-      typedef CopyRestrictProlong< Grid, Container > ThisType;
+      using ThisType = CopyRestrictProlong< Grid, Container >;
 
       Container& container_;
     public:
-      typedef typename Grid::ctype DomainFieldType;
+      using DomainFieldType = typename Grid::ctype;
 
       explicit CopyRestrictProlong( Container& container )
         : container_( container )
@@ -133,8 +133,8 @@ namespace Opm
 
     struct EmptyRestrictProlongTraits
     {
-      typedef double                DomainFieldType;
-      typedef EmptyRestrictProlong  RestProlImp;
+      using DomainFieldType = double               ;
+      using RestProlImp = EmptyRestrictProlong ;
     };
 
     class EmptyRestrictProlong
@@ -142,7 +142,7 @@ namespace Opm
     : public Dune::Fem::RestrictProlongInterfaceDefault< EmptyRestrictProlongTraits >
 #endif
     {
-      typedef EmptyRestrictProlong ThisType;
+      using ThisType = EmptyRestrictProlong;
 
     public:
       /** \brief explicit set volume ratio of son and father

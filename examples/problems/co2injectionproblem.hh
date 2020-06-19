@@ -68,110 +68,174 @@ namespace Co2Injection {
 //! \endcond
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(Co2InjectionBaseProblem);
+namespace TTag {
+struct Co2InjectionBaseProblem {};
+}
 
 // declare the CO2 injection problem specific property tags
-NEW_PROP_TAG(FluidSystemPressureLow);
-NEW_PROP_TAG(FluidSystemPressureHigh);
-NEW_PROP_TAG(FluidSystemNumPressure);
-NEW_PROP_TAG(FluidSystemTemperatureLow);
-NEW_PROP_TAG(FluidSystemTemperatureHigh);
-NEW_PROP_TAG(FluidSystemNumTemperature);
+template<class TypeTag, class MyTypeTag>
+struct FluidSystemPressureLow { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct FluidSystemPressureHigh { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct FluidSystemNumPressure { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct FluidSystemTemperatureLow { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct FluidSystemTemperatureHigh { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct FluidSystemNumTemperature { using type = UndefinedProperty; };
 
-NEW_PROP_TAG(MaxDepth);
-NEW_PROP_TAG(Temperature);
-NEW_PROP_TAG(SimulationName);
+template<class TypeTag, class MyTypeTag>
+struct MaxDepth { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct Temperature { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct SimulationName { using type = UndefinedProperty; };
 
 // Set the grid type
-SET_TYPE_PROP(Co2InjectionBaseProblem, Grid, Dune::YaspGrid<2>);
+template<class TypeTag>
+struct Grid<TypeTag, TTag::Co2InjectionBaseProblem> { using type = Dune::YaspGrid<2>; };
 
 // Set the problem property
-SET_TYPE_PROP(Co2InjectionBaseProblem, Problem,
-              Opm::Co2InjectionProblem<TypeTag>);
+template<class TypeTag>
+struct Problem<TypeTag, TTag::Co2InjectionBaseProblem>
+{ using type = Opm::Co2InjectionProblem<TypeTag>; };
 
 // Set fluid configuration
-SET_PROP(Co2InjectionBaseProblem, FluidSystem)
+template<class TypeTag>
+struct FluidSystem<TypeTag, TTag::Co2InjectionBaseProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef Opm::Co2Injection::CO2Tables CO2Tables;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using CO2Tables = Opm::Co2Injection::CO2Tables;
 
 public:
-    typedef Opm::BrineCO2FluidSystem<Scalar, CO2Tables> type;
-    //typedef Opm::H2ON2FluidSystem<Scalar, /*useComplexRelations=*/false> type;
+    using type = Opm::BrineCO2FluidSystem<Scalar, CO2Tables>;
+    //using type = Opm::H2ON2FluidSystem<Scalar, /*useComplexRelations=*/false>;
 };
 
 // Set the material Law
-SET_PROP(Co2InjectionBaseProblem, MaterialLaw)
+template<class TypeTag>
+struct MaterialLaw<TypeTag, TTag::Co2InjectionBaseProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     enum { liquidPhaseIdx = FluidSystem::liquidPhaseIdx };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef Opm::TwoPhaseMaterialTraits<Scalar,
-                                        /*wettingPhaseIdx=*/FluidSystem::liquidPhaseIdx,
-                                        /*nonWettingPhaseIdx=*/FluidSystem::gasPhaseIdx> Traits;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Traits = Opm::TwoPhaseMaterialTraits<Scalar,
+                                               /*wettingPhaseIdx=*/FluidSystem::liquidPhaseIdx,
+                                               /*nonWettingPhaseIdx=*/FluidSystem::gasPhaseIdx>;
 
     // define the material law which is parameterized by effective
     // saturations
-    typedef Opm::RegularizedBrooksCorey<Traits> EffMaterialLaw;
+    using EffMaterialLaw = Opm::RegularizedBrooksCorey<Traits>;
 
 public:
     // define the material law parameterized by absolute saturations
-    typedef Opm::EffToAbsLaw<EffMaterialLaw> type;
+    using type = Opm::EffToAbsLaw<EffMaterialLaw>;
 };
 
 // Set the thermal conduction law
-SET_PROP(Co2InjectionBaseProblem, ThermalConductionLaw)
+template<class TypeTag>
+struct ThermalConductionLaw<TypeTag, TTag::Co2InjectionBaseProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
 public:
     // define the material law parameterized by absolute saturations
-    typedef Opm::SomertonThermalConductionLaw<FluidSystem, Scalar> type;
+    using type = Opm::SomertonThermalConductionLaw<FluidSystem, Scalar>;
 };
 
 // set the energy storage law for the solid phase
-SET_TYPE_PROP(Co2InjectionBaseProblem, SolidEnergyLaw,
-              Opm::ConstantSolidHeatCapLaw<typename GET_PROP_TYPE(TypeTag, Scalar)>);
+template<class TypeTag>
+struct SolidEnergyLaw<TypeTag, TTag::Co2InjectionBaseProblem>
+{ using type = Opm::ConstantSolidHeatCapLaw<GetPropType<TypeTag, Properties::Scalar>>; };
 
 // Use the algebraic multi-grid linear solver for this problem
-SET_TAG_PROP(Co2InjectionBaseProblem, LinearSolverSplice, ParallelAmgLinearSolver);
+template<class TypeTag>
+struct LinearSolverSplice<TypeTag, TTag::Co2InjectionBaseProblem> { using type = TTag::ParallelAmgLinearSolver; };
 
 // Write the Newton convergence behavior to disk?
-SET_BOOL_PROP(Co2InjectionBaseProblem, NewtonWriteConvergence, false);
+template<class TypeTag>
+struct NewtonWriteConvergence<TypeTag, TTag::Co2InjectionBaseProblem> { static constexpr bool value = false; };
 
 // Enable gravity
-SET_BOOL_PROP(Co2InjectionBaseProblem, EnableGravity, true);
+template<class TypeTag>
+struct EnableGravity<TypeTag, TTag::Co2InjectionBaseProblem> { static constexpr bool value = true; };
 
 // set the defaults for the problem specific properties
-SET_SCALAR_PROP(Co2InjectionBaseProblem, FluidSystemPressureLow, 3e7);
-SET_SCALAR_PROP(Co2InjectionBaseProblem, FluidSystemPressureHigh, 4e7);
-SET_INT_PROP(Co2InjectionBaseProblem, FluidSystemNumPressure, 100);
-SET_SCALAR_PROP(Co2InjectionBaseProblem, FluidSystemTemperatureLow, 290);
-SET_SCALAR_PROP(Co2InjectionBaseProblem, FluidSystemTemperatureHigh, 500);
-SET_INT_PROP(Co2InjectionBaseProblem, FluidSystemNumTemperature, 100);
+template<class TypeTag>
+struct FluidSystemPressureLow<TypeTag, TTag::Co2InjectionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 3e7;
+};
+template<class TypeTag>
+struct FluidSystemPressureHigh<TypeTag, TTag::Co2InjectionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 4e7;
+};
+template<class TypeTag>
+struct FluidSystemNumPressure<TypeTag, TTag::Co2InjectionBaseProblem> { static constexpr int value = 100; };
+template<class TypeTag>
+struct FluidSystemTemperatureLow<TypeTag, TTag::Co2InjectionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 290;
+};
+template<class TypeTag>
+struct FluidSystemTemperatureHigh<TypeTag, TTag::Co2InjectionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 500;
+};
+template<class TypeTag>
+struct FluidSystemNumTemperature<TypeTag, TTag::Co2InjectionBaseProblem> { static constexpr int value = 100; };
 
-SET_SCALAR_PROP(Co2InjectionBaseProblem, MaxDepth, 2500);
-SET_SCALAR_PROP(Co2InjectionBaseProblem, Temperature, 293.15);
-SET_STRING_PROP(Co2InjectionBaseProblem, SimulationName, "co2injection");
+template<class TypeTag>
+struct MaxDepth<TypeTag, TTag::Co2InjectionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 2500;
+};
+template<class TypeTag>
+struct Temperature<TypeTag, TTag::Co2InjectionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 293.15;
+};
+template<class TypeTag>
+struct SimulationName<TypeTag, TTag::Co2InjectionBaseProblem> { static constexpr auto value = "co2injection"; };
 
 // The default for the end time of the simulation
-SET_SCALAR_PROP(Co2InjectionBaseProblem, EndTime, 1e4);
+template<class TypeTag>
+struct EndTime<TypeTag, TTag::Co2InjectionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e4;
+};
 
 // The default for the initial time step size of the simulation
-SET_SCALAR_PROP(Co2InjectionBaseProblem, InitialTimeStepSize, 250);
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, TTag::Co2InjectionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 250;
+};
 
 // The default DGF file to load
-SET_STRING_PROP(Co2InjectionBaseProblem, GridFile, "data/co2injection.dgf");
+template<class TypeTag>
+struct GridFile<TypeTag, TTag::Co2InjectionBaseProblem> { static constexpr auto value = "data/co2injection.dgf"; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!
@@ -197,20 +261,20 @@ namespace Opm {
  * hydrostatic pressure is assumed.
  */
 template <class TypeTag>
-class Co2InjectionProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
+class Co2InjectionProblem : public GetPropType<TypeTag, Properties::BaseProblem>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
+    using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
     enum { dim = GridView::dimension };
     enum { dimWorld = GridView::dimensionworld };
 
     // copy some indices for convenience
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
     enum { numPhases = FluidSystem::numPhases };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
     enum { liquidPhaseIdx = FluidSystem::liquidPhaseIdx };
@@ -219,21 +283,21 @@ class Co2InjectionProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     enum { conti0EqIdx = Indices::conti0EqIdx };
     enum { contiCO2EqIdx = conti0EqIdx + CO2Idx };
 
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
-    typedef typename GET_PROP_TYPE(TypeTag, ThermalConductionLaw) ThermalConductionLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, SolidEnergyLawParams) SolidEnergyLawParams;
-    typedef typename ThermalConductionLaw::Params ThermalConductionLawParams;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using BoundaryRateVector = GetPropType<TypeTag, Properties::BoundaryRateVector>;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Model = GetPropType<TypeTag, Properties::Model>;
+    using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
+    using ThermalConductionLaw = GetPropType<TypeTag, Properties::ThermalConductionLaw>;
+    using SolidEnergyLawParams = GetPropType<TypeTag, Properties::SolidEnergyLawParams>;
+    using ThermalConductionLawParams = typename ThermalConductionLaw::Params;
 
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
-    typedef typename GridView::ctype CoordScalar;
-    typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using CoordScalar = typename GridView::ctype;
+    using GlobalPosition = Dune::FieldVector<CoordScalar, dimWorld>;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
 public:
     /*!
@@ -356,7 +420,7 @@ public:
         std::ostringstream oss;
         oss << EWOMS_GET_PARAM(TypeTag, std::string, SimulationName)
             << "_" << Model::name();
-        if (GET_PROP_VALUE(TypeTag, EnableEnergy))
+        if (getPropValue<TypeTag, Properties::EnableEnergy>())
             oss << "_ni";
         oss << "_" << Model::discretizationName();
         return oss.str();
@@ -488,7 +552,7 @@ public:
             RateVector massRate(0.0);
             massRate[contiCO2EqIdx] = -1e-3; // [kg/(m^3 s)]
 
-            typedef Opm::ImmiscibleFluidState<Scalar, FluidSystem> FluidState;
+            using FluidState = Opm::ImmiscibleFluidState<Scalar, FluidSystem>;
             FluidState fs;
             fs.setSaturation(gasPhaseIdx, 1.0);
             const auto& pg =
@@ -589,7 +653,7 @@ private:
                            1.0 - fs.moleFraction(liquidPhaseIdx, CO2Idx));
 
         typename FluidSystem::template ParameterCache<Scalar> paramCache;
-        typedef Opm::ComputeFromReferencePhase<Scalar, FluidSystem> CFRP;
+        using CFRP = Opm::ComputeFromReferencePhase<Scalar, FluidSystem>;
         CFRP::solve(fs, paramCache,
                     /*refPhaseIdx=*/liquidPhaseIdx,
                     /*setViscosity=*/true,

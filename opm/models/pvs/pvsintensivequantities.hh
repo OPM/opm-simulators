@@ -54,46 +54,46 @@ namespace Opm {
  */
 template <class TypeTag>
 class PvsIntensiveQuantities
-    : public GET_PROP_TYPE(TypeTag, DiscIntensiveQuantities)
-    , public DiffusionIntensiveQuantities<TypeTag, GET_PROP_VALUE(TypeTag, EnableDiffusion) >
-    , public EnergyIntensiveQuantities<TypeTag, GET_PROP_VALUE(TypeTag, EnableEnergy) >
-    , public GET_PROP_TYPE(TypeTag, FluxModule)::FluxIntensiveQuantities
+    : public GetPropType<TypeTag, Properties::DiscIntensiveQuantities>
+    , public DiffusionIntensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableDiffusion>() >
+    , public EnergyIntensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableEnergy>() >
+    , public GetPropType<TypeTag, Properties::FluxModule>::FluxIntensiveQuantities
 {
-    typedef typename GET_PROP_TYPE(TypeTag, DiscIntensiveQuantities) ParentType;
+    using ParentType = GetPropType<TypeTag, Properties::DiscIntensiveQuantities>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, FluxModule) FluxModule;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using FluxModule = GetPropType<TypeTag, Properties::FluxModule>;
 
     enum { switch0Idx = Indices::switch0Idx };
     enum { pressure0Idx = Indices::pressure0Idx };
-    enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
-    enum { numComponents = GET_PROP_VALUE(TypeTag, NumComponents) };
-    enum { enableDiffusion = GET_PROP_VALUE(TypeTag, EnableDiffusion) };
-    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
+    enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
+    enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { dimWorld = GridView::dimensionworld };
 
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
-    typedef Opm::MiscibleMultiPhaseComposition<Scalar, FluidSystem, Evaluation> MiscibleMultiPhaseComposition;
-    typedef Opm::ComputeFromReferencePhase<Scalar, FluidSystem, Evaluation> ComputeFromReferencePhase;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using MiscibleMultiPhaseComposition = Opm::MiscibleMultiPhaseComposition<Scalar, FluidSystem, Evaluation>;
+    using ComputeFromReferencePhase = Opm::ComputeFromReferencePhase<Scalar, FluidSystem, Evaluation>;
 
-    typedef Dune::FieldVector<Scalar, numPhases> PhaseVector;
-    typedef Dune::FieldVector<Evaluation, numPhases> EvalPhaseVector;
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
+    using PhaseVector = Dune::FieldVector<Scalar, numPhases>;
+    using EvalPhaseVector = Dune::FieldVector<Evaluation, numPhases>;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
-    typedef typename FluxModule::FluxIntensiveQuantities FluxIntensiveQuantities;
-    typedef Opm::DiffusionIntensiveQuantities<TypeTag, enableDiffusion> DiffusionIntensiveQuantities;
-    typedef Opm::EnergyIntensiveQuantities<TypeTag, enableEnergy> EnergyIntensiveQuantities;
+    using FluxIntensiveQuantities = typename FluxModule::FluxIntensiveQuantities;
+    using DiffusionIntensiveQuantities = Opm::DiffusionIntensiveQuantities<TypeTag, enableDiffusion>;
+    using EnergyIntensiveQuantities = Opm::EnergyIntensiveQuantities<TypeTag, enableEnergy>;
 
 public:
     //! The type of the object returned by the fluidState() method
-    typedef Opm::CompositionalFluidState<Evaluation, FluidSystem> FluidState;
+    using FluidState = Opm::CompositionalFluidState<Evaluation, FluidSystem>;
 
     PvsIntensiveQuantities()
     { }

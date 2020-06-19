@@ -32,15 +32,19 @@
 
 #include "problems/richardslensproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(RichardsLensVcfvProblem, INHERITS_FROM(RichardsLensProblem));
-SET_TAG_PROP(RichardsLensVcfvProblem, SpatialDiscretizationSplice, VcfvDiscretization);
+// Create new type tags
+namespace TTag {
+struct RichardsLensVcfvProblem { using InheritsFrom = std::tuple<RichardsLensProblem>; };
+} // end namespace TTag
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::RichardsLensVcfvProblem> { using type = TTag::VcfvDiscretization; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(RichardsLensVcfvProblem) ProblemTypeTag;
+    using ProblemTypeTag = Opm::Properties::TTag::RichardsLensVcfvProblem;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

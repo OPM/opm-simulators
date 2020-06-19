@@ -60,31 +60,41 @@ namespace Opm {
 // forward declaration of property tags
 } // namespace Opm
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
+
+namespace TTag {
 
 //! The type tag on which the default properties for the Newton method
 //! are attached
-NEW_TYPE_TAG(NewtonMethod);
+struct NewtonMethod {};
+
+} // namespace TTag
 
 //! Specifies the type of the actual Newton method
-NEW_PROP_TAG(NewtonMethod);
+template<class TypeTag, class MyTypeTag>
+struct NewtonMethod { using type = UndefinedProperty; };
 
 //! The class which linearizes the non-linear system of equations
-NEW_PROP_TAG(Linearizer);
+template<class TypeTag, class MyTypeTag>
+struct Linearizer { using type = UndefinedProperty; };
 
 //! Specifies whether the Newton method should print messages or not
-NEW_PROP_TAG(NewtonVerbose);
+template<class TypeTag, class MyTypeTag>
+struct NewtonVerbose { using type = UndefinedProperty; };
 
 //! Specifies the type of the class which writes out the Newton convergence
-NEW_PROP_TAG(NewtonConvergenceWriter);
+template<class TypeTag, class MyTypeTag>
+struct NewtonConvergenceWriter { using type = UndefinedProperty; };
 
 //! Specifies whether the convergence rate and the global residual
 //! gets written out to disk for every Newton iteration
-NEW_PROP_TAG(NewtonWriteConvergence);
+template<class TypeTag, class MyTypeTag>
+struct NewtonWriteConvergence { using type = UndefinedProperty; };
 
 //! Specifies whether the convergence rate and the global residual
 //! gets written out to disk for every Newton iteration
-NEW_PROP_TAG(ConvergenceWriter);
+template<class TypeTag, class MyTypeTag>
+struct ConvergenceWriter { using type = UndefinedProperty; };
 
 /*!
  * \brief The value for the error below which convergence is declared
@@ -92,11 +102,13 @@ NEW_PROP_TAG(ConvergenceWriter);
  * This value can (and for the porous media models will) be changed to account for grid
  * scaling and other effects.
  */
-NEW_PROP_TAG(NewtonTolerance);
+template<class TypeTag, class MyTypeTag>
+struct NewtonTolerance { using type = UndefinedProperty; };
 
 //! The maximum error which may occur in a simulation before the
 //! Newton method for the time step is aborted
-NEW_PROP_TAG(NewtonMaxError);
+template<class TypeTag, class MyTypeTag>
+struct NewtonMaxError { using type = UndefinedProperty; };
 
 /*!
  * \brief The number of iterations at which the Newton method
@@ -106,24 +118,42 @@ NEW_PROP_TAG(NewtonMaxError);
  * is to scale the last time-step size by the deviation of the
  * number of iterations used from the target steps.
  */
-NEW_PROP_TAG(NewtonTargetIterations);
+template<class TypeTag, class MyTypeTag>
+struct NewtonTargetIterations { using type = UndefinedProperty; };
 
 //! Number of maximum iterations for the Newton method.
-NEW_PROP_TAG(NewtonMaxIterations);
+template<class TypeTag, class MyTypeTag>
+struct NewtonMaxIterations { using type = UndefinedProperty; };
 
 // set default values for the properties
-SET_TYPE_PROP(NewtonMethod, NewtonMethod, Opm::NewtonMethod<TypeTag>);
-SET_TYPE_PROP(NewtonMethod, NewtonConvergenceWriter, Opm::NullConvergenceWriter<TypeTag>);
-SET_BOOL_PROP(NewtonMethod, NewtonWriteConvergence, false);
-SET_BOOL_PROP(NewtonMethod, NewtonVerbose, true);
-SET_SCALAR_PROP(NewtonMethod, NewtonTolerance, 1e-8);
+template<class TypeTag>
+struct NewtonMethod<TypeTag, TTag::NewtonMethod> { using type = Opm::NewtonMethod<TypeTag>; };
+template<class TypeTag>
+struct NewtonConvergenceWriter<TypeTag, TTag::NewtonMethod> { using type = Opm::NullConvergenceWriter<TypeTag>; };
+template<class TypeTag>
+struct NewtonWriteConvergence<TypeTag, TTag::NewtonMethod> { static constexpr bool value = false; };
+template<class TypeTag>
+struct NewtonVerbose<TypeTag, TTag::NewtonMethod> { static constexpr bool value = true; };
+template<class TypeTag>
+struct NewtonTolerance<TypeTag, TTag::NewtonMethod>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-8;
+};
 // set the abortion tolerace to some very large value. if not
 // overwritten at run-time this basically disables abortions
-SET_SCALAR_PROP(NewtonMethod, NewtonMaxError, 1e100);
-SET_INT_PROP(NewtonMethod, NewtonTargetIterations, 10);
-SET_INT_PROP(NewtonMethod, NewtonMaxIterations, 18);
+template<class TypeTag>
+struct NewtonMaxError<TypeTag, TTag::NewtonMethod>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e100;
+};
+template<class TypeTag>
+struct NewtonTargetIterations<TypeTag, TTag::NewtonMethod> { static constexpr int value = 10; };
+template<class TypeTag>
+struct NewtonMaxIterations<TypeTag, TTag::NewtonMethod> { static constexpr int value = 18; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!
@@ -136,23 +166,23 @@ namespace Opm {
 template <class TypeTag>
 class NewtonMethod
 {
-    typedef typename GET_PROP_TYPE(TypeTag, NewtonMethod) Implementation;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Problem) Problem;
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
+    using Implementation = GetPropType<TypeTag, Properties::NewtonMethod>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Problem = GetPropType<TypeTag, Properties::Problem>;
+    using Model = GetPropType<TypeTag, Properties::Model>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, SolutionVector) SolutionVector;
-    typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) GlobalEqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, Constraints) Constraints;
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, Linearizer) Linearizer;
-    typedef typename GET_PROP_TYPE(TypeTag, LinearSolverBackend) LinearSolverBackend;
-    typedef typename GET_PROP_TYPE(TypeTag, NewtonConvergenceWriter) ConvergenceWriter;
+    using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
+    using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using Constraints = GetPropType<TypeTag, Properties::Constraints>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using Linearizer = GetPropType<TypeTag, Properties::Linearizer>;
+    using LinearSolverBackend = GetPropType<TypeTag, Properties::LinearSolverBackend>;
+    using ConvergenceWriter = GetPropType<TypeTag, Properties::NewtonConvergenceWriter>;
 
-    typedef typename Dune::MPIHelper::MPICommunicator Communicator;
-    typedef Dune::CollectiveCommunication<Communicator> CollectiveCommunication;
+    using Communicator = typename Dune::MPIHelper::MPICommunicator;
+    using CollectiveCommunication = Dune::CollectiveCommunication<Communicator>;
 
 public:
     NewtonMethod(Simulator& simulator)
@@ -887,7 +917,7 @@ protected:
     { return EWOMS_GET_PARAM(TypeTag, int, NewtonMaxIterations); }
 
     static bool enableConstraints_()
-    { return GET_PROP_VALUE(TypeTag, EnableConstraints); }
+    { return getPropValue<TypeTag, Properties::EnableConstraints>(); }
 
     Simulator& simulator_;
 

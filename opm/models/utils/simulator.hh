@@ -89,11 +89,11 @@ namespace Opm {
 template <class TypeTag>
 class Simulator
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
-    typedef typename GET_PROP_TYPE(TypeTag, Problem) Problem;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Model = GetPropType<TypeTag, Properties::Model>;
+    using Problem = GetPropType<TypeTag, Properties::Problem>;
 
 public:
     // do not allow to copy simulators around
@@ -887,7 +887,7 @@ public:
      */
     void serialize()
     {
-        typedef Opm::Restart Restarter;
+        using Restarter = Opm::Restart;
         Restarter res;
         res.serializeBegin(*this);
         if (gridView().comm().rank() == 0)
@@ -973,7 +973,8 @@ private:
 };
 
 namespace Properties {
-SET_TYPE_PROP(NumericModel, Simulator, Opm::Simulator<TypeTag>);
+template<class TypeTag>
+struct Simulator<TypeTag, TTag::NumericModel> { using type = Opm::Simulator<TypeTag>; };
 }
 
 } // namespace Opm

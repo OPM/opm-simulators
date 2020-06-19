@@ -34,14 +34,14 @@
 
 #include <dune/common/version.hh>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties::TTag {
 
-NEW_TYPE_TAG(ParallelIstlLinearSolver, INHERITS_FROM(ParallelBaseLinearSolver));
+// Create new type tag
+struct ParallelIstlLinearSolver { using InheritsFrom = std::tuple<ParallelBaseLinearSolver>; };
 
-END_PROPERTIES
+} // namespace Opm::Properties::TTag
 
-namespace Opm {
-namespace Linear {
+namespace Opm::Linear {
 /*!
  * \ingroup Linear
  *
@@ -49,8 +49,9 @@ namespace Linear {
  *
  * To set the linear solver, use
  * \code
- * SET_TYPE_PROP(YourTypeTag, LinearSolverWrapper,
- *               Opm::Linear::SolverWrapper$SOLVER<TypeTag>);
+ * template<class TypeTag>
+ * struct LinearSolverWrapper<TypeTag, TTag::YourTypeTag>
+ * { using type = Opm::Linear::SolverWrapper$SOLVER<TypeTag>; };
  * \endcode
  *
  * The possible choices for '\c $SOLVER' are:
@@ -63,8 +64,9 @@ namespace Linear {
  *
  * Chosing the preconditioner works in an analogous way:
  * \code
- * SET_TYPE_PROP(YourTypeTag, PreconditionerWrapper,
- *               Opm::Linear::PreconditionerWrapper$PRECONDITIONER<TypeTag>);
+ * template<class TypeTag>
+ * struct PreconditionerWrapper<TypeTag, TTag::YourTypeTag>
+ * { using type = Opm::Linear::PreconditionerWrapper$PRECONDITIONER<TypeTag>; };
  * \endcode
  *
  * Where the choices possible for '\c $PRECONDITIONER' are:
@@ -78,20 +80,20 @@ namespace Linear {
 template <class TypeTag>
 class ParallelIstlSolverBackend : public ParallelBaseBackend<TypeTag>
 {
-    typedef ParallelBaseBackend<TypeTag> ParentType;
+    using ParentType = ParallelBaseBackend<TypeTag>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, LinearSolverWrapper) LinearSolverWrapper;
-    typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using LinearSolverWrapper = GetPropType<TypeTag, Properties::LinearSolverWrapper>;
+    using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
 
-    typedef typename ParentType::ParallelOperator ParallelOperator;
-    typedef typename ParentType::OverlappingVector OverlappingVector;
-    typedef typename ParentType::ParallelPreconditioner ParallelPreconditioner;
-    typedef typename ParentType::ParallelScalarProduct ParallelScalarProduct;
+    using ParallelOperator = typename ParentType::ParallelOperator;
+    using OverlappingVector = typename ParentType::OverlappingVector;
+    using ParallelPreconditioner = typename ParentType::ParallelPreconditioner;
+    using ParallelScalarProduct = typename ParentType::ParallelScalarProduct;
 
-    typedef typename SparseMatrixAdapter::MatrixBlock MatrixBlock;
-    typedef typename LinearSolverWrapper::RawSolver RawLinearSolver;
+    using MatrixBlock = typename SparseMatrixAdapter::MatrixBlock;
+    using RawLinearSolver = typename LinearSolverWrapper::RawSolver;
 
     static_assert(std::is_same<SparseMatrixAdapter, IstlSparseMatrixAdapter<MatrixBlock> >::value,
                   "The ParallelIstlSolverBackend linear solver backend requires the IstlSparseMatrixAdapter");
@@ -138,31 +140,32 @@ protected:
     LinearSolverWrapper solverWrapper_;
 };
 
-}} // namespace Linear, Opm
+} // namespace Opm::Linear
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-SET_TYPE_PROP(ParallelIstlLinearSolver,
-              LinearSolverBackend,
-              Opm::Linear::ParallelIstlSolverBackend<TypeTag>);
+template<class TypeTag>
+struct LinearSolverBackend<TypeTag, TTag::ParallelIstlLinearSolver>
+{ using type = Opm::Linear::ParallelIstlSolverBackend<TypeTag>; };
 
-SET_TYPE_PROP(ParallelIstlLinearSolver,
-              LinearSolverWrapper,
-              Opm::Linear::SolverWrapperBiCGStab<TypeTag>);
+template<class TypeTag>
+struct LinearSolverWrapper<TypeTag, TTag::ParallelIstlLinearSolver>
+{ using type = Opm::Linear::SolverWrapperBiCGStab<TypeTag>; };
 
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2,7)
-SET_TYPE_PROP(ParallelIstlLinearSolver,
-              PreconditionerWrapper,
-              Opm::Linear::PreconditionerWrapperILU<TypeTag>);
+template<class TypeTag>
+struct PreconditionerWrapper<TypeTag, TTag::ParallelIstlLinearSolver>
+{ using type = Opm::Linear::PreconditionerWrapperILU<TypeTag>; };
 #else
-SET_TYPE_PROP(ParallelIstlLinearSolver,
-              PreconditionerWrapper,
-              Opm::Linear::PreconditionerWrapperILU0<TypeTag>);
+template<class TypeTag>
+struct PreconditionerWrapper<TypeTag, TTag::ParallelIstlLinearSolver>
+{ using type = Opm::Linear::PreconditionerWrapperILU0<TypeTag>; };
 #endif
 
 //! set the GMRes restart parameter to 10 by default
-SET_INT_PROP(ParallelIstlLinearSolver, GMResRestart, 10);
+template<class TypeTag>
+struct GMResRestart<TypeTag, TTag::ParallelIstlLinearSolver> { static constexpr int value = 10; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 #endif

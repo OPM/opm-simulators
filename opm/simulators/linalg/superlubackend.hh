@@ -39,11 +39,9 @@
 #include <dune/common/fmatrix.hh>
 #include <dune/common/version.hh>
 
-BEGIN_PROPERTIES
-
-NEW_TYPE_TAG(SuperLULinearSolver);
-
-END_PROPERTIES
+namespace Opm::Properties::TTag {
+struct SuperLULinearSolver {};
+} // namespace Opm::Properties::TTag
 
 namespace Opm {
 namespace Linear {
@@ -57,10 +55,10 @@ class SuperLUSolve_;
 template <class TypeTag>
 class SuperLUBackend
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
-    typedef typename SparseMatrixAdapter::block_type Matrix;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
+    using Matrix = typename SparseMatrixAdapter::block_type;
 
     static_assert(std::is_same<SparseMatrixAdapter, IstlSparseMatrixAdapter<MatrixBlock>::value,
                   "The SuperLU linear solver backend requires the IstlSparseMatrixAdapter");
@@ -145,11 +143,11 @@ public:
                        Vector& x,
                        const Vector& b)
     {
-        static const int numEq = GET_PROP_VALUE(TypeTag, NumEq);
-        typedef Dune::FieldVector<double, numEq> DoubleEqVector;
-        typedef Dune::FieldMatrix<double, numEq, numEq> DoubleEqMatrix;
-        typedef Dune::BlockVector<DoubleEqVector> DoubleVector;
-        typedef Dune::BCRSMatrix<DoubleEqMatrix> DoubleMatrix;
+        static const int numEq = getPropValue<TypeTag, Properties::NumEq>();
+        using DoubleEqVector = Dune::FieldVector<double, numEq>;
+        using DoubleEqMatrix = Dune::FieldMatrix<double, numEq, numEq>;
+        using DoubleVector = Dune::BlockVector<DoubleEqVector>;
+        using DoubleMatrix = Dune::BCRSMatrix<DoubleEqMatrix>;
 
         // copy the inputs into the double precision data structures
         DoubleVector bDouble(b);
@@ -172,13 +170,14 @@ public:
 } // namespace Linear
 } // namespace Opm
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-SET_INT_PROP(SuperLULinearSolver, LinearSolverVerbosity, 0);
-SET_TYPE_PROP(SuperLULinearSolver, LinearSolverBackend,
-              Opm::Linear::SuperLUBackend<TypeTag>);
+template<class TypeTag>
+struct LinearSolverVerbosity<TypeTag, TTag::SuperLULinearSolver> { static constexpr int value = 0; };
+template<class TypeTag>
+struct LinearSolverBackend<TypeTag, TTag::SuperLULinearSolver> { using type = Opm::Linear::SuperLUBackend<TypeTag>; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 #endif // HAVE_SUPERLU
 

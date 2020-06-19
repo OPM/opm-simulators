@@ -40,28 +40,44 @@
 
 #include <cstdio>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
+
+namespace TTag {
 
 // create new type tag for the VTK multi-phase output
-NEW_TYPE_TAG(VtkBlackOilPolymer);
+struct VtkBlackOilPolymer {};
+
+} // namespace TTag
 
 // create the property tags needed for the polymer output module
-NEW_PROP_TAG(VtkWritePolymerConcentration);
-NEW_PROP_TAG(VtkWritePolymerDeadPoreVolume);
-NEW_PROP_TAG(VtkWritePolymerAdsorption);
-NEW_PROP_TAG(VtkWritePolymerRockDensity);
-NEW_PROP_TAG(VtkWritePolymerViscosityCorrection);
-NEW_PROP_TAG(VtkWriteWaterViscosityCorrection);
+template<class TypeTag, class MyTypeTag>
+struct VtkWritePolymerConcentration { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWritePolymerDeadPoreVolume { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWritePolymerAdsorption { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWritePolymerRockDensity { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWritePolymerViscosityCorrection { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteWaterViscosityCorrection { using type = UndefinedProperty; };
 
 // set default values for what quantities to output
-SET_BOOL_PROP(VtkBlackOilPolymer, VtkWritePolymerConcentration, true);
-SET_BOOL_PROP(VtkBlackOilPolymer, VtkWritePolymerDeadPoreVolume, true);
-SET_BOOL_PROP(VtkBlackOilPolymer, VtkWritePolymerViscosityCorrection, true);
-SET_BOOL_PROP(VtkBlackOilPolymer, VtkWriteWaterViscosityCorrection, true);
-SET_BOOL_PROP(VtkBlackOilPolymer, VtkWritePolymerRockDensity, true);
-SET_BOOL_PROP(VtkBlackOilPolymer, VtkWritePolymerAdsorption, true);
+template<class TypeTag>
+struct VtkWritePolymerConcentration<TypeTag, TTag::VtkBlackOilPolymer> { static constexpr bool value = true; };
+template<class TypeTag>
+struct VtkWritePolymerDeadPoreVolume<TypeTag, TTag::VtkBlackOilPolymer> { static constexpr bool value = true; };
+template<class TypeTag>
+struct VtkWritePolymerViscosityCorrection<TypeTag, TTag::VtkBlackOilPolymer> { static constexpr bool value = true; };
+template<class TypeTag>
+struct VtkWriteWaterViscosityCorrection<TypeTag, TTag::VtkBlackOilPolymer> { static constexpr bool value = true; };
+template<class TypeTag>
+struct VtkWritePolymerRockDensity<TypeTag, TTag::VtkBlackOilPolymer> { static constexpr bool value = true; };
+template<class TypeTag>
+struct VtkWritePolymerAdsorption<TypeTag, TTag::VtkBlackOilPolymer> { static constexpr bool value = true; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!
@@ -72,20 +88,20 @@ namespace Opm {
 template <class TypeTag>
 class VtkBlackOilPolymerModule : public BaseOutputModule<TypeTag>
 {
-    typedef BaseOutputModule<TypeTag> ParentType;
+    using ParentType = BaseOutputModule<TypeTag>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
-    static const int vtkFormat = GET_PROP_VALUE(TypeTag, VtkOutputFormat);
-    typedef Opm::VtkMultiWriter<GridView, vtkFormat> VtkMultiWriter;
+    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    using VtkMultiWriter = Opm::VtkMultiWriter<GridView, vtkFormat>;
 
-    enum { enablePolymer = GET_PROP_VALUE(TypeTag, EnablePolymer) };
+    enum { enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>() };
 
-    typedef typename ParentType::ScalarBuffer ScalarBuffer;
+    using ScalarBuffer = typename ParentType::ScalarBuffer;
 
 public:
     VtkBlackOilPolymerModule(const Simulator& simulator)

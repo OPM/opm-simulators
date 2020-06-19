@@ -28,8 +28,9 @@
  * In conjunction with a suitable solver backend, solver wrappers work by specifying the
  * "SolverWrapper" property:
  * \code
- * SET_TYPE_PROP(YourTypeTag, LinearSolverWrapper,
- *               Opm::Linear::SolverWrapper$SOLVER<TypeTag>);
+ * template<class TypeTag>
+ * struct LinearSolverWrapper<TypeTag, TTag::YourTypeTag>
+ * { using type = Opm::Linear::SolverWrapper$SOLVER<TypeTag>; };
  * \endcode
  *
  * The possible choices for '\c $SOLVER' are:
@@ -49,9 +50,7 @@
 
 #include <dune/istl/solvers.hh>
 
-namespace Opm {
-
-namespace Linear {
+namespace Opm::Linear {
 
 /*!
  * \brief Macro to create a wrapper around an ISTL solver
@@ -60,14 +59,12 @@ namespace Linear {
     template <class TypeTag>                                                       \
     class SolverWrapper##SOLVER_NAME                                               \
     {                                                                              \
-        typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;                    \
-        typedef typename GET_PROP_TYPE(TypeTag,                                    \
-                                       OverlappingMatrix) OverlappingMatrix;       \
-        typedef typename GET_PROP_TYPE(TypeTag,                                    \
-                                       OverlappingVector) OverlappingVector;       \
+        using Scalar = GetPropType<TypeTag, Properties::Scalar>;                    \
+        using OverlappingMatrix = GetPropType<TypeTag, Properties::OverlappingMatrix>;       \
+        using OverlappingVector = GetPropType<TypeTag, Properties::OverlappingVector>;       \
                                                                                    \
     public:                                                                        \
-        typedef ISTL_SOLVER_NAME<OverlappingVector> RawSolver;                     \
+        using RawSolver = ISTL_SOLVER_NAME<OverlappingVector>;                     \
                                                                                    \
         SolverWrapper##SOLVER_NAME()                                               \
         {}                                                                         \
@@ -115,12 +112,12 @@ EWOMS_WRAP_ISTL_SOLVER(MinRes, Dune::MINRESSolver)
 template <class TypeTag>
 class SolverWrapperRestartedGMRes
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, OverlappingMatrix) OverlappingMatrix;
-    typedef typename GET_PROP_TYPE(TypeTag, OverlappingVector) OverlappingVector;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using OverlappingMatrix = GetPropType<TypeTag, Properties::OverlappingMatrix>;
+    using OverlappingVector = GetPropType<TypeTag, Properties::OverlappingVector>;
 
 public:
-    typedef Dune::RestartedGMResSolver<OverlappingVector> RawSolver;
+    using RawSolver = Dune::RestartedGMResSolver<OverlappingVector>;
 
     SolverWrapperRestartedGMRes()
     {}
@@ -163,6 +160,6 @@ private:
 
 #undef EWOMS_WRAP_ISTL_SOLVER
 
-}} // namespace Linear, Opm
+} // namespace Opm::Linear
 
 #endif

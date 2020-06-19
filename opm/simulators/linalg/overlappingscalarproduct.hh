@@ -42,10 +42,10 @@ class OverlappingScalarProduct
     : public Dune::ScalarProduct<OverlappingBlockVector>
 {
 public:
-    typedef typename OverlappingBlockVector::field_type field_type;
-    typedef typename Dune::CollectiveCommunication<typename Dune::MPIHelper::MPICommunicator> CollectiveCommunication;
+    using field_type = typename OverlappingBlockVector::field_type;
+    using CollectiveCommunication = typename Dune::CollectiveCommunication<typename Dune::MPIHelper::MPICommunicator>;
 
-    typedef typename Dune::ScalarProduct<OverlappingBlockVector>::real_type real_type;
+    using real_type = typename Dune::ScalarProduct<OverlappingBlockVector>::real_type;
 
     //! the kind of computations supported by the operator. Either overlapping or non-overlapping
     Dune::SolverCategory::Category category() const override

@@ -39,30 +39,48 @@
 
 #include <cstdio>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
+
+namespace TTag {
 
 // create new type tag for the VTK multi-phase output
-NEW_TYPE_TAG(VtkDiscreteFracture);
+struct VtkDiscreteFracture {};
+
+} // namespace TTag
 
 // create the property tags needed for the multi phase module
-NEW_PROP_TAG(VtkWriteFractureSaturations);
-NEW_PROP_TAG(VtkWriteFractureMobilities);
-NEW_PROP_TAG(VtkWriteFractureRelativePermeabilities);
-NEW_PROP_TAG(VtkWriteFracturePorosity);
-NEW_PROP_TAG(VtkWriteFractureIntrinsicPermeabilities);
-NEW_PROP_TAG(VtkWriteFractureFilterVelocities);
-NEW_PROP_TAG(VtkWriteFractureVolumeFraction);
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteFractureSaturations { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteFractureMobilities { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteFractureRelativePermeabilities { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteFracturePorosity { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteFractureIntrinsicPermeabilities { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteFractureFilterVelocities { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteFractureVolumeFraction { using type = UndefinedProperty; };
 
 // set default values for what quantities to output
-SET_BOOL_PROP(VtkDiscreteFracture, VtkWriteFractureSaturations, true);
-SET_BOOL_PROP(VtkDiscreteFracture, VtkWriteFractureMobilities, false);
-SET_BOOL_PROP(VtkDiscreteFracture, VtkWriteFractureRelativePermeabilities, true);
-SET_BOOL_PROP(VtkDiscreteFracture, VtkWriteFracturePorosity, true);
-SET_BOOL_PROP(VtkDiscreteFracture, VtkWriteFractureIntrinsicPermeabilities, false);
-SET_BOOL_PROP(VtkDiscreteFracture, VtkWriteFractureFilterVelocities, false);
-SET_BOOL_PROP(VtkDiscreteFracture, VtkWriteFractureVolumeFraction, true);
+template<class TypeTag>
+struct VtkWriteFractureSaturations<TypeTag, TTag::VtkDiscreteFracture> { static constexpr bool value = true; };
+template<class TypeTag>
+struct VtkWriteFractureMobilities<TypeTag, TTag::VtkDiscreteFracture> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteFractureRelativePermeabilities<TypeTag, TTag::VtkDiscreteFracture> { static constexpr bool value = true; };
+template<class TypeTag>
+struct VtkWriteFracturePorosity<TypeTag, TTag::VtkDiscreteFracture> { static constexpr bool value = true; };
+template<class TypeTag>
+struct VtkWriteFractureIntrinsicPermeabilities<TypeTag, TTag::VtkDiscreteFracture> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteFractureFilterVelocities<TypeTag, TTag::VtkDiscreteFracture> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteFractureVolumeFraction<TypeTag, TTag::VtkDiscreteFracture> { static constexpr bool value = true; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!
@@ -81,28 +99,28 @@ namespace Opm {
 template <class TypeTag>
 class VtkDiscreteFractureModule : public BaseOutputModule<TypeTag>
 {
-    typedef BaseOutputModule<TypeTag> ParentType;
+    using ParentType = BaseOutputModule<TypeTag>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, DiscBaseOutputModule) DiscBaseOutputModule;
+    using DiscBaseOutputModule = GetPropType<TypeTag, Properties::DiscBaseOutputModule>;
 
-    static const int vtkFormat = GET_PROP_VALUE(TypeTag, VtkOutputFormat);
-    typedef Opm::VtkMultiWriter<GridView, vtkFormat> VtkMultiWriter;
+    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    using VtkMultiWriter = Opm::VtkMultiWriter<GridView, vtkFormat>;
 
     enum { dim = GridView::dimension };
     enum { dimWorld = GridView::dimensionworld };
-    enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
 
-    typedef typename ParentType::ScalarBuffer ScalarBuffer;
-    typedef typename ParentType::PhaseBuffer PhaseBuffer;
-    typedef typename ParentType::PhaseVectorBuffer PhaseVectorBuffer;
+    using ScalarBuffer = typename ParentType::ScalarBuffer;
+    using PhaseBuffer = typename ParentType::PhaseBuffer;
+    using PhaseVectorBuffer = typename ParentType::PhaseVectorBuffer;
 
 public:
     VtkDiscreteFractureModule(const Simulator& simulator)

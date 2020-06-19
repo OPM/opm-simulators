@@ -42,30 +42,30 @@ namespace Opm {
  * \brief Implements a boundary vector for the fully implicit black-oil model.
  */
 template <class TypeTag>
-class BlackOilBoundaryRateVector : public GET_PROP_TYPE(TypeTag, RateVector)
+class BlackOilBoundaryRateVector : public GetPropType<TypeTag, Properties::RateVector>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, ExtensiveQuantities) ExtensiveQuantities;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, LocalResidual) LocalResidual;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    using ParentType = GetPropType<TypeTag, Properties::RateVector>;
+    using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using LocalResidual = GetPropType<TypeTag, Properties::LocalResidual>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
-    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
-    enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
-    enum { numComponents = GET_PROP_VALUE(TypeTag, NumComponents) };
-    enum { enableSolvent = GET_PROP_VALUE(TypeTag, EnableSolvent) };
-    enum { enablePolymer = GET_PROP_VALUE(TypeTag, EnablePolymer) };
-    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
+    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
+    enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
+    enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
+    enum { enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>() };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { conti0EqIdx = Indices::conti0EqIdx };
     enum { contiEnergyEqIdx = Indices::contiEnergyEqIdx };
-    enum { enableFoam = GET_PROP_VALUE(TypeTag, EnableFoam) };
+    enum { enableFoam = getPropValue<TypeTag, Properties::EnableFoam>() };
 
-    static constexpr bool blackoilConserveSurfaceVolume = GET_PROP_VALUE(TypeTag, BlackoilConserveSurfaceVolume);
+    static constexpr bool blackoilConserveSurfaceVolume = getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>();
 
-    typedef Opm::BlackOilEnergyModule<TypeTag, enableEnergy> EnergyModule;
+    using EnergyModule = Opm::BlackOilEnergyModule<TypeTag, enableEnergy>;
 
 public:
     /*!
@@ -120,8 +120,8 @@ public:
                                                                      extQuants,
                                                                      insideIntQuants.fluidState());
             else if (pBoundary > pInside) {
-                typedef typename std::conditional<std::is_same<typename FluidState::Scalar, Evaluation>::value,
-                                                  Evaluation, Scalar>::type RhsEval;
+                using RhsEval = typename std::conditional<std::is_same<typename FluidState::Scalar, Evaluation>::value,
+                                                          Evaluation, Scalar>::type;
                 // influx
                 LocalResidual::template evalPhaseFluxes_<RhsEval>(tmp,
                                                                   phaseIdx,

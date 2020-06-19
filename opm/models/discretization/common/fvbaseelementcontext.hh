@@ -50,39 +50,39 @@ namespace Opm {
 template<class TypeTag>
 class FvBaseElementContext
 {
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) Implementation;
+    using Implementation = GetPropType<TypeTag, Properties::ElementContext>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) IntensiveQuantities;
-    typedef typename GET_PROP_TYPE(TypeTag, ExtensiveQuantities) ExtensiveQuantities;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
 
     // the history size of the time discretization in number of steps
-    enum { timeDiscHistorySize = GET_PROP_VALUE(TypeTag, TimeDiscHistorySize) };
+    enum { timeDiscHistorySize = getPropValue<TypeTag, Properties::TimeDiscHistorySize>() };
 
     struct DofStore_ {
         IntensiveQuantities intensiveQuantities[timeDiscHistorySize];
         PrimaryVariables priVars[timeDiscHistorySize];
         const IntensiveQuantities *thermodynamicHint[timeDiscHistorySize];
     };
-    typedef std::vector<DofStore_> DofVarsVector;
-    typedef std::vector<ExtensiveQuantities> ExtensiveQuantitiesVector;
+    using DofVarsVector = std::vector<DofStore_>;
+    using ExtensiveQuantitiesVector = std::vector<ExtensiveQuantities>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Problem) Problem;
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
-    typedef typename GET_PROP_TYPE(TypeTag, Stencil) Stencil;
-    typedef typename GET_PROP_TYPE(TypeTag, GradientCalculator) GradientCalculator;
-    typedef typename GET_PROP_TYPE(TypeTag, SolutionVector) SolutionVector;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Problem = GetPropType<TypeTag, Properties::Problem>;
+    using Model = GetPropType<TypeTag, Properties::Model>;
+    using Stencil = GetPropType<TypeTag, Properties::Stencil>;
+    using GradientCalculator = GetPropType<TypeTag, Properties::GradientCalculator>;
+    using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GridView::template Codim<0>::Entity Element;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Element = typename GridView::template Codim<0>::Entity;
 
     static const unsigned dimWorld = GridView::dimensionworld;
-    static const unsigned numEq = GET_PROP_VALUE(TypeTag, NumEq);
+    static const unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
 
-    typedef typename GridView::ctype CoordScalar;
-    typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
+    using CoordScalar = typename GridView::ctype;
+    using GlobalPosition = Dune::FieldVector<CoordScalar, dimWorld>;
 
     // we don't allow copies of element contexts!
     FvBaseElementContext(const FvBaseElementContext& ) = delete;

@@ -33,26 +33,36 @@
 #include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
 #include "problems/reservoirproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(ReservoirNcpVcfvProblem, INHERITS_FROM(NcpModel, ReservoirBaseProblem));
+// Create new type tags
+namespace TTag {
+struct ReservoirNcpVcfvProblem { using InheritsFrom = std::tuple<ReservoirBaseProblem, NcpModel>; };
+} // end namespace TTag
 
 // Select the vertex centered finite volume method as spatial discretization
-SET_TAG_PROP(ReservoirNcpVcfvProblem, SpatialDiscretizationSplice, VcfvDiscretization);
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::ReservoirNcpVcfvProblem> { using type = TTag::VcfvDiscretization; };
 
 // enable the storage cache for this problem so that the storage cache receives wider
 // testing
-SET_BOOL_PROP(ReservoirNcpVcfvProblem, EnableStorageCache, true);
+template<class TypeTag>
+struct EnableStorageCache<TypeTag, TTag::ReservoirNcpVcfvProblem> { static constexpr bool value = true; };
 
 // reduce the base epsilon for the finite difference method to 10^-11. for some reason
 // the simulator converges better with this. (TODO: use automatic differentiation?)
-SET_SCALAR_PROP(ReservoirNcpVcfvProblem, BaseEpsilon, 1e-11);
+template<class TypeTag>
+struct BaseEpsilon<TypeTag, TTag::ReservoirNcpVcfvProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-11;
+};
 
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(ReservoirNcpVcfvProblem) ProblemTypeTag;
+    using ProblemTypeTag = Opm::Properties::TTag::ReservoirNcpVcfvProblem;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

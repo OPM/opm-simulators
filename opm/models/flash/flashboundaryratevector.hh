@@ -43,23 +43,23 @@ namespace Opm {
  *        calculations.
  */
 template <class TypeTag>
-class FlashBoundaryRateVector : public GET_PROP_TYPE(TypeTag, RateVector)
+class FlashBoundaryRateVector : public GetPropType<TypeTag, Properties::RateVector>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, ExtensiveQuantities) ExtensiveQuantities;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    using ParentType = GetPropType<TypeTag, Properties::RateVector>;
+    using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
-    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
-    enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
-    enum { numComponents = GET_PROP_VALUE(TypeTag, NumComponents) };
+    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
+    enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
     enum { conti0EqIdx = Indices::conti0EqIdx };
-    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
-    typedef Opm::EnergyModule<TypeTag, enableEnergy> EnergyModule;
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
+    using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
 
 public:
     FlashBoundaryRateVector() : ParentType()

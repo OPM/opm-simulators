@@ -43,26 +43,26 @@ namespace Opm {
  * \brief A Richards model specific Newton method.
  */
 template <class TypeTag>
-class RichardsNewtonMethod : public GET_PROP_TYPE(TypeTag, DiscNewtonMethod)
+class RichardsNewtonMethod : public GetPropType<TypeTag, Properties::DiscNewtonMethod>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, DiscNewtonMethod) ParentType;
+    using ParentType = GetPropType<TypeTag, Properties::DiscNewtonMethod>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Linearizer) Linearizer;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Linearizer = GetPropType<TypeTag, Properties::Linearizer>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
     enum { pressureWIdx = Indices::pressureWIdx };
     enum { numPhases = FluidSystem::numPhases };
-    enum { liquidPhaseIdx = GET_PROP_VALUE(TypeTag, LiquidPhaseIndex) };
-    enum { gasPhaseIdx = GET_PROP_VALUE(TypeTag, GasPhaseIndex) };
+    enum { liquidPhaseIdx = getPropValue<TypeTag, Properties::LiquidPhaseIndex>() };
+    enum { gasPhaseIdx = getPropValue<TypeTag, Properties::GasPhaseIndex>() };
 
-    typedef Dune::FieldVector<Scalar, numPhases> PhaseVector;
+    using PhaseVector = Dune::FieldVector<Scalar, numPhases>;
 
 public:
     RichardsNewtonMethod(Simulator& simulator) : ParentType(simulator)

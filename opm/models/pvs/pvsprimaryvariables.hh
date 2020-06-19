@@ -57,29 +57,29 @@ namespace Opm {
 template <class TypeTag>
 class PvsPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
 {
-    typedef FvBasePrimaryVariables<TypeTag> ParentType;
-    typedef PvsPrimaryVariables<TypeTag> ThisType;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) Implementation;
+    using ParentType = FvBasePrimaryVariables<TypeTag>;
+    using ThisType = PvsPrimaryVariables<TypeTag>;
+    using Implementation = GetPropType<TypeTag, Properties::PrimaryVariables>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
     // primary variable indices
     enum { pressure0Idx = Indices::pressure0Idx };
     enum { switch0Idx = Indices::switch0Idx };
 
-    enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
-    enum { numComponents = GET_PROP_VALUE(TypeTag, NumComponents) };
-    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
+    enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
-    typedef typename Opm::MathToolbox<Evaluation> Toolbox;
-    typedef Dune::FieldVector<Scalar, numComponents> ComponentVector;
-    typedef Opm::EnergyModule<TypeTag, enableEnergy> EnergyModule;
-    typedef Opm::NcpFlash<Scalar, FluidSystem> NcpFlash;
+    using Toolbox = typename Opm::MathToolbox<Evaluation>;
+    using ComponentVector = Dune::FieldVector<Scalar, numComponents>;
+    using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
+    using NcpFlash = Opm::NcpFlash<Scalar, FluidSystem>;
 
 public:
     PvsPrimaryVariables() : ParentType()
@@ -276,7 +276,7 @@ public:
     template <class FluidState>
     void assignNaive(const FluidState& fluidState)
     {
-        typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
+        using FsToolbox = Opm::MathToolbox<typename FluidState::Scalar>;
 
         // assign the phase temperatures. this is out-sourced to
         // the energy module

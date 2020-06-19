@@ -32,12 +32,12 @@
 
 #include <opm/material/common/Unused.hpp>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 template <class TypeTag, class MyTypeTag>
 struct NewtonMethod;
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!
@@ -48,10 +48,10 @@ namespace Opm {
 template <class TypeTag>
 class NullConvergenceWriter
 {
-    typedef typename GET_PROP_TYPE(TypeTag, NewtonMethod) NewtonMethod;
+    using NewtonMethod = GetPropType<TypeTag, Properties::NewtonMethod>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, SolutionVector) SolutionVector;
-    typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) GlobalEqVector;
+    using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
+    using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
 
 public:
     NullConvergenceWriter(NewtonMethod& method  OPM_UNUSED)

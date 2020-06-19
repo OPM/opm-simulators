@@ -45,20 +45,20 @@ namespace Opm {
  */
 template <class TypeTag>
 class FlashRateVector
-    : public Dune::FieldVector<typename GET_PROP_TYPE(TypeTag, Evaluation),
-                               GET_PROP_VALUE(TypeTag, NumEq)>
+    : public Dune::FieldVector<GetPropType<TypeTag, Properties::Evaluation>,
+                               getPropValue<TypeTag, Properties::NumEq>()>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
     enum { conti0EqIdx = Indices::conti0EqIdx };
-    enum { numComponents = GET_PROP_VALUE(TypeTag, NumComponents) };
-    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
+    enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
+    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
 
-    typedef Dune::FieldVector<Evaluation, numEq> ParentType;
-    typedef Opm::EnergyModule<TypeTag, GET_PROP_VALUE(TypeTag, EnableEnergy)> EnergyModule;
+    using ParentType = Dune::FieldVector<Evaluation, numEq>;
+    using EnergyModule = Opm::EnergyModule<TypeTag, getPropValue<TypeTag, Properties::EnableEnergy>()>;
 
 public:
     FlashRateVector() : ParentType()

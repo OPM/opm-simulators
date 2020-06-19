@@ -31,14 +31,17 @@
 #include <opm/models/pvs/pvsmodel.hh>
 #include "problems/infiltrationproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(InfiltrationProblem, INHERITS_FROM(PvsModel, InfiltrationBaseProblem));
+// Create new type tags
+namespace TTag {
+struct InfiltrationProblem { using InheritsFrom = std::tuple<InfiltrationBaseProblem, PvsModel>; };
+} // end namespace TTag
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(InfiltrationProblem) ProblemTypeTag;
+    using ProblemTypeTag = Opm::Properties::TTag::InfiltrationProblem;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

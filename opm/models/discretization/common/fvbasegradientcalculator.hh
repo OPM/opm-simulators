@@ -47,11 +47,11 @@ class EcfvDiscretization;
 template<class TypeTag>
 class FvBaseGradientCalculator
 {
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, Discretization) Discretization;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using Discretization = GetPropType<TypeTag, Properties::Discretization>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
     enum { dim = GridView::dimension };
     enum { dimWorld = GridView::dimensionworld };
@@ -60,8 +60,8 @@ class FvBaseGradientCalculator
     // we assume that the geometry with the most pointsq is a cube.
     enum { maxFap = 2 << dim };
 
-    typedef Dune::FieldVector<Scalar, dimWorld> DimVector;
-    typedef Dune::FieldVector<Evaluation, dimWorld> EvalDimVector;
+    using DimVector = Dune::FieldVector<Scalar, dimWorld>;
+    using EvalDimVector = Dune::FieldVector<Evaluation, dimWorld>;
 
 public:
     /*!
@@ -99,8 +99,8 @@ public:
                               const QuantityCallback& quantityCallback) const
         -> typename std::remove_reference<decltype(quantityCallback.operator()(0))>::type
     {
-        typedef decltype(quantityCallback.operator()(0)) RawReturnType;
-        typedef typename std::remove_const<typename std::remove_reference<RawReturnType>::type>::type ReturnType;
+        using RawReturnType = decltype(quantityCallback.operator()(0));
+        using ReturnType = typename std::remove_const<typename std::remove_reference<RawReturnType>::type>::type;
 
         Scalar interiorDistance;
         Scalar exteriorDistance;
@@ -145,8 +145,8 @@ public:
                               const QuantityCallback& quantityCallback) const
         -> typename std::remove_reference<decltype(quantityCallback.operator()(0))>::type
     {
-        typedef decltype(quantityCallback.operator()(0)) RawReturnType;
-        typedef typename std::remove_const<typename std::remove_reference<RawReturnType>::type>::type ReturnType;
+        using RawReturnType = decltype(quantityCallback.operator()(0));
+        using ReturnType = typename std::remove_const<typename std::remove_reference<RawReturnType>::type>::type;
 
         Scalar interiorDistance;
         Scalar exteriorDistance;

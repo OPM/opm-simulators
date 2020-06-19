@@ -50,82 +50,97 @@ template <class TypeTag>
 class MultiPhaseBaseModel;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 //! The generic type tag for problems using the immiscible multi-phase model
-NEW_TYPE_TAG(MultiPhaseBaseModel, INHERITS_FROM(VtkMultiPhase, VtkTemperature));
+// Create new type tags
+namespace TTag {
+struct MultiPhaseBaseModel { using InheritsFrom = std::tuple<VtkTemperature, VtkMultiPhase>; };
+} // end namespace TTag
 
 //! Specify the splices of the MultiPhaseBaseModel type tag
-SET_SPLICES(MultiPhaseBaseModel, SpatialDiscretizationSplice);
+template<class TypeTag>
+struct Splices<TypeTag, TTag::MultiPhaseBaseModel>
+{
+    using type = std::tuple<GetSplicePropType<TypeTag, TTag::MultiPhaseBaseModel, Properties::SpatialDiscretizationSplice>>;
+};
 
 //! Set the default spatial discretization
 //!
 //! We use a vertex centered finite volume method by default
-SET_TAG_PROP(MultiPhaseBaseModel, SpatialDiscretizationSplice, VcfvDiscretization);
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::MultiPhaseBaseModel> { using type = TTag::VcfvDiscretization; };
 
 //! set the number of equations to the number of phases
-SET_INT_PROP(MultiPhaseBaseModel, NumEq, GET_PROP_TYPE(TypeTag, Indices)::numEq);
+template<class TypeTag>
+struct NumEq<TypeTag, TTag::MultiPhaseBaseModel> { static constexpr int value = GetPropType<TypeTag, Properties::Indices>::numEq; };
 //! The number of phases is determined by the fluid system
-SET_INT_PROP(MultiPhaseBaseModel, NumPhases, GET_PROP_TYPE(TypeTag, FluidSystem)::numPhases);
+template<class TypeTag>
+struct NumPhases<TypeTag, TTag::MultiPhaseBaseModel> { static constexpr int value = GetPropType<TypeTag, Properties::FluidSystem>::numPhases; };
 //! Number of chemical species in the system
-SET_INT_PROP(MultiPhaseBaseModel, NumComponents, GET_PROP_TYPE(TypeTag, FluidSystem)::numComponents);
+template<class TypeTag>
+struct NumComponents<TypeTag, TTag::MultiPhaseBaseModel> { static constexpr int value = GetPropType<TypeTag, Properties::FluidSystem>::numComponents; };
 
 //! The type of the base base class for actual problems
-SET_TYPE_PROP(MultiPhaseBaseModel, BaseProblem, Opm::MultiPhaseBaseProblem<TypeTag>);
+template<class TypeTag>
+struct BaseProblem<TypeTag, TTag::MultiPhaseBaseModel> { using type = Opm::MultiPhaseBaseProblem<TypeTag>; };
 
 //! By default, use the Darcy relation to determine the phase velocity
-SET_TYPE_PROP(MultiPhaseBaseModel, FluxModule, Opm::DarcyFluxModule<TypeTag>);
+template<class TypeTag>
+struct FluxModule<TypeTag, TTag::MultiPhaseBaseModel> { using type = Opm::DarcyFluxModule<TypeTag>; };
 
 /*!
  * \brief Set the material law to the null law by default.
  */
-SET_PROP(MultiPhaseBaseModel, MaterialLaw)
+template<class TypeTag>
+struct MaterialLaw<TypeTag, TTag::MultiPhaseBaseModel>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef Opm::NullMaterialTraits<Scalar, FluidSystem::numPhases> Traits;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Traits = Opm::NullMaterialTraits<Scalar, FluidSystem::numPhases>;
 
 public:
-    typedef Opm::NullMaterial<Traits> type;
+    using type = Opm::NullMaterial<Traits>;
 };
 
 /*!
  * \brief Set the property for the material parameters by extracting
  *        it from the material law.
  */
-SET_TYPE_PROP(MultiPhaseBaseModel,
-              MaterialLawParams,
-              typename GET_PROP_TYPE(TypeTag, MaterialLaw)::Params);
+template<class TypeTag>
+struct MaterialLawParams<TypeTag, TTag::MultiPhaseBaseModel>
+{ using type = typename GetPropType<TypeTag, Properties::MaterialLaw>::Params; };
 
 //! set the energy storage law for the solid to the one which assumes zero heat capacity
 //! by default
-SET_TYPE_PROP(MultiPhaseBaseModel,
-              SolidEnergyLaw,
-              Opm::NullSolidEnergyLaw<typename GET_PROP_TYPE(TypeTag, Scalar)>);
+template<class TypeTag>
+struct SolidEnergyLaw<TypeTag, TTag::MultiPhaseBaseModel>
+{ using type = Opm::NullSolidEnergyLaw<GetPropType<TypeTag, Properties::Scalar>>; };
 
 //! extract the type of the parameter objects for the solid energy storage law from the
 //! law itself
-SET_TYPE_PROP(MultiPhaseBaseModel,
-              SolidEnergyLawParams,
-              typename GET_PROP_TYPE(TypeTag, SolidEnergyLaw)::Params);
+template<class TypeTag>
+struct SolidEnergyLawParams<TypeTag, TTag::MultiPhaseBaseModel>
+{ using type = typename GetPropType<TypeTag, Properties::SolidEnergyLaw>::Params; };
 
 //! set the thermal conduction law to a dummy one by default
-SET_TYPE_PROP(MultiPhaseBaseModel,
-              ThermalConductionLaw,
-              Opm::NullThermalConductionLaw<typename GET_PROP_TYPE(TypeTag, Scalar)>);
+template<class TypeTag>
+struct ThermalConductionLaw<TypeTag, TTag::MultiPhaseBaseModel>
+{ using type = Opm::NullThermalConductionLaw<GetPropType<TypeTag, Properties::Scalar>>; };
 
 //! extract the type of the parameter objects for the thermal conduction law from the law
 //! itself
-SET_TYPE_PROP(MultiPhaseBaseModel,
-              ThermalConductionLawParams,
-              typename GET_PROP_TYPE(TypeTag, ThermalConductionLaw)::Params);
+template<class TypeTag>
+struct ThermalConductionLawParams<TypeTag, TTag::MultiPhaseBaseModel>
+{ using type = typename GetPropType<TypeTag, Properties::ThermalConductionLaw>::Params; };
 
 //! disable gravity by default
-SET_BOOL_PROP(MultiPhaseBaseModel, EnableGravity, false);
+template<class TypeTag>
+struct EnableGravity<TypeTag, TTag::MultiPhaseBaseModel> { static constexpr bool value = false; };
 
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -135,23 +150,23 @@ namespace Opm {
  *        which assume multiple fluid phases.
  */
 template <class TypeTag>
-class MultiPhaseBaseModel : public GET_PROP_TYPE(TypeTag, Discretization)
+class MultiPhaseBaseModel : public GetPropType<TypeTag, Properties::Discretization>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Discretization) ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Implementation;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) ThreadManager;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    using ParentType = GetPropType<TypeTag, Properties::Discretization>;
+    using Implementation = GetPropType<TypeTag, Properties::Model>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
 
-    typedef typename GridView::template Codim<0>::Iterator ElementIterator;
-    typedef typename GridView::template Codim<0>::Entity Element;
+    using ElementIterator = typename GridView::template Codim<0>::Iterator;
+    using Element = typename GridView::template Codim<0>::Entity;
 
-    enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = FluidSystem::numComponents };
 
 public:

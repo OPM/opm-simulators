@@ -146,7 +146,7 @@ public:
         serializeSectionBegin(cookie);
 
         // write element data
-        typedef typename GridView::template Codim<codim>::Iterator Iterator;
+        using Iterator = typename GridView::template Codim<codim>::Iterator;
 
         Iterator it = gridView.template begin<codim>();
         const Iterator& endIt = gridView.template end<codim>();
@@ -243,7 +243,7 @@ public:
         std::string curLine;
 
         // read entity data
-        typedef typename GridView::template Codim<codim>::Iterator Iterator;
+        using Iterator = typename GridView::template Codim<codim>::Iterator;
         Iterator it = gridView.template begin<codim>();
         const Iterator& endIt = gridView.template end<codim>();
         for (; it != endIt; ++it) {

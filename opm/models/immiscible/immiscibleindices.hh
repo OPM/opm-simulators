@@ -40,12 +40,12 @@ namespace Opm {
  */
 template <class TypeTag, int PVOffset>
 struct ImmiscibleIndices
-    : public EnergyIndices<PVOffset + GET_PROP_VALUE(TypeTag, NumPhases),
-                           GET_PROP_VALUE(TypeTag, EnableEnergy)>
+    : public EnergyIndices<PVOffset + getPropValue<TypeTag, Properties::NumPhases>(),
+                           getPropValue<TypeTag, Properties::EnableEnergy>()>
 {
-    enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
-    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
-    typedef Opm::EnergyIndices<PVOffset + numPhases, enableEnergy> EnergyIndices;
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    using EnergyIndices = Opm::EnergyIndices<PVOffset + numPhases, enableEnergy>;
 
 public:
     // number of equations/primary variables

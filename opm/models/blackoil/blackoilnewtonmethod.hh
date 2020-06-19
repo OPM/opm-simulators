@@ -35,22 +35,42 @@
 
 #include <opm/material/common/Unused.hpp>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 template <class TypeTag, class MyTypeTag>
 struct DiscNewtonMethod;
 
-NEW_PROP_TAG(DpMaxRel);
-NEW_PROP_TAG(DsMax);
-NEW_PROP_TAG(PriVarOscilationThreshold);
-NEW_PROP_TAG(ProjectSaturations);
+template<class TypeTag, class MyTypeTag>
+struct DpMaxRel { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct DsMax { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct PriVarOscilationThreshold { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct ProjectSaturations { using type = UndefinedProperty; };
 
-SET_SCALAR_PROP(NewtonMethod, DpMaxRel, 0.3);
-SET_SCALAR_PROP(NewtonMethod, DsMax, 0.2);
-SET_SCALAR_PROP(NewtonMethod, PriVarOscilationThreshold, 1e-5);
-SET_BOOL_PROP(NewtonMethod, ProjectSaturations, false);
+template<class TypeTag>
+struct DpMaxRel<TypeTag, TTag::NewtonMethod>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.3;
+};
+template<class TypeTag>
+struct DsMax<TypeTag, TTag::NewtonMethod>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.2;
+};
+template<class TypeTag>
+struct PriVarOscilationThreshold<TypeTag, TTag::NewtonMethod>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-5;
+};
+template<class TypeTag>
+struct ProjectSaturations<TypeTag, TTag::NewtonMethod> { static constexpr bool value = false; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -60,19 +80,19 @@ namespace Opm {
  * \brief A newton solver which is specific to the black oil model.
  */
 template <class TypeTag>
-class BlackOilNewtonMethod : public GET_PROP_TYPE(TypeTag, DiscNewtonMethod)
+class BlackOilNewtonMethod : public GetPropType<TypeTag, Properties::DiscNewtonMethod>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, DiscNewtonMethod) ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, SolutionVector) SolutionVector;
-    typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) GlobalEqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Linearizer) Linearizer;
+    using ParentType = GetPropType<TypeTag, Properties::DiscNewtonMethod>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
+    using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Linearizer = GetPropType<TypeTag, Properties::Linearizer>;
 
-    static const unsigned numEq = GET_PROP_VALUE(TypeTag, NumEq);
+    static const unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
 
 public:
     BlackOilNewtonMethod(Simulator& simulator) : ParentType(simulator)

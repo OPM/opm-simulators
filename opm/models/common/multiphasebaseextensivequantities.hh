@@ -48,18 +48,18 @@ namespace Opm {
  */
 template <class TypeTag>
 class MultiPhaseBaseExtensiveQuantities
-    : public GET_PROP_TYPE(TypeTag, DiscExtensiveQuantities)
-    , public GET_PROP_TYPE(TypeTag, FluxModule)::FluxExtensiveQuantities
+    : public GetPropType<TypeTag, Properties::DiscExtensiveQuantities>
+    , public GetPropType<TypeTag, Properties::FluxModule>::FluxExtensiveQuantities
 {
-    typedef typename GET_PROP_TYPE(TypeTag, DiscExtensiveQuantities) ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    using ParentType = GetPropType<TypeTag, Properties::DiscExtensiveQuantities>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
-    enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
 
-    typedef typename GET_PROP_TYPE(TypeTag, FluxModule) FluxModule;
-    typedef typename FluxModule::FluxExtensiveQuantities FluxExtensiveQuantities;
+    using FluxModule = GetPropType<TypeTag, Properties::FluxModule>;
+    using FluxExtensiveQuantities = typename FluxModule::FluxExtensiveQuantities;
 
 public:
     /*!

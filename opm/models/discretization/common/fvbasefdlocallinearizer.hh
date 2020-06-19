@@ -50,20 +50,27 @@ class FvBaseFdLocalLinearizer;
 
 } // namespace Opm
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // declare the property tags required for the finite differences local linearizer
-NEW_TYPE_TAG(FiniteDifferenceLocalLinearizer);
 
-NEW_PROP_TAG(NumericDifferenceMethod);
-NEW_PROP_TAG(BaseEpsilon);
+namespace TTag {
+struct FiniteDifferenceLocalLinearizer {};
+} // namespace TTag
+
+template<class TypeTag, class MyTypeTag>
+struct NumericDifferenceMethod { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct BaseEpsilon { using type = UndefinedProperty; };
 
 // set the properties to be spliced in
-SET_TYPE_PROP(FiniteDifferenceLocalLinearizer, LocalLinearizer,
-              Opm::FvBaseFdLocalLinearizer<TypeTag>);
+template<class TypeTag>
+struct LocalLinearizer<TypeTag, TTag::FiniteDifferenceLocalLinearizer>
+{ using type = Opm::FvBaseFdLocalLinearizer<TypeTag>; };
 
-SET_TYPE_PROP(FiniteDifferenceLocalLinearizer, Evaluation,
-              typename GET_PROP_TYPE(TypeTag, Scalar));
+template<class TypeTag>
+struct Evaluation<TypeTag, TTag::FiniteDifferenceLocalLinearizer>
+{ using type = GetPropType<TypeTag, Properties::Scalar>; };
 
 /*!
  * \brief Specify which kind of method should be used to numerically
@@ -72,14 +79,18 @@ SET_TYPE_PROP(FiniteDifferenceLocalLinearizer, Evaluation,
  * -1 means backward differences, 0 means central differences, 1 means
  * forward differences. By default we use central differences.
  */
-SET_INT_PROP(FiniteDifferenceLocalLinearizer, NumericDifferenceMethod, +1);
+template<class TypeTag>
+struct NumericDifferenceMethod<TypeTag, TTag::FiniteDifferenceLocalLinearizer> { static constexpr int value = +1; };
 
 //! The base epsilon value for finite difference calculations
-SET_SCALAR_PROP(FiniteDifferenceLocalLinearizer,
-                BaseEpsilon,
-                std::max<Scalar>(0.9123e-10, std::numeric_limits<Scalar>::epsilon()*1.23e3));
+template<class TypeTag>
+struct BaseEpsilon<TypeTag, TTag::FiniteDifferenceLocalLinearizer>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = std::max<type>(0.9123e-10, std::numeric_limits<type>::epsilon()*1.23e3);
+};
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -123,27 +134,27 @@ template<class TypeTag>
 class FvBaseFdLocalLinearizer
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, LocalLinearizer) Implementation;
-    typedef typename GET_PROP_TYPE(TypeTag, LocalResidual) LocalResidual;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Problem) Problem;
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GridView::template Codim<0>::Entity Element;
+    using Implementation = GetPropType<TypeTag, Properties::LocalLinearizer>;
+    using LocalResidual = GetPropType<TypeTag, Properties::LocalResidual>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Problem = GetPropType<TypeTag, Properties::Problem>;
+    using Model = GetPropType<TypeTag, Properties::Model>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Element = typename GridView::template Codim<0>::Entity;
 
-    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
+    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
 
     // extract local matrices from jacobian matrix for consistency
-    typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter)::MatrixBlock ScalarMatrixBlock;
-    typedef Dune::FieldVector<Scalar, numEq> ScalarVectorBlock;
+    using ScalarMatrixBlock = typename GetPropType<TypeTag, Properties::SparseMatrixAdapter>::MatrixBlock;
+    using ScalarVectorBlock = Dune::FieldVector<Scalar, numEq>;
 
-    typedef Dune::BlockVector<ScalarVectorBlock> ScalarLocalBlockVector;
-    typedef Dune::Matrix<ScalarMatrixBlock> ScalarLocalBlockMatrix;
+    using ScalarLocalBlockVector = Dune::BlockVector<ScalarVectorBlock>;
+    using ScalarLocalBlockMatrix = Dune::Matrix<ScalarMatrixBlock>;
 
-    typedef typename LocalResidual::LocalEvalBlockVector LocalEvalBlockVector;
+    using LocalEvalBlockVector = typename LocalResidual::LocalEvalBlockVector;
 
 #if __GNUC__ == 4 && __GNUC_MINOR__ <= 6
 public:
@@ -251,7 +262,7 @@ public:
      *        the local derivatives
      */
     static Scalar baseEpsilon()
-    { return GET_PROP_VALUE(TypeTag, BaseEpsilon); }
+    { return getPropValue<TypeTag, Properties::BaseEpsilon>(); }
 
     /*!
      * \brief Returns the epsilon value which is added and removed

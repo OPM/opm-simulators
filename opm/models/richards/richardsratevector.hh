@@ -47,20 +47,20 @@ namespace Opm {
  */
 template <class TypeTag>
 class RichardsRateVector
-    : public Dune::FieldVector<typename GET_PROP_TYPE(TypeTag, Evaluation),
-                               GET_PROP_VALUE(TypeTag, NumEq)>
+    : public Dune::FieldVector<GetPropType<TypeTag, Properties::Evaluation>,
+                               getPropValue<TypeTag, Properties::NumEq>()>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) EnergyModule;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using EnergyModule = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
     enum { contiEqIdx = Indices::contiEqIdx };
-    enum { liquidCompIdx = GET_PROP_VALUE(TypeTag, LiquidComponentIndex) };
-    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
+    enum { liquidCompIdx = getPropValue<TypeTag, Properties::LiquidComponentIndex>() };
+    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
 
-    typedef Dune::FieldVector<Evaluation, numEq> ParentType;
+    using ParentType = Dune::FieldVector<Evaluation, numEq>;
 
 public:
     RichardsRateVector() : ParentType()

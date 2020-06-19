@@ -48,32 +48,32 @@ namespace Opm {
  */
 template <class TypeTag>
 class BlackOilRateVector
-    : public Dune::FieldVector<typename GET_PROP_TYPE(TypeTag, Evaluation),
-                               GET_PROP_VALUE(TypeTag, NumEq)>
+    : public Dune::FieldVector<GetPropType<TypeTag, Properties::Evaluation>,
+                               getPropValue<TypeTag, Properties::NumEq>()>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
-    typedef BlackOilSolventModule<TypeTag> SolventModule;
-    typedef BlackOilPolymerModule<TypeTag> PolymerModule;
-    typedef BlackOilFoamModule<TypeTag> FoamModule;
-    typedef BlackOilBrineModule<TypeTag> BrineModule;
+    using SolventModule = BlackOilSolventModule<TypeTag>;
+    using PolymerModule = BlackOilPolymerModule<TypeTag>;
+    using FoamModule = BlackOilFoamModule<TypeTag>;
+    using BrineModule = BlackOilBrineModule<TypeTag>;
 
-    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
-    enum { numComponents = GET_PROP_VALUE(TypeTag, NumComponents) };
+    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
+    enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
     enum { conti0EqIdx = Indices::conti0EqIdx };
     enum { contiEnergyEqIdx = Indices::contiEnergyEqIdx };
-    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
-    enum { enableSolvent = GET_PROP_VALUE(TypeTag, EnableSolvent) };
-    enum { enablePolymer = GET_PROP_VALUE(TypeTag, EnablePolymer) };
-    enum { enablePolymerMolarWeight = GET_PROP_VALUE(TypeTag, EnablePolymerMW) };
-    enum { enableFoam = GET_PROP_VALUE(TypeTag, EnableFoam) };
-    enum { enableBrine = GET_PROP_VALUE(TypeTag, EnableBrine) };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
+    enum { enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>() };
+    enum { enablePolymerMolarWeight = getPropValue<TypeTag, Properties::EnablePolymerMW>() };
+    enum { enableFoam = getPropValue<TypeTag, Properties::EnableFoam>() };
+    enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
 
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
-    typedef Dune::FieldVector<Evaluation, numEq> ParentType;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using ParentType = Dune::FieldVector<Evaluation, numEq>;
 
 public:
     BlackOilRateVector() : ParentType()
@@ -93,7 +93,7 @@ public:
         ParentType::operator=(value);
 
         // convert to "surface volume" if requested
-        if (GET_PROP_VALUE(TypeTag, BlackoilConserveSurfaceVolume)) {
+        if (getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>()) {
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                 (*this)[FluidSystem::gasCompIdx] /=
                         FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIdx);
@@ -146,7 +146,7 @@ public:
         }
 
         // convert to "surface volume" if requested
-        if (GET_PROP_VALUE(TypeTag, BlackoilConserveSurfaceVolume)) {
+        if (getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>()) {
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                 (*this)[FluidSystem::gasCompIdx] /=
                         FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIdx);

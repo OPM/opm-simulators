@@ -56,72 +56,96 @@ template <class TypeTag>
 class CuvetteProblem;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 
 // create a new type tag for the cuvette steam injection problem
-NEW_TYPE_TAG(CuvetteBaseProblem);
+namespace TTag {
+struct CuvetteBaseProblem {};
+}
 
 // Set the grid type
-SET_TYPE_PROP(CuvetteBaseProblem, Grid, Dune::YaspGrid<2>);
+template<class TypeTag>
+struct Grid<TypeTag, TTag::CuvetteBaseProblem> { using type = Dune::YaspGrid<2>; };
 
 // Set the problem property
-SET_TYPE_PROP(CuvetteBaseProblem, Problem, Opm::CuvetteProblem<TypeTag>);
+template<class TypeTag>
+struct Problem<TypeTag, TTag::CuvetteBaseProblem> { using type = Opm::CuvetteProblem<TypeTag>; };
 
 // Set the fluid system
-SET_TYPE_PROP(
-    CuvetteBaseProblem, FluidSystem,
-    Opm::H2OAirMesityleneFluidSystem<typename GET_PROP_TYPE(TypeTag, Scalar)>);
+template<class TypeTag>
+struct FluidSystem<TypeTag, TTag::CuvetteBaseProblem>
+{ using type = Opm::H2OAirMesityleneFluidSystem<GetPropType<TypeTag, Properties::Scalar>>; };
 
 // Enable gravity
-SET_BOOL_PROP(CuvetteBaseProblem, EnableGravity, true);
+template<class TypeTag>
+struct EnableGravity<TypeTag, TTag::CuvetteBaseProblem> { static constexpr bool value = true; };
 
 // Set the maximum time step
-SET_SCALAR_PROP(CuvetteBaseProblem, MaxTimeStepSize, 600.);
+template<class TypeTag>
+struct MaxTimeStepSize<TypeTag, TTag::CuvetteBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 600.;
+};
 
 // Set the material Law
-SET_PROP(CuvetteBaseProblem, MaterialLaw)
+template<class TypeTag>
+struct MaterialLaw<TypeTag, TTag::CuvetteBaseProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
-    typedef Opm::ThreePhaseMaterialTraits<
+    using Traits = Opm::ThreePhaseMaterialTraits<
         Scalar,
         /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
         /*nonWettingPhaseIdx=*/FluidSystem::naplPhaseIdx,
-        /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx> Traits;
+        /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx>;
 
 public:
-    typedef Opm::ThreePhaseParkerVanGenuchten<Traits> type;
+    using type = Opm::ThreePhaseParkerVanGenuchten<Traits>;
 };
 
 // set the energy storage law for the solid phase
-SET_TYPE_PROP(CuvetteBaseProblem, SolidEnergyLaw,
-              Opm::ConstantSolidHeatCapLaw<typename GET_PROP_TYPE(TypeTag, Scalar)>);
+template<class TypeTag>
+struct SolidEnergyLaw<TypeTag, TTag::CuvetteBaseProblem>
+{ using type = Opm::ConstantSolidHeatCapLaw<GetPropType<TypeTag, Properties::Scalar>>; };
 
 // Set the thermal conduction law
-SET_PROP(CuvetteBaseProblem, ThermalConductionLaw)
+template<class TypeTag>
+struct ThermalConductionLaw<TypeTag, TTag::CuvetteBaseProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
 public:
     // define the material law parameterized by absolute saturations
-    typedef Opm::SomertonThermalConductionLaw<FluidSystem, Scalar> type;
+    using type = Opm::SomertonThermalConductionLaw<FluidSystem, Scalar>;
 };
 
 // The default for the end time of the simulation
-SET_SCALAR_PROP(CuvetteBaseProblem, EndTime, 180);
+template<class TypeTag>
+struct EndTime<TypeTag, TTag::CuvetteBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 180;
+};
 
 // The default for the initial time step size of the simulation
-SET_SCALAR_PROP(CuvetteBaseProblem, InitialTimeStepSize, 1);
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, TTag::CuvetteBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1;
+};
 
 // The default DGF file to load
-SET_STRING_PROP(CuvetteBaseProblem, GridFile, "./data/cuvette_11x4.dgf");
+template<class TypeTag>
+struct GridFile<TypeTag, TTag::CuvetteBaseProblem> { static constexpr auto value = "./data/cuvette_11x4.dgf"; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!
@@ -152,26 +176,26 @@ namespace Opm {
  * of the domain requires much longer (about 10 days simulated time).
  */
 template <class TypeTag>
-class CuvetteProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
+class CuvetteProblem : public GetPropType<TypeTag, Properties::BaseProblem>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
+    using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
-    typedef typename GET_PROP_TYPE(TypeTag, ThermalConductionLawParams) ThermalConductionLawParams;
-    typedef typename GET_PROP_TYPE(TypeTag, SolidEnergyLawParams) SolidEnergyLawParams;
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
+    using ThermalConductionLawParams = GetPropType<TypeTag, Properties::ThermalConductionLawParams>;
+    using SolidEnergyLawParams = GetPropType<TypeTag, Properties::SolidEnergyLawParams>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using BoundaryRateVector = GetPropType<TypeTag, Properties::BoundaryRateVector>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Model = GetPropType<TypeTag, Properties::Model>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
     // copy some indices for convenience
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
@@ -185,9 +209,9 @@ class CuvetteProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     // Grid and world dimension
     enum { dimWorld = GridView::dimensionworld };
 
-    typedef typename GridView::ctype CoordScalar;
-    typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
+    using CoordScalar = typename GridView::ctype;
+    using GlobalPosition = Dune::FieldVector<CoordScalar, dimWorld>;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
 public:
     /*!
@@ -522,7 +546,7 @@ private:
                 fs.setPressure(phaseIdx, pw + (pc[phaseIdx] - pc[waterPhaseIdx]));
 
             // compute the phase compositions
-            typedef Opm::MiscibleMultiPhaseComposition<Scalar, FluidSystem> MMPC;
+            using MMPC = Opm::MiscibleMultiPhaseComposition<Scalar, FluidSystem>;
             typename FluidSystem::template ParameterCache<Scalar> paramCache;
             MMPC::solve(fs, paramCache, /*setViscosity=*/true, /*setEnthalpy=*/true);
         }
@@ -539,7 +563,7 @@ private:
                 fs.setPressure(phaseIdx, pw + (pc[phaseIdx] - pc[waterPhaseIdx]));
 
             // compute the phase compositions
-            typedef Opm::MiscibleMultiPhaseComposition<Scalar, FluidSystem> MMPC;
+            using MMPC = Opm::MiscibleMultiPhaseComposition<Scalar, FluidSystem>;
             typename FluidSystem::template ParameterCache<Scalar> paramCache;
             MMPC::solve(fs, paramCache, /*setViscosity=*/true, /*setEnthalpy=*/true);
 

@@ -33,15 +33,19 @@
 
 #include <opm/models/utils/propertysystem.hh>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 //! The type tag for models based on the VCFV-scheme
-NEW_TYPE_TAG(VcfvDiscretization, INHERITS_FROM(FvBaseDiscretization));
+// Create new type tags
+namespace TTag {
+struct VcfvDiscretization { using InheritsFrom = std::tuple<FvBaseDiscretization>; };
+} // end namespace TTag
 
 //! Use P1 finite-elements gradients instead of two-point gradients. Note that setting
 //! this property to true requires the dune-localfunctions module to be available.
-NEW_PROP_TAG(UseP1FiniteElementGradients);
+template<class TypeTag, class MyTypeTag>
+struct UseP1FiniteElementGradients { using type = UndefinedProperty; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 #endif

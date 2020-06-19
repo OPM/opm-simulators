@@ -41,8 +41,8 @@ class QuadrialteralQuadratureGeometry
 public:
     enum { numCorners = (1 << dim) };
 
-    typedef Dune::FieldVector<Scalar, dim> LocalPosition;
-    typedef Dune::FieldVector<Scalar, dim> GlobalPosition;
+    using LocalPosition = Dune::FieldVector<Scalar, dim>;
+    using GlobalPosition = Dune::FieldVector<Scalar, dim>;
 
     Dune::GeometryType type() const
     { return Dune::GeometryType(/*topologyId=*/(1 << dim) - 1, dim); }

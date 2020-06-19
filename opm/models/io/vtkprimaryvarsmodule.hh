@@ -33,21 +33,31 @@
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
+
+namespace TTag {
 
 // create new type tag for the VTK primary variables output
-NEW_TYPE_TAG(VtkPrimaryVars);
+struct VtkPrimaryVars {};
+
+} // namespace TTag
 
 // create the property tags needed for the primary variables module
-NEW_PROP_TAG(VtkWritePrimaryVars);
-NEW_PROP_TAG(VtkWriteProcessRank);
-NEW_PROP_TAG(VtkWriteDofIndex);
+template<class TypeTag, class MyTypeTag>
+struct VtkWritePrimaryVars { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteProcessRank { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteDofIndex { using type = UndefinedProperty; };
 
-SET_BOOL_PROP(VtkPrimaryVars, VtkWritePrimaryVars, false);
-SET_BOOL_PROP(VtkPrimaryVars, VtkWriteProcessRank, false);
-SET_BOOL_PROP(VtkPrimaryVars, VtkWriteDofIndex, false);
+template<class TypeTag>
+struct VtkWritePrimaryVars<TypeTag, TTag::VtkPrimaryVars> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteProcessRank<TypeTag, TTag::VtkPrimaryVars> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteDofIndex<TypeTag, TTag::VtkPrimaryVars> { static constexpr bool value = false; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -59,19 +69,19 @@ namespace Opm {
 template<class TypeTag>
 class VtkPrimaryVarsModule : public BaseOutputModule<TypeTag>
 {
-    typedef BaseOutputModule<TypeTag> ParentType;
+    using ParentType = BaseOutputModule<TypeTag>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
 
-    static const int vtkFormat = GET_PROP_VALUE(TypeTag, VtkOutputFormat);
-    typedef Opm::VtkMultiWriter<GridView, vtkFormat> VtkMultiWriter;
+    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    using VtkMultiWriter = Opm::VtkMultiWriter<GridView, vtkFormat>;
 
-    typedef typename ParentType::ScalarBuffer ScalarBuffer;
-    typedef typename ParentType::EqBuffer EqBuffer;
+    using ScalarBuffer = typename ParentType::ScalarBuffer;
+    using EqBuffer = typename ParentType::EqBuffer;
 
-    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
+    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
 
 public:
     VtkPrimaryVarsModule(const Simulator& simulator)

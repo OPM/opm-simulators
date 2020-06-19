@@ -56,65 +56,103 @@ class ReservoirProblem;
 
 } // namespace Opm
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 
-NEW_TYPE_TAG(ReservoirBaseProblem);
+namespace TTag {
+
+struct ReservoirBaseProblem {};
+
+} // namespace TTag
 
 // Maximum depth of the reservoir
-NEW_PROP_TAG(MaxDepth);
+template<class TypeTag, class MyTypeTag>
+struct MaxDepth { using type = UndefinedProperty; };
 // The temperature inside the reservoir
-NEW_PROP_TAG(Temperature);
+template<class TypeTag, class MyTypeTag>
+struct Temperature { using type = UndefinedProperty; };
 // The width of producer/injector wells as a fraction of the width of the spatial domain
-NEW_PROP_TAG(WellWidth);
+template<class TypeTag, class MyTypeTag>
+struct WellWidth { using type = UndefinedProperty; };
 
 // Set the grid type
-SET_TYPE_PROP(ReservoirBaseProblem, Grid, Dune::YaspGrid<2>);
+template<class TypeTag>
+struct Grid<TypeTag, TTag::ReservoirBaseProblem> { using type = Dune::YaspGrid<2>; };
 
 // Set the problem property
-SET_TYPE_PROP(ReservoirBaseProblem, Problem, Opm::ReservoirProblem<TypeTag>);
+template<class TypeTag>
+struct Problem<TypeTag, TTag::ReservoirBaseProblem> { using type = Opm::ReservoirProblem<TypeTag>; };
 
 // Set the material Law
-SET_PROP(ReservoirBaseProblem, MaterialLaw)
+template<class TypeTag>
+struct MaterialLaw<TypeTag, TTag::ReservoirBaseProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
-    typedef Opm::
+    using Traits = Opm::
         ThreePhaseMaterialTraits<Scalar,
                                  /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
                                  /*nonWettingPhaseIdx=*/FluidSystem::oilPhaseIdx,
-                                 /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx> Traits;
+                                 /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx>;
 
 public:
-    typedef Opm::LinearMaterial<Traits> type;
+    using type = Opm::LinearMaterial<Traits>;
 };
 
 // Write the Newton convergence behavior to disk?
-SET_BOOL_PROP(ReservoirBaseProblem, NewtonWriteConvergence, false);
+template<class TypeTag>
+struct NewtonWriteConvergence<TypeTag, TTag::ReservoirBaseProblem> { static constexpr bool value = false; };
 
 // Enable gravity
-SET_BOOL_PROP(ReservoirBaseProblem, EnableGravity, true);
+template<class TypeTag>
+struct EnableGravity<TypeTag, TTag::ReservoirBaseProblem> { static constexpr bool value = true; };
 
 // Enable constraint DOFs?
-SET_BOOL_PROP(ReservoirBaseProblem, EnableConstraints, true);
+template<class TypeTag>
+struct EnableConstraints<TypeTag, TTag::ReservoirBaseProblem> { static constexpr bool value = true; };
 
 // set the defaults for some problem specific properties
-SET_SCALAR_PROP(ReservoirBaseProblem, MaxDepth, 2500);
-SET_SCALAR_PROP(ReservoirBaseProblem, Temperature, 293.15);
+template<class TypeTag>
+struct MaxDepth<TypeTag, TTag::ReservoirBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 2500;
+};
+template<class TypeTag>
+struct Temperature<TypeTag, TTag::ReservoirBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 293.15;
+};
 
 //! The default for the end time of the simulation [s].
 //!
 //! By default this problem spans 1000 days (100 "settle down" days and 900 days of
 //! production)
-SET_SCALAR_PROP(ReservoirBaseProblem, EndTime, 1000.0*24*60*60);
+template<class TypeTag>
+struct EndTime<TypeTag, TTag::ReservoirBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1000.0*24*60*60;
+};
 
 // The default for the initial time step size of the simulation [s]
-SET_SCALAR_PROP(ReservoirBaseProblem, InitialTimeStepSize, 100e3);
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, TTag::ReservoirBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 100e3;
+};
 
 // The width of producer/injector wells as a fraction of the width of the spatial domain
-SET_SCALAR_PROP(ReservoirBaseProblem, WellWidth, 0.01);
+template<class TypeTag>
+struct WellWidth<TypeTag, TTag::ReservoirBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.01;
+};
 
 /*!
  * \brief Explicitly set the fluid system to the black-oil fluid system
@@ -124,22 +162,29 @@ SET_SCALAR_PROP(ReservoirBaseProblem, WellWidth, 0.01);
  * though because other models are more generic and thus do not assume a particular fluid
  * system.
  */
-SET_PROP(ReservoirBaseProblem, FluidSystem)
+template<class TypeTag>
+struct FluidSystem<TypeTag, TTag::ReservoirBaseProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    typedef Opm::BlackOilFluidSystem<Scalar> type;
+    using type = Opm::BlackOilFluidSystem<Scalar>;
 };
 
 // The default DGF file to load
-SET_STRING_PROP(ReservoirBaseProblem, GridFile, "data/reservoir.dgf");
+template<class TypeTag>
+struct GridFile<TypeTag, TTag::ReservoirBaseProblem> { static constexpr auto value = "data/reservoir.dgf"; };
 
 // increase the tolerance for this problem to get larger time steps
-SET_SCALAR_PROP(ReservoirBaseProblem, NewtonTolerance, 1e-6);
+template<class TypeTag>
+struct NewtonTolerance<TypeTag, TTag::ReservoirBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-6;
+};
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -160,14 +205,14 @@ namespace Opm {
  * the injector wells use a pressure which is 50% above the reservoir pressure.
  */
 template <class TypeTag>
-class ReservoirProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
+class ReservoirProblem : public GetPropType<TypeTag, Properties::BaseProblem>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
+    using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
     // Grid and world dimension
     enum { dim = GridView::dimension };
@@ -183,25 +228,25 @@ class ReservoirProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     enum { oilCompIdx = FluidSystem::oilCompIdx };
     enum { waterCompIdx = FluidSystem::waterCompIdx };
 
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, Constraints) Constraints;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
+    using Model = GetPropType<TypeTag, Properties::Model>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using BoundaryRateVector = GetPropType<TypeTag, Properties::BoundaryRateVector>;
+    using Constraints = GetPropType<TypeTag, Properties::Constraints>;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
 
-    typedef typename GridView::ctype CoordScalar;
-    typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
-    typedef Dune::FieldVector<Scalar, numPhases> PhaseVector;
+    using CoordScalar = typename GridView::ctype;
+    using GlobalPosition = Dune::FieldVector<CoordScalar, dimWorld>;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
+    using PhaseVector = Dune::FieldVector<Scalar, numPhases>;
 
-    typedef Opm::CompositionalFluidState<Scalar,
-                                         FluidSystem,
-                                         /*enableEnthalpy=*/true> InitialFluidState;
+    using InitialFluidState = Opm::CompositionalFluidState<Scalar,
+                                                           FluidSystem,
+                                                           /*enableEnthalpy=*/true>;
 
 public:
     /*!
@@ -317,13 +362,13 @@ public:
         oilPvt->initEnd();
         waterPvt->initEnd();
 
-        typedef std::shared_ptr<Opm::GasPvtMultiplexer<Scalar> > GasPvtSharedPtr;
+        using GasPvtSharedPtr = std::shared_ptr<Opm::GasPvtMultiplexer<Scalar> >;
         FluidSystem::setGasPvt(GasPvtSharedPtr(gasPvt));
 
-        typedef std::shared_ptr<Opm::OilPvtMultiplexer<Scalar> > OilPvtSharedPtr;
+        using OilPvtSharedPtr = std::shared_ptr<Opm::OilPvtMultiplexer<Scalar> >;
         FluidSystem::setOilPvt(OilPvtSharedPtr(oilPvt));
 
-        typedef std::shared_ptr<Opm::WaterPvtMultiplexer<Scalar> > WaterPvtSharedPtr;
+        using WaterPvtSharedPtr = std::shared_ptr<Opm::WaterPvtMultiplexer<Scalar> >;
         FluidSystem::setWaterPvt(WaterPvtSharedPtr(waterPvt));
 
         FluidSystem::initEnd();
@@ -639,7 +684,7 @@ private:
         fs.setMoleFraction(oilPhaseIdx, gasCompIdx, xoG);
         fs.setMoleFraction(oilPhaseIdx, oilCompIdx, xoO);
 
-        typedef Opm::ComputeFromReferencePhase<Scalar, FluidSystem> CFRP;
+        using CFRP = Opm::ComputeFromReferencePhase<Scalar, FluidSystem>;
         typename FluidSystem::template ParameterCache<Scalar> paramCache;
         CFRP::solve(fs,
                     paramCache,

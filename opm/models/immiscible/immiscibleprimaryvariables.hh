@@ -53,28 +53,28 @@ namespace Opm {
 template <class TypeTag>
 class ImmisciblePrimaryVariables : public FvBasePrimaryVariables<TypeTag>
 {
-    typedef FvBasePrimaryVariables<TypeTag> ParentType;
+    using ParentType = FvBasePrimaryVariables<TypeTag>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) Implementation;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using Implementation = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
     // primary variable indices
     enum { pressure0Idx = Indices::pressure0Idx };
     enum { saturation0Idx = Indices::saturation0Idx };
 
-    enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
-    enum { numComponents = GET_PROP_VALUE(TypeTag, NumComponents) };
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
+    enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
 
-    typedef typename Opm::MathToolbox<Evaluation> Toolbox;
-    typedef Dune::FieldVector<Scalar, numComponents> ComponentVector;
-    typedef Opm::ImmiscibleFlash<Scalar, FluidSystem> ImmiscibleFlash;
-    typedef Opm::EnergyModule<TypeTag, GET_PROP_VALUE(TypeTag, EnableEnergy)> EnergyModule;
+    using Toolbox = typename Opm::MathToolbox<Evaluation>;
+    using ComponentVector = Dune::FieldVector<Scalar, numComponents>;
+    using ImmiscibleFlash = Opm::ImmiscibleFlash<Scalar, FluidSystem>;
+    using EnergyModule = Opm::EnergyModule<TypeTag, getPropValue<TypeTag, Properties::EnableEnergy>()>;
 
 public:
     /*!

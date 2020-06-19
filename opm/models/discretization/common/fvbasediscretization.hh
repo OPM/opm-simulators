@@ -86,184 +86,243 @@ class FvBaseDiscretization;
 
 } // namespace Opm
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 //! Set the default type for the time manager
-SET_TYPE_PROP(FvBaseDiscretization, Simulator, Opm::Simulator<TypeTag>);
+template<class TypeTag>
+struct Simulator<TypeTag, TTag::FvBaseDiscretization> { using type = Opm::Simulator<TypeTag>; };
 
 //! Mapper for the grid view's vertices.
-SET_TYPE_PROP(FvBaseDiscretization, VertexMapper,
-              Dune::MultipleCodimMultipleGeomTypeMapper<typename GET_PROP_TYPE(TypeTag, GridView)>);
+template<class TypeTag>
+struct VertexMapper<TypeTag, TTag::FvBaseDiscretization>
+{ using type = Dune::MultipleCodimMultipleGeomTypeMapper<GetPropType<TypeTag, Properties::GridView>>; };
 
 //! Mapper for the grid view's elements.
-SET_TYPE_PROP(FvBaseDiscretization, ElementMapper,
-              Dune::MultipleCodimMultipleGeomTypeMapper<typename GET_PROP_TYPE(TypeTag, GridView)>);
+template<class TypeTag>
+struct ElementMapper<TypeTag, TTag::FvBaseDiscretization>
+{ using type = Dune::MultipleCodimMultipleGeomTypeMapper<GetPropType<TypeTag, Properties::GridView>>; };
 
 //! marks the border indices (required for the algebraic overlap stuff)
-SET_PROP(FvBaseDiscretization, BorderListCreator)
+template<class TypeTag>
+struct BorderListCreator<TypeTag, TTag::FvBaseDiscretization>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, DofMapper) DofMapper;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    using DofMapper = GetPropType<TypeTag, Properties::DofMapper>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
 public:
-    typedef Opm::Linear::NullBorderListCreator<GridView, DofMapper> type;
+    using type = Opm::Linear::NullBorderListCreator<GridView, DofMapper>;
 };
 
-SET_TYPE_PROP(FvBaseDiscretization, DiscLocalResidual, Opm::FvBaseLocalResidual<TypeTag>);
+template<class TypeTag>
+struct DiscLocalResidual<TypeTag, TTag::FvBaseDiscretization> { using type = Opm::FvBaseLocalResidual<TypeTag>; };
 
-SET_TYPE_PROP(FvBaseDiscretization, DiscIntensiveQuantities, Opm::FvBaseIntensiveQuantities<TypeTag>);
-SET_TYPE_PROP(FvBaseDiscretization, DiscExtensiveQuantities, Opm::FvBaseExtensiveQuantities<TypeTag>);
+template<class TypeTag>
+struct DiscIntensiveQuantities<TypeTag, TTag::FvBaseDiscretization> { using type = Opm::FvBaseIntensiveQuantities<TypeTag>; };
+template<class TypeTag>
+struct DiscExtensiveQuantities<TypeTag, TTag::FvBaseDiscretization> { using type = Opm::FvBaseExtensiveQuantities<TypeTag>; };
 
 //! Calculates the gradient of any quantity given the index of a flux approximation point
-SET_TYPE_PROP(FvBaseDiscretization, GradientCalculator, Opm::FvBaseGradientCalculator<TypeTag>);
+template<class TypeTag>
+struct GradientCalculator<TypeTag, TTag::FvBaseDiscretization> { using type = Opm::FvBaseGradientCalculator<TypeTag>; };
 
 //! The maximum allowed number of timestep divisions for the
 //! Newton solver
-SET_INT_PROP(FvBaseDiscretization, MaxTimeStepDivisions, 10);
+template<class TypeTag>
+struct MaxTimeStepDivisions<TypeTag, TTag::FvBaseDiscretization> { static constexpr int value = 10; };
 
 
 //! By default, do not continue with a non-converged solution instead of giving up
 //! if we encounter a time step size smaller than the minimum time
 //! step size.
-SET_BOOL_PROP(FvBaseDiscretization, ContinueOnConvergenceError, false);
+template<class TypeTag>
+struct ContinueOnConvergenceError<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = false; };
 
 /*!
  * \brief A vector of quanties, each for one equation.
  */
-SET_TYPE_PROP(FvBaseDiscretization, EqVector,
-              Dune::FieldVector<typename GET_PROP_TYPE(TypeTag, Scalar),
-                                GET_PROP_VALUE(TypeTag, NumEq)>);
+template<class TypeTag>
+struct EqVector<TypeTag, TTag::FvBaseDiscretization>
+{ using type = Dune::FieldVector<GetPropType<TypeTag, Properties::Scalar>,
+                                 getPropValue<TypeTag, Properties::NumEq>()>; };
 
 /*!
  * \brief A vector for mass/energy rates.
  *
  * E.g. Neumann fluxes or source terms
  */
-SET_TYPE_PROP(FvBaseDiscretization, RateVector,
-              typename GET_PROP_TYPE(TypeTag, EqVector));
+template<class TypeTag>
+struct RateVector<TypeTag, TTag::FvBaseDiscretization>
+{ using type = GetPropType<TypeTag, Properties::EqVector>; };
 
 /*!
  * \brief Type of object for specifying boundary conditions.
  */
-SET_TYPE_PROP(FvBaseDiscretization, BoundaryRateVector,
-              typename GET_PROP_TYPE(TypeTag, RateVector));
+template<class TypeTag>
+struct BoundaryRateVector<TypeTag, TTag::FvBaseDiscretization>
+{ using type = GetPropType<TypeTag, Properties::RateVector>; };
 
 /*!
  * \brief The class which represents constraints.
  */
-SET_TYPE_PROP(FvBaseDiscretization, Constraints, Opm::FvBaseConstraints<TypeTag>);
+template<class TypeTag>
+struct Constraints<TypeTag, TTag::FvBaseDiscretization> { using type = Opm::FvBaseConstraints<TypeTag>; };
 
 /*!
  * \brief The type for storing a residual for an element.
  */
-SET_TYPE_PROP(FvBaseDiscretization, ElementEqVector,
-              Dune::BlockVector<typename GET_PROP_TYPE(TypeTag, EqVector)>);
+template<class TypeTag>
+struct ElementEqVector<TypeTag, TTag::FvBaseDiscretization>
+{ using type = Dune::BlockVector<GetPropType<TypeTag, Properties::EqVector>>; };
 
 /*!
  * \brief The type for storing a residual for the whole grid.
  */
-SET_TYPE_PROP(FvBaseDiscretization, GlobalEqVector,
-              Dune::BlockVector<typename GET_PROP_TYPE(TypeTag, EqVector)>);
+template<class TypeTag>
+struct GlobalEqVector<TypeTag, TTag::FvBaseDiscretization>
+{ using type = Dune::BlockVector<GetPropType<TypeTag, Properties::EqVector>>; };
 
 /*!
  * \brief An object representing a local set of primary variables.
  */
-SET_TYPE_PROP(FvBaseDiscretization, PrimaryVariables, Opm::FvBasePrimaryVariables<TypeTag>);
+template<class TypeTag>
+struct PrimaryVariables<TypeTag, TTag::FvBaseDiscretization> { using type = Opm::FvBasePrimaryVariables<TypeTag>; };
 
 /*!
  * \brief The type of a solution for the whole grid at a fixed time.
  */
-SET_TYPE_PROP(FvBaseDiscretization, SolutionVector,
-              Dune::BlockVector<typename GET_PROP_TYPE(TypeTag, PrimaryVariables)>);
+template<class TypeTag>
+struct SolutionVector<TypeTag, TTag::FvBaseDiscretization>
+{ using type = Dune::BlockVector<GetPropType<TypeTag, Properties::PrimaryVariables>>; };
 
 /*!
  * \brief The class representing intensive quantities.
  *
  * This should almost certainly be overloaded by the model...
  */
-SET_TYPE_PROP(FvBaseDiscretization, IntensiveQuantities, Opm::FvBaseIntensiveQuantities<TypeTag>);
+template<class TypeTag>
+struct IntensiveQuantities<TypeTag, TTag::FvBaseDiscretization> { using type = Opm::FvBaseIntensiveQuantities<TypeTag>; };
 
 /*!
  * \brief The element context
  */
-SET_TYPE_PROP(FvBaseDiscretization, ElementContext, Opm::FvBaseElementContext<TypeTag>);
-SET_TYPE_PROP(FvBaseDiscretization, BoundaryContext, Opm::FvBaseBoundaryContext<TypeTag>);
-SET_TYPE_PROP(FvBaseDiscretization, ConstraintsContext, Opm::FvBaseConstraintsContext<TypeTag>);
+template<class TypeTag>
+struct ElementContext<TypeTag, TTag::FvBaseDiscretization> { using type = Opm::FvBaseElementContext<TypeTag>; };
+template<class TypeTag>
+struct BoundaryContext<TypeTag, TTag::FvBaseDiscretization> { using type = Opm::FvBaseBoundaryContext<TypeTag>; };
+template<class TypeTag>
+struct ConstraintsContext<TypeTag, TTag::FvBaseDiscretization> { using type = Opm::FvBaseConstraintsContext<TypeTag>; };
 
 /*!
  * \brief The OpenMP threads manager
  */
-SET_TYPE_PROP(FvBaseDiscretization, ThreadManager, Opm::ThreadManager<TypeTag>);
-SET_INT_PROP(FvBaseDiscretization, ThreadsPerProcess, 1);
-SET_BOOL_PROP(FvBaseDiscretization, UseLinearizationLock, true);
+template<class TypeTag>
+struct ThreadManager<TypeTag, TTag::FvBaseDiscretization> { using type = Opm::ThreadManager<TypeTag>; };
+template<class TypeTag>
+struct ThreadsPerProcess<TypeTag, TTag::FvBaseDiscretization> { static constexpr int value = 1; };
+template<class TypeTag>
+struct UseLinearizationLock<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = true; };
 
 /*!
  * \brief Linearizer for the global system of equations.
  */
-SET_TYPE_PROP(FvBaseDiscretization, Linearizer, Opm::FvBaseLinearizer<TypeTag>);
+template<class TypeTag>
+struct Linearizer<TypeTag, TTag::FvBaseDiscretization> { using type = Opm::FvBaseLinearizer<TypeTag>; };
 
 //! use an unlimited time step size by default
-SET_SCALAR_PROP(FvBaseDiscretization, MaxTimeStepSize, std::numeric_limits<Scalar>::infinity());
+template<class TypeTag>
+struct MaxTimeStepSize<TypeTag, TTag::FvBaseDiscretization>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = std::numeric_limits<type>::infinity();
+};
 
 //! By default, accept any time step larger than zero
-SET_SCALAR_PROP(FvBaseDiscretization, MinTimeStepSize, 0.0);
+template<class TypeTag>
+struct MinTimeStepSize<TypeTag, TTag::FvBaseDiscretization>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.0;
+};
 
 //! Disable grid adaptation by default
-SET_BOOL_PROP(FvBaseDiscretization, EnableGridAdaptation, false);
+template<class TypeTag>
+struct EnableGridAdaptation<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = false; };
 
 //! By default, write the simulation output to the current working directory
-SET_STRING_PROP(FvBaseDiscretization, OutputDir, ".");
+template<class TypeTag>
+struct OutputDir<TypeTag, TTag::FvBaseDiscretization> { static constexpr auto value = "."; };
 
 //! Enable the VTK output by default
-SET_BOOL_PROP(FvBaseDiscretization, EnableVtkOutput, true);
+template<class TypeTag>
+struct EnableVtkOutput<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = true; };
 
 //! By default, write the VTK output to asynchronously to disk
 //!
 //! This has only an effect if EnableVtkOutput is true
-SET_BOOL_PROP(FvBaseDiscretization, EnableAsyncVtkOutput, true);
+template<class TypeTag>
+struct EnableAsyncVtkOutput<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = true; };
 
 //! Set the format of the VTK output to ASCII by default
-SET_INT_PROP(FvBaseDiscretization, VtkOutputFormat, Dune::VTK::ascii);
+template<class TypeTag>
+struct VtkOutputFormat<TypeTag, TTag::FvBaseDiscretization> { static constexpr int value = Dune::VTK::ascii; };
 
 // disable caching the storage term by default
-SET_BOOL_PROP(FvBaseDiscretization, EnableStorageCache, false);
+template<class TypeTag>
+struct EnableStorageCache<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = false; };
 
 // disable constraints by default
-SET_BOOL_PROP(FvBaseDiscretization, EnableConstraints, false);
+template<class TypeTag>
+struct EnableConstraints<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = false; };
 
 // by default, disable the intensive quantity cache. If the intensive quantities are
 // relatively cheap to calculate, the cache basically does not yield any performance
 // impact because of the intensive quantity cache will cause additional pressure on the
 // CPU caches...
-SET_BOOL_PROP(FvBaseDiscretization, EnableIntensiveQuantityCache, false);
+template<class TypeTag>
+struct EnableIntensiveQuantityCache<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = false; };
 
 // do not use thermodynamic hints by default. If you enable this, make sure to also
 // enable the intensive quantity cache above to avoid getting an exception...
-SET_BOOL_PROP(FvBaseDiscretization, EnableThermodynamicHints, false);
+template<class TypeTag>
+struct EnableThermodynamicHints<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = false; };
 
 // if the deflection of the newton method is large, we do not need to solve the linear
 // approximation accurately. Assuming that the value for the current solution is quite
 // close to the final value, a reduction of 3 orders of magnitude in the defect should be
 // sufficient...
-SET_SCALAR_PROP(FvBaseDiscretization, LinearSolverTolerance, 1e-3);
+template<class TypeTag>
+struct LinearSolverTolerance<TypeTag, TTag::FvBaseDiscretization>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-3;
+};
 
 // use default initialization based on rule-of-thumb of Newton tolerance
-SET_SCALAR_PROP(FvBaseDiscretization, LinearSolverAbsTolerance, -1.);
+template<class TypeTag>
+struct LinearSolverAbsTolerance<TypeTag, TTag::FvBaseDiscretization>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = -1.;
+};
 
 //! Set the history size of the time discretization to 2 (for implicit euler)
-SET_INT_PROP(FvBaseDiscretization, TimeDiscHistorySize, 2);
+template<class TypeTag>
+struct TimeDiscHistorySize<TypeTag, TTag::FvBaseDiscretization> { static constexpr int value = 2; };
 
 //! Most models use extensive quantities for their storage term (so far, only the Stokes
 //! model does), so we disable this by default.
-SET_BOOL_PROP(FvBaseDiscretization, ExtensiveStorageTerm, false);
+template<class TypeTag>
+struct ExtensiveStorageTerm<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = false; };
 
 // use volumetric residuals is default
-SET_BOOL_PROP(FvBaseDiscretization, UseVolumetricResidual, true);
+template<class TypeTag>
+struct UseVolumetricResidual<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = true; };
 
 //! eWoms is mainly targeted at research, so experimental features are enabled by
 //! default.
-SET_BOOL_PROP(FvBaseDiscretization, EnableExperiments, true);
+template<class TypeTag>
+struct EnableExperiments<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = true; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -275,52 +334,52 @@ namespace Opm {
 template<class TypeTag>
 class FvBaseDiscretization
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Implementation;
-    typedef typename GET_PROP_TYPE(TypeTag, Discretization) Discretization;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementMapper) ElementMapper;
-    typedef typename GET_PROP_TYPE(TypeTag, VertexMapper) VertexMapper;
-    typedef typename GET_PROP_TYPE(TypeTag, DofMapper) DofMapper;
-    typedef typename GET_PROP_TYPE(TypeTag, SolutionVector) SolutionVector;
-    typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) GlobalEqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, Linearizer) Linearizer;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryContext) BoundaryContext;
-    typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) IntensiveQuantities;
-    typedef typename GET_PROP_TYPE(TypeTag, ExtensiveQuantities) ExtensiveQuantities;
-    typedef typename GET_PROP_TYPE(TypeTag, GradientCalculator) GradientCalculator;
-    typedef typename GET_PROP_TYPE(TypeTag, Stencil) Stencil;
-    typedef typename GET_PROP_TYPE(TypeTag, DiscBaseOutputModule) DiscBaseOutputModule;
-    typedef typename GET_PROP_TYPE(TypeTag, GridCommHandleFactory) GridCommHandleFactory;
-    typedef typename GET_PROP_TYPE(TypeTag, NewtonMethod) NewtonMethod;
-    typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) ThreadManager;
+    using Implementation = GetPropType<TypeTag, Properties::Model>;
+    using Discretization = GetPropType<TypeTag, Properties::Discretization>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Grid = GetPropType<TypeTag, Properties::Grid>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
+    using VertexMapper = GetPropType<TypeTag, Properties::VertexMapper>;
+    using DofMapper = GetPropType<TypeTag, Properties::DofMapper>;
+    using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
+    using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using BoundaryRateVector = GetPropType<TypeTag, Properties::BoundaryRateVector>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using Linearizer = GetPropType<TypeTag, Properties::Linearizer>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using BoundaryContext = GetPropType<TypeTag, Properties::BoundaryContext>;
+    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
+    using GradientCalculator = GetPropType<TypeTag, Properties::GradientCalculator>;
+    using Stencil = GetPropType<TypeTag, Properties::Stencil>;
+    using DiscBaseOutputModule = GetPropType<TypeTag, Properties::DiscBaseOutputModule>;
+    using GridCommHandleFactory = GetPropType<TypeTag, Properties::GridCommHandleFactory>;
+    using NewtonMethod = GetPropType<TypeTag, Properties::NewtonMethod>;
+    using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, LocalLinearizer) LocalLinearizer;
-    typedef typename GET_PROP_TYPE(TypeTag, LocalResidual) LocalResidual;
+    using LocalLinearizer = GetPropType<TypeTag, Properties::LocalLinearizer>;
+    using LocalResidual = GetPropType<TypeTag, Properties::LocalResidual>;
 
     enum {
-        numEq = GET_PROP_VALUE(TypeTag, NumEq),
-        historySize = GET_PROP_VALUE(TypeTag, TimeDiscHistorySize),
+        numEq = getPropValue<TypeTag, Properties::NumEq>(),
+        historySize = getPropValue<TypeTag, Properties::TimeDiscHistorySize>(),
     };
 
-    typedef std::vector<IntensiveQuantities, Opm::aligned_allocator<IntensiveQuantities, alignof(IntensiveQuantities)> > IntensiveQuantitiesVector;
+    using IntensiveQuantitiesVector = std::vector<IntensiveQuantities, Opm::aligned_allocator<IntensiveQuantities, alignof(IntensiveQuantities)> >;
 
-    typedef typename GridView::template Codim<0>::Entity Element;
-    typedef typename GridView::template Codim<0>::Iterator ElementIterator;
+    using Element = typename GridView::template Codim<0>::Entity;
+    using ElementIterator = typename GridView::template Codim<0>::Iterator;
 
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
-    typedef Dune::FieldVector<Evaluation, numEq> VectorBlock;
-    typedef Dune::FieldVector<Evaluation, numEq> EvalEqVector;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using VectorBlock = Dune::FieldVector<Evaluation, numEq>;
+    using EvalEqVector = Dune::FieldVector<Evaluation, numEq>;
 
-    typedef typename LocalResidual::LocalEvalBlockVector LocalEvalBlockVector;
+    using LocalEvalBlockVector = typename LocalResidual::LocalEvalBlockVector;
 
     class BlockVectorWrapper
     {
@@ -338,23 +397,23 @@ class FvBaseDiscretization
     };
 
 #if HAVE_DUNE_FEM
-    typedef typename GET_PROP_TYPE(TypeTag, DiscreteFunctionSpace)    DiscreteFunctionSpace;
+    using DiscreteFunctionSpace = GetPropType<TypeTag, Properties::DiscreteFunctionSpace>   ;
 
     // discrete function storing solution data
-    typedef Dune::Fem::ISTLBlockVectorDiscreteFunction<DiscreteFunctionSpace, PrimaryVariables> DiscreteFunction;
+    using DiscreteFunction = Dune::Fem::ISTLBlockVectorDiscreteFunction<DiscreteFunctionSpace, PrimaryVariables>;
 
     // problem restriction and prolongation operator for adaptation
-    typedef typename GET_PROP_TYPE(TypeTag, Problem)   Problem;
-    typedef typename Problem :: RestrictProlongOperator  ProblemRestrictProlongOperator;
+    using Problem = GetPropType<TypeTag, Properties::Problem>  ;
+    using ProblemRestrictProlongOperator = typename Problem :: RestrictProlongOperator ;
 
     // discrete function restriction and prolongation operator for adaptation
-    typedef Dune::Fem::RestrictProlongDefault< DiscreteFunction > DiscreteFunctionRestrictProlong;
-    typedef Dune::Fem::RestrictProlongTuple< DiscreteFunctionRestrictProlong,  ProblemRestrictProlongOperator > RestrictProlong;
+    using DiscreteFunctionRestrictProlong = Dune::Fem::RestrictProlongDefault< DiscreteFunction >;
+    using RestrictProlong = Dune::Fem::RestrictProlongTuple< DiscreteFunctionRestrictProlong,  ProblemRestrictProlongOperator >;
     // adaptation classes
-    typedef Dune::Fem::AdaptationManager<Grid, RestrictProlong  > AdaptationManager;
+    using AdaptationManager = Dune::Fem::AdaptationManager<Grid, RestrictProlong  >;
 #else
-    typedef BlockVectorWrapper  DiscreteFunction;
-    typedef size_t              DiscreteFunctionSpace;
+    using DiscreteFunction = BlockVectorWrapper ;
+    using DiscreteFunctionSpace = size_t             ;
 #endif
 
     // copying a discretization object is not a good idea
@@ -1545,7 +1604,7 @@ public:
                                  const SolutionVector& u,
                                  const GlobalEqVector& deltaU) const
     {
-        typedef std::vector<double> ScalarBuffer;
+        using ScalarBuffer = std::vector<double>;
 
         GlobalEqVector globalResid(u.size());
         asImp_().globalResidual(globalResid, u);

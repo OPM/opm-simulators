@@ -31,16 +31,20 @@
 #include <opm/models/pvs/pvsmodel.hh>
 #include "problems/waterairproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(WaterAirProblem, INHERITS_FROM(PvsModel, WaterAirBaseProblem));
+// Create new type tags
+namespace TTag {
+struct WaterAirProblem { using InheritsFrom = std::tuple<WaterAirBaseProblem, PvsModel>; };
+} // end namespace TTag
 
-SET_BOOL_PROP(WaterAirProblem, EnableEnergy, true);
+template<class TypeTag>
+struct EnableEnergy<TypeTag, TTag::WaterAirProblem> { static constexpr bool value = true; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(WaterAirProblem) ProblemTypeTag;
+    using ProblemTypeTag = Opm::Properties::TTag::WaterAirProblem;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

@@ -49,48 +49,60 @@ template <class TypeTag>
 class DiscreteFractureModel;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
+// Create new type tags
+namespace TTag {
 //! The generic type tag for problems using the immiscible multi-phase model
-NEW_TYPE_TAG(DiscreteFractureModel, INHERITS_FROM(ImmiscibleTwoPhaseModel, VtkDiscreteFracture));
+struct DiscreteFractureModel { using InheritsFrom = std::tuple<VtkDiscreteFracture, ImmiscibleTwoPhaseModel>; };
+} // end namespace TTag
 
 //! The class for the model
-SET_TYPE_PROP(DiscreteFractureModel, Model, Opm::DiscreteFractureModel<TypeTag>);
+template<class TypeTag>
+struct Model<TypeTag, TTag::DiscreteFractureModel> { using type = Opm::DiscreteFractureModel<TypeTag>; };
 
 //! The class for the model
-SET_TYPE_PROP(DiscreteFractureModel, BaseProblem, Opm::DiscreteFractureProblem<TypeTag>);
+template<class TypeTag>
+struct BaseProblem<TypeTag, TTag::DiscreteFractureModel> { using type = Opm::DiscreteFractureProblem<TypeTag>; };
 
 //! Use the immiscible multi-phase local jacobian operator for the immiscible multi-phase model
-SET_TYPE_PROP(DiscreteFractureModel, LocalResidual, Opm::DiscreteFractureLocalResidual<TypeTag>);
+template<class TypeTag>
+struct LocalResidual<TypeTag, TTag::DiscreteFractureModel> { using type = Opm::DiscreteFractureLocalResidual<TypeTag>; };
 
 // The type of the base base class for actual problems.
 // TODO!?
-//SET_TYPE_PROP(DiscreteFractureModel BaseProblem, DiscreteFractureBaseProblem<TypeTag>);
+// template<class TypeTag>
+// struct BaseProblem<TypeTag, TTag::DiscreteFractureModel> { using type = DiscreteFractureBaseProblem<TypeTag>; };
 
 //! the PrimaryVariables property
-SET_TYPE_PROP(DiscreteFractureModel, PrimaryVariables,
-              Opm::DiscreteFracturePrimaryVariables<TypeTag>);
+template<class TypeTag>
+struct PrimaryVariables<TypeTag, TTag::DiscreteFractureModel>
+{ using type = Opm::DiscreteFracturePrimaryVariables<TypeTag>; };
 
 //! the IntensiveQuantities property
-SET_TYPE_PROP(DiscreteFractureModel, IntensiveQuantities,
-              Opm::DiscreteFractureIntensiveQuantities<TypeTag>);
+template<class TypeTag>
+struct IntensiveQuantities<TypeTag, TTag::DiscreteFractureModel>
+{ using type = Opm::DiscreteFractureIntensiveQuantities<TypeTag>; };
 
 //! the ExtensiveQuantities property
-SET_TYPE_PROP(DiscreteFractureModel, ExtensiveQuantities,
-              Opm::DiscreteFractureExtensiveQuantities<TypeTag>);
+template<class TypeTag>
+struct ExtensiveQuantities<TypeTag, TTag::DiscreteFractureModel>
+{ using type = Opm::DiscreteFractureExtensiveQuantities<TypeTag>; };
 
 //! For the discrete fracture model, we need to use two-point flux approximation or it
 //! will converge very poorly
-SET_BOOL_PROP(DiscreteFractureModel, UseTwoPointGradients, true);
+template<class TypeTag>
+struct UseTwoPointGradients<TypeTag, TTag::DiscreteFractureModel> { static constexpr bool value = true; };
 
 // The intensive quantity cache cannot be used by the discrete fracture model, because
 // the intensive quantities of a control degree of freedom are not identical to the
 // intensive quantities of the other intensive quantities of the same of the same degree
 // of freedom. This is because the fracture properties (volume, permeability, etc) are
 // specific for each...
-SET_BOOL_PROP(DiscreteFractureModel, EnableIntensiveQuantityCache, false);
+template<class TypeTag>
+struct EnableIntensiveQuantityCache<TypeTag, TTag::DiscreteFractureModel> { static constexpr bool value = false; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -114,8 +126,8 @@ namespace Opm {
 template <class TypeTag>
 class DiscreteFractureModel : public ImmiscibleModel<TypeTag>
 {
-    typedef ImmiscibleModel<TypeTag> ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+    using ParentType = ImmiscibleModel<TypeTag>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
 public:
     DiscreteFractureModel(Simulator& simulator)

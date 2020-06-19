@@ -33,20 +33,25 @@
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 #include "problems/reservoirproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(ReservoirBlackOilEcfvProblem, INHERITS_FROM(BlackOilModel, ReservoirBaseProblem));
+// Create new type tags
+namespace TTag {
+struct ReservoirBlackOilEcfvProblem { using InheritsFrom = std::tuple<ReservoirBaseProblem, BlackOilModel>; };
+} // end namespace TTag
 
 // Select the element centered finite volume method as spatial discretization
-SET_TAG_PROP(ReservoirBlackOilEcfvProblem, SpatialDiscretizationSplice, EcfvDiscretization);
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::ReservoirBlackOilEcfvProblem> { using type = TTag::EcfvDiscretization; };
 
 // Use automatic differentiation to linearize the system of PDEs
-SET_TAG_PROP(ReservoirBlackOilEcfvProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::ReservoirBlackOilEcfvProblem> { using type = TTag::AutoDiffLocalLinearizer; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(ReservoirBlackOilEcfvProblem) ProblemTypeTag;
+    using ProblemTypeTag = Opm::Properties::TTag::ReservoirBlackOilEcfvProblem;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

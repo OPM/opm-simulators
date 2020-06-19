@@ -35,24 +35,36 @@
 
 #include <opm/material/common/MathToolbox.hpp>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
+
+namespace TTag {
 
 // create new type tag for the VTK energy output
-NEW_TYPE_TAG(VtkEnergy);
+struct VtkEnergy {};
+
+} // namespace TTag
 
 // create the property tags needed for the energy module
-NEW_PROP_TAG(VtkWriteSolidInternalEnergy);
-NEW_PROP_TAG(VtkWriteThermalConductivity);
-NEW_PROP_TAG(VtkWriteInternalEnergies);
-NEW_PROP_TAG(VtkWriteEnthalpies);
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteSolidInternalEnergy { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteThermalConductivity { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteInternalEnergies { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteEnthalpies { using type = UndefinedProperty; };
 
 // set default values for what quantities to output
-SET_BOOL_PROP(VtkEnergy, VtkWriteSolidInternalEnergy, false);
-SET_BOOL_PROP(VtkEnergy, VtkWriteThermalConductivity, false);
-SET_BOOL_PROP(VtkEnergy, VtkWriteInternalEnergies, false);
-SET_BOOL_PROP(VtkEnergy, VtkWriteEnthalpies, false);
+template<class TypeTag>
+struct VtkWriteSolidInternalEnergy<TypeTag, TTag::VtkEnergy> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteThermalConductivity<TypeTag, TTag::VtkEnergy> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteInternalEnergies<TypeTag, TTag::VtkEnergy> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteEnthalpies<TypeTag, TTag::VtkEnergy> { static constexpr bool value = false; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!
@@ -71,22 +83,22 @@ namespace Opm {
 template <class TypeTag>
 class VtkEnergyModule : public BaseOutputModule<TypeTag>
 {
-    typedef BaseOutputModule<TypeTag> ParentType;
+    using ParentType = BaseOutputModule<TypeTag>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
 
-    typedef typename ParentType::ScalarBuffer ScalarBuffer;
-    typedef typename ParentType::PhaseBuffer PhaseBuffer;
+    using ScalarBuffer = typename ParentType::ScalarBuffer;
+    using PhaseBuffer = typename ParentType::PhaseBuffer;
 
-    static const int vtkFormat = GET_PROP_VALUE(TypeTag, VtkOutputFormat);
-    enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
+    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
 
-    typedef typename Opm::MathToolbox<Evaluation> Toolbox;
-    typedef Opm::VtkMultiWriter<GridView, vtkFormat> VtkMultiWriter;
+    using Toolbox = typename Opm::MathToolbox<Evaluation>;
+    using VtkMultiWriter = Opm::VtkMultiWriter<GridView, vtkFormat>;
 
 public:
     VtkEnergyModule(const Simulator& simulator)

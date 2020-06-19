@@ -369,10 +369,22 @@ SET_PROP_(EffTypeTagName,                                     \
           PropTagName,                                        \
           /*value=*/TTAG(ValueTypeTagName))                   \
 {                                                             \
-   typedef TTAG(ValueTypeTagName) type;                      \
+   using type = TTAG(ValueTypeTagName);                      \
 }
 
 } // namespace Properties
 } // namespace Opm
 
-#endif // OPM_PROPERTY_SYSTEM_HH
+/*!
+ * \ingroup Properties
+ * \brief Indicates that property definitions follow
+ */
+#define BEGIN_PROPERTIES namespace Opm { namespace Properties {
+
+/*!
+ * \ingroup Properties
+ * \brief Indicates that all properties have been specified (for now)
+ */
+#define END_PROPERTIES }}
+
+#endif // OPM_PROPERTY_SYSTEM_MACROS_HH

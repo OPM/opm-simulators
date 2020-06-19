@@ -37,12 +37,12 @@
 
 #include <algorithm>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 template <class TypeTag, class MyTypeTag>
 struct DiscNewtonMethod;
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -52,21 +52,21 @@ namespace Opm {
  * \brief A Newton solver specific to the NCP model.
  */
 template <class TypeTag>
-class NcpNewtonMethod : public GET_PROP_TYPE(TypeTag, DiscNewtonMethod)
+class NcpNewtonMethod : public GetPropType<TypeTag, Properties::DiscNewtonMethod>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, DiscNewtonMethod) ParentType;
+    using ParentType = GetPropType<TypeTag, Properties::DiscNewtonMethod>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, SolutionVector) SolutionVector;
-    typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) GlobalEqVector;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
+    using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
 
-    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
-    enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
-    enum { numComponents = GET_PROP_VALUE(TypeTag, NumComponents) };
+    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
+    enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
     enum { fugacity0Idx = Indices::fugacity0Idx };
     enum { saturation0Idx = Indices::saturation0Idx };
     enum { pressure0Idx = Indices::pressure0Idx };

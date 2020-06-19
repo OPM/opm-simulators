@@ -39,7 +39,7 @@
 
 #include <string>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 ///////////////////////////////////
 // Type tag definitions:
@@ -49,11 +49,14 @@ BEGIN_PROPERTIES
 // +-> ImplicitModel
 ///////////////////////////////////
 
+// Create new type tags
+namespace TTag {
 //! Type tag for all models.
-NEW_TYPE_TAG(NumericModel, INHERITS_FROM(ParameterSystem));
+struct NumericModel { using InheritsFrom = std::tuple<ParameterSystem>; };
 
 //! Type tag for all fully coupled models.
-NEW_TYPE_TAG(ImplicitModel, INHERITS_FROM(NumericModel));
+struct ImplicitModel { using InheritsFrom = std::tuple<NumericModel>; };
+} // end namespace TTag
 
 ///////////////////////////////////
 // Property names which are always available:
@@ -62,39 +65,50 @@ NEW_TYPE_TAG(ImplicitModel, INHERITS_FROM(NumericModel));
 ///////////////////////////////////
 
 //! Property to specify the type of scalar values.
-NEW_PROP_TAG(Scalar);
+template<class TypeTag, class MyTypeTag>
+struct Scalar { using type = UndefinedProperty; };
 
 //! Number of equations in the system of PDEs
-NEW_PROP_TAG(NumEq);
+template<class TypeTag, class MyTypeTag>
+struct NumEq { using type = UndefinedProperty; };
 
 //! Property which provides a Dune::ParameterTree.
-NEW_PROP_TAG(ParameterTree);
+template<class TypeTag, class MyTypeTag>
+struct ParameterTree { using type = UndefinedProperty; };
 
 //! The type of the model
-NEW_PROP_TAG(Model);
+template<class TypeTag, class MyTypeTag>
+struct Model { using type = UndefinedProperty; };
 
 //! Property which defines the group that is queried for parameters by default
-NEW_PROP_TAG(ModelParameterGroup);
+template<class TypeTag, class MyTypeTag>
+struct ModelParameterGroup { using type = UndefinedProperty; };
 
 //! Property which provides a Vanguard (manages grids)
-NEW_PROP_TAG(Vanguard);
+template<class TypeTag, class MyTypeTag>
+struct Vanguard { using type = UndefinedProperty; };
 
 //! The type of the DUNE grid
-NEW_PROP_TAG(Grid);
+template<class TypeTag, class MyTypeTag>
+struct Grid { using type = UndefinedProperty; };
 
-NEW_PROP_TAG(GridView);
+template<class TypeTag, class MyTypeTag>
+struct GridView { using type = UndefinedProperty; };
 
 #if HAVE_DUNE_FEM
-NEW_PROP_TAG(GridPart);
+template<class TypeTag, class MyTypeTag>
+struct GridPart { using type = UndefinedProperty; };
 #endif
 
 //! Property which tells the Vanguard how often the grid should be refined
 //! after creation.
-NEW_PROP_TAG(GridGlobalRefinements);
+template<class TypeTag, class MyTypeTag>
+struct GridGlobalRefinements { using type = UndefinedProperty; };
 
 //! Property provides the name of the file from which the additional runtime
 //! parameters should to be loaded from
-NEW_PROP_TAG(ParameterFile);
+template<class TypeTag, class MyTypeTag>
+struct ParameterFile { using type = UndefinedProperty; };
 
 /*!
  * \brief Print all properties on startup?
@@ -102,7 +116,8 @@ NEW_PROP_TAG(ParameterFile);
  * 0 means 'no', 1 means 'yes', 2 means 'print only to logfiles'. The
  * default is 2.
  */
-NEW_PROP_TAG(PrintProperties);
+template<class TypeTag, class MyTypeTag>
+struct PrintProperties { using type = UndefinedProperty; };
 
 /*!
  * \brief Print all parameters on startup?
@@ -110,38 +125,52 @@ NEW_PROP_TAG(PrintProperties);
  * 0 means 'no', 1 means 'yes', 2 means 'print only to logfiles'. The
  * default is 2.
  */
-NEW_PROP_TAG(PrintParameters);
+template<class TypeTag, class MyTypeTag>
+struct PrintParameters { using type = UndefinedProperty; };
 
 //! The default value for the simulation's end time
-NEW_PROP_TAG(EndTime);
+template<class TypeTag, class MyTypeTag>
+struct EndTime { using type = UndefinedProperty; };
 
 //! The default value for the simulation's initial time step size
-NEW_PROP_TAG(InitialTimeStepSize);
+template<class TypeTag, class MyTypeTag>
+struct InitialTimeStepSize { using type = UndefinedProperty; };
 
 //! The default value for the simulation's restart time
-NEW_PROP_TAG(RestartTime);
+template<class TypeTag, class MyTypeTag>
+struct RestartTime { using type = UndefinedProperty; };
 
 //! The name of the file with a number of forced time step lengths
-NEW_PROP_TAG(PredeterminedTimeStepsFile);
+template<class TypeTag, class MyTypeTag>
+struct PredeterminedTimeStepsFile { using type = UndefinedProperty; };
 
 //! domain size
-NEW_PROP_TAG(DomainSizeX);
-NEW_PROP_TAG(DomainSizeY);
-NEW_PROP_TAG(DomainSizeZ);
+template<class TypeTag, class MyTypeTag>
+struct DomainSizeX { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct DomainSizeY { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct DomainSizeZ { using type = UndefinedProperty; };
 
 //! grid resolution
-NEW_PROP_TAG(CellsX);
-NEW_PROP_TAG(CellsY);
-NEW_PROP_TAG(CellsZ);
+template<class TypeTag, class MyTypeTag>
+struct CellsX { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct CellsY { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct CellsZ { using type = UndefinedProperty; };
 
 //! name of the grid file
-NEW_PROP_TAG(GridFile);
+template<class TypeTag, class MyTypeTag>
+struct GridFile { using type = UndefinedProperty; };
 
 //! level of the grid view
-NEW_PROP_TAG(GridViewLevel);
+template<class TypeTag, class MyTypeTag>
+struct GridViewLevel { using type = UndefinedProperty; };
 
 //! Manages the simulation time
-NEW_PROP_TAG(Simulator);
+template<class TypeTag, class MyTypeTag>
+struct Simulator { using type = UndefinedProperty; };
 
 /*!
  * \brief The class which marks the border indices associated with the
@@ -149,19 +178,22 @@ NEW_PROP_TAG(Simulator);
  *
  * This is required for the algebraic overlap stuff.
  */
-NEW_PROP_TAG(BorderListCreator);
+template<class TypeTag, class MyTypeTag>
+struct BorderListCreator { using type = UndefinedProperty; };
 
 ///////////////////////////////////
 // Values for the properties
 ///////////////////////////////////
 
 //! Set the default type of scalar values to double
-SET_TYPE_PROP(NumericModel, Scalar, double);
+template<class TypeTag>
+struct Scalar<TypeTag, TTag::NumericModel> { using type = double; };
 
 //! Set the ParameterTree property
-SET_PROP(NumericModel, ParameterTree)
+template<class TypeTag>
+struct ParameterTree<TypeTag, TTag::NumericModel>
 {
-    typedef Dune::ParameterTree type;
+    using type = Dune::ParameterTree;
 
     static Dune::ParameterTree& tree()
     {
@@ -171,53 +203,78 @@ SET_PROP(NumericModel, ParameterTree)
 };
 
 //! use the global group as default for the model's parameter group
-SET_STRING_PROP(NumericModel, ModelParameterGroup, "");
+template<class TypeTag>
+struct ModelParameterGroup<TypeTag, TTag::NumericModel> { static constexpr auto value = ""; };
 
 //! Set a value for the GridFile property
-SET_STRING_PROP(NumericModel, GridFile, "");
+template<class TypeTag>
+struct GridFile<TypeTag, TTag::NumericModel> { static constexpr auto value = ""; };
 
 #if HAVE_DUNE_FEM
-SET_PROP(NumericModel, GridPart)
+template<class TypeTag>
+struct GridPart<TypeTag, TTag::NumericModel>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
-    typedef Dune::Fem::AdaptiveLeafGridPart<Grid> type;
+    using Grid = GetPropType<TypeTag, Properties::Grid>;
+    using type = Dune::Fem::AdaptiveLeafGridPart<Grid>;
 };
 
-SET_TYPE_PROP(NumericModel, GridView, typename GET_PROP_TYPE(TypeTag, GridPart)::GridViewType);
+template<class TypeTag>
+struct GridView<TypeTag, TTag::NumericModel> { using type = typename GetPropType<TypeTag, Properties::GridPart>::GridViewType; };
 #else
 //! Use the leaf grid view by default.
 //!
 //! Except for spatial refinement, there is rarly a reason to use
 //! anything else...
-SET_TYPE_PROP(NumericModel, GridView, typename GET_PROP_TYPE(TypeTag, Grid)::LeafGridView);
+template<class TypeTag>
+struct GridView<TypeTag, TTag::NumericModel> { using type = typename GetPropType<TypeTag, Properties::Grid>::LeafGridView; };
 #endif
 
 //! Set a value for the ParameterFile property
-SET_STRING_PROP(NumericModel, ParameterFile, "");
+template<class TypeTag>
+struct ParameterFile<TypeTag, TTag::NumericModel> { static constexpr auto value = ""; };
 
 //! Set the number of refinement levels of the grid to 0. This does not belong
 //! here, strictly speaking.
-SET_INT_PROP(NumericModel, GridGlobalRefinements, 0);
+template<class TypeTag>
+struct GridGlobalRefinements<TypeTag, TTag::NumericModel> { static constexpr int value = 0; };
 
 //! By default, print the properties on startup
-SET_INT_PROP(NumericModel, PrintProperties, 2);
+template<class TypeTag>
+struct PrintProperties<TypeTag, TTag::NumericModel> { static constexpr int value = 2; };
 
 //! By default, print the values of the run-time parameters on startup
-SET_INT_PROP(NumericModel, PrintParameters, 2);
+template<class TypeTag>
+struct PrintParameters<TypeTag, TTag::NumericModel> { static constexpr int value = 2; };
 
 //! The default value for the simulation's end time
-SET_SCALAR_PROP(NumericModel, EndTime, -1e35);
+template<class TypeTag>
+struct EndTime<TypeTag, TTag::NumericModel>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = -1e35;
+};
 
 //! The default value for the simulation's initial time step size
-SET_SCALAR_PROP(NumericModel, InitialTimeStepSize, -1e35);
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, TTag::NumericModel>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = -1e35;
+};
 
 //! The default value for the simulation's restart time
-SET_SCALAR_PROP(NumericModel, RestartTime, -1e35);
+template<class TypeTag>
+struct RestartTime<TypeTag, TTag::NumericModel>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = -1e35;
+};
 
 //! By default, do not force any time steps
-SET_STRING_PROP(NumericModel, PredeterminedTimeStepsFile, "");
+template<class TypeTag>
+struct PredeterminedTimeStepsFile<TypeTag, TTag::NumericModel> { static constexpr auto value = ""; };
 
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 #endif

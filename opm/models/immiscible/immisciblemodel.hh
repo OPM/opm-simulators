@@ -55,105 +55,126 @@ template <class TypeTag>
 class ImmiscibleModel;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
+// Create new type tags
+namespace TTag {
 //! The generic type tag for problems using the immiscible multi-phase model
-NEW_TYPE_TAG(ImmiscibleModel, INHERITS_FROM(MultiPhaseBaseModel, VtkEnergy));
+struct ImmiscibleModel { using InheritsFrom = std::tuple<VtkEnergy, MultiPhaseBaseModel>; };
+
 //! The type tag for single-phase immiscible problems
-NEW_TYPE_TAG(ImmiscibleSinglePhaseModel, INHERITS_FROM(ImmiscibleModel));
+struct ImmiscibleSinglePhaseModel { using InheritsFrom = std::tuple<ImmiscibleModel>; };
+
 //! The type tag for two-phase immiscible problems
-NEW_TYPE_TAG(ImmiscibleTwoPhaseModel, INHERITS_FROM(ImmiscibleModel));
+struct ImmiscibleTwoPhaseModel { using InheritsFrom = std::tuple<ImmiscibleModel>; };
+} // end namespace TTag
 
 //! Use the immiscible multi-phase local jacobian operator for the immiscible multi-phase model
-SET_TYPE_PROP(ImmiscibleModel, LocalResidual,
-              Opm::ImmiscibleLocalResidual<TypeTag>);
+template<class TypeTag>
+struct LocalResidual<TypeTag, TTag::ImmiscibleModel> { using type = Opm::ImmiscibleLocalResidual<TypeTag>; };
 
 //! the Model property
-SET_TYPE_PROP(ImmiscibleModel, Model, Opm::ImmiscibleModel<TypeTag>);
+template<class TypeTag>
+struct Model<TypeTag, TTag::ImmiscibleModel> { using type = Opm::ImmiscibleModel<TypeTag>; };
 
 //! the RateVector property
-SET_TYPE_PROP(ImmiscibleModel, RateVector, Opm::ImmiscibleRateVector<TypeTag>);
+template<class TypeTag>
+struct RateVector<TypeTag, TTag::ImmiscibleModel> { using type = Opm::ImmiscibleRateVector<TypeTag>; };
 
 //! the BoundaryRateVector property
-SET_TYPE_PROP(ImmiscibleModel, BoundaryRateVector, Opm::ImmiscibleBoundaryRateVector<TypeTag>);
+template<class TypeTag>
+struct BoundaryRateVector<TypeTag, TTag::ImmiscibleModel> { using type = Opm::ImmiscibleBoundaryRateVector<TypeTag>; };
 
 //! the PrimaryVariables property
-SET_TYPE_PROP(ImmiscibleModel, PrimaryVariables, Opm::ImmisciblePrimaryVariables<TypeTag>);
+template<class TypeTag>
+struct PrimaryVariables<TypeTag, TTag::ImmiscibleModel> { using type = Opm::ImmisciblePrimaryVariables<TypeTag>; };
 
 //! the IntensiveQuantities property
-SET_TYPE_PROP(ImmiscibleModel, IntensiveQuantities, Opm::ImmiscibleIntensiveQuantities<TypeTag>);
+template<class TypeTag>
+struct IntensiveQuantities<TypeTag, TTag::ImmiscibleModel> { using type = Opm::ImmiscibleIntensiveQuantities<TypeTag>; };
 
 //! the ExtensiveQuantities property
-SET_TYPE_PROP(ImmiscibleModel, ExtensiveQuantities, Opm::ImmiscibleExtensiveQuantities<TypeTag>);
+template<class TypeTag>
+struct ExtensiveQuantities<TypeTag, TTag::ImmiscibleModel> { using type = Opm::ImmiscibleExtensiveQuantities<TypeTag>; };
 
 //! The indices required by the isothermal immiscible multi-phase model
-SET_TYPE_PROP(ImmiscibleModel, Indices, Opm::ImmiscibleIndices<TypeTag, /*PVOffset=*/0>);
+template<class TypeTag>
+struct Indices<TypeTag, TTag::ImmiscibleModel> { using type = Opm::ImmiscibleIndices<TypeTag, /*PVOffset=*/0>; };
 
 //! Disable the energy equation by default
-SET_BOOL_PROP(ImmiscibleModel, EnableEnergy, false);
+template<class TypeTag>
+struct EnableEnergy<TypeTag, TTag::ImmiscibleModel> { static constexpr bool value = false; };
 
 /////////////////////
 // set slightly different properties for the single-phase case
 /////////////////////
 
 //! The fluid system to use by default
-SET_PROP(ImmiscibleSinglePhaseModel, FluidSystem)
+template<class TypeTag>
+struct FluidSystem<TypeTag, TTag::ImmiscibleSinglePhaseModel>
 { private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Fluid) Fluid;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Fluid = GetPropType<TypeTag, Properties::Fluid>;
 public:
-    typedef Opm::SinglePhaseFluidSystem<Scalar , Fluid> type;
+    using type = Opm::SinglePhaseFluidSystem<Scalar , Fluid>;
 };
 
-SET_PROP(ImmiscibleSinglePhaseModel, Fluid)
+template<class TypeTag>
+struct Fluid<TypeTag, TTag::ImmiscibleSinglePhaseModel>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    typedef Opm::LiquidPhase<Scalar, Opm::NullComponent<Scalar> > type;
+    using type = Opm::LiquidPhase<Scalar, Opm::NullComponent<Scalar> >;
 };
 
 // disable output of a few quantities which make sense in a
 // multi-phase but not in a single-phase context
-SET_BOOL_PROP(ImmiscibleSinglePhaseModel, VtkWriteSaturations, false);
-SET_BOOL_PROP(ImmiscibleSinglePhaseModel, VtkWriteMobilities, false);
-SET_BOOL_PROP(ImmiscibleSinglePhaseModel, VtkWriteRelativePermeabilities, false);
+template<class TypeTag>
+struct VtkWriteSaturations<TypeTag, TTag::ImmiscibleSinglePhaseModel> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteMobilities<TypeTag, TTag::ImmiscibleSinglePhaseModel> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteRelativePermeabilities<TypeTag, TTag::ImmiscibleSinglePhaseModel> { static constexpr bool value = false; };
 
 /////////////////////
 // set slightly different properties for the two-phase case
 /////////////////////
-SET_PROP(ImmiscibleTwoPhaseModel, WettingPhase)
+template<class TypeTag>
+struct WettingPhase<TypeTag, TTag::ImmiscibleTwoPhaseModel>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    typedef Opm::LiquidPhase<Scalar, Opm::NullComponent<Scalar> > type;
+    using type = Opm::LiquidPhase<Scalar, Opm::NullComponent<Scalar> >;
 };
 
-SET_PROP(ImmiscibleTwoPhaseModel, NonwettingPhase)
+template<class TypeTag>
+struct NonwettingPhase<TypeTag, TTag::ImmiscibleTwoPhaseModel>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    typedef Opm::LiquidPhase<Scalar, Opm::NullComponent<Scalar> > type;
+    using type = Opm::LiquidPhase<Scalar, Opm::NullComponent<Scalar> >;
 };
 
-SET_PROP(ImmiscibleTwoPhaseModel, FluidSystem)
+template<class TypeTag>
+struct FluidSystem<TypeTag, TTag::ImmiscibleTwoPhaseModel>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, WettingPhase) WettingPhase;
-    typedef typename GET_PROP_TYPE(TypeTag, NonwettingPhase) NonwettingPhase;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using WettingPhase = GetPropType<TypeTag, Properties::WettingPhase>;
+    using NonwettingPhase = GetPropType<TypeTag, Properties::NonwettingPhase>;
 
 public:
-    typedef Opm::TwoPhaseImmiscibleFluidSystem<Scalar, WettingPhase, NonwettingPhase> type;
+    using type = Opm::TwoPhaseImmiscibleFluidSystem<Scalar, WettingPhase, NonwettingPhase>;
 };
 
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -175,7 +196,8 @@ namespace Opm {
  * \c FluxModule property. For example, the velocity model can by
  * changed to the Forchheimer approach by
  * \code
- * SET_TYPE_PROP(MyProblemTypeTag, FluxModule, Opm::ForchheimerFluxModule<TypeTag>);
+ * template<class TypeTag>
+struct FluxModule<TypeTag, TTag::MyProblemTypeTag> { using type = Opm::ForchheimerFluxModule<TypeTag>; };
  * \endcode
  *
  * The core of the model is the conservation mass of each component by
@@ -197,21 +219,21 @@ template <class TypeTag>
 class ImmiscibleModel
     : public Opm::MultiPhaseBaseModel<TypeTag>
 {
-    typedef Opm::MultiPhaseBaseModel<TypeTag> ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Implementation;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+    using ParentType = Opm::MultiPhaseBaseModel<TypeTag>;
+    using Implementation = GetPropType<TypeTag, Properties::Model>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
     enum { numComponents = FluidSystem::numComponents };
 
 
 
-    enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
-    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
-    typedef Opm::EnergyModule<TypeTag, enableEnergy> EnergyModule;
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
 
 public:
     ImmiscibleModel(Simulator& simulator)

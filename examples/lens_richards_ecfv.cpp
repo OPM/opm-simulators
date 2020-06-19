@@ -32,18 +32,23 @@
 
 #include "problems/richardslensproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(RichardsLensEcfvProblem, INHERITS_FROM(RichardsLensProblem));
-SET_TAG_PROP(RichardsLensEcfvProblem, SpatialDiscretizationSplice, EcfvDiscretization);
+// Create new type tags
+namespace TTag {
+struct RichardsLensEcfvProblem { using InheritsFrom = std::tuple<RichardsLensProblem>; };
+} // end namespace TTag
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::RichardsLensEcfvProblem> { using type = TTag::EcfvDiscretization; };
 
 //! Use automatic differentiation to linearize the system of PDEs
-SET_TAG_PROP(RichardsLensEcfvProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::RichardsLensEcfvProblem> { using type = TTag::AutoDiffLocalLinearizer; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(RichardsLensEcfvProblem) ProblemTypeTag;
+    using ProblemTypeTag = Opm::Properties::TTag::RichardsLensEcfvProblem;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

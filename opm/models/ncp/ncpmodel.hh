@@ -62,62 +62,89 @@ template <class TypeTag>
 class NcpModel;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
+namespace TTag {
 /*!
  * \brief Define the type tag for the compositional NCP model.
  */
-NEW_TYPE_TAG(NcpModel, INHERITS_FROM(MultiPhaseBaseModel,
-                                     VtkComposition,
-                                     VtkEnergy,
-                                     VtkDiffusion));
+struct NcpModel { using InheritsFrom = std::tuple<VtkDiffusion,
+                                                  VtkEnergy,
+                                                  VtkComposition,
+                                                  MultiPhaseBaseModel>; };
+} // namespace TTag
 
 //! Use the Ncp local jacobian operator for the compositional NCP model
-SET_TYPE_PROP(NcpModel,
-              LocalResidual,
-              Opm::NcpLocalResidual<TypeTag>);
+template<class TypeTag>
+struct LocalResidual<TypeTag, TTag::NcpModel> { using type = Opm::NcpLocalResidual<TypeTag>; };
 
 //! Use the Ncp specific newton method for the compositional NCP model
-SET_TYPE_PROP(NcpModel, NewtonMethod, Opm::NcpNewtonMethod<TypeTag>);
+template<class TypeTag>
+struct NewtonMethod<TypeTag, TTag::NcpModel> { using type = Opm::NcpNewtonMethod<TypeTag>; };
 
 //! the Model property
-SET_TYPE_PROP(NcpModel, Model, Opm::NcpModel<TypeTag>);
+template<class TypeTag>
+struct Model<TypeTag, TTag::NcpModel> { using type = Opm::NcpModel<TypeTag>; };
 
 //! The type of the base base class for actual problems
-SET_TYPE_PROP(NcpModel, BaseProblem, Opm::MultiPhaseBaseProblem<TypeTag>);
+template<class TypeTag>
+struct BaseProblem<TypeTag, TTag::NcpModel> { using type = Opm::MultiPhaseBaseProblem<TypeTag>; };
 
 //! Disable the energy equation by default
-SET_BOOL_PROP(NcpModel, EnableEnergy, false);
+template<class TypeTag>
+struct EnableEnergy<TypeTag, TTag::NcpModel> { static constexpr bool value = false; };
 
 //! disable diffusion by default
-SET_BOOL_PROP(NcpModel, EnableDiffusion, false);
+template<class TypeTag>
+struct EnableDiffusion<TypeTag, TTag::NcpModel> { static constexpr bool value = false; };
 
 //! the RateVector property
-SET_TYPE_PROP(NcpModel, RateVector, Opm::NcpRateVector<TypeTag>);
+template<class TypeTag>
+struct RateVector<TypeTag, TTag::NcpModel> { using type = Opm::NcpRateVector<TypeTag>; };
 
 //! the BoundaryRateVector property
-SET_TYPE_PROP(NcpModel, BoundaryRateVector, Opm::NcpBoundaryRateVector<TypeTag>);
+template<class TypeTag>
+struct BoundaryRateVector<TypeTag, TTag::NcpModel> { using type = Opm::NcpBoundaryRateVector<TypeTag>; };
 
 //! the PrimaryVariables property
-SET_TYPE_PROP(NcpModel, PrimaryVariables, Opm::NcpPrimaryVariables<TypeTag>);
+template<class TypeTag>
+struct PrimaryVariables<TypeTag, TTag::NcpModel> { using type = Opm::NcpPrimaryVariables<TypeTag>; };
 
 //! the IntensiveQuantities property
-SET_TYPE_PROP(NcpModel, IntensiveQuantities, Opm::NcpIntensiveQuantities<TypeTag>);
+template<class TypeTag>
+struct IntensiveQuantities<TypeTag, TTag::NcpModel> { using type = Opm::NcpIntensiveQuantities<TypeTag>; };
 
 //! the ExtensiveQuantities property
-SET_TYPE_PROP(NcpModel, ExtensiveQuantities, Opm::NcpExtensiveQuantities<TypeTag>);
+template<class TypeTag>
+struct ExtensiveQuantities<TypeTag, TTag::NcpModel> { using type = Opm::NcpExtensiveQuantities<TypeTag>; };
 
 //! The indices required by the compositional NCP model
-SET_TYPE_PROP(NcpModel, Indices, Opm::NcpIndices<TypeTag, 0>);
+template<class TypeTag>
+struct Indices<TypeTag, TTag::NcpModel> { using type = Opm::NcpIndices<TypeTag, 0>; };
 
 //! The unmodified weight for the pressure primary variable
-SET_SCALAR_PROP(NcpModel, NcpPressureBaseWeight, 1.0);
+template<class TypeTag>
+struct NcpPressureBaseWeight<TypeTag, TTag::NcpModel>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.0;
+};
 //! The weight for the saturation primary variables
-SET_SCALAR_PROP(NcpModel, NcpSaturationsBaseWeight, 1.0);
+template<class TypeTag>
+struct NcpSaturationsBaseWeight<TypeTag, TTag::NcpModel>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.0;
+};
 //! The unmodified weight for the fugacity primary variables
-SET_SCALAR_PROP(NcpModel, NcpFugacitiesBaseWeight, 1.0e-6);
+template<class TypeTag>
+struct NcpFugacitiesBaseWeight<TypeTag, TTag::NcpModel>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.0e-6;
+};
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -144,7 +171,8 @@ namespace Opm {
  * \c FluxModule property. For example, the velocity model can by
  * changed to the Forchheimer approach by
  * \code
- * SET_TYPE_PROP(MyProblemTypeTag, FluxModule, Opm::ForchheimerFluxModule<TypeTag>);
+ * template<class TypeTag>
+struct FluxModule<TypeTag, TTag::MyProblemTypeTag> { using type = Opm::ForchheimerFluxModule<TypeTag>; };
  * \endcode
  *
  * The core of the model is the conservation mass of each component by
@@ -198,14 +226,14 @@ template <class TypeTag>
 class NcpModel
     : public MultiPhaseBaseModel<TypeTag>
 {
-    typedef MultiPhaseBaseModel<TypeTag> ParentType;
+    using ParentType = MultiPhaseBaseModel<TypeTag>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
@@ -214,15 +242,15 @@ class NcpModel
     enum { saturation0Idx = Indices::saturation0Idx };
     enum { conti0EqIdx = Indices::conti0EqIdx };
     enum { ncp0EqIdx = Indices::ncp0EqIdx };
-    enum { enableDiffusion = GET_PROP_VALUE(TypeTag, EnableDiffusion) };
-    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
+    enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
-    typedef Dune::FieldVector<Scalar, numComponents> ComponentVector;
+    using ComponentVector = Dune::FieldVector<Scalar, numComponents>;
 
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
+    using Toolbox = Opm::MathToolbox<Evaluation>;
 
-    typedef Opm::EnergyModule<TypeTag, enableEnergy> EnergyModule;
-    typedef Opm::DiffusionModule<TypeTag, enableDiffusion> DiffusionModule;
+    using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
+    using DiffusionModule = Opm::DiffusionModule<TypeTag, enableDiffusion>;
 
 public:
     NcpModel(Simulator& simulator)
@@ -376,11 +404,11 @@ public:
 
             Opm::Valgrind::CheckDefined(minActivityCoeff_[globalDofIdx][compIdx]);
             static const Scalar fugacityBaseWeight =
-                GET_PROP_VALUE(TypeTag, NcpFugacitiesBaseWeight);
+                getPropValue<TypeTag, Properties::NcpFugacitiesBaseWeight>();
             result = fugacityBaseWeight / minActivityCoeff_[globalDofIdx][compIdx];
         }
         else if (Indices::pressure0Idx == pvIdx) {
-            static const Scalar pressureBaseWeight = GET_PROP_VALUE(TypeTag, NcpPressureBaseWeight);
+            static const Scalar pressureBaseWeight = getPropValue<TypeTag, Properties::NcpPressureBaseWeight>();
             result = pressureBaseWeight / referencePressure_;
         }
         else {
@@ -391,7 +419,7 @@ public:
 
             // saturation
             static const Scalar saturationsBaseWeight =
-                GET_PROP_VALUE(TypeTag, NcpSaturationsBaseWeight);
+                getPropValue<TypeTag, Properties::NcpSaturationsBaseWeight>();
             result = saturationsBaseWeight;
         }
 

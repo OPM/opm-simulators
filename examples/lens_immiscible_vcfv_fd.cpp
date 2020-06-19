@@ -32,22 +32,27 @@
 #include <opm/models/immiscible/immisciblemodel.hh>
 #include "problems/lensproblem.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(LensProblemVcfvFd, INHERITS_FROM(ImmiscibleTwoPhaseModel, LensBaseProblem));
+// Create new type tags
+namespace TTag {
+struct LensProblemVcfvFd { using InheritsFrom = std::tuple<LensBaseProblem, ImmiscibleTwoPhaseModel>; };
+} // end namespace TTag
 
 // use the finite difference methodfor this simulator
-SET_TAG_PROP(LensProblemVcfvFd, LocalLinearizerSplice, FiniteDifferenceLocalLinearizer);
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::LensProblemVcfvFd> { using type = TTag::FiniteDifferenceLocalLinearizer; };
 
 // use linear finite element gradients if dune-localfunctions is available
 #if HAVE_DUNE_LOCALFUNCTIONS
-SET_BOOL_PROP(LensProblemVcfvFd, UseP1FiniteElementGradients, true);
+template<class TypeTag>
+struct UseP1FiniteElementGradients<TypeTag, TTag::LensProblemVcfvFd> { static constexpr bool value = true; };
 #endif
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(LensProblemVcfvFd) ProblemTypeTag;
+    using ProblemTypeTag = Opm::Properties::TTag::LensProblemVcfvFd;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

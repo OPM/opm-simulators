@@ -40,40 +40,68 @@
 
 #include <cstdio>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
+
+namespace TTag {
 
 // create new type tag for the VTK multi-phase output
-NEW_TYPE_TAG(VtkMultiPhase);
+struct VtkMultiPhase {};
+
+} // namespace TTag
 
 // create the property tags needed for the multi phase module
-NEW_PROP_TAG(VtkWriteExtrusionFactor);
-NEW_PROP_TAG(VtkWritePressures);
-NEW_PROP_TAG(VtkWriteDensities);
-NEW_PROP_TAG(VtkWriteSaturations);
-NEW_PROP_TAG(VtkWriteMobilities);
-NEW_PROP_TAG(VtkWriteRelativePermeabilities);
-NEW_PROP_TAG(VtkWriteViscosities);
-NEW_PROP_TAG(VtkWriteAverageMolarMasses);
-NEW_PROP_TAG(VtkWritePorosity);
-NEW_PROP_TAG(VtkWriteIntrinsicPermeabilities);
-NEW_PROP_TAG(VtkWritePotentialGradients);
-NEW_PROP_TAG(VtkWriteFilterVelocities);
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteExtrusionFactor { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWritePressures { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteDensities { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteSaturations { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteMobilities { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteRelativePermeabilities { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteViscosities { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteAverageMolarMasses { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWritePorosity { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteIntrinsicPermeabilities { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWritePotentialGradients { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteFilterVelocities { using type = UndefinedProperty; };
 
 // set default values for what quantities to output
-SET_BOOL_PROP(VtkMultiPhase, VtkWriteExtrusionFactor, false);
-SET_BOOL_PROP(VtkMultiPhase, VtkWritePressures, true);
-SET_BOOL_PROP(VtkMultiPhase, VtkWriteDensities, true);
-SET_BOOL_PROP(VtkMultiPhase, VtkWriteSaturations, true);
-SET_BOOL_PROP(VtkMultiPhase, VtkWriteMobilities, false);
-SET_BOOL_PROP(VtkMultiPhase, VtkWriteRelativePermeabilities, true);
-SET_BOOL_PROP(VtkMultiPhase, VtkWriteViscosities, false);
-SET_BOOL_PROP(VtkMultiPhase, VtkWriteAverageMolarMasses, false);
-SET_BOOL_PROP(VtkMultiPhase, VtkWritePorosity, true);
-SET_BOOL_PROP(VtkMultiPhase, VtkWriteIntrinsicPermeabilities, false);
-SET_BOOL_PROP(VtkMultiPhase, VtkWritePotentialGradients, false);
-SET_BOOL_PROP(VtkMultiPhase, VtkWriteFilterVelocities, false);
+template<class TypeTag>
+struct VtkWriteExtrusionFactor<TypeTag, TTag::VtkMultiPhase> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWritePressures<TypeTag, TTag::VtkMultiPhase> { static constexpr bool value = true; };
+template<class TypeTag>
+struct VtkWriteDensities<TypeTag, TTag::VtkMultiPhase> { static constexpr bool value = true; };
+template<class TypeTag>
+struct VtkWriteSaturations<TypeTag, TTag::VtkMultiPhase> { static constexpr bool value = true; };
+template<class TypeTag>
+struct VtkWriteMobilities<TypeTag, TTag::VtkMultiPhase> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteRelativePermeabilities<TypeTag, TTag::VtkMultiPhase> { static constexpr bool value = true; };
+template<class TypeTag>
+struct VtkWriteViscosities<TypeTag, TTag::VtkMultiPhase> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteAverageMolarMasses<TypeTag, TTag::VtkMultiPhase> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWritePorosity<TypeTag, TTag::VtkMultiPhase> { static constexpr bool value = true; };
+template<class TypeTag>
+struct VtkWriteIntrinsicPermeabilities<TypeTag, TTag::VtkMultiPhase> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWritePotentialGradients<TypeTag, TTag::VtkMultiPhase> { static constexpr bool value = false; };
+template<class TypeTag>
+struct VtkWriteFilterVelocities<TypeTag, TTag::VtkMultiPhase> { static constexpr bool value = false; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -98,30 +126,30 @@ namespace Opm {
 template<class TypeTag>
 class VtkMultiPhaseModule : public BaseOutputModule<TypeTag>
 {
-    typedef BaseOutputModule<TypeTag> ParentType;
+    using ParentType = BaseOutputModule<TypeTag>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, DiscBaseOutputModule) DiscBaseOutputModule;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using DiscBaseOutputModule = GetPropType<TypeTag, Properties::DiscBaseOutputModule>;
 
-    static const int vtkFormat = GET_PROP_VALUE(TypeTag, VtkOutputFormat);
-    typedef Opm::VtkMultiWriter<GridView, vtkFormat> VtkMultiWriter;
+    static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+    using VtkMultiWriter = Opm::VtkMultiWriter<GridView, vtkFormat>;
 
     enum { dimWorld = GridView::dimensionworld };
-    enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
+    enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
 
-    typedef typename ParentType::ScalarBuffer ScalarBuffer;
-    typedef typename ParentType::VectorBuffer VectorBuffer;
-    typedef typename ParentType::TensorBuffer TensorBuffer;
-    typedef typename ParentType::PhaseBuffer PhaseBuffer;
+    using ScalarBuffer = typename ParentType::ScalarBuffer;
+    using VectorBuffer = typename ParentType::VectorBuffer;
+    using TensorBuffer = typename ParentType::TensorBuffer;
+    using PhaseBuffer = typename ParentType::PhaseBuffer;
 
-    typedef Dune::FieldVector<Scalar, dimWorld> DimVector;
+    using DimVector = Dune::FieldVector<Scalar, dimWorld>;
 
-    typedef std::array<VectorBuffer, numPhases> PhaseVectorBuffer;
+    using PhaseVectorBuffer = std::array<VectorBuffer, numPhases>;
 
 public:
     VtkMultiPhaseModule(const Simulator& simulator)

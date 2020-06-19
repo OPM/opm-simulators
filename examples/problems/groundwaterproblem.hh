@@ -51,63 +51,131 @@ template <class TypeTag>
 class GroundWaterProblem;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(GroundWaterBaseProblem);
+namespace TTag {
+struct GroundWaterBaseProblem {};
+}
 
-NEW_PROP_TAG(LensLowerLeftX);
-NEW_PROP_TAG(LensLowerLeftY);
-NEW_PROP_TAG(LensLowerLeftZ);
-NEW_PROP_TAG(LensUpperRightX);
-NEW_PROP_TAG(LensUpperRightY);
-NEW_PROP_TAG(LensUpperRightZ);
-NEW_PROP_TAG(Permeability);
-NEW_PROP_TAG(PermeabilityLens);
+template<class TypeTag, class MyTypeTag>
+struct LensLowerLeftX { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct LensLowerLeftY { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct LensLowerLeftZ { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct LensUpperRightX { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct LensUpperRightY { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct LensUpperRightZ { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct Permeability { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct PermeabilityLens { using type = UndefinedProperty; };
 
-SET_PROP(GroundWaterBaseProblem, Fluid)
+template<class TypeTag>
+struct Fluid<TypeTag, TTag::GroundWaterBaseProblem>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    typedef Opm::LiquidPhase<Scalar, Opm::SimpleH2O<Scalar> > type;
+    using type = Opm::LiquidPhase<Scalar, Opm::SimpleH2O<Scalar> >;
 };
 
 // Set the grid type
-SET_TYPE_PROP(GroundWaterBaseProblem, Grid, Dune::YaspGrid<2>);
-// SET_TYPE_PROP(GroundWaterBaseProblem, Grid, Dune::SGrid<2, 2>);
+template<class TypeTag>
+struct Grid<TypeTag, TTag::GroundWaterBaseProblem> { using type = Dune::YaspGrid<2>; };
+// struct Grid<TypeTag, TTag::GroundWaterBaseProblem> { using type = Dune::SGrid<2, 2>; };
 
-SET_TYPE_PROP(GroundWaterBaseProblem, Problem,
-              Opm::GroundWaterProblem<TypeTag>);
+template<class TypeTag>
+struct Problem<TypeTag, TTag::GroundWaterBaseProblem>
+{ using type = Opm::GroundWaterProblem<TypeTag>; };
 
-SET_SCALAR_PROP(GroundWaterBaseProblem, LensLowerLeftX, 0.25);
-SET_SCALAR_PROP(GroundWaterBaseProblem, LensLowerLeftY, 0.25);
-SET_SCALAR_PROP(GroundWaterBaseProblem, LensLowerLeftZ, 0.25);
-SET_SCALAR_PROP(GroundWaterBaseProblem, LensUpperRightX, 0.75);
-SET_SCALAR_PROP(GroundWaterBaseProblem, LensUpperRightY, 0.75);
-SET_SCALAR_PROP(GroundWaterBaseProblem, LensUpperRightZ, 0.75);
-SET_SCALAR_PROP(GroundWaterBaseProblem, Permeability, 1e-10);
-SET_SCALAR_PROP(GroundWaterBaseProblem, PermeabilityLens, 1e-12);
+template<class TypeTag>
+struct LensLowerLeftX<TypeTag, TTag::GroundWaterBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.25;
+};
+template<class TypeTag>
+struct LensLowerLeftY<TypeTag, TTag::GroundWaterBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.25;
+};
+template<class TypeTag>
+struct LensLowerLeftZ<TypeTag, TTag::GroundWaterBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.25;
+};
+template<class TypeTag>
+struct LensUpperRightX<TypeTag, TTag::GroundWaterBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.75;
+};
+template<class TypeTag>
+struct LensUpperRightY<TypeTag, TTag::GroundWaterBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.75;
+};
+template<class TypeTag>
+struct LensUpperRightZ<TypeTag, TTag::GroundWaterBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.75;
+};
+template<class TypeTag>
+struct Permeability<TypeTag, TTag::GroundWaterBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-10;
+};
+template<class TypeTag>
+struct PermeabilityLens<TypeTag, TTag::GroundWaterBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-12;
+};
 
 // Enable gravity
-SET_BOOL_PROP(GroundWaterBaseProblem, EnableGravity, true);
+template<class TypeTag>
+struct EnableGravity<TypeTag, TTag::GroundWaterBaseProblem> { static constexpr bool value = true; };
 
 // The default for the end time of the simulation
-SET_SCALAR_PROP(GroundWaterBaseProblem, EndTime, 1);
+template<class TypeTag>
+struct EndTime<TypeTag, TTag::GroundWaterBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1;
+};
 
 // The default for the initial time step size of the simulation
-SET_SCALAR_PROP(GroundWaterBaseProblem, InitialTimeStepSize, 1);
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, TTag::GroundWaterBaseProblem>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1;
+};
 
 // The default DGF file to load
-SET_STRING_PROP(GroundWaterBaseProblem, GridFile, "./data/groundwater_2d.dgf");
+template<class TypeTag>
+struct GridFile<TypeTag, TTag::GroundWaterBaseProblem> { static constexpr auto value = "./data/groundwater_2d.dgf"; };
 
 // Use the conjugated gradient linear solver with the default preconditioner (i.e.,
 // ILU-0) from dune-istl
-SET_TAG_PROP(GroundWaterBaseProblem, LinearSolverSplice, ParallelIstlLinearSolver);
-SET_TYPE_PROP(GroundWaterBaseProblem, LinearSolverWrapper,
-              Opm::Linear::SolverWrapperConjugatedGradients<TypeTag>);
+template<class TypeTag>
+struct LinearSolverSplice<TypeTag, TTag::GroundWaterBaseProblem> { using type = TTag::ParallelIstlLinearSolver; };
 
-END_PROPERTIES
+template<class TypeTag>
+struct LinearSolverWrapper<TypeTag, TTag::GroundWaterBaseProblem>
+{ using type = Opm::Linear::SolverWrapperConjugatedGradients<TypeTag>; };
+
+} // namespace Opm::Properties
 
 namespace Opm {
 /*!
@@ -123,16 +191,16 @@ namespace Opm {
  * occupied by a rectangular lens of lower permeability.
  */
 template <class TypeTag>
-class GroundWaterProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
+class GroundWaterProblem : public GetPropType<TypeTag, Properties::BaseProblem>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, BaseProblem) ParentType;
+    using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
     // copy some indices for convenience
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
     enum {
         numPhases = FluidSystem::numPhases,
 
@@ -144,17 +212,17 @@ class GroundWaterProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
         pressure0Idx = Indices::pressure0Idx
     };
 
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using BoundaryRateVector = GetPropType<TypeTag, Properties::BoundaryRateVector>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using Model = GetPropType<TypeTag, Properties::Model>;
 
-    typedef typename GridView::ctype CoordScalar;
-    typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
+    using CoordScalar = typename GridView::ctype;
+    using GlobalPosition = Dune::FieldVector<CoordScalar, dimWorld>;
 
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
 public:
     /*!

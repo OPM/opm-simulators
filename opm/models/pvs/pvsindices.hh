@@ -43,12 +43,12 @@ namespace Opm {
  */
 template <class TypeTag, int PVOffset>
 class PvsIndices
-    : public EnergyIndices<PVOffset + GET_PROP_VALUE(TypeTag, NumComponents),
-                           GET_PROP_VALUE(TypeTag, EnableEnergy)>
+    : public EnergyIndices<PVOffset + getPropValue<TypeTag, Properties::NumComponents>(),
+                           getPropValue<TypeTag, Properties::EnableEnergy>()>
 {
-    enum { numComponents = GET_PROP_VALUE(TypeTag, NumComponents) };
-    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
-    typedef Opm::EnergyIndices<PVOffset + numComponents, enableEnergy> EnergyIndices;
+    enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    using EnergyIndices = Opm::EnergyIndices<PVOffset + numComponents, enableEnergy>;
 
 public:
     //! Number of partial differential equations or primary variables, respectively

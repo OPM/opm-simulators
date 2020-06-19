@@ -50,15 +50,15 @@ template<class TypeTag>
 class DiscreteFractureProblem
     : public MultiPhaseBaseProblem<TypeTag>
 {
-    typedef Opm::MultiPhaseBaseProblem<TypeTag> ParentType;
+    using ParentType = Opm::MultiPhaseBaseProblem<TypeTag>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Problem) Implementation;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+    using Implementation = GetPropType<TypeTag, Properties::Problem>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
     enum { dimWorld = GridView::dimensionworld };
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
 public:
     /*!

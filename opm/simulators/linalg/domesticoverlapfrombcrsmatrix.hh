@@ -51,8 +51,8 @@ namespace Linear {
  */
 class DomesticOverlapFromBCRSMatrix
 {
-    typedef Opm::Linear::ForeignOverlapFromBCRSMatrix ForeignOverlap;
-    typedef Opm::Linear::GlobalIndices<ForeignOverlap> GlobalIndices;
+    using ForeignOverlap = Opm::Linear::ForeignOverlapFromBCRSMatrix;
+    using GlobalIndices = Opm::Linear::GlobalIndices<ForeignOverlap>;
 
 public:
     // overlaps should never be copied!

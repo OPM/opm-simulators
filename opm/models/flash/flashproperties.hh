@@ -35,13 +35,15 @@
 #include <opm/models/io/vtkenergymodule.hh>
 #include <opm/models/io/vtkdiffusionmodule.hh>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 //! The type of the flash constraint solver
-NEW_PROP_TAG(FlashSolver);
+template<class TypeTag, class MyTypeTag>
+struct FlashSolver { using type = UndefinedProperty; };
 //! The maximum accepted error of the flash solver
-NEW_PROP_TAG(FlashTolerance);
+template<class TypeTag, class MyTypeTag>
+struct FlashTolerance { using type = UndefinedProperty; };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 #endif
