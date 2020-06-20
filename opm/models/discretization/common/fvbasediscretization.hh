@@ -807,6 +807,15 @@ public:
     { return enableStorageCache_; }
 
     /*!
+     * \brief Set the value of enable storage cache
+     *
+     * Be aware that calling the *CachedStorage() methods if the storage cache is
+     * disabled will crash the program.
+     */
+    void setEnableStorageCache(bool enableStorageCache)
+    { enableStorageCache_= enableStorageCache; }
+
+    /*!
      * \brief Retrieve an entry of the cache for the storage term.
      *
      * This is supposed to represent a DOF's total amount of conservation quantities per
