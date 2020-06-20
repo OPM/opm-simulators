@@ -196,7 +196,7 @@ public:
         Evaluation ST = 1.0;
         if (linearizationType.type == Opm::LinearizationType::seqtransport) {
             ST = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx, linearizationType);
-            assert(ST<2);// debug to be sure no pressure is pressent
+            //assert(ST<2);// debug to be sure no pressure is pressent
             assert(timeIdx==0 ||  ST == 1);// for pure sequential with multiple steps this is always true.
             
         }else if (linearizationType.type == Opm::LinearizationType::pressure) {
@@ -214,7 +214,7 @@ public:
                                                gasPhaseIdx)); // get current value assuem this is not updated
             } else {
                 pg = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx, linearizationType);
-                assert(pg>2.0);//enure not ST is present
+                //assert(pg>2.0);//enure not ST is present
             }
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 if (FluidSystem::phaseIsActive(phaseIdx))
@@ -226,7 +226,7 @@ public:
                 po = Toolbox::value(elemCtx.problem().pressure(globalSpaceIdx, oilPhaseIdx));
             } else {
                 po = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx, linearizationType);
-                assert(po>2.0);//enure not ST is present
+                //assert(po>2.0);//enure not ST is present
             }            
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 if (FluidSystem::phaseIsActive(phaseIdx))

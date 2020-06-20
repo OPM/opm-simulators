@@ -563,8 +563,18 @@ namespace Opm {
         void updateSolution(){
             unsigned numDof = ebosSimulator_.model().numGridDof();
             BVector dx(numDof,0);
-            this->updateSolution(dx);
-        }
+            this->updateSolution(dx);            
+            // for(unsigned timeidx; timeidx< 2; ++timidx){
+            //     SolutionVector& sol = model().solution(/*historyIdx=*/timeidx);
+            //     size_t numGridDof = ebosSimulator_.model().numGridDof();
+            //     for (unsigned dofIdx = 0; dofIdx < numGridDof; ++dofIdx) {
+            //         sol[dofIdx].adaptPrimaryVariable(ebosSimulator_.problem(),dofIdx);
+            //     }
+            //     ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
+            // }
+        
+        
+         }
 
         /// Apply an update to the primary variables.
         void updateSolution(const BVector& dx)

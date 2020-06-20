@@ -155,16 +155,20 @@ namespace Opm {
             int seqiterations  = 0;
             int maxseqiterations = 10;
             // should probalby store for trying onse more
-            //auto solutionOld = this->model().solution(/*timeIdx=*/0);
+            auto solutionOld = model_->ebosSimulator().model().solution(/*timeIdx=*/0);
             bool first= true;
             while(not(converged) && (seqiterations < maxseqiterations) ){
                 // do pressure step
+                if(seqiterations>0){
+                    auto& prevsol = model_->ebosSimulator().model().solution(/*timeIdx=*/1);
+                    prevsol=solutionOld;
+                }
                 linearizationType.type = Opm::LinearizationType::pressure;
                 model_->updateSolution();
                 model_->ebosSimulator().problem().updatePressure();//update pressure ans ST
                 model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);  
                 model_->updateSolution();// should conver to the new solution time         
-                SimulatorReportSingle lreportpre = this->stepDefault(timer, /*next*/first);
+                SimulatorReportSingle lreportpre = this->stepDefault(timer, /*next*/first, false);
                 first=false;
 
                 // do transport step
@@ -173,17 +177,27 @@ namespace Opm {
                 model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);
 
                 model_->updateSolution();
-                SimulatorReportSingle lreportseq = this->stepDefault(timer,/*next*/false);
                 reportpre += lreportpre;
-                reportseq += lreportseq;
+                try{
+                    SimulatorReportSingle lreportseq = this->stepDefault(timer,/*next*/false, false);
+                    reportseq += lreportseq;
+                }catch (...){
+                    //set the prevois value to the staring point
+                    auto& prevsol = model_->ebosSimulator().model().solution(/*timeIdx=*/1);
+                    prevsol=solutionOld;
+                    throw;
+                }
+                
                 // for no not seq implicit
                 if(implicit){
                     // for now do full implicit solve
+                    auto& prevsol = model_->ebosSimulator().model().solution(/*timeIdx=*/1);
+                    prevsol=solutionOld;
                     linearizationType.type = Opm::LinearizationType::pressure;
                     model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);
 
                     model_->updateSolution();
-                    SimulatorReportSingle lreportsim = this->stepDefault(timer,/*next*/false);
+                    SimulatorReportSingle lreportsim = this->stepDefault(timer,/*next*/false, false);
                     converged = lreportsim.converged;
                 }else{
                     converged = true;
@@ -195,6 +209,7 @@ namespace Opm {
             if(not(converged)){
                 report.converged = false;
             }else{
+                model_->afterStep(timer);
                 report.converged = true;
             }
             //todo fill this report correctly
@@ -373,7 +388,7 @@ namespace Opm {
             // incase previous step was not fully implicit
             model_->ebosSimulator().problem().updatePressure();//update pressure ans ST                               
             model_->updateSolution();
-            SimulatorReportSingle report = this->stepDefault(timer);
+            SimulatorReportSingle report = this->stepDefault(timer,true,true);
             return report;
         }
 
@@ -385,14 +400,15 @@ namespace Opm {
             model_->ebosSimulator().problem().updatePressure();//update pressure ans ST
             model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);  
             model_->updateSolution();// should conver to the new solution time         
-            SimulatorReportSingle lreportpre = this->stepDefault(timer);
+            SimulatorReportSingle lreportpre = this->stepDefault(timer,true,true);
             SimulatorReportSingle report = lreportpre;
             //todo fill this report correctly
             return report;
                 
         }
                 
-        SimulatorReportSingle stepDefault(const SimulatorTimerInterface& timer,bool next = true)
+        //SimulatorReportSingle stepDefault(const SimulatorTimerInterface& timer,bool next = true, bool end)
+        SimulatorReportSingle stepDefault(const SimulatorTimerInterface& timer,bool next, bool endstep)    
         {
             SimulatorReportSingle report;
             report.global_time = timer.simulationTimeElapsed();
@@ -442,7 +458,9 @@ namespace Opm {
             }
 
             // Do model-specific post-step actions.
-            model_->afterStep(timer);
+            if(endstep){
+                model_->afterStep(timer);
+            }
             report.converged = true;
             return report;
         }
