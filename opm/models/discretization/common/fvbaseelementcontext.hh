@@ -30,6 +30,7 @@
 
 #include "fvbaseproperties.hh"
 
+#include <opm/models/discretization/common/linearizationtype.hh>
 #include <opm/models/utils/alignedallocator.hh>
 
 #include <opm/material/common/Unused.hpp>
@@ -267,6 +268,14 @@ public:
      */
     unsigned focusDofIndex() const
     { return focusDofIdx_; }
+
+    /*!
+     * \brief Returns the linearization type.
+     *
+     * \copydetails setLinearizationType()
+     */
+    LinearizationType linearizationType() const
+    { return this->model().linearizer().getLinearizationType(); }
 
     /*!
      * \brief Return a reference to the simulator.

@@ -29,6 +29,7 @@
 #define EWOMS_FV_BASE_LINEARIZER_HH
 
 #include "fvbaseproperties.hh"
+#include "linearizationtype.hh"
 
 #include <opm/models/parallel/gridcommhandles.hh>
 #include <opm/models/parallel/threadmanager.hh>
@@ -143,6 +144,12 @@ public:
     {
         simulatorPtr_ = &simulator;
         eraseMatrix();
+        auto it = elementCtx_.begin();
+        const auto& endIt = elementCtx_.end();
+        for (; it != endIt; ++it){
+            delete *it;
+        }
+        elementCtx_.resize(0);
     }
 
     /*!
@@ -160,7 +167,11 @@ public:
     /*!
      * \brief Linearize the full system of non-linear equations.
      *
-     * This means the spatial domain plus all auxiliary equations.
+     * The linearizationType() controls the scheme used and the focus
+     * time index. The default is fully implicit scheme, and focus index
+     * equal to 0, i.e. current time (end of step).
+     *
+     * This linearizes the spatial domain and all auxiliary equations.
      */
     void linearize()
     {
@@ -262,6 +273,14 @@ public:
 
     GlobalEqVector& residual()
     { return residual_; }
+
+    void setLinearizationType(LinearizationType linearizationType){
+        linearizationType_ = linearizationType;
+    };
+
+    const LinearizationType& getLinearizationType() const{
+        return linearizationType_;
+    };
 
     /*!
      * \brief Returns the map of constraint degrees of freedom.
@@ -573,6 +592,7 @@ private:
     // the right-hand side
     GlobalEqVector residual_;
 
+    LinearizationType linearizationType_;
 
     std::mutex globalMatrixMutex_;
 };

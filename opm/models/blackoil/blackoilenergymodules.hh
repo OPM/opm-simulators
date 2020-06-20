@@ -358,7 +358,7 @@ public:
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
 
         // set temperature
-        fs.setTemperature(priVars.makeEvaluation(temperatureIdx, timeIdx));
+        fs.setTemperature(priVars.makeEvaluation(temperatureIdx, timeIdx, elemCtx.linearizationType()));
     }
 
     /*!

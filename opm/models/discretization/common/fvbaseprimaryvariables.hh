@@ -31,7 +31,7 @@
 #include <type_traits>
 
 #include "fvbaseproperties.hh"
-
+#include "linearizationtype.hh"
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/common/Unused.hpp>
 #include <opm/material/common/Exceptions.hpp>
@@ -87,13 +87,13 @@ public:
      * it represents the a constant f = x_i. (the difference is that in the first case,
      * the derivative w.r.t. x_i is 1, while it is 0 in the second case.
      */
-    Evaluation makeEvaluation(unsigned varIdx, unsigned timeIdx) const
+    Evaluation makeEvaluation(unsigned varIdx, unsigned timeIdx, LinearizationType linearizationType = LinearizationType()) const
     {
         if (std::is_same<Evaluation, Scalar>::value)
             return (*this)[varIdx]; // finite differences
         else {
             // automatic differentiation
-            if (timeIdx == 0)
+            if (timeIdx == linearizationType.time)
                 return Toolbox::createVariable((*this)[varIdx], varIdx);
             else
                 return Toolbox::createConstant((*this)[varIdx]);
