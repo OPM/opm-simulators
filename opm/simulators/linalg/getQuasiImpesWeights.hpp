@@ -20,6 +20,8 @@
 #ifndef OPM_GET_QUASI_IMPES_WEIGHTS_HEADER_INCLUDED
 #define OPM_GET_QUASI_IMPES_WEIGHTS_HEADER_INCLUDED
 
+#include <dune/common/fvector.hh>
+
 #include <algorithm>
 #include <cmath>
 
