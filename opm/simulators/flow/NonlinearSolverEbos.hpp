@@ -146,7 +146,6 @@ namespace Opm {
             }
         }
 
-        
 
         SimulatorReportSingle stepSequential(const SimulatorTimerInterface& timer,bool implicit){
             LinearizationType linearizationType;
@@ -155,13 +154,18 @@ namespace Opm {
             SimulatorReportSingle reportseq;
             int seqiterations  = 0;
             int maxseqiterations = 10;
+            // should probalby store for trying onse more
+            //auto solutionOld = this->model().solution(/*timeIdx=*/0);
+            bool first= true;
             while(not(converged) && (seqiterations < maxseqiterations) ){
                 // do pressure step
                 linearizationType.type = Opm::LinearizationType::pressure;
+                model_->updateSolution();
                 model_->ebosSimulator().problem().updatePressure();//update pressure ans ST
                 model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);  
                 model_->updateSolution();// should conver to the new solution time         
-                SimulatorReportSingle lreportpre = this->stepDefault(timer);
+                SimulatorReportSingle lreportpre = this->stepDefault(timer, /*next*/first);
+                first=false;
 
                 // do transport step
                 model_->ebosSimulator().problem().updatePressure();//update pressure ans ST                               
@@ -169,7 +173,7 @@ namespace Opm {
                 model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);
 
                 model_->updateSolution();
-                SimulatorReportSingle lreportseq = this->stepDefault(timer);
+                SimulatorReportSingle lreportseq = this->stepDefault(timer,/*next*/false);
                 reportpre += lreportpre;
                 reportseq += lreportseq;
                 // for no not seq implicit
@@ -179,7 +183,7 @@ namespace Opm {
                     model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);
 
                     model_->updateSolution();
-                    SimulatorReportSingle lreportsim = this->stepDefault(timer);
+                    SimulatorReportSingle lreportsim = this->stepDefault(timer,/*next*/false);
                     converged = lreportsim.converged;
                 }else{
                     converged = true;
@@ -388,14 +392,16 @@ namespace Opm {
                 
         }
                 
-        SimulatorReportSingle stepDefault(const SimulatorTimerInterface& timer)
+        SimulatorReportSingle stepDefault(const SimulatorTimerInterface& timer,bool next = true)
         {
             SimulatorReportSingle report;
             report.global_time = timer.simulationTimeElapsed();
             report.timestep_length = timer.currentStepLength();
 
             // Do model-specific once-per-step calculations.
-            model_->prepareStep(timer);
+            
+            model_->prepareStep(timer, next);
+           
 
             int iteration = 0;
 

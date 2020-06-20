@@ -190,12 +190,17 @@ namespace Opm {
 
         /// Called once before each time step.
         /// \param[in] timer                  simulation timer
-        void prepareStep(const SimulatorTimerInterface& timer)
+        void prepareStep(const SimulatorTimerInterface& timer, bool next = true)
         {
             // update the solution variables in ebos
-            if ( timer.lastStepFailed() ) {
-                ebosSimulator_.model().updateFailed();
-            } else {
+            if(next){
+                if ( timer.lastStepFailed() ) {
+                    ebosSimulator_.model().updateFailed();
+                    this->updateSolution();
+                } else {
+                    ebosSimulator_.model().advanceTimeLevel();
+                }
+            }else{
                 ebosSimulator_.model().advanceTimeLevel();
             }
 

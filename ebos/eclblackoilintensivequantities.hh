@@ -28,6 +28,7 @@
 #ifndef EWOMS_ECL_BLACK_OIL_INTENSIVE_QUANTITIES_HH
 #define EWOMS_ECL_BLACK_OIL_INTENSIVE_QUANTITIES_HH
 #include <opm/models/blackoil/blackoilintensivequantities.hh>
+//#include "eclblackoilprimaryvariabels.hh"
 namespace Opm {
 /*!
  * \ingroup BlackOilModel
@@ -104,10 +105,16 @@ public:
     void update(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
     {
         ParentType::update(elemCtx, dofIdx, timeIdx);
-
-        const auto linearizationType = elemCtx.linearizationType();
         const auto& problem = elemCtx.problem();
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
+        
+        const auto linearizationType = elemCtx.linearizationType();
+        if(not(linearizationType.type == LinearizationType::seqtransport)){
+            assert(priVars.simulationType() == PrimaryVariables::SimulationType::Implicit);
+        }else{
+            assert(priVars.simulationType() == PrimaryVariables::SimulationType::Seq);
+        }
+        
 
         asImp_().updateTemperature_(elemCtx, dofIdx, timeIdx);
 

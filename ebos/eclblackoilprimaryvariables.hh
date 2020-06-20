@@ -96,10 +96,16 @@ public:
         OnePhase_p, // onephase case
     };
 
+    enum SimulationType {
+        Implicit,
+        Seq
+    };
+    
     EclBlackOilPrimaryVariables()
         : ParentType()
     {
         Opm::Valgrind::SetUndefined(*this);
+        simulationType_ = SimulationType::Implicit;
         pvtRegionIdx_ = 0;
     }
 
@@ -110,6 +116,7 @@ public:
         : ParentType(value)
     {
         Opm::Valgrind::SetUndefined(primaryVarsMeaning_);
+        Opm::Valgrind::SetUndefined(simulationType_);
         pvtRegionIdx_ = 0;
     }
 
@@ -142,6 +149,9 @@ public:
     PrimaryVarsMeaning primaryVarsMeaning() const
     { return primaryVarsMeaning_; }
 
+    SimulationType simulationType() const
+    { return simulationType_; }
+    
     /*!
      * \brief Set the interpretation which should be applied to the switching primary
      *        variables.
@@ -149,6 +159,11 @@ public:
     void setPrimaryVarsMeaning(PrimaryVarsMeaning newMeaning)
     { primaryVarsMeaning_ = newMeaning; }
 
+    /*
+    void setSimulaiontType(SimulationType simulationType)
+    { simulaionType_ = simulationType; }
+    */
+    
     /*!
      * \copydoc ImmisciblePrimaryVariables::assignMassConservative
      */
@@ -160,7 +175,6 @@ public:
         typedef typename std::remove_reference<typename FluidState::Scalar>::type ConstEvaluation;
         typedef typename std::remove_const<ConstEvaluation>::type FsEvaluation;
         typedef typename Opm::MathToolbox<FsEvaluation> FsToolbox;
-
 #ifndef NDEBUG
         // make sure the temperature is the same in all fluid phases
         for (unsigned phaseIdx = 1; phaseIdx < numPhases; ++phaseIdx) {
@@ -339,6 +353,33 @@ public:
         if (primaryVarsMeaning() == OnePhase_p){
             return false;
         }
+        Scalar pressure=-1;
+        Scalar totalsaturation;
+        if(simulationType_ == SimulationType::Implicit){
+            pressure = (*this)[Indices::pressureSwitchIdx];
+            totalsaturation = problem.totalSaturation(globalDofIdx);
+        }else if (simulationType_ == SimulationType::Seq){
+            if(primaryVarsMeaning() == Sw_po_Sg){
+                pressure = problem.pressure(globalDofIdx, oilPhaseIdx);
+            }else if(primaryVarsMeaning() == Sw_po_Rs){
+                pressure = problem.pressure(globalDofIdx, oilPhaseIdx);
+            }else if(primaryVarsMeaning() == Sw_pg_Rv){
+                pressure = problem.pressure(globalDofIdx, gasPhaseIdx);
+            }else{
+                assert(false);
+            }
+            totalsaturation = (*this)[Indices::pressureSwitchIdx];
+        }else{
+            assert(false);
+        }
+        if(linearizationType.type == LinearizationType::seqtransport){
+            (*this)[Indices::pressureSwitchIdx] = totalsaturation;
+            this->simulationType_ = SimulationType::Seq;
+        }else{
+            (*this)[Indices::pressureSwitchIdx] = pressure;
+            simulationType_ = SimulationType::Implicit;
+        }
+        
         Scalar Sw = 0.0;
         if (waterEnabled)
             Sw = (*this)[Indices::waterSaturationIdx];
@@ -375,12 +416,11 @@ public:
                 // this. For the gas dissolution factor, we use the low-level blackoil
                 // PVT objects to calculate the mole fraction of gas saturated oil.
                 Scalar po;
-                if (linearizationType.type == Opm::LinearizationType::seqtransport) {
-                    // This should be the oil pressure
-                    po = problem.pressure(globalDofIdx, oilPhaseIdx);
-                } else {
+                if (simulationType_ == SimulationType::Implicit){
                     po = (*this)[Indices::pressureSwitchIdx];
                     assert(po>2.0);
+                }else{
+                    po = problem.pressure(globalDofIdx, oilPhaseIdx);
                 }
                 Scalar T = asImp_().temperature_();
                 Scalar SoMax = problem.maxOilSaturation(globalDofIdx);
@@ -403,11 +443,11 @@ public:
                 // the oil phase disappeared and some hydrocarbon gas phase is still
                 // present, i.e., switch the primary variables to { Sw, pg, Rv }.
                 Scalar po;
-                if (linearizationType.type == Opm::LinearizationType::seqtransport) {
-                    po = problem.pressure(globalDofIdx, oilPhaseIdx);
-                } else {
+                if (simulationType_ == SimulationType::Implicit){
                     po = (*this)[Indices::pressureSwitchIdx];
                     assert(po>2.0);
+                }else{
+                    po = problem.pressure(globalDofIdx, oilPhaseIdx);
                 }
                 // we only have the oil pressure readily available, but we need the gas
                 // pressure, i.e. we must determine capillary pressure
@@ -460,11 +500,11 @@ public:
             // than what saturated oil can hold.
             Scalar T = asImp_().temperature_();
             Scalar po;
-            if (linearizationType.type == Opm::LinearizationType::seqtransport) {
-                po = problem.pressure(globalDofIdx, oilPhaseIdx);
-            } else {
+            if (simulationType_ == SimulationType::Implicit) {
                 po = (*this)[Indices::pressureSwitchIdx];
                 assert(po>2.0);
+            } else {
+                po = problem.pressure(globalDofIdx, oilPhaseIdx);                
             }
             Scalar So = 1.0 - Sw - solventSaturation_();
             Scalar SoMax = std::max(So, problem.maxOilSaturation(globalDofIdx));
@@ -493,12 +533,12 @@ public:
             assert(compositionSwitchEnabled);
 
             Scalar pg;
-            if (linearizationType.type == Opm::LinearizationType::seqtransport) {
+            if (simulationType_ == SimulationType::Implicit) {
                 // This should be the gas pressure
-                pg = problem.pressure(globalDofIdx, gasPhaseIdx);
-            } else {
                 pg = (*this)[Indices::pressureSwitchIdx];
                 assert(pg>2.0);
+            } else {
+                pg = problem.pressure(globalDofIdx, gasPhaseIdx);
             }
             Scalar Sg = 1.0 - Sw - solventSaturation_();
 
@@ -752,6 +792,7 @@ private:
     }
 
     PrimaryVarsMeaning primaryVarsMeaning_;
+    SimulationType simulationType_;
     unsigned short pvtRegionIdx_;
 };
 
