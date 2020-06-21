@@ -156,6 +156,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/CPRPreconditioner.hpp
   opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp
   opm/simulators/linalg/FlexibleSolver.hpp
+  opm/simulators/linalg/FlexibleSolver_impl.hpp
   opm/simulators/linalg/FlowLinearSolverParameters.hpp
   opm/simulators/linalg/GraphColoring.hpp
   opm/simulators/linalg/ISTLSolverEbos.hpp

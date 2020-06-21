@@ -188,4 +188,38 @@ namespace Dune
 
 } // namespace Dune
 
+
+// Macros to simplify explicit instantiation of FlexibleSolver for various block sizes.
+
+template <int N>
+using BV = Dune::BlockVector<Dune::FieldVector<double, N>>;
+template <int N>
+using BM = Dune::BCRSMatrix<Dune::FieldMatrix<double, N, N>>;
+template <int N>
+using OBM = Dune::BCRSMatrix<Opm::MatrixBlock<double, N, N>>;
+
+// INSTANTIATE_CONSTRUCTOR instantiates the constructor that is a template,
+// this is only needed in the MPI case, since otherwise the Comm type is
+// not a template argument but always SequentialInformation.
+#if HAVE_MPI
+using Comm = Dune::OwnerOverlapCopyCommunication<int, int>;
+#define INSTANTIATE_FLEXIBLESOLVER_CONSTRUCTOR(n) \
+template Dune::FlexibleSolver<OBM<n>, BV<n>>::FlexibleSolver(const MatrixType& matrix,                        \
+                                                             const Comm& comm,                                \
+                                                             const boost::property_tree::ptree& prm,          \
+                                                             const std::function<BV<n>()>& weightsCalculator);
+#else
+#define INSTANTIATE_FLEXIBLESOLVER_CONSTRUCTOR(n)
+#endif
+
+// INSTANTIATE instantiates the class including any templated constructors if necessary.
+#define INSTANTIATE_FLEXIBLESOLVER(n)               \
+/* Variants using Dune::FieldMatrix blocks. */      \
+template class Dune::FlexibleSolver<BM<n>, BV<n>>;  \
+/* Variants using Opm::MatrixBlock blocks. */       \
+template class Dune::FlexibleSolver<OBM<n>, BV<n>>; \
+INSTANTIATE_FLEXIBLESOLVER_CONSTRUCTOR(n)
+
+
+
 #endif // OPM_FLEXIBLE_SOLVER_IMPL_HEADER_INCLUDED

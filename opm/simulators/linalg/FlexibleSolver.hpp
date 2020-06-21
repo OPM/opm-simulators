@@ -24,11 +24,7 @@
 
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 
-#include <dune/common/fmatrix.hh>
-#include <dune/istl/bcrsmatrix.hh>
-#include <dune/istl/solvers.hh>
-#include <dune/istl/umfpack.hh>
-#include <dune/istl/owneroverlapcopy.hh>
+#include <dune/istl/solver.hh>
 #include <dune/istl/paamg/pinfo.hh>
 
 #include <boost/property_tree/ptree.hpp>
