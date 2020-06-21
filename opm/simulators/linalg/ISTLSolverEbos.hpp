@@ -393,23 +393,17 @@ protected:
             {
                 copyJacToNoGhost(M.istlMatrix(), *noGhostMat_);
             }
-            else
-            {
-                if (firstcall)
-                {
-                    // ebos will not change the matrix object. Hence simply store a pointer
-                    // to the original one with a deleter that does nothing.
-                    // Outch! We need to be able to scale the linear system! Hence const_cast
-                    matrix_ = const_cast<Matrix*>(&M.istlMatrix());
-                }
-                else
-                {
-                    // Pointers should not change
-                    if ( &(M.istlMatrix()) != matrix_ )
-                    {
-                        OPM_THROW(std::logic_error, "Matrix objects are expected to be reused when reassembling!"
-                                  <<" old pointer was " << matrix_ << ", new one is " << (&M.istlMatrix()) );
-                    }
+            if (firstcall) {
+                // ebos will not change the matrix object. Hence simply store a pointer
+                // to the original one with a deleter that does nothing.
+                // Outch! We need to be able to scale the linear system! Hence const_cast
+                matrix_ = const_cast<Matrix*>(&M.istlMatrix());
+            } else {
+                // Pointers should not change
+                if (&(M.istlMatrix()) != matrix_) {
+                    OPM_THROW(std::logic_error,
+                              "Matrix objects are expected to be reused when reassembling!"
+                                  << " old pointer was " << matrix_ << ", new one is " << (&M.istlMatrix()));
                 }
             }
             rhs_ = &b;
