@@ -179,12 +179,16 @@ namespace Opm {
                 model_->updateSolution();
                 reportpre += lreportpre;
                 try{
+                    model_->ebosSimulator().model().advanceTimeLevel();
+                    //model_->ebosSimulator().problem().beginTimeStep();
                     SimulatorReportSingle lreportseq = this->stepDefault(timer,/*next*/false, false);
                     reportseq += lreportseq;
                 }catch (...){
                     //set the prevois value to the staring point
                     auto& prevsol = model_->ebosSimulator().model().solution(/*timeIdx=*/1);
-                    prevsol=solutionOld;
+                    prevsol = solutionOld;
+                    auto& currsol =  model_->ebosSimulator().model().solution(/*timeIdx=*/0);
+                    currsol = solutionOld;
                     throw;
                 }
                 
@@ -193,7 +197,7 @@ namespace Opm {
                     // for now do full implicit solve
                     auto& prevsol = model_->ebosSimulator().model().solution(/*timeIdx=*/1);
                     prevsol=solutionOld;
-                    linearizationType.type = Opm::LinearizationType::pressure;
+                    linearizationType.type = Opm::LinearizationType::implicit;
                     model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);
 
                     model_->updateSolution();

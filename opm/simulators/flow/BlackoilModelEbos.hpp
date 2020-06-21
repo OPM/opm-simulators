@@ -201,7 +201,8 @@ namespace Opm {
                     ebosSimulator_.model().advanceTimeLevel();
                 }
             }else{
-                ebosSimulator_.model().advanceTimeLevel();
+                return;
+                //ebosSimulator_.model().advanceTimeLevel();
             }
 
             // set the timestep size and episode index for ebos explicitly. ebos needs to
