@@ -136,7 +136,10 @@ namespace Opm
         errors_[ 2 ] = error;
         for( int i=0; i<2; ++i ) {
             assert(std::isfinite(errors_[i]));
-            assert(errors_[i]>0);
+            //assert(errors_[i]>0);
+            if(errors_[i]==0){
+                return dt*10;
+            }
         }
 
         if( error > tol_ )
