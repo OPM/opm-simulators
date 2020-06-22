@@ -451,7 +451,7 @@ protected:
             const Evaluation& rhoIn = intQuantsIn.fluidState().density(phaseIdx);
             Scalar rhoEx = Toolbox::value(intQuantsEx.fluidState().density(phaseIdx));
             Evaluation rhoAvg = (rhoIn + rhoEx)/2;            
-            headDiff[phaseIdx] = rhoAvg*(distZ*g);
+            headDiff[phaseIdx] = -1.0*rhoAvg*(distZ*g);
 
             // also add capillary part
             const Evaluation& pcIn = intQuantsIn.fluidState().pc(phaseIdx);
