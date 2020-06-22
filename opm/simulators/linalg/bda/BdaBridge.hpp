@@ -22,10 +22,6 @@
 
 #include <config.h>
 
-#if ! HAVE_CUDA
-  #error "This file should only be included if CUDA is found"
-#endif
-
 #include "dune/istl/solver.hh" // for struct InverseOperatorResult
 
 #include "dune/istl/bcrsmatrix.hh"
@@ -33,7 +29,13 @@
 
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 
+#if HAVE_CUDA
 #include <opm/simulators/linalg/bda/cusparseSolverBackend.hpp>
+#endif
+
+#if HAVE_OPENCL
+#include <opm/simulators/linalg/bda/openclSolverBackend.hpp>
+#endif
 
 namespace Opm
 {
@@ -45,16 +47,17 @@ typedef Dune::InverseOperatorResult InverseOperatorResult;
 class BdaBridge
 {
 private:
-    std::unique_ptr<cusparseSolverBackend> backend;
+    std::unique_ptr<bda::BdaSolver> backend;
+    std::string gpu_mode;
     bool use_gpu;
 
 public:
     /// Construct a BdaBridge
-    /// \param[in] use_gpu                    true iff the cusparseSolver is used, is passed via command-line: '--use-gpu=[true|false]'
-    /// \param[in] linear_solver_verbosity    verbosity of cusparseSolver
-    /// \param[in] maxit                      maximum number of iterations for cusparseSolver
-    /// \param[in] tolerance                  required relative tolerance for cusparseSolver
-    BdaBridge(bool use_gpu, int linear_solver_verbosity, int maxit, double tolerance);
+    /// \param[in] gpu_mode                   to select if a gpu solver is used, is passed via command-line: '--gpu-mode=[none|cusparse|opencl]'
+    /// \param[in] linear_solver_verbosity    verbosity of BdaSolver
+    /// \param[in] maxit                      maximum number of iterations for BdaSolver
+    /// \param[in] tolerance                  required relative tolerance for BdaSolver
+    BdaBridge(std::string gpu_mode, int linear_solver_verbosity, int maxit, double tolerance);
 
 
     /// Solve linear system, A*x = b

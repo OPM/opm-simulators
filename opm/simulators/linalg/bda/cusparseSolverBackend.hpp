@@ -24,20 +24,17 @@
 #include "cublas_v2.h"
 #include "cusparse_v2.h"
 
-#include "opm/simulators/linalg/bda/BdaResult.hpp"
+#include <opm/simulators/linalg/bda/BdaResult.hpp>
+#include <opm/simulators/linalg/bda/BdaSolver.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 
-namespace Opm
+namespace bda
 {
 
 /// This class implements a cusparse-based ilu0-bicgstab solver on GPU
-class cusparseSolverBackend{
+class cusparseSolverBackend : public BdaSolver {
 
 private:
-
-    int minit;
-    int maxit;
-    double tolerance;
 
     cublasHandle_t cublasHandle;
     cusparseHandle_t cusparseHandle;
@@ -49,24 +46,13 @@ private:
     double *d_bVals, *d_mVals;
     int *d_bCols, *d_mCols;
     int *d_bRows, *d_mRows;
-    double *d_x, *d_b, *d_r, *d_rw, *d_p;
+    double *d_x, *d_b, *d_r, *d_rw, *d_p;     // vectors, used during linear solve
     double *d_pw, *d_s, *d_t, *d_v;
     void *d_buffer;
-    int N, Nb, nnz, nnzb;
-    double *vals_contiguous;
+    double *vals_contiguous;                  // only used if COPY_ROW_BY_ROW is true in cusparseSolverBackend.cpp
 
-    int block_size;
-
-    bool initialized = false;
     bool analysis_done = false;
 
-    // verbosity
-    // 0: print nothing during solves, only when initializing
-    // 1: print number of iterations and final norm
-    // 2: also print norm each iteration
-    // 3: also print timings of different backend functions
-
-    int verbosity = 0;
 
     /// Solve linear system using ilu0-bicgstab
     /// \param[in] wellContribs   contains all WellContributions, to apply them separately, instead of adding them to matrix A
@@ -113,12 +99,6 @@ private:
 
 public:
 
-    enum class cusparseSolverStatus {
-        CUSPARSE_SOLVER_SUCCESS,
-        CUSPARSE_SOLVER_ANALYSIS_FAILED,
-        CUSPARSE_SOLVER_CREATE_PRECONDITIONER_FAILED,
-        CUSPARSE_SOLVER_UNKNOWN_ERROR
-    };
 
     /// Construct a cusparseSolver
     /// \param[in] linear_solver_verbosity    verbosity of cusparseSolver
@@ -140,15 +120,15 @@ public:
     /// \param[in] wellContribs   contains all WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
     /// \return                   status code
-    cusparseSolverStatus solve_system(int N, int nnz, int dim, double *vals, int *rows, int *cols, double *b, WellContributions& wellContribs, BdaResult &res);
+    BdaSolverStatus solve_system(int N, int nnz, int dim, double *vals, int *rows, int *cols, double *b, WellContributions& wellContribs, BdaResult &res) override;
 
-    /// Post processing after linear solve, now only copies resulting x vector back
+    /// Get resulting vector x after linear solve, also includes post processing if necessary
     /// \param[inout] x        resulting x vector, caller must guarantee that x points to a valid array
-    void post_process(double *x);
+    void get_result(double *x) override;
 
 }; // end class cusparseSolverBackend
 
-}
+} // namespace bda
 
 #endif
 

@@ -317,18 +317,18 @@ protected:
             }
             const auto& gridForConn = simulator_.vanguard().grid();
 #if HAVE_CUDA
-            bool use_gpu = EWOMS_GET_PARAM(TypeTag, bool, UseGpu);
-            if (gridForConn.comm().size() > 1 && use_gpu) {
+            std::string gpu_mode = EWOMS_GET_PARAM(TypeTag, std::string, GpuMode);
+            if (gridForConn.comm().size() > 1 && "none" != gpu_mode) {
                 OpmLog::warning("Warning cannot use GPU with MPI, GPU is disabled");
-                use_gpu = false;
+                gpu_mode = "none";
             }
             const int maxit = EWOMS_GET_PARAM(TypeTag, int, LinearSolverMaxIter);
             const double tolerance = EWOMS_GET_PARAM(TypeTag, double, LinearSolverReduction);
             const int linear_solver_verbosity = parameters_.linear_solver_verbosity_;
-            bdaBridge.reset(new BdaBridge(use_gpu, linear_solver_verbosity, maxit, tolerance));
+            bdaBridge.reset(new BdaBridge(gpu_mode, linear_solver_verbosity, maxit, tolerance));
 #else
-            const bool use_gpu = EWOMS_GET_PARAM(TypeTag, bool, UseGpu);
-            if (use_gpu) {
+            const bool gpu_mode = EWOMS_GET_PARAM(TypeTag, bool, GpuMode);
+            if ("none" != gpu_mode) {
                 OPM_THROW(std::logic_error,"Error cannot use GPU solver since CUDA was not found during compilation");
             }
 #endif

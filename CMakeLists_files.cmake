@@ -46,6 +46,13 @@ if(CUDA_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/MultisegmentWellContribution.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BdaBridge.cpp)
 endif()
+if(OPENCL_FOUND)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BlockedMatrix.cpp)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BILU0.cpp)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/Reorder.cpp)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/openclSolverBackend.cpp)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BdaBridge.cpp)
+endif()
 if(MPI_FOUND)
   list(APPEND MAIN_SOURCE_FILES opm/simulators/utils/ParallelEclipseState.cpp
                                 opm/simulators/utils/ParallelSerialization.cpp)
@@ -142,8 +149,14 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/aquifers/BlackoilAquiferModel_impl.hpp
   opm/simulators/linalg/bda/BdaBridge.hpp
   opm/simulators/linalg/bda/BdaResult.hpp
+  opm/simulators/linalg/bda/BdaSolver.hpp
+  opm/simulators/linalg/bda/BILU0.hpp
+  opm/simulators/linalg/bda/BlockedMatrix.hpp
   opm/simulators/linalg/bda/cuda_header.hpp
   opm/simulators/linalg/bda/cusparseSolverBackend.hpp
+  opm/simulators/linalg/bda/Reorder.hpp
+  opm/simulators/linalg/bda/openclKernels.hpp
+  opm/simulators/linalg/bda/openclSolverBackend.hpp
   opm/simulators/linalg/bda/MultisegmentWellContribution.hpp
   opm/simulators/linalg/bda/WellContributions.hpp
   opm/simulators/linalg/BlackoilAmg.hpp

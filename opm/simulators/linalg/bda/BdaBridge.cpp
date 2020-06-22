@@ -35,11 +35,24 @@ typedef Dune::InverseOperatorResult InverseOperatorResult;
 namespace Opm
 {
 
-BdaBridge::BdaBridge(bool use_gpu_, int linear_solver_verbosity, int maxit, double tolerance)
-    : use_gpu(use_gpu_)
+    using bda::BdaResult;
+    using bda::BdaSolver;
+
+BdaBridge::BdaBridge(std::string gpu_mode_, int linear_solver_verbosity, int maxit, double tolerance)
+    : gpu_mode(gpu_mode_)
 {
-    if (use_gpu) {
-        backend.reset(new cusparseSolverBackend(linear_solver_verbosity, maxit, tolerance));
+    if (gpu_mode == "cusparse") {
+        use_gpu = true;
+        backend.reset(new bda::cusparseSolverBackend(linear_solver_verbosity, maxit, tolerance));
+    } else if (gpu_mode == "opencl") {
+#if HAVE_OPENCL
+        use_gpu = true;
+        backend.reset(new bda::openclSolverBackend(linear_solver_verbosity, maxit, tolerance));
+#else
+        OPM_THROW(std::logic_error, "Error openclSolver was chosen, but OpenCL was not found by CMake");
+#endif
+    } else if (gpu_mode != "none") {
+        OPM_THROW(std::logic_error, "Error unknown value for parameter 'GpuMode', should be passed like '--gpu-mode=[none|cusparse|opencl]");
     }
 }
 
@@ -159,21 +172,21 @@ void BdaBridge::solve_system(BridgeMatrix *mat OPM_UNUSED, BridgeVector &b OPM_U
         /////////////////////////
         // actually solve
 
-        typedef cusparseSolverBackend::cusparseSolverStatus cusparseSolverStatus;
+        typedef BdaSolver::BdaSolverStatus BdaSolverStatus;
         // assume that underlying data (nonzeroes) from mat (Dune::BCRSMatrix) are contiguous, if this is not the case, cusparseSolver is expected to perform undefined behaviour
-        cusparseSolverStatus status = backend->solve_system(N, nnz, dim, static_cast<double*>(&(((*mat)[0][0][0][0]))), h_rows.data(), h_cols.data(), static_cast<double*>(&(b[0][0])), wellContribs, result);
+        BdaSolverStatus status = backend->solve_system(N, nnz, dim, static_cast<double*>(&(((*mat)[0][0][0][0]))), h_rows.data(), h_cols.data(), static_cast<double*>(&(b[0][0])), wellContribs, result);
         switch(status) {
-        case cusparseSolverStatus::CUSPARSE_SOLVER_SUCCESS:
+        case BdaSolverStatus::BDA_SOLVER_SUCCESS:
             //OpmLog::info("cusparseSolver converged");
             break;
-        case cusparseSolverStatus::CUSPARSE_SOLVER_ANALYSIS_FAILED:
-            OpmLog::warning("cusparseSolver could not analyse level information of matrix, perhaps there is still a 0.0 on the diagonal of a block on the diagonal");
+        case BdaSolverStatus::BDA_SOLVER_ANALYSIS_FAILED:
+            OpmLog::warning("BdaSolver could not analyse level information of matrix, perhaps there is still a 0.0 on the diagonal of a block on the diagonal");
             break;
-        case cusparseSolverStatus::CUSPARSE_SOLVER_CREATE_PRECONDITIONER_FAILED:
-            OpmLog::warning("cusparseSolver could not create preconditioner, perhaps there is still a 0.0 on the diagonal of a block on the diagonal");
+        case BdaSolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED:
+            OpmLog::warning("BdaSolver could not create preconditioner, perhaps there is still a 0.0 on the diagonal of a block on the diagonal");
             break;
         default:
-            OpmLog::warning("cusparseSolver returned unknown status code");
+            OpmLog::warning("BdaSolver returned unknown status code");
         }
 
         res.iterations = result.iterations;
@@ -190,7 +203,7 @@ void BdaBridge::solve_system(BridgeMatrix *mat OPM_UNUSED, BridgeVector &b OPM_U
 template <class BridgeVector>
 void BdaBridge::get_result(BridgeVector &x OPM_UNUSED) {
     if (use_gpu) {
-        backend->post_process(static_cast<double*>(&(x[0][0])));
+        backend->get_result(static_cast<double*>(&(x[0][0])));
     }
 }
 

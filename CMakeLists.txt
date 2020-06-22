@@ -134,6 +134,14 @@ if(CUDA_FOUND)
   include_directories(${CUDA_INCLUDE_DIRS})
 endif()
 
+
+find_package(OpenCL)
+
+if(OpenCL_FOUND)
+  set(HAVE_OPENCL 1)
+  include_directories(${OpenCL_INCLUDE_DIRS})
+endif()
+
 # read the list of components from this file (in the project directory);
 # it should set various lists with the names of the files to include
 include (CMakeLists_files.cmake)
@@ -384,5 +392,9 @@ add_custom_target(extra_test ${CMAKE_CTEST_COMMAND} -C ExtraTests)
 if(CUDA_FOUND)
   target_link_libraries( opmsimulators PUBLIC ${CUDA_cusparse_LIBRARY} )
   target_link_libraries( opmsimulators PUBLIC ${CUDA_cublas_LIBRARY} )
+endif()
+
+if(OpenCL_FOUND)
+  target_link_libraries( opmsimulators ${OpenCL_LIBRARIES} )
 endif()
 
