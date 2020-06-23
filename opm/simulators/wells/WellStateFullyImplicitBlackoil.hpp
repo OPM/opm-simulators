@@ -154,6 +154,9 @@ namespace Opm
             productivity_index_.resize(nw * np, 0.0);
             well_potentials_.resize(nw * np, 0.0);
 
+            perfRatePolymer_.clear();
+            perfRatePolymer_.resize(nperf, 0.0);
+
             // intialize wells that have been there before
             // order may change so the mapping is based on the well name
             if (prevState && !prevState->wellMap().empty()) {
@@ -560,6 +563,10 @@ namespace Opm
                     well.rates.set( rt::solvent, solventWellRate(w) );
                 }
 
+                if ( pu.has_polymer ) {
+                    well.rates.set( rt::polymer, polymerWellRate(w) );
+                }
+
                 well.rates.set( rt::dissolved_gas, this->well_dissolved_gas_rates_[w] );
                 well.rates.set( rt::vaporized_oil, this->well_vaporized_oil_rates_[w] );
 
@@ -817,6 +824,24 @@ namespace Opm
             return solvent_well_rate;
         }
 
+        /// One rate pr well connection.
+        std::vector<double>& perfRatePolymer() { return perfRatePolymer_; }
+        const std::vector<double>& perfRatePolymer() const { return perfRatePolymer_; }
+
+        /// One rate pr well
+        double polymerWellRate(const int w) const {
+            int connpos = 0;
+            for (int iw = 0; iw < w; ++iw) {
+                connpos += this->well_perf_data_[iw].size();
+            }
+            double polymer_well_rate = 0.0;
+            const int endperf = connpos + this->well_perf_data_[w].size();
+            for (int perf = connpos; perf < endperf; ++perf ) {
+                polymer_well_rate += perfRatePolymer_[perf];
+            }
+            return polymer_well_rate;
+        }
+
         std::vector<double>& wellReservoirRates()
         {
             return well_reservoir_rates_;
@@ -1063,6 +1088,9 @@ namespace Opm
         std::map<std::string, double> group_grat_target_from_sales;
 
         std::vector<double> perfRateSolvent_;
+
+        // only for output
+        std::vector<double> perfRatePolymer_;
 
         // it is the throughput of water flow through the perforations
         // it is used as a measure of formation damage around well-bore due to particle deposition
