@@ -49,7 +49,7 @@ class BdaBridge
 private:
     std::unique_ptr<bda::BdaSolver> backend;
     std::string gpu_mode;
-    bool use_gpu;
+    bool use_gpu = false;
 
 public:
     /// Construct a BdaBridge
