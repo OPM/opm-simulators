@@ -129,15 +129,16 @@ public:
     /// \return                    simulation report, with timing data
     SimulatorReport run(SimulatorTimer& timer)
     {
-        runInit(timer);
+        init(timer);
         // Main simulation loop.
         while (!timer.done()) {
-            runStep(timer);
+            bool continue_looping = runStep(timer);
+            if (!continue_looping) break;
         }
-        return runLastStep();
+        return finalize();
     }
 
-    void runInit(SimulatorTimer &timer)
+    void init(SimulatorTimer &timer)
     {
         ebosSimulator_.setEpisodeIndex(-1);
 
@@ -288,7 +289,7 @@ public:
         return true;
     }
 
-    SimulatorReport runLastStep()
+    SimulatorReport finalize()
     {
         // make sure all output is written to disk before run is finished
         {
