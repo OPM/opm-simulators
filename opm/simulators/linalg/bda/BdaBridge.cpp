@@ -177,7 +177,7 @@ void BdaBridge::solve_system(BridgeMatrix *mat OPM_UNUSED, BridgeVector &b OPM_U
         BdaSolverStatus status = backend->solve_system(N, nnz, dim, static_cast<double*>(&(((*mat)[0][0][0][0]))), h_rows.data(), h_cols.data(), static_cast<double*>(&(b[0][0])), wellContribs, result);
         switch(status) {
         case BdaSolverStatus::BDA_SOLVER_SUCCESS:
-            //OpmLog::info("cusparseSolver converged");
+            //OpmLog::info("BdaSolver converged");
             break;
         case BdaSolverStatus::BDA_SOLVER_ANALYSIS_FAILED:
             OpmLog::warning("BdaSolver could not analyse level information of matrix, perhaps there is still a 0.0 on the diagonal of a block on the diagonal");

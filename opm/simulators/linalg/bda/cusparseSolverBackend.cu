@@ -51,7 +51,7 @@ const cusparseSolvePolicy_t policy = CUSPARSE_SOLVE_POLICY_USE_LEVEL;
 const cusparseOperation_t operation  = CUSPARSE_OPERATION_NON_TRANSPOSE;
 const cusparseDirection_t order = CUSPARSE_DIRECTION_ROW;
 
-cusparseSolverBackend::cusparseSolverBackend(int verbosity_, int maxit_, double tolerance_) : BdaSolver(verbosity_, maxit_, tolerance) {}
+cusparseSolverBackend::cusparseSolverBackend(int verbosity_, int maxit_, double tolerance_) : BdaSolver(verbosity_, maxit_, tolerance_) {}
 
 cusparseSolverBackend::~cusparseSolverBackend() {
     finalize();
@@ -491,10 +491,10 @@ void cusparseSolverBackend::get_result(double *x) {
     if (verbosity > 2) {
         t2 = second();
         std::ostringstream out;
-        out << "cusparseSolver::post_process(): " << t2 - t1 << " s";
+        out << "cusparseSolver::get_result(): " << t2 - t1 << " s";
         OpmLog::info(out.str());
     }
-} // end post_process()
+} // end get_result()
 
 
 typedef BdaSolver::BdaSolverStatus BdaSolverStatus;

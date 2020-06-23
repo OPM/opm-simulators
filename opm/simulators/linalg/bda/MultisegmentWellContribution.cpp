@@ -127,10 +127,10 @@ unsigned int MultisegmentWellContribution::getColIdx(unsigned int idx)
     }
 }
 
-void MultisegmentWellContribution::setReordering(int *toOrder, bool reorder)
+void MultisegmentWellContribution::setReordering(int *toOrder_, bool reorder_)
 {
-    this->toOrder = toOrder;
-    this->reorder = reorder;
+    this->toOrder = toOrder_;
+    this->reorder = reorder_;
 }
 
 } //namespace Opm

@@ -315,19 +315,19 @@ void WellContributions::addMultisegmentWellContribution(unsigned int dim, unsign
 }
 
 
-void WellContributions::setReordering(int *toOrder, bool reorder)
+void WellContributions::setReordering(int *toOrder_, bool reorder_)
 {
-    this->toOrder = toOrder;
-    this->reorder = reorder;
+    this->toOrder = toOrder_;
+    this->reorder = reorder_;
     for (auto& ms : multisegments) {
-        ms->setReordering(toOrder, reorder);
+        ms->setReordering(toOrder_, reorder_);
     }
 }
 
 #if HAVE_OPENCL
-void WellContributions::setOpenCLQueue(cl::CommandQueue *queue)
+void WellContributions::setOpenCLQueue(cl::CommandQueue *queue_)
 {
-    this->queue = queue;
+    this->queue = queue_;
 }
 #endif
 
