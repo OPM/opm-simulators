@@ -162,6 +162,28 @@ namespace Opm {
                          ebosSimulator_.timeStepSize());
             }
 
+            void solveWells(double dt){
+                last_report_ = SimulatorReportSingle();
+                if ( ! wellsActive() ) {
+                    return;
+                }
+                bool converged;
+                int exception_thrown = 0;
+                Opm::DeferredLogger local_deferredLogger;
+                try{
+                    updatePerforationIntensiveQuantities();
+                    std::vector< Scalar > B_avg(numComponents(), Scalar() );
+                    computeAverageFormationFactor(B_avg);
+                    updatePerforationIntensiveQuantities();
+                    last_report_ = solveWellEq(B_avg, dt, local_deferredLogger);
+                } catch (std::exception& e) {
+                    exception_thrown = 1;
+                }
+                logAndCheckForExceptionsAndThrow(local_deferredLogger, exception_thrown, "assemble() failed.", terminal_output_);
+                
+                last_report_.converged = true;
+            }
+            
             void endIteration()
             { }
 
