@@ -183,7 +183,7 @@ namespace Opm {
                     //model_->ebosSimulator().problem().beginTimeStep();
                     SimulatorReportSingle lreportseq = this->stepDefault(timer,/*next*/false, false);
                     // hopefully do not change any thing only update well quantities
-                    model_->wellModel().assemble(0,ebosSimulator_.timeStepSize());
+                    model_->wellModel().solveWells(model_->ebosSimulator().timeStepSize());
                     reportseq += lreportseq;
                 }catch (...){
                     //set the prevois value to the staring point
@@ -198,7 +198,7 @@ namespace Opm {
                 if(implicit){
                     // for now do full implicit solve
                     //NB storagecache need to be invalidated
-                    bool storagecache = EWOMS_GET_PARAM(TypeTag, bool, EnableStorageCache);
+                    //bool storagecache = EWOMS_GET_PARAM(TypeTag, bool, EnableStorageCache);
                     model_->ebosSimulator().model().setEnableStorageCache(false);
                     auto& prevsol = model_->ebosSimulator().model().solution(/*timeIdx=*/1);
                     prevsol=solutionOld;
@@ -209,6 +209,7 @@ namespace Opm {
                     //NB her only the convergenceshould be checked
                     SimulatorReportSingle lreportsim = this->stepDefault(timer,/*next*/false, false);
                     converged = lreportsim.converged;
+                    // if this used one probably have to invalidate the storage cache
                     //model_->ebosSimulator().model().setEnableStorageCache(storagecache);
                 }else{
                     converged = true;
