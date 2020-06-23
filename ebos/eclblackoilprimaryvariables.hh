@@ -353,8 +353,8 @@ public:
         if (primaryVarsMeaning() == OnePhase_p){
             return false;
         }
-        Scalar pressure=-1;
-        Scalar totalsaturation;
+        Scalar pressure=-1.0;
+        Scalar totalsaturation=-1.0;
         if(simulationType_ == SimulationType::Implicit){
             pressure = (*this)[Indices::pressureSwitchIdx];
             totalsaturation = problem.totalSaturation(globalDofIdx);
