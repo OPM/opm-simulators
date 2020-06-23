@@ -2488,8 +2488,10 @@ namespace Opm
             const double Tw = well_index_[perf] * trans_mult;
 
             PerfRates perf_rates(num_components_, numWellEq_);
+            const LinearizationType& linearizationType = ebosSimulator.model().linearizer().getLinearizationType();
+            const WellState& well_state = ebosSimulator.problem().wellModel().wellState();
             computePerfRate(intQuants, mob, EvalWell(numWellEq_ + numEq, bhp), well_state, Tw, perf, allow_cf,
-                            perf_rates, deferred_logger);
+                            perf_rates, deferred_logger, linearizationType);
 
             for(int p = 0; p < np; ++p) {
                 well_flux[ebosCompIdxToFlowCompIdx(p)] += perf_rates.cq_s[p].value();
@@ -2872,6 +2874,7 @@ namespace Opm
             double trans_mult = ebos_simulator.problem().template rockCompTransMultiplier<double>(int_quant, cell_idx);
             const double Tw = well_index_[perf] * trans_mult;
             LinearizationType linearizationType = ebos_simulator.model().linearizer().getLinearizationType();
+            const WellState& well_state = ebos_simulator.problem().wellModel().wellState();
             computePerfRate(int_quant, mob, bhp, well_state, Tw, perf, allow_cf, perf_rates, deferred_logger, linearizationType);
             // TODO: make area a member
             const double area = 2 * M_PI * perf_rep_radius_[perf] * perf_length_[perf];
@@ -3210,7 +3213,7 @@ namespace Opm
         }
             computePerfRateSeq(intQuants,mob,/*bhp,Tw,perf,*/allow_cf,perf_rates,deferred_logger);
             if(not(linearizationType.type == Opm::LinearizationType::seqtransport)){
-            for(int i = 0; i < cq_s_tmp.size(); ++i){
+            for(size_t i = 0; i < cq_s_tmp.size(); ++i){
                 typedef Opm::MathToolbox<EvalWell> Toolbox;
                 assert(Toolbox::isSame(cq_s_tmp[i],perf_rates.cq_s[i],1e-6));
             }
