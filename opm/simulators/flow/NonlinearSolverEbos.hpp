@@ -182,6 +182,8 @@ namespace Opm {
                     model_->ebosSimulator().model().advanceTimeLevel();
                     //model_->ebosSimulator().problem().beginTimeStep();
                     SimulatorReportSingle lreportseq = this->stepDefault(timer,/*next*/false, false);
+                    // hopefully do not change any thing only update well quantities
+                    model_->wellModel().assemble(0,ebosSimulator_.timeStepSize());
                     reportseq += lreportseq;
                 }catch (...){
                     //set the prevois value to the staring point
@@ -211,6 +213,7 @@ namespace Opm {
                 }else{
                     converged = true;
                 }
+                
                 std::cout << "Sequantial iteration " << seqiterations << std::endl;
                 seqiterations += 1;
             }
