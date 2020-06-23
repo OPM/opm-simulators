@@ -23,6 +23,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellInjectionProperties.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/linalg/MatrixBlock.hpp>
+// #include <opm/material/densead/Math.hpp>
 
 namespace Opm
 {
@@ -347,15 +348,16 @@ namespace Opm
     computePerfRate(const IntensiveQuantities& intQuants,
                     const std::vector<EvalWell>& mob,
                     const EvalWell& bhp,
+                    const WellState& well_state,
                     const double Tw,
                     const int perf,
                     const bool allow_cf,
                     PerfRates& perf_rates,
                     Opm::DeferredLogger& deferred_logger,
-                    LinearizationType linearizatonType) const
+                    const Opm::LinearizationType& linearizationType) const
     {
         //LinearizationType linearizatonType = ebosSimulator().linearizer().getLinarizationType();
-        if(not(linearizationType == LinearizationType::Seq){
+        if(not(linearizationType.type == Opm::LinearizationType::seqtransport)){
         auto& cq_s = perf_rates.cq_s;
         auto& cq_r = perf_rates.cq_r;
         auto& cq_r_t = perf_rates.cq_r_t;
@@ -427,7 +429,7 @@ namespace Opm
             }
 
             // Using total mobilities
-            EvalWell total_mob_dense = 0;
+            EvalWell total_mob_dense =mob[0]* 0.0;
             for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
                 total_mob_dense += mob[componentIdx];
                 cq_r[componentIdx] = - Tw * (mob[componentIdx] * drawdown);
@@ -592,8 +594,9 @@ namespace Opm
             PerfRates perf_rates(num_components_, numWellEq_);
             double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(intQuants,  cell_idx);
             const double Tw = well_index_[perf] * trans_mult;
-            computePerfRate(intQuants, mob, bhp, Tw, perf, allow_cf,
-                            perf_rates, deferred_logger);
+            const LinearizationType& linearizationType = ebosSimulator.model().linearizer().getLinearizationType();
+            computePerfRate(intQuants, mob, bhp, well_state, Tw, perf, allow_cf,
+                            perf_rates, deferred_logger, linearizationType);
 
             // better way to do here is that use the cq_s and then replace the cq_s_water here?
             if (has_polymer && this->has_polymermw && this->isInjector()) {
@@ -2485,7 +2488,7 @@ namespace Opm
             const double Tw = well_index_[perf] * trans_mult;
 
             PerfRates perf_rates(num_components_, numWellEq_);
-            computePerfRate(intQuants, mob, EvalWell(numWellEq_ + numEq, bhp), Tw, perf, allow_cf,
+            computePerfRate(intQuants, mob, EvalWell(numWellEq_ + numEq, bhp), well_state, Tw, perf, allow_cf,
                             perf_rates, deferred_logger);
 
             for(int p = 0; p < np; ++p) {
@@ -2868,7 +2871,8 @@ namespace Opm
             PerfRates perf_rates(num_components_, numWellEq_);
             double trans_mult = ebos_simulator.problem().template rockCompTransMultiplier<double>(int_quant, cell_idx);
             const double Tw = well_index_[perf] * trans_mult;
-            computePerfRate(int_quant, mob, bhp, Tw, perf, allow_cf, perf_rates, deferred_logger);
+            LinearizationType linearizationType = ebos_simulator.model().linearizer().getLinearizationType();
+            computePerfRate(int_quant, mob, bhp, well_state, Tw, perf, allow_cf, perf_rates, deferred_logger, linearizationType);
             // TODO: make area a member
             const double area = 2 * M_PI * perf_rep_radius_[perf] * perf_length_[perf];
             const auto& material_law_manager = ebos_simulator.problem().materialLawManager();
@@ -3201,13 +3205,14 @@ namespace Opm
             }
             
         auto cq_s_tmp = perf_rates.cq_s;
-        if(not(linearizationType.type == LinearizationType::Seq)){
-            perf_rates.cq_r_t = well_state.perfTotalResRate(index_of_well_ + perf);
+            if(not(linearizationType.type == Opm::LinearizationType::seqtransport)){
+                perf_rates.cq_r_t = well_state.perfTotalResRates()[first_perf_ + perf];
         }
-        computePerfRateNew(intQuants,mob,/*bhp,Tw,*/perf,allow_cf,perf_rates,deferred_logger);
-        if(not(linearizationType.type == LinearizationType::Seq)){
+            computePerfRateSeq(intQuants,mob,/*bhp,Tw,perf,*/allow_cf,perf_rates,deferred_logger);
+            if(not(linearizationType.type == Opm::LinearizationType::seqtransport)){
             for(int i = 0; i < cq_s_tmp.size(); ++i){
-                isSame(cq_s_tmp[i],perf_rates.cq_s[i],1e-6);
+                typedef Opm::MathToolbox<EvalWell> Toolbox;
+                assert(Toolbox::isSame(cq_s_tmp[i],perf_rates.cq_s[i],1e-6));
             }
         }
     }
@@ -3216,23 +3221,24 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    computePerfRateNew(const IntensiveQuantities& intQuants,
-                    const std::vector<EvalWell>& mob,
+    computePerfRateSeq(const IntensiveQuantities& intQuants,
+                       const std::vector<EvalWell>& mob,
                        //const EvalWell& bhp,
                        //const double Tw,
-                    const int perf,
-                    const bool allow_cf,
-                    PerfRates& perf_rates,
-                    Opm::DeferredLogger& deferred_logger) const
+                       //const int perf,
+                       const bool allow_cf,
+                       PerfRates& perf_rates,
+                       Opm::DeferredLogger& deferred_logger) const
     {
         auto& cq_s = perf_rates.cq_s;
-        const auto& cq_r = perf_rates.cq_r;
+        //const auto& cq_r = perf_rates.cq_r;
         const auto& cq_r_t = perf_rates.cq_r_t;
 
         const auto& fs = intQuants.fluidState();
         const EvalWell pressure = extendEval(getPerfCellPressure(fs));
         const EvalWell rs = extendEval(fs.Rs());
         const EvalWell rv = extendEval(fs.Rv());
+        const EvalWell ST = extendEval(fs.totalSaturation());
         std::vector<EvalWell> b_perfcells_dense(num_components_, EvalWell{numWellEq_ + numEq, 0.0});
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
@@ -3246,27 +3252,21 @@ namespace Opm
             b_perfcells_dense[contiSolventEqIdx] = extendEval(intQuants.solventInverseFormationVolumeFactor());
         }
 
-
-        if (this->has_polymermw && this->isInjector()) {
-            const int pskin_index = Bhp + 1 + number_of_perforations_ + perf;
-            const EvalWell& skin_pressure = primary_variables_evaluation_[pskin_index];
-            drawdown += skin_pressure;
-        }
-
-        // producing perforations
+       // producing perforations
         if ( cq_r_t < 0 )  {
             //Do nothing if crossflow is not allowed
             if (!allow_cf && this->isInjector()) {
                 return;
             }
 
-            EvalWell mobt = 0.0;
+            EvalWell mobt = mob[0]*0.0;
             for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
                 mobt += mob[componentIdx];
             }
             // compute component volumetric rates at standard conditions
             for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
-                const EvalWell cq_p = mob[componentIdx]/mobt * cq_r_t;
+                // do upwinding of total saturation and mobility and totalmobility
+                const EvalWell cq_p = ST*mob[componentIdx]/mobt * cq_r_t;
                 perf_rates.cq_s[componentIdx] = b_perfcells_dense[componentIdx] * cq_p;
             }
 
@@ -3876,7 +3876,6 @@ namespace Opm
                     ->bhp(controls.vfp_table_number, rates[Water], rates[Oil], rates[Gas], controls.thp_limit) - dp;
         };
 
-        // Make the flo() function.
         auto flo_type = table.getFloType();
         auto flo = [flo_type](const std::vector<double>& rates) {
             return detail::getFlo(rates[Water], rates[Oil], rates[Gas], flo_type);

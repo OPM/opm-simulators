@@ -34,7 +34,7 @@
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
 #include <opm/models/blackoil/blackoilfoammodules.hh>
 #include <opm/models/blackoil/blackoilbrinemodules.hh>
-
+#include <opm/models/discretization/common/linearizationtype.hh>
 #include <opm/material/densead/DynamicEvaluation.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/ScheduleTypes.hpp>
 
@@ -390,15 +390,26 @@ namespace Opm
             {
             }
         };
-
+        
+        void computePerfRateSeq(const IntensiveQuantities& intQuants,
+                                const std::vector<EvalWell>& mob,
+                                //const EvalWell& bhp,
+                                //const double Tw,
+                                //const int perf,
+                                const bool allow_cf,
+                                PerfRates& perf_rates,
+                                Opm::DeferredLogger& deferred_logger) const;
+        
         void computePerfRate(const IntensiveQuantities& intQuants,
                              const std::vector<EvalWell>& mob,
                              const EvalWell& bhp,
+                             const WellState& well_state,
                              const double Tw,
                              const int perf,
                              const bool allow_cf,
                              PerfRates& perf_rates,
-                             Opm::DeferredLogger& deferred_logger) const;
+                             Opm::DeferredLogger& deferred_logger,
+                             const Opm::LinearizationType& linearizatonType) const;
 
         void computeWellRatesWithBhp(const Simulator& ebosSimulator,
                                              const double& bhp,
