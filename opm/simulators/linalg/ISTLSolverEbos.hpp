@@ -49,7 +49,7 @@
 
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
-#if HAVE_CUDA
+#if HAVE_CUDA + HAVE_OPENCL
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
 #endif
 
@@ -278,7 +278,7 @@ protected:
         enum { pressureVarIndex = Indices::pressureSwitchIdx };
         static const int numEq = Indices::numEq;
 
-#if HAVE_CUDA
+#if HAVE_CUDA + HAVE_OPENCL
         std::unique_ptr<BdaBridge> bdaBridge;
 #endif
 
@@ -316,9 +316,9 @@ protected:
                 prm_ = setupPropertyTree<TypeTag>(parameters_);
             }
             const auto& gridForConn = simulator_.vanguard().grid();
-#if HAVE_CUDA
+#if HAVE_CUDA + HAVE_OPENCL
             std::string gpu_mode = EWOMS_GET_PARAM(TypeTag, std::string, GpuMode);
-            if (gridForConn.comm().size() > 1 && "none" != gpu_mode) {
+            if (gridForConn.comm().size() > 1 && gpu_mode.compare("none") != 0) {
                 OpmLog::warning("Warning cannot use GPU with MPI, GPU is disabled");
                 gpu_mode = "none";
             }
@@ -328,7 +328,7 @@ protected:
             bdaBridge.reset(new BdaBridge(gpu_mode, linear_solver_verbosity, maxit, tolerance));
 #else
             const bool gpu_mode = EWOMS_GET_PARAM(TypeTag, bool, GpuMode);
-            if ("none" != gpu_mode) {
+            if (gpu_mode.compare("none") != 0) {
                 OPM_THROW(std::logic_error,"Error cannot use GPU solver since CUDA was not found during compilation");
             }
 #endif
@@ -622,7 +622,7 @@ protected:
 #endif
             {
                 // tries to solve linear system
-#if HAVE_CUDA
+#if HAVE_CUDA + HAVE_OPENCL
                 bool use_gpu = bdaBridge->getUseGpu();
                 if (use_gpu) {
                     WellContributions wellContribs;

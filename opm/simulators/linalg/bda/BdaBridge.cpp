@@ -41,17 +41,24 @@ namespace Opm
 BdaBridge::BdaBridge(std::string gpu_mode_, int linear_solver_verbosity, int maxit, double tolerance)
     : gpu_mode(gpu_mode_)
 {
-    if (gpu_mode == "cusparse") {
+    std::cout << "mode: " << gpu_mode_ << std::endl;
+    if (gpu_mode.compare("cusparse") == 0) {
+#if HAVE_CUDA
         use_gpu = true;
         backend.reset(new bda::cusparseSolverBackend(linear_solver_verbosity, maxit, tolerance));
-    } else if (gpu_mode == "opencl") {
+#else
+        OPM_THROW(std::logic_error, "Error cusparseSolver was chosen, but CUDA was not found by CMake");
+#endif
+    } else if (gpu_mode.compare("opencl") == 0) {
 #if HAVE_OPENCL
         use_gpu = true;
         backend.reset(new bda::openclSolverBackend(linear_solver_verbosity, maxit, tolerance));
 #else
         OPM_THROW(std::logic_error, "Error openclSolver was chosen, but OpenCL was not found by CMake");
 #endif
-    } else if (gpu_mode != "none") {
+    } else if (gpu_mode.compare("none") == 0) {
+        use_gpu = false;
+    } else {
         OPM_THROW(std::logic_error, "Error unknown value for parameter 'GpuMode', should be passed like '--gpu-mode=[none|cusparse|opencl]");
     }
 }
