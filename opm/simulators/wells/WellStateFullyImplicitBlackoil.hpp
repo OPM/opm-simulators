@@ -123,6 +123,8 @@ namespace Opm
             perfphaserates_.clear();
             perfphaserates_.resize(nperf * np, 0.0);
 
+            perf_total_res_rates_.assign(nperf * np, 0.0);
+
             // these are only used to monitor the injectivity
             perf_water_throughput_.clear();
             perf_water_throughput_.resize(nperf, 0.0);
@@ -142,6 +144,8 @@ namespace Opm
                     if (wells_ecl[w].getStatus() == Well::Status::OPEN) {
                         for (int p = 0; p < np; ++p) {
                             perfphaserates_[np*perf + p] = wellRates()[np*w + p] / double(num_perf_this_well);
+                            // TODO: probably not good for gas rates
+                            perf_total_res_rates_[np*perf + p] = perfphaserates_[np*perf + p];
                         }
                     }
                     perfPress()[perf] = cellPressures[well_perf_data[w][perf-connpos].cell_index];
@@ -220,6 +224,7 @@ namespace Opm
                                  perf_phase_idx < (connpos + num_perf_this_well)*np; ++perf_phase_idx, ++old_perf_phase_idx )
                             {
                                 perfPhaseRates()[ perf_phase_idx ] = prevState->perfPhaseRates()[ old_perf_phase_idx ];
+                                perfTotalResRates()[ perf_phase_idx ] = prevState->perfTotalResRates()[ old_perf_phase_idx ];
                             }
                         } else {
                             for (int perf = connpos; perf < connpos + num_perf_this_well; ++perf) {
@@ -320,6 +325,10 @@ namespace Opm
         /// One rate per phase and well connection.
         std::vector<double>& perfPhaseRates() { return perfphaserates_; }
         const std::vector<double>& perfPhaseRates() const { return perfphaserates_; }
+
+        std::vector<double>& perfTotalResRates() { return perf_total_res_rates_; }
+        const std::vector<double>& perfTotalResRates() const { return perf_total_res_rates_; }
+
 
         /// One current control per injecting well.
         std::vector<Opm::Well::InjectorCMode>& currentInjectionControls() { return current_injection_controls_; }
@@ -1088,6 +1097,10 @@ namespace Opm
         // iterate over all perforations of a given well
         // for (int perf = first_perf_index_[well_index]; perf < first_perf_index_[well_index+1]; ++perf)
         std::vector<int> first_perf_index_;
+
+        // perforation total reservoir volume rates
+        std::vector<double> perf_total_res_rates_;
+
         std::vector<Opm::Well::InjectorCMode> current_injection_controls_;
         std::vector<Well::ProducerCMode> current_production_controls_;
 

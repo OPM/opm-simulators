@@ -641,6 +641,7 @@ namespace Opm
                 }
             }
             this->conTotalResRates_[perf] = this->restrictEval(perf_rates.cq_r_t * well_efficiency_factor_);
+            well_state.perfTotalResRates()[first_perf_ + perf] = perf_rates.cq_r_t.value();
 
             if (has_energy) {
 
