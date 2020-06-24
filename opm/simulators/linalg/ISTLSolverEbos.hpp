@@ -21,6 +21,7 @@
 #ifndef OPM_ISTLSOLVER_EBOS_HEADER_INCLUDED
 #define OPM_ISTLSOLVER_EBOS_HEADER_INCLUDED
 
+#include <opm/simulators/linalg/WellOperators.hpp>
 #include <opm/simulators/linalg/MatrixBlock.hpp>
 #include <opm/simulators/linalg/BlackoilAmg.hpp>
 #include <opm/simulators/linalg/CPRPreconditioner.hpp>
@@ -87,165 +88,6 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
 
     return tmp;
 }
-
-//=====================================================================
-// Implementation for ISTL-matrix based operator
-//=====================================================================
-
-
-/*!
-   \brief Adapter to turn a matrix into a linear operator.
-
-   Adapts a matrix to the assembled linear operator interface
- */
-template<class M, class X, class Y, class WellModel, bool overlapping >
-class WellModelMatrixAdapter : public Dune::AssembledLinearOperator<M,X,Y>
-{
-  typedef Dune::AssembledLinearOperator<M,X,Y> BaseType;
-
-public:
-  typedef M matrix_type;
-  typedef X domain_type;
-  typedef Y range_type;
-  typedef typename X::field_type field_type;
-
-#if HAVE_MPI
-  typedef Dune::OwnerOverlapCopyCommunication<int,int> communication_type;
-#else
-  typedef Dune::CollectiveCommunication< int > communication_type;
-#endif
-
-  Dune::SolverCategory::Category category() const override
-  {
-    return overlapping ?
-           Dune::SolverCategory::overlapping : Dune::SolverCategory::sequential;
-  }
-
-  //! constructor: just store a reference to a matrix
-  WellModelMatrixAdapter (const M& A,
-                          const WellModel& wellMod,
-                          const std::shared_ptr< communication_type >& comm = std::shared_ptr< communication_type >())
-      : A_( A ), wellMod_( wellMod ), comm_(comm)
-  {}
-
-
-  virtual void apply( const X& x, Y& y ) const override
-  {
-    A_.mv( x, y );
-
-    // add well model modification to y
-    wellMod_.apply(x, y );
-
-#if HAVE_MPI
-    if( comm_ )
-      comm_->project( y );
-#endif
-  }
-
-  // y += \alpha * A * x
-  virtual void applyscaleadd (field_type alpha, const X& x, Y& y) const override
-  {
-    A_.usmv(alpha,x,y);
-
-    // add scaled well model modification to y
-    wellMod_.applyScaleAdd( alpha, x, y );
-
-#if HAVE_MPI
-    if( comm_ )
-      comm_->project( y );
-#endif
-  }
-
-  virtual const matrix_type& getmat() const override { return A_; }
-
-protected:
-  const matrix_type& A_ ;
-  const WellModel& wellMod_;
-  std::shared_ptr< communication_type > comm_;
-};
-
-
-/*!
-   \brief Adapter to turn a matrix into a linear operator.
-   Adapts a matrix to the assembled linear operator interface.
-   We assume parallel ordering, where ghost rows are located after interior rows
- */
-template<class M, class X, class Y, class WellModel, bool overlapping >
-class WellModelGhostLastMatrixAdapter : public Dune::AssembledLinearOperator<M,X,Y>
-{
-    typedef Dune::AssembledLinearOperator<M,X,Y> BaseType;
-
-public:
-    typedef M matrix_type;
-    typedef X domain_type;
-    typedef Y range_type;
-    typedef typename X::field_type field_type;
-
-#if HAVE_MPI
-    typedef Dune::OwnerOverlapCopyCommunication<int,int> communication_type;
-#else
-    typedef Dune::CollectiveCommunication< int > communication_type;
-#endif
-
-
-    Dune::SolverCategory::Category category() const override
-    {
-        return overlapping ?
-            Dune::SolverCategory::overlapping : Dune::SolverCategory::sequential;
-    }
-
-    //! constructor: just store a reference to a matrix
-    WellModelGhostLastMatrixAdapter (const M& A,
-                                     const WellModel& wellMod,
-                                     const size_t interiorSize )
-        : A_( A ), wellMod_( wellMod ), interiorSize_(interiorSize)
-    {}
-
-    virtual void apply( const X& x, Y& y ) const override
-    {
-        for (auto row = A_.begin(); row.index() < interiorSize_; ++row)
-        {
-            y[row.index()]=0;
-            auto endc = (*row).end();
-            for (auto col = (*row).begin(); col != endc; ++col)
-                (*col).umv(x[col.index()], y[row.index()]);
-        }
-
-        // add well model modification to y
-        wellMod_.apply(x, y );
-
-        ghostLastProject( y );
-    }
-
-    // y += \alpha * A * x
-    virtual void applyscaleadd (field_type alpha, const X& x, Y& y) const override
-    {
-        for (auto row = A_.begin(); row.index() < interiorSize_; ++row)
-        {
-            auto endc = (*row).end();
-            for (auto col = (*row).begin(); col != endc; ++col)
-                (*col).usmv(alpha, x[col.index()], y[row.index()]);
-        }
-        // add scaled well model modification to y
-        wellMod_.applyScaleAdd( alpha, x, y );
-
-        ghostLastProject( y );
-    }
-
-    virtual const matrix_type& getmat() const override { return A_; }
-
-protected:
-    void ghostLastProject(Y& y) const
-    {
-        size_t end = y.size();
-        for (size_t i = interiorSize_; i < end; ++i)
-            y[i] = 0;
-    }
-
-    const matrix_type& A_ ;
-    const WellModel& wellMod_;
-    size_t interiorSize_;
-};
 
     /// This class solves the fully implicit black-oil system by
     /// solving the reduced system (after eliminating well variables)
@@ -503,31 +345,27 @@ protected:
             }
 
             const WellModel& wellModel = simulator_.problem().wellModel();
+            const WellModelAsLinearOperator<WellModel, Vector, Vector> wellOp(wellModel);
 
             if( isParallel() )
             {
                 if ( ownersFirst_ && !parameters_.linear_solver_use_amg_ && !useFlexible_) {
-                    typedef WellModelGhostLastMatrixAdapter< Matrix, Vector, Vector, WellModel, true > Operator;
+                    typedef WellModelGhostLastMatrixAdapter< Matrix, Vector, Vector, true > Operator;
                     assert(matrix_);
-                    Operator opA(getMatrix(), wellModel, interiorCellNum_);
-
+                    Operator opA(getMatrix(), wellOp, interiorCellNum_);
                     solve( opA, x, *rhs_, *comm_ );
                 }
                 else {
-
-                    typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, true > Operator;
+                    typedef WellModelMatrixAdapter< Matrix, Vector, Vector, true > Operator;
                     assert (noGhostMat_);
-                    Operator opA(getMatrix(), wellModel,
-                                 comm_ );
-
+                    Operator opA(getMatrix(), wellOp, comm_ );
                     solve( opA, x, *rhs_, *comm_ );
-
                 }
             }
             else
             {
-                typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, false > Operator;
-                Operator opA(getMatrix(), wellModel);
+                typedef WellModelMatrixAdapter< Matrix, Vector, Vector, false > Operator;
+                Operator opA(getMatrix(), wellOp);
                 solve( opA, x, *rhs_ );
             }
 
