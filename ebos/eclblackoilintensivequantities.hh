@@ -197,7 +197,10 @@ public:
         if (linearizationType.type == Opm::LinearizationType::seqtransport) {
             ST = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx, linearizationType);
             //assert(ST<2);// debug to be sure no pressure is pressent
-            assert(timeIdx==0 ||  ST == 1);// for pure sequential with multiple steps this is always true.
+            //assert(timeIdx==0 ||  ST == 1);// for pure sequential with multiple steps this is always true.
+            if(timeIdx == 1){
+                ST = 1.0;
+            }
             
         }else if (linearizationType.type == Opm::LinearizationType::pressure) {
             // we are doing sequation pressure where ST may not be 1 any more
