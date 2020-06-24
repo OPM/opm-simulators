@@ -327,7 +327,7 @@ protected:
             const int linear_solver_verbosity = parameters_.linear_solver_verbosity_;
             bdaBridge.reset(new BdaBridge(gpu_mode, linear_solver_verbosity, maxit, tolerance));
 #else
-            const bool gpu_mode = EWOMS_GET_PARAM(TypeTag, bool, GpuMode);
+            const std::string gpu_mode = EWOMS_GET_PARAM(TypeTag, std::string, GpuMode);
             if (gpu_mode.compare("none") != 0) {
                 OPM_THROW(std::logic_error,"Error cannot use GPU solver since CUDA was not found during compilation");
             }
