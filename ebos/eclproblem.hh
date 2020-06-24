@@ -907,7 +907,8 @@ public:
         // used when ROCKCOMP is activated
         const bool invalidateFromMaxWaterSat = updateMaxWaterSaturation_();
         const bool invalidateFromMinPressure = updateMinPressure_();
-        updatePressure();//update stored pressure in case of sequential do not need to recalculate chach
+        this->updatePressureAndFluxes();//update stored pressure in case of sequential do not need to recalculate chach
+        this->updateTotalSaturation();
         invalidateIntensiveQuantities = invalidateFromMaxWaterSat || invalidateFromMinPressure;
 
         if (invalidateIntensiveQuantities)
@@ -1778,6 +1779,12 @@ public:
         return totalSaturation_[globalDofIdx];
     }
 
+    void totalSaturationOne(){
+        for(auto& v : totalSaturation_){
+            v=1.0;
+        }
+    }
+    
     Scalar totalFlux(unsigned globalIndex,unsigned loc_index) const{
         //unsigned globalIndx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
         //for (unsigned scvfIdx = 0; scvfIdx < numInteriorFaces; scvfIdx++) {
@@ -1935,13 +1942,23 @@ public:
      * \brief update pressure and totalSaturation 
      * update copy of pressure and total saturation for sequential solve
      */
-    bool updatePressure(){
-        LinearizationType linearizationType = this->simulator().model().linearizer().getLinearizationType();
+    bool updatePressureAndFluxes(){
+        // maybe use simulation type instead
+        std::string simulationtype  = EWOMS_GET_PARAM(TypeTag, std::string, SimulationType); 
+        bool updated = false;
+        if(not(simulationtype == "implicit")){
+            this->updatePressure_();               
+            this->updateFluxes_();
+            updated = true;
+        }
+        return updated;
+    }
+    bool updateTotalSaturation(){
+        std::string simulationtype  = EWOMS_GET_PARAM(TypeTag, std::string, SimulationType); 
         // maybe use simulation type instead
         bool updated = false;
-        if(not(linearizationType.type == Opm::LinearizationType::implicit)){
-            this->updatePressure_();
-            this->updateFluxes_();
+        if(not(simulationtype == "implicit")){
+            this->updateTotalSaturation_();
             updated = true;
         }
         return updated;
@@ -2231,12 +2248,30 @@ private:
             }else{
                 pressure_[compressedDofIdx][waterPhaseIdx] = Opm::getValue(fs.pressure(waterPhaseIdx));
             }
-            totalSaturation_[compressedDofIdx] = Opm::getValue(fs.totalSaturation());
         }
 
         return true;
     }
 
+    bool updateTotalSaturation_()
+    {        
+        ElementContext elemCtx(this->simulator());
+        const auto& vanguard = this->simulator().vanguard();
+        auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
+        const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            const Element& elem = *elemIt;
+            elemCtx.updatePrimaryStencil(elem);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+            unsigned compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto& iq = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto& fs = iq.fluidState();
+            totalSaturation_[compressedDofIdx] = Opm::getValue(fs.totalSaturation());
+        }       
+        return true;
+    }
+
+    
     void readRockParameters_()
     {
         const auto& simulator = this->simulator();

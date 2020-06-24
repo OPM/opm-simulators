@@ -161,20 +161,18 @@ namespace Opm {
                 // do pressure step
                 if(seqiterations>0){
                     auto& prevsol = model_->ebosSimulator().model().solution(/*timeIdx=*/1);
+                    model_->ebosSimulator().model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/1);
+                    //NB is the storag cach allso invalidated??
                     prevsol=solutionOld;
                 }
-                linearizationType.type = Opm::LinearizationType::pressure;
-                model_->updateSolution();
-                model_->ebosSimulator().problem().updatePressure();//update pressure ans ST
+                linearizationType.type = Opm::LinearizationType::pressure;                
                 model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);  
-                model_->updateSolution();// should conver to the new solution time         
+                model_->updateSolution();                               
                 SimulatorReportSingle lreportpre = this->stepDefault(timer, /*next*/first, false);
                 first=false;
-
                 // do transport step
-                model_->ebosSimulator().problem().updatePressure();//update pressure ans ST                               
-                linearizationType.type = Opm::LinearizationType::seqtransport;
-                model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);
+                model_->ebosSimulator().problem().updatePressureAndFluxes();//update pressure ans ST 
+                linearizationType.type = Opm::LinearizationType::seqtransport;                         model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);
 
                 model_->updateSolution();
                 reportpre += lreportpre;
@@ -183,7 +181,7 @@ namespace Opm {
                     //model_->ebosSimulator().problem().beginTimeStep();
                     SimulatorReportSingle lreportseq = this->stepDefault(timer,/*next*/false, false);
                     // hopefully do not change any thing only update well quantities
-                    model_->wellModel().solveWells(model_->ebosSimulator().timeStepSize());
+                    //model_->wellModel().solveWells(model_->ebosSimulator().timeStepSize());
                     reportseq += lreportseq;
                 }catch (...){
                     //set the prevois value to the staring point
@@ -202,15 +200,21 @@ namespace Opm {
                     model_->ebosSimulator().model().setEnableStorageCache(false);
                     auto& prevsol = model_->ebosSimulator().model().solution(/*timeIdx=*/1);
                     prevsol=solutionOld;
+                    model_->ebosSimulator().model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/1);
+                    model_->ebosSimulator().model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
                     linearizationType.type = Opm::LinearizationType::implicit;
-                    model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);
-
+                    model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);                   
                     model_->updateSolution();
+                    
                     //NB her only the convergenceshould be checked
-                    SimulatorReportSingle lreportsim = this->stepDefault(timer,/*next*/false, false);
-                    converged = lreportsim.converged;
+                    //SimulatorReportSingle lreportsim = this->stepDefault(timer,/*next*/false, false);
+                    std::vector<double> residual_norms;
+                    auto asreport = model_->assembleReservoir(timer, seqiterations);
+                    auto convrep = model_->getConvergence(timer, seqiterations,residual_norms);
+                    converged = convrep.converged();
                     // if this used one probably have to invalidate the storage cache
-                    //model_->ebosSimulator().model().setEnableStorageCache(storagecache);
+                    //model_->ebosSimulator().model().setEnableStorageCache(storagecache);                    
+                    model_->ebosSimulator().problem().totalSaturationOne();
                 }else{
                     converged = true;
                 }
@@ -225,6 +229,7 @@ namespace Opm {
                 model_->afterStep(timer);
                 report.converged = true;
             }
+            model_->updateSolution();
             //todo fill this report correctly
             return report;
                 
@@ -399,7 +404,7 @@ namespace Opm {
             LinearizationType linearizationType;// use default
             model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);
             // incase previous step was not fully implicit
-            model_->ebosSimulator().problem().updatePressure();//update pressure ans ST                               
+            model_->ebosSimulator().problem().updatePressureAndFluxes();//update pressure ans ST                               
             model_->updateSolution();
             SimulatorReportSingle report = this->stepDefault(timer,true,true);
             return report;
@@ -410,7 +415,7 @@ namespace Opm {
             SimulatorReportSingle reportpre;
             // do pressure step
             linearizationType.type = Opm::LinearizationType::pressure;
-            model_->ebosSimulator().problem().updatePressure();//update pressure ans ST
+            model_->ebosSimulator().problem().updatePressureAndFluxes();//update pressure ans ST
             model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);  
             model_->updateSolution();// should conver to the new solution time         
             SimulatorReportSingle lreportpre = this->stepDefault(timer,true,true);
