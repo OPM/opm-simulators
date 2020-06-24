@@ -279,7 +279,8 @@ protected:
         static const int numEq = Indices::numEq;
 
 #if HAVE_CUDA + HAVE_OPENCL
-        std::unique_ptr<BdaBridge> bdaBridge;
+        static const unsigned int block_size = Matrix::block_type::rows;
+        std::unique_ptr<BdaBridge<Matrix, Vector, block_size>> bdaBridge;
 #endif
 
 #if HAVE_MPI
@@ -325,7 +326,7 @@ protected:
             const int maxit = EWOMS_GET_PARAM(TypeTag, int, LinearSolverMaxIter);
             const double tolerance = EWOMS_GET_PARAM(TypeTag, double, LinearSolverReduction);
             const int linear_solver_verbosity = parameters_.linear_solver_verbosity_;
-            bdaBridge.reset(new BdaBridge(gpu_mode, linear_solver_verbosity, maxit, tolerance));
+            bdaBridge.reset(new BdaBridge<Matrix, Vector, block_size>(gpu_mode, linear_solver_verbosity, maxit, tolerance));
 #else
             const std::string gpu_mode = EWOMS_GET_PARAM(TypeTag, std::string, GpuMode);
             if (gpu_mode.compare("none") != 0) {

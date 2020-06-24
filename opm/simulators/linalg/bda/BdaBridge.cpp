@@ -38,10 +38,9 @@ namespace Opm
     using bda::BdaResult;
     using bda::BdaSolver;
 
-BdaBridge::BdaBridge(std::string gpu_mode_, int linear_solver_verbosity, int maxit, double tolerance)
-    : gpu_mode(gpu_mode_)
+template <class BridgeMatrix, class BridgeVector, int block_size>
+BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string gpu_mode, int linear_solver_verbosity, int maxit, double tolerance)
 {
-    std::cout << "mode: " << gpu_mode_ << std::endl;
     if (gpu_mode.compare("cusparse") == 0) {
 #if HAVE_CUDA
         use_gpu = true;
@@ -132,8 +131,8 @@ void getSparsityPattern(BridgeMatrix& mat, std::vector<int> &h_rows, std::vector
 } // end getSparsityPattern()
 
 
-template <class BridgeMatrix, class BridgeVector>
-void BdaBridge::solve_system(BridgeMatrix *mat OPM_UNUSED, BridgeVector &b OPM_UNUSED, WellContributions& wellContribs OPM_UNUSED, InverseOperatorResult &res OPM_UNUSED)
+template <class BridgeMatrix, class BridgeVector, int block_size>
+void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatrix *mat OPM_UNUSED, BridgeVector &b OPM_UNUSED, WellContributions& wellContribs OPM_UNUSED, InverseOperatorResult &res OPM_UNUSED)
 {
 
     if (use_gpu) {
@@ -207,21 +206,30 @@ void BdaBridge::solve_system(BridgeMatrix *mat OPM_UNUSED, BridgeVector &b OPM_U
 }
 
 
-template <class BridgeVector>
-void BdaBridge::get_result(BridgeVector &x OPM_UNUSED) {
+template <class BridgeMatrix, class BridgeVector, int block_size>
+void BdaBridge<BridgeMatrix, BridgeVector, block_size>::get_result(BridgeVector &x OPM_UNUSED) {
     if (use_gpu) {
         backend->get_result(static_cast<double*>(&(x[0][0])));
     }
 }
 
-#define INSTANTIATE_BDA_FUNCTIONS(n)                                                                  \
-template void BdaBridge::solve_system                                                                 \
-(Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >*, \
-    Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >&, \
-    WellContributions&, InverseOperatorResult&);                                                      \
-                                                                                                      \
-template void BdaBridge::get_result                                                                   \
-(Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >&);   \
+#define INSTANTIATE_BDA_FUNCTIONS(n)                                                                                        \
+template BdaBridge<Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >,      \
+Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >,                            \
+n>::BdaBridge                                                                                                               \
+(std::string gpu_mode_, int linear_solver_verbosity, int maxit, double tolerance);                                          \
+                                                                                                                            \
+template void BdaBridge<Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >, \
+Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >,                            \
+n>::solve_system                                                                                                            \
+(Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >*,                       \
+    Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >&,                       \
+    WellContributions&, InverseOperatorResult&);                                                                            \
+                                                                                                                            \
+template void BdaBridge<Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >, \
+Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >,                            \
+n>::get_result                                                                                                              \
+(Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >&);                         \
 
 INSTANTIATE_BDA_FUNCTIONS(1);
 INSTANTIATE_BDA_FUNCTIONS(2);
