@@ -509,7 +509,7 @@ protected:
                 if ( ownersFirst_ && !parameters_.linear_solver_use_amg_ && !useFlexible_) {
                     typedef WellModelGhostLastMatrixAdapter< Matrix, Vector, Vector, WellModel, true > Operator;
                     assert(matrix_);
-                    Operator opA(*matrix_, wellModel, interiorCellNum_);
+                    Operator opA(getMatrix(), wellModel, interiorCellNum_);
 
                     solve( opA, x, *rhs_, *comm_ );
                 }
@@ -517,7 +517,7 @@ protected:
 
                     typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, true > Operator;
                     assert (noGhostMat_);
-                    Operator opA(*noGhostMat_, wellModel,
+                    Operator opA(getMatrix(), wellModel,
                                  comm_ );
 
                     solve( opA, x, *rhs_, *comm_ );
@@ -527,7 +527,7 @@ protected:
             else
             {
                 typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, false > Operator;
-                Operator opA(*matrix_, wellModel);
+                Operator opA(getMatrix(), wellModel);
                 solve( opA, x, *rhs_ );
             }
 
@@ -904,10 +904,10 @@ protected:
                 if (isParallel()) {
 #if HAVE_MPI
                     assert(noGhostMat_);
-                    flexibleSolver_.reset(new FlexibleSolverType(*noGhostMat_, *comm_, prm_, weightsCalculator));
+                    flexibleSolver_.reset(new FlexibleSolverType(getMatrix(), *comm_, prm_, weightsCalculator));
 #endif
                 } else {
-                    flexibleSolver_.reset(new FlexibleSolverType(*matrix_, prm_, weightsCalculator));
+                    flexibleSolver_.reset(new FlexibleSolverType(getMatrix(), prm_, weightsCalculator));
                 }
             }
             else
