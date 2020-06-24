@@ -517,7 +517,6 @@ protected:
 
                     typedef WellModelMatrixAdapter< Matrix, Vector, Vector, WellModel, true > Operator;
                     assert (noGhostMat_);
-                    copyJacToNoGhost(*matrix_, *noGhostMat_);
                     Operator opA(*noGhostMat_, wellModel,
                                  comm_ );
 
