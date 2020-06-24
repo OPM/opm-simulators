@@ -31,14 +31,28 @@
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 
 #include <opm/simulators/linalg/bda/BILU0.hpp>
-typedef bda::BILU0 Preconditioner;
 
 namespace bda
 {
 
 /// This class implements a opencl-based ilu0-bicgstab solver on GPU
-class openclSolverBackend : public BdaSolver
+template <unsigned int block_size>
+class openclSolverBackend : public BdaSolver<block_size>
 {
+
+    typedef BdaSolver<block_size> Base;
+    typedef BILU0<block_size> Preconditioner;
+
+    using Base::N;
+    using Base::Nb;
+    using Base::nnz;
+    using Base::nnzb;
+    using Base::verbosity;
+    using Base::maxit;
+    using Base::tolerance;
+    using Base::second;
+    using Base::initialized;
+    typedef BdaSolverStatus::Status Status;
 
 private:
 
@@ -182,7 +196,7 @@ public:
     /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
     /// \return                   status code
-    BdaSolverStatus solve_system(int N, int nnz, int dim, double *vals, int *rows, int *cols, double *b, WellContributions& wellContribs, BdaResult &res) override;
+    Status solve_system(int N, int nnz, int dim, double *vals, int *rows, int *cols, double *b, WellContributions& wellContribs, BdaResult &res) override;
 
     /// Get result after linear solve, and peform postprocessing if necessary
     /// \param[inout] x          resulting x vector, caller must guarantee that x points to a valid array

@@ -51,31 +51,28 @@ namespace bda
 
 using Opm::OpmLog;
 
-openclSolverBackend::openclSolverBackend(int verbosity_, int maxit_, double tolerance_) : BdaSolver(verbosity_, maxit_, tolerance_) {
+template <unsigned int block_size>
+openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_, double tolerance_) : BdaSolver<block_size>(verbosity_, maxit_, tolerance_) {
     prec = new Preconditioner(LEVEL_SCHEDULING, GRAPH_COLORING, verbosity_);
 }
 
 
-openclSolverBackend::~openclSolverBackend() {
+template <unsigned int block_size>
+openclSolverBackend<block_size>::~openclSolverBackend() {
     finalize();
 }
 
 
 // divide A by B, and round up: return (int)ceil(A/B)
-unsigned int openclSolverBackend::ceilDivision(const unsigned int A, const unsigned int B)
+template <unsigned int block_size>
+unsigned int openclSolverBackend<block_size>::ceilDivision(const unsigned int A, const unsigned int B)
 {
     return A / B + (A % B > 0);
 }
 
-// just for verifying and debugging
-bool equal(float a, float b)
-{
-    const float tol_abs = 1e-2;
-    const float tol_rel = 1e-2;
-    return std::abs(a - b) <= std::max(tol_rel * std::max(std::abs(a), std::abs(b)), tol_abs);
-}
 
-double openclSolverBackend::dot_w(cl::Buffer in1, cl::Buffer in2, cl::Buffer out)
+template <unsigned int block_size>
+double openclSolverBackend<block_size>::dot_w(cl::Buffer in1, cl::Buffer in2, cl::Buffer out)
 {
     double t1 = 0.0, t2 = 0.0;
     const unsigned int work_group_size = 1024;
@@ -106,7 +103,8 @@ double openclSolverBackend::dot_w(cl::Buffer in1, cl::Buffer in2, cl::Buffer out
     return gpu_sum;
 }
 
-double openclSolverBackend::norm_w(cl::Buffer in, cl::Buffer out)
+template <unsigned int block_size>
+double openclSolverBackend<block_size>::norm_w(cl::Buffer in, cl::Buffer out)
 {
     double t1 = 0.0, t2 = 0.0;
     const unsigned int work_group_size = 1024;
@@ -138,7 +136,8 @@ double openclSolverBackend::norm_w(cl::Buffer in, cl::Buffer out)
     return gpu_norm;
 }
 
-void openclSolverBackend::axpy_w(cl::Buffer in, const double a, cl::Buffer out)
+template <unsigned int block_size>
+void openclSolverBackend<block_size>::axpy_w(cl::Buffer in, const double a, cl::Buffer out)
 {
     double t1 = 0.0, t2 = 0.0;
     const unsigned int work_group_size = 32;
@@ -159,7 +158,8 @@ void openclSolverBackend::axpy_w(cl::Buffer in, const double a, cl::Buffer out)
     }
 }
 
-void openclSolverBackend::custom_w(cl::Buffer p, cl::Buffer v, cl::Buffer r, const double omega, const double beta)
+template <unsigned int block_size>
+void openclSolverBackend<block_size>::custom_w(cl::Buffer p, cl::Buffer v, cl::Buffer r, const double omega, const double beta)
 {
     double t1 = 0.0, t2 = 0.0;
     const unsigned int work_group_size = 32;
@@ -180,7 +180,8 @@ void openclSolverBackend::custom_w(cl::Buffer p, cl::Buffer v, cl::Buffer r, con
     }
 }
 
-void openclSolverBackend::spmv_blocked_w(cl::Buffer vals, cl::Buffer cols, cl::Buffer rows, cl::Buffer x, cl::Buffer b)
+template <unsigned int block_size>
+void openclSolverBackend<block_size>::spmv_blocked_w(cl::Buffer vals, cl::Buffer cols, cl::Buffer rows, cl::Buffer x, cl::Buffer b)
 {
     double t1 = 0.0, t2 = 0.0;
     const unsigned int work_group_size = 32;
@@ -203,7 +204,8 @@ void openclSolverBackend::spmv_blocked_w(cl::Buffer vals, cl::Buffer cols, cl::B
 }
 
 
-void openclSolverBackend::gpu_pbicgstab(WellContributions& wellContribs, BdaResult& res) {
+template <unsigned int block_size>
+void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContribs, BdaResult& res) {
 
     float it;
     double rho, rhop, beta, alpha, omega, tmp1, tmp2;
@@ -360,10 +362,10 @@ void openclSolverBackend::gpu_pbicgstab(WellContributions& wellContribs, BdaResu
 }
 
 
-void openclSolverBackend::initialize(int N_, int nnz_, int dim, double *vals, int *rows, int *cols) {
+template <unsigned int block_size>
+void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, double *vals, int *rows, int *cols) {
     this->N = N_;
     this->nnz = nnz_;
-    this->block_size = dim;
     this->nnzb = nnz_ / block_size / block_size;
 
     Nb = (N + dim - 1) / dim;
@@ -542,7 +544,9 @@ void openclSolverBackend::initialize(int N_, int nnz_, int dim, double *vals, in
     initialized = true;
 } // end initialize()
 
-void openclSolverBackend::finalize() {
+
+template <unsigned int block_size>
+void openclSolverBackend<block_size>::finalize() {
     delete[] rb;
     delete[] tmp;
 #if COPY_ROW_BY_ROW
@@ -551,7 +555,8 @@ void openclSolverBackend::finalize() {
 } // end finalize()
 
 
-void openclSolverBackend::copy_system_to_gpu() {
+template <unsigned int block_size>
+void openclSolverBackend<block_size>::copy_system_to_gpu() {
 
     double t1 = 0.0, t2 = 0.0;
     if (verbosity > 2) {
@@ -588,7 +593,8 @@ void openclSolverBackend::copy_system_to_gpu() {
 
 
 // don't copy rowpointers and colindices, they stay the same
-void openclSolverBackend::update_system_on_gpu() {
+template <unsigned int block_size>
+void openclSolverBackend<block_size>::update_system_on_gpu() {
 
     double t1 = 0.0, t2 = 0.0;
     if (verbosity > 2) {
@@ -622,7 +628,8 @@ void openclSolverBackend::update_system_on_gpu() {
 } // end update_system_on_gpu()
 
 
-bool openclSolverBackend::analyse_matrix() {
+template <unsigned int block_size>
+bool openclSolverBackend<block_size>::analyse_matrix() {
 
     double t1 = 0.0, t2 = 0.0;
 
@@ -630,7 +637,7 @@ bool openclSolverBackend::analyse_matrix() {
         t1 = second();
     }
 
-    bool success = prec->init(mat, block_size);
+    bool success = prec->init(mat);
     int work_group_size = 32;
     int num_work_groups = ceilDivision(N, work_group_size);
     int total_work_items = num_work_groups * work_group_size;
@@ -654,7 +661,8 @@ bool openclSolverBackend::analyse_matrix() {
 } // end analyse_matrix()
 
 
-void openclSolverBackend::update_system(double *vals, double *b) {
+template <unsigned int block_size>
+void openclSolverBackend<block_size>::update_system(double *vals, double *b) {
     double t1 = 0.0, t2 = 0.0;
     if (verbosity > 2) {
         t1 = second();
@@ -673,7 +681,8 @@ void openclSolverBackend::update_system(double *vals, double *b) {
 } // end update_system()
 
 
-bool openclSolverBackend::create_preconditioner() {
+template <unsigned int block_size>
+bool openclSolverBackend<block_size>::create_preconditioner() {
 
     double t1 = 0.0, t2 = 0.0;
     if (verbosity > 2) {
@@ -692,7 +701,8 @@ bool openclSolverBackend::create_preconditioner() {
 } // end create_preconditioner()
 
 
-void openclSolverBackend::solve_system(WellContributions& wellContribs, BdaResult &res) {
+template <unsigned int block_size>
+void openclSolverBackend<block_size>::solve_system(WellContributions& wellContribs, BdaResult &res) {
     // actually solve
     double t1 = 0.0, t2 = 0.0;
     if (verbosity > 2) {
@@ -713,7 +723,8 @@ void openclSolverBackend::solve_system(WellContributions& wellContribs, BdaResul
 
 // copy result to host memory
 // caller must be sure that x is a valid array
-void openclSolverBackend::get_result(double *x) {
+template <unsigned int block_size>
+void openclSolverBackend<block_size>::get_result(double *x) {
 
     double t1 = 0.0, t2 = 0.0;
     if (verbosity > 2) {
@@ -732,32 +743,43 @@ void openclSolverBackend::get_result(double *x) {
 } // end get_result()
 
 
+typedef BdaSolverStatus::Status Status;
 
-typedef BdaSolver::BdaSolverStatus BdaSolverStatus;
-
-BdaSolverStatus openclSolverBackend::solve_system(int N_, int nnz_, int dim, double *vals, int *rows, int *cols, double *b, WellContributions& wellContribs, BdaResult &res) {
+template <unsigned int block_size>
+Status openclSolverBackend<block_size>::solve_system(int N_, int nnz_, int dim, double *vals, int *rows, int *cols, double *b, WellContributions& wellContribs, BdaResult &res) {
     if (initialized == false) {
         initialize(N_, nnz_,  dim, vals, rows, cols);
         if (analysis_done == false) {
             if (!analyse_matrix()) {
-                return BdaSolverStatus::BDA_SOLVER_ANALYSIS_FAILED;
+                return Status::BDA_SOLVER_ANALYSIS_FAILED;
             }
         }
         update_system(vals, b);
         if (!create_preconditioner()) {
-            return BdaSolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
+            return Status::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
         }
         copy_system_to_gpu();
     } else {
         update_system(vals, b);
         if (!create_preconditioner()) {
-            return BdaSolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
+            return Status::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
         }
         update_system_on_gpu();
     }
     solve_system(wellContribs, res);
-    return BdaSolverStatus::BDA_SOLVER_SUCCESS;
+    return Status::BDA_SOLVER_SUCCESS;
 }
 
-}
+
+#define INSTANTIATE_BDA_FUNCTIONS(n)                                     \
+template openclSolverBackend<n>::openclSolverBackend(int, int, double);  \
+
+INSTANTIATE_BDA_FUNCTIONS(1);
+INSTANTIATE_BDA_FUNCTIONS(2);
+INSTANTIATE_BDA_FUNCTIONS(3);
+INSTANTIATE_BDA_FUNCTIONS(4);
+
+#undef INSTANTIATE_BDA_FUNCTIONS
+
+} // namespace bda
 

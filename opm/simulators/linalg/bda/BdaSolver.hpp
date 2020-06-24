@@ -26,15 +26,19 @@
 #include <sys/time.h>
 
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
+#include <opm/simulators/linalg/bda/BdaSolverStatus.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 
 namespace bda
 {
 
     using Opm::WellContributions;
+    typedef BdaSolverStatus::Status Status;
 
     /// This class serves to simplify choosing between different backend solvers, such as cusparseSolver and openclSolver
     /// This class is abstract, no instantiations can of it can be made, only of its children
+    /// Without a default block_size value, the BILU0 class cannot use BdaSolver::second()
+    template <unsigned int block_size = 3>
     class BdaSolver
     {
 
@@ -55,18 +59,10 @@ namespace bda
         int Nb;          // number of blocked rows (Nb*block_size == N)
         int nnz;         // number of nonzeroes (scalars)
         int nnzb;        // number of nonzero blocks (nnzb*block_size*block_size == nnz)
-        int block_size;  // size of block
 
         bool initialized = false;
 
     public:
-
-        enum class BdaSolverStatus {
-            BDA_SOLVER_SUCCESS,
-            BDA_SOLVER_ANALYSIS_FAILED,
-            BDA_SOLVER_CREATE_PRECONDITIONER_FAILED,
-            BDA_SOLVER_UNKNOWN_ERROR
-        };
 
         BdaSolver(int linear_solver_verbosity, int max_it, double tolerance_) : verbosity(linear_solver_verbosity), maxit(max_it), tolerance(tolerance_) {};
 
@@ -74,7 +70,7 @@ namespace bda
         virtual ~BdaSolver() {};
 
         /// Define as pure virtual functions, so derivedclass must implement them
-        virtual BdaSolverStatus solve_system(int N, int nnz, int dim,
+        virtual Status solve_system(int N, int nnz, int dim,
             double *vals, int *rows, int *cols,
             double *b, WellContributions& wellContribs, BdaResult &res) = 0;
 

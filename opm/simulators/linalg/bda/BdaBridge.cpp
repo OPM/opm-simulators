@@ -26,6 +26,7 @@
 #include <opm/material/common/Unused.hpp>
 
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
+#include <opm/simulators/linalg/bda/BdaSolverStatus.hpp>
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 
 #define PRINT_TIMERS_BRIDGE 0
@@ -37,6 +38,7 @@ namespace Opm
 
     using bda::BdaResult;
     using bda::BdaSolver;
+    using bda::BdaSolverStatus;
 
 template <class BridgeMatrix, class BridgeVector, int block_size>
 BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string gpu_mode, int linear_solver_verbosity, int maxit, double tolerance)
@@ -44,14 +46,14 @@ BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string gpu_mod
     if (gpu_mode.compare("cusparse") == 0) {
 #if HAVE_CUDA
         use_gpu = true;
-        backend.reset(new bda::cusparseSolverBackend(linear_solver_verbosity, maxit, tolerance));
+        backend.reset(new bda::cusparseSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance));
 #else
         OPM_THROW(std::logic_error, "Error cusparseSolver was chosen, but CUDA was not found by CMake");
 #endif
     } else if (gpu_mode.compare("opencl") == 0) {
 #if HAVE_OPENCL
         use_gpu = true;
-        backend.reset(new bda::openclSolverBackend(linear_solver_verbosity, maxit, tolerance));
+        backend.reset(new bda::openclSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance));
 #else
         OPM_THROW(std::logic_error, "Error openclSolver was chosen, but OpenCL was not found by CMake");
 #endif
@@ -178,17 +180,17 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatri
         /////////////////////////
         // actually solve
 
-        typedef BdaSolver::BdaSolverStatus BdaSolverStatus;
+        typedef BdaSolverStatus::Status Status;
         // assume that underlying data (nonzeroes) from mat (Dune::BCRSMatrix) are contiguous, if this is not the case, cusparseSolver is expected to perform undefined behaviour
-        BdaSolverStatus status = backend->solve_system(N, nnz, dim, static_cast<double*>(&(((*mat)[0][0][0][0]))), h_rows.data(), h_cols.data(), static_cast<double*>(&(b[0][0])), wellContribs, result);
+        Status status = backend->solve_system(N, nnz, dim, static_cast<double*>(&(((*mat)[0][0][0][0]))), h_rows.data(), h_cols.data(), static_cast<double*>(&(b[0][0])), wellContribs, result);
         switch(status) {
-        case BdaSolverStatus::BDA_SOLVER_SUCCESS:
+        case Status::BDA_SOLVER_SUCCESS:
             //OpmLog::info("BdaSolver converged");
             break;
-        case BdaSolverStatus::BDA_SOLVER_ANALYSIS_FAILED:
+        case Status::BDA_SOLVER_ANALYSIS_FAILED:
             OpmLog::warning("BdaSolver could not analyse level information of matrix, perhaps there is still a 0.0 on the diagonal of a block on the diagonal");
             break;
-        case BdaSolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED:
+        case Status::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED:
             OpmLog::warning("BdaSolver could not create preconditioner, perhaps there is still a 0.0 on the diagonal of a block on the diagonal");
             break;
         default:
@@ -238,6 +240,6 @@ INSTANTIATE_BDA_FUNCTIONS(4);
 
 #undef INSTANTIATE_BDA_FUNCTIONS
 
-}
+} // namespace Opm
 
 

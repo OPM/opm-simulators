@@ -47,7 +47,7 @@ template <class BridgeMatrix, class BridgeVector, int block_size>
 class BdaBridge
 {
 private:
-    std::unique_ptr<bda::BdaSolver> backend;
+    std::unique_ptr<bda::BdaSolver<block_size> > backend;
     bool use_gpu = false;
 
 public:

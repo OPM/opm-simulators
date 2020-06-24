@@ -35,12 +35,12 @@ namespace bda
 
     using Opm::OpmLog;
 
-    BILU0::BILU0(bool level_scheduling_, bool graph_coloring_, int verbosity_) :
-
     // define 'second' as 'BdaSolver<>::second', this allows usage of the second() function for timing
     // typedefs cannot handle templates
     const auto second = BdaSolver<>::second;
 
+    template <unsigned int block_size>
+    BILU0<block_size>::BILU0(bool level_scheduling_, bool graph_coloring_, int verbosity_) :
         level_scheduling(level_scheduling_), graph_coloring(graph_coloring_), verbosity(verbosity_)
     {
         if (level_scheduling == graph_coloring) {
@@ -49,7 +49,8 @@ namespace bda
         double t1 = second();
     }
 
-    BILU0::~BILU0()
+    template <unsigned int block_size>
+    BILU0<block_size>::~BILU0()
     {
         delete[] invDiagVals;
         delete[] diagIndex;
@@ -62,7 +63,8 @@ namespace bda
         freeBlockedMatrix(&rMat);
     }
 
-    bool BILU0::init(BlockedMatrix *mat, unsigned int block_size)
+    template <unsigned int block_size>
+    bool BILU0<block_size>::init(BlockedMatrix *mat)
     {
         double t1 = 0.0, t2 = 0.0;
         BlockedMatrix *CSCmat = nullptr;
@@ -71,7 +73,6 @@ namespace bda
         this->Nb = mat->Nb;
         this->nnz = mat->nnzbs * block_size * block_size;
         this->nnzbs = mat->nnzbs;
-        this->block_size = block_size;
 
         toOrder = new int[N];
         fromOrder = new int[N];
@@ -160,7 +161,8 @@ namespace bda
     } // end init()
 
 
-    bool BILU0::create_preconditioner(BlockedMatrix *mat)
+    template <unsigned int block_size>
+    bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat)
     {
         double t1 = 0.0, t2 = 0.0;
         if (verbosity >= 3){
@@ -306,13 +308,13 @@ namespace bda
     // kernels are blocking on an NVIDIA GPU, so waiting for events is not needed
     // however, if individual kernel calls are timed, waiting for events is needed
     // behavior on other GPUs is untested
-    void BILU0::apply(cl::Buffer& x, cl::Buffer& y)
+    template <unsigned int block_size>
+    void BILU0<block_size>::apply(cl::Buffer& x, cl::Buffer& y)
     {
         double t1 = 0.0, t2 = 0.0;
         if (verbosity >= 3) {
             t1 = second();
         }
-        const unsigned int block_size = 3;
         cl::Event event;
 
         for(unsigned int color = 0; color < numColors; ++color){
@@ -334,24 +336,49 @@ namespace bda
     }
 
 
-    void BILU0::setOpenCLContext(cl::Context *context){
+    template <unsigned int block_size>
+    void BILU0<block_size>::setOpenCLContext(cl::Context *context){
         this->context = context;
     }
-    void BILU0::setOpenCLQueue(cl::CommandQueue *queue){
+    template <unsigned int block_size>
+    void BILU0<block_size>::setOpenCLQueue(cl::CommandQueue *queue){
         this->queue = queue;
     }
-    void BILU0::setKernelParameters(const unsigned int work_group_size, const unsigned int total_work_items, const unsigned int lmem_per_work_group){
+    template <unsigned int block_size>
+    void BILU0<block_size>::setKernelParameters(const unsigned int work_group_size, const unsigned int total_work_items, const unsigned int lmem_per_work_group){
         this->work_group_size = work_group_size;
         this->total_work_items = total_work_items;
         this->lmem_per_work_group = lmem_per_work_group;
     }
-    void BILU0::setKernels(
+    template <unsigned int block_size>
+    void BILU0<block_size>::setKernels(
         cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *ILU_apply1_,
         cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *ILU_apply2_
     ){
         this->ILU_apply1 = ILU_apply1_;
         this->ILU_apply2 = ILU_apply2_;
     }
+
+
+#define INSTANTIATE_BDA_FUNCTIONS(n)                                                     \
+template BILU0<n>::BILU0(bool, bool, int);                                               \
+template bool BILU0<n>::init(BlockedMatrix*);                                            \
+template bool BILU0<n>::create_preconditioner(BlockedMatrix*);                           \
+template void BILU0<n>::apply(cl::Buffer& x, cl::Buffer& y);                             \
+template void BILU0<n>::setOpenCLContext(cl::Context*);                                  \
+template void BILU0<n>::setOpenCLQueue(cl::CommandQueue*);                               \
+template void BILU0<n>::setKernelParameters(unsigned int, unsigned int, unsigned int);   \
+template void BILU0<n>::setKernels(                                                      \
+    cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *, \
+    cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *  \
+    );
+
+INSTANTIATE_BDA_FUNCTIONS(1);
+INSTANTIATE_BDA_FUNCTIONS(2);
+INSTANTIATE_BDA_FUNCTIONS(3);
+INSTANTIATE_BDA_FUNCTIONS(4);
+
+#undef INSTANTIATE_BDA_FUNCTIONS
 
 } // end namespace bda
 

@@ -36,6 +36,7 @@ namespace bda
 
     /// This class implementa a Blocked ILU0 preconditioner
     /// The decomposition is done on CPU, and reorders the rows of the matrix
+    template <unsigned int block_size>
     class BILU0
     {
 
@@ -44,7 +45,6 @@ namespace bda
         int Nb;      // number of blockrows of the matrix
         int nnz;     // number of nonzeroes of the matrix (scalar)
         int nnzbs;   // number of blocks of the matrix
-        unsigned int block_size;
         BlockedMatrix *LMat, *UMat, *LUMat;
         BlockedMatrix *rMat = nullptr; // only used with PAR_SIM
         Block *invDiagVals;
@@ -79,7 +79,7 @@ namespace bda
         ~BILU0();
 
         // analysis
-        bool init(BlockedMatrix *mat, unsigned int block_size);
+        bool init(BlockedMatrix *mat);
 
         // ilu_decomposition
         bool create_preconditioner(BlockedMatrix *mat);
