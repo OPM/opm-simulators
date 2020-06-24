@@ -36,11 +36,17 @@ namespace bda
     using Opm::OpmLog;
 
     BILU0::BILU0(bool level_scheduling_, bool graph_coloring_, int verbosity_) :
+
+    // define 'second' as 'BdaSolver<>::second', this allows usage of the second() function for timing
+    // typedefs cannot handle templates
+    const auto second = BdaSolver<>::second;
+
         level_scheduling(level_scheduling_), graph_coloring(graph_coloring_), verbosity(verbosity_)
     {
         if (level_scheduling == graph_coloring) {
             OPM_THROW(std::logic_error, "Error, either level_scheduling or graph_coloring must be true, not both\n");
         }
+        double t1 = second();
     }
 
     BILU0::~BILU0()
@@ -77,11 +83,11 @@ namespace bda
             CSCmat->colIndices = new int[nnzbs];
             CSCmat->rowPointers = new int[Nb + 1];
             if(verbosity >= 3){
-                t1 = BdaSolver::second();
+                t1 = second();
             }
             bcsr_to_bcsc(mat->nnzValues, mat->colIndices, mat->rowPointers, CSCmat->nnzValues, CSCmat->colIndices, CSCmat->rowPointers, mat->Nb);
             if(verbosity >= 3){
-                t2 = BdaSolver::second();
+                t2 = second();
                 std::ostringstream out;
                 out << "BILU0 convert CSR to CSC: " << t2 - t1 << " s";
                 OpmLog::info(out.str());
@@ -89,7 +95,7 @@ namespace bda
         }
 
         if(verbosity >= 3){
-            t1 = BdaSolver::second();
+            t1 = second();
         }
         rMat = allocateBlockedMatrix(mat->Nb, mat->nnzbs);
         LUMat = soft_copyBlockedMatrix(rMat);
@@ -102,7 +108,7 @@ namespace bda
             return false;
         }
         if(verbosity >= 3){
-            t2 = BdaSolver::second();
+            t2 = second();
             std::ostringstream out;
             out << "BILU0 analysis took: " << t2 - t1 << " s, " << numColors << " colors";
             OpmLog::info(out.str());
@@ -158,11 +164,11 @@ namespace bda
     {
         double t1 = 0.0, t2 = 0.0;
         if (verbosity >= 3){
-            t1 = BdaSolver::second();
+            t1 = second();
         }
         blocked_reorder_matrix_by_pattern(mat, toOrder, fromOrder, rMat);
         if (verbosity >= 3){
-            t2 = BdaSolver::second();
+            t2 = second();
             std::ostringstream out;
             out << "BILU0 reorder matrix: " << t2 - t1 << " s";
             OpmLog::info(out.str());
@@ -170,11 +176,11 @@ namespace bda
 
         // TODO: remove this copy by replacing inplace ilu decomp by out-of-place ilu decomp
         if (verbosity >= 3){
-            t1 = BdaSolver::second();
+            t1 = second();
         }
         memcpy(LUMat->nnzValues, rMat->nnzValues, sizeof(Block) * rMat->nnzbs);
         if (verbosity >= 3){
-            t2 = BdaSolver::second();
+            t2 = second();
             std::ostringstream out;
             out << "BILU0 memcpy: " << t2 - t1 << " s";
             OpmLog::info(out.str());
@@ -188,7 +194,7 @@ namespace bda
         const int blockSquare = block_size * block_size;
 
         if (verbosity >= 3){
-            t1 = BdaSolver::second();
+            t1 = second();
         }
         // go through all rows
         for (i = 0; i < LUMat->Nb; i++) {
@@ -268,14 +274,14 @@ namespace bda
             URowIndex++;
         }
         if (verbosity >= 3) {
-            t2 = BdaSolver::second();
+            t2 = second();
             std::ostringstream out;
             out << "BILU0 decomposition: " << t2 - t1 << " s";
             OpmLog::info(out.str());
         }
 
         if (verbosity >= 3) {
-            t1 = BdaSolver::second();
+            t1 = second();
         }
         if (pattern_uploaded == false) {
             queue->enqueueWriteBuffer(s.Lcols, CL_TRUE, 0, LMat->nnzbs * sizeof(int), LMat->colIndices);
@@ -288,7 +294,7 @@ namespace bda
         queue->enqueueWriteBuffer(s.Uvals, CL_TRUE, 0, UMat->nnzbs * sizeof(Block), UMat->nnzValues);
         queue->enqueueWriteBuffer(s.invDiagVals, CL_TRUE, 0, Nb * sizeof(Block), invDiagVals);
         if (verbosity >= 3) {
-            t2 = BdaSolver::second();
+            t2 = second();
             std::ostringstream out;
             out << "BILU0 copy to GPU: " << t2 - t1 << " s";
             OpmLog::info(out.str());
@@ -304,7 +310,7 @@ namespace bda
     {
         double t1 = 0.0, t2 = 0.0;
         if (verbosity >= 3) {
-            t1 = BdaSolver::second();
+            t1 = second();
         }
         const unsigned int block_size = 3;
         cl::Event event;
@@ -320,7 +326,7 @@ namespace bda
 
         if (verbosity >= 3) {
             event.wait();
-            t2 = BdaSolver::second();
+            t2 = second();
             std::ostringstream out;
             out << "BILU0 apply: " << t2 - t1 << " s";
             OpmLog::info(out.str());
