@@ -565,8 +565,6 @@ namespace Opm {
         const auto& grid = ebosSimulator_.vanguard().grid();
         const auto& cartDims = Opm::UgGridHelpers::cartDims(grid);
         well_perf_data_.resize(wells_ecl_.size());
-        first_perf_index_.clear();
-        first_perf_index_.resize(wells_ecl_.size() + 1, 0);
         int well_index = 0;
         for (const auto& well : wells_ecl_) {
             well_perf_data_[well_index].clear();
@@ -597,7 +595,6 @@ namespace Opm {
                     }
                 }
             }
-            first_perf_index_[well_index + 1] = first_perf_index_[well_index] + well_perf_data_[well_index].size();
             ++well_index;
         }
     }
@@ -715,7 +712,7 @@ namespace Opm {
                                                                           numComponents(),
                                                                           numPhases(),
                                                                           w,
-                                                                          first_perf_index_[w],
+                                                                          well_state_.firstPerfIndex()[w],
                                                                           well_perf_data_[w]));
                 } else {
                     well_container.emplace_back(new MultisegmentWell<TypeTag>(well_ecl,
@@ -726,7 +723,7 @@ namespace Opm {
                                                                               numComponents(),
                                                                               numPhases(),
                                                                               w,
-                                                                              first_perf_index_[w],
+                                                                              well_state_.firstPerfIndex()[w],
                                                                               well_perf_data_[w]));
                 }
                 if (wellIsStopped)
@@ -782,7 +779,7 @@ namespace Opm {
                                                               numComponents(),
                                                               numPhases(),
                                                               index_well_ecl,
-                                                              first_perf_index_[index_well_ecl],
+                                                              well_state_.firstPerfIndex()[index_well_ecl],
                                                               well_perf_data_[index_well_ecl]));
         } else {
             return WellInterfacePtr(new MultisegmentWell<TypeTag>(well_ecl,
@@ -793,7 +790,7 @@ namespace Opm {
                                                                   numComponents(),
                                                                   numPhases(),
                                                                   index_well_ecl,
-                                                                  first_perf_index_[index_well_ecl],
+                                                                  well_state_.firstPerfIndex()[index_well_ecl],
                                                                   well_perf_data_[index_well_ecl]));
         }
     }

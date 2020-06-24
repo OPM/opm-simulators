@@ -666,12 +666,16 @@ namespace Opm
             if (has_polymer) {
                 // TODO: the application of well efficiency factor has not been tested with an example yet
                 const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-                EvalWell cq_s_poly = cq_s[waterCompIdx] * well_efficiency_factor_;
+                EvalWell cq_s_poly = cq_s[waterCompIdx];
                 if (this->isInjector()) {
                     cq_s_poly *= wpolymer();
                 } else {
                     cq_s_poly *= extendEval(intQuants.polymerConcentration() * intQuants.polymerViscosityCorrection());
                 }
+                // Note. Efficiency factor is handled in the output layer
+                well_state.perfRatePolymer()[first_perf_ + perf] = cq_s_poly.value();
+
+                cq_s_poly *= well_efficiency_factor_;
                 connectionRates_[perf][contiPolymerEqIdx] = Base::restrictEval(cq_s_poly);
 
                 if (this->has_polymermw) {
