@@ -3208,11 +3208,11 @@ namespace Opm
             }
             
         auto cq_s_tmp = perf_rates.cq_s;
-            if(not(linearizationType.type == Opm::LinearizationType::seqtransport)){
-                perf_rates.cq_r_t = well_state.perfTotalResRates()[first_perf_ + perf];
+        if(linearizationType.type == Opm::LinearizationType::seqtransport){
+            perf_rates.cq_r_t = well_state.perfTotalResRates()[first_perf_ + perf];
         }
-            computePerfRateSeq(intQuants,mob,/*bhp,Tw,perf,*/allow_cf,perf_rates,deferred_logger);
-            if(not(linearizationType.type == Opm::LinearizationType::seqtransport)){
+        computePerfRateSeq(intQuants,mob,/*bhp,Tw,perf,*/allow_cf,perf_rates,deferred_logger);
+        if(not(linearizationType.type == Opm::LinearizationType::seqtransport)){
             for(size_t i = 0; i < cq_s_tmp.size(); ++i){
                 typedef Opm::MathToolbox<EvalWell> Toolbox;
                 assert(Toolbox::isSame(cq_s_tmp[i],perf_rates.cq_s[i],1e-6));
