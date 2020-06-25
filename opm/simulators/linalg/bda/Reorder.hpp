@@ -29,6 +29,7 @@ namespace bda
 
 /// Give every node in the matrix a color so that no neighbouring nodes share a color
 /// The color array must be allocated already
+/// This function with throw an error if no coloring can be found within the given restrictions
 /// This function does graph coloring based on random numbers
 /// \param[in] rows            number of rows in the matrix
 /// \param[in] rowPointers     array of row pointers
@@ -36,7 +37,7 @@ namespace bda
 /// \param[inout] colors       output array containing the number of the color that each row is assigned to
 /// \param[in] maxRowsPerColor the maximum number of rows that are allowed in one color (so: the maximum number of nodes per color)
 /// \param[in] maxColsPerColor the maximum number of columns that the rows in a color are allowed to share (so: the maximum number of nodes that the nodes in one color may be connected to)
-/// \return                    the number of colors needed for the coloring, or -1 if no reordering was found with the given restrictions
+/// \return                    the number of colors needed for the coloring
 int colorBlockedNodes(int rows, const int *rowPointers, const int *colIndices, std::vector<int>& colors, int maxRowsPerColor, int maxColsPerColor);
 
 /// Reorder the rows of the matrix according to the mapping in toOrder and fromOrder

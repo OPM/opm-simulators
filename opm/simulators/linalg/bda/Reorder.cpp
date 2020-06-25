@@ -17,11 +17,14 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <cstdio>
 #include <vector>
 #include <cstring>
 #include <algorithm> // for fill()
-#include <sys/time.h>
+#include <random>
+#include <limits>
+#include <sstream>
+
+#include <opm/common/ErrorMacros.hpp>
 
 #include <opm/simulators/linalg/bda/Reorder.hpp>
 #include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
@@ -36,31 +39,37 @@ namespace bda
 
 int colorBlockedNodes(int rows, const int *rowPointers, const int *colIndices, std::vector<int>& colors, int maxRowsPerColor, int maxColsPerColor)
 {
-    int left, c, t, i, j, k;
+    int left, c;
     const int max_tries = 100;            // since coloring is random, it is possible that a coloring fails. In that case, try again.
     std::vector<int> randoms;
-    randoms.reserve(rows);
+    randoms.resize(rows);
 
     std::vector<bool> visitedColumns;
+    visitedColumns.resize(rows);
     std::fill(visitedColumns.begin(), visitedColumns.end(), false);
+
     int colsInColor;
     int additionalColsInRow;
 
-    for (t = 0; t < max_tries; t++) {
-        struct timeval tm;
-        gettimeofday(&tm, nullptr);
-        srand(tm.tv_sec + tm.tv_usec * 1000000ul);
-        for (i = 0; i  < rows; i++) {
-            randoms[i] = rand();
-            colors[i] = -1;
+    for (unsigned int t = 0; t < max_tries; t++) {
+        // (re)initialize data for coloring process
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<> uniform(0, std::numeric_limits<int>::max());
+        {
+            for(int i = 0; i < rows; ++i){
+                randoms[i] = uniform(gen);
+            }
         }
+        std::fill(colors.begin(), colors.end(), -1);
 
+        // actually perform coloring
         for (c = 0; c < MAX_COLORS; c++) {
             int rowsInColor = 0;
             colsInColor = 0;
-            for (i = 0; i < rows; i++)
+            for (int i = 0; i < rows; i++)
             {
-                char f = 1; // true iff you have max random
+                bool iMax = true; // true iff you have max random
 
                 // ignore nodes colored earlier
                 if ((colors[i] != -1))
@@ -69,28 +78,30 @@ int colorBlockedNodes(int rows, const int *rowPointers, const int *colIndices, s
                 int ir = randoms[i];
 
                 // look at neighbors to check their random number
-                for (k = rowPointers[i]; k < rowPointers[i + 1]; k++) {
+                for (int k = rowPointers[i]; k < rowPointers[i + 1]; k++) {
 
                     // ignore nodes colored earlier (and yourself)
-                    j = colIndices[k];
+                    int j = colIndices[k];
                     int jc = colors[j];
                     if (((jc != -1) && (jc != c)) || (i == j)) {
                         continue;
                     }
                     // The if statement below makes it both true graph coloring and no longer guaranteed to converge
                     if (jc == c) {
-                        f = 0;
+                        iMax = false;
                         break;
                     }
                     int jr = randoms[j];
-                    if (ir <= jr) f = 0;
+                    if (ir <= jr) {
+                        iMax = false;
+                    }
                 }
 
                 // assign color if you have the maximum random number
-                if (f == 1) {
+                if (iMax) {
                     additionalColsInRow = 0;
-                    for (k = rowPointers[i]; k < rowPointers[i + 1]; k++) {
-                        j = colIndices[k];
+                    for (int k = rowPointers[i]; k < rowPointers[i + 1]; k++) {
+                        int j = colIndices[k];
                         if (!visitedColumns[j]) {
                             visitedColumns[j] = true;
                             additionalColsInRow += 3;
@@ -105,13 +116,12 @@ int colorBlockedNodes(int rows, const int *rowPointers, const int *colIndices, s
                     if ((rowsInColor + 2) >= maxRowsPerColor) {
                         break;
                     }
-
                 }
 
             }
             // Check if graph coloring is done.
             left = 0;
-            for (k = 0; k < rows; k++) {
+            for (int k = 0; k < rows; k++) {
                 if (colors[k] == -1) {
                     left++;
                 }
@@ -122,7 +132,9 @@ int colorBlockedNodes(int rows, const int *rowPointers, const int *colIndices, s
         }
     }
 
-    printf("Could not find a graph coloring with %d colors after %d tries.\nAmount of colorless nodes: %d.\n", c, t, left);
+    std::ostringstream oss;
+    oss << "Error could not find a graph coloring with " << c << " colors after " << max_tries << " tries.\nNumber of colorless nodes: " << left;
+    OPM_THROW(std::logic_error, oss.str());
     return -1;
 }
 
@@ -288,12 +300,10 @@ int *findLevelScheduling(int *CSRColIndices, int *CSRRowPointers, int *CSCColInd
 
 int* findGraphColoring(int *colIndices, int *rowPointers, int Nb, int maxRowsPerColor, int maxColsPerColor, int *numColors, int *toOrder, int* fromOrder) {
     std::vector<int> rowColor;
-    rowColor.reserve(Nb);
+    rowColor.resize(Nb);
     int *rowsPerColor = new int[MAX_COLORS];
 
-    if (colorBlockedNodes(Nb, rowPointers, colIndices, rowColor, maxRowsPerColor, maxColsPerColor) == -1) {
-        return nullptr;
-    }
+    colorBlockedNodes(Nb, rowPointers, colIndices, rowColor, maxRowsPerColor, maxColsPerColor);
 
     colorsToReordering(Nb, rowColor, toOrder, fromOrder, rowsPerColor);
 

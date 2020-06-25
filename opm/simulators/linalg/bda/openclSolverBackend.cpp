@@ -38,7 +38,8 @@
 // otherwise, the nonzeroes of the matrix are assumed to be in a contiguous array, and a single GPU memcpy is enough
 #define COPY_ROW_BY_ROW 0
 
-
+// Level Scheduling respects the depencies in the original matrix
+// Graph Coloring is more aggresive and is likely to change the number of linearizations and linear iterations to converge, but can still be faster on GPU because it results in more parallelism
 #define LEVEL_SCHEDULING 1
 #define GRAPH_COLORING   0
 
