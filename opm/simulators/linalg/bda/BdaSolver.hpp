@@ -21,8 +21,6 @@
 #define OPM_BDASOLVER_BACKEND_HEADER_INCLUDED
 
 
-#include <string>
-#include <vector>
 #include <sys/time.h>
 
 #include <opm/simulators/linalg/bda/BdaResult.hpp>

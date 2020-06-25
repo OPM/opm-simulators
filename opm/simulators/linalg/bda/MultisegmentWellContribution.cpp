@@ -18,7 +18,6 @@
 */
 
 
-#include <cstdlib>
 #include <config.h> // CMake
 
 #if HAVE_UMFPACK

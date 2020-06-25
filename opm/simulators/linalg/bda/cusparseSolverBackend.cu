@@ -21,11 +21,7 @@
 #error "Cannot compile for cusparse: NVIDIA compiler not found"
 #endif
 
-#include <cstdio>
-#include <cstdlib>
 #include <cuda_runtime.h>
-#include <iostream>
-#include <sys/time.h>
 #include <sstream>
 
 #include <opm/common/OpmLog/OpmLog.hpp>

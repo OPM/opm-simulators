@@ -17,11 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <cstdio>
 #include <cstring>
-#include <sys/time.h>
 #include <cmath>
-#include <iostream>
 
 #include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
 

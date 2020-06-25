@@ -20,16 +20,10 @@
 #ifndef BILU0_HPP
 #define BILU0_HPP
 
-#include <config.h> // CMake
-
-#include <memory>
-
 #include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
 
-#if HAVE_OPENCL
 #define __CL_ENABLE_EXCEPTIONS
 #include <CL/cl.hpp>            // up to OpenCL 1.2
-#endif
 
 namespace bda
 {
