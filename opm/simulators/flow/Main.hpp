@@ -100,8 +100,8 @@ namespace Opm {
 # else
     Dune::MPIHelper::instance(argc, argv);
 # endif
-    Opm::FlowMainEbos<TypeTag> mainfunc;
-    return mainfunc.execute(argc, argv, outputCout, outputFiles);
+    Opm::FlowMainEbos<TypeTag> mainfunc(argc, argv, outputCout, outputFiles);
+    return mainfunc.execute();
   }
 }
 

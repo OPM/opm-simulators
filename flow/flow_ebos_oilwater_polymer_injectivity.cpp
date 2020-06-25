@@ -84,8 +84,9 @@ int flowEbosOilWaterPolymerInjectivityMain(int argc, char** argv, bool outputCou
     Dune::MPIHelper::instance(argc, argv);
 #endif
 
-    Opm::FlowMainEbos<TTAG(EclFlowOilWaterPolymerInjectivityProblem)> mainfunc;
-    return mainfunc.execute(argc, argv, outputCout, outputFiles);
+    Opm::FlowMainEbos<TTAG(EclFlowOilWaterPolymerInjectivityProblem)>
+        mainfunc {argc, argv, outputCout, outputFiles};
+    return mainfunc.execute();
 }
 
 }
