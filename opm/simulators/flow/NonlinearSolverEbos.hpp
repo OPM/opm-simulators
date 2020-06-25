@@ -226,10 +226,11 @@ namespace Opm {
             if(not(converged)){
                 report.converged = false;
             }else{
+                model_->updateSolution();
+                model_->ebosSimulator().problem().updateTotalSaturation();  
                 model_->afterStep(timer);
                 report.converged = true;
-            }
-            model_->updateSolution();
+            }            
             //todo fill this report correctly
             return report;
                 

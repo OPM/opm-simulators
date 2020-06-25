@@ -908,7 +908,7 @@ public:
         const bool invalidateFromMaxWaterSat = updateMaxWaterSaturation_();
         const bool invalidateFromMinPressure = updateMinPressure_();
         this->updatePressureAndFluxes();//update stored pressure in case of sequential do not need to recalculate chach
-        this->updateTotalSaturation();
+        //this->updateTotalSaturation();
         invalidateIntensiveQuantities = invalidateFromMaxWaterSat || invalidateFromMinPressure;
 
         if (invalidateIntensiveQuantities)
@@ -993,7 +993,7 @@ public:
 
         bool isSubStep = !EWOMS_GET_PARAM(TypeTag, bool, EnableWriteAllSolutions) && !this->simulator().episodeWillBeOver();
         eclWriter_->evalSummaryState(isSubStep);
-
+        this->writeExtra();
         auto& schedule = simulator.vanguard().schedule();
         auto& ecl_state = simulator.vanguard().eclState();
         int episodeIdx = simulator.episodeIndex();
@@ -1005,6 +1005,43 @@ public:
                            simulator.vanguard().summaryState());
     }
 
+
+    void writeExtra(){
+        std::string dir = this->simulator().problem().outputDir();
+        if (dir == ".") {
+            dir = "";
+        } else if (!dir.empty() && dir.back() != '/') {
+            dir += "/";
+        }
+        namespace fs = Opm::filesystem;
+        fs::path output_dir(dir);
+        fs::path subdir("extra_out");
+        output_dir = output_dir / subdir;
+        if (!(fs::exists(output_dir))) {
+            fs::create_directory(output_dir);
+        }
+        std::ostringstream oss;
+        oss << "totalsat_" << this->simulator().episodeIndex() << "_time_";
+        oss << std::setprecision(15) << std::setw(12) << std::setfill('0') << this->simulator().time() << "_";
+        std::string output_file(oss.str());
+        fs::path full_path = output_dir / output_file;
+        std::string prefix = full_path.string() + ".txt";
+        {            
+#if HAVE_MPI
+            //std::string filename = prefix + ename + "matrix_istl";
+#endif
+            std::ofstream file(prefix.c_str());
+            std::string simulationType  = EWOMS_GET_PARAM(TypeTag, std::string, SimulationType);
+            if(simulationType == "seq"){
+                Opm::LinearizationType linearizationType = this->simulator().model().linearizer().getLinearizationType();
+                assert(linearizationType.type == Opm::LinearizationType::seqtransport);
+            }
+            for(const auto& v : totalSaturation_){
+                file << v << std::endl;
+            }            
+        }
+    }
+    
     /*!
      * \brief Called by the simulator after the end of an episode.
      */
@@ -1021,6 +1058,7 @@ public:
             simulator.setFinished(true);
             return;
         }
+        // Combine and return.
 
         // .. if we're not yet done, start the next episode (report step)
         simulator.startNextEpisode(timeMap.getTimeStepLength(episodeIdx + 1));
