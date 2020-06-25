@@ -22,6 +22,7 @@
 #include <opm/common/utility/numeric/RootFinders.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellInjectionProperties.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/simulators/linalg/MatrixBlock.hpp>
 
 namespace Opm
 {
