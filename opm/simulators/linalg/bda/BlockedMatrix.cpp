@@ -104,10 +104,10 @@ void sortBlockedRow(int *colIndices, double *data, int left, int right) {
 template <unsigned int block_size>
 void blockMultSub(double *a, double *b, double *c)
 {
-    for (int row = 0; row < block_size; row++) {
-        for (int col = 0; col < block_size; col++) {
+    for (unsigned int row = 0; row < block_size; row++) {
+        for (unsigned int col = 0; col < block_size; col++) {
             double temp = 0.0;
-            for (int k = 0; k < block_size; k++) {
+            for (unsigned int k = 0; k < block_size; k++) {
                 temp += b[block_size * row + k] * c[block_size * k + col];
             }
             a[block_size * row + col] -= temp;
@@ -119,10 +119,10 @@ void blockMultSub(double *a, double *b, double *c)
 
 template <unsigned int block_size>
 void blockMult(double *mat1, double *mat2, double *resMat) {
-    for (int row = 0; row < block_size; row++) {
-        for (int col = 0; col < block_size; col++) {
+    for (unsigned int row = 0; row < block_size; row++) {
+        for (unsigned int col = 0; col < block_size; col++) {
             double temp = 0;
-            for (int k = 0; k < block_size; k++) {
+            for (unsigned int k = 0; k < block_size; k++) {
                 temp += mat1[block_size * row + k] * mat2[block_size * k + col];
             }
             resMat[block_size * row + col] = temp;
