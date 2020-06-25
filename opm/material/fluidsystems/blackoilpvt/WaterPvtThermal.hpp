@@ -273,7 +273,7 @@ public:
         Scalar muRef = pvtwViscosity_[regionIdx]/(1.0 + x + 0.5*x*x);
 
         // compute the viscosity deviation due to temperature
-        const auto& muWatvisct = watvisctCurves_[regionIdx].eval(temperature);
+        const auto& muWatvisct = watvisctCurves_[regionIdx].eval(temperature, true);
         return isothermalMu * muWatvisct/muRef;
     }
 
