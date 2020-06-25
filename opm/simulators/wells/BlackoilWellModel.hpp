@@ -235,7 +235,7 @@ namespace Opm {
             // subtract B*inv(D)*C * x from A*x
             void apply(const BVector& x, BVector& Ax) const;
 
-#if HAVE_CUDA
+#if HAVE_CUDA || HAVE_OPENCL
             // accumulate the contributions of all Wells in the WellContributions object
             void getWellContributions(WellContributions& x) const;
 #endif

@@ -22,7 +22,7 @@
 #include <cstdlib>
 #include <cstring>
 
-#ifdef __NVCC__
+#if HAVE_CUDA
 #include "opm/simulators/linalg/bda/cuda_header.hpp"
 #include <cuda_runtime.h>
 #endif
@@ -35,6 +35,7 @@ namespace Opm
 {
 
 // apply WellContributions using y -= C^T * (D^-1 * (B * x))
+#if HAVE_CUDA
 __global__ void apply_well_contributions(
     const double * __restrict__ Cnnzs,
     const double * __restrict__ Dnnzs,
@@ -126,10 +127,12 @@ __global__ void apply_well_contributions(
     }
 
 }
+#endif
 
 void WellContributions::alloc()
 {
     if (num_std_wells > 0) {
+#if HAVE_CUDA
         cudaMalloc((void**)&d_Cnnzs, sizeof(double) * num_blocks * dim * dim_wells);
         cudaMalloc((void**)&d_Dnnzs, sizeof(double) * num_std_wells * dim_wells * dim_wells);
         cudaMalloc((void**)&d_Bnnzs, sizeof(double) * num_blocks * dim * dim_wells);
@@ -139,6 +142,7 @@ void WellContributions::alloc()
         cudaMalloc((void**)&d_val_pointers, sizeof(int) * (num_std_wells + 1));
         cudaCheckLastError("apply_gpu malloc failed");
         allocated = true;
+#endif
     }
 }
 
@@ -147,8 +151,10 @@ WellContributions::~WellContributions()
     // free pinned memory for MultisegmentWellContributions
     if (h_x) {
         if (host_mem_cuda) {
+#if HAVE_CUDA
             cudaFreeHost(h_x);
             cudaFreeHost(h_y);
+#endif
         } else {
             delete[] h_x;
             delete[] h_y;
@@ -163,6 +169,7 @@ WellContributions::~WellContributions()
 
     // delete data for StandardWell
     if (num_std_wells > 0) {
+#if HAVE_CUDA
         cudaFree(d_Cnnzs);
         cudaFree(d_Dnnzs);
         cudaFree(d_Bnnzs);
@@ -170,12 +177,14 @@ WellContributions::~WellContributions()
         cudaFree(d_Bcols);
         delete[] val_pointers;
         cudaFree(d_val_pointers);
+#endif
     }
 }
 
 
 // Apply the WellContributions, similar to StandardWell::apply()
 // y -= (C^T *(D^-1*(   B*x)))
+#if HAVE_CUDA
 void WellContributions::apply(double *d_x, double *d_y)
 {
     // apply MultisegmentWells
@@ -212,6 +221,7 @@ void WellContributions::apply(double *d_x, double *d_y)
         apply_well_contributions <<< num_std_wells, 32, smem_size, stream>>>(d_Cnnzs, d_Dnnzs, d_Bnnzs, d_Ccols, d_Bcols, d_x, d_y, dim, dim_wells, d_val_pointers);
     }
 }
+#endif
 
 #if HAVE_OPENCL
 void WellContributions::apply(cl::Buffer& d_x, cl::Buffer& d_y) {
@@ -252,6 +262,7 @@ void WellContributions::addMatrix(MatrixType type, int *colIndices, double *valu
         OPM_THROW(std::logic_error, "Error cannot add wellcontribution before allocating memory in WellContributions");
     }
 
+#if HAVE_CUDA
     switch (type) {
     case MatrixType::C:
         cudaMemcpy(d_Cnnzs + num_blocks_so_far * dim * dim_wells, values, sizeof(double) * val_size * dim * dim_wells, cudaMemcpyHostToDevice);
@@ -277,8 +288,12 @@ void WellContributions::addMatrix(MatrixType type, int *colIndices, double *valu
         num_blocks_so_far += val_size;
         num_std_wells_so_far++;
     }
+#else
+    OPM_THROW(std::logic_error, "Error cannot use StandardWells since CUDA was not found");
+#endif
 }
 
+#if HAVE_CUDA
 void WellContributions::setCudaStream(cudaStream_t stream_)
 {
     this->stream = stream_;
@@ -286,6 +301,7 @@ void WellContributions::setCudaStream(cudaStream_t stream_)
         well->setCudaStream(stream_);
     }
 }
+#endif
 
 void WellContributions::setBlockSize(unsigned int dim_, unsigned int dim_wells_)
 {

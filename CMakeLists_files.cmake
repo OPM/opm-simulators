@@ -52,6 +52,8 @@ if(OPENCL_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/Reorder.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/openclSolverBackend.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BdaBridge.cpp)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/WellContributions.cu)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/MultisegmentWellContribution.cpp)
 endif()
 if(MPI_FOUND)
   list(APPEND MAIN_SOURCE_FILES opm/simulators/utils/ParallelEclipseState.cpp

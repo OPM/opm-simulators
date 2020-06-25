@@ -104,7 +104,9 @@ public:
 
     /// Set a cudaStream to be used
     /// \param[in] stream           the cudaStream that is used to launch the kernel in
+#if HAVE_CUDA
     void setCudaStream(cudaStream_t stream);
+#endif
 
     /// Create a new WellContributions, implementation is empty
     WellContributions() {};
@@ -116,7 +118,9 @@ public:
     /// performs y -= (C^T * (D^-1 * (B*x))) for all Wells
     /// \param[in] d_x        vector x, must be on GPU
     /// \param[inout] d_y     vector y, must be on GPU
+#if HAVE_CUDA
     void apply(double *d_x, double *d_y);
+#endif
 #if HAVE_OPENCL
     void apply(cl::Buffer& x, cl::Buffer& y);
 #endif

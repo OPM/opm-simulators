@@ -185,7 +185,7 @@ namespace Opm
         /// r = r - C D^-1 Rw
         virtual void apply(BVector& r) const override;
 
-#if HAVE_CUDA
+#if HAVE_CUDA || HAVE_OPENCL
         /// add the contribution (C, D^-1, B matrices) of this Well to the WellContributions object
         void addWellContribution(WellContributions& wellContribs) const;
 

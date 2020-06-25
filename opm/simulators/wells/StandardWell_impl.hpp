@@ -2293,7 +2293,7 @@ namespace Opm
         duneC_.mmtv(invDrw_, r);
     }
 
-#if HAVE_CUDA
+#if HAVE_CUDA || HAVE_OPENCL
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::

@@ -17,9 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __NVCC__
-#error "Cannot compile for cusparse: NVIDIA compiler not found"
-#endif
+#include <config.h>
 
 #include <cuda_runtime.h>
 #include <sstream>

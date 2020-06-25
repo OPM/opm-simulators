@@ -640,7 +640,7 @@ namespace Opm
 
 
 
-#if HAVE_CUDA
+#if HAVE_CUDA || HAVE_OPENCL
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::

@@ -138,8 +138,16 @@ endif()
 find_package(OpenCL)
 
 if(OpenCL_FOUND)
-  set(HAVE_OPENCL 1)
-  include_directories(${OpenCL_INCLUDE_DIRS})
+  # the current OpenCL implementation relies on cl.hpp, not cl2.hpp
+  # make sure it is available, otherwise disable OpenCL
+  find_file(CL_HPP CL/cl.hpp HINTS ${OpenCL_INCLUDE_DIRS})
+  if(CL_HPP)
+    set(HAVE_OPENCL 1)
+    include_directories(${OpenCL_INCLUDE_DIRS})
+  else()
+    message(WARNING " OpenCL was found, but this version of opm-simulators relies on CL/cl.hpp, which implements OpenCL 1.0, 1.1 and 1.2.\n Deactivating OpenCL")
+    set(OpenCL_FOUND OFF)
+  endif()
 endif()
 
 # read the list of components from this file (in the project directory);

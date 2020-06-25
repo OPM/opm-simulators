@@ -112,10 +112,12 @@ void MultisegmentWellContribution::apply(double *h_x, double *h_y)
     }
 }
 
+#if HAVE_CUDA
 void MultisegmentWellContribution::setCudaStream(cudaStream_t stream_)
 {
     stream = stream_;
 }
+#endif
 
 unsigned int MultisegmentWellContribution::getColIdx(unsigned int idx)
 {
