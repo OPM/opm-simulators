@@ -3241,7 +3241,7 @@ namespace Opm
         const EvalWell pressure = extendEval(getPerfCellPressure(fs));
         const EvalWell rs = extendEval(fs.Rs());
         const EvalWell rv = extendEval(fs.Rv());
-        const EvalWell ST = extendEval(fs.totalSaturation());
+        const EvalWell totalSaturation = extendEval(fs.totalSaturation());
         std::vector<EvalWell> b_perfcells_dense(num_components_, EvalWell{numWellEq_ + numEq, 0.0});
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
@@ -3269,7 +3269,7 @@ namespace Opm
             // compute component volumetric rates at standard conditions
             for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
                 // do upwinding of total saturation and mobility and totalmobility
-                const EvalWell cq_p = ST*mob[componentIdx]/mobt * cq_r_t;
+                const EvalWell cq_p = totalSaturation*mob[componentIdx]/mobt * cq_r_t;
                 perf_rates.cq_s[componentIdx] = b_perfcells_dense[componentIdx] * cq_p;
             }
 

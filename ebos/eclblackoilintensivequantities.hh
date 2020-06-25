@@ -193,22 +193,22 @@ public:
         }
 
         // oil is the reference phase for pressure
-        Evaluation ST = 1.0;
+        Evaluation totalSaturation = 1.0;
         if (linearizationType.type == Opm::LinearizationType::seqtransport) {
-            ST = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx, linearizationType);
-            //assert(ST<2);// debug to be sure no pressure is pressent
-            //assert(timeIdx==0 ||  ST == 1);// for pure sequential with multiple steps this is always true.
+            totalSaturation = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx, linearizationType);
+            //assert(totalSaturation<2);// debug to be sure no pressure is pressent
+            //assert(timeIdx==0 ||  totalSaturation == 1);// for pure sequential with multiple steps this is always true.
             if(timeIdx == 1){
-                ST = 1.0;
+                totalSaturation = 1.0;
             }
             
         }else if (linearizationType.type == Opm::LinearizationType::pressure) {
-            // we are doing sequation pressure where ST may not be 1 any more
-            if(timeIdx == 1){//pressure solves try to make new value i.e. timeIdx==0 so that ST==1;
-                ST = elemCtx.problem().totalSaturation(globalSpaceIdx);
+            // we are doing sequation pressure where totalSaturation may not be 1 any more
+            if(timeIdx == 1){//pressure solves try to make new value i.e. timeIdx==0 so that totalSaturation==1;
+                totalSaturation = elemCtx.problem().totalSaturation(globalSpaceIdx);
             }
         }
-        fluidState_.setTotalSaturation(ST);
+        fluidState_.setTotalSaturation(totalSaturation);
         if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_pg_Rv) {
             Evaluation pg;
             if (linearizationType.type == Opm::LinearizationType::seqtransport) {
@@ -217,7 +217,7 @@ public:
                                                gasPhaseIdx)); // get current value assuem this is not updated
             } else {
                 pg = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx, linearizationType);
-                //assert(pg>2.0);//enure not ST is present
+                //assert(pg>2.0);//enure not totalSaturation is present
             }
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 if (FluidSystem::phaseIsActive(phaseIdx))
@@ -229,7 +229,7 @@ public:
                 po = Toolbox::value(elemCtx.problem().pressure(globalSpaceIdx, oilPhaseIdx));
             } else {
                 po = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx, linearizationType);
-                //assert(po>2.0);//enure not ST is present
+                //assert(po>2.0);//enure not totalSaturation is present
             }            
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 if (FluidSystem::phaseIsActive(phaseIdx))
@@ -399,7 +399,7 @@ public:
         porosity_ *= problem.template rockCompPoroMultiplier<Evaluation>(*this, globalSpaceIdx);
 
         // this line is doing things for sequential simulation to avoid modifying storage term.
-        porosity_ *= ST;
+        porosity_ *= totalSaturation;
 
         asImp_().solventPvtUpdate_(elemCtx, dofIdx, timeIdx);
         asImp_().polymerPropertiesUpdate_(elemCtx, dofIdx, timeIdx);

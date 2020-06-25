@@ -461,8 +461,8 @@ protected:
             mob1[phaseIdx] = intQuantsIn.mobility(phaseIdx);
             mob2[phaseIdx] = Toolbox::value(intQuantsEx.mobility(phaseIdx));
         }
-        Evaluation ST1 = intQuantsIn.fluidState().totalSaturation();
-        Evaluation ST2 = Toolbox::value(intQuantsEx.fluidState().totalSaturation());
+        Evaluation totalSaturation1 = intQuantsIn.fluidState().totalSaturation();
+        Evaluation totalSaturation2 = Toolbox::value(intQuantsEx.fluidState().totalSaturation());
         Evaluation totalflux;
         if(linearizationType.type == Opm::LinearizationType::seqtransport){
             unsigned gIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
@@ -497,7 +497,7 @@ protected:
                 upIdx_[phaseIdx] = interiorDofIdx_;
                 dnIdx_[phaseIdx] = exteriorDofIdx_;
                 fmob[phaseIdx] = mob1[phaseIdx];
-                fst[phaseIdx] = ST1;
+                fst[phaseIdx] = totalSaturation1;
             }else{
              if(linearizationType.type == Opm::LinearizationType::implicit){
                  if(not(pressureDifference_[phaseIdx] == 0.0)){
@@ -508,7 +508,7 @@ protected:
                 upIdx_[phaseIdx] = exteriorDofIdx_;
                 dnIdx_[phaseIdx] = interiorDofIdx_;
                 fmob[phaseIdx] = mob2[phaseIdx];
-                fst[phaseIdx] = ST2;
+                fst[phaseIdx] = totalSaturation2;
             }
             mobT += fmob[phaseIdx];
         }
