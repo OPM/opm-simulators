@@ -45,6 +45,7 @@ int colorBlockedNodes(int rows, const int *rowPointers, const int *colIndices, s
 /// \param[in] toOrder       reorder pattern that lists for each index in the original order, to which index in the new order it should be moved
 /// \param[in] fromOrder     reorder pattern that lists for each index in the new order, from which index in the original order it was moved
 /// \param[inout] rMat       reordered Matrix 
+template <unsigned int block_size>
 void blocked_reorder_matrix_by_pattern(BlockedMatrix *mat, int *toOrder, int *fromOrder, BlockedMatrix *rMat);
 
 /// Compute reorder mapping from the color that each node has received
@@ -63,6 +64,7 @@ void colorsToReordering(int Nb, std::vector<int>& colors, int *toOrder, int *fro
 /// \param[in] toOrder       reorder pattern that lists for each index in the original order, to which index in the new order it should be moved
 /// \param[in] fromOrder     reorder pattern that lists for each index in the new order, from which index in the original order it was moved
 /// \param[inout] rVector    reordered vector
+template <unsigned int block_size>
 void blocked_reorder_vector_by_pattern(int Nb, double *vector, int *fromOrder, double *rVector);
 
 /// Determine whether all rows that a certain row depends on are done already
@@ -109,7 +111,8 @@ int* findGraphColoring(int *colIndices, int *rowPointers, int Nb, int maxRowsPer
 /// \param[inout] Bcols       row indices of the result BCSC matrix
 /// \param[inout] Brows       column pointers of the result BCSC matrix
 /// \param[in] Nb             number of blockrows in the matrix
-void bcsr_to_bcsc(Block *Avals, int *Acols, int *Arows, Block *Bvals, int *Bcols, int *Brows, int Nb);
+template <unsigned int block_size>
+void bcsr_to_bcsc(double *Avals, int *Acols, int *Arows, double *Bvals, int *Bcols, int *Brows, int Nb);
 
 }
 

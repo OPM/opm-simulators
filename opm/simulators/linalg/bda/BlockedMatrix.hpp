@@ -20,15 +20,11 @@
 #ifndef BLOCKED_MATRIX_HPP
 #define BLOCKED_MATRIX_HPP
 
-#define BLOCK_SIZE 3
-
-typedef double Block[9];
-
 namespace bda
 {
 
 typedef struct {
-    Block *nnzValues;
+    double *nnzValues;
     int *colIndices;
     int *rowPointers;
     int Nb;
@@ -39,6 +35,7 @@ typedef struct {
 /// \param[in] Nb               number of blockrows
 /// \param[in] nnzbs            number of nonzero blocks
 /// \return pointer to BlockedMatrix
+template <unsigned int block_size>
 BlockedMatrix *allocateBlockedMatrix(int Nb, int nnzbs);
 
 /// Allocate BlockedMatrix, but copy data pointers instead of allocating new memory
@@ -55,25 +52,28 @@ void freeBlockedMatrix(BlockedMatrix **mat);
 /// \param[inout] data           
 /// \param[in] left              lower index of data of row
 /// \param[in] right             upper index of data of row
-void sortBlockedRow(int *colIndices, Block *data, int left, int right);
+template <unsigned int block_size>
+void sortBlockedRow(int *colIndices, double *data, int left, int right);
 
 /// Multiply and subtract blocks
 /// a = a - (b * c)
 /// \param[inout] a              block to be subtracted from
 /// \param[in] b                 input block
 /// \param[in] c                 input block
-void blockMultSub(Block a, Block b, Block c);
+template <unsigned int block_size>
+void blockMultSub(double *a, double *b, double *c);
 
 /// Perform a 3x3 matrix-matrix multiplication on two blocks
 /// \param[in] mat1              input block 1
 /// \param[in] mat2              input block 2
 /// \param[inout] resMat         output block
-void blockMult(Block mat1, Block mat2, Block resMat);
+template <unsigned int block_size>
+void blockMult(double *mat1, double *mat2, double *resMat);
 
 /// Calculate the inverse of a block. This function is specific for only 3x3 block size.
 /// \param[in] mat               input block
 /// \param[inout] res            output block
-void blockInvert3x3(Block mat, Block res);
+void blockInvert3x3(double *mat, double *res);
 
 } // end namespace bda
 

@@ -131,9 +131,12 @@ int colorBlockedNodes(int rows, const int *rowPointers, const int *colIndices, s
  * Both a to order array, which contains for every node from the old matrix where it will move in the new matrix,
  * and the from order, which contains for every node in the new matrix where it came from in the old matrix.*/
 
+template <unsigned int block_size>
 void blocked_reorder_matrix_by_pattern(BlockedMatrix *mat, int *toOrder, int *fromOrder, BlockedMatrix *rMat) {
+    const unsigned int bs = block_size;
     int rIndex = 0;
-    int i, j, k;
+    int i, k;
+    unsigned int j;
 
     rMat->rowPointers[0] = 0;
     for (i = 0; i < mat->Nb; i++) {
@@ -141,8 +144,9 @@ void blocked_reorder_matrix_by_pattern(BlockedMatrix *mat, int *toOrder, int *fr
         // put thisRow from the old matrix into row i of the new matrix
         rMat->rowPointers[i + 1] = rMat->rowPointers[i] + mat->rowPointers[thisRow + 1] - mat->rowPointers[thisRow];
         for (k = mat->rowPointers[thisRow]; k < mat->rowPointers[thisRow + 1]; k++) {
-            for (j = 0; j < BLOCK_SIZE * BLOCK_SIZE; j++)
-                rMat->nnzValues[rIndex][j] = mat->nnzValues[k][j];
+            for (j = 0; j < bs * bs; j++){
+                rMat->nnzValues[rIndex * bs * bs + j] = mat->nnzValues[k * bs * bs + j];
+            }
             rMat->colIndices[rIndex] = mat->colIndices[k];
             rIndex++;
         }
@@ -153,7 +157,7 @@ void blocked_reorder_matrix_by_pattern(BlockedMatrix *mat, int *toOrder, int *fr
     }
     // re-sort the column indices of every row.
     for (i = 0; i < mat->Nb; i++) {
-        sortBlockedRow(rMat->colIndices, rMat->nnzValues, rMat->rowPointers[i], rMat->rowPointers[i + 1] - 1);
+        sortBlockedRow<bs>(rMat->colIndices, rMat->nnzValues, rMat->rowPointers[i], rMat->rowPointers[i + 1] - 1);
     }
 }
 
@@ -182,10 +186,11 @@ void colorsToReordering(int Nb, std::vector<int>& colors, int *toOrder, int *fro
 
 // Reorder a matrix according to a reordering pattern
 
+template <unsigned int block_size>
 void blocked_reorder_vector_by_pattern(int Nb, double *vector, int *fromOrder, double *rVector) {
     for (int i = 0; i < Nb; i++) {
-        for (int j = 0; j < BLOCK_SIZE; j++) {
-            rVector[BLOCK_SIZE * i + j] = vector[BLOCK_SIZE * fromOrder[i] + j];
+        for (unsigned int j = 0; j < block_size; j++) {
+            rVector[block_size * i + j] = vector[block_size * fromOrder[i] + j];
         }
     }
 }
@@ -304,7 +309,8 @@ int* findGraphColoring(int *colIndices, int *rowPointers, int Nb, int maxRowsPer
 // input : matrix A via Avals, Acols, Arows, Nb
 // output: matrix B via Bvals, Bcols, Brows
 // arrays for B must be preallocated
-void bcsr_to_bcsc(Block *Avals, int *Acols, int *Arows, Block *Bvals, int *Bcols, int *Brows, int Nb) {
+template <unsigned int block_size>
+void bcsr_to_bcsc(double *Avals, int *Acols, int *Arows, double *Bvals, int *Bcols, int *Brows, int Nb) {
 
     int nnz = Arows[Nb];
 
@@ -328,7 +334,7 @@ void bcsr_to_bcsc(Block *Avals, int *Acols, int *Arows, Block *Bvals, int *Bcols
             int col = Acols[j];
             int dest = Brows[col];
             Bcols[dest] = row;
-            memcpy(Bvals + dest, Avals + dest, sizeof(Block));
+            memcpy(Bvals + dest, Avals + dest, sizeof(double) * block_size * block_size);
             Brows[col]++;
         }
     }
@@ -339,5 +345,18 @@ void bcsr_to_bcsc(Block *Avals, int *Acols, int *Arows, Block *Bvals, int *Bcols
         last = temp;
     }
 }
+
+
+#define INSTANTIATE_BDA_FUNCTIONS(n)                                                                 \
+template void blocked_reorder_matrix_by_pattern<n>(BlockedMatrix *, int *, int *, BlockedMatrix *);  \
+template void blocked_reorder_vector_by_pattern<n>(int, double*, int*, double*);                     \
+template void bcsr_to_bcsc<n>(double *, int *, int *, double *, int *, int *, int );                 \
+
+INSTANTIATE_BDA_FUNCTIONS(1);
+INSTANTIATE_BDA_FUNCTIONS(2);
+INSTANTIATE_BDA_FUNCTIONS(3);
+INSTANTIATE_BDA_FUNCTIONS(4);
+
+#undef INSTANTIATE_BDA_FUNCTIONS
 
 } //namespace bda

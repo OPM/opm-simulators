@@ -47,7 +47,7 @@ namespace bda
         int nnzbs;   // number of blocks of the matrix
         BlockedMatrix *LMat, *UMat, *LUMat;
         BlockedMatrix *rMat = nullptr; // only used with PAR_SIM
-        Block *invDiagVals;
+        double *invDiagVals;
         int *diagIndex, *rowsPerColor;
         int *toOrder, *fromOrder;
         int numColors;

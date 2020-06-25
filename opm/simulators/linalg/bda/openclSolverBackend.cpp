@@ -497,10 +497,10 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
         vals_contiguous = new double[N];
 #endif
 
-        mat = (BlockedMatrix *)malloc(sizeof(BlockedMatrix));
+        mat = new BlockedMatrix();
         mat->Nb = Nb;
         mat->nnzbs = nnzb;
-        mat->nnzValues = (Block*)vals;
+        mat->nnzValues = vals;
         mat->colIndices = cols;
         mat->rowPointers = rows;
 
@@ -547,6 +547,7 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
 
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::finalize() {
+    delete mat;
     delete[] rb;
     delete[] tmp;
 #if COPY_ROW_BY_ROW
@@ -668,9 +669,8 @@ void openclSolverBackend<block_size>::update_system(double *vals, double *b) {
         t1 = second();
     }
 
-    mat->nnzValues = (Block*)vals;
-    //mat->nnzValues = static_cast<Block*>(vals);
-    blocked_reorder_vector_by_pattern(mat->Nb, b, fromOrder, rb);
+    mat->nnzValues = vals;
+    blocked_reorder_vector_by_pattern<block_size>(mat->Nb, b, fromOrder, rb);
 
     if (verbosity > 2) {
         t2 = second();
@@ -732,7 +732,7 @@ void openclSolverBackend<block_size>::get_result(double *x) {
     }
 
     queue->enqueueReadBuffer(d_x, CL_TRUE, 0, sizeof(double) * N, rb);
-    blocked_reorder_vector_by_pattern(mat->Nb, rb, toOrder, x);
+    blocked_reorder_vector_by_pattern<block_size>(mat->Nb, rb, toOrder, x);
 
     if (verbosity > 2) {
         t2 = second();
