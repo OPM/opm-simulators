@@ -156,6 +156,7 @@ namespace Opm {
             int maxseqiterations = 10;
             // should probalby store for trying onse more
             auto solutionOld = model_->ebosSimulator().model().solution(/*timeIdx=*/0);
+            auto oldTotalSaturation = model_->ebosSimulator().problem.getTotalSaturation();
             bool first= true;
             while(not(converged) && (seqiterations < maxseqiterations) ){
                 // do pressure step
@@ -172,7 +173,8 @@ namespace Opm {
                 first=false;
                 // do transport step
                 model_->ebosSimulator().problem().updatePressureAndFluxes();//update pressure ans ST 
-                linearizationType.type = Opm::LinearizationType::seqtransport;                         model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);
+                linearizationType.type = Opm::LinearizationType::seqtransport;
+                model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);
 
                 model_->updateSolution();
                 reportpre += lreportpre;
@@ -189,6 +191,10 @@ namespace Opm {
                     prevsol = solutionOld;
                     auto& currsol =  model_->ebosSimulator().model().solution(/*timeIdx=*/0);
                     currsol = solutionOld;
+                    // set back totalSaturation pressure and fluxes
+                    model_->ebosSimulator().problem.setTotalSaturation(oldTotalSaturation);
+                    // total pressure  fluxes should be updated in the pressure solve anyway
+                    
                     throw;
                 }
                 
@@ -213,13 +219,13 @@ namespace Opm {
                     auto convrep = model_->getConvergence(timer, seqiterations,residual_norms);
                     converged = convrep.converged();
                     // if this used one probably have to invalidate the storage cache
-                    //model_->ebosSimulator().model().setEnableStorageCache(storagecache);                    
+                    //model_->ebosSimulator().model().setEnableStorageCache(storagecache);
                     model_->ebosSimulator().problem().totalSaturationOne();
                 }else{
                     converged = true;
                 }
                 
-                std::cout << "Sequantial iteration " << seqiterations << std::endl;
+                std::cout << "Sequantial fullimplicit iteration " << seqiterations << std::endl;
                 seqiterations += 1;
             }
             SimulatorReportSingle report;

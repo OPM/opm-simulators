@@ -1817,6 +1817,16 @@ public:
         return totalSaturation_[globalDofIdx];
     }
 
+    const std::vector<Scalar>& getTotalSaturation() const
+    {
+        return totalSaturation_;
+    }
+
+    void setTotalSaturation(std::vector<Scalar> totSat) 
+    {
+        totalSaturation_ = totSat;
+    }
+    
     void totalSaturationOne(){
         for(auto& v : totalSaturation_){
             v=1.0;
