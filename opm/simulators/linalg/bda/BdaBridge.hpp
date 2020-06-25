@@ -20,8 +20,6 @@
 #ifndef BDABRIDGE_HEADER_INCLUDED
 #define BDABRIDGE_HEADER_INCLUDED
 
-#include <config.h>
-
 #include "dune/istl/solver.hh" // for struct InverseOperatorResult
 
 #include "dune/istl/bcrsmatrix.hh"

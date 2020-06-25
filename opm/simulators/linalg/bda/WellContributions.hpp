@@ -20,8 +20,6 @@
 #ifndef WELLCONTRIBUTIONS_HEADER_INCLUDED
 #define WELLCONTRIBUTIONS_HEADER_INCLUDED
 
-#include <config.h>
-
 #if HAVE_CUDA
 #include <cuda_runtime.h>
 #endif

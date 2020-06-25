@@ -18,9 +18,9 @@
 */
 
 
+#include <config.h> // CMake
 #include <cstdlib>
 #include <cstring>
-#include <config.h> // CMake
 
 #ifdef __NVCC__
 #include "opm/simulators/linalg/bda/cuda_header.hpp"
