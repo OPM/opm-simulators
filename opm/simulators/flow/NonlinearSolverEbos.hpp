@@ -156,7 +156,7 @@ namespace Opm {
             int maxseqiterations = 10;
             // should probalby store for trying onse more
             auto solutionOld = model_->ebosSimulator().model().solution(/*timeIdx=*/0);
-            auto oldTotalSaturation = model_->ebosSimulator().problem.getTotalSaturation();
+            auto oldTotalSaturation = model_->ebosSimulator().problem().getTotalSaturation();
             bool first= true;
             while(not(converged) && (seqiterations < maxseqiterations) ){
                 // do pressure step
@@ -192,7 +192,7 @@ namespace Opm {
                     auto& currsol =  model_->ebosSimulator().model().solution(/*timeIdx=*/0);
                     currsol = solutionOld;
                     // set back totalSaturation pressure and fluxes
-                    model_->ebosSimulator().problem.setTotalSaturation(oldTotalSaturation);
+                    model_->ebosSimulator().problem().setTotalSaturation(oldTotalSaturation);
                     // total pressure  fluxes should be updated in the pressure solve anyway
                     
                     throw;
