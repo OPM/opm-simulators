@@ -49,7 +49,7 @@
 
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
-#if HAVE_CUDA + HAVE_OPENCL
+#if HAVE_CUDA || HAVE_OPENCL
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
 #endif
 
@@ -278,7 +278,7 @@ protected:
         enum { pressureVarIndex = Indices::pressureSwitchIdx };
         static const int numEq = Indices::numEq;
 
-#if HAVE_CUDA + HAVE_OPENCL
+#if HAVE_CUDA || HAVE_OPENCL
         static const unsigned int block_size = Matrix::block_type::rows;
         std::unique_ptr<BdaBridge<Matrix, Vector, block_size>> bdaBridge;
 #endif
@@ -317,7 +317,7 @@ protected:
                 prm_ = setupPropertyTree<TypeTag>(parameters_);
             }
             const auto& gridForConn = simulator_.vanguard().grid();
-#if HAVE_CUDA + HAVE_OPENCL
+#if HAVE_CUDA || HAVE_OPENCL
             std::string gpu_mode = EWOMS_GET_PARAM(TypeTag, std::string, GpuMode);
             if (gridForConn.comm().size() > 1 && gpu_mode.compare("none") != 0) {
                 OpmLog::warning("Warning cannot use GPU with MPI, GPU is disabled");
@@ -623,7 +623,7 @@ protected:
 #endif
             {
                 // tries to solve linear system
-#if HAVE_CUDA + HAVE_OPENCL
+#if HAVE_CUDA || HAVE_OPENCL
                 bool use_gpu = bdaBridge->getUseGpu();
                 if (use_gpu) {
                     WellContributions wellContribs;
