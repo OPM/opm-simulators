@@ -41,12 +41,11 @@ namespace bda
 
     template <unsigned int block_size>
     BILU0<block_size>::BILU0(bool level_scheduling_, bool graph_coloring_, int verbosity_) :
-        level_scheduling(level_scheduling_), graph_coloring(graph_coloring_), verbosity(verbosity_)
+        verbosity(verbosity_), level_scheduling(level_scheduling_), graph_coloring(graph_coloring_)
     {
         if (level_scheduling == graph_coloring) {
             OPM_THROW(std::logic_error, "Error, either level_scheduling or graph_coloring must be true, not both\n");
         }
-        double t1 = second();
     }
 
     template <unsigned int block_size>
@@ -317,7 +316,7 @@ namespace bda
         }
         cl::Event event;
 
-        for(unsigned int color = 0; color < numColors; ++color){
+        for(int color = 0; color < numColors; ++color){
             event = (*ILU_apply1)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), s.Lvals, s.Lcols, s.Lrows, (unsigned int)Nb, x, y, s.rowsPerColor, color, block_size, cl::Local(lmem_per_work_group));
             // event.wait();
         }
@@ -337,18 +336,18 @@ namespace bda
 
 
     template <unsigned int block_size>
-    void BILU0<block_size>::setOpenCLContext(cl::Context *context){
-        this->context = context;
+    void BILU0<block_size>::setOpenCLContext(cl::Context *context_){
+        this->context = context_;
     }
     template <unsigned int block_size>
-    void BILU0<block_size>::setOpenCLQueue(cl::CommandQueue *queue){
-        this->queue = queue;
+    void BILU0<block_size>::setOpenCLQueue(cl::CommandQueue *queue_){
+        this->queue = queue_;
     }
     template <unsigned int block_size>
-    void BILU0<block_size>::setKernelParameters(const unsigned int work_group_size, const unsigned int total_work_items, const unsigned int lmem_per_work_group){
-        this->work_group_size = work_group_size;
-        this->total_work_items = total_work_items;
-        this->lmem_per_work_group = lmem_per_work_group;
+    void BILU0<block_size>::setKernelParameters(const unsigned int work_group_size_, const unsigned int total_work_items_, const unsigned int lmem_per_work_group_){
+        this->work_group_size = work_group_size_;
+        this->total_work_items = total_work_items_;
+        this->lmem_per_work_group = lmem_per_work_group_;
     }
     template <unsigned int block_size>
     void BILU0<block_size>::setKernels(
