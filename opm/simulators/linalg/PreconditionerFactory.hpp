@@ -197,6 +197,46 @@ private:
         }
     }
 
+    /// Helper method to determine if the local partitioning has the
+    /// K interior cells from [0, K-1] and ghost cells from [K, N-1].
+    /// Returns K if true, otherwise returns N. This is motivated by
+    /// usage in the ParallelOverlappingILU0 preconditiner.
+    template <class CommArg>
+    static size_t interiorIfGhostLast(const CommArg& comm)
+    {
+        size_t interior_count = 0;
+        size_t highest_interior_index = 0;
+        const auto& is = comm.indexSet();
+        for (const auto& ind : is) {
+            if (CommArg::OwnerSet::contains(ind.local().attribute())) {
+                ++interior_count;
+                highest_interior_index = std::max(highest_interior_index, ind.local().local());
+            }
+        }
+        if (highest_interior_index + 1 == interior_count) {
+            return interior_count;
+        } else {
+            return is.size();
+        }
+    }
+
+    static PrecPtr
+    createParILU(const Operator& op, const boost::property_tree::ptree& prm, const Comm& comm, const int ilulevel)
+    {
+        const double w = prm.get<double>("relaxation", 1.0);
+        const bool redblack = prm.get<bool>("redblack", false);
+        const bool reorder_spheres = prm.get<bool>("reorder_spheres", false);
+        // Already a parallel preconditioner. Need to pass comm, but no need to wrap it in a BlockPreconditioner.
+        if (ilulevel == 0) {
+            const size_t num_interior = interiorIfGhostLast(comm);
+            return std::make_shared<Opm::ParallelOverlappingILU0<Matrix, Vector, Vector, Comm>>(
+                op.getmat(), comm, w, Opm::MILU_VARIANT::ILU, num_interior, redblack, reorder_spheres);
+        } else {
+            return std::make_shared<Opm::ParallelOverlappingILU0<Matrix, Vector, Vector, Comm>>(
+                op.getmat(), comm, ilulevel, w, Opm::MILU_VARIANT::ILU, redblack, reorder_spheres);
+        }
+    }
+
     // Add a useful default set of preconditioners to the factory.
     // This is the default template, used for parallel preconditioners.
     // (Serial specialization below).
@@ -210,22 +250,13 @@ private:
         using P = boost::property_tree::ptree;
         using C = Comm;
         doAddCreator("ILU0", [](const O& op, const P& prm, const std::function<Vector()>&, const C& comm) {
-            const double w = prm.get<double>("relaxation", 1.0);
-            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V, C>>(
-                op.getmat(), comm, 0, w, Opm::MILU_VARIANT::ILU);
+            return createParILU(op, prm, comm, 0);
         });
         doAddCreator("ParOverILU0", [](const O& op, const P& prm, const std::function<Vector()>&, const C& comm) {
-            const double w = prm.get<double>("relaxation", 1.0);
-            const int n = prm.get<int>("ilulevel", 0);
-            // Already a parallel preconditioner. Need to pass comm, but no need to wrap it in a BlockPreconditioner.
-            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V, C>>(
-                op.getmat(), comm, n, w, Opm::MILU_VARIANT::ILU);
+            return createParILU(op, prm, comm, prm.get<int>("ilulevel", 0));
         });
         doAddCreator("ILUn", [](const O& op, const P& prm, const std::function<Vector()>&, const C& comm) {
-            const int n = prm.get<int>("ilulevel", 0);
-            const double w = prm.get<double>("relaxation", 1.0);
-            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V, C>>(
-                op.getmat(), comm, n, w, Opm::MILU_VARIANT::ILU);
+            return createParILU(op, prm, comm, prm.get<int>("ilulevel", 0));
         });
         doAddCreator("Jac", [](const O& op, const P& prm, const std::function<Vector()>&,
                                const C& comm) {

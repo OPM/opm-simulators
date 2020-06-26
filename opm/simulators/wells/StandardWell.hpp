@@ -26,7 +26,6 @@
 
 #include <opm/simulators/wells/RateConverter.hpp>
 #include <opm/simulators/wells/WellInterface.hpp>
-#include <opm/simulators/linalg/ISTLSolverEbos.hpp>
 
 #include <opm/models/blackoil/blackoilpolymermodules.hh>
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
