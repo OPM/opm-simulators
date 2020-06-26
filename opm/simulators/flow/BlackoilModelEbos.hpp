@@ -526,7 +526,7 @@ namespace Opm {
 
 
                 std::function<PressureVectorType()> weightsCalculator;// dummy
-                Dune::FlexibleSolver<PressureMatrixType,PressureVectorType> pressureSolver(prm,pmatrix, weightsCalculator, *comm);
+                Dune::FlexibleSolver<PressureMatrixType,PressureVectorType> pressureSolver(pmatrix, *comm, prm, weightsCalculator);
                 PressureVectorType xp(x.size(),0);
                 Dune::InverseOperatorResult res;
                 pressureSolver.apply(xp,rhs, res);

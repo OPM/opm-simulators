@@ -89,7 +89,7 @@ include ("${project}-prereqs")
 # our way of specifying cuda source files never worked for CMake
 # version < 3.8. Hence we deactivate cuda for these versions.
 # We use "CMAKE_VERSION VERSION_GREATER 3.7.9" instead of
-# CMAKE_VERSION VERSION_GREATER_EQUAL 3.8, because of backwarsd
+# CMAKE_VERSION VERSION_GREATER_EQUAL 3.8, because of backwards
 # compatibility to cmake 3.6 and lower.
 if(NOT CMAKE_DISABLE_FIND_PACKAGE_CUDA AND
     CMAKE_VERSION VERSION_GREATER 3.7.9)
