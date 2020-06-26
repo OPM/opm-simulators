@@ -348,7 +348,7 @@ namespace Opm
     computePerfRate(const IntensiveQuantities& intQuants,
                     const std::vector<EvalWell>& mob,
                     const EvalWell& bhp,
-                    const WellState& well_state,
+                    const WellState& prev_well_state,
                     const double Tw,
                     const int perf,
                     const bool allow_cf,
@@ -595,7 +595,8 @@ namespace Opm
             double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(intQuants,  cell_idx);
             const double Tw = well_index_[perf] * trans_mult;
             const LinearizationType& linearizationType = ebosSimulator.model().linearizer().getLinearizationType();
-            computePerfRate(intQuants, mob, bhp, well_state, Tw, perf, allow_cf,
+            const WellState& prev_well_state = ebosSimulator.problem().wellModel().prevWellState();
+            computePerfRate(intQuants, mob, bhp, prev_well_state, Tw, perf, allow_cf,
                             perf_rates, deferred_logger, linearizationType);
 
             // better way to do here is that use the cq_s and then replace the cq_s_water here?
@@ -2489,8 +2490,8 @@ namespace Opm
 
             PerfRates perf_rates(num_components_, numWellEq_);
             const LinearizationType& linearizationType = ebosSimulator.model().linearizer().getLinearizationType();
-            const WellState& well_state = ebosSimulator.problem().wellModel().wellState();
-            computePerfRate(intQuants, mob, EvalWell(numWellEq_ + numEq, bhp), well_state, Tw, perf, allow_cf,
+            const WellState& prev_well_state = ebosSimulator.problem().wellModel().prevWellState();
+            computePerfRate(intQuants, mob, EvalWell(numWellEq_ + numEq, bhp), prev_well_state, Tw, perf, allow_cf,
                             perf_rates, deferred_logger, linearizationType);
 
             for(int p = 0; p < np; ++p) {
@@ -2874,8 +2875,8 @@ namespace Opm
             double trans_mult = ebos_simulator.problem().template rockCompTransMultiplier<double>(int_quant, cell_idx);
             const double Tw = well_index_[perf] * trans_mult;
             LinearizationType linearizationType = ebos_simulator.model().linearizer().getLinearizationType();
-            const WellState& well_state = ebos_simulator.problem().wellModel().wellState();
-            computePerfRate(int_quant, mob, bhp, well_state, Tw, perf, allow_cf, perf_rates, deferred_logger, linearizationType);
+            const WellState& prev_well_state = ebos_simulator.problem().wellModel().prevWellState();
+            computePerfRate(int_quant, mob, bhp, prev_well_state, Tw, perf, allow_cf, perf_rates, deferred_logger, linearizationType);
             // TODO: make area a member
             const double area = 2 * M_PI * perf_rep_radius_[perf] * perf_length_[perf];
             const auto& material_law_manager = ebos_simulator.problem().materialLawManager();
@@ -3209,7 +3210,7 @@ namespace Opm
             
         auto cq_s_tmp = perf_rates.cq_s;
         if(linearizationType.type == Opm::LinearizationType::seqtransport){
-            perf_rates.cq_r_t = well_state.perfTotalResRates()[first_perf_ + perf];
+            perf_rates.cq_r_t = prev_well_state.perfTotalResRates()[first_perf_ + perf];
         }
         computePerfRateSeq(intQuants,mob,/*bhp,Tw,perf,*/allow_cf,perf_rates,deferred_logger);
         if(not(linearizationType.type == Opm::LinearizationType::seqtransport)){

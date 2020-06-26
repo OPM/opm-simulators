@@ -264,6 +264,9 @@ namespace Opm {
             // return the internal well state
             const WellState& wellState() const;
 
+            // return the internal well state
+            const WellState& prevWellState() const;
+
             const SimulatorReportSingle& lastReport() const;
 
             void addWellContributions(SparseMatrixAdapter& jacobian) const

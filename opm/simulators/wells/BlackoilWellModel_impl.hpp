@@ -144,7 +144,6 @@ namespace Opm {
         }
     }
 
-
     /// Return true if any well has a THP constraint.
     template<typename TypeTag>
     bool
@@ -1395,6 +1394,12 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     wellState() const { return well_state_; }
 
+    template<typename TypeTag>
+    const typename BlackoilWellModel<TypeTag>::WellState&
+    BlackoilWellModel<TypeTag>::
+    prevWellState() const { return previous_well_state_; }
+    
+    
     template<typename TypeTag>
     const typename BlackoilWellModel<TypeTag>::WellState&
     BlackoilWellModel<TypeTag>::

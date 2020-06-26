@@ -172,6 +172,7 @@ namespace Opm {
                 SimulatorReportSingle lreportpre = this->stepDefault(timer, /*next*/first, false);
                 first=false;
                 // do transport step
+                model_->ebosSimulator().problem().wellModel().endTimeStep();// shouldupdate previous state NB do wee need to store it if transportstep fails?
                 model_->ebosSimulator().problem().updatePressureAndFluxes();//update pressure ans ST 
                 linearizationType.type = Opm::LinearizationType::seqtransport;
                 model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);
