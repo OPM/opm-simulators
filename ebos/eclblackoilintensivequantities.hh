@@ -199,7 +199,7 @@ public:
             //assert(totalSaturation<2);// debug to be sure no pressure is pressent
             //assert(timeIdx==0 ||  totalSaturation == 1);// for pure sequential with multiple steps this is always true.
             if(timeIdx == 1){
-                totalSaturation = 1.0;
+                totalSaturation = elemCtx.problem().totalSaturation(globalSpaceIdx);
             }
             
         }else if (linearizationType.type == Opm::LinearizationType::pressure) {
