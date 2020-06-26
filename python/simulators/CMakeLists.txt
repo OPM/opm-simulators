@@ -4,6 +4,7 @@ set_target_properties( simulators PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PROJECT_
 
 target_sources(simulators
   PRIVATE
+    ../../opm/simulators/utils/moduleVersion.cpp
     ../../flow/flow_ebos_blackoil.cpp)
 
 target_link_libraries( simulators PRIVATE opmsimulators )

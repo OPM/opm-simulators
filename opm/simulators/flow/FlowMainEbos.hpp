@@ -303,6 +303,11 @@ namespace Opm
             return execute_(&FlowMainEbos::runSimulator, /*cleanup=*/true);
         }
 
+        int executeInitStep()
+        {
+            return execute_(&FlowMainEbos::runSimulatorInit, /*cleanup=*/false);
+        }
+
         // Print an ASCII-art header to the PRT and DEBUG files.
         // \return Whether unkown keywords were seen during parsing.
         static void printPRTHeader(bool output_cout)
@@ -533,6 +538,11 @@ namespace Opm
             return runSimulatorInitOrRun_(&FlowMainEbos::runSimulatorRunCallback_);
         }
 
+        int runSimulatorInit()
+        {
+            return runSimulatorInitOrRun_(&FlowMainEbos::runSimulatorInitCallback_);
+        }
+
     private:
         // Callback that will be called from runSimulatorInitOrRun_().
         int runSimulatorRunCallback_()
@@ -540,6 +550,13 @@ namespace Opm
             SimulatorReport report = simulator_->run(*simtimer_);
             runSimulatorAfterSim_(report);
             return report.success.exit_status;
+        }
+
+        // Callback that will be called from runSimulatorInitOrRun_().
+        int runSimulatorInitCallback_()
+        {
+            simulator_->init(*simtimer_);
+            return EXIT_SUCCESS;
         }
 
         // Output summary after simulation has completed
