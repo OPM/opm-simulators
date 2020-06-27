@@ -233,7 +233,7 @@ public:
 
     void evalSummaryState(bool isSubStep)
     {
-        int reportStepNum = simulator_.episodeIndex() + 1;
+        const int reportStepNum = simulator_.episodeIndex() + 1;
         /*
           The summary data is not evaluated for timestep 0, that is
           implemented with a:
@@ -254,33 +254,21 @@ public:
         if (reportStepNum == 0)
             return;
 
-        Scalar curTime = simulator_.time() + simulator_.timeStepSize();
-        Scalar totalCpuTime =
+        const Scalar curTime = simulator_.time() + simulator_.timeStepSize();
+        const Scalar totalCpuTime =
             simulator_.executionTimer().realTimeElapsed() +
             simulator_.setupTimer().realTimeElapsed() +
             simulator_.vanguard().externalSetupTime();
 
-        Opm::data::Wells localWellData = simulator_.problem().wellModel().wellData();
+        const auto localWellData  = simulator_.problem().wellModel().wellData();
+        const auto localGroupData = simulator_.problem().wellModel()
+            .groupData(reportStepNum, simulator_.vanguard().schedule());
 
-        Opm::data::Group localGroupData = simulator_.problem().wellModel().groupData(reportStepNum, simulator_.vanguard().schedule());
-
-        const auto& gridView = simulator_.vanguard().gridView();
-        int numElements = gridView.size(/*codim=*/0);
-        bool log = collectToIORank_.isIORank();
-        eclOutputModule_.allocBuffers(numElements, reportStepNum, isSubStep, log, /*isRestart*/ false);
-
-        ElementContext elemCtx(simulator_);
-        ElementIterator elemIt = gridView.template begin</*codim=*/0>();
-        const ElementIterator& elemEndIt = gridView.template end</*codim=*/0>();
-        for (; elemIt != elemEndIt; ++elemIt) {
-            const Element& elem = *elemIt;
-            elemCtx.updatePrimaryStencil(elem);
-            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-            eclOutputModule_.processElement(elemCtx);
-        }
+        this->prepareLocalCellData(isSubStep, reportStepNum);
 
         if (collectToIORank_.isParallel())
-            collectToIORank_.collect({}, eclOutputModule_.getBlockData(), localWellData, localGroupData);
+            collectToIORank_.collect({}, eclOutputModule_.getBlockData(),
+                                     localWellData, localGroupData);
 
         std::map<std::string, double> miscSummaryData;
         std::map<std::string, std::vector<double>> regionData;
@@ -294,21 +282,27 @@ public:
         eclOutputModule_.outputCumLog(reportStepNum, isSubStep, forceDisableCumOutput);
 
         std::vector<char> buffer;
-        if (collectToIORank_.isIORank()) {
+        if (this->collectToIORank_.isIORank()) {
             const auto& summary = eclIO_->summary();
             const auto& eclState = simulator_.vanguard().eclState();
 
             // Add TCPU
-            if (totalCpuTime != 0.0)
+            if (totalCpuTime != 0.0) {
                 miscSummaryData["TCPU"] = totalCpuTime;
+            }
 
-            const Opm::data::Wells& wellData = collectToIORank_.isParallel() ? collectToIORank_.globalWellData() : localWellData;
-            const Opm::data::Group& groupData = collectToIORank_.isParallel() ? collectToIORank_.globalGroupData() : localGroupData;
+            const auto& wellData = this->collectToIORank_.isParallel()
+                ? this->collectToIORank_.globalWellData()
+                : localWellData;
 
-            const std::map<std::pair<std::string, int>, double>& blockData
-                = collectToIORank_.isParallel()
-                ? collectToIORank_.globalBlockData()
-                : eclOutputModule_.getBlockData();
+            const auto& groupData = this->collectToIORank_.isParallel()
+                ? this->collectToIORank_.globalGroupData()
+                : localGroupData;
+
+            const auto& blockData
+                = this->collectToIORank_.isParallel()
+                ? this->collectToIORank_.globalBlockData()
+                : this->eclOutputModule_.getBlockData();
 
             summary.eval(summaryState(),
                          reportStepNum,
@@ -342,75 +336,33 @@ public:
 
     void writeOutput(bool isSubStep)
     {
-        int reportStepNum = simulator_.episodeIndex() + 1;
-        Scalar curTime = simulator_.time() + simulator_.timeStepSize();
-        Scalar nextStepSize = simulator_.problem().nextTimeStepSize();
+        const int reportStepNum = simulator_.episodeIndex() + 1;
+
+        this->prepareLocalCellData(isSubStep, reportStepNum);
+        this->eclOutputModule_.outputErrorLog();
 
         // output using eclWriter if enabled
-        Opm::data::Wells localWellData = simulator_.problem().wellModel().wellData();
-        Opm::data::Group localGroupData = simulator_.problem().wellModel().groupData(reportStepNum, simulator_.vanguard().schedule());
+        auto localWellData = simulator_.problem().wellModel().wellData();
 
-        const auto& gridView = simulator_.vanguard().gridView();
-        int numElements = gridView.size(/*codim=*/0);
-        bool log = collectToIORank_.isIORank();
-        eclOutputModule_.allocBuffers(numElements, reportStepNum, isSubStep, log, /*isRestart*/ false);
-
-        ElementContext elemCtx(simulator_);
-        ElementIterator elemIt = gridView.template begin</*codim=*/0>();
-        const ElementIterator& elemEndIt = gridView.template end</*codim=*/0>();
-        for (; elemIt != elemEndIt; ++elemIt) {
-            const Element& elem = *elemIt;
-            elemCtx.updatePrimaryStencil(elem);
-            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-            eclOutputModule_.processElement(elemCtx);
-        }
-        eclOutputModule_.outputErrorLog();
-
-        // collect all data to I/O rank and assign to sol
         Opm::data::Solution localCellData = {};
-        if (!isSubStep)
-            eclOutputModule_.assignToSolution(localCellData);
+        if (! isSubStep) {
+            this->eclOutputModule_.assignToSolution(localCellData);
 
-        // add cell data to perforations for Rft output
-        if (!isSubStep)
-            eclOutputModule_.addRftDataToWells(localWellData, reportStepNum);
+            // add cell data to perforations for Rft output
+            this->eclOutputModule_.addRftDataToWells(localWellData, reportStepNum);
+        }
 
-        if (collectToIORank_.isParallel())
+        if (collectToIORank_.isParallel()) {
+            const auto localGroupData = simulator_.problem().wellModel()
+                .groupData(reportStepNum, simulator_.vanguard().schedule());
+
             collectToIORank_.collect(localCellData, eclOutputModule_.getBlockData(), localWellData, localGroupData);
+        }
 
-
-        if (collectToIORank_.isIORank()) {
-            const auto& eclState = simulator_.vanguard().eclState();
-            const auto& simConfig = eclState.getSimulationConfig();
-
-            bool enableDoublePrecisionOutput = EWOMS_GET_PARAM(TypeTag, bool, EclOutputDoublePrecision);
-            const Opm::data::Solution& cellData = collectToIORank_.isParallel() ? collectToIORank_.globalCellData() : localCellData;
-            const Opm::data::Wells& wellData = collectToIORank_.isParallel() ? collectToIORank_.globalWellData() : localWellData;
-            Opm::RestartValue restartValue(cellData, wellData);
-
-            if (simConfig.useThresholdPressure())
-                restartValue.addExtra("THRESHPR", Opm::UnitSystem::measure::pressure, simulator_.problem().thresholdPressure().data());
-
-            // Add suggested next timestep to extra data.
-            if (!isSubStep)
-                restartValue.addExtra("OPMEXTRA", std::vector<double>(1, nextStepSize));
-
-            // first, create a tasklet to write the data for the current time step to disk
-            auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(actionState(),
-                                                                     summaryState(),
-                                                                     *eclIO_,
-                                                                     reportStepNum,
-                                                                     isSubStep,
-                                                                     curTime,
-                                                                     restartValue,
-                                                                     enableDoublePrecisionOutput);
-
-            // then, make sure that the previous I/O request has been completed and the
-            // number of incomplete tasklets does not increase between time steps
-            taskletRunner_->barrier();
-
-            // finally, start a new output writing job
-            taskletRunner_->dispatch(eclWriteTasklet);
+        if (this->collectToIORank_.isIORank()) {
+            this->writeOutput(reportStepNum, isSubStep,
+                              std::move(localCellData),
+                              std::move(localWellData));
         }
     }
 
@@ -743,14 +695,80 @@ private:
     const Opm::Schedule& schedule() const
     { return simulator_.vanguard().schedule(); }
 
+    void prepareLocalCellData(const bool isSubStep,
+                              const int  reportStepNum)
+    {
+        const auto& gridView = simulator_.vanguard().gridView();
+        const int numElements = gridView.size(/*codim=*/0);
+        const bool log = collectToIORank_.isIORank();
+
+        eclOutputModule_.allocBuffers(numElements, reportStepNum,
+                                      isSubStep, log, /*isRestart*/ false);
+
+        ElementContext elemCtx(simulator_);
+        ElementIterator elemIt = gridView.template begin</*codim=*/0>();
+
+        const ElementIterator& elemEndIt = gridView.template end</*codim=*/0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            const Element& elem = *elemIt;
+
+            elemCtx.updatePrimaryStencil(elem);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
+            eclOutputModule_.processElement(elemCtx);
+        }
+    }
+
+    void writeOutput(const int               reportStepNum,
+                     const bool              isSubStep,
+                     ::Opm::data::Solution&& localCellData,
+                     ::Opm::data::Wells&&    localWellData)
+    {
+        const Scalar curTime = simulator_.time() + simulator_.timeStepSize();
+        const Scalar nextStepSize = simulator_.problem().nextTimeStepSize();
+        const auto isParallel = this->collectToIORank_.isParallel();
+
+        Opm::RestartValue restartValue {
+            isParallel ? this->collectToIORank_.globalCellData()
+                       : std::move(localCellData),
+
+            isParallel ? this->collectToIORank_.globalWellData()
+                       : std::move(localWellData)
+        };
+
+        if (simulator_.vanguard().eclState().getSimulationConfig().useThresholdPressure()) {
+            restartValue.addExtra("THRESHPR", Opm::UnitSystem::measure::pressure,
+                                  simulator_.problem().thresholdPressure().data());
+        }
+
+        // Add suggested next timestep to extra data.
+        if (! isSubStep) {
+            restartValue.addExtra("OPMEXTRA", std::vector<double>(1, nextStepSize));
+        }
+
+        // first, create a tasklet to write the data for the current time
+        // step to disk
+        auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(
+            this->actionState(), this->summaryState(), *this->eclIO_,
+            reportStepNum, isSubStep, curTime, std::move(restartValue),
+            EWOMS_GET_PARAM(TypeTag, bool, EclOutputDoublePrecision)
+            );
+
+        // then, make sure that the previous I/O request has been completed
+        // and the number of incomplete tasklets does not increase between
+        // time steps
+        this->taskletRunner_->barrier();
+
+        // finally, start a new output writing job
+        this->taskletRunner_->dispatch(std::move(eclWriteTasklet));
+    }
+
     Simulator& simulator_;
     CollectDataToIORankType collectToIORank_;
     EclOutputBlackOilModule<TypeTag> eclOutputModule_;
     std::unique_ptr<Opm::EclipseIO> eclIO_;
     std::unique_ptr<TaskletRunner> taskletRunner_;
     Scalar restartTimeStepSize_;
-
-
 };
 } // namespace Opm
 
