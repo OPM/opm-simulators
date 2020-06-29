@@ -356,8 +356,22 @@ namespace Opm
                     Opm::DeferredLogger& deferred_logger,
                     const Opm::LinearizationType& linearizationType) const
     {
-        //LinearizationType linearizatonType = ebosSimulator().linearizer().getLinarizationType();
-        if(not(linearizationType.type == Opm::LinearizationType::seqtransport)){
+        // auto cq_s_tmp = perf_rates.cq_s;
+        if(linearizationType.type == Opm::LinearizationType::seqtransport){
+            perf_rates.cq_r_t = prev_well_state.perfTotalResRates()[first_perf_ + perf];
+            computePerfRateSeq(intQuants,mob,/*bhp,Tw,perf,*/allow_cf,perf_rates,deferred_logger);
+            return;
+        }
+
+        // TODO: the following is some sanity check of the for computePerfRateSeq, while it is not done
+        // without running the code following until the end of the function
+        /* if(not(linearizationType.type == Opm::LinearizationType::seqtransport)){
+            for(size_t i = 0; i < cq_s_tmp.size(); ++i){
+                typedef Opm::MathToolbox<EvalWell> Toolbox;
+                assert(Toolbox::isSame(cq_s_tmp[i],perf_rates.cq_s[i],1e-6));
+            }
+        } */
+
         auto& cq_s = perf_rates.cq_s;
         auto& cq_r = perf_rates.cq_r;
         auto& cq_r_t = perf_rates.cq_r_t;
@@ -3206,19 +3220,7 @@ namespace Opm
                 }
             }
         }
-            }
-            
-        auto cq_s_tmp = perf_rates.cq_s;
-        if(linearizationType.type == Opm::LinearizationType::seqtransport){
-            perf_rates.cq_r_t = prev_well_state.perfTotalResRates()[first_perf_ + perf];
-        }
-        computePerfRateSeq(intQuants,mob,/*bhp,Tw,perf,*/allow_cf,perf_rates,deferred_logger);
-        if(not(linearizationType.type == Opm::LinearizationType::seqtransport)){
-            for(size_t i = 0; i < cq_s_tmp.size(); ++i){
-                typedef Opm::MathToolbox<EvalWell> Toolbox;
-                assert(Toolbox::isSame(cq_s_tmp[i],perf_rates.cq_s[i],1e-6));
-            }
-        }
+
     }
 
 
@@ -3299,7 +3301,7 @@ namespace Opm
             }
 
             // // Using total mobilities
-            // EvalWell total_mob_dense = 
+            // EvalWell total_mob_dense =
             // for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
             //     total_mob_dense += mob[componentIdx];
             //     cq_r[componentIdx] = - Tw * (mob[componentIdx] * drawdown);
