@@ -640,7 +640,7 @@ namespace Opm {
                     maxCoeff[ contiFoamEqIdx ] = std::max( maxCoeff[ contiFoamEqIdx ], std::abs( R2 ) / pvValue );
                 }
                 if (has_brine_ ) {
-                    B_avg[ contiBrineEqIdx ] += 1.0 / fs.invB(FluidSystem::gasPhaseIdx).value();
+                    B_avg[ contiBrineEqIdx ] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
                     const auto R2 = ebosResid[cell_idx][contiBrineEqIdx];
                     R_sum[ contiBrineEqIdx ] += R2;
                     maxCoeff[ contiBrineEqIdx ] = std::max( maxCoeff[ contiBrineEqIdx ], std::abs( R2 ) / pvValue );
