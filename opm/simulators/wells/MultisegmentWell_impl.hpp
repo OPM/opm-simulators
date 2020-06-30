@@ -65,6 +65,14 @@ namespace Opm
         if (Base::has_energy) {
             OPM_THROW(std::runtime_error, "energy is not supported by multisegment well yet");
         }
+
+        if (Base::has_foam) {
+            OPM_THROW(std::runtime_error, "foam is not supported by multisegment well yet");
+        }
+
+        if (Base::has_brine) {
+            OPM_THROW(std::runtime_error, "brine is not supported by multisegment well yet");
+        }
         // since we decide to use the WellSegments from the well parser. we can reuse a lot from it.
         // for other facilities needed but not available from parser, we need to process them here
 
