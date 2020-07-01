@@ -58,6 +58,7 @@ namespace Amg
          */
         struct PressureInverseOperator : public Dune::InverseOperator<X, X>
         {
+#if HAVE_MPI
             template <typename GlobalIndex, typename LocalIndex>
             PressureInverseOperator(Operator& op,
                                     const boost::property_tree::ptree& prm,
@@ -67,6 +68,8 @@ namespace Amg
                 assert(op.category() == Dune::SolverCategory::overlapping);
                 linsolver_ = std::make_unique<Solver>(op, comm, prm, std::function<X()>());
             }
+#endif // HAVE_MPI
+
             PressureInverseOperator(Operator& op,
                                     const boost::property_tree::ptree& prm,
                                     const SequentialInformation&)
