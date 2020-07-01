@@ -37,6 +37,7 @@ namespace bda
  * form of row pointers and column indices arrays are in the input), a color
  * in the colors array. Also return the amount of colors in the return integer. */
 
+template <unsigned int block_size>
 int colorBlockedNodes(int rows, const int *rowPointers, const int *colIndices, std::vector<int>& colors, int maxRowsPerColor, int maxColsPerColor)
 {
     int left, c;
@@ -48,8 +49,8 @@ int colorBlockedNodes(int rows, const int *rowPointers, const int *colIndices, s
     visitedColumns.resize(rows);
     std::fill(visitedColumns.begin(), visitedColumns.end(), false);
 
-    int colsInColor;
-    int additionalColsInRow;
+    unsigned int colsInColor;
+    unsigned int additionalColsInRow;
 
     for (unsigned int t = 0; t < max_tries; t++) {
         // (re)initialize data for coloring process
@@ -65,7 +66,7 @@ int colorBlockedNodes(int rows, const int *rowPointers, const int *colIndices, s
 
         // actually perform coloring
         for (c = 0; c < MAX_COLORS; c++) {
-            int rowsInColor = 0;
+            unsigned int rowsInColor = 0;
             colsInColor = 0;
             for (int i = 0; i < rows; i++)
             {
@@ -104,16 +105,16 @@ int colorBlockedNodes(int rows, const int *rowPointers, const int *colIndices, s
                         int j = colIndices[k];
                         if (!visitedColumns[j]) {
                             visitedColumns[j] = true;
-                            additionalColsInRow += 3;
+                            additionalColsInRow += block_size;
                         }
                     }
-                    if ((colsInColor + additionalColsInRow) > maxColsPerColor) {
+                    if ((colsInColor + additionalColsInRow) > static_cast<unsigned int>(maxColsPerColor)) {
                         break;
                     }
                     colsInColor += additionalColsInRow;
                     colors[i] = c;
-                    rowsInColor += 3;
-                    if ((rowsInColor + 2) >= maxRowsPerColor) {
+                    rowsInColor += block_size;
+                    if ((rowsInColor + block_size - 1) >= static_cast<unsigned int>(maxRowsPerColor)) {
                         break;
                     }
                 }
@@ -298,12 +299,13 @@ int *findLevelScheduling(int *CSRColIndices, int *CSRRowPointers, int *CSCColInd
 
 /* Perform the complete graph coloring algorithm on a matrix. Return an array with the amount of nodes per color.*/
 
+template <unsigned int block_size>
 int* findGraphColoring(int *colIndices, int *rowPointers, int Nb, int maxRowsPerColor, int maxColsPerColor, int *numColors, int *toOrder, int* fromOrder) {
     std::vector<int> rowColor;
     rowColor.resize(Nb);
     int *rowsPerColor = new int[MAX_COLORS];
 
-    colorBlockedNodes(Nb, rowPointers, colIndices, rowColor, maxRowsPerColor, maxColsPerColor);
+    colorBlockedNodes<block_size>(Nb, rowPointers, colIndices, rowColor, maxRowsPerColor, maxColsPerColor);
 
     colorsToReordering(Nb, rowColor, toOrder, fromOrder, rowsPerColor);
 
@@ -357,10 +359,12 @@ void bcsr_to_bcsc(double *Avals, int *Acols, int *Arows, double *Bvals, int *Bco
 }
 
 
-#define INSTANTIATE_BDA_FUNCTIONS(n)                                                                 \
-template void blocked_reorder_matrix_by_pattern<n>(BlockedMatrix *, int *, int *, BlockedMatrix *);  \
-template void blocked_reorder_vector_by_pattern<n>(int, double*, int*, double*);                     \
-template void bcsr_to_bcsc<n>(double *, int *, int *, double *, int *, int *, int );                 \
+#define INSTANTIATE_BDA_FUNCTIONS(n)                                                                \
+template int colorBlockedNodes<n>(int, const int *, const int *, std::vector<int>&, int, int);      \
+template void blocked_reorder_matrix_by_pattern<n>(BlockedMatrix *, int *, int *, BlockedMatrix *); \
+template void blocked_reorder_vector_by_pattern<n>(int, double*, int*, double*);                    \
+template int* findGraphColoring<n>(int *, int *, int, int, int, int *, int *, int *);               \
+template void bcsr_to_bcsc<n>(double *, int *, int *, double *, int *, int *, int);                 \
 
 INSTANTIATE_BDA_FUNCTIONS(1);
 INSTANTIATE_BDA_FUNCTIONS(2);

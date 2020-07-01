@@ -99,7 +99,7 @@ namespace bda
         if (level_scheduling) {
             rowsPerColor = findLevelScheduling(mat->colIndices, mat->rowPointers, CSCmat->colIndices, CSCmat->rowPointers, mat->Nb, &numColors, toOrder, fromOrder);
         } else if (graph_coloring) {
-            rowsPerColor = findGraphColoring(mat->colIndices, mat->rowPointers, mat->Nb, mat->Nb, mat->Nb, &numColors, toOrder, fromOrder);
+            rowsPerColor = findGraphColoring<block_size>(mat->colIndices, mat->rowPointers, mat->Nb, mat->Nb, mat->Nb, &numColors, toOrder, fromOrder);
         }
         if (rowsPerColor == nullptr) {
             return false;

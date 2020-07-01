@@ -38,6 +38,7 @@ namespace bda
 /// \param[in] maxRowsPerColor the maximum number of rows that are allowed in one color (so: the maximum number of nodes per color)
 /// \param[in] maxColsPerColor the maximum number of columns that the rows in a color are allowed to share (so: the maximum number of nodes that the nodes in one color may be connected to)
 /// \return                    the number of colors needed for the coloring
+template <unsigned int block_size>
 int colorBlockedNodes(int rows, const int *rowPointers, const int *colIndices, std::vector<int>& colors, int maxRowsPerColor, int maxColsPerColor);
 
 /// Reorder the rows of the matrix according to the mapping in toOrder and fromOrder
@@ -100,6 +101,7 @@ int* findLevelScheduling(int *CSRColIndices, int *CSRRowPointers, int *CSCColInd
 /// \param[inout] toOrder      the reorder pattern that was found, which lists for each index in the original order, to which index in the new order it should be moved
 /// \param[inout] fromOrder    the reorder pattern that was found, which lists for each index in the new order, from which index in the original order it was moved
 /// \return                    a pointer to an array that contains for each color, the number of rows that that color contains
+template <unsigned int block_size>
 int* findGraphColoring(int *colIndices, int *rowPointers, int Nb, int maxRowsPerColor, int maxColsPerColor, int *numColors, int *toOrder, int* fromOrder);
 
 /// Convert BCSR matrix to BCSC
