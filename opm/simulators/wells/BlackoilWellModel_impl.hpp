@@ -1263,7 +1263,9 @@ namespace Opm {
 
         WellGroupHelpers::updateReservoirRatesInjectionGroups(fieldGroup, schedule(), reportStepIdx, well_state_nupcol_, well_state_);
         WellGroupHelpers::updateGroupProductionRates(fieldGroup, schedule(), reportStepIdx, well_state_nupcol_, well_state_);
-        WellGroupHelpers::updateWellRates(fieldGroup, schedule(), reportStepIdx, well_state_nupcol_, well_state_);
+
+        // We use the rates from the privious time-step to reduce oscilations
+        WellGroupHelpers::updateWellRates(fieldGroup, schedule(), reportStepIdx, previous_well_state_, well_state_);
         well_state_.communicateGroupRates(comm);
 
         // compute wsolvent fraction for REIN wells
