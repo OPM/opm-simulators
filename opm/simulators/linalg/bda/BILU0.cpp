@@ -70,6 +70,7 @@ namespace bda
 
         toOrder = new int[N];
         fromOrder = new int[N];
+
         if (level_scheduling) {
             CSCRowIndices = new int[nnzbs];
             CSCColPointers = new int[Nb + 1];
@@ -90,7 +91,7 @@ namespace bda
         if (level_scheduling) {
             rowsPerColor = findLevelScheduling(mat->colIndices, mat->rowPointers, CSCRowIndices, CSCColPointers, mat->Nb, &numColors, toOrder, fromOrder);
         } else if (graph_coloring) {
-            rowsPerColor = findGraphColoring<block_size>(mat->colIndices, mat->rowPointers, mat->Nb, mat->Nb, mat->Nb, &numColors, toOrder, fromOrder);
+            rowsPerColor = findGraphColoring<block_size>(mat->colIndices, mat->rowPointers, CSCRowIndices, CSCColPointers, mat->Nb, mat->Nb, mat->Nb, &numColors, toOrder, fromOrder);
         }
         if (rowsPerColor == nullptr) {
             return false;
@@ -109,11 +110,8 @@ namespace bda
 
         LUmat->nnzValues = new double[mat->nnzbs * bs * bs];
 
-        if (level_scheduling) {
-            delete[] CSCRowIndices;
-            delete[] CSCColPointers;
-        }
-
+        delete[] CSCRowIndices;
+        delete[] CSCColPointers;
 
         s.Lvals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * bs * bs * Lmat->nnzbs);
         s.Uvals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * bs * bs * Umat->nnzbs);

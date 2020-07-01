@@ -40,7 +40,7 @@ namespace bda
  * "A Parallel Graph Coloring Heuristic" by M.T. Jones and P.E. Plassmann in SIAM Journal of Scientific Computing 14 (1993) */
 
 template <unsigned int block_size>
-int colorBlockedNodes(int rows, const int *rowPointers, const int *colIndices, std::vector<int>& colors, int maxRowsPerColor, int maxColsPerColor)
+int colorBlockedNodes(int rows, const int *CSRRowPointers, const int *CSRColIndices, const int *CSCColPointers, const int *CSCRowIndices, std::vector<int>& colors, int maxRowsPerColor, int maxColsPerColor)
 {
     int left, c;
     const int max_tries = 100;            // since coloring is random, it is possible that a coloring fails. In that case, try again.
@@ -80,31 +80,52 @@ int colorBlockedNodes(int rows, const int *rowPointers, const int *colIndices, s
 
                 int ir = randoms[i];
 
-                // look at neighbors to check their random number
-                for (int k = rowPointers[i]; k < rowPointers[i + 1]; k++) {
-
+                // look at all nodex that node i is connected to
+                for (int k = CSRRowPointers[i]; k < CSRRowPointers[i + 1]; k++) {
                     // ignore nodes colored earlier (and yourself)
-                    int j = colIndices[k];
+                    int j = CSRColIndices[k];
                     int jc = colors[j];
                     if (((jc != -1) && (jc != c)) || (i == j)) {
                         continue;
                     }
-                    // The if statement below makes it both true graph coloring and no longer guaranteed to converge
+                    // node i is not in the current color if one of its neighbours shares this color, 
                     if (jc == c) {
                         iMax = false;
                         break;
                     }
+                    // or if one of its uncolored neighbours has a higher random value 
                     int jr = randoms[j];
                     if (ir <= jr) {
                         iMax = false;
+                        break;
+                    }
+                }
+                // look at all nodes that have a connection to node i
+                for (int k = CSCColPointers[i]; k < CSCColPointers[i + 1]; k++) {
+                    // ignore nodes colored earlier (and yourself)
+                    int j = CSCRowIndices[k];
+                    int jc = colors[j];
+                    if (((jc != -1) && (jc != c)) || (i == j)) {
+                        continue;
+                    }
+                    // node i is not in the current color if one of its neighbours shares this color, 
+                    if (jc == c) {
+                        iMax = false;
+                        break;
+                    }
+                    // or if one of its uncolored neighbours has a higher random value 
+                    int jr = randoms[j];
+                    if (ir <= jr) {
+                        iMax = false;
+                        break;
                     }
                 }
 
                 // assign color if you have the maximum random number
                 if (iMax) {
                     additionalColsInRow = 0;
-                    for (int k = rowPointers[i]; k < rowPointers[i + 1]; k++) {
-                        int j = colIndices[k];
+                    for (int k = CSRRowPointers[i]; k < CSRRowPointers[i + 1]; k++) {
+                        int j = CSRColIndices[k];
                         if (!visitedColumns[j]) {
                             visitedColumns[j] = true;
                             additionalColsInRow += block_size;
@@ -303,12 +324,12 @@ int *findLevelScheduling(int *CSRColIndices, int *CSRRowPointers, int *CSCRowInd
 /* Perform the complete graph coloring algorithm on a matrix. Return an array with the amount of nodes per color.*/
 
 template <unsigned int block_size>
-int* findGraphColoring(const int *colIndices, const int *rowPointers, int Nb, int maxRowsPerColor, int maxColsPerColor, int *numColors, int *toOrder, int* fromOrder) {
+int* findGraphColoring(const int *CSRColIndices, const int *CSRRowPointers, const int *CSCRowIndices, const int *CSCColPointers, int Nb, int maxRowsPerColor, int maxColsPerColor, int *numColors, int *toOrder, int *fromOrder) {
     std::vector<int> rowColor;
     rowColor.resize(Nb);
     int *rowsPerColor = new int[MAX_COLORS];
 
-    *numColors = colorBlockedNodes<block_size>(Nb, rowPointers, colIndices, rowColor, maxRowsPerColor, maxColsPerColor);
+    *numColors = colorBlockedNodes<block_size>(Nb, CSRRowPointers, CSRColIndices, CSCColPointers, CSCRowIndices, rowColor, maxRowsPerColor, maxColsPerColor);
 
     colorsToReordering(Nb, rowColor, *numColors, toOrder, fromOrder, rowsPerColor);
 
@@ -355,10 +376,10 @@ void csrPatternToCsc(int *CSRColIndices, int *CSRRowPointers, int *CSCRowIndices
 
 
 #define INSTANTIATE_BDA_FUNCTIONS(n)                                                               \
-template int colorBlockedNodes<n>(int, const int *, const int *, std::vector<int>&, int, int);     \
+template int colorBlockedNodes<n>(int, const int *, const int *, const int *, const int *, std::vector<int>&, int, int);     \
 template void reorderBlockedMatrixByPattern<n>(BlockedMatrix *, int *, int *, BlockedMatrix *);    \
 template void reorderBlockedVectorByPattern<n>(int, double*, int*, double*);                       \
-template int* findGraphColoring<n>(const int *, const int *, int, int, int, int *, int *, int *);  \
+template int* findGraphColoring<n>(const int *, const int *, const int *, const int *, int, int, int, int *, int *, int *);  \
 
 INSTANTIATE_BDA_FUNCTIONS(1);
 INSTANTIATE_BDA_FUNCTIONS(2);

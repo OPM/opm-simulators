@@ -32,14 +32,16 @@ namespace bda
 /// This function with throw an error if no coloring can be found within the given restrictions
 /// This function does graph coloring based on random numbers
 /// \param[in] rows            number of rows in the matrix
-/// \param[in] rowPointers     array of row pointers
-/// \param[in] colIndices      array of column indices
+/// \param[in] CSRRowPointers  array of row pointers of the sparsity pattern stored in the CSR format
+/// \param[in] CSRColIndices   array of column indices of the sparsity pattern stored in the CSR format
+/// \param[in] CSCColPointers  array of column pointers of the sparsity pattern stored in the CSC format
+/// \param[in] CSCRowIndices   array of row indices of the sparsity pattern stored in the CSC format
 /// \param[inout] colors       output array containing the number of the color that each row is assigned to
 /// \param[in] maxRowsPerColor the maximum number of rows that are allowed in one color (so: the maximum number of nodes per color)
 /// \param[in] maxColsPerColor the maximum number of columns that the rows in a color are allowed to share (so: the maximum number of nodes that the nodes in one color may be connected to)
 /// \return                    the number of colors needed for the coloring
 template <unsigned int block_size>
-int colorBlockedNodes(int rows, const int *rowPointers, const int *colIndices, std::vector<int>& colors, int maxRowsPerColor, int maxColsPerColor);
+int colorBlockedNodes(int rows, const int *CSRRowPointers, const int *CSRColIndices, const int *CSCColPointers, const int *CSCRowIndices, std::vector<int>& colors, int maxRowsPerColor, int maxColsPerColor);
 
 /// Reorder the rows of the matrix according to the mapping in toOrder and fromOrder
 /// rMat must be allocated already
@@ -82,19 +84,21 @@ bool canBeStarted(const int rowIndex, const  int *rowPointers, const  int *colIn
 /// The toOrder and fromOrder arrays must be allocated already
 /// \param[in] CSRColIndices  column indices array, obtained from storing the input matrix in the CSR format
 /// \param[in] CSRRowPointers row pointers array, obtained from storing the input matrix in the CSR format
-/// \param[in] CSCColIndices  row indices array, obtained from storing the input matrix in the CSC format
-/// \param[in] CSCRowPointers column pointers array, obtained from storing the input matrix in the CSC format
+/// \param[in] CSCRowIndices  row indices array, obtained from storing the input matrix in the CSC format
+/// \param[in] CSCColPointers column pointers array, obtained from storing the input matrix in the CSC format
 /// \param[in] Nb             number of blockrows in the matrix
 /// \param[out] numColors     a pointer to the number of colors needed for the level scheduling
 /// \param[inout] toOrder     the reorder pattern that was found, which lists for each index in the original order, to which index in the new order it should be moved
 /// \param[inout] fromOrder   the reorder pattern that was found, which lists for each index in the new order, from which index in the original order it was moved
 /// \return                   a pointer to an array that contains for each color, the number of rows that that color contains
-int* findLevelScheduling(int *CSRColIndices, int *CSRRowPointers, int *CSCColIndices, int *CSCRowPointers, int Nb, int *numColors, int *toOrder, int* fromOrder);
+int* findLevelScheduling(int *CSRColIndices, int *CSRRowPointers, int *CSCRowIndices, int *CSCColPointers, int Nb, int *numColors, int *toOrder, int* fromOrder);
 
 /// Find a graph coloring reordering for an input matrix
 /// The toOrder and fromOrder arrays must be allocated already
-/// \param[in] colIndices      column indices of the input matrix
-/// \param[in] rowPointers     row pointers of the input matrix
+/// \param[in] CSRColIndices   column indices of the input sparsity pattern stored in the CSR format
+/// \param[in] CSRRowPointers  row pointers of the input sparsity pattern stored in the CSR format
+/// \param[in] CSCRowIndices   row indices of the input sparsity pattern stored in the CSC format
+/// \param[in] CSCColPointers  column pointers of the input sparsity pattern stored in the CSC format
 /// \param[in] Nb              number of blockrows in the matrix
 /// \param[in] maxRowsPerColor the maximum number of rows that are allowed in one color (so: the maximum number of nodes per color)
 /// \param[in] maxColsPerColor the maximum number of columns that the rows in a color are allowed to share (so: the maximum number of nodes that the nodes in one color may be connected to)
@@ -103,7 +107,7 @@ int* findLevelScheduling(int *CSRColIndices, int *CSRRowPointers, int *CSCColInd
 /// \param[inout] fromOrder    the reorder pattern that was found, which lists for each index in the new order, from which index in the original order it was moved
 /// \return                    a pointer to an array that contains for each color, the number of rows that that color contains
 template <unsigned int block_size>
-int* findGraphColoring(const int *colIndices, const int *rowPointers, int Nb, int maxRowsPerColor, int maxColsPerColor, int *numColors, int *toOrder, int* fromOrder);
+int* findGraphColoring(const int *CSRColIndices, const int *CSRRowPointers, const int *CSCRowIndices, const int *CSCColPointers, int Nb, int maxRowsPerColor, int maxColsPerColor, int *numColors, int *toOrder, int *fromOrder);
 
 /// Convert a sparsity pattern stored in the CSR format to the CSC format
 /// CSCRowIndices and CSCColPointers arrays must be allocated already
