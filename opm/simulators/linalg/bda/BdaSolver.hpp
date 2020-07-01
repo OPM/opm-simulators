@@ -55,11 +55,21 @@ namespace bda
         int nnz;         // number of nonzeroes (scalars)
         int nnzb;        // number of nonzero blocks (nnzb*block_size*block_size == nnz)
 
+        unsigned int platformID = 0; // ID of OpenCL platform to be used, only used by openclSolver now
+        unsigned int deviceID = 0;   // ID of the device to be used
+
         bool initialized = false;
 
     public:
 
-        BdaSolver(int linear_solver_verbosity, int max_it, double tolerance_) : verbosity(linear_solver_verbosity), maxit(max_it), tolerance(tolerance_) {};
+        /// Construct a BdaSolver, can be cusparseSolver or openclSolver
+        /// \param[in] linear_solver_verbosity    verbosity of solver
+        /// \param[in] maxit                      maximum number of iterations for solver
+        /// \param[in] tolerance                  required relative tolerance for solver
+        /// \param[in] platformID                 the OpenCL platform to be used, only used in openclSolver
+        /// \param[in] deviceID                   the device to be used
+        BdaSolver(int linear_solver_verbosity, int max_it, double tolerance_, unsigned int deviceID_) : verbosity(linear_solver_verbosity), maxit(max_it), tolerance(tolerance_), deviceID(deviceID_) {};
+        BdaSolver(int linear_solver_verbosity, int max_it, double tolerance_, unsigned int platformID_, unsigned int deviceID_) : verbosity(linear_solver_verbosity), maxit(max_it), tolerance(tolerance_), platformID(platformID_), deviceID(deviceID_) {};
 
         /// Define virtual destructor, so that the derivedclass destructor will be called
         virtual ~BdaSolver() {};

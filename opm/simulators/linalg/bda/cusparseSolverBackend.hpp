@@ -42,6 +42,7 @@ class cusparseSolverBackend : public BdaSolver<block_size> {
     using Base::nnz;
     using Base::nnzb;
     using Base::verbosity;
+    using Base::deviceID;
     using Base::maxit;
     using Base::tolerance;
     using Base::initialized;
@@ -117,7 +118,8 @@ public:
     /// \param[in] linear_solver_verbosity    verbosity of cusparseSolver
     /// \param[in] maxit                      maximum number of iterations for cusparseSolver
     /// \param[in] tolerance                  required relative tolerance for cusparseSolver
-    cusparseSolverBackend(int linear_solver_verbosity, int maxit, double tolerance);
+    /// \param[in] deviceID                   the device to be used
+    cusparseSolverBackend(int linear_solver_verbosity, int maxit, double tolerance, unsigned int deviceID);
 
     /// Destroy a cusparseSolver, and free memory
     ~cusparseSolverBackend();

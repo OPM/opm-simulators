@@ -39,11 +39,11 @@ namespace bda
         int Nb;      // number of blockrows of the matrix
         int nnz;     // number of nonzeroes of the matrix (scalar)
         int nnzbs;   // number of blocks of the matrix
-        BlockedMatrix *Lmat, *Umat, *LUmat;
+        BlockedMatrix *Lmat = nullptr, *Umat = nullptr, *LUmat = nullptr;
         BlockedMatrix *rmat = nullptr; // only used with PAR_SIM
-        double *invDiagVals;
-        int *diagIndex, *rowsPerColor;
-        int *toOrder, *fromOrder;
+        double *invDiagVals = nullptr;
+        int *diagIndex = nullptr, *rowsPerColor = nullptr;
+        int *toOrder = nullptr, *fromOrder = nullptr;
         int numColors;
         int verbosity;
 

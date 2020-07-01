@@ -54,7 +54,9 @@ public:
     /// \param[in] linear_solver_verbosity    verbosity of BdaSolver
     /// \param[in] maxit                      maximum number of iterations for BdaSolver
     /// \param[in] tolerance                  required relative tolerance for BdaSolver
-    BdaBridge(std::string gpu_mode, int linear_solver_verbosity, int maxit, double tolerance);
+    /// \param[in] platformID                 the OpenCL platform ID to be used
+    /// \param[in] deviceID                   the device ID to be used by the cusparse- and openclSolvers, too high values could cause runtime errors
+    BdaBridge(std::string gpu_mode, int linear_solver_verbosity, int maxit, double tolerance, unsigned int platformID, unsigned int deviceID);
 
 
     /// Solve linear system, A*x = b

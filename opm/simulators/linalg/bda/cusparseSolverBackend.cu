@@ -49,7 +49,7 @@ const cusparseDirection_t order = CUSPARSE_DIRECTION_ROW;
 
 
 template <unsigned int block_size>
-cusparseSolverBackend<block_size>::cusparseSolverBackend(int verbosity_, int maxit_, double tolerance_) : BdaSolver<block_size>(verbosity_, maxit_, tolerance_) {}
+cusparseSolverBackend<block_size>::cusparseSolverBackend(int verbosity_, int maxit_, double tolerance_, unsigned int deviceID_) : BdaSolver<block_size>(verbosity_, maxit_, tolerance_, deviceID_) {}
 
 template <unsigned int block_size>
 cusparseSolverBackend<block_size>::~cusparseSolverBackend() {
@@ -198,7 +198,6 @@ void cusparseSolverBackend<block_size>::initialize(int N, int nnz, int dim) {
     out << "Maxit: " << maxit << std::scientific << ", tolerance: " << tolerance;
     OpmLog::info(out.str());
 
-    int deviceID = 0;
     cudaSetDevice(deviceID);
     cudaCheckLastError("Could not get device");
     struct cudaDeviceProp props;
@@ -501,8 +500,8 @@ Status cusparseSolverBackend<block_size>::solve_system(int N, int nnz, int dim, 
 }
 
 
-#define INSTANTIATE_BDA_FUNCTIONS(n)                                         \
-template cusparseSolverBackend<n>::cusparseSolverBackend(int, int, double);  \
+#define INSTANTIATE_BDA_FUNCTIONS(n)                                                       \
+template cusparseSolverBackend<n>::cusparseSolverBackend(int, int, double, unsigned int);  \
 
 INSTANTIATE_BDA_FUNCTIONS(1);
 INSTANTIATE_BDA_FUNCTIONS(2);

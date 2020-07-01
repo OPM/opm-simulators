@@ -48,6 +48,8 @@ class openclSolverBackend : public BdaSolver<block_size>
     using Base::nnz;
     using Base::nnzb;
     using Base::verbosity;
+    using Base::platformID;
+    using Base::deviceID;
     using Base::maxit;
     using Base::tolerance;
     using Base::initialized;
@@ -55,8 +57,8 @@ class openclSolverBackend : public BdaSolver<block_size>
 
 private:
 
-    double *rb;                 // reordered b vector, the matrix is reordered, so b must also be
-    double *vals_contiguous;    // only used if COPY_ROW_BY_ROW is true in openclSolverBackend.cpp
+    double *rb = nullptr;                 // reordered b vector, the matrix is reordered, so b must also be
+    double *vals_contiguous = nullptr;    // only used if COPY_ROW_BY_ROW is true in openclSolverBackend.cpp
 
     bool analysis_done = false;
 
@@ -65,7 +67,7 @@ private:
     cl::Buffer d_x, d_b, d_rb, d_r, d_rw, d_p;   // vectors, used during linear solve
     cl::Buffer d_pw, d_s, d_t, d_v;              // vectors, used during linear solve
     cl::Buffer d_tmp;                            // used as tmp GPU buffer for dot() and norm()
-    double *tmp;                                 // used as tmp CPU buffer for dot() and norm()
+    double *tmp = nullptr;                       // used as tmp CPU buffer for dot() and norm()
 
     // shared pointers are also passed to BILU0
     std::shared_ptr<cl::Context> context;
@@ -78,9 +80,9 @@ private:
     std::shared_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> > ILU_apply1_k;
     std::shared_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> > ILU_apply2_k;
 
-    Preconditioner *prec;        // only supported preconditioner is BILU0
-    int *toOrder, *fromOrder;    // BILU0 reorders rows of the matrix via these mappings
-    BlockedMatrix *mat, *rmat;   // normal and reordered matrix
+    Preconditioner *prec = nullptr;                  // only supported preconditioner is BILU0
+    int *toOrder = nullptr, *fromOrder = nullptr;    // BILU0 reorders rows of the matrix via these mappings
+    BlockedMatrix *mat = nullptr, *rmat = nullptr;   // normal and reordered matrix
 
 
     /// Divide A by B, and round up: return (int)ceil(A/B)
@@ -175,7 +177,9 @@ public:
     /// \param[in] linear_solver_verbosity    verbosity of openclSolver
     /// \param[in] maxit                      maximum number of iterations for openclSolver
     /// \param[in] tolerance                  required relative tolerance for openclSolver
-    openclSolverBackend(int linear_solver_verbosity, int maxit, double tolerance);
+    /// \param[in] platformID                 the OpenCL platform to be used
+    /// \param[in] deviceID                   the device to be used
+    openclSolverBackend(int linear_solver_verbosity, int maxit, double tolerance, unsigned int platformID, unsigned int deviceID);
 
     /// Destroy a openclSolver, and free memory
     ~openclSolverBackend();

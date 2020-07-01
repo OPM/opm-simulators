@@ -329,6 +329,7 @@ namespace bda
 
 #define INSTANTIATE_BDA_FUNCTIONS(n)                                                     \
 template BILU0<n>::BILU0(bool, bool, int);                                               \
+template BILU0<n>::~BILU0();                                                             \
 template bool BILU0<n>::init(BlockedMatrix*);                                            \
 template bool BILU0<n>::create_preconditioner(BlockedMatrix*);                           \
 template void BILU0<n>::apply(cl::Buffer& x, cl::Buffer& y);                             \

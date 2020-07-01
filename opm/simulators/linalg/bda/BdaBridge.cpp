@@ -41,19 +41,19 @@ namespace Opm
     using bda::BdaSolverStatus;
 
 template <class BridgeMatrix, class BridgeVector, int block_size>
-BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string gpu_mode, int linear_solver_verbosity, int maxit, double tolerance)
+BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string gpu_mode, int linear_solver_verbosity, int maxit, double tolerance, unsigned int platformID, unsigned int deviceID)
 {
     if (gpu_mode.compare("cusparse") == 0) {
 #if HAVE_CUDA
         use_gpu = true;
-        backend.reset(new bda::cusparseSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance));
+        backend.reset(new bda::cusparseSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance, deviceID));
 #else
         OPM_THROW(std::logic_error, "Error cusparseSolver was chosen, but CUDA was not found by CMake");
 #endif
     } else if (gpu_mode.compare("opencl") == 0) {
 #if HAVE_OPENCL
         use_gpu = true;
-        backend.reset(new bda::openclSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance));
+        backend.reset(new bda::openclSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance, platformID, deviceID));
 #else
         OPM_THROW(std::logic_error, "Error openclSolver was chosen, but OpenCL was not found by CMake");
 #endif
@@ -215,23 +215,23 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::get_result(BridgeVector 
     }
 }
 
-#define INSTANTIATE_BDA_FUNCTIONS(n)                                                                                        \
-template BdaBridge<Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >,      \
-Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >,                            \
-n>::BdaBridge                                                                                                               \
-(std::string gpu_mode_, int linear_solver_verbosity, int maxit, double tolerance);                                          \
-                                                                                                                            \
-template void BdaBridge<Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >, \
-Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >,                            \
-n>::solve_system                                                                                                            \
-(Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >*,                       \
-    Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >&,                       \
-    WellContributions&, InverseOperatorResult&);                                                                            \
-                                                                                                                            \
-template void BdaBridge<Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >, \
-Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >,                            \
-n>::get_result                                                                                                              \
-(Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >&);                         \
+#define INSTANTIATE_BDA_FUNCTIONS(n)                                                                                                \
+template BdaBridge<Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >,              \
+Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >,                                    \
+n>::BdaBridge                                                                                                                       \
+(std::string gpu_mode_, int linear_solver_verbosity, int maxit, double tolerance, unsigned int platformID, unsigned int deviceID);  \
+                                                                                                                                    \
+template void BdaBridge<Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >,         \
+Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >,                                    \
+n>::solve_system                                                                                                                    \
+(Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >*,                               \
+    Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >&,                               \
+    WellContributions&, InverseOperatorResult&);                                                                                    \
+                                                                                                                                    \
+template void BdaBridge<Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >,         \
+Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >,                                    \
+n>::get_result                                                                                                                      \
+(Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >&);                                 \
 
 INSTANTIATE_BDA_FUNCTIONS(1);
 INSTANTIATE_BDA_FUNCTIONS(2);

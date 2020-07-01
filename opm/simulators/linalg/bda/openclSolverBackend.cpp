@@ -52,7 +52,7 @@ using Opm::OpmLog;
 using Dune::Timer;
 
 template <unsigned int block_size>
-openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_, double tolerance_) : BdaSolver<block_size>(verbosity_, maxit_, tolerance_) {
+openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_, double tolerance_, unsigned int platformID_, unsigned int deviceID_) : BdaSolver<block_size>(verbosity_, maxit_, tolerance_, platformID_, deviceID_) {
     prec = new Preconditioner(LEVEL_SCHEDULING, GRAPH_COLORING, verbosity_);
 }
 
@@ -318,10 +318,10 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
     }
     if (verbosity >= 4) {
         std::ostringstream out;
-        out << "openclSolver::ily_apply:   " << t_prec.elapsed() << "s\n";
-        out << "openclSolver::spmv:        " << t_spmv.elapsed() << "s\n";
-        out << "openclSolver::rest:        " << t_rest.elapsed() << "s\n";
-        out << "openclSolver::total_solve: " << res.elapsed << "s\n";
+        out << "openclSolver::ily_apply:   " << t_prec.elapsed() << " s\n";
+        out << "openclSolver::spmv:        " << t_spmv.elapsed() << " s\n";
+        out << "openclSolver::rest:        " << t_rest.elapsed() << " s\n";
+        out << "openclSolver::total_solve: " << res.elapsed << " s\n";
         OpmLog::info(out.str());
     }
 }
@@ -337,34 +337,32 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
     std::ostringstream out;
     out << "Initializing GPU, matrix size: " << N << " blocks, nnzb: " << nnzb << "\n";
     out << "Maxit: " << maxit << std::scientific << ", tolerance: " << tolerance << "\n";
+    out << "PlatformID: " << platformID << ", deviceID: " << deviceID << "\n";
     OpmLog::info(out.str());
     out.str("");
     out.clear();
-
-    int deviceID = 0;
 
     cl_int err = CL_SUCCESS;
     try {
         std::vector<cl::Platform> platforms;
         cl::Platform::get(&platforms);
-        if (platforms.size() == 0)
-        {
+        if (platforms.size() == 0) {
             OPM_THROW(std::logic_error, "Error openclSolver is selected but no OpenCL platforms are found");
         }
         out << "Found " << platforms.size() << " OpenCL platforms" << "\n\n";
 
         if (verbosity >= 1) {
             std::string platform_info;
-            for (unsigned int platformID = 0; platformID < platforms.size(); ++platformID) {
-                platforms[platformID].getInfo(CL_PLATFORM_NAME, &platform_info);
+            for (unsigned int i = 0; i < platforms.size(); ++i) {
+                platforms[i].getInfo(CL_PLATFORM_NAME, &platform_info);
                 out << "Platform name      : " << platform_info << "\n";
-                platforms[platformID].getInfo(CL_PLATFORM_VENDOR, &platform_info);
+                platforms[i].getInfo(CL_PLATFORM_VENDOR, &platform_info);
                 out << "Platform vendor    : " << platform_info << "\n";
-                platforms[platformID].getInfo(CL_PLATFORM_VERSION, &platform_info);
+                platforms[i].getInfo(CL_PLATFORM_VERSION, &platform_info);
                 out << "Platform version   : " << platform_info << "\n";
-                platforms[platformID].getInfo(CL_PLATFORM_PROFILE, &platform_info);
+                platforms[i].getInfo(CL_PLATFORM_PROFILE, &platform_info);
                 out << "Platform profile   : " << platform_info << "\n";
-                platforms[platformID].getInfo(CL_PLATFORM_EXTENSIONS, &platform_info);
+                platforms[i].getInfo(CL_PLATFORM_EXTENSIONS, &platform_info);
                 out << "Platform extensions: " << platform_info << "\n\n";
             }
         }
@@ -372,7 +370,11 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
         out.str("");
         out.clear();
 
-        cl_context_properties properties[] = {CL_CONTEXT_PLATFORM, (cl_context_properties)(platforms[deviceID])(), 0};
+        if (platforms.size() <= platformID) {
+            OPM_THROW(std::logic_error, "Error chosen too high OpenCL platform ID");
+        }
+
+        cl_context_properties properties[] = {CL_CONTEXT_PLATFORM, (cl_context_properties)(platforms[platformID])(), 0};
         context.reset(new cl::Context(CL_DEVICE_TYPE_GPU, properties));
 
         std::vector<cl::Device> devices = context->getInfo<CL_CONTEXT_DEVICES>();
@@ -437,6 +439,10 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
         }
         OpmLog::info(out.str());
 
+        if (devices.size() <= deviceID){
+            OPM_THROW(std::logic_error, "Error chosen too high OpenCL device ID");
+        }
+
         cl::Program::Sources source(1, std::make_pair(kernel_1, strlen(kernel_1)));  // what does this '1' mean? cl::Program::Sources is of type 'std::vector<std::pair<const char*, long unsigned int> >'
         source.emplace_back(std::make_pair(kernel_2, strlen(kernel_2)));
         source.emplace_back(std::make_pair(axpy_s, strlen(axpy_s)));
@@ -451,7 +457,7 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
         program_.build(devices);
 
         cl::Event event;
-        queue.reset(new cl::CommandQueue(*context, devices[0], 0, &err));
+        queue.reset(new cl::CommandQueue(*context, devices[deviceID], 0, &err));
 
         prec->setOpenCLContext(context.get());
         prec->setOpenCLQueue(queue.get());
@@ -503,12 +509,14 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
         std::ostringstream oss;
         oss << "OpenCL Error: " << error.what() << "(" << error.err() << ")";
         OpmLog::error(oss.str());
+    } catch (std::logic_error error) {
+        // rethrow exception, without this, a segfault occurs
+        throw error;
     }
 
 
     initialized = true;
 } // end initialize()
-
 
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::finalize() {
@@ -518,6 +526,7 @@ void openclSolverBackend<block_size>::finalize() {
 #if COPY_ROW_BY_ROW
     delete[] vals_contiguous;
 #endif
+    delete prec;
 } // end finalize()
 
 
@@ -700,8 +709,8 @@ Status openclSolverBackend<block_size>::solve_system(int N_, int nnz_, int dim, 
 }
 
 
-#define INSTANTIATE_BDA_FUNCTIONS(n)                                     \
-template openclSolverBackend<n>::openclSolverBackend(int, int, double);  \
+#define INSTANTIATE_BDA_FUNCTIONS(n)                                                                 \
+template openclSolverBackend<n>::openclSolverBackend(int, int, double, unsigned int, unsigned int);  \
 
 INSTANTIATE_BDA_FUNCTIONS(1);
 INSTANTIATE_BDA_FUNCTIONS(2);
