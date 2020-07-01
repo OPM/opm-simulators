@@ -31,6 +31,7 @@
 #  include <flow/flow_ebos_polymer.hpp>
 #  include <flow/flow_ebos_foam.hpp>
 #  include <flow/flow_ebos_brine.hpp>
+#  include <flow/flow_ebos_oilwater_brine.hpp>
 #  include <flow/flow_ebos_energy.hpp>
 #  include <flow/flow_ebos_oilwater_polymer.hpp>
 #  include <flow/flow_ebos_oilwater_polymer_injectivity.hpp>
@@ -260,8 +261,19 @@ namespace Opm
             }
             // Brine case
             else if ( phases.active( Opm::Phase::BRINE ) ) {
-                Opm::flowEbosBrineSetDeck(setupTime_, deck_.get(), *eclipseState_, *schedule_, *summaryConfig_);
-                return Opm::flowEbosBrineMain(argc_, argv_, outputCout_, outputFiles_);
+                if ( !phases.active( Opm::Phase::WATER) ) {
+                    if (outputCout_)
+                        std::cerr << "No valid configuration is found for brine simulation, valid options include "
+                                  << "oilwater + brine and blackoil + brine" << std::endl;
+                    return EXIT_FAILURE;
+                }
+                if ( phases.size() == 3 ) { // oil water brine case
+                    Opm::flowEbosOilWaterBrineSetDeck(setupTime_, deck_.get(), *eclipseState_, *schedule_, *summaryConfig_);
+                    return Opm::flowEbosOilWaterBrineMain(argc_, argv_, outputCout_, outputFiles_);
+                } else {
+                    Opm::flowEbosBrineSetDeck(setupTime_, deck_.get(), *eclipseState_, *schedule_, *summaryConfig_);
+                    return Opm::flowEbosBrineMain(argc_, argv_, outputCout_, outputFiles_);
+                }
             }
             // Solvent case
             else if ( phases.active( Opm::Phase::SOLVENT ) ) {
