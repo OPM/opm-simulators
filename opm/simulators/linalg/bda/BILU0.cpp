@@ -48,19 +48,20 @@ namespace bda
         delete[] invDiagVals;
         delete[] diagIndex;
         delete[] rowsPerColor;
-        freeBlockedMatrix(&LUMat);
-        freeBlockedMatrix(&LMat);
-        freeBlockedMatrix(&UMat);
+        freeBlockedMatrix(&LUmat);
+        freeBlockedMatrix(&Lmat);
+        freeBlockedMatrix(&Umat);
         delete[] toOrder;
         delete[] fromOrder;
-        freeBlockedMatrix(&rMat);
+        freeBlockedMatrix(&rmat);
     }
 
     template <unsigned int block_size>
     bool BILU0<block_size>::init(BlockedMatrix *mat)
     {
         const unsigned int bs = block_size;
-        BlockedMatrix *CSCmat = nullptr;
+        int *CSCRowIndices = nullptr;
+        int *CSCColPointers = nullptr;
 
         this->N = mat->Nb * block_size;
         this->Nb = mat->Nb;
@@ -70,14 +71,11 @@ namespace bda
         toOrder = new int[N];
         fromOrder = new int[N];
         if (level_scheduling) {
-            CSCmat = new BlockedMatrix();
-            CSCmat->Nb = Nb;
-            CSCmat->nnzbs = nnzbs;
-            CSCmat->nnzValues = new double[nnzbs * bs * bs];
-            CSCmat->colIndices = new int[nnzbs];
-            CSCmat->rowPointers = new int[Nb + 1];
+            CSCRowIndices = new int[nnzbs];
+            CSCColPointers = new int[Nb + 1];
+
             Timer t_convert;
-            bcsr_to_bcsc<block_size>(mat->nnzValues, mat->colIndices, mat->rowPointers, CSCmat->nnzValues, CSCmat->colIndices, CSCmat->rowPointers, mat->Nb);
+            csrPatternToCsc(mat->colIndices, mat->rowPointers, CSCRowIndices, CSCColPointers, mat->Nb);
             if(verbosity >= 3){
                 std::ostringstream out;
                 out << "BILU0 convert CSR to CSC: " << t_convert.stop() << " s\n";
@@ -86,10 +84,11 @@ namespace bda
         }
 
         Timer t_analysis;
-        rMat = allocateBlockedMatrix<block_size>(mat->Nb, mat->nnzbs);
-        LUMat = soft_copyBlockedMatrix(rMat);
+        rmat = allocateBlockedMatrix<block_size>(mat->Nb, mat->nnzbs);
+        LUmat = softCopyBlockedMatrix(rmat);
+
         if (level_scheduling) {
-            rowsPerColor = findLevelScheduling(mat->colIndices, mat->rowPointers, CSCmat->colIndices, CSCmat->rowPointers, mat->Nb, &numColors, toOrder, fromOrder);
+            rowsPerColor = findLevelScheduling(mat->colIndices, mat->rowPointers, CSCRowIndices, CSCColPointers, mat->Nb, &numColors, toOrder, fromOrder);
         } else if (graph_coloring) {
             rowsPerColor = findGraphColoring<block_size>(mat->colIndices, mat->rowPointers, mat->Nb, mat->Nb, mat->Nb, &numColors, toOrder, fromOrder);
         }
@@ -105,34 +104,32 @@ namespace bda
         diagIndex = new int[mat->Nb];
         invDiagVals = new double[mat->Nb * bs * bs];
 
-        LMat = allocateBlockedMatrix<block_size>(mat->Nb, (mat->nnzbs - mat->Nb) / 2);
-        UMat = allocateBlockedMatrix<block_size>(mat->Nb, (mat->nnzbs - mat->Nb) / 2);
+        Lmat = allocateBlockedMatrix<block_size>(mat->Nb, (mat->nnzbs - mat->Nb) / 2);
+        Umat = allocateBlockedMatrix<block_size>(mat->Nb, (mat->nnzbs - mat->Nb) / 2);
 
-        LUMat->nnzValues = new double[mat->nnzbs * bs * bs];
+        LUmat->nnzValues = new double[mat->nnzbs * bs * bs];
 
         if (level_scheduling) {
-            delete[] CSCmat->nnzValues;
-            delete[] CSCmat->colIndices;
-            delete[] CSCmat->rowPointers;
-            delete CSCmat;
+            delete[] CSCRowIndices;
+            delete[] CSCColPointers;
         }
 
 
-        s.Lvals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * bs * bs * LMat->nnzbs);
-        s.Uvals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * bs * bs * UMat->nnzbs);
-        s.Lcols = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * LMat->nnzbs);
-        s.Ucols = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * UMat->nnzbs);
-        s.Lrows = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (LMat->Nb + 1));
-        s.Urows = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (UMat->Nb + 1));
+        s.Lvals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * bs * bs * Lmat->nnzbs);
+        s.Uvals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * bs * bs * Umat->nnzbs);
+        s.Lcols = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * Lmat->nnzbs);
+        s.Ucols = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * Umat->nnzbs);
+        s.Lrows = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (Lmat->Nb + 1));
+        s.Urows = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (Umat->Nb + 1));
         s.invDiagVals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * bs * bs * mat->Nb);
         s.rowsPerColor = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (numColors + 1));
 
-        queue->enqueueWriteBuffer(s.Lvals, CL_TRUE, 0, LMat->nnzbs * sizeof(double) * bs * bs, LMat->nnzValues);
-        queue->enqueueWriteBuffer(s.Uvals, CL_TRUE, 0, UMat->nnzbs * sizeof(double) * bs * bs, UMat->nnzValues);
-        queue->enqueueWriteBuffer(s.Lcols, CL_TRUE, 0, LMat->nnzbs * sizeof(int), LMat->colIndices);
-        queue->enqueueWriteBuffer(s.Ucols, CL_TRUE, 0, UMat->nnzbs * sizeof(int), UMat->colIndices);
-        queue->enqueueWriteBuffer(s.Lrows, CL_TRUE, 0, (LMat->Nb + 1) * sizeof(int), LMat->rowPointers);
-        queue->enqueueWriteBuffer(s.Urows, CL_TRUE, 0, (UMat->Nb + 1) * sizeof(int), UMat->rowPointers);
+        queue->enqueueWriteBuffer(s.Lvals, CL_TRUE, 0, Lmat->nnzbs * sizeof(double) * bs * bs, Lmat->nnzValues);
+        queue->enqueueWriteBuffer(s.Uvals, CL_TRUE, 0, Umat->nnzbs * sizeof(double) * bs * bs, Umat->nnzValues);
+        queue->enqueueWriteBuffer(s.Lcols, CL_TRUE, 0, Lmat->nnzbs * sizeof(int), Lmat->colIndices);
+        queue->enqueueWriteBuffer(s.Ucols, CL_TRUE, 0, Umat->nnzbs * sizeof(int), Umat->colIndices);
+        queue->enqueueWriteBuffer(s.Lrows, CL_TRUE, 0, (Lmat->Nb + 1) * sizeof(int), Lmat->rowPointers);
+        queue->enqueueWriteBuffer(s.Urows, CL_TRUE, 0, (Umat->Nb + 1) * sizeof(int), Umat->rowPointers);
         queue->enqueueWriteBuffer(s.invDiagVals, CL_TRUE, 0, mat->Nb * sizeof(double) * bs * bs, invDiagVals);
 
         int *rowsPerColorPrefix = new int[numColors + 1];
@@ -154,7 +151,7 @@ namespace bda
         const unsigned int bs = block_size;
 
         Timer t_reorder;
-        blocked_reorder_matrix_by_pattern<block_size>(mat, toOrder, fromOrder, rMat);
+        reorderBlockedMatrixByPattern<block_size>(mat, toOrder, fromOrder, rmat);
         if (verbosity >= 3){
             std::ostringstream out;
             out << "BILU0 reorder matrix: " << t_reorder.stop() << " s";
@@ -163,7 +160,7 @@ namespace bda
 
         // TODO: remove this copy by replacing inplace ilu decomp by out-of-place ilu decomp
         Timer t_copy;
-        memcpy(LUMat->nnzValues, rMat->nnzValues, sizeof(double) * bs * bs * rMat->nnzbs);
+        memcpy(LUmat->nnzValues, rmat->nnzValues, sizeof(double) * bs * bs * rmat->nnzbs);
         if (verbosity >= 3){
             std::ostringstream out;
             out << "BILU0 memcpy: " << t_copy.stop() << " s";
@@ -179,13 +176,13 @@ namespace bda
         Timer t_decomposition;
 
         // go through all rows
-        for (i = 0; i < LUMat->Nb; i++) {
-            iRowStart = LUMat->rowPointers[i];
-            iRowEnd = LUMat->rowPointers[i + 1];
+        for (i = 0; i < LUmat->Nb; i++) {
+            iRowStart = LUmat->rowPointers[i];
+            iRowEnd = LUmat->rowPointers[i + 1];
 
             // go through all elements of the row
             for (ij = iRowStart; ij < iRowEnd; ij++) {
-                j = LUMat->colIndices[ij];
+                j = LUmat->colIndices[ij];
                 // if the element is the diagonal, store the index and go to next row
                 if (j == i) {
                     diagIndex[i] = ij;
@@ -202,21 +199,21 @@ namespace bda
 
                 LSize++;
                 // calculate the pivot of this row
-                blockMult<bs>(LUMat->nnzValues + ij * bs * bs, invDiagVals + j * bs * bs, &pivot[0]);
+                blockMult<bs>(LUmat->nnzValues + ij * bs * bs, invDiagVals + j * bs * bs, &pivot[0]);
 
-                memcpy(LUMat->nnzValues + ij * bs * bs, &pivot[0], sizeof(double) * block_size * block_size);
+                memcpy(LUmat->nnzValues + ij * bs * bs, &pivot[0], sizeof(double) * block_size * block_size);
 
-                jRowEnd = LUMat->rowPointers[j + 1];
+                jRowEnd = LUmat->rowPointers[j + 1];
                 jk = diagIndex[j] + 1;
                 ik = ij + 1;
                 // substract that row scaled by the pivot from this row.
                 while (ik < iRowEnd && jk < jRowEnd) {
-                    if (LUMat->colIndices[ik] == LUMat->colIndices[jk]) {
-                        blockMultSub<bs>(LUMat->nnzValues + ik * bs * bs, pivot, LUMat->nnzValues + jk * bs * bs);
+                    if (LUmat->colIndices[ik] == LUmat->colIndices[jk]) {
+                        blockMultSub<bs>(LUmat->nnzValues + ik * bs * bs, pivot, LUmat->nnzValues + jk * bs * bs);
                         ik++;
                         jk++;
                     } else {
-                        if (LUMat->colIndices[ik] < LUMat->colIndices[jk])
+                        if (LUmat->colIndices[ik] < LUmat->colIndices[jk])
                         { ik++; }
                         else
                         { jk++; }
@@ -224,35 +221,35 @@ namespace bda
                 }
             }
             // store the inverse in the diagonal!
-            blockInvert3x3(LUMat->nnzValues + ij * bs * bs, invDiagVals + i * bs * bs);
+            blockInvert3x3(LUmat->nnzValues + ij * bs * bs, invDiagVals + i * bs * bs);
 
-            memcpy(LUMat->nnzValues + ij * bs * bs, invDiagVals + i * bs * bs, sizeof(double) * bs * bs);
+            memcpy(LUmat->nnzValues + ij * bs * bs, invDiagVals + i * bs * bs, sizeof(double) * bs * bs);
         }
 
-        LMat->rowPointers[0] = 0;
-        UMat->rowPointers[0] = 0;
+        Lmat->rowPointers[0] = 0;
+        Umat->rowPointers[0] = 0;
 
         // Split the LU matrix into two by comparing column indices to diagonal indices
-        for (i = 0; i < LUMat->Nb; i++) {
-            int offsetL = LMat->rowPointers[i];
-            int rowSize = diagIndex[i] - LUMat->rowPointers[i];
-            int offsetLU = LUMat->rowPointers[i];
-            memcpy(LMat->nnzValues + offsetL * bs * bs, LUMat->nnzValues + offsetLU * bs * bs, sizeof(double) * bs * bs * rowSize);
-            memcpy(LMat->colIndices + offsetL, LUMat->colIndices + offsetLU, sizeof(int) * rowSize);
+        for (i = 0; i < LUmat->Nb; i++) {
+            int offsetL = Lmat->rowPointers[i];
+            int rowSize = diagIndex[i] - LUmat->rowPointers[i];
+            int offsetLU = LUmat->rowPointers[i];
+            memcpy(Lmat->nnzValues + offsetL * bs * bs, LUmat->nnzValues + offsetLU * bs * bs, sizeof(double) * bs * bs * rowSize);
+            memcpy(Lmat->colIndices + offsetL, LUmat->colIndices + offsetLU, sizeof(int) * rowSize);
             offsetL += rowSize;
-            LMat->rowPointers[i + 1] = offsetL;
+            Lmat->rowPointers[i + 1] = offsetL;
         }
         // Reverse the order or the (blocked) rows for the U matrix,
         // because the rows are accessed in reverse order when applying the ILU0
         int URowIndex = 0;
-        for (i = LUMat->Nb - 1; i >= 0; i--) {
-            int offsetU = UMat->rowPointers[URowIndex];
-            int rowSize = LUMat->rowPointers[i + 1] - diagIndex[i] - 1;
+        for (i = LUmat->Nb - 1; i >= 0; i--) {
+            int offsetU = Umat->rowPointers[URowIndex];
+            int rowSize = LUmat->rowPointers[i + 1] - diagIndex[i] - 1;
             int offsetLU = diagIndex[i] + 1;
-            memcpy(UMat->nnzValues + offsetU * bs * bs, LUMat->nnzValues + offsetLU * bs * bs, sizeof(double) * bs * bs * rowSize);
-            memcpy(UMat->colIndices + offsetU, LUMat->colIndices + offsetLU, sizeof(int) * rowSize);
+            memcpy(Umat->nnzValues + offsetU * bs * bs, LUmat->nnzValues + offsetLU * bs * bs, sizeof(double) * bs * bs * rowSize);
+            memcpy(Umat->colIndices + offsetU, LUmat->colIndices + offsetLU, sizeof(int) * rowSize);
             offsetU += rowSize;
-            UMat->rowPointers[URowIndex + 1] = offsetU;
+            Umat->rowPointers[URowIndex + 1] = offsetU;
             URowIndex++;
         }
         if (verbosity >= 3) {
@@ -263,14 +260,14 @@ namespace bda
 
         Timer t_copyToGpu;
         if (pattern_uploaded == false) {
-            queue->enqueueWriteBuffer(s.Lcols, CL_TRUE, 0, LMat->nnzbs * sizeof(int), LMat->colIndices);
-            queue->enqueueWriteBuffer(s.Ucols, CL_TRUE, 0, UMat->nnzbs * sizeof(int), UMat->colIndices);
-            queue->enqueueWriteBuffer(s.Lrows, CL_TRUE, 0, (LMat->Nb + 1) * sizeof(int), LMat->rowPointers);
-            queue->enqueueWriteBuffer(s.Urows, CL_TRUE, 0, (UMat->Nb + 1) * sizeof(int), UMat->rowPointers);
+            queue->enqueueWriteBuffer(s.Lcols, CL_TRUE, 0, Lmat->nnzbs * sizeof(int), Lmat->colIndices);
+            queue->enqueueWriteBuffer(s.Ucols, CL_TRUE, 0, Umat->nnzbs * sizeof(int), Umat->colIndices);
+            queue->enqueueWriteBuffer(s.Lrows, CL_TRUE, 0, (Lmat->Nb + 1) * sizeof(int), Lmat->rowPointers);
+            queue->enqueueWriteBuffer(s.Urows, CL_TRUE, 0, (Umat->Nb + 1) * sizeof(int), Umat->rowPointers);
             pattern_uploaded = true;
         }
-        queue->enqueueWriteBuffer(s.Lvals, CL_TRUE, 0, LMat->nnzbs * sizeof(double) * bs * bs, LMat->nnzValues);
-        queue->enqueueWriteBuffer(s.Uvals, CL_TRUE, 0, UMat->nnzbs * sizeof(double) * bs * bs, UMat->nnzValues);
+        queue->enqueueWriteBuffer(s.Lvals, CL_TRUE, 0, Lmat->nnzbs * sizeof(double) * bs * bs, Lmat->nnzValues);
+        queue->enqueueWriteBuffer(s.Uvals, CL_TRUE, 0, Umat->nnzbs * sizeof(double) * bs * bs, Umat->nnzValues);
         queue->enqueueWriteBuffer(s.invDiagVals, CL_TRUE, 0, Nb * sizeof(double) * bs * bs, invDiagVals);
         if (verbosity >= 3) {
             std::ostringstream out;

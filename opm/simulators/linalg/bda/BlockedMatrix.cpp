@@ -50,7 +50,7 @@ void freeBlockedMatrix(BlockedMatrix **mat) {
     }
 }
 
-BlockedMatrix *soft_copyBlockedMatrix(BlockedMatrix *mat) {
+BlockedMatrix *softCopyBlockedMatrix(BlockedMatrix *mat) {
     BlockedMatrix *res = new BlockedMatrix();
     res->nnzValues = mat->nnzValues;
     res->colIndices = mat->colIndices;

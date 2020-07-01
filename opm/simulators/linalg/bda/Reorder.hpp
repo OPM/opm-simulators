@@ -48,18 +48,19 @@ int colorBlockedNodes(int rows, const int *rowPointers, const int *colIndices, s
 /// \param[in] fromOrder     reorder pattern that lists for each index in the new order, from which index in the original order it was moved
 /// \param[inout] rMat       reordered Matrix 
 template <unsigned int block_size>
-void blocked_reorder_matrix_by_pattern(BlockedMatrix *mat, int *toOrder, int *fromOrder, BlockedMatrix *rMat);
+void reorderBlockedMatrixByPattern(BlockedMatrix *mat, int *toOrder, int *fromOrder, BlockedMatrix *rMat);
 
 /// Compute reorder mapping from the color that each node has received
 /// The toOrder, fromOrder and iters arrays must be allocated already
-/// \param[in] Nb            number of blocks in the vector
-/// \param[in] colors        array containing the number of the color that each row is assigned to
-/// \param[inout] toOrder    reorder pattern that lists for each index in the original order, to which index in the new order it should be moved
-/// \param[inout] fromOrder  reorder pattern that lists for each index in the new order, from which index in the original order it was moved
-/// \param[inout] iters      array containing for each color the number of rows that it contains
-void colorsToReordering(int Nb, std::vector<int>& colors, int *toOrder, int *fromOrder, int *iters);
+/// \param[in] Nb              number of blocks in the vector
+/// \param[in] colors          array containing the number of the color that each row is assigned to
+/// \param[in] numColors       the total number of colors into which all rows have been divided
+/// \param[inout] toOrder      reorder pattern that lists for each index in the original order, to which index in the new order it should be moved
+/// \param[inout] fromOrder    reorder pattern that lists for each index in the new order, from which index in the original order it was moved
+/// \param[inout] rowsPerColor array containing for each color the number of rows that it contains
+void colorsToReordering(int Nb, std::vector<int>& colors, int numColors, int *toOrder, int *fromOrder, int *rowsPerColor);
 
-/// Reorder a vector according to the mapping in toOrder and fromOrder
+/// Reorder a vector according to the mapping in fromOrder
 /// The rVector array must be allocated already
 /// \param[in] Nb            number of blocks in the vector
 /// \param[in] vector        vector to be reordered
@@ -67,7 +68,7 @@ void colorsToReordering(int Nb, std::vector<int>& colors, int *toOrder, int *fro
 /// \param[in] fromOrder     reorder pattern that lists for each index in the new order, from which index in the original order it was moved
 /// \param[inout] rVector    reordered vector
 template <unsigned int block_size>
-void blocked_reorder_vector_by_pattern(int Nb, double *vector, int *fromOrder, double *rVector);
+void reorderBlockedVectorByPattern(int Nb, double *vector, int *fromOrder, double *rVector);
 
 /// Determine whether all rows that a certain row depends on are done already
 /// \param[in] rowIndex      index of the row that needs to be checked for
@@ -75,7 +76,7 @@ void blocked_reorder_vector_by_pattern(int Nb, double *vector, int *fromOrder, d
 /// \param[in] colIndices    column indices of the matrix that the row is in
 /// \param[in] doneRows      array that for each row lists whether it is done or not
 /// \return                  true iff all dependencies are done and if the result itself was not done yet
-bool canBeStarted(int rowIndex, int *rowPointers, int *colIndices, std::vector<bool>& doneRows);
+bool canBeStarted(const int rowIndex, const  int *rowPointers, const  int *colIndices, const std::vector<bool>& doneRows);
 
 /// Find a level scheduling reordering for an input matrix
 /// The toOrder and fromOrder arrays must be allocated already
@@ -84,11 +85,11 @@ bool canBeStarted(int rowIndex, int *rowPointers, int *colIndices, std::vector<b
 /// \param[in] CSCColIndices  row indices array, obtained from storing the input matrix in the CSC format
 /// \param[in] CSCRowPointers column pointers array, obtained from storing the input matrix in the CSC format
 /// \param[in] Nb             number of blockrows in the matrix
-/// \param[out] iters         a pointer to the number of colors needed for the level scheduling
+/// \param[out] numColors     a pointer to the number of colors needed for the level scheduling
 /// \param[inout] toOrder     the reorder pattern that was found, which lists for each index in the original order, to which index in the new order it should be moved
 /// \param[inout] fromOrder   the reorder pattern that was found, which lists for each index in the new order, from which index in the original order it was moved
 /// \return                   a pointer to an array that contains for each color, the number of rows that that color contains
-int* findLevelScheduling(int *CSRColIndices, int *CSRRowPointers, int *CSCColIndices, int *CSCRowPointers, int Nb, int *iters, int *toOrder, int* fromOrder);
+int* findLevelScheduling(int *CSRColIndices, int *CSRRowPointers, int *CSCColIndices, int *CSCRowPointers, int Nb, int *numColors, int *toOrder, int* fromOrder);
 
 /// Find a graph coloring reordering for an input matrix
 /// The toOrder and fromOrder arrays must be allocated already
@@ -102,20 +103,17 @@ int* findLevelScheduling(int *CSRColIndices, int *CSRRowPointers, int *CSCColInd
 /// \param[inout] fromOrder    the reorder pattern that was found, which lists for each index in the new order, from which index in the original order it was moved
 /// \return                    a pointer to an array that contains for each color, the number of rows that that color contains
 template <unsigned int block_size>
-int* findGraphColoring(int *colIndices, int *rowPointers, int Nb, int maxRowsPerColor, int maxColsPerColor, int *numColors, int *toOrder, int* fromOrder);
+int* findGraphColoring(const int *colIndices, const int *rowPointers, int Nb, int maxRowsPerColor, int maxColsPerColor, int *numColors, int *toOrder, int* fromOrder);
 
-/// Convert BCSR matrix to BCSC
-/// Arrays for output matrix B must be allocated already
+/// Convert a sparsity pattern stored in the CSR format to the CSC format
+/// CSCRowIndices and CSCColPointers arrays must be allocated already
 /// Based on the csr_tocsc() function from the scipy package from python, https://github.com/scipy/scipy/blob/master/scipy/sparse/sparsetools/csr.h
-/// \param[in] Avals          non-zero values of the BCSR matrix
-/// \param[in] Acols          column indices of the BCSR matrix
-/// \param[in] Arows          row pointers of the BCSR matrix
-/// \param[inout] Bvals       non-zero values of the result BCSC matrix
-/// \param[inout] Bcols       row indices of the result BCSC matrix
-/// \param[inout] Brows       column pointers of the result BCSC matrix
-/// \param[in] Nb             number of blockrows in the matrix
-template <unsigned int block_size>
-void bcsr_to_bcsc(double *Avals, int *Acols, int *Arows, double *Bvals, int *Bcols, int *Brows, int Nb);
+/// \param[in] CSRColIndices     column indices of the CSR representation of the pattern
+/// \param[in] CSRRowPointers    row pointers of the CSR representation of the pattern
+/// \param[inout] CSCRowIndices  row indices of the result CSC representation of the pattern
+/// \param[inout] CSCColPointers column pointers of the result CSC representation of the pattern
+/// \param[in] Nb                number of blockrows in the matrix
+void csrPatternToCsc(int *CSRColIndices, int *CSRRowPointers, int *CSCRowIndices, int *CSCColPointers, int Nb);
 
 }
 

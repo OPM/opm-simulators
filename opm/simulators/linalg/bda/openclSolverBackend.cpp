@@ -318,9 +318,9 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
     }
     if (verbosity >= 4) {
         std::ostringstream out;
-        out << "openclSolver::ily_apply:   " << prec_time << "s\n";
-        out << "openclSolver::spmv:        " << spmv_time << "s\n";
-        out << "openclSolver::rest:        " << rest_time << "s\n";
+        out << "openclSolver::ily_apply:   " << t_prec.elapsed() << "s\n";
+        out << "openclSolver::spmv:        " << t_spmv.elapsed() << "s\n";
+        out << "openclSolver::rest:        " << t_rest.elapsed() << "s\n";
         out << "openclSolver::total_solve: " << res.elapsed << "s\n";
         OpmLog::info(out.str());
     }
@@ -614,7 +614,7 @@ void openclSolverBackend<block_size>::update_system(double *vals, double *b) {
     Timer t;
 
     mat->nnzValues = vals;
-    blocked_reorder_vector_by_pattern<block_size>(mat->Nb, b, fromOrder, rb);
+    reorderBlockedVectorByPattern<block_size>(mat->Nb, b, fromOrder, rb);
 
     if (verbosity > 2) {
         std::ostringstream out;
@@ -662,7 +662,7 @@ void openclSolverBackend<block_size>::get_result(double *x) {
 	Timer t;
 
     queue->enqueueReadBuffer(d_x, CL_TRUE, 0, sizeof(double) * N, rb);
-    blocked_reorder_vector_by_pattern<block_size>(mat->Nb, rb, toOrder, x);
+    reorderBlockedVectorByPattern<block_size>(mat->Nb, rb, toOrder, x);
 
     if (verbosity > 2) {
         std::ostringstream out;

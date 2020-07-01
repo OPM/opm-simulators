@@ -41,7 +41,7 @@ BlockedMatrix *allocateBlockedMatrix(int Nb, int nnzbs);
 /// Allocate BlockedMatrix, but copy data pointers instead of allocating new memory
 /// \param[in] mat              matrix to be copied
 /// \return pointer to BlockedMatrix
-BlockedMatrix *soft_copyBlockedMatrix(BlockedMatrix *mat);
+BlockedMatrix *softCopyBlockedMatrix(BlockedMatrix *mat);
 
 /// Free BlockedMatrix and its data
 /// \param[in] mat              matrix to be free'd

@@ -39,8 +39,8 @@ namespace bda
         int Nb;      // number of blockrows of the matrix
         int nnz;     // number of nonzeroes of the matrix (scalar)
         int nnzbs;   // number of blocks of the matrix
-        BlockedMatrix *LMat, *UMat, *LUMat;
-        BlockedMatrix *rMat = nullptr; // only used with PAR_SIM
+        BlockedMatrix *Lmat, *Umat, *LUmat;
+        BlockedMatrix *rmat = nullptr; // only used with PAR_SIM
         double *invDiagVals;
         int *diagIndex, *rowsPerColor;
         int *toOrder, *fromOrder;
@@ -101,7 +101,7 @@ namespace bda
 
         BlockedMatrix* getRMat()
         {
-            return rMat;
+            return rmat;
         }
 
     };
