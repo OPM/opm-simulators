@@ -562,7 +562,10 @@ public:
         return wellDat;
     }
 
-    Opm::data::Group groupData(const int /* reportStepIdx */, Opm::Schedule& /* sched */) const {
+    Opm::data::GroupValues
+    groupData(const int /* reportStepIdx */,
+              const Opm::Schedule& /* sched */) const
+    {
         return {};
     }
 
