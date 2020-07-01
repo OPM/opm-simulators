@@ -20,6 +20,7 @@
 #include <config.h>
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
+#include <dune/common/timer.hh>
 
 #include <opm/simulators/linalg/bda/BdaSolver.hpp>
 #include <opm/simulators/linalg/bda/BILU0.hpp>
@@ -30,10 +31,7 @@ namespace bda
 {
 
     using Opm::OpmLog;
-
-    // define 'second' as 'BdaSolver<>::second', this allows usage of the second() function for timing
-    // typedefs cannot handle templates
-    const auto second = BdaSolver<>::second;
+    using Dune::Timer;
 
     template <unsigned int block_size>
     BILU0<block_size>::BILU0(bool level_scheduling_, bool graph_coloring_, int verbosity_) :
@@ -62,7 +60,6 @@ namespace bda
     bool BILU0<block_size>::init(BlockedMatrix *mat)
     {
         const unsigned int bs = block_size;
-        double t1 = 0.0, t2 = 0.0;
         BlockedMatrix *CSCmat = nullptr;
 
         this->N = mat->Nb * block_size;
@@ -79,21 +76,16 @@ namespace bda
             CSCmat->nnzValues = new double[nnzbs * bs * bs];
             CSCmat->colIndices = new int[nnzbs];
             CSCmat->rowPointers = new int[Nb + 1];
-            if(verbosity >= 3){
-                t1 = second();
-            }
+            Timer t_convert;
             bcsr_to_bcsc<block_size>(mat->nnzValues, mat->colIndices, mat->rowPointers, CSCmat->nnzValues, CSCmat->colIndices, CSCmat->rowPointers, mat->Nb);
             if(verbosity >= 3){
-                t2 = second();
                 std::ostringstream out;
-                out << "BILU0 convert CSR to CSC: " << t2 - t1 << " s";
+                out << "BILU0 convert CSR to CSC: " << t_convert.stop() << " s\n";
                 OpmLog::info(out.str());
             }
         }
 
-        if(verbosity >= 3){
-            t1 = second();
-        }
+        Timer t_analysis;
         rMat = allocateBlockedMatrix<block_size>(mat->Nb, mat->nnzbs);
         LUMat = soft_copyBlockedMatrix(rMat);
         if (level_scheduling) {
@@ -105,9 +97,8 @@ namespace bda
             return false;
         }
         if(verbosity >= 3){
-            t2 = second();
             std::ostringstream out;
-            out << "BILU0 analysis took: " << t2 - t1 << " s, " << numColors << " colors";
+            out << "BILU0 analysis took: " << t_analysis.stop() << " s, " << numColors << " colors";
             OpmLog::info(out.str());
         }
 
@@ -161,27 +152,21 @@ namespace bda
     bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat)
     {
         const unsigned int bs = block_size;
-        double t1 = 0.0, t2 = 0.0;
-        if (verbosity >= 3){
-            t1 = second();
-        }
+
+        Timer t_reorder;
         blocked_reorder_matrix_by_pattern<block_size>(mat, toOrder, fromOrder, rMat);
         if (verbosity >= 3){
-            t2 = second();
             std::ostringstream out;
-            out << "BILU0 reorder matrix: " << t2 - t1 << " s";
+            out << "BILU0 reorder matrix: " << t_reorder.stop() << " s";
             OpmLog::info(out.str());
         }
 
         // TODO: remove this copy by replacing inplace ilu decomp by out-of-place ilu decomp
-        if (verbosity >= 3){
-            t1 = second();
-        }
+        Timer t_copy;
         memcpy(LUMat->nnzValues, rMat->nnzValues, sizeof(double) * bs * bs * rMat->nnzbs);
         if (verbosity >= 3){
-            t2 = second();
             std::ostringstream out;
-            out << "BILU0 memcpy: " << t2 - t1 << " s";
+            out << "BILU0 memcpy: " << t_copy.stop() << " s";
             OpmLog::info(out.str());
         }
 
@@ -191,9 +176,8 @@ namespace bda
 
         int LSize = 0;
 
-        if (verbosity >= 3){
-            t1 = second();
-        }
+        Timer t_decomposition;
+
         // go through all rows
         for (i = 0; i < LUMat->Nb; i++) {
             iRowStart = LUMat->rowPointers[i];
@@ -272,15 +256,12 @@ namespace bda
             URowIndex++;
         }
         if (verbosity >= 3) {
-            t2 = second();
             std::ostringstream out;
-            out << "BILU0 decomposition: " << t2 - t1 << " s";
+            out << "BILU0 decomposition: " << t_decomposition.stop() << " s";
             OpmLog::info(out.str());
         }
 
-        if (verbosity >= 3) {
-            t1 = second();
-        }
+        Timer t_copyToGpu;
         if (pattern_uploaded == false) {
             queue->enqueueWriteBuffer(s.Lcols, CL_TRUE, 0, LMat->nnzbs * sizeof(int), LMat->colIndices);
             queue->enqueueWriteBuffer(s.Ucols, CL_TRUE, 0, UMat->nnzbs * sizeof(int), UMat->colIndices);
@@ -292,9 +273,8 @@ namespace bda
         queue->enqueueWriteBuffer(s.Uvals, CL_TRUE, 0, UMat->nnzbs * sizeof(double) * bs * bs, UMat->nnzValues);
         queue->enqueueWriteBuffer(s.invDiagVals, CL_TRUE, 0, Nb * sizeof(double) * bs * bs, invDiagVals);
         if (verbosity >= 3) {
-            t2 = second();
             std::ostringstream out;
-            out << "BILU0 copy to GPU: " << t2 - t1 << " s";
+            out << "BILU0 copy to GPU: " << t_copyToGpu.stop() << " s";
             OpmLog::info(out.str());
         }
 
@@ -307,11 +287,8 @@ namespace bda
     template <unsigned int block_size>
     void BILU0<block_size>::apply(cl::Buffer& x, cl::Buffer& y)
     {
-        double t1 = 0.0, t2 = 0.0;
-        if (verbosity >= 3) {
-            t1 = second();
-        }
         cl::Event event;
+        Timer t_apply;
 
         for(int color = 0; color < numColors; ++color){
             event = (*ILU_apply1)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), s.Lvals, s.Lcols, s.Lrows, (unsigned int)Nb, x, y, s.rowsPerColor, color, block_size, cl::Local(lmem_per_work_group));
@@ -324,9 +301,8 @@ namespace bda
 
         if (verbosity >= 3) {
             event.wait();
-            t2 = second();
             std::ostringstream out;
-            out << "BILU0 apply: " << t2 - t1 << " s";
+            out << "BILU0 apply: " << t_apply.stop() << " s";
             OpmLog::info(out.str());
         }
     }

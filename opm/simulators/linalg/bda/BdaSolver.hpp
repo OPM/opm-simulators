@@ -21,8 +21,6 @@
 #define OPM_BDASOLVER_BACKEND_HEADER_INCLUDED
 
 
-#include <sys/time.h>
-
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 #include <opm/simulators/linalg/bda/BdaSolverStatus.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
@@ -35,8 +33,7 @@ namespace bda
 
     /// This class serves to simplify choosing between different backend solvers, such as cusparseSolver and openclSolver
     /// This class is abstract, no instantiations can of it can be made, only of its children
-    /// Without a default block_size value, the BILU0 class cannot use BdaSolver::second()
-    template <unsigned int block_size = 3>
+    template <unsigned int block_size>
     class BdaSolver
     {
 
@@ -73,13 +70,6 @@ namespace bda
             double *b, WellContributions& wellContribs, BdaResult &res) = 0;
 
         virtual void get_result(double *x) = 0;
-
-        /// Different implementations of BdaSolver can use this function for timing
-        static double second(void) {
-            struct timeval tv;
-            gettimeofday(&tv, nullptr);
-            return (double)tv.tv_sec + (double)tv.tv_usec / 1000000.0;
-        }
 
     }; // end class BdaSolver
 

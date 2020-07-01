@@ -23,6 +23,7 @@
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
+#include <dune/common/timer.hh>
 
 
 #define __CL_ENABLE_EXCEPTIONS
@@ -48,6 +49,7 @@ namespace bda
 {
 
 using Opm::OpmLog;
+using Dune::Timer;
 
 template <unsigned int block_size>
 openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_, double tolerance_) : BdaSolver<block_size>(verbosity_, maxit_, tolerance_) {
@@ -72,14 +74,11 @@ unsigned int openclSolverBackend<block_size>::ceilDivision(const unsigned int A,
 template <unsigned int block_size>
 double openclSolverBackend<block_size>::dot_w(cl::Buffer in1, cl::Buffer in2, cl::Buffer out)
 {
-    double t1 = 0.0, t2 = 0.0;
     const unsigned int work_group_size = 1024;
     const unsigned int num_work_groups = ceilDivision(N, work_group_size);
     const unsigned int total_work_items = num_work_groups * work_group_size;
     const unsigned int lmem_per_work_group = sizeof(double) * work_group_size;
-    if (verbosity >= 4) {
-        t1 = second();
-    }
+    Timer t_dot;
 
     cl::Event event = (*dot_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), in1, in2, out, N, cl::Local(lmem_per_work_group));
 
@@ -92,9 +91,8 @@ double openclSolverBackend<block_size>::dot_w(cl::Buffer in1, cl::Buffer in2, cl
 
     if (verbosity >= 4) {
         event.wait();
-        t2 = second();
         std::ostringstream oss;
-        oss << "openclSolver dot_w time: " << t2 - t1;
+        oss << std::scientific << "openclSolver dot_w time: " << t_dot.stop() << " s";
         OpmLog::info(oss.str());
     }
 
@@ -104,14 +102,11 @@ double openclSolverBackend<block_size>::dot_w(cl::Buffer in1, cl::Buffer in2, cl
 template <unsigned int block_size>
 double openclSolverBackend<block_size>::norm_w(cl::Buffer in, cl::Buffer out)
 {
-    double t1 = 0.0, t2 = 0.0;
     const unsigned int work_group_size = 1024;
     const unsigned int num_work_groups = ceilDivision(N, work_group_size);
     const unsigned int total_work_items = num_work_groups * work_group_size;
     const unsigned int lmem_per_work_group = sizeof(double) * work_group_size;
-    if (verbosity >= 4) {
-        t1 = second();
-    }
+    Timer t_norm;
 
     cl::Event event = (*norm_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), in, out, N, cl::Local(lmem_per_work_group));
 
@@ -125,9 +120,8 @@ double openclSolverBackend<block_size>::norm_w(cl::Buffer in, cl::Buffer out)
 
     if (verbosity >= 4) {
         event.wait();
-        t2 = second();
         std::ostringstream oss;
-        oss << "openclSolver norm_w time: " << t2 - t1;
+        oss << std::scientific << "openclSolver norm_w time: " << t_norm.stop() << " s";
         OpmLog::info(oss.str());
     }
 
@@ -137,21 +131,17 @@ double openclSolverBackend<block_size>::norm_w(cl::Buffer in, cl::Buffer out)
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::axpy_w(cl::Buffer in, const double a, cl::Buffer out)
 {
-    double t1 = 0.0, t2 = 0.0;
     const unsigned int work_group_size = 32;
     const unsigned int num_work_groups = ceilDivision(N, work_group_size);
     const unsigned int total_work_items = num_work_groups * work_group_size;
-    if (verbosity >= 4) {
-        t1 = second();
-    }
+    Timer t_axpy;
 
     cl::Event event = (*axpy_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), in, a, out, N);
 
     if (verbosity >= 4) {
         event.wait();
-        t2 = second();
         std::ostringstream oss;
-        oss << "openclSolver axpy_w time: " << t2 - t1;
+        oss << std::scientific << "openclSolver axpy_w time: " << t_axpy.stop() << " s";
         OpmLog::info(oss.str());
     }
 }
@@ -159,21 +149,17 @@ void openclSolverBackend<block_size>::axpy_w(cl::Buffer in, const double a, cl::
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::custom_w(cl::Buffer p, cl::Buffer v, cl::Buffer r, const double omega, const double beta)
 {
-    double t1 = 0.0, t2 = 0.0;
     const unsigned int work_group_size = 32;
     const unsigned int num_work_groups = ceilDivision(N, work_group_size);
     const unsigned int total_work_items = num_work_groups * work_group_size;
-    if (verbosity >= 4) {
-        t1 = second();
-    }
+    Timer t_custom;
 
     cl::Event event = (*custom_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), p, v, r, omega, beta, N);
 
     if (verbosity >= 4) {
         event.wait();
-        t2 = second();
         std::ostringstream oss;
-        oss << "openclSolver custom_w time: " << t2 - t1;
+        oss << std::scientific << "openclSolver custom_w time: " << t_custom.stop() << " s";
         OpmLog::info(oss.str());
     }
 }
@@ -181,22 +167,18 @@ void openclSolverBackend<block_size>::custom_w(cl::Buffer p, cl::Buffer v, cl::B
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::spmv_blocked_w(cl::Buffer vals, cl::Buffer cols, cl::Buffer rows, cl::Buffer x, cl::Buffer b)
 {
-    double t1 = 0.0, t2 = 0.0;
     const unsigned int work_group_size = 32;
     const unsigned int num_work_groups = ceilDivision(N, work_group_size);
     const unsigned int total_work_items = num_work_groups * work_group_size;
     const unsigned int lmem_per_work_group = sizeof(double) * work_group_size;
-    if (verbosity >= 4) {
-        t1 = second();
-    }
+    Timer t_spmv;
 
     cl::Event event = (*spmv_blocked_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), vals, cols, rows, Nb, x, b, block_size, cl::Local(lmem_per_work_group));
 
     if (verbosity >= 4) {
         event.wait();
-        t2 = second();
         std::ostringstream oss;
-        oss << "openclSolver spmv_blocked_w time: " << t2 - t1;
+        oss << std::scientific << "openclSolver spmv_blocked_w time: " << t_spmv.stop() << " s";
         OpmLog::info(oss.str());
     }
 }
@@ -209,9 +191,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
     double rho, rhop, beta, alpha, omega, tmp1, tmp2;
     double norm, norm_0;
 
-    double t_total1, t_total2, t1 = 0.0, t2 = 0.0;
-    double prec_time = 0.0, spmv_time = 0.0, well_time = 0.0, rest_time = 0.0;
-    t_total1 = second();
+    Timer t_total, t_prec(false), t_spmv(false), t_well(false), t_rest(false);
 
     wellContribs.setOpenCLQueue(queue.get());
     wellContribs.setReordering(toOrder, true);
@@ -245,7 +225,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
         OpmLog::info(out.str());
     }
 
-    t1 = second();
+    t_rest.start();
     for (it = 0.5; it < maxit; it += 0.5) {
         rhop = rho;
         rho = dot_w(d_rw, d_r, d_tmp);
@@ -254,37 +234,32 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
             beta = (rho / rhop) * (alpha / omega);
             custom_w(d_p, d_v, d_r, omega, beta);
         }
-        t2 = second();
-        rest_time += t2 - t1;
+        t_rest.stop();
 
         // pw = prec(p)
-        t1 = second();
+        t_prec.start();
         prec->apply(d_p, d_pw);
-        t2 = second();
-        prec_time += t2 - t1;
+        t_prec.stop();
 
         // v = A * pw
-        t1 = second();
+        t_spmv.start();
         spmv_blocked_w(d_Avals, d_Acols, d_Arows, d_pw, d_v);
-        t2 = second();
-        spmv_time += t2 - t1;
+        t_spmv.stop();
 
         // apply wellContributions
         if (wellContribs.getNumWells() > 0) {
-            t1 = second();
+            t_well.start();
             wellContribs.apply(d_pw, d_v);
-            t2 = second();
-            well_time += t2 - t1;
+            t_well.stop();
         }
 
-        t1 = second();
+        t_rest.start();
         tmp1 = dot_w(d_rw, d_v, d_tmp);
         alpha = rho / tmp1;
         axpy_w(d_v, -alpha, d_r);      // r = r - alpha * v
         axpy_w(d_pw, alpha, d_x);      // x = x + alpha * pw
         norm = norm_w(d_r, d_tmp);
-        t2 = second();
-        rest_time += t2 - t1;
+        t_rest.stop();
 
         if (norm < tolerance * norm_0) {
             break;
@@ -293,34 +268,30 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
         it += 0.5;
 
         // s = prec(r)
-        t1 = second();
+        t_prec.start();
         prec->apply(d_r, d_s);
-        t2 = second();
-        prec_time += t2 - t1;
+        t_prec.stop();
 
         // t = A * s
-        t1 = second();
+        t_spmv.start();
         spmv_blocked_w(d_Avals, d_Acols, d_Arows, d_s, d_t);
-        t2 = second();
-        spmv_time += t2 - t1;
+        t_spmv.stop();
 
         // apply wellContributions
         if (wellContribs.getNumWells() > 0) {
-            t1 = second();
+        	t_well.start();
             wellContribs.apply(d_s, d_t);
-            t2 = second();
-            well_time += t2 - t1;
+        	t_well.stop();
         }
 
-        t1 = second();
+        t_rest.start();
         tmp1 = dot_w(d_t, d_r, d_tmp);
         tmp2 = dot_w(d_t, d_t, d_tmp);
         omega = tmp1 / tmp2;
         axpy_w(d_s, omega, d_x);     // x = x + omega * s
         axpy_w(d_t, -omega, d_r);    // r = r - omega * t
         norm = norm_w(d_r, d_tmp);
-        t2 = second();
-        rest_time += t2 - t1;
+        t_rest.stop();
 
         if (norm < tolerance * norm_0) {
             break;
@@ -333,14 +304,10 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
         }
     }
 
-    t2 = second();
-    t_total2 = second();
-    rest_time += t2 - t1;
-
     res.iterations = std::min(it, (float)maxit);
     res.reduction = norm / norm_0;
     res.conv_rate  = static_cast<double>(pow(res.reduction, 1.0 / it));
-    res.elapsed = t_total2 - t_total1;
+    res.elapsed = t_total.stop();
     res.converged = (it != (maxit + 0.5));
 
     if (verbosity > 0) {
@@ -556,12 +523,7 @@ void openclSolverBackend<block_size>::finalize() {
 
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::copy_system_to_gpu() {
-
-    double t1 = 0.0, t2 = 0.0;
-    if (verbosity > 2) {
-        t1 = second();
-    }
-
+	Timer t;
     cl::Event event;
 
 #if COPY_ROW_BY_ROW
@@ -583,9 +545,8 @@ void openclSolverBackend<block_size>::copy_system_to_gpu() {
     event.wait();
 
     if (verbosity > 2) {
-        t2 = second();
         std::ostringstream out;
-        out << "openclSolver::copy_system_to_gpu(): " << t2 - t1 << " s";
+        out << "openclSolver::copy_system_to_gpu(): " << t.stop() << " s";
         OpmLog::info(out.str());
     }
 } // end copy_system_to_gpu()
@@ -594,12 +555,7 @@ void openclSolverBackend<block_size>::copy_system_to_gpu() {
 // don't copy rowpointers and colindices, they stay the same
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::update_system_on_gpu() {
-
-    double t1 = 0.0, t2 = 0.0;
-    if (verbosity > 2) {
-        t1 = second();
-    }
-
+	Timer t;
     cl::Event event;
 
 #if COPY_ROW_BY_ROW
@@ -619,9 +575,8 @@ void openclSolverBackend<block_size>::update_system_on_gpu() {
     event.wait();
 
     if (verbosity > 2) {
-        t2 = second();
         std::ostringstream out;
-        out << "openclSolver::update_system_on_gpu(): " << t2 - t1 << " s";
+        out << "openclSolver::update_system_on_gpu(): " << t.stop() << " s";
         OpmLog::info(out.str());
     }
 } // end update_system_on_gpu()
@@ -629,12 +584,7 @@ void openclSolverBackend<block_size>::update_system_on_gpu() {
 
 template <unsigned int block_size>
 bool openclSolverBackend<block_size>::analyse_matrix() {
-
-    double t1 = 0.0, t2 = 0.0;
-
-    if (verbosity > 2) {
-        t1 = second();
-    }
+	Timer t;
 
     bool success = prec->init(mat);
     int work_group_size = 32;
@@ -648,9 +598,8 @@ bool openclSolverBackend<block_size>::analyse_matrix() {
     rmat = prec->getRMat();
 
     if (verbosity > 2) {
-        t2 = second();
         std::ostringstream out;
-        out << "openclSolver::analyse_matrix(): " << t2 - t1 << " s";
+        out << "openclSolver::analyse_matrix(): " << t.stop() << " s";
         OpmLog::info(out.str());
     }
 
@@ -662,18 +611,14 @@ bool openclSolverBackend<block_size>::analyse_matrix() {
 
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::update_system(double *vals, double *b) {
-    double t1 = 0.0, t2 = 0.0;
-    if (verbosity > 2) {
-        t1 = second();
-    }
+    Timer t;
 
     mat->nnzValues = vals;
     blocked_reorder_vector_by_pattern<block_size>(mat->Nb, b, fromOrder, rb);
 
     if (verbosity > 2) {
-        t2 = second();
         std::ostringstream out;
-        out << "openclSolver::update_system(): " << t2 - t1 << " s";
+        out << "openclSolver::update_system(): " << t.stop() << " s";
         OpmLog::info(out.str());
     }
 } // end update_system()
@@ -681,18 +626,13 @@ void openclSolverBackend<block_size>::update_system(double *vals, double *b) {
 
 template <unsigned int block_size>
 bool openclSolverBackend<block_size>::create_preconditioner() {
-
-    double t1 = 0.0, t2 = 0.0;
-    if (verbosity > 2) {
-        t1 = second();
-    }
+	Timer t;
 
     bool result = prec->create_preconditioner(mat);
 
     if (verbosity > 2) {
-        t2 = second();
         std::ostringstream out;
-        out << "openclSolver::create_preconditioner(): " << t2 - t1 << " s";
+        out << "openclSolver::create_preconditioner(): " << t.stop() << " s";
         OpmLog::info(out.str());
     }
     return result;
@@ -701,18 +641,14 @@ bool openclSolverBackend<block_size>::create_preconditioner() {
 
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::solve_system(WellContributions& wellContribs, BdaResult &res) {
-    // actually solve
-    double t1 = 0.0, t2 = 0.0;
-    if (verbosity > 2) {
-        t1 = second();
-    }
+    Timer t;
 
+    // actually solve
     gpu_pbicgstab(wellContribs, res);
 
     if (verbosity > 2) {
-        t2 = second();
         std::ostringstream out;
-        out << "openclSolver::solve_system(): " << t2 - t1 << " s";
+        out << "openclSolver::solve_system(): " << t.stop() << " s";
         OpmLog::info(out.str());
     }
 
@@ -723,19 +659,14 @@ void openclSolverBackend<block_size>::solve_system(WellContributions& wellContri
 // caller must be sure that x is a valid array
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::get_result(double *x) {
-
-    double t1 = 0.0, t2 = 0.0;
-    if (verbosity > 2) {
-        t1 = second();
-    }
+	Timer t;
 
     queue->enqueueReadBuffer(d_x, CL_TRUE, 0, sizeof(double) * N, rb);
     blocked_reorder_vector_by_pattern<block_size>(mat->Nb, rb, toOrder, x);
 
     if (verbosity > 2) {
-        t2 = second();
         std::ostringstream out;
-        out << "openclSolver::get_result(): " << t2 - t1 << " s";
+        out << "openclSolver::get_result(): " << t.stop() << " s";
         OpmLog::info(out.str());
     }
 } // end get_result()

@@ -23,6 +23,7 @@
 #include <sstream>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <dune/common/timer.hh>
 
 #include <opm/simulators/linalg/bda/cusparseSolverBackend.hpp>
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
@@ -40,6 +41,7 @@ namespace bda
 {
 
 using Opm::OpmLog;
+using Dune::Timer;
 
 const cusparseSolvePolicy_t policy = CUSPARSE_SOLVE_POLICY_USE_LEVEL;
 const cusparseOperation_t operation  = CUSPARSE_OPERATION_NON_TRANSPOSE;
@@ -56,7 +58,7 @@ cusparseSolverBackend<block_size>::~cusparseSolverBackend() {
 
 template <unsigned int block_size>
 void cusparseSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContribs, BdaResult& res) {
-    double t_total1, t_total2;
+    Timer t_total, t_prec(false), t_spmv(false), t_well(false), t_rest(false);
     int n = N;
     double rho = 1.0, rhop;
     double alpha, nalpha, beta;
@@ -66,8 +68,6 @@ void cusparseSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellCon
     double one  = 1.0;
     double mone = -1.0;
     float it;
-
-    t_total1 = second();
 
     if (wellContribs.getNumWells() > 0) {
         wellContribs.setCudaStream(stream);
@@ -169,12 +169,10 @@ void cusparseSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellCon
         }
     }
 
-    t_total2 = second();
-
     res.iterations = std::min(it, (float)maxit);
     res.reduction = norm / norm_0;
     res.conv_rate  = static_cast<double>(pow(res.reduction, 1.0 / it));
-    res.elapsed = t_total2 - t_total1;
+    res.elapsed = t_total.stop();
     res.converged = (it != (maxit + 0.5));
 
     if (verbosity > 0) {
@@ -284,11 +282,7 @@ void cusparseSolverBackend<block_size>::finalize() {
 
 template <unsigned int block_size>
 void cusparseSolverBackend<block_size>::copy_system_to_gpu(double *vals, int *rows, int *cols, double *b) {
-
-    double t1, t2;
-    if (verbosity > 2) {
-        t1 = second();
-    }
+    Timer t;
 
 #if COPY_ROW_BY_ROW
     int sum = 0;
@@ -309,9 +303,8 @@ void cusparseSolverBackend<block_size>::copy_system_to_gpu(double *vals, int *ro
 
     if (verbosity > 2) {
         cudaStreamSynchronize(stream);
-        t2 = second();
         std::ostringstream out;
-        out << "cusparseSolver::copy_system_to_gpu(): " << t2 - t1 << " s";
+        out << "cusparseSolver::copy_system_to_gpu(): " << t.stop() << " s";
         OpmLog::info(out.str());
     }
 } // end copy_system_to_gpu()
@@ -320,11 +313,7 @@ void cusparseSolverBackend<block_size>::copy_system_to_gpu(double *vals, int *ro
 // don't copy rowpointers and colindices, they stay the same
 template <unsigned int block_size>
 void cusparseSolverBackend<block_size>::update_system_on_gpu(double *vals, int *rows, double *b) {
-
-    double t1, t2;
-    if (verbosity > 2) {
-        t1 = second();
-    }
+    Timer t;
 
 #if COPY_ROW_BY_ROW
     int sum = 0;
@@ -343,9 +332,8 @@ void cusparseSolverBackend<block_size>::update_system_on_gpu(double *vals, int *
 
     if (verbosity > 2) {
         cudaStreamSynchronize(stream);
-        t2 = second();
         std::ostringstream out;
-        out << "cusparseSolver::update_system_on_gpu(): " << t2 - t1 << " s";
+        out << "cusparseSolver::update_system_on_gpu(): " << t.stop() << " s";
         OpmLog::info(out.str());
     }
 } // end update_system_on_gpu()
@@ -361,11 +349,7 @@ template <unsigned int block_size>
 bool cusparseSolverBackend<block_size>::analyse_matrix() {
 
     int d_bufferSize_M, d_bufferSize_L, d_bufferSize_U, d_bufferSize;
-    double t1, t2;
-
-    if (verbosity > 2) {
-        t1 = second();
-    }
+    Timer t;
 
     cusparseCreateMatDescr(&descr_B);
     cusparseCreateMatDescr(&descr_M);
@@ -428,9 +412,8 @@ bool cusparseSolverBackend<block_size>::analyse_matrix() {
 
     if (verbosity > 2) {
         cudaStreamSynchronize(stream);
-        t2 = second();
         std::ostringstream out;
-        out << "cusparseSolver::analyse_matrix(): " << t2 - t1 << " s";
+        out << "cusparseSolver::analyse_matrix(): " << t.stop() << " s";
         OpmLog::info(out.str());
     }
 
@@ -441,11 +424,7 @@ bool cusparseSolverBackend<block_size>::analyse_matrix() {
 
 template <unsigned int block_size>
 bool cusparseSolverBackend<block_size>::create_preconditioner() {
-
-    double t1, t2;
-    if (verbosity > 2) {
-        t1 = second();
-    }
+    Timer t;
 
     d_mCols = d_bCols;
     d_mRows = d_bRows;
@@ -463,9 +442,8 @@ bool cusparseSolverBackend<block_size>::create_preconditioner() {
 
     if (verbosity > 2) {
         cudaStreamSynchronize(stream);
-        t2 = second();
         std::ostringstream out;
-        out << "cusparseSolver::create_preconditioner(): " << t2 - t1 << " s";
+        out << "cusparseSolver::create_preconditioner(): " << t.stop() << " s";
         OpmLog::info(out.str());
     }
     return true;
@@ -485,19 +463,14 @@ void cusparseSolverBackend<block_size>::solve_system(WellContributions& wellCont
 // caller must be sure that x is a valid array
 template <unsigned int block_size>
 void cusparseSolverBackend<block_size>::get_result(double *x) {
-
-    double t1, t2;
-    if (verbosity > 2) {
-        t1 = second();
-    }
+    Timer t;
 
     cudaMemcpyAsync(x, d_x, N * sizeof(double), cudaMemcpyDeviceToHost, stream);
     cudaStreamSynchronize(stream);
 
     if (verbosity > 2) {
-        t2 = second();
         std::ostringstream out;
-        out << "cusparseSolver::get_result(): " << t2 - t1 << " s";
+        out << "cusparseSolver::get_result(): " << t.stop() << " s";
         OpmLog::info(out.str());
     }
 } // end get_result()

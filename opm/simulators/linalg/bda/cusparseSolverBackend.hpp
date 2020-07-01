@@ -44,7 +44,6 @@ class cusparseSolverBackend : public BdaSolver<block_size> {
     using Base::verbosity;
     using Base::maxit;
     using Base::tolerance;
-    using Base::second;
     using Base::initialized;
     typedef BdaSolverStatus::Status Status;
 
