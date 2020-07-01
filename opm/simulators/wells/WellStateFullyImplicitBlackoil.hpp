@@ -161,6 +161,9 @@ namespace Opm
             perfRatePolymer_.clear();
             perfRatePolymer_.resize(nperf, 0.0);
 
+            perfRateBrine_.clear();
+            perfRateBrine_.resize(nperf, 0.0);
+
             // intialize wells that have been there before
             // order may change so the mapping is based on the well name
             if (prevState && !prevState->wellMap().empty()) {
@@ -571,6 +574,10 @@ namespace Opm
                     well.rates.set( rt::polymer, polymerWellRate(w) );
                 }
 
+                if ( pu.has_brine ) {
+                    well.rates.set( rt::brine, brineWellRate(w) );
+                }
+
                 well.rates.set( rt::dissolved_gas, this->well_dissolved_gas_rates_[w] );
                 well.rates.set( rt::vaporized_oil, this->well_vaporized_oil_rates_[w] );
 
@@ -586,11 +593,22 @@ namespace Opm
                     const auto rates = this->perfPhaseRates().begin()
                                      + (np * wt.second[ 1 ])
                                      + (np * local_comp_index);
-                    ++local_comp_index;
+
 
                     for( int i = 0; i < np; ++i ) {
                         comp.rates.set( phs[ i ], *(rates + i) );
                     }
+                    if ( pu.has_polymer ) {
+                        comp.rates.set( rt::polymer, this->perfRatePolymer()[local_comp_index]);
+                    }
+                    if ( pu.has_brine ) {
+                        comp.rates.set( rt::brine, this->perfRateBrine()[local_comp_index]);
+                    }
+                    if ( pu.has_solvent ) {
+                        comp.rates.set( rt::solvent, this->perfRateSolvent()[local_comp_index]);
+                    }
+
+                    ++local_comp_index;
                 }
                 assert(local_comp_index == this->well_perf_data_[w].size());
 
@@ -830,6 +848,15 @@ namespace Opm
         /// One rate pr well
         double polymerWellRate(const int w) const {
             return std::accumulate(&perfRatePolymer_[0] + first_perf_index_[w], &perfRatePolymer_[0] + first_perf_index_[w+1], 0.0);
+        }
+
+        /// One rate pr well connection.
+        std::vector<double>& perfRateBrine() { return perfRateBrine_; }
+        const std::vector<double>& perfRateBrine() const { return perfRateBrine_; }
+
+        /// One rate pr well
+        double brineWellRate(const int w) const {
+            return std::accumulate(&perfRateBrine_[0] + first_perf_index_[w], &perfRateBrine_[0] + first_perf_index_[w+1], 0.0);
         }
 
         std::vector<double>& wellReservoirRates()
@@ -1086,6 +1113,7 @@ namespace Opm
 
         // only for output
         std::vector<double> perfRatePolymer_;
+        std::vector<double> perfRateBrine_;
 
         // it is the throughput of water flow through the perforations
         // it is used as a measure of formation damage around well-bore due to particle deposition

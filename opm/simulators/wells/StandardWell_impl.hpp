@@ -699,12 +699,16 @@ namespace Opm
             if (has_brine) {
                 // TODO: the application of well efficiency factor has not been tested with an example yet
                 const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-                EvalWell cq_s_sm = cq_s[waterCompIdx] * well_efficiency_factor_;
+                EvalWell cq_s_sm = cq_s[waterCompIdx];
                 if (this->isInjector()) {
                     cq_s_sm *= wsalt();
                 } else {
                     cq_s_sm *= extendEval(intQuants.fluidState().saltConcentration());
                 }
+                // Note. Efficiency factor is handled in the output layer
+                well_state.perfRateBrine()[first_perf_ + perf] = cq_s_sm.value();
+
+                cq_s_sm *= well_efficiency_factor_;
                 connectionRates_[perf][contiBrineEqIdx] = Base::restrictEval(cq_s_sm);
             }
 
