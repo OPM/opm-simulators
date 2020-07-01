@@ -61,18 +61,19 @@ class ISTLSolverEbosFlexible
     using Simulator = typename GET_PROP_TYPE(TypeTag, Simulator);
     using Scalar = typename GET_PROP_TYPE(TypeTag, Scalar);
     using MatrixType = typename SparseMatrixAdapter::IstlMatrix;
+    using WellModel = typename GET_PROP_TYPE(TypeTag, EclWellModel);
 #if HAVE_MPI
     using Communication = Dune::OwnerOverlapCopyCommunication<int, int>;
 #else
     using Communication = int; // Dummy type.
 #endif
+    using AbstractOperatorType = Dune::AssembledLinearOperator<MatrixType, VectorType, VectorType>;
+    using WellModelOpType = WellModelAsLinearOperator<WellModel, VectorType, VectorType>;
     using SolverType = Dune::FlexibleSolver<MatrixType, VectorType>;
 
     // for quasiImpesWeights
     typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) Vector;
     typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
-    //typedef typename GET_PROP_TYPE(TypeTag, EclWellModel) WellModel;
-    //typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
     typedef typename SparseMatrixAdapter::IstlMatrix Matrix;
     typedef typename SparseMatrixAdapter::MatrixBlock MatrixBlockType;
     typedef typename Vector::block_type BlockVector;
@@ -90,6 +91,9 @@ public:
 
     explicit ISTLSolverEbosFlexible(const Simulator& simulator)
         : simulator_(simulator)
+        , ownersFirst_(EWOMS_GET_PARAM(TypeTag, bool, OwnerCellsFirst))
+        , matrixAddWellContributions_(EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions))
+        , interiorCellNum_(detail::numMatrixRowsToUseInSolver(simulator_.vanguard().grid(), ownersFirst_))
     {
         parameters_.template init<TypeTag>();
         prm_ = setupPropertyTree<TypeTag>(parameters_);
@@ -134,76 +138,53 @@ public:
             parinfo->copyValuesTo(comm_->indexSet(), comm_->remoteIndices(), size, 1);
             firstcall = false;
         }
-        makeOverlapRowsInvalid(mat.istlMatrix());
+        if (isParallel() && matrixAddWellContributions_) {
+            makeOverlapRowsInvalid(mat.istlMatrix());
+        }
 #endif
-        // Decide if we should recreate the solver or just do
-        // a minimal preconditioner update.
-        const int newton_iteration = this->simulator_.model().newtonMethod().numIterations();
-        bool recreate_solver = false;
-        if (this->parameters_.cpr_reuse_setup_ == 0) {
-            // Always recreate solver.
-            recreate_solver = true;
-        } else if (this->parameters_.cpr_reuse_setup_ == 1) {
-            // Recreate solver on the first iteration of every timestep.
-            if (newton_iteration == 0) {
-                recreate_solver = true;
-            }
-        } else if (this->parameters_.cpr_reuse_setup_ == 2) {
-            // Recreate solver if the last solve used more than 10 iterations.
-            if (this->iterations() > 10) {
-                recreate_solver = true;
-            }
-        } else {
-            assert(this->parameters_.cpr_reuse_setup_ == 3);
-            assert(recreate_solver == false);
-            // Never recreate solver.
-        }
 
-        std::function<VectorType()> weightsCalculator;
+        matrix_ = &mat.istlMatrix(); // Store pointer for output if needed.
+        std::function<VectorType()> weightsCalculator = getWeightsCalculator(mat.istlMatrix(), b);
 
-        auto preconditionerType = prm_.get("preconditioner.type", "cpr");
-        if( preconditionerType  == "cpr" ||
-            preconditionerType == "cprt"
-            )
-        {
-            bool transpose = false;
-            if(preconditionerType == "cprt"){
-                transpose = true;
-            }
-
-            auto weightsType = prm_.get("preconditioner.weight_type", "quasiimpes");
-            auto pressureIndex = this->prm_.get("preconditioner.pressure_var_index", 1);
-            if(weightsType == "quasiimpes") {
-                // weighs will be created as default in the solver
-                weightsCalculator =
-                    [&mat, transpose, pressureIndex](){
-                        return Opm::Amg::getQuasiImpesWeights<MatrixType,
-                                                              VectorType>(
-                                                                          mat.istlMatrix(),
-                                                                          pressureIndex,
-                                                                          transpose);
-                    };
-
-            }else if(weightsType == "trueimpes"  ){
-                weightsCalculator =
-                    [this, &b, pressureIndex](){
-                        return this->getTrueImpesWeights(b, pressureIndex);
-                    };
-            }else{
-                OPM_THROW(std::invalid_argument, "Weights type " << weightsType << "not implemented for cpr."
-                          << " Please use quasiimpes or trueimpes.");
-            }
-        }
-
-        if (recreate_solver || !solver_) {
+        if (shouldCreateSolver()) {
             if (isParallel()) {
 #if HAVE_MPI
-                matrix_ = &mat.istlMatrix();
-                solver_.reset(new SolverType(mat.istlMatrix(), *comm_, prm_, weightsCalculator));
-#endif
+                if (matrixAddWellContributions_) {
+                    using ParOperatorType = Dune::OverlappingSchwarzOperator<MatrixType, VectorType, VectorType, Communication>;
+                    auto op = std::make_unique<ParOperatorType>(mat.istlMatrix(), *comm_);
+                    auto sol = std::make_unique<SolverType>(*op, *comm_, prm_, weightsCalculator);
+                    solver_ = std::move(sol);
+                    linear_operator_ = std::move(op);
+                } else {
+                    if (!ownersFirst_) {
+                        OPM_THROW(std::runtime_error, "In parallel, the flexible solver requires "
+                                  "--owner-cells-first=true when --matrix-add-well-contributions=false is used.");
+                    }
+                    using ParOperatorType = WellModelGhostLastMatrixAdapter<MatrixType, VectorType, VectorType, true>;
+                    auto well_op = std::make_unique<WellModelOpType>(simulator_.problem().wellModel());
+                    auto op = std::make_unique<ParOperatorType>(mat.istlMatrix(), *well_op, interiorCellNum_);
+                    auto sol = std::make_unique<SolverType>(*op, *comm_, prm_, weightsCalculator);
+                    solver_ = std::move(sol);
+                    linear_operator_ = std::move(op);
+                    well_operator_ = std::move(well_op);
+                }
+#endif // HAVE_MPI
             } else {
-                matrix_ = &mat.istlMatrix();
-                solver_.reset(new SolverType(mat.istlMatrix(), prm_, weightsCalculator));
+                if (matrixAddWellContributions_) {
+                    using SeqOperatorType = Dune::MatrixAdapter<MatrixType, VectorType, VectorType>;
+                    auto op = std::make_unique<SeqOperatorType>(mat.istlMatrix());
+                    auto sol = std::make_unique<SolverType>(*op, prm_, weightsCalculator);
+                    solver_ = std::move(sol);
+                    linear_operator_ = std::move(op);
+                } else {
+                    using SeqOperatorType = WellModelMatrixAdapter<MatrixType, VectorType, VectorType, false>;
+                    auto well_op = std::make_unique<WellModelOpType>(simulator_.problem().wellModel());
+                    auto op = std::make_unique<SeqOperatorType>(mat.istlMatrix(), *well_op);
+                    auto sol = std::make_unique<SolverType>(*op, prm_, weightsCalculator);
+                    solver_ = std::move(sol);
+                    linear_operator_ = std::move(op);
+                    well_operator_ = std::move(well_op);
+                }
             }
             rhs_ = b;
         } else {
@@ -245,6 +226,63 @@ public:
 
 protected:
 
+    bool shouldCreateSolver() const
+    {
+        // Decide if we should recreate the solver or just do
+        // a minimal preconditioner update.
+        if (!solver_) {
+            return true;
+        }
+        const int newton_iteration = this->simulator_.model().newtonMethod().numIterations();
+        bool recreate_solver = false;
+        if (this->parameters_.cpr_reuse_setup_ == 0) {
+            // Always recreate solver.
+            recreate_solver = true;
+        } else if (this->parameters_.cpr_reuse_setup_ == 1) {
+            // Recreate solver on the first iteration of every timestep.
+            if (newton_iteration == 0) {
+                recreate_solver = true;
+            }
+        } else if (this->parameters_.cpr_reuse_setup_ == 2) {
+            // Recreate solver if the last solve used more than 10 iterations.
+            if (this->iterations() > 10) {
+                recreate_solver = true;
+            }
+        } else {
+            assert(this->parameters_.cpr_reuse_setup_ == 3);
+            assert(recreate_solver == false);
+            // Never recreate solver.
+        }
+        return recreate_solver;
+    }
+
+    std::function<VectorType()> getWeightsCalculator(const MatrixType& mat, const VectorType& b) const
+    {
+        std::function<VectorType()> weightsCalculator;
+
+        auto preconditionerType = prm_.get("preconditioner.type", "cpr");
+        if (preconditionerType == "cpr" || preconditionerType == "cprt") {
+            const bool transpose = preconditionerType == "cprt";
+            const auto weightsType = prm_.get("preconditioner.weight_type", "quasiimpes");
+            const auto pressureIndex = this->prm_.get("preconditioner.pressure_var_index", 1);
+            if (weightsType == "quasiimpes") {
+                // weighs will be created as default in the solver
+                weightsCalculator = [&mat, transpose, pressureIndex]() {
+                    return Opm::Amg::getQuasiImpesWeights<MatrixType, VectorType>(mat, pressureIndex, transpose);
+                };
+            } else if (weightsType == "trueimpes") {
+                weightsCalculator = [this, &b, pressureIndex]() {
+                    return this->getTrueImpesWeights(b, pressureIndex);
+                };
+            } else {
+                OPM_THROW(std::invalid_argument,
+                          "Weights type " << weightsType << "not implemented for cpr."
+                                          << " Please use quasiimpes or trueimpes.");
+            }
+        }
+        return weightsCalculator;
+    }
+
     /// Zero out off-diagonal blocks on rows corresponding to overlap cells
     /// Diagonal blocks on ovelap rows are set to diag(1.0).
     void makeOverlapRowsInvalid(MatrixType& matrix) const
@@ -267,7 +305,7 @@ protected:
         }
     }
 
-    VectorType getTrueImpesWeights(const VectorType& b,const int pressureVarIndex)
+    VectorType getTrueImpesWeights(const VectorType& b, const int pressureVarIndex) const
     {
         VectorType weights(b.size());
         ElementContext elemCtx(simulator_);
@@ -289,14 +327,20 @@ protected:
         }
     }
 
+
     const Simulator& simulator_;
     MatrixType* matrix_;
+    std::unique_ptr<WellModelOpType> well_operator_;
+    std::unique_ptr<AbstractOperatorType> linear_operator_;
     std::unique_ptr<SolverType> solver_;
     FlowLinearSolverParameters parameters_;
     boost::property_tree::ptree prm_;
     VectorType rhs_;
     Dune::InverseOperatorResult res_;
     std::any parallelInformation_;
+    bool ownersFirst_;
+    bool matrixAddWellContributions_;
+    int interiorCellNum_;
     std::unique_ptr<Communication> comm_;
     std::vector<int> overlapRows_;
     std::vector<int> interiorRows_;
