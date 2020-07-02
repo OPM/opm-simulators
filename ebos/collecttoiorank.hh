@@ -549,12 +549,12 @@ public:
 
     class PackUnPackGroupData : public P2PCommunicatorType::DataHandleInterface
     {
-        const Opm::data::Group& localGroupData_;
-        Opm::data::Group& globalGroupData_;
+        const Opm::data::Groups& localGroupData_;
+        Opm::data::Groups& globalGroupData_;
 
     public:
-        PackUnPackGroupData(const Opm::data::Group& localGroupData,
-                           Opm::data::Group& globalGroupData,
+        PackUnPackGroupData(const Opm::data::Groups& localGroupData,
+                           Opm::data::Groups& globalGroupData,
                            bool isIORank)
             : localGroupData_(localGroupData)
             , globalGroupData_(globalGroupData)
@@ -649,7 +649,7 @@ public:
     void collect(const Opm::data::Solution& localCellData,
                  const std::map<std::pair<std::string, int>, double>& localBlockData,
                  const Opm::data::Wells& localWellData,
-                const Opm::data::Group& localGroupData)
+                 const Opm::data::Groups& localGroupData)
     {
         globalCellData_ = {};
         globalBlockData_.clear();
@@ -711,7 +711,7 @@ public:
     const Opm::data::Wells& globalWellData() const
     { return globalWellData_; }
 
-    const Opm::data::Group& globalGroupData() const
+    const Opm::data::Groups& globalGroupData() const
     { return globalGroupData_; }
 
     bool isIORank() const
@@ -760,7 +760,7 @@ protected:
     Opm::data::Solution globalCellData_;
     std::map<std::pair<std::string, int>, double> globalBlockData_;
     Opm::data::Wells globalWellData_;
-    Opm::data::Group globalGroupData_;
+    Opm::data::Groups globalGroupData_;
     std::vector<int> localIdxToGlobalIdx_;
 };
 

@@ -187,9 +187,9 @@ namespace Opm {
 
             void initFromRestartFile(const RestartValue& restartValues);
 
-            Opm::data::Group groupData(const int reportStepIdx, Opm::Schedule& sched) const
+            Opm::data::Groups groupData(const int reportStepIdx, Opm::Schedule& sched) const
             {
-                Opm::data::Group dw;
+                Opm::data::Groups dw;
                 for (const std::string gname :  sched.groupNames(reportStepIdx))  {
                     const auto& grup = sched.getGroup(gname, reportStepIdx);
                     const auto& grup_type = grup.getGroupType();
