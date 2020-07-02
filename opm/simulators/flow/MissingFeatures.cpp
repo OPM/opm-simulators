@@ -653,7 +653,6 @@ namespace MissingFeatures {
             "SALT",
             "SALTNODE",
             "SALTREST",
-            "SALTVD",
             "SCALELIM",
             "SCDATAB",
             "SCDETAB",

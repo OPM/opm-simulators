@@ -612,6 +612,8 @@ private:
  */
 class EquilReg
 {
+    using TabulatedFunction = typename Opm::Tabulated1DFunction<double>;
+
 public:
     /**
      * Constructor.
@@ -624,10 +626,12 @@ public:
     EquilReg(const Opm::EquilRecord& rec,
              std::shared_ptr<Miscibility::RsFunction> rs,
              std::shared_ptr<Miscibility::RsFunction> rv,
+             const TabulatedFunction& saltVdTable,
              const int pvtIdx)
         : rec_    (rec)
         , rs_     (rs)
         , rv_     (rv)
+        , saltVdTable_ (saltVdTable)
         , pvtIdx_ (pvtIdx)
     {}
 
@@ -701,6 +705,8 @@ public:
     const CalcEvaporation&
     evaporationCalculator() const { return *this->rv_; }
 
+    const TabulatedFunction&
+    saltVdTable() const { return saltVdTable_;}
     /**
      * Retrieve pvtIdx of the region.
      */
@@ -710,6 +716,7 @@ private:
     Opm::EquilRecord rec_;     /**< Equilibration data */
     std::shared_ptr<Miscibility::RsFunction> rs_;      /**< RS calculator */
     std::shared_ptr<Miscibility::RsFunction> rv_;      /**< RV calculator */
+    const TabulatedFunction& saltVdTable_;
     const int pvtIdx_;
 };
 
