@@ -20,6 +20,7 @@
 #include <config.h>
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/simulators/linalg/MatrixBlock.hpp>
 #include <dune/common/timer.hh>
 
 #include <opm/simulators/linalg/bda/BdaSolver.hpp>
@@ -170,6 +171,7 @@ namespace bda
         double pivot[bs * bs];
 
         int LSize = 0;
+        Opm::Detail::Inverter<bs> inverter;   // reuse inverter to invert blocks
 
         Timer t_decomposition;
 
@@ -219,7 +221,7 @@ namespace bda
                 }
             }
             // store the inverse in the diagonal!
-            blockInvert3x3(LUmat->nnzValues + ij * bs * bs, invDiagVals + i * bs * bs);
+            inverter(LUmat->nnzValues + ij * bs * bs, invDiagVals + i * bs * bs);
 
             memcpy(LUmat->nnzValues + ij * bs * bs, invDiagVals + i * bs * bs, sizeof(double) * bs * bs);
         }

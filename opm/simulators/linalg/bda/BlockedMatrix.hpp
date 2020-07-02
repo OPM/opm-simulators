@@ -70,11 +70,6 @@ void blockMultSub(double *a, double *b, double *c);
 template <unsigned int block_size>
 void blockMult(double *mat1, double *mat2, double *resMat);
 
-/// Calculate the inverse of a block. This function is specific for only 3x3 block size.
-/// \param[in] mat               input block
-/// \param[inout] res            output block
-void blockInvert3x3(double *mat, double *res);
-
 } // end namespace bda
 
 #endif
