@@ -448,6 +448,7 @@ namespace Opm {
                     ra.rs = 0.0;
                     ra.rv = 0.0;
                     ra.pv = 0.0;
+                    ra.saltConcentration = 0.0;
 
                 }
 
@@ -490,6 +491,7 @@ namespace Opm {
                     auto& rs  = ra.rs;
                     auto& rv  = ra.rv;
                     auto& pv  = ra.pv;
+                    auto& saltConcentration = ra.saltConcentration;
 
                     // sum p, rs, rv, and T.
                     double hydrocarbonPV = pv_cell*hydrocarbon;
@@ -499,6 +501,7 @@ namespace Opm {
                         rs += fs.Rs().value()*hydrocarbonPV;
                         rv += fs.Rv().value()*hydrocarbonPV;
                         T += fs.temperature(FluidSystem::oilPhaseIdx).value()*hydrocarbonPV;
+                        saltConcentration += fs.saltConcentration().value()*hydrocarbonPV;
                     }
                 }
 
@@ -509,17 +512,20 @@ namespace Opm {
                       auto& rs  = ra.rs;
                       auto& rv  = ra.rv;
                       auto& pv  = ra.pv;
+                      auto& saltConcentration = ra.saltConcentration;
                       // communicate sums
                       p = comm.sum(p);
                       T = comm.sum(T);
                       rs = comm.sum(rs);
                       rv = comm.sum(rv);
                       pv = comm.sum(pv);
+                      saltConcentration = comm.sum(saltConcentration);
                       // compute average
                       p /= pv;
                       T /= pv;
                       rs /= pv;
                       rv /= pv;
+                      saltConcentration /=pv;
                 }
             }
 
@@ -565,6 +571,7 @@ namespace Opm {
                 const auto& ra = attr_.attributes(r);
                 const double p = ra.pressure;
                 const double T = ra.temperature;
+                const double saltConcentration = ra.saltConcentration;
 
                 const int   iw = Details::PhasePos::water(pu);
                 const int   io = Details::PhasePos::oil  (pu);
@@ -575,7 +582,7 @@ namespace Opm {
                 if (Details::PhaseUsed::water(pu)) {
                     // q[w]_r = q[w]_s / bw
 
-                    const double bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p);
+                    const double bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, saltConcentration);
 
                     coeff[iw] = 1.0 / bw;
                 }
@@ -645,6 +652,7 @@ namespace Opm {
                 const auto& ra = attr_.attributes(r);
                 const double p = ra.pressure;
                 const double T = ra.temperature;
+                const double saltConcentration = ra.saltConcentration;
 
                 const int   iw = Details::PhasePos::water(pu);
                 const int   io = Details::PhasePos::oil  (pu);
@@ -653,7 +661,7 @@ namespace Opm {
                 if (Details::PhaseUsed::water(pu)) {
                     // q[w]_r = q[w]_s / bw
 
-                    const double bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p);
+                    const double bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, saltConcentration);
 
                     voidage_rates[iw] = surface_rates[iw] / bw;
                 }
@@ -755,6 +763,7 @@ namespace Opm {
                     , rs(0.0)
                     , rv(0.0)
                     , pv(0.0)
+                    , saltConcentration(0.0)
                 {}
 
                 double pressure;
@@ -762,6 +771,7 @@ namespace Opm {
                 double rs;
                 double rv;
                 double pv;
+                double saltConcentration;
             };
 
             Details::RegionAttributes<RegionId, Attributes> attr_;
