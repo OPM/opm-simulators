@@ -76,6 +76,18 @@ LhsEval getInvB_(typename std::enable_if<!HasMember_invB<FluidState>::value,
         /FluidSystem::referenceDensity(phaseIdx, pvtRegionIdx);
 }
 
+OPM_GENERATE_HAS_MEMBER(saltConcentration, ) // Creates 'HasMember_saltConcentration<T>'.
+
+template <class FluidState>
+unsigned getSaltConcentration_(typename std::enable_if<HasMember_saltConcentration<FluidState>::value,
+                                                    const FluidState&>::type fluidState)
+{ return fluidState.saltConcentration(); }
+
+template <class FluidState>
+unsigned getSaltConcentration_(typename std::enable_if<!HasMember_saltConcentration<FluidState>::value,
+                                                    const FluidState&>::type fluidState OPM_UNUSED)
+{ return 0; }
+
 /*!
  * \brief Implements a "tailor-made" fluid state class for the black-oil model.
  *

@@ -157,20 +157,6 @@ public:
     template <class Evaluation>
     Evaluation viscosity(unsigned regionIdx,
                          const Evaluation& temperature,
-                         const Evaluation& pressure) const
-    {
-       // assert(realWaterPvt_ != ConstantCompressibilityBrinePvt );
-        const Evaluation saltconcentration = 0.0;
-        OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.viscosity(regionIdx, temperature, pressure, saltconcentration));
-        return 0;
-    }
-
-    /*!
-     * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.
-     */
-    template <class Evaluation>
-    Evaluation viscosity(unsigned regionIdx,
-                         const Evaluation& temperature,
                          const Evaluation& pressure,
                          const Evaluation& saltconcentration) const
     {
@@ -187,19 +173,6 @@ public:
                                             const Evaluation& pressure,
                                             const Evaluation& saltconcentration) const
     {   OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.inverseFormationVolumeFactor(regionIdx, temperature, pressure, saltconcentration));
-        return 0;
-    }
-
-    /*!
-     * \brief Returns the formation volume factor [-] of the fluid phase.
-     */
-    template <class Evaluation>
-    Evaluation inverseFormationVolumeFactor(unsigned regionIdx,
-                                            const Evaluation& temperature,
-                                            const Evaluation& pressure) const
-    {
-        const Evaluation saltconcentration = 0.0;
-        OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.inverseFormationVolumeFactor(regionIdx, temperature, pressure, saltconcentration));
         return 0;
     }
 

@@ -139,6 +139,7 @@ void ensurePvtApi(const OilPvt& oilPvt, const GasPvt& gasPvt, const WaterPvt& wa
     while (0) {
         Evaluation temperature = 273.15 + 20.0;
         Evaluation pressure = 1e5;
+        Evaluation saltconcentration = 0.0;
         Evaluation Rs = 0.0;
         Evaluation Rv = 0.0;
         Evaluation So = 0.5;
@@ -150,10 +151,12 @@ void ensurePvtApi(const OilPvt& oilPvt, const GasPvt& gasPvt, const WaterPvt& wa
         /////
         tmp = waterPvt.viscosity(/*regionIdx=*/0,
                                  temperature,
-                                 pressure);
+                                 pressure,
+                                 saltconcentration);
         tmp = waterPvt.inverseFormationVolumeFactor(/*regionIdx=*/0,
                                                     temperature,
-                                                    pressure);
+                                                    pressure,
+                                                    saltconcentration);
 
         /////
         // oil PVT API
