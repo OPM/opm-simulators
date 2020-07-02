@@ -681,31 +681,30 @@ void openclSolverBackend<block_size>::get_result(double *x) {
 } // end get_result()
 
 
-typedef BdaSolverStatus::Status Status;
 
 template <unsigned int block_size>
-Status openclSolverBackend<block_size>::solve_system(int N_, int nnz_, int dim, double *vals, int *rows, int *cols, double *b, WellContributions& wellContribs, BdaResult &res) {
+SolverStatus openclSolverBackend<block_size>::solve_system(int N_, int nnz_, int dim, double *vals, int *rows, int *cols, double *b, WellContributions& wellContribs, BdaResult &res) {
     if (initialized == false) {
         initialize(N_, nnz_,  dim, vals, rows, cols);
         if (analysis_done == false) {
             if (!analyse_matrix()) {
-                return Status::BDA_SOLVER_ANALYSIS_FAILED;
+                return SolverStatus::BDA_SOLVER_ANALYSIS_FAILED;
             }
         }
         update_system(vals, b);
         if (!create_preconditioner()) {
-            return Status::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
+            return SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
         }
         copy_system_to_gpu();
     } else {
         update_system(vals, b);
         if (!create_preconditioner()) {
-            return Status::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
+            return SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
         }
         update_system_on_gpu();
     }
     solve_system(wellContribs, res);
-    return Status::BDA_SOLVER_SUCCESS;
+    return SolverStatus::BDA_SOLVER_SUCCESS;
 }
 
 

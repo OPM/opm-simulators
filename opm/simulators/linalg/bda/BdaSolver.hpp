@@ -22,14 +22,19 @@
 
 
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
-#include <opm/simulators/linalg/bda/BdaSolverStatus.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 
 namespace bda
 {
 
     using Opm::WellContributions;
-    typedef BdaSolverStatus::Status Status;
+
+    enum class SolverStatus {
+        BDA_SOLVER_SUCCESS,
+        BDA_SOLVER_ANALYSIS_FAILED,
+        BDA_SOLVER_CREATE_PRECONDITIONER_FAILED,
+        BDA_SOLVER_UNKNOWN_ERROR
+    };
 
     /// This class serves to simplify choosing between different backend solvers, such as cusparseSolver and openclSolver
     /// This class is abstract, no instantiations can of it can be made, only of its children
@@ -75,7 +80,7 @@ namespace bda
         virtual ~BdaSolver() {};
 
         /// Define as pure virtual functions, so derivedclass must implement them
-        virtual Status solve_system(int N, int nnz, int dim,
+        virtual SolverStatus solve_system(int N, int nnz, int dim,
             double *vals, int *rows, int *cols,
             double *b, WellContributions& wellContribs, BdaResult &res) = 0;
 

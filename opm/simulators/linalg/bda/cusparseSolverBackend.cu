@@ -475,10 +475,9 @@ void cusparseSolverBackend<block_size>::get_result(double *x) {
 } // end get_result()
 
 
-typedef BdaSolverStatus::Status Status;
 
 template <unsigned int block_size>
-Status cusparseSolverBackend<block_size>::solve_system(int N, int nnz, int dim, double *vals, int *rows, int *cols, double *b, WellContributions& wellContribs, BdaResult &res) {
+SolverStatus cusparseSolverBackend<block_size>::solve_system(int N, int nnz, int dim, double *vals, int *rows, int *cols, double *b, WellContributions& wellContribs, BdaResult &res) {
     if (initialized == false) {
         initialize(N, nnz, dim);
         copy_system_to_gpu(vals, rows, cols, b);
@@ -487,16 +486,16 @@ Status cusparseSolverBackend<block_size>::solve_system(int N, int nnz, int dim, 
     }
     if (analysis_done == false) {
         if (!analyse_matrix()) {
-            return Status::BDA_SOLVER_ANALYSIS_FAILED;
+            return SolverStatus::BDA_SOLVER_ANALYSIS_FAILED;
         }
     }
     reset_prec_on_gpu();
     if (create_preconditioner()) {
         solve_system(wellContribs, res);
     } else {
-        return Status::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
+        return SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
     }
-    return Status::BDA_SOLVER_SUCCESS;
+    return SolverStatus::BDA_SOLVER_SUCCESS;
 }
 
 

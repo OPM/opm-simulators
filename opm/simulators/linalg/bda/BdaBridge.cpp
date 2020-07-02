@@ -26,7 +26,6 @@
 #include <opm/material/common/Unused.hpp>
 
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
-#include <opm/simulators/linalg/bda/BdaSolverStatus.hpp>
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 
 #define PRINT_TIMERS_BRIDGE 0
@@ -38,7 +37,7 @@ namespace Opm
 
     using bda::BdaResult;
     using bda::BdaSolver;
-    using bda::BdaSolverStatus;
+    using bda::SolverStatus;
 
 template <class BridgeMatrix, class BridgeVector, int block_size>
 BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string gpu_mode, int linear_solver_verbosity, int maxit, double tolerance, unsigned int platformID, unsigned int deviceID)
@@ -180,17 +179,16 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatri
         /////////////////////////
         // actually solve
 
-        typedef BdaSolverStatus::Status Status;
         // assume that underlying data (nonzeroes) from mat (Dune::BCRSMatrix) are contiguous, if this is not the case, cusparseSolver is expected to perform undefined behaviour
-        Status status = backend->solve_system(N, nnz, dim, static_cast<double*>(&(((*mat)[0][0][0][0]))), h_rows.data(), h_cols.data(), static_cast<double*>(&(b[0][0])), wellContribs, result);
+        SolverStatus status = backend->solve_system(N, nnz, dim, static_cast<double*>(&(((*mat)[0][0][0][0]))), h_rows.data(), h_cols.data(), static_cast<double*>(&(b[0][0])), wellContribs, result);
         switch(status) {
-        case Status::BDA_SOLVER_SUCCESS:
+        case SolverStatus::BDA_SOLVER_SUCCESS:
             //OpmLog::info("BdaSolver converged");
             break;
-        case Status::BDA_SOLVER_ANALYSIS_FAILED:
+        case SolverStatus::BDA_SOLVER_ANALYSIS_FAILED:
             OpmLog::warning("BdaSolver could not analyse level information of matrix, perhaps there is still a 0.0 on the diagonal of a block on the diagonal");
             break;
-        case Status::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED:
+        case SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED:
             OpmLog::warning("BdaSolver could not create preconditioner, perhaps there is still a 0.0 on the diagonal of a block on the diagonal");
             break;
         default:
