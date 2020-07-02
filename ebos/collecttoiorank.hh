@@ -549,41 +549,43 @@ public:
 
     class PackUnPackGroupData : public P2PCommunicatorType::DataHandleInterface
     {
-        const Opm::data::Group& localGroupData_;
-        Opm::data::Group& globalGroupData_;
+        const Opm::data::GroupValues& localGroupData_;
+        Opm::data::GroupValues&       globalGroupData_;
 
     public:
-        PackUnPackGroupData(const Opm::data::Group& localGroupData,
-                           Opm::data::Group& globalGroupData,
-                           bool isIORank)
-            : localGroupData_(localGroupData)
+        PackUnPackGroupData(const Opm::data::GroupValues& localGroupData,
+                            Opm::data::GroupValues&       globalGroupData,
+                            const bool                    isIORank)
+            : localGroupData_ (localGroupData)
             , globalGroupData_(globalGroupData)
         {
-            if (isIORank) {
-                MessageBufferType buffer;
-                pack(0, buffer);
+            if (! isIORank) { return; }
 
-                // pass a dummy_link to satisfy virtual class
-                int dummyLink = -1;
-                unpack(dummyLink, buffer);
-            }
+            MessageBufferType buffer;
+            this->pack(0, buffer);
+
+            // pass a dummy_link to satisfy virtual class
+            const int dummyLink = -1;
+            this->unpack(dummyLink, buffer);
         }
 
         // pack all data associated with link
         void pack(int link, MessageBufferType& buffer)
         {
             // we should only get one link
-            if (link != 0)
-                throw std::logic_error("link in method pack is not 0 as expected");
+            if (link != 0) {
+                throw std::logic_error {
+                    "link in method pack is not 0 as expected"
+                };
+            }
 
             // write all group data
-           localGroupData_.write(buffer);
+           this->localGroupData_.write(buffer);
         }
 
         // unpack all data associated with link
         void unpack(int /*link*/, MessageBufferType& buffer)
-        { globalGroupData_.read(buffer); }
-
+        { this->globalGroupData_.read(buffer); }
     };
 
 
@@ -649,7 +651,7 @@ public:
     void collect(const Opm::data::Solution& localCellData,
                  const std::map<std::pair<std::string, int>, double>& localBlockData,
                  const Opm::data::Wells& localWellData,
-                const Opm::data::Group& localGroupData)
+                 const Opm::data::GroupValues& localGroupData)
     {
         globalCellData_ = {};
         globalBlockData_.clear();
@@ -660,34 +662,39 @@ public:
         if(!needsReordering && !isParallel())
             return;
 
-        // this also packs and unpacks the local buffers one ioRank
-        PackUnPackCellData
-            packUnpackCellData(localCellData,
-                                globalCellData_,
-                                localIndexMap_,
-                                indexMaps_,
-                                numCells(),
-                                isIORank());
 
-        if (!isParallel())
+        // this also linearises the local buffers on ioRank
+        PackUnPackCellData packUnpackCellData {
+            localCellData,
+            this->globalCellData_,
+            this->localIndexMap_,
+            this->indexMaps_,
+            this->numCells(),
+            this->isIORank()
+        };
+
+        if (! isParallel()) {
             // no need to collect anything.
             return;
+        }
 
-        PackUnPackWellData
-            packUnpackWellData(localWellData,
-                               globalWellData_,
-                               isIORank());
+        PackUnPackWellData packUnpackWellData {
+            localWellData,
+            this->globalWellData_,
+            this->isIORank()
+        };
 
-        PackUnPackGroupData
-            packUnpackGroupData(localGroupData,
-                               globalGroupData_,
-                               isIORank());
+        PackUnPackGroupData packUnpackGroupData {
+            localGroupData,
+            this->globalGroupData_,
+            this->isIORank()
+        };
 
-
-        PackUnPackBlockData
-            packUnpackBlockData(localBlockData,
-                                globalBlockData_,
-                                isIORank());
+        PackUnPackBlockData packUnpackBlockData {
+            localBlockData,
+            this->globalBlockData_,
+            this->isIORank()
+        };
 
         toIORankComm_.exchange(packUnpackCellData);
         toIORankComm_.exchange(packUnpackWellData);
@@ -711,7 +718,7 @@ public:
     const Opm::data::Wells& globalWellData() const
     { return globalWellData_; }
 
-    const Opm::data::Group& globalGroupData() const
+    const Opm::data::GroupValues& globalGroupData() const
     { return globalGroupData_; }
 
     bool isIORank() const
@@ -760,7 +767,7 @@ protected:
     Opm::data::Solution globalCellData_;
     std::map<std::pair<std::string, int>, double> globalBlockData_;
     Opm::data::Wells globalWellData_;
-    Opm::data::Group globalGroupData_;
+    Opm::data::GroupValues globalGroupData_;
     std::vector<int> localIdxToGlobalIdx_;
 };
 

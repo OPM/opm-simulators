@@ -2430,5 +2430,40 @@ namespace Opm {
         }
     }
 
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    assignGroupControl(const Group& group, data::GroupData& gdata) const
+    {
+        const auto& gname     = group.name();
+        const auto  grup_type = group.getGroupType();
+        auto&       cgc       = gdata.currentControl;
+
+        cgc.currentProdConstraint =
+            ::Opm::Group::ProductionCMode::NONE;
+
+        cgc.currentGasInjectionConstraint =
+        cgc.currentWaterInjectionConstraint =
+            ::Opm::Group::InjectionCMode::NONE;
+
+        if (this->well_state_.hasProductionGroupControl(gname)) {
+            cgc.currentProdConstraint = this->well_state_
+                .currentProductionGroupControl(gname);
+        }
+
+        if ((grup_type == ::Opm::Group::GroupType::INJECTION) ||
+            (grup_type == ::Opm::Group::GroupType::MIXED))
+        {
+            if (this->well_state_.hasInjectionGroupControl(::Opm::Phase::WATER, gname)) {
+                cgc.currentWaterInjectionConstraint = this->well_state_
+                    .currentInjectionGroupControl(::Opm::Phase::WATER, gname);
+            }
+
+            if (this->well_state_.hasInjectionGroupControl(::Opm::Phase::GAS, gname)) {
+                cgc.currentGasInjectionConstraint = this->well_state_
+                    .currentInjectionGroupControl(::Opm::Phase::GAS, gname);
+            }
+        }
+    }
 
 } // namespace Opm
