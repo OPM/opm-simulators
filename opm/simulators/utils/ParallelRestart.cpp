@@ -826,7 +826,8 @@ RestartValue loadParallelRestart(const EclipseIO* eclIO, Action::State& actionSt
 #if HAVE_MPI
     data::Solution sol;
     data::Wells wells;
-    RestartValue restartValues(sol, wells);
+    data::GroupValues groups;
+    RestartValue restartValues(sol, wells, groups);
 
     if (eclIO)
     {

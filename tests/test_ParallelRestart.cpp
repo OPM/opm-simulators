@@ -320,8 +320,9 @@ BOOST_AUTO_TEST_CASE(RestartKey)
 BOOST_AUTO_TEST_CASE(RestartValue)
 {
     Opm::data::WellRates wells1;
+    Opm::data::GroupValues groups1;
     wells1.insert({"test_well", getWell()});
-    Opm::RestartValue val1(getSolution(), wells1);
+    Opm::RestartValue val1(getSolution(), wells1, groups1);
     auto val2 = PackUnpack(val1);
     DO_CHECKS(RestartValue)
 }
