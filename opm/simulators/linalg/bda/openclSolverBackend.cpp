@@ -468,12 +468,7 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
         vals_contiguous = new double[N];
 #endif
 
-        mat = new BlockedMatrix();
-        mat->Nb = Nb;
-        mat->nnzbs = nnzb;
-        mat->nnzValues = vals;
-        mat->colIndices = cols;
-        mat->rowPointers = rows;
+        mat.reset(new BlockedMatrix<block_size>(Nb, nnzb, vals, cols, rows));
 
         d_x = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
         d_b = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
@@ -520,7 +515,6 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
 
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::finalize() {
-    delete mat;
     delete[] rb;
     delete[] tmp;
 #if COPY_ROW_BY_ROW
@@ -595,7 +589,7 @@ template <unsigned int block_size>
 bool openclSolverBackend<block_size>::analyse_matrix() {
 	Timer t;
 
-    bool success = prec->init(mat);
+    bool success = prec->init(mat.get());
     int work_group_size = 32;
     int num_work_groups = ceilDivision(N, work_group_size);
     int total_work_items = num_work_groups * work_group_size;
@@ -637,7 +631,7 @@ template <unsigned int block_size>
 bool openclSolverBackend<block_size>::create_preconditioner() {
 	Timer t;
 
-    bool result = prec->create_preconditioner(mat);
+    bool result = prec->create_preconditioner(mat.get());
 
     if (verbosity > 2) {
         std::ostringstream out;

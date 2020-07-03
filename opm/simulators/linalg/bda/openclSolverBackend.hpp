@@ -68,7 +68,7 @@ private:
     cl::Buffer d_tmp;                            // used as tmp GPU buffer for dot() and norm()
     double *tmp = nullptr;                       // used as tmp CPU buffer for dot() and norm()
 
-    // shared pointers are also passed to BILU0
+    // shared pointers are also passed to other objects
     std::shared_ptr<cl::Context> context;
     std::shared_ptr<cl::CommandQueue> queue;
     std::unique_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > dot_k;
@@ -81,7 +81,9 @@ private:
 
     Preconditioner *prec = nullptr;                  // only supported preconditioner is BILU0
     int *toOrder = nullptr, *fromOrder = nullptr;    // BILU0 reorders rows of the matrix via these mappings
-    BlockedMatrix *mat = nullptr, *rmat = nullptr;   // normal and reordered matrix
+    std::unique_ptr<BlockedMatrix<block_size> > mat = nullptr;    // original matrix 
+    BlockedMatrix<block_size> *rmat = nullptr;       // reordered matrix, used for spmv
+
 
 
     /// Divide A by B, and round up: return (int)ceil(A/B)

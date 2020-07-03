@@ -27,40 +27,6 @@ using bda::BlockedMatrix;
 namespace bda
 {
 
-template <unsigned int block_size>
-BlockedMatrix *allocateBlockedMatrix(int Nb, int nnzbs) {
-    BlockedMatrix *mat = new BlockedMatrix();
-
-    mat->nnzValues  = new double[nnzbs * block_size * block_size];
-    mat->colIndices = new int[nnzbs];
-    mat->rowPointers = new int[Nb + 1];
-    mat->Nb = Nb;
-    mat->nnzbs = nnzbs;
-
-    return mat;
-}
-
-void freeBlockedMatrix(BlockedMatrix **mat) {
-    if (*mat) {
-        delete[] (*mat)->nnzValues;
-        delete[] (*mat)->colIndices;
-        delete[] (*mat)->rowPointers;
-        delete (*mat);
-        *mat = NULL;
-    }
-}
-
-BlockedMatrix *softCopyBlockedMatrix(BlockedMatrix *mat) {
-    BlockedMatrix *res = new BlockedMatrix();
-    res->nnzValues = mat->nnzValues;
-    res->colIndices = mat->colIndices;
-    res->rowPointers = mat->rowPointers;
-    res->Nb = mat->Nb;
-    res->nnzbs = mat->nnzbs;
-    return res;
-}
-
-
 /*Sort a row of matrix elements from a blocked CSR-format.*/
 
 template <unsigned int block_size>
@@ -129,7 +95,6 @@ void blockMult(double *mat1, double *mat2, double *resMat) {
 
 
 #define INSTANTIATE_BDA_FUNCTIONS(n)                                 \
-template BlockedMatrix *allocateBlockedMatrix<n>(int Nb, int nnzbs); \
 template void sortBlockedRow<n>(int *, double *, int, int);          \
 template void blockMultSub<n>(double *, double *, double *);         \
 template void blockMult<n>(double *, double *, double *);            \

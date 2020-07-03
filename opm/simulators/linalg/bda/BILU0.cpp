@@ -49,20 +49,14 @@ namespace bda
         delete[] invDiagVals;
         delete[] diagIndex;
         delete[] rowsPerColor;
-        freeBlockedMatrix(&LUmat);
-        freeBlockedMatrix(&Lmat);
-        freeBlockedMatrix(&Umat);
         delete[] toOrder;
         delete[] fromOrder;
-        freeBlockedMatrix(&rmat);
     }
 
     template <unsigned int block_size>
-    bool BILU0<block_size>::init(BlockedMatrix *mat)
+    bool BILU0<block_size>::init(BlockedMatrix<block_size> *mat)
     {
         const unsigned int bs = block_size;
-        int *CSCRowIndices = nullptr;
-        int *CSCColPointers = nullptr;
 
         this->N = mat->Nb * block_size;
         this->Nb = mat->Nb;
@@ -72,23 +66,20 @@ namespace bda
         toOrder = new int[N];
         fromOrder = new int[N];
 
-        if (level_scheduling) {
-            CSCRowIndices = new int[nnzbs];
-            CSCColPointers = new int[Nb + 1];
+        int *CSCRowIndices = new int[nnzbs];
+        int *CSCColPointers = new int[Nb + 1];
 
-            Timer t_convert;
-            csrPatternToCsc(mat->colIndices, mat->rowPointers, CSCRowIndices, CSCColPointers, mat->Nb);
-            if(verbosity >= 3){
-                std::ostringstream out;
-                out << "BILU0 convert CSR to CSC: " << t_convert.stop() << " s\n";
-                OpmLog::info(out.str());
-            }
+        Timer t_convert;
+        csrPatternToCsc(mat->colIndices, mat->rowPointers, CSCRowIndices, CSCColPointers, mat->Nb);
+        if(verbosity >= 3){
+            std::ostringstream out;
+            out << "BILU0 convert CSR to CSC: " << t_convert.stop() << " s";
+            OpmLog::info(out.str());
         }
 
         Timer t_analysis;
-        rmat = allocateBlockedMatrix<block_size>(mat->Nb, mat->nnzbs);
-        LUmat = softCopyBlockedMatrix(rmat);
-
+        rmat = std::make_shared<BlockedMatrix<block_size> >(mat->Nb, mat->nnzbs);
+        LUmat = std::make_unique<BlockedMatrix<block_size> >(*rmat);
         if (level_scheduling) {
             rowsPerColor = findLevelScheduling(mat->colIndices, mat->rowPointers, CSCRowIndices, CSCColPointers, mat->Nb, &numColors, toOrder, fromOrder);
         } else if (graph_coloring) {
@@ -103,16 +94,16 @@ namespace bda
             OpmLog::info(out.str());
         }
 
+        delete[] CSCRowIndices;
+        delete[] CSCColPointers;
+
         diagIndex = new int[mat->Nb];
         invDiagVals = new double[mat->Nb * bs * bs];
 
-        Lmat = allocateBlockedMatrix<block_size>(mat->Nb, (mat->nnzbs - mat->Nb) / 2);
-        Umat = allocateBlockedMatrix<block_size>(mat->Nb, (mat->nnzbs - mat->Nb) / 2);
+        Lmat = std::make_unique<BlockedMatrix<block_size> >(mat->Nb, (mat->nnzbs - mat->Nb) / 2);
+        Umat = std::make_unique<BlockedMatrix<block_size> >(mat->Nb, (mat->nnzbs - mat->Nb) / 2);
 
         LUmat->nnzValues = new double[mat->nnzbs * bs * bs];
-
-        delete[] CSCRowIndices;
-        delete[] CSCColPointers;
 
         s.Lvals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * bs * bs * Lmat->nnzbs);
         s.Uvals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * bs * bs * Umat->nnzbs);
@@ -145,12 +136,12 @@ namespace bda
 
 
     template <unsigned int block_size>
-    bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat)
+    bool BILU0<block_size>::create_preconditioner(BlockedMatrix<block_size> *mat)
     {
         const unsigned int bs = block_size;
-
         Timer t_reorder;
-        reorderBlockedMatrixByPattern<block_size>(mat, toOrder, fromOrder, rmat);
+        reorderBlockedMatrixByPattern<block_size>(mat, toOrder, fromOrder, rmat.get());
+
         if (verbosity >= 3){
             std::ostringstream out;
             out << "BILU0 reorder matrix: " << t_reorder.stop() << " s";
@@ -160,6 +151,7 @@ namespace bda
         // TODO: remove this copy by replacing inplace ilu decomp by out-of-place ilu decomp
         Timer t_copy;
         memcpy(LUmat->nnzValues, rmat->nnzValues, sizeof(double) * bs * bs * rmat->nnzbs);
+
         if (verbosity >= 3){
             std::ostringstream out;
             out << "BILU0 memcpy: " << t_copy.stop() << " s";
@@ -332,8 +324,8 @@ namespace bda
 #define INSTANTIATE_BDA_FUNCTIONS(n)                                                     \
 template BILU0<n>::BILU0(bool, bool, int);                                               \
 template BILU0<n>::~BILU0();                                                             \
-template bool BILU0<n>::init(BlockedMatrix*);                                            \
-template bool BILU0<n>::create_preconditioner(BlockedMatrix*);                           \
+template bool BILU0<n>::init(BlockedMatrix<n>*);                                         \
+template bool BILU0<n>::create_preconditioner(BlockedMatrix<n>*);                        \
 template void BILU0<n>::apply(cl::Buffer& x, cl::Buffer& y);                             \
 template void BILU0<n>::setOpenCLContext(cl::Context*);                                  \
 template void BILU0<n>::setOpenCLQueue(cl::CommandQueue*);                               \

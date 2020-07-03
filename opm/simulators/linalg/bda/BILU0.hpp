@@ -39,8 +39,8 @@ namespace bda
         int Nb;      // number of blockrows of the matrix
         int nnz;     // number of nonzeroes of the matrix (scalar)
         int nnzbs;   // number of blocks of the matrix
-        BlockedMatrix *Lmat = nullptr, *Umat = nullptr, *LUmat = nullptr;
-        BlockedMatrix *rmat = nullptr; // only used with PAR_SIM
+        std::unique_ptr<BlockedMatrix<block_size> > Lmat = nullptr, Umat = nullptr, LUmat = nullptr;
+        std::shared_ptr<BlockedMatrix<block_size> > rmat = nullptr; // only used with PAR_SIM
         double *invDiagVals = nullptr;
         int *diagIndex = nullptr, *rowsPerColor = nullptr;
         int *toOrder = nullptr, *fromOrder = nullptr;
@@ -73,10 +73,10 @@ namespace bda
         ~BILU0();
 
         // analysis
-        bool init(BlockedMatrix *mat);
+        bool init(BlockedMatrix<block_size> *mat);
 
         // ilu_decomposition
-        bool create_preconditioner(BlockedMatrix *mat);
+        bool create_preconditioner(BlockedMatrix<block_size> *mat);
 
         // apply preconditioner, y = prec(x)
         void apply(cl::Buffer& x, cl::Buffer& y);
@@ -99,9 +99,9 @@ namespace bda
             return fromOrder;
         }
 
-        BlockedMatrix* getRMat()
+        BlockedMatrix<block_size>* getRMat()
         {
-            return rmat;
+            return rmat.get();
         }
 
     };

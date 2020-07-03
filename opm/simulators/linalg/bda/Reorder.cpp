@@ -168,32 +168,32 @@ int colorBlockedNodes(int rows, const int *CSRRowPointers, const int *CSRColIndi
  * and the from order, which contains for every node in the new matrix where it came from in the old matrix.*/
 
 template <unsigned int block_size>
-void reorderBlockedMatrixByPattern(BlockedMatrix *mat, int *toOrder, int *fromOrder, BlockedMatrix *rMat) {
+void reorderBlockedMatrixByPattern(BlockedMatrix<block_size> *mat, int *toOrder, int *fromOrder, BlockedMatrix<block_size> *rmat) {
     const unsigned int bs = block_size;
     int rIndex = 0;
     int i, k;
     unsigned int j;
 
-    rMat->rowPointers[0] = 0;
+    rmat->rowPointers[0] = 0;
     for (i = 0; i < mat->Nb; i++) {
         int thisRow = fromOrder[i];
         // put thisRow from the old matrix into row i of the new matrix
-        rMat->rowPointers[i + 1] = rMat->rowPointers[i] + mat->rowPointers[thisRow + 1] - mat->rowPointers[thisRow];
+        rmat->rowPointers[i + 1] = rmat->rowPointers[i] + mat->rowPointers[thisRow + 1] - mat->rowPointers[thisRow];
         for (k = mat->rowPointers[thisRow]; k < mat->rowPointers[thisRow + 1]; k++) {
             for (j = 0; j < bs * bs; j++){
-                rMat->nnzValues[rIndex * bs * bs + j] = mat->nnzValues[k * bs * bs + j];
+                rmat->nnzValues[rIndex * bs * bs + j] = mat->nnzValues[k * bs * bs + j];
             }
-            rMat->colIndices[rIndex] = mat->colIndices[k];
+            rmat->colIndices[rIndex] = mat->colIndices[k];
             rIndex++;
         }
     }
     // re-assign column indices according to the new positions of the nodes referenced by the column indices
     for (i = 0; i < mat->nnzbs; i++) {
-        rMat->colIndices[i] = toOrder[rMat->colIndices[i]];
+        rmat->colIndices[i] = toOrder[rmat->colIndices[i]];
     }
     // re-sort the column indices of every row.
     for (i = 0; i < mat->Nb; i++) {
-        sortBlockedRow<bs>(rMat->colIndices, rMat->nnzValues, rMat->rowPointers[i], rMat->rowPointers[i + 1] - 1);
+        sortBlockedRow<bs>(rmat->colIndices, rmat->nnzValues, rmat->rowPointers[i], rmat->rowPointers[i + 1] - 1);
     }
 }
 
@@ -375,10 +375,10 @@ void csrPatternToCsc(int *CSRColIndices, int *CSRRowPointers, int *CSCRowIndices
 }
 
 
-#define INSTANTIATE_BDA_FUNCTIONS(n)                                                               \
+#define INSTANTIATE_BDA_FUNCTIONS(n)                                                                                         \
 template int colorBlockedNodes<n>(int, const int *, const int *, const int *, const int *, std::vector<int>&, int, int);     \
-template void reorderBlockedMatrixByPattern<n>(BlockedMatrix *, int *, int *, BlockedMatrix *);    \
-template void reorderBlockedVectorByPattern<n>(int, double*, int*, double*);                       \
+template void reorderBlockedMatrixByPattern<n>(BlockedMatrix<n> *, int *, int *, BlockedMatrix<n> *);                        \
+template void reorderBlockedVectorByPattern<n>(int, double*, int*, double*);                                                 \
 template int* findGraphColoring<n>(const int *, const int *, const int *, const int *, int, int, int, int *, int *, int *);  \
 
 INSTANTIATE_BDA_FUNCTIONS(1);
