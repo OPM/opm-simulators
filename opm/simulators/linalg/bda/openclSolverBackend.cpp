@@ -42,8 +42,8 @@
 
 // Level Scheduling respects the depencies in the original matrix
 // Graph Coloring is more aggresive and is likely to change the number of linearizations and linear iterations to converge, but can still be faster on GPU because it results in more parallelism
-#define LEVEL_SCHEDULING 1
-#define GRAPH_COLORING   0
+#define LEVEL_SCHEDULING 0
+#define GRAPH_COLORING   1
 
 namespace bda
 {
