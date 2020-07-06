@@ -23,34 +23,6 @@
 namespace bda
 {
 
-    const char* kernel_1  = R"(
-    __kernel void hello1(void)
-    {
-        printf("in the kernel 1\n");
-    }
-    )";
-
-    const char* kernel_2  = R"(
-    __kernel void hello2(
-        __global int *in1,
-        __global int *in2,
-        __global int *out)
-    {
-        printf("in the kernel 2\n");
-        int idx = get_global_id(0);
-        out[idx] = in1[idx];
-        for(int i = 0; i < 20000000; ++i){
-            out[idx] = in1[idx] - in2[idx] * out[idx];
-            if(out[idx] > 100000){
-                out[idx] -= 100000;
-            }
-            if(out[idx] < -100000){
-                out[idx] += 100000;
-            }
-        }
-    }
-    )";
-
     const char* axpy_s  = R"(
     __kernel void axpy(
         __global double *in,

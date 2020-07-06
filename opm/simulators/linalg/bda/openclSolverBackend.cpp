@@ -443,9 +443,7 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
             OPM_THROW(std::logic_error, "Error chosen too high OpenCL device ID");
         }
 
-        cl::Program::Sources source(1, std::make_pair(kernel_1, strlen(kernel_1)));  // what does this '1' mean? cl::Program::Sources is of type 'std::vector<std::pair<const char*, long unsigned int> >'
-        source.emplace_back(std::make_pair(kernel_2, strlen(kernel_2)));
-        source.emplace_back(std::make_pair(axpy_s, strlen(axpy_s)));
+        cl::Program::Sources source(1, std::make_pair(axpy_s, strlen(axpy_s)));  // what does this '1' mean? cl::Program::Sources is of type 'std::vector<std::pair<const char*, long unsigned int> >'
         source.emplace_back(std::make_pair(dot_1_s, strlen(dot_1_s)));
         source.emplace_back(std::make_pair(norm_s, strlen(norm_s)));
         source.emplace_back(std::make_pair(custom_s, strlen(custom_s)));
