@@ -152,7 +152,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/BdaBridge.hpp
   opm/simulators/linalg/bda/BdaResult.hpp
   opm/simulators/linalg/bda/BdaSolver.hpp
-  opm/simulators/linalg/bda/BdaSolverStatus.hpp
   opm/simulators/linalg/bda/BILU0.hpp
   opm/simulators/linalg/bda/BlockedMatrix.hpp
   opm/simulators/linalg/bda/cuda_header.hpp
