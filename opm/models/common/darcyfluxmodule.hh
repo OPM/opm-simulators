@@ -386,10 +386,10 @@ protected:
 
                 Opm::Valgrind::CheckDefined(pStatIn);
                 // compute the hydrostatic gradient between the control volume and face integration
-                // point (this gradient exhibitis the same direction as the vector between the
+                // point. This gradient exhibitis the same direction as the vector between the
                 // control volume center and face integration point (-distVecIn / absDist) and the
-                // length: -pStaticInterior) / absDist. Note that the two negatives become + and the
-                // 1 / (absDist * absDist) -> absDistSquared.
+                // length of the vector is -pStaticIn / absDist. Note that the two negatives become
+                // + and the 1 / (absDist * absDist) -> absDistSquared.
                 EvalDimVector f(distVecIn);
                 f *= pStatIn / absDistSquared;
 
