@@ -42,7 +42,8 @@ namespace bda
         std::unique_ptr<BlockedMatrix<block_size> > Lmat = nullptr, Umat = nullptr, LUmat = nullptr;
         std::shared_ptr<BlockedMatrix<block_size> > rmat = nullptr; // only used with PAR_SIM
         double *invDiagVals = nullptr;
-        int *diagIndex = nullptr, *rowsPerColor = nullptr;
+        int *diagIndex = nullptr;
+        std::vector<int> rowsPerColor;  // color i contains rowsPerColor[i] rows, which are processed in parallel
         int *toOrder = nullptr, *fromOrder = nullptr;
         int numColors;
         int verbosity;

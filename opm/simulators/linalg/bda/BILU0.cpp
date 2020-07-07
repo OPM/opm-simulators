@@ -48,7 +48,6 @@ namespace bda
     {
         delete[] invDiagVals;
         delete[] diagIndex;
-        delete[] rowsPerColor;
         delete[] toOrder;
         delete[] fromOrder;
     }
@@ -63,8 +62,8 @@ namespace bda
         this->nnz = mat->nnzbs * block_size * block_size;
         this->nnzbs = mat->nnzbs;
 
-        toOrder = new int[N];
-        fromOrder = new int[N];
+        toOrder = new int[Nb];
+        fromOrder = new int[Nb];
 
         int *CSCRowIndices = new int[nnzbs];
         int *CSCColPointers = new int[Nb + 1];
@@ -81,12 +80,9 @@ namespace bda
         rmat = std::make_shared<BlockedMatrix<block_size> >(mat->Nb, mat->nnzbs);
         LUmat = std::make_unique<BlockedMatrix<block_size> >(*rmat);
         if (level_scheduling) {
-            rowsPerColor = findLevelScheduling(mat->colIndices, mat->rowPointers, CSCRowIndices, CSCColPointers, mat->Nb, &numColors, toOrder, fromOrder);
+            findLevelScheduling(mat->colIndices, mat->rowPointers, CSCRowIndices, CSCColPointers, mat->Nb, &numColors, toOrder, fromOrder, rowsPerColor);
         } else if (graph_coloring) {
-            rowsPerColor = findGraphColoring<block_size>(mat->colIndices, mat->rowPointers, CSCRowIndices, CSCColPointers, mat->Nb, mat->Nb, mat->Nb, &numColors, toOrder, fromOrder);
-        }
-        if (rowsPerColor == nullptr) {
-            return false;
+            findGraphColoring<block_size>(mat->colIndices, mat->rowPointers, CSCRowIndices, CSCColPointers, mat->Nb, mat->Nb, mat->Nb, &numColors, toOrder, fromOrder, rowsPerColor);
         }
         if(verbosity >= 3){
             std::ostringstream out;

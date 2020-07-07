@@ -199,12 +199,9 @@ void reorderBlockedMatrixByPattern(BlockedMatrix<block_size> *mat, int *toOrder,
 
 /* Reorder a matrix according to the colors that every node of the matrix has received*/
 
-void colorsToReordering(int Nb, std::vector<int>& colors, int numColors, int *toOrder, int *fromOrder, int *rowsPerColor) {
+void colorsToReordering(int Nb, std::vector<int>& colors, int numColors, int *toOrder, int *fromOrder, std::vector<int>& rowsPerColor) {
     int reordered = 0;
     int i, c;
-    for (i = 0; i < numColors; i++) {
-        rowsPerColor[i] = 0;
-    }
 
     // Find reordering patterns
     for (c = 0; c < numColors; c++) {
@@ -212,7 +209,6 @@ void colorsToReordering(int Nb, std::vector<int>& colors, int numColors, int *to
             if (colors[i] == c) {
                 rowsPerColor[c]++;
                 toOrder[i] = reordered;
-
                 fromOrder[reordered] = i;
                 reordered++;
             }
@@ -259,13 +255,11 @@ bool canBeStarted(const int rowIndex, const int *rowPointers, const int *colIndi
  * "Iterative methods for Sparse Linear Systems" by Yousef Saad in section 11.6.3 
  */
 
-int *findLevelScheduling(int *CSRColIndices, int *CSRRowPointers, int *CSCRowIndices, int *CSCColPointers, int Nb, int *numColors, int *toOrder, int* fromOrder) {
+void findLevelScheduling(int *CSRColIndices, int *CSRRowPointers, int *CSCRowIndices, int *CSCColPointers, int Nb, int *numColors, int *toOrder, int* fromOrder, std::vector<int>& rowsPerColor) {
     int activeRowIndex = 0, colorEnd, nextActiveRowIndex = 0;
     int thisRow;
     std::vector<bool> doneRows(Nb, false);
-    std::vector<int> rowsPerColor;
     rowsPerColor.reserve(Nb);
-    int *resRowsPerColor;
 
     std::vector <int> rowsToStart;
 
@@ -310,32 +304,21 @@ int *findLevelScheduling(int *CSRColIndices, int *CSRRowPointers, int *CSCRowInd
         colorEnd = nextActiveRowIndex;
         rowsPerColor.emplace_back(nextActiveRowIndex - activeRowIndex);
     }
-    // Crop the rowsPerColor array to it minimum size.
-    resRowsPerColor = new int[rowsPerColor.size()];
-    for (unsigned int i = 0; i < rowsPerColor.size(); i++) {
-        resRowsPerColor[i] = rowsPerColor[i];
-    }
 
     *numColors = rowsPerColor.size();
-
-    return resRowsPerColor;
 }
 
 /* Perform the complete graph coloring algorithm on a matrix. Return an array with the amount of nodes per color.*/
 
 template <unsigned int block_size>
-int* findGraphColoring(const int *CSRColIndices, const int *CSRRowPointers, const int *CSCRowIndices, const int *CSCColPointers, int Nb, int maxRowsPerColor, int maxColsPerColor, int *numColors, int *toOrder, int *fromOrder) {
+void findGraphColoring(const int *CSRColIndices, const int *CSRRowPointers, const int *CSCRowIndices, const int *CSCColPointers, int Nb, int maxRowsPerColor, int maxColsPerColor, int *numColors, int *toOrder, int *fromOrder, std::vector<int>& rowsPerColor) {
     std::vector<int> rowColor;
     rowColor.resize(Nb);
-    int *rowsPerColor = new int[MAX_COLORS];
 
     *numColors = colorBlockedNodes<block_size>(Nb, CSRRowPointers, CSRColIndices, CSCColPointers, CSCRowIndices, rowColor, maxRowsPerColor, maxColsPerColor);
 
+    rowsPerColor.resize(*numColors);
     colorsToReordering(Nb, rowColor, *numColors, toOrder, fromOrder, rowsPerColor);
-
-    // The rowsPerColor array contains a non-zero value for each color denoting how many rows are in that color. It has a size of *numColors.
-
-    return rowsPerColor;
 }
 
 // based on the scipy package from python, scipy/sparse/sparsetools/csr.h on github
@@ -375,11 +358,11 @@ void csrPatternToCsc(int *CSRColIndices, int *CSRRowPointers, int *CSCRowIndices
 }
 
 
-#define INSTANTIATE_BDA_FUNCTIONS(n)                                                                                         \
-template int colorBlockedNodes<n>(int, const int *, const int *, const int *, const int *, std::vector<int>&, int, int);     \
-template void reorderBlockedMatrixByPattern<n>(BlockedMatrix<n> *, int *, int *, BlockedMatrix<n> *);                        \
-template void reorderBlockedVectorByPattern<n>(int, double*, int*, double*);                                                 \
-template int* findGraphColoring<n>(const int *, const int *, const int *, const int *, int, int, int, int *, int *, int *);  \
+#define INSTANTIATE_BDA_FUNCTIONS(n)                                                                                                            \
+template int colorBlockedNodes<n>(int, const int *, const int *, const int *, const int *, std::vector<int>&, int, int);                        \
+template void reorderBlockedMatrixByPattern<n>(BlockedMatrix<n> *, int *, int *, BlockedMatrix<n> *);                                           \
+template void reorderBlockedVectorByPattern<n>(int, double*, int*, double*);                                                                    \
+template void findGraphColoring<n>(const int *, const int *, const int *, const int *, int, int, int, int *, int *, int *, std::vector<int>&);  \
 
 INSTANTIATE_BDA_FUNCTIONS(1);
 INSTANTIATE_BDA_FUNCTIONS(2);
