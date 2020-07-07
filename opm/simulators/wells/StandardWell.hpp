@@ -23,6 +23,9 @@
 #ifndef OPM_STANDARDWELL_HEADER_INCLUDED
 #define OPM_STANDARDWELL_HEADER_INCLUDED
 
+#if HAVE_CUDA || HAVE_OPENCL
+#include <opm/simulators/linalg/bda/WellContributions.hpp>
+#endif
 
 #include <opm/simulators/wells/RateConverter.hpp>
 #include <opm/simulators/wells/WellInterface.hpp>
