@@ -663,7 +663,18 @@ void openclSolverBackend<block_size>::solve_system(WellContributions& wellContri
     Timer t;
 
     // actually solve
-    gpu_pbicgstab(wellContribs, res);
+    try {
+        gpu_pbicgstab(wellContribs, res);
+    } catch (cl::Error error) {
+        std::ostringstream oss;
+        oss << "openclSolverBackend::solve_system error: " << error.what() << "(" << error.err() << ")\n";
+        oss << getErrorString(error.err());
+        // rethrow exception
+        OPM_THROW(std::logic_error, oss.str());
+    } catch (std::logic_error error) {
+        // rethrow exception by OPM_THROW in the try{}, without this, a segfault occurs
+        throw error;
+    }
 
     if (verbosity > 2) {
         std::ostringstream out;
