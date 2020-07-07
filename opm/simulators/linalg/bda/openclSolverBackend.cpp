@@ -275,9 +275,9 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
 
         // apply wellContributions
         if (wellContribs.getNumWells() > 0) {
-        	t_well.start();
+            t_well.start();
             wellContribs.apply(d_s, d_t);
-        	t_well.stop();
+            t_well.stop();
         }
 
         t_rest.start();
@@ -345,7 +345,7 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
         if (platforms.size() == 0) {
             OPM_THROW(std::logic_error, "Error openclSolver is selected but no OpenCL platforms are found");
         }
-        out << "Found " << platforms.size() << " OpenCL platforms" << "\n\n";
+        out << "Found " << platforms.size() << " OpenCL platforms" << "\n";
 
         if (verbosity >= 1) {
             std::string platform_info;
@@ -368,6 +368,16 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
 
         if (platforms.size() <= platformID) {
             OPM_THROW(std::logic_error, "Error chosen too high OpenCL platform ID");
+        } else {
+            std::string platform_info;
+            out << "Chosen:\n";
+            platforms[platformID].getInfo(CL_PLATFORM_NAME, &platform_info);
+            out << "Platform name      : " << platform_info << "\n";
+            platforms[platformID].getInfo(CL_PLATFORM_VERSION, &platform_info);
+            out << "Platform version   : " << platform_info << "\n";
+            OpmLog::info(out.str());
+            out.str("");
+            out.clear();
         }
 
         cl_context_properties properties[] = {CL_CONTEXT_PLATFORM, (cl_context_properties)(platforms[platformID])(), 0};
@@ -377,7 +387,7 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
         if (devices.size() == 0){
             OPM_THROW(std::logic_error, "Error openclSolver is selected but no OpenCL devices are found");
         }
-        out << "Found " << devices.size() << " OpenCL devices" << "\n\n";
+        out << "Found " << devices.size() << " OpenCL devices" << "\n";
 
         if (verbosity >= 1) {
             for (unsigned int i = 0; i < devices.size(); ++i) {
@@ -393,8 +403,6 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
                 out << "CL_DRIVER_VERSION         : " << device_info << "\n";
                 devices[i].getInfo(CL_DEVICE_BUILT_IN_KERNELS, &device_info);
                 out << "CL_DEVICE_BUILT_IN_KERNELS: " << device_info << "\n";
-                devices[i].getInfo(CL_DEVICE_VERSION, &device_info);
-                out << "CL_DEVICE_VERSION         : " << device_info << "\n";
                 devices[i].getInfo(CL_DEVICE_PROFILE, &device_info);
                 out << "CL_DEVICE_PROFILE         : " << device_info << "\n";
                 devices[i].getInfo(CL_DEVICE_OPENCL_C_VERSION, &device_info);
@@ -434,9 +442,21 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
             }
         }
         OpmLog::info(out.str());
+        out.str("");
+        out.clear();
 
         if (devices.size() <= deviceID){
             OPM_THROW(std::logic_error, "Error chosen too high OpenCL device ID");
+        } else {
+            std::string device_info;
+            out << "Chosen:\n";
+            devices[deviceID].getInfo(CL_DEVICE_NAME, &device_info);
+            out << "CL_DEVICE_NAME            : " << device_info << "\n";
+            devices[deviceID].getInfo(CL_DEVICE_VERSION, &device_info);
+            out << "CL_DEVICE_VERSION         : " << device_info << "\n";
+            OpmLog::info(out.str());
+            out.str("");
+            out.clear();
         }
 
         cl::Program::Sources source(1, std::make_pair(axpy_s, strlen(axpy_s)));  // what does this '1' mean? cl::Program::Sources is of type 'std::vector<std::pair<const char*, long unsigned int> >'
@@ -522,7 +542,7 @@ void openclSolverBackend<block_size>::finalize() {
 
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::copy_system_to_gpu() {
-	Timer t;
+    Timer t;
     cl::Event event;
 
 #if COPY_ROW_BY_ROW
@@ -554,7 +574,7 @@ void openclSolverBackend<block_size>::copy_system_to_gpu() {
 // don't copy rowpointers and colindices, they stay the same
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::update_system_on_gpu() {
-	Timer t;
+    Timer t;
     cl::Event event;
 
 #if COPY_ROW_BY_ROW
@@ -583,7 +603,7 @@ void openclSolverBackend<block_size>::update_system_on_gpu() {
 
 template <unsigned int block_size>
 bool openclSolverBackend<block_size>::analyse_matrix() {
-	Timer t;
+    Timer t;
 
     bool success = prec->init(mat.get());
     int work_group_size = 32;
@@ -625,7 +645,7 @@ void openclSolverBackend<block_size>::update_system(double *vals, double *b) {
 
 template <unsigned int block_size>
 bool openclSolverBackend<block_size>::create_preconditioner() {
-	Timer t;
+    Timer t;
 
     bool result = prec->create_preconditioner(mat.get());
 
@@ -658,7 +678,7 @@ void openclSolverBackend<block_size>::solve_system(WellContributions& wellContri
 // caller must be sure that x is a valid array
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::get_result(double *x) {
-	Timer t;
+    Timer t;
 
     queue->enqueueReadBuffer(d_x, CL_TRUE, 0, sizeof(double) * N, rb);
     reorderBlockedVectorByPattern<block_size>(mat->Nb, rb, toOrder, x);

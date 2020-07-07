@@ -233,9 +233,9 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, int, CprReuseSetup, "Reuse Amg Setup");
             EWOMS_REGISTER_PARAM(TypeTag, std::string, LinearSolverConfiguration, "Configuration of solver valid is: ilu0 (default), cpr_quasiimpes, cpr_trueimpes or file (specified in LinearSolverConfigurationJsonFile) ");
             EWOMS_REGISTER_PARAM(TypeTag, std::string, LinearSolverConfigurationJsonFile, "Filename of JSON configuration for flexible linear solver system.");
-            EWOMS_REGISTER_PARAM(TypeTag, std::string, GpuMode, "Use GPU cusparseSolver or openclSolver as the linear solver");
-            EWOMS_REGISTER_PARAM(TypeTag, int, BdaDeviceId, "Choose device ID for cusparseSolver or openclSolver, too high value could lead to errors");
-            EWOMS_REGISTER_PARAM(TypeTag, int, OpenclPlatformId, "Choose platform ID for openclSolver, too high value could lead to errors");
+            EWOMS_REGISTER_PARAM(TypeTag, std::string, GpuMode, "Use GPU cusparseSolver or openclSolver as the linear solver, usage: '--gpu-mode=[none|cusparse|opencl]'");
+            EWOMS_REGISTER_PARAM(TypeTag, int, BdaDeviceId, "Choose device ID for cusparseSolver or openclSolver, use 'nvidia-smi' or 'clinfo' to determine valid IDs");
+            EWOMS_REGISTER_PARAM(TypeTag, int, OpenclPlatformId, "Choose platform ID for openclSolver, use 'clinfo' to determine valid platform IDs");
         }
 
         FlowLinearSolverParameters() { reset(); }
