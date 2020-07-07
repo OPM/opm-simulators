@@ -22,8 +22,7 @@
 
 #include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
 
-#define __CL_ENABLE_EXCEPTIONS
-#include <CL/cl.hpp>            // up to OpenCL 1.2
+#include <opm/simulators/linalg/bda/opencl.hpp>
 
 namespace bda
 {

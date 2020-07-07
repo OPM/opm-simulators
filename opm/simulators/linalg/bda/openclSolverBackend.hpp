@@ -20,11 +20,7 @@
 #ifndef OPM_OPENCLSOLVER_BACKEND_HEADER_INCLUDED
 #define OPM_OPENCLSOLVER_BACKEND_HEADER_INCLUDED
 
-#if HAVE_OPENCL
-#define __CL_ENABLE_EXCEPTIONS
-#include <CL/cl.hpp>            // up to OpenCL 1.2
-#endif
-
+#include <opm/simulators/linalg/bda/opencl.hpp>
 
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 #include <opm/simulators/linalg/bda/BdaSolver.hpp>

@@ -25,13 +25,9 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <dune/common/timer.hh>
 
-
-#define __CL_ENABLE_EXCEPTIONS
-#include <CL/cl.hpp>
+#include <opm/simulators/linalg/bda/openclSolverBackend.hpp>
 #include <opm/simulators/linalg/bda/openclKernels.hpp>
 
-
-#include <opm/simulators/linalg/bda/openclSolverBackend.hpp>
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 #include <opm/simulators/linalg/bda/Reorder.hpp>
 
@@ -500,10 +496,12 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
 
     } catch (cl::Error error) {
         std::ostringstream oss;
-        oss << "OpenCL Error: " << error.what() << "(" << error.err() << ")";
-        OpmLog::error(oss.str());
+        oss << "OpenCL Error: " << error.what() << "(" << error.err() << ")\n";
+        oss << getErrorString(error.err());
+        // rethrow exception
+        OPM_THROW(std::logic_error, oss.str());
     } catch (std::logic_error error) {
-        // rethrow exception, without this, a segfault occurs
+        // rethrow exception by OPM_THROW in the try{}, without this, a segfault occurs
         throw error;
     }
 

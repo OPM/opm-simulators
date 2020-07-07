@@ -25,8 +25,7 @@
 #endif
 
 #if HAVE_OPENCL
-#define __CL_ENABLE_EXCEPTIONS
-#include <CL/cl.hpp>
+#include <opm/simulators/linalg/bda/opencl.hpp>
 #endif
 
 #include <vector>
