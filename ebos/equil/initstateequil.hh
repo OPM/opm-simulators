@@ -172,7 +172,8 @@ private:
     double
     density(const double press) const
     {
-        double rho = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp_, press);
+        double saltConcentration = 0.0; // TODO allow for non-zero initial salt concentration
+        double rho = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp_, press, saltConcentration);
         rho *= FluidSystem::referenceDensity(FluidSystem::waterPhaseIdx, pvtRegionIdx_);
         return rho;
     }

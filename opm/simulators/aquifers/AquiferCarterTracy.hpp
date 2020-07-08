@@ -224,10 +224,11 @@ protected:
         // We use the temperature of the first cell connected to the aquifer
         // Here we copy the fluidstate of the first cell, so we do not accidentally mess up the reservoir fs
         fs_aquifer.assign(iq0.fluidState());
-        Eval temperature_aq, pa0_mean;
+        Eval temperature_aq, pa0_mean, saltConcentration_aq;
         temperature_aq = fs_aquifer.temperature(0);
+        saltConcentration_aq = fs_aquifer.saltConcentration();
         pa0_mean = this->pa0_;
-        Eval mu_w_aquifer = FluidSystem::waterPvt().viscosity(pvttableIdx, temperature_aq, pa0_mean);
+        Eval mu_w_aquifer = FluidSystem::waterPvt().viscosity(pvttableIdx, temperature_aq, pa0_mean, saltConcentration_aq);
         mu_w_ = mu_w_aquifer.value();
     }
 
