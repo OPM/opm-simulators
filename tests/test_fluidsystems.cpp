@@ -53,6 +53,7 @@
 #include <opm/material/fluidstates/NonEquilibriumFluidState.hpp>
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
 #include <opm/material/fluidstates/SimpleModularFluidState.hpp>
+#include <opm/material/fluidstates/BlackOilFluidState.hpp>
 
 // include the tables for CO2 which are delivered with opm-material by default
 #include <opm/material/common/UniformTabulated2DFunction.hpp>
@@ -83,7 +84,7 @@ void ensureBlackoilApi()
 #endif
 
         typedef typename FluidSystem::Scalar Scalar;
-        typedef Opm::CompositionalFluidState<Evaluation, FluidSystem> FluidState;
+        typedef Opm::BlackOilFluidState<Evaluation, FluidSystem> FluidState;
         FluidState fluidState;
         Evaluation XoG = 0.0;
         Evaluation XgO = 0.0;
