@@ -23,11 +23,7 @@
 
 #include <opm/simulators/linalg/WellOperators.hpp>
 #include <opm/simulators/linalg/MatrixBlock.hpp>
-#include <opm/simulators/linalg/BlackoilAmg.hpp>
-#include <opm/simulators/linalg/CPRPreconditioner.hpp>
 #include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
-#include <opm/simulators/linalg/ParallelRestrictedAdditiveSchwarz.hpp>
-#include <opm/simulators/linalg/ParallelOverlappingILU0.hpp>
 #include <opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp>
 #include <opm/simulators/linalg/findOverlapRowsAndColumns.hpp>
 #include <opm/simulators/linalg/setupPropertyTree.hpp>
@@ -35,20 +31,11 @@
 #include <opm/simulators/linalg/WriteSystemMatrixHelper.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/simulators/linalg/ParallelIstlInformation.hpp>
-#include <opm/common/utility/platform_dependent/disable_warnings.h>
+
 #include <opm/material/fluidsystems/BlackOilDefaultIndexTraits.hpp>
 
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
-
-#include <dune/istl/scalarproducts.hh>
-#include <dune/istl/operators.hh>
-#include <dune/istl/preconditioners.hh>
-#include <dune/istl/solvers.hh>
-#include <dune/istl/owneroverlapcopy.hh>
-#include <dune/istl/paamg/amg.hh>
-
-#include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 #if HAVE_CUDA || HAVE_OPENCL
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
@@ -408,53 +395,6 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
             // Construct scalar product.
             auto sp = Dune::createScalarProduct<Vector,POrComm>(parallelInformation_arg, category);
 
-#if FLOW_SUPPORT_AMG // activate AMG if either flow_ebos is used or UMFPack is not available
-            if( parameters_.linear_solver_use_amg_ || parameters_.use_cpr_)
-            {
-                typedef ISTLUtility::CPRSelector< Matrix, Vector, Vector, POrComm>  CPRSelectorType;
-                typedef typename CPRSelectorType::Operator MatrixOperator;
-
-                std::unique_ptr< MatrixOperator > opA;
-
-                if( ! std::is_same< LinearOperator, MatrixOperator > :: value )
-                {
-                    // create new operator in case linear operator and matrix operator differ
-                    opA.reset( CPRSelectorType::makeOperator( linearOperator.getmat(), parallelInformation_arg ) );
-                }
-
-                const double relax = parameters_.ilu_relaxation_;
-                const MILU_VARIANT ilu_milu  = parameters_.ilu_milu_;
-                if (  parameters_.use_cpr_ )
-                {
-                    using MatrixType     = typename MatrixOperator::matrix_type;
-                    using CouplingMetric = Opm::Amg::Element<pressureEqnIndex, pressureVarIndex>;
-                    using CritBase       = Dune::Amg::SymmetricCriterion<MatrixType, CouplingMetric>;
-                    using Criterion      = Dune::Amg::CoarsenCriterion<CritBase>;
-                    using AMG = typename ISTLUtility
-                        ::BlackoilAmgSelector< MatrixType, Vector, Vector,POrComm, Criterion, pressureEqnIndex, pressureVarIndex >::AMG;
-
-                    std::unique_ptr< AMG > amg;
-                    // Construct preconditioner.
-                    Criterion crit(15, 2000);
-                    constructAMGPrecond<Criterion>( linearOperator, parallelInformation_arg, amg, opA, relax, ilu_milu );
-
-                    // Solve.
-                    solve(linearOperator, x, istlb, *sp, *amg, result);
-                }
-                else
-                {
-                    typedef typename CPRSelectorType::AMG AMG;
-                    std::unique_ptr< AMG > amg;
-
-                    // Construct preconditioner.
-                    constructAMGPrecond( linearOperator, parallelInformation_arg, amg, opA, relax, ilu_milu );
-
-                    // Solve.
-                    solve(linearOperator, x, istlb, *sp, *amg, result);
-                }
-            }
-            else
-#endif
             {
                 // tries to solve linear system
 #if HAVE_CUDA || HAVE_OPENCL
@@ -533,24 +473,6 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
             return Pointer(new ParPreconditioner(opA.getmat(), comm, relax, ilu_milu, interiorCellNum_, ilu_redblack, ilu_reorder_spheres));
         }
 #endif
-
-        template <class LinearOperator, class MatrixOperator, class POrComm, class AMG >
-        void
-        constructAMGPrecond(LinearOperator& /* linearOperator */, const POrComm& comm, std::unique_ptr< AMG >& amg, std::unique_ptr< MatrixOperator >& opA, const double relax, const MILU_VARIANT milu) const
-        {
-            ISTLUtility::template createAMGPreconditionerPointer<pressureEqnIndex, pressureVarIndex>( *opA, relax, milu, comm, amg );
-        }
-
-
-        template <class C, class LinearOperator, class MatrixOperator, class POrComm, class AMG >
-        void
-        constructAMGPrecond(LinearOperator& /* linearOperator */, const POrComm& comm, std::unique_ptr< AMG >& amg, std::unique_ptr< MatrixOperator >& opA, const double relax,
-                            const MILU_VARIANT /* milu */ ) const
-        {
-            ISTLUtility::template createAMGPreconditionerPointer<C>( *opA, relax,
-                                                                     comm, amg, parameters_, weights_ );
-        }
-
 
         /// \brief Solve the system using the given preconditioner and scalar product.
         template <class Operator, class ScalarProd, class Precond>
