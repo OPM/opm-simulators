@@ -50,18 +50,13 @@ setupPropertyTree(const FlowLinearSolverParameters& p)
 #else
        OPM_THROW(std::invalid_argument,
                  "--linear-solver-configuration=file not supported with "
-                 << "boost version. Needs versoin > 1.48.");
+                 << "boost version. Needs version > 1.48.");
 #endif
     }
     else
     {
         std::string conf =  p.linear_solver_configuration_;
         // Support old UseCpr if not configuration was set
-        if (!EWOMS_PARAM_IS_SET(TypeTag, std::string, LinearSolverConfiguration) && p.use_cpr_)
-        {
-            conf = "cpr_trueimpes";
-        }
-
         if((conf == "cpr_trueimpes") || (conf == "cpr_quasiimpes")){
             prm.put("tol", p.linear_solver_reduction_);
             if (EWOMS_PARAM_IS_SET(TypeTag, int, LinearSolverMaxIter))

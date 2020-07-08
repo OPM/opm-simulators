@@ -16,9 +16,6 @@
 */
 #include "config.h"
 
-// Define making clear that the simulator supports AMG
-#define FLOW_SUPPORT_AMG 1
-
 #include <flow/flow_ebos_oilwater_polymer.hpp>
 
 #include <opm/material/common/ResetLocale.hpp>

@@ -21,13 +21,15 @@
 #define BOOST_TEST_MODULE BlackoilAmgTest
 #define BOOST_TEST_NO_MAIN
 #include <boost/test/unit_test.hpp>
-#include <opm/simulators/linalg/BlackoilAmg.hpp>
+#include <opm/simulators/linalg/PreconditionerFactory.hpp>
+#include <opm/simulators/linalg/FlexibleSolver.hpp>
 
 #include <dune/common/parallel/mpihelper.hh>
 #include <dune/common/fmatrix.hh>
 #include <dune/common/unused.hh>
 #include <dune/common/parallel/indexset.hh>
 #include <dune/common/parallel/plocalindex.hh>
+#include <dune/common/version.hh>
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
 #include <dune/common/parallel/communication.hh>
 #else
@@ -35,6 +37,7 @@
 #endif
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/owneroverlapcopy.hh>
+#include <dune/istl/schwarz.hh>
 
 class MPIError {
 public:
@@ -260,6 +263,7 @@ M setupAnisotropic2d(int N, Dune::ParallelIndexSet<G,L,s>& indices, const Dune::
     return mat;
 }
 
+
 //BOOST_AUTO_TEST_CASE(runBlackoilAmgLaplace)
 void runBlackoilAmgLaplace()
 {
@@ -289,30 +293,18 @@ void runBlackoilAmgLaplace()
     setBoundary(x, b, N, comm.indexSet());
 
     Operator fop(mat, comm);
-    typedef Dune::Amg::CoarsenCriterion<Dune::Amg::SymmetricCriterion<BCRSMat,Dune::Amg::FirstDiagonal> >
-        Criterion;
-    typedef Dune::SeqSSOR<BCRSMat,Vector,Vector> Smoother;
-    //typedef Dune::SeqJac<BCRSMat,Vector,Vector> Smoother;
-    //typedef Dune::SeqILU0<BCRSMat,Vector,Vector> Smoother;
-    //typedef Dune::SeqILUn<BCRSMat,Vector,Vector> Smoother;
-    typedef Dune::BlockPreconditioner<Vector,Vector,Communication,Smoother> ParSmoother;
-    typedef typename Dune::Amg::SmootherTraits<ParSmoother>::Arguments SmootherArgs;
-
     Dune::OverlappingSchwarzScalarProduct<Vector,Communication> sp(comm);
-
     Dune::InverseOperatorResult r;
-    SmootherArgs smootherArgs;
-    Criterion criterion;
 
-    smootherArgs.iterations = 1;
-    Opm::CPRParameter param;
+    boost::property_tree::ptree prm;
+    prm.put("type", "amg");
+    std::function<Vector()> weights = [&mat]() {
+        return Opm::Amg::getQuasiImpesWeights<BCRSMat, Vector>(mat, 0, false);
+    };
+    auto amg = Opm::PreconditionerFactory<Operator, Communication>::create(fop, prm, weights, comm);
 
-    Opm::BlackoilAmg<Operator,ParSmoother,Criterion,Communication,0,0> amg(param,
-                                                                         {},
-                                                                         fop, criterion,
-                                                                         smootherArgs,
-                                                                         comm);
-    Dune::CGSolver<Vector> amgCG(fop, sp, amg, 10e-8, 300, (ccomm.rank()==0) ? 2 : 0);
+    Dune::CGSolver<Vector> amgCG(fop, sp, *amg, 10e-8, 300, (ccomm.rank()==0) ? 2 : 0);
+
     amgCG.apply(x,b,r);
 
 }
