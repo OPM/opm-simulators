@@ -1069,7 +1069,7 @@ public:
         if (actions.empty())
             return;
 
-        Opm::Action::Context context( summaryState );
+        Opm::Action::Context context( summaryState, schedule.getWListManager(reportStep) );
         auto now = Opm::TimeStampUTC( schedule.getStartTime() ) + std::chrono::duration<double>(sim_time);
         std::string ts;
         {
