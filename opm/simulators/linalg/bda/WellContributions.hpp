@@ -39,7 +39,8 @@ namespace Opm
 /// This class serves to eliminate the need to include the WellContributions into the matrix (with --matrix-add-well-contributions=true) for the cusparseSolver
 /// If the --matrix-add-well-contributions commandline parameter is true, this class should not be used
 /// So far, StandardWell and MultisegmentWell are supported
-/// A single instance (or pointer) of this class is passed to the cusparseSolver.
+/// StandardWells are only supported for cusparseSolver (CUDA), MultisegmentWells are supported for both cusparseSolver and openclSolver
+/// A single instance (or pointer) of this class is passed to the BdaSolver.
 /// For StandardWell, this class contains all the data and handles the computation. For MultisegmentWell, the vector 'multisegments' contains all the data. For more information, check the MultisegmentWellContribution class.
 
 /// A StandardWell uses C, D and B and performs y -= (C^T * (D^-1 * (B*x)))
@@ -54,6 +55,15 @@ namespace Opm
 /// - copy data of wellcontributions
 class WellContributions
 {
+
+public:
+
+    /// StandardWell has C, D and B matrices that need to be copied
+    enum class MatrixType {
+        C,
+        D,
+        B
+    };
 
 private:
     unsigned int num_blocks = 0;             // total number of blocks in all wells
@@ -76,7 +86,9 @@ private:
     cl::CommandQueue *queue = nullptr;
 #endif
 
+#if HAVE_CUDA
     // data for StandardWells, could remain nullptrs if not used
+    // StandardWells are only supported for cusparseSolver now
     double *d_Cnnzs = nullptr;
     double *d_Dnnzs = nullptr;
     double *d_Bnnzs = nullptr;
@@ -85,6 +97,7 @@ private:
     double *d_z1 = nullptr;
     double *d_z2 = nullptr;
     unsigned int *d_val_pointers = nullptr;
+#endif
 
     double *h_x = nullptr, *h_y = nullptr;  // CUDA pinned memory for GPU memcpy
     bool host_mem_cuda = false;             // true iff h_x and h_y are allocated by cudaMallocHost(), so they need to be freed using cudaFreeHost()
@@ -92,14 +105,20 @@ private:
     int *toOrder = nullptr;
     bool reorder = false;
 
-public:
+    /// Store a matrix in this object, in blocked csr format, can only be called after alloc() is called
+    /// \param[in] type        indicate if C, D or B is sent
+    /// \param[in] colIndices  columnindices of blocks in C or B, ignored for D
+    /// \param[in] values      array of nonzeroes
+    /// \param[in] val_size    number of blocks in C or B, ignored for D
+    void addMatrixGpu(MatrixType type, int *colIndices, double *values, unsigned int val_size);
 
-    /// StandardWell has C, D and B matrices that need to be copied
-    enum class MatrixType {
-        C,
-        D,
-        B
-    };
+    /// Allocate GPU memory for StandardWells
+    void allocStandardWells();
+
+    /// Free GPU memory from StandardWells
+    void freeStandardWells();
+
+public:
 
     /// Set a cudaStream to be used
     /// \param[in] stream           the cudaStream that is used to launch the kernel in
