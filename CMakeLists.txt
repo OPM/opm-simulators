@@ -134,6 +134,22 @@ if(CUDA_FOUND)
   include_directories(${CUDA_INCLUDE_DIRS})
 endif()
 
+
+find_package(OpenCL)
+
+if(OpenCL_FOUND)
+  # the current OpenCL implementation relies on cl.hpp, not cl2.hpp
+  # make sure it is available, otherwise disable OpenCL
+  find_file(CL_HPP CL/cl.hpp HINTS ${OpenCL_INCLUDE_DIRS})
+  if(CL_HPP)
+    set(HAVE_OPENCL 1)
+    include_directories(${OpenCL_INCLUDE_DIRS})
+  else()
+    message(WARNING " OpenCL was found, but this version of opm-simulators relies on CL/cl.hpp, which implements OpenCL 1.0, 1.1 and 1.2.\n Deactivating OpenCL")
+    set(OpenCL_FOUND OFF)
+  endif()
+endif()
+
 # read the list of components from this file (in the project directory);
 # it should set various lists with the names of the files to include
 include (CMakeLists_files.cmake)
@@ -385,5 +401,9 @@ add_custom_target(extra_test ${CMAKE_CTEST_COMMAND} -C ExtraTests)
 if(CUDA_FOUND)
   target_link_libraries( opmsimulators PUBLIC ${CUDA_cusparse_LIBRARY} )
   target_link_libraries( opmsimulators PUBLIC ${CUDA_cublas_LIBRARY} )
+endif()
+
+if(OpenCL_FOUND)
+  target_link_libraries( opmsimulators ${OpenCL_LIBRARIES} )
 endif()
 

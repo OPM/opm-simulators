@@ -23,6 +23,9 @@
 #ifndef OPM_STANDARDWELL_HEADER_INCLUDED
 #define OPM_STANDARDWELL_HEADER_INCLUDED
 
+#if HAVE_CUDA || HAVE_OPENCL
+#include <opm/simulators/linalg/bda/WellContributions.hpp>
+#endif
 
 #include <opm/simulators/wells/RateConverter.hpp>
 #include <opm/simulators/wells/WellInterface.hpp>
@@ -184,7 +187,7 @@ namespace Opm
         /// r = r - C D^-1 Rw
         virtual void apply(BVector& r) const override;
 
-#if HAVE_CUDA
+#if HAVE_CUDA || HAVE_OPENCL
         /// add the contribution (C, D^-1, B matrices) of this Well to the WellContributions object
         void addWellContribution(WellContributions& wellContribs) const;
 

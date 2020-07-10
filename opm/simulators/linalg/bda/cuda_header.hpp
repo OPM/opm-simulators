@@ -21,7 +21,10 @@
 #define CUDA_HEADER_HEADER_INCLUDED
 
 #include <cuda_runtime.h>
-#include <iostream>
+#include <sstream>
+
+#include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/ErrorMacros.hpp>
 
 /// Runtime error checking of CUDA functions
 /// Usage:
@@ -33,9 +36,10 @@
 inline void __cudaCheckError(const char *file, const int line, const char *msg){
     cudaError err = cudaGetLastError();
     if (cudaSuccess != err){
-        std::cerr << "cudaCheckError() failed at " << file << ":" << line << ": " << cudaGetErrorString(err) << std::endl;
-        std::cerr << "BDA error message: " << msg << std::endl;
-        exit(1);
+        std::ostringstream out;
+        out << cudaGetErrorString(err) << "\n";
+        out << "BDA error message: " << msg << "\n";
+        OPM_THROW(std::logic_error, out.str());
     }
 }
 

@@ -20,12 +20,6 @@
 #ifndef BDABRIDGE_HEADER_INCLUDED
 #define BDABRIDGE_HEADER_INCLUDED
 
-#include <config.h>
-
-#if ! HAVE_CUDA
-  #error "This file should only be included if CUDA is found"
-#endif
-
 #include "dune/istl/solver.hh" // for struct InverseOperatorResult
 
 #include "dune/istl/bcrsmatrix.hh"
@@ -33,28 +27,36 @@
 
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 
+#if HAVE_CUDA
 #include <opm/simulators/linalg/bda/cusparseSolverBackend.hpp>
+#endif
+
+#if HAVE_OPENCL
+#include <opm/simulators/linalg/bda/openclSolverBackend.hpp>
+#endif
 
 namespace Opm
 {
 
 typedef Dune::InverseOperatorResult InverseOperatorResult;
 
-/// BdaBridge acts as interface between opm-simulators with the cusparseSolver
-/// if CUDA was not found during CMake, function bodies of this class are empty
+/// BdaBridge acts as interface between opm-simulators with the BdaSolvers
+template <class BridgeMatrix, class BridgeVector, int block_size>
 class BdaBridge
 {
 private:
-    std::unique_ptr<cusparseSolverBackend> backend;
-    bool use_gpu;
+    std::unique_ptr<bda::BdaSolver<block_size> > backend;
+    bool use_gpu = false;
 
 public:
     /// Construct a BdaBridge
-    /// \param[in] use_gpu                    true iff the cusparseSolver is used, is passed via command-line: '--use-gpu=[true|false]'
-    /// \param[in] linear_solver_verbosity    verbosity of cusparseSolver
-    /// \param[in] maxit                      maximum number of iterations for cusparseSolver
-    /// \param[in] tolerance                  required relative tolerance for cusparseSolver
-    BdaBridge(bool use_gpu, int linear_solver_verbosity, int maxit, double tolerance);
+    /// \param[in] gpu_mode                   to select if a gpu solver is used, is passed via command-line: '--gpu-mode=[none|cusparse|opencl]'
+    /// \param[in] linear_solver_verbosity    verbosity of BdaSolver
+    /// \param[in] maxit                      maximum number of iterations for BdaSolver
+    /// \param[in] tolerance                  required relative tolerance for BdaSolver
+    /// \param[in] platformID                 the OpenCL platform ID to be used
+    /// \param[in] deviceID                   the device ID to be used by the cusparse- and openclSolvers, too high values could cause runtime errors
+    BdaBridge(std::string gpu_mode, int linear_solver_verbosity, int maxit, double tolerance, unsigned int platformID, unsigned int deviceID);
 
 
     /// Solve linear system, A*x = b
@@ -63,12 +65,10 @@ public:
     /// \param[in] b            vector b, should be of type Dune::BlockVector
     /// \param[in] wellContribs contains all WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] result    summary of solver result
-    template <class BridgeMatrix, class BridgeVector>
     void solve_system(BridgeMatrix *mat, BridgeVector &b, WellContributions& wellContribs, InverseOperatorResult &result);
 
     /// Get the resulting x vector
     /// \param[inout] x    vector x, should be of type Dune::BlockVector
-    template <class BridgeVector>
     void get_result(BridgeVector &x);
 
     /// Return whether the BdaBridge will use the GPU or not

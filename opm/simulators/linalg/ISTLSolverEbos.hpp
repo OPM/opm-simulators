@@ -50,7 +50,7 @@
 
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
-#if HAVE_CUDA
+#if HAVE_CUDA || HAVE_OPENCL
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
 #endif
 
@@ -122,8 +122,9 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
         enum { pressureVarIndex = Indices::pressureSwitchIdx };
         static const int numEq = Indices::numEq;
 
-#if HAVE_CUDA
-        std::unique_ptr<BdaBridge> bdaBridge;
+#if HAVE_CUDA || HAVE_OPENCL
+        static const unsigned int block_size = Matrix::block_type::rows;
+        std::unique_ptr<BdaBridge<Matrix, Vector, block_size>> bdaBridge;
 #endif
 
 #if HAVE_MPI
@@ -160,20 +161,22 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
                 prm_ = setupPropertyTree<TypeTag>(parameters_);
             }
             const auto& gridForConn = simulator_.vanguard().grid();
-#if HAVE_CUDA
-            bool use_gpu = EWOMS_GET_PARAM(TypeTag, bool, UseGpu);
-            if (gridForConn.comm().size() > 1 && use_gpu) {
+#if HAVE_CUDA || HAVE_OPENCL
+            std::string gpu_mode = EWOMS_GET_PARAM(TypeTag, std::string, GpuMode);
+            int platformID = EWOMS_GET_PARAM(TypeTag, int, OpenclPlatformId);
+            int deviceID = EWOMS_GET_PARAM(TypeTag, int, BdaDeviceId);
+            if (gridForConn.comm().size() > 1 && gpu_mode.compare("none") != 0) {
                 OpmLog::warning("Warning cannot use GPU with MPI, GPU is disabled");
-                use_gpu = false;
+                gpu_mode = "none";
             }
             const int maxit = EWOMS_GET_PARAM(TypeTag, int, LinearSolverMaxIter);
             const double tolerance = EWOMS_GET_PARAM(TypeTag, double, LinearSolverReduction);
             const int linear_solver_verbosity = parameters_.linear_solver_verbosity_;
-            bdaBridge.reset(new BdaBridge(use_gpu, linear_solver_verbosity, maxit, tolerance));
+            bdaBridge.reset(new BdaBridge<Matrix, Vector, block_size>(gpu_mode, linear_solver_verbosity, maxit, tolerance, platformID, deviceID));
 #else
-            const bool use_gpu = EWOMS_GET_PARAM(TypeTag, bool, UseGpu);
-            if (use_gpu) {
-                OPM_THROW(std::logic_error,"Error cannot use GPU solver since CUDA was not found during compilation");
+            const std::string gpu_mode = EWOMS_GET_PARAM(TypeTag, std::string, GpuMode);
+            if (gpu_mode.compare("none") != 0) {
+                OPM_THROW(std::logic_error,"Error cannot use GPU solver since neither CUDA nor OpenCL was not found by cmake");
             }
 #endif
             extractParallelGridInformationToISTL(simulator_.vanguard().grid(), parallelInformation_);
@@ -454,7 +457,7 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
 #endif
             {
                 // tries to solve linear system
-#if HAVE_CUDA
+#if HAVE_CUDA || HAVE_OPENCL
                 bool use_gpu = bdaBridge->getUseGpu();
                 if (use_gpu) {
                     WellContributions wellContribs;

@@ -67,7 +67,9 @@ NEW_PROP_TAG(CprEllSolvetype);
 NEW_PROP_TAG(CprReuseSetup);
 NEW_PROP_TAG(LinearSolverConfiguration);
 NEW_PROP_TAG(LinearSolverConfigurationJsonFile);
-NEW_PROP_TAG(UseGpu);
+NEW_PROP_TAG(GpuMode);
+NEW_PROP_TAG(BdaDeviceId);
+NEW_PROP_TAG(OpenclPlatformId);
 
 SET_SCALAR_PROP(FlowIstlSolverParams, LinearSolverReduction, 1e-2);
 SET_SCALAR_PROP(FlowIstlSolverParams, IluRelaxation, 0.9);
@@ -94,7 +96,9 @@ SET_INT_PROP(FlowIstlSolverParams, CprEllSolvetype, 0);
 SET_INT_PROP(FlowIstlSolverParams, CprReuseSetup, 3);
 SET_STRING_PROP(FlowIstlSolverParams, LinearSolverConfiguration, "ilu0");
 SET_STRING_PROP(FlowIstlSolverParams, LinearSolverConfigurationJsonFile, "none");
-SET_BOOL_PROP(FlowIstlSolverParams, UseGpu, false);
+SET_STRING_PROP(FlowIstlSolverParams, GpuMode, "none");
+SET_INT_PROP(FlowIstlSolverParams, BdaDeviceId, 0);
+SET_INT_PROP(FlowIstlSolverParams, OpenclPlatformId, 0);
 
 
 
@@ -167,7 +171,9 @@ namespace Opm
         bool scale_linear_system_;
         std::string linear_solver_configuration_;
         std::string linear_solver_configuration_json_file_;
-        bool use_gpu_;
+        std::string gpu_mode_;
+        int bda_device_id_;
+        int opencl_platform_id_;
 
         template <class TypeTag>
         void init()
@@ -196,7 +202,9 @@ namespace Opm
             cpr_reuse_setup_  =  EWOMS_GET_PARAM(TypeTag, int, CprReuseSetup);
             linear_solver_configuration_ = EWOMS_GET_PARAM(TypeTag, std::string, LinearSolverConfiguration);
             linear_solver_configuration_json_file_ = EWOMS_GET_PARAM(TypeTag, std::string, LinearSolverConfigurationJsonFile);
-            use_gpu_ = EWOMS_GET_PARAM(TypeTag, bool, UseGpu);
+            gpu_mode_ = EWOMS_GET_PARAM(TypeTag, std::string, GpuMode);
+            bda_device_id_ = EWOMS_GET_PARAM(TypeTag, int, BdaDeviceId);
+            opencl_platform_id_ = EWOMS_GET_PARAM(TypeTag, int, OpenclPlatformId);
         }
 
         template <class TypeTag>
@@ -225,7 +233,9 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, int, CprReuseSetup, "Reuse Amg Setup");
             EWOMS_REGISTER_PARAM(TypeTag, std::string, LinearSolverConfiguration, "Configuration of solver valid is: ilu0 (default), cpr_quasiimpes, cpr_trueimpes or file (specified in LinearSolverConfigurationJsonFile) ");
             EWOMS_REGISTER_PARAM(TypeTag, std::string, LinearSolverConfigurationJsonFile, "Filename of JSON configuration for flexible linear solver system.");
-            EWOMS_REGISTER_PARAM(TypeTag, bool, UseGpu, "Use GPU cusparseSolver as the linear solver");
+            EWOMS_REGISTER_PARAM(TypeTag, std::string, GpuMode, "Use GPU cusparseSolver or openclSolver as the linear solver, usage: '--gpu-mode=[none|cusparse|opencl]'");
+            EWOMS_REGISTER_PARAM(TypeTag, int, BdaDeviceId, "Choose device ID for cusparseSolver or openclSolver, use 'nvidia-smi' or 'clinfo' to determine valid IDs");
+            EWOMS_REGISTER_PARAM(TypeTag, int, OpenclPlatformId, "Choose platform ID for openclSolver, use 'clinfo' to determine valid platform IDs");
         }
 
         FlowLinearSolverParameters() { reset(); }
@@ -247,7 +257,9 @@ namespace Opm
             ilu_milu_                 = MILU_VARIANT::ILU;
             ilu_redblack_             = false;
             ilu_reorder_sphere_       = true;
-            use_gpu_                  = false;
+            gpu_mode_                 = "none";
+            bda_device_id_            = 0;
+            opencl_platform_id_       = 0;
         }
     };
 
