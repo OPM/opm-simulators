@@ -141,7 +141,7 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
             comm_.reset( new communication_type( simulator_.vanguard().grid().comm() ) );
 #endif
             parameters_.template init<TypeTag>();
-            useFlexible_ = parameters_.use_cpr_ || EWOMS_PARAM_IS_SET(TypeTag, std::string, LinearSolverConfiguration);
+            useFlexible_ = EWOMS_PARAM_IS_SET(TypeTag, std::string, LinearSolverConfiguration);
 
             if (useFlexible_)
             {
@@ -171,7 +171,7 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
             ownersFirst_ = EWOMS_GET_PARAM(TypeTag, bool, OwnerCellsFirst);
             interiorCellNum_ = detail::numMatrixRowsToUseInSolver(simulator_.vanguard().grid(), ownersFirst_);
 
-            if ( isParallel() && (!ownersFirst_ || parameters_.linear_solver_use_amg_) ) {
+            if ( isParallel() && (!ownersFirst_) ) {
                 detail::setWellConnections(gridForConn, simulator_.vanguard().schedule().getWellsatEnd(), useWellConn_, wellConnectionsGraph_);
                 // For some reason simulator_.model().elementMapper() is not initialized at this stage
                 // Hence const auto& elemMapper = simulator_.model().elementMapper(); does not work.
@@ -245,56 +245,9 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
             {
                 prepareFlexibleSolver();
             }
-            else
-            {
-                this->scaleSystem();
-            }
             firstcall = false;
         }
 
-        void scaleSystem()
-        {
-            if (useWellConn_) {
-                bool form_cpr = true;
-                if (parameters_.system_strategy_ == "quasiimpes") {
-                    weights_ = getQuasiImpesWeights();
-                } else if (parameters_.system_strategy_ == "trueimpes") {
-                    weights_ = getStorageWeights();
-                } else if (parameters_.system_strategy_ == "simple") {
-                    BlockVector bvec(1.0);
-                    weights_ = getSimpleWeights(bvec);
-                } else if (parameters_.system_strategy_ == "original") {
-                    BlockVector bvec(0.0);
-                    bvec[pressureEqnIndex] = 1;
-                    weights_ = getSimpleWeights(bvec);
-                } else {
-                    if (parameters_.system_strategy_ != "none") {
-                        OpmLog::warning("unknown_system_strategy", "Unknown linear solver system strategy: '" + parameters_.system_strategy_ + "', applying 'none' strategy.");
-                    }
-                    form_cpr = false;
-                }
-                if (parameters_.scale_linear_system_) {
-                    // also scale weights
-                    this->scaleEquationsAndVariables(weights_);
-                }
-                if (form_cpr && !(parameters_.cpr_use_drs_)) {
-                    scaleMatrixAndRhs(weights_);
-                }
-                if (weights_.size() == 0) {
-                    // if weights are not set cpr_use_drs_=false;
-                    parameters_.cpr_use_drs_ = false;
-                }
-            } else {
-                if (parameters_.use_cpr_ && parameters_.cpr_use_drs_) {
-                   OpmLog::warning("DRS_DISABLE", "Disabling DRS as matrix does not contain well contributions");
-                }
-                parameters_.cpr_use_drs_ = false;
-                if (parameters_.scale_linear_system_) {
-                    // also scale weights
-                    this->scaleEquationsAndVariables(weights_);
-                }
-            }
-        }
 
         void setResidual(Vector& /* b */) {
             // rhs_ = &b; // Must be handled in prepare() instead.
@@ -334,7 +287,7 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
 
             if( isParallel() )
             {
-                if ( ownersFirst_ && !parameters_.linear_solver_use_amg_ && !useFlexible_) {
+                if ( ownersFirst_ && !useFlexible_) {
                     typedef WellModelGhostLastMatrixAdapter< Matrix, Vector, Vector, true > Operator;
                     assert(matrix_);
                     Operator opA(getMatrix(), wellOp, interiorCellNum_);
@@ -689,6 +642,33 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
             }
         }
 
+
+        // Weights to make approximate pressure equations.
+        // Calculated from the storage terms (only) of the
+        // conservation equations, ignoring all other terms.
+        Vector getStorageWeights() const
+        {
+            Vector weights(rhs_->size());
+            ElementContext elemCtx(simulator_);
+            Opm::Amg::getTrueImpesWeights(pressureVarIndex, weights, simulator_.vanguard().gridView(),
+                                          elemCtx, simulator_.model(),
+                                          ThreadManager::threadId());
+            return weights;
+        }
+
+
+        void scaleSolution(Vector& x)
+        {
+            for (std::size_t i = 0; i < x.size(); ++i) {
+                auto& bx = x[i];
+                for (std::size_t jj = 0; jj < bx.size(); jj++) {
+                    double var_scale = simulator_.model().primaryVarWeight(i,jj);
+                    bx[jj] /= var_scale;
+                }
+            }
+        }
+
+
         /// Create sparsity pattern of matrix without off-diagonal ghost entries.
         void noGhostAdjacency()
         {
@@ -782,142 +762,6 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
             }
         }
 
-        // Weights to make approximate pressure equations.
-        // Calculated from the storage terms (only) of the
-        // conservation equations, ignoring all other terms.
-        Vector getStorageWeights() const
-        {
-            Vector weights(rhs_->size());
-            ElementContext elemCtx(simulator_);
-            Opm::Amg::getTrueImpesWeights(pressureVarIndex, weights, simulator_.vanguard().gridView(),
-                                          elemCtx, simulator_.model(),
-                                          ThreadManager::threadId());
-            return weights;
-        }
-
-        // Interaction between the CPR weights (the function argument 'weights')
-        // and the variable and equation weights from
-        // simulator_.model().primaryVarWeight() and
-        // simulator_.model().eqWeight() is nontrivial and does not work
-        // at the moment. Possibly refactoring of ewoms weight treatment
-        // is needed. In the meantime this function shows what needs to be
-        // done to integrate the weights properly.
-        void scaleEquationsAndVariables(Vector& weights)
-        {
-            // loop over primary variables
-            const auto endi = getMatrix().end();
-            for (auto i = getMatrix().begin(); i != endi; ++i) {
-                const auto endj = (*i).end();
-                BlockVector& brhs = (*rhs_)[i.index()];
-                for (auto j = (*i).begin(); j != endj; ++j) {
-                    MatrixBlockType& block = *j;
-                    for (std::size_t ii = 0; ii < block.rows; ii++ ) {
-                        for (std::size_t jj = 0; jj < block.cols; jj++) {
-                            double var_scale = simulator_.model().primaryVarWeight(i.index(),jj);
-                            block[ii][jj] /= var_scale;
-                            block[ii][jj] *= simulator_.model().eqWeight(i.index(), ii);
-                        }
-                    }
-                }
-                for (std::size_t ii = 0; ii < brhs.size(); ii++) {
-                    brhs[ii] *= simulator_.model().eqWeight(i.index(), ii);
-                }
-                if (weights.size() == getMatrix().N()) {
-                    BlockVector& bw = weights[i.index()];
-                    for (std::size_t ii = 0; ii < brhs.size(); ii++) {
-                        bw[ii] /= simulator_.model().eqWeight(i.index(), ii);
-                    }
-                    double abs_max =
-                        *std::max_element(bw.begin(), bw.end(), [](double a, double b){ return std::abs(a) < std::abs(b); } );
-                    bw /= abs_max;
-                }
-            }
-        }
-
-        void scaleSolution(Vector& x)
-        {
-            for (std::size_t i = 0; i < x.size(); ++i) {
-                auto& bx = x[i];
-                for (std::size_t jj = 0; jj < bx.size(); jj++) {
-                    double var_scale = simulator_.model().primaryVarWeight(i,jj);
-                    bx[jj] /= var_scale;
-                }
-            }
-        }
-
-        Vector getQuasiImpesWeights()
-        {
-            return Amg::getQuasiImpesWeights<Matrix,Vector>(getMatrix(), pressureVarIndex, /* transpose=*/ true);
-        }
-
-        Vector getSimpleWeights(const BlockVector& rhs)
-        {
-            Vector weights(rhs_->size(), 0);
-            for (auto& bw : weights) {
-                bw = rhs;
-            }
-            return weights;
-        }
-
-        void scaleMatrixAndRhs(const Vector& weights)
-        {
-            using Block = typename Matrix::block_type;
-            const auto endi = getMatrix().end();
-            for (auto i = getMatrix().begin(); i !=endi; ++i) {
-                const BlockVector& bweights = weights[i.index()];
-                BlockVector& brhs = (*rhs_)[i.index()];
-                const auto endj = (*i).end();
-                for (auto j = (*i).begin(); j != endj; ++j) {
-                    // assume it is something on all rows
-                    Block& block = (*j);
-                    BlockVector neweq(0.0);
-                    for (std::size_t ii = 0; ii < block.rows; ii++) {
-                        for (std::size_t jj = 0; jj < block.cols; jj++) {
-                            neweq[jj] += bweights[ii]*block[ii][jj];
-                        }
-                    }
-                    block[pressureEqnIndex] = neweq;
-                }
-                Scalar newrhs(0.0);
-                for (std::size_t ii = 0; ii < brhs.size(); ii++) {
-                    newrhs += bweights[ii]*brhs[ii];
-                }
-                brhs[pressureEqnIndex] = newrhs;
-            }
-        }
-
-        static void multBlocksInMatrix(Matrix& ebosJac, const MatrixBlockType& trans, const bool left = true)
-        {
-            const int n = ebosJac.N();
-            for (int row_index = 0; row_index < n; ++row_index) {
-                auto& row = ebosJac[row_index];
-                auto* dataptr = row.getptr();
-                for (int elem = 0; elem < row.N(); ++elem) {
-                    auto& block = dataptr[elem];
-                    if (left) {
-                        block = block.leftmultiply(trans);
-                    } else {
-                        block = block.rightmultiply(trans);
-                    }
-                }
-            }
-        }
-
-        static void multBlocksVector(Vector& ebosResid_cp, const MatrixBlockType& leftTrans)
-        {
-            for (auto& bvec : ebosResid_cp) {
-                auto bvec_new = bvec;
-                leftTrans.mv(bvec, bvec_new);
-                bvec = bvec_new;
-            }
-        }
-
-        static void scaleCPRSystem(Matrix& M_cp, Vector& b_cp, const MatrixBlockType& leftTrans)
-        {
-            multBlocksInMatrix(M_cp, leftTrans, true);
-            multBlocksVector(b_cp, leftTrans);
-        }
-
         Matrix& getMatrix()
         {
             return noGhostMat_ ? *noGhostMat_ : *matrix_;
@@ -952,7 +796,6 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
 
         FlowLinearSolverParameters parameters_;
         boost::property_tree::ptree prm_;
-        Vector weights_;
         bool scale_variables_;
 
         std::shared_ptr< communication_type > comm_;

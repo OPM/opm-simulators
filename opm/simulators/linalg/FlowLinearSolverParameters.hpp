@@ -55,13 +55,13 @@ NEW_PROP_TAG(IluReorderSpheres);
 NEW_PROP_TAG(UseGmres);
 NEW_PROP_TAG(LinearSolverRequireFullSparsityPattern);
 NEW_PROP_TAG(LinearSolverIgnoreConvergenceFailure);
-NEW_PROP_TAG(UseAmg);
-NEW_PROP_TAG(UseCpr);
+// NEW_PROP_TAG(UseAmg);
+// NEW_PROP_TAG(UseCpr);
 NEW_PROP_TAG(PreconditionerAddWellContributions);
-NEW_PROP_TAG(SystemStrategy);
+// NEW_PROP_TAG(SystemStrategy);
 NEW_PROP_TAG(ScaleLinearSystem);
-NEW_PROP_TAG(CprSolverVerbose);
-NEW_PROP_TAG(CprUseDrs);
+// NEW_PROP_TAG(CprSolverVerbose);
+// NEW_PROP_TAG(CprUseDrs);
 NEW_PROP_TAG(CprMaxEllIter);
 NEW_PROP_TAG(CprEllSolvetype);
 NEW_PROP_TAG(CprReuseSetup);
@@ -83,14 +83,14 @@ SET_BOOL_PROP(FlowIstlSolverParams, IluReorderSpheres, false);
 SET_BOOL_PROP(FlowIstlSolverParams, UseGmres, false);
 SET_BOOL_PROP(FlowIstlSolverParams, LinearSolverRequireFullSparsityPattern, false);
 SET_BOOL_PROP(FlowIstlSolverParams, LinearSolverIgnoreConvergenceFailure, false);
-SET_BOOL_PROP(FlowIstlSolverParams, UseAmg, false);
-SET_BOOL_PROP(FlowIstlSolverParams, UseCpr, false);
+// SET_BOOL_PROP(FlowIstlSolverParams, UseAmg, false);
+// SET_BOOL_PROP(FlowIstlSolverParams, UseCpr, false);
 SET_TYPE_PROP(FlowIstlSolverParams, LinearSolverBackend, Opm::ISTLSolverEbos<TypeTag>);
 SET_BOOL_PROP(FlowIstlSolverParams, PreconditionerAddWellContributions, false);
-SET_STRING_PROP(FlowIstlSolverParams, SystemStrategy, "none");
+// SET_STRING_PROP(FlowIstlSolverParams, SystemStrategy, "none");
 SET_BOOL_PROP(FlowIstlSolverParams, ScaleLinearSystem, false);
-SET_INT_PROP(FlowIstlSolverParams, CprSolverVerbose, 0);
-SET_BOOL_PROP(FlowIstlSolverParams, CprUseDrs, false);
+// SET_INT_PROP(FlowIstlSolverParams, CprSolverVerbose, 0);
+// SET_BOOL_PROP(FlowIstlSolverParams, CprUseDrs, false);
 SET_INT_PROP(FlowIstlSolverParams, CprMaxEllIter, 20);
 SET_INT_PROP(FlowIstlSolverParams, CprEllSolvetype, 0);
 SET_INT_PROP(FlowIstlSolverParams, CprReuseSetup, 3);
@@ -110,48 +110,48 @@ namespace Opm
     /**
      * \brief Parameters used to configure the CPRPreconditioner.
      */
-    struct CPRParameter
-    {
-        double cpr_relax_;
-        double cpr_solver_tol_;
-        int cpr_ilu_n_;
-        MILU_VARIANT cpr_ilu_milu_;
-        bool cpr_ilu_redblack_;
-        bool cpr_ilu_reorder_sphere_;
-        bool cpr_use_drs_;
-        int cpr_max_ell_iter_;
-        int cpr_ell_solvetype_;
-        bool cpr_use_amg_;
-        bool cpr_use_bicgstab_;
-        int cpr_solver_verbose_;
-        bool cpr_pressure_aggregation_;
-        int cpr_reuse_setup_;
-        CPRParameter() { reset(); }
+    // struct CPRParameter
+    // {
+    //     double cpr_relax_;
+    //     double cpr_solver_tol_;
+    //     int cpr_ilu_n_;
+    //     MILU_VARIANT cpr_ilu_milu_;
+    //     bool cpr_ilu_redblack_;
+    //     bool cpr_ilu_reorder_sphere_;
+    //     bool cpr_use_drs_;
+    //     int cpr_max_ell_iter_;
+    //     int cpr_ell_solvetype_;
+    //     bool cpr_use_amg_;
+    //     bool cpr_use_bicgstab_;
+    //     int cpr_solver_verbose_;
+    //     bool cpr_pressure_aggregation_;
+    //     int cpr_reuse_setup_;
+    //     CPRParameter() { reset(); }
 
-        void reset()
-        {
-            cpr_solver_tol_           = 1e-2;
-            cpr_ilu_n_                = 0;
-            cpr_ilu_milu_             = MILU_VARIANT::ILU;
-            cpr_ilu_redblack_         = false;
-            cpr_ilu_reorder_sphere_   = true;
-            cpr_max_ell_iter_         = 25;
-            cpr_ell_solvetype_        = 0;
-            cpr_use_drs_              = false;
-            cpr_use_amg_              = true;
-            cpr_use_bicgstab_         = true;
-            cpr_solver_verbose_       = 0;
-            cpr_pressure_aggregation_ = false;
-            cpr_reuse_setup_          = 0;
-        }
-    };
+    //     void reset()
+    //     {
+    //         cpr_solver_tol_           = 1e-2;
+    //         cpr_ilu_n_                = 0;
+    //         cpr_ilu_milu_             = MILU_VARIANT::ILU;
+    //         cpr_ilu_redblack_         = false;
+    //         cpr_ilu_reorder_sphere_   = true;
+    //         cpr_max_ell_iter_         = 25;
+    //         cpr_ell_solvetype_        = 0;
+    //         cpr_use_drs_              = false;
+    //         cpr_use_amg_              = true;
+    //         cpr_use_bicgstab_         = true;
+    //         cpr_solver_verbose_       = 0;
+    //         cpr_pressure_aggregation_ = false;
+    //         cpr_reuse_setup_          = 0;
+    //     }
+    // };
 
 
 
 
     /// This class carries all parameters for the NewtonIterationBlackoilInterleaved class.
     struct FlowLinearSolverParameters
-        : public CPRParameter
+        //: public CPRParameter
     {
         double linear_solver_reduction_;
         double ilu_relaxation_;
@@ -165,15 +165,18 @@ namespace Opm
         bool   newton_use_gmres_;
         bool   require_full_sparsity_pattern_;
         bool   ignoreConvergenceFailure_;
-        bool   linear_solver_use_amg_;
-        bool   use_cpr_;
-        std::string system_strategy_;
+        // bool   linear_solver_use_amg_;
+        // bool   use_cpr_;
+        // std::string system_strategy_;
         bool scale_linear_system_;
         std::string linear_solver_configuration_;
         std::string linear_solver_configuration_json_file_;
         std::string gpu_mode_;
         int bda_device_id_;
         int opencl_platform_id_;
+        int cpr_max_ell_iter_ = 20;
+        int cpr_reuse_setup_ = 0;
+        bool use_gpu_;
 
         template <class TypeTag>
         void init()
@@ -191,14 +194,14 @@ namespace Opm
             newton_use_gmres_ = EWOMS_GET_PARAM(TypeTag, bool, UseGmres);
             require_full_sparsity_pattern_ = EWOMS_GET_PARAM(TypeTag, bool, LinearSolverRequireFullSparsityPattern);
             ignoreConvergenceFailure_ = EWOMS_GET_PARAM(TypeTag, bool, LinearSolverIgnoreConvergenceFailure);
-            linear_solver_use_amg_ = EWOMS_GET_PARAM(TypeTag, bool, UseAmg);
-            use_cpr_ = EWOMS_GET_PARAM(TypeTag, bool, UseCpr);
-            system_strategy_ = EWOMS_GET_PARAM(TypeTag, std::string, SystemStrategy);
+            // linear_solver_use_amg_ = EWOMS_GET_PARAM(TypeTag, bool, UseAmg);
+            // use_cpr_ = EWOMS_GET_PARAM(TypeTag, bool, UseCpr);
+            // system_strategy_ = EWOMS_GET_PARAM(TypeTag, std::string, SystemStrategy);
             scale_linear_system_ = EWOMS_GET_PARAM(TypeTag, bool, ScaleLinearSystem);
-            cpr_solver_verbose_  =  EWOMS_GET_PARAM(TypeTag, int, CprSolverVerbose);
-            cpr_use_drs_  =  EWOMS_GET_PARAM(TypeTag, bool, CprUseDrs);
+            // cpr_solver_verbose_  =  EWOMS_GET_PARAM(TypeTag, int, CprSolverVerbose);
+            // cpr_use_drs_  =  EWOMS_GET_PARAM(TypeTag, bool, CprUseDrs);
             cpr_max_ell_iter_  =  EWOMS_GET_PARAM(TypeTag, int, CprMaxEllIter);
-            cpr_ell_solvetype_  =  EWOMS_GET_PARAM(TypeTag, int, CprEllSolvetype);
+            // cpr_ell_solvetype_  =  EWOMS_GET_PARAM(TypeTag, int, CprEllSolvetype);
             cpr_reuse_setup_  =  EWOMS_GET_PARAM(TypeTag, int, CprReuseSetup);
             linear_solver_configuration_ = EWOMS_GET_PARAM(TypeTag, std::string, LinearSolverConfiguration);
             linear_solver_configuration_json_file_ = EWOMS_GET_PARAM(TypeTag, std::string, LinearSolverConfigurationJsonFile);
@@ -222,14 +225,14 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseGmres, "Use GMRES as the linear solver");
             EWOMS_REGISTER_PARAM(TypeTag, bool, LinearSolverRequireFullSparsityPattern, "Produce the full sparsity pattern for the linear solver");
             EWOMS_REGISTER_PARAM(TypeTag, bool, LinearSolverIgnoreConvergenceFailure, "Continue with the simulation like nothing happened after the linear solver did not converge");
-            EWOMS_REGISTER_PARAM(TypeTag, bool, UseAmg, "Use AMG as the linear solver's preconditioner");
-            EWOMS_REGISTER_PARAM(TypeTag, bool, UseCpr, "Use CPR as the linear solver's preconditioner");
-            EWOMS_REGISTER_PARAM(TypeTag, std::string, SystemStrategy, "Strategy for reformulating and scaling linear system (none: no scaling -- should not be used with CPR, original: use weights that are equivalent to no scaling -- should not be used with CPR, simple: form pressure equation as simple sum of conservation equations, quasiimpes: form pressure equation based on diagonal block, trueimpes: form pressure equation based on linearization of accumulation term)");
+            // EWOMS_REGISTER_PARAM(TypeTag, bool, UseAmg, "Use AMG as the linear solver's preconditioner");
+            // EWOMS_REGISTER_PARAM(TypeTag, bool, UseCpr, "Use CPR as the linear solver's preconditioner");
+            // EWOMS_REGISTER_PARAM(TypeTag, std::string, SystemStrategy, "Strategy for reformulating and scaling linear system (none: no scaling -- should not be used with CPR, original: use weights that are equivalent to no scaling -- should not be used with CPR, simple: form pressure equation as simple sum of conservation equations, quasiimpes: form pressure equation based on diagonal block, trueimpes: form pressure equation based on linearization of accumulation term)");
             EWOMS_REGISTER_PARAM(TypeTag, bool, ScaleLinearSystem, "Scale linear system according to equation scale and primary variable types");
-            EWOMS_REGISTER_PARAM(TypeTag, int, CprSolverVerbose, "Verbosity of cpr solver (0: silent, 1: print summary of inner linear solver, 2: print extensive information about inner linear solve, including setup information)");
-            EWOMS_REGISTER_PARAM(TypeTag, bool, CprUseDrs, "Use dynamic row sum using weights");
+            // EWOMS_REGISTER_PARAM(TypeTag, int, CprSolverVerbose, "Verbosity of cpr solver (0: silent, 1: print summary of inner linear solver, 2: print extensive information about inner linear solve, including setup information)");
+            // EWOMS_REGISTER_PARAM(TypeTag, bool, CprUseDrs, "Use dynamic row sum using weights");
             EWOMS_REGISTER_PARAM(TypeTag, int, CprMaxEllIter, "MaxIterations of the elliptic pressure part of the cpr solver");
-            EWOMS_REGISTER_PARAM(TypeTag, int, CprEllSolvetype, "Solver type of elliptic pressure solve (0: bicgstab, 1: cg, 2: only amg preconditioner)");
+            // EWOMS_REGISTER_PARAM(TypeTag, int, CprEllSolvetype, "Solver type of elliptic pressure solve (0: bicgstab, 1: cg, 2: only amg preconditioner)");
             EWOMS_REGISTER_PARAM(TypeTag, int, CprReuseSetup, "Reuse Amg Setup");
             EWOMS_REGISTER_PARAM(TypeTag, std::string, LinearSolverConfiguration, "Configuration of solver valid is: ilu0 (default), cpr_quasiimpes, cpr_trueimpes or file (specified in LinearSolverConfigurationJsonFile) ");
             EWOMS_REGISTER_PARAM(TypeTag, std::string, LinearSolverConfigurationJsonFile, "Filename of JSON configuration for flexible linear solver system.");
@@ -243,7 +246,7 @@ namespace Opm
         // set default values
         void reset()
         {
-            use_cpr_     = false;
+            // use_cpr_     = false;
             newton_use_gmres_        = false;
             linear_solver_reduction_ = 1e-2;
             linear_solver_maxiter_   = 150;
@@ -251,7 +254,7 @@ namespace Opm
             linear_solver_verbosity_ = 0;
             require_full_sparsity_pattern_ = false;
             ignoreConvergenceFailure_ = false;
-            linear_solver_use_amg_    = false;
+            // linear_solver_use_amg_    = false;
             ilu_fillin_level_         = 0;
             ilu_relaxation_           = 0.9;
             ilu_milu_                 = MILU_VARIANT::ILU;
