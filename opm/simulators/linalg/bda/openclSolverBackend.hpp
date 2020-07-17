@@ -64,6 +64,13 @@ private:
     cl::Buffer d_tmp;                            // used as tmp GPU buffer for dot() and norm()
     double *tmp = nullptr;                       // used as tmp CPU buffer for dot() and norm()
 
+    //unsigned int num_blocks, dim_, dim_wells, num_std_wells;
+    //unsigned int *h_val_pointers;
+    //int *h_Ccols, *h_Bcols;
+    //double *h_Cnnzs, *h_Dnnzs, *h_Bnnzs;
+    //cl::Buffer d_Cnnzs, d_Dnnzs, d_Bnnzs;
+    //cl::Buffer d_Ccols, d_Bcols, d_val_pointers;
+
     // shared pointers are also passed to other objects
     std::shared_ptr<cl::Context> context;
     std::shared_ptr<cl::CommandQueue> queue;
@@ -74,6 +81,7 @@ private:
     std::unique_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > spmv_blocked_k;
     std::shared_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> > ILU_apply1_k;
     std::shared_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> > ILU_apply2_k;
+    std::shared_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::Buffer&, cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg> > add_well_contributions_k;
 
     Preconditioner *prec = nullptr;                  // only supported preconditioner is BILU0
     int *toOrder = nullptr, *fromOrder = nullptr;    // BILU0 reorders rows of the matrix via these mappings
@@ -127,6 +135,8 @@ private:
     /// \param[out] b       output vector
     void spmv_blocked_w(cl::Buffer vals, cl::Buffer cols, cl::Buffer rows, cl::Buffer x, cl::Buffer b);
 
+    //void add_well_contributions_w(cl::Buffer valsC, cl::Buffer valsD, cl::Buffer valsB, cl::Buffer colsC, cl::Buffer colsB, cl::Buffer x, cl::Buffer y, cl::Buffer val_pointers);
+
     /// Solve linear system using ilu0-bicgstab
     /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
@@ -139,13 +149,13 @@ private:
     /// \param[in] vals           array of nonzeroes, each block is stored row-wise and contiguous, contains nnz values
     /// \param[in] rows           array of rowPointers, contains N/dim+1 values
     /// \param[in] cols           array of columnIndices, contains nnz values
-    void initialize(int N, int nnz, int dim, double *vals, int *rows, int *cols);
+    void initialize(int N, int nnz, int dim, double *vals, int *rows, int *cols, WellContributions& wellContribs);
 
     /// Clean memory
     void finalize();
 
     /// Copy linear system to GPU
-    void copy_system_to_gpu();
+    void copy_system_to_gpu(WellContributions& wellContribs);
 
     /// Reorder the linear system so it corresponds with the coloring
     /// \param[in] vals           array of nonzeroes, each block is stored row-wise and contiguous, contains nnz values

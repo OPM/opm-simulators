@@ -181,7 +181,7 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
 #else
             const std::string gpu_mode = EWOMS_GET_PARAM(TypeTag, std::string, GpuMode);
             if (gpu_mode.compare("none") != 0) {
-                OPM_THROW(std::logic_error,"Error cannot use GPU solver since neither CUDA nor OpenCL was not found by cmake");
+                OPM_THROW(std::logic_error,"Error cannot use GPU solver since neither CUDA nor OpenCL were found by cmake");
             }
 #endif
             extractParallelGridInformationToISTL(simulator_.vanguard().grid(), parallelInformation_);
@@ -465,7 +465,8 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
 #if HAVE_CUDA || HAVE_OPENCL
                 bool use_gpu = bdaBridge->getUseGpu();
                 if (use_gpu) {
-                    WellContributions wellContribs;
+                    const std::string gpu_mode = EWOMS_GET_PARAM(TypeTag, std::string, GpuMode);
+                    WellContributions wellContribs(gpu_mode);
                     if (!useWellConn_) {
                         simulator_.problem().wellModel().getWellContributions(wellContribs);
                     }
@@ -478,7 +479,13 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
                         // CPU fallback
                         use_gpu = bdaBridge->getUseGpu();  // update value, BdaBridge might have disabled cusparseSolver
                         if (use_gpu) {
-                            OpmLog::warning("cusparseSolver did not converge, now trying Dune to solve current linear system...");
+                            if(gpu_mode.compare("cusparse") == 0){
+                                OpmLog::warning("cusparseSolver did not converge, now trying Dune to solve current linear system...");
+                            }
+
+                            if(gpu_mode.compare("opencl") == 0){
+                                OpmLog::warning("openclSolver did not converge, now trying Dune to solve current linear system...");
+                            }
                         }
 
                         // call Dune

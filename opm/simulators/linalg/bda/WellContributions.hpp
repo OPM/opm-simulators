@@ -57,7 +57,6 @@ class WellContributions
 {
 
 public:
-
     /// StandardWell has C, D and B matrices that need to be copied
     enum class MatrixType {
         C,
@@ -78,17 +77,16 @@ private:
     bool allocated = false;
     std::vector<MultisegmentWellContribution*> multisegments;
 
+    int *toOrder = nullptr;
+    bool reorder = false;
+
+    bool opencl_gpu = false;
+    bool cuda_gpu = false;
+
 #if HAVE_CUDA
     cudaStream_t stream;
-#endif
 
-#if HAVE_OPENCL
-    cl::CommandQueue *queue = nullptr;
-#endif
-
-#if HAVE_CUDA
     // data for StandardWells, could remain nullptrs if not used
-    // StandardWells are only supported for cusparseSolver now
     double *d_Cnnzs = nullptr;
     double *d_Dnnzs = nullptr;
     double *d_Bnnzs = nullptr;
@@ -97,13 +95,29 @@ private:
     double *d_z1 = nullptr;
     double *d_z2 = nullptr;
     unsigned int *d_val_pointers = nullptr;
+    double *h_x = nullptr;
+    double *h_y = nullptr;
 #endif
 
-    double *h_x = nullptr, *h_y = nullptr;  // CUDA pinned memory for GPU memcpy
+#if HAVE_OPENCL
+    double *h_Cnnzs_ocl = nullptr;
+    double *h_Dnnzs_ocl = nullptr;
+    double *h_Bnnzs_ocl = nullptr;
+    int *h_Ccols_ocl = nullptr;
+    int *h_Bcols_ocl = nullptr;
+    double *h_x_ocl = nullptr;
+    double *h_y_ocl = nullptr;
 
-    int *toOrder = nullptr;
-    bool reorder = false;
+    cl::Buffer d_Cnnzs_ocl, d_Dnnzs_ocl, d_Bnnzs_ocl;
+    cl::Buffer d_Ccols_ocl, d_Bcols_ocl, d_val_pointers_ocl;
 
+    typedef cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&,
+                            cl::Buffer&, cl::Buffer&, cl::Buffer&,
+                            cl::Buffer&, const unsigned int, const unsigned int,
+                            cl::Buffer&, cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg> kernel_type;
+#endif
+
+#if HAVE_CUDA
     /// Store a matrix in this object, in blocked csr format, can only be called after alloc() is called
     /// \param[in] type        indicate if C, D or B is sent
     /// \param[in] colIndices  columnindices of blocks in C or B, ignored for D
@@ -116,31 +130,42 @@ private:
 
     /// Free GPU memory allocated with cuda.
     void freeCudaMemory();
-
-public:
-
-    /// Set a cudaStream to be used
-    /// \param[in] stream           the cudaStream that is used to launch the kernel in
-#if HAVE_CUDA
-    void setCudaStream(cudaStream_t stream);
 #endif
 
-    /// Create a new WellContributions, implementation is empty
-    WellContributions() {};
+#if HAVE_OPENCL
+    void applyStdWell(cl::CommandQueue *queue, cl::Buffer& d_x, cl::Buffer& d_y, kernel_type *kernel);
+    void applyMSWell(cl::CommandQueue *queue, cl::Buffer& d_x, cl::Buffer& d_y);
+#endif
 
-    /// Destroy a WellContributions, and free memory
-    ~WellContributions();
+public:
+#if HAVE_CUDA
+    /// Set a cudaStream to be used
+    /// \param[in] stream           the cudaStream that is used to launch the kernel in
+    void setCudaStream(cudaStream_t stream);
 
     /// Apply all Wells in this object
     /// performs y -= (C^T * (D^-1 * (B*x))) for all Wells
     /// \param[in] d_x        vector x, must be on GPU
     /// \param[inout] d_y     vector y, must be on GPU
-#if HAVE_CUDA
     void apply(double *d_x, double *d_y);
+
+    unsigned int getNumWells(){
+        return num_std_wells + num_ms_wells;
+    }
 #endif
+
 #if HAVE_OPENCL
-    void apply(cl::Buffer& x, cl::Buffer& y);
+    void init(cl::Context *context);
+    void copyDataToGPU(cl::CommandQueue *queue);
+    void apply(cl::CommandQueue *queue, cl::Buffer& x, cl::Buffer& y, kernel_type *kernel);
 #endif
+
+    /// Create a new WellContributions
+    WellContributions(std::string gpu_mode);
+
+    /// Destroy a WellContributions, and free memory
+    ~WellContributions();
+
 
     /// Allocate memory for the StandardWells
     void alloc();
@@ -182,24 +207,11 @@ public:
                                          unsigned int DnumBlocks, double *Dvalues, int *DcolPointers, int *DrowIndices,
                                          std::vector<double> &Cvalues);
 
-    /// Return the number of wells added to this object
-    /// \return the number of wells added to this object
-    unsigned int getNumWells() {
-        return num_std_wells + num_ms_wells;
-    }
-
-
     /// If the rows of the matrix are reordered, the columnindices of the matrixdata are incorrect
     /// Those indices need to be mapped via toOrder
     /// \param[in] toOrder    array with mappings
     /// \param[in] reorder    whether the columnindices need to be reordered or not
     void setReordering(int *toOrder, bool reorder);
-
-#if HAVE_OPENCL
-    /// This object copies some cl::Buffers, it requires a CommandQueue to do that
-    /// \param[in] queue      the opencl commandqueue to be used
-    void setOpenCLQueue(cl::CommandQueue *queue);
-#endif
 };
 
 } //namespace Opm
