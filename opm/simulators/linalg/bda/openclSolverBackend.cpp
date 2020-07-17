@@ -324,7 +324,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
 
 
 template <unsigned int block_size>
-void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, double *vals, int *rows, int *cols) {
+void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, double *vals, int *rows, int *cols, WellContributions& wellContribs) {
     this->N = N_;
     this->nnz = nnz_;
     this->nnzb = nnz_ / block_size / block_size;
@@ -466,6 +466,7 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
         source.emplace_back(std::make_pair(spmv_blocked_s, strlen(spmv_blocked_s)));
         source.emplace_back(std::make_pair(ILU_apply1_s, strlen(ILU_apply1_s)));
         source.emplace_back(std::make_pair(ILU_apply2_s, strlen(ILU_apply2_s)));
+        source.emplace_back(std::make_pair(add_well_contributions_s, strlen(add_well_contributions_s)));
         cl::Program program_ = cl::Program(*context, source);
 
         program_.build(devices);
@@ -475,6 +476,8 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
 
         prec->setOpenCLContext(context.get());
         prec->setOpenCLQueue(queue.get());
+        wellContribs.setOpenCLContext(context.get());
+        wellContribs.setOpenCLQueue(queue.get());
 
         rb = new double[N];
         tmp = new double[N];
@@ -511,8 +514,10 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
         spmv_blocked_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program_, "spmv_blocked")));
         ILU_apply1_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program_, "ILU_apply1")));
         ILU_apply2_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program_, "ILU_apply2")));
+        add_well_contributions_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::Buffer&, cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg>(cl::Kernel(program_, "add_well_contributions")));
 
         prec->setKernels(ILU_apply1_k.get(), ILU_apply2_k.get());
+        wellContribs.setKernel(add_well_contributions_k.get());
 
     } catch (cl::Error error) {
         std::ostringstream oss;
