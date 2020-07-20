@@ -1066,9 +1066,9 @@ namespace Opm
             auto it = wellNameToGlobalIdx_.find(name);
 
             if (it == wellNameToGlobalIdx_.end())
-                OPM_THROW(std::logic_error, "Could not find global injection group for well" << name);
+                OPM_THROW(std::logic_error, "Could not find global injection group for well " << name);
 
-            return globalIsInjectionGrup_[it->second];
+            return globalIsInjectionGrup_[it->second] != 0;
         }
 
         bool isProductionGrup(const std::string& name) const {
@@ -1076,9 +1076,9 @@ namespace Opm
             auto it = wellNameToGlobalIdx_.find(name);
 
             if (it == wellNameToGlobalIdx_.end())
-                OPM_THROW(std::logic_error, "Could not find global injection group for well" << name);
+                OPM_THROW(std::logic_error, "Could not find global production group for well " << name);
 
-            return globalIsProductionGrup_[it->second];
+            return globalIsProductionGrup_[it->second] != 0;
         }
 
     private:
