@@ -24,6 +24,8 @@
 #include <opm/simulators/wells/SimFIBODetails.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 
+#include <utility>
+
 namespace Opm {
     template<typename TypeTag>
     BlackoilWellModel<TypeTag>::
@@ -2431,6 +2433,79 @@ namespace Opm {
     }
 
     template<typename TypeTag>
+    std::unordered_map<std::string, data::GroupGuideRates>
+    BlackoilWellModel<TypeTag>::
+    calculateAllGroupGuiderates(const int reportStepIdx, const Schedule& sched) const
+    {
+        auto gr = std::unordered_map<std::string, data::GroupGuideRates>{};
+        auto up = std::vector<std::string>{};
+
+        // Start at well level, accumulate contributions towards root of
+        // group tree (FIELD group).
+
+        for (const auto& wname : sched.wellNames(reportStepIdx)) {
+            if (! (this->well_state_.hasWellRates(wname) &&
+                   this->guideRate_->has(wname)))
+            {
+                continue;
+            }
+
+            const auto& well   = sched.getWell(wname, reportStepIdx);
+            const auto& parent = well.groupName();
+
+            if (parent == "FIELD") {
+                // Well parented directly to "FIELD".  Inadvisable and
+                // unexpected, but nothing to do about that here.  Just skip
+                // this guide rate contribution.
+                continue;
+            }
+
+            auto& grval = well.isInjector()
+                ? gr[parent].injection
+                : gr[parent].production;
+
+            grval += this->getGuideRateValues(well);
+            up.push_back(parent);
+        }
+
+        // Propagate accumulated guide rates up towards root of group tree.
+        // Override accumulation if there is a GUIDERAT specification that
+        // applies to a group.
+        std::sort(up.begin(), up.end());
+        auto start = 0*up.size();
+        auto u     = std::unique(up.begin(), up.end());
+        auto nu    = std::distance(up.begin(), u);
+        while (nu > 0) {
+            const auto ntot = up.size();
+
+            for (auto gi = 0*nu; gi < nu; ++gi) {
+                const auto& gname = up[start + gi];
+                const auto& group = sched.getGroup(gname, reportStepIdx);
+
+                if (this->guideRate_->has(gname)) {
+                    gr[gname].production = this->getGuideRateValues(group);
+                }
+
+                const auto parent = group.parent();
+                if (parent == "FIELD") { continue; }
+
+                gr[parent].injection  += gr[gname].injection;
+                gr[parent].production += gr[gname].production;
+                up.push_back(parent);
+            }
+
+            start = ntot;
+
+            auto begin = up.begin() + ntot;
+            std::sort(begin, up.end());
+            u  = std::unique(begin, up.end());
+            nu = std::distance(begin, u);
+        }
+
+        return gr;
+    }
+
+    template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
     assignGroupControl(const Group& group, data::GroupData& gdata) const
@@ -2466,4 +2541,114 @@ namespace Opm {
         }
     }
 
+    template <typename TypeTag>
+    data::GuideRateValue
+    BlackoilWellModel<TypeTag>::
+    getGuideRateValues(const Well& well) const
+    {
+        auto grval = data::GuideRateValue{};
+
+        assert (this->guideRate_ != nullptr);
+
+        const auto& wname = well.name();
+        if (! this->well_state_.hasWellRates(wname)) {
+            // No flow rates for 'wname' -- might be before well comes
+            // online (e.g., for the initial condition before simulation
+            // starts).
+            return grval;
+        }
+
+        if (! this->guideRate_->has(wname)) {
+            // No guiderates exist for 'wname'.
+            return grval;
+        }
+
+        const auto qs = WellGroupHelpers::
+            getRateVector(this->well_state_, this->phase_usage_, wname);
+
+        this->getGuideRateValues(qs, well.isInjector(), wname, grval);
+
+        return grval;
+    }
+
+    template <typename TypeTag>
+    data::GuideRateValue
+    BlackoilWellModel<TypeTag>::
+    getGuideRateValues(const Group& group) const
+    {
+        auto grval = data::GuideRateValue{};
+
+        assert (this->guideRate_ != nullptr);
+
+        const auto& gname = group.name();
+        if (! this->well_state_.hasProductionGroupRates(gname)) {
+            // No flow rates for 'gname' -- might be before group comes
+            // online (e.g., for the initial condition before simulation
+            // starts).
+            return grval;
+        }
+
+        if (! this->guideRate_->has(gname)) {
+            // No guiderates exist for 'gname'.
+            return grval;
+        }
+
+        const auto qs = WellGroupHelpers::
+            getProductionGroupRateVector(this->well_state_, this->phase_usage_, gname);
+
+        const auto is_inj = false; // This procedure only applies to G*PGR.
+        this->getGuideRateValues(qs, is_inj, gname, grval);
+
+        return grval;
+    }
+
+    template <typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    getGuideRateValues(const GuideRate::RateVector& qs,
+                       const bool                   is_inj,
+                       const std::string&           wgname,
+                       data::GuideRateValue&        grval) const
+    {
+        auto getGR = [this, &wgname, &qs](const GuideRateModel::Target t)
+        {
+            return this->guideRate_->get(wgname, t, qs);
+        };
+
+        // Note: GuideRate does currently (2020-07-20) not support Target::RES.
+        grval.set(data::GuideRateValue::Item::Gas,
+                  getGR(GuideRateModel::Target::GAS));
+
+        grval.set(data::GuideRateValue::Item::Water,
+                  getGR(GuideRateModel::Target::WAT));
+
+        if (! is_inj) {
+            // Producer.  Extract "all" guiderate values.
+            grval.set(data::GuideRateValue::Item::Oil,
+                      getGR(GuideRateModel::Target::OIL));
+        }
+    }
+
+    template <typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    assignGroupGuideRates(const Group& group,
+                          const std::unordered_map<std::string, data::GroupGuideRates>& groupGuideRates,
+                          data::GroupData& gdata) const
+    {
+        auto& prod = gdata.guideRates.production;  prod.clear();
+        auto& inj  = gdata.guideRates.injection;   inj .clear();
+
+        auto xgrPos = groupGuideRates.find(group.name());
+        if ((xgrPos == groupGuideRates.end()) ||
+            !this->guideRate_->has(group.name()))
+        {
+            // No guiderates defined for this group.
+            return;
+        }
+
+        const auto& xgr = xgrPos->second;
+        prod = xgr.production;
+        inj  = xgr.injection;
+    }
 } // namespace Opm

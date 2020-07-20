@@ -31,6 +31,7 @@
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 #include <cassert>
+#include <unordered_map>
 #include <tuple>
 
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
@@ -195,11 +196,15 @@ namespace Opm {
             {
                 auto gvalues = ::Opm::data::GroupValues{};
 
+                const auto groupGuideRates =
+                    calculateAllGroupGuiderates(reportStepIdx, sched);
+
                 for (const auto& gname : sched.groupNames(reportStepIdx)) {
                     const auto& grup = sched.getGroup(gname, reportStepIdx);
 
                     auto& gdata = gvalues[gname];
                     this->assignGroupControl(grup, gdata);
+                    this->assignGroupGuideRates(grup, groupGuideRates, gdata);
                 }
 
                 return gvalues;
@@ -216,6 +221,9 @@ namespace Opm {
                     }
 
                     xwPos->second.current_control.isProducer = well.isProducer();
+
+                    auto& grval = xwPos->second.guide_rates;  grval.clear();
+                    grval += this->getGuideRateValues(well);
                 }
 
                 return wsrpt;
@@ -435,7 +443,20 @@ namespace Opm {
 
             void setWsolvent(const Group& group, const Schedule& schedule, const int reportStepIdx, double wsolvent);
 
+            std::unordered_map<std::string, data::GroupGuideRates>
+            calculateAllGroupGuiderates(const int reportStepIdx, const Schedule& sched) const;
+
             void assignGroupControl(const Group& group, data::GroupData& gdata) const;
+            data::GuideRateValue getGuideRateValues(const Well& well) const;
+            data::GuideRateValue getGuideRateValues(const Group& group) const;
+            void getGuideRateValues(const GuideRate::RateVector& qs,
+                                    const bool                   is_inj,
+                                    const std::string&           wgname,
+                                    data::GuideRateValue&        grval) const;
+
+            void assignGroupGuideRates(const Group& group,
+                                       const std::unordered_map<std::string, data::GroupGuideRates>& groupGuideRates,
+                                       data::GroupData& gdata) const;
         };
 
 
