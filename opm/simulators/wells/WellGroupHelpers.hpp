@@ -261,6 +261,8 @@ namespace WellGroupHelpers
     GuideRate::RateVector
     getRateVector(const WellStateFullyImplicitBlackoil& well_state, const PhaseUsage& pu, const std::string& name);
 
+    GuideRate::RateVector
+    getProductionGroupRateVector(const WellStateFullyImplicitBlackoil& well_state, const PhaseUsage& pu, const std::string& group_name);
 
     double getGuideRate(const std::string& name,
                         const Schedule& schedule,
@@ -279,7 +281,6 @@ namespace WellGroupHelpers
                            const GuideRateModel::Target target,
                            const Phase& injectionPhase,
                            const PhaseUsage& pu);
-
 
     int groupControlledWells(const Schedule& schedule,
                              const WellStateFullyImplicitBlackoil& well_state,
@@ -314,7 +315,6 @@ namespace WellGroupHelpers
         PhaseUsage pu_;
     };
 
-    GuideRate::RateVector getGroupRateVector(const std::string& group_name);
 
 
     double fractionFromGuideRates(const std::string& name,
