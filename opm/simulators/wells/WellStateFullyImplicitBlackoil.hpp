@@ -379,6 +379,10 @@ namespace Opm
             return it->second;
         }
 
+        bool hasWellRates(const std::string& wellName) const {
+            return this->well_rates.find(wellName) != this->well_rates.end();
+        }
+
         void setCurrentProductionGroupRates(const std::string& groupName, const std::vector<double>& rates ) {
             production_group_rates[groupName] = rates;
         }
@@ -390,6 +394,10 @@ namespace Opm
                 OPM_THROW(std::logic_error, "Could not find any rates for productino group  " << groupName);
 
             return it->second;
+        }
+
+        bool hasProductionGroupRates(const std::string& groupName) const {
+            return this->production_group_rates.find(groupName) != this->production_group_rates.end();
         }
         
         void setCurrentProductionGroupReductionRates(const std::string& groupName, const std::vector<double>& target ) {
