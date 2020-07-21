@@ -92,7 +92,7 @@ void WellContributions::apply(cl::Buffer& d_x, cl::Buffer& d_y) {
 }
 #endif
 
-void WellContributions::addMatrix(MatrixType type, int *colIndices, double *values, unsigned int val_size)
+void WellContributions::addMatrix([[maybe_unused]] MatrixType type, [[maybe_unused]]int *colIndices, [[maybe_unused]] double *values, [[maybe_unused]] unsigned int val_size)
 {
 #if HAVE_CUDA
         addMatrixGpu(type, colIndices, values, val_size);
@@ -117,14 +117,14 @@ void WellContributions::addNumBlocks(unsigned int nnz)
     num_std_wells++;
 }
 
-void WellContributions::addMultisegmentWellContribution(unsigned int dim, unsigned int dim_wells,
+void WellContributions::addMultisegmentWellContribution(unsigned int dim_, unsigned int dim_wells_,
         unsigned int Nb, unsigned int Mb,
         unsigned int BnumBlocks, std::vector<double> &Bvalues, std::vector<unsigned int> &BcolIndices, std::vector<unsigned int> &BrowPointers,
         unsigned int DnumBlocks, double *Dvalues, int *DcolPointers, int *DrowIndices,
         std::vector<double> &Cvalues)
 {
-    this->N = Nb * dim;
-    MultisegmentWellContribution *well = new MultisegmentWellContribution(dim, dim_wells, Nb, Mb, BnumBlocks, Bvalues, BcolIndices, BrowPointers, DnumBlocks, Dvalues, DcolPointers, DrowIndices, Cvalues);
+    this->N = Nb * dim_;
+    MultisegmentWellContribution *well = new MultisegmentWellContribution(dim, dim_wells_, Nb, Mb, BnumBlocks, Bvalues, BcolIndices, BrowPointers, DnumBlocks, Dvalues, DcolPointers, DrowIndices, Cvalues);
     multisegments.emplace_back(well);
     ++num_ms_wells;
 }
