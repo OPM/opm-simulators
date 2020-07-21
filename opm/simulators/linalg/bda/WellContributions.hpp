@@ -83,7 +83,12 @@ private:
 #endif
 
 #if HAVE_OPENCL
-    cl::CommandQueue *queue = nullptr;
+    cl::Context *context;
+    cl::CommandQueue *queue;
+    cl::Buffer d_Cnnzs, d_Dnnzs, d_Bnnzs, d_Ccols, d_Bcols, d_val_pointers;
+    cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::Buffer&, cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg> *add_well_contributions;
+    std::vector<double> h_Cnnzs, h_Dnnzs, h_Bnnzs;
+    std::vector<int> h_Ccols, h_Bcols;
 #endif
 
 #if HAVE_CUDA
@@ -140,7 +145,8 @@ public:
     void apply(double *d_x, double *d_y);
 #endif
 #if HAVE_OPENCL
-    void apply(cl::Buffer& x, cl::Buffer& y);
+    //void apply(cl::Buffer& x, cl::Buffer& y);
+    void apply(cl::Buffer x, cl::Buffer y);
 #endif
 
     /// Allocate memory for the StandardWells
@@ -200,6 +206,8 @@ public:
     /// This object copies some cl::Buffers, it requires a CommandQueue to do that
     /// \param[in] queue      the opencl commandqueue to be used
     void setOpenCLQueue(cl::CommandQueue *queue);
+    void setOpenCLContext(cl::Context *context);
+    void setKernel(cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::Buffer&, cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg> *add_well_contributions_);
 #endif
 };
 

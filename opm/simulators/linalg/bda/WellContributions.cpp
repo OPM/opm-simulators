@@ -21,6 +21,7 @@
 #include <config.h> // CMake
 #include <cstdlib>
 #include <cstring>
+#include <iostream>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
@@ -37,12 +38,8 @@ void WellContributions::alloc()
 #if HAVE_CUDA
         allocStandardWells();
 #elif HAVE_OPENCL
-        d_Cnnzs = cl::Buffer(*context, CL_MEM_READ_ONLY, sizeof(double) * num_blocks * dim * dim_wells);
-        d_Dnnzs = cl::Buffer(*context, CL_MEM_READ_ONLY, sizeof(double) * num_std_wells * dim_wells * dim_wells);
-        d_Bnnzs = cl::Buffer(*context, CL_MEM_READ_ONLY, sizeof(double) * num_blocks * dim * dim_wells);
-        d_Ccols = cl::Buffer(*context, CL_MEM_READ_ONLY, sizeof(int) * num_blocks);
-        d_Bcols = cl::Buffer(*context, CL_MEM_READ_ONLY, sizeof(int) * num_blocks);
-        d_val_pointers = cl::Buffer(*context, CL_MEM_READ_ONLY, sizeof(double) * (num_std_wells + 1));
+        val_pointers = new unsigned int[num_std_wells + 1];
+        allocated = true;
 #else
         OPM_THROW(std::logic_error, "Error cannot allocate on GPU because neither CUDA nor OpenCL were found by cmake");
 #endif
@@ -62,21 +59,24 @@ WellContributions::~WellContributions()
     }
     multisegments.clear();
 
+    if(num_std_wells > 0){
 #if HAVE_CUDA
-    freeStandardWells();
+        freeStandardWells();
 #elif HAVE_OPENCL
-    cl::ReleaseMemObject(d_Cnnzs);
-    cl::ReleaseMemObject(d_Dnnzs);
-    cl::ReleaseMemObject(d_Bnnzs);
-    cl::ReleaseMemObject(d_Ccols);
-    cl::ReleaseMemObject(d_Bcols);
-    cl::ReleaseMemObject(d_val_pointers);
+        delete[] val_pointers;
+        std::vector<double>().swap(h_Cnnzs);
+        std::vector<double>().swap(h_Dnnzs);
+        std::vector<double>().swap(h_Bnnzs);
+        std::vector<int>().swap(h_Ccols);
+        std::vector<int>().swap(h_Bcols);
 #endif
+    }
 }
 
 
 #if HAVE_OPENCL
-void WellContributions::apply(cl::Buffer& d_x, cl::Buffer& d_y) {
+//void WellContributions::apply(cl::Buffer& d_x, cl::Buffer& d_y) {
+void WellContributions::apply(cl::Buffer d_x, cl::Buffer d_y) {
 
     // apply MultisegmentWells
     if (num_ms_wells > 0) {
@@ -99,17 +99,30 @@ void WellContributions::apply(cl::Buffer& d_x, cl::Buffer& d_y) {
         queue->enqueueWriteBuffer(d_y, CL_TRUE, 0, sizeof(double) * N, h_y);
     }
 
-    queue->enqueueWriteBuffer(d_Cnnzs, CL_TRUE, 0, sizeof(double) * h_Cnnzs.size(), h_Cnnzs.data());
-    queue->enqueueWriteBuffer(d_Dnnzs, CL_TRUE, 0, sizeof(double) * h_Dnnzs.size(), h_Dnnzs.data());
-    queue->enqueueWriteBuffer(d_Bnnzs, CL_TRUE, 0, sizeof(double) * h_Bnnzs.size(), h_Bnnzs.data());
-    queue->enqueueWriteBuffer(d_Ccols, CL_TRUE, 0, sizeof(int) * h_Ccols.size(), h_Ccols.data());
-    queue->enqueueWriteBuffer(d_Bcols, CL_TRUE, 0, sizeof(int) * h_Bcols.size(), h_Bcols.data());
-    queue->enqueueWriteBuffer(d_val_pointers, CL_TRUE, 0, sizeof(int) * (num_std_wells + 1), val_pointers);
-
     // apply StandardWells
     if (num_std_wells > 0) {
         cl::Event event;
-        event = (*add_well_contributions)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), d_Cnnzs, d_Dnnzs, d_Bnnzs, d_Ccols, d_Bcols, d_x, d_y, dim, dim_wells, d_val_pointers, cl::Local(work_group_size*sizeof(double)), cl::Local(2*sizeof(double)*dim_wells), cl::Local(2*sizeof(double)*dim_wells));
+        const unsigned int work_group_size = 32;
+        const unsigned int total_work_items = num_std_wells * work_group_size;
+        const unsigned int lmem1 = 2 * sizeof(double) * work_group_size;
+        const unsigned int lmem2 = 2 * sizeof(double) * dim_wells;
+
+        d_Cnnzs = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * num_blocks * dim * dim_wells);
+        d_Dnnzs = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * num_std_wells * dim_wells * dim_wells);
+        d_Bnnzs = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * num_blocks * dim * dim_wells);
+        d_Ccols = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * num_blocks);
+        d_Bcols = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * num_blocks);
+        d_val_pointers = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(unsigned int) * (num_std_wells + 1));
+
+        queue->enqueueWriteBuffer(d_Cnnzs, CL_TRUE, 0, sizeof(double) * h_Cnnzs.size(), h_Cnnzs.data());
+        queue->enqueueWriteBuffer(d_Dnnzs, CL_TRUE, 0, sizeof(double) * h_Dnnzs.size(), h_Dnnzs.data());
+        queue->enqueueWriteBuffer(d_Bnnzs, CL_TRUE, 0, sizeof(double) * h_Bnnzs.size(), h_Bnnzs.data());
+        queue->enqueueWriteBuffer(d_Ccols, CL_TRUE, 0, sizeof(int) * h_Ccols.size(), h_Ccols.data());
+        queue->enqueueWriteBuffer(d_Bcols, CL_TRUE, 0, sizeof(int) * h_Bcols.size(), h_Bcols.data());
+        queue->enqueueWriteBuffer(d_val_pointers, CL_TRUE, 0, sizeof(unsigned int) * (num_std_wells + 1), &val_pointers, nullptr, &event);
+        event.wait();
+
+        event = (*add_well_contributions)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), d_Cnnzs, d_Dnnzs, d_Bnnzs, d_Ccols, d_Bcols, d_x, d_y, dim, dim_wells, d_val_pointers, cl::Local(lmem1), cl::Local(lmem2), cl::Local(lmem2));
     }
 }
 #endif
@@ -200,12 +213,6 @@ void WellContributions::setOpenCLContext(cl::Context *context_)
 void WellContributions::setOpenCLQueue(cl::CommandQueue *queue_)
 {
     this->queue = queue_;
-}
-
-void WellContributions::setKernelParameters(const unsigned int work_group_size_, const unsigned int total_work_items_)
-{
-    this->work_group_size = work_group_size_;
-    this->total_work_items = total_work_items_;
 }
 
 void WellContributions::setKernel(cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::Buffer&, cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg> *add_well_contributions_)

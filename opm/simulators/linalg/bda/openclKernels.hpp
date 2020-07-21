@@ -23,7 +23,7 @@
 namespace bda
 {
 
-    const char* axpy_s  = R"(
+    inline const char* axpy_s  = R"(
     __kernel void axpy(
         __global double *in,
         const double a,
@@ -42,7 +42,7 @@ namespace bda
 
 
     // returns partial sums, instead of the final dot product
-    const char* dot_1_s = R"(
+    inline const char* dot_1_s = R"(
     __kernel void dot_1(
         __global double *in1,
         __global double *in2,
@@ -83,7 +83,7 @@ namespace bda
 
     // returns partial sums, instead of the final norm
     // the square root must be computed on CPU
-    const char* norm_s = R"(
+    inline const char* norm_s = R"(
     __kernel void norm(
         __global double *in,
         __global double *out,
@@ -122,7 +122,7 @@ namespace bda
 
 
     // p = (p - omega * v) * beta + r
-    const char* custom_s = R"(
+    inline const char* custom_s = R"(
     __kernel void custom(
         __global double *p,
         __global double *v,
@@ -150,7 +150,7 @@ namespace bda
     // algorithm based on:
     // Optimization of Block Sparse Matrix-Vector Multiplication on Shared-MemoryParallel Architectures,
     // Ryan Eberhardt, Mark Hoemmen, 2016, https://doi.org/10.1109/IPDPSW.2016.42
-    const char* spmv_blocked_s = R"(
+    inline const char* spmv_blocked_s = R"(
     __kernel void spmv_blocked(
         __global const double *vals,
         __global const int *cols,
@@ -220,7 +220,7 @@ namespace bda
 
     // ILU apply part 1: forward substitution
     // solves L*x=y where L is a lower triangular sparse blocked matrix
-    const char* ILU_apply1_s = R"(
+    inline const char* ILU_apply1_s = R"(
     __kernel void ILU_apply1(
         __global const double *Lvals,
         __global const unsigned int *Lcols,
@@ -290,7 +290,7 @@ namespace bda
 
     // ILU apply part 2: backward substitution
     // solves U*x=y where L is a lower triangular sparse blocked matrix
-    const char* ILU_apply2_s = R"(
+    inline const char* ILU_apply2_s = R"(
     __kernel void ILU_apply2(
         __global const double *Uvals,
         __global const int *Ucols,
@@ -366,7 +366,7 @@ namespace bda
     }
     )";
 
-    const char* add_well_contributions_s = R"(
+    inline const char* add_well_contributions_s = R"(
     #pragma OPENCL EXTENSION cl_khr_fp64: enable
     #pragma OPENCL EXTENSION cl_khr_int64_base_atomics: enable
 

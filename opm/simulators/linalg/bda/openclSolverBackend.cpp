@@ -20,6 +20,7 @@
 #include <config.h>
 #include <cmath>
 #include <sstream>
+#include <iostream>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
@@ -70,7 +71,7 @@ unsigned int openclSolverBackend<block_size>::ceilDivision(const unsigned int A,
 template <unsigned int block_size>
 double openclSolverBackend<block_size>::dot_w(cl::Buffer in1, cl::Buffer in2, cl::Buffer out)
 {
-    const unsigned int work_group_size = 1024;
+    const unsigned int work_group_size = 256;
     const unsigned int num_work_groups = ceilDivision(N, work_group_size);
     const unsigned int total_work_items = num_work_groups * work_group_size;
     const unsigned int lmem_per_work_group = sizeof(double) * work_group_size;
@@ -98,7 +99,7 @@ double openclSolverBackend<block_size>::dot_w(cl::Buffer in1, cl::Buffer in2, cl
 template <unsigned int block_size>
 double openclSolverBackend<block_size>::norm_w(cl::Buffer in, cl::Buffer out)
 {
-    const unsigned int work_group_size = 1024;
+    const unsigned int work_group_size = 256;
     const unsigned int num_work_groups = ceilDivision(N, work_group_size);
     const unsigned int total_work_items = num_work_groups * work_group_size;
     const unsigned int lmem_per_work_group = sizeof(double) * work_group_size;
@@ -189,8 +190,9 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
 
     Timer t_total, t_prec(false), t_spmv(false), t_well(false), t_rest(false);
 
-    wellContribs.setOpenCLQueue(queue.get());
     wellContribs.setReordering(toOrder, true);
+    wellContribs.setOpenCLContext(context.get());
+    wellContribs.setOpenCLQueue(queue.get());
 
     // set r to the initial residual
     // if initial x guess is not 0, must call applyblockedscaleadd(), not implemented
@@ -325,6 +327,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
 
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, double *vals, int *rows, int *cols, WellContributions& wellContribs) {
+    std::cout << "Entrei nesta porra" << std::endl;
     this->N = N_;
     this->nnz = nnz_;
     this->nnzb = nnz_ / block_size / block_size;
@@ -476,8 +479,6 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
 
         prec->setOpenCLContext(context.get());
         prec->setOpenCLQueue(queue.get());
-        wellContribs.setOpenCLContext(context.get());
-        wellContribs.setOpenCLQueue(queue.get());
 
         rb = new double[N];
         tmp = new double[N];
@@ -711,7 +712,7 @@ void openclSolverBackend<block_size>::get_result(double *x) {
 template <unsigned int block_size>
 SolverStatus openclSolverBackend<block_size>::solve_system(int N_, int nnz_, int dim, double *vals, int *rows, int *cols, double *b, WellContributions& wellContribs, BdaResult &res) {
     if (initialized == false) {
-        initialize(N_, nnz_,  dim, vals, rows, cols);
+        initialize(N_, nnz_,  dim, vals, rows, cols, wellContribs);
         if (analysis_done == false) {
             if (!analyse_matrix()) {
                 return SolverStatus::BDA_SOLVER_ANALYSIS_FAILED;

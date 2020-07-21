@@ -140,7 +140,7 @@ private:
     /// \param[in] vals           array of nonzeroes, each block is stored row-wise and contiguous, contains nnz values
     /// \param[in] rows           array of rowPointers, contains N/dim+1 values
     /// \param[in] cols           array of columnIndices, contains nnz values
-    void initialize(int N, int nnz, int dim, double *vals, int *rows, int *cols);
+    void initialize(int N, int nnz, int dim, double *vals, int *rows, int *cols, WellContributions& wellContribs);
 
     /// Clean memory
     void finalize();

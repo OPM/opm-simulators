@@ -127,30 +127,24 @@ __global__ void apply_well_contributions(
 
 void WellContributions::allocStandardWells()
 {
-    if (num_std_wells > 0) {
-        cudaMalloc((void**)&d_Cnnzs, sizeof(double) * num_blocks * dim * dim_wells);
-        cudaMalloc((void**)&d_Dnnzs, sizeof(double) * num_std_wells * dim_wells * dim_wells);
-        cudaMalloc((void**)&d_Bnnzs, sizeof(double) * num_blocks * dim * dim_wells);
-        cudaMalloc((void**)&d_Ccols, sizeof(int) * num_blocks);
-        cudaMalloc((void**)&d_Bcols, sizeof(int) * num_blocks);
-        val_pointers = new unsigned int[num_std_wells + 1];
-        cudaMalloc((void**)&d_val_pointers, sizeof(int) * (num_std_wells + 1));
-        cudaCheckLastError("apply_gpu malloc failed");
-        allocated = true;
-    }
+    cudaMalloc((void**)&d_Cnnzs, sizeof(double) * num_blocks * dim * dim_wells);
+    cudaMalloc((void**)&d_Dnnzs, sizeof(double) * num_std_wells * dim_wells * dim_wells);
+    cudaMalloc((void**)&d_Bnnzs, sizeof(double) * num_blocks * dim * dim_wells);
+    cudaMalloc((void**)&d_Ccols, sizeof(int) * num_blocks);
+    cudaMalloc((void**)&d_Bcols, sizeof(int) * num_blocks);
+    val_pointers = new unsigned int[num_std_wells + 1];
+    cudaMalloc((void**)&d_val_pointers, sizeof(int) * (num_std_wells + 1));
+    cudaCheckLastError("apply_gpu malloc failed");
 }
 
 void WellContributions::freeStandardWells() {
     // delete data for StandardWell
-    if (num_std_wells > 0) {
-        cudaFree(d_Cnnzs);
-        cudaFree(d_Dnnzs);
-        cudaFree(d_Bnnzs);
-        cudaFree(d_Ccols);
-        cudaFree(d_Bcols);
-        delete[] val_pointers;
-        cudaFree(d_val_pointers);
-    }
+    cudaFree(d_Cnnzs);
+    cudaFree(d_Dnnzs);
+    cudaFree(d_Bnnzs);
+    cudaFree(d_Ccols);
+    cudaFree(d_Bcols);
+    cudaFree(d_val_pointers);
 }
 
 
