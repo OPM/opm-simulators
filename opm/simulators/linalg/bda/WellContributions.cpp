@@ -92,7 +92,7 @@ void WellContributions::apply(cl::Buffer& d_x, cl::Buffer& d_y) {
 }
 #endif
 
-void WellContributions::addMatrix(MatrixType type, int *colIndices, double *values, unsigned int val_size)
+void WellContributions::addMatrix([[maybe_unused]] MatrixType type, [[maybe_unused]]int *colIndices, [[maybe_unused]] double *values, [[maybe_unused]] unsigned int val_size)
 {
 #if HAVE_CUDA
         addMatrixGpu(type, colIndices, values, val_size);
