@@ -1,6 +1,7 @@
 /*
   Copyright 2017 SINTEF Digital, Mathematics and Cybernetics.
   Copyright 2017 Statoil ASA.
+  Copyright 2020 Equinor ASA.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -36,16 +37,16 @@ namespace Opm {
 
 namespace mswellhelpers
 {
-    // obtain y = D^-1 * x with a direct solver
+
+#if HAVE_UMFPACK
+    /// Applies umfpack and checks for singularity
     template <typename MatrixType, typename VectorType>
     VectorType
-    invDXDirect(const MatrixType& D, VectorType x)
+    applyUMFPack(Dune::UMFPack<MatrixType>& linsolver, VectorType x)
     {
-#if HAVE_UMFPACK
+        // The copy of x seems mandatory for calling UMFPack!
         VectorType y(x.size());
         y = 0.;
-
-        Dune::UMFPack<MatrixType> linsolver(D, 0);
 
         // Object storing some statistics about the solving process
         Dune::InverseOperatorResult res;
@@ -62,8 +63,18 @@ namespace mswellhelpers
                 }
             }
         }
-
         return y;
+    }
+#endif
+
+    // obtain y = D^-1 * x with a direct solver
+    template <typename MatrixType, typename VectorType>
+    VectorType
+    invDXDirect(const MatrixType& D, VectorType x)
+    {
+#if HAVE_UMFPACK
+        Dune::UMFPack<MatrixType> linsolver(D, 0);
+        return applyUMFPack(linsolver, x);
 #else
         // this is not thread safe
         OPM_THROW(std::runtime_error, "Cannot use invDXDirect() without UMFPACK. "
