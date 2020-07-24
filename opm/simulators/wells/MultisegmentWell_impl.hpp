@@ -624,7 +624,8 @@ namespace Opm
         duneB_.mv(x, Bx);
 
         // invDBx = duneD^-1 * Bx_
-        const BVectorWell invDBx = mswellhelpers::invDXDirect(duneD_, Bx);
+        // const BVectorWell invDBx = mswellhelpers::invDXDirect(duneD_, Bx);
+        const BVectorWell invDBx = mswellhelpers::applyUMFPack(duneD_, duneDSolver_, Bx);
 
         // Ax = Ax - duneC_^T * invDBx
         duneC_.mmtv(invDBx,Ax);
@@ -640,7 +641,8 @@ namespace Opm
     apply(BVector& r) const
     {
         // invDrw_ = duneD^-1 * resWell_
-        const BVectorWell invDrw = mswellhelpers::invDXDirect(duneD_, resWell_);
+        // const BVectorWell invDrw = mswellhelpers::invDXDirect(duneD_, resWell_);
+        const BVectorWell invDrw = mswellhelpers::applyUMFPack(duneD_, duneDSolver_, resWell_);
         // r = r - duneC_^T * invDrw
         duneC_.mmtv(invDrw, r);
     }
@@ -999,7 +1001,8 @@ namespace Opm
         // resWell = resWell - B * x
         duneB_.mmv(x, resWell);
         // xw = D^-1 * resWell
-        xw = mswellhelpers::invDXDirect(duneD_, resWell);
+        //xw = mswellhelpers::invDXDirect(duneD_, resWell);
+        xw = mswellhelpers::applyUMFPack(duneD_, duneDSolver_, resWell);
     }
 
 
@@ -1013,7 +1016,8 @@ namespace Opm
     {
         // We assemble the well equations, then we check the convergence,
         // which is why we do not put the assembleWellEq here.
-        const BVectorWell dx_well = mswellhelpers::invDXDirect(duneD_, resWell_);
+        //const BVectorWell dx_well = mswellhelpers::invDXDirect(duneD_, resWell_);
+        const BVectorWell dx_well = mswellhelpers::applyUMFPack(duneD_, duneDSolver_, resWell_);
 
         updateWellState(dx_well, well_state, deferred_logger);
     }
@@ -1923,6 +1927,7 @@ namespace Opm
         for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
             duneD_[0][0][SPres][pv_idx] = control_eq.derivative(pv_idx + numEq);
         }
+        duneDSolver_.reset();
     }
 
 
@@ -2087,6 +2092,7 @@ namespace Opm
         if (accelerationalPressureLossConsidered()) {
             handleAccelerationPressureLoss(seg, well_state);
         }
+        duneDSolver_.reset();
     }
 
 
@@ -2181,6 +2187,7 @@ namespace Opm
         duneD_[seg][seg][SPres][GTotal] -= accelerationPressureLoss.derivative(GTotal + numEq);
         duneD_[seg][seg_upwind][SPres][WFrac] -= accelerationPressureLoss.derivative(WFrac + numEq);
         duneD_[seg][seg_upwind][SPres][GFrac] -= accelerationPressureLoss.derivative(GFrac + numEq);
+        duneDSolver_.reset();
     }
 
 
@@ -2399,7 +2406,8 @@ namespace Opm
 
             assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, deferred_logger);
 
-            const BVectorWell dx_well = mswellhelpers::invDXDirect(duneD_, resWell_);
+            // const BVectorWell dx_well = mswellhelpers::invDXDirect(duneD_, resWell_);
+            const BVectorWell dx_well = mswellhelpers::applyUMFPack(duneD_, duneDSolver_, resWell_);
 
             if (it > param_.strict_inner_iter_ms_wells_)
                 relax_convergence = true;
@@ -2656,6 +2664,7 @@ namespace Opm
                                              well_state.segPressDropFriction()[seg] +
                                              well_state.segPressDropAcceleration()[seg];
         }
+        duneDSolver_.reset();
     }
 
 
@@ -3207,6 +3216,7 @@ namespace Opm
             duneD_[seg][outlet_segment_index][SPres][pv_idx] = -outlet_pressure.derivative(pv_idx + numEq);
 
         }
+        duneDSolver_.reset();
     }
 
 
@@ -3248,6 +3258,7 @@ namespace Opm
         for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
             duneD_[seg][outlet_segment_index][SPres][pv_idx] = -outlet_pressure.derivative(pv_idx + numEq);
         }
+        duneDSolver_.reset();
     }
 
 
