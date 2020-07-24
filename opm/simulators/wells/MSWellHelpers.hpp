@@ -42,8 +42,13 @@ namespace mswellhelpers
     /// Applies umfpack and checks for singularity
     template <typename MatrixType, typename VectorType>
     VectorType
-    applyUMFPack(Dune::UMFPack<MatrixType>& linsolver, VectorType x)
+    applyUMFPack(const MatrixType& D, std::shared_ptr<Dune::UMFPack<MatrixType> >& linsolver, VectorType x)
     {
+        if (!linsolver)
+        {
+            linsolver.reset(new Dune::UMFPack<MatrixType>(D, 0));
+        }
+
         // The copy of x seems mandatory for calling UMFPack!
         VectorType y(x.size());
         y = 0.;
@@ -52,7 +57,7 @@ namespace mswellhelpers
         Dune::InverseOperatorResult res;
 
         // Solve
-        linsolver.apply(y, x, res);
+        linsolver->apply(y, x, res);
 
         // Checking if there is any inf or nan in y
         // it will be the solution before we find a way to catch the singularity of the matrix
@@ -73,8 +78,8 @@ namespace mswellhelpers
     invDXDirect(const MatrixType& D, VectorType x)
     {
 #if HAVE_UMFPACK
-        Dune::UMFPack<MatrixType> linsolver(D, 0);
-        return applyUMFPack(linsolver, x);
+        std::shared_ptr<Dune::UMFPack<MatrixType> > linsolver;
+        return applyUMFPack(D, linsolver, x);
 #else
         // this is not thread safe
         OPM_THROW(std::runtime_error, "Cannot use invDXDirect() without UMFPACK. "
