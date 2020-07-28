@@ -147,6 +147,7 @@ if(OpenCL_FOUND)
   else()
     message(WARNING " OpenCL was found, but this version of opm-simulators relies on CL/cl.hpp, which implements OpenCL 1.0, 1.1 and 1.2.\n Deactivating OpenCL")
     set(OpenCL_FOUND OFF)
+    set(OPENCL_FOUND OFF)
   endif()
 endif()
 
