@@ -73,25 +73,14 @@ private:
     unsigned int num_ms_wells = 0;           // number of MultisegmentWells in this object, must equal multisegments.size()
     unsigned int num_blocks_so_far = 0;      // keep track of where next data is written
     unsigned int num_std_wells_so_far = 0;   // keep track of where next data is written
-    unsigned int *val_pointers = nullptr;    // val_pointers[wellID] == index of first block for this well in Ccols and Bcols
+    unsigned int *val_pointers;              // val_pointers[wellID] == index of first block for this well in Ccols and Bcols
     unsigned int N;                          // number of rows (not blockrows) in vectors x and y
     bool allocated = false;
     std::vector<MultisegmentWellContribution*> multisegments;
 
 #if HAVE_CUDA
     cudaStream_t stream;
-#endif
-
-#if HAVE_OPENCL
-    cl::Context *context;
-    cl::CommandQueue *queue;
-    cl::Buffer d_Cnnzs, d_Dnnzs, d_Bnnzs, d_Ccols, d_Bcols, d_val_pointers;
-    cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::Buffer&, cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg> *add_well_contributions;
-    std::vector<double> h_Cnnzs, h_Dnnzs, h_Bnnzs;
-    std::vector<int> h_Ccols, h_Bcols;
-#endif
-
-#if HAVE_CUDA
+    
     // data for StandardWells, could remain nullptrs if not used
     // StandardWells are only supported for cusparseSolver now
     double *d_Cnnzs = nullptr;
@@ -102,6 +91,9 @@ private:
     double *d_z1 = nullptr;
     double *d_z2 = nullptr;
     unsigned int *d_val_pointers = nullptr;
+#elif HAVE_OPENCL
+    double *h_valsC, *h_valsD, *h_valsB;
+    int *h_colsC, *h_colsB;
 #endif
 
     double *h_x = nullptr, *h_y = nullptr;  // CUDA pinned memory for GPU memcpy
@@ -124,11 +116,19 @@ private:
     void freeStandardWells();
 
 public:
-
+#if HAVE_CUDA
     /// Set a cudaStream to be used
     /// \param[in] stream           the cudaStream that is used to launch the kernel in
-#if HAVE_CUDA
     void setCudaStream(cudaStream_t stream);
+    
+    /// Apply all Wells in this object
+    /// performs y -= (C^T * (D^-1 * (B*x))) for all Wells
+    /// \param[in] d_x        vector x, must be on GPU
+    /// \param[inout] d_y     vector y, must be on GPU
+    void apply(double *d_x, double *d_y);
+#elif HAVE_OPENCL
+    void getParams(unsigned int *num_blocks_, unsigned int *num_std_wells_, unsigned int *dim_, unsigned int *dim_wells_);
+    void getData(double **valsC, double **valsD, double **valsB, int **colsC, int **colsB, unsigned int **val_pointers_);
 #endif
 
     /// Create a new WellContributions, implementation is empty
@@ -137,17 +137,6 @@ public:
     /// Destroy a WellContributions, and free memory
     ~WellContributions();
 
-    /// Apply all Wells in this object
-    /// performs y -= (C^T * (D^-1 * (B*x))) for all Wells
-    /// \param[in] d_x        vector x, must be on GPU
-    /// \param[inout] d_y     vector y, must be on GPU
-#if HAVE_CUDA
-    void apply(double *d_x, double *d_y);
-#endif
-#if HAVE_OPENCL
-    //void apply(cl::Buffer& x, cl::Buffer& y);
-    void apply(cl::Buffer x, cl::Buffer y);
-#endif
 
     /// Allocate memory for the StandardWells
     void alloc();
@@ -201,14 +190,6 @@ public:
     /// \param[in] toOrder    array with mappings
     /// \param[in] reorder    whether the columnindices need to be reordered or not
     void setReordering(int *toOrder, bool reorder);
-
-#if HAVE_OPENCL
-    /// This object copies some cl::Buffers, it requires a CommandQueue to do that
-    /// \param[in] queue      the opencl commandqueue to be used
-    void setOpenCLQueue(cl::CommandQueue *queue);
-    void setOpenCLContext(cl::Context *context);
-    void setKernel(cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::Buffer&, cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg> *add_well_contributions_);
-#endif
 };
 
 } //namespace Opm

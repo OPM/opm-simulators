@@ -22,6 +22,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <algorithm>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
@@ -38,7 +39,13 @@ void WellContributions::alloc()
 #if HAVE_CUDA
         allocStandardWells();
 #elif HAVE_OPENCL
+        h_valsC = new double[num_blocks * dim * dim_wells];
+        h_valsD = new double[num_std_wells * dim_wells * dim_wells];
+        h_valsB = new double[num_blocks * dim * dim_wells];
+        h_colsC = new int[num_blocks];
+        h_colsB = new int[num_blocks];
         val_pointers = new unsigned int[num_std_wells + 1];
+        
         allocated = true;
 #else
         OPM_THROW(std::logic_error, "Error cannot allocate on GPU because neither CUDA nor OpenCL were found by cmake");
@@ -63,21 +70,20 @@ WellContributions::~WellContributions()
 #if HAVE_CUDA
         freeStandardWells();
 #elif HAVE_OPENCL
+        delete[] h_valsC;
+        delete[] h_valsD;
+        delete[] h_valsB;
+        delete[] h_colsC;
+        delete[] h_colsB; 
         delete[] val_pointers;
-        std::vector<double>().swap(h_Cnnzs);
-        std::vector<double>().swap(h_Dnnzs);
-        std::vector<double>().swap(h_Bnnzs);
-        std::vector<int>().swap(h_Ccols);
-        std::vector<int>().swap(h_Bcols);
 #endif
     }
 }
 
 
 #if HAVE_OPENCL
-//void WellContributions::apply(cl::Buffer& d_x, cl::Buffer& d_y) {
-void WellContributions::apply(cl::Buffer d_x, cl::Buffer d_y) {
-
+/*
+void WellContributions::apply(cl::Buffer& d_x, cl::Buffer& d_y) {
     // apply MultisegmentWells
     if (num_ms_wells > 0) {
         // allocate pinned memory on host if not yet done
@@ -98,33 +104,25 @@ void WellContributions::apply(cl::Buffer d_x, cl::Buffer d_y) {
         // copy vector y from CPU to GPU
         queue->enqueueWriteBuffer(d_y, CL_TRUE, 0, sizeof(double) * N, h_y);
     }
-
-    // apply StandardWells
-    if (num_std_wells > 0) {
-        cl::Event event;
-        const unsigned int work_group_size = 32;
-        const unsigned int total_work_items = num_std_wells * work_group_size;
-        const unsigned int lmem1 = 2 * sizeof(double) * work_group_size;
-        const unsigned int lmem2 = 2 * sizeof(double) * dim_wells;
-
-        d_Cnnzs = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * num_blocks * dim * dim_wells);
-        d_Dnnzs = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * num_std_wells * dim_wells * dim_wells);
-        d_Bnnzs = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * num_blocks * dim * dim_wells);
-        d_Ccols = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * num_blocks);
-        d_Bcols = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * num_blocks);
-        d_val_pointers = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(unsigned int) * (num_std_wells + 1));
-
-        queue->enqueueWriteBuffer(d_Cnnzs, CL_TRUE, 0, sizeof(double) * h_Cnnzs.size(), h_Cnnzs.data());
-        queue->enqueueWriteBuffer(d_Dnnzs, CL_TRUE, 0, sizeof(double) * h_Dnnzs.size(), h_Dnnzs.data());
-        queue->enqueueWriteBuffer(d_Bnnzs, CL_TRUE, 0, sizeof(double) * h_Bnnzs.size(), h_Bnnzs.data());
-        queue->enqueueWriteBuffer(d_Ccols, CL_TRUE, 0, sizeof(int) * h_Ccols.size(), h_Ccols.data());
-        queue->enqueueWriteBuffer(d_Bcols, CL_TRUE, 0, sizeof(int) * h_Bcols.size(), h_Bcols.data());
-        queue->enqueueWriteBuffer(d_val_pointers, CL_TRUE, 0, sizeof(unsigned int) * (num_std_wells + 1), &val_pointers, nullptr, &event);
-        event.wait();
-
-        event = (*add_well_contributions)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), d_Cnnzs, d_Dnnzs, d_Bnnzs, d_Ccols, d_Bcols, d_x, d_y, dim, dim_wells, d_val_pointers, cl::Local(lmem1), cl::Local(lmem2), cl::Local(lmem2));
-    }
 }
+*/
+
+void WellContributions::getParams(unsigned int *num_blocks_, unsigned int *num_std_wells_, unsigned int *dim_, unsigned int *dim_wells_){
+    *num_blocks_ = num_blocks;
+    *num_std_wells_ = num_std_wells;
+    *dim_ = dim;
+    *dim_wells_ = dim_wells;
+}
+
+void WellContributions::getData(double **valsC, double **valsD, double **valsB, int **colsC, int **colsB, unsigned int **val_pointers_){
+    std::copy(h_valsC, h_valsC + num_blocks*dim*dim_wells, *valsC);
+    std::copy(h_valsD, h_valsD + num_std_wells*dim_wells*dim_wells, *valsD);
+    std::copy(h_valsB, h_valsB + num_blocks*dim*dim_wells, *valsB);
+    std::copy(h_colsC, h_colsC + num_blocks, *colsC);
+    std::copy(h_colsB, h_colsB + num_blocks, *colsB);
+    std::copy(val_pointers, val_pointers + num_std_wells + 1, *val_pointers_);
+}
+
 #endif
 
 void WellContributions::addMatrix(MatrixType type, int *colIndices, double *values, unsigned int val_size)
@@ -136,27 +134,28 @@ void WellContributions::addMatrix(MatrixType type, int *colIndices, double *valu
     addMatrixGpu(type, colIndices, values, val_size);
 #elif HAVE_OPENCL
     switch (type) {
-    case MatrixType::C:
-        h_Ccols.insert(h_Ccols.end(), colIndices, colIndices + val_size);
-        h_Cnnzs.insert(h_Cnnzs.end(), values, values + val_size*dim*dim_wells);
-        break;
+        case MatrixType::C:
+            std::copy(colIndices, colIndices + val_size, h_colsC + num_blocks_so_far);
+            std::copy(values, values + val_size*dim*dim_wells, h_valsC + num_blocks_so_far*dim*dim_wells);
+            break;
 
-    case MatrixType::D:
-        h_Dnnzs.insert(h_Dnnzs.end(), values, values + val_size*dim_wells*dim_wells);
-        break;
+        case MatrixType::D:
+            std::copy(values, values + dim_wells*dim_wells, h_valsD + num_std_wells_so_far*dim_wells*dim_wells);
+            break;
 
-    case MatrixType::B:
-        h_Bcols.insert(h_Bcols.end(), colIndices, colIndices + val_size);
-        h_Bnnzs.insert(h_Bnnzs.end(), values, values + val_size*dim*dim_wells);
-        val_pointers[num_std_wells_so_far] = num_blocks_so_far;
+        case MatrixType::B:
+            std::copy(colIndices, colIndices + val_size, h_colsB + num_blocks_so_far);
+            std::copy(values, values + val_size*dim*dim_wells, h_valsB + num_blocks_so_far*dim*dim_wells);
+            val_pointers[num_std_wells_so_far] = num_blocks_so_far;
 
-        if(num_std_wells_so_far == num_std_wells - 1){
-            val_pointers[num_std_wells] = num_blocks;
-        }
-        break;
-    default:
-        OPM_THROW(std::logic_error, "Error unsupported matrix ID for WellContributions::addMatrix()");
-    }   
+            if(num_std_wells_so_far == num_std_wells - 1){
+                val_pointers[num_std_wells] = num_blocks;
+            }
+            break;
+
+        default:
+            OPM_THROW(std::logic_error, "Error unsupported matrix ID for WellContributions::addMatrix()");
+        }   
 #else
     OPM_THROW(std::logic_error, "Error cannot add StandardWell matrix on GPU because neither CUDA nor OpenCL were found by cmake");
 #endif
@@ -173,12 +172,12 @@ void WellContributions::setBlockSize(unsigned int dim_, unsigned int dim_wells_)
     dim_wells = dim_wells_;
 }
 
-void WellContributions::addNumBlocks(unsigned int nnz)
+void WellContributions::addNumBlocks(unsigned int numBlocks)
 {
     if (allocated) {
         OPM_THROW(std::logic_error, "Error cannot add more sizes after allocated in WellContributions");
     }
-    num_blocks += nnz;
+    num_blocks += numBlocks;
     num_std_wells++;
 }
 
@@ -203,23 +202,6 @@ void WellContributions::setReordering(int *toOrder_, bool reorder_)
         ms->setReordering(toOrder_, reorder_);
     }
 }
-
-#if HAVE_OPENCL
-void WellContributions::setOpenCLContext(cl::Context *context_)
-{
-    this->context = context_;
-}
-
-void WellContributions::setOpenCLQueue(cl::CommandQueue *queue_)
-{
-    this->queue = queue_;
-}
-
-void WellContributions::setKernel(cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::Buffer&, cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg> *add_well_contributions_)
-{
-    this->add_well_contributions = add_well_contributions_;
-}
-#endif
 
 } //namespace Opm
 

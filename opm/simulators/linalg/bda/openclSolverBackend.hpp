@@ -64,6 +64,13 @@ private:
     cl::Buffer d_tmp;                            // used as tmp GPU buffer for dot() and norm()
     double *tmp = nullptr;                       // used as tmp CPU buffer for dot() and norm()
 
+    unsigned int num_blocks, dim_, dim_wells, num_std_wells;
+    unsigned int *h_val_pointers;
+    int *h_colsC, *h_colsB;
+    double *h_valsC, *h_valsD, *h_valsB;
+    cl::Buffer d_valsC, d_valsD, d_valsB;
+    cl::Buffer d_colsC, d_colsB, d_val_pointers;
+
     // shared pointers are also passed to other objects
     std::shared_ptr<cl::Context> context;
     std::shared_ptr<cl::CommandQueue> queue;
@@ -127,6 +134,8 @@ private:
     /// \param[in] x        input vector
     /// \param[out] b       output vector
     void spmv_blocked_w(cl::Buffer vals, cl::Buffer cols, cl::Buffer rows, cl::Buffer x, cl::Buffer b);
+    
+    void add_well_contributions_w(cl::Buffer valsC, cl::Buffer valsD, cl::Buffer valsB, cl::Buffer colsC, cl::Buffer colsB, cl::Buffer x, cl::Buffer y, cl::Buffer val_pointers);
 
     /// Solve linear system using ilu0-bicgstab
     /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A

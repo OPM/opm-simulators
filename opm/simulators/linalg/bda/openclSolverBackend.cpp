@@ -180,19 +180,24 @@ void openclSolverBackend<block_size>::spmv_blocked_w(cl::Buffer vals, cl::Buffer
     }
 }
 
+template <unsigned int block_size>
+void openclSolverBackend<block_size>::add_well_contributions_w(cl::Buffer valsC, cl::Buffer valsD, cl::Buffer valsB, cl::Buffer colsC, cl::Buffer colsB, cl::Buffer x, cl::Buffer y, cl::Buffer val_pointers){
+    const unsigned int work_group_size = 32;
+    const unsigned int total_work_items = num_std_wells * work_group_size;
+    const unsigned int lmem1 = sizeof(double) * work_group_size;
+    const unsigned int lmem2 = sizeof(double) * dim_wells;
+
+    cl::Event event = (*add_well_contributions_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), valsC, valsD, valsB, colsC, colsB, x, y, dim_, dim_wells, val_pointers, cl::Local(lmem1), cl::Local(lmem2), cl::Local(lmem2));
+}
+
 
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContribs, BdaResult& res) {
-
     float it;
     double rho, rhop, beta, alpha, omega, tmp1, tmp2;
     double norm, norm_0;
 
     Timer t_total, t_prec(false), t_spmv(false), t_well(false), t_rest(false);
-
-    wellContribs.setReordering(toOrder, true);
-    wellContribs.setOpenCLContext(context.get());
-    wellContribs.setOpenCLQueue(queue.get());
 
     // set r to the initial residual
     // if initial x guess is not 0, must call applyblockedscaleadd(), not implemented
@@ -214,6 +219,17 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
     queue->enqueueCopyBuffer(d_r, d_p, 0, 0, sizeof(double) * N, nullptr, &event);
     event.wait();
 
+    wellContribs.setReordering(toOrder, true);
+    wellContribs.getData(&h_valsC, &h_valsD, &h_valsB, &h_colsC, &h_colsB, &h_val_pointers);
+
+    queue->enqueueWriteBuffer(d_valsC, CL_TRUE, 0, sizeof(double) * num_blocks * dim_ * dim_wells, h_valsC);
+    queue->enqueueWriteBuffer(d_valsD, CL_TRUE, 0, sizeof(double) * num_std_wells * dim_wells * dim_wells, h_valsD);
+    queue->enqueueWriteBuffer(d_valsB, CL_TRUE, 0, sizeof(double) * num_blocks * dim_ * dim_wells, h_valsB);
+    queue->enqueueWriteBuffer(d_colsC, CL_TRUE, 0, sizeof(int) * num_blocks, h_colsC);
+    queue->enqueueWriteBuffer(d_colsB, CL_TRUE, 0, sizeof(int) * num_blocks, h_colsB);
+    queue->enqueueWriteBuffer(d_val_pointers, CL_TRUE, 0, sizeof(unsigned int) * (num_std_wells + 1), h_val_pointers, nullptr, &event);
+    event.wait();
+    
     norm = norm_w(d_r, d_tmp);
     norm_0 = norm;
 
@@ -247,7 +263,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
         // apply wellContributions
         if (wellContribs.getNumWells() > 0) {
             t_well.start();
-            wellContribs.apply(d_pw, d_v);
+            add_well_contributions_w(d_valsC, d_valsD, d_valsB, d_colsC, d_colsB, d_pw, d_v, d_val_pointers);
             t_well.stop();
         }
 
@@ -278,7 +294,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
         // apply wellContributions
         if (wellContribs.getNumWells() > 0) {
             t_well.start();
-            wellContribs.apply(d_s, d_t);
+            add_well_contributions_w(d_valsC, d_valsD, d_valsB, d_colsC, d_colsB, d_s, d_t, d_val_pointers);
             t_well.stop();
         }
 
@@ -316,7 +332,8 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
     }
     if (verbosity >= 4) {
         std::ostringstream out;
-        out << "openclSolver::ily_apply:   " << t_prec.elapsed() << " s\n";
+        out << "openclSolver::ilu_apply:   " << t_prec.elapsed() << " s\n";
+        out << "wellContributions::apply:  " << t_well.elapsed() << " s\n";
         out << "openclSolver::spmv:        " << t_spmv.elapsed() << " s\n";
         out << "openclSolver::rest:        " << t_rest.elapsed() << " s\n";
         out << "openclSolver::total_solve: " << res.elapsed << " s\n";
@@ -327,7 +344,6 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
 
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, double *vals, int *rows, int *cols, WellContributions& wellContribs) {
-    std::cout << "Entrei nesta porra" << std::endl;
     this->N = N_;
     this->nnz = nnz_;
     this->nnzb = nnz_ / block_size / block_size;
@@ -479,12 +495,19 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
 
         prec->setOpenCLContext(context.get());
         prec->setOpenCLQueue(queue.get());
+        wellContribs.getParams(&num_blocks, &num_std_wells, &dim_, &dim_wells);
 
         rb = new double[N];
         tmp = new double[N];
 #if COPY_ROW_BY_ROW
         vals_contiguous = new double[N];
 #endif
+        h_valsC = new double[num_blocks * dim_ * dim_wells];
+        h_valsD = new double[num_std_wells * dim_wells * dim_wells];
+        h_valsB = new double[num_blocks * dim_ * dim_wells];
+        h_colsC = new int[num_blocks];
+        h_colsB = new int[num_blocks];
+        h_val_pointers = new unsigned int[num_std_wells + 1];        
 
         mat.reset(new BlockedMatrix<block_size>(Nb, nnzb, vals, cols, rows));
 
@@ -504,6 +527,13 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
         d_Acols = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * nnzb);
         d_Arows = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (Nb + 1));
 
+        d_valsC = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * num_blocks * dim_ * dim_wells);
+        d_valsD = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * num_std_wells * dim_wells * dim_wells);
+        d_valsB = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * num_blocks * dim_ * dim_wells);
+        d_colsC = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * num_blocks);
+        d_colsB = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * num_blocks);
+        d_val_pointers = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(unsigned int) * (num_std_wells + 1));
+
         // queue.enqueueNDRangeKernel() is a blocking/synchronous call, at least for NVIDIA
         // cl::make_kernel<> myKernel(); myKernel(args, arg1, arg2); is also blocking
 
@@ -518,7 +548,6 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
         add_well_contributions_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::Buffer&, cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg>(cl::Kernel(program_, "add_well_contributions")));
 
         prec->setKernels(ILU_apply1_k.get(), ILU_apply2_k.get());
-        wellContribs.setKernel(add_well_contributions_k.get());
 
     } catch (cl::Error error) {
         std::ostringstream oss;
@@ -542,6 +571,12 @@ void openclSolverBackend<block_size>::finalize() {
 #if COPY_ROW_BY_ROW
     delete[] vals_contiguous;
 #endif
+    delete[] h_valsC;
+    delete[] h_valsD;
+    delete[] h_valsB;
+    delete[] h_colsC;
+    delete[] h_colsB; 
+    delete[] h_val_pointers;
     delete prec;
 } // end finalize()
 
@@ -667,7 +702,7 @@ bool openclSolverBackend<block_size>::create_preconditioner() {
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::solve_system(WellContributions& wellContribs, BdaResult &res) {
     Timer t;
-
+    
     // actually solve
     try {
         gpu_pbicgstab(wellContribs, res);

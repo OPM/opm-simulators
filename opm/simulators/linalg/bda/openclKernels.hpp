@@ -387,9 +387,9 @@ namespace bda
         } while(atom_cmpxchg((volatile __global ulong *)val, old.i, new.i) != old.i);
     }
 
-    __kernel void add_well_contributions(__global double *valsC,
-                                         __global double *valsD,
-                                         __global double *valsB,
+    __kernel void add_well_contributions(__global const double *valsC,
+                                         __global const double *valsD,
+                                         __global const double *valsB,
                                          __global const int *colsC,
                                          __global const int *colsB,
                                          __global double *x,
