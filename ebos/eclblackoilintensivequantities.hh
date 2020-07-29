@@ -214,7 +214,8 @@ public:
             if (linearizationType.type == Opm::LinearizationType::seqtransport) {
                 pg = Toolbox::value(
                     elemCtx.problem().pressure(globalSpaceIdx,
-                                               gasPhaseIdx)); // get current value assuem this is not updated
+                                                  gasPhaseIdx,
+                                                  timeIdx)); // get current value assuem this is not updated
             } else {
                 pg = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx, linearizationType);
                 //assert(pg>2.0);//enure not totalSaturation is present
@@ -226,11 +227,11 @@ public:
             Evaluation po;
             if (linearizationType.type == Opm::LinearizationType::seqtransport) {
                 // get current value assume this is never updated
-                po = Toolbox::value(elemCtx.problem().pressure(globalSpaceIdx, oilPhaseIdx));
+                po = Toolbox::value(elemCtx.problem().pressure(globalSpaceIdx, oilPhaseIdx, timeIdx));
             } else {
                 po = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx, linearizationType);
                 //assert(po>2.0);//enure not totalSaturation is present
-            }            
+            }
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 if (FluidSystem::phaseIsActive(phaseIdx))
                     fluidState_.setPressure(phaseIdx, po + (pC[phaseIdx] - pC[oilPhaseIdx]));

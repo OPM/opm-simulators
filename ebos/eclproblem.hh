@@ -689,7 +689,8 @@ public:
             lastRv_.resize(numDof, 0.0);
             maxOilSaturation_.resize(numDof, 0.0);
         }
-        pressure_.resize(numDof);
+        pressure_[0].resize(numDof);
+        pressure_[1].resize(numDof);
         totalSaturation_.resize(numDof, 1.0);
 
         updateElementDepths_();
@@ -1807,10 +1808,10 @@ public:
      * of the timestep need for sequential
      *
      */
-    Scalar pressure(unsigned globalDofIdx,unsigned phaseIndex) const
+    Scalar pressure(unsigned globalDofIdx, unsigned phaseIndex, const unsigned timeIdx = 0) const
     {
         // phase index is unused for now will give warning in compilation
-        return pressure_[globalDofIdx][phaseIndex];
+        return pressure_[timeIdx][globalDofIdx][phaseIndex];
     }
     Scalar totalSaturation(unsigned globalDofIdx) const
     {
@@ -2290,11 +2291,14 @@ private:
             const auto& fs = iq.fluidState();
 
             if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-                pressure_[compressedDofIdx][oilPhaseIdx] = Opm::getValue(fs.pressure(oilPhaseIdx));
-            }else if( FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)){
-                pressure_[compressedDofIdx][gasPhaseIdx] = Opm::getValue(fs.pressure(gasPhaseIdx));
+                pressure_[1][compressedDofIdx][oilPhaseIdx] = pressure_[0][compressedDofIdx][oilPhaseIdx];
+                pressure_[0][compressedDofIdx][oilPhaseIdx] = Opm::getValue(fs.pressure(oilPhaseIdx));
+            }else if( FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                pressure_[1][compressedDofIdx][gasPhaseIdx] = pressure_[0][compressedDofIdx][gasPhaseIdx];
+                pressure_[0][compressedDofIdx][gasPhaseIdx] = Opm::getValue(fs.pressure(gasPhaseIdx));
             }else{
-                pressure_[compressedDofIdx][waterPhaseIdx] = Opm::getValue(fs.pressure(waterPhaseIdx));
+                pressure_[1][compressedDofIdx][waterPhaseIdx] = pressure_[0][compressedDofIdx][waterPhaseIdx];
+                pressure_[0][compressedDofIdx][waterPhaseIdx] = Opm::getValue(fs.pressure(waterPhaseIdx));
             }
         }
 
@@ -3261,7 +3265,7 @@ private:
     std::vector<Scalar> maxWaterSaturation_;
     std::vector<Scalar> overburdenPressure_;
     std::vector<Scalar> minOilPressure_;
-    std::vector< Dune::FieldVector<Scalar,3> > pressure_;
+    std::array< std::vector<Dune::FieldVector<Scalar,3> >, 2> pressure_;
     std::vector<Scalar> totalSaturation_;
     std::vector< std::vector<Scalar> > totalFlux_;
 
