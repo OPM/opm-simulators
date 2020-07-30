@@ -176,7 +176,7 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
 #else
             const std::string gpu_mode = EWOMS_GET_PARAM(TypeTag, std::string, GpuMode);
             if (gpu_mode.compare("none") != 0) {
-                OPM_THROW(std::logic_error,"Error cannot use GPU solver since neither CUDA nor OpenCL was not found by cmake");
+                OPM_THROW(std::logic_error,"Error cannot use GPU solver since neither CUDA nor OpenCL were found by cmake");
             }
 #endif
             extractParallelGridInformationToISTL(simulator_.vanguard().grid(), parallelInformation_);
