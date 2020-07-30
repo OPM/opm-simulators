@@ -510,6 +510,8 @@ namespace Opm {
                 }
                 std::any parallelInformation;               
                 extractParallelGridInformationToISTL(ebosSimulator_.vanguard().grid(), parallelInformation);
+                using AbstractOperatorType = Dune::AssembledLinearOperator<PressureMatrixType, PressureVectorType, PressureVectorType>;
+                std::unique_ptr<AbstractOperatorType> operator_for_flexiblesolver;
 #if HAVE_MPI
                 using Communication = Dune::OwnerOverlapCopyCommunication<int, int>;
                 std::unique_ptr<Communication> comm;
@@ -519,14 +521,20 @@ namespace Opm {
                     assert(parinfo);
                     comm.reset(new Communication(parinfo->communicator()));
                 }
+                using ParOperatorType = Dune::OverlappingSchwarzOperator<PressureMatrixType, PressureVectorType,
+                                                                          PressureVectorType, Communication>;
+                operator_for_flexiblesolver = std::make_unique<ParOperatorType>(pmatrix, *comm);
 #else
                 using Communication = Dune::Amg::SequentialInformation; // Dummy type
                 std::unique_ptr<Communication> comm;
+                using SeqLinearOperator = Dune::MatrixAdapter<PressureMatrixType, PressureVectorType, PressureVectorType>;
+                operator_for_flexiblesolver = std::make_unique<SeqLinearOperator>(pmatrix);
 #endif
 
 
                 std::function<PressureVectorType()> weightsCalculator;// dummy
-                Dune::FlexibleSolver<PressureMatrixType,PressureVectorType> pressureSolver(pmatrix, *comm, prm, weightsCalculator);
+                Dune::FlexibleSolver<PressureMatrixType,PressureVectorType> pressureSolver(*operator_for_flexiblesolver,
+                                                                                         *comm, prm, weightsCalculator);
                 PressureVectorType xp(x.size(),0);
                 Dune::InverseOperatorResult res;
                 pressureSolver.apply(xp,rhs, res);

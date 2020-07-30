@@ -228,9 +228,18 @@ template Dune::FlexibleSolver<OBM<N>, BV<N>>::FlexibleSolver(AbstractOperatorTyp
 
 #else // HAVE_MPI
 
+using Comm = Dune::Amg::SequentialInformation;
 #define INSTANTIATE_FLEXIBLESOLVER(N)                  \
 template class Dune::FlexibleSolver<BM<N>, BV<N>>;     \
-template class Dune::FlexibleSolver<OBM<N>, BV<N>>;
+template class Dune::FlexibleSolver<OBM<N>, BV<N>>; \
+template Dune::FlexibleSolver<BM<N>, BV<N>>::FlexibleSolver(AbstractOperatorType& op,                         \
+                                                            const Comm& comm,                                 \
+                                                            const boost::property_tree::ptree& prm,           \
+                                                            const std::function<BV<N>()>& weightsCalculator); \
+template Dune::FlexibleSolver<OBM<N>, BV<N>>::FlexibleSolver(AbstractOperatorType& op,                        \
+                                                             const Comm& comm,                                \
+                                                             const boost::property_tree::ptree& prm,          \
+                                                             const std::function<BV<N>()>& weightsCalculator);
 
 #endif // HAVE_MPI
 
