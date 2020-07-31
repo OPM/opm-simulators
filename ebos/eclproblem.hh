@@ -1022,7 +1022,7 @@ public:
             fs::create_directory(output_dir);
         }
         std::ostringstream oss;
-        oss << "totalsat_" << this->simulator().episodeIndex() << "_time_";
+        oss << "totalsat_" << std::setw(4) << std::setfill('0') << this->simulator().episodeIndex() << "_time_";
         oss << std::setprecision(15) << std::setw(12) << std::setfill('0') << this->simulator().time() << "_";
         std::string output_file(oss.str());
         fs::path full_path = output_dir / output_file;
