@@ -503,41 +503,49 @@ namespace Opm {
                 PressureVectorType rhs(ebosResid.size(),0);
                 PressureHelper::moveToPressureEqn(ebosResid, rhs, weights);
                 boost::property_tree::ptree prm;
-                try{    
+                try{
                     boost::property_tree::read_json("pressuresolver.json", prm);
                 }catch(...){
                     OPM_THROW(std::logic_error,"Configuration file pressuresolver.json not pressent");
                 }
-                std::any parallelInformation;               
+                std::any parallelInformation;
                 extractParallelGridInformationToISTL(ebosSimulator_.vanguard().grid(), parallelInformation);
                 using AbstractOperatorType = Dune::AssembledLinearOperator<PressureMatrixType, PressureVectorType, PressureVectorType>;
+                using PressureSolverType = Dune::FlexibleSolver<PressureMatrixType, PressureVectorType>;
                 std::unique_ptr<AbstractOperatorType> operator_for_flexiblesolver;
+                std::function<PressureVectorType()> weightsCalculator;// dummy
+                std::unique_ptr<PressureSolverType> pressureSolver;
 #if HAVE_MPI
                 using Communication = Dune::OwnerOverlapCopyCommunication<int, int>;
+#else
+                using Communication = int; // Dummy type
+#endif
                 std::unique_ptr<Communication> comm;
-                if (parallelInformation.type() == typeid(ParallelISTLInformation)) {
+
+#if HAVE_MPI
+                if (ebosSimulator_.gridView().comm().size() > 1) {
+                    // Parallel case.
+                    assert(parallelInformation.type() == typeid(ParallelISTLInformation));
                     // Parallel case.
                     const ParallelISTLInformation* parinfo = std::any_cast<ParallelISTLInformation>(&parallelInformation);
                     assert(parinfo);
-                    comm.reset(new Communication(parinfo->communicator()));
-                }
-                using ParOperatorType = Dune::OverlappingSchwarzOperator<PressureMatrixType, PressureVectorType,
-                                                                          PressureVectorType, Communication>;
-                operator_for_flexiblesolver = std::make_unique<ParOperatorType>(pmatrix, *comm);
-#else
-                using Communication = Dune::Amg::SequentialInformation; // Dummy type
-                std::unique_ptr<Communication> comm;
-                using SeqLinearOperator = Dune::MatrixAdapter<PressureMatrixType, PressureVectorType, PressureVectorType>;
-                operator_for_flexiblesolver = std::make_unique<SeqLinearOperator>(pmatrix);
+                    comm = std::make_unique<Communication>(parinfo->communicator());
+                    using ParOperatorType = Dune::OverlappingSchwarzOperator<PressureMatrixType, PressureVectorType,
+                                                                             PressureVectorType, Communication>;
+                    operator_for_flexiblesolver = std::make_unique<ParOperatorType>(pmatrix, *comm);
+                    pressureSolver = std::make_unique<PressureSolverType>(*operator_for_flexiblesolver, *comm , prm, weightsCalculator);
+                } else
 #endif
+                {
+                    // Serial case.
+                    using SeqLinearOperator = Dune::MatrixAdapter<PressureMatrixType, PressureVectorType, PressureVectorType>;
+                    operator_for_flexiblesolver = std::make_unique<SeqLinearOperator>(pmatrix);
+                    pressureSolver = std::make_unique<PressureSolverType>(*operator_for_flexiblesolver, prm, weightsCalculator);
+                }
 
-
-                std::function<PressureVectorType()> weightsCalculator;// dummy
-                Dune::FlexibleSolver<PressureMatrixType,PressureVectorType> pressureSolver(*operator_for_flexiblesolver,
-                                                                                         *comm, prm, weightsCalculator);
                 PressureVectorType xp(x.size(),0);
                 Dune::InverseOperatorResult res;
-                pressureSolver.apply(xp,rhs, res);
+                pressureSolver->apply(xp,rhs, res);
                 Opm::Helper::writeSystem(this->ebosSimulator_, //simulator is only used to get names
                                                      pmatrix,
                                                      rhs,
