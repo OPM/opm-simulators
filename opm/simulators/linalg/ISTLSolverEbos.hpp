@@ -141,6 +141,15 @@ namespace Opm
             }
 #endif
             extractParallelGridInformationToISTL(simulator_.vanguard().grid(), parallelInformation_);
+
+            // For some reason simulator_.model().elementMapper() is not initialized at this stage
+            // Hence const auto& elemMapper = simulator_.model().elementMapper(); does not work.
+            // Set it up manually
+            using ElementMapper =
+                Dune::MultipleCodimMultipleGeomTypeMapper<GridView>;
+            ElementMapper elemMapper(simulator_.vanguard().grid().leafGridView(), Dune::mcmgElementLayout());
+            detail::findOverlapAndInterior(simulator_.vanguard().grid(), elemMapper, overlapRows_, interiorRows_);
+
             useWellConn_ = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
             const bool ownersFirst = EWOMS_GET_PARAM(TypeTag, bool, OwnerCellsFirst);
             if (!ownersFirst) {
@@ -194,6 +203,9 @@ namespace Opm
             }
             rhs_ = &b;
 
+            if (isParallel() && useWellConn_) {
+                makeOverlapRowsInvalid(getMatrix());
+            }
             prepareFlexibleSolver();
             firstcall = false;
         }
@@ -418,6 +430,27 @@ namespace Opm
         }
 
 
+        /// Zero out off-diagonal blocks on rows corresponding to overlap cells
+        /// Diagonal blocks on ovelap rows are set to diag(1.0).
+        void makeOverlapRowsInvalid(Matrix& matrix) const
+        {
+            //value to set on diagonal
+            const int numEq = Matrix::block_type::rows;
+            typename Matrix::block_type diag_block(0.0);
+            for (int eq = 0; eq < numEq; ++eq)
+                diag_block[eq][eq] = 1.0;
+
+            //loop over precalculated overlap rows and columns
+            for (auto row = overlapRows_.begin(); row != overlapRows_.end(); row++ )
+                {
+                    int lcell = *row;
+                    // Zero out row.
+                    matrix[lcell] = 0.0;
+
+                    //diagonal block set to diag(1.0).
+                    matrix[lcell][lcell] = diag_block;
+                }
+        }
 
 
         Matrix& getMatrix()
