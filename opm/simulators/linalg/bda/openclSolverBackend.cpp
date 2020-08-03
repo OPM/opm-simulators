@@ -549,13 +549,13 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
 
         prec->setKernels(ILU_apply1_k.get(), ILU_apply2_k.get());
 
-    } catch (cl::Error error) {
+    } catch (const cl::Error& error) {
         std::ostringstream oss;
         oss << "OpenCL Error: " << error.what() << "(" << error.err() << ")\n";
         oss << getErrorString(error.err());
         // rethrow exception
         OPM_THROW(std::logic_error, oss.str());
-    } catch (std::logic_error error) {
+    } catch (const std::logic_error& error) {
         // rethrow exception by OPM_THROW in the try{}, without this, a segfault occurs
         throw error;
     }
@@ -706,13 +706,13 @@ void openclSolverBackend<block_size>::solve_system(WellContributions& wellContri
     // actually solve
     try {
         gpu_pbicgstab(wellContribs, res);
-    } catch (cl::Error error) {
+    } catch (const cl::Error& error) {
         std::ostringstream oss;
         oss << "openclSolverBackend::solve_system error: " << error.what() << "(" << error.err() << ")\n";
         oss << getErrorString(error.err());
         // rethrow exception
         OPM_THROW(std::logic_error, oss.str());
-    } catch (std::logic_error error) {
+    } catch (const std::logic_error& error) {
         // rethrow exception by OPM_THROW in the try{}, without this, a segfault occurs
         throw error;
     }
