@@ -138,7 +138,9 @@ void WellContributions::addMatrix(MatrixType type, int *colIndices, double *valu
     }
 #if HAVE_CUDA
     addMatrixGpu(type, colIndices, values, val_size);
-#elif HAVE_OPENCL
+#endif
+
+#if HAVE_OPENCL
     switch (type) {
         case MatrixType::C:
             std::copy(colIndices, colIndices + val_size, d_Ccols_ocl + num_blocks_so_far);
@@ -162,9 +164,12 @@ void WellContributions::addMatrix(MatrixType type, int *colIndices, double *valu
         default:
             OPM_THROW(std::logic_error, "Error unsupported matrix ID for WellContributions::addMatrix()");
         }   
-#else
+#endif
+
+#if !HAVE_CUDA && !HAVE_OPENCL    
     OPM_THROW(std::logic_error, "Error cannot add StandardWell matrix on GPU because neither CUDA nor OpenCL were found by cmake");
 #endif
+
     if (MatrixType::B == type) {
         num_blocks_so_far += val_size;
         num_std_wells_so_far++;

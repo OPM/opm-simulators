@@ -131,7 +131,9 @@ public:
     /// \param[in] d_x        vector x, must be on GPU
     /// \param[inout] d_y     vector y, must be on GPU
     void apply(double *d_x, double *d_y);
-#elif HAVE_OPENCL
+#endif
+
+#if HAVE_OPENCL
     void getParams(unsigned int *num_blocks_, unsigned int *num_std_wells_, unsigned int *dim_, unsigned int *dim_wells_);
     void getData(double **valsC, double **valsD, double **valsB, int **colsC, int **colsB, unsigned int **val_pointers_);
 #endif
