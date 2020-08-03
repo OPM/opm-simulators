@@ -331,65 +331,10 @@ namespace Opm
 
         void prepareFlexibleSolver()
         {
-            // Decide if we should recreate the solver or just do
-            // a minimal preconditioner update.
-            const int newton_iteration = this->simulator_.model().newtonMethod().numIterations();
-            bool recreate_solver = false;
-            if (this->parameters_.cpr_reuse_setup_ == 0) {
-                // Always recreate solver.
-                recreate_solver = true;
-            } else if (this->parameters_.cpr_reuse_setup_ == 1) {
-                // Recreate solver on the first iteration of every timestep.
-                if (newton_iteration == 0) {
-                    recreate_solver = true;
-                }
-            } else if (this->parameters_.cpr_reuse_setup_ == 2) {
-                // Recreate solver if the last solve used more than 10 iterations.
-                if (this->iterations() > 10) {
-                    recreate_solver = true;
-                }
-            } else {
-                assert(this->parameters_.cpr_reuse_setup_ == 3);
-                assert(recreate_solver == false);
-                // Never recreate solver.
-            }
 
-            std::function<Vector()> weightsCalculator;
+            std::function<Vector()> weightsCalculator = getWeightsCalculator();
 
-            auto preconditionerType = prm_.get("preconditioner.type", "cpr");
-            if( preconditionerType  == "cpr" ||
-                preconditionerType == "cprt"
-                )
-            {
-                bool transpose = false;
-                if(preconditionerType == "cprt"){
-                    transpose = true;
-                }
-
-                auto weightsType = prm_.get("preconditioner.weight_type", "quasiimpes");
-                auto pressureIndex = this->prm_.get("preconditioner.pressure_var_index", 1);
-                if(weightsType == "quasiimpes") {
-                    // weighs will be created as default in the solver
-                    weightsCalculator =
-                        [this, transpose, pressureIndex](){
-                            return Opm::Amg::getQuasiImpesWeights<Matrix,
-                                                                  Vector>(getMatrix(),
-                                                                          pressureIndex,
-                                                                          transpose);
-                        };
-
-                }else if(weightsType == "trueimpes"  ){
-                    weightsCalculator =
-                        [this, pressureIndex](){
-                            return this->getTrueImpesWeights(pressureIndex);
-                        };
-                }else{
-                    OPM_THROW(std::invalid_argument, "Weights type " << weightsType << "not implemented for cpr."
-                              << " Please use quasiimpes or trueimpes.");
-                }
-            }
-
-            if (recreate_solver || !flexibleSolver_) {
+            if (shouldCreateSolver()) {
                 if (isParallel()) {
 #if HAVE_MPI
                     if (useWellConn_) {
@@ -413,6 +358,68 @@ namespace Opm
             {
                 flexibleSolver_->preconditioner().update();
             }
+        }
+
+
+        /// Return true if we should (re)create the whole solver,
+        /// instead of just calling update() on the preconditioner.
+        bool shouldCreateSolver() const
+        {
+            // Decide if we should recreate the solver or just do
+            // a minimal preconditioner update.
+            if (!flexibleSolver_) {
+                return true;
+            }
+            const int newton_iteration = this->simulator_.model().newtonMethod().numIterations();
+            bool recreate_solver = false;
+            if (this->parameters_.cpr_reuse_setup_ == 0) {
+                // Always recreate solver.
+                recreate_solver = true;
+            } else if (this->parameters_.cpr_reuse_setup_ == 1) {
+                // Recreate solver on the first iteration of every timestep.
+                if (newton_iteration == 0) {
+                    recreate_solver = true;
+                }
+            } else if (this->parameters_.cpr_reuse_setup_ == 2) {
+                // Recreate solver if the last solve used more than 10 iterations.
+                if (this->iterations() > 10) {
+                    recreate_solver = true;
+                }
+            } else {
+                assert(this->parameters_.cpr_reuse_setup_ == 3);
+                assert(recreate_solver == false);
+                // Never recreate solver.
+            }
+            return recreate_solver;
+        }
+
+
+        /// Return an appropriate weight function if a cpr preconditioner is asked for.
+        std::function<Vector()> getWeightsCalculator() const
+        {
+            std::function<Vector()> weightsCalculator;
+
+            auto preconditionerType = prm_.get("preconditioner.type", "cpr");
+            if (preconditionerType == "cpr" || preconditionerType == "cprt") {
+                const bool transpose = preconditionerType == "cprt";
+                const auto weightsType = prm_.get("preconditioner.weight_type", "quasiimpes");
+                const auto pressureIndex = this->prm_.get("preconditioner.pressure_var_index", 1);
+                if (weightsType == "quasiimpes") {
+                    // weighs will be created as default in the solver
+                    weightsCalculator = [this, transpose, pressureIndex]() {
+                        return Opm::Amg::getQuasiImpesWeights<Matrix, Vector>(this->getMatrix(), pressureIndex, transpose);
+                    };
+                } else if (weightsType == "trueimpes") {
+                    weightsCalculator = [this, pressureIndex]() {
+                        return this->getTrueImpesWeights(pressureIndex);
+                    };
+                } else {
+                    OPM_THROW(std::invalid_argument,
+                              "Weights type " << weightsType << "not implemented for cpr."
+                              << " Please use quasiimpes or trueimpes.");
+                }
+            }
+            return weightsCalculator;
         }
 
 
