@@ -99,9 +99,6 @@ private:
     double *d_Bnnzs_ocl = nullptr;
     int *d_Ccols_ocl = nullptr;
     int *d_Bcols_ocl = nullptr;
-
-    //double *h_valsC, *h_valsD, *h_valsB;
-    //int *h_colsC, *h_colsB;
 #endif
 
     double *h_x = nullptr, *h_y = nullptr;  // CUDA pinned memory for GPU memcpy

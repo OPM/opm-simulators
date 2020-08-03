@@ -47,13 +47,6 @@ void WellContributions::alloc()
         d_Ccols_ocl = new int[num_blocks];
         d_Bcols_ocl = new int[num_blocks];
         val_pointers = new unsigned int[num_std_wells + 1];
-
-        //d_Cnnzs_ocl = new double[num_blocks * dim * dim_wells];
-        //d_Dnnzs_ocl = new double[num_std_wells * dim_wells * dim_wells];
-        //d_Bnnzs_ocl = new double[num_blocks * dim * dim_wells];
-        //d_Ccols_ocl = new int[num_blocks];
-        //d_Bcols_ocl = new int[num_blocks];
-        //val_pointers = new unsigned int[num_std_wells + 1];
         
         allocated = true;
 #endif
@@ -89,13 +82,6 @@ WellContributions::~WellContributions()
         delete[] d_Ccols_ocl;
         delete[] d_Bcols_ocl; 
         delete[] val_pointers;
-        
-        //delete[] d_Cnnzs_ocl;
-        //delete[] d_Dnnzs_ocl;
-        //delete[] d_Bnnzs_ocl;
-        //delete[] d_Ccols_ocl;
-        //delete[] d_Bcols_ocl; 
-        //delete[] val_pointers;
 #endif
     }
 }
@@ -145,7 +131,7 @@ void WellContributions::getData(double **valsC, double **valsD, double **valsB, 
 
 #endif
 
-void WellContributions::addMatrix([[maybe_unused]] MatrixType type, [[maybe_unused]]int *colIndices, [[maybe_unused]] double *values, [[maybe_unused]] unsigned int val_size)
+void WellContributions::addMatrix(MatrixType type, int *colIndices, double *values, unsigned int val_size)
 {
     if (!allocated) {
         OPM_THROW(std::logic_error, "Error cannot add wellcontribution before allocating memory in WellContributions");
@@ -201,14 +187,14 @@ void WellContributions::addNumBlocks(unsigned int numBlocks)
     num_std_wells++;
 }
 
-void WellContributions::addMultisegmentWellContribution(unsigned int dim_, unsigned int dim_wells_,
+void WellContributions::addMultisegmentWellContribution(unsigned int dim, unsigned int dim_wells,
         unsigned int Nb, unsigned int Mb,
         unsigned int BnumBlocks, std::vector<double> &Bvalues, std::vector<unsigned int> &BcolIndices, std::vector<unsigned int> &BrowPointers,
         unsigned int DnumBlocks, double *Dvalues, int *DcolPointers, int *DrowIndices,
         std::vector<double> &Cvalues)
 {
-    this->N = Nb * dim_;
-    MultisegmentWellContribution *well = new MultisegmentWellContribution(dim, dim_wells_, Nb, Mb, BnumBlocks, Bvalues, BcolIndices, BrowPointers, DnumBlocks, Dvalues, DcolPointers, DrowIndices, Cvalues);
+    this->N = Nb * dim;
+    MultisegmentWellContribution *well = new MultisegmentWellContribution(dim, dim_wells, Nb, Mb, BnumBlocks, Bvalues, BcolIndices, BrowPointers, DnumBlocks, Dvalues, DcolPointers, DrowIndices, Cvalues);
     multisegments.emplace_back(well);
     ++num_ms_wells;
 }
