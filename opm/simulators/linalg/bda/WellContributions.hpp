@@ -73,7 +73,7 @@ private:
     unsigned int num_ms_wells = 0;           // number of MultisegmentWells in this object, must equal multisegments.size()
     unsigned int num_blocks_so_far = 0;      // keep track of where next data is written
     unsigned int num_std_wells_so_far = 0;   // keep track of where next data is written
-    unsigned int *val_pointers;              // val_pointers[wellID] == index of first block for this well in Ccols and Bcols
+    unsigned int *val_pointers = nullptr;    // val_pointers[wellID] == index of first block for this well in Ccols and Bcols
     unsigned int N;                          // number of rows (not blockrows) in vectors x and y
     bool allocated = false;
     std::vector<MultisegmentWellContribution*> multisegments;
@@ -91,9 +91,17 @@ private:
     double *d_z1 = nullptr;
     double *d_z2 = nullptr;
     unsigned int *d_val_pointers = nullptr;
-#elif HAVE_OPENCL
-    double *h_valsC, *h_valsD, *h_valsB;
-    int *h_colsC, *h_colsB;
+#endif
+
+#if HAVE_OPENCL
+    double *d_Cnnzs_ocl = nullptr;
+    double *d_Dnnzs_ocl = nullptr;
+    double *d_Bnnzs_ocl = nullptr;
+    int *d_Ccols_ocl = nullptr;
+    int *d_Bcols_ocl = nullptr;
+
+    //double *h_valsC, *h_valsD, *h_valsB;
+    //int *h_colsC, *h_colsB;
 #endif
 
     double *h_x = nullptr, *h_y = nullptr;  // CUDA pinned memory for GPU memcpy

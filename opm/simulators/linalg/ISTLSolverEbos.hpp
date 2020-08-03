@@ -461,7 +461,7 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
                 bool use_gpu = bdaBridge->getUseGpu();
                 if (use_gpu) {
                     WellContributions wellContribs;
-                    if (useWellConn_) {
+                    if (!useWellConn_) {
                         simulator_.problem().wellModel().getWellContributions(wellContribs);
                     }
                     // Const_cast needed since the CUDA stuff overwrites values for better matrix condition..

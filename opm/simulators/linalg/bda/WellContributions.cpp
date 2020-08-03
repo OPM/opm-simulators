@@ -38,16 +38,27 @@ void WellContributions::alloc()
     if (num_std_wells > 0) {
 #if HAVE_CUDA
         allocStandardWells();
-#elif HAVE_OPENCL
-        h_valsC = new double[num_blocks * dim * dim_wells];
-        h_valsD = new double[num_std_wells * dim_wells * dim_wells];
-        h_valsB = new double[num_blocks * dim * dim_wells];
-        h_colsC = new int[num_blocks];
-        h_colsB = new int[num_blocks];
+#endif
+
+#if HAVE_OPENCL
+        d_Cnnzs_ocl = new double[num_blocks * dim * dim_wells];
+        d_Dnnzs_ocl = new double[num_std_wells * dim_wells * dim_wells];
+        d_Bnnzs_ocl = new double[num_blocks * dim * dim_wells];
+        d_Ccols_ocl = new int[num_blocks];
+        d_Bcols_ocl = new int[num_blocks];
         val_pointers = new unsigned int[num_std_wells + 1];
+
+        //d_Cnnzs_ocl = new double[num_blocks * dim * dim_wells];
+        //d_Dnnzs_ocl = new double[num_std_wells * dim_wells * dim_wells];
+        //d_Bnnzs_ocl = new double[num_blocks * dim * dim_wells];
+        //d_Ccols_ocl = new int[num_blocks];
+        //d_Bcols_ocl = new int[num_blocks];
+        //val_pointers = new unsigned int[num_std_wells + 1];
         
         allocated = true;
-#else
+#endif
+
+#if !HAVE_CUDA && !HAVE_OPENCL
         OPM_THROW(std::logic_error, "Error cannot allocate on GPU because neither CUDA nor OpenCL were found by cmake");
 #endif
     }
@@ -69,13 +80,22 @@ WellContributions::~WellContributions()
     if(num_std_wells > 0){
 #if HAVE_CUDA
         freeStandardWells();
-#elif HAVE_OPENCL
-        delete[] h_valsC;
-        delete[] h_valsD;
-        delete[] h_valsB;
-        delete[] h_colsC;
-        delete[] h_colsB; 
+#endif
+
+#if HAVE_OPENCL
+        delete[] d_Cnnzs_ocl;
+        delete[] d_Dnnzs_ocl;
+        delete[] d_Bnnzs_ocl;
+        delete[] d_Ccols_ocl;
+        delete[] d_Bcols_ocl; 
         delete[] val_pointers;
+        
+        //delete[] d_Cnnzs_ocl;
+        //delete[] d_Dnnzs_ocl;
+        //delete[] d_Bnnzs_ocl;
+        //delete[] d_Ccols_ocl;
+        //delete[] d_Bcols_ocl; 
+        //delete[] val_pointers;
 #endif
     }
 }
@@ -115,11 +135,11 @@ void WellContributions::getParams(unsigned int *num_blocks_, unsigned int *num_s
 }
 
 void WellContributions::getData(double **valsC, double **valsD, double **valsB, int **colsC, int **colsB, unsigned int **val_pointers_){
-    std::copy(h_valsC, h_valsC + num_blocks*dim*dim_wells, *valsC);
-    std::copy(h_valsD, h_valsD + num_std_wells*dim_wells*dim_wells, *valsD);
-    std::copy(h_valsB, h_valsB + num_blocks*dim*dim_wells, *valsB);
-    std::copy(h_colsC, h_colsC + num_blocks, *colsC);
-    std::copy(h_colsB, h_colsB + num_blocks, *colsB);
+    std::copy(d_Cnnzs_ocl, d_Cnnzs_ocl + num_blocks*dim*dim_wells, *valsC);
+    std::copy(d_Dnnzs_ocl, d_Dnnzs_ocl + num_std_wells*dim_wells*dim_wells, *valsD);
+    std::copy(d_Bnnzs_ocl, d_Bnnzs_ocl + num_blocks*dim*dim_wells, *valsB);
+    std::copy(d_Ccols_ocl, d_Ccols_ocl + num_blocks, *colsC);
+    std::copy(d_Bcols_ocl, d_Bcols_ocl + num_blocks, *colsB);
     std::copy(val_pointers, val_pointers + num_std_wells + 1, *val_pointers_);
 }
 
@@ -135,17 +155,17 @@ void WellContributions::addMatrix(MatrixType type, int *colIndices, double *valu
 #elif HAVE_OPENCL
     switch (type) {
         case MatrixType::C:
-            std::copy(colIndices, colIndices + val_size, h_colsC + num_blocks_so_far);
-            std::copy(values, values + val_size*dim*dim_wells, h_valsC + num_blocks_so_far*dim*dim_wells);
+            std::copy(colIndices, colIndices + val_size, d_Ccols_ocl + num_blocks_so_far);
+            std::copy(values, values + val_size*dim*dim_wells, d_Cnnzs_ocl + num_blocks_so_far*dim*dim_wells);
             break;
 
         case MatrixType::D:
-            std::copy(values, values + dim_wells*dim_wells, h_valsD + num_std_wells_so_far*dim_wells*dim_wells);
+            std::copy(values, values + dim_wells*dim_wells, d_Dnnzs_ocl + num_std_wells_so_far*dim_wells*dim_wells);
             break;
 
         case MatrixType::B:
-            std::copy(colIndices, colIndices + val_size, h_colsB + num_blocks_so_far);
-            std::copy(values, values + val_size*dim*dim_wells, h_valsB + num_blocks_so_far*dim*dim_wells);
+            std::copy(colIndices, colIndices + val_size, d_Bcols_ocl + num_blocks_so_far);
+            std::copy(values, values + val_size*dim*dim_wells, d_Bnnzs_ocl + num_blocks_so_far*dim*dim_wells);
             val_pointers[num_std_wells_so_far] = num_blocks_so_far;
 
             if(num_std_wells_so_far == num_std_wells - 1){
