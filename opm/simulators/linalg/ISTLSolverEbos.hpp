@@ -203,7 +203,7 @@ namespace Opm
             }
             rhs_ = &b;
 
-            if (isParallel() && useWellConn_) {
+            if (isParallel()) {
                 makeOverlapRowsInvalid(getMatrix());
             }
             prepareFlexibleSolver();
