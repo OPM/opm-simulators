@@ -140,7 +140,7 @@ void WellContributions::allocStandardWells()
     }
 }
 
-void WellContributions::freeStandardWells() {
+void WellContributions::freeCudaMemory() {
     // delete data for StandardWell
     if (num_std_wells > 0) {
         cudaFree(d_Cnnzs);
@@ -150,6 +150,12 @@ void WellContributions::freeStandardWells() {
         cudaFree(d_Bcols);
         delete[] val_pointers;
         cudaFree(d_val_pointers);
+    }
+
+    if (num_ms_wells > 0 && h_x) {
+        cudaFreeHost(h_x);
+	cudaFreeHost(h_y);
+	h_x = h_y = nullptr; // Mark as free for constructor
     }
 }
 
@@ -168,7 +174,6 @@ void WellContributions::apply(double *d_x, double *d_y)
         if (h_x == nullptr) {
             cudaMallocHost(&h_x, sizeof(double) * N);
             cudaMallocHost(&h_y, sizeof(double) * N);
-            host_mem_cuda = true;
         }
 
         // copy vectors x and y from GPU to CPU
