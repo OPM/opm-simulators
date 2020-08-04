@@ -221,8 +221,16 @@ public:
         // Only output RESTART_AUXILIARY asked for by the user.
         const Opm::RestartConfig& restartConfig = simulator_.vanguard().schedule().restart();
         std::map<std::string, int> rstKeywords = restartConfig.getRestartKeywords(reportStepNum);
-        for (auto& keyValue: rstKeywords) {
-            keyValue.second = restartConfig.getKeyword(keyValue.first, reportStepNum);
+        for (auto& [keyword, should_write] : rstKeywords) {
+            if (this->isOutputCreationDirective_(keyword)) {
+                // 'BASIC', 'FREQ' and similar.  Don't attempt to create
+                // cell-based output for these keywords and don't warn about
+                // not being able to create such cell-based result vectors.
+                should_write = 0;
+            }
+            else {
+                should_write = restartConfig.getKeyword(keyword, reportStepNum);
+            }
         }
 
         outputFipRestart_ = false;
@@ -300,11 +308,24 @@ public:
         }
         // and oil pressure
         oilPressure_.resize(bufferSize, 0.0);
+        rstKeywords["PRES"] = 0;
+        rstKeywords["PRESSURE"] = 0;
 
-        if (FluidSystem::enableDissolvedGas())
+        if (FluidSystem::phaseIsActive(oilPhaseIdx))
+            rstKeywords["SOIL"] = 0;
+        if (FluidSystem::phaseIsActive(gasPhaseIdx))
+            rstKeywords["SGAS"] = 0;
+        if (FluidSystem::phaseIsActive(waterPhaseIdx))
+            rstKeywords["SWAT"] = 0;
+
+        if (FluidSystem::enableDissolvedGas()) {
             rs_.resize(bufferSize, 0.0);
-        if (FluidSystem::enableVaporizedOil())
+            rstKeywords["RS"] = 0;
+        }
+        if (FluidSystem::enableVaporizedOil()) {
             rv_.resize(bufferSize, 0.0);
+            rstKeywords["RV"] = 0;
+        }
 
         if (GET_PROP_VALUE(TypeTag, EnableSolvent))
             sSol_.resize(bufferSize, 0.0);
@@ -325,8 +346,10 @@ public:
             krnSwMdcGo_.resize(bufferSize, 0.0);
         }
 
-        if (simulator_.vanguard().eclState().fieldProps().has_double("SWATINIT"))
+        if (simulator_.vanguard().eclState().fieldProps().has_double("SWATINIT")) {
             ppcw_.resize(bufferSize, 0.0);
+            rstKeywords["PPCW"] = 0;
+        }
 
         if (FluidSystem::enableDissolvedGas() && rstKeywords["RSSAT"] > 0) {
             rstKeywords["RSSAT"] = 0;
@@ -2092,6 +2115,13 @@ private:
                 case WellCumDataType::FluidResVolInj: return "FRVI";
         }
         return "ERROR";
+    }
+
+    bool isOutputCreationDirective_(const std::string& keyword) const
+    {
+        return (keyword == "BASIC") || (keyword == "FREQ")
+            || (keyword == "RESTART")                        // From RPTSCHED
+            || (keyword == "SAVE")  || (keyword == "SFREQ"); // Not really supported
     }
 
     const Simulator& simulator_;

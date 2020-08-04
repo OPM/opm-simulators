@@ -102,7 +102,6 @@ private:
 #endif
 
     double *h_x = nullptr, *h_y = nullptr;  // CUDA pinned memory for GPU memcpy
-    bool host_mem_cuda = false;             // true iff h_x and h_y are allocated by cudaMallocHost(), so they need to be freed using cudaFreeHost()
 
     int *toOrder = nullptr;
     bool reorder = false;
@@ -117,8 +116,8 @@ private:
     /// Allocate GPU memory for StandardWells
     void allocStandardWells();
 
-    /// Free GPU memory from StandardWells
-    void freeStandardWells();
+    /// Free GPU memory allocated with cuda.
+    void freeCudaMemory();
 
 public:
 #if HAVE_CUDA
