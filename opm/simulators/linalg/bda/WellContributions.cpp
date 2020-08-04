@@ -74,7 +74,7 @@ WellContributions::~WellContributions()
     multisegments.clear();
 
 #if HAVE_CUDA
-    freeStandardWells();
+    freeCudaMemory();
 #endif
 
 #if HAVE_OPENCL
