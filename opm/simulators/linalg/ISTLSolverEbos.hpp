@@ -349,9 +349,16 @@ namespace Opm
                     }
 #endif
                 } else {
-                    using SeqLinearOperator = Dune::MatrixAdapter<Matrix, Vector, Vector>;
-                    linearOperatorForFlexibleSolver_ = std::make_unique<SeqLinearOperator>(getMatrix());
-                    flexibleSolver_ = std::make_unique<FlexibleSolverType>(*linearOperatorForFlexibleSolver_, prm_, weightsCalculator);
+                    if (useWellConn_) {
+                        using SeqOperatorType = Dune::MatrixAdapter<Matrix, Vector, Vector>;
+                        linearOperatorForFlexibleSolver_ = std::make_unique<SeqOperatorType>(getMatrix());
+                        flexibleSolver_ = std::make_unique<FlexibleSolverType>(*linearOperatorForFlexibleSolver_, prm_, weightsCalculator);
+                    } else {
+                        using SeqOperatorType = WellModelMatrixAdapter<Matrix, Vector, Vector, false>;
+                        wellOperator_ = std::make_unique<WellModelOperator>(simulator_.problem().wellModel());
+                        linearOperatorForFlexibleSolver_ = std::make_unique<SeqOperatorType>(getMatrix(), *wellOperator_);
+                        flexibleSolver_ = std::make_unique<FlexibleSolverType>(*linearOperatorForFlexibleSolver_, prm_, weightsCalculator);
+                    }
                 }
             }
             else
