@@ -32,23 +32,35 @@
 namespace Opm
 {
 
+WellContributions::WellContributions(std::string gpu_mode){
+    if(gpu_mode.compare("cusparse") == 0){
+        cuda_gpu = true;
+    }
+
+    if(gpu_mode.compare("opencl") == 0){
+        opencl_gpu = true;
+    }
+}
 
 void WellContributions::alloc()
 {
     if (num_std_wells > 0) {
 #if HAVE_CUDA
-        allocStandardWells();
+        if(cuda_gpu){ 
+            allocStandardWells();
+        }
 #endif
 
 #if HAVE_OPENCL
-        d_Cnnzs_ocl = new double[num_blocks * dim * dim_wells];
-        d_Dnnzs_ocl = new double[num_std_wells * dim_wells * dim_wells];
-        d_Bnnzs_ocl = new double[num_blocks * dim * dim_wells];
-        d_Ccols_ocl = new int[num_blocks];
-        d_Bcols_ocl = new int[num_blocks];
-        val_pointers = new unsigned int[num_std_wells + 1];
-        
-        allocated = true;
+        if(opencl_gpu){
+            d_Cnnzs_ocl = new double[num_blocks * dim * dim_wells];
+            d_Dnnzs_ocl = new double[num_std_wells * dim_wells * dim_wells];
+            d_Bnnzs_ocl = new double[num_blocks * dim * dim_wells];
+            d_Ccols_ocl = new int[num_blocks];
+            d_Bcols_ocl = new int[num_blocks];
+            val_pointers = new unsigned int[num_std_wells + 1];
+            allocated = true;
+        }
 #endif
 
 #if !HAVE_CUDA && !HAVE_OPENCL
@@ -59,9 +71,6 @@ void WellContributions::alloc()
 
 WellContributions::~WellContributions()
 {
-#if HAVE_CUDA
-    freeCudaMemory();
-#endif
     if (h_x) {
         delete[] h_x;
         delete[] h_y;
@@ -74,21 +83,24 @@ WellContributions::~WellContributions()
     multisegments.clear();
 
 #if HAVE_CUDA
-    freeCudaMemory();
+    if(cuda_gpu){
+        freeCudaMemory();
+    }
 #endif
 
 #if HAVE_OPENCL
-    if(num_std_wells > 0){
-        delete[] d_Cnnzs_ocl;
-        delete[] d_Dnnzs_ocl;
-        delete[] d_Bnnzs_ocl;
-        delete[] d_Ccols_ocl;
-        delete[] d_Bcols_ocl; 
-        delete[] val_pointers;
+    if(opencl_gpu){
+        if(num_std_wells > 0){
+            delete[] d_Cnnzs_ocl;
+            delete[] d_Dnnzs_ocl;
+            delete[] d_Bnnzs_ocl;
+            delete[] d_Ccols_ocl;
+            delete[] d_Bcols_ocl; 
+            delete[] val_pointers;
+        }
     }
 #endif
 }
-
 
 #if HAVE_OPENCL
 /*
@@ -140,33 +152,37 @@ void WellContributions::addMatrix(MatrixType type, int *colIndices, double *valu
         OPM_THROW(std::logic_error, "Error cannot add wellcontribution before allocating memory in WellContributions");
     }
 #if HAVE_CUDA
-    addMatrixGpu(type, colIndices, values, val_size);
+    if(cuda_gpu){
+        addMatrixGpu(type, colIndices, values, val_size);
+    }
 #endif
 
 #if HAVE_OPENCL
-    switch (type) {
-        case MatrixType::C:
-            std::copy(colIndices, colIndices + val_size, d_Ccols_ocl + num_blocks_so_far);
-            std::copy(values, values + val_size*dim*dim_wells, d_Cnnzs_ocl + num_blocks_so_far*dim*dim_wells);
-            break;
+    if(opencl_gpu){
+        switch (type) {
+            case MatrixType::C:
+                std::copy(colIndices, colIndices + val_size, d_Ccols_ocl + num_blocks_so_far);
+                std::copy(values, values + val_size*dim*dim_wells, d_Cnnzs_ocl + num_blocks_so_far*dim*dim_wells);
+                break;
 
-        case MatrixType::D:
-            std::copy(values, values + dim_wells*dim_wells, d_Dnnzs_ocl + num_std_wells_so_far*dim_wells*dim_wells);
-            break;
+            case MatrixType::D:
+                std::copy(values, values + dim_wells*dim_wells, d_Dnnzs_ocl + num_std_wells_so_far*dim_wells*dim_wells);
+                break;
 
-        case MatrixType::B:
-            std::copy(colIndices, colIndices + val_size, d_Bcols_ocl + num_blocks_so_far);
-            std::copy(values, values + val_size*dim*dim_wells, d_Bnnzs_ocl + num_blocks_so_far*dim*dim_wells);
-            val_pointers[num_std_wells_so_far] = num_blocks_so_far;
+            case MatrixType::B:
+                std::copy(colIndices, colIndices + val_size, d_Bcols_ocl + num_blocks_so_far);
+                std::copy(values, values + val_size*dim*dim_wells, d_Bnnzs_ocl + num_blocks_so_far*dim*dim_wells);
+                val_pointers[num_std_wells_so_far] = num_blocks_so_far;
 
-            if(num_std_wells_so_far == num_std_wells - 1){
-                val_pointers[num_std_wells] = num_blocks;
-            }
-            break;
+                if(num_std_wells_so_far == num_std_wells - 1){
+                    val_pointers[num_std_wells] = num_blocks;
+                }
+                break;
 
-        default:
-            OPM_THROW(std::logic_error, "Error unsupported matrix ID for WellContributions::addMatrix()");
+            default:
+                OPM_THROW(std::logic_error, "Error unsupported matrix ID for WellContributions::addMatrix()");
         }   
+    }
 #endif
 
 #if !HAVE_CUDA && !HAVE_OPENCL    

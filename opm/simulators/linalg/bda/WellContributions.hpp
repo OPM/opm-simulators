@@ -78,6 +78,9 @@ private:
     bool allocated = false;
     std::vector<MultisegmentWellContribution*> multisegments;
 
+    bool opencl_gpu = false;
+    bool cuda_gpu = false;
+
 #if HAVE_CUDA
     cudaStream_t stream;
     
@@ -138,7 +141,7 @@ public:
 #endif
 
     /// Create a new WellContributions, implementation is empty
-    WellContributions() {};
+    WellContributions(std::string gpu_mode);
 
     /// Destroy a WellContributions, and free memory
     ~WellContributions();
