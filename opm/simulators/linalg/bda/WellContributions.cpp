@@ -43,6 +43,9 @@ void WellContributions::alloc()
 
 WellContributions::~WellContributions()
 {
+#if HAVE_CUDA
+    freeCudaMemory();
+#endif
     if (h_x) {
         delete[] h_x;
         delete[] h_y;
@@ -53,10 +56,6 @@ WellContributions::~WellContributions()
         delete ms;
     }
     multisegments.clear();
-
-#if HAVE_CUDA
-    freeStandardWells();
-#endif
 }
 
 
