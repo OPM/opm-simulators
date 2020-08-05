@@ -323,7 +323,7 @@ public:
                                                             pvtRegionIdx,
                                                             SoMax);
                 auto priVarsCopy = priVars;
-                priVarsCopy[Indices::compositionSwitchIdx] = Opm::min(Toolbox::value(RvMax),priVarsCopy[Indices::compositionSwitchIdx]);
+                priVarsCopy[Indices::compositionSwitchIdx] = Opm::min(Toolbox::value(RvSat),priVarsCopy[Indices::compositionSwitchIdx]);
                 const auto& Rv = priVarsCopy.makeEvaluation(Indices::compositionSwitchIdx, timeIdx, linearizationType);
                 fluidState_.setRv(Rv);
             }else{    
