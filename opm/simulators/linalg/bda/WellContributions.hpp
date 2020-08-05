@@ -136,6 +136,7 @@ public:
 #endif
 
 #if HAVE_OPENCL
+    void applyMSW(cl::CommandQueue *queue, cl::Buffer& d_x, cl::Buffer& d_y);
     void getParams(unsigned int *num_blocks_, unsigned int *num_std_wells_, unsigned int *dim_, unsigned int *dim_wells_);
     void getData(double **valsC, double **valsD, double **valsB, int **colsC, int **colsB, unsigned int **val_pointers_);
 #endif
@@ -187,12 +188,17 @@ public:
                                          unsigned int DnumBlocks, double *Dvalues, int *DcolPointers, int *DrowIndices,
                                          std::vector<double> &Cvalues);
 
-    /// Return the number of wells added to this object
-    /// \return the number of wells added to this object
-    unsigned int getNumWells() {
-        return num_std_wells + num_ms_wells;
+    /// Return the number of standard wells added to this object
+    /// \return the number of standard wells added to this object
+    unsigned int getNumStdWells() {
+        return num_std_wells;
     }
 
+    /// Return the number of standard wells added to this object
+    /// \return the number of standard wells added to this object
+    unsigned int getNumMSWells() {
+        return num_ms_wells;
+    }
 
     /// If the rows of the matrix are reordered, the columnindices of the matrixdata are incorrect
     /// Those indices need to be mapped via toOrder

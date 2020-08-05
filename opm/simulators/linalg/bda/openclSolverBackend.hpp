@@ -66,10 +66,10 @@ private:
 
     unsigned int num_blocks, dim_, dim_wells, num_std_wells;
     unsigned int *h_val_pointers;
-    int *h_colsC, *h_colsB;
-    double *h_valsC, *h_valsD, *h_valsB;
-    cl::Buffer d_valsC, d_valsD, d_valsB;
-    cl::Buffer d_colsC, d_colsB, d_val_pointers;
+    int *h_Ccols, *h_Bcols;
+    double *h_Cnnzs, *h_Dnnzs, *h_Bnnzs;
+    cl::Buffer d_Cnnzs, d_Dnnzs, d_Bnnzs;
+    cl::Buffer d_Ccols, d_Bcols, d_val_pointers;
 
     // shared pointers are also passed to other objects
     std::shared_ptr<cl::Context> context;

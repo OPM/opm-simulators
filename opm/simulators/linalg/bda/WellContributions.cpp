@@ -103,8 +103,8 @@ WellContributions::~WellContributions()
 }
 
 #if HAVE_OPENCL
-/*
-void WellContributions::apply(cl::Buffer& d_x, cl::Buffer& d_y) {
+
+void WellContributions::applyMSW(cl::CommandQueue *queue, cl::Buffer& d_x, cl::Buffer& d_y) {
     // apply MultisegmentWells
     if (num_ms_wells > 0) {
         // allocate pinned memory on host if not yet done
@@ -126,7 +126,6 @@ void WellContributions::apply(cl::Buffer& d_x, cl::Buffer& d_y) {
         queue->enqueueWriteBuffer(d_y, CL_TRUE, 0, sizeof(double) * N, h_y);
     }
 }
-*/
 
 void WellContributions::getParams(unsigned int *num_blocks_, unsigned int *num_std_wells_, unsigned int *dim_, unsigned int *dim_wells_){
     *num_blocks_ = num_blocks;
