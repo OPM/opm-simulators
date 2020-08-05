@@ -315,7 +315,7 @@ public:
                 fluidState_.setRv(0.0);
         }
         else if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_pg_Rv) {
-            const auto& Rv = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx, linearizationType);
+            
             if(linearizationType.type == Opm::LinearizationType::pressure){
                 const auto& RvSat =
                     FluidSystem::saturatedDissolutionFactor(fluidState_,
@@ -326,7 +326,8 @@ public:
                 priVarsCopy[Indices::compositionSwitchIdx] = Opm::min(Toolbox::value(RvSat),priVarsCopy[Indices::compositionSwitchIdx]);
                 const auto& Rv = priVarsCopy.makeEvaluation(Indices::compositionSwitchIdx, timeIdx, linearizationType);
                 fluidState_.setRv(Rv);
-            }else{    
+            }else{
+                const auto& Rv = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx, linearizationType);
                 fluidState_.setRv(Rv);
             }
 
