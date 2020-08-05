@@ -140,7 +140,7 @@ public:
     void getData(double **valsC, double **valsD, double **valsB, int **colsC, int **colsB, unsigned int **val_pointers_);
 #endif
 
-    /// Create a new WellContributions, implementation is empty
+    /// Create a new WellContributions
     WellContributions(std::string gpu_mode);
 
     /// Destroy a WellContributions, and free memory
