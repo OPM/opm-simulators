@@ -283,11 +283,22 @@ public:
         else if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_po_Rs) {
             // if the switching variable is the mole fraction of the gas component in the
             Scalar RsMax = elemCtx.problem().maxGasDissolutionFactor(timeIdx, globalSpaceIdx);
-
-            // oil phase, we can directly set the composition of the oil phase
-            const auto& Rs = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx, linearizationType);
-            fluidState_.setRs(Opm::min(RsMax, Rs));
-
+            if(linearizationType.type == Opm::LinearizationType::pressure){
+                const Evaluation& RsSat =
+                    FluidSystem::saturatedDissolutionFactor(fluidState_,
+                                                            oilPhaseIdx,
+                                                            pvtRegionIdx,
+                                                            SoMax);
+                RsMax = Opm::min(RsMax,Toolbox::value(RsSat));
+                auto priVarsCopy = priVars;
+                priVarsCopy[Indices::compositionSwitchIdx] = Opm::min(RsMax,priVarsCopy[Indices::compositionSwitchIdx]);
+                const auto& Rs = priVarsCopy.makeEvaluation(Indices::compositionSwitchIdx, timeIdx, linearizationType);                
+                fluidState_.setRs(Rs);
+            }else{
+                // oil phase, we can directly set the composition of the oil phase
+                const auto& Rs = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx, linearizationType);
+                fluidState_.setRs(Opm::min(RsMax, Rs));
+            }    
             if (FluidSystem::enableVaporizedOil()) {
                 // the gas phase is not present, but we need to compute its "composition"
                 // for the gravity correction anyway
@@ -305,7 +316,19 @@ public:
         }
         else if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_pg_Rv) {
             const auto& Rv = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx, linearizationType);
-            fluidState_.setRv(Rv);
+            if(linearizationType.type == Opm::LinearizationType::pressure){
+                const auto& RvSat =
+                    FluidSystem::saturatedDissolutionFactor(fluidState_,
+                                                            gasPhaseIdx,
+                                                            pvtRegionIdx,
+                                                            SoMax);
+                auto priVarsCopy = priVars;
+                priVarsCopy[Indices::compositionSwitchIdx] = Opm::min(Toolbox::value(RvMax),priVarsCopy[Indices::compositionSwitchIdx]);
+                const auto& Rv = priVarsCopy.makeEvaluation(Indices::compositionSwitchIdx, timeIdx, linearizationType);
+                fluidState_.setRv(Rv);
+            }else{    
+                fluidState_.setRv(Rv);
+            }
 
             if (FluidSystem::enableDissolvedGas()) {
                 // the oil phase is not present, but we need to compute its "composition" for
