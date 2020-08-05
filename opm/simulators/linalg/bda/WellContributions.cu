@@ -152,8 +152,8 @@ void WellContributions::freeCudaMemory() {
 
     if (num_ms_wells > 0 && h_x) {
         cudaFreeHost(h_x);
-	cudaFreeHost(h_y);
-	h_x = h_y = nullptr; // Mark as free for constructor
+	    cudaFreeHost(h_y);
+	    h_x = h_y = nullptr; // Mark as free for constructor
     }
 }
 

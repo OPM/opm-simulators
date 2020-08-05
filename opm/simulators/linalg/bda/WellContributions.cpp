@@ -71,6 +71,12 @@ void WellContributions::alloc()
 
 WellContributions::~WellContributions()
 {
+#if HAVE_CUDA
+    if(cuda_gpu){
+        freeCudaMemory(); // should come before 'delete[] h_x' 
+    }
+#endif
+    
     if (h_x) {
         delete[] h_x;
         delete[] h_y;
@@ -81,12 +87,6 @@ WellContributions::~WellContributions()
         delete ms;
     }
     multisegments.clear();
-
-#if HAVE_CUDA
-    if(cuda_gpu){
-        freeCudaMemory();
-    }
-#endif
 
 #if HAVE_OPENCL
     if(opencl_gpu){
@@ -146,7 +146,7 @@ void WellContributions::getData(double **valsC, double **valsD, double **valsB, 
 
 #endif
 
-void WellContributions::addMatrix(MatrixType type, int *colIndices, double *values, unsigned int val_size)
+void WellContributions::addMatrix([[maybe_unused]] MatrixType type, [[maybe_unused]] int *colIndices, [[maybe_unused]] double *values, [[maybe_unused]] unsigned int val_size)
 {
     if (!allocated) {
         OPM_THROW(std::logic_error, "Error cannot add wellcontribution before allocating memory in WellContributions");
