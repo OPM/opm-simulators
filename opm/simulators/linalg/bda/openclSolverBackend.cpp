@@ -220,7 +220,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
     event.wait();
 
     wellContribs.setReordering(toOrder, true);
-    wellContribs.getData(&h_Cnnzs, &h_Dnnzs, &h_Bnnzs, &h_Ccols, &h_Bcols, &h_val_pointers);
+    std::tie(h_Cnnzs, h_Dnnzs, h_Bnnzs, h_Ccols, h_Bcols, h_val_pointers) = wellContribs.getMatrixData();
 
     queue->enqueueWriteBuffer(d_Cnnzs, CL_TRUE, 0, sizeof(double) * num_blocks * dim_ * dim_wells, h_Cnnzs);
     queue->enqueueWriteBuffer(d_Dnnzs, CL_TRUE, 0, sizeof(double) * num_std_wells * dim_wells * dim_wells, h_Dnnzs);
@@ -267,11 +267,13 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
             t_well.stop();
         }
 
+        /*
         if (wellContribs.getNumMSWells() > 0) {
             t_well.start();
             wellContribs.applyMSW(queue.get(), d_pw, d_v);
             t_well.stop();
         }
+        */
 
         t_rest.start();
         tmp1 = dot_w(d_rw, d_v, d_tmp);
@@ -304,11 +306,13 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
             t_well.stop();
         }
         
+        /*
         if (wellContribs.getNumMSWells() > 0) {
             t_well.start();
             wellContribs.applyMSW(queue.get(), d_s, d_t);
             t_well.stop();
         }
+        */
 
         t_rest.start();
         tmp1 = dot_w(d_t, d_r, d_tmp);

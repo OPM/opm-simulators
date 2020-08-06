@@ -134,13 +134,8 @@ void WellContributions::getParams(unsigned int *num_blocks_, unsigned int *num_s
     *dim_wells_ = dim_wells;
 }
 
-void WellContributions::getData(double **valsC, double **valsD, double **valsB, int **colsC, int **colsB, unsigned int **val_pointers_){
-    std::copy(d_Cnnzs_ocl, d_Cnnzs_ocl + num_blocks*dim*dim_wells, *valsC);
-    std::copy(d_Dnnzs_ocl, d_Dnnzs_ocl + num_std_wells*dim_wells*dim_wells, *valsD);
-    std::copy(d_Bnnzs_ocl, d_Bnnzs_ocl + num_blocks*dim*dim_wells, *valsB);
-    std::copy(d_Ccols_ocl, d_Ccols_ocl + num_blocks, *colsC);
-    std::copy(d_Bcols_ocl, d_Bcols_ocl + num_blocks, *colsB);
-    std::copy(val_pointers, val_pointers + num_std_wells + 1, *val_pointers_);
+std::tuple<double*, double*, double*, int*, int*, unsigned int*> WellContributions::getMatrixData(){
+    return std::make_tuple(d_Cnnzs_ocl, d_Dnnzs_ocl, d_Bnnzs_ocl, d_Ccols_ocl, d_Bcols_ocl, val_pointers);
 }
 
 #endif

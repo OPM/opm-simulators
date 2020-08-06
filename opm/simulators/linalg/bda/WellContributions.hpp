@@ -138,7 +138,7 @@ public:
 #if HAVE_OPENCL
     void applyMSW(cl::CommandQueue *queue, cl::Buffer& d_x, cl::Buffer& d_y);
     void getParams(unsigned int *num_blocks_, unsigned int *num_std_wells_, unsigned int *dim_, unsigned int *dim_wells_);
-    void getData(double **valsC, double **valsD, double **valsB, int **colsC, int **colsB, unsigned int **val_pointers_);
+    std::tuple<double*, double*, double*, int*, int*, unsigned int*> getMatrixData();
 #endif
 
     /// Create a new WellContributions
