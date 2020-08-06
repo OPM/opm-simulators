@@ -282,7 +282,7 @@ public:
             return isothermalMu;
 
         // compute the viscosity deviation due to temperature
-        const auto& muOilvisct = oilvisctCurves_[regionIdx].eval(temperature);
+        const auto& muOilvisct = oilvisctCurves_[regionIdx].eval(temperature, true);
         return muOilvisct/viscRef_[regionIdx]*isothermalMu;
     }
 
