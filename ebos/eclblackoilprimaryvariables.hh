@@ -378,6 +378,9 @@ public:
         }else{
             assert(false);
         }
+        totalsaturation = std::max(0.1,totalsaturation);
+        totalsaturation = std::min(totalsaturation,5.0);
+        
         if(linearizationType.type == LinearizationType::seqtransport){
             (*this)[Indices::pressureSwitchIdx] = totalsaturation;
             this->simulationType_ = SimulationType::Seq;

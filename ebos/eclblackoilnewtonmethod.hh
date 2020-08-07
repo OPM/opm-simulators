@@ -226,6 +226,7 @@ protected:
                 LinearizationType linearizationType = this->model().linearizer().getLinearizationType();
                 if (linearizationType.type == Opm::LinearizationType::seqtransport) {
                     // TODO: set max update of ST
+                    delta =  Opm::signum(delta)*std::min(delta,0.1);
                 } else {
                     if (std::abs(delta) > dpMaxRel_*currentValue[pvIdx])
                         delta = Opm::signum(delta)*dpMaxRel_*currentValue[pvIdx];
