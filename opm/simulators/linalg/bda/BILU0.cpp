@@ -121,7 +121,7 @@ namespace bda
         int *rowsPerColorPrefix = new int[numColors + 1];
         rowsPerColorPrefix[0] = 0;
         for (int i = 0; i < numColors; ++i) {
-            rowsPerColorPrefix[i+1] =rowsPerColorPrefix[i] + rowsPerColor[i];
+            rowsPerColorPrefix[i+1] = rowsPerColorPrefix[i] + rowsPerColor[i];
         }
         queue->enqueueWriteBuffer(s.rowsPerColor, CL_TRUE, 0, (numColors + 1) * sizeof(int), rowsPerColorPrefix);
         delete[] rowsPerColorPrefix;
