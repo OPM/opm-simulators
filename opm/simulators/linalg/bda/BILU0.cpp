@@ -119,10 +119,9 @@ namespace bda
         queue->enqueueWriteBuffer(s.invDiagVals, CL_TRUE, 0, mat->Nb * sizeof(double) * bs * bs, invDiagVals);
 
         int *rowsPerColorPrefix = new int[numColors + 1];
-        int prefix = 0;
-        for (int i = 0; i < numColors + 1; ++i) {
-            rowsPerColorPrefix[i] = prefix;
-            prefix += rowsPerColor[i];
+        rowsPerColorPrefix[0] = 0;
+        for (int i = 0; i < numColors; ++i) {
+            rowsPerColorPrefix[i+1] = rowsPerColorPrefix[i] + rowsPerColor[i];
         }
         queue->enqueueWriteBuffer(s.rowsPerColor, CL_TRUE, 0, (numColors + 1) * sizeof(int), rowsPerColorPrefix);
         delete[] rowsPerColorPrefix;
