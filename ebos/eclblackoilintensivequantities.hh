@@ -139,7 +139,7 @@ public:
             if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg) {
                 // -> threephase case
                 assert( priVars.primaryVarsMeaning() != PrimaryVariables::OnePhase_p );
-                Sg = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
+                Sg = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx,linearizationType);
             } else if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_pg_Rv) {
                 // -> gas-water case
                 Sg = 1.0 - Sw;
@@ -151,8 +151,29 @@ public:
             else
             {
                 assert(priVars.primaryVarsMeaning() == PrimaryVariables::Sw_po_Rs);
+                if(linearizationType.type == Opm::LinearizationType::pressure){
+                    Scalar po = priVars[Indices::pressureSwitchIdx];
+                    Scalar T  = Toolbox::value(fluidState_.temperature(0));//priVars.temperature_();
+                    Scalar SoMax = problem.maxOilSaturation(globalSpaceIdx);
+                    Scalar So2 = Toolbox::value(1.0 - Sw);// - priVars.solventSaturation_());
+                    Scalar RsMax = problem.maxGasDissolutionFactor(/*timeIdx=*/0, globalSpaceIdx);
+                    Scalar RsSat = FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvtRegionIdx,
+                                                                                       T,
+                                                                                       po,
+                                                                                       So2,
+                                                                                       SoMax);
+                    Scalar Rs = priVars[Indices::compositionSwitchIdx];
+                    if(Rs>RsSat){
+                        auto priVarsCopy = priVars;
+                        priVarsCopy[Indices::compositionSwitchIdx] = 0.0;
+                        Sg =  priVarsCopy.makeEvaluation(Indices::compositionSwitchIdx, timeIdx, linearizationType);
+                    }else{
+                        Sg = 0.0;
+                    }
+                }else{
                 // -> oil-water case
-                Sg = 0.0;
+                    Sg = 0.0;
+                }
             }
         }
 
@@ -281,19 +302,24 @@ public:
                 fluidState_.setRv(0.0);
         }
         else if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_po_Rs) {
-            // if the switching variable is the mole fraction of the gas component in the
-            Scalar RsMax = elemCtx.problem().maxGasDissolutionFactor(timeIdx, globalSpaceIdx);
+            //if the switching variable is the mole fraction of the gas component in the
+            Evaluation RsMax = elemCtx.problem().maxGasDissolutionFactor(timeIdx, globalSpaceIdx);
             if(linearizationType.type == Opm::LinearizationType::pressure){
                 const Evaluation& RsSat =
                     FluidSystem::saturatedDissolutionFactor(fluidState_,
                                                             oilPhaseIdx,
                                                             pvtRegionIdx,
                                                             SoMax);
-                RsMax = Opm::min(RsMax,Toolbox::value(RsSat));
-                auto priVarsCopy = priVars;
-                priVarsCopy[Indices::compositionSwitchIdx] = Opm::min(RsMax,priVarsCopy[Indices::compositionSwitchIdx]);
-                const auto& Rs = priVarsCopy.makeEvaluation(Indices::compositionSwitchIdx, timeIdx, linearizationType);                
-                fluidState_.setRs(Rs);
+                RsMax = Opm::min(RsMax, RsSat);
+                //auto priVarsCopy = priVars;
+                //priVarsCopy[Indices::compositionSwitchIdx] = Opm::min(RsMax,priVarsCopy[Indices::compositionSwitchIdx]);
+                const auto& Rs = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx, linearizationType);                
+                if(Rs>RsSat){
+                    fluidState_.setRs(RsSat);
+                }else{
+                    
+                    fluidState_.setRs(Rs);
+                }
             }else{
                 // oil phase, we can directly set the composition of the oil phase
                 const auto& Rs = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx, linearizationType);

@@ -180,7 +180,7 @@ namespace Opm {
                 model_->updateSolution();
                 reportpre += lreportpre;
                 try{
-                    model_->ebosSimulator().model().advanceTimeLevel();
+                    //model_->ebosSimulator().model().advanceTimeLevel();
                     //model_->ebosSimulator().problem().beginTimeStep();
                     SimulatorReportSingle lreportseq = this->stepDefault(timer,/*next*/false, false);
                     // hopefully do not change any thing only update well quantities
