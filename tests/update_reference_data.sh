@@ -54,6 +54,7 @@ declare -A tests
 # to be used by cmake as an optional fourth argument.
 tests[spe1]="flow spe1 SPE1CASE1"
 tests[spe12]="flow spe1 SPE1CASE2"
+tests[spe12_seq]="flow_blackoil_dunecpr_seq spe1 SPE1CASE2"
 tests[spe12p]="flow spe1 SPE1CASE2_2P spe1_2p"
 tests[spe1oilgas]="flow spe1 SPE1CASE2_OILGAS spe1_oilgas"
 tests[spe1nowells]="flow spe1 SPE1CASE2_NOWELLS spe1_nowells"
