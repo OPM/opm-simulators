@@ -69,6 +69,7 @@
 #include <limits>
 #include <vector>
 #include <algorithm>
+#include <filesystem>
 
 namespace Opm::Properties {
 
@@ -503,10 +504,20 @@ namespace Opm {
                 PressureVectorType rhs(ebosResid.size(),0);
                 PressureHelper::moveToPressureEqn(ebosResid, rhs, weights);
                 boost::property_tree::ptree prm;
-                try{
-                    boost::property_tree::read_json("pressuresolver.json", prm);
-                }catch(...){
-                    OPM_THROW(std::logic_error,"Configuration file pressuresolver.json not pressent");
+                if (std::filesystem::exists("pressuresolver.json") ) {
+                    try{
+                        boost::property_tree::read_json("pressuresolver.json", prm);
+                    }catch(...){
+                        OPM_THROW(std::logic_error,"failed in passing configuration file pressuresolver.json");
+                    }
+                } else {
+                    // using a default setup for pressure solver
+                    std::stringstream ss;
+                    ss << "{\n"
+                          " \"solver\": \"umfpack\",\n"
+                          " \"blocksize\": \"1\"\n"
+                          "}";
+                    boost::property_tree::read_json(ss, prm);
                 }
                 std::any parallelInformation;
                 extractParallelGridInformationToISTL(ebosSimulator_.vanguard().grid(), parallelInformation);
