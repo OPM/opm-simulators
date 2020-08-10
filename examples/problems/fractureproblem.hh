@@ -241,7 +241,7 @@ class FractureProblem : public GetPropType<TypeTag, Properties::BaseProblem>
         bool contains(Dune::GeometryType gt)
         { return gt.dim() == dim - 1; }
     };
-    using FaceMapper = Dune::MultipleCodimMultipleGeomTypeMapper<GridView, FaceLayout>;
+    using FaceMapper = Dune::MultipleCodimMultipleGeomTypeMapper<GridView>;
 
     using FractureMapper = Opm::FractureMapper<TypeTag>;
 
