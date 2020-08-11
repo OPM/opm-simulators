@@ -451,6 +451,29 @@ namespace Opm
                                  const double simulation_time, const int report_step,
                                          WellState& well_state, WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger) = 0;
 
+
+        virtual void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
+                                                    const double dt,
+                                                    const Well::InjectionControls& inj_controls,
+                                                    const Well::ProductionControls& prod_controls,
+                                                    WellState& well_state,
+                                                    Opm::DeferredLogger& deferred_logger) = 0;
+
+        // iterate well equations with the specified control until converged
+        virtual bool iterateWellEqWithControl(const Simulator& ebosSimulator,
+                                              const std::vector<double>& B_avg,
+                                              const double dt,
+                                              const Well::InjectionControls& inj_controls,
+                                              const Well::ProductionControls& prod_controls,
+                                              WellState& well_state,
+                                              Opm::DeferredLogger& deferred_logger) = 0;
+
+        bool iterateWellEquations(const Simulator& ebosSimulator,
+                                  const std::vector<double>& B_avg,
+                                  const double dt,
+                                  WellState& well_state,
+                                  Opm::DeferredLogger& deferred_logger);
+
         void updateWellTestStateEconomic(const WellState& well_state,
                                          const double simulation_time,
                                          const bool write_message_to_opmlog,
@@ -466,11 +489,6 @@ namespace Opm
         void solveWellForTesting(const Simulator& ebosSimulator, WellState& well_state,
                                  const std::vector<double>& B_avg,
                                  Opm::DeferredLogger& deferred_logger);
-
-        bool solveWellEqUntilConverged(const Simulator& ebosSimulator,
-                                       const std::vector<double>& B_avg,
-                                       WellState& well_state,
-                                       Opm::DeferredLogger& deferred_logger);
 
         void scaleProductivityIndex(const int perfIdx, double& productivity_index, const bool new_well, Opm::DeferredLogger& deferred_logger);
 
