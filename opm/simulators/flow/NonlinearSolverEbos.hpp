@@ -233,9 +233,13 @@ namespace Opm {
             if(not(converged)){
                 report.converged = false;
             }else{
-                model_->updateSolution();
+                // model_->updateSolution();
                 model_->ebosSimulator().problem().updateTotalSaturation();  
                 model_->afterStep(timer);
+                // NOTE: updating solution again for information used in the relativeChange function.
+                linearizationType.type = Opm::LinearizationType::pressure;
+                model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);
+                model_->updateSolution();
                 report.converged = true;
             }            
             //todo fill this report correctly
