@@ -201,6 +201,7 @@ add_test_compareECLFiles(CASENAME spe12_seq
                          SIMULATOR flow_blackoil_dunecpr_seq
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
+                         DIR spe1
                          TEST_ARGS --full-time-step-initially=true --enable-adaptive-time-stepping=false   --simulation-type=seq  --enable-storage-cache=false)
 
 add_test_compareECLFiles(CASENAME spe1_2p

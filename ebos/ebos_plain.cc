@@ -33,7 +33,7 @@
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(EbosPlainTypeTag, INHERITS_FROM(BlackOilModel, EclBaseProblem));
+NEW_TYPE_TAG(EbosPlainTypeTag, INHERITS_FROM(BlackOilModel, EclBaseProblem, FlowModelParameters));
 
 } // namespace Opm::Properties
 
