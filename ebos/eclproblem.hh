@@ -1034,8 +1034,10 @@ public:
             std::ofstream file(prefix.c_str());
             std::string simulationType  = EWOMS_GET_PARAM(TypeTag, std::string, SimulationType);
             if(simulationType == "seq"){
+#ifndef NDEBUG                
                 Opm::LinearizationType linearizationType = this->simulator().model().linearizer().getLinearizationType();
                 assert(linearizationType.type == Opm::LinearizationType::seqtransport);
+#endif
             }
             for(const auto& v : totalSaturation_){
                 file << v << std::endl;

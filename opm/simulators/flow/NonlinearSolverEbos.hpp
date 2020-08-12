@@ -176,7 +176,9 @@ namespace Opm {
                 model_->ebosSimulator().problem().updatePressureAndFluxes();//update pressure ans ST 
                 linearizationType.type = Opm::LinearizationType::seqtransport;
                 model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);
-
+                // initial guess for transport use the old state
+                //auto& currsol =  model_->ebosSimulator().model().solution(/*timeIdx=*/0);
+                //currsol = solutionOld;
                 model_->updateSolution();
                 reportpre += lreportpre;
                 try{

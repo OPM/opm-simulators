@@ -23,7 +23,7 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/SimFIBODetails.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
-
+#include <opm/models/discretization/common/linearizationtype.hh>
 namespace Opm {
     template<typename TypeTag>
     BlackoilWellModel<TypeTag>::
@@ -1181,6 +1181,10 @@ namespace Opm {
         // Even if there are no wells active locally, we cannot
         // return as the DeferredLogger uses global communication.
         // For no well active globally we simply return.
+        const LinearizationType& linearizationType = ebosSimulator_.model().linearizer().getLinearizationType();
+        if(linearizationType.type == Opm::LinearizationType::seqtransport){
+            return;
+        }
         if( !wellsActive() ) return ;
 
         updateAndCommunicateGroupData();
