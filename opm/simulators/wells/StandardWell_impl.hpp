@@ -534,7 +534,7 @@ namespace Opm
 #ifndef NDEBUG
         auto cq_s_tmp = perf_rates.cq_s;
         computePerfRateSeq(intQuants,mob,/*bhp,Tw,perf,*/allow_cf,perf_rates,deferred_logger);
-        if(not(linearizationType.type == Opm::LinearizationType::seqtransport)){
+        if (linearizationType.type == Opm::LinearizationType::pressure) {
             for(size_t i = 0; i < cq_s_tmp.size(); ++i){
                 typedef Opm::MathToolbox<EvalWell> Toolbox;
                 assert(Toolbox::isSame(cq_s_tmp[i],perf_rates.cq_s[i],1e-6));
