@@ -892,7 +892,7 @@ namespace Opm {
                         msg += compNames[compIdx][0];
                         msg += ") ";
                     }
-                    OpmLog::debug(msg);
+                    // OpmLog::debug(msg);
                     OpmLog::info(msg);
                 }
                 std::ostringstream ss;
@@ -907,7 +907,7 @@ namespace Opm {
                 }
                 ss.precision(oprec);
                 ss.flags(oflags);
-                OpmLog::debug(ss.str());
+                // OpmLog::debug(ss.str());
                 OpmLog::info(ss.str());
             }
 

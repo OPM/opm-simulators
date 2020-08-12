@@ -691,7 +691,8 @@ public:
         }
         pressure_[0].resize(numDof);
         pressure_[1].resize(numDof);
-        totalSaturation_.resize(numDof, 1.0);
+        totalSaturation_[0].resize(numDof, 1.0);
+        totalSaturation_[1].resize(numDof, 1.0);
 
         updateElementDepths_();
         readRockParameters_();
@@ -1039,7 +1040,7 @@ public:
                 assert(linearizationType.type == Opm::LinearizationType::seqtransport);
 #endif
             }
-            for(const auto& v : totalSaturation_){
+            for(const auto& v : totalSaturation_[0]){
                 file << v << std::endl;
             }
         }
@@ -1815,23 +1816,23 @@ public:
         // phase index is unused for now will give warning in compilation
         return pressure_[timeIdx][globalDofIdx][phaseIndex];
     }
-    Scalar totalSaturation(unsigned globalDofIdx) const
+    Scalar totalSaturation(unsigned globalDofIdx, const unsigned timeIdx = 0) const
     {
-        return totalSaturation_[globalDofIdx];
+        return totalSaturation_[timeIdx][globalDofIdx];
     }
 
-    const std::vector<Scalar>& getTotalSaturation() const
+    const std::vector<Scalar>& getTotalSaturation(const unsigned timeIdx = 0) const
     {
-        return totalSaturation_;
+        return totalSaturation_[timeIdx];
     }
 
-    void setTotalSaturation(std::vector<Scalar> totSat)
+    void setTotalSaturation(std::vector<Scalar> totSat, const unsigned timeIdx = 0)
     {
-        totalSaturation_ = totSat;
+        totalSaturation_[timeIdx] = totSat;
     }
 
-    void totalSaturationOne(){
-        for(auto& v : totalSaturation_){
+    void totalSaturationOne(const unsigned timeIdx = 0){
+        for(auto& v : totalSaturation_[timeIdx]){
             v=1.0;
         }
     }
@@ -2320,7 +2321,8 @@ private:
             unsigned compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
             const auto& iq = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
             const auto& fs = iq.fluidState();
-            totalSaturation_[compressedDofIdx] = Opm::getValue(fs.totalSaturation());
+            // TODO: not sure where to handle the update totalSaturation_[1]
+            totalSaturation_[/*timeIdx=*/0][compressedDofIdx] = Opm::getValue(fs.totalSaturation());
         }
         return true;
     }
@@ -3268,7 +3270,7 @@ private:
     std::vector<Scalar> overburdenPressure_;
     std::vector<Scalar> minOilPressure_;
     std::array< std::vector<Dune::FieldVector<Scalar,3> >, 2> pressure_;
-    std::vector<Scalar> totalSaturation_;
+    std::array<std::vector<Scalar>, 2>  totalSaturation_;
     std::vector< std::vector<Scalar> > totalFlux_;
 
     std::vector<TabulatedTwoDFunction> rockCompPoroMult_;
