@@ -255,7 +255,7 @@ namespace Opm
                 } else {
                     // CPU fallback
                     use_gpu = bdaBridge->getUseGpu();  // update value, BdaBridge might have disabled cusparseSolver
-                    if (use_gpu && simulator.gridView().comm().rank() == 0) {
+                    if (use_gpu && simulator_.gridView().comm().rank() == 0) {
                         OpmLog::warning("cusparseSolver did not converge, now trying Dune to solve current linear system...");
                     }
                 }
