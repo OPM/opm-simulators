@@ -97,11 +97,19 @@ private:
 #endif
 
 #if HAVE_OPENCL
-    double *d_Cnnzs_ocl = nullptr;
-    double *d_Dnnzs_ocl = nullptr;
-    double *d_Bnnzs_ocl = nullptr;
-    int *d_Ccols_ocl = nullptr;
-    int *d_Bcols_ocl = nullptr;
+    double *h_Cnnzs_ocl = nullptr;
+    double *h_Dnnzs_ocl = nullptr;
+    double *h_Bnnzs_ocl = nullptr;
+    int *h_Ccols_ocl = nullptr;
+    int *h_Bcols_ocl = nullptr;
+
+    cl::Buffer d_Cnnzs, d_Dnnzs, d_Bnnzs;
+    cl::Buffer d_Ccols, d_Bcols, d_val_pointers;
+
+    typedef cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&,
+                            cl::Buffer&, cl::Buffer&, cl::Buffer&,
+                            cl::Buffer&, const unsigned int, const unsigned int,
+                            cl::Buffer&, cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg> kernel_type;
 #endif
 
     double *h_x = nullptr, *h_y = nullptr;  // CUDA pinned memory for GPU memcpy
@@ -136,9 +144,12 @@ public:
 #endif
 
 #if HAVE_OPENCL
-    void applyMSW(cl::CommandQueue *queue, cl::Buffer& d_x, cl::Buffer& d_y);
-    void getParams(unsigned int *num_blocks_, unsigned int *num_std_wells_, unsigned int *dim_, unsigned int *dim_wells_);
-    std::tuple<double*, double*, double*, int*, int*, unsigned int*> getMatrixData();
+    //void getParams(unsigned int *num_blocks_, unsigned int *num_std_wells_, unsigned int *dim_, unsigned int *dim_wells_);
+    //std::tuple<double*, double*, double*, int*, int*, unsigned int*> getMatrixData();
+    void init(cl::Context *context);
+    void copyDataToGPU(cl::CommandQueue *queue);
+    void applyStdWell(cl::CommandQueue *queue, cl::Buffer& x, cl::Buffer& y, kernel_type *kernel);
+    void applyMSWell(cl::CommandQueue *queue, cl::Buffer& d_x, cl::Buffer& d_y);
 #endif
 
     /// Create a new WellContributions
