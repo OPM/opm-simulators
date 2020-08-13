@@ -29,10 +29,8 @@
 
 namespace Opm
 {
-    SimulatorReportSingle::SimulatorReportSingle()
-        : pressure_time(0.0),
-          transport_time(0.0),
-          total_time(0.0),
+    SimulatorReportSingleBase::SimulatorReportSingleBase()
+        : total_time(0.0),
           solver_time(0.0),
           assemble_time(0.0),
           linear_solve_setup_time(0.0),
@@ -50,10 +48,8 @@ namespace Opm
     {
     }
 
-    void SimulatorReportSingle::operator+=(const SimulatorReportSingle& sr)
+    void SimulatorReportSingleBase::operator+=(const SimulatorReportSingleBase& sr)
     {
-        pressure_time += sr.pressure_time;
-        transport_time += sr.transport_time;
         linear_solve_setup_time += sr.linear_solve_setup_time;
         linear_solve_time += sr.linear_solve_time;
         solver_time += sr.solver_time;
@@ -69,7 +65,7 @@ namespace Opm
     }
 
 
-    void SimulatorReportSingle::reportStep(std::ostringstream& ss) const
+    void SimulatorReportSingleBase::reportStep(std::ostringstream& ss) const
     {
         ss << "Time step summary: ";
         if (total_well_iterations != 0) {
@@ -82,7 +78,28 @@ namespace Opm
            << " ("  << std::fixed << std::setprecision(3) << std::setw(6) << linear_solve_time << " sec)";
     }
 
-    void SimulatorReportSingle::reportFullyImplicit(std::ostream& os, const SimulatorReportSingle* failureReport) const
+    void SimulatorReportSingleBase::fullReportStep(std::ostream& os) const{
+            os.precision(10);
+            os << std::defaultfloat;
+            os << std::setw(11) << unit::convert::to(this->global_time, unit::day) << " ";
+            os << std::setw(11) << unit::convert::to(this->timestep_length, unit::day) << " ";
+            os.precision(4);
+            os << std::fixed;
+            os << std::setw(9) << this->assemble_time << " ";
+            os << std::setw(9) << this->linear_solve_setup_time << " ";
+            os << std::setw(9) << this->linear_solve_time << " ";
+            os << std::setw(9) << this->update_time << " ";
+            os << std::setw(9) << this->output_write_time << " ";
+            os.precision(6);
+            os << std::defaultfloat;
+            os << std::setw(6) << this->total_well_iterations << " ";
+            os << std::setw(4) << this->total_linearizations << " ";
+            os << std::setw(6) << this->total_newton_iterations << " ";
+            os << std::setw(5) << this->total_linear_iterations << " ";
+            os << std::setw(4) << this->converged << "\n";
+     }
+
+    void SimulatorReportSingleBase::reportFullyImplicit(std::ostream& os, const SimulatorReportSingleBase* failureReport) const
     {
         double t = total_time;
         os << "Total time (seconds):         " << t;
@@ -188,27 +205,16 @@ namespace Opm
 
     void SimulatorReport::fullReports(std::ostream& os) const
     {
-        os << "  Time(day)  TStep(day)  Assembly    LSolve    LSetup    Update    Output WellIt Lins NewtIt LinIt Conv\n";
+        os << "  Time(day)  TStep(day)  Assembly    LSolve    LSetup    Update    Output WellIt Lins NewtIt LinIt Conv";
+        os << "  PreTime(day)  PreTStep(day)  PreAssembly    PreLSolve    PreLSetup    PreUpdate    PreOutput PreWellIt PreLins PreNewtIt PreLinIt PreConv";
+        os << "  TransTime(day)  TransTStep(day)  TransAssembly    TransLSolve    TransLSetup    TransUpdate    TransOutput TransWellIt TransLins TransNewtIt TransLinIt TransConv\n";
         for (size_t i = 0; i < this->stepreports.size(); ++i) {
-            const SimulatorReportSingle& sr = this->stepreports[i];
-            os.precision(10);
-            os << std::defaultfloat;
-            os << std::setw(11) << unit::convert::to(sr.global_time, unit::day) << " ";
-            os << std::setw(11) << unit::convert::to(sr.timestep_length, unit::day) << " ";
-            os.precision(4);
-            os << std::fixed;
-            os << std::setw(9) << sr.assemble_time << " ";
-            os << std::setw(9) << sr.linear_solve_setup_time << " ";
-            os << std::setw(9) << sr.linear_solve_time << " ";
-            os << std::setw(9) << sr.update_time << " ";
-            os << std::setw(9) << sr.output_write_time << " ";
-            os.precision(6);
-            os << std::defaultfloat;
-            os << std::setw(6) << sr.total_well_iterations << " ";
-            os << std::setw(4) << sr.total_linearizations << " ";
-            os << std::setw(6) << sr.total_newton_iterations << " ";
-            os << std::setw(5) << sr.total_linear_iterations << " ";
-            os << std::setw(4) << sr.converged << "\n";
+            const SimulatorReportSingleBase& sr = this->stepreports[i];
+            sr.fullReportStep(os);
+            const SimulatorReportSingleBase& srpre = this->stepreports[i].pressure_report;
+            srpre.fullReportStep(os);
+            const SimulatorReportSingleBase& srtrans = this->stepreports[i].transport_report;
+            srtrans.fullReportStep(os);
         }
     }
 

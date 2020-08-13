@@ -27,10 +27,10 @@ namespace Opm
 {
 
     /// A struct for returning timing data from a simulator to its caller.
-    struct SimulatorReportSingle
+    struct SimulatorReportSingleBase
     {
-        double pressure_time;
-        double transport_time;
+        //double pressure_time;
+        //double transport_time;
         double total_time;
         double solver_time;
         double assemble_time;
@@ -51,15 +51,37 @@ namespace Opm
         double timestep_length;
 
         /// Default constructor initializing all times to 0.0.
-        SimulatorReportSingle();
+        SimulatorReportSingleBase();
         /// Increment this report's times by those in sr.
-        void operator+=(const SimulatorReportSingle& sr);
+        void operator+=(const SimulatorReportSingleBase& sr);
         /// Print a report suitable for a single simulation step.
         void reportStep(std::ostringstream& os) const;
         /// Print a report suitable for the end of a fully implicit case, leaving out the pressure/transport time.
-        void reportFullyImplicit(std::ostream& os, const SimulatorReportSingle* failedReport = nullptr) const;
+        void reportFullyImplicit(std::ostream& os, const SimulatorReportSingleBase* failedReport = nullptr) const;
+        void fullReportStep(std::ostream& os) const;
     };
 
+    /// A struct for returning timing data from a simulator to its caller.
+    struct SimulatorReportSingle: public SimulatorReportSingleBase 
+    {
+        SimulatorReportSingleBase pressure_report;
+        SimulatorReportSingleBase transport_report;
+        void setPressureReport(SimulatorReportSingleBase pressure_report_){
+            pressure_report = pressure_report_;
+        };
+        void setTransportReport(SimulatorReportSingleBase transport_report_){
+            transport_report = transport_report_;
+        };
+        void operator+=(const SimulatorReportSingle& sr){
+            SimulatorReportSingleBase::operator += (sr);
+            pressure_report += sr.pressure_report;
+            transport_report += sr.transport_report;
+        };
+    };
+
+
+
+    
     struct SimulatorReport
     {
         SimulatorReportSingle success;

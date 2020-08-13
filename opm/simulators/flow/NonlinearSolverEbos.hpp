@@ -231,7 +231,12 @@ namespace Opm {
                 std::cout << "Sequantial fullimplicit iteration " << seqiterations << std::endl;
                 seqiterations += 1;
             }
-            SimulatorReportSingle report;
+            SimulatorReportSingle report = reportseq;
+            report += reportpre;
+            report.setPressureReport(reportpre);
+            report.setTransportReport(reportseq);
+            report.total_newton_iterations = seqiterations;
+            //TODO add timings of call to implicit residual
             if(not(converged)){
                 report.converged = false;
             }else{
