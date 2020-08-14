@@ -185,8 +185,6 @@ namespace Opm {
                     //model_->ebosSimulator().model().advanceTimeLevel();
                     //model_->ebosSimulator().problem().beginTimeStep();
                     SimulatorReportSingle lreportseq = this->stepDefault(timer,/*next*/false, false);
-                    // hopefully do not change any thing only update well quantities
-                    //model_->wellModel().solveWells(model_->ebosSimulator().timeStepSize());
                     reportseq += lreportseq;
                 }catch (...){
                     //set the prevois value to the staring point
@@ -218,7 +216,7 @@ namespace Opm {
                     //NB her only the convergenceshould be checked
                     //SimulatorReportSingle lreportsim = this->stepDefault(timer,/*next*/false, false);
                     std::vector<double> residual_norms;
-                    auto asreport = model_->assembleReservoir(timer, seqiterations);
+                    model_->assembleReservoir(timer, seqiterations);
                     auto convrep = model_->getConvergence(timer, seqiterations,residual_norms);
                     converged = convrep.converged();
                     // if this used one probably have to invalidate the storage cache
