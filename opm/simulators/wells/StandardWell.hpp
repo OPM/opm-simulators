@@ -369,11 +369,10 @@ namespace Opm
         void computeWellConnectionPressures(const Simulator& ebosSimulator,
                                                     const WellState& well_state);
 
+        // a struct to store all the relevant rates associated with perforations
         struct PerfRates {
             // surface perforation rates
             std::vector<EvalWell> cq_s;
-            // reservoir perforation rates
-            std::vector<EvalWell> cq_r;
             // reservor perfration total rates
             EvalWell cq_r_t;
 
@@ -383,7 +382,6 @@ namespace Opm
 
             PerfRates(int num_components, int num_welleq)
             : cq_s(num_components, {num_welleq + numEq, 0.})
-            , cq_r(num_components, {num_welleq + numEq, 0.})
             , cq_r_t(num_welleq + numEq, 0.)
             , perf_dis_gas_rate(0.)
             , perf_vap_oil_rate(0.)

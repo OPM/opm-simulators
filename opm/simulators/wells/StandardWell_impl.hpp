@@ -23,7 +23,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellInjectionProperties.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/linalg/MatrixBlock.hpp>
-// #include <opm/material/densead/Math.hpp>
 
 namespace Opm
 {
@@ -356,24 +355,14 @@ namespace Opm
                     Opm::DeferredLogger& deferred_logger,
                     const Opm::LinearizationType& linearizationType) const
     {
-        // auto cq_s_tmp = perf_rates.cq_s;
-        if(linearizationType.type == Opm::LinearizationType::seqtransport){
+        // for the transport step during sequential running, we use different way to calculate the perforation rates
+        if (linearizationType.type == Opm::LinearizationType::seqtransport) {
             perf_rates.cq_r_t = prev_well_state.perfTotalResRates()[first_perf_ + perf];
-            computePerfRateSeq(intQuants,mob,/*bhp,Tw,perf,*/allow_cf,perf_rates,deferred_logger);
+            computePerfRateSeq(intQuants, mob, allow_cf, perf_rates, deferred_logger);
             return;
         }
 
-        // TODO: the following is some sanity check of the for computePerfRateSeq, while it is not done
-        // without running the code following until the end of the function
-        /* if(not(linearizationType.type == Opm::LinearizationType::seqtransport)){
-            for(size_t i = 0; i < cq_s_tmp.size(); ++i){
-                typedef Opm::MathToolbox<EvalWell> Toolbox;
-                assert(Toolbox::isSame(cq_s_tmp[i],perf_rates.cq_s[i],1e-6));
-            }
-        } */
-
         auto& cq_s = perf_rates.cq_s;
-        auto& cq_r = perf_rates.cq_r;
         auto& cq_r_t = perf_rates.cq_r_t;
 
         const auto& fs = intQuants.fluidState();
@@ -414,7 +403,6 @@ namespace Opm
             for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
                 const EvalWell cq_p = - Tw * (mob[componentIdx] * drawdown);
                 perf_rates.cq_s[componentIdx] = b_perfcells_dense[componentIdx] * cq_p;
-                perf_rates.cq_r[componentIdx] = cq_p;
                 perf_rates.cq_r_t += cq_p;
             }
 
@@ -446,13 +434,11 @@ namespace Opm
             EvalWell total_mob_dense =mob[0]* 0.0;
             for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
                 total_mob_dense += mob[componentIdx];
-                cq_r[componentIdx] = - Tw * (mob[componentIdx] * drawdown);
-                cq_r_t += cq_r[componentIdx];
             }
 
-            // TODO: cqt_i should be same with cq_r_t, there is some repeated computation here
             // injection perforations total volume rates
             const EvalWell cqt_i = - Tw * (total_mob_dense * drawdown);
+            cq_r_t = cqt_i;
 
             // surface volume fraction of fluids within wellbore
             std::vector<EvalWell> cmix_s(num_components_, EvalWell{numWellEq_ + numEq});
@@ -625,7 +611,7 @@ namespace Opm
 
             // better way to do here is that use the cq_s and then replace the cq_s_water here?
             if (has_polymer && this->has_polymermw && this->isInjector()) {
-                // TODO: we strictly, we probably should handle cq_r here too
+                // TODO: strictly, we probably should handle cq_r_t here too if running for sequential
                 handleInjectivityRateAndEquations(intQuants, well_state, perf, perf_rates.cq_s, deferred_logger);
             }
 
@@ -645,7 +631,6 @@ namespace Opm
                 const EvalWell cq_s_effective = cq_s[componentIdx] * well_efficiency_factor_;
 
                 connectionRates_[perf][componentIdx] = Base::restrictEval(cq_s_effective);
-                this->conResRates_[perf][componentIdx] = this->restrictEval(perf_rates.cq_r[componentIdx] * well_efficiency_factor_);
 
                 // subtract sum of phase fluxes in the well equations.
                 resWell_[0][componentIdx] += cq_s_effective.value();
@@ -668,7 +653,7 @@ namespace Opm
                     well_state.perfPhaseRates()[(first_perf_ + perf) * np + ebosCompIdxToFlowCompIdx(componentIdx)] = cq_s[componentIdx].value();
                 }
             }
-            this->conTotalResRates_[perf] = this->restrictEval(perf_rates.cq_r_t * well_efficiency_factor_);
+
             well_state.perfTotalResRates()[first_perf_ + perf] = perf_rates.cq_r_t.value();
 
             if (has_energy) {
@@ -820,6 +805,7 @@ namespace Opm
         const auto& summaryState = ebosSimulator.vanguard().summaryState();
         const Opm::Schedule& schedule = ebosSimulator.vanguard().schedule();
 
+        // during the transport step of sequential running, we have a trivial control eqution to keep bhp fixed
         if(ebosSimulator.model().linearizer().getLinearizationType().type == Opm::LinearizationType::seqtransport) {
             assembleControlEqSeqTrans(well_state);
         } else {
@@ -2323,7 +2309,9 @@ namespace Opm
                                 Opm::DeferredLogger& deferred_logger)
     {
         const LinearizationType& linearizationType = ebosSimulator.model().linearizer().getLinearizationType();
-        if(linearizationType.type == Opm::LinearizationType::seqtransport) return; // not updating the explicit quantities
+
+        // not updating the explicit quantities during the transport solve of the sequential solution process
+        if(linearizationType.type == Opm::LinearizationType::seqtransport) return;
 
         updatePrimaryVariables(well_state, deferred_logger);
         initPrimaryVariablesEvaluation();
@@ -2904,6 +2892,7 @@ namespace Opm
             LinearizationType linearizationType = ebos_simulator.model().linearizer().getLinearizationType();
             const WellState& prev_well_state = ebos_simulator.problem().wellModel().prevWellState();
             computePerfRate(int_quant, mob, bhp, prev_well_state, Tw, perf, allow_cf, perf_rates, deferred_logger, linearizationType);
+
             // TODO: make area a member
             const double area = 2 * M_PI * perf_rep_radius_[perf] * perf_length_[perf];
             const auto& material_law_manager = ebos_simulator.problem().materialLawManager();
@@ -3241,15 +3230,11 @@ namespace Opm
     StandardWell<TypeTag>::
     computePerfRateSeq(const IntensiveQuantities& intQuants,
                        const std::vector<EvalWell>& mob,
-                       //const EvalWell& bhp,
-                       //const double Tw,
-                       //const int perf,
                        const bool allow_cf,
                        PerfRates& perf_rates,
                        Opm::DeferredLogger& deferred_logger) const
     {
         auto& cq_s = perf_rates.cq_s;
-        //const auto& cq_r = perf_rates.cq_r;
         const auto& cq_r_t = perf_rates.cq_r_t;
 
         const auto& fs = intQuants.fluidState();
@@ -3284,7 +3269,7 @@ namespace Opm
             // compute component volumetric rates at standard conditions
             for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
                 // do upwinding of total saturation and mobility and totalmobility
-                const EvalWell cq_p = totalSaturation*mob[componentIdx]/mobt * cq_r_t;
+                const EvalWell cq_p = totalSaturation * mob[componentIdx] / mobt * cq_r_t;
                 perf_rates.cq_s[componentIdx] = b_perfcells_dense[componentIdx] * cq_p;
             }
 
@@ -3312,15 +3297,6 @@ namespace Opm
                 return;
             }
 
-            // // Using total mobilities
-            // EvalWell total_mob_dense =
-            // for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
-            //     total_mob_dense += mob[componentIdx];
-            //     cq_r[componentIdx] = - Tw * (mob[componentIdx] * drawdown);
-            //     cq_r_t += cq_r[componentIdx];
-            // }
-
-            // TODO: cqt_i should be same with cq_r_t, there is some repeated computation here
             // injection perforations total volume rates
             const EvalWell cqt_i = cq_r_t;
 
