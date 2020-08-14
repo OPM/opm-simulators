@@ -284,22 +284,17 @@ public:
                     setSgcmis(regionIdx, zero);
             }
 
-
-            if (!eclState.getTableManager().getTlmixparTable().empty()) {
+            const auto& tlmixpar = eclState.getTableManager().getTLMixpar();
+            if (!tlmixpar.empty()) {
                 // resize the attributes of the object
                 tlMixParamViscosity_.resize(numMiscRegions);
                 tlMixParamDensity_.resize(numMiscRegions);
 
-                const auto& tlmixparTable = eclState.getTableManager().getTlmixparTable();
-
-                assert(numMiscRegions == tlmixparTable.size());
+                assert(numMiscRegions == tlmixpar.size());
                 for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
-                    // Copy data
-                    tlMixParamViscosity_[regionIdx] = tlmixparTable[regionIdx].viscosity;
-                    if (tlmixparTable[regionIdx].density == 0.0)
-                        tlMixParamDensity_[regionIdx] = tlMixParamViscosity_[regionIdx];
-                    else
-                        tlMixParamDensity_[regionIdx] = tlmixparTable[regionIdx].density;
+                    const auto& tlp = tlmixpar[regionIdx];
+                    tlMixParamViscosity_[regionIdx] = tlp.viscosity_parameter;
+                    tlMixParamDensity_[regionIdx] = tlp.density_parameter;
                 }
             }
             else
