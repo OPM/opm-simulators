@@ -58,12 +58,6 @@ class WellContributions
 
 public:
 
-    /// StandardWell has C, D and B matrices that need to be copied
-    enum class MatrixType {
-        C,
-        D,
-        B
-    };
 
 private:
     unsigned int num_blocks = 0;             // total number of blocks in all wells
@@ -78,6 +72,9 @@ private:
     bool allocated = false;
     std::vector<MultisegmentWellContribution*> multisegments;
 
+    int *toOrder = nullptr;
+    bool reorder = false;
+
     bool opencl_gpu = false;
     bool cuda_gpu = false;
 
@@ -85,7 +82,6 @@ private:
     cudaStream_t stream;
     
     // data for StandardWells, could remain nullptrs if not used
-    // StandardWells are only supported for cusparseSolver now
     double *d_Cnnzs = nullptr;
     double *d_Dnnzs = nullptr;
     double *d_Bnnzs = nullptr;
@@ -94,6 +90,8 @@ private:
     double *d_z1 = nullptr;
     double *d_z2 = nullptr;
     unsigned int *d_val_pointers = nullptr;
+    double *h_x = nullptr;
+    double *h_y = nullptr;
 #endif
 
 #if HAVE_OPENCL
@@ -102,6 +100,8 @@ private:
     double *h_Bnnzs_ocl = nullptr;
     int *h_Ccols_ocl = nullptr;
     int *h_Bcols_ocl = nullptr;
+    double *h_x_ocl = nullptr;
+    double *h_y_ocl = nullptr;
 
     cl::Buffer d_Cnnzs, d_Dnnzs, d_Bnnzs;
     cl::Buffer d_Ccols, d_Bcols, d_val_pointers;
@@ -112,11 +112,7 @@ private:
                             cl::Buffer&, cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg> kernel_type;
 #endif
 
-    double *h_x = nullptr, *h_y = nullptr;  // CUDA pinned memory for GPU memcpy
-
-    int *toOrder = nullptr;
-    bool reorder = false;
-
+#if HAVE_CUDA
     /// Store a matrix in this object, in blocked csr format, can only be called after alloc() is called
     /// \param[in] type        indicate if C, D or B is sent
     /// \param[in] colIndices  columnindices of blocks in C or B, ignored for D
@@ -129,8 +125,21 @@ private:
 
     /// Free GPU memory allocated with cuda.
     void freeCudaMemory();
+#endif
+
+#if HAVE_OPENCL
+    void applyStdWell(cl::CommandQueue *queue, cl::Buffer& d_x, cl::Buffer& d_y, kernel_type *kernel);
+    void applyMSWell(cl::CommandQueue *queue, cl::Buffer& d_x, cl::Buffer& d_y);
+#endif
 
 public:
+    /// StandardWell has C, D and B matrices that need to be copied
+    enum class MatrixType {
+        C,
+        D,
+        B
+    };
+
 #if HAVE_CUDA
     /// Set a cudaStream to be used
     /// \param[in] stream           the cudaStream that is used to launch the kernel in
@@ -144,12 +153,9 @@ public:
 #endif
 
 #if HAVE_OPENCL
-    //void getParams(unsigned int *num_blocks_, unsigned int *num_std_wells_, unsigned int *dim_, unsigned int *dim_wells_);
-    //std::tuple<double*, double*, double*, int*, int*, unsigned int*> getMatrixData();
     void init(cl::Context *context);
     void copyDataToGPU(cl::CommandQueue *queue);
-    void applyStdWell(cl::CommandQueue *queue, cl::Buffer& x, cl::Buffer& y, kernel_type *kernel);
-    void applyMSWell(cl::CommandQueue *queue, cl::Buffer& d_x, cl::Buffer& d_y);
+    void apply(cl::CommandQueue *queue, cl::Buffer& x, cl::Buffer& y, kernel_type *kernel);
 #endif
 
     /// Create a new WellContributions
@@ -198,18 +204,6 @@ public:
                                          unsigned int BnumBlocks, std::vector<double> &Bvalues, std::vector<unsigned int> &BcolIndices, std::vector<unsigned int> &BrowPointers,
                                          unsigned int DnumBlocks, double *Dvalues, int *DcolPointers, int *DrowIndices,
                                          std::vector<double> &Cvalues);
-
-    /// Return the number of standard wells added to this object
-    /// \return the number of standard wells added to this object
-    unsigned int getNumStdWells() {
-        return num_std_wells;
-    }
-
-    /// Return the number of standard wells added to this object
-    /// \return the number of standard wells added to this object
-    unsigned int getNumMSWells() {
-        return num_ms_wells;
-    }
 
     /// If the rows of the matrix are reordered, the columnindices of the matrixdata are incorrect
     /// Those indices need to be mapped via toOrder
