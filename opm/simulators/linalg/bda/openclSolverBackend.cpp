@@ -247,13 +247,11 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
             t_well.stop();
         }
 
-        /*
         if (wellContribs.getNumMSWells() > 0) {
             t_well.start();
-            wellContribs.applyMSW(queue.get(), d_pw, d_v);
+            wellContribs.applyMSWell(queue.get(), d_pw, d_v);
             t_well.stop();
         }
-        */
 
         t_rest.start();
         tmp1 = dot_w(d_rw, d_v, d_tmp);
@@ -286,13 +284,11 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
             t_well.stop();
         }
         
-        /*
         if (wellContribs.getNumMSWells() > 0) {
             t_well.start();
-            wellContribs.applyMSW(queue.get(), d_s, d_t);
+            wellContribs.applyMSWell(queue.get(), d_s, d_t);
             t_well.stop();
         }
-        */
 
         t_rest.start();
         tmp1 = dot_w(d_t, d_r, d_tmp);
