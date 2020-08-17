@@ -1816,27 +1816,27 @@ public:
      * of the timestep need for sequential
      *
      */
-    Scalar pressure(unsigned globalDofIdx, unsigned phaseIndex, const unsigned timeIdx = 0) const
+    Scalar pressure(unsigned globalDofIdx, unsigned phaseIndex, const unsigned timeIdx) const
     {
         // phase index is unused for now will give warning in compilation
         return pressure_[timeIdx][globalDofIdx][phaseIndex];
     }
-    Scalar totalSaturation(unsigned globalDofIdx, const unsigned timeIdx = 0) const
+    Scalar totalSaturation(unsigned globalDofIdx, const unsigned timeIdx) const
     {
         return totalSaturation_[timeIdx][globalDofIdx];
     }
 
-    const std::vector<Scalar>& getTotalSaturation(const unsigned timeIdx = 0) const
+    const std::vector<Scalar>& getTotalSaturation(const unsigned timeIdx) const
     {
         return totalSaturation_[timeIdx];
     }
 
-    void setTotalSaturation(std::vector<Scalar> totSat, const unsigned timeIdx = 0)
+    void setTotalSaturation(std::vector<Scalar> totSat, const unsigned timeIdx)
     {
         totalSaturation_[timeIdx] = totSat;
     }
 
-    void totalSaturationOne(const unsigned timeIdx = 0){
+    void totalSaturationOne(const unsigned timeIdx){
         for(auto& v : totalSaturation_[timeIdx]){
             v=1.0;
         }
@@ -2002,6 +2002,7 @@ public:
     bool updateAllPressures(){
         this->updatePressure_(0);
         this->updatePressure_(1);
+        return true;
     }
     
     bool updatePressureAndFluxes(){
@@ -2318,11 +2319,11 @@ private:
             const auto& fs = iq.fluidState();
 
             if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-                pressure_[0][compressedDofIdx][oilPhaseIdx] = Opm::getValue(fs.pressure(oilPhaseIdx));
+                pressure_[timeIdx][compressedDofIdx][oilPhaseIdx] = Opm::getValue(fs.pressure(oilPhaseIdx));
             }else if( FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                pressure_[0][compressedDofIdx][gasPhaseIdx] = Opm::getValue(fs.pressure(gasPhaseIdx));
+                pressure_[timeIdx][compressedDofIdx][gasPhaseIdx] = Opm::getValue(fs.pressure(gasPhaseIdx));
             }else{
-                pressure_[0][compressedDofIdx][waterPhaseIdx] = Opm::getValue(fs.pressure(waterPhaseIdx));
+                pressure_[timeIdx][compressedDofIdx][waterPhaseIdx] = Opm::getValue(fs.pressure(waterPhaseIdx));
             }
         }
 

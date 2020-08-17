@@ -364,14 +364,14 @@ public:
         
         if(simulationType_ == SimulationType::Implicit){
             pressure = (*this)[Indices::pressureSwitchIdx];
-            totalsaturation = problem.totalSaturation(globalDofIdx);
+            totalsaturation = problem.totalSaturation(globalDofIdx,/*timeidx*/ 0);//NB hack
         }else if (simulationType_ == SimulationType::Seq){
             if(primaryVarsMeaning() == Sw_po_Sg){
-                pressure = problem.pressure(globalDofIdx, oilPhaseIdx);
+                pressure = problem.pressure(globalDofIdx, oilPhaseIdx,/*timeidx*/ 0);//NB hack
             }else if(primaryVarsMeaning() == Sw_po_Rs){
-                pressure = problem.pressure(globalDofIdx, oilPhaseIdx);
+                pressure = problem.pressure(globalDofIdx, oilPhaseIdx,/*timeidx*/ 0);//NB hack
             }else if(primaryVarsMeaning() == Sw_pg_Rv){
-                pressure = problem.pressure(globalDofIdx, gasPhaseIdx);
+                pressure = problem.pressure(globalDofIdx, gasPhaseIdx,/*timeidx*/ 0);//NB hack
             }else{
                 assert(false);
             }
@@ -430,7 +430,7 @@ public:
                     po = (*this)[Indices::pressureSwitchIdx];
                     assert(po>2.0);
                 }else{
-                    po = problem.pressure(globalDofIdx, oilPhaseIdx);
+                    po = problem.pressure(globalDofIdx, oilPhaseIdx,/*timeidx*/ 0);
                 }
                 Scalar T = asImp_().temperature_();
                 Scalar SoMax = problem.maxOilSaturation(globalDofIdx);
@@ -457,7 +457,7 @@ public:
                     po = (*this)[Indices::pressureSwitchIdx];
                     assert(po>2.0);
                 }else{
-                    po = problem.pressure(globalDofIdx, oilPhaseIdx);
+                    po = problem.pressure(globalDofIdx, oilPhaseIdx,/*timeidx*/ 0);
                 }
                 // we only have the oil pressure readily available, but we need the gas
                 // pressure, i.e. we must determine capillary pressure
@@ -514,7 +514,7 @@ public:
                 po = (*this)[Indices::pressureSwitchIdx];
                 assert(po>2.0);
             } else {
-                po = problem.pressure(globalDofIdx, oilPhaseIdx);                
+                po = problem.pressure(globalDofIdx, oilPhaseIdx,/*timeidx*/ 0);                
             }
             Scalar So = 1.0 - Sw - solventSaturation_();
             Scalar SoMax = std::max(So, problem.maxOilSaturation(globalDofIdx));
@@ -548,7 +548,7 @@ public:
                 pg = (*this)[Indices::pressureSwitchIdx];
                 assert(pg>2.0);
             } else {
-                pg = problem.pressure(globalDofIdx, gasPhaseIdx);
+                pg = problem.pressure(globalDofIdx, gasPhaseIdx,/*timeidx*/ 0);
             }
             Scalar Sg = 1.0 - Sw - solventSaturation_();
 

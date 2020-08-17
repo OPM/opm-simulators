@@ -591,8 +591,8 @@ namespace Opm {
         void updateSolution(){
             unsigned numDof = ebosSimulator_.model().numGridDof();
             BVector dx(numDof,0);
-            this->updateSolution(dx, 0);
-            this->updateSolution(dx, 1);
+            this->updateSolution(dx);
+            //this->updateSolution(dx, 1);// can not be done
             // for(unsigned timeidx; timeidx< 2; ++timidx){
             //     SolutionVector& sol = model().solution(/*historyIdx=*/timeidx);
             //     size_t numGridDof = ebosSimulator_.model().numGridDof();
@@ -606,10 +606,10 @@ namespace Opm {
          }
 
         /// Apply an update to the primary variables.
-        void updateSolution(const BVector& dx, const int timeIdx = 0)
+        void updateSolution(const BVector& dx)
         {
             auto& ebosNewtonMethod = ebosSimulator_.model().newtonMethod();
-            SolutionVector& solution = ebosSimulator_.model().solution(timeIdx);
+            SolutionVector& solution = ebosSimulator_.model().solution(/*timeIdx*/ 0);
 
             ebosNewtonMethod.update_(/*nextSolution=*/solution,
                                      /*curSolution=*/solution,
@@ -619,7 +619,7 @@ namespace Opm {
                                                     // residual
 
             // if the solution is updated, the intensive quantities need to be recalculated
-            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(timeIdx);
+            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx*/ 0);
         }
 
         /// Return true if output to cout is wanted.
