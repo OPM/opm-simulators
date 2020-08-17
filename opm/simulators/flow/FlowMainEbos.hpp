@@ -450,7 +450,8 @@ namespace Opm
             ebosSimulator_.reset(new EbosSimulator(/*verbose=*/false));
             ebosSimulator_->executionTimer().start();
             ebosSimulator_->model().applyInitialSolution();
-
+            // this should be moved to primary variables
+            ebosSimulator_->problem().updateAllPressures();
             try {
                 // Possible to force initialization only behavior (NOSIM).
                 const std::string& dryRunString = EWOMS_GET_PARAM(TypeTag, std::string, EnableDryRun);

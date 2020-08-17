@@ -154,17 +154,19 @@ namespace Opm {
             SimulatorReportSingle reportseq;
             int seqiterations  = 0;
             int maxseqiterations = 10;
-            // should probalby store for trying onse more
+            // sett the seq variable to be equal at beginning
             auto solutionOld = model_->ebosSimulator().model().solution(/*timeIdx=*/0);
-            auto oldTotalSaturation = model_->ebosSimulator().problem().getTotalSaturation();
+            //auto oldTotalSaturation = model_->ebosSimulator().problem().getTotalSaturation(/*timeIdx*/0);
+            //model_->ebosSimulator().problem().setTotalSaturation(oldTotalSaturation,/*timeidx*/1);
+            model_->ebosSimulator().problem().syncPressureForward();
+            model_->ebosSimulator().problem().syncTotalSaturationForward();
             bool first= true;
             while(not(converged) && (seqiterations < maxseqiterations) ){
+                // Always guess that nest step will give one in total saturation
+                model_->ebosSimulator().problem().totalSaturationOne(/*timeidx*/0);
                 // do pressure step
                 if(seqiterations>0){
-                    auto& prevsol = model_->ebosSimulator().model().solution(/*timeIdx=*/1);
                     model_->ebosSimulator().model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/1);
-                    //NB is the storag cach allso invalidated??
-                    prevsol=solutionOld;
                 }
                 linearizationType.type = Opm::LinearizationType::pressure;                
                 model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);  
@@ -172,18 +174,15 @@ namespace Opm {
                 SimulatorReportSingle lreportpre = this->stepDefault(timer, /*next*/first, false);
                 first=false;
                 // do transport step
-                model_->ebosSimulator().problem().wellModel().endTimeStep();// shouldupdate previous state NB do wee need to store it if transportstep fails?
-                model_->ebosSimulator().problem().updatePressureAndFluxes();//update pressure ans ST 
+                // shouldupdate previous state NB do wee need to store it if transportstep fails?
+                model_->ebosSimulator().problem().wellModel().endTimeStep();
+                //update pressure[0] and fluxes
+                model_->ebosSimulator().problem().updatePressureAndFluxes();
                 linearizationType.type = Opm::LinearizationType::seqtransport;
                 model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);
-                // initial guess for transport use the old state
-                //auto& currsol =  model_->ebosSimulator().model().solution(/*timeIdx=*/0);
-                //currsol = solutionOld;
                 model_->updateSolution();
                 reportpre += lreportpre;
                 try{
-                    //model_->ebosSimulator().model().advanceTimeLevel();
-                    //model_->ebosSimulator().problem().beginTimeStep();
                     SimulatorReportSingle lreportseq = this->stepDefault(timer,/*next*/false, false);
                     reportseq += lreportseq;
                 }catch (...){
@@ -192,36 +191,25 @@ namespace Opm {
                     prevsol = solutionOld;
                     auto& currsol =  model_->ebosSimulator().model().solution(/*timeIdx=*/0);
                     currsol = solutionOld;
-                    // set back totalSaturation pressure and fluxes
-                    model_->ebosSimulator().problem().setTotalSaturation(oldTotalSaturation);
-                    // total pressure  fluxes should be updated in the pressure solve anyway
-                    
+                    // set back the
+                    // the sequantial variables should not be needed to put back
+                    //model_->ebosSimulator().problem().setTotalSaturation(oldTotalSaturation,0);
+                    //model_->ebosSimulator().problem().setTotalSaturation(oldTotalSaturation,1);
+                    model_->ebosSimulator().problem().syncPressureBackward();
+                    model_->ebosSimulator().problem().syncTotalSaturationBackward();    
                     throw;
                 }
-                
+                model_->ebosSimulator().problem().updateTotalSaturation();  
                 // for no not seq implicit
                 if(implicit){
-                    // for now do full implicit solve
-                    //NB storagecache need to be invalidated
-                    //bool storagecache = EWOMS_GET_PARAM(TypeTag, bool, EnableStorageCache);
-                    model_->ebosSimulator().model().setEnableStorageCache(false);
-                    auto& prevsol = model_->ebosSimulator().model().solution(/*timeIdx=*/1);
-                    prevsol=solutionOld;
-                    model_->ebosSimulator().model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/1);
-                    model_->ebosSimulator().model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
+                    //NB need to be carefull with storage cache
                     linearizationType.type = Opm::LinearizationType::implicit;
                     model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);                   
-                    model_->updateSolution();
-                    
-                    //NB her only the convergenceshould be checked
-                    //SimulatorReportSingle lreportsim = this->stepDefault(timer,/*next*/false, false);
+                    model_->updateSolution();                    
                     std::vector<double> residual_norms;
                     model_->assembleReservoir(timer, seqiterations);
                     auto convrep = model_->getConvergence(timer, seqiterations,residual_norms);
                     converged = convrep.converged();
-                    // if this used one probably have to invalidate the storage cache
-                    //model_->ebosSimulator().model().setEnableStorageCache(storagecache);
-                    model_->ebosSimulator().problem().totalSaturationOne();
                 }else{
                     converged = true;
                 }
@@ -239,7 +227,6 @@ namespace Opm {
                 report.converged = false;
             }else{
                 // model_->updateSolution();
-                model_->ebosSimulator().problem().updateTotalSaturation();  
                 model_->afterStep(timer);
                 // NOTE: updating solution again for information used in the relativeChange function.
                 linearizationType.type = Opm::LinearizationType::pressure;
@@ -247,7 +234,6 @@ namespace Opm {
                 model_->updateSolution();
                 report.converged = true;
             }            
-            //todo fill this report correctly
             return report;
                 
         }

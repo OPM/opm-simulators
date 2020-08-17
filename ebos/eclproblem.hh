@@ -740,6 +740,9 @@ public:
             simulator.startNextEpisode(timeMap.getTimeStepLength(0));
             simulator.setEpisodeIndex(0);
         }
+        //this->updatePressure_(/*timeIdx*/ 0);
+        //this->updatePressure_(/*timeIdx*/ 1);
+        
     }
 
     void prefetch(const Element& elem) const
@@ -1996,17 +1999,36 @@ public:
      * \brief update pressure and totalSaturation
      * update copy of pressure and total saturation for sequential solve
      */
+    bool updateAllPressures(){
+        this->updatePressure_(0);
+        this->updatePressure_(1);
+    }
+    
     bool updatePressureAndFluxes(){
         // maybe use simulation type instead
         std::string simulationtype  = EWOMS_GET_PARAM(TypeTag, std::string, SimulationType);
         bool updated = false;
         if(not(simulationtype == "implicit")){
-            this->updatePressure_();
+            this->updatePressure_(/*timeIdx*/ 0);
             this->updateFluxes_();
             updated = true;
         }
         return updated;
     }
+    void syncPressureForward(){
+        pressure_[1] = pressure_[0];
+    }
+    void syncPressureBackward(){
+        pressure_[0] = pressure_[1];
+    }
+
+    void syncTotalSaturationForward(){
+        totalSaturation_[1] = totalSaturation_[0];
+    }
+    void syncTotalSaturationBackward(){
+        totalSaturation_[0] = totalSaturation_[1];
+    }
+    
     bool updateTotalSaturation(){
         std::string simulationtype  = EWOMS_GET_PARAM(TypeTag, std::string, SimulationType);
         // maybe use simulation type instead
@@ -2278,8 +2300,8 @@ private:
 
         return true;
     }
-
-    bool updatePressure_()
+    
+    bool updatePressure_(unsigned timeIdx)
     {
         ElementContext elemCtx(this->simulator());
         const auto& vanguard = this->simulator().vanguard();
@@ -2289,20 +2311,17 @@ private:
             const Element& elem = *elemIt;
 
             elemCtx.updatePrimaryStencil(elem);
-            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+            elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
 
-            unsigned compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-            const auto& iq = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+            unsigned compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, timeIdx);
+            const auto& iq = elemCtx.intensiveQuantities(/*spaceIdx=*/0, timeIdx);
             const auto& fs = iq.fluidState();
 
             if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-                pressure_[1][compressedDofIdx][oilPhaseIdx] = pressure_[0][compressedDofIdx][oilPhaseIdx];
                 pressure_[0][compressedDofIdx][oilPhaseIdx] = Opm::getValue(fs.pressure(oilPhaseIdx));
             }else if( FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                pressure_[1][compressedDofIdx][gasPhaseIdx] = pressure_[0][compressedDofIdx][gasPhaseIdx];
                 pressure_[0][compressedDofIdx][gasPhaseIdx] = Opm::getValue(fs.pressure(gasPhaseIdx));
             }else{
-                pressure_[1][compressedDofIdx][waterPhaseIdx] = pressure_[0][compressedDofIdx][waterPhaseIdx];
                 pressure_[0][compressedDofIdx][waterPhaseIdx] = Opm::getValue(fs.pressure(waterPhaseIdx));
             }
         }
@@ -2312,6 +2331,10 @@ private:
 
     bool updateTotalSaturation_()
     {
+#ifndef NDEBUG                
+            Opm::LinearizationType linearizationType = this->simulator().model().linearizer().getLinearizationType();
+            assert(linearizationType.type == Opm::LinearizationType::seqtransport);
+#endif
         ElementContext elemCtx(this->simulator());
         const auto& vanguard = this->simulator().vanguard();
         auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
@@ -2688,7 +2711,7 @@ private:
             int elemIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
             initial(sol[elemIdx], elemCtx, /*spaceIdx=*/0, /*timeIdx=*/0);
         }
-
+        this->updateAllPressures();
         // make sure that the ghost and overlap entities exhibit the correct
         // solution. alternatively, this could be done in the loop above by also
         // considering non-interior elements. Since the initial() method might not work

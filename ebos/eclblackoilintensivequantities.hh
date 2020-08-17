@@ -220,14 +220,19 @@ public:
             //assert(totalSaturation<2);// debug to be sure no pressure is pressent
             //assert(timeIdx==0 ||  totalSaturation == 1);// for pure sequential with multiple steps this is always true.
             if(timeIdx == 1){
-                totalSaturation = elemCtx.problem().totalSaturation(globalSpaceIdx);
+                totalSaturation = elemCtx.problem().totalSaturation(globalSpaceIdx,timeIdx);
             }
             
-        }else if (linearizationType.type == Opm::LinearizationType::pressure) {
+        }else if (linearizationType.type == Opm::LinearizationType::pressure ||
+                  linearizationType.type == Opm::LinearizationType::implicit
+            ) {
+            totalSaturation = 1.0;//fornew step
             // we are doing sequation pressure where totalSaturation may not be 1 any more
             if(timeIdx == 1){//pressure solves try to make new value i.e. timeIdx==0 so that totalSaturation==1;
-                totalSaturation = elemCtx.problem().totalSaturation(globalSpaceIdx);
+                totalSaturation = elemCtx.problem().totalSaturation(globalSpaceIdx,timeIdx);
             }
+        }else{
+            assert(false);
         }
         fluidState_.setTotalSaturation(totalSaturation);
         if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_pg_Rv) {
