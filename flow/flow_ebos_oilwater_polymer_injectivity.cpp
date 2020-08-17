@@ -68,7 +68,7 @@ namespace Opm {
     typedef TTAG(EclFlowOilWaterPolymerInjectivityProblem) TypeTag;
     typedef GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
 
-    Vanguard::setExternalDeck(&deck, &eclState);
+    Vanguard::setExternalDeck(std::move(deck, &eclState));
 } */
 
 // ----------------- Main program -----------------

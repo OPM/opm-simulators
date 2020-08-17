@@ -223,14 +223,14 @@ public:
     /*!
      * \brief Set the Opm::ParseContext object which ought to be used for parsing the deck and creating the Opm::EclipseState object.
      */
-    static void setExternalParseContext(Opm::ParseContext* parseContext)
-    { externalParseContext_ = parseContext; }
+    static void setExternalParseContext(std::unique_ptr<Opm::ParseContext> parseContext)
+    { externalParseContext_ = std::move(parseContext); }
 
     /*!
      * \brief Set the Opm::ErrorGuard object which ought to be used for parsing the deck and creating the Opm::EclipseState object.
      */
-    static void setExternalErrorGuard(Opm::ErrorGuard* errorGuard)
-    { externalErrorGuard_ = errorGuard; }
+    static void setExternalErrorGuard(std::unique_ptr<Opm::ErrorGuard> errorGuard)
+    { externalErrorGuard_ = std::move(errorGuard); }
 
     /*!
      * \brief Set the Opm::Deck object which ought to be used when the simulator vanguard
@@ -242,14 +242,14 @@ public:
      * management of these two objects, i.e., they are not allowed to be deleted as long
      * as the simulator vanguard object is alive.
      */
-    static void setExternalDeck(Opm::Deck* deck)
-    { externalDeck_ = deck; externalDeckSet_ = true; }
+    static void setExternalDeck(std::unique_ptr<Opm::Deck> deck)
+    { externalDeck_ = std::move(deck); externalDeckSet_ = true; }
     /*!
      * \brief Set the Opm::EclipseState object which ought to be used when the simulator
      *        vanguard is instantiated.
      */
-    static void setExternalEclState(Opm::EclipseState* eclState)
-    { externalEclState_ = eclState; }
+    static void setExternalEclState(std::unique_ptr<Opm::EclipseState> eclState)
+    { externalEclState_ = std::move(eclState); }
 
     /*!
      * \brief Create the grid for problem data files which use the ECL file format.
@@ -307,14 +307,14 @@ public:
             parseContext_ = internalParseContext_.get();
         }
         else
-            parseContext_ = externalParseContext_;
+            parseContext_ = externalParseContext_.get();
 
         if (!externalParseContext_) {
             internalErrorGuard_.reset(new Opm::ErrorGuard);
             errorGuard_ = internalErrorGuard_.get();
         }
         else
-            errorGuard_ = externalErrorGuard_;
+            errorGuard_ = externalErrorGuard_.get();
 
         if (!externalDeck_ && !externalDeckSet_) {
             if (myRank == 0)
@@ -328,7 +328,7 @@ public:
                 Opm::checkDeck(*deck_, parser,  *parseContext_, *errorGuard_);
         }
         else {
-            deck_ = externalDeck_;
+            deck_ = externalDeck_.get();
         }
 
         if (!externalEclState_) {
@@ -338,8 +338,8 @@ public:
         else {
             assert(externalEclState_);
 
-            deck_ = externalDeck_;
-            eclState_ = externalEclState_;
+            deck_ = externalDeck_.get();
+            eclState_ = externalEclState_.get();
         }
 
         if (!externalEclSchedule_) {
@@ -350,7 +350,7 @@ public:
             eclSchedule_ = internalEclSchedule_.get();
         }
         else
-            eclSchedule_ = externalEclSchedule_;
+            eclSchedule_ = externalEclSchedule_.get();
         this->summaryState_.reset( new Opm::SummaryState( std::chrono::system_clock::from_time_t(this->eclSchedule_->getStartTime() )));
         this->actionState_.reset( new Opm::Action::State() );
 
@@ -367,7 +367,7 @@ public:
             eclSummaryConfig_ = internalEclSummaryConfig_.get();
         }
         else
-            eclSummaryConfig_ = externalEclSummaryConfig_;
+            eclSummaryConfig_ = externalEclSummaryConfig_.get();
 
         if (*errorGuard_) {
             errorGuard_->dump();
@@ -416,8 +416,8 @@ public:
      * The lifetime of this object is not managed by the vanguard, i.e., the object must
      * stay valid until after the vanguard gets destroyed.
      */
-    static void setExternalSchedule(Opm::Schedule* schedule)
-    { externalEclSchedule_ = schedule; }
+    static void setExternalSchedule(std::unique_ptr<Opm::Schedule> schedule)
+    { externalEclSchedule_ = std::move(schedule); }
 
     /*!
      * \brief Return a reference to the object that determines which quantities ought to
@@ -432,8 +432,8 @@ public:
      * The lifetime of this object is not managed by the vanguard, i.e., the object must
      * stay valid until after the vanguard gets destroyed.
      */
-    static void setExternalSummaryConfig(Opm::SummaryConfig* summaryConfig)
-    { externalEclSummaryConfig_ = summaryConfig; }
+    static void setExternalSummaryConfig(std::unique_ptr<Opm::SummaryConfig> summaryConfig)
+    { externalEclSummaryConfig_ = std::move(summaryConfig); }
 
 
     /*!
@@ -616,13 +616,13 @@ private:
 
     static Scalar externalSetupTime_;
 
-    static Opm::ParseContext* externalParseContext_;
-    static Opm::ErrorGuard* externalErrorGuard_;
-    static Opm::Deck* externalDeck_;
+    static std::unique_ptr<Opm::ParseContext> externalParseContext_;
+    static std::unique_ptr<Opm::ErrorGuard> externalErrorGuard_;
+    static std::unique_ptr<Opm::Deck> externalDeck_;
     static bool externalDeckSet_;
-    static Opm::EclipseState* externalEclState_;
-    static Opm::Schedule* externalEclSchedule_;
-    static Opm::SummaryConfig* externalEclSummaryConfig_;
+    static std::unique_ptr<Opm::EclipseState> externalEclState_;
+    static std::unique_ptr<Opm::Schedule> externalEclSchedule_;
+    static std::unique_ptr<Opm::SummaryConfig> externalEclSummaryConfig_;
 
     std::unique_ptr<Opm::ParseContext> internalParseContext_;
     std::unique_ptr<Opm::ErrorGuard> internalErrorGuard_;
@@ -657,25 +657,25 @@ template <class TypeTag>
 typename EclBaseVanguard<TypeTag>::Scalar EclBaseVanguard<TypeTag>::externalSetupTime_ = 0.0;
 
 template <class TypeTag>
-Opm::ParseContext* EclBaseVanguard<TypeTag>::externalParseContext_ = nullptr;
+std::unique_ptr<Opm::ParseContext> EclBaseVanguard<TypeTag>::externalParseContext_ = nullptr;
 
 template <class TypeTag>
-Opm::ErrorGuard* EclBaseVanguard<TypeTag>::externalErrorGuard_ = nullptr;
+std::unique_ptr<Opm::ErrorGuard> EclBaseVanguard<TypeTag>::externalErrorGuard_ = nullptr;
 
 template <class TypeTag>
-Opm::Deck* EclBaseVanguard<TypeTag>::externalDeck_ = nullptr;
+std::unique_ptr<Opm::Deck> EclBaseVanguard<TypeTag>::externalDeck_ = nullptr;
 
 template <class TypeTag>
 bool EclBaseVanguard<TypeTag>::externalDeckSet_ = false;
 
 template <class TypeTag>
-Opm::EclipseState* EclBaseVanguard<TypeTag>::externalEclState_;
+std::unique_ptr<Opm::EclipseState> EclBaseVanguard<TypeTag>::externalEclState_;
 
 template <class TypeTag>
-Opm::Schedule* EclBaseVanguard<TypeTag>::externalEclSchedule_ = nullptr;
+std::unique_ptr<Opm::Schedule> EclBaseVanguard<TypeTag>::externalEclSchedule_ = nullptr;
 
 template <class TypeTag>
-Opm::SummaryConfig* EclBaseVanguard<TypeTag>::externalEclSummaryConfig_ = nullptr;
+std::unique_ptr<Opm::SummaryConfig> EclBaseVanguard<TypeTag>::externalEclSummaryConfig_ = nullptr;
 
 } // namespace Opm
 

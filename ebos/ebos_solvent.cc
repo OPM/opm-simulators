@@ -41,18 +41,18 @@ END_PROPERTIES
 
 namespace Opm {
 
-void ebosSolventSetDeck(Opm::Deck* deck,
-                        Opm::ParseContext* parseContext,
-                        Opm::ErrorGuard* errorGuard,
+void ebosSolventSetDeck(std::unique_ptr<Opm::Deck> deck,
+                        std::unique_ptr<Opm::ParseContext> parseContext,
+                        std::unique_ptr<Opm::ErrorGuard> errorGuard,
                         double externalSetupTime)
 {
     typedef TTAG(EbosSolventTypeTag) ProblemTypeTag;
     typedef GET_PROP_TYPE(ProblemTypeTag, Vanguard) Vanguard;
 
     Vanguard::setExternalSetupTime(externalSetupTime);
-    Vanguard::setExternalParseContext(parseContext);
-    Vanguard::setExternalErrorGuard(errorGuard);
-    Vanguard::setExternalDeck(deck);
+    Vanguard::setExternalParseContext(std::move(parseContext));
+    Vanguard::setExternalErrorGuard(std::move(errorGuard));
+    Vanguard::setExternalDeck(std::move(deck));
 }
 
 int ebosSolventMain(int argc, char **argv)
