@@ -21,8 +21,6 @@
 #include <config.h> // CMake
 #include <cstdlib>
 #include <cstring>
-#include <iostream>
-#include <algorithm>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
@@ -71,24 +69,24 @@ void WellContributions::alloc()
 
 WellContributions::~WellContributions()
 {
-#if HAVE_CUDA
-    if(cuda_gpu){
-        freeCudaMemory(); // should come before 'delete[] h_x' 
-    }
-#endif
-    
-    if (h_x) {
-        delete[] h_x;
-        delete[] h_y;
-    }
-
     // delete MultisegmentWellContributions
     for (auto ms : multisegments) {
         delete ms;
     }
     multisegments.clear();
 
+#if HAVE_CUDA
+    if(cuda_gpu){
+        freeCudaMemory(); // should come before 'delete[] h_x' 
+    }
+#endif
+
 #if HAVE_OPENCL
+    if (h_x_ocl) {
+        delete[] h_x_ocl;
+        delete[] h_y_ocl;
+    }
+
     if(opencl_gpu){
         if(num_std_wells > 0){
             delete[] h_Cnnzs_ocl;
@@ -129,26 +127,26 @@ void WellContributions::applyMSWell(cl::CommandQueue *queue, cl::Buffer& d_x, cl
     // apply MultisegmentWells
     if (num_ms_wells > 0) {
         // allocate pinned memory on host if not yet done
-        if (h_x == nullptr) {
-            h_x = new double[N];
-            h_y = new double[N];
+        if (h_x_ocl == nullptr) {
+            h_x_ocl = new double[N];
+            h_y_ocl = new double[N];
         }
 
         // copy vectors x and y from GPU to CPU
-        queue->enqueueReadBuffer(d_x, CL_TRUE, 0, sizeof(double) * N, h_x);
-        queue->enqueueReadBuffer(d_y, CL_TRUE, 0, sizeof(double) * N, h_y);
+        queue->enqueueReadBuffer(d_x, CL_TRUE, 0, sizeof(double) * N, h_x_ocl);
+        queue->enqueueReadBuffer(d_y, CL_TRUE, 0, sizeof(double) * N, h_y_ocl);
 
         // actually apply MultisegmentWells
         for (MultisegmentWellContribution *well : multisegments) {
-            well->apply(h_x, h_y);
+            well->apply(h_x_ocl, h_y_ocl);
         }
 
         // copy vector y from CPU to GPU
-        queue->enqueueWriteBuffer(d_y, CL_TRUE, 0, sizeof(double) * N, h_y);
+        queue->enqueueWriteBuffer(d_y, CL_TRUE, 0, sizeof(double) * N, h_y_ocl);
     }
 }
 
-void WellContributions::applyStdWell(cl::CommandQueue *queue, cl::Buffer& x, cl::Buffer& y, kernel_type *kernel){
+void WellContributions::applyStdWell(cl::CommandQueue *queue, cl::Buffer& d_x, cl::Buffer& d_y, kernel_type *kernel){
     const unsigned int work_group_size = 32;
     const unsigned int total_work_items = num_std_wells * work_group_size;
     const unsigned int lmem1 = sizeof(double) * work_group_size;
@@ -156,8 +154,19 @@ void WellContributions::applyStdWell(cl::CommandQueue *queue, cl::Buffer& x, cl:
 
     cl::Event event;
     event = (*kernel)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
-                                      d_Cnnzs, d_Dnnzs, d_Bnnzs, d_Ccols, d_Bcols, x, y, dim, dim_wells, d_val_pointers,
+                                      d_Cnnzs, d_Dnnzs, d_Bnnzs, d_Ccols, d_Bcols, d_x, d_y, dim, dim_wells, d_val_pointers,
                                       cl::Local(lmem1), cl::Local(lmem2), cl::Local(lmem2));
+    event.wait();
+}
+
+void WellContributions::apply(cl::CommandQueue *queue, cl::Buffer& d_x, cl::Buffer& d_y, kernel_type *kernel){
+    if(num_std_wells > 0){
+        applyStdWell(queue, d_x, d_y, kernel);
+    }
+
+    if(num_ms_wells > 0){
+        applyMSWell(queue, d_x, d_y);
+    }
 }
 
 #endif

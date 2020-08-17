@@ -392,7 +392,7 @@ namespace bda
                                          __global const double *valsB,
                                          __global const int *colsC,
                                          __global const int *colsB,
-                                         __global double *x,
+                                         __global const double *x,
                                          __global double *y,
                                          const unsigned int blnc,
                                          const unsigned int blnr,
