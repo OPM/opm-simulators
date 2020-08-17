@@ -271,7 +271,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
 
         // apply wellContributions
         t_well.start();
-        wellContribs.apply(queue.get(), d_pw, d_v, add_well_contributions_k.get());
+        wellContribs.apply(queue.get(), d_s, d_t, add_well_contributions_k.get());
         t_well.stop();
 
         t_rest.start();
