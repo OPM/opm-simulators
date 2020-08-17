@@ -37,10 +37,6 @@
 #  include <flow/flow_ebos_oilwater_polymer_injectivity.hpp>
 # endif
 
-#include <opm/common/OpmLog/OpmLog.hpp>
-#include <opm/common/OpmLog/EclipsePRTLog.hpp>
-#include <opm/common/OpmLog/LogUtil.hpp>
-
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
@@ -51,8 +47,7 @@
 #include <opm/models/utils/parametersystem.hh>
 
 #include <opm/simulators/flow/FlowMainEbos.hpp>
-#include <opm/simulators/flow/MissingFeatures.hpp>
-
+#include <opm/simulators/utils/readDeck.hpp>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
@@ -108,6 +103,7 @@ namespace Opm {
 
 namespace Opm
 {
+
     // ----------------- Main class -----------------
     //   For now, we will either be instantiated from main() in flow.cpp,
     //   or from a Python pybind11 module..
@@ -120,14 +116,6 @@ namespace Opm
     private:
         using FlowMainEbosType = Opm::FlowMainEbos<Opm::Properties::TTag::EclFlowProblem>;
 
-        enum class FileOutputMode {
-            //! \brief No output to files.
-            OUTPUT_NONE = 0,
-            //! \brief Output only to log files, no eclipse output.
-            OUTPUT_LOG_ONLY = 1,
-            //! \brief Output to all files.
-            OUTPUT_ALL = 3
-        };
     public:
         Main(int argc, char** argv) : argc_(argc), argv_(argv)  {  }
 
@@ -420,117 +408,27 @@ namespace Opm
                 Opm::FlowMainEbos<PreTypeTag>::printBanner();
             }
             // Create Deck and EclipseState.
+            if (outputCout_) {
+                std::cout << "Reading deck file '" << deckFilename << "'\n";
+                std::cout.flush();
+            }
             try {
-                if (outputCout_) {
-                    std::cout << "Reading deck file '" << deckFilename << "'\n";
-                    std::cout.flush();
-                }
                 auto python = std::make_shared<Opm::Python>();
-                {
-                    Opm::Parser parser;
-                    Opm::ParseContext parseContext({{Opm::ParseContext::PARSE_RANDOM_SLASH, Opm::InputError::IGNORE},
-                                                    {Opm::ParseContext::PARSE_MISSING_DIMS_KEYWORD, Opm::InputError::WARN},
-                                                    {Opm::ParseContext::SUMMARY_UNKNOWN_WELL, Opm::InputError::WARN},
-                                                    {Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN}});
-                    Opm::ErrorGuard errorGuard;
-                    if (outputDir.empty())
-                        outputDir = EWOMS_GET_PARAM(PreTypeTag, std::string, OutputDir);
-                    outputMode = setupLogging_(mpiRank,
-                                      deckFilename,
-                                      outputDir,
-                                      EWOMS_GET_PARAM(PreTypeTag, std::string, OutputMode),
-                                      outputCout_, "STDOUT_LOGGER");
-
-                    if (EWOMS_GET_PARAM(PreTypeTag, bool, EclStrictParsing))
-                        parseContext.update( Opm::InputError::DELAYED_EXIT1);
-
-                    Opm::FlowMainEbos<PreTypeTag>::printPRTHeader(outputCout_);
-
-#if HAVE_MPI
-                    int parseSuccess = 0;
-#endif
-                    std::string failureMessage;
-
-                    if (mpiRank == 0) {
-                        try
-                        {
-                            if (!deck_)
-                                deck_.reset( new Opm::Deck( parser.parseFile(deckFilename , parseContext, errorGuard)));
-                            Opm::MissingFeatures::checkKeywords(*deck_, parseContext, errorGuard);
-                            if ( outputCout_ )
-                                Opm::checkDeck(*deck_, parser, parseContext, errorGuard);
-
-                            if (!eclipseState_) {
-#if HAVE_MPI
-                                eclipseState_.reset(new Opm::ParallelEclipseState(*deck_));
-#else
-                                eclipseState_.reset(new Opm::EclipseState(*deck_));
-#endif
-                            }
-                            /*
-                              For the time being initializing wells and groups from the
-                              restart file is not possible, but work is underways and it is
-                              included here as a switch.
-                            */
-                            const bool init_from_restart_file = !EWOMS_GET_PARAM(PreTypeTag, bool, SchedRestart);
-                            const auto& init_config = eclipseState_->getInitConfig();
-                            if (init_config.restartRequested() && init_from_restart_file) {
-                                int report_step = init_config.getRestartStep();
-                                const auto& rst_filename = eclipseState_->getIOConfig().getRestartFileName( init_config.getRestartRootName(), report_step, false );
-                                Opm::EclIO::ERst rst_file(rst_filename);
-                                const auto& rst_state = Opm::RestartIO::RstState::load(rst_file, report_step);
-                                if (!schedule_)
-                                    schedule_.reset(new Opm::Schedule(*deck_, *eclipseState_, parseContext, errorGuard, python, &rst_state) );
-                            }
-                            else {
-                                if (!schedule_)
-                                    schedule_.reset(new Opm::Schedule(*deck_, *eclipseState_, parseContext, errorGuard, python));
-                            }
-                            setupMessageLimiter_(schedule_->getMessageLimits(), "STDOUT_LOGGER");
-                            if (!summaryConfig_)
-                                summaryConfig_.reset( new Opm::SummaryConfig(*deck_, *schedule_, eclipseState_->getTableManager(), parseContext, errorGuard));
-#if HAVE_MPI
-                            parseSuccess = 1;
-#endif
-                        }
-                        catch(const std::exception& e)
-                        {
-                            failureMessage = e.what();
-                        }
-                    }
-#if HAVE_MPI
-                    else {
-                        if (!summaryConfig_)
-                            summaryConfig_.reset(new Opm::SummaryConfig);
-                        if (!schedule_)
-                            schedule_.reset(new Opm::Schedule(python));
-                        if (!eclipseState_)
-                            eclipseState_.reset(new Opm::ParallelEclipseState);
-                    }
-
-                    auto comm = Dune::MPIHelper::getCollectiveCommunication();
-                    parseSuccess = comm.max(parseSuccess);
-                    if (!parseSuccess)
-                    {
-                        if (errorGuard) {
-                            errorGuard.dump();
-                            errorGuard.clear();
-                        }
-                        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-                    }
-
-                    Opm::eclStateBroadcast(*eclipseState_, *schedule_, *summaryConfig_);
-#endif
-
-                    Opm::checkConsistentArrayDimensions(*eclipseState_, *schedule_, parseContext, errorGuard);
-
-                    if (errorGuard) {
-                        errorGuard.dump();
-                        errorGuard.clear();
-
-                        throw std::runtime_error("Unrecoverable errors were encountered while loading input.");
-                    }
-                }
+                const bool init_from_restart_file = !EWOMS_GET_PARAM(PreTypeTag, bool, SchedRestart);
+                if (outputDir.empty())
+                    outputDir = EWOMS_GET_PARAM(PreTypeTag, std::string, OutputDir);
+                outputMode = setupLogging(mpiRank,
+                                          deckFilename,
+                                          outputDir,
+                                          EWOMS_GET_PARAM(PreTypeTag, std::string, OutputMode),
+                                          outputCout_, "STDOUT_LOGGER");
+                Opm::ParseContext parseContext({{Opm::ParseContext::PARSE_RANDOM_SLASH, Opm::InputError::IGNORE},
+                                                {Opm::ParseContext::PARSE_MISSING_DIMS_KEYWORD, Opm::InputError::WARN},
+                                                {Opm::ParseContext::SUMMARY_UNKNOWN_WELL, Opm::InputError::WARN},
+                                                {Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN}});
+                readDeck(mpiRank, deckFilename, deck_, eclipseState_, schedule_,
+                         summaryConfig_, python, parseContext,
+                         init_from_restart_file, outputCout_);
                 setupTime_ = externalSetupTimer.elapsed();
                 outputFiles_ = (outputMode != FileOutputMode::OUTPUT_NONE);
             }
@@ -596,122 +494,6 @@ namespace Opm
             }
         }
 
-
-        void ensureOutputDirExists_(const std::string& cmdline_output_dir)
-        {
-            if (!Opm::filesystem::is_directory(cmdline_output_dir)) {
-                try {
-                    Opm::filesystem::create_directories(cmdline_output_dir);
-                }
-                catch (...) {
-                    throw std::runtime_error("Creation of output directory '" + cmdline_output_dir + "' failed\n");
-                }
-            }
-        }
-
-
-        // Setup the OpmLog backends
-        FileOutputMode setupLogging_(int mpi_rank_, const std::string& deck_filename, const std::string& cmdline_output_dir, const std::string& cmdline_output, bool output_cout_, const std::string& stdout_log_id) {
-
-            if (!cmdline_output_dir.empty()) {
-                ensureOutputDirExists_(cmdline_output_dir);
-            }
-
-            // create logFile
-            using Opm::filesystem::path;
-            path fpath(deck_filename);
-            std::string baseName;
-            std::ostringstream debugFileStream;
-            std::ostringstream logFileStream;
-
-            // Strip extension "." or ".DATA"
-            std::string extension = boost::to_upper_copy(fpath.extension().string());
-            if (extension == ".DATA" || extension == ".") {
-                baseName = boost::to_upper_copy(fpath.stem().string());
-            } else {
-                baseName = boost::to_upper_copy(fpath.filename().string());
-            }
-
-            std::string output_dir = cmdline_output_dir;
-            if (output_dir.empty()) {
-                output_dir = fpath.has_parent_path()
-                    ? absolute(fpath.parent_path()).generic_string()
-                    : Opm::filesystem::current_path().generic_string();
-            }
-
-            logFileStream << output_dir << "/" << baseName;
-            debugFileStream << output_dir << "/" << baseName;
-
-            if (mpi_rank_ != 0) {
-                // Added rank to log file for non-zero ranks.
-                // This prevents message loss.
-                debugFileStream << "." << mpi_rank_;
-                // If the following file appears then there is a bug.
-                logFileStream << "." << mpi_rank_;
-            }
-            logFileStream << ".PRT";
-            debugFileStream << ".DBG";
-
-            FileOutputMode output;
-            {
-                static std::map<std::string, FileOutputMode> stringToOutputMode =
-                    { {"none", FileOutputMode::OUTPUT_NONE },
-                      {"false", FileOutputMode::OUTPUT_LOG_ONLY },
-                      {"log", FileOutputMode::OUTPUT_LOG_ONLY },
-                      {"all" , FileOutputMode::OUTPUT_ALL },
-                      {"true" , FileOutputMode::OUTPUT_ALL }};
-                auto outputModeIt = stringToOutputMode.find(cmdline_output);
-                if (outputModeIt != stringToOutputMode.end()) {
-                    output = outputModeIt->second;
-                }
-                else {
-                    output = FileOutputMode::OUTPUT_ALL;
-                    std::cerr << "Value " << cmdline_output <<
-                        " is not a recognized output mode. Using \"all\" instead."
-                              << std::endl;
-                }
-            }
-
-            if (output > FileOutputMode::OUTPUT_NONE) {
-                std::shared_ptr<Opm::EclipsePRTLog> prtLog = std::make_shared<Opm::EclipsePRTLog>(logFileStream.str(), Opm::Log::NoDebugMessageTypes, false, output_cout_);
-                Opm::OpmLog::addBackend("ECLIPSEPRTLOG", prtLog);
-                prtLog->setMessageLimiter(std::make_shared<Opm::MessageLimiter>());
-                prtLog->setMessageFormatter(std::make_shared<Opm::SimpleMessageFormatter>(false));
-            }
-
-            if (output >= FileOutputMode::OUTPUT_LOG_ONLY) {
-                std::string debugFile = debugFileStream.str();
-                std::shared_ptr<Opm::StreamLog> debugLog = std::make_shared<Opm::EclipsePRTLog>(debugFileStream.str(), Opm::Log::DefaultMessageTypes, false, output_cout_);
-                Opm::OpmLog::addBackend("DEBUGLOG", debugLog);
-            }
-
-            if (mpi_rank_ == 0) {
-                std::shared_ptr<Opm::StreamLog> streamLog = std::make_shared<Opm::StreamLog>(std::cout, Opm::Log::StdoutMessageTypes);
-                Opm::OpmLog::addBackend(stdout_log_id, streamLog);
-                streamLog->setMessageFormatter(std::make_shared<Opm::SimpleMessageFormatter>(true));
-            }
-            return output;
-        }
-
-
-
-        void setupMessageLimiter_(const Opm::MessageLimits msgLimits,  const std::string& stdout_log_id) {
-            std::shared_ptr<Opm::StreamLog> stream_log = Opm::OpmLog::getBackend<Opm::StreamLog>(stdout_log_id);
-
-            const std::map<int64_t, int> limits = {{Opm::Log::MessageType::Note,
-                                            msgLimits.getCommentPrintLimit(0)},
-                                           {Opm::Log::MessageType::Info,
-                                            msgLimits.getMessagePrintLimit(0)},
-                                           {Opm::Log::MessageType::Warning,
-                                            msgLimits.getWarningPrintLimit(0)},
-                                           {Opm::Log::MessageType::Error,
-                                            msgLimits.getErrorPrintLimit(0)},
-                                           {Opm::Log::MessageType::Problem,
-                                            msgLimits.getProblemPrintLimit(0)},
-                                           {Opm::Log::MessageType::Bug,
-                                            msgLimits.getBugPrintLimit(0)}};
-            stream_log->setMessageLimiter(std::make_shared<Opm::MessageLimiter>(10, limits));
-        }
 
         int argc_;
         char** argv_;
