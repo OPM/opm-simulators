@@ -36,16 +36,19 @@ SET_BOOL_PROP(EclFlowFoamProblem, EnableFoam, true);
 }}
 
 namespace Opm {
-void flowEbosFoamSetDeck(double setupTime, Deck *deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
+void flowEbosFoamSetDeck(double setupTime, std::unique_ptr<Deck> deck,
+                         std::unique_ptr<EclipseState> eclState,
+                         std::unique_ptr<Schedule> schedule,
+                         std::unique_ptr<SummaryConfig> summaryConfig)
 {
     using TypeTag = Properties::TTag::EclFlowFoamProblem;
     using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
 
     Vanguard::setExternalSetupTime(setupTime);
-    Vanguard::setExternalDeck(deck);
-    Vanguard::setExternalEclState(&eclState);
-    Vanguard::setExternalSchedule(&schedule);
-    Vanguard::setExternalSummaryConfig(&summaryConfig);
+    Vanguard::setExternalDeck(std::move(deck));
+    Vanguard::setExternalEclState(std::move(eclState));
+    Vanguard::setExternalSchedule(std::move(schedule));
+    Vanguard::setExternalSummaryConfig(std::move(summaryConfig));
 }
 
 

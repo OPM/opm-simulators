@@ -33,9 +33,9 @@
 #include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
 
 namespace Opm {
-void ebosGasOilSetDeck(Opm::Deck* deck,
-                       Opm::ParseContext* parseContext,
-                       Opm::ErrorGuard* errorGuard,
+void ebosGasOilSetDeck(std::unique_ptr<Opm::Deck> deck,
+                       std::unique_ptr<Opm::ParseContext> parseContext,
+                       std::unique_ptr<Opm::ErrorGuard> errorGuard,
                        double externalSetupTime);
 
 int ebosGasOilMain(int argc, char** argv);
