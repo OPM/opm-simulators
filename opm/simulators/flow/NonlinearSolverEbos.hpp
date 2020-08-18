@@ -227,7 +227,8 @@ namespace Opm {
             report.setTransportReport(reportseq);
             report.total_newton_iterations = seqiterations;
             //TODO add timings of call to implicit residual
-            if(not(converged)){
+            bool mrst_policy = true;//accept step even if not converged
+            if(not(converged) && not(mrst_policy)){
                 report.converged = false;
                 failureReport_ = report;
                 auto& prevsol = model_->ebosSimulator().model().solution(/*timeIdx=*/1);
