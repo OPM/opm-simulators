@@ -351,8 +351,8 @@ public:
         }
         else
             eclSchedule_ = externalEclSchedule_.get();
-        this->summaryState_.reset( new Opm::SummaryState( std::chrono::system_clock::from_time_t(this->eclSchedule_->getStartTime() )));
-        this->actionState_.reset( new Opm::Action::State() );
+        this->summaryState_ = std::make_unique<Opm::SummaryState>( std::chrono::system_clock::from_time_t(this->eclSchedule_->getStartTime() ));
+        this->actionState_ = std::make_unique<Opm::Action::State>() ;
 
         if (!externalEclSummaryConfig_) {
             // create the schedule object. Note that if eclState is supposed to represent
