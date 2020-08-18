@@ -38,12 +38,12 @@ namespace Opm {
 namespace mswellhelpers
 {
 
-#if HAVE_UMFPACK
     /// Applies umfpack and checks for singularity
     template <typename MatrixType, typename VectorType>
     VectorType
     applyUMFPack(const MatrixType& D, std::shared_ptr<Dune::UMFPack<MatrixType> >& linsolver, VectorType x)
     {
+#if HAVE_UMFPACK
         if (!linsolver)
         {
             linsolver.reset(new Dune::UMFPack<MatrixType>(D, 0));
@@ -69,25 +69,12 @@ namespace mswellhelpers
             }
         }
         return y;
-    }
-#endif
-
-    // obtain y = D^-1 * x with a direct solver
-    template <typename MatrixType, typename VectorType>
-    VectorType
-    invDXDirect(const MatrixType& D, VectorType x)
-    {
-#if HAVE_UMFPACK
-        std::shared_ptr<Dune::UMFPack<MatrixType> > linsolver;
-        return applyUMFPack(D, linsolver, x);
 #else
         // this is not thread safe
-        OPM_THROW(std::runtime_error, "Cannot use invDXDirect() without UMFPACK. "
+        OPM_THROW(std::runtime_error, "Cannot use aplyUMFPack() without UMFPACK. "
                   "Reconfigure opm-simulator with SuiteSparse/UMFPACK support and recompile.");
 #endif // HAVE_UMFPACK
     }
-
-
 
 
 
