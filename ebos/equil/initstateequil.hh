@@ -46,6 +46,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/RvvdTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PbvdTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PdvdTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SaltvdTable.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/data/SimulationDataContainer.hpp>
 
@@ -148,31 +149,37 @@ namespace PhasePressODE {
 template <class FluidSystem>
 class Water
 {
+using TabulatedFunction = Opm::Tabulated1DFunction<double>;
 public:
     Water(const double temp,
+          const TabulatedFunction& saltVdTable,
           const int pvtRegionIdx,
           const double normGrav)
         : temp_(temp)
+        , saltVdTable_(saltVdTable)
         , pvtRegionIdx_(pvtRegionIdx)
         , g_(normGrav)
     {}
 
     double
-    operator()(const double /* depth */,
+    operator()(const double depth,
                const double press) const
     {
-        return this->density(press) * g_;
+        return this->density(depth, press) * g_;
     }
 
 private:
     const double temp_;
+    const TabulatedFunction& saltVdTable_;
     const int pvtRegionIdx_;
     const double g_;
 
     double
-    density(const double press) const
+    density(const double depth,
+            const double press) const
     {
-        double saltConcentration = 0.0; // TODO allow for non-zero initial salt concentration
+        // The initializing algorithm can give depths outside the range due to numerical noise i.e. we extrapolate
+        double saltConcentration = saltVdTable_.eval(depth, /*extrapolate=*/true);
         double rho = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp_, press, saltConcentration);
         rho *= FluidSystem::referenceDensity(FluidSystem::waterPhaseIdx, pvtRegionIdx_);
         return rho;
@@ -749,7 +756,7 @@ makeWatPressure(const typename WPress::InitCond& ic,
                 const VSpan&                     span)
 {
     const auto drho = WatPressODE {
-        this->temperature_, reg.pvtIdx(), this->gravity_
+        this->temperature_, reg.saltVdTable(), reg.pvtIdx(), this->gravity_
     };
 
     this->wat_ = std::make_unique<WPress>(drho, ic, this->nsample_, span);
@@ -1576,6 +1583,7 @@ public:
                          const double grav = Opm::unit::gravity,
                          const bool applySwatInit = true)
         : temperature_(grid.size(/*codim=*/0)),
+          saltConcentration_(grid.size(/*codim=*/0)),
           pp_(FluidSystem::numPhases,
               std::vector<double>(grid.size(/*codim=*/0))),
           sat_(FluidSystem::numPhases,
@@ -1699,6 +1707,9 @@ public:
         // EXTRACT the initial temperature
         updateInitialTemperature_(eclipseState);
 
+        // EXTRACT the initial salt concentration
+        updateInitialSaltConcentration_(eclipseState, eqlmap, grid);
+
         // Compute pressures, saturations, rs and rv factors.
         calcPressSatRsRv(eqlmap, rec, materialLawManager, grid, grav);
 
@@ -1710,6 +1721,7 @@ public:
     typedef std::vector<Vec>    PVec; // One per phase.
 
     const Vec& temperature() const { return temperature_; }
+    const Vec& saltConcentration() const { return saltConcentration_; }
     const PVec& press() const { return pp_; }
     const PVec& saturation() const { return sat_; }
     const Vec& rs() const { return rs_; }
@@ -1721,10 +1733,42 @@ private:
         this->temperature_ = eclState.fieldProps().get_double("TEMPI");
     }
 
+    template <class RMap>
+    void updateInitialSaltConcentration_(const Opm::EclipseState& eclState, const RMap& reg, const Grid& grid)
+    {
+        const int numEquilReg = rsFunc_.size();
+        saltVdTable_.resize(numEquilReg);
+        const auto& tables = eclState.getTableManager();
+        const Opm::TableContainer& saltvdTables = tables.getSaltvdTables();
+
+        // If no saltvd table is given, we create a trivial table for the density calculations
+        if (saltvdTables.empty()) {
+            std::vector<double> x = {0.0,1.0};
+            std::vector<double> y = {0.0,0.0};
+            for (auto& table : this->saltVdTable_) {
+                table.setXYContainers(x, y);
+            }
+        } else {
+            for (size_t i = 0; i < saltvdTables.size(); ++i) {
+                const Opm::SaltvdTable& saltvdTable = saltvdTables.getTable<Opm::SaltvdTable>(i);
+                saltVdTable_[i].setXYContainers(saltvdTable.getDepthColumn(), saltvdTable.getSaltColumn());
+
+                const auto& cells = reg.cells(i);
+                for (const auto& cell : cells) {
+                    const double depth = UgGridHelpers::cellCenterDepth(grid, cell);
+                    this->saltConcentration_[cell] = saltVdTable_[i].eval(depth);
+                }
+            }
+        }
+    }
+
     std::vector< std::shared_ptr<Miscibility::RsFunction> > rsFunc_;
     std::vector< std::shared_ptr<Miscibility::RsFunction> > rvFunc_;
+    using TabulatedFunction = Opm::Tabulated1DFunction<double>;
+    std::vector<TabulatedFunction> saltVdTable_;
     std::vector<int> regionPvtIdx_;
     Vec temperature_;
+    Vec saltConcentration_;
     PVec pp_;
     PVec sat_;
     Vec rs_;
@@ -1768,7 +1812,7 @@ private:
             Details::verticalExtent(grid, cells, vspan);
 
             const auto eqreg = EquilReg {
-                rec[r], this->rsFunc_[r], this->rvFunc_[r], this->regionPvtIdx_[r]
+                rec[r], this->rsFunc_[r], this->rvFunc_[r], this->saltVdTable_[r], this->regionPvtIdx_[r]
             };
 
             // Ensure gas/oil and oil/water contacts are within the span for the

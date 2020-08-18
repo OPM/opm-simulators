@@ -148,6 +148,10 @@ public:
                 fluidState.setDensity(phaseIdx, rho);
 
             }
+
+            // set salt concentration
+            if (enableBrine)
+                fluidState.setSaltConcentration(initialState.saltConcentration()[elemIdx]);
         }
     }
 

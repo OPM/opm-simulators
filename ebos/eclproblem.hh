@@ -411,6 +411,7 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     enum { enableExperiments = GET_PROP_VALUE(TypeTag, EnableExperiments) };
     enum { enableSolvent = GET_PROP_VALUE(TypeTag, EnableSolvent) };
     enum { enablePolymer = GET_PROP_VALUE(TypeTag, EnablePolymer) };
+    enum { enableBrine = GET_PROP_VALUE(TypeTag, EnableBrine) };
     enum { enablePolymerMolarWeight = GET_PROP_VALUE(TypeTag, EnablePolymerMW) };
     enum { enableFoam = GET_PROP_VALUE(TypeTag, EnableFoam) };
     enum { enableTemperature = GET_PROP_VALUE(TypeTag, EnableTemperature) };
@@ -1566,6 +1567,9 @@ public:
 
         if (enablePolymerMolarWeight)
             values[Indices::polymerMoleWeightIdx]= polymerMoleWeight_[globalDofIdx];
+
+        if (enableBrine)
+            values[Indices::saltConcentrationIdx] = initialFluidStates_[globalDofIdx].saltConcentration();
 
         values.checkDefined();
     }

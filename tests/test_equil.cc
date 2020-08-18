@@ -182,6 +182,11 @@ void test_PhasePressure()
     using TypeTag     = TTAG(TestEquilTypeTag);
     using FluidSystem = GET_PROP_TYPE(TypeTag, FluidSystem);
 
+    using TabulatedFunction = Opm::Tabulated1DFunction<double>;
+    std::vector<double> x = {0.0,100.0};
+    std::vector<double> y = {0.0,0.0};
+    TabulatedFunction trivialSaltVdTable = TabulatedFunction(2, x, y);
+
     auto simulator = initSimulator<TypeTag>("equil_base.DATA");
     initDefaultFluidSystem<TypeTag>();
 
@@ -189,6 +194,7 @@ void test_PhasePressure()
         record,
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        trivialSaltVdTable,
         0
     };
 
@@ -235,26 +241,35 @@ void test_CellSubset()
     const Opm::EquilRecord record[] = { mkEquilRecord( 0, 1e5, 2.5, -0.075e5, 0, 0 ),
                                   mkEquilRecord( 5, 1.35e5, 7.5, -0.225e5, 5, 0 ) };
 
+    using TabulatedFunction = Opm::Tabulated1DFunction<double>;
+    std::vector<double> x = {0.0,100.0};
+    std::vector<double> y = {0.0,0.0};
+    TabulatedFunction trivialSaltVdTable = TabulatedFunction(2, x, y);
+
     const Opm::EQUIL::EquilReg region[] =
     {
         Opm::EQUIL::EquilReg(record[0],
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        trivialSaltVdTable,
         0)
         ,
         Opm::EQUIL::EquilReg(record[0],
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        trivialSaltVdTable,
         0)
         ,
         Opm::EQUIL::EquilReg(record[1],
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        trivialSaltVdTable,
         0)
         ,
         Opm::EQUIL::EquilReg(record[1],
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        trivialSaltVdTable,
         0)
     };
 
@@ -330,26 +345,35 @@ void test_RegMapping()
     auto simulator = initSimulator<TypeTag>("equil_base.DATA");
     initDefaultFluidSystem<TypeTag>();
 
+    using TabulatedFunction = Opm::Tabulated1DFunction<double>;
+    std::vector<double> x = {0.0,100.0};
+    std::vector<double> y = {0.0,0.0};
+    TabulatedFunction trivialSaltVdTable = TabulatedFunction(2, x, y);
+
     const Opm::EQUIL::EquilReg region[] =
     {
         Opm::EQUIL::EquilReg(record[0],
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        trivialSaltVdTable,
         0)
         ,
         Opm::EQUIL::EquilReg(record[0],
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        trivialSaltVdTable,
         0)
         ,
         Opm::EQUIL::EquilReg(record[1],
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        trivialSaltVdTable,
         0)
         ,
         Opm::EQUIL::EquilReg(record[1],
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        trivialSaltVdTable,
         0)
         };
 
