@@ -303,54 +303,49 @@ public:
         // create the parser objects for the deck or use their externally specified
         // versions (if desired)
         if (!externalParseContext_) {
-            internalParseContext_ = createParseContext();
-            parseContext_ = internalParseContext_.get();
+            parseContext_ = createParseContext();
         }
         else
-            parseContext_ = externalParseContext_.get();
+            parseContext_ = std::move(externalParseContext_);
 
         if (!externalParseContext_) {
-            internalErrorGuard_.reset(new Opm::ErrorGuard);
-            errorGuard_ = internalErrorGuard_.get();
+            errorGuard_ = std::make_unique<Opm::ErrorGuard>();
         }
         else
-            errorGuard_ = externalErrorGuard_.get();
+            errorGuard_ = std::move(externalErrorGuard_);
 
         if (!externalDeck_ && !externalDeckSet_) {
             if (myRank == 0)
                 std::cout << "Reading the deck file '" << fileName << "'" << std::endl;
 
             Opm::Parser parser;
-            internalDeck_.reset(new Opm::Deck(parser.parseFile(fileName, *parseContext_, *errorGuard_)));
-            deck_ = internalDeck_.get();
+            deck_ = std::make_unique<Opm::Deck>(parser.parseFile(fileName, *parseContext_, *errorGuard_));
 
             if (enableExperiments && myRank == 0)
                 Opm::checkDeck(*deck_, parser,  *parseContext_, *errorGuard_);
         }
         else {
-            deck_ = externalDeck_.get();
+            deck_ = std::move(externalDeck_);
         }
 
         if (!externalEclState_) {
-            internalEclState_.reset(new Opm::EclipseState(*deck_));
-            eclState_ = internalEclState_.get();
+            eclState_ = std::make_unique<Opm::EclipseState>(*deck_);
         }
         else {
             assert(externalEclState_);
 
-            deck_ = externalDeck_.get();
-            eclState_ = externalEclState_.get();
+            deck_ = std::move(externalDeck_);
+            eclState_ = std::move(externalEclState_);
         }
 
         if (!externalEclSchedule_) {
             // create the schedule object. Note that if eclState is supposed to represent
             // the internalized version of the deck, this constitutes a layering
             // violation.
-            internalEclSchedule_.reset(new Opm::Schedule(*deck_, *eclState_, *parseContext_, *errorGuard_, python));
-            eclSchedule_ = internalEclSchedule_.get();
+            eclSchedule_ = std::make_unique<Opm::Schedule>(*deck_, *eclState_, *parseContext_, *errorGuard_, python);
         }
         else
-            eclSchedule_ = externalEclSchedule_.get();
+            eclSchedule_ = std::move(externalEclSchedule_);
         this->summaryState_ = std::make_unique<Opm::SummaryState>( std::chrono::system_clock::from_time_t(this->eclSchedule_->getStartTime() ));
         this->actionState_ = std::make_unique<Opm::Action::State>() ;
 
@@ -358,16 +353,16 @@ public:
             // create the schedule object. Note that if eclState is supposed to represent
             // the internalized version of the deck, this constitutes a layering
             // violation.
-            internalEclSummaryConfig_.reset(new Opm::SummaryConfig(*deck_,
-                                                                   *eclSchedule_,
-                                                                   eclState_->getTableManager(),
-                                                                   *parseContext_,
-                                                                   *errorGuard_));
+            eclSummaryConfig_ =
+                std::make_unique<Opm::SummaryConfig>(*deck_,
+                                                     *eclSchedule_,
+                                                     eclState_->getTableManager(),
+                                                     *parseContext_,
+                                                     *errorGuard_);
 
-            eclSummaryConfig_ = internalEclSummaryConfig_.get();
         }
         else
-            eclSummaryConfig_ = externalEclSummaryConfig_.get();
+            eclSummaryConfig_ = std::move(externalEclSummaryConfig_);
 
         if (*errorGuard_) {
             errorGuard_->dump();
@@ -624,23 +619,17 @@ private:
     static std::unique_ptr<Opm::Schedule> externalEclSchedule_;
     static std::unique_ptr<Opm::SummaryConfig> externalEclSummaryConfig_;
 
-    std::unique_ptr<Opm::ParseContext> internalParseContext_;
-    std::unique_ptr<Opm::ErrorGuard> internalErrorGuard_;
-    std::unique_ptr<Opm::Deck> internalDeck_;
-    std::unique_ptr<Opm::EclipseState> internalEclState_;
-    std::unique_ptr<Opm::Schedule> internalEclSchedule_;
-    std::unique_ptr<Opm::SummaryConfig> internalEclSummaryConfig_;
     std::unique_ptr<Opm::SummaryState> summaryState_;
     std::unique_ptr<Opm::Action::State> actionState_;
 
     // these attributes point  either to the internal  or to the external version of the
     // parser objects.
-    Opm::ParseContext* parseContext_;
-    Opm::ErrorGuard* errorGuard_;
-    Opm::Deck* deck_;
-    Opm::EclipseState* eclState_;
-    Opm::Schedule* eclSchedule_;
-    Opm::SummaryConfig* eclSummaryConfig_;
+    std::unique_ptr<Opm::ParseContext> parseContext_;
+    std::unique_ptr<Opm::ErrorGuard> errorGuard_;
+    std::unique_ptr<Opm::Deck> deck_;
+    std::unique_ptr<Opm::EclipseState> eclState_;
+    std::unique_ptr<Opm::Schedule> eclSchedule_;
+    std::unique_ptr<Opm::SummaryConfig> eclSummaryConfig_;
     std::shared_ptr<Opm::Python> python = std::make_shared<Opm::Python>();
 
     Dune::EdgeWeightMethod edgeWeightsMethod_;
