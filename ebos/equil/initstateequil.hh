@@ -178,7 +178,8 @@ private:
     density(const double depth,
             const double press) const
     {
-        double saltConcentration = saltVdTable_.eval(depth);
+        // The initializing algorithm can give depths outside the range due to numerical noise i.e. we extrapolate
+        double saltConcentration = saltVdTable_.eval(depth, /*extrapolate=*/true);
         double rho = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp_, press, saltConcentration);
         rho *= FluidSystem::referenceDensity(FluidSystem::waterPhaseIdx, pvtRegionIdx_);
         return rho;
@@ -1736,17 +1737,28 @@ private:
     template <class RMap>
     void updateInitialSaltConcentration_(const Opm::EclipseState& eclState, const RMap& reg, const Grid& grid)
     {
+        const int numEquilReg = rsFunc_.size();
+        saltVdTable_.resize(numEquilReg);
         const auto& tables = eclState.getTableManager();
         const Opm::TableContainer& saltvdTables = tables.getSaltvdTables();
-        saltVdTable_.resize(saltvdTables.size());
-        for (size_t i = 0; i < saltvdTables.size(); ++i) {
-            const Opm::SaltvdTable& saltvdTable = saltvdTables.getTable<Opm::SaltvdTable>(i);
-            saltVdTable_[i].setXYContainers(saltvdTable.getDepthColumn(), saltvdTable.getSaltColumn());
 
-            const auto& cells = reg.cells(i);
-            for (const auto& cell : cells) {
-                const double depth = UgGridHelpers::cellCenterDepth(grid, cell);
-                this->saltConcentration_[cell] = saltVdTable_[i].eval(depth);
+        // If no saltvd table is given, we create a trivial table for the density calculations
+        if (saltvdTables.empty()) {
+            std::vector<double> x = {0.0,1.0};
+            std::vector<double> y = {0.0,0.0};
+            for (size_t i = 0; i < numEquilReg; ++i) {
+                saltVdTable_[i].setXYContainers(x,y);
+            }
+        } else {
+            for (size_t i = 0; i < saltvdTables.size(); ++i) {
+                const Opm::SaltvdTable& saltvdTable = saltvdTables.getTable<Opm::SaltvdTable>(i);
+                saltVdTable_[i].setXYContainers(saltvdTable.getDepthColumn(), saltvdTable.getSaltColumn());
+
+                const auto& cells = reg.cells(i);
+                for (const auto& cell : cells) {
+                    const double depth = UgGridHelpers::cellCenterDepth(grid, cell);
+                    this->saltConcentration_[cell] = saltVdTable_[i].eval(depth);
+                }
             }
         }
     }
