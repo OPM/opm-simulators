@@ -203,6 +203,7 @@ namespace Opm {
                 // for no not seq implicit
                 if(implicit){
                     //NB need to be carefull with storage cache
+                    OpmLog::info("Error for sequential implicit:");
                     linearizationType.type = Opm::LinearizationType::implicit;
                     model_->ebosSimulator().model().linearizer().setLinearizationType(linearizationType);                   
                     model_->updateSolution();                    
@@ -213,8 +214,9 @@ namespace Opm {
                 }else{
                     converged = true;
                 }
-                
-                std::cout << "Sequantial fullimplicit iteration " << seqiterations << std::endl;
+                std::ostringstream ss;
+                ss << "Sequantial fullimplicit iteration " << seqiterations << std::endl;
+                OpmLog::info(ss.str());
                 seqiterations += 1;
             }
             SimulatorReportSingle report = reportseq;
