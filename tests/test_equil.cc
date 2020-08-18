@@ -182,7 +182,7 @@ void test_PhasePressure()
     using TypeTag     = TTAG(TestEquilTypeTag);
     using FluidSystem = GET_PROP_TYPE(TypeTag, FluidSystem);
 
-    using TabulatedFunction = typename Opm::Tabulated1DFunction<double>;
+    using TabulatedFunction = Opm::Tabulated1DFunction<double>;
     std::vector<double> x = {0.0,100.0};
     std::vector<double> y = {0.0,0.0};
     TabulatedFunction trivialSaltVdTable = TabulatedFunction(2, x, y);
@@ -241,7 +241,7 @@ void test_CellSubset()
     const Opm::EquilRecord record[] = { mkEquilRecord( 0, 1e5, 2.5, -0.075e5, 0, 0 ),
                                   mkEquilRecord( 5, 1.35e5, 7.5, -0.225e5, 5, 0 ) };
 
-    using TabulatedFunction = typename Opm::Tabulated1DFunction<double>;
+    using TabulatedFunction = Opm::Tabulated1DFunction<double>;
     std::vector<double> x = {0.0,100.0};
     std::vector<double> y = {0.0,0.0};
     TabulatedFunction trivialSaltVdTable = TabulatedFunction(2, x, y);
@@ -345,7 +345,7 @@ void test_RegMapping()
     auto simulator = initSimulator<TypeTag>("equil_base.DATA");
     initDefaultFluidSystem<TypeTag>();
 
-    using TabulatedFunction = typename Opm::Tabulated1DFunction<double>;
+    using TabulatedFunction = Opm::Tabulated1DFunction<double>;
     std::vector<double> x = {0.0,100.0};
     std::vector<double> y = {0.0,0.0};
     TabulatedFunction trivialSaltVdTable = TabulatedFunction(2, x, y);

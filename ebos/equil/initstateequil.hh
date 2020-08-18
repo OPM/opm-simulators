@@ -149,7 +149,7 @@ namespace PhasePressODE {
 template <class FluidSystem>
 class Water
 {
-using TabulatedFunction = typename Opm::Tabulated1DFunction<double>;
+using TabulatedFunction = Opm::Tabulated1DFunction<double>;
 public:
     Water(const double temp,
           const TabulatedFunction& saltVdTable,
@@ -530,7 +530,6 @@ private:
     double gravity_;
     int    nsample_;
     double temperature_{ 273.15 + 20 };
-    double saltConcentration_{0.0};
 
     std::unique_ptr<OPress> oil_{};
     std::unique_ptr<GPress> gas_{};
@@ -1746,8 +1745,8 @@ private:
         if (saltvdTables.empty()) {
             std::vector<double> x = {0.0,1.0};
             std::vector<double> y = {0.0,0.0};
-            for (size_t i = 0; i < numEquilReg; ++i) {
-                saltVdTable_[i].setXYContainers(x,y);
+            for (auto& table : this->saltVdTable_) {
+                table.setXYContainers(x, y);
             }
         } else {
             for (size_t i = 0; i < saltvdTables.size(); ++i) {
@@ -1765,7 +1764,7 @@ private:
 
     std::vector< std::shared_ptr<Miscibility::RsFunction> > rsFunc_;
     std::vector< std::shared_ptr<Miscibility::RsFunction> > rvFunc_;
-    using TabulatedFunction = typename Opm::Tabulated1DFunction<double>;
+    using TabulatedFunction = Opm::Tabulated1DFunction<double>;
     std::vector<TabulatedFunction> saltVdTable_;
     std::vector<int> regionPvtIdx_;
     Vec temperature_;

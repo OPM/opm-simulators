@@ -612,7 +612,7 @@ private:
  */
 class EquilReg
 {
-    using TabulatedFunction = typename Opm::Tabulated1DFunction<double>;
+    using TabulatedFunction = Opm::Tabulated1DFunction<double>;
 
 public:
     /**
