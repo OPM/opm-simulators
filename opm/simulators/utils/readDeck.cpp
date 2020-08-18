@@ -186,7 +186,7 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
             if (!deck)
             {
                 Opm::Parser parser;
-                deck.reset( new Opm::Deck( parser.parseFile(deckFilename , *parseContext, *errorGuard)));
+                deck = std::make_unique<Opm::Deck>( parser.parseFile(deckFilename , *parseContext, *errorGuard));
                 Opm::MissingFeatures::checkKeywords(*deck, *parseContext, *errorGuard);
                 if ( checkDeck )
                     Opm::checkDeck(*deck, parser, *parseContext, *errorGuard);
@@ -194,9 +194,9 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
 
             if (!eclipseState) {
 #if HAVE_MPI
-                eclipseState.reset(new Opm::ParallelEclipseState(*deck));
+                eclipseState = std::make_unique<Opm::ParallelEclipseState>(*deck);
 #else
-                eclipseState.reset(new Opm::EclipseState(*deck));
+                eclipseState = std::make_unique<Opm::EclipseState>(*deck);
 #endif
             }
             /*
@@ -211,15 +211,15 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
                 Opm::EclIO::ERst rst_file(rst_filename);
                 const auto& rst_state = Opm::RestartIO::RstState::load(rst_file, report_step);
                 if (!schedule)
-                    schedule.reset(new Opm::Schedule(*deck, *eclipseState, *parseContext, *errorGuard, python, &rst_state) );
+                    schedule = std::make_unique<Opm::Schedule>(*deck, *eclipseState, *parseContext, *errorGuard, python, &rst_state);
             }
             else {
                 if (!schedule)
-                    schedule.reset(new Opm::Schedule(*deck, *eclipseState, *parseContext, *errorGuard, python));
+                    schedule = std::make_unique<Opm::Schedule>(*deck, *eclipseState, *parseContext, *errorGuard, python);
             }
             setupMessageLimiter(schedule->getMessageLimits(), "STDOUT_LOGGER");
             if (!summaryConfig)
-                summaryConfig.reset( new Opm::SummaryConfig(*deck, *schedule, eclipseState->getTableManager(), *parseContext, *errorGuard));
+                summaryConfig = std::make_unique<Opm::SummaryConfig>(*deck, *schedule, eclipseState->getTableManager(), *parseContext, *errorGuard);
 #if HAVE_MPI
             parseSuccess = 1;
 #endif
@@ -232,11 +232,11 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
 #if HAVE_MPI
     else {
         if (!summaryConfig)
-            summaryConfig.reset(new Opm::SummaryConfig);
+            summaryConfig = std::make_unique<Opm::SummaryConfig>();
         if (!schedule)
-            schedule.reset(new Opm::Schedule(python));
+            schedule = std::make_unique<Opm::Schedule>(python);
         if (!eclipseState)
-            eclipseState.reset(new Opm::ParallelEclipseState);
+            eclipseState = std::make_unique<Opm::ParallelEclipseState>();
     }
 
     auto comm = Dune::MPIHelper::getCollectiveCommunication();
