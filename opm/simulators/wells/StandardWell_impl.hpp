@@ -24,6 +24,8 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/linalg/MatrixBlock.hpp>
 
+#include <iomanip>
+
 namespace Opm
 {
 
@@ -2219,6 +2221,16 @@ namespace Opm
         checkConvergenceControlEq(well_state, report, deferred_logger);
 
         checkConvergenceExtraEqs(res, report);
+
+        if ( !report.converged() ) {
+            std::stringstream ss;
+            ss << "UNCONVERGED WELL: " << name() << " residual ";
+            for ( int compIdx = 0; compIdx < num_components_; ++compIdx ) {
+                ss << std::setw(12) << well_flux_residual[compIdx];
+            }
+            ss << std::setw(15) << res[this->numWellEq_ - 1];
+            deferred_logger.info(ss.str());
+        }
 
         return report;
     }
