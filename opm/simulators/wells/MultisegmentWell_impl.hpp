@@ -1922,7 +1922,6 @@ namespace Opm
         for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
             duneD_[0][0][SPres][pv_idx] = control_eq.derivative(pv_idx + numEq);
         }
-        duneDSolver_.reset();
     }
 
 
@@ -2087,7 +2086,6 @@ namespace Opm
         if (accelerationalPressureLossConsidered()) {
             handleAccelerationPressureLoss(seg, well_state);
         }
-        duneDSolver_.reset();
     }
 
 
@@ -2182,7 +2180,6 @@ namespace Opm
         duneD_[seg][seg][SPres][GTotal] -= accelerationPressureLoss.derivative(GTotal + numEq);
         duneD_[seg][seg_upwind][SPres][WFrac] -= accelerationPressureLoss.derivative(WFrac + numEq);
         duneD_[seg][seg_upwind][SPres][GFrac] -= accelerationPressureLoss.derivative(GFrac + numEq);
-        duneDSolver_.reset();
     }
 
 
@@ -2516,6 +2513,8 @@ namespace Opm
         duneD_ = 0.0;
         resWell_ = 0.0;
 
+        duneDSolver_.reset();
+
         well_state.wellVaporizedOilRates()[index_of_well_] = 0.;
         well_state.wellDissolvedGasRates()[index_of_well_] = 0.;
 
@@ -2659,7 +2658,6 @@ namespace Opm
                                              well_state.segPressDropFriction()[seg] +
                                              well_state.segPressDropAcceleration()[seg];
         }
-        duneDSolver_.reset();
     }
 
 
@@ -3211,7 +3209,6 @@ namespace Opm
             duneD_[seg][outlet_segment_index][SPres][pv_idx] = -outlet_pressure.derivative(pv_idx + numEq);
 
         }
-        duneDSolver_.reset();
     }
 
 
@@ -3253,7 +3250,6 @@ namespace Opm
         for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
             duneD_[seg][outlet_segment_index][SPres][pv_idx] = -outlet_pressure.derivative(pv_idx + numEq);
         }
-        duneDSolver_.reset();
     }
 
 
