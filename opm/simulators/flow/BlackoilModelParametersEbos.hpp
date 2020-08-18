@@ -49,6 +49,12 @@ NEW_PROP_TAG(MatrixAddWellContributions);
 NEW_PROP_TAG(EnableWellOperabilityCheck);
 NEW_PROP_TAG(SimulationType);
 
+// for sequential
+NEW_PROP_TAG(MaxStrictIterSeq);
+NEW_PROP_TAG(ToleranceCnvSeq);
+NEW_PROP_TAG(ToleranceCnvRelaxedSeq);
+NEW_PROP_TAG(TolerancePressure);
+
 // parameters for multisegment wells
 NEW_PROP_TAG(TolerancePressureMsWells);
 NEW_PROP_TAG(MaxPressureChangeMsWells);
@@ -90,6 +96,12 @@ SET_STRING_PROP(FlowModelParameters, SimulationType, "implicit");
 
 SET_SCALAR_PROP(FlowModelParameters, RelaxedFlowTolInnerIterMsw, 1);
 SET_SCALAR_PROP(FlowModelParameters, RelaxedPressureTolInnerIterMsw, 0.5e5);
+
+// for sequential
+SET_INT_PROP(FlowModelParameters, MaxStrictIterSeq, 8);
+SET_SCALAR_PROP(FlowModelParameters, ToleranceCnvSeq,1e-2);
+SET_SCALAR_PROP(FlowModelParameters, ToleranceCnvRelaxedSeq, 1e9);
+SET_SCALAR_PROP(FlowModelParameters, TolerancePressure, 1e-4);
 
 // if openMP is available, determine the number threads per process automatically.
 #if _OPENMP
@@ -186,6 +198,15 @@ namespace Opm
         // Whether to add influences of wells between cells to the matrix and preconditioner matrix
         bool matrix_add_well_contributions_;
 
+        // for sequential
+        /// Maximum number of Newton iterations before we give up on the CNV convergence criterion
+        int max_strict_iter_seq_;
+        /// Local convergence tolerance (max of local saturation errors).
+        double tolerance_cnv_seq_;
+        /// Relaxed local convergence tolerance (used when iter >= max_strict_iter_).
+        double tolerance_cnv_relaxed_seq_;
+        /// pressure tolerance
+        double tolerance_pressure_;
         /// Construct from user parameters or defaults.
         BlackoilModelParametersEbos()
         {
@@ -217,6 +238,13 @@ namespace Opm
             matrix_add_well_contributions_ = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
 
             deck_file_name_ = EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName);
+
+            // for sequential
+            max_strict_iter_seq_ = EWOMS_GET_PARAM(TypeTag, int, MaxStrictIterSeq);
+            tolerance_cnv_seq_ = EWOMS_GET_PARAM(TypeTag, Scalar, ToleranceCnvSeq);
+            tolerance_cnv_relaxed_seq_ = EWOMS_GET_PARAM(TypeTag, Scalar, ToleranceCnvRelaxedSeq);
+            tolerance_pressure_ = EWOMS_GET_PARAM(TypeTag, Scalar, TolerancePressure);
+            
         }
 
         static void registerParameters()
@@ -249,6 +277,13 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, bool, MatrixAddWellContributions, "Explicitly specify the influences of wells between cells in the Jacobian and preconditioner matrices");
             EWOMS_REGISTER_PARAM(TypeTag, bool, EnableWellOperabilityCheck, "Enable the well operability checking");
             EWOMS_REGISTER_PARAM(TypeTag, std::string, SimulationType, "Define simulation type: default implicit");
+
+            // for sequential
+            EWOMS_REGISTER_PARAM(TypeTag, int, MaxStrictIterSeq, "Maximum number of sequential iterations before relaxed tolerances are used for the CNV convergence criterion");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, ToleranceCnvSeq, "Local convergence tolerance for sequentialtransport(Maximum of local saturation errors)");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, ToleranceCnvRelaxedSeq, "Relaxed local convergence tolerance that applies for iterations after the iterations with the strict tolerance for sequential transport");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, TolerancePressure, "Relaxed local convergence tolerance that applies for iterations after the iterations with the strict tolerance for sequential transport");
+
         }
     };
 } // namespace Opm

@@ -40,11 +40,13 @@ NEW_TYPE_TAG(FlowNonLinearSolver);
 NEW_PROP_TAG(NewtonMaxRelax);
 NEW_PROP_TAG(FlowNewtonMaxIterations);
 NEW_PROP_TAG(FlowNewtonMinIterations);
+NEW_PROP_TAG(FlowNewtonMaxSeqIterations);
 NEW_PROP_TAG(NewtonRelaxationType);
 
 SET_SCALAR_PROP(FlowNonLinearSolver, NewtonMaxRelax, 0.5);
 SET_INT_PROP(FlowNonLinearSolver, FlowNewtonMaxIterations, 20);
 SET_INT_PROP(FlowNonLinearSolver, FlowNewtonMinIterations, 1);
+SET_INT_PROP(FlowNonLinearSolver, FlowNewtonMaxSeqIterations, 10);
 SET_STRING_PROP(FlowNonLinearSolver, NewtonRelaxationType, "dampen");
 
 } // namespace Opm::Properties
@@ -75,7 +77,7 @@ namespace Opm {
             double relaxRelTol_;
             int maxIter_; // max nonlinear iterations
             int minIter_; // min nonlinear iterations
-
+            int maxSeqIter_;// max sequential iterations
             SolverParameters()
             {
                 // set default values
@@ -85,6 +87,7 @@ namespace Opm {
                 relaxMax_ = EWOMS_GET_PARAM(TypeTag, Scalar, NewtonMaxRelax);
                 maxIter_ = EWOMS_GET_PARAM(TypeTag, int, FlowNewtonMaxIterations);
                 minIter_ = EWOMS_GET_PARAM(TypeTag, int, FlowNewtonMinIterations);
+                maxSeqIter_ = EWOMS_GET_PARAM(TypeTag, int, FlowNewtonMaxSeqIterations);
 
                 const auto& relaxationTypeString = EWOMS_GET_PARAM(TypeTag, std::string, NewtonRelaxationType);
                 if (relaxationTypeString == "dampen") {
@@ -101,6 +104,7 @@ namespace Opm {
                 EWOMS_REGISTER_PARAM(TypeTag, Scalar, NewtonMaxRelax, "The maximum relaxation factor of a Newton iteration used by flow");
                 EWOMS_REGISTER_PARAM(TypeTag, int, FlowNewtonMaxIterations, "The maximum number of Newton iterations per time step used by flow");
                 EWOMS_REGISTER_PARAM(TypeTag, int, FlowNewtonMinIterations, "The minimum number of Newton iterations per time step used by flow");
+                EWOMS_REGISTER_PARAM(TypeTag, int, FlowNewtonMaxSeqIterations, "The maxismum number of Sequential iterations per time step used by flow");
                 EWOMS_REGISTER_PARAM(TypeTag, std::string, NewtonRelaxationType, "The type of relaxation used by flow's Newton method");
             }
 
@@ -113,6 +117,7 @@ namespace Opm {
                 relaxRelTol_ = 0.2;
                 maxIter_ = 10;
                 minIter_ = 1;
+                maxSeqIter_ = 10;
             }
 
         };
@@ -153,7 +158,6 @@ namespace Opm {
             SimulatorReportSingle reportpre;
             SimulatorReportSingle reportseq;
             int seqiterations  = 0;
-            int maxseqiterations = 10;
             // sett the seq variable to be equal at beginning
             auto solutionOld = model_->ebosSimulator().model().solution(/*timeIdx=*/0);
             //auto oldTotalSaturation = model_->ebosSimulator().problem().getTotalSaturation(/*timeIdx*/0);
@@ -161,7 +165,7 @@ namespace Opm {
             model_->ebosSimulator().problem().syncPressureForward();
             model_->ebosSimulator().problem().syncTotalSaturationForward();
             bool first= true;
-            while(not(converged) && (seqiterations < maxseqiterations) ){
+            while(not(converged) && (seqiterations < maxSeqIter()) ){
                 // Always guess that nest step will give one in total saturation
                 model_->ebosSimulator().problem().totalSaturationOne(/*timeidx*/0);
                 // do pressure step
@@ -193,8 +197,6 @@ namespace Opm {
                     currsol = solutionOld;
                     // set back the
                     // the sequantial variables should not be needed to put back
-                    //model_->ebosSimulator().problem().setTotalSaturation(oldTotalSaturation,0);
-                    //model_->ebosSimulator().problem().setTotalSaturation(oldTotalSaturation,1);
                     model_->ebosSimulator().problem().syncPressureBackward();
                     model_->ebosSimulator().problem().syncTotalSaturationBackward();    
                     throw;
@@ -227,6 +229,17 @@ namespace Opm {
             //TODO add timings of call to implicit residual
             if(not(converged)){
                 report.converged = false;
+                failureReport_ = report;
+                auto& prevsol = model_->ebosSimulator().model().solution(/*timeIdx=*/1);
+                prevsol = solutionOld;
+                auto& currsol =  model_->ebosSimulator().model().solution(/*timeIdx=*/0);
+                currsol = solutionOld;
+                // set back the
+                // the sequantial variables should not be needed to put back
+                model_->ebosSimulator().problem().syncPressureBackward();
+                model_->ebosSimulator().problem().syncTotalSaturationBackward();    
+                std::string msg = "Solver iteration sin seq - Failed to complete a time step within " + std::to_string(maxIter()) + " iterations.";
+                OPM_THROW_NOLOG(Opm::TooManyIterations, msg);
             }else{
                 // model_->updateSolution();
                 model_->afterStep(timer);
@@ -399,6 +412,9 @@ namespace Opm {
         /// The minimum number of nonlinear iterations allowed.
         int minIter() const
         { return param_.minIter_; }
+
+        int maxSeqIter() const
+        { return param_.maxSeqIter_; }
 
         /// Set parameters to override those given at construction time.
         void setParameters(const SolverParameters& param)

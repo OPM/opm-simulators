@@ -479,31 +479,13 @@ namespace Opm {
             return ebosSimulator_.model().newtonMethod().linearSolver().iterations ();
         }
 
-        /// Solve the Jacobian system Jx = r where J is the Jacobian and
-        /// r is the residual.
-        void solveJacobianSystem(BVector& x)
-        {
-            if(ebosSimulator_.model().linearizer().getLinearizationType().type == Opm::LinearizationType::pressure){
-                auto& ebosJac = ebosSimulator_.model().linearizer().jacobian();
-                auto& ebosResid = ebosSimulator_.model().linearizer().residual();
-                // NB when tested the linear solver an the martrix could be part of linearizer
-                using PressureMatrixType = Dune::BCRSMatrix< Dune::FieldMatrix<double,1,1>>;
-                using PressureVectorType = Dune::BlockVector<Dune::FieldVector<double,1>>;
-                int pressureVarIndex=1;
-                // true impes case could add case with trivial weighs i equations is modifind with weights
-                // this would make a newton based method if derivative of the weights are takein into account
-                BVector weights = this->getPressureWeights(pressureVarIndex);
-                PressureMatrixType pmatrix =
-                    PressureHelper::makePressureMatrix<Mat,
-                                                       BVector,
-                                                       PressureMatrixType,
-                                                       PressureVectorType>(
-                                                           ebosJac.istlMatrix(),
-                                                           pressureVarIndex,
-                                                           weights);
-                PressureVectorType rhs(ebosResid.size(),0);
-                PressureHelper::moveToPressureEqn(ebosResid, rhs, weights);
-                boost::property_tree::ptree prm;
+        std::unique_ptr<
+            Dune::FlexibleSolver< Dune::BCRSMatrix< Dune::FieldMatrix<double,1,1>>,
+                                  Dune::BlockVector<Dune::FieldVector<double,1>>
+                                  >            
+            >
+        makePressureSolver(Dune::BCRSMatrix< Dune::FieldMatrix<double,1,1>>& pmatrix) {
+            boost::property_tree::ptree prm;
                 if (std::filesystem::exists("pressuresolver.json") ) {
                     try{
                         boost::property_tree::read_json("pressuresolver.json", prm);
@@ -519,6 +501,8 @@ namespace Opm {
                           "}";
                     boost::property_tree::read_json(ss, prm);
                 }
+                using PressureMatrixType = Dune::BCRSMatrix< Dune::FieldMatrix<double,1,1>>;
+                using PressureVectorType = Dune::BlockVector<Dune::FieldVector<double,1>>;
                 std::any parallelInformation;
                 extractParallelGridInformationToISTL(ebosSimulator_.vanguard().grid(), parallelInformation);
                 using AbstractOperatorType = Dune::AssembledLinearOperator<PressureMatrixType, PressureVectorType, PressureVectorType>;
@@ -553,16 +537,51 @@ namespace Opm {
                     operator_for_flexiblesolver = std::make_unique<SeqLinearOperator>(pmatrix);
                     pressureSolver = std::make_unique<PressureSolverType>(*operator_for_flexiblesolver, prm, weightsCalculator);
                 }
+                return pressureSolver;
 
+        }
+        
+        /// Solve the Jacobian system Jx = r where J is the Jacobian and
+        /// r is the residual.
+        void solveJacobianSystem(BVector& x)
+        {
+            if(ebosSimulator_.model().linearizer().getLinearizationType().type == Opm::LinearizationType::pressure){
+                auto& ebosJac = ebosSimulator_.model().linearizer().jacobian();
+                auto& ebosResid = ebosSimulator_.model().linearizer().residual();
+                // NB when tested the linear solver an the martrix could be part of linearizer
+                using PressureMatrixType = Dune::BCRSMatrix< Dune::FieldMatrix<double,1,1>>;
+                using PressureVectorType = Dune::BlockVector<Dune::FieldVector<double,1>>;
+                int pressureVarIndex=1;
+                // true impes case could add case with trivial weighs i equations is modifind with weights
+                // this would make a newton based method if derivative of the weights are takein into account
+                BVector weights = this->getPressureWeights(pressureVarIndex);
+                PressureMatrixType pmatrix =
+                    PressureHelper::makePressureMatrix<Mat,
+                                                       BVector,
+                                                       PressureMatrixType,
+                                                       PressureVectorType>(
+                                                           ebosJac.istlMatrix(),
+                                                           pressureVarIndex,
+                                                           weights);
+                PressureVectorType rhs(ebosResid.size(),0);
+                PressureHelper::moveToPressureEqn(ebosResid, rhs, weights);
+
+                using PressureSolverType = Dune::FlexibleSolver<PressureMatrixType, PressureVectorType>;
+                std::unique_ptr<PressureSolverType> pressureSolver = makePressureSolver(pmatrix);
                 PressureVectorType xp(x.size(),0);
                 Dune::InverseOperatorResult res;
                 pressureSolver->apply(xp,rhs, res);
-                Opm::Helper::writeSystem(this->ebosSimulator_, //simulator is only used to get names
-                                                     pmatrix,
-                                                     rhs,
-                                                     comm.get(),
-                                                     std::string("pressure_")
-                                         );
+                /*
+                bool write_pressure_system  = false;               
+                if(write_pressure_system){
+                    Opm::Helper::writeSystem(this->ebosSimulator_, //simulator is only used to get names
+                                             pmatrix,
+                                             rhs,
+                                             comm.get(),
+                                             std::string("pressure_")
+                        );
+                }
+                */
                 x=0;
                 PressureHelper::movePressureToBlock(x, xp, pressureVarIndex);
                 // set initial guess
@@ -792,7 +811,12 @@ namespace Opm {
             typedef std::vector< Scalar > Vector;
 
             const double tol_mb  = param_.tolerance_mb_;
-            const double tol_cnv = (iteration < param_.max_strict_iter_) ? param_.tolerance_cnv_ : param_.tolerance_cnv_relaxed_;
+            double tol_cnv;
+            if(ebosSimulator_.model().linearizer().getLinearizationType().type == Opm::LinearizationType::seqtransport){
+                tol_cnv = (iteration < param_.max_strict_iter_seq_) ? param_.tolerance_cnv_seq_ : param_.tolerance_cnv_relaxed_seq_;
+            }else{
+                tol_cnv = (iteration < param_.max_strict_iter_) ? param_.tolerance_cnv_ : param_.tolerance_cnv_relaxed_;
+            }
 
             const int numComp = numEq;
             Vector R_sum(numComp, 0.0 );
@@ -948,8 +972,8 @@ namespace Opm {
             ss << "Iteration " << iteration << " Norm of pressure equation " << norm;
             OpmLog::info(ss.str());
             // NB need better convergence criteria
-            const double tol_cnv = param_.tolerance_cnv_;
-            bool converged = norm < tol_cnv;
+            const double tol_pressure = param_.tolerance_pressure_;
+            bool converged = norm < tol_pressure;
             ConvergenceReport report;
             
             if(not(converged)){
