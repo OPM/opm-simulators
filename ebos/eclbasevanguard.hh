@@ -49,6 +49,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/State.hpp>
 
+#include <opm/simulators/utils/readDeck.hpp>
 
 #if HAVE_MPI
 #include <mpi.h>
@@ -300,76 +301,47 @@ public:
             std::transform(caseName_.begin(), caseName_.end(), caseName_.begin(), ::toupper);
         }
 
-        // create the parser objects for the deck or use their externally specified
-        // versions (if desired)
-        if (!externalParseContext_) {
+        std::unique_ptr<ErrorGuard> errorGuard = nullptr;
+
+        // Check that we are in one of the known configurations for external variables
+        // and move them to internal
+        if (externalDeck_)
+        {
+            deck_ = std::move(externalDeck_);
+
+            if (externalParseContext_ && externalErrorGuard_ )
+            {
+                parseContext_ = std::move(externalParseContext_);
+                errorGuard = std::move(externalErrorGuard_);
+            }
+            else if(externalEclState_ && externalEclSchedule_ && externalEclSummaryConfig_)
+            {
+                eclState_ = std::move(externalEclState_);
+                eclSchedule_ = std::move(externalEclSchedule_);
+                eclSummaryConfig_ = std::move(externalEclSummaryConfig_);
+            }
+            else
+            {
+                OPM_THROW(std::logic_error, "Either parse context and error guard or ECL state, schedule, and summary config need to be"
+                          << " set externally.");
+            }
+        }
+        else if (externalParseContext_)
+        {
+            parseContext_ = std::move(externalParseContext_);
+        }
+        else
+        {
             parseContext_ = createParseContext();
         }
-        else
-            parseContext_ = std::move(externalParseContext_);
 
-        if (!externalParseContext_) {
-            errorGuard_ = std::make_unique<Opm::ErrorGuard>();
-        }
-        else
-            errorGuard_ = std::move(externalErrorGuard_);
+        readDeck(myRank, fileName, deck_, eclState_, eclSchedule_,
+                 eclSummaryConfig_, std::move(errorGuard), python,
+                 std::move(parseContext_), /* initFromRestart = */ false,
+                 /* checkDeck = */ enableExperiments);
 
-        if (!externalDeck_ && !externalDeckSet_) {
-            if (myRank == 0)
-                std::cout << "Reading the deck file '" << fileName << "'" << std::endl;
-
-            Opm::Parser parser;
-            deck_ = std::make_unique<Opm::Deck>(parser.parseFile(fileName, *parseContext_, *errorGuard_));
-
-            if (enableExperiments && myRank == 0)
-                Opm::checkDeck(*deck_, parser,  *parseContext_, *errorGuard_);
-        }
-        else {
-            deck_ = std::move(externalDeck_);
-        }
-
-        if (!externalEclState_) {
-            eclState_ = std::make_unique<Opm::EclipseState>(*deck_);
-        }
-        else {
-            assert(externalEclState_);
-
-            deck_ = std::move(externalDeck_);
-            eclState_ = std::move(externalEclState_);
-        }
-
-        if (!externalEclSchedule_) {
-            // create the schedule object. Note that if eclState is supposed to represent
-            // the internalized version of the deck, this constitutes a layering
-            // violation.
-            eclSchedule_ = std::make_unique<Opm::Schedule>(*deck_, *eclState_, *parseContext_, *errorGuard_, python);
-        }
-        else
-            eclSchedule_ = std::move(externalEclSchedule_);
         this->summaryState_ = std::make_unique<Opm::SummaryState>( std::chrono::system_clock::from_time_t(this->eclSchedule_->getStartTime() ));
         this->actionState_ = std::make_unique<Opm::Action::State>() ;
-
-        if (!externalEclSummaryConfig_) {
-            // create the schedule object. Note that if eclState is supposed to represent
-            // the internalized version of the deck, this constitutes a layering
-            // violation.
-            eclSummaryConfig_ =
-                std::make_unique<Opm::SummaryConfig>(*deck_,
-                                                     *eclSchedule_,
-                                                     eclState_->getTableManager(),
-                                                     *parseContext_,
-                                                     *errorGuard_);
-
-        }
-        else
-            eclSummaryConfig_ = std::move(externalEclSummaryConfig_);
-
-        if (*errorGuard_) {
-            errorGuard_->dump();
-            errorGuard_->clear();
-
-            throw std::runtime_error("Unrecoverable errors were encountered while loading input.");
-        }
 
         // Possibly override IOConfig setting for how often RESTART files should get
         // written to disk (every N report step)
@@ -568,8 +540,11 @@ protected:
         asImp_().finalizeInit_();
 
         if (enableExperiments) {
-            Opm::RelpermDiagnostics relpermDiagnostics;
-            relpermDiagnostics.diagnosis(*eclState_, asImp_().grid());
+            if (asImp_().grid().size(0)) //grid not loadbalanced yet for ebos!
+            {
+                Opm::RelpermDiagnostics relpermDiagnostics;
+                relpermDiagnostics.diagnosis(*eclState_, asImp_().grid());
+            }
         }
     }
 private:

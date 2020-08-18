@@ -53,9 +53,12 @@ FileOutputMode setupLogging(int mpi_rank_, const std::string& deck_filename, con
 void setupMessageLimiter(const Opm::MessageLimits msgLimits,  const std::string& stdout_log_id);
 
 
+/// \brief Reads the deck and creates all necessary objects if needed
+///
+/// If pointers already contains objects then they are used otherwise they are created and can be used outside later.
 void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& deck, std::unique_ptr<Opm::EclipseState>& eclipseState,
               std::unique_ptr<Opm::Schedule>& schedule, std::unique_ptr<Opm::SummaryConfig>& summaryConfig,
-              std::shared_ptr<Opm::Python>& python, const ParseContext& parseContext,
+              std::unique_ptr<ErrorGuard> errorGuard, std::shared_ptr<Opm::Python>& python, std::unique_ptr<ParseContext> parseContext,
               bool initFromRestart, bool checkDeck);
 } // end namespace Opm
 

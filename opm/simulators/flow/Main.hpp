@@ -422,12 +422,15 @@ namespace Opm
                                           outputDir,
                                           EWOMS_GET_PARAM(PreTypeTag, std::string, OutputMode),
                                           outputCout_, "STDOUT_LOGGER");
-                Opm::ParseContext parseContext({{Opm::ParseContext::PARSE_RANDOM_SLASH, Opm::InputError::IGNORE},
-                                                {Opm::ParseContext::PARSE_MISSING_DIMS_KEYWORD, Opm::InputError::WARN},
-                                                {Opm::ParseContext::SUMMARY_UNKNOWN_WELL, Opm::InputError::WARN},
-                                                {Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN}});
+                auto parseContext =
+                    std::make_unique<Opm::ParseContext>(std::vector<std::pair<std::string , InputError::Action>>
+                                                        {{Opm::ParseContext::PARSE_RANDOM_SLASH, Opm::InputError::IGNORE},
+                                                         {Opm::ParseContext::PARSE_MISSING_DIMS_KEYWORD, Opm::InputError::WARN},
+                                                         {Opm::ParseContext::SUMMARY_UNKNOWN_WELL, Opm::InputError::WARN},
+                                                         {Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN}});
+
                 readDeck(mpiRank, deckFilename, deck_, eclipseState_, schedule_,
-                         summaryConfig_, python, parseContext,
+                         summaryConfig_, nullptr, python, std::move(parseContext),
                          init_from_restart_file, outputCout_);
                 setupTime_ = externalSetupTimer.elapsed();
                 outputFiles_ = (outputMode != FileOutputMode::OUTPUT_NONE);

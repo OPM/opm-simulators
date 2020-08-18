@@ -162,11 +162,13 @@ void setupMessageLimiter(const Opm::MessageLimits msgLimits,  const std::string&
 
 void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& deck, std::unique_ptr<Opm::EclipseState>& eclipseState,
               std::unique_ptr<Opm::Schedule>& schedule, std::unique_ptr<Opm::SummaryConfig>& summaryConfig,
-              std::shared_ptr<Opm::Python>& python, const ParseContext& parseContext,
+              std::unique_ptr<ErrorGuard> errorGuard, std::shared_ptr<Opm::Python>& python, std::unique_ptr<ParseContext> parseContext,
               bool initFromRestart, bool checkDeck)
 {
-    Opm::Parser parser;
-    Opm::ErrorGuard errorGuard;
+    if (!errorGuard)
+    {
+        errorGuard = std::make_unique<ErrorGuard>();
+    }
 
 #if HAVE_MPI
     int parseSuccess = 0;
@@ -176,14 +178,22 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
     if (rank==0) {
         try
         {
+            if ( (!deck || !schedule || !summaryConfig ) && !parseContext)
+            {
+                OPM_THROW(std::logic_error, "We need a parse context if deck, schedule, or summaryConfig are not initialized");
+            }
+
             if (!deck)
-                deck.reset( new Opm::Deck( parser.parseFile(deckFilename , parseContext, errorGuard)));
-            Opm::MissingFeatures::checkKeywords(*deck, parseContext, errorGuard);
-            if ( checkDeck )
-                Opm::checkDeck(*deck, parser, parseContext, errorGuard);
+            {
+                Opm::Parser parser;
+                deck.reset( new Opm::Deck( parser.parseFile(deckFilename , *parseContext, *errorGuard)));
+                Opm::MissingFeatures::checkKeywords(*deck, *parseContext, *errorGuard);
+                if ( checkDeck )
+                    Opm::checkDeck(*deck, parser, *parseContext, *errorGuard);
+            }
 
             if (!eclipseState) {
-#if HAVEMPI
+#if HAVE_MPI
                 eclipseState.reset(new Opm::ParallelEclipseState(*deck));
 #else
                 eclipseState.reset(new Opm::EclipseState(*deck));
@@ -201,15 +211,15 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
                 Opm::EclIO::ERst rst_file(rst_filename);
                 const auto& rst_state = Opm::RestartIO::RstState::load(rst_file, report_step);
                 if (!schedule)
-                    schedule.reset(new Opm::Schedule(*deck, *eclipseState, parseContext, errorGuard, python, &rst_state) );
+                    schedule.reset(new Opm::Schedule(*deck, *eclipseState, *parseContext, *errorGuard, python, &rst_state) );
             }
             else {
                 if (!schedule)
-                    schedule.reset(new Opm::Schedule(*deck, *eclipseState, parseContext, errorGuard, python));
+                    schedule.reset(new Opm::Schedule(*deck, *eclipseState, *parseContext, *errorGuard, python));
             }
             setupMessageLimiter(schedule->getMessageLimits(), "STDOUT_LOGGER");
             if (!summaryConfig)
-                summaryConfig.reset( new Opm::SummaryConfig(*deck, *schedule, eclipseState->getTableManager(), parseContext, errorGuard));
+                summaryConfig.reset( new Opm::SummaryConfig(*deck, *schedule, eclipseState->getTableManager(), *parseContext, *errorGuard));
 #if HAVE_MPI
             parseSuccess = 1;
 #endif
@@ -233,9 +243,9 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
     parseSuccess = comm.max(parseSuccess);
     if (!parseSuccess)
     {
-        if (errorGuard) {
-            errorGuard.dump();
-            errorGuard.clear();
+        if (*errorGuard) {
+            errorGuard->dump();
+            errorGuard->clear();
         }
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
@@ -243,11 +253,11 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
     Opm::eclStateBroadcast(*eclipseState, *schedule, *summaryConfig);
 #endif
 
-    Opm::checkConsistentArrayDimensions(*eclipseState, *schedule, parseContext, errorGuard);
+    Opm::checkConsistentArrayDimensions(*eclipseState, *schedule, *parseContext, *errorGuard);
 
-    if (errorGuard) {
-        errorGuard.dump();
-        errorGuard.clear();
+    if (*errorGuard) {
+        errorGuard->dump();
+        errorGuard->clear();
 
         throw std::runtime_error("Unrecoverable errors were encountered while loading input.");
     }
