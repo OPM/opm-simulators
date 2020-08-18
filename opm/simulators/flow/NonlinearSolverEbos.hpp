@@ -239,7 +239,7 @@ namespace Opm {
                 // the sequantial variables should not be needed to put back
                 model_->ebosSimulator().problem().syncPressureBackward();
                 model_->ebosSimulator().problem().syncTotalSaturationBackward();    
-                std::string msg = "Solver iteration sin seq - Failed to complete a time step within " + std::to_string(maxIter()) + " iterations.";
+                std::string msg = "Solver iteration sin seq - Failed to complete a time step within " + std::to_string(maxSeqIter()) + " iterations.";
                 OPM_THROW_NOLOG(Opm::TooManyIterations, msg);
             }else{
                 // model_->updateSolution();
