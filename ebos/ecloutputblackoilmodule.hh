@@ -999,7 +999,7 @@ public:
             sol.insert ("FOAM", Opm::UnitSystem::measure::identity, std::move(cFoam_), Opm::data::TargetType::RESTART_SOLUTION);
 
         if (cSalt_.size() > 0)
-            sol.insert ("SALT", Opm::UnitSystem::measure::identity, std::move(cSalt_), Opm::data::TargetType::RESTART_SOLUTION);
+            sol.insert ("SALT", Opm::UnitSystem::measure::salinity, std::move(cSalt_), Opm::data::TargetType::RESTART_SOLUTION);
 
         if (dewPointPressure_.size() > 0)
             sol.insert ("PDEW", Opm::UnitSystem::measure::pressure, std::move(dewPointPressure_), Opm::data::TargetType::RESTART_AUXILIARY);
