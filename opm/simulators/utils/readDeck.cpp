@@ -217,7 +217,10 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
                 if (!schedule)
                     schedule = std::make_unique<Opm::Schedule>(*deck, *eclipseState, *parseContext, *errorGuard, python);
             }
-            setupMessageLimiter(schedule->getMessageLimits(), "STDOUT_LOGGER");
+            if (Opm::OpmLog::hasBackend("STDOUT_LOGGER")) // loggers might not be set up!
+            {
+                setupMessageLimiter(schedule->getMessageLimits(), "STDOUT_LOGGER");
+            }
             if (!summaryConfig)
                 summaryConfig = std::make_unique<Opm::SummaryConfig>(*deck, *schedule, eclipseState->getTableManager(), *parseContext, *errorGuard);
 #if HAVE_MPI
