@@ -45,7 +45,6 @@ class EclBlackOilPrimaryVariables : public BlackOilPrimaryVariables<TypeTag>
     using typename BaseType::Indices;
     using typename BaseType::FluidSystem;
     using typename BaseType::MaterialLawParams;
-    using typename BaseType::EnergyModule;
 
     using BaseType::numPhases;
     using BaseType::oilPhaseIdx;
@@ -57,10 +56,7 @@ class EclBlackOilPrimaryVariables : public BlackOilPrimaryVariables<TypeTag>
     using BaseType::waterEnabled;
     using BaseType::solventSaturation_;
     using BaseType::asImp_;
-
-    using BaseType::primaryVarsMeaning_;
     using BaseType::computeCapillaryPressures_;
-
 
     using BaseType::pvtRegionIdx_;
 
@@ -73,7 +69,6 @@ public:
     using BaseType::Sw_po_Rs;
     using BaseType::Sw_po_Sg;
 
-    using BaseType::checkDefined;
     using BaseType::OnePhase_p;
     using BaseType::primaryVarsMeaning;
     using BaseType::setPrimaryVarsMeaning;
@@ -109,99 +104,6 @@ public:
 
     SimulationType simulationType() const
     { return simulationType_; }
-    
-
-    /*
-    void setSimulaiontType(SimulationType simulationType)
-    { simulaionType_ = simulationType; }
-    */
-
-    /*!
-     * \copydoc ImmisciblePrimaryVariables::assignNaive
-     */
-    template <class FluidState>
-    void assignNaive(const FluidState& fluidState)
-    {
-        using ConstEvaluation = typename std::remove_reference<typename FluidState::Scalar>::type;
-        using FsEvaluation = typename std::remove_const<ConstEvaluation>::type;
-        using FsToolbox = typename Opm::MathToolbox<FsEvaluation>;
-
-        bool gasPresent = FluidSystem::phaseIsActive(gasPhaseIdx)?(fluidState.saturation(gasPhaseIdx) > 0.0):false;
-        bool oilPresent = FluidSystem::phaseIsActive(oilPhaseIdx)?(fluidState.saturation(oilPhaseIdx) > 0.0):false;
-        static const Scalar thresholdWaterFilledCell = 1.0 - 1e-6;
-        bool onlyWater = FluidSystem::phaseIsActive(waterPhaseIdx)?(fluidState.saturation(waterPhaseIdx) > thresholdWaterFilledCell):false;
-
-        // deal with the primary variables for the energy extension
-        EnergyModule::assignPrimaryVars(*this, fluidState);
-
-        // determine the meaning of the primary variables
-        if (FluidSystem::numActivePhases() == 1) {
-            primaryVarsMeaning_ = OnePhase_p;
-        }
-        else if ((gasPresent && oilPresent) || (onlyWater && FluidSystem::phaseIsActive(oilPhaseIdx))) {
-            // gas and oil: both hydrocarbon phases are in equilibrium (i.e., saturated
-            // with the "protagonist" component of the other phase.)
-            primaryVarsMeaning_ = Sw_po_Sg;
-        }
-        else if (oilPresent) {
-            // only oil: if dissolved gas is enabled, we need to consider the oil phase
-            // composition, if it is disabled, the gas component must stick to its phase
-            if (FluidSystem::enableDissolvedGas())
-                primaryVarsMeaning_ = Sw_po_Rs;
-            else
-                primaryVarsMeaning_ = Sw_po_Sg;
-        }
-        else {
-            assert(gasPresent);
-            // only gas: if vaporized oil is enabled, we need to consider the gas phase
-            // composition, if it is disabled, the oil component must stick to its phase
-            if (FluidSystem::enableVaporizedOil())
-                primaryVarsMeaning_ = Sw_pg_Rv;
-            else
-                primaryVarsMeaning_ = Sw_po_Sg;
-        }
-
-        // assign the actual primary variables
-        if (primaryVarsMeaning() == OnePhase_p) {
-            if (waterEnabled) {
-                (*this)[waterSaturationIdx] = FsToolbox::value(fluidState.saturation(waterPhaseIdx));
-                (*this)[pressureSwitchIdx] = FsToolbox::value(fluidState.pressure(waterPhaseIdx));
-            } else {
-                throw std::logic_error("For single-phase runs, only pure water is presently allowed.");
-            }
-
-        }
-        else if (primaryVarsMeaning() == Sw_po_Sg) {
-            if (waterEnabled)
-                (*this)[waterSaturationIdx] = FsToolbox::value(fluidState.saturation(waterPhaseIdx));
-            (*this)[pressureSwitchIdx] = FsToolbox::value(fluidState.pressure(oilPhaseIdx));
-            if( compositionSwitchEnabled )
-                (*this)[compositionSwitchIdx] = FsToolbox::value(fluidState.saturation(gasPhaseIdx));
-        }
-        else if (primaryVarsMeaning() == Sw_po_Rs) {
-            const auto& Rs = Opm::BlackOil::getRs_<FluidSystem, FluidState, Scalar>(fluidState, pvtRegionIdx_);
-
-            if (waterEnabled)
-                (*this)[waterSaturationIdx] = FsToolbox::value(fluidState.saturation(waterPhaseIdx));
-            (*this)[pressureSwitchIdx] = FsToolbox::value(fluidState.pressure(oilPhaseIdx));
-            if( compositionSwitchEnabled )
-                (*this)[compositionSwitchIdx] = Rs;
-        }
-        else {
-            assert(primaryVarsMeaning() == Sw_pg_Rv);
-
-            const auto& Rv = Opm::BlackOil::getRv_<FluidSystem, FluidState, Scalar>(fluidState, pvtRegionIdx_);
-            if (waterEnabled)
-                (*this)[waterSaturationIdx] = FsToolbox::value(fluidState.saturation(waterPhaseIdx));
-
-            (*this)[pressureSwitchIdx] = FsToolbox::value(fluidState.pressure(gasPhaseIdx));
-            if( compositionSwitchEnabled )
-                (*this)[compositionSwitchIdx] = Rv;
-        }
-
-        checkDefined();
-    }
-
 
     /*!
      * \brief Adapt the interpretation of the switching variables to be physically
@@ -353,7 +255,7 @@ public:
                                                                          Scalar(0),
                                                                          SoMax);
                 setPrimaryVarsMeaning(Sw_pg_Rv);
-                if (not(linearizationType.type == Opm::LinearizationType::seqtransport)) {
+                if (linearizationType.type != Opm::LinearizationType::seqtransport) {
                     (*this)[Indices::pressureSwitchIdx] = pg;
                 }
                 if (compositionSwitchEnabled)
@@ -444,7 +346,7 @@ public:
                 setPrimaryVarsMeaning(Sw_po_Sg);
                 if (waterEnabled)
                     (*this)[Indices::waterSaturationIdx] = 1.0;
-                if(not(linearizationType.type == Opm::LinearizationType::seqtransport)){
+                if(linearizationType.type != Opm::LinearizationType::seqtransport){
                     (*this)[Indices::pressureSwitchIdx] = po;
                 }
                 (*this)[Indices::compositionSwitchIdx] = 0.0; // hydrocarbon gas saturation
