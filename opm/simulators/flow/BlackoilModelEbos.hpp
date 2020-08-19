@@ -731,7 +731,8 @@ namespace Opm {
             cnvErrorPvFraction /= pvSum;
 
             const double tol_mb  = param_.tolerance_mb_;
-            const double tol_cnv = (cnvErrorPvFraction < param_.relaxed_max_pv_fraction_) ? param_.tolerance_cnv_relaxed_ :  param_.tolerance_cnv_;
+            const bool use_relaxed = cnvErrorPvFraction < param_.relaxed_max_pv_fraction_ || iteration >= param_.max_strict_iter_;                                              
+            const double tol_cnv = use_relaxed ? param_.tolerance_cnv_relaxed_ :  param_.tolerance_cnv_;
 
             // Finish computation
             std::vector<Scalar> CNV(numComp);
