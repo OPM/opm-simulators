@@ -36,65 +36,49 @@ namespace Opm{
  * \brief Represents the primary variables used by the black-oil model.
  */
 template <class TypeTag>
-class EclBlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
+class EclBlackOilPrimaryVariables : public BlackOilPrimaryVariables<TypeTag>
 {
-    using ParentType = FvBasePrimaryVariables<TypeTag>;
-    using Implementation = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using BaseType = BlackOilPrimaryVariables<TypeTag>;
 
-    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-    using Indices = GetPropType<TypeTag, Properties::Indices>;
-    using Problem = GetPropType<TypeTag, Properties::Problem>;
-    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
-    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
-    using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
+    using typename BaseType::Scalar;
+    using typename BaseType::Problem;
+    using typename BaseType::Indices;
+    using typename BaseType::FluidSystem;
+    using typename BaseType::MaterialLawParams;
+    using typename BaseType::EnergyModule;
 
-    // number of equations
-    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
+    using BaseType::numPhases;
+    using BaseType::oilPhaseIdx;
+    using BaseType::gasPhaseIdx;
+    using BaseType::waterPhaseIdx;
+    using BaseType::compositionSwitchEnabled;
 
-    // primary variable indices
-    enum { waterSaturationIdx = Indices::waterSaturationIdx };
-    enum { pressureSwitchIdx = Indices::pressureSwitchIdx };
-    enum { compositionSwitchIdx = Indices::compositionSwitchIdx };
 
-    static const bool compositionSwitchEnabled = Indices::gasEnabled;
-    static const bool waterEnabled = Indices::waterEnabled;
+    using BaseType::waterEnabled;
+    using BaseType::solventSaturation_;
+    using BaseType::asImp_;
 
-    // phase indices from the fluid system
-    enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
-    enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
-    enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
-    enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
+    using BaseType::primaryVarsMeaning_;
+    using BaseType::computeCapillaryPressures_;
 
-    // component indices from the fluid system
-    enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
-    enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
-    enum { enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>() };
-    enum { enableFoam = getPropValue<TypeTag, Properties::EnableFoam>() };
-    enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
-    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
-    enum { gasCompIdx = FluidSystem::gasCompIdx };
-    enum { waterCompIdx = FluidSystem::waterCompIdx };
-    enum { oilCompIdx = FluidSystem::oilCompIdx };
 
-    using Toolbox = typename Opm::MathToolbox<Evaluation>;
-    using ComponentVector = Dune::FieldVector<Scalar, numComponents>;
-    using SolventModule = BlackOilSolventModule<TypeTag, enableSolvent>;
-    using PolymerModule = BlackOilPolymerModule<TypeTag, enablePolymer>;
-    using EnergyModule = BlackOilEnergyModule<TypeTag, enableEnergy>;
-    using FoamModule = BlackOilFoamModule<TypeTag, enableFoam>;
-    using BrineModule = BlackOilBrineModule<TypeTag, enableBrine>;
+    using BaseType::pvtRegionIdx_;
 
-    static_assert(numPhases == 3, "The black-oil model assumes three phases!");
-    static_assert(numComponents == 3, "The black-oil model assumes three components!");
+    using BaseType::waterSaturationIdx;
+    using BaseType::pressureSwitchIdx;
+    using BaseType::compositionSwitchIdx;
 
 public:
-    enum PrimaryVarsMeaning {
-        Sw_po_Sg, // threephase case
-        Sw_po_Rs, // water + oil case
-        Sw_pg_Rv, // water + gas case
-        OnePhase_p, // onephase case
-    };
+    using BaseType::Sw_pg_Rv;
+    using BaseType::Sw_po_Rs;
+    using BaseType::Sw_po_Sg;
+
+    using BaseType::checkDefined;
+    using BaseType::OnePhase_p;
+    using BaseType::primaryVarsMeaning;
+    using BaseType::setPrimaryVarsMeaning;
+
+    using BaseType::operator=;
 
     enum SimulationType {
         Implicit,
@@ -102,22 +86,19 @@ public:
     };
     
     EclBlackOilPrimaryVariables()
-        : ParentType()
+        : BaseType()
     {
         Opm::Valgrind::SetUndefined(*this);
         simulationType_ = SimulationType::Implicit;
-        pvtRegionIdx_ = 0;
     }
 
     /*!
      * \copydoc ImmisciblePrimaryVariables::ImmisciblePrimaryVariables(Scalar)
      */
     EclBlackOilPrimaryVariables(Scalar value)
-        : ParentType(value)
+        : BaseType(value)
     {
-        Opm::Valgrind::SetUndefined(primaryVarsMeaning_);
         Opm::Valgrind::SetUndefined(simulationType_);
-        pvtRegionIdx_ = 0;
     }
 
     /*!
@@ -125,122 +106,15 @@ public:
      */
     EclBlackOilPrimaryVariables(const EclBlackOilPrimaryVariables& value) = default;
 
-    /*!
-     * \brief Set the index of the region which should be used for PVT properties.
-     *
-     * The concept of PVT regions is a hack to work around the fact that the
-     * pseudo-components used by the black oil model (i.e., oil, gas and water) change
-     * their composition within the spatial domain. We implement them because, the ECL
-     * file format mandates them.
-     */
-    void setPvtRegionIndex(unsigned value)
-    { pvtRegionIdx_ = static_cast<unsigned short>(value); }
-
-    /*!
-     * \brief Return the index of the region which should be used for PVT properties.
-     */
-    unsigned pvtRegionIndex() const
-    { return pvtRegionIdx_; }
-
-    /*!
-     * \brief Return the interpretation which should be applied to the switching primary
-     *        variables.
-     */
-    PrimaryVarsMeaning primaryVarsMeaning() const
-    { return primaryVarsMeaning_; }
 
     SimulationType simulationType() const
     { return simulationType_; }
     
-    /*!
-     * \brief Set the interpretation which should be applied to the switching primary
-     *        variables.
-     */
-    void setPrimaryVarsMeaning(PrimaryVarsMeaning newMeaning)
-    { primaryVarsMeaning_ = newMeaning; }
 
     /*
     void setSimulaiontType(SimulationType simulationType)
     { simulaionType_ = simulationType; }
     */
-    
-    /*!
-     * \copydoc ImmisciblePrimaryVariables::assignMassConservative
-     */
-    template <class FluidState>
-    void assignMassConservative(const FluidState& fluidState,
-                                const MaterialLawParams& matParams,
-                                bool isInEquilibrium = false)
-    {
-        using ConstEvaluation = typename std::remove_reference<typename FluidState::Scalar>::type;
-        using FsEvaluation = typename std::remove_const<ConstEvaluation>::type;
-        using FsToolbox = typename Opm::MathToolbox<FsEvaluation>;
-
-#ifndef NDEBUG
-        // make sure the temperature is the same in all fluid phases
-        for (unsigned phaseIdx = 1; phaseIdx < numPhases; ++phaseIdx) {
-            Opm::Valgrind::CheckDefined(fluidState.temperature(0));
-            Opm::Valgrind::CheckDefined(fluidState.temperature(phaseIdx));
-
-            assert(fluidState.temperature(0) == fluidState.temperature(phaseIdx));
-        }
-#endif // NDEBUG
-
-        // for the equilibrium case, we don't need complicated
-        // computations.
-        if (isInEquilibrium) {
-            assignNaive(fluidState);
-            return;
-        }
-
-        // If your compiler bails out here, you're probably not using a suitable black
-        // oil fluid system.
-        typename FluidSystem::template ParameterCache<Scalar> paramCache;
-        paramCache.setRegionIndex(pvtRegionIdx_);
-        paramCache.setMaxOilSat(FsToolbox::value(fluidState.saturation(oilPhaseIdx)));
-
-        // create a mutable fluid state with well defined densities based on the input
-        using NcpFlash = Opm::NcpFlash<Scalar, FluidSystem>;
-        using FlashFluidState = Opm::CompositionalFluidState<Scalar, FluidSystem>;
-        FlashFluidState fsFlash;
-        fsFlash.setTemperature(FsToolbox::value(fluidState.temperature(/*phaseIdx=*/0)));
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            fsFlash.setPressure(phaseIdx, FsToolbox::value(fluidState.pressure(phaseIdx)));
-            fsFlash.setSaturation(phaseIdx, FsToolbox::value(fluidState.saturation(phaseIdx)));
-            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
-                fsFlash.setMoleFraction(phaseIdx, compIdx, FsToolbox::value(fluidState.moleFraction(phaseIdx, compIdx)));
-        }
-
-        paramCache.updateAll(fsFlash);
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!FluidSystem::phaseIsActive(phaseIdx))
-                continue;
-
-            Scalar rho = FluidSystem::template density<FlashFluidState, Scalar>(fsFlash, paramCache, phaseIdx);
-            fsFlash.setDensity(phaseIdx, rho);
-        }
-
-        // calculate the "global molarities"
-        ComponentVector globalMolarities(0.0);
-        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx))
-                    continue;
-
-                globalMolarities[compIdx] +=
-                    fsFlash.saturation(phaseIdx) * fsFlash.molarity(phaseIdx, compIdx);
-            }
-        }
-
-        // use a flash calculation to calculate a fluid state in
-        // thermodynamic equilibrium
-
-        // run the flash calculation
-        NcpFlash::template solve<MaterialLaw>(fsFlash, matParams, paramCache, globalMolarities);
-
-        // use the result to assign the primary variables
-        assignNaive(fsFlash);
-    }
 
     /*!
      * \copydoc ImmisciblePrimaryVariables::assignNaive
@@ -295,7 +169,7 @@ public:
             } else {
                 throw std::logic_error("For single-phase runs, only pure water is presently allowed.");
             }
-            
+
         }
         else if (primaryVarsMeaning() == Sw_po_Sg) {
             if (waterEnabled)
@@ -327,6 +201,7 @@ public:
 
         checkDefined();
     }
+
 
     /*!
      * \brief Adapt the interpretation of the switching variables to be physically
@@ -606,7 +481,7 @@ public:
                 Scalar po = pg + (pC[oilPhaseIdx] - pC[gasPhaseIdx]);
 
                 setPrimaryVarsMeaning(Sw_po_Sg);
-                if (not(linearizationType.type == Opm::LinearizationType::seqtransport)) {
+                if (linearizationType.type != Opm::LinearizationType::seqtransport) {
                     (*this)[Indices::pressureSwitchIdx] = po;
                 }
                 (*this)[Indices::compositionSwitchIdx] = Sg; // hydrocarbon gas saturation
@@ -621,189 +496,8 @@ public:
         return false;
     }
 
-    bool chopAndNormalizeSaturations(){
-        if (primaryVarsMeaning() == OnePhase_p){
-            return false;
-        }
-        Scalar Sw = 0.0;
-        if (waterEnabled)
-            Sw = (*this)[Indices::waterSaturationIdx];
-
-        if (primaryVarsMeaning() == Sw_po_Sg) {
-            Scalar Sg = 0.0;
-            if (compositionSwitchEnabled)
-                Sg = (*this)[Indices::compositionSwitchIdx];
-            Scalar Ssol = 0.0;
-            if (enableSolvent)
-                Ssol =(*this) [Indices::solventSaturationIdx];
-            
-            Scalar So = 1.0 - Sw - Sg - Ssol;
-            Sw = std::min(std::max(Sw,0.0),1.0);
-            So = std::min(std::max(So,0.0),1.0);
-            Sg = std::min(std::max(Sg,0.0),1.0);
-            Ssol = std::min(std::max(Ssol,0.0),1.0);
-            
-            Scalar St = Sw + So + Sg + Ssol;
-            Sw = Sw/St;
-            Sg = Sg/St;
-            Ssol = Ssol/St;
-            assert(St>0.5);
-            if (waterEnabled)
-                (*this)[Indices::waterSaturationIdx]= Sw;
-            if (compositionSwitchEnabled)
-                (*this)[Indices::compositionSwitchIdx] = Sg;
-            if (enableSolvent)
-                (*this)[Indices::solventSaturationIdx] = Ssol;
-            return not(St==1);
-            
-        }else if (primaryVarsMeaning() == Sw_po_Rs) { 
-            Scalar Ssol = 0.0;
-            if (enableSolvent)
-                Ssol = (*this)[Indices::solventSaturationIdx];
-            Scalar So = 1.0 - Sw  - Ssol;
-            Sw = std::min(std::max(Sw,0.0),1.0);
-            So = std::min(std::max(So,0.0),1.0);
-            Ssol = std::min(std::max(Ssol,0.0),1.0);
-            //Sg = 0.0;
-            Scalar St = Sw + So + Ssol;
-            assert(St>0.5);
-            Sw=Sw/St;
-            Ssol=Ssol/St;
-            if (waterEnabled)
-                (*this)[Indices::waterSaturationIdx]= Sw;
-            if (enableSolvent)
-                (*this)[Indices::solventSaturationIdx] = Ssol;            
-            return not(St==1);
-        }else{
-            assert(primaryVarsMeaning() == Sw_pg_Rv);
-            assert(compositionSwitchEnabled);
-            Scalar Ssol=0.0;
-            if (enableSolvent)
-                Ssol = (*this)[Indices::solventSaturationIdx];
-            Scalar Sg = 1.0 - Sw - Ssol;
-            //So = 0.0;
-            Sw = std::min(std::max(Sw,0.0),1.0);
-            Sg = std::min(std::max(Sg,0.0),1.0);
-            Ssol = std::min(std::max(Ssol,0.0),1.0);
-            Scalar St = Sw + Sg + Ssol;
-            assert(St>0.5);
-            Sw=Sw/St;
-            Ssol=Ssol/St;
-            if (waterEnabled)
-                (*this)[Indices::waterSaturationIdx]= Sw;
-            if (enableSolvent)
-                (*this)[Indices::solventSaturationIdx] = Ssol;
-            return not(St==1);            
-        }
-        assert(false); 
-    }
-    
-    EclBlackOilPrimaryVariables& operator=(const EclBlackOilPrimaryVariables& other) = default;
-    EclBlackOilPrimaryVariables& operator=(Scalar value)
-    {
-        for (unsigned i = 0; i < numEq; ++i)
-            (*this)[i] = value;
-
-        return *this;
-    }
-
-    /*!
-     * \brief Instruct valgrind to check the definedness of all attributes of this class.
-     *
-     * We cannot simply check the definedness of the whole object because there might be
-     * "alignedness holes" in the memory layout which are caused by the pseudo primary
-     * variables.
-     */
-    void checkDefined() const
-    {
-#ifndef NDEBUG
-        // check the "real" primary variables
-        for (unsigned i = 0; i < this->size(); ++i)
-            Opm::Valgrind::CheckDefined((*this)[i]);
-
-        // check the "pseudo" primary variables
-        Opm::Valgrind::CheckDefined(primaryVarsMeaning_);
-        Opm::Valgrind::CheckDefined(pvtRegionIdx_);
-#endif // NDEBUG
-    }
-
-private:
-    Implementation& asImp_()
-    { return *static_cast<Implementation*>(this); }
-
-    const Implementation& asImp_() const
-    { return *static_cast<const Implementation*>(this); }
-
-    Scalar solventSaturation_() const
-    {
-        if (!enableSolvent)
-            return 0.0;
-
-        return (*this)[Indices::solventSaturationIdx];
-    }
-
-    Scalar polymerConcentration_() const
-    {
-        if (!enablePolymer)
-            return 0.0;
-
-        return (*this)[Indices::polymerConcentrationIdx];
-    }
-
-    Scalar foamConcentration_() const
-    {
-        if (!enableFoam)
-            return 0.0;
-
-        return (*this)[Indices::foamConcentrationIdx];
-    }
-
-    Scalar saltConcentration_() const
-    {
-        if (!enableBrine)
-            return 0.0;
-
-        return (*this)[Indices::saltConcentrationIdx];
-    }
-
-    Scalar temperature_() const
-    {
-        if (!enableEnergy)
-            return FluidSystem::reservoirTemperature();
-
-        return (*this)[Indices::temperatureIdx];
-    }
-
-    template <class Container>
-    void computeCapillaryPressures_(Container& result,
-                                    Scalar So,
-                                    Scalar Sg,
-                                    Scalar Sw,
-                                    const MaterialLawParams& matParams) const
-    {
-        using SatOnlyFluidState = Opm::SimpleModularFluidState<Scalar,
-                                                               numPhases,
-                                                               numComponents,
-                                                               FluidSystem,
-                                                               /*storePressure=*/false,
-                                                               /*storeTemperature=*/false,
-                                                               /*storeComposition=*/false,
-                                                               /*storeFugacity=*/false,
-                                                               /*storeSaturation=*/true,
-                                                               /*storeDensity=*/false,
-                                                               /*storeViscosity=*/false,
-                                                               /*storeEnthalpy=*/false>;
-        SatOnlyFluidState fluidState;
-        fluidState.setSaturation(waterPhaseIdx, Sw);
-        fluidState.setSaturation(oilPhaseIdx, So);
-        fluidState.setSaturation(gasPhaseIdx, Sg);
-
-        MaterialLaw::capillaryPressures(result, matParams, fluidState);
-    }
-
-    PrimaryVarsMeaning primaryVarsMeaning_;
+protected:
     SimulationType simulationType_;
-    unsigned short pvtRegionIdx_;
 };
 
 
