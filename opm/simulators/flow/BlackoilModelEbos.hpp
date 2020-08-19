@@ -143,6 +143,10 @@ namespace Opm {
         typedef Dune::BlockVector<VectorBlockType>      BVector;
 
         typedef ISTLSolverEbos<TypeTag> ISTLSolverType;
+
+        typedef  Dune::BCRSMatrix< Dune::FieldMatrix<double,1,1>> PressureMatrixType;
+        typedef  Dune::BlockVector<Dune::FieldVector<double,1>> PressureVectorType;
+        typedef  Dune::FlexibleSolver<PressureMatrixType, PressureVectorType> PressureSolverType;
         //typedef typename SolutionVector :: value_type            PrimaryVariables ;
 
         // ---------  Public methods  ---------
@@ -486,27 +490,29 @@ namespace Opm {
             >
         makePressureSolver(Dune::BCRSMatrix< Dune::FieldMatrix<double,1,1>>& pmatrix) {
             boost::property_tree::ptree prm;
-                if (std::filesystem::exists("pressuresolver.json") ) {
+                if (std::filesystem::exists(param_.pressure_solver_json_) ) {
                     try{
-                        boost::property_tree::read_json("pressuresolver.json", prm);
+                        boost::property_tree::read_json(param_.pressure_solver_json_, prm);
                     }catch(...){
-                        OPM_THROW(std::logic_error,"failed in passing configuration file pressuresolver.json");
+                        OPM_THROW(std::logic_error,"failed in passing configuration file:" + param_.pressure_solver_json_);
                     }
                 } else {
                     // using a default setup for pressure solver
                     std::stringstream ss;
+                    prm.put("solver","umfpack");
+                    prm.put("blocksize",1);
+                    prm.put("verbosity",1);
+                    /*
                     ss << "{\n"
                           " \"solver\": \"umfpack\",\n"
                           " \"blocksize\": \"1\"\n"
                           "}";
                     boost::property_tree::read_json(ss, prm);
+                    */
                 }
-                using PressureMatrixType = Dune::BCRSMatrix< Dune::FieldMatrix<double,1,1>>;
-                using PressureVectorType = Dune::BlockVector<Dune::FieldVector<double,1>>;
                 std::any parallelInformation;
                 extractParallelGridInformationToISTL(ebosSimulator_.vanguard().grid(), parallelInformation);
                 using AbstractOperatorType = Dune::AssembledLinearOperator<PressureMatrixType, PressureVectorType, PressureVectorType>;
-                using PressureSolverType = Dune::FlexibleSolver<PressureMatrixType, PressureVectorType>;
                 std::unique_ptr<AbstractOperatorType> operator_for_flexiblesolver;
                 std::function<PressureVectorType()> weightsCalculator;// dummy
                 std::unique_ptr<PressureSolverType> pressureSolver;
@@ -540,7 +546,18 @@ namespace Opm {
                 return pressureSolver;
 
         }
-        
+        bool shouldCreatePressureSolver(){
+            if(!pressureSolver_){
+                return true;
+            }
+            if(param_.reuse_pressure_solver_ > 0){
+                return false;
+            }else{
+                return true;
+            }
+            assert(false);
+            
+        }
         /// Solve the Jacobian system Jx = r where J is the Jacobian and
         /// r is the residual.
         void solveJacobianSystem(BVector& x)
@@ -549,28 +566,43 @@ namespace Opm {
                 auto& ebosJac = ebosSimulator_.model().linearizer().jacobian();
                 auto& ebosResid = ebosSimulator_.model().linearizer().residual();
                 // NB when tested the linear solver an the martrix could be part of linearizer
-                using PressureMatrixType = Dune::BCRSMatrix< Dune::FieldMatrix<double,1,1>>;
-                using PressureVectorType = Dune::BlockVector<Dune::FieldVector<double,1>>;
+                
                 int pressureVarIndex=1;
                 // true impes case could add case with trivial weighs i equations is modifind with weights
                 // this would make a newton based method if derivative of the weights are takein into account
                 BVector weights = this->getPressureWeights(pressureVarIndex);
-                PressureMatrixType pmatrix =
-                    PressureHelper::makePressureMatrix<Mat,
-                                                       BVector,
-                                                       PressureMatrixType,
-                                                       PressureVectorType>(
-                                                           ebosJac.istlMatrix(),
-                                                           pressureVarIndex,
-                                                           weights);
+                if(!pmatrix_){
+                    // make matrix structure and fill with elements
+                    pmatrix_ =
+                        std::make_unique<PressureMatrixType>(PressureHelper::makePressureMatrix<Mat,
+                                                            BVector,
+                                                            PressureMatrixType,
+                                                            PressureVectorType>(
+                                                            ebosJac.istlMatrix(),
+                                                            pressureVarIndex,
+                                                            weights));
+                }else{
+                    //only update elements of matrix
+                    // assume matrix structure never change
+                    PressureHelper::makePressureMatrixEntries<Mat,
+                                                              PressureMatrixType,
+                                                              BVector>(
+                                                                 *pmatrix_,
+                                                                 ebosJac.istlMatrix(),
+                                                                 pressureVarIndex,
+                                                                 weights);
+                }
                 PressureVectorType rhs(ebosResid.size(),0);
                 PressureHelper::moveToPressureEqn(ebosResid, rhs, weights);
-
-                using PressureSolverType = Dune::FlexibleSolver<PressureMatrixType, PressureVectorType>;
-                std::unique_ptr<PressureSolverType> pressureSolver = makePressureSolver(pmatrix);
+                if(this->shouldCreatePressureSolver()){
+                    pressureSolver_ = makePressureSolver(*pmatrix_);
+                }else{
+                    pressureSolver_->preconditioner().update();
+                }
+                
                 PressureVectorType xp(x.size(),0);
                 Dune::InverseOperatorResult res;
-                pressureSolver->apply(xp,rhs, res);
+                pressureSolver_->apply(xp,rhs, res);
                 /*
                 bool write_pressure_system  = false;               
                 if(write_pressure_system){
@@ -1112,6 +1144,9 @@ namespace Opm {
         double drMaxRel() const { return param_.dr_max_rel_; }
         double maxResidualAllowed() const { return param_.max_residual_allowed_; }
         double linear_solve_setup_time_;
+        std::unique_ptr<PressureSolverType> pressureSolver_;
+        std::unique_ptr<PressureMatrixType> pmatrix_;
+        
     public:
         std::vector<bool> wasSwitched_;
     };
