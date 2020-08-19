@@ -309,7 +309,9 @@ public:
         auto wellDofIt = dofVariables_.begin();
         const auto& wellDofEndIt = dofVariables_.end();
         for (; wellDofIt != wellDofEndIt; ++ wellDofIt) {
-            neighbors[wellGlobalDof].insert(wellDofIt->first);
+            if (wellDofIt->second->element.partitionType() == Dune::PartitionType::InteriorEntity) {
+                neighbors[wellGlobalDof].insert(wellDofIt->first);
+            }
             neighbors[wellDofIt->first].insert(wellGlobalDof);
         }
     }

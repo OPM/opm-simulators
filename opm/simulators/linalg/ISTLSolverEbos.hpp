@@ -461,7 +461,26 @@ namespace Opm
             typename Matrix::block_type diag_block(0.0);
             for (int eq = 0; eq < numEq; ++eq)
                 diag_block[eq][eq] = 1.0;
-
+#if 0
+            // Count overlap row elements.
+            int overlap_diagonal = 0;
+            int overlap_total = 0;
+            for (auto row_index : overlapRows_) {
+                const auto& row = matrix[row_index];
+                for (auto it = row.begin(); it != row.end(); ++it) {
+                    ++overlap_total;
+                    if (it.index() == row_index) {
+                        ++overlap_diagonal;
+                    } else {
+                        OpmLog::info("** " + std::to_string(row_index) + "  " + std::to_string(it.index()) + " **");
+                    }
+                }
+            }
+            std::ostringstream os;
+            os << "makeOverlapRowsInvalid() found " << overlap_diagonal << " diagonal overlap entries and "
+               << (overlap_total - overlap_diagonal) << " non-diagonal overlap entries.";
+            OpmLog::info(os.str());
+#endif
             //loop over precalculated overlap rows and columns
             for (auto row = overlapRows_.begin(); row != overlapRows_.end(); row++ )
                 {
