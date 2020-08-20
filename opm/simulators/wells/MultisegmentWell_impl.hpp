@@ -624,7 +624,7 @@ namespace Opm
         duneB_.mv(x, Bx);
 
         // invDBx = duneD^-1 * Bx_
-        const BVectorWell invDBx = mswellhelpers::invDXDirect(duneD_, Bx);
+        const BVectorWell invDBx = mswellhelpers::applyUMFPack(duneD_, duneDSolver_, Bx);
 
         // Ax = Ax - duneC_^T * invDBx
         duneC_.mmtv(invDBx,Ax);
@@ -640,7 +640,7 @@ namespace Opm
     apply(BVector& r) const
     {
         // invDrw_ = duneD^-1 * resWell_
-        const BVectorWell invDrw = mswellhelpers::invDXDirect(duneD_, resWell_);
+        const BVectorWell invDrw = mswellhelpers::applyUMFPack(duneD_, duneDSolver_, resWell_);
         // r = r - duneC_^T * invDrw
         duneC_.mmtv(invDrw, r);
     }
@@ -999,7 +999,7 @@ namespace Opm
         // resWell = resWell - B * x
         duneB_.mmv(x, resWell);
         // xw = D^-1 * resWell
-        xw = mswellhelpers::invDXDirect(duneD_, resWell);
+        xw = mswellhelpers::applyUMFPack(duneD_, duneDSolver_, resWell);
     }
 
 
@@ -1013,7 +1013,7 @@ namespace Opm
     {
         // We assemble the well equations, then we check the convergence,
         // which is why we do not put the assembleWellEq here.
-        const BVectorWell dx_well = mswellhelpers::invDXDirect(duneD_, resWell_);
+        const BVectorWell dx_well = mswellhelpers::applyUMFPack(duneD_, duneDSolver_, resWell_);
 
         updateWellState(dx_well, well_state, deferred_logger);
     }
@@ -1110,14 +1110,12 @@ namespace Opm
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
             if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                 const int sign = dwells[seg][WFrac] > 0. ? 1 : -1;
-                // const double dx_limited = sign * std::min(std::abs(dwells[seg][WFrac]), relaxation_factor * dFLimit);
                 const double dx_limited = sign * std::min(std::abs(dwells[seg][WFrac]) * relaxation_factor, dFLimit);
                 primary_variables_[seg][WFrac] = old_primary_variables[seg][WFrac] - dx_limited;
             }
 
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                 const int sign = dwells[seg][GFrac] > 0. ? 1 : -1;
-                // const double dx_limited = sign * std::min(std::abs(dwells[seg][GFrac]), relaxation_factor * dFLimit);
                 const double dx_limited = sign * std::min(std::abs(dwells[seg][GFrac]) * relaxation_factor, dFLimit);
                 primary_variables_[seg][GFrac] = old_primary_variables[seg][GFrac] - dx_limited;
             }
@@ -1128,7 +1126,6 @@ namespace Opm
             // update the segment pressure
             {
                 const int sign = dwells[seg][SPres] > 0.? 1 : -1;
-                //const double dx_limited = sign * std::min(std::abs(dwells[seg][SPres]), relaxation_factor * max_pressure_change);
                 const double dx_limited = sign * std::min(std::abs(dwells[seg][SPres]) * relaxation_factor, max_pressure_change);
                 primary_variables_[seg][SPres] = std::max( old_primary_variables[seg][SPres] - dx_limited, 1e5);
             }
@@ -2399,7 +2396,7 @@ namespace Opm
 
             assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, deferred_logger);
 
-            const BVectorWell dx_well = mswellhelpers::invDXDirect(duneD_, resWell_);
+            const BVectorWell dx_well = mswellhelpers::applyUMFPack(duneD_, duneDSolver_, resWell_);
 
             if (it > param_.strict_inner_iter_ms_wells_)
                 relax_convergence = true;
@@ -2512,6 +2509,8 @@ namespace Opm
 
         duneD_ = 0.0;
         resWell_ = 0.0;
+
+        duneDSolver_.reset();
 
         well_state.wellVaporizedOilRates()[index_of_well_] = 0.;
         well_state.wellDissolvedGasRates()[index_of_well_] = 0.;
