@@ -71,7 +71,7 @@ namespace mswellhelpers
         return y;
 #else
         // this is not thread safe
-        OPM_THROW(std::runtime_error, "Cannot use aplyUMFPack() without UMFPACK. "
+        OPM_THROW(std::runtime_error, "Cannot use applyUMFPack() without UMFPACK. "
                   "Reconfigure opm-simulator with SuiteSparse/UMFPACK support and recompile.");
 #endif // HAVE_UMFPACK
     }
