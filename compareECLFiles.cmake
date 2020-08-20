@@ -926,6 +926,13 @@ add_test_compare_restarted_simulation(CASENAME spe9
                                       REL_TOL ${rel_tol_restart}
                                       TEST_ARGS --sched-restart=false)
 
+add_test_compare_restarted_simulation(CASENAME model4
+                                      FILENAME MOD4_GRP
+                                      SIMULATOR flow
+                                      ABS_TOL ${abs_tol_restart}
+                                      REL_TOL ${rel_tol_restart}
+                                      TEST_ARGS --sched-restart=false)
+
 # The dynamic MSW data is not written to /read from the restart file
 # We therefore accept significant deviation in the results.
 # Note also that we use --sched-restart=true since some necessary
