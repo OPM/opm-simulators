@@ -640,7 +640,6 @@ namespace Opm
     apply(BVector& r) const
     {
         // invDrw_ = duneD^-1 * resWell_
-        // const BVectorWell invDrw = mswellhelpers::invDXDirect(duneD_, resWell_);
         const BVectorWell invDrw = mswellhelpers::applyUMFPack(duneD_, duneDSolver_, resWell_);
         // r = r - duneC_^T * invDrw
         duneC_.mmtv(invDrw, r);
@@ -1000,7 +999,6 @@ namespace Opm
         // resWell = resWell - B * x
         duneB_.mmv(x, resWell);
         // xw = D^-1 * resWell
-        //xw = mswellhelpers::invDXDirect(duneD_, resWell);
         xw = mswellhelpers::applyUMFPack(duneD_, duneDSolver_, resWell);
     }
 
@@ -2398,7 +2396,6 @@ namespace Opm
 
             assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, deferred_logger);
 
-            // const BVectorWell dx_well = mswellhelpers::invDXDirect(duneD_, resWell_);
             const BVectorWell dx_well = mswellhelpers::applyUMFPack(duneD_, duneDSolver_, resWell_);
 
             if (it > param_.strict_inner_iter_ms_wells_)
