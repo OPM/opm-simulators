@@ -539,7 +539,9 @@ namespace Opm
     template <typename TypeTag>
     ConvergenceReport
     MultisegmentWell<TypeTag>::
-    getWellConvergence(const WellState& well_state, const std::vector<double>& B_avg, Opm::DeferredLogger& deferred_logger, const bool relax_tolerance) const
+    getWellConvergence(const WellState& well_state, const std::vector<double>& B_avg,
+                       Opm::DeferredLogger& deferred_logger, std::vector<double>& /* residual */,
+                       const bool relax_tolerance) const
     {
         assert(int(B_avg.size()) == num_components_);
 
@@ -2401,7 +2403,8 @@ namespace Opm
             if (it > param_.strict_inner_iter_ms_wells_)
                 relax_convergence = true;
 
-            const auto report = getWellConvergence(well_state, B_avg, deferred_logger, relax_convergence);
+            std::vector<double> residual;
+            const auto report = getWellConvergence(well_state, B_avg, deferred_logger, residual, relax_convergence);
             if (report.converged()) {
                 converged = true;
                 break;
@@ -2425,7 +2428,8 @@ namespace Opm
                     ++stagnate_count;
                     if (stagnate_count == 6) {
                         sstr << " well " << name() << " observes severe stagnation and/or oscillation. We relax the tolerance and check for convergence. \n";
-                        const auto reportStag = getWellConvergence(well_state, B_avg, deferred_logger, true);
+                        std::vector<double> temp_residual(numWellEq, 0.);
+                        const auto reportStag = getWellConvergence(well_state, B_avg, deferred_logger, temp_residual, true);
                         if (reportStag.converged()) {
                             converged = true;
                             sstr << " well " << name() << " manages to get converged with relaxed tolerances in " << it << " inner iterations";

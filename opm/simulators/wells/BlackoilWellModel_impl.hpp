@@ -24,6 +24,9 @@
 #include <opm/simulators/wells/SimFIBODetails.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/models/discretization/common/linearizationtype.hh>
+
+#include <iomanip>
+
 namespace Opm {
     template<typename TypeTag>
     BlackoilWellModel<TypeTag>::
@@ -1122,11 +1125,23 @@ namespace Opm {
         Opm::DeferredLogger local_deferredLogger;
         // Get global (from all processes) convergence report.
         ConvergenceReport local_report;
+        std::vector<double> residuals(B_avg.size() + 1, 0.);
         for (const auto& well : well_container_) {
             if (well->isOperable() ) {
-                local_report += well->getWellConvergence(well_state_, B_avg, local_deferredLogger);
+                local_report += well->getWellConvergence(well_state_, B_avg, local_deferredLogger, residuals);
             }
         }
+
+        ebosSimulator_.vanguard().grid().comm().max(residuals.data(), residuals.size());
+        if (terminal_output_) {
+            std::stringstream ss;
+            ss << "Well residuals: ";
+            for (const auto& res : residuals) {
+                ss << " " << std::setw(12) << res;
+            }
+            OpmLog::info(ss.str());
+        }
+
         Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
         if (terminal_output_) {
             global_deferredLogger.logMessages();
@@ -1136,12 +1151,29 @@ namespace Opm {
 
         // Log debug messages for NaN or too large residuals.
         if (terminal_output_) {
+            std::stringstream ss;
+            if ( !report.wellFailures().empty() ) {
+                ss << "UNCONVERGED WELLS: ";
+            }
+            std::vector<std::string> failed_wells;
             for (const auto& f : report.wellFailures()) {
                 if (f.severity() == ConvergenceReport::Severity::NotANumber) {
                         OpmLog::debug("NaN residual found with phase " + std::to_string(f.phase()) + " for well " + f.wellName());
                 } else if (f.severity() == ConvergenceReport::Severity::TooLarge) {
                         OpmLog::debug("Too large residual found with phase " + std::to_string(f.phase()) + " for well " + f.wellName());
                 }
+                failed_wells.push_back(f.wellName());
+            }
+            // for more complicated situation, a sorting might be needed
+            const auto last = std::unique(failed_wells.begin(), failed_wells.end());
+            failed_wells.erase(last, failed_wells.end());
+
+            for (const auto& w : failed_wells) {
+                ss <<  " " << w;
+            }
+
+            if ( !report.wellFailures().empty() ) {
+                OpmLog::info(ss.str());
             }
         }
 
@@ -1150,6 +1182,11 @@ namespace Opm {
             const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
             bool violated = checkGroupConstraints(fieldGroup, global_deferredLogger);
             report.setGroupConverged(!violated);
+        }
+        if (terminal_output_) {
+            if (report.converged()) {
+                OpmLog::info(" the well equations are converged ");
+            }
         }
         return report;
     }

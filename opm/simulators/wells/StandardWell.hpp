@@ -180,6 +180,7 @@ namespace Opm
         virtual ConvergenceReport getWellConvergence(const WellState& well_state,
                                                      const std::vector<double>& B_avg,
                                                      Opm::DeferredLogger& deferred_logger,
+                                                     std::vector<double>& residual,
                                                      const bool relax_tolerance = false) const override;
 
         /// Ax = Ax - C D^-1 B x

@@ -2174,11 +2174,13 @@ namespace Opm
     getWellConvergence(const WellState& well_state,
                        const std::vector<double>& B_avg,
                        Opm::DeferredLogger& deferred_logger,
+                       std::vector<double>& residual,
                        const bool /*relax_tolerance*/) const
     {
         // the following implementation assume that the polymer is always after the w-o-g phases
         // For the polymer, energy and foam cases, there is one more mass balance equations of reservoir than wells
         assert((int(B_avg.size()) == num_components_) || has_polymer || has_energy || has_foam || has_brine);
+        assert( int(residual.size()) == numWellEq_ );
 
         const double tol_wells = param_.tolerance_wells_;
         const double maxResidualAllowed = param_.max_residual_allowed_;
@@ -2195,6 +2197,13 @@ namespace Opm
         for ( int compIdx = 0; compIdx < num_components_; ++compIdx )
         {
             well_flux_residual[compIdx] = B_avg[compIdx] * res[compIdx];
+            if (well_flux_residual[compIdx] > residual[compIdx]) {
+                residual[compIdx] = well_flux_residual[compIdx];
+            }
+        }
+
+        if (res[Bhp] > residual[Bhp]) {
+            residual[Bhp] = res[Bhp];
         }
 
         ConvergenceReport report;
@@ -2221,16 +2230,6 @@ namespace Opm
         checkConvergenceControlEq(well_state, report, deferred_logger);
 
         checkConvergenceExtraEqs(res, report);
-
-        if ( !report.converged() ) {
-            std::stringstream ss;
-            ss << "UNCONVERGED WELL: " << name() << " residual ";
-            for ( int compIdx = 0; compIdx < num_components_; ++compIdx ) {
-                ss << std::setw(12) << well_flux_residual[compIdx];
-            }
-            ss << std::setw(15) << res[this->numWellEq_ - 1];
-            deferred_logger.info(ss.str());
-        }
 
         return report;
     }
@@ -4042,7 +4041,8 @@ namespace Opm
         do {
             assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, deferred_logger);
 
-            auto report = getWellConvergence(well_state, B_avg, deferred_logger);
+            std::vector<double> residual(B_avg.size() + 1, 0.);
+            auto report = getWellConvergence(well_state, B_avg,deferred_logger, residual);
 
             converged = report.converged();
             if (converged) {

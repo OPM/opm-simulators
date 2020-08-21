@@ -157,7 +157,9 @@ namespace Opm
 
         virtual void initPrimaryVariablesEvaluation() const = 0;
 
-        virtual ConvergenceReport getWellConvergence(const WellState& well_state, const std::vector<double>& B_avg, Opm::DeferredLogger& deferred_logger, const bool relax_tolerance = false) const = 0;
+        virtual ConvergenceReport getWellConvergence(const WellState& well_state, const std::vector<double>& B_avg,
+                                                     Opm::DeferredLogger& deferred_logger, std::vector<double>& residual,
+                                                     const bool relax_tolerance = false) const = 0;
 
         virtual void solveEqAndUpdateWellState(WellState& well_state, Opm::DeferredLogger& deferred_logger) = 0;
 
