@@ -38,19 +38,19 @@ namespace Opm {
  * \brief A newton solver which is specific to the black oil model.
  */
 template <class TypeTag>
-class EclBlackOilNewtonMethod : public GET_PROP_TYPE(TypeTag, DiscNewtonMethod)
+class EclBlackOilNewtonMethod : public GetPropType<TypeTag, Properties::DiscNewtonMethod>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, DiscNewtonMethod) ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, SolutionVector) SolutionVector;
-    typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) GlobalEqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Linearizer) Linearizer;
+    using ParentType = GetPropType<TypeTag, Properties::DiscNewtonMethod>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
+    using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Linearizer = GetPropType<TypeTag, Properties::Linearizer>;
 
-    static const unsigned numEq = GET_PROP_VALUE(TypeTag, NumEq);
+    static const unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
 
 public:
     EclBlackOilNewtonMethod(Simulator& simulator) : ParentType(simulator)

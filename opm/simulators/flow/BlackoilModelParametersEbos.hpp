@@ -216,7 +216,7 @@ namespace Opm
         // name of json file for pressure setup
         std::string pressure_solver_json_;
         /// Construct from user parameters or defaults.
-        
+
         BlackoilModelParametersEbos()
         {
             dbhp_max_rel_=  EWOMS_GET_PARAM(TypeTag, Scalar, DbhpMaxRel);
@@ -255,8 +255,8 @@ namespace Opm
             tolerance_pressure_ = EWOMS_GET_PARAM(TypeTag, Scalar, TolerancePressure);
             reuse_pressure_solver_ = EWOMS_GET_PARAM(TypeTag, int, ReusePressureSolver);
             pressure_solver_json_  = EWOMS_GET_PARAM(TypeTag, std::string,PressureSolverJson);
-            
-            
+
+
         }
 
         static void registerParameters()
@@ -288,7 +288,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseUpdateStabilization, "Try to detect and correct oscillations or stagnation during the Newton method");
             EWOMS_REGISTER_PARAM(TypeTag, bool, MatrixAddWellContributions, "Explicitly specify the influences of wells between cells in the Jacobian and preconditioner matrices");
             EWOMS_REGISTER_PARAM(TypeTag, bool, EnableWellOperabilityCheck, "Enable the well operability checking");
-            
+
 
             // for sequential
             EWOMS_REGISTER_PARAM(TypeTag, int, MaxStrictIterSeq, "Maximum number of sequential iterations before relaxed tolerances are used for the CNV convergence criterion");
@@ -297,7 +297,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, TolerancePressure, "Relaxed local convergence tolerance that applies for iterations after the iterations with the strict tolerance for sequential transport");
             EWOMS_REGISTER_PARAM(TypeTag, int, ReusePressureSolver, "Reuse policy for pressure");
             EWOMS_REGISTER_PARAM(TypeTag, std::string, PressureSolverJson, "Json setupfile for pressure solver");
-            EWOMS_REGISTER_PARAM(TypeTag, std::string, SimulationType, "Define simulation type: default implicit");
+            EWOMS_REGISTER_PARAM(TypeTag, std::string, SimulationType, "Define simulation type: implicit, seq, fimseq, pressure");
 
         }
     };
