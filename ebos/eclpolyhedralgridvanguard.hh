@@ -37,7 +37,7 @@ template <class TypeTag>
 class EclPolyhedralGridVanguard;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_TYPE_TAG(EclPolyhedralGridVanguard, INHERITS_FROM(EclBaseVanguard));
 
@@ -46,7 +46,7 @@ SET_TYPE_PROP(EclPolyhedralGridVanguard, Vanguard, Opm::EclPolyhedralGridVanguar
 SET_TYPE_PROP(EclPolyhedralGridVanguard, Grid, Dune::PolyhedralGrid<3, 3>);
 SET_TYPE_PROP(EclPolyhedralGridVanguard, EquilGrid, typename GET_PROP_TYPE(TypeTag, Grid));
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

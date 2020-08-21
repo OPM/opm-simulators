@@ -23,25 +23,23 @@
 #include <opm/simulators/flow/Main.hpp>
 #include  <opm/simulators/linalg/ISTLSolverEbosFlexible.hpp>
 
-BEGIN_PROPERTIES
-NEW_TYPE_TAG(EclFlowProblemSimple, INHERITS_FROM(EclFlowProblem));
-
-SET_BOOL_PROP(EclFlowProblemSimple, MatrixAddWellContributions, true);
-SET_INT_PROP(EclFlowProblemSimple, LinearSolverVerbosity,0);
-SET_SCALAR_PROP(EclFlowProblemSimple, LinearSolverReduction, 1e-2);
-SET_INT_PROP(EclFlowProblemSimple, LinearSolverMaxIter, 100);
-SET_BOOL_PROP(EclFlowProblemSimple, UseAmg, true);//probably not used
-SET_BOOL_PROP(EclFlowProblemSimple, UseCpr, true);
-SET_INT_PROP(EclFlowProblemSimple, CprMaxEllIter, 1);
-SET_INT_PROP(EclFlowProblemSimple, CprEllSolvetype, 3);
-SET_INT_PROP(EclFlowProblemSimple, CprReuseSetup, 3);
-SET_INT_PROP(EclFlowProblemSimple, CprSolverVerbose, 0);
-SET_STRING_PROP(EclFlowProblemSimple, LinearSolverConfiguration, "ilu0");
-SET_STRING_PROP(EclFlowProblemSimple, SystemStrategy, "quasiimpes");
-END_PROPERTIES
-
 namespace Opm {
   namespace Properties {
+
+    NEW_TYPE_TAG(EclFlowProblemSimple, INHERITS_FROM(EclFlowProblem));
+
+    SET_BOOL_PROP(EclFlowProblemSimple, MatrixAddWellContributions, true);
+    SET_INT_PROP(EclFlowProblemSimple, LinearSolverVerbosity,0);
+    SET_SCALAR_PROP(EclFlowProblemSimple, LinearSolverReduction, 1e-2);
+    SET_INT_PROP(EclFlowProblemSimple, LinearSolverMaxIter, 100);
+    SET_BOOL_PROP(EclFlowProblemSimple, UseAmg, true);//probably not used
+    SET_BOOL_PROP(EclFlowProblemSimple, UseCpr, true);
+    SET_INT_PROP(EclFlowProblemSimple, CprMaxEllIter, 1);
+    SET_INT_PROP(EclFlowProblemSimple, CprEllSolvetype, 3);
+    SET_INT_PROP(EclFlowProblemSimple, CprReuseSetup, 3);
+    SET_INT_PROP(EclFlowProblemSimple, CprSolverVerbose, 0);
+    SET_STRING_PROP(EclFlowProblemSimple, LinearSolverConfiguration, "ilu0");
+    SET_STRING_PROP(EclFlowProblemSimple, SystemStrategy, "quasiimpes");
 
     SET_PROP(EclFlowProblemSimple, FluidSystem)
     {

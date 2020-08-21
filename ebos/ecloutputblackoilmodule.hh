@@ -44,7 +44,7 @@
 
 #include <type_traits>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // create new type tag for the Ecl-output
 NEW_TYPE_TAG(EclOutputBlackOil);
@@ -53,7 +53,7 @@ NEW_PROP_TAG(ForceDisableFluidInPlaceOutput);
 
 SET_BOOL_PROP(EclOutputBlackOil, ForceDisableFluidInPlaceOutput, false);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

@@ -68,13 +68,13 @@
 #include <string>
 #include <type_traits>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // this is a dummy type tag that is used to setup the parameters before the actual
 // simulator.
 NEW_TYPE_TAG(FlowEarlyBird, INHERITS_FROM(EclFlowProblem));
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
   template <class TypeTag>

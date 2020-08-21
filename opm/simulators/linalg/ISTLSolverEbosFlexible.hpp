@@ -33,11 +33,11 @@
 #include <memory>
 #include <utility>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_TYPE_TAG(FlowIstlSolverFlexible, INHERITS_FROM(FlowIstlSolverParams));
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 
 namespace Opm

@@ -54,7 +54,7 @@
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
 #endif
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_TYPE_TAG(FlowIstlSolver, INHERITS_FROM(FlowIstlSolverParams));
 
@@ -74,7 +74,7 @@ public:
     typedef typename Opm::Linear::IstlSparseMatrixAdapter<Block> type;
 };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm
 {

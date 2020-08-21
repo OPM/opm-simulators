@@ -25,7 +25,7 @@
 
 #include <string>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_TYPE_TAG(FlowModelParameters);
 
@@ -93,7 +93,7 @@ SET_SCALAR_PROP(FlowModelParameters, RelaxedPressureTolInnerIterMsw, 0.5e5);
 SET_INT_PROP(FlowModelParameters, ThreadsPerProcess, -1);
 #endif
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm
 {

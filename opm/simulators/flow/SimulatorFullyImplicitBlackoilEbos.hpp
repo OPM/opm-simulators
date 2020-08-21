@@ -34,7 +34,7 @@
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_PROP_TAG(EnableAdaptiveTimeStepping);
 NEW_PROP_TAG(EnableTuning);
@@ -43,7 +43,7 @@ SET_BOOL_PROP(EclFlowProblem, EnableTerminalOutput, true);
 SET_BOOL_PROP(EclFlowProblem, EnableAdaptiveTimeStepping, true);
 SET_BOOL_PROP(EclFlowProblem, EnableTuning, false);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

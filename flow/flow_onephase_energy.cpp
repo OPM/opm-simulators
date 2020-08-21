@@ -22,8 +22,8 @@
 #include <opm/simulators/flow/Main.hpp>
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
 
+namespace Opm::Properties {
 
-BEGIN_PROPERTIES
 NEW_TYPE_TAG(EclFlowProblemSimple, INHERITS_FROM(EclFlowProblem));
 SET_BOOL_PROP(EclFlowProblemSimple, EnableEnergy, true);
 //! The indices required by the model
@@ -46,7 +46,8 @@ public:
                                          /*enebledCompIdx=*/FluidSystem::waterCompIdx>
         type;
 };
-END_PROPERTIES
+
+} // namespace Opm::Properties
 
 int main(int argc, char** argv)
 {

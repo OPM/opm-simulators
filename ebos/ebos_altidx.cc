@@ -50,7 +50,8 @@ public:
 };
 }
 
-BEGIN_PROPERTIES
+
+namespace Opm::Properties {
 
 NEW_TYPE_TAG(EbosAltIdxTypeTag, INHERITS_FROM(EbosTypeTag));
 
@@ -63,7 +64,7 @@ public:
     typedef Opm::BlackOilFluidSystem<Scalar, Opm::EclAlternativeBlackOilIndexTraits> type;
 };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {

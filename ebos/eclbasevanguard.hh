@@ -64,7 +64,7 @@ template <class TypeTag>
 class EclBaseVanguard;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_TYPE_TAG(EclBaseVanguard);
 
@@ -88,7 +88,7 @@ SET_BOOL_PROP(EclBaseVanguard, SchedRestart, false);
 SET_INT_PROP(EclBaseVanguard, EdgeWeightsMethod, 1);
 SET_BOOL_PROP(EclBaseVanguard, OwnerCellsFirst, true);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

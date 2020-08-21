@@ -115,7 +115,7 @@ template <class TypeTag>
 class EclProblem;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 #if EBOS_USE_ALUGRID
 NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclAluGridVanguard, EclOutputBlackOil, VtkEclTracer));
@@ -374,9 +374,8 @@ SET_BOOL_PROP(EclBaseProblem, EclEnableTuning, false);
 
 SET_STRING_PROP(EclBaseProblem, OutputMode, "all");
 
+} // namespace Opm::Properties
 
-
-END_PROPERTIES
 
 namespace Opm {
 

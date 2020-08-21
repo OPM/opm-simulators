@@ -30,14 +30,14 @@
 #include "ebos.hh"
 #include "startEbos.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_TYPE_TAG(EbosSolventTypeTag, INHERITS_FROM(EbosTypeTag));
 
 // enable the solvent extension of the black oil model
 SET_BOOL_PROP(EbosSolventTypeTag, EnableSolvent, true);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 
