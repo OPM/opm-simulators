@@ -839,6 +839,10 @@ RestartValue loadParallelRestart(const EclipseIO* eclIO, Action::State& actionSt
         Mpi::pack(restartValues, buffer, position, comm);
         comm.broadcast(&position, 1, 0);
         comm.broadcast(buffer.data(), position, 0);
+        std::vector<char> buf2 = summaryState.serialize();
+        int size = buf2.size();
+        comm.broadcast(&size, 1, 0);
+        comm.broadcast(buf2.data(), size, 0);
     }
     else
     {
@@ -848,6 +852,10 @@ RestartValue loadParallelRestart(const EclipseIO* eclIO, Action::State& actionSt
         comm.broadcast(buffer.data(), bufferSize, 0);
         int position{};
         Mpi::unpack(restartValues, buffer, position, comm);
+        comm.broadcast(&bufferSize, 1, 0);
+        buffer.resize(bufferSize);
+        comm.broadcast(buffer.data(), bufferSize, 0);
+        summaryState.deserialize(buffer);
     }
     return restartValues;
 #else
