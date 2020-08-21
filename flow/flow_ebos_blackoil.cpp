@@ -36,7 +36,7 @@ namespace Opm {
 
 void flowEbosBlackoilSetDeck(double setupTime, Deck *deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
 {
-    typedef TTAG(EclFlowProblem) TypeTag;
+    using TypeTag = Properties::TTag::EclFlowProblem;
     typedef GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
 
     Vanguard::setExternalSetupTime(setupTime);
@@ -46,7 +46,7 @@ void flowEbosBlackoilSetDeck(double setupTime, Deck *deck, EclipseState& eclStat
     Vanguard::setExternalSummaryConfig(&summaryConfig);
 }
 
-std::unique_ptr<Opm::FlowMainEbos<TTAG(EclFlowProblem)>>
+std::unique_ptr<Opm::FlowMainEbos<Properties::TTag::EclFlowProblem>>
 flowEbosBlackoilMainInit(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
@@ -59,7 +59,7 @@ flowEbosBlackoilMainInit(int argc, char** argv, bool outputCout, bool outputFile
     Dune::MPIHelper::instance(argc, argv);
 #endif
 
-    return std::make_unique<Opm::FlowMainEbos<TTAG(EclFlowProblem)>>(
+    return std::make_unique<Opm::FlowMainEbos<Properties::TTag::EclFlowProblem>>(
         argc, argv, outputCout, outputFiles);
 }
 

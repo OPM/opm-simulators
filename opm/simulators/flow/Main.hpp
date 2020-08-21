@@ -118,7 +118,7 @@ namespace Opm
     class Main
     {
     private:
-        using FlowMainEbosType = Opm::FlowMainEbos<TTAG(EclFlowProblem)>;
+        using FlowMainEbosType = Opm::FlowMainEbos<Opm::Properties::TTag::EclFlowProblem>;
 
         enum class FileOutputMode {
             //! \brief No output to files.
@@ -159,7 +159,7 @@ namespace Opm
         int runDynamic()
         {
             int exitCode = EXIT_SUCCESS;
-            if (initialize_<TTAG(FlowEarlyBird)>(exitCode)) {
+            if (initialize_<Properties::TTag::FlowEarlyBird>(exitCode)) {
                 return dispatchDynamic_();
             } else {
                 return exitCode;
@@ -184,7 +184,7 @@ namespace Opm
         std::unique_ptr<FlowMainEbosType> initFlowEbosBlackoil(int& exitCode)
         {
             exitCode = EXIT_SUCCESS;
-            if (initialize_<TTAG(FlowEarlyBird)>(exitCode)) {
+            if (initialize_<Properties::TTag::FlowEarlyBird>(exitCode)) {
                 // TODO: check that this deck really represents a blackoil
                 // case. E.g. check that number of phases == 3
                 Opm::flowEbosBlackoilSetDeck(

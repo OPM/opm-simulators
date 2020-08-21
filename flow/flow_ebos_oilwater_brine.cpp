@@ -45,7 +45,7 @@ private:
     // it is unfortunately not possible to simply use 'TypeTag' here because this leads
     // to cyclic definitions of some properties. if this happens the compiler error
     // messages unfortunately are *really* confusing and not really helpful.
-    typedef TTAG(EclFlowProblem) BaseTypeTag;
+    using BaseTypeTag = TTag::EclFlowProblem;
     typedef typename GET_PROP_TYPE(BaseTypeTag, FluidSystem) FluidSystem;
 
 public:
@@ -62,7 +62,7 @@ public:
 namespace Opm {
 void flowEbosOilWaterBrineSetDeck(double setupTime, Deck* deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
 {
-    typedef TTAG(EclFlowOilWaterBrineProblem) TypeTag;
+    using TypeTag = Properties::TTag::EclFlowOilWaterBrineProblem;
     typedef GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
 
     Vanguard::setExternalSetupTime(setupTime);
@@ -85,7 +85,7 @@ int flowEbosOilWaterBrineMain(int argc, char** argv, bool outputCout, bool outpu
     Dune::MPIHelper::instance(argc, argv);
 #endif
 
-    Opm::FlowMainEbos<TTAG(EclFlowOilWaterBrineProblem)>
+    Opm::FlowMainEbos<Properties::TTag::EclFlowOilWaterBrineProblem>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }

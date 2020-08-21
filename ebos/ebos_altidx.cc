@@ -68,6 +68,6 @@ public:
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(EbosAltIdxTypeTag) ProblemTypeTag;
+    using ProblemTypeTag = Opm::Properties::TTag::EbosAltIdxTypeTag;
     return Opm::startEbos<ProblemTypeTag>(argc, argv);
 }

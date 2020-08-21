@@ -38,7 +38,7 @@ SET_BOOL_PROP(EclFlowBrineProblem, EnableBrine, true);
 namespace Opm {
 void flowEbosBrineSetDeck(double setupTime, Deck *deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
 {
-    typedef TTAG(EclFlowBrineProblem) TypeTag;
+    using TypeTag = Properties::TTag::EclFlowBrineProblem;
     typedef GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
 
     Vanguard::setExternalSetupTime(setupTime);
@@ -63,7 +63,7 @@ int flowEbosBrineMain(int argc, char** argv, bool outputCout, bool outputFiles)
     Dune::MPIHelper::instance(argc, argv).rank();
 #endif
 
-    Opm::FlowMainEbos<TTAG(EclFlowBrineProblem)>
+    Opm::FlowMainEbos<Properties::TTag::EclFlowBrineProblem>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }

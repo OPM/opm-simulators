@@ -70,7 +70,7 @@ namespace Opm {
 
 int main(int argc, char** argv)
 {
-    using TypeTag = TTAG(EclFlowProblemSimple);
+    using TypeTag = Opm::Properties::TTag::EclFlowProblemSimple;
     auto mainObject = Opm::Main(argc, argv);
     return mainObject.runStatic<TypeTag>();
 }

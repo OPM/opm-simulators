@@ -34,7 +34,7 @@ namespace Opm {
 
 bool ebosBlackOilDeckFileNameIsSet(int argc, char** argv)
 {
-    typedef TTAG(EbosTypeTag) ProblemTypeTag;
+    using ProblemTypeTag = Properties::TTag::EbosTypeTag;
 
     // use the ewoms parameter machinery and the blackoil vanguard to handle the grunt of
     // the work
@@ -52,7 +52,7 @@ bool ebosBlackOilDeckFileNameIsSet(int argc, char** argv)
 
 std::string ebosBlackOilGetDeckFileName(int argc, char** argv)
 {
-    typedef TTAG(EbosTypeTag) ProblemTypeTag;
+    using ProblemTypeTag = Properties::TTag::EbosTypeTag;
     typedef GET_PROP_TYPE(ProblemTypeTag, Vanguard) Vanguard;
 
     // use the ewoms parameter machinery and the blackoil vanguard to handle the grunt of
@@ -72,7 +72,7 @@ std::string ebosBlackOilGetDeckFileName(int argc, char** argv)
 
 std::unique_ptr<Opm::ParseContext> ebosBlackOilCreateParseContext(int argc, char** argv)
 {
-    typedef TTAG(EbosTypeTag) ProblemTypeTag;
+    using ProblemTypeTag = Properties::TTag::EbosTypeTag;
     typedef GET_PROP_TYPE(ProblemTypeTag, Vanguard) Vanguard;
 
     // use the ewoms parameter machinery and the blackoil vanguard to handle the grunt of
@@ -94,7 +94,7 @@ void ebosBlackOilSetDeck(Opm::Deck* deck,
                          Opm::ErrorGuard* errorGuard,
                          double externalSetupTime)
 {
-    typedef TTAG(EbosTypeTag) ProblemTypeTag;
+    using ProblemTypeTag = Properties::TTag::EbosTypeTag;
     typedef GET_PROP_TYPE(ProblemTypeTag, Vanguard) Vanguard;
 
     Vanguard::setExternalSetupTime(externalSetupTime);
@@ -105,7 +105,7 @@ void ebosBlackOilSetDeck(Opm::Deck* deck,
 
 int ebosBlackOilMain(int argc, char **argv)
 {
-    typedef TTAG(EbosTypeTag) ProblemTypeTag;
+    using ProblemTypeTag = Properties::TTag::EbosTypeTag;
     return Opm::startEbos<ProblemTypeTag>(argc, argv);
 }
 

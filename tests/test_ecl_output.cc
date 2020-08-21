@@ -125,7 +125,7 @@ initSimulator(const char *filename)
 
 void test_summary()
 {
-    typedef typename TTAG(TestEclOutputTypeTag) TypeTag;
+    using TypeTag = Opm::Properties::TTag::TestEclOutputTypeTag;
     const std::string filename = "SUMMARY_DECK_NON_CONSTANT_POROSITY.DATA";
     const std::string casename = "SUMMARY_DECK_NON_CONSTANT_POROSITY";
 
@@ -270,7 +270,7 @@ int main(int argc, char** argv)
     Dune::MPIHelper::instance(argc, argv);
 #endif
 
-    typedef TTAG(TestEclOutputTypeTag) TypeTag;
+    using TypeTag = Opm::Properties::TTag::TestEclOutputTypeTag;
     Opm::registerAllParameters_<TypeTag>();
     test_summary();
     test_readWriteWells();

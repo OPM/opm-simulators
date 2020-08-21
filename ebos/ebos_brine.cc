@@ -46,7 +46,7 @@ void ebosBrineSetDeck(Opm::Deck* deck,
                      Opm::ErrorGuard* errorGuard,
                      double externalSetupTime)
 {
-    typedef TTAG(EbosBrineTypeTag) ProblemTypeTag;
+    using ProblemTypeTag = Properties::TTag::EbosBrineTypeTag;
     typedef GET_PROP_TYPE(ProblemTypeTag, Vanguard) Vanguard;
 
     Vanguard::setExternalSetupTime(externalSetupTime);
@@ -57,7 +57,7 @@ void ebosBrineSetDeck(Opm::Deck* deck,
 
 int ebosBrineMain(int argc, char **argv)
 {
-    typedef TTAG(EbosBrineTypeTag) ProblemTypeTag;
+    using ProblemTypeTag = Properties::TTag::EbosBrineTypeTag;
     return Opm::startEbos<ProblemTypeTag>(argc, argv);
 }
 

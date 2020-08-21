@@ -41,7 +41,7 @@ private:
     // it is unfortunately not possible to simply use 'TypeTag' here because this leads
     // to cyclic definitions of some properties. if this happens the compiler error
     // messages unfortunately are *really* confusing and not really helpful.
-    typedef typename GET_PROP_TYPE(TTAG(EbosTypeTag), FluidSystem) FluidSystem;
+    typedef typename GET_PROP_TYPE(TTag::EbosTypeTag, FluidSystem) FluidSystem;
 
 public:
     typedef Opm::BlackOilTwoPhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent),
@@ -62,7 +62,7 @@ void ebosGasOilSetDeck(Opm::Deck* deck,
                        Opm::ErrorGuard* errorGuard,
                        double externalSetupTime)
 {
-    typedef TTAG(EbosGasOilTypeTag) ProblemTypeTag;
+    using ProblemTypeTag = Properties::TTag::EbosGasOilTypeTag;
     typedef GET_PROP_TYPE(ProblemTypeTag, Vanguard) Vanguard;
 
     Vanguard::setExternalSetupTime(externalSetupTime);
@@ -73,7 +73,7 @@ void ebosGasOilSetDeck(Opm::Deck* deck,
 
 int ebosGasOilMain(int argc, char **argv)
 {
-    typedef TTAG(EbosGasOilTypeTag) ProblemTypeTag;
+    using ProblemTypeTag = Properties::TTag::EbosGasOilTypeTag;
     return Opm::startEbos<ProblemTypeTag>(argc, argv);
 }
 
