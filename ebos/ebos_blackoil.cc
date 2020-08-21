@@ -38,14 +38,14 @@ bool ebosBlackOilDeckFileNameIsSet(int argc, char** argv)
 
     // use the ewoms parameter machinery and the blackoil vanguard to handle the grunt of
     // the work
-    EWOMS_RESET_PARAMS_(ProblemTypeTag);
+    Parameters::reset<ProblemTypeTag>();
     Opm::setupParameters_<ProblemTypeTag>(argc,
                                           const_cast<const char**>(argv),
                                           /*doRegistration=*/true,
                                           /*allowUnused=*/true,
                                           /*handleHelp=*/false);
     bool result = EWOMS_PARAM_IS_SET(ProblemTypeTag, std::string, EclDeckFileName);
-    EWOMS_RESET_PARAMS_(ProblemTypeTag);
+    Parameters::reset<ProblemTypeTag>();
 
     return result;
 }
@@ -57,7 +57,7 @@ std::string ebosBlackOilGetDeckFileName(int argc, char** argv)
 
     // use the ewoms parameter machinery and the blackoil vanguard to handle the grunt of
     // the work
-    EWOMS_RESET_PARAMS_(ProblemTypeTag);
+    Parameters::reset<ProblemTypeTag>();
     Opm::setupParameters_<ProblemTypeTag>(argc,
                                           const_cast<const char**>(argv),
                                           /*doRegistration=*/true,
@@ -65,7 +65,7 @@ std::string ebosBlackOilGetDeckFileName(int argc, char** argv)
                                           /*handleHelp=*/false);
     std::string rawDeckFileName = EWOMS_GET_PARAM(ProblemTypeTag, std::string, EclDeckFileName);
     std::string result = Vanguard::canonicalDeckPath(rawDeckFileName).string();
-    EWOMS_RESET_PARAMS_(ProblemTypeTag);
+    Parameters::reset<ProblemTypeTag>();
 
     return result;
 }
@@ -77,14 +77,14 @@ std::unique_ptr<Opm::ParseContext> ebosBlackOilCreateParseContext(int argc, char
 
     // use the ewoms parameter machinery and the blackoil vanguard to handle the grunt of
     // the work
-    EWOMS_RESET_PARAMS_(ProblemTypeTag);
+    Parameters::reset<ProblemTypeTag>();
     Opm::setupParameters_<ProblemTypeTag>(argc,
                                           const_cast<const char**>(argv),
                                           /*doRegistration=*/true,
                                           /*allowUnused=*/true,
                                           /*handleHelp=*/false);
     std::unique_ptr<Opm::ParseContext> result = Vanguard::createParseContext();
-    EWOMS_RESET_PARAMS_(ProblemTypeTag);
+    Parameters::reset<ProblemTypeTag>();
 
     return result;
 }
