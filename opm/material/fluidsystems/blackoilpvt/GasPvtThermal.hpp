@@ -263,7 +263,7 @@ public:
             return isothermalPvt_->saturatedViscosity(regionIdx, temperature, pressure);
 
         // compute the viscosity deviation due to temperature
-        const auto& muGasvisct = gasvisctCurves_[regionIdx].eval(temperature);
+        const auto& muGasvisct = gasvisctCurves_[regionIdx].eval(temperature, true);
         return muGasvisct;
     }
 
