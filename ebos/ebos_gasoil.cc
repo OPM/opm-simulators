@@ -30,7 +30,7 @@
 #include "ebos.hh"
 #include "startEbos.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_TYPE_TAG(EbosGasOilTypeTag, INHERITS_FROM(EbosTypeTag));
 
@@ -53,7 +53,7 @@ public:
                                          /*disabledCompIdx=*/FluidSystem::waterCompIdx> type;
 };
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

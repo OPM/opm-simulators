@@ -31,11 +31,11 @@
 
 #include <opm/models/utils/start.hh>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_TYPE_TAG(EbosPlainTypeTag, INHERITS_FROM(BlackOilModel, EclBaseProblem));
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {

@@ -42,11 +42,11 @@
 #include <vector>
 #include <iostream>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_PROP_TAG(EnableTracerModel);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

@@ -40,7 +40,7 @@ class EclAluGridVanguard;
 
 } // namespace Opm
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_TYPE_TAG(EclAluGridVanguard, INHERITS_FROM(EclBaseVanguard));
 
@@ -49,7 +49,7 @@ SET_TYPE_PROP(EclAluGridVanguard, Vanguard, Opm::EclAluGridVanguard<TypeTag>);
 SET_TYPE_PROP(EclAluGridVanguard, Grid,  Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming>);
 SET_TYPE_PROP(EclAluGridVanguard, EquilGrid, Dune::CpGrid);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

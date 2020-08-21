@@ -69,8 +69,7 @@
 #include <vector>
 #include <algorithm>
 
-
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_TYPE_TAG(EclFlowProblem, INHERITS_FROM(BlackOilModel, EclBaseProblem, FlowNonLinearSolver, FlowModelParameters, FlowTimeSteppingParameters));
 SET_STRING_PROP(EclFlowProblem, OutputDir, "");
@@ -93,8 +92,7 @@ SET_BOOL_PROP(EclFlowProblem, EnableBrine, false);
 SET_TYPE_PROP(EclFlowProblem, EclWellModel, Opm::BlackoilWellModel<TypeTag>);
 SET_TAG_PROP(EclFlowProblem, LinearSolverSplice, FlowIstlSolver);
 
-
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
     /// A model implementation for three-phase black oil.

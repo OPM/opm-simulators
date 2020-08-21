@@ -17,7 +17,7 @@
 #include <opm/simulators/timestepping/TimeStepControl.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_TYPE_TAG(FlowTimeSteppingParameters);
 
@@ -61,8 +61,7 @@ SET_SCALAR_PROP(FlowTimeSteppingParameters, TimeStepControlGrowthRate, 1.25);
 SET_STRING_PROP(FlowTimeSteppingParameters, TimeStepControlFileName, "timesteps");
 SET_SCALAR_PROP(FlowTimeSteppingParameters, MinTimeStepBeforeShuttingProblematicWellsInDays, 0.001);
 
-
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
     // AdaptiveTimeStepping

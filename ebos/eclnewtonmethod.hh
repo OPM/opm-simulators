@@ -35,7 +35,7 @@
 
 #include <opm/material/common/Unused.hpp>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_PROP_TAG(EclNewtonSumTolerance);
 NEW_PROP_TAG(EclNewtonStrictIterations);
@@ -43,7 +43,7 @@ NEW_PROP_TAG(EclNewtonRelaxedVolumeFraction);
 NEW_PROP_TAG(EclNewtonSumToleranceExponent);
 NEW_PROP_TAG(EclNewtonRelaxedTolerance);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

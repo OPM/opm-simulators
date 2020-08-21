@@ -40,7 +40,7 @@
 
 #include <cstdio>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 // create new type tag for the VTK tracer output
 NEW_TYPE_TAG(VtkEclTracer);
@@ -50,7 +50,8 @@ NEW_PROP_TAG(VtkWriteEclTracerConcentration);
 
 // set default values for what quantities to output
 SET_BOOL_PROP(VtkEclTracer, VtkWriteEclTracerConcentration, false);
-END_PROPERTIES
+
+} // namespace Opm::Properties
 
 namespace Opm {
     /*!

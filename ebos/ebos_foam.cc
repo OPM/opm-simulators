@@ -30,14 +30,14 @@
 #include "ebos.hh"
 #include "startEbos.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_TYPE_TAG(EbosFoamTypeTag, INHERITS_FROM(EbosTypeTag));
 
 // enable the foam extension of the black oil model
 SET_BOOL_PROP(EbosFoamTypeTag, EnableFoam, true);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

@@ -39,7 +39,7 @@ class ISTLSolverEbos;
 }
 
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_TYPE_TAG(FlowIstlSolverParams);
 
@@ -100,9 +100,7 @@ SET_STRING_PROP(FlowIstlSolverParams, GpuMode, "none");
 SET_INT_PROP(FlowIstlSolverParams, BdaDeviceId, 0);
 SET_INT_PROP(FlowIstlSolverParams, OpenclPlatformId, 0);
 
-
-
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm
 {

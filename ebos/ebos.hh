@@ -41,7 +41,7 @@ template <class TypeTag>
 class EbosProblem;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_TYPE_TAG(EbosTypeTag, INHERITS_FROM(BlackOilModel, EclBaseProblem, FlowModelParameters));
 
@@ -109,7 +109,7 @@ SET_INT_PROP(EbosTypeTag, ThreadsPerProcess, 2);
 // smallest time step size is reached.
 SET_BOOL_PROP(EbosTypeTag, ContinueOnConvergenceError, true);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 template <class TypeTag>

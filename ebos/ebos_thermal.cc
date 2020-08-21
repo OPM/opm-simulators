@@ -30,14 +30,14 @@
 #include "ebos.hh"
 #include "startEbos.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_TYPE_TAG(EbosThermalTypeTag, INHERITS_FROM(EbosTypeTag));
 
 // enable the energy extension of the black oil model
 SET_BOOL_PROP(EbosThermalTypeTag, EnableEnergy, true);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

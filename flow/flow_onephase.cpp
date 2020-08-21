@@ -23,7 +23,8 @@
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
 
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
+
 NEW_TYPE_TAG(EclFlowProblemSimple, INHERITS_FROM(EclFlowProblem));
 //! The indices required by the model
 SET_PROP(EclFlowProblemSimple, Indices)
@@ -45,7 +46,8 @@ public:
                                          /*enebledCompIdx=*/FluidSystem::waterCompIdx>
         type;
 };
-END_PROPERTIES
+
+} // namespace Opm::Properties
 
 int main(int argc, char** argv)
 {

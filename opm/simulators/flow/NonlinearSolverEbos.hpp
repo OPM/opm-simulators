@@ -34,7 +34,7 @@
 #include <dune/istl/bcrsmatrix.hh>
 #include <memory>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_TYPE_TAG(FlowNonLinearSolver);
 
@@ -48,7 +48,7 @@ SET_INT_PROP(FlowNonLinearSolver, FlowNewtonMaxIterations, 20);
 SET_INT_PROP(FlowNonLinearSolver, FlowNewtonMinIterations, 1);
 SET_STRING_PROP(FlowNonLinearSolver, NewtonRelaxationType, "dampen");
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

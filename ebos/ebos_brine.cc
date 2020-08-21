@@ -30,14 +30,14 @@
 #include "ebos.hh"
 #include "startEbos.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_TYPE_TAG(EbosBrineTypeTag, INHERITS_FROM(EbosTypeTag));
 
 // enable the brine extension of the black oil model
 SET_BOOL_PROP(EbosBrineTypeTag, EnableBrine, true);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

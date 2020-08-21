@@ -66,13 +66,13 @@
 #include <mpi.h>
 #endif
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_PROP_TAG(EnableEclOutput);
 NEW_PROP_TAG(EnableAsyncEclOutput);
 NEW_PROP_TAG(EclOutputDoublePrecision);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

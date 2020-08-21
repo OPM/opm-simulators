@@ -30,14 +30,14 @@
 #include "ebos.hh"
 #include "startEbos.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_TYPE_TAG(EbosPolymerTypeTag, INHERITS_FROM(EbosTypeTag));
 
 // enable the polymer extension of the black oil model
 SET_BOOL_PROP(EbosPolymerTypeTag, EnablePolymer, true);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 

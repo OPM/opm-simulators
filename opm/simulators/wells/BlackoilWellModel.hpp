@@ -61,11 +61,11 @@
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
 NEW_PROP_TAG(EnableTerminalOutput);
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 
