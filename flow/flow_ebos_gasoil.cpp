@@ -86,8 +86,9 @@ int flowEbosGasOilMain(int argc, char** argv, bool outputCout, bool outputFiles)
     Dune::MPIHelper::instance(argc, argv);
 #endif
 
-    Opm::FlowMainEbos<TTAG(EclFlowGasOilProblem)> mainfunc;
-    return mainfunc.execute(argc, argv, outputCout, outputFiles);
+    Opm::FlowMainEbos<TTAG(EclFlowGasOilProblem)>
+        mainfunc {argc, argv, outputCout, outputFiles} ;
+    return mainfunc.execute();
 }
 
 }
