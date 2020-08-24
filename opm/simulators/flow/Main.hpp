@@ -119,6 +119,7 @@ namespace Opm
     {
     private:
         using FlowMainEbosType = Opm::FlowMainEbos<TTAG(EclFlowProblem)>;
+
         enum class FileOutputMode {
             //! \brief No output to files.
             OUTPUT_NONE = 0,

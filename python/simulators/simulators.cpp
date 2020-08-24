@@ -5,34 +5,56 @@
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #define FLOW_BLACKOIL_ONLY
 #include <opm/simulators/flow/Main.hpp>
+#include <opm/simulators/flow/FlowMainEbos.hpp>
 #include <pybind11/pybind11.h>
 #include <pybind11/embed.h>
+// NOTE: EXIT_SUCCESS, EXIT_FAILURE is defined in cstdlib
+#include <cstdlib>
 #include <iostream>
 #include <string>
+#include <opm/simulators/flow/python/simulators.hpp>
 
 namespace py = pybind11;
 
-class BlackOilSimulator
+namespace Opm::Pybind {
+BlackOilSimulator::BlackOilSimulator( const std::string &deckFilename)
+    : deckFilename_(deckFilename), hasRunInit_(false)
 {
-public:
+}
 
-    BlackOilSimulator( const std::string &deckFilename) : deckFilename_(deckFilename)
-    {
-    }
+int BlackOilSimulator::run()
+{
+    auto mainObject = Opm::Main( deckFilename_ );
+    return mainObject.runDynamic();
+}
 
-    int run()
-    {
-        auto mainObject = Opm::Main( deckFilename_ );
-        return mainObject.runDynamic();
+int BlackOilSimulator::step_init()
+{
+
+    if (hasRunInit_) {
+        // Running step_init() multiple times is not implemented yet,
+        // currently we just do nothing and return
+        return EXIT_SUCCESS;
     }
-    
-private:
-    const std::string deckFilename_;
-};
+    main_ = std::make_unique<Opm::Main>( deckFilename_ );
+    int exitCode = EXIT_SUCCESS;
+    mainEbos_ = main_->initFlowEbosBlackoil(exitCode);
+    if (mainEbos_) {
+        int result = mainEbos_->executeInitStep();
+        hasRunInit_ = true;
+        return result;
+    }
+    else {
+        return exitCode;
+    }
+}
+
+} // namespace Opm::Python
 
 PYBIND11_MODULE(simulators, m)
 {
-    py::class_<BlackOilSimulator>(m, "BlackOilSimulator")
+    py::class_<Opm::Pybind::BlackOilSimulator>(m, "BlackOilSimulator")
         .def(py::init< const std::string& >())
-        .def("run", &BlackOilSimulator::run);
+        .def("run", &Opm::Pybind::BlackOilSimulator::run)
+        .def("step_init", &Opm::Pybind::BlackOilSimulator::step_init);
 }
