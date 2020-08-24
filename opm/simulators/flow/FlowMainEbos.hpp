@@ -354,7 +354,7 @@ namespace Opm
             try {
                 // deal with some administrative boilerplate
 
-                int status = setupParameters_(argc_, argv_);
+                int status = setupParameters_(this->argc_, this->argv_);
                 if (status)
                     return status;
 
@@ -374,7 +374,7 @@ namespace Opm
                 std::ostringstream message;
                 message  << "Program threw an exception: " << e.what();
 
-                if (output_cout_) {
+                if (this->output_cout_) {
                     // in some cases exceptions are thrown before the logging system is set
                     // up.
                     if (OpmLog::hasBackend("STREAMLOG")) {
@@ -425,7 +425,7 @@ namespace Opm
             // force closing of all log files.
             OpmLog::removeAllBackends();
 
-            if (mpi_rank_ != 0 || mpi_size_ < 2 || !output_files_) {
+            if (mpi_rank_ != 0 || mpi_size_ < 2 || !this->output_files_) {
                 return;
             }
 
@@ -504,7 +504,7 @@ namespace Opm
         //   OpmLog singleton.
         void runDiagnostics()
         {
-            if (!output_cout_) {
+            if (!this->output_cout_) {
                 return;
             }
 
@@ -545,7 +545,7 @@ namespace Opm
         // Output summary after simulation has completed
         void runSimulatorAfterSim_(SimulatorReport &report)
         {
-            if (output_cout_) {
+            if (this->output_cout_) {
                 std::ostringstream ss;
                 ss << "\n\n================    End of simulation     ===============\n\n";
                 ss << "Number of MPI processes: " << std::setw(6) << mpi_size_ << "\n";
@@ -582,7 +582,7 @@ namespace Opm
             const auto& initConfig = eclState().getInitConfig();
             simtimer_->init(timeMap, (size_t)initConfig.getRestartStep());
 
-            if (output_cout_) {
+            if (this->output_cout_) {
                 std::ostringstream oss;
 
                 // This allows a user to catch typos and misunderstandings in the
@@ -595,7 +595,7 @@ namespace Opm
             }
 
             if (!ioConfig.initOnly()) {
-                if (output_cout_) {
+                if (this->output_cout_) {
                     std::string msg;
                     msg = "\n\n================ Starting main simulation loop ===============\n";
                     OpmLog::info(msg);
@@ -604,7 +604,7 @@ namespace Opm
                 return (this->*initOrRunFunc)();
             }
             else {
-                if (output_cout_) {
+                if (this->output_cout_) {
                     std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;
                 }
                 return EXIT_SUCCESS;
