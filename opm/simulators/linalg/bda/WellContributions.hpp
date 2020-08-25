@@ -57,7 +57,12 @@ class WellContributions
 {
 
 public:
-
+    /// StandardWell has C, D and B matrices that need to be copied
+    enum class MatrixType {
+        C,
+        D,
+        B
+    };
 
 private:
     unsigned int num_blocks = 0;             // total number of blocks in all wells
@@ -103,8 +108,8 @@ private:
     double *h_x_ocl = nullptr;
     double *h_y_ocl = nullptr;
 
-    cl::Buffer d_Cnnzs, d_Dnnzs, d_Bnnzs;
-    cl::Buffer d_Ccols, d_Bcols, d_val_pointers;
+    cl::Buffer d_Cnnzs_ocl, d_Dnnzs_ocl, d_Bnnzs_ocl;
+    cl::Buffer d_Ccols_ocl, d_Bcols_ocl, d_val_pointers_ocl;
 
     typedef cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&,
                             cl::Buffer&, cl::Buffer&, cl::Buffer&,
@@ -133,13 +138,6 @@ private:
 #endif
 
 public:
-    /// StandardWell has C, D and B matrices that need to be copied
-    enum class MatrixType {
-        C,
-        D,
-        B
-    };
-
 #if HAVE_CUDA
     /// Set a cudaStream to be used
     /// \param[in] stream           the cudaStream that is used to launch the kernel in
@@ -150,6 +148,10 @@ public:
     /// \param[in] d_x        vector x, must be on GPU
     /// \param[inout] d_y     vector y, must be on GPU
     void apply(double *d_x, double *d_y);
+
+    unsigned int getNumWells(){
+        return num_std_wells + num_ms_wells;
+    }
 #endif
 
 #if HAVE_OPENCL
