@@ -34,6 +34,7 @@ private:
 public:
     BlackOilSimulator( const std::string &deckFilename);
     int run();
+    int step();
     int step_init();
 
 private:
