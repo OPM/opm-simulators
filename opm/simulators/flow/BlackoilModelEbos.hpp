@@ -692,7 +692,7 @@ namespace Opm {
                 elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
                 const unsigned cell_idx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
                 const double pvValue = ebosProblem.referencePorosity(cell_idx, /*timeIdx=*/0) * ebosModel.dofTotalVolume( cell_idx );
-                const auto cellResidual = ebosResid[cell_idx];
+                const auto& cellResidual = ebosResid[cell_idx];
                 bool cnvViolated = false;
 
                 for (unsigned eqIdx = 0; eqIdx < cellResidual.size(); ++eqIdx)
