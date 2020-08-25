@@ -675,15 +675,46 @@ namespace Opm {
             return pvSumLocal;
         }
 
+        double computeCnvErrorPv(const std::vector<Scalar>& B_avg, double dt)
+        {
+            double errorPV{};
+            const auto& ebosModel = ebosSimulator_.model();
+            const auto& ebosProblem = ebosSimulator_.problem();
+            const auto& ebosResid = ebosSimulator_.model().linearizer().residual();
+            const auto& gridView = ebosSimulator().gridView();
+            ElementContext elemCtx(ebosSimulator_);
+
+            for (const auto& elem: elements(gridView, Dune::Partitions::interiorBorder))
+            {
+                elemCtx.updatePrimaryStencil(elem);
+                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                const unsigned cell_idx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+                const double pvValue = ebosProblem.referencePorosity(cell_idx, /*timeIdx=*/0) * ebosModel.dofTotalVolume( cell_idx );
+                const auto& cellResidual = ebosResid[cell_idx];
+                bool cnvViolated = false;
+
+                for (unsigned eqIdx = 0; eqIdx < cellResidual.size(); ++eqIdx)
+                {
+                    using std::abs;
+                    Scalar CNV = cellResidual[eqIdx] * dt * B_avg[eqIdx] / pvValue;
+                    cnvViolated = cnvViolated || (abs(CNV) > param_.tolerance_cnv_);
+                }
+
+                if (cnvViolated)
+                {
+                    errorPV += pvValue;
+                }
+            }
+
+            return grid_.comm().sum(errorPV);
+        }
+
         ConvergenceReport getReservoirConvergence(const double dt,
                                                   const int iteration,
                                                   std::vector<Scalar>& B_avg,
                                                   std::vector<Scalar>& residual_norms)
         {
             typedef std::vector< Scalar > Vector;
-
-            const double tol_mb  = param_.tolerance_mb_;
-            const double tol_cnv = (iteration < param_.max_strict_iter_) ? param_.tolerance_cnv_ : param_.tolerance_cnv_relaxed_;
 
             const int numComp = numEq;
             Vector R_sum(numComp, 0.0 );
@@ -693,6 +724,13 @@ namespace Opm {
             // compute global sum and max of quantities
             const double pvSum = convergenceReduction(grid_.comm(), pvSumLocal,
                                                       R_sum, maxCoeff, B_avg);
+
+            auto cnvErrorPvFraction = computeCnvErrorPv(B_avg, dt);
+            cnvErrorPvFraction /= pvSum;
+
+            const double tol_mb  = param_.tolerance_mb_;
+            const bool use_relaxed = cnvErrorPvFraction < param_.relaxed_max_pv_fraction_ || iteration >= param_.max_strict_iter_;                                              
+            const double tol_cnv = use_relaxed ? param_.tolerance_cnv_relaxed_ :  param_.tolerance_cnv_;
 
             // Finish computation
             std::vector<Scalar> CNV(numComp);
