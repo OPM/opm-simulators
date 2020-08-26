@@ -729,7 +729,11 @@ namespace Opm {
             cnvErrorPvFraction /= pvSum;
 
             const double tol_mb  = param_.tolerance_mb_;
-            const bool use_relaxed = cnvErrorPvFraction < param_.relaxed_max_pv_fraction_ || iteration >= param_.max_strict_iter_;                                              
+            // Default value of relaxed_max_pv_fraction_ is 1 and
+            // max_strict_iter_ is 8. Hence only iteration chooses
+            // whether to use relaxed or not.
+            // To activate only fraction use fraction below 1 and iter 0.
+            const bool use_relaxed = cnvErrorPvFraction < param_.relaxed_max_pv_fraction_ && iteration >= param_.max_strict_iter_;                                              
             const double tol_cnv = use_relaxed ? param_.tolerance_cnv_relaxed_ :  param_.tolerance_cnv_;
 
             // Finish computation
