@@ -54,7 +54,7 @@ NEW_TYPE_TAG(EclCpGridVanguard, INHERITS_FROM(EclBaseVanguard));
 // declare the properties
 SET_TYPE_PROP(EclCpGridVanguard, Vanguard, Opm::EclCpGridVanguard<TypeTag>);
 SET_TYPE_PROP(EclCpGridVanguard, Grid, Dune::CpGrid);
-SET_TYPE_PROP(EclCpGridVanguard, EquilGrid, typename GET_PROP_TYPE(TypeTag, Grid));
+SET_TYPE_PROP(EclCpGridVanguard, EquilGrid, GetPropType<TypeTag, Properties::Grid>);
 
 } // namespace Opm::Properties
 
@@ -73,14 +73,14 @@ class EclCpGridVanguard : public EclBaseVanguard<TypeTag>
     friend class EclBaseVanguard<TypeTag>;
     typedef EclBaseVanguard<TypeTag> ParentType;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementMapper) ElementMapper;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
 
 public:
-    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
-    typedef typename GET_PROP_TYPE(TypeTag, EquilGrid) EquilGrid;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    using Grid = GetPropType<TypeTag, Properties::Grid>;
+    using EquilGrid = GetPropType<TypeTag, Properties::EquilGrid>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
 
 private:
     typedef Dune::CartesianIndexMapper<Grid> CartesianIndexMapper;

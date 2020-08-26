@@ -39,7 +39,7 @@ namespace Opm {
 void flowEbosPolymerSetDeck(double setupTime, Deck *deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
 {
     using TypeTag = Properties::TTag::EclFlowPolymerProblem;
-    typedef GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
+    using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
 
     Vanguard::setExternalSetupTime(setupTime);
     Vanguard::setExternalDeck(deck);

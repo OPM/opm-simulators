@@ -47,7 +47,7 @@ void ebosFoamSetDeck(Opm::Deck* deck,
                      double externalSetupTime)
 {
     using ProblemTypeTag = Properties::TTag::EbosFoamTypeTag;
-    typedef GET_PROP_TYPE(ProblemTypeTag, Vanguard) Vanguard;
+    using Vanguard = GetPropType<ProblemTypeTag, Properties::Vanguard>;
 
     Vanguard::setExternalSetupTime(externalSetupTime);
     Vanguard::setExternalParseContext(parseContext);

@@ -53,7 +53,7 @@ bool ebosBlackOilDeckFileNameIsSet(int argc, char** argv)
 std::string ebosBlackOilGetDeckFileName(int argc, char** argv)
 {
     using ProblemTypeTag = Properties::TTag::EbosTypeTag;
-    typedef GET_PROP_TYPE(ProblemTypeTag, Vanguard) Vanguard;
+    using Vanguard = GetPropType<ProblemTypeTag, Properties::Vanguard>;
 
     // use the ewoms parameter machinery and the blackoil vanguard to handle the grunt of
     // the work
@@ -73,7 +73,7 @@ std::string ebosBlackOilGetDeckFileName(int argc, char** argv)
 std::unique_ptr<Opm::ParseContext> ebosBlackOilCreateParseContext(int argc, char** argv)
 {
     using ProblemTypeTag = Properties::TTag::EbosTypeTag;
-    typedef GET_PROP_TYPE(ProblemTypeTag, Vanguard) Vanguard;
+    using Vanguard = GetPropType<ProblemTypeTag, Properties::Vanguard>;
 
     // use the ewoms parameter machinery and the blackoil vanguard to handle the grunt of
     // the work
@@ -95,7 +95,7 @@ void ebosBlackOilSetDeck(Opm::Deck* deck,
                          double externalSetupTime)
 {
     using ProblemTypeTag = Properties::TTag::EbosTypeTag;
-    typedef GET_PROP_TYPE(ProblemTypeTag, Vanguard) Vanguard;
+    using Vanguard = GetPropType<ProblemTypeTag, Properties::Vanguard>;
 
     Vanguard::setExternalSetupTime(externalSetupTime);
     Vanguard::setExternalParseContext(parseContext);

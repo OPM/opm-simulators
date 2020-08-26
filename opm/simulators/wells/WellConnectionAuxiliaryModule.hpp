@@ -33,8 +33,8 @@ template<class TypeTag>
 class WellConnectionAuxiliaryModule
     : public Opm::BaseAuxiliaryModule<TypeTag>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) GlobalEqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
+    using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
+    using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
 
 public:
 

@@ -60,15 +60,15 @@ namespace Opm {
 template <class TypeTag>
 class EclTracerModel
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Stencil) Stencil;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Grid = GetPropType<TypeTag, Properties::Grid>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Stencil = GetPropType<TypeTag, Properties::Stencil>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
     typedef Opm::DenseAd::Evaluation<Scalar,1> TracerEvaluation;
 

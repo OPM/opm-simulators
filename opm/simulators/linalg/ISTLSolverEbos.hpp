@@ -66,7 +66,7 @@ struct EclWellModel;
 SET_PROP(FlowIstlSolver, SparseMatrixAdapter)
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
     typedef Opm::MatrixBlock<Scalar, numEq, numEq> Block;
 
@@ -97,21 +97,21 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
     class ISTLSolverEbos
     {
     protected:
-        typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-        typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-        typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
-        typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) Vector;
-        typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
-        typedef typename GET_PROP_TYPE(TypeTag, EclWellModel) WellModel;
-        typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+        using GridView = GetPropType<TypeTag, Properties::GridView>;
+        using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+        using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
+        using Vector = GetPropType<TypeTag, Properties::GlobalEqVector>;
+        using Indices = GetPropType<TypeTag, Properties::Indices>;
+        using WellModel = GetPropType<TypeTag, Properties::EclWellModel>;
+        using Simulator = GetPropType<TypeTag, Properties::Simulator>;
         typedef typename SparseMatrixAdapter::IstlMatrix Matrix;
 
         typedef typename SparseMatrixAdapter::MatrixBlock MatrixBlockType;
         typedef typename Vector::block_type BlockVector;
-        typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-        typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) ThreadManager;
+        using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+        using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;
         typedef typename GridView::template Codim<0>::Entity Element;
-        typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+        using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
         using FlexibleSolverType = Dune::FlexibleSolver<Matrix, Vector>;
         using AbstractOperatorType = Dune::AssembledLinearOperator<Matrix, Vector, Vector>;
         using WellModelOperator = WellModelAsLinearOperator<WellModel, Vector, Vector>;

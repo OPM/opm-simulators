@@ -105,10 +105,10 @@ double ecl_sum_get_general_var(const Opm::EclIO::ESmry* smry,
 }
 
 template <class TypeTag>
-std::unique_ptr<typename GET_PROP_TYPE(TypeTag, Simulator)>
+std::unique_ptr<Opm::GetPropType<TypeTag, Opm::Properties::Simulator>>
 initSimulator(const char *filename)
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+    using Simulator = Opm::GetPropType<TypeTag, Opm::Properties::Simulator>;
 
     std::string filenameArg = "--ecl-deck-file-name=";
     filenameArg += filename;
@@ -130,7 +130,7 @@ void test_summary()
     const std::string casename = "SUMMARY_DECK_NON_CONSTANT_POROSITY";
 
     auto simulator = initSimulator<TypeTag>(filename.data());
-    typedef typename GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
+    using Vanguard = Opm::GetPropType<TypeTag, Opm::Properties::Vanguard>;
     typedef Opm::CollectDataToIORank< Vanguard > CollectDataToIORankType;
     CollectDataToIORankType collectToIORank(simulator->vanguard());
     Opm::EclOutputBlackOilModule<TypeTag> eclOutputModule(*simulator, collectToIORank);

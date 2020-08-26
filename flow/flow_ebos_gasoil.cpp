@@ -46,7 +46,7 @@ private:
     // to cyclic definitions of some properties. if this happens the compiler error
     // messages unfortunately are *really* confusing and not really helpful.
     using BaseTypeTag = TTag::EclFlowProblem;
-    typedef typename GET_PROP_TYPE(BaseTypeTag, FluidSystem) FluidSystem;
+    using FluidSystem = GetPropType<BaseTypeTag, Properties::FluidSystem>;
 
 public:
     typedef Opm::BlackOilTwoPhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent),
@@ -63,7 +63,7 @@ namespace Opm {
 void flowEbosGasOilSetDeck(double setupTime, Deck *deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
 {
     using TypeTag = Properties::TTag::EclFlowGasOilProblem;
-    typedef GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
+    using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
 
     Vanguard::setExternalSetupTime(setupTime);
     Vanguard::setExternalDeck(deck);

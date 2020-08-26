@@ -1571,9 +1571,9 @@ equilnum(const Opm::EclipseState& eclipseState,
 template<class TypeTag>
 class InitialStateComputer
 {
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Grid = GetPropType<TypeTag, Properties::Grid>;
 
 public:
     template<class MaterialLawManager>

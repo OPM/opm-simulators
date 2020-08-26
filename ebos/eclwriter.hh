@@ -149,16 +149,16 @@ bool directVerticalNeighbors(const std::array<int, 3>& cartDims,
 template <class TypeTag>
 class EclWriter
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
-    typedef typename GET_PROP_TYPE(TypeTag, EquilGrid) EquilGrid;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GridView::template Codim<0>::Entity Element;
-    typedef typename GridView::template Codim<0>::Iterator ElementIterator;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Grid = GetPropType<TypeTag, Properties::Grid>;
+    using EquilGrid = GetPropType<TypeTag, Properties::EquilGrid>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Element = typename GridView::template Codim<0>::Entity;
+    using ElementIterator = typename GridView::template Codim<0>::Iterator;
 
     typedef CollectDataToIORank<Vanguard> CollectDataToIORankType;
 

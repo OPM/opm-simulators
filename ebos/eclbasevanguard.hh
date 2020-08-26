@@ -100,16 +100,16 @@ namespace Opm {
 template <class TypeTag>
 class EclBaseVanguard : public BaseVanguard<TypeTag>
 {
-    typedef BaseVanguard<TypeTag> ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, Vanguard) Implementation;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+    using ParentType = BaseVanguard<TypeTag>;
+    using Implementation = GetPropType<TypeTag, Properties::Vanguard>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
     enum { enableExperiments = GET_PROP_VALUE(TypeTag, EnableExperiments) };
 
 public:
-    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    using Grid = GetPropType<TypeTag, Properties::Grid>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
 
 protected:
     static const int dimension = Grid::dimension;

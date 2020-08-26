@@ -53,12 +53,12 @@ namespace Opm {
 template <class TypeTag>
 class EclEquilInitializer
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
     enum { numPhases = FluidSystem::numPhases };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };

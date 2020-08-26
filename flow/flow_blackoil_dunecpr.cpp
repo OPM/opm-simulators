@@ -44,9 +44,8 @@ namespace Opm {
     SET_PROP(EclFlowProblemSimple, FluidSystem)
     {
     private:
-      //typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-      typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-      typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
+      using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+      using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
 
     public:
         typedef Opm::BlackOilFluidSystem<Scalar> type;

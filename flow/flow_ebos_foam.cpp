@@ -39,7 +39,7 @@ namespace Opm {
 void flowEbosFoamSetDeck(double setupTime, Deck *deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
 {
     using TypeTag = Properties::TTag::EclFlowFoamProblem;
-    typedef GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
+    using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
 
     Vanguard::setExternalSetupTime(setupTime);
     Vanguard::setExternalDeck(deck);

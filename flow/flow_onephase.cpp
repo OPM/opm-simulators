@@ -34,7 +34,7 @@ private:
     // to cyclic definitions of some properties. if this happens the compiler error
     // messages unfortunately are *really* confusing and not really helpful.
     using BaseTypeTag = TTag::EclFlowProblem;
-    typedef typename GET_PROP_TYPE(BaseTypeTag, FluidSystem) FluidSystem;
+    using FluidSystem = GetPropType<BaseTypeTag, Properties::FluidSystem>;
 
 public:
     typedef Opm::BlackOilOnePhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent),
