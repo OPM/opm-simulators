@@ -80,7 +80,7 @@ namespace Opm {
   template <class TypeTag>
   void flowEbosSetDeck(Deck *deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
   {
-    using Vanguard = typename GET_PROP_TYPE(TypeTag, Vanguard);
+    using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
     Vanguard::setExternalDeck(deck);
     Vanguard::setExternalEclState(&eclState);
     Vanguard::setExternalSchedule(&schedule);
@@ -118,7 +118,7 @@ namespace Opm
     class Main
     {
     private:
-        using FlowMainEbosType = Opm::FlowMainEbos<TTAG(EclFlowProblem)>;
+        using FlowMainEbosType = Opm::FlowMainEbos<Opm::Properties::TTag::EclFlowProblem>;
 
         enum class FileOutputMode {
             //! \brief No output to files.
@@ -159,7 +159,7 @@ namespace Opm
         int runDynamic()
         {
             int exitCode = EXIT_SUCCESS;
-            if (initialize_<TTAG(FlowEarlyBird)>(exitCode)) {
+            if (initialize_<Properties::TTag::FlowEarlyBird>(exitCode)) {
                 return dispatchDynamic_();
             } else {
                 return exitCode;
@@ -184,7 +184,7 @@ namespace Opm
         std::unique_ptr<FlowMainEbosType> initFlowEbosBlackoil(int& exitCode)
         {
             exitCode = EXIT_SUCCESS;
-            if (initialize_<TTAG(FlowEarlyBird)>(exitCode)) {
+            if (initialize_<Properties::TTag::FlowEarlyBird>(exitCode)) {
                 // TODO: check that this deck really represents a blackoil
                 // case. E.g. check that number of phases == 3
                 Opm::flowEbosBlackoilSetDeck(
@@ -341,7 +341,7 @@ namespace Opm
             // simulator object. (Which parses the parameters again, but since this is done in an
             // identical manner it does not matter.)
             typedef TypeTagEarlyBird PreTypeTag;
-            typedef typename GET_PROP_TYPE(PreTypeTag, Problem) PreProblem;
+            using PreProblem = GetPropType<PreTypeTag, Properties::Problem>;
 
             PreProblem::setBriefDescription("Flow, an advanced reservoir simulator for ECL-decks provided by the Open Porous Media project.");
             int status = Opm::FlowMainEbos<PreTypeTag>::setupParameters_(argc_, argv_);
@@ -374,7 +374,7 @@ namespace Opm
                 deckFilename = EWOMS_GET_PARAM(PreTypeTag, std::string, EclDeckFileName);
             }
 
-            typedef typename GET_PROP_TYPE(PreTypeTag, Vanguard) PreVanguard;
+            using PreVanguard = GetPropType<PreTypeTag, Properties::Vanguard>;
             try {
                 deckFilename = PreVanguard::canonicalDeckPath(deckFilename).string();
             }

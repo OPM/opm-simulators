@@ -104,7 +104,7 @@ namespace Opm
     struct BlackoilModelParametersEbos
     {
     private:
-        typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+        using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
     public:
         /// Max relative change in bhp in single iteration.

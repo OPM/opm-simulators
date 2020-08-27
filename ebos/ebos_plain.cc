@@ -39,6 +39,6 @@ NEW_TYPE_TAG(EbosPlainTypeTag, INHERITS_FROM(BlackOilModel, EclBaseProblem));
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(EbosPlainTypeTag) ProblemTypeTag;
+    using ProblemTypeTag = Opm::Properties::TTag::EbosPlainTypeTag;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

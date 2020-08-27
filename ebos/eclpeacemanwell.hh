@@ -73,22 +73,22 @@ class EcfvDiscretization;
 template <class TypeTag>
 class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
 {
-    typedef BaseAuxiliaryModule<TypeTag> AuxModule;
+    using AuxModule = BaseAuxiliaryModule<TypeTag>;
 
-    typedef typename AuxModule::NeighborSet NeighborSet;
-    typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
-    typedef typename GET_PROP_TYPE(TypeTag, SolutionVector) SolutionVector;
-    typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) GlobalEqVector;
+    using NeighborSet = typename AuxModule::NeighborSet;
+    using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
+    using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
+    using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, Discretization) Discretization;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) IntensiveQuantities;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using Discretization = GetPropType<TypeTag, Properties::Discretization>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
 
     typedef Opm::MathToolbox<Evaluation> Toolbox;
 
@@ -115,8 +115,8 @@ class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
     static const unsigned gasCompIdx = FluidSystem::gasCompIdx;
 
     static const unsigned numModelEq = GET_PROP_VALUE(TypeTag, NumEq);
-    static const unsigned conti0EqIdx = GET_PROP_TYPE(TypeTag, Indices)::conti0EqIdx;
-    static const unsigned contiEnergyEqIdx = GET_PROP_TYPE(TypeTag, Indices)::contiEnergyEqIdx;
+    static const unsigned conti0EqIdx = GetPropType<TypeTag, Properties::Indices>::conti0EqIdx;
+    static const unsigned contiEnergyEqIdx = GetPropType<TypeTag, Properties::Indices>::contiEnergyEqIdx;
 
     static constexpr unsigned historySize = GET_PROP_VALUE(TypeTag, TimeDiscHistorySize);
 

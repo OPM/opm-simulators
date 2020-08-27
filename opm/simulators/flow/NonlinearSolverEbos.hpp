@@ -58,7 +58,7 @@ namespace Opm {
     template <class TypeTag, class PhysicalModel>
     class NonlinearSolverEbos
     {
-        typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+        using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
     public:
         // Available relaxation scheme types.

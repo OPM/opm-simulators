@@ -28,7 +28,7 @@ void flowEbosBlackoilSetDeck(double setupTime, Deck *deck, EclipseState& eclStat
 
 int flowEbosBlackoilMain(int argc, char** argv, bool outputCout, bool outputFiles);
 
-std::unique_ptr<Opm::FlowMainEbos<TTAG(EclFlowProblem)>>
+std::unique_ptr<Opm::FlowMainEbos<Properties::TTag::EclFlowProblem>>
     flowEbosBlackoilMainInit(int argc, char** argv, bool outputCout, bool outputFiles);
 }
 

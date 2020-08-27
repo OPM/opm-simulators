@@ -33,8 +33,8 @@ private:
     // it is unfortunately not possible to simply use 'TypeTag' here because this leads
     // to cyclic definitions of some properties. if this happens the compiler error
     // messages unfortunately are *really* confusing and not really helpful.
-    typedef TTAG(EclFlowProblem) BaseTypeTag;
-    typedef typename GET_PROP_TYPE(BaseTypeTag, FluidSystem) FluidSystem;
+    using BaseTypeTag = TTag::EclFlowProblem;
+    using FluidSystem = GetPropType<BaseTypeTag, Properties::FluidSystem>;
 
 public:
     typedef Opm::BlackOilOnePhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent),
@@ -51,7 +51,7 @@ public:
 
 int main(int argc, char** argv)
 {
-    using TypeTag = TTAG(EclFlowProblemSimple);
+    using TypeTag = Opm::Properties::TTag::EclFlowProblemSimple;
     auto mainObject = Opm::Main(argc, argv);
     return mainObject.runStatic<TypeTag>();
 }

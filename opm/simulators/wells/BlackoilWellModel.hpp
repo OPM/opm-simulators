@@ -78,15 +78,15 @@ namespace Opm {
             typedef WellStateFullyImplicitBlackoil WellState;
             typedef BlackoilModelParametersEbos<TypeTag> ModelParameters;
 
-            typedef typename GET_PROP_TYPE(TypeTag, Grid)                Grid;
-            typedef typename GET_PROP_TYPE(TypeTag, FluidSystem)         FluidSystem;
-            typedef typename GET_PROP_TYPE(TypeTag, ElementContext)      ElementContext;
-            typedef typename GET_PROP_TYPE(TypeTag, Indices)             Indices;
-            typedef typename GET_PROP_TYPE(TypeTag, Simulator)           Simulator;
-            typedef typename GET_PROP_TYPE(TypeTag, Scalar)              Scalar;
-            typedef typename GET_PROP_TYPE(TypeTag, RateVector)          RateVector;
-            typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector)      GlobalEqVector;
-            typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
+            using Grid = GetPropType<TypeTag, Properties::Grid>;
+            using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+            using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+            using Indices = GetPropType<TypeTag, Properties::Indices>;
+            using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+            using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+            using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+            using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
+            using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
 
             typedef typename Opm::BaseAuxiliaryModule<TypeTag>::NeighborSet NeighborSet;
 

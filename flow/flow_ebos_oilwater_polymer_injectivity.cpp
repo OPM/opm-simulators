@@ -48,8 +48,8 @@ private:
     // it is unfortunately not possible to simply use 'TypeTag' here because this leads
     // to cyclic definitions of some properties. if this happens the compiler error
     // messages unfortunately are *really* confusing and not really helpful.
-    typedef TTAG(EclFlowProblem) BaseTypeTag;
-    typedef typename GET_PROP_TYPE(BaseTypeTag, FluidSystem) FluidSystem;
+    using BaseTypeTag = TTag::EclFlowProblem;
+    using FluidSystem = GetPropType<BaseTypeTag, Properties::FluidSystem>;
 
 public:
     typedef Opm::BlackOilTwoPhaseIndices<0,
@@ -65,8 +65,8 @@ public:
 namespace Opm {
 /* void flowEbosOilWaterPolymerInjectivitySetDeck(Deck& deck, EclipseState& eclState)
 {
-    typedef TTAG(EclFlowOilWaterPolymerInjectivityProblem) TypeTag;
-    typedef GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
+    using TypeTag = Properties::TTag::EclFlowOilWaterPolymerInjectivityProblem;
+    using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
 
     Vanguard::setExternalDeck(&deck, &eclState);
 } */
@@ -84,7 +84,7 @@ int flowEbosOilWaterPolymerInjectivityMain(int argc, char** argv, bool outputCou
     Dune::MPIHelper::instance(argc, argv);
 #endif
 
-    Opm::FlowMainEbos<TTAG(EclFlowOilWaterPolymerInjectivityProblem)>
+    Opm::FlowMainEbos<Properties::TTag::EclFlowOilWaterPolymerInjectivityProblem>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }

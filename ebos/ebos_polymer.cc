@@ -46,8 +46,8 @@ void ebosPolymerSetDeck(Opm::Deck* deck,
                         Opm::ErrorGuard* errorGuard,
                         double externalSetupTime)
 {
-    typedef TTAG(EbosPolymerTypeTag) ProblemTypeTag;
-    typedef GET_PROP_TYPE(ProblemTypeTag, Vanguard) Vanguard;
+    using ProblemTypeTag = Properties::TTag::EbosPolymerTypeTag;
+    using Vanguard = GetPropType<ProblemTypeTag, Properties::Vanguard>;
 
     Vanguard::setExternalSetupTime(externalSetupTime);
     Vanguard::setExternalParseContext(parseContext);
@@ -57,7 +57,7 @@ void ebosPolymerSetDeck(Opm::Deck* deck,
 
 int ebosPolymerMain(int argc, char **argv)
 {
-    typedef TTAG(EbosPolymerTypeTag) ProblemTypeTag;
+    using ProblemTypeTag = Properties::TTag::EbosPolymerTypeTag;
     return Opm::startEbos<ProblemTypeTag>(argc, argv);
 }
 

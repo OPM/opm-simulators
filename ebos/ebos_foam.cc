@@ -46,8 +46,8 @@ void ebosFoamSetDeck(Opm::Deck* deck,
                      Opm::ErrorGuard* errorGuard,
                      double externalSetupTime)
 {
-    typedef TTAG(EbosFoamTypeTag) ProblemTypeTag;
-    typedef GET_PROP_TYPE(ProblemTypeTag, Vanguard) Vanguard;
+    using ProblemTypeTag = Properties::TTag::EbosFoamTypeTag;
+    using Vanguard = GetPropType<ProblemTypeTag, Properties::Vanguard>;
 
     Vanguard::setExternalSetupTime(externalSetupTime);
     Vanguard::setExternalParseContext(parseContext);
@@ -57,7 +57,7 @@ void ebosFoamSetDeck(Opm::Deck* deck,
 
 int ebosFoamMain(int argc, char **argv)
 {
-    typedef TTAG(EbosFoamTypeTag) ProblemTypeTag;
+    using ProblemTypeTag = Properties::TTag::EbosFoamTypeTag;
     return Opm::startEbos<ProblemTypeTag>(argc, argv);
 }
 

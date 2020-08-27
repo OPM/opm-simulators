@@ -66,12 +66,12 @@ namespace Opm {
 template <class TypeTag>
 class EclTransmissibility
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementMapper) ElementMapper;
-    typedef typename GridView::Intersection Intersection;
+    using Grid = GetPropType<TypeTag, Properties::Grid>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
+    using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
+    using Intersection = typename GridView::Intersection;
 
     static const bool enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy);
 

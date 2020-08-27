@@ -70,12 +70,12 @@ namespace Opm
     {
     public:
         typedef typename GET_PROP(TypeTag, MaterialLaw)::EclMaterialLawManager MaterialLawManager;
-        typedef typename GET_PROP_TYPE(TypeTag, Simulator) EbosSimulator;
-        typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
-        typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-        typedef typename GET_PROP_TYPE(TypeTag, Problem) Problem;
-        typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-        typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+        using EbosSimulator = GetPropType<TypeTag, Properties::Simulator>;
+        using Grid = GetPropType<TypeTag, Properties::Grid>;
+        using GridView = GetPropType<TypeTag, Properties::GridView>;
+        using Problem = GetPropType<TypeTag, Properties::Problem>;
+        using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+        using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
         typedef Opm::SimulatorFullyImplicitBlackoilEbos<TypeTag> Simulator;
 
@@ -419,7 +419,7 @@ namespace Opm
                 omp_set_num_threads(std::min(2, omp_get_num_procs()));
 #endif
 
-            typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) ThreadManager;
+            using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;
             ThreadManager::init();
         }
 

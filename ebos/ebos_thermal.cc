@@ -46,8 +46,8 @@ void ebosThermalSetDeck(Opm::Deck* deck,
                         Opm::ErrorGuard* errorGuard,
                         double externalSetupTime)
 {
-    typedef TTAG(EbosThermalTypeTag) ProblemTypeTag;
-    typedef GET_PROP_TYPE(ProblemTypeTag, Vanguard) Vanguard;
+    using ProblemTypeTag = Properties::TTag::EbosThermalTypeTag;
+    using Vanguard = GetPropType<ProblemTypeTag, Properties::Vanguard>;
 
     Vanguard::setExternalSetupTime(externalSetupTime);
     Vanguard::setExternalParseContext(parseContext);
@@ -57,7 +57,7 @@ void ebosThermalSetDeck(Opm::Deck* deck,
 
 int ebosThermalMain(int argc, char **argv)
 {
-    typedef TTAG(EbosThermalTypeTag) ProblemTypeTag;
+    using ProblemTypeTag = Properties::TTag::EbosThermalTypeTag;
     return Opm::startEbos<ProblemTypeTag>(argc, argv);
 }
 

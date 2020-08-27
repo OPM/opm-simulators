@@ -46,8 +46,8 @@ void ebosSolventSetDeck(Opm::Deck* deck,
                         Opm::ErrorGuard* errorGuard,
                         double externalSetupTime)
 {
-    typedef TTAG(EbosSolventTypeTag) ProblemTypeTag;
-    typedef GET_PROP_TYPE(ProblemTypeTag, Vanguard) Vanguard;
+    using ProblemTypeTag = Properties::TTag::EbosSolventTypeTag;
+    using Vanguard = GetPropType<ProblemTypeTag, Properties::Vanguard>;
 
     Vanguard::setExternalSetupTime(externalSetupTime);
     Vanguard::setExternalParseContext(parseContext);
@@ -57,7 +57,7 @@ void ebosSolventSetDeck(Opm::Deck* deck,
 
 int ebosSolventMain(int argc, char **argv)
 {
-    typedef TTAG(EbosSolventTypeTag) ProblemTypeTag;
+    using ProblemTypeTag = Properties::TTag::EbosSolventTypeTag;
     return Opm::startEbos<ProblemTypeTag>(argc, argv);
 }
 

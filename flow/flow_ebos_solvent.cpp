@@ -38,8 +38,8 @@ SET_BOOL_PROP(EclFlowSolventProblem, EnableSolvent, true);
 namespace Opm {
 void flowEbosSolventSetDeck(double setupTime, Deck *deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
 {
-    typedef TTAG(EclFlowSolventProblem) TypeTag;
-    typedef GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
+    using TypeTag = Properties::TTag::EclFlowSolventProblem;
+    using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
 
     Vanguard::setExternalSetupTime(setupTime);
     Vanguard::setExternalDeck(deck);
@@ -63,7 +63,7 @@ int flowEbosSolventMain(int argc, char** argv, bool outputCout, bool outputFiles
     Dune::MPIHelper::instance(argc, argv).rank();
 #endif
 
-    Opm::FlowMainEbos<TTAG(EclFlowSolventProblem)>
+    Opm::FlowMainEbos<Properties::TTag::EclFlowSolventProblem>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }

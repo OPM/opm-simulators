@@ -38,8 +38,8 @@ SET_BOOL_PROP(EclFlowPolymerProblem, EnablePolymer, true);
 namespace Opm {
 void flowEbosPolymerSetDeck(double setupTime, Deck *deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
 {
-    typedef TTAG(EclFlowPolymerProblem) TypeTag;
-    typedef GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
+    using TypeTag = Properties::TTag::EclFlowPolymerProblem;
+    using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
 
     Vanguard::setExternalSetupTime(setupTime);
     Vanguard::setExternalDeck(deck);
@@ -62,7 +62,7 @@ int flowEbosPolymerMain(int argc, char** argv, bool outputCout, bool outputFiles
     Dune::MPIHelper::instance(argc, argv).rank();
 #endif
 
-    Opm::FlowMainEbos<TTAG(EclFlowPolymerProblem)>
+    Opm::FlowMainEbos<Properties::TTag::EclFlowPolymerProblem>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }

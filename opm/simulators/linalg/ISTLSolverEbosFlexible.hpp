@@ -55,13 +55,13 @@ namespace Opm
 template <class TypeTag>
 class ISTLSolverEbosFlexible
 {
-    using GridView = typename GET_PROP_TYPE(TypeTag, GridView);
-    using SparseMatrixAdapter = typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter);
-    using VectorType = typename GET_PROP_TYPE(TypeTag, GlobalEqVector);
-    using Simulator = typename GET_PROP_TYPE(TypeTag, Simulator);
-    using Scalar = typename GET_PROP_TYPE(TypeTag, Scalar);
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
+    using VectorType = GetPropType<TypeTag, Properties::GlobalEqVector>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using MatrixType = typename SparseMatrixAdapter::IstlMatrix;
-    using WellModel = typename GET_PROP_TYPE(TypeTag, EclWellModel);
+    using WellModel = GetPropType<TypeTag, Properties::EclWellModel>;
 #if HAVE_MPI
     using Communication = Dune::OwnerOverlapCopyCommunication<int, int>;
 #else
@@ -72,16 +72,15 @@ class ISTLSolverEbosFlexible
     using SolverType = Dune::FlexibleSolver<MatrixType, VectorType>;
 
     // for quasiImpesWeights
-    typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) Vector;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+    using Vector = GetPropType<TypeTag, Properties::GlobalEqVector>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
     typedef typename SparseMatrixAdapter::IstlMatrix Matrix;
     typedef typename SparseMatrixAdapter::MatrixBlock MatrixBlockType;
     typedef typename Vector::block_type BlockVector;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) ThreadManager;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;
     typedef typename GridView::template Codim<0>::Entity Element;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
 public:
     static void registerParameters()

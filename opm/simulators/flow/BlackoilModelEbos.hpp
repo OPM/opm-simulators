@@ -109,16 +109,16 @@ namespace Opm {
         typedef WellStateFullyImplicitBlackoil WellState;
         typedef BlackoilModelParametersEbos<TypeTag> ModelParameters;
 
-        typedef typename GET_PROP_TYPE(TypeTag, Simulator)         Simulator;
-        typedef typename GET_PROP_TYPE(TypeTag, Grid)              Grid;
-        typedef typename GET_PROP_TYPE(TypeTag, ElementContext)    ElementContext;
-        typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
-        typedef typename GET_PROP_TYPE(TypeTag, SolutionVector)    SolutionVector ;
-        typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables)  PrimaryVariables ;
-        typedef typename GET_PROP_TYPE(TypeTag, FluidSystem)       FluidSystem;
-        typedef typename GET_PROP_TYPE(TypeTag, Indices)           Indices;
-        typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw)       MaterialLaw;
-        typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
+        using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+        using Grid = GetPropType<TypeTag, Properties::Grid>;
+        using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+        using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
+        using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
+        using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+        using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+        using Indices = GetPropType<TypeTag, Properties::Indices>;
+        using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+        using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
 
         typedef double Scalar;
         static const int numEq = Indices::numEq;

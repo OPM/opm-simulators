@@ -74,14 +74,14 @@ namespace Opm
         static const int Oil = BlackoilPhases::Liquid;
         static const int Gas = BlackoilPhases::Vapour;
 
-        typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
-        typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-        typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-        typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
-        typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) IntensiveQuantities;
-        typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
-        typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
-        typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
+        using Grid = GetPropType<TypeTag, Properties::Grid>;
+        using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+        using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+        using Indices = GetPropType<TypeTag, Properties::Indices>;
+        using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+        using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+        using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
+        using RateVector = GetPropType<TypeTag, Properties::RateVector>;
 
         static const int numEq = Indices::numEq;
         typedef double Scalar;
