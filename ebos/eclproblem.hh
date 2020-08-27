@@ -183,7 +183,8 @@ SET_TAG_PROP(EclBaseProblem, SpatialDiscretizationSplice, EcfvDiscretization);
 SET_TAG_PROP(EclBaseProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
 
 // Set the material law for fluid fluxes
-SET_PROP(EclBaseProblem, MaterialLaw)
+template<class TypeTag>
+struct MaterialLaw<TypeTag, TTag::EclBaseProblem>
 {
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -201,7 +202,8 @@ public:
 };
 
 // Set the material law for energy storage in rock
-SET_PROP(EclBaseProblem, SolidEnergyLaw)
+template<class TypeTag>
+struct SolidEnergyLaw<TypeTag, TTag::EclBaseProblem>
 {
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -214,7 +216,8 @@ public:
 };
 
 // Set the material law for thermal conduction
-SET_PROP(EclBaseProblem, ThermalConductionLaw)
+template<class TypeTag>
+struct ThermalConductionLaw<TypeTag, TTag::EclBaseProblem>
 {
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -228,7 +231,8 @@ public:
 
 // ebos can use a slightly faster stencil class because it does not need the normals and
 // the integration points of intersections
-SET_PROP(EclBaseProblem, Stencil)
+template<class TypeTag>
+struct Stencil<TypeTag, TTag::EclBaseProblem>
 {
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;

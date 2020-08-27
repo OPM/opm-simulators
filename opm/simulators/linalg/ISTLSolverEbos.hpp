@@ -67,7 +67,8 @@ struct EclWellModel;
 
 //! Set the type of a global jacobian matrix for linear solvers that are based on
 //! dune-istl.
-SET_PROP(FlowIstlSolver, SparseMatrixAdapter)
+template<class TypeTag>
+struct SparseMatrixAdapter<TypeTag, TTag::FlowIstlSolver>
 {
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;

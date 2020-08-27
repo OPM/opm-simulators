@@ -46,7 +46,8 @@ struct EnableBrine<TypeTag, TTag::EclFlowOilWaterBrineProblem> {
     static constexpr bool value = true;
 };
 //! The indices required by the model
-SET_PROP(EclFlowOilWaterBrineProblem, Indices)
+template<class TypeTag>
+struct Indices<TypeTag, TTag::EclFlowOilWaterBrineProblem>
 {
 private:
     // it is unfortunately not possible to simply use 'TypeTag' here because this leads

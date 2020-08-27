@@ -39,7 +39,8 @@ struct EbosOilWaterTypeTag {
 }
 
 //! The indices indices which only enable oil and water
-SET_PROP(EbosOilWaterTypeTag, Indices)
+template<class TypeTag>
+struct Indices<TypeTag, TTag::EbosOilWaterTypeTag>
 {
 private:
     // it is unfortunately not possible to simply use 'TypeTag' here because this leads

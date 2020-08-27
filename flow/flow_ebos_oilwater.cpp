@@ -43,7 +43,8 @@ struct EclFlowOilWaterProblem {
 }
 
 //! The indices required by the model
-SET_PROP(EclFlowOilWaterProblem, Indices)
+template<class TypeTag>
+struct Indices<TypeTag, TTag::EclFlowOilWaterProblem>
 {
 private:
     // it is unfortunately not possible to simply use 'TypeTag' here because this leads

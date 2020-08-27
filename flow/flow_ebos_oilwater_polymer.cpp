@@ -46,8 +46,8 @@ struct EnablePolymer<TypeTag, TTag::EclFlowOilWaterPolymerProblem> {
     static constexpr bool value = true;
 };
 //! The indices required by the model
-//! The indices required by the model
-SET_PROP(EclFlowOilWaterPolymerProblem, Indices)
+template<class TypeTag>
+struct Indices<TypeTag, TTag::EclFlowOilWaterPolymerProblem>
 {
 private:
     // it is unfortunately not possible to simply use 'TypeTag' here because this leads

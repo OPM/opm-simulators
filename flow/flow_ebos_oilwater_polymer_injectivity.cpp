@@ -52,7 +52,8 @@ struct EnablePolymerMW<TypeTag, TTag::EclFlowOilWaterPolymerInjectivityProblem> 
 //! The indices required by the model
 // For this case, there will be two primary variables introduced for the polymer
 // polymer concentration and polymer molecular weight
-SET_PROP(EclFlowOilWaterPolymerInjectivityProblem, Indices)
+template<class TypeTag>
+struct Indices<TypeTag, TTag::EclFlowOilWaterPolymerInjectivityProblem>
 {
 private:
     // it is unfortunately not possible to simply use 'TypeTag' here because this leads

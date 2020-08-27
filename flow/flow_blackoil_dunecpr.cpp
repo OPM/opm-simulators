@@ -82,7 +82,8 @@ namespace Opm {
         static constexpr auto value = "quasiimpes";
     };
 
-    SET_PROP(EclFlowProblemSimple, FluidSystem)
+    template<class TypeTag>
+    struct FluidSystem<TypeTag, TTag::EclFlowProblemSimple>
     {
     private:
       using Scalar = GetPropType<TypeTag, Properties::Scalar>;
