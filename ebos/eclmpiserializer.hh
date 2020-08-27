@@ -159,7 +159,7 @@ public:
 
     */
     template<class T0, class T1>
-    void variant(std::variant<T0,T1>& data)
+    void variant(const std::variant<T0,T1>& data)
     {
         auto pack_size = [&](auto& d) {
                              m_packSize += Mpi::packSize(d, m_comm);
@@ -177,16 +177,17 @@ public:
             std::visit([&](auto& arg) { pack(arg); }, data);
         } else if (m_op == Operation::UNPACK) {
             size_t index;
+            std::variant<T0,T1>& mutable_data = const_cast<std::variant<T0,T1>&>(data);
             Mpi::unpack(index, m_buffer, m_position, m_comm);
 
             if (index == 0) {
                 T0 t0;
                 Mpi::unpack(t0, m_buffer, m_position, m_comm);
-                data = t0;
+                mutable_data = t0;
             } else if (index == 1) {
                 T1 t1;
                 Mpi::unpack(t1, m_buffer, m_position, m_comm);
-                data = t1;
+                mutable_data = t1;
             } else
                 throw std::logic_error("Internal meltdown in std::variant<T0,T1> unpack loaded index=" + std::to_string(index) + " allowed range: [0,1]");
         }
