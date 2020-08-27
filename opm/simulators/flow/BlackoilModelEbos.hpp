@@ -131,7 +131,10 @@ template<class TypeTag>
 struct EclWellModel<TypeTag, TTag::EclFlowProblem> {
     using type = Opm::BlackoilWellModel<TypeTag>;
 };
-SET_TAG_PROP(EclFlowProblem, LinearSolverSplice, FlowIstlSolver);
+template<class TypeTag>
+struct LinearSolverSplice<TypeTag, TTag::EclFlowProblem> {
+    using type = TTag::FlowIstlSolver;
+};
 
 } // namespace Opm::Properties
 

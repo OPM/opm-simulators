@@ -219,10 +219,16 @@ struct Problem<TypeTag, TTag::EclBaseProblem> {
 };
 
 // Select the element centered finite volume method as spatial discretization
-SET_TAG_PROP(EclBaseProblem, SpatialDiscretizationSplice, EcfvDiscretization);
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::EclBaseProblem> {
+    using type = TTag::EcfvDiscretization;
+};
 
 //! for ebos, use automatic differentiation to linearize the system of PDEs
-SET_TAG_PROP(EclBaseProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::EclBaseProblem> {
+    using type = TTag::AutoDiffLocalLinearizer;
+};
 
 // Set the material law for fluid fluxes
 template<class TypeTag>

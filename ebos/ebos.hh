@@ -107,7 +107,10 @@ struct EclAquiferModel<TypeTag, TTag::EbosTypeTag> {
 };
 
 // use flow's linear solver backend for now
-SET_TAG_PROP(EbosTypeTag, LinearSolverSplice, FlowIstlSolver);
+template<class TypeTag>
+struct LinearSolverSplice<TypeTag, TTag::EbosTypeTag> {
+    using type = TTag::FlowIstlSolver;
+};
 
 // the default for the allowed volumetric error for oil per second
 template<class TypeTag>

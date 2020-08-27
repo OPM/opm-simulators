@@ -105,7 +105,10 @@ namespace Opm {
 //    struct LinearSolverBackend<TypeTag, TTag::EclFlowProblemSimple> {
 //        using type = Opm::ISTLSolverEbos<TypeTag>;
 //    };
-    //SET_TAG_PROP(EclFlowProblemSimple, LinearSolverSplice, ParallelBiCGStabLinearSolver);
+//    template<class TypeTag>
+//    struct LinearSolverSplice<TypeTag, TTag::EclFlowProblemSimple> {
+//        using type = TTag::ParallelBiCGStabLinearSolver;
+//    };
 //    template<class TypeTag>
 //    struct LinearSolverBackend<TypeTag, TTag::EclFlowProblemSimple> {
 //        using type = Opm::Linear::ParallelBiCGStabSolverBackend<TypeTag>; // not work
@@ -114,7 +117,10 @@ namespace Opm {
 //    struct LinearSolverBackend<TypeTag, TTag::EclFlowProblemSimple> {
 //        using type = Opm::Linear::SuperLUBackend<TypeTag>; // not work
 //    };
-    //SET_TAG_PROP(EclFlowProblem, FluidState, Opm::BlackOilFluidState);
+//    template<class TypeTag>
+//    struct FluidState<TypeTag, TTag::EclFlowProblem> {
+//        using type = Opm::BlackOilFluidState;
+//    };
 
     template<class TypeTag>
     struct LinearSolverBackend<TypeTag, TTag::EclFlowProblemSimple> {
