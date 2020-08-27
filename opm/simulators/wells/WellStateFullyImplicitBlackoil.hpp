@@ -365,7 +365,7 @@ namespace Opm
 
             return it->second;
         }
-        
+
         void setCurrentWellRates(const std::string& wellName, const std::vector<double>& rates ) {
             well_rates[wellName] = rates;
         }
@@ -391,7 +391,7 @@ namespace Opm
 
             return it->second;
         }
-        
+
         void setCurrentProductionGroupReductionRates(const std::string& groupName, const std::vector<double>& target ) {
             production_group_reduction_rates[groupName] = target;
         }
