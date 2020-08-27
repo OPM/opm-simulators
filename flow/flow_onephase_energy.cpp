@@ -29,7 +29,10 @@ struct EclFlowProblemSimple {
     using InheritsFrom = std::tuple<EclFlowProblem>;
 };
 }
-SET_BOOL_PROP(EclFlowProblemSimple, EnableEnergy, true);
+template<class TypeTag>
+struct EnableEnergy<TypeTag, TTag::EclFlowProblemSimple> {
+    static constexpr bool value = true;
+};
 //! The indices required by the model
 SET_PROP(EclFlowProblemSimple, Indices)
 {

@@ -41,7 +41,10 @@ struct EclFlowOilWaterPolymerProblem {
     using InheritsFrom = std::tuple<EclFlowProblem>;
 };
 }
-SET_BOOL_PROP(EclFlowOilWaterPolymerProblem, EnablePolymer, true);
+template<class TypeTag>
+struct EnablePolymer<TypeTag, TTag::EclFlowOilWaterPolymerProblem> {
+    static constexpr bool value = true;
+};
 //! The indices required by the model
 //! The indices required by the model
 SET_PROP(EclFlowOilWaterPolymerProblem, Indices)

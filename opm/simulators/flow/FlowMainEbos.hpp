@@ -57,7 +57,10 @@ NEW_PROP_TAG(EnableLoggingFalloutWarning);
 // TODO: enumeration parameters. we use strings for now.
 SET_STRING_PROP(EclFlowProblem, EnableDryRun, "auto");
 // Do not merge parallel output files or warn about them
-SET_BOOL_PROP(EclFlowProblem, EnableLoggingFalloutWarning, false);
+template<class TypeTag>
+struct EnableLoggingFalloutWarning<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = false;
+};
 SET_INT_PROP(EclFlowProblem, OutputInterval, 1);
 
 } // namespace Opm::Properties

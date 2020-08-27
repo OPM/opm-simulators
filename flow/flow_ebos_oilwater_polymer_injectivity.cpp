@@ -41,8 +41,14 @@ struct EclFlowOilWaterPolymerInjectivityProblem {
     using InheritsFrom = std::tuple<EclFlowProblem>;
 };
 }
-SET_BOOL_PROP(EclFlowOilWaterPolymerInjectivityProblem, EnablePolymer, true);
-SET_BOOL_PROP(EclFlowOilWaterPolymerInjectivityProblem, EnablePolymerMW, true);
+template<class TypeTag>
+struct EnablePolymer<TypeTag, TTag::EclFlowOilWaterPolymerInjectivityProblem> {
+    static constexpr bool value = true;
+};
+template<class TypeTag>
+struct EnablePolymerMW<TypeTag, TTag::EclFlowOilWaterPolymerInjectivityProblem> {
+    static constexpr bool value = true;
+};
 //! The indices required by the model
 // For this case, there will be two primary variables introduced for the polymer
 // polymer concentration and polymer molecular weight

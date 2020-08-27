@@ -72,22 +72,46 @@ SET_SCALAR_PROP(FlowModelParameters, ToleranceCnvRelaxed, 1e9);
 SET_SCALAR_PROP(FlowModelParameters, ToleranceWells, 1e-4);
 SET_SCALAR_PROP(FlowModelParameters, ToleranceWellControl, 1e-7);
 SET_INT_PROP(FlowModelParameters, MaxWelleqIter, 30);
-SET_BOOL_PROP(FlowModelParameters, UseMultisegmentWell, true);
+template<class TypeTag>
+struct UseMultisegmentWell<TypeTag, TTag::FlowModelParameters> {
+    static constexpr bool value = true;
+};
 SET_SCALAR_PROP(FlowModelParameters, MaxSinglePrecisionDays, 20.0);
 SET_INT_PROP(FlowModelParameters, MaxStrictIter, 8);
-SET_BOOL_PROP(FlowModelParameters, SolveWelleqInitially, true);
-SET_BOOL_PROP(FlowModelParameters, UpdateEquationsScaling, false);
-SET_BOOL_PROP(FlowModelParameters, UseUpdateStabilization, true);
-SET_BOOL_PROP(FlowModelParameters, MatrixAddWellContributions, false);
+template<class TypeTag>
+struct SolveWelleqInitially<TypeTag, TTag::FlowModelParameters> {
+    static constexpr bool value = true;
+};
+template<class TypeTag>
+struct UpdateEquationsScaling<TypeTag, TTag::FlowModelParameters> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct UseUpdateStabilization<TypeTag, TTag::FlowModelParameters> {
+    static constexpr bool value = true;
+};
+template<class TypeTag>
+struct MatrixAddWellContributions<TypeTag, TTag::FlowModelParameters> {
+    static constexpr bool value = false;
+};
 SET_SCALAR_PROP(FlowModelParameters, TolerancePressureMsWells, 0.01*1e5);
 SET_SCALAR_PROP(FlowModelParameters, MaxPressureChangeMsWells, 10*1e5);
-SET_BOOL_PROP(FlowModelParameters, UseInnerIterationsMsWells, true);
+template<class TypeTag>
+struct UseInnerIterationsMsWells<TypeTag, TTag::FlowModelParameters> {
+    static constexpr bool value = true;
+};
 SET_INT_PROP(FlowModelParameters, MaxInnerIterMsWells, 100);
-SET_BOOL_PROP(FlowModelParameters, UseInnerIterationsWells, false);
+template<class TypeTag>
+struct UseInnerIterationsWells<TypeTag, TTag::FlowModelParameters> {
+    static constexpr bool value = false;
+};
 SET_INT_PROP(FlowModelParameters, MaxInnerIterWells, 50);
 SET_INT_PROP(FlowModelParameters, StrictInnerIterMsWells, 40);
 SET_SCALAR_PROP(FlowModelParameters, RegularizationFactorMsw, 1);
-SET_BOOL_PROP(FlowModelParameters, EnableWellOperabilityCheck, true);
+template<class TypeTag>
+struct EnableWellOperabilityCheck<TypeTag, TTag::FlowModelParameters> {
+    static constexpr bool value = true;
+};
 
 SET_SCALAR_PROP(FlowModelParameters, RelaxedFlowTolInnerIterMsw, 1);
 SET_SCALAR_PROP(FlowModelParameters, RelaxedPressureTolInnerIterMsw, 0.5e5);

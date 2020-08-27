@@ -39,7 +39,10 @@ struct EbosPolymerTypeTag {
 }
 
 // enable the polymer extension of the black oil model
-SET_BOOL_PROP(EbosPolymerTypeTag, EnablePolymer, true);
+template<class TypeTag>
+struct EnablePolymer<TypeTag, TTag::EbosPolymerTypeTag> {
+    static constexpr bool value = true;
+};
 
 } // namespace Opm::Properties
 

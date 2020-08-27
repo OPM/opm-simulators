@@ -78,21 +78,48 @@ struct EclFlowProblem {
 };
 }
 SET_STRING_PROP(EclFlowProblem, OutputDir, "");
-SET_BOOL_PROP(EclFlowProblem, EnableDebuggingChecks, false);
+template<class TypeTag>
+struct EnableDebuggingChecks<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = false;
+};
 // default in flow is to formulate the equations in surface volumes
-SET_BOOL_PROP(EclFlowProblem, BlackoilConserveSurfaceVolume, true);
-SET_BOOL_PROP(EclFlowProblem, UseVolumetricResidual, false);
+template<class TypeTag>
+struct BlackoilConserveSurfaceVolume<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = true;
+};
+template<class TypeTag>
+struct UseVolumetricResidual<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = false;
+};
 
 SET_TYPE_PROP(EclFlowProblem, EclAquiferModel, Opm::BlackoilAquiferModel<TypeTag>);
 
 // disable all extensions supported by black oil model. this should not really be
 // necessary but it makes things a bit more explicit
-SET_BOOL_PROP(EclFlowProblem, EnablePolymer, false);
-SET_BOOL_PROP(EclFlowProblem, EnableSolvent, false);
-SET_BOOL_PROP(EclFlowProblem, EnableTemperature, true);
-SET_BOOL_PROP(EclFlowProblem, EnableEnergy, false);
-SET_BOOL_PROP(EclFlowProblem, EnableFoam, false);
-SET_BOOL_PROP(EclFlowProblem, EnableBrine, false);
+template<class TypeTag>
+struct EnablePolymer<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct EnableSolvent<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct EnableTemperature<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = true;
+};
+template<class TypeTag>
+struct EnableEnergy<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct EnableFoam<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct EnableBrine<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = false;
+};
 
 SET_TYPE_PROP(EclFlowProblem, EclWellModel, Opm::BlackoilWellModel<TypeTag>);
 SET_TAG_PROP(EclFlowProblem, LinearSolverSplice, FlowIstlSolver);

@@ -51,7 +51,10 @@ struct VtkEclTracer {};
 NEW_PROP_TAG(VtkWriteEclTracerConcentration);
 
 // set default values for what quantities to output
-SET_BOOL_PROP(VtkEclTracer, VtkWriteEclTracerConcentration, false);
+template<class TypeTag>
+struct VtkWriteEclTracerConcentration<TypeTag, TTag::VtkEclTracer> {
+    static constexpr bool value = false;
+};
 
 } // namespace Opm::Properties
 

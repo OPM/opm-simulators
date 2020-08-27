@@ -32,12 +32,21 @@ namespace Opm {
         };
     }
 
-    SET_BOOL_PROP(EclFlowProblemSimple, MatrixAddWellContributions, true);
+    template<class TypeTag>
+    struct MatrixAddWellContributions<TypeTag, TTag::EclFlowProblemSimple> {
+        static constexpr bool value = true;
+    };
     SET_INT_PROP(EclFlowProblemSimple, LinearSolverVerbosity,0);
     SET_SCALAR_PROP(EclFlowProblemSimple, LinearSolverReduction, 1e-2);
     SET_INT_PROP(EclFlowProblemSimple, LinearSolverMaxIter, 100);
-    SET_BOOL_PROP(EclFlowProblemSimple, UseAmg, true);//probably not used
-    SET_BOOL_PROP(EclFlowProblemSimple, UseCpr, true);
+    template<class TypeTag>
+    struct UseAmg<TypeTag, TTag::EclFlowProblemSimple> { // probably not used
+        static constexpr bool value = true;
+    };
+    template<class TypeTag>
+    struct UseCpr<TypeTag, TTag::EclFlowProblemSimple> {
+        static constexpr bool value = true;
+    };
     SET_INT_PROP(EclFlowProblemSimple, CprMaxEllIter, 1);
     SET_INT_PROP(EclFlowProblemSimple, CprEllSolvetype, 3);
     SET_INT_PROP(EclFlowProblemSimple, CprReuseSetup, 3);
@@ -66,12 +75,24 @@ namespace Opm {
     //SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Opm::Linear::SuperLUBackend<TypeTag>)//not work
     //SET_TAG_PROP(EclFlowProblem, FluidState, Opm::BlackOilFluidState);
     SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Opm::ISTLSolverEbosFlexible<TypeTag>);
-    SET_BOOL_PROP(EclFlowProblemSimple, EnableStorageCache, true);
-    SET_BOOL_PROP(EclFlowProblemSimple, EnableIntensiveQuantityCache, true);
+    template<class TypeTag>
+    struct EnableStorageCache<TypeTag, TTag::EclFlowProblemSimple> {
+        static constexpr bool value = true;
+    };
+    template<class TypeTag>
+    struct EnableIntensiveQuantityCache<TypeTag, TTag::EclFlowProblemSimple> {
+        static constexpr bool value = true;
+    };
 
     //SET_INT_PROP(EclFlowProblemSimple, NumWellAdjoint, 1);
-    //SET_BOOL_PROP(EclFlowProblem, EnableStorageCache, true);
-    //SET_BOOL_PROP(EclFlowProblem, EnableIntensiveQuantityCache, true);
+//    template<class TypeTag>
+//    struct EnableStorageCache<TypeTag, TTag::EclFlowProblem> {
+//        static constexpr bool value = true;
+//    };
+//    template<class TypeTag>
+//    struct EnableIntensiveQuantityCache<TypeTag, TTag::EclFlowProblem> {
+//        static constexpr bool value = true;
+//    };
   }
 }
 

@@ -36,7 +36,10 @@ struct EclFlowSolventProblem {
     using InheritsFrom = std::tuple<EclFlowProblem>;
 };
 }
-SET_BOOL_PROP(EclFlowSolventProblem, EnableSolvent, true);
+template<class TypeTag>
+struct EnableSolvent<TypeTag, TTag::EclFlowSolventProblem> {
+    static constexpr bool value = true;
+};
 }}
 
 namespace Opm {

@@ -53,7 +53,10 @@ struct EclOutputBlackOil {};
 
 NEW_PROP_TAG(ForceDisableFluidInPlaceOutput);
 
-SET_BOOL_PROP(EclOutputBlackOil, ForceDisableFluidInPlaceOutput, false);
+template<class TypeTag>
+struct ForceDisableFluidInPlaceOutput<TypeTag, TTag::EclOutputBlackOil> {
+    static constexpr bool value = false;
+};
 
 } // namespace Opm::Properties
 

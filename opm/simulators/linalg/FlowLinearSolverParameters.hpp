@@ -80,19 +80,49 @@ SET_INT_PROP(FlowIstlSolverParams, LinearSolverRestart, 40);
 SET_INT_PROP(FlowIstlSolverParams, FlowLinearSolverVerbosity, 0);
 SET_INT_PROP(FlowIstlSolverParams, IluFillinLevel, 0);
 SET_STRING_PROP(FlowIstlSolverParams, MiluVariant, "ILU");
-SET_BOOL_PROP(FlowIstlSolverParams, IluRedblack, false);
-SET_BOOL_PROP(FlowIstlSolverParams, IluReorderSpheres, false);
-SET_BOOL_PROP(FlowIstlSolverParams, UseGmres, false);
-SET_BOOL_PROP(FlowIstlSolverParams, LinearSolverRequireFullSparsityPattern, false);
-SET_BOOL_PROP(FlowIstlSolverParams, LinearSolverIgnoreConvergenceFailure, false);
-SET_BOOL_PROP(FlowIstlSolverParams, UseAmg, false);
-SET_BOOL_PROP(FlowIstlSolverParams, UseCpr, false);
+template<class TypeTag>
+struct IluRedblack<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct IluReorderSpheres<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct UseGmres<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct LinearSolverRequireFullSparsityPattern<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct LinearSolverIgnoreConvergenceFailure<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct UseAmg<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct UseCpr<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr bool value = false;
+};
 SET_TYPE_PROP(FlowIstlSolverParams, LinearSolverBackend, Opm::ISTLSolverEbos<TypeTag>);
-SET_BOOL_PROP(FlowIstlSolverParams, PreconditionerAddWellContributions, false);
+template<class TypeTag>
+struct PreconditionerAddWellContributions<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr bool value = false;
+};
 SET_STRING_PROP(FlowIstlSolverParams, SystemStrategy, "none");
-SET_BOOL_PROP(FlowIstlSolverParams, ScaleLinearSystem, false);
+template<class TypeTag>
+struct ScaleLinearSystem<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr bool value = false;
+};
 SET_INT_PROP(FlowIstlSolverParams, CprSolverVerbose, 0);
-SET_BOOL_PROP(FlowIstlSolverParams, CprUseDrs, false);
+template<class TypeTag>
+struct CprUseDrs<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr bool value = false;
+};
 SET_INT_PROP(FlowIstlSolverParams, CprMaxEllIter, 20);
 SET_INT_PROP(FlowIstlSolverParams, CprEllSolvetype, 0);
 SET_INT_PROP(FlowIstlSolverParams, CprReuseSetup, 3);

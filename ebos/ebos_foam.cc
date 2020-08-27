@@ -39,7 +39,10 @@ struct EbosFoamTypeTag {
 }
 
 // enable the foam extension of the black oil model
-SET_BOOL_PROP(EbosFoamTypeTag, EnableFoam, true);
+template<class TypeTag>
+struct EnableFoam<TypeTag, TTag::EbosFoamTypeTag> {
+    static constexpr bool value = true;
+};
 
 } // namespace Opm::Properties
 

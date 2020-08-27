@@ -55,7 +55,10 @@ SET_TYPE_PROP(EbosTypeTag, Problem, Opm::EbosProblem<TypeTag>);
 // Enable experimental features for ebos: ebos is the research simulator of the OPM
 // project. If you're looking for a more stable "production quality" simulator, consider
 // using `flow`
-SET_BOOL_PROP(EbosTypeTag, EnableExperiments, true);
+template<class TypeTag>
+struct EnableExperiments<TypeTag, TTag::EbosTypeTag> {
+    static constexpr bool value = true;
+};
 
 // use flow's well model for now
 SET_TYPE_PROP(EbosTypeTag, EclWellModel, Opm::BlackoilWellModel<TypeTag>);
@@ -63,15 +66,33 @@ SET_TYPE_PROP(EbosTypeTag, EclWellModel, Opm::BlackoilWellModel<TypeTag>);
 // currently, ebos uses the non-multisegment well model by default to avoid
 // regressions. the --use-multisegment-well=true|false command line parameter is still
 // available in ebos, but hidden from view.
-SET_BOOL_PROP(EbosTypeTag, UseMultisegmentWell, false);
+template<class TypeTag>
+struct UseMultisegmentWell<TypeTag, TTag::EbosTypeTag> {
+    static constexpr bool value = false;
+};
 
 // set some properties that are only required by the well model
-SET_BOOL_PROP(EbosTypeTag, MatrixAddWellContributions, true);
-SET_BOOL_PROP(EbosTypeTag, EnableTerminalOutput, false);
+template<class TypeTag>
+struct MatrixAddWellContributions<TypeTag, TTag::EbosTypeTag> {
+    static constexpr bool value = true;
+};
+
+template<class TypeTag>
+struct EnableTerminalOutput<TypeTag, TTag::EbosTypeTag> {
+    static constexpr bool value = false;
+};
+
 // flow's well model only works with surface volumes
-SET_BOOL_PROP(EbosTypeTag, BlackoilConserveSurfaceVolume, true);
+template<class TypeTag>
+struct BlackoilConserveSurfaceVolume<TypeTag, TTag::EbosTypeTag> {
+    static constexpr bool value = true;
+};
+
 // the values for the residual are for the whole cell instead of for a cubic meter of the cell
-SET_BOOL_PROP(EbosTypeTag, UseVolumetricResidual, false);
+template<class TypeTag>
+struct UseVolumetricResidual<TypeTag, TTag::EbosTypeTag> {
+    static constexpr bool value = false;
+};
 
 // by default use flow's aquifer model for now
 SET_TYPE_PROP(EbosTypeTag, EclAquiferModel, Opm::BlackoilAquiferModel<TypeTag>);
@@ -111,7 +132,10 @@ SET_INT_PROP(EbosTypeTag, ThreadsPerProcess, 2);
 
 // By default, ebos accepts the result of the time integration unconditionally if the
 // smallest time step size is reached.
-SET_BOOL_PROP(EbosTypeTag, ContinueOnConvergenceError, true);
+template<class TypeTag>
+struct ContinueOnConvergenceError<TypeTag, TTag::EbosTypeTag> {
+    static constexpr bool value = true;
+};
 
 } // namespace Opm::Properties
 

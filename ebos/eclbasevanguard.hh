@@ -85,11 +85,23 @@ NEW_PROP_TAG(OwnerCellsFirst);
 SET_STRING_PROP(EclBaseVanguard, IgnoreKeywords, "");
 SET_STRING_PROP(EclBaseVanguard, EclDeckFileName, "");
 SET_INT_PROP(EclBaseVanguard, EclOutputInterval, -1); // use the deck-provided value
-SET_BOOL_PROP(EclBaseVanguard, EnableOpmRstFile, false);
-SET_BOOL_PROP(EclBaseVanguard, EclStrictParsing, false);
-SET_BOOL_PROP(EclBaseVanguard, SchedRestart, false);
+template<class TypeTag>
+struct EnableOpmRstFile<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct EclStrictParsing<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct SchedRestart<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr bool value = false;
+};
 SET_INT_PROP(EclBaseVanguard, EdgeWeightsMethod, 1);
-SET_BOOL_PROP(EclBaseVanguard, OwnerCellsFirst, true);
+template<class TypeTag>
+struct OwnerCellsFirst<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr bool value = true;
+};
 
 } // namespace Opm::Properties
 

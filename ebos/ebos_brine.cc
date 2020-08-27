@@ -39,7 +39,10 @@ struct EbosBrineTypeTag {
 }
 
 // enable the brine extension of the black oil model
-SET_BOOL_PROP(EbosBrineTypeTag, EnableBrine, true);
+template<class TypeTag>
+struct EnableBrine<TypeTag, TTag::EbosBrineTypeTag> {
+    static constexpr bool value = true;
+};
 
 } // namespace Opm::Properties
 

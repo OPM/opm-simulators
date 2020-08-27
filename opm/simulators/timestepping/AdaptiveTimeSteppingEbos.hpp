@@ -52,7 +52,10 @@ SET_INT_PROP(FlowTimeSteppingParameters, SolverMaxRestarts, 10);
 SET_INT_PROP(FlowTimeSteppingParameters, SolverVerbosity, 1);
 SET_INT_PROP(FlowTimeSteppingParameters, TimeStepVerbosity, 1);
 SET_SCALAR_PROP(FlowTimeSteppingParameters, InitialTimeStepInDays, 1.0);
-SET_BOOL_PROP(FlowTimeSteppingParameters, FullTimeStepInitially, false);
+template<class TypeTag>
+struct FullTimeStepInitially<TypeTag, TTag::FlowTimeSteppingParameters> {
+    static constexpr bool value = false;
+};
 SET_SCALAR_PROP(FlowTimeSteppingParameters, TimeStepAfterEventInDays, -1.0);
 SET_STRING_PROP(FlowTimeSteppingParameters, TimeStepControl, "pid");
 SET_SCALAR_PROP(FlowTimeSteppingParameters, TimeStepControlTolerance, 1e-1);

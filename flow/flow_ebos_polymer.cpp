@@ -36,7 +36,10 @@ struct EclFlowPolymerProblem {
     using InheritsFrom = std::tuple<EclFlowProblem>;
 };
 }
-SET_BOOL_PROP(EclFlowPolymerProblem, EnablePolymer, true);
+template<class TypeTag>
+struct EnablePolymer<TypeTag, TTag::EclFlowPolymerProblem> {
+    static constexpr bool value = true;
+};
 }}
 
 namespace Opm {

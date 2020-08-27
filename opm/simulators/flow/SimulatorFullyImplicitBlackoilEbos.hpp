@@ -39,9 +39,18 @@ namespace Opm::Properties {
 NEW_PROP_TAG(EnableAdaptiveTimeStepping);
 NEW_PROP_TAG(EnableTuning);
 
-SET_BOOL_PROP(EclFlowProblem, EnableTerminalOutput, true);
-SET_BOOL_PROP(EclFlowProblem, EnableAdaptiveTimeStepping, true);
-SET_BOOL_PROP(EclFlowProblem, EnableTuning, false);
+template<class TypeTag>
+struct EnableTerminalOutput<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = true;
+};
+template<class TypeTag>
+struct EnableAdaptiveTimeStepping<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = true;
+};
+template<class TypeTag>
+struct EnableTuning<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = false;
+};
 
 } // namespace Opm::Properties
 

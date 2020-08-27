@@ -82,8 +82,14 @@ struct TestEclOutputTypeTag {
     using InheritsFrom = std::tuple<EclBaseProblem, BlackOilModel>;
 };
 }
-SET_BOOL_PROP(TestEclOutputTypeTag, EnableGravity, false);
-SET_BOOL_PROP(TestEclOutputTypeTag, EnableAsyncEclOutput, false);
+template<class TypeTag>
+struct EnableGravity<TypeTag, TTag::TestEclOutputTypeTag> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct EnableAsyncEclOutput<TypeTag, TTag::TestEclOutputTypeTag> {
+    static constexpr bool value = false;
+};
 
 } // namespace Opm::Properties
 

@@ -36,7 +36,10 @@ struct EclFlowEnergyProblem {
     using InheritsFrom = std::tuple<EclFlowProblem>;
 };
 }
-SET_BOOL_PROP(EclFlowEnergyProblem, EnableEnergy, true);
+template<class TypeTag>
+struct EnableEnergy<TypeTag, TTag::EclFlowEnergyProblem> {
+    static constexpr bool value = true;
+};
 }}
 
 namespace Opm {

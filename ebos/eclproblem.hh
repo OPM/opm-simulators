@@ -248,16 +248,28 @@ SET_TYPE_PROP(EclBaseProblem, EclAquiferModel, Opm::EclBaseAquiferModel<TypeTag>
 SET_TYPE_PROP(EclBaseProblem, EclWellModel, EclWellManager<TypeTag>);
 
 // Enable aquifers by default in experimental mode
-SET_BOOL_PROP(EclBaseProblem, EclEnableAquifers, true);
+template<class TypeTag>
+struct EclEnableAquifers<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = true;
+};
 
 // Enable gravity
-SET_BOOL_PROP(EclBaseProblem, EnableGravity, true);
+template<class TypeTag>
+struct EnableGravity<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = true;
+};
 
 // only write the solutions for the report steps to disk
-SET_BOOL_PROP(EclBaseProblem, EnableWriteAllSolutions, false);
+template<class TypeTag>
+struct EnableWriteAllSolutions<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
 
 // disable API tracking
-SET_BOOL_PROP(EclBaseProblem, EnableApiTracking, false);
+template<class TypeTag>
+struct EnableApiTracking<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
 
 // The default for the end time of the simulation [s]
 //
@@ -313,26 +325,44 @@ SET_INT_PROP(EclBaseProblem, NewtonMaxIterations, 14);
 SET_INT_PROP(EclBaseProblem, NewtonTargetIterations, 6);
 
 // Disable the VTK output by default for this problem ...
-SET_BOOL_PROP(EclBaseProblem, EnableVtkOutput, false);
+template<class TypeTag>
+struct EnableVtkOutput<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
 
 // ... but enable the ECL output by default
-SET_BOOL_PROP(EclBaseProblem, EnableEclOutput, true);
+template<class TypeTag>
+struct EnableEclOutput<TypeTag,TTag::EclBaseProblem> {
+    static constexpr bool value = true;
+};
 
 // If available, write the ECL output in a non-blocking manner
-SET_BOOL_PROP(EclBaseProblem, EnableAsyncEclOutput, true);
+template<class TypeTag>
+struct EnableAsyncEclOutput<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = true;
+};
 
 // By default, use single precision for the ECL formated results
-SET_BOOL_PROP(EclBaseProblem, EclOutputDoublePrecision, false);
+template<class TypeTag>
+struct EclOutputDoublePrecision<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
 
 // The default location for the ECL output files
 SET_STRING_PROP(EclBaseProblem, OutputDir, ".");
 
 // the cache for intensive quantities can be used for ECL problems and also yields a
 // decent speedup...
-SET_BOOL_PROP(EclBaseProblem, EnableIntensiveQuantityCache, true);
+template<class TypeTag>
+struct EnableIntensiveQuantityCache<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = true;
+};
 
 // the cache for the storage term can also be used and also yields a decent speedup
-SET_BOOL_PROP(EclBaseProblem, EnableStorageCache, true);
+template<class TypeTag>
+struct EnableStorageCache<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = true;
+};
 
 // Use the "velocity module" which uses the Eclipse "NEWTRAN" transmissibilities
 SET_TYPE_PROP(EclBaseProblem, FluxModule, Opm::EclTransFluxModule<TypeTag>);
@@ -351,36 +381,67 @@ SET_INT_PROP(EclBaseProblem, RestartWritingInterval, 0xffffff); // disable
 // Drift compensation is an experimental feature, i.e., systematic errors in the
 // conservation quantities are only compensated for
 // as default if experimental mode is enabled.
-SET_BOOL_PROP(EclBaseProblem,
-              EclEnableDriftCompensation,
-              getPropValue<TypeTag, Properties::EnableExperiments>());
+template<class TypeTag>
+struct EclEnableDriftCompensation<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = getPropValue<TypeTag, Properties::EnableExperiments>();
+};
 
 // By default, we enable the debugging checks if we're compiled in debug mode
-SET_BOOL_PROP(EclBaseProblem, EnableDebuggingChecks, true);
+template<class TypeTag>
+struct EnableDebuggingChecks<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = true;
+};
 
 // store temperature (but do not conserve energy, as long as EnableEnergy is false)
-SET_BOOL_PROP(EclBaseProblem, EnableTemperature, true);
+template<class TypeTag>
+struct EnableTemperature<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = true;
+};
 
 // disable all extensions supported by black oil model. this should not really be
 // necessary but it makes things a bit more explicit
-SET_BOOL_PROP(EclBaseProblem, EnablePolymer, false);
-SET_BOOL_PROP(EclBaseProblem, EnableSolvent, false);
-SET_BOOL_PROP(EclBaseProblem, EnableEnergy, false);
-SET_BOOL_PROP(EclBaseProblem, EnableFoam, false);
+template<class TypeTag>
+struct EnablePolymer<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct EnableSolvent<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct EnableEnergy<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct EnableFoam<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
 
 // disable thermal flux boundaries by default
-SET_BOOL_PROP(EclBaseProblem, EnableThermalFluxBoundaries, false);
+template<class TypeTag>
+struct EnableThermalFluxBoundaries<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
 
-SET_BOOL_PROP(EclBaseProblem, EnableTracerModel, false);
+template<class TypeTag>
+struct EnableTracerModel<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
 
 // By default, simulators derived from the EclBaseProblem are production simulators,
 // i.e., experimental features must be explicitly enabled at compile time
-SET_BOOL_PROP(EclBaseProblem, EnableExperiments, false);
+template<class TypeTag>
+struct EnableExperiments<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
 
 // set defaults for the time stepping parameters
 SET_SCALAR_PROP(EclBaseProblem, EclMaxTimeStepSizeAfterWellEvent, 3600*24*365.25);
 SET_SCALAR_PROP(EclBaseProblem, EclRestartShrinkFactor, 3);
-SET_BOOL_PROP(EclBaseProblem, EclEnableTuning, false);
+template<class TypeTag>
+struct EclEnableTuning<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
 
 SET_STRING_PROP(EclBaseProblem, OutputMode, "all");
 

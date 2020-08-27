@@ -38,7 +38,10 @@ struct EbosOilWaterPolymerTypeTag {
 }
 
 // enable the polymer extension of the black oil model
-SET_BOOL_PROP(EbosOilWaterPolymerTypeTag, EnablePolymer, true);
+template<class TypeTag>
+struct EnablePolymer<TypeTag, TTag::EbosOilWaterPolymerTypeTag> {
+    static constexpr bool value = true;
+};
 
 //! The indices indices which only enable oil and water
 SET_PROP(EbosOilWaterPolymerTypeTag, Indices)
