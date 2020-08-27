@@ -42,7 +42,11 @@ class EclAluGridVanguard;
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(EclAluGridVanguard, INHERITS_FROM(EclBaseVanguard));
+namespace TTag {
+struct EclAluGridVanguard {
+    using InheritsFrom = std::tuple<EclBaseVanguard>;
+};
+}
 
 // declare the properties
 SET_TYPE_PROP(EclAluGridVanguard, Vanguard, Opm::EclAluGridVanguard<TypeTag>);

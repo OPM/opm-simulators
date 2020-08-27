@@ -39,7 +39,11 @@ class EclPolyhedralGridVanguard;
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(EclPolyhedralGridVanguard, INHERITS_FROM(EclBaseVanguard));
+namespace TTag {
+struct EclPolyhedralGridVanguard {
+    using InheritsFrom = std::tuple<EclBaseVanguard>;
+};
+}
 
 // declare the properties
 SET_TYPE_PROP(EclPolyhedralGridVanguard, Vanguard, Opm::EclPolyhedralGridVanguard<TypeTag>);

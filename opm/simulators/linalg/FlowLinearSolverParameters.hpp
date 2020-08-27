@@ -41,7 +41,9 @@ class ISTLSolverEbos;
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(FlowIstlSolverParams);
+namespace TTag {
+struct FlowIstlSolverParams {};
+}
 
 NEW_PROP_TAG(LinearSolverReduction);
 NEW_PROP_TAG(IluRelaxation);

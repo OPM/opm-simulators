@@ -26,7 +26,11 @@
 namespace Opm {
   namespace Properties {
 
-    NEW_TYPE_TAG(EclFlowProblemSimple, INHERITS_FROM(EclFlowProblem));
+    namespace TTag {
+        struct EclFlowProblemSimple {
+            using InheritsFrom = std::tuple<EclFlowProblem>;
+        };
+    }
 
     SET_BOOL_PROP(EclFlowProblemSimple, MatrixAddWellContributions, true);
     SET_INT_PROP(EclFlowProblemSimple, LinearSolverVerbosity,0);
@@ -50,7 +54,11 @@ namespace Opm {
     public:
         typedef Opm::BlackOilFluidSystem<Scalar> type;
     };
-    //NEW_TYPE_TAG(EclFlowProblem, INHERITS_FROM(BlackOilModel, EclBaseProblem));
+//    namespace TTag {
+//        struct EclFlowProblemSimple {
+//            using InheritsFrom = std::tuple<EclBaseProblem, BlackOilModel>;
+//        };
+//    }
     SET_TYPE_PROP(EclFlowProblemSimple, IntensiveQuantities, Opm::BlackOilIntensiveQuantities<TypeTag>);
     //SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Opm::ISTLSolverEbos<TypeTag>);
     //SET_TAG_PROP(EclFlowProblemSimple, LinearSolverSplice, ParallelBiCGStabLinearSolver);

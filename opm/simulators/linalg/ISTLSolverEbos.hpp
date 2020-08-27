@@ -56,7 +56,11 @@
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(FlowIstlSolver, INHERITS_FROM(FlowIstlSolverParams));
+namespace TTag {
+struct FlowIstlSolver {
+    using InheritsFrom = std::tuple<FlowIstlSolverParams>;
+};
+}
 
 template <class TypeTag, class MyTypeTag>
 struct EclWellModel;

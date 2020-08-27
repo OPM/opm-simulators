@@ -43,7 +43,11 @@ class EbosProblem;
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(EbosTypeTag, INHERITS_FROM(BlackOilModel, EclBaseProblem, FlowModelParameters));
+namespace TTag {
+struct EbosTypeTag {
+    using InheritsFrom = std::tuple<FlowModelParameters, EclBaseProblem, BlackOilModel>;
+};
+}
 
 // Set the problem class
 SET_TYPE_PROP(EbosTypeTag, Problem, Opm::EbosProblem<TypeTag>);

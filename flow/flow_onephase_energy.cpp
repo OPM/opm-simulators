@@ -24,7 +24,11 @@
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(EclFlowProblemSimple, INHERITS_FROM(EclFlowProblem));
+namespace TTag {
+struct EclFlowProblemSimple {
+    using InheritsFrom = std::tuple<EclFlowProblem>;
+};
+}
 SET_BOOL_PROP(EclFlowProblemSimple, EnableEnergy, true);
 //! The indices required by the model
 SET_PROP(EclFlowProblemSimple, Indices)

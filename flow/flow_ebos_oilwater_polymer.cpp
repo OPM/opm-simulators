@@ -36,7 +36,11 @@
 
 namespace Opm {
 namespace Properties {
-NEW_TYPE_TAG(EclFlowOilWaterPolymerProblem, INHERITS_FROM(EclFlowProblem));
+namespace TTag {
+struct EclFlowOilWaterPolymerProblem {
+    using InheritsFrom = std::tuple<EclFlowProblem>;
+};
+}
 SET_BOOL_PROP(EclFlowOilWaterPolymerProblem, EnablePolymer, true);
 //! The indices required by the model
 //! The indices required by the model

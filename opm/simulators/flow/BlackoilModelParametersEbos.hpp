@@ -27,7 +27,9 @@
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(FlowModelParameters);
+namespace TTag {
+struct FlowModelParameters {};
+}
 
 NEW_PROP_TAG(DbhpMaxRel);
 NEW_PROP_TAG(DwellFractionMax);

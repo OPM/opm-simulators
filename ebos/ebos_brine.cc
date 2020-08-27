@@ -32,7 +32,11 @@
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(EbosBrineTypeTag, INHERITS_FROM(EbosTypeTag));
+namespace TTag {
+struct EbosBrineTypeTag {
+    using InheritsFrom = std::tuple<EbosTypeTag>;
+};
+}
 
 // enable the brine extension of the black oil model
 SET_BOOL_PROP(EbosBrineTypeTag, EnableBrine, true);

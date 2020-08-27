@@ -71,7 +71,12 @@
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(EclFlowProblem, INHERITS_FROM(BlackOilModel, EclBaseProblem, FlowNonLinearSolver, FlowModelParameters, FlowTimeSteppingParameters));
+namespace TTag {
+struct EclFlowProblem {
+    using InheritsFrom = std::tuple<FlowTimeSteppingParameters, FlowModelParameters,
+                                    FlowNonLinearSolver, EclBaseProblem, BlackOilModel>;
+};
+}
 SET_STRING_PROP(EclFlowProblem, OutputDir, "");
 SET_BOOL_PROP(EclFlowProblem, EnableDebuggingChecks, false);
 // default in flow is to formulate the equations in surface volumes

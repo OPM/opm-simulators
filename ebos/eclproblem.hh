@@ -118,12 +118,21 @@ class EclProblem;
 
 namespace Opm::Properties {
 
+namespace TTag {
+
 #if EBOS_USE_ALUGRID
-NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclAluGridVanguard, EclOutputBlackOil, VtkEclTracer));
+struct EclBaseProblem {
+  using InheritstFrom = std::tuple<VtkEclTracer, EclOutputBlackOil, EclAluGridVanguard>;
+};
 #else
-NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclCpGridVanguard, EclOutputBlackOil, VtkEclTracer));
-//NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclPolyhedralGridVanguard, EclOutputBlackOil, VtkEclTracer));
+struct EclBaseProblem {
+  using InheritsFrom = std::tuple<VtkEclTracer, EclOutputBlackOil, EclCpGridVanguard>;
+};
+//struct EclBaseProblem {
+//    using InheritsFrom = std::tuple<VtkEclTracer, EclOutputBlackOil, EclPolyhedralGridVanguard>;
+//};
 #endif
+}
 
 // The class which deals with ECL wells
 NEW_PROP_TAG(EclWellModel);
@@ -431,8 +440,8 @@ class EclProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Element = typename GridView::template Codim<0>::Entity;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using EclMaterialLawManager = typename GET_PROP(TypeTag, MaterialLaw)::EclMaterialLawManager;
-    using EclThermalLawManager = typename GET_PROP(TypeTag, SolidEnergyLaw)::EclThermalLawManager;
+    using EclMaterialLawManager = typename GetProp<TypeTag, Properties::MaterialLaw>::EclMaterialLawManager;
+    using EclThermalLawManager = typename GetProp<TypeTag, Properties::SolidEnergyLaw>::EclThermalLawManager;
     using MaterialLawParams = typename EclMaterialLawManager::MaterialLawParams;
     using SolidEnergyLawParams = typename EclThermalLawManager::SolidEnergyLawParams;
     using ThermalConductionLawParams = typename EclThermalLawManager::ThermalConductionLawParams;
@@ -521,7 +530,7 @@ public:
                                          int paramIdx,
                                          int posParamIdx OPM_UNUSED)
     {
-        typedef typename GET_PROP(TypeTag, ParameterMetaData) ParamsMeta;
+        using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
         Dune::ParameterTree& tree = ParamsMeta::tree();
 
         std::string param  = argv[paramIdx];

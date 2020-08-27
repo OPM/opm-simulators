@@ -47,7 +47,9 @@
 namespace Opm::Properties {
 
 // create new type tag for the Ecl-output
-NEW_TYPE_TAG(EclOutputBlackOil);
+namespace TTag {
+struct EclOutputBlackOil {};
+}
 
 NEW_PROP_TAG(ForceDisableFluidInPlaceOutput);
 

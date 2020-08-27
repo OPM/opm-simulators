@@ -19,7 +19,9 @@
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(FlowTimeSteppingParameters);
+namespace TTag {
+struct FlowTimeSteppingParameters {};
+}
 
 NEW_PROP_TAG(SolverRestartFactor);
 NEW_PROP_TAG(SolverGrowthFactor);

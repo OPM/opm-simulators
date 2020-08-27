@@ -36,7 +36,9 @@
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(FlowNonLinearSolver);
+namespace TTag {
+struct FlowNonLinearSolver {};
+}
 
 NEW_PROP_TAG(NewtonMaxRelax);
 NEW_PROP_TAG(FlowNewtonMaxIterations);

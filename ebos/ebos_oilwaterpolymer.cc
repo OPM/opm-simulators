@@ -31,7 +31,11 @@
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(EbosOilWaterPolymerTypeTag, INHERITS_FROM(EbosTypeTag));
+namespace TTag {
+struct EbosOilWaterPolymerTypeTag {
+    using InheritsFrom = std::tuple<EbosTypeTag>;
+};
+}
 
 // enable the polymer extension of the black oil model
 SET_BOOL_PROP(EbosOilWaterPolymerTypeTag, EnablePolymer, true);

@@ -32,7 +32,11 @@
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(EbosOilWaterTypeTag, INHERITS_FROM(EbosTypeTag));
+namespace TTag {
+struct EbosOilWaterTypeTag {
+    using InheritsFrom = std::tuple<EbosTypeTag>;
+};
+}
 
 //! The indices indices which only enable oil and water
 SET_PROP(EbosOilWaterTypeTag, Indices)

@@ -69,7 +69,7 @@ namespace Opm
     class FlowMainEbos
     {
     public:
-        typedef typename GET_PROP(TypeTag, MaterialLaw)::EclMaterialLawManager MaterialLawManager;
+        using MaterialLawManager = typename GetProp<TypeTag, Properties::MaterialLaw>::EclMaterialLawManager;
         using EbosSimulator = GetPropType<TypeTag, Properties::Simulator>;
         using Grid = GetPropType<TypeTag, Properties::Grid>;
         using GridView = GetPropType<TypeTag, Properties::GridView>;
@@ -89,7 +89,7 @@ namespace Opm
         // Read the command line parameters. Throws an exception if something goes wrong.
         static int setupParameters_(int argc, char** argv)
         {
-            using ParamsMeta = typename GET_PROP(TypeTag, ParameterMetaData);
+            using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
             if (!ParamsMeta::registrationOpen()) {
                 // We have already successfully run setupParameters_().
                 // For the dynamically chosen runs (as from the main flow

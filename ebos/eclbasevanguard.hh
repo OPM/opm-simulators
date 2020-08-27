@@ -67,7 +67,9 @@ class EclBaseVanguard;
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(EclBaseVanguard);
+namespace TTag {
+struct EclBaseVanguard {};
+}
 
 // declare the properties required by the for the ecl simulator vanguard
 NEW_PROP_TAG(EquilGrid);

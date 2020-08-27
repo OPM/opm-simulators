@@ -31,7 +31,11 @@
 
 namespace Opm {
 namespace Properties {
-NEW_TYPE_TAG(EclFlowPolymerProblem, INHERITS_FROM(EclFlowProblem));
+namespace TTag {
+struct EclFlowPolymerProblem {
+    using InheritsFrom = std::tuple<EclFlowProblem>;
+};
+}
 SET_BOOL_PROP(EclFlowPolymerProblem, EnablePolymer, true);
 }}
 

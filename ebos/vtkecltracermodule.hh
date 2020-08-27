@@ -43,7 +43,9 @@
 namespace Opm::Properties {
 
 // create new type tag for the VTK tracer output
-NEW_TYPE_TAG(VtkEclTracer);
+namespace TTag {
+struct VtkEclTracer {};
+}
 
 // create the property tags needed for the tracer model
 NEW_PROP_TAG(VtkWriteEclTracerConcentration);
