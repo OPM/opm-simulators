@@ -55,8 +55,8 @@ public:
     typedef Opm::BlackOilTwoPhaseIndices<0,
                                          2,
                                          0,
-                                         GET_PROP_VALUE(TypeTag, EnableFoam),
-                                         GET_PROP_VALUE(TypeTag, EnableBrine),
+                                         getPropValue<TypeTag, Properties::EnableFoam>(),
+                                         getPropValue<TypeTag, Properties::EnableBrine>(),
                                          /*PVOffset=*/0,
                                          /*disabledCompIdx=*/FluidSystem::gasCompIdx> type;
 };

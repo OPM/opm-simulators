@@ -164,8 +164,8 @@ class EclWriter
 
     typedef std::vector<Scalar> ScalarBuffer;
 
-    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
-    enum { enableSolvent = GET_PROP_VALUE(TypeTag, EnableSolvent) };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
 
 
 public:

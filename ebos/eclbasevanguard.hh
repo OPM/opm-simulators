@@ -106,7 +106,7 @@ class EclBaseVanguard : public BaseVanguard<TypeTag>
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
-    enum { enableExperiments = GET_PROP_VALUE(TypeTag, EnableExperiments) };
+    enum { enableExperiments = getPropValue<TypeTag, Properties::EnableExperiments>() };
 
 public:
     using Grid = GetPropType<TypeTag, Properties::Grid>;

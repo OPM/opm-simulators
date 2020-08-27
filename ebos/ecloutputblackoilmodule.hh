@@ -88,7 +88,7 @@ class EclOutputBlackOilModule
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
     enum { gasCompIdx = FluidSystem::gasCompIdx };
     enum { oilCompIdx = FluidSystem::oilCompIdx };
-    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
     typedef std::vector<Scalar> ScalarBuffer;
     typedef std::vector<std::string> StringBuffer;    
@@ -326,13 +326,13 @@ public:
             rstKeywords["RV"] = 0;
         }
 
-        if (GET_PROP_VALUE(TypeTag, EnableSolvent))
+        if (getPropValue<TypeTag, Properties::EnableSolvent>())
             sSol_.resize(bufferSize, 0.0);
-        if (GET_PROP_VALUE(TypeTag, EnablePolymer))
+        if (getPropValue<TypeTag, Properties::EnablePolymer>())
             cPolymer_.resize(bufferSize, 0.0);
-        if (GET_PROP_VALUE(TypeTag, EnableFoam))
+        if (getPropValue<TypeTag, Properties::EnableFoam>())
             cFoam_.resize(bufferSize, 0.0);
-        if (GET_PROP_VALUE(TypeTag, EnableBrine))
+        if (getPropValue<TypeTag, Properties::EnableBrine>())
             cSalt_.resize(bufferSize, 0.0);
 
         if (simulator_.problem().vapparsActive())

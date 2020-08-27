@@ -71,9 +71,9 @@ class EclEquilInitializer
     enum { waterCompIdx = FluidSystem::waterCompIdx };
 
     enum { dimWorld = GridView::dimensionworld };
-    enum { enableTemperature = GET_PROP_VALUE(TypeTag, EnableTemperature) };
-    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
-    enum { enableBrine = GET_PROP_VALUE(TypeTag, EnableBrine) };
+    enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
 
 public:
     // NB: setting the enableEnergy argument to true enables storage of enthalpy and

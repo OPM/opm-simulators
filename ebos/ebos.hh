@@ -83,7 +83,7 @@ SET_SCALAR_PROP(EbosTypeTag, NewtonTolerance, 1e-1);
 SET_SCALAR_PROP(EbosTypeTag, EclNewtonRelaxedVolumeFraction, 0.05);
 
 // the maximum volumetric error of a cell in the relaxed region
-SET_SCALAR_PROP(EbosTypeTag, EclNewtonRelaxedTolerance, 1e6*GET_PROP_VALUE(TypeTag, NewtonTolerance));
+SET_SCALAR_PROP(EbosTypeTag, EclNewtonRelaxedTolerance, 1e6*getPropValue<TypeTag, Properties::NewtonTolerance>());
 
 // the tolerated amount of "incorrect" amount of oil per time step for the complete
 // reservoir. this is scaled by the pore volume of the reservoir, i.e., larger reservoirs

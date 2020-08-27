@@ -70,7 +70,7 @@ class EclThresholdPressure
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
-    enum { enableExperiments = GET_PROP_VALUE(TypeTag, EnableExperiments) };
+    enum { enableExperiments = getPropValue<TypeTag, Properties::EnableExperiments>() };
     enum { numPhases = FluidSystem::numPhases };
 
 public:

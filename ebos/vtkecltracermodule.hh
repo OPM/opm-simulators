@@ -72,7 +72,7 @@ namespace Opm {
         using GridView = GetPropType<TypeTag, Properties::GridView>;
         using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
-        static const int vtkFormat = GET_PROP_VALUE(TypeTag, VtkOutputFormat);
+        static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
         typedef Opm::VtkMultiWriter<GridView, vtkFormat> VtkMultiWriter;
 
 

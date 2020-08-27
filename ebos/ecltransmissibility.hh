@@ -73,7 +73,7 @@ class EclTransmissibility
     using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
     using Intersection = typename GridView::Intersection;
 
-    static const bool enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy);
+    static const bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
 
     // Grid and world dimension
     enum { dimWorld = GridView::dimensionworld };

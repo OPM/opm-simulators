@@ -344,7 +344,7 @@ SET_INT_PROP(EclBaseProblem, RestartWritingInterval, 0xffffff); // disable
 // as default if experimental mode is enabled.
 SET_BOOL_PROP(EclBaseProblem,
               EclEnableDriftCompensation,
-              GET_PROP_VALUE(TypeTag, EnableExperiments));
+              getPropValue<TypeTag, Properties::EnableExperiments>());
 
 // By default, we enable the debugging checks if we're compiled in debug mode
 SET_BOOL_PROP(EclBaseProblem, EnableDebuggingChecks, true);
@@ -405,19 +405,19 @@ class EclProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     enum { dimWorld = GridView::dimensionworld };
 
     // copy some indices for convenience
-    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
+    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
-    enum { enableExperiments = GET_PROP_VALUE(TypeTag, EnableExperiments) };
-    enum { enableSolvent = GET_PROP_VALUE(TypeTag, EnableSolvent) };
-    enum { enablePolymer = GET_PROP_VALUE(TypeTag, EnablePolymer) };
-    enum { enableBrine = GET_PROP_VALUE(TypeTag, EnableBrine) };
-    enum { enablePolymerMolarWeight = GET_PROP_VALUE(TypeTag, EnablePolymerMW) };
-    enum { enableFoam = GET_PROP_VALUE(TypeTag, EnableFoam) };
-    enum { enableTemperature = GET_PROP_VALUE(TypeTag, EnableTemperature) };
-    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
-    enum { enableThermalFluxBoundaries = GET_PROP_VALUE(TypeTag, EnableThermalFluxBoundaries) };
-    enum { enableApiTracking = GET_PROP_VALUE(TypeTag, EnableApiTracking) };
+    enum { enableExperiments = getPropValue<TypeTag, Properties::EnableExperiments>() };
+    enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
+    enum { enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>() };
+    enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
+    enum { enablePolymerMolarWeight = getPropValue<TypeTag, Properties::EnablePolymerMW>() };
+    enum { enableFoam = getPropValue<TypeTag, Properties::EnableFoam>() };
+    enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    enum { enableThermalFluxBoundaries = getPropValue<TypeTag, Properties::EnableThermalFluxBoundaries>() };
+    enum { enableApiTracking = getPropValue<TypeTag, Properties::EnableApiTracking>() };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
@@ -705,7 +705,7 @@ public:
 
         updatePffDofData_();
 
-        if (GET_PROP_VALUE(TypeTag, EnablePolymer)) {
+        if (getPropValue<TypeTag, Properties::EnablePolymer>()) {
             const auto& vanguard = this->simulator().vanguard();
             const auto& gridView = vanguard.gridView();
             int numElements = gridView.size(/*codim=*/0);
@@ -846,7 +846,7 @@ public:
         const bool invalidateFromMaxOilSat = updateMaxOilSaturation_();
         const bool doInvalidate = invalidateFromHyst || invalidateFromMaxOilSat;
 
-        if (GET_PROP_VALUE(TypeTag, EnablePolymer))
+        if (getPropValue<TypeTag, Properties::EnablePolymer>())
             updateMaxPolymerAdsorption_();
 
         // set up the wells for the next episode.
@@ -955,7 +955,7 @@ public:
     void endTimeStep()
     {
 #ifndef NDEBUG
-        if (GET_PROP_VALUE(TypeTag, EnableDebuggingChecks)) {
+        if (getPropValue<(TypeTag, Properties::EnableDebuggingChecks>()) {
             // in debug mode, we don't care about performance, so we check if the model does
             // the right thing (i.e., the mass change inside the whole reservoir must be
             // equivalent to the fluxes over the grid's boundaries plus the source rates
@@ -983,7 +983,7 @@ public:
             for (unsigned globalDofIdx = 0; globalDofIdx < residual.size(); globalDofIdx ++) {
                 drift_[globalDofIdx] = residual[globalDofIdx];
                 drift_[globalDofIdx] *= simulator.timeStepSize();
-                if (GET_PROP_VALUE(TypeTag, UseVolumetricResidual))
+                if (getPropValue<TypeTag, Properties::UseVolumetricResidual>())
                     drift_[globalDofIdx] *= this->model().dofTotalVolume(globalDofIdx);
             }
         }

@@ -67,7 +67,7 @@ SET_PROP(FlowIstlSolver, SparseMatrixAdapter)
 {
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
+    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     typedef Opm::MatrixBlock<Scalar, numEq, numEq> Block;
 
 public:
