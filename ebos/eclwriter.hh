@@ -47,6 +47,7 @@
 #include <opm/output/eclipse/Summary.hpp>
 #include <opm/parser/eclipse/Units/UnitSystem.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/State.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQConfig.hpp>
 
 #include <opm/simulators/utils/ParallelRestart.hpp>
 #include <opm/grid/GridHelpers.hpp>
@@ -314,6 +315,10 @@ public:
                          miscSummaryData,
                          regionData,
                          blockData);
+
+            const auto& udq_config = schedule().getUDQConfig(reportStepNum);
+            udq_config.eval( summaryState() );
+
             buffer = summaryState().serialize();
         }
 
