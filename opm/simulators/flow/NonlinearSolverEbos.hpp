@@ -46,8 +46,14 @@ NEW_PROP_TAG(FlowNewtonMinIterations);
 NEW_PROP_TAG(NewtonRelaxationType);
 
 SET_SCALAR_PROP(FlowNonLinearSolver, NewtonMaxRelax, 0.5);
-SET_INT_PROP(FlowNonLinearSolver, FlowNewtonMaxIterations, 20);
-SET_INT_PROP(FlowNonLinearSolver, FlowNewtonMinIterations, 1);
+template<class TypeTag>
+struct FlowNewtonMaxIterations<TypeTag, TTag::FlowNonLinearSolver> {
+    static constexpr int value = 20;
+};
+template<class TypeTag>
+struct FlowNewtonMinIterations<TypeTag, TTag::FlowNonLinearSolver> {
+    static constexpr int value = 1;
+};
 template<class TypeTag>
 struct NewtonRelaxationType<TypeTag, TTag::FlowNonLinearSolver> {
     static constexpr auto value = "dampen";

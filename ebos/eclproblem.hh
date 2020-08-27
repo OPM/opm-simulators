@@ -303,7 +303,10 @@ SET_SCALAR_PROP(EclBaseProblem, EclNewtonSumToleranceExponent, 1.0/3.0);
 
 // set number of Newton iterations where the volumetric residual is considered for
 // convergence
-SET_INT_PROP(EclBaseProblem, EclNewtonStrictIterations, 8);
+template<class TypeTag>
+struct EclNewtonStrictIterations<TypeTag, TTag::EclBaseProblem> {
+    static constexpr int value = 8;
+};
 
 // set fraction of the pore volume where the volumetric residual may be violated during
 // strict Newton iterations
@@ -317,12 +320,18 @@ SET_SCALAR_PROP(EclBaseProblem, NewtonMaxError, 10e9);
 
 // set the maximum number of Newton iterations to 14 because the likelyhood that a time
 // step succeeds at more than 14 Newton iteration is rather small
-SET_INT_PROP(EclBaseProblem, NewtonMaxIterations, 14);
+template<class TypeTag>
+struct NewtonMaxIterations<TypeTag, TTag::EclBaseProblem> {
+    static constexpr int value = 14;
+};
 
 // also, reduce the target for the "optimum" number of Newton iterations to 6. Note that
 // this is only relevant if the time step is reduced from the report step size for some
 // reason. (because ebos first tries to do a report step using a single time step.)
-SET_INT_PROP(EclBaseProblem, NewtonTargetIterations, 6);
+template<class TypeTag>
+struct NewtonTargetIterations<TypeTag, TTag::EclBaseProblem> {
+    static constexpr int value = 6;
+};
 
 // Disable the VTK output by default for this problem ...
 template<class TypeTag>
@@ -379,7 +388,10 @@ SET_TYPE_PROP(EclBaseProblem, NewtonMethod, Opm::EclNewtonMethod<TypeTag>);
 
 // The frequency of writing restart (*.ers) files. This is the number of time steps
 // between writing restart files
-SET_INT_PROP(EclBaseProblem, RestartWritingInterval, 0xffffff); // disable
+template<class TypeTag>
+struct RestartWritingInterval<TypeTag, TTag::EclBaseProblem> {
+    static constexpr int value = 0xffffff; // disable
+};
 
 // Drift compensation is an experimental feature, i.e., systematic errors in the
 // conservation quantities are only compensated for

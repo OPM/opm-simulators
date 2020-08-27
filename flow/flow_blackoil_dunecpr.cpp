@@ -36,9 +36,15 @@ namespace Opm {
     struct MatrixAddWellContributions<TypeTag, TTag::EclFlowProblemSimple> {
         static constexpr bool value = true;
     };
-    SET_INT_PROP(EclFlowProblemSimple, LinearSolverVerbosity,0);
+    template<class TypeTag>
+    struct LinearSolverVerbosity<TypeTag, TTag::EclFlowProblemSimple> {
+        static constexpr int value = 0;
+    };
     SET_SCALAR_PROP(EclFlowProblemSimple, LinearSolverReduction, 1e-2);
-    SET_INT_PROP(EclFlowProblemSimple, LinearSolverMaxIter, 100);
+    template<class TypeTag>
+    struct LinearSolverMaxIter<TypeTag, TTag::EclFlowProblemSimple> {
+        static constexpr int value = 100;
+    };
     template<class TypeTag>
     struct UseAmg<TypeTag, TTag::EclFlowProblemSimple> { // probably not used
         static constexpr bool value = true;
@@ -47,10 +53,22 @@ namespace Opm {
     struct UseCpr<TypeTag, TTag::EclFlowProblemSimple> {
         static constexpr bool value = true;
     };
-    SET_INT_PROP(EclFlowProblemSimple, CprMaxEllIter, 1);
-    SET_INT_PROP(EclFlowProblemSimple, CprEllSolvetype, 3);
-    SET_INT_PROP(EclFlowProblemSimple, CprReuseSetup, 3);
-    SET_INT_PROP(EclFlowProblemSimple, CprSolverVerbose, 0);
+    template<class TypeTag>
+    struct CprMaxEllIter<TypeTag,TTag::EclFlowProblemSimple> {
+        static constexpr int value = 1;
+    };
+    template<class TypeTag>
+    struct CprEllSolvetype<TypeTag, TTag::EclFlowProblemSimple> {
+        static constexpr int value = 3;
+    };
+    template<class TypeTag>
+    struct CprReuseSetup<TypeTag,TTag::EclFlowProblemSimple> {
+        static constexpr int value = 3;
+    };
+    template<class TypeTag>
+    struct CprSolverVerbose<TypeTag, TTag::EclFlowProblemSimple> {
+        static constexpr int value = 0;
+    };
     template<class TypeTag>
     struct LinearSolverConfiguration<TypeTag, TTag::EclFlowProblemSimple> {
         static constexpr auto value = "ilu0";
@@ -90,7 +108,10 @@ namespace Opm {
         static constexpr bool value = true;
     };
 
-    //SET_INT_PROP(EclFlowProblemSimple, NumWellAdjoint, 1);
+//    template<class TypeTag>
+//    struct NumWellAdjoint<TypeTag, TTag::EclFlowProblemSimple> {
+//        static constexpr int value = 1;
+//    };
 //    template<class TypeTag>
 //    struct EnableStorageCache<TypeTag, TTag::EclFlowProblem> {
 //        static constexpr bool value = true;

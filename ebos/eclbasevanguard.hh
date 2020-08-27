@@ -90,7 +90,10 @@ template<class TypeTag>
 struct EclDeckFileName<TypeTag, TTag::EclBaseVanguard> {
     static constexpr auto value = "";
 };
-SET_INT_PROP(EclBaseVanguard, EclOutputInterval, -1); // use the deck-provided value
+template<class TypeTag>
+struct EclOutputInterval<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr int value = -1;
+};
 template<class TypeTag>
 struct EnableOpmRstFile<TypeTag, TTag::EclBaseVanguard> {
     static constexpr bool value = false;
@@ -103,7 +106,10 @@ template<class TypeTag>
 struct SchedRestart<TypeTag, TTag::EclBaseVanguard> {
     static constexpr bool value = false;
 };
-SET_INT_PROP(EclBaseVanguard, EdgeWeightsMethod, 1);
+template<class TypeTag>
+struct EdgeWeightsMethod<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr int value = 1;
+};
 template<class TypeTag>
 struct OwnerCellsFirst<TypeTag, TTag::EclBaseVanguard> {
     static constexpr bool value = true;

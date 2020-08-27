@@ -118,16 +118,25 @@ SET_SCALAR_PROP(EbosTypeTag, EclNewtonSumTolerance, 1e-5);
 // make all Newton iterations strict, i.e., the volumetric Newton tolerance must be
 // always be upheld in the majority of the spatial domain. In this context, "majority"
 // means 1 - EclNewtonRelaxedVolumeFraction.
-SET_INT_PROP(EbosTypeTag, EclNewtonStrictIterations, 100);
+template<class TypeTag>
+struct EclNewtonStrictIterations<TypeTag, TTag::EbosTypeTag> {
+    static constexpr int value = 100;
+};
 
 // set the maximum number of Newton iterations to 8 so that we fail quickly (albeit
 // relatively often)
-SET_INT_PROP(EbosTypeTag, NewtonMaxIterations, 8);
+template<class TypeTag>
+struct NewtonMaxIterations<TypeTag, TTag::EbosTypeTag> {
+    static constexpr int value = 8;
+};
 
 // if openMP is available, set the default the number of threads per process for the main
 // simulation to 2 (instead of grabbing everything that is available).
 #if _OPENMP
-SET_INT_PROP(EbosTypeTag, ThreadsPerProcess, 2);
+template<class TypeTag>
+struct ThreadsPerProcess<TypeTag, TTag::EbosTypeTag> {
+    static constexpr int value = 2;
+};
 #endif
 
 // By default, ebos accepts the result of the time integration unconditionally if the

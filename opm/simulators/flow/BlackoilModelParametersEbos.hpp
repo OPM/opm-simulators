@@ -71,13 +71,19 @@ SET_SCALAR_PROP(FlowModelParameters, ToleranceCnv,1e-2);
 SET_SCALAR_PROP(FlowModelParameters, ToleranceCnvRelaxed, 1e9);
 SET_SCALAR_PROP(FlowModelParameters, ToleranceWells, 1e-4);
 SET_SCALAR_PROP(FlowModelParameters, ToleranceWellControl, 1e-7);
-SET_INT_PROP(FlowModelParameters, MaxWelleqIter, 30);
+template<class TypeTag>
+struct MaxWelleqIter<TypeTag, TTag::FlowModelParameters> {
+    static constexpr int value = 30;
+};
 template<class TypeTag>
 struct UseMultisegmentWell<TypeTag, TTag::FlowModelParameters> {
     static constexpr bool value = true;
 };
 SET_SCALAR_PROP(FlowModelParameters, MaxSinglePrecisionDays, 20.0);
-SET_INT_PROP(FlowModelParameters, MaxStrictIter, 8);
+template<class TypeTag>
+struct MaxStrictIter<TypeTag, TTag::FlowModelParameters> {
+    static constexpr int value = 8;
+};
 template<class TypeTag>
 struct SolveWelleqInitially<TypeTag, TTag::FlowModelParameters> {
     static constexpr bool value = true;
@@ -100,13 +106,22 @@ template<class TypeTag>
 struct UseInnerIterationsMsWells<TypeTag, TTag::FlowModelParameters> {
     static constexpr bool value = true;
 };
-SET_INT_PROP(FlowModelParameters, MaxInnerIterMsWells, 100);
+template<class TypeTag>
+struct MaxInnerIterMsWells<TypeTag, TTag::FlowModelParameters> {
+    static constexpr int value = 100;
+};
 template<class TypeTag>
 struct UseInnerIterationsWells<TypeTag, TTag::FlowModelParameters> {
     static constexpr bool value = false;
 };
-SET_INT_PROP(FlowModelParameters, MaxInnerIterWells, 50);
-SET_INT_PROP(FlowModelParameters, StrictInnerIterMsWells, 40);
+template<class TypeTag>
+struct MaxInnerIterWells<TypeTag, TTag::FlowModelParameters> {
+    static constexpr int value = 50;
+};
+template<class TypeTag>
+struct StrictInnerIterMsWells<TypeTag, TTag::FlowModelParameters> {
+    static constexpr int value = 40;
+};
 SET_SCALAR_PROP(FlowModelParameters, RegularizationFactorMsw, 1);
 template<class TypeTag>
 struct EnableWellOperabilityCheck<TypeTag, TTag::FlowModelParameters> {
@@ -118,7 +133,10 @@ SET_SCALAR_PROP(FlowModelParameters, RelaxedPressureTolInnerIterMsw, 0.5e5);
 
 // if openMP is available, determine the number threads per process automatically.
 #if _OPENMP
-SET_INT_PROP(FlowModelParameters, ThreadsPerProcess, -1);
+template<class TypeTag>
+struct ThreadsPerProcess<TypeTag, TTag::FlowModelParameters> {
+    static constexpr int value = -1;
+};
 #endif
 
 } // namespace Opm::Properties

@@ -75,10 +75,22 @@ NEW_PROP_TAG(OpenclPlatformId);
 
 SET_SCALAR_PROP(FlowIstlSolverParams, LinearSolverReduction, 1e-2);
 SET_SCALAR_PROP(FlowIstlSolverParams, IluRelaxation, 0.9);
-SET_INT_PROP(FlowIstlSolverParams, LinearSolverMaxIter, 200);
-SET_INT_PROP(FlowIstlSolverParams, LinearSolverRestart, 40);
-SET_INT_PROP(FlowIstlSolverParams, FlowLinearSolverVerbosity, 0);
-SET_INT_PROP(FlowIstlSolverParams, IluFillinLevel, 0);
+template<class TypeTag>
+struct LinearSolverMaxIter<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr int value = 200;
+};
+template<class TypeTag>
+struct LinearSolverRestart<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr int value = 40;
+};
+template<class TypeTag>
+struct FlowLinearSolverVerbosity<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr int value = 0;
+};
+template<class TypeTag>
+struct IluFillinLevel<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr int value = 0;
+};
 template<class TypeTag>
 struct MiluVariant<TypeTag, TTag::FlowIstlSolverParams> {
     static constexpr auto value = "ILU";
@@ -124,14 +136,26 @@ template<class TypeTag>
 struct ScaleLinearSystem<TypeTag, TTag::FlowIstlSolverParams> {
     static constexpr bool value = false;
 };
-SET_INT_PROP(FlowIstlSolverParams, CprSolverVerbose, 0);
+template<class TypeTag>
+struct CprSolverVerbose<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr int value = 0;
+};
 template<class TypeTag>
 struct CprUseDrs<TypeTag, TTag::FlowIstlSolverParams> {
     static constexpr bool value = false;
 };
-SET_INT_PROP(FlowIstlSolverParams, CprMaxEllIter, 20);
-SET_INT_PROP(FlowIstlSolverParams, CprEllSolvetype, 0);
-SET_INT_PROP(FlowIstlSolverParams, CprReuseSetup, 3);
+template<class TypeTag>
+struct CprMaxEllIter<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr int value = 20;
+};
+template<class TypeTag>
+struct CprEllSolvetype<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr int value = 0;
+};
+template<class TypeTag>
+struct CprReuseSetup<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr int value = 3;
+};
 template<class TypeTag>
 struct LinearSolverConfiguration<TypeTag, TTag::FlowIstlSolverParams> {
     static constexpr auto value = "ilu0";
@@ -144,8 +168,14 @@ template<class TypeTag>
 struct GpuMode<TypeTag, TTag::FlowIstlSolverParams> {
     static constexpr auto value = "none";
 };
-SET_INT_PROP(FlowIstlSolverParams, BdaDeviceId, 0);
-SET_INT_PROP(FlowIstlSolverParams, OpenclPlatformId, 0);
+template<class TypeTag>
+struct BdaDeviceId<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr int value = 0;
+};
+template<class TypeTag>
+struct OpenclPlatformId<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr int value = 0;
+};
 
 } // namespace Opm::Properties
 

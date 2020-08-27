@@ -48,9 +48,18 @@ SET_SCALAR_PROP(FlowTimeSteppingParameters, SolverGrowthFactor, 2.0);
 SET_SCALAR_PROP(FlowTimeSteppingParameters, SolverMaxGrowth, 3.0);
 SET_SCALAR_PROP(FlowTimeSteppingParameters, SolverMaxTimeStepInDays, 365.0);
 SET_SCALAR_PROP(FlowTimeSteppingParameters, SolverMinTimeStep, 0.0);
-SET_INT_PROP(FlowTimeSteppingParameters, SolverMaxRestarts, 10);
-SET_INT_PROP(FlowTimeSteppingParameters, SolverVerbosity, 1);
-SET_INT_PROP(FlowTimeSteppingParameters, TimeStepVerbosity, 1);
+template<class TypeTag>
+struct SolverMaxRestarts<TypeTag, TTag::FlowTimeSteppingParameters> {
+    static constexpr int value = 10;
+};
+template<class TypeTag>
+struct SolverVerbosity<TypeTag, TTag::FlowTimeSteppingParameters> {
+    static constexpr int value = 1;
+};
+template<class TypeTag>
+struct TimeStepVerbosity<TypeTag, TTag::FlowTimeSteppingParameters> {
+    static constexpr int value = 1;
+};
 SET_SCALAR_PROP(FlowTimeSteppingParameters, InitialTimeStepInDays, 1.0);
 template<class TypeTag>
 struct FullTimeStepInitially<TypeTag, TTag::FlowTimeSteppingParameters> {
@@ -62,8 +71,14 @@ struct TimeStepControl<TypeTag, TTag::FlowTimeSteppingParameters> {
     static constexpr auto value = "pid";
 };
 SET_SCALAR_PROP(FlowTimeSteppingParameters, TimeStepControlTolerance, 1e-1);
-SET_INT_PROP(FlowTimeSteppingParameters, TimeStepControlTargetIterations, 30);
-SET_INT_PROP(FlowTimeSteppingParameters, TimeStepControlTargetNewtonIterations, 8);
+template<class TypeTag>
+struct TimeStepControlTargetIterations<TypeTag, TTag::FlowTimeSteppingParameters> {
+    static constexpr int value = 30;
+};
+template<class TypeTag>
+struct TimeStepControlTargetNewtonIterations<TypeTag, TTag::FlowTimeSteppingParameters> {
+    static constexpr int value = 8;
+};
 SET_SCALAR_PROP(FlowTimeSteppingParameters, TimeStepControlDecayRate, 0.75);
 SET_SCALAR_PROP(FlowTimeSteppingParameters, TimeStepControlGrowthRate, 1.25);
 template<class TypeTag>

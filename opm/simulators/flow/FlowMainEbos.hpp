@@ -64,7 +64,10 @@ template<class TypeTag>
 struct EnableLoggingFalloutWarning<TypeTag, TTag::EclFlowProblem> {
     static constexpr bool value = false;
 };
-SET_INT_PROP(EclFlowProblem, OutputInterval, 1);
+template<class TypeTag>
+struct OutputInterval<TypeTag, TTag::EclFlowProblem> {
+    static constexpr int value = 1;
+};
 
 } // namespace Opm::Properties
 
