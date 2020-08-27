@@ -55,7 +55,10 @@ NEW_PROP_TAG(OutputInterval);
 NEW_PROP_TAG(EnableLoggingFalloutWarning);
 
 // TODO: enumeration parameters. we use strings for now.
-SET_STRING_PROP(EclFlowProblem, EnableDryRun, "auto");
+template<class TypeTag>
+struct EnableDryRun<TypeTag, TTag::EclFlowProblem> {
+    static constexpr auto value = "auto";
+};
 // Do not merge parallel output files or warn about them
 template<class TypeTag>
 struct EnableLoggingFalloutWarning<TypeTag, TTag::EclFlowProblem> {

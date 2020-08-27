@@ -79,7 +79,10 @@ SET_INT_PROP(FlowIstlSolverParams, LinearSolverMaxIter, 200);
 SET_INT_PROP(FlowIstlSolverParams, LinearSolverRestart, 40);
 SET_INT_PROP(FlowIstlSolverParams, FlowLinearSolverVerbosity, 0);
 SET_INT_PROP(FlowIstlSolverParams, IluFillinLevel, 0);
-SET_STRING_PROP(FlowIstlSolverParams, MiluVariant, "ILU");
+template<class TypeTag>
+struct MiluVariant<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr auto value = "ILU";
+};
 template<class TypeTag>
 struct IluRedblack<TypeTag, TTag::FlowIstlSolverParams> {
     static constexpr bool value = false;
@@ -113,7 +116,10 @@ template<class TypeTag>
 struct PreconditionerAddWellContributions<TypeTag, TTag::FlowIstlSolverParams> {
     static constexpr bool value = false;
 };
-SET_STRING_PROP(FlowIstlSolverParams, SystemStrategy, "none");
+template<class TypeTag>
+struct SystemStrategy<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr auto value = "none";
+};
 template<class TypeTag>
 struct ScaleLinearSystem<TypeTag, TTag::FlowIstlSolverParams> {
     static constexpr bool value = false;
@@ -126,9 +132,18 @@ struct CprUseDrs<TypeTag, TTag::FlowIstlSolverParams> {
 SET_INT_PROP(FlowIstlSolverParams, CprMaxEllIter, 20);
 SET_INT_PROP(FlowIstlSolverParams, CprEllSolvetype, 0);
 SET_INT_PROP(FlowIstlSolverParams, CprReuseSetup, 3);
-SET_STRING_PROP(FlowIstlSolverParams, LinearSolverConfiguration, "ilu0");
-SET_STRING_PROP(FlowIstlSolverParams, LinearSolverConfigurationJsonFile, "none");
-SET_STRING_PROP(FlowIstlSolverParams, GpuMode, "none");
+template<class TypeTag>
+struct LinearSolverConfiguration<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr auto value = "ilu0";
+};
+template<class TypeTag>
+struct LinearSolverConfigurationJsonFile<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr auto value = "none";
+};
+template<class TypeTag>
+struct GpuMode<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr auto value = "none";
+};
 SET_INT_PROP(FlowIstlSolverParams, BdaDeviceId, 0);
 SET_INT_PROP(FlowIstlSolverParams, OpenclPlatformId, 0);
 

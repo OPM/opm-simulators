@@ -349,7 +349,10 @@ struct EclOutputDoublePrecision<TypeTag, TTag::EclBaseProblem> {
 };
 
 // The default location for the ECL output files
-SET_STRING_PROP(EclBaseProblem, OutputDir, ".");
+template<class TypeTag>
+struct OutputDir<TypeTag, TTag::EclBaseProblem> {
+    static constexpr auto value = ".";
+};
 
 // the cache for intensive quantities can be used for ECL problems and also yields a
 // decent speedup...
@@ -443,7 +446,10 @@ struct EclEnableTuning<TypeTag, TTag::EclBaseProblem> {
     static constexpr bool value = false;
 };
 
-SET_STRING_PROP(EclBaseProblem, OutputMode, "all");
+template<class TypeTag>
+struct OutputMode<TypeTag, TTag::EclBaseProblem> {
+    static constexpr auto value = "all";
+};
 
 } // namespace Opm::Properties
 

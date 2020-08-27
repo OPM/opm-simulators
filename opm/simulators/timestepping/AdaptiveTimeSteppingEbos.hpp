@@ -57,13 +57,19 @@ struct FullTimeStepInitially<TypeTag, TTag::FlowTimeSteppingParameters> {
     static constexpr bool value = false;
 };
 SET_SCALAR_PROP(FlowTimeSteppingParameters, TimeStepAfterEventInDays, -1.0);
-SET_STRING_PROP(FlowTimeSteppingParameters, TimeStepControl, "pid");
+template<class TypeTag>
+struct TimeStepControl<TypeTag, TTag::FlowTimeSteppingParameters> {
+    static constexpr auto value = "pid";
+};
 SET_SCALAR_PROP(FlowTimeSteppingParameters, TimeStepControlTolerance, 1e-1);
 SET_INT_PROP(FlowTimeSteppingParameters, TimeStepControlTargetIterations, 30);
 SET_INT_PROP(FlowTimeSteppingParameters, TimeStepControlTargetNewtonIterations, 8);
 SET_SCALAR_PROP(FlowTimeSteppingParameters, TimeStepControlDecayRate, 0.75);
 SET_SCALAR_PROP(FlowTimeSteppingParameters, TimeStepControlGrowthRate, 1.25);
-SET_STRING_PROP(FlowTimeSteppingParameters, TimeStepControlFileName, "timesteps");
+template<class TypeTag>
+struct TimeStepControlFileName<TypeTag, TTag::FlowTimeSteppingParameters> {
+    static constexpr auto value = "timesteps";
+};
 SET_SCALAR_PROP(FlowTimeSteppingParameters, MinTimeStepBeforeShuttingProblematicWellsInDays, 0.001);
 
 } // namespace Opm::Properties

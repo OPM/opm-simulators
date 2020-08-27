@@ -82,8 +82,14 @@ NEW_PROP_TAG(IgnoreKeywords);
 NEW_PROP_TAG(EdgeWeightsMethod);
 NEW_PROP_TAG(OwnerCellsFirst);
 
-SET_STRING_PROP(EclBaseVanguard, IgnoreKeywords, "");
-SET_STRING_PROP(EclBaseVanguard, EclDeckFileName, "");
+template<class TypeTag>
+struct IgnoreKeywords<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr auto value = "";
+};
+template<class TypeTag>
+struct EclDeckFileName<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr auto value = "";
+};
 SET_INT_PROP(EclBaseVanguard, EclOutputInterval, -1); // use the deck-provided value
 template<class TypeTag>
 struct EnableOpmRstFile<TypeTag, TTag::EclBaseVanguard> {

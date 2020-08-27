@@ -51,8 +51,14 @@ namespace Opm {
     SET_INT_PROP(EclFlowProblemSimple, CprEllSolvetype, 3);
     SET_INT_PROP(EclFlowProblemSimple, CprReuseSetup, 3);
     SET_INT_PROP(EclFlowProblemSimple, CprSolverVerbose, 0);
-    SET_STRING_PROP(EclFlowProblemSimple, LinearSolverConfiguration, "ilu0");
-    SET_STRING_PROP(EclFlowProblemSimple, SystemStrategy, "quasiimpes");
+    template<class TypeTag>
+    struct LinearSolverConfiguration<TypeTag, TTag::EclFlowProblemSimple> {
+        static constexpr auto value = "ilu0";
+    };
+    template<class TypeTag>
+    struct SystemStrategy<TypeTag, TTag::EclFlowProblemSimple> {
+        static constexpr auto value = "quasiimpes";
+    };
 
     SET_PROP(EclFlowProblemSimple, FluidSystem)
     {

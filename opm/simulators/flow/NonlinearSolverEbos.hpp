@@ -48,7 +48,10 @@ NEW_PROP_TAG(NewtonRelaxationType);
 SET_SCALAR_PROP(FlowNonLinearSolver, NewtonMaxRelax, 0.5);
 SET_INT_PROP(FlowNonLinearSolver, FlowNewtonMaxIterations, 20);
 SET_INT_PROP(FlowNonLinearSolver, FlowNewtonMinIterations, 1);
-SET_STRING_PROP(FlowNonLinearSolver, NewtonRelaxationType, "dampen");
+template<class TypeTag>
+struct NewtonRelaxationType<TypeTag, TTag::FlowNonLinearSolver> {
+    static constexpr auto value = "dampen";
+};
 
 } // namespace Opm::Properties
 

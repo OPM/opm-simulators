@@ -77,7 +77,10 @@ struct EclFlowProblem {
                                     FlowNonLinearSolver, EclBaseProblem, BlackOilModel>;
 };
 }
-SET_STRING_PROP(EclFlowProblem, OutputDir, "");
+template<class TypeTag>
+struct OutputDir<TypeTag, TTag::EclFlowProblem> {
+    static constexpr auto value = "";
+};
 template<class TypeTag>
 struct EnableDebuggingChecks<TypeTag, TTag::EclFlowProblem> {
     static constexpr bool value = false;
