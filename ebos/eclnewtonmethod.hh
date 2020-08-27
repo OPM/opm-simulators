@@ -37,11 +37,26 @@
 
 namespace Opm::Properties {
 
-NEW_PROP_TAG(EclNewtonSumTolerance);
-NEW_PROP_TAG(EclNewtonStrictIterations);
-NEW_PROP_TAG(EclNewtonRelaxedVolumeFraction);
-NEW_PROP_TAG(EclNewtonSumToleranceExponent);
-NEW_PROP_TAG(EclNewtonRelaxedTolerance);
+template<class TypeTag, class MyTypeTag>
+struct EclNewtonSumTolerance {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EclNewtonStrictIterations {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EclNewtonRelaxedVolumeFraction {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EclNewtonSumToleranceExponent {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EclNewtonRelaxedTolerance {
+    using type = UndefinedProperty;
+};
 
 } // namespace Opm::Properties
 

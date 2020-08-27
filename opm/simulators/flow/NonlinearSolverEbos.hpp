@@ -40,10 +40,22 @@ namespace TTag {
 struct FlowNonLinearSolver {};
 }
 
-NEW_PROP_TAG(NewtonMaxRelax);
-NEW_PROP_TAG(FlowNewtonMaxIterations);
-NEW_PROP_TAG(FlowNewtonMinIterations);
-NEW_PROP_TAG(NewtonRelaxationType);
+template<class TypeTag, class MyTypeTag>
+struct NewtonMaxRelax {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct FlowNewtonMaxIterations {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct FlowNewtonMinIterations{
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct NewtonRelaxationType{
+    using type = UndefinedProperty;
+};
 
 template<class TypeTag>
 struct NewtonMaxRelax<TypeTag, TTag::FlowNonLinearSolver> {

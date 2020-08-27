@@ -50,9 +50,18 @@
 
 namespace Opm::Properties {
 
-NEW_PROP_TAG(EnableDryRun);
-NEW_PROP_TAG(OutputInterval);
-NEW_PROP_TAG(EnableLoggingFalloutWarning);
+template<class TypeTag, class MyTypeTag>
+struct EnableDryRun {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct OutputInterval {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EnableLoggingFalloutWarning {
+    using type = UndefinedProperty;
+};
 
 // TODO: enumeration parameters. we use strings for now.
 template<class TypeTag>

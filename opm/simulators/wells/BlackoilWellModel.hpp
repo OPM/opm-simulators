@@ -63,7 +63,10 @@
 
 namespace Opm::Properties {
 
-NEW_PROP_TAG(EnableTerminalOutput);
+template<class TypeTag, class MyTypeTag>
+struct EnableTerminalOutput {
+    using type = UndefinedProperty;
+};
 
 } // namespace Opm::Properties
 

@@ -135,43 +135,82 @@ struct EclBaseProblem {
 }
 
 // The class which deals with ECL wells
-NEW_PROP_TAG(EclWellModel);
+template<class TypeTag, class MyTypeTag>
+struct EclWellModel {
+    using type = UndefinedProperty;
+};
 
 // Write all solutions for visualization, not just the ones for the
 // report steps...
-NEW_PROP_TAG(EnableWriteAllSolutions);
+template<class TypeTag, class MyTypeTag>
+struct EnableWriteAllSolutions {
+    using type = UndefinedProperty;
+};
 
 // The number of time steps skipped between writing two consequtive restart files
-NEW_PROP_TAG(RestartWritingInterval);
+template<class TypeTag, class MyTypeTag>
+struct RestartWritingInterval {
+    using type = UndefinedProperty;
+};
 
 // Enable partial compensation of systematic mass losses via the source term of the next time
 // step
-NEW_PROP_TAG(EclEnableDriftCompensation);
+template<class TypeTag, class MyTypeTag>
+struct EclEnableDriftCompensation {
+    using type = UndefinedProperty;
+};
 
 // Enable the additional checks even if compiled in debug mode (i.e., with the NDEBUG
 // macro undefined). Next to a slightly better performance, this also eliminates some
 // print statements in debug mode.
-NEW_PROP_TAG(EnableDebuggingChecks);
+template<class TypeTag, class MyTypeTag>
+struct EnableDebuggingChecks {
+    using type = UndefinedProperty;
+};
 
 // if thermal flux boundaries are enabled an effort is made to preserve the initial
 // thermal gradient specified via the TEMPVD keyword
-NEW_PROP_TAG(EnableThermalFluxBoundaries);
+template<class TypeTag, class MyTypeTag>
+struct EnableThermalFluxBoundaries {
+    using type = UndefinedProperty;
+};
 
 // Specify whether API tracking should be enabled (replaces PVT regions).
 // TODO: This is not yet implemented
-NEW_PROP_TAG(EnableApiTracking);
+template<class TypeTag, class MyTypeTag>
+struct EnableApiTracking {
+    using type = UndefinedProperty;
+};
 
 // The class which deals with ECL aquifers
-NEW_PROP_TAG(EclAquiferModel);
+template<class TypeTag, class MyTypeTag>
+struct EclAquiferModel {
+    using type = UndefinedProperty;
+};
 
 // In experimental mode, decides if the aquifer model should be enabled or not
-NEW_PROP_TAG(EclEnableAquifers);
+template<class TypeTag, class MyTypeTag>
+struct EclEnableAquifers {
+    using type = UndefinedProperty;
+};
 
 // time stepping parameters
-NEW_PROP_TAG(EclMaxTimeStepSizeAfterWellEvent);
-NEW_PROP_TAG(EclRestartShrinkFactor);
-NEW_PROP_TAG(EclEnableTuning);
-NEW_PROP_TAG(OutputMode);
+template<class TypeTag, class MyTypeTag>
+struct EclMaxTimeStepSizeAfterWellEvent {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EclRestartShrinkFactor {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EclEnableTuning {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct OutputMode {
+    using type = UndefinedProperty;
+};
 
 // Set the problem property
 SET_TYPE_PROP(EclBaseProblem, Problem, Opm::EclProblem<TypeTag>);

@@ -44,7 +44,10 @@
 
 namespace Opm::Properties {
 
-NEW_PROP_TAG(EnableTracerModel);
+template<class TypeTag, class MyTypeTag>
+struct EnableTracerModel {
+    using type = UndefinedProperty;
+};
 
 } // namespace Opm::Properties
 

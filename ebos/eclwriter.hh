@@ -68,9 +68,18 @@
 
 namespace Opm::Properties {
 
-NEW_PROP_TAG(EnableEclOutput);
-NEW_PROP_TAG(EnableAsyncEclOutput);
-NEW_PROP_TAG(EclOutputDoublePrecision);
+template<class TypeTag, class MyTypeTag>
+struct EnableEclOutput {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EnableAsyncEclOutput {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EclOutputDoublePrecision {
+    using type = UndefinedProperty;
+};
 
 } // namespace Opm::Properties
 

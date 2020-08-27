@@ -36,8 +36,14 @@
 
 namespace Opm::Properties {
 
-NEW_PROP_TAG(EnableAdaptiveTimeStepping);
-NEW_PROP_TAG(EnableTuning);
+template<class TypeTag, class MyTypeTag>
+struct EnableAdaptiveTimeStepping {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EnableTuning {
+    using type = UndefinedProperty;
+};
 
 template<class TypeTag>
 struct EnableTerminalOutput<TypeTag, TTag::EclFlowProblem> {

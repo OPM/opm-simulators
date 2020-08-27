@@ -45,33 +45,114 @@ namespace TTag {
 struct FlowIstlSolverParams {};
 }
 
-NEW_PROP_TAG(LinearSolverReduction);
-NEW_PROP_TAG(IluRelaxation);
-NEW_PROP_TAG(LinearSolverMaxIter);
-NEW_PROP_TAG(LinearSolverRestart);
-NEW_PROP_TAG(FlowLinearSolverVerbosity);
-NEW_PROP_TAG(IluFillinLevel);
-NEW_PROP_TAG(MiluVariant);
-NEW_PROP_TAG(IluRedblack);
-NEW_PROP_TAG(IluReorderSpheres);
-NEW_PROP_TAG(UseGmres);
-NEW_PROP_TAG(LinearSolverRequireFullSparsityPattern);
-NEW_PROP_TAG(LinearSolverIgnoreConvergenceFailure);
-NEW_PROP_TAG(UseAmg);
-NEW_PROP_TAG(UseCpr);
-NEW_PROP_TAG(PreconditionerAddWellContributions);
-NEW_PROP_TAG(SystemStrategy);
-NEW_PROP_TAG(ScaleLinearSystem);
-NEW_PROP_TAG(CprSolverVerbose);
-NEW_PROP_TAG(CprUseDrs);
-NEW_PROP_TAG(CprMaxEllIter);
-NEW_PROP_TAG(CprEllSolvetype);
-NEW_PROP_TAG(CprReuseSetup);
-NEW_PROP_TAG(LinearSolverConfiguration);
-NEW_PROP_TAG(LinearSolverConfigurationJsonFile);
-NEW_PROP_TAG(GpuMode);
-NEW_PROP_TAG(BdaDeviceId);
-NEW_PROP_TAG(OpenclPlatformId);
+template<class TypeTag, class MyTypeTag>
+struct LinearSolverReduction {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct IluRelaxation {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct LinearSolverMaxIter {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct LinearSolverRestart {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct FlowLinearSolverVerbosity {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct IluFillinLevel {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct MiluVariant {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct IluRedblack {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct IluReorderSpheres {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct UseGmres {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct LinearSolverRequireFullSparsityPattern {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct LinearSolverIgnoreConvergenceFailure{
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct UseAmg {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct UseCpr {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct PreconditionerAddWellContributions {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct SystemStrategy {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct ScaleLinearSystem {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct CprSolverVerbose {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct CprUseDrs {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct CprMaxEllIter {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct CprEllSolvetype {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct CprReuseSetup {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct LinearSolverConfiguration {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct LinearSolverConfigurationJsonFile {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct GpuMode {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct BdaDeviceId {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct OpenclPlatformId {
+    using type = UndefinedProperty;
+};
 
 template<class TypeTag>
 struct LinearSolverReduction<TypeTag, TTag::FlowIstlSolverParams> {

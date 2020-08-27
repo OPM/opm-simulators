@@ -23,25 +23,82 @@ namespace TTag {
 struct FlowTimeSteppingParameters {};
 }
 
-NEW_PROP_TAG(SolverRestartFactor);
-NEW_PROP_TAG(SolverGrowthFactor);
-NEW_PROP_TAG(SolverMaxGrowth);
-NEW_PROP_TAG(SolverMaxTimeStepInDays);
-NEW_PROP_TAG(SolverMinTimeStep);
-NEW_PROP_TAG(SolverMaxRestarts);
-NEW_PROP_TAG(SolverVerbosity);
-NEW_PROP_TAG(TimeStepVerbosity);
-NEW_PROP_TAG(InitialTimeStepInDays);
-NEW_PROP_TAG(FullTimeStepInitially);
-NEW_PROP_TAG(TimeStepAfterEventInDays);
-NEW_PROP_TAG(TimeStepControl);
-NEW_PROP_TAG(TimeStepControlTolerance);
-NEW_PROP_TAG(TimeStepControlTargetIterations);
-NEW_PROP_TAG(TimeStepControlTargetNewtonIterations);
-NEW_PROP_TAG(TimeStepControlDecayRate);
-NEW_PROP_TAG(TimeStepControlGrowthRate);
-NEW_PROP_TAG(TimeStepControlFileName);
-NEW_PROP_TAG(MinTimeStepBeforeShuttingProblematicWellsInDays);
+template<class TypeTag, class MyTypeTag>
+struct SolverRestartFactor {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct SolverGrowthFactor {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct SolverMaxGrowth {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct SolverMaxTimeStepInDays {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct SolverMinTimeStep {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct SolverMaxRestarts {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct SolverVerbosity {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct TimeStepVerbosity {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct InitialTimeStepInDays {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct FullTimeStepInitially {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct TimeStepAfterEventInDays {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct TimeStepControl {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct TimeStepControlTolerance {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct TimeStepControlTargetIterations {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct TimeStepControlTargetNewtonIterations {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct TimeStepControlDecayRate {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct TimeStepControlGrowthRate {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct TimeStepControlFileName {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct MinTimeStepBeforeShuttingProblematicWellsInDays {
+    using type = UndefinedProperty;
+};
 
 template<class TypeTag>
 struct SolverRestartFactor<TypeTag, TTag::FlowTimeSteppingParameters> {

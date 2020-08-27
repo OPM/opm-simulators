@@ -48,7 +48,10 @@ struct VtkEclTracer {};
 }
 
 // create the property tags needed for the tracer model
-NEW_PROP_TAG(VtkWriteEclTracerConcentration);
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteEclTracerConcentration {
+    using type = UndefinedProperty;
+};
 
 // set default values for what quantities to output
 template<class TypeTag>

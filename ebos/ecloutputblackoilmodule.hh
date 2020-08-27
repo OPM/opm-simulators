@@ -51,7 +51,10 @@ namespace TTag {
 struct EclOutputBlackOil {};
 }
 
-NEW_PROP_TAG(ForceDisableFluidInPlaceOutput);
+template<class TypeTag, class MyTypeTag>
+struct ForceDisableFluidInPlaceOutput {
+    using type = UndefinedProperty;
+};
 
 template<class TypeTag>
 struct ForceDisableFluidInPlaceOutput<TypeTag, TTag::EclOutputBlackOil> {

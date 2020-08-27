@@ -31,36 +31,120 @@ namespace TTag {
 struct FlowModelParameters {};
 }
 
-NEW_PROP_TAG(DbhpMaxRel);
-NEW_PROP_TAG(DwellFractionMax);
-NEW_PROP_TAG(MaxResidualAllowed);
-NEW_PROP_TAG(RelaxedMaxPvFraction);
-NEW_PROP_TAG(ToleranceMb);
-NEW_PROP_TAG(ToleranceCnv);
-NEW_PROP_TAG(ToleranceCnvRelaxed);
-NEW_PROP_TAG(ToleranceWells);
-NEW_PROP_TAG(ToleranceWellControl);
-NEW_PROP_TAG(MaxWelleqIter);
-NEW_PROP_TAG(UseMultisegmentWell);
-NEW_PROP_TAG(MaxSinglePrecisionDays);
-NEW_PROP_TAG(MaxStrictIter);
-NEW_PROP_TAG(SolveWelleqInitially);
-NEW_PROP_TAG(UpdateEquationsScaling);
-NEW_PROP_TAG(UseUpdateStabilization);
-NEW_PROP_TAG(MatrixAddWellContributions);
-NEW_PROP_TAG(EnableWellOperabilityCheck);
+template<class TypeTag, class MyTypeTag>
+struct DbhpMaxRel {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct DwellFractionMax {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct MaxResidualAllowed {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct RelaxedMaxPvFraction {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct ToleranceMb {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct ToleranceCnv {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct ToleranceCnvRelaxed {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct ToleranceWells {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct ToleranceWellControl {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct MaxWelleqIter {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct UseMultisegmentWell {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct MaxSinglePrecisionDays {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct MaxStrictIter {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct SolveWelleqInitially {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct UpdateEquationsScaling {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct UseUpdateStabilization {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct MatrixAddWellContributions {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EnableWellOperabilityCheck {
+    using type = UndefinedProperty;
+};
 
 // parameters for multisegment wells
-NEW_PROP_TAG(TolerancePressureMsWells);
-NEW_PROP_TAG(MaxPressureChangeMsWells);
-NEW_PROP_TAG(UseInnerIterationsMsWells);
-NEW_PROP_TAG(MaxInnerIterMsWells);
-NEW_PROP_TAG(StrictInnerIterMsWells);
-NEW_PROP_TAG(RelaxedFlowTolInnerIterMsw);
-NEW_PROP_TAG(RelaxedPressureTolInnerIterMsw);
-NEW_PROP_TAG(RegularizationFactorMsw);
-NEW_PROP_TAG(UseInnerIterationsWells);
-NEW_PROP_TAG(MaxInnerIterWells);
+template<class TypeTag, class MyTypeTag>
+struct TolerancePressureMsWells {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct MaxPressureChangeMsWells {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct UseInnerIterationsMsWells {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct MaxInnerIterMsWells {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct StrictInnerIterMsWells {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct RelaxedFlowTolInnerIterMsw {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct RelaxedPressureTolInnerIterMsw {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct RegularizationFactorMsw {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct UseInnerIterationsWells {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct MaxInnerIterWells {
+    using type = UndefinedProperty;
+};
 
 template<class TypeTag>
 struct DbhpMaxRel<TypeTag, TTag::FlowModelParameters> {

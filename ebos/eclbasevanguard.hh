@@ -72,15 +72,42 @@ struct EclBaseVanguard {};
 }
 
 // declare the properties required by the for the ecl simulator vanguard
-NEW_PROP_TAG(EquilGrid);
-NEW_PROP_TAG(EclDeckFileName);
-NEW_PROP_TAG(EnableOpmRstFile);
-NEW_PROP_TAG(EclStrictParsing);
-NEW_PROP_TAG(SchedRestart);
-NEW_PROP_TAG(EclOutputInterval);
-NEW_PROP_TAG(IgnoreKeywords);
-NEW_PROP_TAG(EdgeWeightsMethod);
-NEW_PROP_TAG(OwnerCellsFirst);
+template<class TypeTag, class MyTypeTag>
+struct EquilGrid {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EclDeckFileName {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EnableOpmRstFile {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EclStrictParsing {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct SchedRestart {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EclOutputInterval {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct IgnoreKeywords {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EdgeWeightsMethod {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct OwnerCellsFirst {
+    using type = UndefinedProperty;
+};
 
 template<class TypeTag>
 struct IgnoreKeywords<TypeTag, TTag::EclBaseVanguard> {
