@@ -62,15 +62,51 @@ NEW_PROP_TAG(RegularizationFactorMsw);
 NEW_PROP_TAG(UseInnerIterationsWells);
 NEW_PROP_TAG(MaxInnerIterWells);
 
-SET_SCALAR_PROP(FlowModelParameters, DbhpMaxRel, 1.0);
-SET_SCALAR_PROP(FlowModelParameters, DwellFractionMax, 0.2);
-SET_SCALAR_PROP(FlowModelParameters, MaxResidualAllowed, 1e7);
-SET_SCALAR_PROP(FlowModelParameters, RelaxedMaxPvFraction, 1.0);
-SET_SCALAR_PROP(FlowModelParameters, ToleranceMb, 1e-6);
-SET_SCALAR_PROP(FlowModelParameters, ToleranceCnv,1e-2);
-SET_SCALAR_PROP(FlowModelParameters, ToleranceCnvRelaxed, 1e9);
-SET_SCALAR_PROP(FlowModelParameters, ToleranceWells, 1e-4);
-SET_SCALAR_PROP(FlowModelParameters, ToleranceWellControl, 1e-7);
+template<class TypeTag>
+struct DbhpMaxRel<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.0;
+};
+template<class TypeTag>
+struct DwellFractionMax<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.2;
+};
+template<class TypeTag>
+struct MaxResidualAllowed<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e7;
+};
+template<class TypeTag>
+struct RelaxedMaxPvFraction<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.0;
+};
+template<class TypeTag>
+struct ToleranceMb<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-6;
+};
+template<class TypeTag>
+struct ToleranceCnv<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-2;
+};
+template<class TypeTag>
+struct ToleranceCnvRelaxed<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e9;
+};
+template<class TypeTag>
+struct ToleranceWells<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-4;
+};
+template<class TypeTag>
+struct ToleranceWellControl<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-7;
+};
 template<class TypeTag>
 struct MaxWelleqIter<TypeTag, TTag::FlowModelParameters> {
     static constexpr int value = 30;
@@ -79,7 +115,11 @@ template<class TypeTag>
 struct UseMultisegmentWell<TypeTag, TTag::FlowModelParameters> {
     static constexpr bool value = true;
 };
-SET_SCALAR_PROP(FlowModelParameters, MaxSinglePrecisionDays, 20.0);
+template<class TypeTag>
+struct MaxSinglePrecisionDays<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 20.0;
+};
 template<class TypeTag>
 struct MaxStrictIter<TypeTag, TTag::FlowModelParameters> {
     static constexpr int value = 8;
@@ -100,8 +140,16 @@ template<class TypeTag>
 struct MatrixAddWellContributions<TypeTag, TTag::FlowModelParameters> {
     static constexpr bool value = false;
 };
-SET_SCALAR_PROP(FlowModelParameters, TolerancePressureMsWells, 0.01*1e5);
-SET_SCALAR_PROP(FlowModelParameters, MaxPressureChangeMsWells, 10*1e5);
+template<class TypeTag>
+struct TolerancePressureMsWells<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.01*1e5;
+};
+template<class TypeTag>
+struct MaxPressureChangeMsWells<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 10*1e5;
+};
 template<class TypeTag>
 struct UseInnerIterationsMsWells<TypeTag, TTag::FlowModelParameters> {
     static constexpr bool value = true;
@@ -122,14 +170,25 @@ template<class TypeTag>
 struct StrictInnerIterMsWells<TypeTag, TTag::FlowModelParameters> {
     static constexpr int value = 40;
 };
-SET_SCALAR_PROP(FlowModelParameters, RegularizationFactorMsw, 1);
+template<class TypeTag>
+struct RegularizationFactorMsw<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1;
+};
 template<class TypeTag>
 struct EnableWellOperabilityCheck<TypeTag, TTag::FlowModelParameters> {
     static constexpr bool value = true;
 };
-
-SET_SCALAR_PROP(FlowModelParameters, RelaxedFlowTolInnerIterMsw, 1);
-SET_SCALAR_PROP(FlowModelParameters, RelaxedPressureTolInnerIterMsw, 0.5e5);
+template<class TypeTag>
+struct RelaxedFlowTolInnerIterMsw<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1;
+};
+template<class TypeTag>
+struct RelaxedPressureTolInnerIterMsw<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.5e5;
+};
 
 // if openMP is available, determine the number threads per process automatically.
 #if _OPENMP

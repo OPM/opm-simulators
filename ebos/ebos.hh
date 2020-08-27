@@ -101,19 +101,35 @@ SET_TYPE_PROP(EbosTypeTag, EclAquiferModel, Opm::BlackoilAquiferModel<TypeTag>);
 SET_TAG_PROP(EbosTypeTag, LinearSolverSplice, FlowIstlSolver);
 
 // the default for the allowed volumetric error for oil per second
-SET_SCALAR_PROP(EbosTypeTag, NewtonTolerance, 1e-1);
+template<class TypeTag>
+struct NewtonTolerance<TypeTag, TTag::EbosTypeTag> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-1;
+};
 
 // set fraction of the pore volume where the volumetric residual may be violated during
 // strict Newton iterations
-SET_SCALAR_PROP(EbosTypeTag, EclNewtonRelaxedVolumeFraction, 0.05);
+template<class TypeTag>
+struct EclNewtonRelaxedVolumeFraction<TypeTag, TTag::EbosTypeTag> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.05;
+};
 
 // the maximum volumetric error of a cell in the relaxed region
-SET_SCALAR_PROP(EbosTypeTag, EclNewtonRelaxedTolerance, 1e6*getPropValue<TypeTag, Properties::NewtonTolerance>());
+template<class TypeTag>
+struct EclNewtonRelaxedTolerance<TypeTag, TTag::EbosTypeTag> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e6*getPropValue<TypeTag, Properties::NewtonTolerance>();
+};
 
 // the tolerated amount of "incorrect" amount of oil per time step for the complete
 // reservoir. this is scaled by the pore volume of the reservoir, i.e., larger reservoirs
 // will tolerate larger residuals.
-SET_SCALAR_PROP(EbosTypeTag, EclNewtonSumTolerance, 1e-5);
+template<class TypeTag>
+struct EclNewtonSumTolerance<TypeTag, TTag::EbosTypeTag> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-5;
+};
 
 // make all Newton iterations strict, i.e., the volumetric Newton tolerance must be
 // always be upheld in the majority of the spatial domain. In this context, "majority"

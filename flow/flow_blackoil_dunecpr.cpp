@@ -40,7 +40,11 @@ namespace Opm {
     struct LinearSolverVerbosity<TypeTag, TTag::EclFlowProblemSimple> {
         static constexpr int value = 0;
     };
-    SET_SCALAR_PROP(EclFlowProblemSimple, LinearSolverReduction, 1e-2);
+    template<class TypeTag>
+    struct LinearSolverReduction<TypeTag, TTag::EclFlowProblemSimple> {
+        using type = GetPropType<TypeTag, Scalar>;
+        static constexpr type value = 1e-2;
+    };
     template<class TypeTag>
     struct LinearSolverMaxIter<TypeTag, TTag::EclFlowProblemSimple> {
         static constexpr int value = 100;

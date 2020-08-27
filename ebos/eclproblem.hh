@@ -276,22 +276,38 @@ struct EnableApiTracking<TypeTag, TTag::EclBaseProblem> {
 // By default, stop it after the universe will probably have stopped
 // to exist. (the ECL problem will finish the simulation explicitly
 // after it simulated the last episode specified in the deck.)
-SET_SCALAR_PROP(EclBaseProblem, EndTime, 1e100);
+template<class TypeTag>
+struct EndTime<TypeTag, TTag::EclBaseProblem> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e100;
+};
 
 // The default for the initial time step size of the simulation [s].
 //
 // The chosen value means that the size of the first time step is the
 // one of the initial episode (if the length of the initial episode is
 // not millions of trillions of years, that is...)
-SET_SCALAR_PROP(EclBaseProblem, InitialTimeStepSize, 3600*24);
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, TTag::EclBaseProblem> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 3600*24;
+};
 
 // the default for the allowed volumetric error for oil per second
-SET_SCALAR_PROP(EclBaseProblem, NewtonTolerance, 1e-2);
+template<class TypeTag>
+struct NewtonTolerance<TypeTag, TTag::EclBaseProblem> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-2;
+};
 
 // the tolerated amount of "incorrect" amount of oil per time step for the complete
 // reservoir. this is scaled by the pore volume of the reservoir, i.e., larger reservoirs
 // will tolerate larger residuals.
-SET_SCALAR_PROP(EclBaseProblem, EclNewtonSumTolerance, 1e-4);
+template<class TypeTag>
+struct EclNewtonSumTolerance<TypeTag, TTag::EclBaseProblem> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-4;
+};
 
 // set the exponent for the volume scaling of the sum tolerance: larger reservoirs can
 // tolerate a higher amount of mass lost per time step than smaller ones! since this is
@@ -299,7 +315,11 @@ SET_SCALAR_PROP(EclBaseProblem, EclNewtonSumTolerance, 1e-4);
 // value specified by the NewtonSumTolerance parameter is the "incorrect" mass per
 // timestep for an reservoir that exhibits 1 m^3 of pore volume. A reservoir with a total
 // pore volume of 10^3 m^3 will tolerate 10 times as much.
-SET_SCALAR_PROP(EclBaseProblem, EclNewtonSumToleranceExponent, 1.0/3.0);
+template<class TypeTag>
+struct EclNewtonSumToleranceExponent<TypeTag, TTag::EclBaseProblem> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.0/3.0;
+};
 
 // set number of Newton iterations where the volumetric residual is considered for
 // convergence
@@ -310,13 +330,25 @@ struct EclNewtonStrictIterations<TypeTag, TTag::EclBaseProblem> {
 
 // set fraction of the pore volume where the volumetric residual may be violated during
 // strict Newton iterations
-SET_SCALAR_PROP(EclBaseProblem, EclNewtonRelaxedVolumeFraction, 0.03);
+template<class TypeTag>
+struct EclNewtonRelaxedVolumeFraction<TypeTag, TTag::EclBaseProblem> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.03;
+};
 
 // the maximum volumetric error of a cell in the relaxed region
-SET_SCALAR_PROP(EclBaseProblem, EclNewtonRelaxedTolerance, 1e9);
+template<class TypeTag>
+struct EclNewtonRelaxedTolerance<TypeTag, TTag::EclBaseProblem> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e9;
+};
 
 // Ignore the maximum error mass for early termination of the newton method.
-SET_SCALAR_PROP(EclBaseProblem, NewtonMaxError, 10e9);
+template<class TypeTag>
+struct NewtonMaxError<TypeTag, TTag::EclBaseProblem> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 10e9;
+};
 
 // set the maximum number of Newton iterations to 14 because the likelyhood that a time
 // step succeeds at more than 14 Newton iteration is rather small
@@ -451,8 +483,16 @@ struct EnableExperiments<TypeTag, TTag::EclBaseProblem> {
 };
 
 // set defaults for the time stepping parameters
-SET_SCALAR_PROP(EclBaseProblem, EclMaxTimeStepSizeAfterWellEvent, 3600*24*365.25);
-SET_SCALAR_PROP(EclBaseProblem, EclRestartShrinkFactor, 3);
+template<class TypeTag>
+struct EclMaxTimeStepSizeAfterWellEvent<TypeTag, TTag::EclBaseProblem> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 3600*24*365.25;
+};
+template<class TypeTag>
+struct EclRestartShrinkFactor<TypeTag, TTag::EclBaseProblem> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 3;
+};
 template<class TypeTag>
 struct EclEnableTuning<TypeTag, TTag::EclBaseProblem> {
     static constexpr bool value = false;

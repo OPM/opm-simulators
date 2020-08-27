@@ -73,8 +73,16 @@ NEW_PROP_TAG(GpuMode);
 NEW_PROP_TAG(BdaDeviceId);
 NEW_PROP_TAG(OpenclPlatformId);
 
-SET_SCALAR_PROP(FlowIstlSolverParams, LinearSolverReduction, 1e-2);
-SET_SCALAR_PROP(FlowIstlSolverParams, IluRelaxation, 0.9);
+template<class TypeTag>
+struct LinearSolverReduction<TypeTag, TTag::FlowIstlSolverParams> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-2;
+};
+template<class TypeTag>
+struct IluRelaxation<TypeTag, TTag::FlowIstlSolverParams> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.9;
+};
 template<class TypeTag>
 struct LinearSolverMaxIter<TypeTag, TTag::FlowIstlSolverParams> {
     static constexpr int value = 200;
