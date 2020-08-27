@@ -46,9 +46,18 @@ struct EclPolyhedralGridVanguard {
 }
 
 // declare the properties
-SET_TYPE_PROP(EclPolyhedralGridVanguard, Vanguard, Opm::EclPolyhedralGridVanguard<TypeTag>);
-SET_TYPE_PROP(EclPolyhedralGridVanguard, Grid, Dune::PolyhedralGrid<3, 3>);
-SET_TYPE_PROP(EclPolyhedralGridVanguard, EquilGrid, GetPropType<TypeTag, Properties::Grid>);
+template<class TypeTag>
+struct Vanguard<TypeTag, TTag::EclPolyhedralGridVanguard> {
+    using type = Opm::EclPolyhedralGridVanguard<TypeTag>;
+};
+template<class TypeTag>
+struct Grid<TypeTag, TTag::EclPolyhedralGridVanguard> {
+    using type = Dune::PolyhedralGrid<3, 3>;
+};
+template<class TypeTag>
+struct EquilGrid<TypeTag, TTag::EclPolyhedralGridVanguard> {
+    using type = GetPropType<TypeTag, Properties::Grid>;
+};
 
 } // namespace Opm::Properties
 

@@ -95,7 +95,10 @@ struct UseVolumetricResidual<TypeTag, TTag::EclFlowProblem> {
     static constexpr bool value = false;
 };
 
-SET_TYPE_PROP(EclFlowProblem, EclAquiferModel, Opm::BlackoilAquiferModel<TypeTag>);
+template<class TypeTag>
+struct EclAquiferModel<TypeTag, TTag::EclFlowProblem> {
+    using type = Opm::BlackoilAquiferModel<TypeTag>;
+};
 
 // disable all extensions supported by black oil model. this should not really be
 // necessary but it makes things a bit more explicit
@@ -124,7 +127,10 @@ struct EnableBrine<TypeTag, TTag::EclFlowProblem> {
     static constexpr bool value = false;
 };
 
-SET_TYPE_PROP(EclFlowProblem, EclWellModel, Opm::BlackoilWellModel<TypeTag>);
+template<class TypeTag>
+struct EclWellModel<TypeTag, TTag::EclFlowProblem> {
+    using type = Opm::BlackoilWellModel<TypeTag>;
+};
 SET_TAG_PROP(EclFlowProblem, LinearSolverSplice, FlowIstlSolver);
 
 } // namespace Opm::Properties

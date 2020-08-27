@@ -50,7 +50,10 @@ struct EbosTypeTag {
 }
 
 // Set the problem class
-SET_TYPE_PROP(EbosTypeTag, Problem, Opm::EbosProblem<TypeTag>);
+template<class TypeTag>
+struct Problem<TypeTag, TTag::EbosTypeTag> {
+    using type = Opm::EbosProblem<TypeTag>;
+};
 
 // Enable experimental features for ebos: ebos is the research simulator of the OPM
 // project. If you're looking for a more stable "production quality" simulator, consider
@@ -61,7 +64,10 @@ struct EnableExperiments<TypeTag, TTag::EbosTypeTag> {
 };
 
 // use flow's well model for now
-SET_TYPE_PROP(EbosTypeTag, EclWellModel, Opm::BlackoilWellModel<TypeTag>);
+template<class TypeTag>
+struct EclWellModel<TypeTag, TTag::EbosTypeTag> {
+    using type = Opm::BlackoilWellModel<TypeTag>;
+};
 
 // currently, ebos uses the non-multisegment well model by default to avoid
 // regressions. the --use-multisegment-well=true|false command line parameter is still
@@ -95,7 +101,10 @@ struct UseVolumetricResidual<TypeTag, TTag::EbosTypeTag> {
 };
 
 // by default use flow's aquifer model for now
-SET_TYPE_PROP(EbosTypeTag, EclAquiferModel, Opm::BlackoilAquiferModel<TypeTag>);
+template<class TypeTag>
+struct EclAquiferModel<TypeTag, TTag::EbosTypeTag> {
+    using type = Opm::BlackoilAquiferModel<TypeTag>;
+};
 
 // use flow's linear solver backend for now
 SET_TAG_PROP(EbosTypeTag, LinearSolverSplice, FlowIstlSolver);

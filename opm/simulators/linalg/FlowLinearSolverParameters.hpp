@@ -212,7 +212,10 @@ template<class TypeTag>
 struct UseCpr<TypeTag, TTag::FlowIstlSolverParams> {
     static constexpr bool value = false;
 };
-SET_TYPE_PROP(FlowIstlSolverParams, LinearSolverBackend, Opm::ISTLSolverEbos<TypeTag>);
+template<class TypeTag>
+struct LinearSolverBackend<TypeTag, TTag::FlowIstlSolverParams> {
+    using type = Opm::ISTLSolverEbos<TypeTag>;
+};
 template<class TypeTag>
 struct PreconditionerAddWellContributions<TypeTag, TTag::FlowIstlSolverParams> {
     static constexpr bool value = false;

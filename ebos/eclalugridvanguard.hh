@@ -49,9 +49,18 @@ struct EclAluGridVanguard {
 }
 
 // declare the properties
-SET_TYPE_PROP(EclAluGridVanguard, Vanguard, Opm::EclAluGridVanguard<TypeTag>);
-SET_TYPE_PROP(EclAluGridVanguard, Grid,  Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming>);
-SET_TYPE_PROP(EclAluGridVanguard, EquilGrid, Dune::CpGrid);
+template<class TypeTag>
+struct Vanguard<TypeTag, TTag::EclAluGridVanguard> {
+    using type = Opm::EclAluGridVanguard<TypeTag>;
+};
+template<class TypeTag>
+struct Grid<TypeTag, TTag::EclAluGridVanguard> {
+    using type = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming>;
+};
+template<class TypeTag>
+struct EquilGrid<TypeTag, TTag::EclAluGridVanguard> {
+    using type = Dune::CpGrid;
+};
 
 } // namespace Opm::Properties
 

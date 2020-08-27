@@ -213,7 +213,10 @@ struct OutputMode {
 };
 
 // Set the problem property
-SET_TYPE_PROP(EclBaseProblem, Problem, Opm::EclProblem<TypeTag>);
+template<class TypeTag>
+struct Problem<TypeTag, TTag::EclBaseProblem> {
+    using type = Opm::EclProblem<TypeTag>;
+};
 
 // Select the element centered finite volume method as spatial discretization
 SET_TAG_PROP(EclBaseProblem, SpatialDiscretizationSplice, EcfvDiscretization);
@@ -285,10 +288,16 @@ public:
 };
 
 // by default use the dummy aquifer "model"
-SET_TYPE_PROP(EclBaseProblem, EclAquiferModel, Opm::EclBaseAquiferModel<TypeTag>);
+template<class TypeTag>
+struct EclAquiferModel<TypeTag, TTag::EclBaseProblem> {
+    using type = Opm::EclBaseAquiferModel<TypeTag>;
+};
 
 // use the built-in proof of concept well model by default
-SET_TYPE_PROP(EclBaseProblem, EclWellModel, EclWellManager<TypeTag>);
+template<class TypeTag>
+struct EclWellModel<TypeTag, TTag::EclBaseProblem> {
+    using type = EclWellManager<TypeTag>;
+};
 
 // Enable aquifers by default in experimental mode
 template<class TypeTag>
@@ -452,14 +461,23 @@ struct EnableStorageCache<TypeTag, TTag::EclBaseProblem> {
 };
 
 // Use the "velocity module" which uses the Eclipse "NEWTRAN" transmissibilities
-SET_TYPE_PROP(EclBaseProblem, FluxModule, Opm::EclTransFluxModule<TypeTag>);
+template<class TypeTag>
+struct FluxModule<TypeTag, TTag::EclBaseProblem> {
+    using type = Opm::EclTransFluxModule<TypeTag>;
+};
 
 // Use the dummy gradient calculator in order not to do unnecessary work.
-SET_TYPE_PROP(EclBaseProblem, GradientCalculator, Opm::EclDummyGradientCalculator<TypeTag>);
+template<class TypeTag>
+struct GradientCalculator<TypeTag, TTag::EclBaseProblem> {
+    using type = Opm::EclDummyGradientCalculator<TypeTag>;
+};
 
 // Use a custom Newton-Raphson method class for ebos in order to attain more
 // sophisticated update and error computation mechanisms
-SET_TYPE_PROP(EclBaseProblem, NewtonMethod, Opm::EclNewtonMethod<TypeTag>);
+template<class TypeTag>
+struct NewtonMethod<TypeTag, TTag::EclBaseProblem> {
+    using type = Opm::EclNewtonMethod<TypeTag>;
+};
 
 // The frequency of writing restart (*.ers) files. This is the number of time steps
 // between writing restart files

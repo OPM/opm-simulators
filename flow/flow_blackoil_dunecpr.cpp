@@ -97,13 +97,29 @@ namespace Opm {
 //            using InheritsFrom = std::tuple<EclBaseProblem, BlackOilModel>;
 //        };
 //    }
-    SET_TYPE_PROP(EclFlowProblemSimple, IntensiveQuantities, Opm::BlackOilIntensiveQuantities<TypeTag>);
-    //SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Opm::ISTLSolverEbos<TypeTag>);
+    template<class TypeTag>
+    struct IntensiveQuantities<TypeTag, TTag::EclFlowProblemSimple> {
+        using type =  Opm::BlackOilIntensiveQuantities<TypeTag>;
+    };
+//    template<class TypeTag>
+//    struct LinearSolverBackend<TypeTag, TTag::EclFlowProblemSimple> {
+//        using type = Opm::ISTLSolverEbos<TypeTag>;
+//    };
     //SET_TAG_PROP(EclFlowProblemSimple, LinearSolverSplice, ParallelBiCGStabLinearSolver);
-    //SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Opm::Linear::ParallelBiCGStabSolverBackend<TypeTag>);//not work
-    //SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Opm::Linear::SuperLUBackend<TypeTag>)//not work
+//    template<class TypeTag>
+//    struct LinearSolverBackend<TypeTag, TTag::EclFlowProblemSimple> {
+//        using type = Opm::Linear::ParallelBiCGStabSolverBackend<TypeTag>; // not work
+//    };
+//    template<class TypeTag>
+//    struct LinearSolverBackend<TypeTag, TTag::EclFlowProblemSimple> {
+//        using type = Opm::Linear::SuperLUBackend<TypeTag>; // not work
+//    };
     //SET_TAG_PROP(EclFlowProblem, FluidState, Opm::BlackOilFluidState);
-    SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Opm::ISTLSolverEbosFlexible<TypeTag>);
+
+    template<class TypeTag>
+    struct LinearSolverBackend<TypeTag, TTag::EclFlowProblemSimple> {
+        using type = Opm::ISTLSolverEbosFlexible<TypeTag>;
+    };
     template<class TypeTag>
     struct EnableStorageCache<TypeTag, TTag::EclFlowProblemSimple> {
         static constexpr bool value = true;
