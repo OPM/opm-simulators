@@ -24,7 +24,10 @@
 
 
 namespace Opm {
-void flowEbosSolventSetDeck(double setupTime, Deck *deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig);
+void flowEbosSolventSetDeck(double setupTime, std::unique_ptr<Deck> deck,
+                            std::unique_ptr<EclipseState> eclState,
+                            std::unique_ptr<Schedule> schedule,
+                            std::unique_ptr<SummaryConfig> summaryConfig);
 int flowEbosSolventMain(int argc, char** argv, bool outoutCout, bool outputFiles);
 }
 

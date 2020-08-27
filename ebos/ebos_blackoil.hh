@@ -40,9 +40,9 @@ bool ebosBlackOilDeckFileNameIsSet(int argc, char** argv);
 std::string ebosBlackOilGetDeckFileName(int argc, char** argv);
 std::unique_ptr<Opm::ParseContext> ebosBlackOilCreateParseContext(int argc, char** argv);
 
-void ebosBlackOilSetDeck(Opm::Deck* deck,
-                         Opm::ParseContext* parseContext,
-                         Opm::ErrorGuard* errorGuard,
+void ebosBlackOilSetDeck(std::unique_ptr<Opm::Deck> deck,
+                         std::unique_ptr<Opm::ParseContext> parseContext,
+                         std::unique_ptr<Opm::ErrorGuard> errorGuard,
                          double externalSetupTime);
 
 int ebosBlackOilMain(int argc, char** argv);

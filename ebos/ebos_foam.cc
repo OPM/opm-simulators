@@ -41,18 +41,18 @@ SET_BOOL_PROP(EbosFoamTypeTag, EnableFoam, true);
 
 namespace Opm {
 
-void ebosFoamSetDeck(Opm::Deck* deck,
-                     Opm::ParseContext* parseContext,
-                     Opm::ErrorGuard* errorGuard,
+void ebosFoamSetDeck(std::unique_ptr<Opm::Deck> deck,
+                     std::unique_ptr<Opm::ParseContext> parseContext,
+                     std::unique_ptr<Opm::ErrorGuard> errorGuard,
                      double externalSetupTime)
 {
     using ProblemTypeTag = Properties::TTag::EbosFoamTypeTag;
     using Vanguard = GetPropType<ProblemTypeTag, Properties::Vanguard>;
 
     Vanguard::setExternalSetupTime(externalSetupTime);
-    Vanguard::setExternalParseContext(parseContext);
-    Vanguard::setExternalErrorGuard(errorGuard);
-    Vanguard::setExternalDeck(deck);
+    Vanguard::setExternalParseContext(std::move(parseContext));
+    Vanguard::setExternalErrorGuard(std::move(errorGuard));
+    Vanguard::setExternalDeck(std::move(deck));
 }
 
 int ebosFoamMain(int argc, char **argv)

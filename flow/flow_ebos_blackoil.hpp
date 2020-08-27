@@ -24,7 +24,10 @@
 #include <opm/simulators/flow/FlowMainEbos.hpp>
 
 namespace Opm {
-void flowEbosBlackoilSetDeck(double setupTime, Deck *deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig);
+void flowEbosBlackoilSetDeck(double setupTime, std::unique_ptr<Deck> deck,
+                             std::unique_ptr<EclipseState> eclState,
+                             std::unique_ptr<Schedule> schedule,
+                             std::unique_ptr<SummaryConfig> summaryConfig);
 
 int flowEbosBlackoilMain(int argc, char** argv, bool outputCout, bool outputFiles);
 

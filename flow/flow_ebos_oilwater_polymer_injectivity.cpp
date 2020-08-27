@@ -68,7 +68,7 @@ namespace Opm {
     using TypeTag = Properties::TTag::EclFlowOilWaterPolymerInjectivityProblem;
     using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
 
-    Vanguard::setExternalDeck(&deck, &eclState);
+    Vanguard::setExternalDeck(std::move(deck, &eclState));
 } */
 
 // ----------------- Main program -----------------

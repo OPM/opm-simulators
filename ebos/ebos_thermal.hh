@@ -33,9 +33,9 @@
 #include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
 
 namespace Opm {
-void ebosThermalSetDeck(Opm::Deck* deck,
-                        Opm::ParseContext* parseContext,
-                        Opm::ErrorGuard* errorGuard,
+void ebosThermalSetDeck(std::unique_ptr<Opm::Deck> deck,
+                        std::unique_ptr<Opm::ParseContext> parseContext,
+                        std::unique_ptr<Opm::ErrorGuard> errorGuard,
                         double externalSetupTime);
 
 int ebosThermalMain(int argc, char** argv);

@@ -32,6 +32,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/linalg/FlexibleSolver2.cpp
   opm/simulators/linalg/FlexibleSolver3.cpp
   opm/simulators/linalg/FlexibleSolver4.cpp
+  opm/simulators/utils/readDeck.cpp
   opm/simulators/timestepping/TimeStepControl.cpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.cpp
   opm/simulators/timestepping/SimulatorTimer.cpp
@@ -214,6 +215,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/utils/PropsCentroidsDataHandle.hpp
   opm/simulators/wells/PerforationData.hpp
   opm/simulators/wells/RateConverter.hpp
+  opm/simulators/utils/readDeck.hpp
   opm/simulators/wells/SimFIBODetails.hpp
   opm/simulators/wells/TargetCalculator.hpp
   opm/simulators/wells/WellConnectionAuxiliaryModule.hpp

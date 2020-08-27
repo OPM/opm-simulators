@@ -98,6 +98,7 @@
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
+#include <dune/common/parallel/mpiguard.hh>
 
 #include <opm/output/eclipse/EclipseIO.hpp>
 
@@ -1913,58 +1914,65 @@ public:
 private:
     void checkDeckCompatibility_() const
     {
-        const auto& deck = this->simulator().vanguard().deck();
         const auto& comm = this->simulator().gridView().comm();
-        bool beVerbose = comm.rank() == 0;
+        Dune::MPIGuard guard;
 
-        if (enableApiTracking)
-            throw std::logic_error("API tracking is not yet implemented but requested at compile time.");
-        if (!enableApiTracking && deck.hasKeyword("API"))
-            throw std::logic_error("The simulator is build with API tracking disabled, but API tracking is requested by the deck.");
+        if (comm.rank() == 0)
+        {
+            // Only rank 0 has the deck and hence can do the checks!
+            const auto& deck = this->simulator().vanguard().deck();
 
-        if (enableSolvent && !deck.hasKeyword("SOLVENT"))
-            throw std::runtime_error("The simulator requires the solvent option to be enabled, but the deck does not.");
-        else if (!enableSolvent && deck.hasKeyword("SOLVENT"))
-            throw std::runtime_error("The deck enables the solvent option, but the simulator is compiled without it.");
+            if (enableApiTracking)
+                throw std::logic_error("API tracking is not yet implemented but requested at compile time.");
+            if (!enableApiTracking && deck.hasKeyword("API"))
+                throw std::logic_error("The simulator is build with API tracking disabled, but API tracking is requested by the deck.");
 
-        if (enablePolymer && !deck.hasKeyword("POLYMER"))
-            throw std::runtime_error("The simulator requires the polymer option to be enabled, but the deck does not.");
-        else if (!enablePolymer && deck.hasKeyword("POLYMER"))
-            throw std::runtime_error("The deck enables the polymer option, but the simulator is compiled without it.");
+            if (enableSolvent && !deck.hasKeyword("SOLVENT"))
+                throw std::runtime_error("The simulator requires the solvent option to be enabled, but the deck does not.");
+            else if (!enableSolvent && deck.hasKeyword("SOLVENT"))
+                throw std::runtime_error("The deck enables the solvent option, but the simulator is compiled without it.");
 
-        if (deck.hasKeyword("TEMP") && deck.hasKeyword("THERMAL"))
-            throw std::runtime_error("The deck enables both, the TEMP and the THERMAL options, but they are mutually exclusive.");
+            if (enablePolymer && !deck.hasKeyword("POLYMER"))
+                throw std::runtime_error("The simulator requires the polymer option to be enabled, but the deck does not.");
+            else if (!enablePolymer && deck.hasKeyword("POLYMER"))
+                throw std::runtime_error("The deck enables the polymer option, but the simulator is compiled without it.");
 
-        bool deckEnergyEnabled = (deck.hasKeyword("TEMP") || deck.hasKeyword("THERMAL"));
-        if (enableEnergy && !deckEnergyEnabled)
-            throw std::runtime_error("The simulator requires the TEMP or the THERMAL option to be enabled, but the deck activates neither.");
-        else if (!enableEnergy && deckEnergyEnabled)
-            throw std::runtime_error("The deck enables the TEMP or the THERMAL option, but the simulator is not compiled to support either.");
+            if (deck.hasKeyword("TEMP") && deck.hasKeyword("THERMAL"))
+                throw std::runtime_error("The deck enables both, the TEMP and the THERMAL options, but they are mutually exclusive.");
 
-        if (deckEnergyEnabled && deck.hasKeyword("TEMP") && beVerbose)
-            std::cerr << "WARNING: The deck requests the TEMP option, i.e., treating energy "
-                      << "conservation as a post processing step. This is currently unsupported, "
-                      << "i.e., energy conservation is always handled fully implicitly." << std::endl;
+            bool deckEnergyEnabled = (deck.hasKeyword("TEMP") || deck.hasKeyword("THERMAL"));
+            if (enableEnergy && !deckEnergyEnabled)
+                throw std::runtime_error("The simulator requires the TEMP or the THERMAL option to be enabled, but the deck activates neither.");
+            else if (!enableEnergy && deckEnergyEnabled)
+                throw std::runtime_error("The deck enables the TEMP or the THERMAL option, but the simulator is not compiled to support either.");
 
-        int numDeckPhases = FluidSystem::numActivePhases();
-        if (numDeckPhases < Indices::numPhases && beVerbose)
-            std::cerr << "WARNING: The number of active phases specified by the deck ("
-                      << numDeckPhases << ") is smaller than the number of compiled-in phases ("
-                      << Indices::numPhases << "). This usually results in a significant "
-                      << "performance degradation compared to using a specialized simulator."  << std::endl;
-        else if (numDeckPhases < Indices::numPhases)
-            throw std::runtime_error("The deck enables "+std::to_string(numDeckPhases)+" phases "
-                                     "while this simulator can only handle "+
-                                     std::to_string(Indices::numPhases)+".");
+            if (deckEnergyEnabled && deck.hasKeyword("TEMP"))
+                std::cerr << "WARNING: The deck requests the TEMP option, i.e., treating energy "
+                          << "conservation as a post processing step. This is currently unsupported, "
+                          << "i.e., energy conservation is always handled fully implicitly." << std::endl;
 
-        // make sure that the correct phases are active
-        if (FluidSystem::phaseIsActive(oilPhaseIdx) && !Indices::oilEnabled)
-            throw std::runtime_error("The deck enables oil, but this simulator cannot handle it.");
-        if (FluidSystem::phaseIsActive(gasPhaseIdx) && !Indices::gasEnabled)
-            throw std::runtime_error("The deck enables gas, but this simulator cannot handle it.");
-        if (FluidSystem::phaseIsActive(waterPhaseIdx) && !Indices::waterEnabled)
-            throw std::runtime_error("The deck enables water, but this simulator cannot handle it.");
-        // the opposite cases should be fine (albeit a bit slower than what's possible)
+            int numDeckPhases = FluidSystem::numActivePhases();
+            if (numDeckPhases < Indices::numPhases)
+                std::cerr << "WARNING: The number of active phases specified by the deck ("
+                          << numDeckPhases << ") is smaller than the number of compiled-in phases ("
+                          << Indices::numPhases << "). This usually results in a significant "
+                          << "performance degradation compared to using a specialized simulator."  << std::endl;
+            else if (numDeckPhases < Indices::numPhases)
+                throw std::runtime_error("The deck enables "+std::to_string(numDeckPhases)+" phases "
+                                         "while this simulator can only handle "+
+                                         std::to_string(Indices::numPhases)+".");
+
+            // make sure that the correct phases are active
+            if (FluidSystem::phaseIsActive(oilPhaseIdx) && !Indices::oilEnabled)
+                throw std::runtime_error("The deck enables oil, but this simulator cannot handle it.");
+            if (FluidSystem::phaseIsActive(gasPhaseIdx) && !Indices::gasEnabled)
+                throw std::runtime_error("The deck enables gas, but this simulator cannot handle it.");
+            if (FluidSystem::phaseIsActive(waterPhaseIdx) && !Indices::waterEnabled)
+                throw std::runtime_error("The deck enables water, but this simulator cannot handle it.");
+            // the opposite cases should be fine (albeit a bit slower than what's possible)
+        }
+        // throws an expeption on all processes if rank 0 had a problem
+        guard.finalize();
     }
 
     bool drsdtActive_() const

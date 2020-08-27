@@ -57,18 +57,18 @@ public:
 
 namespace Opm {
 
-void ebosGasOilSetDeck(Opm::Deck* deck,
-                       Opm::ParseContext* parseContext,
-                       Opm::ErrorGuard* errorGuard,
+void ebosGasOilSetDeck(std::unique_ptr<Opm::Deck> deck,
+                       std::unique_ptr<Opm::ParseContext> parseContext,
+                       std::unique_ptr<Opm::ErrorGuard> errorGuard,
                        double externalSetupTime)
 {
     using ProblemTypeTag = Properties::TTag::EbosGasOilTypeTag;
     using Vanguard = GetPropType<ProblemTypeTag, Properties::Vanguard>;
 
     Vanguard::setExternalSetupTime(externalSetupTime);
-    Vanguard::setExternalParseContext(parseContext);
-    Vanguard::setExternalErrorGuard(errorGuard);
-    Vanguard::setExternalDeck(deck);
+    Vanguard::setExternalParseContext(std::move(parseContext));
+    Vanguard::setExternalErrorGuard(std::move(errorGuard));
+    Vanguard::setExternalDeck(std::move(deck));
 }
 
 int ebosGasOilMain(int argc, char **argv)
