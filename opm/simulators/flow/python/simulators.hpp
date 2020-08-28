@@ -29,7 +29,7 @@ namespace Opm::Pybind {
 class BlackOilSimulator
 {
 private:
-    using FlowMainEbosType = Opm::FlowMainEbos<TTAG(EclFlowProblem)>;
+    using FlowMainEbosType = Opm::FlowMainEbos<Opm::Properties::TTag::EclFlowProblem>;
 
 public:
     BlackOilSimulator( const std::string &deckFilename);
