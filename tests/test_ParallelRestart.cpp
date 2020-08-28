@@ -24,6 +24,8 @@
 
 #include <boost/test/unit_test.hpp>
 
+#include <tuple>
+
 #include <opm/common/OpmLog/Location.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Deck/DeckItem.hpp>
@@ -187,6 +189,15 @@ Opm::data::CurrentControl getCurrentControl()
     return curr;
 }
 
+Opm::data::GuideRateValue getWellGuideRate()
+{
+    using Item = Opm::data::GuideRateValue::Item;
+
+    return Opm::data::GuideRateValue{}.set(Item::Oil  , 1.23)
+                                      .set(Item::Gas  , 2.34)
+                                      .set(Item::Water, 3.45)
+                                      .set(Item::ResV , 4.56);
+}
 
 Opm::data::Well getWell()
 {
@@ -199,6 +210,7 @@ Opm::data::Well getWell()
     well1.connections.push_back(getConnection());
     well1.segments.insert({0, getSegment()});
     well1.current_control = getCurrentControl();
+    well1.guide_rates = getWellGuideRate();
     return well1;
 }
 
@@ -256,6 +268,23 @@ BOOST_AUTO_TEST_CASE(Rates)
     DO_CHECKS(data::Rates)
 }
 
+BOOST_AUTO_TEST_CASE(dataGuideRateValue)
+{
+    using Item = Opm::data::GuideRateValue::Item;
+
+    const auto val1 = Opm::data::GuideRateValue{}
+    .set(Item::Oil ,   999.888)
+    .set(Item::Gas ,  8888.777)
+    .set(Item::ResV, 12345.678);
+
+    const auto val2 = PackUnpack(val1);
+
+    BOOST_CHECK_MESSAGE(! std::get<0>(val2).has(Item::Water),
+                        "Water Must Not Appear From "
+                        "Serializing GuideRateValues");
+
+    DO_CHECKS(data::GuideRateValue)
+}
 
 BOOST_AUTO_TEST_CASE(dataConnection)
 {

@@ -209,6 +209,14 @@ HANDLE_AS_POD(data::CurrentControl)
 HANDLE_AS_POD(data::Rates)
 HANDLE_AS_POD(data::Segment)
 
+std::size_t packSize(const data::GuideRateValue&, Dune::MPIHelper::MPICommunicator comm)
+{
+    const auto nItem = static_cast<std::size_t>(data::GuideRateValue::Item::NumItems);
+
+    return packSize(std::array<int   , nItem>{}, comm)
+        +  packSize(std::array<double, nItem>{}, comm);
+}
+
 std::size_t packSize(const data::Well& data, Dune::MPIHelper::MPICommunicator comm)
 {
     std::size_t size = packSize(data.rates, comm);
@@ -218,6 +226,7 @@ std::size_t packSize(const data::Well& data, Dune::MPIHelper::MPICommunicator co
     size += packSize(data.connections, comm);
     size += packSize(data.segments, comm);
     size += packSize(data.current_control, comm);
+    size += packSize(data.guide_rates, comm);
     return size;
 }
 
@@ -436,6 +445,28 @@ void pack(const std::unordered_map<T1,T2,H,P,A>& data, std::vector<char>& buffer
     }
 }
 
+void pack(const data::GuideRateValue& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    using Item = data::GuideRateValue::Item;
+    const auto nItem = static_cast<std::size_t>(Item::NumItems);
+
+    auto has = std::array<int   , nItem>{};  has.fill(0);
+    auto val = std::array<double, nItem>{};  val.fill(0.0);
+
+    for (auto itemID = 0*nItem; itemID < nItem; ++itemID) {
+        const auto item = static_cast<Item>(itemID);
+
+        if (data.has(item)) {
+            has[itemID] = 1;
+            val[itemID] = data.get(item);
+        }
+    }
+
+    pack(has, buffer, position, comm);
+    pack(val, buffer, position, comm);
+}
+
 void pack(const data::Well& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
@@ -447,6 +478,7 @@ void pack(const data::Well& data, std::vector<char>& buffer, int& position,
     pack(data.connections, buffer, position, comm);
     pack(data.segments, buffer, position, comm);
     pack(data.current_control, buffer, position, comm);
+    pack(data.guide_rates, buffer, position, comm);
 }
 
 void pack(const RestartKey& data, std::vector<char>& buffer, int& position,
@@ -707,6 +739,26 @@ void unpack(data::Well& data, std::vector<char>& buffer, int& position,
     unpack(data.connections, buffer, position, comm);
     unpack(data.segments, buffer, position, comm);
     unpack(data.current_control, buffer, position, comm);
+    unpack(data.guide_rates, buffer, position, comm);
+}
+
+void unpack(data::GuideRateValue& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    using Item = data::GuideRateValue::Item;
+    const auto nItem = static_cast<std::size_t>(Item::NumItems);
+
+    auto has = std::array<int   , nItem>{};
+    auto val = std::array<double, nItem>{};
+
+    unpack(has, buffer, position, comm);
+    unpack(val, buffer, position, comm);
+
+    for (auto itemID = 0*nItem; itemID < nItem; ++itemID) {
+        if (has[itemID] != 0) {
+            data.set(static_cast<Item>(itemID), val[itemID]);
+        }
+    }
 }
 
 void unpack(RestartKey& data, std::vector<char>& buffer, int& position,
