@@ -414,6 +414,7 @@ namespace Opm {
 
             // convert well data from opm-common to well state from opm-core
             void wellsToState( const data::Wells& wells,
+                               const data::GroupValues& groupValues,
                                const PhaseUsage& phases,
                                const bool handle_ms_well,
                                WellStateFullyImplicitBlackoil& state ) const;
