@@ -25,6 +25,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <tuple>
+#include <utility>
 
 #include <opm/common/OpmLog/Location.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
@@ -214,7 +215,40 @@ Opm::data::Well getWell()
     return well1;
 }
 
+Opm::data::GroupGuideRates getGroupGuideRates()
+{
+    using Item = Opm::data::GuideRateValue::Item;
 
+    auto gr = Opm::data::GroupGuideRates{};
+
+    gr.production.set(Item::Oil ,   999.888)
+                 .set(Item::Gas ,  8888.777)
+                 .set(Item::ResV, 12345.678);
+
+    gr.injection.set(Item::Gas  , 9876.543)
+                .set(Item::Water, 2345.987);
+
+    return gr;
+}
+
+Opm::data::GroupConstraints getGroupConstraints()
+{
+    using PMode = ::Opm::Group::ProductionCMode;
+    using IMode = ::Opm::Group::InjectionCMode;
+
+    return Opm::data::GroupConstraints{}
+    .set(PMode::ORAT,           // Production
+         IMode::VREP,           // Gas Injection
+         IMode::NONE);          // Water Injection
+}
+
+Opm::data::GroupData getGroupData()
+{
+    return Opm::data::GroupData {
+        getGroupConstraints(),
+        getGroupGuideRates()
+    };
+}
 }
 
 
@@ -326,6 +360,29 @@ BOOST_AUTO_TEST_CASE(WellRates)
     DO_CHECKS(data::WellRates)
 }
 
+BOOST_AUTO_TEST_CASE(dataGroupConstraints)
+{
+    const auto val1 = getGroupConstraints();
+    const auto val2 = PackUnpack(val1);
+
+    DO_CHECKS(data::GroupConstraints)
+}
+
+BOOST_AUTO_TEST_CASE(dataGroupGuideRates)
+{
+    const auto val1 = getGroupData().guideRates;
+    const auto val2 = PackUnpack(val1);
+
+    DO_CHECKS(data::GroupGuideRates)
+}
+
+BOOST_AUTO_TEST_CASE(dataGroupData)
+{
+    const auto val1 = getGroupData();
+    const auto val2 = PackUnpack(val1);
+
+    DO_CHECKS(data::GroupData)
+}
 
 BOOST_AUTO_TEST_CASE(CellData)
 {
@@ -348,11 +405,18 @@ BOOST_AUTO_TEST_CASE(RestartKey)
 
 BOOST_AUTO_TEST_CASE(RestartValue)
 {
-    Opm::data::WellRates wells1;
-    Opm::data::GroupValues groups1;
-    wells1.insert({"test_well", getWell()});
-    Opm::RestartValue val1(getSolution(), wells1, groups1);
-    auto val2 = PackUnpack(val1);
+    auto wells1 = Opm::data::WellRates {{
+        { "test_well", getWell() },
+    }};
+    auto groups1 = Opm::data::GroupValues {{
+        { "test_group1", getGroupData() },
+    }};
+
+    const auto val1 = Opm::RestartValue {
+        getSolution(), std::move(wells1), std::move(groups1)
+    };
+    const auto val2 = PackUnpack(val1);
+
     DO_CHECKS(RestartValue)
 }
 
