@@ -49,12 +49,25 @@ class EclCpGridVanguard;
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(EclCpGridVanguard, INHERITS_FROM(EclBaseVanguard));
+namespace TTag {
+struct EclCpGridVanguard {
+    using InheritsFrom = std::tuple<EclBaseVanguard>;
+};
+}
 
 // declare the properties
-SET_TYPE_PROP(EclCpGridVanguard, Vanguard, Opm::EclCpGridVanguard<TypeTag>);
-SET_TYPE_PROP(EclCpGridVanguard, Grid, Dune::CpGrid);
-SET_TYPE_PROP(EclCpGridVanguard, EquilGrid, GetPropType<TypeTag, Properties::Grid>);
+template<class TypeTag>
+struct Vanguard<TypeTag, TTag::EclCpGridVanguard> {
+    using type = Opm::EclCpGridVanguard<TypeTag>;
+};
+template<class TypeTag>
+struct Grid<TypeTag, TTag::EclCpGridVanguard> {
+    using type = Dune::CpGrid;
+};
+template<class TypeTag>
+struct EquilGrid<TypeTag, TTag::EclCpGridVanguard> {
+    using type = GetPropType<TypeTag, Properties::Grid>;
+};
 
 } // namespace Opm::Properties
 

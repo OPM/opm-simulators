@@ -118,63 +118,121 @@ class EclProblem;
 
 namespace Opm::Properties {
 
+namespace TTag {
+
 #if EBOS_USE_ALUGRID
-NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclAluGridVanguard, EclOutputBlackOil, VtkEclTracer));
+struct EclBaseProblem {
+  using InheritstFrom = std::tuple<VtkEclTracer, EclOutputBlackOil, EclAluGridVanguard>;
+};
 #else
-NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclCpGridVanguard, EclOutputBlackOil, VtkEclTracer));
-//NEW_TYPE_TAG(EclBaseProblem, INHERITS_FROM(EclPolyhedralGridVanguard, EclOutputBlackOil, VtkEclTracer));
+struct EclBaseProblem {
+  using InheritsFrom = std::tuple<VtkEclTracer, EclOutputBlackOil, EclCpGridVanguard>;
+};
+//struct EclBaseProblem {
+//    using InheritsFrom = std::tuple<VtkEclTracer, EclOutputBlackOil, EclPolyhedralGridVanguard>;
+//};
 #endif
+}
 
 // The class which deals with ECL wells
-NEW_PROP_TAG(EclWellModel);
+template<class TypeTag, class MyTypeTag>
+struct EclWellModel {
+    using type = UndefinedProperty;
+};
 
 // Write all solutions for visualization, not just the ones for the
 // report steps...
-NEW_PROP_TAG(EnableWriteAllSolutions);
+template<class TypeTag, class MyTypeTag>
+struct EnableWriteAllSolutions {
+    using type = UndefinedProperty;
+};
 
 // The number of time steps skipped between writing two consequtive restart files
-NEW_PROP_TAG(RestartWritingInterval);
+template<class TypeTag, class MyTypeTag>
+struct RestartWritingInterval {
+    using type = UndefinedProperty;
+};
 
 // Enable partial compensation of systematic mass losses via the source term of the next time
 // step
-NEW_PROP_TAG(EclEnableDriftCompensation);
+template<class TypeTag, class MyTypeTag>
+struct EclEnableDriftCompensation {
+    using type = UndefinedProperty;
+};
 
 // Enable the additional checks even if compiled in debug mode (i.e., with the NDEBUG
 // macro undefined). Next to a slightly better performance, this also eliminates some
 // print statements in debug mode.
-NEW_PROP_TAG(EnableDebuggingChecks);
+template<class TypeTag, class MyTypeTag>
+struct EnableDebuggingChecks {
+    using type = UndefinedProperty;
+};
 
 // if thermal flux boundaries are enabled an effort is made to preserve the initial
 // thermal gradient specified via the TEMPVD keyword
-NEW_PROP_TAG(EnableThermalFluxBoundaries);
+template<class TypeTag, class MyTypeTag>
+struct EnableThermalFluxBoundaries {
+    using type = UndefinedProperty;
+};
 
 // Specify whether API tracking should be enabled (replaces PVT regions).
 // TODO: This is not yet implemented
-NEW_PROP_TAG(EnableApiTracking);
+template<class TypeTag, class MyTypeTag>
+struct EnableApiTracking {
+    using type = UndefinedProperty;
+};
 
 // The class which deals with ECL aquifers
-NEW_PROP_TAG(EclAquiferModel);
+template<class TypeTag, class MyTypeTag>
+struct EclAquiferModel {
+    using type = UndefinedProperty;
+};
 
 // In experimental mode, decides if the aquifer model should be enabled or not
-NEW_PROP_TAG(EclEnableAquifers);
+template<class TypeTag, class MyTypeTag>
+struct EclEnableAquifers {
+    using type = UndefinedProperty;
+};
 
 // time stepping parameters
-NEW_PROP_TAG(EclMaxTimeStepSizeAfterWellEvent);
-NEW_PROP_TAG(EclRestartShrinkFactor);
-NEW_PROP_TAG(EclEnableTuning);
-NEW_PROP_TAG(OutputMode);
+template<class TypeTag, class MyTypeTag>
+struct EclMaxTimeStepSizeAfterWellEvent {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EclRestartShrinkFactor {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EclEnableTuning {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct OutputMode {
+    using type = UndefinedProperty;
+};
 
 // Set the problem property
-SET_TYPE_PROP(EclBaseProblem, Problem, Opm::EclProblem<TypeTag>);
+template<class TypeTag>
+struct Problem<TypeTag, TTag::EclBaseProblem> {
+    using type = Opm::EclProblem<TypeTag>;
+};
 
 // Select the element centered finite volume method as spatial discretization
-SET_TAG_PROP(EclBaseProblem, SpatialDiscretizationSplice, EcfvDiscretization);
+template<class TypeTag>
+struct SpatialDiscretizationSplice<TypeTag, TTag::EclBaseProblem> {
+    using type = TTag::EcfvDiscretization;
+};
 
 //! for ebos, use automatic differentiation to linearize the system of PDEs
-SET_TAG_PROP(EclBaseProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::EclBaseProblem> {
+    using type = TTag::AutoDiffLocalLinearizer;
+};
 
 // Set the material law for fluid fluxes
-SET_PROP(EclBaseProblem, MaterialLaw)
+template<class TypeTag>
+struct MaterialLaw<TypeTag, TTag::EclBaseProblem>
 {
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -192,7 +250,8 @@ public:
 };
 
 // Set the material law for energy storage in rock
-SET_PROP(EclBaseProblem, SolidEnergyLaw)
+template<class TypeTag>
+struct SolidEnergyLaw<TypeTag, TTag::EclBaseProblem>
 {
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -205,7 +264,8 @@ public:
 };
 
 // Set the material law for thermal conduction
-SET_PROP(EclBaseProblem, ThermalConductionLaw)
+template<class TypeTag>
+struct ThermalConductionLaw<TypeTag, TTag::EclBaseProblem>
 {
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -219,7 +279,8 @@ public:
 
 // ebos can use a slightly faster stencil class because it does not need the normals and
 // the integration points of intersections
-SET_PROP(EclBaseProblem, Stencil)
+template<class TypeTag>
+struct Stencil<TypeTag, TTag::EclBaseProblem>
 {
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -233,44 +294,78 @@ public:
 };
 
 // by default use the dummy aquifer "model"
-SET_TYPE_PROP(EclBaseProblem, EclAquiferModel, Opm::EclBaseAquiferModel<TypeTag>);
+template<class TypeTag>
+struct EclAquiferModel<TypeTag, TTag::EclBaseProblem> {
+    using type = Opm::EclBaseAquiferModel<TypeTag>;
+};
 
 // use the built-in proof of concept well model by default
-SET_TYPE_PROP(EclBaseProblem, EclWellModel, EclWellManager<TypeTag>);
+template<class TypeTag>
+struct EclWellModel<TypeTag, TTag::EclBaseProblem> {
+    using type = EclWellManager<TypeTag>;
+};
 
 // Enable aquifers by default in experimental mode
-SET_BOOL_PROP(EclBaseProblem, EclEnableAquifers, true);
+template<class TypeTag>
+struct EclEnableAquifers<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = true;
+};
 
 // Enable gravity
-SET_BOOL_PROP(EclBaseProblem, EnableGravity, true);
+template<class TypeTag>
+struct EnableGravity<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = true;
+};
 
 // only write the solutions for the report steps to disk
-SET_BOOL_PROP(EclBaseProblem, EnableWriteAllSolutions, false);
+template<class TypeTag>
+struct EnableWriteAllSolutions<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
 
 // disable API tracking
-SET_BOOL_PROP(EclBaseProblem, EnableApiTracking, false);
+template<class TypeTag>
+struct EnableApiTracking<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
 
 // The default for the end time of the simulation [s]
 //
 // By default, stop it after the universe will probably have stopped
 // to exist. (the ECL problem will finish the simulation explicitly
 // after it simulated the last episode specified in the deck.)
-SET_SCALAR_PROP(EclBaseProblem, EndTime, 1e100);
+template<class TypeTag>
+struct EndTime<TypeTag, TTag::EclBaseProblem> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e100;
+};
 
 // The default for the initial time step size of the simulation [s].
 //
 // The chosen value means that the size of the first time step is the
 // one of the initial episode (if the length of the initial episode is
 // not millions of trillions of years, that is...)
-SET_SCALAR_PROP(EclBaseProblem, InitialTimeStepSize, 3600*24);
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, TTag::EclBaseProblem> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 3600*24;
+};
 
 // the default for the allowed volumetric error for oil per second
-SET_SCALAR_PROP(EclBaseProblem, NewtonTolerance, 1e-2);
+template<class TypeTag>
+struct NewtonTolerance<TypeTag, TTag::EclBaseProblem> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-2;
+};
 
 // the tolerated amount of "incorrect" amount of oil per time step for the complete
 // reservoir. this is scaled by the pore volume of the reservoir, i.e., larger reservoirs
 // will tolerate larger residuals.
-SET_SCALAR_PROP(EclBaseProblem, EclNewtonSumTolerance, 1e-4);
+template<class TypeTag>
+struct EclNewtonSumTolerance<TypeTag, TTag::EclBaseProblem> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-4;
+};
 
 // set the exponent for the volume scaling of the sum tolerance: larger reservoirs can
 // tolerate a higher amount of mass lost per time step than smaller ones! since this is
@@ -278,102 +373,202 @@ SET_SCALAR_PROP(EclBaseProblem, EclNewtonSumTolerance, 1e-4);
 // value specified by the NewtonSumTolerance parameter is the "incorrect" mass per
 // timestep for an reservoir that exhibits 1 m^3 of pore volume. A reservoir with a total
 // pore volume of 10^3 m^3 will tolerate 10 times as much.
-SET_SCALAR_PROP(EclBaseProblem, EclNewtonSumToleranceExponent, 1.0/3.0);
+template<class TypeTag>
+struct EclNewtonSumToleranceExponent<TypeTag, TTag::EclBaseProblem> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.0/3.0;
+};
 
 // set number of Newton iterations where the volumetric residual is considered for
 // convergence
-SET_INT_PROP(EclBaseProblem, EclNewtonStrictIterations, 8);
+template<class TypeTag>
+struct EclNewtonStrictIterations<TypeTag, TTag::EclBaseProblem> {
+    static constexpr int value = 8;
+};
 
 // set fraction of the pore volume where the volumetric residual may be violated during
 // strict Newton iterations
-SET_SCALAR_PROP(EclBaseProblem, EclNewtonRelaxedVolumeFraction, 0.03);
+template<class TypeTag>
+struct EclNewtonRelaxedVolumeFraction<TypeTag, TTag::EclBaseProblem> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.03;
+};
 
 // the maximum volumetric error of a cell in the relaxed region
-SET_SCALAR_PROP(EclBaseProblem, EclNewtonRelaxedTolerance, 1e9);
+template<class TypeTag>
+struct EclNewtonRelaxedTolerance<TypeTag, TTag::EclBaseProblem> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e9;
+};
 
 // Ignore the maximum error mass for early termination of the newton method.
-SET_SCALAR_PROP(EclBaseProblem, NewtonMaxError, 10e9);
+template<class TypeTag>
+struct NewtonMaxError<TypeTag, TTag::EclBaseProblem> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 10e9;
+};
 
 // set the maximum number of Newton iterations to 14 because the likelyhood that a time
 // step succeeds at more than 14 Newton iteration is rather small
-SET_INT_PROP(EclBaseProblem, NewtonMaxIterations, 14);
+template<class TypeTag>
+struct NewtonMaxIterations<TypeTag, TTag::EclBaseProblem> {
+    static constexpr int value = 14;
+};
 
 // also, reduce the target for the "optimum" number of Newton iterations to 6. Note that
 // this is only relevant if the time step is reduced from the report step size for some
 // reason. (because ebos first tries to do a report step using a single time step.)
-SET_INT_PROP(EclBaseProblem, NewtonTargetIterations, 6);
+template<class TypeTag>
+struct NewtonTargetIterations<TypeTag, TTag::EclBaseProblem> {
+    static constexpr int value = 6;
+};
 
 // Disable the VTK output by default for this problem ...
-SET_BOOL_PROP(EclBaseProblem, EnableVtkOutput, false);
+template<class TypeTag>
+struct EnableVtkOutput<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
 
 // ... but enable the ECL output by default
-SET_BOOL_PROP(EclBaseProblem, EnableEclOutput, true);
+template<class TypeTag>
+struct EnableEclOutput<TypeTag,TTag::EclBaseProblem> {
+    static constexpr bool value = true;
+};
 
 // If available, write the ECL output in a non-blocking manner
-SET_BOOL_PROP(EclBaseProblem, EnableAsyncEclOutput, true);
+template<class TypeTag>
+struct EnableAsyncEclOutput<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = true;
+};
 
 // By default, use single precision for the ECL formated results
-SET_BOOL_PROP(EclBaseProblem, EclOutputDoublePrecision, false);
+template<class TypeTag>
+struct EclOutputDoublePrecision<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
 
 // The default location for the ECL output files
-SET_STRING_PROP(EclBaseProblem, OutputDir, ".");
+template<class TypeTag>
+struct OutputDir<TypeTag, TTag::EclBaseProblem> {
+    static constexpr auto value = ".";
+};
 
 // the cache for intensive quantities can be used for ECL problems and also yields a
 // decent speedup...
-SET_BOOL_PROP(EclBaseProblem, EnableIntensiveQuantityCache, true);
+template<class TypeTag>
+struct EnableIntensiveQuantityCache<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = true;
+};
 
 // the cache for the storage term can also be used and also yields a decent speedup
-SET_BOOL_PROP(EclBaseProblem, EnableStorageCache, true);
+template<class TypeTag>
+struct EnableStorageCache<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = true;
+};
 
 // Use the "velocity module" which uses the Eclipse "NEWTRAN" transmissibilities
-SET_TYPE_PROP(EclBaseProblem, FluxModule, Opm::EclTransFluxModule<TypeTag>);
+template<class TypeTag>
+struct FluxModule<TypeTag, TTag::EclBaseProblem> {
+    using type = Opm::EclTransFluxModule<TypeTag>;
+};
 
 // Use the dummy gradient calculator in order not to do unnecessary work.
-SET_TYPE_PROP(EclBaseProblem, GradientCalculator, Opm::EclDummyGradientCalculator<TypeTag>);
+template<class TypeTag>
+struct GradientCalculator<TypeTag, TTag::EclBaseProblem> {
+    using type = Opm::EclDummyGradientCalculator<TypeTag>;
+};
 
 // Use a custom Newton-Raphson method class for ebos in order to attain more
 // sophisticated update and error computation mechanisms
-SET_TYPE_PROP(EclBaseProblem, NewtonMethod, Opm::EclNewtonMethod<TypeTag>);
+template<class TypeTag>
+struct NewtonMethod<TypeTag, TTag::EclBaseProblem> {
+    using type = Opm::EclNewtonMethod<TypeTag>;
+};
 
 // The frequency of writing restart (*.ers) files. This is the number of time steps
 // between writing restart files
-SET_INT_PROP(EclBaseProblem, RestartWritingInterval, 0xffffff); // disable
+template<class TypeTag>
+struct RestartWritingInterval<TypeTag, TTag::EclBaseProblem> {
+    static constexpr int value = 0xffffff; // disable
+};
 
 // Drift compensation is an experimental feature, i.e., systematic errors in the
 // conservation quantities are only compensated for
 // as default if experimental mode is enabled.
-SET_BOOL_PROP(EclBaseProblem,
-              EclEnableDriftCompensation,
-              GET_PROP_VALUE(TypeTag, EnableExperiments));
+template<class TypeTag>
+struct EclEnableDriftCompensation<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = getPropValue<TypeTag, Properties::EnableExperiments>();
+};
 
 // By default, we enable the debugging checks if we're compiled in debug mode
-SET_BOOL_PROP(EclBaseProblem, EnableDebuggingChecks, true);
+template<class TypeTag>
+struct EnableDebuggingChecks<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = true;
+};
 
 // store temperature (but do not conserve energy, as long as EnableEnergy is false)
-SET_BOOL_PROP(EclBaseProblem, EnableTemperature, true);
+template<class TypeTag>
+struct EnableTemperature<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = true;
+};
 
 // disable all extensions supported by black oil model. this should not really be
 // necessary but it makes things a bit more explicit
-SET_BOOL_PROP(EclBaseProblem, EnablePolymer, false);
-SET_BOOL_PROP(EclBaseProblem, EnableSolvent, false);
-SET_BOOL_PROP(EclBaseProblem, EnableEnergy, false);
-SET_BOOL_PROP(EclBaseProblem, EnableFoam, false);
+template<class TypeTag>
+struct EnablePolymer<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct EnableSolvent<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct EnableEnergy<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct EnableFoam<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
 
 // disable thermal flux boundaries by default
-SET_BOOL_PROP(EclBaseProblem, EnableThermalFluxBoundaries, false);
+template<class TypeTag>
+struct EnableThermalFluxBoundaries<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
 
-SET_BOOL_PROP(EclBaseProblem, EnableTracerModel, false);
+template<class TypeTag>
+struct EnableTracerModel<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
 
 // By default, simulators derived from the EclBaseProblem are production simulators,
 // i.e., experimental features must be explicitly enabled at compile time
-SET_BOOL_PROP(EclBaseProblem, EnableExperiments, false);
+template<class TypeTag>
+struct EnableExperiments<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
 
 // set defaults for the time stepping parameters
-SET_SCALAR_PROP(EclBaseProblem, EclMaxTimeStepSizeAfterWellEvent, 3600*24*365.25);
-SET_SCALAR_PROP(EclBaseProblem, EclRestartShrinkFactor, 3);
-SET_BOOL_PROP(EclBaseProblem, EclEnableTuning, false);
+template<class TypeTag>
+struct EclMaxTimeStepSizeAfterWellEvent<TypeTag, TTag::EclBaseProblem> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 3600*24*365.25;
+};
+template<class TypeTag>
+struct EclRestartShrinkFactor<TypeTag, TTag::EclBaseProblem> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 3;
+};
+template<class TypeTag>
+struct EclEnableTuning<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
 
-SET_STRING_PROP(EclBaseProblem, OutputMode, "all");
+template<class TypeTag>
+struct OutputMode<TypeTag, TTag::EclBaseProblem> {
+    static constexpr auto value = "all";
+};
 
 } // namespace Opm::Properties
 
@@ -405,19 +600,19 @@ class EclProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     enum { dimWorld = GridView::dimensionworld };
 
     // copy some indices for convenience
-    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
+    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
-    enum { enableExperiments = GET_PROP_VALUE(TypeTag, EnableExperiments) };
-    enum { enableSolvent = GET_PROP_VALUE(TypeTag, EnableSolvent) };
-    enum { enablePolymer = GET_PROP_VALUE(TypeTag, EnablePolymer) };
-    enum { enableBrine = GET_PROP_VALUE(TypeTag, EnableBrine) };
-    enum { enablePolymerMolarWeight = GET_PROP_VALUE(TypeTag, EnablePolymerMW) };
-    enum { enableFoam = GET_PROP_VALUE(TypeTag, EnableFoam) };
-    enum { enableTemperature = GET_PROP_VALUE(TypeTag, EnableTemperature) };
-    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
-    enum { enableThermalFluxBoundaries = GET_PROP_VALUE(TypeTag, EnableThermalFluxBoundaries) };
-    enum { enableApiTracking = GET_PROP_VALUE(TypeTag, EnableApiTracking) };
+    enum { enableExperiments = getPropValue<TypeTag, Properties::EnableExperiments>() };
+    enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
+    enum { enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>() };
+    enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
+    enum { enablePolymerMolarWeight = getPropValue<TypeTag, Properties::EnablePolymerMW>() };
+    enum { enableFoam = getPropValue<TypeTag, Properties::EnableFoam>() };
+    enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    enum { enableThermalFluxBoundaries = getPropValue<TypeTag, Properties::EnableThermalFluxBoundaries>() };
+    enum { enableApiTracking = getPropValue<TypeTag, Properties::EnableApiTracking>() };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
@@ -431,8 +626,8 @@ class EclProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Element = typename GridView::template Codim<0>::Entity;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using EclMaterialLawManager = typename GET_PROP(TypeTag, MaterialLaw)::EclMaterialLawManager;
-    using EclThermalLawManager = typename GET_PROP(TypeTag, SolidEnergyLaw)::EclThermalLawManager;
+    using EclMaterialLawManager = typename GetProp<TypeTag, Properties::MaterialLaw>::EclMaterialLawManager;
+    using EclThermalLawManager = typename GetProp<TypeTag, Properties::SolidEnergyLaw>::EclThermalLawManager;
     using MaterialLawParams = typename EclMaterialLawManager::MaterialLawParams;
     using SolidEnergyLawParams = typename EclThermalLawManager::SolidEnergyLawParams;
     using ThermalConductionLawParams = typename EclThermalLawManager::ThermalConductionLawParams;
@@ -521,7 +716,7 @@ public:
                                          int paramIdx,
                                          int posParamIdx OPM_UNUSED)
     {
-        typedef typename GET_PROP(TypeTag, ParameterMetaData) ParamsMeta;
+        using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
         Dune::ParameterTree& tree = ParamsMeta::tree();
 
         std::string param  = argv[paramIdx];
@@ -705,7 +900,7 @@ public:
 
         updatePffDofData_();
 
-        if (GET_PROP_VALUE(TypeTag, EnablePolymer)) {
+        if (getPropValue<TypeTag, Properties::EnablePolymer>()) {
             const auto& vanguard = this->simulator().vanguard();
             const auto& gridView = vanguard.gridView();
             int numElements = gridView.size(/*codim=*/0);
@@ -846,7 +1041,7 @@ public:
         const bool invalidateFromMaxOilSat = updateMaxOilSaturation_();
         const bool doInvalidate = invalidateFromHyst || invalidateFromMaxOilSat;
 
-        if (GET_PROP_VALUE(TypeTag, EnablePolymer))
+        if (getPropValue<TypeTag, Properties::EnablePolymer>())
             updateMaxPolymerAdsorption_();
 
         // set up the wells for the next episode.
@@ -955,7 +1150,7 @@ public:
     void endTimeStep()
     {
 #ifndef NDEBUG
-        if (GET_PROP_VALUE(TypeTag, EnableDebuggingChecks)) {
+        if (getPropValue<(TypeTag, Properties::EnableDebuggingChecks>()) {
             // in debug mode, we don't care about performance, so we check if the model does
             // the right thing (i.e., the mass change inside the whole reservoir must be
             // equivalent to the fluxes over the grid's boundaries plus the source rates
@@ -983,7 +1178,7 @@ public:
             for (unsigned globalDofIdx = 0; globalDofIdx < residual.size(); globalDofIdx ++) {
                 drift_[globalDofIdx] = residual[globalDofIdx];
                 drift_[globalDofIdx] *= simulator.timeStepSize();
-                if (GET_PROP_VALUE(TypeTag, UseVolumetricResidual))
+                if (getPropValue<TypeTag, Properties::UseVolumetricResidual>())
                     drift_[globalDofIdx] *= this->model().dofTotalVolume(globalDofIdx);
             }
         }

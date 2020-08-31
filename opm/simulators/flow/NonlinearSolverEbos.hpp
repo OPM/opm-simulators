@@ -29,6 +29,8 @@
 
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
+#include <opm/models/utils/basicproperties.hh>
+
 
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -36,17 +38,44 @@
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(FlowNonLinearSolver);
+namespace TTag {
+struct FlowNonLinearSolver {};
+}
 
-NEW_PROP_TAG(NewtonMaxRelax);
-NEW_PROP_TAG(FlowNewtonMaxIterations);
-NEW_PROP_TAG(FlowNewtonMinIterations);
-NEW_PROP_TAG(NewtonRelaxationType);
+template<class TypeTag, class MyTypeTag>
+struct NewtonMaxRelax {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct FlowNewtonMaxIterations {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct FlowNewtonMinIterations{
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct NewtonRelaxationType{
+    using type = UndefinedProperty;
+};
 
-SET_SCALAR_PROP(FlowNonLinearSolver, NewtonMaxRelax, 0.5);
-SET_INT_PROP(FlowNonLinearSolver, FlowNewtonMaxIterations, 20);
-SET_INT_PROP(FlowNonLinearSolver, FlowNewtonMinIterations, 1);
-SET_STRING_PROP(FlowNonLinearSolver, NewtonRelaxationType, "dampen");
+template<class TypeTag>
+struct NewtonMaxRelax<TypeTag, TTag::FlowNonLinearSolver> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.5;
+};
+template<class TypeTag>
+struct FlowNewtonMaxIterations<TypeTag, TTag::FlowNonLinearSolver> {
+    static constexpr int value = 20;
+};
+template<class TypeTag>
+struct FlowNewtonMinIterations<TypeTag, TTag::FlowNonLinearSolver> {
+    static constexpr int value = 1;
+};
+template<class TypeTag>
+struct NewtonRelaxationType<TypeTag, TTag::FlowNonLinearSolver> {
+    static constexpr auto value = "dampen";
+};
 
 } // namespace Opm::Properties
 

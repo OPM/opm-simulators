@@ -71,26 +71,70 @@
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(EclFlowProblem, INHERITS_FROM(BlackOilModel, EclBaseProblem, FlowNonLinearSolver, FlowModelParameters, FlowTimeSteppingParameters));
-SET_STRING_PROP(EclFlowProblem, OutputDir, "");
-SET_BOOL_PROP(EclFlowProblem, EnableDebuggingChecks, false);
+namespace TTag {
+struct EclFlowProblem {
+    using InheritsFrom = std::tuple<FlowTimeSteppingParameters, FlowModelParameters,
+                                    FlowNonLinearSolver, EclBaseProblem, BlackOilModel>;
+};
+}
+template<class TypeTag>
+struct OutputDir<TypeTag, TTag::EclFlowProblem> {
+    static constexpr auto value = "";
+};
+template<class TypeTag>
+struct EnableDebuggingChecks<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = false;
+};
 // default in flow is to formulate the equations in surface volumes
-SET_BOOL_PROP(EclFlowProblem, BlackoilConserveSurfaceVolume, true);
-SET_BOOL_PROP(EclFlowProblem, UseVolumetricResidual, false);
+template<class TypeTag>
+struct BlackoilConserveSurfaceVolume<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = true;
+};
+template<class TypeTag>
+struct UseVolumetricResidual<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = false;
+};
 
-SET_TYPE_PROP(EclFlowProblem, EclAquiferModel, Opm::BlackoilAquiferModel<TypeTag>);
+template<class TypeTag>
+struct EclAquiferModel<TypeTag, TTag::EclFlowProblem> {
+    using type = Opm::BlackoilAquiferModel<TypeTag>;
+};
 
 // disable all extensions supported by black oil model. this should not really be
 // necessary but it makes things a bit more explicit
-SET_BOOL_PROP(EclFlowProblem, EnablePolymer, false);
-SET_BOOL_PROP(EclFlowProblem, EnableSolvent, false);
-SET_BOOL_PROP(EclFlowProblem, EnableTemperature, true);
-SET_BOOL_PROP(EclFlowProblem, EnableEnergy, false);
-SET_BOOL_PROP(EclFlowProblem, EnableFoam, false);
-SET_BOOL_PROP(EclFlowProblem, EnableBrine, false);
+template<class TypeTag>
+struct EnablePolymer<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct EnableSolvent<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct EnableTemperature<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = true;
+};
+template<class TypeTag>
+struct EnableEnergy<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct EnableFoam<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct EnableBrine<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = false;
+};
 
-SET_TYPE_PROP(EclFlowProblem, EclWellModel, Opm::BlackoilWellModel<TypeTag>);
-SET_TAG_PROP(EclFlowProblem, LinearSolverSplice, FlowIstlSolver);
+template<class TypeTag>
+struct EclWellModel<TypeTag, TTag::EclFlowProblem> {
+    using type = Opm::BlackoilWellModel<TypeTag>;
+};
+template<class TypeTag>
+struct LinearSolverSplice<TypeTag, TTag::EclFlowProblem> {
+    using type = TTag::FlowIstlSolver;
+};
 
 } // namespace Opm::Properties
 
@@ -164,12 +208,12 @@ namespace Opm {
         , phaseUsage_(phaseUsageFromDeck(eclState()))
         , has_disgas_(FluidSystem::enableDissolvedGas())
         , has_vapoil_(FluidSystem::enableVaporizedOil())
-        , has_solvent_(GET_PROP_VALUE(TypeTag, EnableSolvent))
-        , has_polymer_(GET_PROP_VALUE(TypeTag, EnablePolymer))
-        , has_polymermw_(GET_PROP_VALUE(TypeTag, EnablePolymerMW))
-        , has_energy_(GET_PROP_VALUE(TypeTag, EnableEnergy))
-        , has_foam_(GET_PROP_VALUE(TypeTag, EnableFoam))
-        , has_brine_(GET_PROP_VALUE(TypeTag, EnableBrine))
+        , has_solvent_(getPropValue<TypeTag, Properties::EnableSolvent>())
+        , has_polymer_(getPropValue<TypeTag, Properties::EnablePolymer>())
+        , has_polymermw_(getPropValue<TypeTag, Properties::EnablePolymerMW>())
+        , has_energy_(getPropValue<TypeTag, Properties::EnableEnergy>())
+        , has_foam_(getPropValue<TypeTag, Properties::EnableFoam>())
+        , has_brine_(getPropValue<TypeTag, Properties::EnableBrine>())
         , param_( param )
         , well_model_ (well_model)
         , terminal_output_ (terminal_output)

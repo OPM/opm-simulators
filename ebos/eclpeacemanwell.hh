@@ -100,8 +100,8 @@ class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
 
     // convenient access to the number of phases and the number of
     // components
-    static const unsigned numComponents = GET_PROP_VALUE(TypeTag, NumComponents);
-    static const unsigned numPhases = GET_PROP_VALUE(TypeTag, NumPhases);
+    static const unsigned numComponents = getPropValue<TypeTag, Properties::NumComponents>();
+    static const unsigned numPhases = getPropValue<TypeTag, Properties::NumPhases>();
 
     // convenient access to the phase and component indices. If the compiler bails out
     // here, you're probably using an incompatible fluid system. This class has only been
@@ -114,13 +114,13 @@ class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
     static const unsigned waterCompIdx = FluidSystem::waterCompIdx;
     static const unsigned gasCompIdx = FluidSystem::gasCompIdx;
 
-    static const unsigned numModelEq = GET_PROP_VALUE(TypeTag, NumEq);
+    static const unsigned numModelEq = getPropValue<TypeTag, Properties::NumEq>();
     static const unsigned conti0EqIdx = GetPropType<TypeTag, Properties::Indices>::conti0EqIdx;
     static const unsigned contiEnergyEqIdx = GetPropType<TypeTag, Properties::Indices>::contiEnergyEqIdx;
 
-    static constexpr unsigned historySize = GET_PROP_VALUE(TypeTag, TimeDiscHistorySize);
+    static constexpr unsigned historySize = getPropValue<TypeTag, Properties::TimeDiscHistorySize>();
 
-    static constexpr bool enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy);
+    static constexpr bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
 
     typedef Opm::CompositionalFluidState<Scalar, FluidSystem, /*storeEnthalpy=*/true> FluidState;
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;

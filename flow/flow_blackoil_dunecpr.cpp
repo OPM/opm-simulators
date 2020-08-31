@@ -26,22 +26,64 @@
 namespace Opm {
   namespace Properties {
 
-    NEW_TYPE_TAG(EclFlowProblemSimple, INHERITS_FROM(EclFlowProblem));
+    namespace TTag {
+        struct EclFlowProblemSimple {
+            using InheritsFrom = std::tuple<EclFlowProblem>;
+        };
+    }
 
-    SET_BOOL_PROP(EclFlowProblemSimple, MatrixAddWellContributions, true);
-    SET_INT_PROP(EclFlowProblemSimple, LinearSolverVerbosity,0);
-    SET_SCALAR_PROP(EclFlowProblemSimple, LinearSolverReduction, 1e-2);
-    SET_INT_PROP(EclFlowProblemSimple, LinearSolverMaxIter, 100);
-    SET_BOOL_PROP(EclFlowProblemSimple, UseAmg, true);//probably not used
-    SET_BOOL_PROP(EclFlowProblemSimple, UseCpr, true);
-    SET_INT_PROP(EclFlowProblemSimple, CprMaxEllIter, 1);
-    SET_INT_PROP(EclFlowProblemSimple, CprEllSolvetype, 3);
-    SET_INT_PROP(EclFlowProblemSimple, CprReuseSetup, 3);
-    SET_INT_PROP(EclFlowProblemSimple, CprSolverVerbose, 0);
-    SET_STRING_PROP(EclFlowProblemSimple, LinearSolverConfiguration, "ilu0");
-    SET_STRING_PROP(EclFlowProblemSimple, SystemStrategy, "quasiimpes");
+    template<class TypeTag>
+    struct MatrixAddWellContributions<TypeTag, TTag::EclFlowProblemSimple> {
+        static constexpr bool value = true;
+    };
+    template<class TypeTag>
+    struct LinearSolverVerbosity<TypeTag, TTag::EclFlowProblemSimple> {
+        static constexpr int value = 0;
+    };
+    template<class TypeTag>
+    struct LinearSolverReduction<TypeTag, TTag::EclFlowProblemSimple> {
+        using type = GetPropType<TypeTag, Scalar>;
+        static constexpr type value = 1e-2;
+    };
+    template<class TypeTag>
+    struct LinearSolverMaxIter<TypeTag, TTag::EclFlowProblemSimple> {
+        static constexpr int value = 100;
+    };
+    template<class TypeTag>
+    struct UseAmg<TypeTag, TTag::EclFlowProblemSimple> { // probably not used
+        static constexpr bool value = true;
+    };
+    template<class TypeTag>
+    struct UseCpr<TypeTag, TTag::EclFlowProblemSimple> {
+        static constexpr bool value = true;
+    };
+    template<class TypeTag>
+    struct CprMaxEllIter<TypeTag,TTag::EclFlowProblemSimple> {
+        static constexpr int value = 1;
+    };
+    template<class TypeTag>
+    struct CprEllSolvetype<TypeTag, TTag::EclFlowProblemSimple> {
+        static constexpr int value = 3;
+    };
+    template<class TypeTag>
+    struct CprReuseSetup<TypeTag,TTag::EclFlowProblemSimple> {
+        static constexpr int value = 3;
+    };
+    template<class TypeTag>
+    struct CprSolverVerbose<TypeTag, TTag::EclFlowProblemSimple> {
+        static constexpr int value = 0;
+    };
+    template<class TypeTag>
+    struct LinearSolverConfiguration<TypeTag, TTag::EclFlowProblemSimple> {
+        static constexpr auto value = "ilu0";
+    };
+    template<class TypeTag>
+    struct SystemStrategy<TypeTag, TTag::EclFlowProblemSimple> {
+        static constexpr auto value = "quasiimpes";
+    };
 
-    SET_PROP(EclFlowProblemSimple, FluidSystem)
+    template<class TypeTag>
+    struct FluidSystem<TypeTag, TTag::EclFlowProblemSimple>
     {
     private:
       using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -50,20 +92,61 @@ namespace Opm {
     public:
         typedef Opm::BlackOilFluidSystem<Scalar> type;
     };
-    //NEW_TYPE_TAG(EclFlowProblem, INHERITS_FROM(BlackOilModel, EclBaseProblem));
-    SET_TYPE_PROP(EclFlowProblemSimple, IntensiveQuantities, Opm::BlackOilIntensiveQuantities<TypeTag>);
-    //SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Opm::ISTLSolverEbos<TypeTag>);
-    //SET_TAG_PROP(EclFlowProblemSimple, LinearSolverSplice, ParallelBiCGStabLinearSolver);
-    //SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Opm::Linear::ParallelBiCGStabSolverBackend<TypeTag>);//not work
-    //SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Opm::Linear::SuperLUBackend<TypeTag>)//not work
-    //SET_TAG_PROP(EclFlowProblem, FluidState, Opm::BlackOilFluidState);
-    SET_TYPE_PROP(EclFlowProblemSimple, LinearSolverBackend, Opm::ISTLSolverEbosFlexible<TypeTag>);
-    SET_BOOL_PROP(EclFlowProblemSimple, EnableStorageCache, true);
-    SET_BOOL_PROP(EclFlowProblemSimple, EnableIntensiveQuantityCache, true);
+//    namespace TTag {
+//        struct EclFlowProblemSimple {
+//            using InheritsFrom = std::tuple<EclBaseProblem, BlackOilModel>;
+//        };
+//    }
+    template<class TypeTag>
+    struct IntensiveQuantities<TypeTag, TTag::EclFlowProblemSimple> {
+        using type =  Opm::BlackOilIntensiveQuantities<TypeTag>;
+    };
+//    template<class TypeTag>
+//    struct LinearSolverBackend<TypeTag, TTag::EclFlowProblemSimple> {
+//        using type = Opm::ISTLSolverEbos<TypeTag>;
+//    };
+//    template<class TypeTag>
+//    struct LinearSolverSplice<TypeTag, TTag::EclFlowProblemSimple> {
+//        using type = TTag::ParallelBiCGStabLinearSolver;
+//    };
+//    template<class TypeTag>
+//    struct LinearSolverBackend<TypeTag, TTag::EclFlowProblemSimple> {
+//        using type = Opm::Linear::ParallelBiCGStabSolverBackend<TypeTag>; // not work
+//    };
+//    template<class TypeTag>
+//    struct LinearSolverBackend<TypeTag, TTag::EclFlowProblemSimple> {
+//        using type = Opm::Linear::SuperLUBackend<TypeTag>; // not work
+//    };
+//    template<class TypeTag>
+//    struct FluidState<TypeTag, TTag::EclFlowProblem> {
+//        using type = Opm::BlackOilFluidState;
+//    };
 
-    //SET_INT_PROP(EclFlowProblemSimple, NumWellAdjoint, 1);
-    //SET_BOOL_PROP(EclFlowProblem, EnableStorageCache, true);
-    //SET_BOOL_PROP(EclFlowProblem, EnableIntensiveQuantityCache, true);
+    template<class TypeTag>
+    struct LinearSolverBackend<TypeTag, TTag::EclFlowProblemSimple> {
+        using type = Opm::ISTLSolverEbosFlexible<TypeTag>;
+    };
+    template<class TypeTag>
+    struct EnableStorageCache<TypeTag, TTag::EclFlowProblemSimple> {
+        static constexpr bool value = true;
+    };
+    template<class TypeTag>
+    struct EnableIntensiveQuantityCache<TypeTag, TTag::EclFlowProblemSimple> {
+        static constexpr bool value = true;
+    };
+
+//    template<class TypeTag>
+//    struct NumWellAdjoint<TypeTag, TTag::EclFlowProblemSimple> {
+//        static constexpr int value = 1;
+//    };
+//    template<class TypeTag>
+//    struct EnableStorageCache<TypeTag, TTag::EclFlowProblem> {
+//        static constexpr bool value = true;
+//    };
+//    template<class TypeTag>
+//    struct EnableIntensiveQuantityCache<TypeTag, TTag::EclFlowProblem> {
+//        static constexpr bool value = true;
+//    };
   }
 }
 

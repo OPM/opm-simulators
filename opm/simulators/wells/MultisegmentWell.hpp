@@ -69,7 +69,7 @@ namespace Opm
         static const int SPres = gasoil? 2 : 3;
 
         ///  the number of well equations // TODO: it should have a more general strategy for it
-        static const int numWellEq = GET_PROP_VALUE(TypeTag, EnablePolymer)? numEq : numEq + 1;
+        static const int numWellEq = getPropValue<TypeTag, Properties::EnablePolymer>() ? numEq : numEq + 1;
 
         using typename Base::Scalar;
 

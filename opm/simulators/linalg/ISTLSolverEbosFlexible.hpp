@@ -35,7 +35,11 @@
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(FlowIstlSolverFlexible, INHERITS_FROM(FlowIstlSolverParams));
+namespace TTag {
+struct FlowIstlSolverFlexible {
+    using InheritsFrom = std::tuple<FlowIstlSolverParams>;
+};
+}
 
 } // namespace Opm::Properties
 

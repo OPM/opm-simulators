@@ -36,13 +36,24 @@
 
 namespace Opm {
 namespace Properties {
-NEW_TYPE_TAG(EclFlowOilWaterPolymerInjectivityProblem, INHERITS_FROM(EclFlowProblem));
-SET_BOOL_PROP(EclFlowOilWaterPolymerInjectivityProblem, EnablePolymer, true);
-SET_BOOL_PROP(EclFlowOilWaterPolymerInjectivityProblem, EnablePolymerMW, true);
+namespace TTag {
+struct EclFlowOilWaterPolymerInjectivityProblem {
+    using InheritsFrom = std::tuple<EclFlowProblem>;
+};
+}
+template<class TypeTag>
+struct EnablePolymer<TypeTag, TTag::EclFlowOilWaterPolymerInjectivityProblem> {
+    static constexpr bool value = true;
+};
+template<class TypeTag>
+struct EnablePolymerMW<TypeTag, TTag::EclFlowOilWaterPolymerInjectivityProblem> {
+    static constexpr bool value = true;
+};
 //! The indices required by the model
 // For this case, there will be two primary variables introduced for the polymer
 // polymer concentration and polymer molecular weight
-SET_PROP(EclFlowOilWaterPolymerInjectivityProblem, Indices)
+template<class TypeTag>
+struct Indices<TypeTag, TTag::EclFlowOilWaterPolymerInjectivityProblem>
 {
 private:
     // it is unfortunately not possible to simply use 'TypeTag' here because this leads
@@ -55,8 +66,8 @@ public:
     typedef Opm::BlackOilTwoPhaseIndices<0,
                                          2,
                                          0,
-                                         GET_PROP_VALUE(TypeTag, EnableFoam),
-                                         GET_PROP_VALUE(TypeTag, EnableBrine),
+                                         getPropValue<TypeTag, Properties::EnableFoam>(),
+                                         getPropValue<TypeTag, Properties::EnableBrine>(),
                                          /*PVOffset=*/0,
                                          /*disabledCompIdx=*/FluidSystem::gasCompIdx> type;
 };

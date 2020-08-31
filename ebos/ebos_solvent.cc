@@ -32,10 +32,17 @@
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(EbosSolventTypeTag, INHERITS_FROM(EbosTypeTag));
+namespace TTag {
+struct EbosSolventTypeTag {
+    using InheritsFrom = std::tuple<EbosTypeTag>;
+};
+}
 
 // enable the solvent extension of the black oil model
-SET_BOOL_PROP(EbosSolventTypeTag, EnableSolvent, true);
+template<class TypeTag>
+struct EnableSolvent<TypeTag, TTag::EbosSolventTypeTag> {
+    static constexpr bool value = true;
+};
 
 } // namespace Opm::Properties
 

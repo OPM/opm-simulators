@@ -70,11 +70,13 @@
             throw std::runtime_error("Test condition failed");    \
     }
 
-BEGIN_PROPERTIES
-
-NEW_TYPE_TAG(TestEquilTypeTag, INHERITS_FROM(BlackOilModel, EclBaseProblem));
-
-END_PROPERTIES
+namespace Opm::Properties {
+namespace TTag {
+struct TestEquilTypeTag {
+    using InheritsFrom = std::tuple<EclBaseProblem, BlackOilModel>;
+};
+}
+} // namespace Opm::Properties
 
 template <class TypeTag>
 std::unique_ptr<Opm::GetPropType<TypeTag, Opm::Properties::Simulator>>

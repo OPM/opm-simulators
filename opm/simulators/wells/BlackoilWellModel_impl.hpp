@@ -29,8 +29,8 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     BlackoilWellModel(Simulator& ebosSimulator)
         : ebosSimulator_(ebosSimulator)
-        , has_solvent_(GET_PROP_VALUE(TypeTag, EnableSolvent))
-        , has_polymer_(GET_PROP_VALUE(TypeTag, EnablePolymer))
+        , has_solvent_(getPropValue<TypeTag, Properties::EnableSolvent>())
+        , has_polymer_(getPropValue<TypeTag, Properties::EnablePolymer>())
     {
         terminal_output_ = false;
         if (ebosSimulator.gridView().comm().rank() == 0)
@@ -350,7 +350,7 @@ namespace Opm {
             if (has_polymer_)
             {
                 const Grid& grid = ebosSimulator_.vanguard().grid();
-                if (PolymerModule::hasPlyshlog() || GET_PROP_VALUE(TypeTag, EnablePolymerMW) ) {
+                if (PolymerModule::hasPlyshlog() || getPropValue<TypeTag, Properties::EnablePolymerMW>() ) {
                         computeRepRadiusPerfLength(grid, local_deferredLogger);
                 }
             }
@@ -446,7 +446,7 @@ namespace Opm {
 
         Opm::DeferredLogger local_deferredLogger;
         for (const auto& well : well_container_) {
-            if (GET_PROP_VALUE(TypeTag, EnablePolymerMW) && well->isInjector()) {
+            if (getPropValue<TypeTag, Properties::EnablePolymerMW>() && well->isInjector()) {
                 well->updateWaterThroughput(dt, well_state_);
             }
         }

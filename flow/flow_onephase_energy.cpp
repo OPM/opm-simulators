@@ -24,10 +24,18 @@
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(EclFlowProblemSimple, INHERITS_FROM(EclFlowProblem));
-SET_BOOL_PROP(EclFlowProblemSimple, EnableEnergy, true);
+namespace TTag {
+struct EclFlowProblemSimple {
+    using InheritsFrom = std::tuple<EclFlowProblem>;
+};
+}
+template<class TypeTag>
+struct EnableEnergy<TypeTag, TTag::EclFlowProblemSimple> {
+    static constexpr bool value = true;
+};
 //! The indices required by the model
-SET_PROP(EclFlowProblemSimple, Indices)
+template<class TypeTag>
+struct Indices<TypeTag, TTag::EclFlowProblemSimple>
 {
 private:
     // it is unfortunately not possible to simply use 'TypeTag' here because this leads
@@ -37,11 +45,11 @@ private:
     using FluidSystem = GetPropType<BaseTypeTag, Properties::FluidSystem>;
 
 public:
-    typedef Opm::BlackOilOnePhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent),
-                                         GET_PROP_VALUE(TypeTag, EnablePolymer),
-                                         GET_PROP_VALUE(TypeTag, EnableEnergy),
-                                         GET_PROP_VALUE(TypeTag, EnableFoam),
-                                         GET_PROP_VALUE(TypeTag, EnableBrine),
+    typedef Opm::BlackOilOnePhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
+                                         getPropValue<TypeTag, Properties::EnablePolymer>(),
+                                         getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                         getPropValue<TypeTag, Properties::EnableFoam>(),
+                                         getPropValue<TypeTag, Properties::EnableBrine>(),
                                          /*PVOffset=*/0,
                                          /*enebledCompIdx=*/FluidSystem::waterCompIdx>
         type;

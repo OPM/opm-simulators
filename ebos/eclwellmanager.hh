@@ -74,7 +74,7 @@ class EclWellManager
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
 
-    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
+    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { numPhases = FluidSystem::numPhases };
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };

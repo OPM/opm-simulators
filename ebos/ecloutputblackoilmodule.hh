@@ -47,11 +47,19 @@
 namespace Opm::Properties {
 
 // create new type tag for the Ecl-output
-NEW_TYPE_TAG(EclOutputBlackOil);
+namespace TTag {
+struct EclOutputBlackOil {};
+}
 
-NEW_PROP_TAG(ForceDisableFluidInPlaceOutput);
+template<class TypeTag, class MyTypeTag>
+struct ForceDisableFluidInPlaceOutput {
+    using type = UndefinedProperty;
+};
 
-SET_BOOL_PROP(EclOutputBlackOil, ForceDisableFluidInPlaceOutput, false);
+template<class TypeTag>
+struct ForceDisableFluidInPlaceOutput<TypeTag, TTag::EclOutputBlackOil> {
+    static constexpr bool value = false;
+};
 
 } // namespace Opm::Properties
 
@@ -88,7 +96,7 @@ class EclOutputBlackOilModule
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
     enum { gasCompIdx = FluidSystem::gasCompIdx };
     enum { oilCompIdx = FluidSystem::oilCompIdx };
-    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
     typedef std::vector<Scalar> ScalarBuffer;
     typedef std::vector<std::string> StringBuffer;    
@@ -326,13 +334,13 @@ public:
             rstKeywords["RV"] = 0;
         }
 
-        if (GET_PROP_VALUE(TypeTag, EnableSolvent))
+        if (getPropValue<TypeTag, Properties::EnableSolvent>())
             sSol_.resize(bufferSize, 0.0);
-        if (GET_PROP_VALUE(TypeTag, EnablePolymer))
+        if (getPropValue<TypeTag, Properties::EnablePolymer>())
             cPolymer_.resize(bufferSize, 0.0);
-        if (GET_PROP_VALUE(TypeTag, EnableFoam))
+        if (getPropValue<TypeTag, Properties::EnableFoam>())
             cFoam_.resize(bufferSize, 0.0);
-        if (GET_PROP_VALUE(TypeTag, EnableBrine))
+        if (getPropValue<TypeTag, Properties::EnableBrine>())
             cSalt_.resize(bufferSize, 0.0);
 
         if (simulator_.problem().vapparsActive())

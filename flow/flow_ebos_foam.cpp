@@ -31,8 +31,15 @@
 
 namespace Opm {
 namespace Properties {
-NEW_TYPE_TAG(EclFlowFoamProblem, INHERITS_FROM(EclFlowProblem));
-SET_BOOL_PROP(EclFlowFoamProblem, EnableFoam, true);
+namespace TTag {
+struct EclFlowFoamProblem {
+    using InheritsFrom = std::tuple<EclFlowProblem>;
+};
+}
+template<class TypeTag>
+struct EnableFoam<TypeTag, TTag::EclFlowFoamProblem> {
+    static constexpr bool value = true;
+};
 }}
 
 namespace Opm {

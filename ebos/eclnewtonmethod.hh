@@ -37,11 +37,26 @@
 
 namespace Opm::Properties {
 
-NEW_PROP_TAG(EclNewtonSumTolerance);
-NEW_PROP_TAG(EclNewtonStrictIterations);
-NEW_PROP_TAG(EclNewtonRelaxedVolumeFraction);
-NEW_PROP_TAG(EclNewtonSumToleranceExponent);
-NEW_PROP_TAG(EclNewtonRelaxedTolerance);
+template<class TypeTag, class MyTypeTag>
+struct EclNewtonSumTolerance {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EclNewtonStrictIterations {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EclNewtonRelaxedVolumeFraction {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EclNewtonSumToleranceExponent {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EclNewtonRelaxedTolerance {
+    using type = UndefinedProperty;
+};
 
 } // namespace Opm::Properties
 
@@ -67,7 +82,7 @@ class EclNewtonMethod : public BlackOilNewtonMethod<TypeTag>
     using Linearizer = GetPropType<TypeTag, Properties::Linearizer>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
-    static const unsigned numEq = GET_PROP_VALUE(TypeTag, NumEq);
+    static const unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
 
     static constexpr int contiSolventEqIdx = Indices::contiSolventEqIdx;
     static constexpr int contiPolymerEqIdx = Indices::contiPolymerEqIdx;
@@ -175,7 +190,7 @@ public:
 
                 // in the case of a volumetric formulation, the residual in the above is
                 // per cubic meter
-                if (GET_PROP_VALUE(TypeTag, UseVolumetricResidual)) {
+                if (getPropValue<TypeTag, Properties::UseVolumetricResidual>()) {
                     tmpError *= dofVolume;
                     tmpError2 *= dofVolume;
                 }

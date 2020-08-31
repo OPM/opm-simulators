@@ -44,7 +44,10 @@
 
 namespace Opm::Properties {
 
-NEW_PROP_TAG(EnableTracerModel);
+template<class TypeTag, class MyTypeTag>
+struct EnableTracerModel {
+    using type = UndefinedProperty;
+};
 
 } // namespace Opm::Properties
 
@@ -72,7 +75,7 @@ class EclTracerModel
 
     typedef Opm::DenseAd::Evaluation<Scalar,1> TracerEvaluation;
 
-    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
+    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { numPhases = FluidSystem::numPhases };
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };

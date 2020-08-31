@@ -67,7 +67,11 @@ namespace Opm::Properties {
 
 // this is a dummy type tag that is used to setup the parameters before the actual
 // simulator.
-NEW_TYPE_TAG(FlowEarlyBird, INHERITS_FROM(EclFlowProblem));
+namespace TTag {
+struct FlowEarlyBird {
+    using InheritsFrom = std::tuple<EclFlowProblem>;
+};
+}
 
 } // namespace Opm::Properties
 

@@ -69,27 +69,80 @@ class EclBaseVanguard;
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(EclBaseVanguard);
+namespace TTag {
+struct EclBaseVanguard {};
+}
 
 // declare the properties required by the for the ecl simulator vanguard
-NEW_PROP_TAG(EquilGrid);
-NEW_PROP_TAG(EclDeckFileName);
-NEW_PROP_TAG(EnableOpmRstFile);
-NEW_PROP_TAG(EclStrictParsing);
-NEW_PROP_TAG(SchedRestart);
-NEW_PROP_TAG(EclOutputInterval);
-NEW_PROP_TAG(IgnoreKeywords);
-NEW_PROP_TAG(EdgeWeightsMethod);
-NEW_PROP_TAG(OwnerCellsFirst);
+template<class TypeTag, class MyTypeTag>
+struct EquilGrid {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EclDeckFileName {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EnableOpmRstFile {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EclStrictParsing {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct SchedRestart {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EclOutputInterval {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct IgnoreKeywords {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EdgeWeightsMethod {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct OwnerCellsFirst {
+    using type = UndefinedProperty;
+};
 
-SET_STRING_PROP(EclBaseVanguard, IgnoreKeywords, "");
-SET_STRING_PROP(EclBaseVanguard, EclDeckFileName, "");
-SET_INT_PROP(EclBaseVanguard, EclOutputInterval, -1); // use the deck-provided value
-SET_BOOL_PROP(EclBaseVanguard, EnableOpmRstFile, false);
-SET_BOOL_PROP(EclBaseVanguard, EclStrictParsing, false);
-SET_BOOL_PROP(EclBaseVanguard, SchedRestart, false);
-SET_INT_PROP(EclBaseVanguard, EdgeWeightsMethod, 1);
-SET_BOOL_PROP(EclBaseVanguard, OwnerCellsFirst, true);
+template<class TypeTag>
+struct IgnoreKeywords<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr auto value = "";
+};
+template<class TypeTag>
+struct EclDeckFileName<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr auto value = "";
+};
+template<class TypeTag>
+struct EclOutputInterval<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr int value = -1;
+};
+template<class TypeTag>
+struct EnableOpmRstFile<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct EclStrictParsing<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct SchedRestart<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct EdgeWeightsMethod<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr int value = 1;
+};
+template<class TypeTag>
+struct OwnerCellsFirst<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr bool value = true;
+};
 
 } // namespace Opm::Properties
 
@@ -108,7 +161,7 @@ class EclBaseVanguard : public BaseVanguard<TypeTag>
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
-    enum { enableExperiments = GET_PROP_VALUE(TypeTag, EnableExperiments) };
+    enum { enableExperiments = getPropValue<TypeTag, Properties::EnableExperiments>() };
 
 public:
     using Grid = GetPropType<TypeTag, Properties::Grid>;

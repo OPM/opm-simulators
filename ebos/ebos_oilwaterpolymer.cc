@@ -31,13 +31,21 @@
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(EbosOilWaterPolymerTypeTag, INHERITS_FROM(EbosTypeTag));
+namespace TTag {
+struct EbosOilWaterPolymerTypeTag {
+    using InheritsFrom = std::tuple<EbosTypeTag>;
+};
+}
 
 // enable the polymer extension of the black oil model
-SET_BOOL_PROP(EbosOilWaterPolymerTypeTag, EnablePolymer, true);
+template<class TypeTag>
+struct EnablePolymer<TypeTag, TTag::EbosOilWaterPolymerTypeTag> {
+    static constexpr bool value = true;
+};
 
 //! The indices indices which only enable oil and water
-SET_PROP(EbosOilWaterPolymerTypeTag, Indices)
+template<class TypeTag>
+struct Indices<TypeTag, TTag::EbosOilWaterPolymerTypeTag>
 {
 private:
     // it is unfortunately not possible to simply use 'TypeTag' here because this leads
@@ -46,11 +54,11 @@ private:
     using FluidSystem = GetPropType<TTag::EbosTypeTag, Properties::FluidSystem>;
 
 public:
-    typedef Opm::BlackOilTwoPhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent),
-                                         GET_PROP_VALUE(TypeTag, EnablePolymer),
-                                         GET_PROP_VALUE(TypeTag, EnableEnergy),
-                                         GET_PROP_VALUE(TypeTag, EnableFoam),
-                                         GET_PROP_VALUE(TypeTag, EnableBrine),
+    typedef Opm::BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
+                                         getPropValue<TypeTag, Properties::EnablePolymer>(),
+                                         getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                         getPropValue<TypeTag, Properties::EnableFoam>(),
+                                         getPropValue<TypeTag, Properties::EnableBrine>(),
                                          /*PVOffset=*/0,
                                          /*disabledCompIdx=*/FluidSystem::gasCompIdx> type;
 };

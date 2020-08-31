@@ -19,47 +19,174 @@
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(FlowTimeSteppingParameters);
+namespace TTag {
+struct FlowTimeSteppingParameters {};
+}
 
-NEW_PROP_TAG(SolverRestartFactor);
-NEW_PROP_TAG(SolverGrowthFactor);
-NEW_PROP_TAG(SolverMaxGrowth);
-NEW_PROP_TAG(SolverMaxTimeStepInDays);
-NEW_PROP_TAG(SolverMinTimeStep);
-NEW_PROP_TAG(SolverMaxRestarts);
-NEW_PROP_TAG(SolverVerbosity);
-NEW_PROP_TAG(TimeStepVerbosity);
-NEW_PROP_TAG(InitialTimeStepInDays);
-NEW_PROP_TAG(FullTimeStepInitially);
-NEW_PROP_TAG(TimeStepAfterEventInDays);
-NEW_PROP_TAG(TimeStepControl);
-NEW_PROP_TAG(TimeStepControlTolerance);
-NEW_PROP_TAG(TimeStepControlTargetIterations);
-NEW_PROP_TAG(TimeStepControlTargetNewtonIterations);
-NEW_PROP_TAG(TimeStepControlDecayRate);
-NEW_PROP_TAG(TimeStepControlGrowthRate);
-NEW_PROP_TAG(TimeStepControlFileName);
-NEW_PROP_TAG(MinTimeStepBeforeShuttingProblematicWellsInDays);
+template<class TypeTag, class MyTypeTag>
+struct SolverRestartFactor {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct SolverGrowthFactor {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct SolverMaxGrowth {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct SolverMaxTimeStepInDays {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct SolverMinTimeStep {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct SolverMaxRestarts {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct SolverVerbosity {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct TimeStepVerbosity {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct InitialTimeStepInDays {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct FullTimeStepInitially {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct TimeStepAfterEventInDays {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct TimeStepControl {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct TimeStepControlTolerance {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct TimeStepControlTargetIterations {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct TimeStepControlTargetNewtonIterations {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct TimeStepControlDecayRate {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct TimeStepControlGrowthRate {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct TimeStepControlFileName {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct MinTimeStepBeforeShuttingProblematicWellsInDays {
+    using type = UndefinedProperty;
+};
 
-SET_SCALAR_PROP(FlowTimeSteppingParameters, SolverRestartFactor, 0.33);
-SET_SCALAR_PROP(FlowTimeSteppingParameters, SolverGrowthFactor, 2.0);
-SET_SCALAR_PROP(FlowTimeSteppingParameters, SolverMaxGrowth, 3.0);
-SET_SCALAR_PROP(FlowTimeSteppingParameters, SolverMaxTimeStepInDays, 365.0);
-SET_SCALAR_PROP(FlowTimeSteppingParameters, SolverMinTimeStep, 0.0);
-SET_INT_PROP(FlowTimeSteppingParameters, SolverMaxRestarts, 10);
-SET_INT_PROP(FlowTimeSteppingParameters, SolverVerbosity, 1);
-SET_INT_PROP(FlowTimeSteppingParameters, TimeStepVerbosity, 1);
-SET_SCALAR_PROP(FlowTimeSteppingParameters, InitialTimeStepInDays, 1.0);
-SET_BOOL_PROP(FlowTimeSteppingParameters, FullTimeStepInitially, false);
-SET_SCALAR_PROP(FlowTimeSteppingParameters, TimeStepAfterEventInDays, -1.0);
-SET_STRING_PROP(FlowTimeSteppingParameters, TimeStepControl, "pid");
-SET_SCALAR_PROP(FlowTimeSteppingParameters, TimeStepControlTolerance, 1e-1);
-SET_INT_PROP(FlowTimeSteppingParameters, TimeStepControlTargetIterations, 30);
-SET_INT_PROP(FlowTimeSteppingParameters, TimeStepControlTargetNewtonIterations, 8);
-SET_SCALAR_PROP(FlowTimeSteppingParameters, TimeStepControlDecayRate, 0.75);
-SET_SCALAR_PROP(FlowTimeSteppingParameters, TimeStepControlGrowthRate, 1.25);
-SET_STRING_PROP(FlowTimeSteppingParameters, TimeStepControlFileName, "timesteps");
-SET_SCALAR_PROP(FlowTimeSteppingParameters, MinTimeStepBeforeShuttingProblematicWellsInDays, 0.001);
+template<class TypeTag>
+struct SolverRestartFactor<TypeTag, TTag::FlowTimeSteppingParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.33;
+};
+template<class TypeTag>
+struct SolverGrowthFactor<TypeTag, TTag::FlowTimeSteppingParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 2.0;
+};
+template<class TypeTag>
+struct SolverMaxGrowth<TypeTag, TTag::FlowTimeSteppingParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 3.0;
+};
+template<class TypeTag>
+struct SolverMaxTimeStepInDays<TypeTag, TTag::FlowTimeSteppingParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 365.0;
+};
+template<class TypeTag>
+struct SolverMinTimeStep<TypeTag, TTag::FlowTimeSteppingParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.0;
+};
+template<class TypeTag>
+struct SolverMaxRestarts<TypeTag, TTag::FlowTimeSteppingParameters> {
+    static constexpr int value = 10;
+};
+template<class TypeTag>
+struct SolverVerbosity<TypeTag, TTag::FlowTimeSteppingParameters> {
+    static constexpr int value = 1;
+};
+template<class TypeTag>
+struct TimeStepVerbosity<TypeTag, TTag::FlowTimeSteppingParameters> {
+    static constexpr int value = 1;
+};
+template<class TypeTag>
+struct InitialTimeStepInDays<TypeTag, TTag::FlowTimeSteppingParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.0;
+};
+template<class TypeTag>
+struct FullTimeStepInitially<TypeTag, TTag::FlowTimeSteppingParameters> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct TimeStepAfterEventInDays<TypeTag, TTag::FlowTimeSteppingParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = -1.0;
+};
+template<class TypeTag>
+struct TimeStepControl<TypeTag, TTag::FlowTimeSteppingParameters> {
+    static constexpr auto value = "pid";
+};
+template<class TypeTag>
+struct TimeStepControlTolerance<TypeTag, TTag::FlowTimeSteppingParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-1;
+};
+template<class TypeTag>
+struct TimeStepControlTargetIterations<TypeTag, TTag::FlowTimeSteppingParameters> {
+    static constexpr int value = 30;
+};
+template<class TypeTag>
+struct TimeStepControlTargetNewtonIterations<TypeTag, TTag::FlowTimeSteppingParameters> {
+    static constexpr int value = 8;
+};
+template<class TypeTag>
+struct TimeStepControlDecayRate<TypeTag, TTag::FlowTimeSteppingParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.75;
+};
+template<class TypeTag>
+struct TimeStepControlGrowthRate<TypeTag, TTag::FlowTimeSteppingParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.25;
+};
+template<class TypeTag>
+struct TimeStepControlFileName<TypeTag, TTag::FlowTimeSteppingParameters> {
+    static constexpr auto value = "timesteps";
+};
+template<class TypeTag>
+struct MinTimeStepBeforeShuttingProblematicWellsInDays<TypeTag, TTag::FlowTimeSteppingParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.001;
+};
 
 } // namespace Opm::Properties
 

@@ -56,18 +56,23 @@
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(FlowIstlSolver, INHERITS_FROM(FlowIstlSolverParams));
+namespace TTag {
+struct FlowIstlSolver {
+    using InheritsFrom = std::tuple<FlowIstlSolverParams>;
+};
+}
 
 template <class TypeTag, class MyTypeTag>
 struct EclWellModel;
 
 //! Set the type of a global jacobian matrix for linear solvers that are based on
 //! dune-istl.
-SET_PROP(FlowIstlSolver, SparseMatrixAdapter)
+template<class TypeTag>
+struct SparseMatrixAdapter<TypeTag, TTag::FlowIstlSolver>
 {
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
+    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     typedef Opm::MatrixBlock<Scalar, numEq, numEq> Block;
 
 public:

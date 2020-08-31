@@ -76,13 +76,22 @@
     }
 
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
+namespace TTag {
+struct TestEclOutputTypeTag {
+    using InheritsFrom = std::tuple<EclBaseProblem, BlackOilModel>;
+};
+}
+template<class TypeTag>
+struct EnableGravity<TypeTag, TTag::TestEclOutputTypeTag> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct EnableAsyncEclOutput<TypeTag, TTag::TestEclOutputTypeTag> {
+    static constexpr bool value = false;
+};
 
-NEW_TYPE_TAG(TestEclOutputTypeTag, INHERITS_FROM(BlackOilModel, EclBaseProblem));
-SET_BOOL_PROP(TestEclOutputTypeTag, EnableGravity, false);
-SET_BOOL_PROP(TestEclOutputTypeTag, EnableAsyncEclOutput, false);
-
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace {
 std::unique_ptr<Opm::EclIO::ESmry> readsum(const std::string& base)

@@ -53,10 +53,15 @@ public:
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(EbosAltIdxTypeTag, INHERITS_FROM(EbosTypeTag));
+namespace TTag {
+struct EbosAltIdxTypeTag {
+    using InheritsFrom = std::tuple<EbosTypeTag>;
+};
+}
 
 // use a fluid system with different indices than the default
-SET_PROP(EbosAltIdxTypeTag, FluidSystem)
+template<class TypeTag>
+struct FluidSystem<TypeTag, TTag::EbosAltIdxTypeTag>
 {
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 

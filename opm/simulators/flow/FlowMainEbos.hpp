@@ -50,15 +50,33 @@
 
 namespace Opm::Properties {
 
-NEW_PROP_TAG(EnableDryRun);
-NEW_PROP_TAG(OutputInterval);
-NEW_PROP_TAG(EnableLoggingFalloutWarning);
+template<class TypeTag, class MyTypeTag>
+struct EnableDryRun {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct OutputInterval {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EnableLoggingFalloutWarning {
+    using type = UndefinedProperty;
+};
 
 // TODO: enumeration parameters. we use strings for now.
-SET_STRING_PROP(EclFlowProblem, EnableDryRun, "auto");
+template<class TypeTag>
+struct EnableDryRun<TypeTag, TTag::EclFlowProblem> {
+    static constexpr auto value = "auto";
+};
 // Do not merge parallel output files or warn about them
-SET_BOOL_PROP(EclFlowProblem, EnableLoggingFalloutWarning, false);
-SET_INT_PROP(EclFlowProblem, OutputInterval, 1);
+template<class TypeTag>
+struct EnableLoggingFalloutWarning<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct OutputInterval<TypeTag, TTag::EclFlowProblem> {
+    static constexpr int value = 1;
+};
 
 } // namespace Opm::Properties
 
@@ -69,7 +87,7 @@ namespace Opm
     class FlowMainEbos
     {
     public:
-        typedef typename GET_PROP(TypeTag, MaterialLaw)::EclMaterialLawManager MaterialLawManager;
+        using MaterialLawManager = typename GetProp<TypeTag, Properties::MaterialLaw>::EclMaterialLawManager;
         using EbosSimulator = GetPropType<TypeTag, Properties::Simulator>;
         using Grid = GetPropType<TypeTag, Properties::Grid>;
         using GridView = GetPropType<TypeTag, Properties::GridView>;
@@ -89,7 +107,7 @@ namespace Opm
         // Read the command line parameters. Throws an exception if something goes wrong.
         static int setupParameters_(int argc, char** argv)
         {
-            using ParamsMeta = typename GET_PROP(TypeTag, ParameterMetaData);
+            using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
             if (!ParamsMeta::registrationOpen()) {
                 // We have already successfully run setupParameters_().
                 // For the dynamically chosen runs (as from the main flow

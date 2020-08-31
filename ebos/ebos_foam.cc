@@ -32,10 +32,17 @@
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(EbosFoamTypeTag, INHERITS_FROM(EbosTypeTag));
+namespace TTag {
+struct EbosFoamTypeTag {
+    using InheritsFrom = std::tuple<EbosTypeTag>;
+};
+}
 
 // enable the foam extension of the black oil model
-SET_BOOL_PROP(EbosFoamTypeTag, EnableFoam, true);
+template<class TypeTag>
+struct EnableFoam<TypeTag, TTag::EbosFoamTypeTag> {
+    static constexpr bool value = true;
+};
 
 } // namespace Opm::Properties
 

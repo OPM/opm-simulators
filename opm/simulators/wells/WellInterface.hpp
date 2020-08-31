@@ -91,14 +91,14 @@ namespace Opm
         typedef Dune::BlockVector<VectorBlockType> BVector;
         typedef DenseAd::Evaluation<double, /*size=*/numEq> Eval;
 
-        static const bool has_solvent = GET_PROP_VALUE(TypeTag, EnableSolvent);
-        static const bool has_polymer = GET_PROP_VALUE(TypeTag, EnablePolymer);
-        static const bool has_energy = GET_PROP_VALUE(TypeTag, EnableEnergy);
-        static const bool has_temperature = GET_PROP_VALUE(TypeTag, EnableTemperature);
+        static const bool has_solvent = getPropValue<TypeTag, Properties::EnableSolvent>();
+        static const bool has_polymer = getPropValue<TypeTag, Properties::EnablePolymer>();
+        static const bool has_energy = getPropValue<TypeTag, Properties::EnableEnergy>();
+        static const bool has_temperature = getPropValue<TypeTag, Properties::EnableTemperature>();
         // flag for polymer molecular weight related
-        static const bool has_polymermw = GET_PROP_VALUE(TypeTag, EnablePolymerMW);
-        static const bool has_foam = GET_PROP_VALUE(TypeTag, EnableFoam);
-        static const bool has_brine = GET_PROP_VALUE(TypeTag, EnableBrine);
+        static const bool has_polymermw = getPropValue<TypeTag, Properties::EnablePolymerMW>();
+        static const bool has_foam = getPropValue<TypeTag, Properties::EnableFoam>();
+        static const bool has_brine = getPropValue<TypeTag, Properties::EnableBrine>();
         static const int contiSolventEqIdx = Indices::contiSolventEqIdx;
         static const int contiPolymerEqIdx = Indices::contiPolymerEqIdx;
         // index for the polymer molecular weight continuity equation

@@ -32,10 +32,17 @@
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(EbosThermalTypeTag, INHERITS_FROM(EbosTypeTag));
+namespace TTag {
+struct EbosThermalTypeTag {
+    using InheritsFrom = std::tuple<EbosTypeTag>;
+};
+}
 
 // enable the energy extension of the black oil model
-SET_BOOL_PROP(EbosThermalTypeTag, EnableEnergy, true);
+template<class TypeTag>
+struct EnableEnergy<TypeTag, TTag::EbosThermalTypeTag> {
+    static constexpr bool value = true;
+};
 
 } // namespace Opm::Properties
 

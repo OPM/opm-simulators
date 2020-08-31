@@ -69,9 +69,18 @@
 
 namespace Opm::Properties {
 
-NEW_PROP_TAG(EnableEclOutput);
-NEW_PROP_TAG(EnableAsyncEclOutput);
-NEW_PROP_TAG(EclOutputDoublePrecision);
+template<class TypeTag, class MyTypeTag>
+struct EnableEclOutput {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EnableAsyncEclOutput {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EclOutputDoublePrecision {
+    using type = UndefinedProperty;
+};
 
 } // namespace Opm::Properties
 
@@ -165,8 +174,8 @@ class EclWriter
 
     typedef std::vector<Scalar> ScalarBuffer;
 
-    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
-    enum { enableSolvent = GET_PROP_VALUE(TypeTag, EnableSolvent) };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
 
 
 public:
