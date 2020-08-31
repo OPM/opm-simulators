@@ -48,6 +48,8 @@
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/State.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQState.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQConfig.hpp>
 
 #include <opm/simulators/utils/readDeck.hpp>
 
@@ -341,6 +343,7 @@ public:
                  /* checkDeck = */ enableExperiments);
 
         this->summaryState_ = std::make_unique<Opm::SummaryState>( std::chrono::system_clock::from_time_t(this->eclSchedule_->getStartTime() ));
+        this->udqState_.reset( new Opm::UDQState( this->eclSchedule_->getUDQConfig(0).params().undefinedValue()) );
         this->actionState_ = std::make_unique<Opm::Action::State>() ;
 
         // Possibly override IOConfig setting for how often RESTART files should get
@@ -429,6 +432,17 @@ public:
     { return *actionState_; }
 
     /*!
+     * \brief Returns the udq state
+     *
+     * The UDQState keeps track of the result of UDQ evaluations.
+     */
+    Opm::UDQState& udqState()
+    { return *udqState_; }
+
+    const Opm::UDQState& udqState() const
+    { return *udqState_; }
+
+    /*!
      * \brief Parameter deciding the edge-weight strategy of the load balancer.
      */
     Dune::EdgeWeightMethod edgeWeightsMethod() const
@@ -439,7 +453,7 @@ public:
      */
     bool ownersFirst() const
     { return ownersFirst_; }
-    
+
     /*!
      * \brief Returns the name of the case.
      *
@@ -596,6 +610,7 @@ private:
 
     std::unique_ptr<Opm::SummaryState> summaryState_;
     std::unique_ptr<Opm::Action::State> actionState_;
+    std::unique_ptr<Opm::UDQState> udqState_;
 
     // these attributes point  either to the internal  or to the external version of the
     // parser objects.
