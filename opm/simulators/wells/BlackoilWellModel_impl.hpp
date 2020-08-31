@@ -2184,7 +2184,7 @@ namespace Opm {
     actionOnBrokenConstraints(const Group& group, const Group::ExceedAction& exceed_action, const Group::ProductionCMode& newControl, Opm::DeferredLogger& deferred_logger) {
 
         auto& well_state = well_state_;
-        const Group::ProductionCMode& oldControl = well_state.currentProductionGroupControl(group.name());
+        const Group::ProductionCMode oldControl = well_state.currentProductionGroupControl(group.name());
 
         std::ostringstream ss;
 
@@ -2240,7 +2240,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     actionOnBrokenConstraints(const Group& group, const Group::InjectionCMode& newControl, const Phase& controlPhase, Opm::DeferredLogger& deferred_logger) {
         auto& well_state = well_state_;
-        const Group::InjectionCMode& oldControl = well_state.currentInjectionGroupControl(controlPhase, group.name());
+        const Group::InjectionCMode oldControl = well_state.currentInjectionGroupControl(controlPhase, group.name());
 
         std::ostringstream ss;
         if (oldControl != newControl) {
