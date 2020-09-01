@@ -48,6 +48,7 @@
 #include <opm/parser/eclipse/Units/UnitSystem.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/State.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQState.hpp>
 
 #include <opm/simulators/utils/ParallelRestart.hpp>
 #include <opm/grid/GridHelpers.hpp>
@@ -658,6 +659,7 @@ private:
     {
         Opm::Action::State actionState_;
         Opm::SummaryState summaryState_;
+        Opm::UDQState udqState_;
         Opm::EclipseIO& eclIO_;
         int reportStepNum_;
         bool isSubStep_;
@@ -667,6 +669,7 @@ private:
 
         explicit EclWriteTasklet(const Opm::Action::State& actionState,
                                  const Opm::SummaryState& summaryState,
+                                 const Opm::UDQState& udqState,
                                  Opm::EclipseIO& eclIO,
                                  int reportStepNum,
                                  bool isSubStep,
@@ -675,6 +678,7 @@ private:
                                  bool writeDoublePrecision)
             : actionState_(actionState)
             , summaryState_(summaryState)
+            , udqState_(udqState)
             , eclIO_(eclIO)
             , reportStepNum_(reportStepNum)
             , isSubStep_(isSubStep)
@@ -688,6 +692,7 @@ private:
         {
             eclIO_.writeTimeStep(actionState_,
                                  summaryState_,
+                                 udqState_,
                                  reportStepNum_,
                                  isSubStep_,
                                  secondsElapsed_,
@@ -704,6 +709,9 @@ private:
 
     Opm::Action::State& actionState()
     { return simulator_.vanguard().actionState(); }
+
+    Opm::UDQState& udqState()
+    { return simulator_.vanguard().udqState(); }
 
     const Opm::Schedule& schedule() const
     { return simulator_.vanguard().schedule(); }
@@ -766,7 +774,7 @@ private:
         // first, create a tasklet to write the data for the current time
         // step to disk
         auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(
-            this->actionState(), this->summaryState(), *this->eclIO_,
+            this->actionState(), this->summaryState(), this->udqState(), *this->eclIO_,
             reportStepNum, isSubStep, curTime, std::move(restartValue),
             EWOMS_GET_PARAM(TypeTag, bool, EclOutputDoublePrecision)
             );
