@@ -373,7 +373,7 @@ protected:
             // the distance between the face center and the center of the control volume
             DimVector distVecIn(posIn);
             distVecIn -= posFace;
-            Scalar absDist = distVecIn.two_norm();
+            Scalar absDistSquared = distVecIn.two_norm2();
             Scalar gTimesDist = gIn*distVecIn;
 
             for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
@@ -385,15 +385,13 @@ protected:
                 Evaluation pStatIn = - gTimesDist*rhoIn;
 
                 Opm::Valgrind::CheckDefined(pStatIn);
-
-                // compute the hydrostatic gradient between the two control volumes (this
-                // gradient exhibitis the same direction as the vector between the two
-                // control volume centers and the length (pStaticExterior -
-                // pStaticInterior)/distanceInteriorToExterior. Note that for the
-                // boundary, 'pStaticExterior' is zero as the boundary pressure is
-                // defined on boundary face's integration point...
+                // compute the hydrostatic gradient between the control volume and face integration
+                // point. This gradient exhibitis the same direction as the vector between the
+                // control volume center and face integration point (-distVecIn / absDist) and the
+                // length of the vector is -pStaticIn / absDist. Note that the two negatives become
+                // + and the 1 / (absDist * absDist) -> absDistSquared.
                 EvalDimVector f(distVecIn);
-                f *= - pStatIn/absDist;
+                f *= pStatIn / absDistSquared;
 
                 // calculate the final potential gradient
                 for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
