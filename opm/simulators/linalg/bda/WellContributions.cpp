@@ -104,24 +104,28 @@ WellContributions::~WellContributions()
 #if HAVE_OPENCL
 
 void WellContributions::init(cl::Context *context){
-    d_Cnnzs_ocl = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * num_blocks * dim * dim_wells);
-    d_Dnnzs_ocl = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * num_std_wells * dim_wells * dim_wells);
-    d_Bnnzs_ocl = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * num_blocks * dim * dim_wells);
-    d_Ccols_ocl = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * num_blocks);
-    d_Bcols_ocl = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * num_blocks);
-    d_val_pointers_ocl = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(unsigned int) * (num_std_wells + 1));
+    if(num_std_wells > 0){
+        d_Cnnzs_ocl = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * num_blocks * dim * dim_wells);
+        d_Dnnzs_ocl = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * num_std_wells * dim_wells * dim_wells);
+        d_Bnnzs_ocl = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * num_blocks * dim * dim_wells);
+        d_Ccols_ocl = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * num_blocks);
+        d_Bcols_ocl = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * num_blocks);
+        d_val_pointers_ocl = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(unsigned int) * (num_std_wells + 1));
+    }
 }
 
 void WellContributions::copyDataToGPU(cl::CommandQueue *queue){
-    cl::Event event;
+    if(num_std_wells > 0){
+        cl::Event event;
 
-    queue->enqueueWriteBuffer(d_Cnnzs_ocl, CL_TRUE, 0, sizeof(double) * num_blocks * dim * dim_wells, h_Cnnzs_ocl);
-    queue->enqueueWriteBuffer(d_Dnnzs_ocl, CL_TRUE, 0, sizeof(double) * num_std_wells * dim_wells * dim_wells, h_Dnnzs_ocl);
-    queue->enqueueWriteBuffer(d_Bnnzs_ocl, CL_TRUE, 0, sizeof(double) * num_blocks * dim * dim_wells, h_Bnnzs_ocl);
-    queue->enqueueWriteBuffer(d_Ccols_ocl, CL_TRUE, 0, sizeof(int) * num_blocks, h_Ccols_ocl);
-    queue->enqueueWriteBuffer(d_Bcols_ocl, CL_TRUE, 0, sizeof(int) * num_blocks, h_Bcols_ocl);
-    queue->enqueueWriteBuffer(d_val_pointers_ocl, CL_TRUE, 0, sizeof(unsigned int) * (num_std_wells + 1), val_pointers, nullptr, &event);
-    event.wait();
+        queue->enqueueWriteBuffer(d_Cnnzs_ocl, CL_TRUE, 0, sizeof(double) * num_blocks * dim * dim_wells, h_Cnnzs_ocl);
+        queue->enqueueWriteBuffer(d_Dnnzs_ocl, CL_TRUE, 0, sizeof(double) * num_std_wells * dim_wells * dim_wells, h_Dnnzs_ocl);
+        queue->enqueueWriteBuffer(d_Bnnzs_ocl, CL_TRUE, 0, sizeof(double) * num_blocks * dim * dim_wells, h_Bnnzs_ocl);
+        queue->enqueueWriteBuffer(d_Ccols_ocl, CL_TRUE, 0, sizeof(int) * num_blocks, h_Ccols_ocl);
+        queue->enqueueWriteBuffer(d_Bcols_ocl, CL_TRUE, 0, sizeof(int) * num_blocks, h_Bcols_ocl);
+        queue->enqueueWriteBuffer(d_val_pointers_ocl, CL_TRUE, 0, sizeof(unsigned int) * (num_std_wells + 1), val_pointers, nullptr, &event);
+        event.wait();
+    }
 }
 
 void WellContributions::applyMSWell(cl::CommandQueue *queue, cl::Buffer& d_x, cl::Buffer& d_y) {
