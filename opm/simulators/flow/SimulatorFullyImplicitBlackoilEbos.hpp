@@ -330,12 +330,12 @@ protected:
 
     std::unique_ptr<Solver> createSolver(WellModel& wellModel)
     {
-        auto model = std::unique_ptr<Model>(new Model(ebosSimulator_,
-                                                      modelParam_,
-                                                      wellModel,
-                                                      terminalOutput_));
+        auto model = std::make_unique<Model>(ebosSimulator_,
+                                             modelParam_,
+                                             wellModel,
+                                             terminalOutput_);
 
-        return std::unique_ptr<Solver>(new Solver(solverParam_, std::move(model)));
+        return std::make_unique<Solver>(solverParam_, std::move(model));
     }
 
     void outputTimestampFIP(const SimulatorTimer& timer, const std::string version)

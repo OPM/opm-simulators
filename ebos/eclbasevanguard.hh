@@ -239,7 +239,7 @@ public:
         tmp.emplace_back(Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN);
         tmp.emplace_back(Opm::ParseContext::PARSE_EXTRA_RECORDS, Opm::InputError::WARN);
 
-        std::unique_ptr<Opm::ParseContext> parseContext(new Opm::ParseContext(tmp));
+        auto parseContext = std::make_unique<Opm::ParseContext>(tmp);
 
         const std::string ignoredKeywords = EWOMS_GET_PARAM(TypeTag, std::string, IgnoreKeywords);
         if (ignoredKeywords.size() > 0) {

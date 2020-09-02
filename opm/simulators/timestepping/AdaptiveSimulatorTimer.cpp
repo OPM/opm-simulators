@@ -167,7 +167,7 @@ AdaptiveSimulatorTimer& AdaptiveSimulatorTimer::operator++ ()
     std::unique_ptr< SimulatorTimerInterface >
     AdaptiveSimulatorTimer::clone() const
     {
-        return std::unique_ptr< SimulatorTimerInterface > (new AdaptiveSimulatorTimer( *this ));
+        return std::make_unique<AdaptiveSimulatorTimer>(*this);
     }
 
 
