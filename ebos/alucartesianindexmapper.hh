@@ -230,7 +230,7 @@ public:
     {
         typedef GlobalIndexDataHandle<GridView> DataHandle ;
         assert(&grid_ == &gridView.grid());
-        return std::unique_ptr<DataHandle>(new DataHandle(gridView, cartesianIndex_));
+        return std::make_unique<DataHandle>(gridView, cartesianIndex_);
     }
 
 protected:

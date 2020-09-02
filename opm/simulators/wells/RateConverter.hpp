@@ -169,7 +169,7 @@ namespace Opm {
                     using VT = typename AttributeMap::value_type;
 
                     for (const auto& r : rmap.activeRegions()) {
-                        auto v = std::unique_ptr<Value>(new Value(attr));
+                        auto v = std::make_unique<Value>(attr);
 
                         const auto stat = attr_.insert(VT(r, std::move(v)));
 

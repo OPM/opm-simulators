@@ -517,7 +517,7 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
             const MILU_VARIANT ilu_milu  = parameters_.ilu_milu_;
             const bool ilu_redblack = parameters_.ilu_redblack_;
             const bool ilu_reorder_spheres = parameters_.ilu_reorder_sphere_;
-            std::unique_ptr<SeqPreconditioner> precond(new SeqPreconditioner(opA.getmat(), ilu_fillin, relax, ilu_milu, ilu_redblack, ilu_reorder_spheres));
+            auto precond = std::make_unique<SeqPreconditioner>(opA.getmat(), ilu_fillin, relax, ilu_milu, ilu_redblack, ilu_reorder_spheres);
             return precond;
         }
 

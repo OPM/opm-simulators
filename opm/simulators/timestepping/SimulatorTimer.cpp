@@ -165,7 +165,7 @@ namespace Opm
     std::unique_ptr< SimulatorTimerInterface >
     SimulatorTimer::clone() const
     {
-       return std::unique_ptr< SimulatorTimerInterface > (new SimulatorTimer( *this ));
+       return std::make_unique<SimulatorTimer>(*this);
     }
 
 
