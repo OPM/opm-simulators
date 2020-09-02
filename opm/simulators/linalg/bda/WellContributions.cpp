@@ -243,14 +243,15 @@ void WellContributions::addNumBlocks(unsigned int numBlocks)
     num_std_wells++;
 }
 
-void WellContributions::addMultisegmentWellContribution(unsigned int dim, unsigned int dim_wells,
+void WellContributions::addMultisegmentWellContribution(unsigned int dim_, unsigned int dim_wells_,
         unsigned int Nb, unsigned int Mb,
         unsigned int BnumBlocks, std::vector<double> &Bvalues, std::vector<unsigned int> &BcolIndices, std::vector<unsigned int> &BrowPointers,
         unsigned int DnumBlocks, double *Dvalues, int *DcolPointers, int *DrowIndices,
         std::vector<double> &Cvalues)
 {
-    this->N = Nb * dim;
-    MultisegmentWellContribution *well = new MultisegmentWellContribution(dim, dim_wells, Nb, Mb, BnumBlocks, Bvalues, BcolIndices, BrowPointers, DnumBlocks, Dvalues, DcolPointers, DrowIndices, Cvalues);
+    assert(dim==dim_);
+    this->N = Nb * dim_;
+    MultisegmentWellContribution *well = new MultisegmentWellContribution(dim_, dim_wells_, Nb, Mb, BnumBlocks, Bvalues, BcolIndices, BrowPointers, DnumBlocks, Dvalues, DcolPointers, DrowIndices, Cvalues);
     multisegments.emplace_back(well);
     ++num_ms_wells;
 }
