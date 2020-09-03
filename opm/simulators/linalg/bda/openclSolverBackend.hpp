@@ -72,6 +72,7 @@ private:
     //cl::Buffer d_Ccols, d_Bcols, d_val_pointers;
 
     // shared pointers are also passed to other objects
+    cl::Program program;
     std::shared_ptr<cl::Context> context;
     std::shared_ptr<cl::CommandQueue> queue;
     std::unique_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > dot_k;
@@ -149,7 +150,9 @@ private:
     /// \param[in] vals           array of nonzeroes, each block is stored row-wise and contiguous, contains nnz values
     /// \param[in] rows           array of rowPointers, contains N/dim+1 values
     /// \param[in] cols           array of columnIndices, contains nnz values
-    void initialize(int N, int nnz, int dim, double *vals, int *rows, int *cols, WellContributions& wellContribs);
+    void initialize(int N, int nnz, int dim, double *vals, int *rows, int *cols);
+
+    void initialize_wellContribs(WellContributions& wellContribs);
 
     /// Clean memory
     void finalize();
