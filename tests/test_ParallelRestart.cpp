@@ -24,6 +24,9 @@
 
 #include <boost/test/unit_test.hpp>
 
+#include <tuple>
+#include <utility>
+
 #include <opm/common/OpmLog/Location.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Deck/DeckItem.hpp>
@@ -187,6 +190,15 @@ Opm::data::CurrentControl getCurrentControl()
     return curr;
 }
 
+Opm::data::GuideRateValue getWellGuideRate()
+{
+    using Item = Opm::data::GuideRateValue::Item;
+
+    return Opm::data::GuideRateValue{}.set(Item::Oil  , 1.23)
+                                      .set(Item::Gas  , 2.34)
+                                      .set(Item::Water, 3.45)
+                                      .set(Item::ResV , 4.56);
+}
 
 Opm::data::Well getWell()
 {
@@ -199,10 +211,44 @@ Opm::data::Well getWell()
     well1.connections.push_back(getConnection());
     well1.segments.insert({0, getSegment()});
     well1.current_control = getCurrentControl();
+    well1.guide_rates = getWellGuideRate();
     return well1;
 }
 
+Opm::data::GroupGuideRates getGroupGuideRates()
+{
+    using Item = Opm::data::GuideRateValue::Item;
 
+    auto gr = Opm::data::GroupGuideRates{};
+
+    gr.production.set(Item::Oil ,   999.888)
+                 .set(Item::Gas ,  8888.777)
+                 .set(Item::ResV, 12345.678);
+
+    gr.injection.set(Item::Gas  , 9876.543)
+                .set(Item::Water, 2345.987);
+
+    return gr;
+}
+
+Opm::data::GroupConstraints getGroupConstraints()
+{
+    using PMode = ::Opm::Group::ProductionCMode;
+    using IMode = ::Opm::Group::InjectionCMode;
+
+    return Opm::data::GroupConstraints{}
+    .set(PMode::ORAT,           // Production
+         IMode::VREP,           // Gas Injection
+         IMode::NONE);          // Water Injection
+}
+
+Opm::data::GroupData getGroupData()
+{
+    return Opm::data::GroupData {
+        getGroupConstraints(),
+        getGroupGuideRates()
+    };
+}
 }
 
 
@@ -256,6 +302,23 @@ BOOST_AUTO_TEST_CASE(Rates)
     DO_CHECKS(data::Rates)
 }
 
+BOOST_AUTO_TEST_CASE(dataGuideRateValue)
+{
+    using Item = Opm::data::GuideRateValue::Item;
+
+    const auto val1 = Opm::data::GuideRateValue{}
+    .set(Item::Oil ,   999.888)
+    .set(Item::Gas ,  8888.777)
+    .set(Item::ResV, 12345.678);
+
+    const auto val2 = PackUnpack(val1);
+
+    BOOST_CHECK_MESSAGE(! std::get<0>(val2).has(Item::Water),
+                        "Water Must Not Appear From "
+                        "Serializing GuideRateValues");
+
+    DO_CHECKS(data::GuideRateValue)
+}
 
 BOOST_AUTO_TEST_CASE(dataConnection)
 {
@@ -297,6 +360,29 @@ BOOST_AUTO_TEST_CASE(WellRates)
     DO_CHECKS(data::WellRates)
 }
 
+BOOST_AUTO_TEST_CASE(dataGroupConstraints)
+{
+    const auto val1 = getGroupConstraints();
+    const auto val2 = PackUnpack(val1);
+
+    DO_CHECKS(data::GroupConstraints)
+}
+
+BOOST_AUTO_TEST_CASE(dataGroupGuideRates)
+{
+    const auto val1 = getGroupData().guideRates;
+    const auto val2 = PackUnpack(val1);
+
+    DO_CHECKS(data::GroupGuideRates)
+}
+
+BOOST_AUTO_TEST_CASE(dataGroupData)
+{
+    const auto val1 = getGroupData();
+    const auto val2 = PackUnpack(val1);
+
+    DO_CHECKS(data::GroupData)
+}
 
 BOOST_AUTO_TEST_CASE(CellData)
 {
@@ -319,11 +405,18 @@ BOOST_AUTO_TEST_CASE(RestartKey)
 
 BOOST_AUTO_TEST_CASE(RestartValue)
 {
-    Opm::data::WellRates wells1;
-    Opm::data::GroupValues groups1;
-    wells1.insert({"test_well", getWell()});
-    Opm::RestartValue val1(getSolution(), wells1, groups1);
-    auto val2 = PackUnpack(val1);
+    auto wells1 = Opm::data::WellRates {{
+        { "test_well", getWell() },
+    }};
+    auto groups1 = Opm::data::GroupValues {{
+        { "test_group1", getGroupData() },
+    }};
+
+    const auto val1 = Opm::RestartValue {
+        getSolution(), std::move(wells1), std::move(groups1)
+    };
+    const auto val2 = PackUnpack(val1);
+
     DO_CHECKS(RestartValue)
 }
 
