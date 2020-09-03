@@ -115,6 +115,9 @@ private:
                             cl::Buffer&, cl::Buffer&, cl::Buffer&,
                             cl::Buffer&, const unsigned int, const unsigned int,
                             cl::Buffer&, cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg> kernel_type;
+    kernel_type *stdwell_apply;
+    cl::Context *context;
+    cl::CommandQueue *queue;
 #endif
 
 #if HAVE_CUDA
@@ -133,8 +136,8 @@ private:
 #endif
 
 #if HAVE_OPENCL
-    void applyStdWell(cl::CommandQueue *queue, cl::Buffer& d_x, cl::Buffer& d_y, kernel_type *kernel);
-    void applyMSWell(cl::CommandQueue *queue, cl::Buffer& d_x, cl::Buffer& d_y);
+    void applyStdWell(cl::Buffer& d_x, cl::Buffer& d_y);
+    void applyMSWell(cl::Buffer& d_x, cl::Buffer& d_y);
 #endif
 
 public:
@@ -155,9 +158,11 @@ public:
 #endif
 
 #if HAVE_OPENCL
-    void init(cl::Context *context);
-    void copyDataToGPU(cl::CommandQueue *queue);
-    void apply(cl::CommandQueue *queue, cl::Buffer& x, cl::Buffer& y, kernel_type *kernel);
+    void init();
+    void apply(cl::Buffer& x, cl::Buffer& y);
+    void setOpenCLContext(cl::Context *context);
+    void setOpenCLQueue(cl::CommandQueue *queue);
+    void setKernel(kernel_type *stdwell_apply);
 #endif
 
     /// Create a new WellContributions

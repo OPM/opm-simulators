@@ -155,7 +155,7 @@ private:
     void finalize();
 
     /// Copy linear system to GPU
-    void copy_system_to_gpu(WellContributions& wellContribs);
+    void copy_system_to_gpu();
 
     /// Reorder the linear system so it corresponds with the coloring
     /// \param[in] vals           array of nonzeroes, each block is stored row-wise and contiguous, contains nnz values
