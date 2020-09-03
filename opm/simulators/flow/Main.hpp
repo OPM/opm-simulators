@@ -412,10 +412,6 @@ namespace Opm
                 Opm::FlowMainEbos<PreTypeTag>::printBanner();
             }
             // Create Deck and EclipseState.
-            if (outputCout_) {
-                std::cout << "Reading deck file '" << deckFilename << "'\n";
-                std::cout.flush();
-            }
             try {
                 auto python = std::make_shared<Opm::Python>();
                 const bool init_from_restart_file = !EWOMS_GET_PARAM(PreTypeTag, bool, SchedRestart);
@@ -437,9 +433,18 @@ namespace Opm
 
                 Opm::FlowMainEbos<PreTypeTag>::printPRTHeader(outputCout_);
 
+                if (outputCout_) {
+                    OpmLog::info("Reading deck file '" + deckFilename + "'");
+                }
+
                 readDeck(mpiRank, deckFilename, deck_, eclipseState_, schedule_,
                          summaryConfig_, nullptr, python, std::move(parseContext),
                          init_from_restart_file, outputCout_);
+
+                if (outputCout_) {
+                    OpmLog::info("Done reading deck file.");
+                }
+
                 setupTime_ = externalSetupTimer.elapsed();
                 outputFiles_ = (outputMode != FileOutputMode::OUTPUT_NONE);
             }
