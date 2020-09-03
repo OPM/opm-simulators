@@ -432,6 +432,10 @@ namespace Opm
                                                          {Opm::ParseContext::PARSE_MISSING_DIMS_KEYWORD, Opm::InputError::WARN},
                                                          {Opm::ParseContext::SUMMARY_UNKNOWN_WELL, Opm::InputError::WARN},
                                                          {Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN}});
+                if (EWOMS_GET_PARAM(PreTypeTag, bool, EclStrictParsing))
+                    parseContext->update(Opm::InputError::DELAYED_EXIT1);
+
+                Opm::FlowMainEbos<PreTypeTag>::printPRTHeader(outputCout_);
 
                 readDeck(mpiRank, deckFilename, deck_, eclipseState_, schedule_,
                          summaryConfig_, nullptr, python, std::move(parseContext),
