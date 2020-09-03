@@ -71,7 +71,7 @@ unsigned int openclSolverBackend<block_size>::ceilDivision(const unsigned int A,
 template <unsigned int block_size>
 double openclSolverBackend<block_size>::dot_w(cl::Buffer in1, cl::Buffer in2, cl::Buffer out)
 {
-    const unsigned int work_group_size = 1024;
+    const unsigned int work_group_size = 256;
     const unsigned int num_work_groups = ceilDivision(N, work_group_size);
     const unsigned int total_work_items = num_work_groups * work_group_size;
     const unsigned int lmem_per_work_group = sizeof(double) * work_group_size;
@@ -99,7 +99,7 @@ double openclSolverBackend<block_size>::dot_w(cl::Buffer in1, cl::Buffer in2, cl
 template <unsigned int block_size>
 double openclSolverBackend<block_size>::norm_w(cl::Buffer in, cl::Buffer out)
 {
-    const unsigned int work_group_size = 1024;
+    const unsigned int work_group_size = 256;
     const unsigned int num_work_groups = ceilDivision(N, work_group_size);
     const unsigned int total_work_items = num_work_groups * work_group_size;
     const unsigned int lmem_per_work_group = sizeof(double) * work_group_size;
