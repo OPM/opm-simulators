@@ -768,9 +768,16 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
                     }
 #endif
                 } else {
-                    using SeqLinearOperator = Dune::MatrixAdapter<Matrix, Vector, Vector>;
-                    linearOperatorForFlexibleSolver_ = std::make_unique<SeqLinearOperator>(getMatrix());
-                    flexibleSolver_ = std::make_unique<FlexibleSolverType>(*linearOperatorForFlexibleSolver_, prm_, weightsCalculator);
+                    if (useWellConn_) {
+                        using SeqLinearOperator = Dune::MatrixAdapter<Matrix, Vector, Vector>;
+                        linearOperatorForFlexibleSolver_ = std::make_unique<SeqLinearOperator>(getMatrix());
+                        flexibleSolver_ = std::make_unique<FlexibleSolverType>(*linearOperatorForFlexibleSolver_, prm_, weightsCalculator);
+                    } else {
+                        using SeqLinearOperator = WellModelMatrixAdapter<Matrix, Vector, Vector, false>;
+                        wellOperator_ = std::make_unique<WellModelOperator>(simulator_.problem().wellModel());
+                        linearOperatorForFlexibleSolver_ = std::make_unique<SeqLinearOperator>(getMatrix(), *wellOperator_);
+                        flexibleSolver_ = std::make_unique<FlexibleSolverType>(*linearOperatorForFlexibleSolver_, prm_, weightsCalculator);
+                    }
                 }
             }
             else
