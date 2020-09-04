@@ -130,6 +130,7 @@ tests[udq_pyaction]="flow udq_actionx PYACTION_WCONPROD udq_pyaction"
 tests[spe1_foam]="flow spe1_foam SPE1FOAM"
 tests[wsegsicd]="flow wsegsicd TEST_WSEGSICD"
 tests[bc_lab]="flow bc_lab BC_LAB"
+tests[pinch_multz_all]="flow pinch PINCH_MULTZ_ALL pinch_multz_all"
 
 changed_tests=""
 
