@@ -752,9 +752,6 @@ public:
         if (!isParallel())
             return true;
 
-        if (localIdxToGlobalIdx_.empty())
-            throw std::logic_error("index map is not created on this rank");
-
         return std::find(localIdxToGlobalIdx_.begin(), localIdxToGlobalIdx_.end(), globalIdx) != localIdxToGlobalIdx_.end();
     }
 
