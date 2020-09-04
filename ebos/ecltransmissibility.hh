@@ -344,9 +344,12 @@ public:
                 // apply the full face transmissibility multipliers
                 // for the inside ...
 
-                if (useSmallestMultiplier)
-                    applyAllZMultipliers_(trans, insideFaceIdx, insideCartElemIdx, outsideCartElemIdx, transMult, cartDims);
-                else
+                if (useSmallestMultiplier) {
+                    applyAllZMultipliers_(trans, insideFaceIdx,
+                                          std::min(insideCartElemIdx, outsideCartElemIdx),
+                                          std::max(insideCartElemIdx, outsideCartElemIdx),
+                                          transMult, cartDims);
+                } else
                     applyMultipliers_(trans, insideFaceIdx, insideCartElemIdx, transMult);
                 // ... and outside elements
                 applyMultipliers_(trans, outsideFaceIdx, outsideCartElemIdx, transMult);
