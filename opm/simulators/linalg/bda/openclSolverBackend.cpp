@@ -710,7 +710,6 @@ template <unsigned int block_size>
 SolverStatus openclSolverBackend<block_size>::solve_system(int N_, int nnz_, int dim, double *vals, int *rows, int *cols, double *b, WellContributions& wellContribs, BdaResult &res) {
     if (initialized == false) {
         initialize(N_, nnz_,  dim, vals, rows, cols);
-        initialize_wellContribs(wellContribs);
         if (analysis_done == false) {
             if (!analyse_matrix()) {
                 return SolverStatus::BDA_SOLVER_ANALYSIS_FAILED;
@@ -723,12 +722,12 @@ SolverStatus openclSolverBackend<block_size>::solve_system(int N_, int nnz_, int
         copy_system_to_gpu();
     } else {
         update_system(vals, b);
-        initialize_wellContribs(wellContribs);
         if (!create_preconditioner()) {
             return SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
         }
         update_system_on_gpu();
     }
+    initialize_wellContribs(wellContribs);
     solve_system(wellContribs, res);
     return SolverStatus::BDA_SOLVER_SUCCESS;
 }
