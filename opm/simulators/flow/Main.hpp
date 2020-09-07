@@ -27,6 +27,7 @@
 # ifndef FLOW_BLACKOIL_ONLY
 #  include <flow/flow_ebos_gasoil.hpp>
 #  include <flow/flow_ebos_oilwater.hpp>
+#  include <flow/flow_ebos_gaswater.hpp>
 #  include <flow/flow_ebos_solvent.hpp>
 #  include <flow/flow_ebos_polymer.hpp>
 #  include <flow/flow_ebos_extbo.hpp>
@@ -208,19 +209,24 @@ namespace Opm
             // Twophase cases
             else if( phases.size() == 2 ) {
                 // oil-gas
-                if (phases.active( Opm::Phase::GAS )) {
+                if (phases.active( Opm::Phase::OIL ) && phases.active( Opm::Phase::GAS )) {
                     Opm::flowEbosGasOilSetDeck(setupTime_, std::move(deck_), std::move(eclipseState_),
                                                std::move(schedule_), std::move(summaryConfig_));
                     return Opm::flowEbosGasOilMain(argc_, argv_, outputCout_, outputFiles_);
                 }
                 // oil-water
-                else if ( phases.active( Opm::Phase::WATER ) ) {
+                else if ( phases.active( Opm::Phase::OIL ) && phases.active( Opm::Phase::WATER ) ) {
                     Opm::flowEbosOilWaterSetDeck(setupTime_, std::move(deck_), std::move(eclipseState_), std::move(schedule_), std::move(summaryConfig_));
                     return Opm::flowEbosOilWaterMain(argc_, argv_, outputCout_, outputFiles_);
                 }
+                // gas-water
+                else if ( phases.active( Opm::Phase::GAS ) && phases.active( Opm::Phase::WATER ) ) {
+                    Opm::flowEbosGasWaterSetDeck(setupTime_, std::move(deck_), std::move(eclipseState_), std::move(schedule_), std::move(summaryConfig_));
+                    return Opm::flowEbosGasWaterMain(argc_, argv_, outputCout_, outputFiles_);
+                }
                 else {
                     if (outputCout_)
-                        std::cerr << "No suitable configuration found, valid are Twophase (oilwater and oilgas), polymer, solvent, or blackoil" << std::endl;
+                        std::cerr << "No suitable configuration found, valid are Twophase (oilwater, oilgas and gaswater), polymer, solvent, or blackoil" << std::endl;
                     return EXIT_FAILURE;
                 }
             }
