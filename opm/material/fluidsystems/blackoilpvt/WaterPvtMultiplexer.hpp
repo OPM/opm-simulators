@@ -143,6 +143,12 @@ public:
     { OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.numRegions()); return 1; }
 
     /*!
+     * \brief Return the reference density which are considered by this PVT-object.
+     */
+    const Scalar waterReferenceDensity(unsigned regionIdx)
+    { OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.waterReferenceDensity(regionIdx)); return 1000.; }
+
+    /*!
      * \brief Returns the specific enthalpy [J/kg] of gas given a set of parameters.
      */
     template <class Evaluation>

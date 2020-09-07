@@ -628,13 +628,11 @@ public:
         throw NumericalIssue(errlog.str());
     }
 
-    const std::vector<Scalar>& gasReferenceDensity() const {
-        return gasReferenceDensity_;
-    }
+    const Scalar gasReferenceDensity(unsigned regionIdx) const
+    { return gasReferenceDensity_[regionIdx]; }
 
-    const std::vector<Scalar>& oilReferenceDensity() const {
-        return oilReferenceDensity_;
-    }
+    const Scalar oilReferenceDensity(unsigned regionIdx) const
+    { return oilReferenceDensity_[regionIdx]; }
 
     const std::vector<TabulatedTwoDFunction>& inverseGasB() const {
         return inverseGasB_;

@@ -72,8 +72,13 @@ public:
     struct ParameterCache : public Opm::NullParameterCache<Evaluation>
     {};
 
+    //! The type of the component for brine used by the fluid system
+    typedef Brine_Tabulated Brine;
+    //! The type of the component for pure CO2 used by the fluid system
+    typedef Opm::CO2<Scalar, CO2Tables> CO2;
+
     //! The binary coefficients for brine and CO2 used by this fluid system
-    typedef Opm::BinaryCoeff::Brine_CO2<Scalar, CO2Tables> BinaryCoeffBrineCO2;
+    typedef Opm::BinaryCoeff::Brine_CO2<Scalar, H2O, CO2> BinaryCoeffBrineCO2;
 
     /****************************************
      * Fluid phase related static parameters
@@ -153,11 +158,6 @@ public:
     static const int BrineIdx = 0;
     //! The index of the CO2 component
     static const int CO2Idx = 1;
-
-    //! The type of the component for brine used by the fluid system
-    typedef Brine_Tabulated Brine;
-    //! The type of the component for pure CO2 used by the fluid system
-    typedef Opm::CO2<Scalar, CO2Tables> CO2;
 
     /*!
      * \copydoc BaseFluidSystem::componentName

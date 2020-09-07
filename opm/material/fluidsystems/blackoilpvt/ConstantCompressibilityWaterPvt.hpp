@@ -210,8 +210,8 @@ public:
         return (1.0 + X*(1.0 + X/2.0))/BwRef;
     }
 
-    const std::vector<Scalar>& waterReferenceDensity() const
-    { return waterReferenceDensity_; }
+    const Scalar waterReferenceDensity(unsigned regionIdx) const
+    { return waterReferenceDensity_[regionIdx]; }
 
     const std::vector<Scalar>& waterReferencePressure() const
     { return waterReferencePressure_; }

@@ -370,6 +370,9 @@ public:
     const IsothermalPvt* isoThermalPvt() const
     { return isothermalPvt_; }
 
+    const Scalar gasReferenceDensity(unsigned regionIdx) const
+    { return isothermalPvt_->gasReferenceDensity(regionIdx); }
+
     const std::vector<TabulatedOneDFunction>& gasvisctCurves() const
     { return gasvisctCurves_; }
 

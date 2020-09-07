@@ -202,8 +202,8 @@ public:
 
     }
 
-    const std::vector<Scalar>& waterReferenceDensity() const
-    { return waterReferenceDensity_; }
+    const Scalar waterReferenceDensity(unsigned regionIdx) const
+    { return waterReferenceDensity_[regionIdx]; }
 
     const std::vector<Scalar>& referencePressure() const
     { return referencePressure_; }

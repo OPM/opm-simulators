@@ -380,6 +380,9 @@ public:
     const IsothermalPvt* isoThermalPvt() const
     { return isothermalPvt_; }
 
+    const Scalar oilReferenceDensity(unsigned regionIdx) const
+    { return isothermalPvt_->oilReferenceDensity(regionIdx); }
+
     const std::vector<TabulatedOneDFunction>& oilvisctCurves() const
     { return oilvisctCurves_; }
 
