@@ -475,14 +475,11 @@ private:
         if (insideFaceIdx > 3) { // top or or bottom
             Scalar mult = 1e20;
             unsigned cartElemIdx = insideCartElemIdx;
+            assert(insideFaceIdx==5); // as insideCartElemIdx < outsideCartElemIdx holds
             // pick the smallest multiplier while looking down the pillar untill reaching the other end of the connection
             // for the inbetween cells we apply it from both sides
             while (cartElemIdx != outsideCartElemIdx) {
-                if (insideFaceIdx == 4 || cartElemIdx !=insideCartElemIdx )
-                    mult = std::min(mult, transMult.getMultiplier(cartElemIdx, Opm::FaceDir::ZMinus));
-                if (insideFaceIdx == 5 || cartElemIdx !=insideCartElemIdx)
-                    mult = std::min(mult, transMult.getMultiplier(cartElemIdx, Opm::FaceDir::ZPlus));
-
+                mult = std::min(mult, transMult.getMultiplier(cartElemIdx, Opm::FaceDir::ZPlus));
                 cartElemIdx += cartDims[0]*cartDims[1];
             }
             trans *= mult;
