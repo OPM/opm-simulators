@@ -273,13 +273,13 @@ public:
                         A * (n*d)/(d*d);
                 }
 
-                // we only need to calculate a face's transmissibility
-                // once...
-                if (elemIdx > outsideElemIdx)
-                    continue;
-
                 unsigned insideCartElemIdx = cartMapper.cartesianIndex(elemIdx);
                 unsigned outsideCartElemIdx = cartMapper.cartesianIndex(outsideElemIdx);
+
+                // we only need to calculate a face's transmissibility
+                // once...
+                if (insideCartElemIdx > outsideCartElemIdx)
+                    continue;
 
                 // local indices of the faces of the inside and
                 // outside elements which contain the intersection
