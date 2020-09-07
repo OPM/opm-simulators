@@ -435,7 +435,6 @@ namespace Opm {
 
                 // create map from cell to region
                 // and set all attributes to zero
-                const auto& grid = simulator.vanguard().grid();
                 for (const auto& reg : rmap_.activeRegions()) {
                     auto& ra = attr_.attributes(reg);
                     ra.pressure = 0.0;
