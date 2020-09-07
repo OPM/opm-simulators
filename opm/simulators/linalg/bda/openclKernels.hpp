@@ -455,7 +455,7 @@ namespace bda
             for (unsigned int j = 0; j < blnr; ++j){
                 temp += valsC[bb*blnc*blnr + j*blnc + c]*z2[j];
             }
-            atomicAdd(&y[colIdx*blnc + c], temp);
+            atomicAdd(&y[colIdx*blnc + c], -temp);
         }
     }
     )";

@@ -101,37 +101,8 @@ WellContributions::~WellContributions()
 #endif
 }
 
+/*
 #if HAVE_OPENCL
-void WellContributions::setOpenCLContext(cl::Context *context_){
-    this->context = context_;
-}
-
-void WellContributions::setOpenCLQueue(cl::CommandQueue *queue_){
-    this->queue = queue_;
-}
-
-void WellContributions::setKernel(kernel_type *stdwell_apply_){
-    this->stdwell_apply = stdwell_apply_;
-}
-
-void WellContributions::init(){
-    if(num_std_wells > 0){
-        d_Cnnzs_ocl = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * num_blocks * dim * dim_wells);
-        d_Dnnzs_ocl = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * num_std_wells * dim_wells * dim_wells);
-        d_Bnnzs_ocl = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * num_blocks * dim * dim_wells);
-        d_Ccols_ocl = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * num_blocks);
-        d_Bcols_ocl = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * num_blocks);
-        d_val_pointers_ocl = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(unsigned int) * (num_std_wells + 1));
-
-        queue->enqueueWriteBuffer(d_Cnnzs_ocl, CL_TRUE, 0, sizeof(double) * num_blocks * dim * dim_wells, h_Cnnzs_ocl);
-        queue->enqueueWriteBuffer(d_Dnnzs_ocl, CL_TRUE, 0, sizeof(double) * num_std_wells * dim_wells * dim_wells, h_Dnnzs_ocl);
-        queue->enqueueWriteBuffer(d_Bnnzs_ocl, CL_TRUE, 0, sizeof(double) * num_blocks * dim * dim_wells, h_Bnnzs_ocl);
-        queue->enqueueWriteBuffer(d_Ccols_ocl, CL_TRUE, 0, sizeof(int) * num_blocks, h_Ccols_ocl);
-        queue->enqueueWriteBuffer(d_Bcols_ocl, CL_TRUE, 0, sizeof(int) * num_blocks, h_Bcols_ocl);
-        queue->enqueueWriteBuffer(d_val_pointers_ocl, CL_TRUE, 0, sizeof(unsigned int) * (num_std_wells + 1), val_pointers);
-    }
-}
-
 void WellContributions::applyMSWell(cl::Buffer& d_x, cl::Buffer& d_y) {
     // apply MultisegmentWells
     if (num_ms_wells > 0) {
@@ -154,30 +125,8 @@ void WellContributions::applyMSWell(cl::Buffer& d_x, cl::Buffer& d_y) {
         queue->enqueueWriteBuffer(d_y, CL_TRUE, 0, sizeof(double) * N, h_y_ocl);
     }
 }
-
-void WellContributions::applyStdWell(cl::Buffer& d_x, cl::Buffer& d_y){
-    const unsigned int work_group_size = 32;
-    const unsigned int total_work_items = num_std_wells * work_group_size;
-    const unsigned int lmem1 = sizeof(double) * work_group_size;
-    const unsigned int lmem2 = sizeof(double) * dim_wells;
-
-    cl::Event event;
-    event = (*stdwell_apply)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
-                             d_Cnnzs_ocl, d_Dnnzs_ocl, d_Bnnzs_ocl, d_Ccols_ocl, d_Bcols_ocl, d_x, d_y, dim, dim_wells,
-                             d_val_pointers_ocl, cl::Local(lmem1), cl::Local(lmem2), cl::Local(lmem2));
-}
-
-void WellContributions::apply(cl::Buffer& d_x, cl::Buffer& d_y){
-    if(num_std_wells > 0){
-        applyStdWell(d_x, d_y);
-    }
-
-    if(num_ms_wells > 0){
-        applyMSWell(d_x, d_y);
-    }
-}
-
 #endif
+*/
 
 void WellContributions::addMatrix([[maybe_unused]] MatrixType type, [[maybe_unused]] int *colIndices, [[maybe_unused]] double *values, [[maybe_unused]] unsigned int val_size)
 {
