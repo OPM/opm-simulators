@@ -194,7 +194,7 @@ public:
         // Initialize block output
         for (const auto& node: summaryConfig) {
             if (node.category() == SummaryConfigNode::Category::Block) {
-                if (collectToIORank.isGlobalIdxOnThisRank(node.number() - 1)) {
+                if (collectToIORank.isCartIdxOnThisRank(node.number() - 1)) {
                     std::pair<std::string, int> key = std::make_pair(node.keyword(), node.number());
                     blockData_[key] = 0.0;
                 }
