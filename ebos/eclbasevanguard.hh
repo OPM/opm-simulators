@@ -396,7 +396,7 @@ public:
                  /* checkDeck = */ enableExperiments);
 
         this->summaryState_ = std::make_unique<Opm::SummaryState>( std::chrono::system_clock::from_time_t(this->eclSchedule_->getStartTime() ));
-        this->udqState_.reset( new Opm::UDQState( this->eclSchedule_->getUDQConfig(0).params().undefinedValue()) );
+        this->udqState_ = std::make_unique<Opm::UDQState>( this->eclSchedule_->getUDQConfig(0).params().undefinedValue() );
         this->actionState_ = std::make_unique<Opm::Action::State>() ;
 
         // Possibly override IOConfig setting for how often RESTART files should get
