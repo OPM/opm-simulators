@@ -327,7 +327,7 @@ public:
                          blockData);
 
             const auto& udq_config = schedule().getUDQConfig(reportStepNum);
-            udq_config.eval( summaryState(), udqState() );
+            udq_config.eval( reportStepNum, summaryState(), udqState() );
 
             buffer = summaryState().serialize();
         }
