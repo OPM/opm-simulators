@@ -457,6 +457,13 @@ add_test_compareECLFiles(CASENAME pinch_multz_all
                          REL_TOL ${rel_tol}
                          DIR pinch)
 
+add_test_compareECLFiles(CASENAME pinch_multz_all_barrier
+                         FILENAME PINCH_MULTZ_ALL_BARRIER
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR pinch)
+
 if (opm-common_EMBEDDED_PYTHON)
   add_test_compareECLFiles(CASENAME udq_pyaction
                            FILENAME PYACTION_WCONPROD
