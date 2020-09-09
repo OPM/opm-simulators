@@ -289,9 +289,14 @@ public:
                     const size_t k = size_t(connection.getK());
                     const size_t index = simulator_.vanguard().eclState().gridDims().getGlobalIndex(i, j, k);
 
-                    oilConnectionPressures_.emplace(std::make_pair(index, 0.0));
-                    waterConnectionSaturations_.emplace(std::make_pair(index, 0.0));
-                    gasConnectionSaturations_.emplace(std::make_pair(index, 0.0));
+                    if (FluidSystem::phaseIsActive(oilPhaseIdx))
+                        oilConnectionPressures_.emplace(std::make_pair(index, 0.0));
+
+                    if (FluidSystem::phaseIsActive(waterPhaseIdx))
+                        waterConnectionSaturations_.emplace(std::make_pair(index, 0.0));
+
+                    if (FluidSystem::phaseIsActive(gasPhaseIdx))
+                        gasConnectionSaturations_.emplace(std::make_pair(index, 0.0));
                 }
             }
         }
