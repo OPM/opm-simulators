@@ -254,7 +254,9 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(BdaResult& res) {
 
         // apply wellContributions
         t_well.start();
-        stdwell_w(d_Cnnzs, d_Dnnzs, d_Bnnzs, d_Ccols, d_Bcols, d_pw, d_v, d_val_pointers);
+        if(num_std_wells > 0){
+            stdwell_w(d_Cnnzs, d_Dnnzs, d_Bnnzs, d_Ccols, d_Bcols, d_pw, d_v, d_val_pointers);
+        }
         t_well.stop();
 
         t_rest.start();
@@ -283,7 +285,9 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(BdaResult& res) {
 
         // apply wellContributions
         t_well.start();
-        stdwell_w(d_Cnnzs, d_Dnnzs, d_Bnnzs, d_Ccols, d_Bcols, d_s, d_t, d_val_pointers);
+        if(num_std_wells > 0){
+            stdwell_w(d_Cnnzs, d_Dnnzs, d_Bnnzs, d_Ccols, d_Bcols, d_s, d_t, d_val_pointers);
+        }
         t_well.stop();
 
         t_rest.start();
