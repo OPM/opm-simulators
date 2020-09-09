@@ -66,7 +66,7 @@ namespace Opm
         static const int GTotal = 0;
         static const int WFrac = gasoil? -1000: 1;
         static const int GFrac = gasoil? 1 : 2;
-        static const int SPres = gasoil? 2 : 3;
+        static const int SPres = numEq;
 
         ///  the number of well equations // TODO: it should have a more general strategy for it
         static const int numWellEq = getPropValue<TypeTag, Properties::EnablePolymer>() ? numEq : numEq + 1;
