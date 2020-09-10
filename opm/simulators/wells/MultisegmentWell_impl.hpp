@@ -2069,8 +2069,12 @@ namespace Opm
         const int seg_upwind = upwinding_segments_[seg];
         duneD_[seg][seg][SPres][SPres] += pressure_equation.derivative(SPres + numEq);
         duneD_[seg][seg][SPres][GTotal] += pressure_equation.derivative(GTotal + numEq);
-        duneD_[seg][seg_upwind][SPres][WFrac] += pressure_equation.derivative(WFrac + numEq);
-        duneD_[seg][seg_upwind][SPres][GFrac] += pressure_equation.derivative(GFrac + numEq);
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            duneD_[seg][seg_upwind][SPres][WFrac] += pressure_equation.derivative(WFrac + numEq);
+        }
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            duneD_[seg][seg_upwind][SPres][GFrac] += pressure_equation.derivative(GFrac + numEq);
+        }
 
         // contribution from the outlet segment
         const int outlet_segment_index = segmentNumberToIndex(segmentSet()[seg].outletSegment());
@@ -2176,8 +2180,12 @@ namespace Opm
         resWell_[seg][SPres] -= accelerationPressureLoss.value();
         duneD_[seg][seg][SPres][SPres] -= accelerationPressureLoss.derivative(SPres + numEq);
         duneD_[seg][seg][SPres][GTotal] -= accelerationPressureLoss.derivative(GTotal + numEq);
-        duneD_[seg][seg_upwind][SPres][WFrac] -= accelerationPressureLoss.derivative(WFrac + numEq);
-        duneD_[seg][seg_upwind][SPres][GFrac] -= accelerationPressureLoss.derivative(GFrac + numEq);
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            duneD_[seg][seg_upwind][SPres][WFrac] -= accelerationPressureLoss.derivative(WFrac + numEq);
+        }
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            duneD_[seg][seg_upwind][SPres][GFrac] -= accelerationPressureLoss.derivative(GFrac + numEq);
+        }
     }
 
 
@@ -2555,8 +2563,12 @@ namespace Opm
                     // and WFrac and GFrac in seg_upwind
                     resWell_[seg][comp_idx] -= segment_rate.value();
                     duneD_[seg][seg][comp_idx][GTotal] -= segment_rate.derivative(GTotal + numEq);
-                    duneD_[seg][seg_upwind][comp_idx][WFrac] -= segment_rate.derivative(WFrac + numEq);
-                    duneD_[seg][seg_upwind][comp_idx][GFrac] -= segment_rate.derivative(GFrac + numEq);
+                    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                        duneD_[seg][seg_upwind][comp_idx][WFrac] -= segment_rate.derivative(WFrac + numEq);
+                    }
+                    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                        duneD_[seg][seg_upwind][comp_idx][GFrac] -= segment_rate.derivative(GFrac + numEq);
+                    }
                     // pressure derivative should be zero
                 }
             }
@@ -2572,8 +2584,12 @@ namespace Opm
                         // and WFrac and GFrac in inlet_upwind
                         resWell_[seg][comp_idx] += inlet_rate.value();
                         duneD_[seg][inlet][comp_idx][GTotal] += inlet_rate.derivative(GTotal + numEq);
-                        duneD_[seg][inlet_upwind][comp_idx][WFrac] += inlet_rate.derivative(WFrac + numEq);
-                        duneD_[seg][inlet_upwind][comp_idx][GFrac] += inlet_rate.derivative(GFrac + numEq);
+                        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                            duneD_[seg][inlet_upwind][comp_idx][WFrac] += inlet_rate.derivative(WFrac + numEq);
+                        }
+                        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                            duneD_[seg][inlet_upwind][comp_idx][GFrac] += inlet_rate.derivative(GFrac + numEq);
+                        }
                         // pressure derivative should be zero
                     }
                 }
@@ -3194,8 +3210,12 @@ namespace Opm
         resWell_[seg][SPres] = pressure_equation.value();
         duneD_[seg][seg][SPres][SPres] += pressure_equation.derivative(SPres + numEq);
         duneD_[seg][seg][SPres][GTotal] += pressure_equation.derivative(GTotal + numEq);
-        duneD_[seg][seg_upwind][SPres][WFrac] += pressure_equation.derivative(WFrac + numEq);
-        duneD_[seg][seg_upwind][SPres][GFrac] += pressure_equation.derivative(GFrac + numEq);
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            duneD_[seg][seg_upwind][SPres][WFrac] += pressure_equation.derivative(WFrac + numEq);
+        }
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            duneD_[seg][seg_upwind][SPres][GFrac] += pressure_equation.derivative(GFrac + numEq);
+        }
 
         // contribution from the outlet segment
         const int outlet_segment_index = segmentNumberToIndex(segmentSet()[seg].outletSegment());
@@ -3236,8 +3256,12 @@ namespace Opm
         resWell_[seg][SPres] = pressure_equation.value();
         duneD_[seg][seg][SPres][SPres] += pressure_equation.derivative(SPres + numEq);
         duneD_[seg][seg][SPres][GTotal] += pressure_equation.derivative(GTotal + numEq);
-        duneD_[seg][seg_upwind][SPres][WFrac] += pressure_equation.derivative(WFrac + numEq);
-        duneD_[seg][seg_upwind][SPres][GFrac] += pressure_equation.derivative(GFrac + numEq);
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            duneD_[seg][seg_upwind][SPres][WFrac] += pressure_equation.derivative(WFrac + numEq);
+        }
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            duneD_[seg][seg_upwind][SPres][GFrac] += pressure_equation.derivative(GFrac + numEq);
+        }
 
         // contribution from the outlet segment
         const int outlet_segment_index = segmentNumberToIndex(segmentSet()[seg].outletSegment());

@@ -60,11 +60,10 @@ namespace Opm
         // sometimes, they are similar, while sometimes, they can have very different forms.
 
         // TODO: the following system looks not rather flexible. Looking into all kinds of possibilities
-        // TODO: gas is always there? how about oil water case?
-        // Is it gas oil two phase case?
         static const bool gasoil = numEq == 2 && (Indices::compositionSwitchIdx >= 0);
         static const int GTotal = 0;
         static const int WFrac = gasoil? -1000: 1;
+        //For oilwater system the GFrac is set to 2 (the same as SPres) but it is never used
         static const int GFrac = gasoil? 1 : 2;
         static const int SPres = numEq;
 
