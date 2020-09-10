@@ -504,7 +504,7 @@ private:
             }
 
             trans *= mult;
-            //applyMultipliers_(trans, outsideFaceIdx, outsideCartElemIdx, transMult); // Uncommenting makes the tests succeed
+            applyMultipliers_(trans, outsideFaceIdx, outsideCartElemIdx, transMult);
         }
         else
         {
