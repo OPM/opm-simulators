@@ -345,11 +345,19 @@ public:
                 // for the inside ...
 
                 if (useSmallestMultiplier)
-                    applyAllZMultipliers_(trans, insideFaceIdx, insideCartElemIdx, outsideCartElemIdx, transMult, cartDims);
+                {
+                    // Currently PINCH(4) is never queries and hence  PINCH(4) == TOPBOT is assumed
+                    // and in this branch PINCH(5) == ALL holds
+                    applyAllZMultipliers_(trans, insideFaceIdx, outsideFaceIdx, insideCartElemIdx,
+                                          outsideCartElemIdx, transMult, cartDims,
+                                          /* pinchTop= */ false);
+                }
                 else
+                {
                     applyMultipliers_(trans, insideFaceIdx, insideCartElemIdx, transMult);
-                // ... and outside elements
-                applyMultipliers_(trans, outsideFaceIdx, outsideCartElemIdx, transMult);
+                    // ... and outside elements
+                    applyMultipliers_(trans, outsideFaceIdx, outsideCartElemIdx, transMult);
+                }
 
                 // apply the region multipliers (cf. the MULTREGT keyword)
                 Opm::FaceDir::DirEnum faceDir;
@@ -465,29 +473,44 @@ private:
         }
     }
 
+    /// \brief Apply the Multipliers for the case PINCH(4)==TOPBOT
+    ///
+    /// \param pinchTop Whether PINCH(5) is TOP, otherwise ALL is assumed.
     void applyAllZMultipliers_(Scalar& trans,
                                unsigned insideFaceIdx,
+                               unsigned outsideFaceIdx,
                                unsigned insideCartElemIdx,
                                unsigned outsideCartElemIdx,
                                const Opm::TransMult& transMult,
-                               const std::array<int, dimWorld>& cartDims)
+                               const std::array<int, dimWorld>& cartDims,
+                               bool pinchTop)
     {
         if (insideFaceIdx > 3) { // top or or bottom
-            Scalar mult = 1e20;
-            unsigned cartElemIdx = insideCartElemIdx;
             assert(insideFaceIdx==5); // as insideCartElemIdx < outsideCartElemIdx holds for the Z column
-            // pick the smallest multiplier for Z+ while looking down the pillar untill reaching the other end of the connection
-            // While Z- is not all used here. There is a call after this function that does
-            // applyMultipliers_(trans, outsideFaceIdx, outsideCartElemIdx, transMult)
-            // and hence treats the other direction
-            while (cartElemIdx != outsideCartElemIdx) {
-                mult = std::min(mult, transMult.getMultiplier(cartElemIdx, Opm::FaceDir::ZPlus));
-                cartElemIdx += cartDims[0]*cartDims[1];
+            assert(outsideCartElemIdx > insideCartElemIdx);
+            auto lastCartElemIdx = outsideCartElemIdx - cartDims[0]*cartDims[1];
+            // Last multiplier
+            Scalar mult = transMult.getMultiplier(lastCartElemIdx , Opm::FaceDir::ZPlus);
+
+            if ( !pinchTop )
+            {
+                // pick the smallest multiplier for Z+ while looking down the pillar until reaching the other end of the connection
+                // While Z- is not all used here.
+                for(auto cartElemIdx = insideCartElemIdx; cartElemIdx < lastCartElemIdx;
+                    cartElemIdx += cartDims[0]*cartDims[1])
+                {
+                    mult = std::min(mult, transMult.getMultiplier(cartElemIdx, Opm::FaceDir::ZPlus));
+                }
             }
+
             trans *= mult;
+            applyMultipliers_(trans, outsideFaceIdx, outsideCartElemIdx, transMult);
         }
         else
+        {
             applyMultipliers_(trans, insideFaceIdx, insideCartElemIdx, transMult);
+            applyMultipliers_(trans, outsideFaceIdx, outsideCartElemIdx, transMult);
+        }
     }
 
     void updateFromEclState_()
