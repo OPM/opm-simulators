@@ -512,8 +512,6 @@ namespace MissingFeatures {
             "OILAPI",
             "OLDTRAN",
             "OLDTRANR",
-            "OPERATER",
-            "OPERNUM",
             "OPTIONS",
             "OPTIONS",
             "OUTSOL",
