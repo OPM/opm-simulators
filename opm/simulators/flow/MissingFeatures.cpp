@@ -513,7 +513,6 @@ namespace MissingFeatures {
             "OLDTRAN",
             "OLDTRANR",
             "OPTIONS",
-            "OPTIONS",
             "OUTSOL",
             "PARAOPTS",
             "PCG32D",
