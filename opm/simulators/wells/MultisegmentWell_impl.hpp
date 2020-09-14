@@ -2180,7 +2180,7 @@ namespace Opm
         resWell_[seg][SPres] -= accelerationPressureLoss.value();
         duneD_[seg][seg][SPres][SPres] -= accelerationPressureLoss.derivative(SPres + numEq);
         duneD_[seg][seg][SPres][GTotal] -= accelerationPressureLoss.derivative(GTotal + numEq);
-        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
             duneD_[seg][seg_upwind][SPres][WFrac] -= accelerationPressureLoss.derivative(WFrac + numEq);
         }
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
