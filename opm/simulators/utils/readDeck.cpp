@@ -42,6 +42,8 @@
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
 
+#include <cstdlib>
+
 namespace Opm
 {
 
@@ -297,7 +299,7 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
 #if HAVE_MPI
         MPI_Finalize();
 #endif
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 }
 } // end namespace Opm
