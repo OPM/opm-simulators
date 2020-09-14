@@ -59,16 +59,15 @@ namespace Opm
         // TODO: we need to have order for the primary variables and also the order for the well equations.
         // sometimes, they are similar, while sometimes, they can have very different forms.
 
-        // TODO: the following system looks not rather flexible. Looking into all kinds of possibilities
-        // TODO: gas is always there? how about oil water case?
-        // Is it gas oil two phase case?
-        static const bool gasoil = numEq == 2 && (Indices::compositionSwitchIdx >= 0);
-        static const int GTotal = 0;
-        static const int WFrac = gasoil? -1000: 1;
-        static const int GFrac = gasoil? 1 : 2;
-        static const int SPres = gasoil? 2 : 3;
+        static const bool has_gas = (Indices::compositionSwitchIdx >= 0);
+        static const bool has_water = (Indices::waterSaturationIdx >= 0);
 
-        ///  the number of well equations // TODO: it should have a more general strategy for it
+        static const int GTotal = 0;
+        static const int WFrac = has_water? 1: -1000;
+        static const int GFrac = has_gas? has_water + 1 : -1000;
+        static const int SPres = has_gas + has_water + 1;
+
+        //  the number of well equations  TODO: it should have a more general strategy for it
         static const int numWellEq = getPropValue<TypeTag, Properties::EnablePolymer>() ? numEq : numEq + 1;
 
         using typename Base::Scalar;

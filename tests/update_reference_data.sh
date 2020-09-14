@@ -132,6 +132,7 @@ tests[wsegsicd]="flow wsegsicd TEST_WSEGSICD"
 tests[bc_lab]="flow bc_lab BC_LAB"
 tests[pinch_multz_all]="flow pinch PINCH_MULTZ_ALL pinch_multz_all"
 tests[pinch_multz_all_barrier]="flow pinch PINCH_MULTZ_ALL_BARRIER pinch_multz_all_barrier"
+tests[model6_msw]="flow model6 1_MSW_MODEL6 model6_msw"
 
 changed_tests=""
 
