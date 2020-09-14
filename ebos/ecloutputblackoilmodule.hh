@@ -27,6 +27,11 @@
 #ifndef EWOMS_ECL_OUTPUT_BLACK_OIL_MODULE_HH
 #define EWOMS_ECL_OUTPUT_BLACK_OIL_MODULE_HH
 
+#include <array>
+#include <numeric>
+#include <optional>
+#include <stdexcept>
+
 #include <opm/models/blackoil/blackoilproperties.hh>
 
 #include <opm/models/utils/propertysystem.hh>
@@ -65,6 +70,8 @@ struct ForceDisableFluidInPlaceOutput<TypeTag, TTag::EclOutputBlackOil> {
 
 namespace Opm {
 
+
+
 // forward declaration
 template <class TypeTag>
 class EcfvDiscretization;
@@ -99,7 +106,7 @@ class EclOutputBlackOilModule
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
     typedef std::vector<Scalar> ScalarBuffer;
-    typedef std::vector<std::string> StringBuffer;    
+    typedef std::vector<std::string> StringBuffer;
 
     struct FipDataType
     {
@@ -114,14 +121,29 @@ class EclOutputBlackOilModule
             GasInPlaceInGasPhase = 6,  //GIPG
             PoreVolume = 7, //PV
         };
-        static const int numFipValues = PoreVolume + 1 ;
+        static const int numFipTypes = PoreVolume + 1 ;
+
+
+        static std::string EclString(int fip_type) {
+            switch(static_cast<FipId>(fip_type)) {
+            case FipDataType::WaterInPlace: return "WIP";
+            case FipDataType::OilInPlace: return "OIP";
+            case FipDataType::GasInPlace: return "GIP";
+            case FipDataType::OilInPlaceInLiquidPhase: return "OIPL";
+            case FipDataType::OilInPlaceInGasPhase: return "OIPG";
+            case FipDataType::GasInPlaceInLiquidPhase: return "GIPL";
+            case FipDataType::GasInPlaceInGasPhase: return "GIPG";
+            case FipDataType::PoreVolume: return "PV";
+            }
+            throw std::logic_error("fip_type:  " + std::to_string(fip_type) + " not recognized");
+        }
     };
     struct WellProdDataType
     {
         enum WPId
         {
             WellLocationi = 0, //WLi
-            WellLocationj = 1, //WLj          
+            WellLocationj = 1, //WLj
             OilRate = 2, //OR
             WaterRate = 3, //WR
             GasRate = 4, //GR
@@ -137,7 +159,7 @@ class EclOutputBlackOilModule
         };
         static const int numWPValues = 12;
         static const int numWPNames = 2;
-    };  
+    };
         struct WellInjDataType
     {
         enum WIId
@@ -181,17 +203,42 @@ class EclOutputBlackOilModule
         static const int numWCNames = 3;
     };
 
+    struct RegionSum {
+        std::size_t ntFip;
+        std::array<ScalarBuffer, FipDataType::numFipTypes> regFipValues;
+        ScalarBuffer regPressurePv;
+        ScalarBuffer regPvHydrocarbon;
+        ScalarBuffer regPressurePvHydrocarbon;
+
+        std::array<Scalar, FipDataType::numFipTypes> fieldFipValues;
+        Scalar fieldPressurePv;
+        Scalar fieldPvHydrocarbon;
+        Scalar fieldPressurePvHydrocarbon;
+    };
+
 public:
     template<class CollectDataToIORankType>
     EclOutputBlackOilModule(const Simulator& simulator, const CollectDataToIORankType& collectToIORank)
         : simulator_(simulator)
     {
-        createLocalFipnum_();
-
-        // Summary output is for all steps
         const Opm::SummaryConfig summaryConfig = simulator_.vanguard().summaryConfig();
+        const auto& fp = simulator_.vanguard().eclState().fieldProps();
 
-        // Initialize block output
+        this->regions_["FIPNUM"] = fp.get_int("FIPNUM");
+        for (const auto& region : summaryConfig.fip_regions())
+            this->regions_[region] = fp.get_int(region);
+
+        for (auto& region_pair : this->regions_)
+            createLocalRegion_(region_pair.second);
+
+        this->RPRNodes_  = summaryConfig.keywords("RPR*");
+        this->RPRPNodes_ = summaryConfig.keywords("RPRP*");
+
+        for (int fip_type = 0; fip_type < FipDataType::numFipTypes; fip_type++) {
+            std::string key_pattern = "R" + FipDataType::EclString(fip_type) + "*";
+            this->regionNodes_[fip_type] = summaryConfig.keywords(key_pattern);
+        }
+
         for (const auto& node: summaryConfig) {
             if (node.category() == SummaryConfigNode::Category::Block) {
                 if (collectToIORank.isCartIdxOnThisRank(node.number() - 1)) {
@@ -244,8 +291,8 @@ public:
         computeFip_ = false;
 
         // Fluid in place
-        for (int i = 0; i<FipDataType::numFipValues; i++) {
-            if (!substep || summaryConfig.require3DField(fipEnumToString_(i))) {
+        for (int i = 0; i<FipDataType::numFipTypes; i++) {
+            if (!substep || summaryConfig.require3DField(FipDataType::EclString(i))) {
                 if (rstKeywords["FIP"] > 0) {
                     rstKeywords["FIP"] = 0;
                     outputFipRestart_ = true;
@@ -256,7 +303,7 @@ public:
             else
                 fip_[i].clear();
         }
-        if (!substep || summaryConfig.hasKeyword("FPR") || summaryConfig.hasKeyword("FPRP") || summaryConfig.hasKeyword("RPR")) {
+        if (!substep || summaryConfig.hasKeyword("FPR") || summaryConfig.hasKeyword("FPRP") || !this->RPRNodes_.empty()) {
             fip_[FipDataType::PoreVolume].resize(bufferSize, 0.0);
             hydrocarbonPoreVolume_.resize(bufferSize, 0.0);
             pressureTimesPoreVolume_.resize(bufferSize, 0.0);
@@ -1025,9 +1072,9 @@ public:
 
 
         // Fluid in place
-        for (int i = 0; i<FipDataType::numFipValues; i++) {
+        for (int i = 0; i<FipDataType::numFipTypes; i++) {
             if (outputFipRestart_ && fip_[i].size() > 0) {
-                sol.insert(fipEnumToString_(i),
+                sol.insert(FipDataType::EclString(i),
                            Opm::UnitSystem::measure::volume,
                            fip_[i],
                            Opm::data::TargetType::SUMMARY);
@@ -1044,170 +1091,268 @@ public:
         }
     }
 
+    int regionMax(const std::vector<int>& region) {
+        const auto max_value = region.empty() ? 0 : *std::max_element(region.begin(), region.end());
+        return this->simulator_.gridView().comm().max(max_value);
+    }
+
+
+    RegionSum makeRegionSum(const std::vector<int>& region, bool is_fipnum) {
+        RegionSum rsum;
+        rsum.ntFip = this->regionMax(region);
+
+        // sum values over each region
+        rsum.regPressurePv = this->regionSum(this->pressureTimesPoreVolume_, region, rsum.ntFip);
+        rsum.regPvHydrocarbon = this->regionSum(this->hydrocarbonPoreVolume_, region, rsum.ntFip);
+        rsum.regPressurePvHydrocarbon = this->regionSum(pressureTimesHydrocarbonVolume_, region, rsum.ntFip);
+        for (int fip_type = 0; fip_type < FipDataType::numFipTypes; fip_type++)
+            rsum.regFipValues[fip_type] = this->regionSum(this->fip_[fip_type], region, rsum.ntFip);
+
+
+
+        // sum all region values to compute the field total
+        rsum.fieldPressurePv = sum(rsum.regPressurePv);
+        rsum.fieldPvHydrocarbon = sum(rsum.regPvHydrocarbon);
+        rsum.fieldPressurePvHydrocarbon = sum(rsum.regPressurePvHydrocarbon);
+        for (int fip_type = 0; fip_type < FipDataType::numFipTypes; fip_type++) {
+            const auto& regionFip = rsum.regFipValues[fip_type];
+            rsum.fieldFipValues[fip_type] = sum(regionFip);
+        }
+
+        if (is_fipnum) {
+            // The first time the outputFipLog function is run we store the inplace values in
+            // the initialInplace_ member. This has at least two problems:
+            //
+            //   o We really want the *initial* value - now we get the value after
+            //     the first timestep.
+            //
+            //   o For restarted runs this is obviously wrong.
+            //
+            // Finally it is of course not desirable to mutate state in an output
+            // routine.
+            if (!this->regionInitialInplace_) {
+                this->regionInitialInplace_.emplace();
+                for (int fip_type = 0; fip_type < FipDataType::numFipTypes; fip_type++)
+                    this->regionInitialInplace_.value()[fip_type] = rsum.regFipValues[fip_type];
+            }
+
+            if (!this->fieldInitialInplace_)
+                this->fieldInitialInplace_ = rsum.fieldFipValues;
+        }
+        return rsum;
+    }
+
+
+    std::unordered_map<std::string, RegionSum> accumulateRegionSums() {
+        std::unordered_map<std::string, RegionSum> rsum_map;
+        const Opm::SummaryConfig summaryConfig = simulator_.vanguard().summaryConfig();
+
+        rsum_map.emplace("FIPNUM", makeRegionSum(this->regions_.at("FIPNUM"), true));
+        for (const auto& fip_region : summaryConfig.fip_regions()) {
+            if (fip_region == "FIPNUM")
+                continue;
+
+            const auto& region = this->regions_.at(fip_region);
+            rsum_map.emplace(fip_region, makeRegionSum(region, false));
+        }
+        return rsum_map;
+    }
+
+    Scalar sum(const ScalarBuffer& v) {
+        return std::accumulate(v.begin(), v.end(), Scalar{0});
+    }
+
+    void updateSummaryRegionValues(const std::unordered_map<std::string, RegionSum>& rsum_map,
+                                   std::map<std::string, double>& miscSummaryData,
+                                   std::map<std::string, std::vector<double>>& regionData) const {
+
+        const Opm::SummaryConfig summaryConfig = simulator_.vanguard().summaryConfig();
+
+        // The field summary vectors should only use the FIPNUM based region sum.
+        {
+            const auto& rsum = rsum_map.at("FIPNUM");
+            for (int fip_type = 0; fip_type < FipDataType::numFipTypes; fip_type++) {
+                std::string key = "F" + FipDataType::EclString(fip_type);
+                if (summaryConfig.hasKeyword(key))
+                    miscSummaryData[key] = rsum.fieldFipValues[fip_type];
+            }
+            if (summaryConfig.hasKeyword("FOE") && this->fieldInitialInplace_)
+                miscSummaryData["FOE"] = rsum.fieldFipValues[FipDataType::OilInPlace]
+                    / this->fieldInitialInplace_.value()[FipDataType::OilInPlace];
+
+            if (summaryConfig.hasKeyword("FPR"))
+                miscSummaryData["FPR"] = pressureAverage_(rsum.fieldPressurePvHydrocarbon,
+                                                          rsum.fieldPvHydrocarbon,
+                                                          rsum.fieldPressurePv,
+                                                          rsum.fieldFipValues[FipDataType::PoreVolume],
+                                                          true);
+
+            if (summaryConfig.hasKeyword("FPRP"))
+                miscSummaryData["FPRP"] = pressureAverage_(rsum.fieldPressurePvHydrocarbon,
+                                                           rsum.fieldPvHydrocarbon,
+                                                           rsum.fieldPressurePv,
+                                                           rsum.fieldFipValues[FipDataType::PoreVolume],
+                                                           false);
+
+        }
+
+        // The region summary vectors should loop through the FIPxxx regions to
+        // support the RPR__xxx summary keywords.
+        {
+            for (int fip_type = 0; fip_type < FipDataType::numFipTypes; fip_type++) {
+                for (const auto& node : this->regionNodes_[fip_type]) {
+                    const auto& rsum = rsum_map.at(node.fip_region());
+                    regionData[node.keyword()] = rsum.regFipValues[fip_type];
+                }
+            }
+
+            // The exact same quantity is calculated for RPR and RPRP - is that correct?
+            for (const auto& node : this->RPRNodes_) {
+                const auto& rsum = rsum_map.at(node.fip_region());
+                regionData[node.keyword()] = pressureAverage_(rsum.regPressurePvHydrocarbon,
+                                                              rsum.regPvHydrocarbon,
+                                                              rsum.regPressurePv,
+                                                              rsum.regFipValues[FipDataType::PoreVolume],
+                                                              true);
+            }
+
+            for (const auto& node : this->RPRPNodes_) {
+                const auto& rsum = rsum_map.at(node.fip_region());
+                regionData[node.keyword()] = pressureAverage_(rsum.regPressurePvHydrocarbon,
+                                                              rsum.regPvHydrocarbon,
+                                                              rsum.regPressurePv,
+                                                              rsum.regFipValues[FipDataType::PoreVolume],
+                                                              false);
+            }
+        }
+    }
+
+
+    void outputFipLogImpl(const RegionSum& rsum) const {
+
+
+        {
+            Scalar fieldHydroCarbonPoreVolumeAveragedPressure = pressureAverage_(rsum.fieldPressurePvHydrocarbon,
+                                                                                 rsum.fieldPvHydrocarbon,
+                                                                                 rsum.fieldPressurePv,
+                                                                                 rsum.fieldFipValues[FipDataType::PoreVolume],
+                                                                                 true);
+            std::array<Scalar, FipDataType::numFipTypes> initial_values = *this->fieldInitialInplace_;
+            std::array<Scalar, FipDataType::numFipTypes> current_values = rsum.fieldFipValues;
+            fipUnitConvert_(initial_values);
+            fipUnitConvert_(current_values);
+
+            pressureUnitConvert_(fieldHydroCarbonPoreVolumeAveragedPressure);
+            outputRegionFluidInPlace_(initial_values,
+                                      current_values,
+                                      fieldHydroCarbonPoreVolumeAveragedPressure);
+        }
+
+        for (size_t reg = 0; reg < rsum.ntFip; ++reg) {
+            std::array<Scalar, FipDataType::numFipTypes> initial_values;
+            std::array<Scalar, FipDataType::numFipTypes> current_values;
+
+            for (std::size_t fip_type = 0; fip_type < FipDataType::numFipTypes; fip_type++) {
+                initial_values[fip_type] = this->regionInitialInplace_.value()[fip_type][reg];
+                current_values[fip_type] = rsum.regFipValues[fip_type][reg];
+            }
+            fipUnitConvert_(initial_values);
+            fipUnitConvert_(current_values);
+
+            Scalar regHydroCarbonPoreVolumeAveragedPressure
+                = pressureAverage_(rsum.regPressurePvHydrocarbon[reg],
+                                   rsum.regPvHydrocarbon[reg],
+                                   rsum.regPressurePv[reg],
+                                   rsum.regFipValues[FipDataType::PoreVolume][reg],
+                                   true);
+            pressureUnitConvert_(regHydroCarbonPoreVolumeAveragedPressure);
+            outputRegionFluidInPlace_(initial_values, current_values, regHydroCarbonPoreVolumeAveragedPressure, reg + 1);
+        }
+    }
+
+
+
+
     // write Fluid In Place to output log
     void outputFipLog(std::map<std::string, double>& miscSummaryData,  std::map<std::string, std::vector<double>>& regionData, const bool substep)
     {
-        const auto& comm = simulator_.gridView().comm();
-        auto maxElement = std::max_element(fipnum_.begin(), fipnum_.end());
-        size_t ntFip = 0;
-        if ( maxElement != fipnum_.end() ) {
-            ntFip = *maxElement;
-        }
-        ntFip = comm.max(ntFip);
+        auto rsum_map = this->accumulateRegionSums();
+        if (!isIORank_())
+            return;
 
-        // sum values over each region
-        ScalarBuffer regionFipValues[FipDataType::numFipValues];
-        for (int i = 0; i < FipDataType::numFipValues; i++) {
-            regionFipValues[i] = computeFipForRegions_(fip_[i], fipnum_, ntFip);
-            if (isIORank_() && origRegionValues_[i].empty())
-                origRegionValues_[i] = regionFipValues[i];
-        }
+        updateSummaryRegionValues(rsum_map,
+                                  miscSummaryData,
+                                  regionData);
 
-        // sum all region values to compute the field total
-        std::vector<int> fieldNum(ntFip, 1);
-        ScalarBuffer fieldFipValues(FipDataType::numFipValues, 0.0);
-        bool comunicateSum = false; // the regionValues are already summed over all ranks.
-        for (int i = 0; i<FipDataType::numFipValues; i++) {
-            const ScalarBuffer& tmp = computeFipForRegions_(regionFipValues[i], fieldNum, 1, comunicateSum);
-            fieldFipValues[i] = tmp[0];
-        }
-
-        // compute the hydrocarbon averaged pressure over the regions.
-        ScalarBuffer regPressurePv = computeFipForRegions_(pressureTimesPoreVolume_, fipnum_, ntFip);
-        ScalarBuffer regPvHydrocarbon = computeFipForRegions_(hydrocarbonPoreVolume_, fipnum_, ntFip);
-        ScalarBuffer regPressurePvHydrocarbon = computeFipForRegions_(pressureTimesHydrocarbonVolume_, fipnum_, ntFip);
-
-        ScalarBuffer fieldPressurePv = computeFipForRegions_(regPressurePv, fieldNum, 1, comunicateSum);
-        ScalarBuffer fieldPvHydrocarbon = computeFipForRegions_(regPvHydrocarbon, fieldNum, 1, comunicateSum);
-        ScalarBuffer fieldPressurePvHydrocarbon = computeFipForRegions_(regPressurePvHydrocarbon, fieldNum, 1, comunicateSum);
-
-        // output on io rank
-        // the original Fip values are stored on the first step
-        // TODO: Store initial Fip in the init file and restore them
-        // and use them here.
-        const Opm::SummaryConfig summaryConfig = simulator_.vanguard().summaryConfig();
-        if (isIORank_()) {
-            // Field summary output
-            for (int i = 0; i<FipDataType::numFipValues; i++) {
-                std::string key = "F" + fipEnumToString_(i);
-                if (summaryConfig.hasKeyword(key))
-                    miscSummaryData[key] = fieldFipValues[i];
-            }
-            if (summaryConfig.hasKeyword("FOE") && !origTotalValues_.empty())
-                miscSummaryData["FOE"] = fieldFipValues[FipDataType::OilInPlace] / origTotalValues_[FipDataType::OilInPlace];
-
-            if (summaryConfig.hasKeyword("FPR"))
-                miscSummaryData["FPR"] = pressureAverage_(fieldPressurePvHydrocarbon[0], fieldPvHydrocarbon[0], fieldPressurePv[0], fieldFipValues[FipDataType::PoreVolume], true);
-
-            if (summaryConfig.hasKeyword("FPRP"))
-                miscSummaryData["FPRP"] = pressureAverage_(fieldPressurePvHydrocarbon[0], fieldPvHydrocarbon[0], fieldPressurePv[0], fieldFipValues[FipDataType::PoreVolume], false);
-
-            // Region summary output
-            for (int i = 0; i<FipDataType::numFipValues; i++) {
-                std::string key = "R" + fipEnumToString_(i);
-                if (summaryConfig.hasKeyword(key))
-                    regionData[key] = regionFipValues[i];
-            }
-            if (summaryConfig.hasKeyword("RPR"))
-                regionData["RPR"] = pressureAverage_(regPressurePvHydrocarbon, regPvHydrocarbon, regPressurePv, regionFipValues[FipDataType::PoreVolume], true);
-
-            if (summaryConfig.hasKeyword("RPRP"))
-                regionData["RPRP"] = pressureAverage_(regPressurePvHydrocarbon, regPvHydrocarbon, regPressurePv, regionFipValues[FipDataType::PoreVolume], false);
-
-            // Output to log
-            if (!substep) {
-
-                fipUnitConvert_(fieldFipValues);
-                if (origTotalValues_.empty())
-                    origTotalValues_ = fieldFipValues;
-
-                Scalar fieldHydroCarbonPoreVolumeAveragedPressure = pressureAverage_(fieldPressurePvHydrocarbon[0], fieldPvHydrocarbon[0], fieldPressurePv[0], fieldFipValues[FipDataType::PoreVolume], true);
-                pressureUnitConvert_(fieldHydroCarbonPoreVolumeAveragedPressure);
-                outputRegionFluidInPlace_(origTotalValues_, fieldFipValues, fieldHydroCarbonPoreVolumeAveragedPressure, 0);
-                for (size_t reg = 0; reg < ntFip; ++reg) {
-                    ScalarBuffer tmpO(FipDataType::numFipValues, 0.0);
-                    for (int i = 0; i<FipDataType::numFipValues; i++) {
-                        tmpO[i] = origRegionValues_[i][reg];
-                    }
-                    fipUnitConvert_(tmpO);
-                    ScalarBuffer tmp(FipDataType::numFipValues, 0.0);
-                    for (int i = 0; i<FipDataType::numFipValues; i++) {
-                        tmp[i] = regionFipValues[i][reg];
-                    }
-                    fipUnitConvert_(tmp);
-                    Scalar regHydroCarbonPoreVolumeAveragedPressure = pressureAverage_(regPressurePvHydrocarbon[reg], regPvHydrocarbon[reg], regPressurePv[reg], regionFipValues[FipDataType::PoreVolume][reg], true);
-                    pressureUnitConvert_(regHydroCarbonPoreVolumeAveragedPressure);
-                    outputRegionFluidInPlace_(tmpO, tmp, regHydroCarbonPoreVolumeAveragedPressure, reg + 1);
-                }
-            }
-        }
-
+        if (!substep)
+            outputFipLogImpl(rsum_map.at("FIPNUM"));
     }
 
-    // write production report to output 
-    void outputProdLog(size_t reportStepNum, const bool substep, bool forceDisableProdOutput) 
+
+    // write production report to output
+    void outputProdLog(size_t reportStepNum, const bool substep, bool forceDisableProdOutput)
     {
                 if (!substep) {
-                        
+
                         ScalarBuffer  tmp_values(WellProdDataType::numWPValues, 0.0);
                         StringBuffer  tmp_names(WellProdDataType::numWPNames, "");
                         outputProductionReport_(tmp_values, tmp_names, forceDisableProdOutput);
-                        
-                        const auto& st = simulator_.vanguard().summaryState(); 
+
+                        const auto& st = simulator_.vanguard().summaryState();
                         const auto& schedule = simulator_.vanguard().schedule();
-            
+
                         for (const auto& gname: schedule.groupNames()) {
-                
-                                auto gName = static_cast<std::string>(gname);                
+
+                                auto gName = static_cast<std::string>(gname);
                                 auto get = [&st, &gName](const std::string& vector)
                                 {
                                         const auto key = vector + ':' + gName;
 
                                         return st.has(key) ? st.get(key) : 0.0;
-                                };      
-                
+                                };
+
                                 tmp_names[0] = gname;
-                
-                                tmp_values[2] = get("GOPR"); //WellProdDataType::OilRate 
+
+                                tmp_values[2] = get("GOPR"); //WellProdDataType::OilRate
                                 tmp_values[3] = get("GWPR"); //WellProdDataType::WaterRate
                                 tmp_values[4] = get("GGPR"); //WellProdDataType::GasRate
                                 tmp_values[5] = get("GVPR"); //WellProdDataType::FluidResVol
                                 tmp_values[6] = get("GWCT"); //WellProdDataType::WaterCut
                                 tmp_values[7] = get("GGOR"); //WellProdDataType::GasOilRatio
-                                tmp_values[8] = get("GWPR")/get("GGPR"); //WellProdDataType::WaterGasRatio      
-                
-                                outputProductionReport_(tmp_values, tmp_names, forceDisableProdOutput); 
+                                tmp_values[8] = get("GWPR")/get("GGPR"); //WellProdDataType::WaterGasRatio
+
+                                outputProductionReport_(tmp_values, tmp_names, forceDisableProdOutput);
                         }
-            
+
                         for (const auto& wname: schedule.wellNames(reportStepNum)) {
-                                
-                                // don't bother with wells not on this process 
-                                const auto& defunctWellNames = simulator_.vanguard().defunctWellNames(); 
+
+                                // don't bother with wells not on this process
+                                const auto& defunctWellNames = simulator_.vanguard().defunctWellNames();
                                 if (defunctWellNames.find(wname) != defunctWellNames.end()) {
                                         continue;
                                 }
 
-                                const auto& well = schedule.getWell(wname, reportStepNum);                     
-                                        
-                                // Ignore injector wells  
-                                if (well.isInjector()){ 
+                                const auto& well = schedule.getWell(wname, reportStepNum);
+
+                                // Ignore injector wells
+                                if (well.isInjector()){
                                         continue;
                                 }
-        
+
                                 tmp_names[0] = wname;//WellProdDataType::WellName
-        
-                                
-                                auto wName = static_cast<std::string>(wname);                
+
+
+                                auto wName = static_cast<std::string>(wname);
                                 auto get = [&st, &wName](const std::string& vector)
                                 {
                                         const auto key = vector + ':' + wName;
 
                                         return st.has(key) ? st.get(key) : 0.0;
                                 };
-                                
+
                                 const auto& controls = well.productionControls(st);
                                 using CMode = ::Opm::Well::ProducerCMode;
-                                
+
                                 auto fctl = [](const auto wmctl) -> std::string
                                 {
                                         switch (wmctl) {
@@ -1228,102 +1373,102 @@ public:
                                 };
 
                                 tmp_names[1] = fctl(controls.cmode); //WellProdDataType::CTRLMode
-        
+
                                 tmp_values[0] = well.getHeadI() + 1;//WellProdDataType::WellLocationi
                                 tmp_values[1] = well.getHeadJ() + 1;//WellProdDataType::WellLocationj
-                                tmp_values[2] = get("WOPR"); //WellProdDataType::OilRate 
+                                tmp_values[2] = get("WOPR"); //WellProdDataType::OilRate
                                 tmp_values[3] = get("WWPR"); //WellProdDataType::WaterRate
                                 tmp_values[4] = get("WGPR"); //WellProdDataType::GasRate
                                 tmp_values[5] = get("WVPR"); //WellProdDataType::FluidResVol
                                 tmp_values[6] = get("WWCT"); //WellProdDataType::WaterCut
                                 tmp_values[7] = get("WGOR"); //WellProdDataType::GasOilRatio
-                                tmp_values[8] = get("WWPR")/get("WGPR"); //WellProdDataType::WaterGasRatio                                      
+                                tmp_values[8] = get("WWPR")/get("WGPR"); //WellProdDataType::WaterGasRatio
                                 tmp_values[9] = get("WBHP"); //WellProdDataType::BHP
                                 tmp_values[10] = get("WTHP"); //WellProdDataType::THP
-                                //tmp_values[11] = 0; //WellProdDataType::SteadyStatePI //                      
-                                
-                                outputProductionReport_(tmp_values, tmp_names, forceDisableProdOutput);         
-                                
+                                //tmp_values[11] = 0; //WellProdDataType::SteadyStatePI //
+
+                                outputProductionReport_(tmp_values, tmp_names, forceDisableProdOutput);
+
                         }
                 }
     }
 
-    
-    // write injection report to output 
+
+    // write injection report to output
     void outputInjLog(size_t reportStepNum, const bool substep, bool forceDisableInjOutput)
     {
-                if (!substep) {         
+                if (!substep) {
                         ScalarBuffer  tmp_values(WellInjDataType::numWIValues, 0.0);
                         StringBuffer  tmp_names(WellInjDataType::numWINames, "");
                         outputInjectionReport_(tmp_values, tmp_names, forceDisableInjOutput);
-                        
+
                         const auto& st = simulator_.vanguard().summaryState();
                         const auto& schedule = simulator_.vanguard().schedule();
                         for (const auto& gname: schedule.groupNames()) {
-                
-                                auto gName = static_cast<std::string>(gname);                
+
+                                auto gName = static_cast<std::string>(gname);
                                 auto get = [&st, &gName](const std::string& vector)
                                 {
                                         const auto key = vector + ':' + gName;
 
                                         return st.has(key) ? st.get(key) : 0.0;
-                                };      
-                
-                                tmp_names[0] = gname; 
-               
-                                tmp_values[2] = get("GOIR");//WellInjDataType::OilRate                          
+                                };
+
+                                tmp_names[0] = gname;
+
+                                tmp_values[2] = get("GOIR");//WellInjDataType::OilRate
                                 tmp_values[3] = get("GWIR"); //WellInjDataType::WaterRate
-                                tmp_values[4] = get("GGIR"); //WellInjDataType::GasRate 
-                                tmp_values[5] = get("GVIR");//WellInjDataType::FluidResVol       
-                
-                                outputInjectionReport_(tmp_values, tmp_names, forceDisableInjOutput); 
+                                tmp_values[4] = get("GGIR"); //WellInjDataType::GasRate
+                                tmp_values[5] = get("GVIR");//WellInjDataType::FluidResVol
+
+                                outputInjectionReport_(tmp_values, tmp_names, forceDisableInjOutput);
                         }
-            
+
                         for (const auto& wname: schedule.wellNames(reportStepNum)) {
-                                
-                                // don't bother with wells not on this process 
-                                const auto& defunctWellNames = simulator_.vanguard().defunctWellNames(); 
+
+                                // don't bother with wells not on this process
+                                const auto& defunctWellNames = simulator_.vanguard().defunctWellNames();
                                 if (defunctWellNames.find(wname) != defunctWellNames.end()) {
                                         continue;
                                 }
 
-                                const auto& well = schedule.getWell(wname, reportStepNum);                
-                                        
-                                // Ignore Producer wells  
-                                if (well.isProducer()){  
+                                const auto& well = schedule.getWell(wname, reportStepNum);
+
+                                // Ignore Producer wells
+                                if (well.isProducer()){
                                         continue;
                                 }
-                
-                                tmp_names[0] = wname;   //WellInjDataType::WellName                     
 
-                                auto wName = static_cast<std::string>(wname);                
+                                tmp_names[0] = wname;   //WellInjDataType::WellName
+
+                                auto wName = static_cast<std::string>(wname);
                                 auto get = [&st, &wName](const std::string& vector)
                                 {
                                         const auto key = vector + ':' + wName;
 
                                         return st.has(key) ? st.get(key) : 0.0;
-                                };      
-                                
+                                };
+
                                 const auto& controls = well.injectionControls(st);
                                 const auto ctlMode = controls.cmode;
-                                const auto injType = controls.injector_type;                            
+                                const auto injType = controls.injector_type;
                                 using CMode = ::Opm::Well::InjectorCMode;
                                 using WType = ::Opm::InjectorType;
-                                
+
                                 auto ftype = [](const auto wtype) -> std::string
                                 {
                                         switch (wtype) {
                                         case WType::OIL:   return "Oil";
                                         case WType::WATER: return "Wat";
                                         case WType::GAS:   return "Gas";
-                                        case WType::MULTI: return "Multi";                
+                                        case WType::MULTI: return "Multi";
                                         default:
                                         {
                                                 return "";
                                         }
                                         }
                                 };
-                                
+
                                 auto fctl = [](const auto wmctl) -> std::string
                                 {
                                         switch (wmctl) {
@@ -1338,118 +1483,118 @@ public:
                                         }
                                         }
                                 };
-                
+
                                 const auto flowtype = ftype(injType);
                                 const auto flowctl = fctl(ctlMode);
                                 if(flowtype == "Oil") //WellInjDataType::CTRLModeOil
-                                {                    
+                                {
                                         if (flowctl == "RATE"){ tmp_names[1] = "ORAT"; }
                                         else { tmp_names[1] =  flowctl; }
-                                } 
+                                }
                                 else if (flowtype == "Wat") //WellInjDataType::CTRLModeWat
                                 {
                                         if (flowctl == "RATE"){ tmp_names[3] = "WRAT"; }
                                         else { tmp_names[2] =  flowctl; }
-                                } 
+                                }
                                 else if (flowtype == "Gas") //WellInjDataType::CTRLModeGas
                                 {
                                         if (flowctl == "RATE"){ tmp_names[3] = "GRAT"; }
                                         else { tmp_names[3] =  flowctl; }
-                                }                                       
+                                }
 
                                 tmp_values[0] = well.getHeadI() + 1; //WellInjDataType::wellLocationi
-                                tmp_values[1] = well.getHeadJ() + 1; //WellInjDataType::wellLocationj 
+                                tmp_values[1] = well.getHeadJ() + 1; //WellInjDataType::wellLocationj
                                 tmp_values[2] = get("WOIR"); //WellInjDataType::OilRate
                                 tmp_values[3] = get("WWIR"); //WellInjDataType::WaterRate
-                                tmp_values[4] = get("WGIR"); //WellInjDataType::GasRate 
-                                tmp_values[5] = get("WVIR");//WellInjDataType::FluidResVol                              
+                                tmp_values[4] = get("WGIR"); //WellInjDataType::GasRate
+                                tmp_values[5] = get("WVIR");//WellInjDataType::FluidResVol
                                 tmp_values[6] = get("WBHP"); //WellInjDataType::BHP
                                 tmp_values[7] = get("WTHP"); //WellInjDataType::THP
                                 //tmp_values[8] = 0; //WellInjDataType::SteadyStateII
-                                
-                                outputInjectionReport_(tmp_values, tmp_names, forceDisableInjOutput);   
-                                
+
+                                outputInjectionReport_(tmp_values, tmp_names, forceDisableInjOutput);
+
                         }
                 }
     }
-    
+
     // write cumulative production and injection reports to output
     void outputCumLog(size_t reportStepNum, const bool substep, bool forceDisableCumOutput)
     {
-                if (!substep) {         
+                if (!substep) {
                         ScalarBuffer  tmp_values(WellCumDataType::numWCValues, 0.0);
                         StringBuffer  tmp_names(WellCumDataType::numWCNames, "");
                         outputCumulativeReport_(tmp_values, tmp_names, forceDisableCumOutput);
-                        
+
                         const auto& st = simulator_.vanguard().summaryState();
                         const auto& schedule = simulator_.vanguard().schedule();
-            
+
                         for (const auto& gname: schedule.groupNames()) {
-                
-                                auto gName = static_cast<std::string>(gname);                
+
+                                auto gName = static_cast<std::string>(gname);
                                 auto get = [&st, &gName](const std::string& vector)
                                 {
                                         const auto key = vector + ':' + gName;
 
                                         return st.has(key) ? st.get(key) : 0.0;
-                                };      
-                 
-                                tmp_names[0] = gname; 
-                
+                                };
+
+                                tmp_names[0] = gname;
+
                                 tmp_values[2] = get("GOPT"); //WellCumDataType::OilProd
                                 tmp_values[3] = get("GWPT"); //WellCumDataType::WaterProd
-                                tmp_values[4] = get("GGPT"); //WellCumDataType::GasProd 
-                                tmp_values[5] = get("GVPT");//WellCumDataType::FluidResVolProd          
+                                tmp_values[4] = get("GGPT"); //WellCumDataType::GasProd
+                                tmp_values[5] = get("GVPT");//WellCumDataType::FluidResVolProd
                                 tmp_values[6] = get("GOIT"); //WellCumDataType::OilInj
                                 tmp_values[7] = get("GWIT"); //WellCumDataType::WaterInj
-                                tmp_values[8] = get("GGIT"); //WellCumDataType::GasInj  
-                                tmp_values[9] = get("GVIT");//WellCumDataType::FluidResVolInj           
-                
-                                outputCumulativeReport_(tmp_values, tmp_names, forceDisableCumOutput); 
+                                tmp_values[8] = get("GGIT"); //WellCumDataType::GasInj
+                                tmp_values[9] = get("GVIT");//WellCumDataType::FluidResVolInj
+
+                                outputCumulativeReport_(tmp_values, tmp_names, forceDisableCumOutput);
                         }
-            
+
                         for (const auto& wname : schedule.wellNames(reportStepNum))  {
-                                
-                                // don't bother with wells not on this process 
-                                const auto& defunctWellNames = simulator_.vanguard().defunctWellNames(); 
+
+                                // don't bother with wells not on this process
+                                const auto& defunctWellNames = simulator_.vanguard().defunctWellNames();
                                 if (defunctWellNames.find(wname) != defunctWellNames.end()) {
                                         continue;
-                                }               
-                
+                                }
+
                                 const auto& well = schedule.getWell(wname, reportStepNum);
 
-                                tmp_names[0] = wname; //WellCumDataType::WellName                               
+                                tmp_names[0] = wname; //WellCumDataType::WellName
 
-                                auto wName = static_cast<std::string>(wname);                
+                                auto wName = static_cast<std::string>(wname);
                                 auto get = [&st, &wName](const std::string& vector)
                                 {
                                         const auto key = vector + ':' + wName;
 
                                         return st.has(key) ? st.get(key) : 0.0;
-                                };      
-                                
+                                };
+
                                 if (well.isInjector()) {
-                                        
+
                                         const auto& controls = well.injectionControls(st);
                                         const auto ctlMode = controls.cmode;
-                                        const auto injType = controls.injector_type;                            
+                                        const auto injType = controls.injector_type;
                                         using CMode = ::Opm::Well::InjectorCMode;
                                         using WType = ::Opm::InjectorType;
-                                        
+
                                         auto ftype = [](const auto wtype) -> std::string
                                         {
                                             switch (wtype) {
                                             case WType::OIL:   return "Oil";
                                             case WType::WATER: return "Wat";
                                             case WType::GAS:   return "Gas";
-                                            case WType::MULTI: return "Multi";                
+                                            case WType::MULTI: return "Multi";
                                             default:
                                             {
                                                     return "";
                                             }
                                             }
                                         };
-                                
+
                                         auto fctl = [](const auto wmctl) -> std::string
                                         {
                                             switch (wmctl) {
@@ -1463,10 +1608,10 @@ public:
                                                     return "";
                                             }
                                             }
-                                        };         
+                                        };
 
-                                       tmp_names[1] = "INJ"; //WellCumDataType::WellType       
-                                       const auto flowctl = fctl(ctlMode); 
+                                       tmp_names[1] = "INJ"; //WellCumDataType::WellType
+                                       const auto flowctl = fctl(ctlMode);
                                        if (flowctl == "RATE") //WellCumDataType::WellCTRL
                                        {
                                                 const auto flowtype = ftype(injType);
@@ -1478,13 +1623,13 @@ public:
                                         {
                                                 tmp_names[2] = flowctl;
                                         }
-                    
-                                }       
+
+                                }
                                 else if (well.isProducer()) {
-                                        
+
                                         const auto& controls = well.productionControls(st);
                                         using CMode = ::Opm::Well::ProducerCMode;
-                                        
+
                                         auto fctl = [](const auto wmctl) -> std::string
                                         {
                                                 switch (wmctl) {
@@ -1503,27 +1648,27 @@ public:
                                                         }
                                                 }
                                         };
-                                        tmp_names[1] = "PROD"; //WellProdDataType::CTRLMode 
-                                        tmp_names[2] = fctl(controls.cmode); //WellProdDataType::CTRLMode               
+                                        tmp_names[1] = "PROD"; //WellProdDataType::CTRLMode
+                                        tmp_names[2] = fctl(controls.cmode); //WellProdDataType::CTRLMode
                                 }
-        
+
                                         tmp_values[0] = well.getHeadI() + 1; //WellCumDataType::wellLocationi
-                                        tmp_values[1] = well.getHeadJ() + 1; //WellCumDataType::wellLocationj 
+                                        tmp_values[1] = well.getHeadJ() + 1; //WellCumDataType::wellLocationj
                                         tmp_values[2] = get("WOPT"); //WellCumDataType::OilProd
                                         tmp_values[3] = get("WWPT"); //WellCumDataType::WaterProd
-                                        tmp_values[4] = get("WGPT"); //WellCumDataType::GasProd 
-                                        tmp_values[5] = get("WVPT");//WellCumDataType::FluidResVolProd          
+                                        tmp_values[4] = get("WGPT"); //WellCumDataType::GasProd
+                                        tmp_values[5] = get("WVPT");//WellCumDataType::FluidResVolProd
                                         tmp_values[6] = get("WOIT"); //WellCumDataType::OilInj
                                         tmp_values[7] = get("WWIT"); //WellCumDataType::WaterInj
-                                        tmp_values[8] = get("WGIT"); //WellCumDataType::GasInj  
-                                        tmp_values[9] = get("WVIT");//WellCumDataType::FluidResVolInj                                                           
-                                
-                                        outputCumulativeReport_(tmp_values, tmp_names, forceDisableCumOutput);  
-                                
+                                        tmp_values[8] = get("WGIT"); //WellCumDataType::GasInj
+                                        tmp_values[9] = get("WVIT");//WellCumDataType::FluidResVolInj
+
+                                        outputCumulativeReport_(tmp_values, tmp_names, forceDisableCumOutput);
+
                         }
                 }
     }
-    
+
     void setRestart(const Opm::data::Solution& sol, unsigned elemIdx, unsigned globalDofIndex)
     {
         Scalar so = 1.0;
@@ -1772,14 +1917,8 @@ private:
 
     }
 
-    void createLocalFipnum_()
+    void createLocalRegion_(std::vector<int>& region)
     {
-        const auto& gridView = simulator_.vanguard().gridView();
-        if (simulator_.vanguard().eclState().fieldProps().has_int("FIPNUM"))
-            fipnum_ = simulator_.vanguard().eclState().fieldProps().get_int("FIPNUM");
-        else
-            fipnum_.resize(gridView.size(/*codim=*/0), 1);
-
         ElementContext elemCtx(simulator_);
         ElementIterator elemIt = simulator_.gridView().template begin</*codim=*/0>();
         const ElementIterator& elemEndIt = simulator_.gridView().template end</*codim=*/0>();
@@ -1787,19 +1926,19 @@ private:
         for (; elemIt != elemEndIt; ++elemIt, ++elemIdx) {
             const Element& elem = *elemIt;
             if (elem.partitionType() != Dune::InteriorEntity)
-                fipnum_[elemIdx] = 0;
+                region[elemIdx] = 0;
         }
     }
 
     // Sum Fip values over regions.
-    ScalarBuffer computeFipForRegions_(const ScalarBuffer& fip, std::vector<int>& regionId, size_t maxNumberOfRegions, bool commSum = true)
+    ScalarBuffer regionSum(const ScalarBuffer& property, const std::vector<int>& regionId, size_t maxNumberOfRegions) const
     {
         ScalarBuffer totals(maxNumberOfRegions, 0.0);
 
-        if (fip.empty())
+        if (property.empty())
             return totals;
 
-        assert(regionId.size() == fip.size());
+        assert(regionId.size() == property.size());
         for (size_t j = 0; j < regionId.size(); ++j) {
             const int regionIdx = regionId[j] - 1;
             // the cell is not attributed to any region. ignore it!
@@ -1807,18 +1946,17 @@ private:
                 continue;
 
             assert(regionIdx < static_cast<int>(maxNumberOfRegions));
-            totals[regionIdx] += fip[j];
+            totals[regionIdx] += property[j];
         }
-        if (commSum) {
-            const auto& comm = simulator_.gridView().comm();
-            for (size_t i = 0; i < maxNumberOfRegions; ++i)
-                totals[i] = comm.sum(totals[i]);
-        }
+
+        const auto& comm = simulator_.gridView().comm();
+        for (size_t i = 0; i < maxNumberOfRegions; ++i)
+            totals[i] = comm.sum(totals[i]);
 
         return totals;
     }
 
-    ScalarBuffer pressureAverage_(const ScalarBuffer& pressurePvHydrocarbon, const ScalarBuffer& pvHydrocarbon, const ScalarBuffer& pressurePv, const ScalarBuffer& pv, bool hydrocarbon)
+    ScalarBuffer pressureAverage_(const ScalarBuffer& pressurePvHydrocarbon, const ScalarBuffer& pvHydrocarbon, const ScalarBuffer& pressurePv, const ScalarBuffer& pv, bool hydrocarbon) const
     {
         size_t size = pressurePvHydrocarbon.size();
         assert(pvHydrocarbon.size() == size);
@@ -1832,7 +1970,7 @@ private:
         return fraction;
     }
 
-    Scalar pressureAverage_(const Scalar& pressurePvHydrocarbon, const Scalar& pvHydrocarbon, const Scalar& pressurePv, const Scalar& pv, bool hydrocarbon)
+    Scalar pressureAverage_(const Scalar& pressurePvHydrocarbon, const Scalar& pvHydrocarbon, const Scalar& pressurePv, const Scalar& pv, bool hydrocarbon) const
     {
         if (pvHydrocarbon > 1e-10 && hydrocarbon)
             return pressurePvHydrocarbon / pvHydrocarbon;
@@ -1840,7 +1978,7 @@ private:
         return pressurePv / pv;
     }
 
-    void fipUnitConvert_(ScalarBuffer& fip)
+    void fipUnitConvert_(std::array<Scalar, FipDataType::numFipTypes>& fip) const
     {
         const Opm::UnitSystem& units = simulator_.vanguard().eclState().getUnits();
         if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_FIELD) {
@@ -1872,7 +2010,7 @@ private:
         }
     }
 
-    void pressureUnitConvert_(Scalar& pav)
+    void pressureUnitConvert_(Scalar& pav) const
     {
         const Opm::UnitSystem& units = simulator_.vanguard().eclState().getUnits();
         if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_FIELD) {
@@ -1890,7 +2028,9 @@ private:
         }
     }
 
-    void outputRegionFluidInPlace_(const ScalarBuffer& oip, const ScalarBuffer& cip, const Scalar& pav, const int reg)
+    void outputRegionFluidInPlace_(const std::array<Scalar, FipDataType::numFipTypes>& oip,
+                                   const std::array<Scalar, FipDataType::numFipTypes>& cip,
+                                   const Scalar& pav, const int reg = 0) const
     {
         if (forceDisableFipOutput_)
             return;
@@ -1901,7 +2041,7 @@ private:
 
         const Opm::UnitSystem& units = simulator_.vanguard().eclState().getUnits();
         std::ostringstream ss;
-        if (!reg) {
+        if (reg == 0) {
             ss << "                                                  ===================================================\n"
                << "                                                  :                   Field Totals                  :\n";
         }
@@ -1940,12 +2080,12 @@ private:
            << ":========================:==========================================:================:==========================================:\n";
         Opm::OpmLog::note(ss.str());
     }
-    
+
     void outputProductionReport_(const ScalarBuffer& wellProd, const StringBuffer& wellProdNames, const bool forceDisableProdOutput)
     {
                 if(forceDisableProdOutput)
                         return;
-                
+
         const Opm::UnitSystem& units = simulator_.vanguard().eclState().getUnits();
         std::ostringstream ss;
         if (wellProdNames[WellProdDataType::WellName].empty()) {
@@ -1956,10 +2096,10 @@ private:
                             ss << ":        :           :    :  SCM/DAY  :  SCM/DAY  :  SCM/DAY  :  RCM/DAY  :  SCM/SCM  :  SCM/SCM :  SCM/SCM   :  BARSA :  BARSA :\n";//                    :\n";
                         }
                         if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-                            ss << ":        :           :    :  STB/DAY  :  STB/DAY  :  MSCF/DAY :  RB/DAY   :           : MSCF/STB :  STB/MSCF  :  PSIA  :  PSIA  :\n";//                    :\n"; 
+                            ss << ":        :           :    :  STB/DAY  :  STB/DAY  :  MSCF/DAY :  RB/DAY   :           : MSCF/STB :  STB/MSCF  :  PSIA  :  PSIA  :\n";//                    :\n";
                         }
                     if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_LAB) {
-                                ss << ":        :           :    :  SCC/HR   :  SCC/HR   :  SCC/HR   :    RCC    :  SCC/SCC  :  SCC/SCC :  SCC/SCC   :  ATMA  :  ATMA  :\n";//                    :\n"; 
+                                ss << ":        :           :    :  SCC/HR   :  SCC/HR   :  SCC/HR   :    RCC    :  SCC/SCC  :  SCC/SCC :  SCC/SCC   :  ATMA  :  ATMA  :\n";//                    :\n";
                         }
                 ss << "=================================================================================================================================\n";//=================== \n";
         }
@@ -1973,13 +2113,13 @@ private:
             ss << ":"<< std::setfill ('-') << std::setw (9) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (5) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (11) << ":" << std::setfill ('-') << std::setw (13) << ":" << std::setfill ('-') << std::setw (9) << ":" << std::setfill ('-') << std::setw (9) << ":" << "\n";
         }
                 Opm::OpmLog::note(ss.str());
-    }    
+    }
 
     void outputInjectionReport_(const ScalarBuffer& wellInj, const StringBuffer& wellInjNames, const bool forceDisableInjOutput)
     {
                 if(forceDisableInjOutput)
                         return;
-                
+
         const Opm::UnitSystem& units = simulator_.vanguard().eclState().getUnits();
         std::ostringstream ss;
         if (wellInjNames[WellInjDataType::WellName].empty()) {
@@ -1990,10 +2130,10 @@ private:
                                 ss << ":        :           : OIL  : WAT  : GAS  :  SCM/DAY  :  SCM/DAY  :  SCM/DAY  :  RCM/DAY  :  BARSA :  BARSA :\n";//                    :\n";
                         }
                         if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-                                ss << ":        :           : OIL  : WAT  : GAS  :  STB/DAY  :  STB/DAY  :  MSCF/DAY :  RB/DAY   :  PSIA  :  PSIA  :\n";//                    :\n"; 
+                                ss << ":        :           : OIL  : WAT  : GAS  :  STB/DAY  :  STB/DAY  :  MSCF/DAY :  RB/DAY   :  PSIA  :  PSIA  :\n";//                    :\n";
                         }
                         if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_LAB) {
-                                ss << ":        :           : OIL  : WAT  : GAS  :   SCC/HR  :  SCC/HR   :  SCC/HR   :  RCC/HR   :  ATMA  :  ATMA  :\n";//                    :\n"; 
+                                ss << ":        :           : OIL  : WAT  : GAS  :   SCC/HR  :  SCC/HR   :  SCC/HR   :  RCC/HR   :  ATMA  :  ATMA  :\n";//                    :\n";
                         }
                 ss << "==============================================================================================================\n";//===================== \n";
         }
@@ -2004,16 +2144,16 @@ private:
             else {
                 ss  << std::right << std::fixed << std::setprecision(0) << ":" << std::setw (8) << wellInjNames[WellInjDataType::WellName] << ":" << std::setw(5) << wellInj[WellInjDataType::WellLocationi] << "," << std::setw(5) << wellInj[WellInjDataType::WellLocationj] << ":" << std::setw(6) << wellInjNames[WellInjDataType::CTRLModeOil] << ":" << std::setw(6) << wellInjNames[WellInjDataType::CTRLModeWat] << ":" << std::setw(6) << wellInjNames[WellInjDataType::CTRLModeGas] << ":" << std::setprecision(1) << std::setw(11) << wellInj[WellInjDataType::OilRate] << ":" << std::setw(11) << wellInj[WellInjDataType::WaterRate] << ":" << std::setw(11)<< wellInj[WellInjDataType::GasRate] << ":" << std::setw(11) << wellInj[WellInjDataType::FluidResVol] << ":" << std::setw(8)<< wellInj[WellInjDataType::BHP] << ":" << std::setw(8)<< wellInj[WellInjDataType::THP] << ": \n";//wellInj[WellInjDataType::SteadyStateII] << std::setw(10) << "\n"
             }
-            ss << ":--------:-----------:------:------:------:------------:----------:-----------:-----------:--------:--------: \n";//--------------------:\n";      
+            ss << ":--------:-----------:------:------:------:------------:----------:-----------:-----------:--------:--------: \n";//--------------------:\n";
         }
                 Opm::OpmLog::note(ss.str());
     }
-        
+
         void outputCumulativeReport_(const ScalarBuffer& wellCum, const StringBuffer& wellCumNames, const bool forceDisableCumOutput)
     {
                 if(forceDisableCumOutput)
                         return;
-                
+
         const Opm::UnitSystem& units = simulator_.vanguard().eclState().getUnits();
         std::ostringstream ss;
         if (wellCumNames[WellCumDataType::WellName].empty()) {
@@ -2024,41 +2164,25 @@ private:
                                 ss << ":        :           :        :    :    MSCM   :   MSCM    :    MMSCM  :   MRCM    :    MSCM   :   MSCM    :    MMSCM  :   MRCM    :\n";
                         }
                         if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-                                ss << ":        :           :        :    :    MSTB   :   MSTB    :    MMSCF  :   MRB     :    MSTB   :   MSTB    :    MMSCF  :   MRB     :\n"; 
+                                ss << ":        :           :        :    :    MSTB   :   MSTB    :    MMSCF  :   MRB     :    MSTB   :   MSTB    :    MMSCF  :   MRB     :\n";
                         }
                         if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_LAB) {
-                                ss << ":        :           :        :    :     MSCC  :   MSCC    :    MMSCC  :   MRCC    :    MSCC   :   MSCC    :    MMSCC  :   MRCC    :\n"; 
+                                ss << ":        :           :        :    :     MSCC  :   MSCC    :    MMSCC  :   MRCC    :    MSCC   :   MSCC    :    MMSCC  :   MRCC    :\n";
                         }
-                ss << "====================================================================================================================================\n"; 
+                ss << "====================================================================================================================================\n";
         }
                 else {
             if (wellCum[WellCumDataType::WellLocationi] < 1) {
                 ss  << std::right << std::fixed << std::setprecision(0) << ":" << std::setw (8) << wellCumNames[WellCumDataType::WellName] << ":" << std::setw(11) <<  "" << ":" << std::setw(8) << wellCumNames[WellCumDataType::WellType] << ":" << std::setw(4) << wellCumNames[WellCumDataType::WellCTRL] << ":" << std::setprecision(1) << std::setw(11) << wellCum[WellCumDataType::OilProd]/1000 << ":" << std::setw(11) << wellCum[WellCumDataType::WaterProd]/1000 << ":" << std::setw(11)<< wellCum[WellCumDataType::GasProd]/1000 << ":" << std::setw(11) << wellCum[WellCumDataType::FluidResVolProd]/1000 << ":" << std::setw(11) << wellCum[WellCumDataType::OilInj]/1000 << ":"  << std::setw(11) << wellCum[WellCumDataType::WaterInj]/1000 << ":" << std::setw(11) << wellCum[WellCumDataType::GasInj]/1000 << ":" << std::setw(11) << wellCum[WellCumDataType::FluidResVolInj]/1000 << ": \n";
             }
-            else {        
+            else {
                 ss  << std::right << std::fixed << std::setprecision(0) << ":" << std::setw (8) << wellCumNames[WellCumDataType::WellName] << ":" << std::setw(5) << wellCum[WellCumDataType::WellLocationi] << "," << std::setw(5) << wellCum[WellCumDataType::WellLocationj] << ":" << std::setw(8) << wellCumNames[WellCumDataType::WellType] << ":" << std::setw(4) << wellCumNames[WellCumDataType::WellCTRL] << ":" << std::setprecision(1) << std::setw(11) << wellCum[WellCumDataType::OilProd]/1000 << ":" << std::setw(11) << wellCum[WellCumDataType::WaterProd]/1000 << ":" << std::setw(11)<< wellCum[WellCumDataType::GasProd]/1000 << ":" << std::setw(11) << wellCum[WellCumDataType::FluidResVolProd]/1000 << ":" << std::setw(11) << wellCum[WellCumDataType::OilInj]/1000 << ":"  << std::setw(11) << wellCum[WellCumDataType::WaterInj]/1000 << ":" << std::setw(11) << wellCum[WellCumDataType::GasInj]/1000 << ":" << std::setw(11) << wellCum[WellCumDataType::FluidResVolInj]/1000 << ": \n";
             }
-            ss << ":--------:-----------:--------:----:------------:----------:-----------:-----------:------------:----------:-----------:-----------: \n";      
+            ss << ":--------:-----------:--------:----:------------:----------:-----------:-----------:------------:----------:-----------:-----------: \n";
         }
         Opm::OpmLog::note(ss.str());
     }
 
-    std::string fipEnumToString_(int i)
-    {
-        typedef typename FipDataType::FipId FipId;
-        switch(static_cast<FipId>(i))
-        {
-        case FipDataType::WaterInPlace: return "WIP";
-        case FipDataType::OilInPlace: return "OIP";
-        case FipDataType::GasInPlace: return "GIP";
-        case FipDataType::OilInPlaceInLiquidPhase: return "OIPL";
-        case FipDataType::OilInPlaceInGasPhase: return "OIPG";
-        case FipDataType::GasInPlaceInLiquidPhase: return "GIPL";
-        case FipDataType::GasInPlaceInGasPhase: return "GIPG";
-        case FipDataType::PoreVolume: return "PV";
-        }
-        return "ERROR";
-    }
     std::string WPEnumToString_(int i)
     {
         typedef typename WellProdDataType::WPId WPId;
@@ -2080,7 +2204,7 @@ private:
                 case WellProdDataType::SteadyStatePI: return "SteadyStatePI";
         }
         return "ERROR";
-    }   
+    }
         std::string WIEnumToString_(int i)
     {
         typedef typename WellInjDataType::WIId WIId;
@@ -2171,10 +2295,17 @@ private:
 
     std::vector<int> failedCellsPb_;
     std::vector<int> failedCellsPd_;
-    std::vector<int> fipnum_;
-    ScalarBuffer fip_[FipDataType::numFipValues];
-    ScalarBuffer origTotalValues_;
-    ScalarBuffer origRegionValues_[FipDataType::numFipValues];
+    std::unordered_map<std::string, std::vector<int>> regions_;
+    std::array<ScalarBuffer, FipDataType::numFipTypes> fip_;
+    std::optional<std::array<ScalarBuffer, FipDataType::numFipTypes>> regionInitialInplace_;
+    std::optional<std::array<Scalar, FipDataType::numFipTypes>> fieldInitialInplace_;
+
+    std::vector<Opm::SummaryConfigNode> RPRNodes_;
+    std::vector<Opm::SummaryConfigNode> RPRPNodes_;
+    std::array<std::vector<Opm::SummaryConfigNode>, FipDataType::numFipTypes> regionNodes_;
+
+
+
     ScalarBuffer hydrocarbonPoreVolume_;
     ScalarBuffer pressureTimesPoreVolume_;
     ScalarBuffer pressureTimesHydrocarbonVolume_;
