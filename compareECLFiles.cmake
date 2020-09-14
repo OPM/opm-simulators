@@ -726,7 +726,7 @@ add_test_compareECLFiles(CASENAME model4_udq_group
                          DIR model4)
 
 add_test_compareECLFiles(CASENAME model6_msw
-                         FILENAME 1_MSW_MODEL
+                         FILENAME 1_MSW_MODEL6
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
