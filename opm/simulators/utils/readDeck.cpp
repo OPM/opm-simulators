@@ -274,7 +274,7 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
 #if HAVE_MPI
         MPI_Finalize();
 #endif
-        exit(1);
+        std::exit(EXIT_FAILURE);
     }
 }
 } // end namespace Opm
