@@ -143,6 +143,7 @@ FileOutputMode setupLogging(int mpi_rank_, const std::string& deck_filename, con
 }
 
 
+namespace {
 void setupMessageLimiter(const Opm::MessageLimits msgLimits,  const std::string& stdout_log_id) {
     std::shared_ptr<Opm::StreamLog> stream_log = Opm::OpmLog::getBackend<Opm::StreamLog>(stdout_log_id);
 
@@ -159,6 +160,7 @@ void setupMessageLimiter(const Opm::MessageLimits msgLimits,  const std::string&
                                            {Opm::Log::MessageType::Bug,
                                             msgLimits.getBugPrintLimit(0)}};
     stream_log->setMessageLimiter(std::make_shared<Opm::MessageLimiter>(10, limits));
+}
 }
 
 
