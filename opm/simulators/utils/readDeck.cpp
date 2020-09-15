@@ -224,6 +224,7 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
             if (!summaryConfig)
                 summaryConfig = std::make_unique<Opm::SummaryConfig>(*deck, *schedule, eclipseState->getTableManager(), *parseContext, *errorGuard);
 
+            Opm::checkConsistentArrayDimensions(*eclipseState, *schedule, *parseContext, *errorGuard);
         }
         catch(const std::exception& e)
         {
@@ -272,7 +273,6 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
 #if HAVE_MPI
         Opm::eclStateBroadcast(*eclipseState, *schedule, *summaryConfig);
 #endif
-        Opm::checkConsistentArrayDimensions(*eclipseState, *schedule, *parseContext, *errorGuard);
     }
     catch(const std::exception& e)
     {
