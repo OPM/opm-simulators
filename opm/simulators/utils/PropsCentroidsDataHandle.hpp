@@ -81,6 +81,11 @@ public:
             int position = 0;
             Mpi::pack(m_intKeys, buffer, position, comm);
             Mpi::pack(m_doubleKeys, buffer, position, comm);
+            {
+                std::vector<char> tran_buffer = globalProps.serialize_tran();
+                position += tran_buffer.size();
+                buffer.insert(buffer.end(), std::make_move_iterator(tran_buffer.begin()), std::make_move_iterator(tran_buffer.end()));
+            }
             comm.broadcast(&position, 1, 0);
             comm.broadcast(buffer.data(), position, 0);
 
@@ -121,6 +126,7 @@ public:
             int position{};
             Mpi::unpack(m_intKeys, buffer, position, comm);
             Mpi::unpack(m_doubleKeys, buffer, position, comm);
+            m_distributed_fieldProps.deserialize_tran( std::vector<char>(buffer.begin() + position, buffer.end()) );
             m_no_data = m_intKeys.size() + m_doubleKeys.size() +
                 Grid::dimensionworld;
         }
