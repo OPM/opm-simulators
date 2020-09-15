@@ -241,6 +241,17 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
         if (!eclipseState)
             eclipseState = std::make_unique<Opm::ParallelEclipseState>();
     }
+
+    try
+    {
+        Opm::eclStateBroadcast(*eclipseState, *schedule, *summaryConfig);
+    }
+    catch(const std::exception& e)
+    {
+        failureMessage = e.what();
+        parseSuccess = 0;
+    }
+
 #endif
 
     if (*errorGuard) { // errors encountered
@@ -264,42 +275,6 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
         MPI_Finalize();
 #endif
         exit(1);
-    }
-
-    parseSuccess = 1;
-
-    try
-    {
-#if HAVE_MPI
-        Opm::eclStateBroadcast(*eclipseState, *schedule, *summaryConfig);
-#endif
-    }
-    catch(const std::exception& e)
-    {
-        failureMessage = e.what();
-        parseSuccess = 0;
-    }
-
-    if (*errorGuard) { // errors encountered
-        parseSuccess = 0;
-    }
-
-    // Print warnings and erors on every rank! Maybe too much?
-    errorGuard->dump();
-    errorGuard->clear();
-
-    parseSuccess = comm.min(parseSuccess);
-
-    if (!parseSuccess)
-    {
-        if (rank == 0)
-        {
-            OpmLog::error(std::string("Unrecoverable errors were encountered while loading input: ")+failureMessage);
-        }
-#if HAVE_MPI
-        MPI_Finalize();
-#endif
-        exit(EXIT_FAILURE);
     }
 }
 } // end namespace Opm
