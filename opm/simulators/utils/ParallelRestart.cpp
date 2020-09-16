@@ -617,9 +617,11 @@ void unpack(std::optional<T>&data, std::vector<char>& buffer, int& position,
 {
     bool has_value;
     unpack(has_value, buffer, position, comm);
-    if (has_value)
-        unpack(*data, buffer, position, comm);
-    else
+    if (has_value) {
+        T val;
+        unpack(val, buffer, position, comm);
+        data = std::optional<T>(val);
+    } else
         data.reset();
 }
 
