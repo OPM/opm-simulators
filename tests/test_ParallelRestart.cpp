@@ -64,6 +64,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/icd.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/SICD.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Network/Node.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/RFTConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
@@ -487,6 +488,7 @@ TEST_FOR_TYPE(MessageLimits)
 TEST_FOR_TYPE(MLimits)
 TEST_FOR_TYPE(MULTREGTScanner)
 TEST_FOR_TYPE(NNC)
+TEST_FOR_TYPE2(Network, Node)
 TEST_FOR_TYPE(OilVaporizationProperties)
 TEST_FOR_TYPE(Phases)
 TEST_FOR_TYPE(PlymwinjTable)
