@@ -50,9 +50,6 @@ enum class FileOutputMode {
 // Setup the OpmLog backends
 FileOutputMode setupLogging(int mpi_rank_, const std::string& deck_filename, const std::string& cmdline_output_dir, const std::string& cmdline_output, bool output_cout_, const std::string& stdout_log_id);
 
-void setupMessageLimiter(const Opm::MessageLimits msgLimits,  const std::string& stdout_log_id);
-
-
 /// \brief Reads the deck and creates all necessary objects if needed
 ///
 /// If pointers already contains objects then they are used otherwise they are created and can be used outside later.
