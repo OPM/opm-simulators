@@ -27,7 +27,7 @@
 #include <tuple>
 #include <utility>
 
-#include <opm/common/OpmLog/Location.hpp>
+#include <opm/common/OpmLog/KeywordLocation.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Deck/DeckItem.hpp>
 #include <opm/parser/eclipse/EclipseState/Aquancon.hpp>
@@ -483,7 +483,7 @@ TEST_FOR_TYPE(GuideRateModel)
 TEST_FOR_TYPE(InitConfig)
 TEST_FOR_TYPE(IOConfig)
 TEST_FOR_TYPE(JFunc)
-TEST_FOR_TYPE(Location)
+TEST_FOR_TYPE(KeywordLocation)
 TEST_FOR_TYPE(MessageLimits)
 TEST_FOR_TYPE(MLimits)
 TEST_FOR_TYPE(MULTREGTScanner)
