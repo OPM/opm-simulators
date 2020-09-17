@@ -118,7 +118,10 @@ public:
 
                 for (const auto& doubleKey : m_doubleKeys)
                 {
-                    const auto& fieldData = globalProps.get_double_field_data(doubleKey);
+                    // We need to allow unsupported keywords to get the data
+                    // for TranCalculator, too.
+                    const auto& fieldData = globalProps.get_double_field_data(doubleKey,
+                                                                              /* allow_unsupported = */ true);
                     data.push_back(std::make_pair(fieldData.data[index],
                                                   static_cast<unsigned char>(fieldData.value_status[index])));
                 }
