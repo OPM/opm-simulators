@@ -50,7 +50,7 @@ class PropsCentroidsDataHandle
 {
 public:
     //! \brief the data type we send (ints are converted to double)
-    using DataType = double;
+    using DataType = std::pair<double, unsigned char>;
 
     //! \brief Constructor
     //! \param grid The grid where the loadbalancing is happening.
@@ -106,15 +106,23 @@ public:
                 data.reserve(m_no_data);
 
                 for (const auto& intKey : m_intKeys)
-                    data.push_back(globalProps.get_int(intKey)[index]);
+                {
+                    const auto& fieldData = globalProps.get_int_field_data(intKey);
+                    data.push_back(std::make_pair(fieldData.data[index],
+                                                  static_cast<unsigned char>(fieldData.value_status[index])));
+                }
 
                 for (const auto& doubleKey : m_doubleKeys)
-                    data.push_back(globalProps.get_double(doubleKey)[index]);
+                {
+                    const auto& fieldData = globalProps.get_double_field_data(doubleKey);
+                    data.push_back(std::make_pair(fieldData.data[index],
+                                                  static_cast<unsigned char>(fieldData.value_status[index])));
+                }
 
                 auto cartIndex = cartMapper.cartesianIndex(index);
                 const auto& center = eclGridOnRoot->getCellCenter(cartIndex);
                 for (int dim = 0; dim < Grid::dimensionworld; ++dim)
-                    data.push_back(center[dim]);
+                    data.push_back(std::make_pair(center[dim], '1')); // write garbage for value_status
             }
         }
         else
@@ -136,10 +144,16 @@ public:
     {
         // distributed grid is now correctly set up.
         for(const auto& intKey : m_intKeys)
-            m_distributed_fieldProps.m_intProps[intKey].resize(m_grid.size(0));
+        {
+            m_distributed_fieldProps.m_intProps[intKey].data.resize(m_grid.size(0));
+            m_distributed_fieldProps.m_intProps[intKey].value_status.resize(m_grid.size(0));
+        }
 
         for(const auto& doubleKey : m_doubleKeys)
-            m_distributed_fieldProps.m_doubleProps[doubleKey].resize(m_grid.size(0));
+        {
+            m_distributed_fieldProps.m_doubleProps[doubleKey].data.resize(m_grid.size(0));
+            m_distributed_fieldProps.m_doubleProps[doubleKey].value_status.resize(m_grid.size(0));
+        }
 
         m_centroids.resize(m_grid.size(0) * Grid::dimensionworld);
 
@@ -159,15 +173,23 @@ public:
             assert(data != elementData_.end());
 
             for(const auto& intKey : m_intKeys)
-                m_distributed_fieldProps.m_intProps[intKey][index] = static_cast<int>(data->second[counter++]);
+            {
+                const auto& pair = data->second[counter++];
+                m_distributed_fieldProps.m_intProps[intKey].data[index] = static_cast<int>(pair.first);
+                m_distributed_fieldProps.m_intProps[intKey].value_status[index] = static_cast<value::status>(pair.second);
+            }
 
             for(const auto& doubleKey : m_doubleKeys)
-                m_distributed_fieldProps.m_doubleProps[doubleKey][index] = data->second[counter++];
+            {
+                const auto& pair = data->second[counter++];
+                m_distributed_fieldProps.m_doubleProps[doubleKey].data[index] = pair.first;
+                m_distributed_fieldProps.m_doubleProps[doubleKey].value_status[index] = static_cast<value::status>(pair.second);
+            }
 
             auto centroidIter = m_centroids.begin() + Grid::dimensionworld * index;
             auto centroidIterEnd = centroidIter + Grid::dimensionworld;
             for ( ; centroidIter != centroidIterEnd; ++centroidIter )
-                *centroidIter = data->second[counter++];
+                *centroidIter = data->second[counter++].first; // value_status discarded
         }
     }
 
@@ -197,7 +219,9 @@ public:
         auto iter = elementData_.find(m_grid.localIdSet().id(e));
         assert(iter != elementData_.end());
         for(const auto& data : iter->second)
+        {
             buffer.write(data);
+        }
     }
 
     template<class BufferType, class EntityType>
@@ -222,7 +246,9 @@ private:
     //! \brief The names of the keys of the double fields.
     std::vector<std::string> m_doubleKeys;
     /// \brief The data per element as a vector mapped from the local id.
-    std::unordered_map<typename LocalIdSet::IdType, std::vector<double> > elementData_;
+    ///
+    /// each entry is a pair of data and value_status.
+    std::unordered_map<typename LocalIdSet::IdType, std::vector<std::pair<double,unsigned char> > > elementData_;
     /// \brief The cell centroids of the distributed grid.
     std::vector<double>& m_centroids;
     /// \brief The amount of data to send for each element
