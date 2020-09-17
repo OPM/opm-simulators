@@ -167,6 +167,17 @@ std::vector<double> ParallelFieldPropsManager::get_global_double(const std::stri
     return result;
 }
 
+bool ParallelFieldPropsManager::tran_active(const std::string& keyword) const
+{
+    auto calculator = m_tran.find(keyword);
+    return calculator != m_tran.end() && calculator->second.size();
+}
+
+void ParallelFieldPropsManager::apply_tran(const std::string& keyword,
+                                           std::vector<double>& data) const
+{
+    Opm::apply_tran(m_tran, m_doubleProps, m_activeSize(), keyword, data);
+}
 
 bool ParallelFieldPropsManager::has_int(const std::string& keyword) const
 {
@@ -174,6 +185,10 @@ bool ParallelFieldPropsManager::has_int(const std::string& keyword) const
     return it != m_intProps.end();
 }
 
+void ParallelFieldPropsManager::deserialize_tran(const std::vector<char>& buffer)
+{
+    Opm::deserialize_tran(m_tran, buffer);
+}
 
 bool ParallelFieldPropsManager::has_double(const std::string& keyword) const
 {
