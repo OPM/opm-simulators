@@ -68,7 +68,7 @@ const std::vector<int>& ParallelFieldPropsManager::get_int(const std::string& ke
         // Some of the keywords might be defaulted.
         // We will let rank 0 create them and distribute them using get_global_int
         auto data = get_global_int(keyword);
-        auto& local_data = const_cast<std::map<std::string, FieldData<int>>&>(m_intProps)[keyword];
+        auto& local_data = const_cast<std::map<std::string, Fieldprops::FieldData<int>>&>(m_intProps)[keyword];
         local_data.data.resize(m_activeSize());
         local_data.value_status.resize(m_activeSize());
 
@@ -122,7 +122,7 @@ const std::vector<double>& ParallelFieldPropsManager::get_double(const std::stri
         // Some of the keywords might be defaulted.
         // We will let rank 0 create them and distribute them using get_global_int
         auto data = get_global_double(keyword);
-        auto& local_data = const_cast<std::map<std::string, FieldData<double>>&>(m_doubleProps)[keyword];
+        auto& local_data = const_cast<std::map<std::string, Fieldprops::FieldData<double>>&>(m_doubleProps)[keyword];
         local_data.data.resize(m_activeSize());
         local_data.value_status.resize(m_activeSize());
         for (int i = 0; i < m_activeSize(); ++i)

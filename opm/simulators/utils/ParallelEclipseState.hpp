@@ -103,13 +103,13 @@ public:
 
     void deserialize_tran(const std::vector<char>& buffer) override;
 protected:
-    std::map<std::string, Opm::FieldData<int>> m_intProps; //!< Map of integer properties in process-local compressed indices.
-    std::map<std::string, Opm::FieldData<double>> m_doubleProps; //!< Map of double properties in process-local compressed indices.
+    std::map<std::string, Opm::Fieldprops::FieldData<int>> m_intProps; //!< Map of integer properties in process-local compressed indices.
+    std::map<std::string, Opm::Fieldprops::FieldData<double>> m_doubleProps; //!< Map of double properties in process-local compressed indices.
     FieldPropsManager& m_manager; //!< Underlying field property manager (only used on root process).
     Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> m_comm; //!< Collective communication handler.
     std::function<int(void)> m_activeSize; //!< active size function of the grid
     std::function<int(const int)> m_local2Global; //!< mapping from local to global cartesian indices
-    std::unordered_map<std::string, TranCalculator> m_tran; //!< calculators map
+    std::unordered_map<std::string, Fieldprops::TranCalculator> m_tran; //!< calculators map
 };
 
 
