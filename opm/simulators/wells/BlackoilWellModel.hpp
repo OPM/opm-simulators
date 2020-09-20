@@ -191,23 +191,15 @@ namespace Opm {
 
             void initFromRestartFile(const RestartValue& restartValues);
 
-            Opm::data::GroupValues
-            groupData(const int reportStepIdx, const Opm::Schedule& sched) const
+            Opm::data::GroupAndNetworkValues
+            groupAndNetworkData(const int reportStepIdx, const Opm::Schedule& sched) const
             {
-                auto gvalues = ::Opm::data::GroupValues{};
+                auto grp_nwrk_values = ::Opm::data::GroupAndNetworkValues{};
 
-                const auto groupGuideRates =
-                    calculateAllGroupGuiderates(reportStepIdx, sched);
+                this->assignGroupValues(reportStepIdx, sched,
+                                        grp_nwrk_values.groupData);
 
-                for (const auto& gname : sched.groupNames(reportStepIdx)) {
-                    const auto& grup = sched.getGroup(gname, reportStepIdx);
-
-                    auto& gdata = gvalues[gname];
-                    this->assignGroupControl(grup, gdata);
-                    this->assignGroupGuideRates(grup, groupGuideRates, gdata);
-                }
-
-                return gvalues;
+                return grp_nwrk_values;
             }
 
             Opm::data::Wells wellData() const
@@ -414,7 +406,7 @@ namespace Opm {
 
             // convert well data from opm-common to well state from opm-core
             void wellsToState( const data::Wells& wells,
-                               const data::GroupValues& groupValues,
+                               const data::GroupAndNetworkValues& grpNwrkValues,
                                const PhaseUsage& phases,
                                const bool handle_ms_well,
                                WellStateFullyImplicitBlackoil& state ) const;
@@ -443,6 +435,10 @@ namespace Opm {
             void updateWsolvent(const Group& group, const Schedule& schedule, const int reportStepIdx, const WellStateFullyImplicitBlackoil& wellState);
 
             void setWsolvent(const Group& group, const Schedule& schedule, const int reportStepIdx, double wsolvent);
+
+            void assignGroupValues(const int                               reportStepIdx,
+                                   const Schedule&                         sched,
+                                   std::map<std::string, data::GroupData>& gvalues) const;
 
             std::unordered_map<std::string, data::GroupGuideRates>
             calculateAllGroupGuiderates(const int reportStepIdx, const Schedule& sched) const;

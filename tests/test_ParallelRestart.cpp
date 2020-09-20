@@ -250,6 +250,13 @@ Opm::data::GroupData getGroupData()
         getGroupGuideRates()
     };
 }
+
+Opm::data::NodeData getNodeData()
+{
+    return Opm::data::NodeData {
+        123.457
+    };
+}
 }
 
 
@@ -385,6 +392,14 @@ BOOST_AUTO_TEST_CASE(dataGroupData)
     DO_CHECKS(data::GroupData)
 }
 
+BOOST_AUTO_TEST_CASE(dataNodeData)
+{
+    const auto val1 = getNodeData();
+    const auto val2 = PackUnpack(val1);
+
+    DO_CHECKS(data::NodeData)
+}
+
 BOOST_AUTO_TEST_CASE(CellData)
 {
     Opm::data::CellData val1;
@@ -409,12 +424,17 @@ BOOST_AUTO_TEST_CASE(RestartValue)
     auto wells1 = Opm::data::WellRates {{
         { "test_well", getWell() },
     }};
-    auto groups1 = Opm::data::GroupValues {{
-        { "test_group1", getGroupData() },
-    }};
+    auto grp_nwrk_1 = Opm::data::GroupAndNetworkValues {
+        {                       // .groupData
+            { "test_group1", getGroupData() },
+        },
+        {                       // .nodeData
+            { "test_node1", getNodeData() },
+        }
+    };
 
     const auto val1 = Opm::RestartValue {
-        getSolution(), std::move(wells1), std::move(groups1)
+        getSolution(), std::move(wells1), std::move(grp_nwrk_1)
     };
     const auto val2 = PackUnpack(val1);
 

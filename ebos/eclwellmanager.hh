@@ -562,9 +562,9 @@ public:
         return wellDat;
     }
 
-    Opm::data::GroupValues
-    groupData(const int /* reportStepIdx */,
-              const Opm::Schedule& /* sched */) const
+    Opm::data::GroupAndNetworkValues
+    groupAndNetworkData(const int /* reportStepIdx */,
+                        const Opm::Schedule& /* sched */) const
     {
         return {};
     }

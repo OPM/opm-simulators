@@ -547,7 +547,7 @@ namespace Opm {
             const size_t numCells = Opm::UgGridHelpers::numCells(grid());
             const bool handle_ms_well = (param_.use_multisegment_well_ && anyMSWellOpenLocal());
             well_state_.resize(wells_ecl_, schedule(), handle_ms_well, numCells, phaseUsage, well_perf_data_, summaryState, globalNumWells); // Resize for restart step
-            wellsToState(restartValues.wells, restartValues.groups, phaseUsage, handle_ms_well, well_state_);
+            wellsToState(restartValues.wells, restartValues.grp_nwrk, phaseUsage, handle_ms_well, well_state_);
         }
 
         previous_well_state_ = well_state_;
@@ -1602,7 +1602,7 @@ namespace Opm {
     void
     BlackoilWellModel<TypeTag>::
     wellsToState( const data::Wells& wells,
-                  const data::GroupValues& groupValues,
+                  const data::GroupAndNetworkValues& grpNwrkValues,
                   const PhaseUsage& phases,
                   const bool handle_ms_well,
                   WellStateFullyImplicitBlackoil& state) const
@@ -1699,7 +1699,7 @@ namespace Opm {
             }
         }
 
-        for (const auto& [group, value] : groupValues) {
+        for (const auto& [group, value] : grpNwrkValues.groupData) {
             const auto cpc = value.currentControl.currentProdConstraint;
             const auto cgi = value.currentControl.currentGasInjectionConstraint;
             const auto cwi = value.currentControl.currentWaterInjectionConstraint;
@@ -2453,6 +2453,25 @@ namespace Opm {
 
             auto well = getWell(wellName);
             well->setWsolvent(wsolvent);
+        }
+    }
+
+    template <typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    assignGroupValues(const int                               reportStepIdx,
+                      const Schedule&                         sched,
+                      std::map<std::string, data::GroupData>& gvalues) const
+    {
+        const auto groupGuideRates =
+            this->calculateAllGroupGuiderates(reportStepIdx, sched);
+
+        for (const auto& gname : sched.groupNames(reportStepIdx)) {
+            const auto& grup = sched.getGroup(gname, reportStepIdx);
+
+            auto& gdata = gvalues[gname];
+            this->assignGroupControl(grup, gdata);
+            this->assignGroupGuideRates(grup, groupGuideRates, gdata);
         }
     }
 
