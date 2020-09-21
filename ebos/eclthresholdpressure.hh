@@ -40,8 +40,6 @@
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 
-#include <opm/material/common/Exceptions.hpp>
-
 #include <dune/grid/common/gridenums.hh>
 #include <dune/common/version.hh>
 

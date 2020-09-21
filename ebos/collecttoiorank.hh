@@ -35,7 +35,6 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/EclipseGrid.hpp>
 
-#include <opm/material/common/Exceptions.hpp>
 #include <opm/material/common/Unused.hpp>
 
 #include <dune/grid/common/mcmgmapper.hh>

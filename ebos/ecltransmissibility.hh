@@ -42,7 +42,6 @@
 
 #include <opm/grid/CpGrid.hpp>
 
-#include <opm/material/common/Exceptions.hpp>
 #include <opm/material/common/ConditionalStorage.hpp>
 
 #include <dune/grid/common/mcmgmapper.hh>

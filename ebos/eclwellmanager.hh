@@ -43,7 +43,6 @@
 
 #include <opm/output/data/Wells.hpp>
 #include <opm/output/data/Groups.hpp>
-#include <opm/material/common/Exceptions.hpp>
 
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/parallel/threadedentityiterator.hh>

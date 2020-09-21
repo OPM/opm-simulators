@@ -22,7 +22,6 @@
 
 #include <opm/simulators/linalg/GraphColoring.hpp>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
-#include <opm/common/Exceptions.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <dune/common/version.hh>
 #include <dune/istl/preconditioner.hh>
