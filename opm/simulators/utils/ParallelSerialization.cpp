@@ -18,6 +18,9 @@
 */
 
 #include <config.h>
+
+#include <opm/simulators/utils/ParallelSerialization.hpp>
+
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/DynamicState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>

@@ -556,17 +556,17 @@ public:
 
     };
 
-    class PackUnPackGroupData : public P2PCommunicatorType::DataHandleInterface
+    class PackUnPackGroupAndNetworkValues : public P2PCommunicatorType::DataHandleInterface
     {
-        const Opm::data::GroupValues& localGroupData_;
-        Opm::data::GroupValues&       globalGroupData_;
+        const Opm::data::GroupAndNetworkValues& localGroupAndNetworkData_;
+        Opm::data::GroupAndNetworkValues&       globalGroupAndNetworkData_;
 
     public:
-        PackUnPackGroupData(const Opm::data::GroupValues& localGroupData,
-                            Opm::data::GroupValues&       globalGroupData,
-                            const bool                    isIORank)
-            : localGroupData_ (localGroupData)
-            , globalGroupData_(globalGroupData)
+        PackUnPackGroupAndNetworkValues(const Opm::data::GroupAndNetworkValues& localGroupAndNetworkData,
+                                        Opm::data::GroupAndNetworkValues&       globalGroupAndNetworkData,
+                                        const bool                              isIORank)
+            : localGroupAndNetworkData_ (localGroupAndNetworkData)
+            , globalGroupAndNetworkData_(globalGroupAndNetworkData)
         {
             if (! isIORank) { return; }
 
@@ -588,13 +588,13 @@ public:
                 };
             }
 
-            // write all group data
-           this->localGroupData_.write(buffer);
+            // write all group and network (node/branch) data
+            this->localGroupAndNetworkData_.write(buffer);
         }
 
         // unpack all data associated with link
         void unpack(int /*link*/, MessageBufferType& buffer)
-        { this->globalGroupData_.read(buffer); }
+        { this->globalGroupAndNetworkData_.read(buffer); }
     };
 
 
@@ -660,17 +660,16 @@ public:
     void collect(const Opm::data::Solution& localCellData,
                  const std::map<std::pair<std::string, int>, double>& localBlockData,
                  const Opm::data::Wells& localWellData,
-                 const Opm::data::GroupValues& localGroupData)
+                 const Opm::data::GroupAndNetworkValues& localGroupAndNetworkData)
     {
         globalCellData_ = {};
         globalBlockData_.clear();
         globalWellData_.clear();
-        globalGroupData_.clear();
+        globalGroupAndNetworkData_.clear();
 
         // index maps only have to be build when reordering is needed
         if(!needsReordering && !isParallel())
             return;
-
 
         // this also linearises the local buffers on ioRank
         PackUnPackCellData packUnpackCellData {
@@ -693,9 +692,9 @@ public:
             this->isIORank()
         };
 
-        PackUnPackGroupData packUnpackGroupData {
-            localGroupData,
-            this->globalGroupData_,
+        PackUnPackGroupAndNetworkValues packUnpackGroupAndNetworkData {
+            localGroupAndNetworkData,
+            this->globalGroupAndNetworkData_,
             this->isIORank()
         };
 
@@ -707,7 +706,7 @@ public:
 
         toIORankComm_.exchange(packUnpackCellData);
         toIORankComm_.exchange(packUnpackWellData);
-        toIORankComm_.exchange(packUnpackGroupData);
+        toIORankComm_.exchange(packUnpackGroupAndNetworkData);
         toIORankComm_.exchange(packUnpackBlockData);
 
 
@@ -727,8 +726,8 @@ public:
     const Opm::data::Wells& globalWellData() const
     { return globalWellData_; }
 
-    const Opm::data::GroupValues& globalGroupData() const
-    { return globalGroupData_; }
+    const Opm::data::GroupAndNetworkValues& globalGroupAndNetworkData() const
+    { return globalGroupAndNetworkData_; }
 
     bool isIORank() const
     { return toIORankComm_.rank() == ioRank; }
@@ -775,7 +774,7 @@ protected:
     Opm::data::Solution globalCellData_;
     std::map<std::pair<std::string, int>, double> globalBlockData_;
     Opm::data::Wells globalWellData_;
-    Opm::data::GroupValues globalGroupData_;
+    Opm::data::GroupAndNetworkValues globalGroupAndNetworkData_;
     std::vector<int> localIdxToGlobalIdx_;
     /// \brief sorted list of cartesian indices present-
     ///
