@@ -24,7 +24,6 @@
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Exceptions.hpp>
 #include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
 
 #include <opm/models/utils/parametersystem.hh>

@@ -31,7 +31,6 @@
 #include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
 #include <opm/grid/utility/StopWatch.hpp>
 
-#include <opm/common/Exceptions.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
 namespace Opm::Properties {

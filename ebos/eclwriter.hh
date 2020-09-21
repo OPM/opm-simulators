@@ -55,8 +55,6 @@
 #include <opm/grid/utility/cartesianToCompressed.hpp>
 
 #include <opm/material/common/Valgrind.hpp>
-#include <opm/material/common/Exceptions.hpp>
-
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <list>

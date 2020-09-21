@@ -33,7 +33,6 @@
 #include <opm/simulators/linalg/setupPropertyTree.hpp>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/WriteSystemMatrixHelper.hpp>
-#include <opm/common/Exceptions.hpp>
 #include <opm/simulators/linalg/ParallelIstlInformation.hpp>
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <opm/material/fluidsystems/BlackOilDefaultIndexTraits.hpp>

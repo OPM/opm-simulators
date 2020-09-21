@@ -30,8 +30,6 @@
 
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
-#include <opm/material/common/Exceptions.hpp>
-
 #include <dune/common/fvector.hh>
 
 namespace Opm {

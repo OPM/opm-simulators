@@ -92,7 +92,6 @@
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/RockwnodTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/OverburdTable.hpp>
-#include <opm/material/common/Exceptions.hpp>
 #include <opm/material/common/ConditionalStorage.hpp>
 
 #include <dune/common/version.hh>
