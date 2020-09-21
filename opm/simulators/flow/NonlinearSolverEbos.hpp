@@ -29,7 +29,7 @@
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/basicproperties.hh>
-
+#include <opm/common/Exceptions.hpp>
 
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
