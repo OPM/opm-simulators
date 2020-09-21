@@ -35,7 +35,6 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #endif
 
-#include <opm/material/common/Exceptions.hpp>
 #include <opm/material/common/Unused.hpp>
 
 #include <string>

@@ -31,6 +31,7 @@
 #include <opm/material/common/Unused.hpp>
 #include <opm/material/common/ConditionalStorage.hpp>
 
+#include <stdexcept>
 #include <string>
 #include <cstdlib>
 #include <type_traits>

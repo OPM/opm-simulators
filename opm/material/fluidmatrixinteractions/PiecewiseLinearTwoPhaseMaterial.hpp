@@ -29,7 +29,6 @@
 
 #include "PiecewiseLinearTwoPhaseMaterialParams.hpp"
 
-#include <opm/material/common/Exceptions.hpp>
 #include <opm/material/common/MathToolbox.hpp>
 
 #include <algorithm>
