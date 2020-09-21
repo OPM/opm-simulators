@@ -35,8 +35,6 @@
 #include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
-#include <opm/material/common/Exceptions.hpp>
-
 #include <dune/istl/bvector.hh>
 #include <dune/common/fvector.hh>
 

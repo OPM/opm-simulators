@@ -34,8 +34,6 @@
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
 
-#include <opm/material/common/Exceptions.hpp>
-
 #include <dune/common/version.hh>
 
 namespace Opm {

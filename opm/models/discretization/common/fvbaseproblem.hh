@@ -35,8 +35,6 @@
 #include <opm/models/discretization/common/restrictprolong.hh>
 
 #include <opm/material/common/Unused.hpp>
-#include <opm/material/common/Exceptions.hpp>
-
 #include <dune/common/fvector.hh>
 
 #include <iostream>
