@@ -112,8 +112,8 @@ public:
                 for (const auto& intKey : m_intKeys)
                 {
                     const auto& fieldData = globalProps.get_int_field_data(intKey);
-                    data.push_back(std::make_pair(fieldData.data[index],
-                                                  static_cast<unsigned char>(fieldData.value_status[index])));
+                    data.emplace_back(fieldData.data[index],
+                                      static_cast<unsigned char>(fieldData.value_status[index]));
                 }
 
                 for (const auto& doubleKey : m_doubleKeys)
@@ -122,14 +122,14 @@ public:
                     // for TranCalculator, too.
                     const auto& fieldData = globalProps.get_double_field_data(doubleKey,
                                                                               /* allow_unsupported = */ true);
-                    data.push_back(std::make_pair(fieldData.data[index],
-                                                  static_cast<unsigned char>(fieldData.value_status[index])));
+                    data.emplace_back(fieldData.data[index],
+                                      static_cast<unsigned char>(fieldData.value_status[index]));
                 }
 
                 auto cartIndex = cartMapper.cartesianIndex(index);
                 const auto& center = eclGridOnRoot->getCellCenter(cartIndex);
                 for (int dim = 0; dim < Grid::dimensionworld; ++dim)
-                    data.push_back(std::make_pair(center[dim], '1')); // write garbage for value_status
+                    data.emplace_back(center[dim], '1'); // write garbage for value_status
             }
         }
         else
