@@ -34,8 +34,6 @@
 #include <opm/parser/eclipse/Deck/DeckItem.hpp>
 #endif
 
-#include <opm/material/common/Exceptions.hpp>
-
 #include <string>
 #include <cassert>
 #include <algorithm>

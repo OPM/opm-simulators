@@ -46,8 +46,6 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #endif
 
-#include <opm/material/common/Exceptions.hpp>
-
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 

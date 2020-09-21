@@ -27,9 +27,10 @@
 #ifndef OPM_BASE_FLUID_SYSTEM_HPP
 #define OPM_BASE_FLUID_SYSTEM_HPP
 
+#include <stdexcept>
+
 #include "NullParameterCache.hpp"
 
-#include <opm/material/common/Exceptions.hpp>
 #include <dune/common/classname.hh>
 
 namespace Opm {

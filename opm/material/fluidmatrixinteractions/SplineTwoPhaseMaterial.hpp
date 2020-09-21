@@ -29,8 +29,6 @@
 
 #include "SplineTwoPhaseMaterialParams.hpp"
 
-#include <opm/material/common/Exceptions.hpp>
-
 #include <algorithm>
 #include <cmath>
 #include <cassert>

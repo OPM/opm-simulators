@@ -27,8 +27,7 @@
 #ifndef OPM_COMPONENT_HPP
 #define OPM_COMPONENT_HPP
 
-#include <opm/material/common/Exceptions.hpp>
-
+#include <stdexcept>
 namespace Opm {
 
 /*!

@@ -30,7 +30,6 @@
 #include "EclEpsTwoPhaseLawParams.hpp"
 
 #include <opm/material/fluidstates/SaturationOverlayFluidState.hpp>
-#include <opm/material/common/Exceptions.hpp>
 
 namespace Opm {
 /*!

@@ -29,7 +29,6 @@
 #define OPM_FLUID_STATE_FUGACITY_MODULES_HPP
 
 #include <opm/material/common/Valgrind.hpp>
-#include <opm/material/common/Exceptions.hpp>
 
 #include <algorithm>
 #include <limits>
