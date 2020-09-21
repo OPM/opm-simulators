@@ -34,7 +34,6 @@
 #include <opm/models/utils/alignedallocator.hh>
 
 #include <opm/material/common/Unused.hpp>
-#include <opm/material/common/Exceptions.hpp>
 
 #include <dune/common/fvector.hh>
 
