@@ -133,6 +133,8 @@ tests[bc_lab]="flow bc_lab BC_LAB"
 tests[pinch_multz_all]="flow pinch PINCH_MULTZ_ALL pinch_multz_all"
 tests[pinch_multz_all_barrier]="flow pinch PINCH_MULTZ_ALL_BARRIER pinch_multz_all_barrier"
 tests[model6_msw]="flow model6 1_MSW_MODEL6 model6_msw"
+tests[tran_in_edit]="flow model2 10_TRAN_IN_EDIT tran_in_edit"
+tests[maxvalue_in_edit]="flow model5 3_MAXVALUE_TRANZ maxvalue_in_edit"
 
 changed_tests=""
 
