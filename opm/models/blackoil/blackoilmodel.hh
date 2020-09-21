@@ -53,7 +53,6 @@
 
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/common/Unused.hpp>
-#include <opm/material/common/Exceptions.hpp>
 
 #include <sstream>
 #include <string>

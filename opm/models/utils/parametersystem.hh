@@ -34,7 +34,6 @@
 
 #include <opm/models/utils/propertysystem.hh>
 
-#include <opm/material/common/Exceptions.hpp>
 #include <opm/material/common/Unused.hpp>
 
 #if HAVE_QUAD
