@@ -36,7 +36,6 @@
 #include <opm/material/fluidmatrixinteractions/NullMaterial.hpp>
 #include <opm/material/common/Means.hpp>
 #include <opm/material/common/Unused.hpp>
-#include <opm/material/common/Exceptions.hpp>
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
