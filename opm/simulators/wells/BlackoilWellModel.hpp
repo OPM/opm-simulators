@@ -280,6 +280,8 @@ namespace Opm {
 
             std::vector<bool> is_cell_perforated_;
 
+            std::function<bool(const Well&)> is_shut_or_defunct_;
+
             void initializeWellPerfData();
 
             // create the well container

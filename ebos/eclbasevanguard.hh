@@ -579,15 +579,15 @@ public:
     void equilCartesianCoordinate(unsigned cellIdx, std::array<int,3>& ijk) const
     { return asImp_().equilCartesianIndexMapper().cartesianCoordinate(cellIdx, ijk); }
 
+
     /*!
-     * \brief Return the names of the wells which do not penetrate any cells on the local
-     *        process.
+     * \brief Returns vector with name and whether the has local perforated cells
+     *        for all wells.
      *
-     * This is a kludge around the fact that for distributed grids, not all wells are
-     * seen by all proccesses.
+     * Will only have usable values for CpGrid.
      */
-    std::unordered_set<std::string> defunctWellNames() const
-    { return std::unordered_set<std::string>(); }
+    const std::vector<std::pair<std::string,bool>>& parallelWells() const
+    { return parallelWells_; }
 
     /*!
      * \brief Get the cell centroids for a distributed grid.
@@ -683,6 +683,12 @@ protected:
      * Empty otherwise. Used by EclTransmissibilty.
      */
     std::vector<double> centroids_;
+    /*! \brief information about wells in parallel
+     *
+     * For each well in the model there is an entry with its name
+     * and a boolean indicating whether it perforates local cells.
+     */
+    std::vector<std::pair<std::string,bool>> parallelWells_;
 };
 
 template <class TypeTag>

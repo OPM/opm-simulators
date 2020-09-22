@@ -218,7 +218,7 @@ public:
 
                     PropsCentroidsDataHandle<Dune::CpGrid> handle(*grid_, eclState, eclGrid, this->centroids_,
                                                                   cartesianIndexMapper());
-                    defunctWellNames_ = std::get<1>(grid_->loadBalance(handle, edgeWeightsMethod, &wells, faceTrans.data(), ownersFirst));
+                    this->parallelWells_ = std::get<1>(grid_->loadBalance(handle, edgeWeightsMethod, &wells, faceTrans.data(), ownersFirst));
                 }
                 catch(const std::bad_cast& e)
                 {
@@ -295,9 +295,6 @@ public:
         return *equilCartesianIndexMapper_;
     }
 
-    std::unordered_set<std::string> defunctWellNames() const
-    { return defunctWellNames_; }
-
     const EclTransmissibility<TypeTag>& globalTransmissibility() const
     {
         assert( globalTrans_ != nullptr );
@@ -361,7 +358,6 @@ protected:
     std::unique_ptr<CartesianIndexMapper> equilCartesianIndexMapper_;
 
     std::unique_ptr<EclTransmissibility<TypeTag> > globalTrans_;
-    std::unordered_set<std::string> defunctWellNames_;
     int mpiRank;
 };
 

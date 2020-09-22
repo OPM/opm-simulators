@@ -25,6 +25,7 @@
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 
 #include <utility>
+#include <algorithm>
 
 namespace Opm {
     template<typename TypeTag>
@@ -53,6 +54,18 @@ namespace Opm {
         const auto& cartDims = Opm::UgGridHelpers::cartDims(grid);
         setupCartesianToCompressed_(Opm::UgGridHelpers::globalCell(grid),
                                     cartDims[0]*cartDims[1]*cartDims[2]);
+
+        is_shut_or_defunct_ = [&ebosSimulator](const Well& well) {
+                if (well.getStatus() == Well::Status::SHUT)
+                    return true;
+                if (ebosSimulator.gridView().comm().size() == 1)
+                    return false;
+                std::pair<std::string, bool> value{well.name(), true}; // false indicate not active!
+                const auto& parallel_wells = ebosSimulator.vanguard().parallelWells();
+                auto candidate = std::lower_bound(parallel_wells.begin(), parallel_wells.end(),
+                                                 value);
+                return candidate == parallel_wells.end() || *candidate != value;
+            };
     }
 
     template<typename TypeTag>
@@ -215,13 +228,9 @@ namespace Opm {
         int globalNumWells = 0;
         // Make wells_ecl_ contain only this partition's non-shut wells.
         {
-            const auto& defunct_well_names = ebosSimulator_.vanguard().defunctWellNames();
-            auto is_shut_or_defunct = [&defunct_well_names](const Well& well) {
-                return (well.getStatus() == Well::Status::SHUT) || (defunct_well_names.find(well.name()) != defunct_well_names.end());
-            };
             auto w = schedule().getWells(timeStepIdx);
             globalNumWells = w.size();
-            w.erase(std::remove_if(w.begin(), w.end(), is_shut_or_defunct), w.end());
+            w.erase(std::remove_if(w.begin(), w.end(), is_shut_or_defunct_), w.end());
             wells_ecl_.swap(w);
         }
         initializeWellPerfData();
@@ -529,13 +538,9 @@ namespace Opm {
         int globalNumWells = 0;
         // Make wells_ecl_ contain only this partition's non-shut wells.
         {
-            const auto& defunct_well_names = ebosSimulator_.vanguard().defunctWellNames();
-            auto is_shut_or_defunct = [&defunct_well_names](const Well& well) {
-                return (well.getStatus() == Well::Status::SHUT) || (defunct_well_names.find(well.name()) != defunct_well_names.end());
-            };
             auto w = schedule().getWells(report_step);
             globalNumWells = w.size();
-            w.erase(std::remove_if(w.begin(), w.end(), is_shut_or_defunct), w.end());
+            w.erase(std::remove_if(w.begin(), w.end(), is_shut_or_defunct_), w.end());
             wells_ecl_.swap(w);
         }
 
