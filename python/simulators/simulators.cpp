@@ -28,6 +28,14 @@ int BlackOilSimulator::run()
     return mainObject.runDynamic();
 }
 
+int BlackOilSimulator::step()
+{
+    if (!hasRunInit_) {
+        throw std::logic_error("step() called before step_init()");
+    }
+    return mainEbos_->executeStep();
+}
+
 int BlackOilSimulator::step_init()
 {
 
@@ -56,5 +64,6 @@ PYBIND11_MODULE(simulators, m)
     py::class_<Opm::Pybind::BlackOilSimulator>(m, "BlackOilSimulator")
         .def(py::init< const std::string& >())
         .def("run", &Opm::Pybind::BlackOilSimulator::run)
+        .def("step", &Opm::Pybind::BlackOilSimulator::step)
         .def("step_init", &Opm::Pybind::BlackOilSimulator::step_init);
 }

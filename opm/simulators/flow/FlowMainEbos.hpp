@@ -326,6 +326,13 @@ namespace Opm
             return execute_(&FlowMainEbos::runSimulatorInit, /*cleanup=*/false);
         }
 
+        // Returns true unless "EXIT" was encountered in the schedule
+        //   section of the input datafile.
+        int executeStep()
+        {
+            return simulator_->runStep(*simtimer_);
+        }
+
         // Print an ASCII-art header to the PRT and DEBUG files.
         // \return Whether unkown keywords were seen during parsing.
         static void printPRTHeader(bool output_cout)
