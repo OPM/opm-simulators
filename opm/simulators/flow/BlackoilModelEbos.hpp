@@ -917,12 +917,6 @@ namespace Opm {
             typedef std::vector< Scalar > Vector;
 
             const double tol_mb  = param_.tolerance_mb_;
-            double tol_cnv;
-            if(ebosSimulator_.model().linearizer().getLinearizationType().type == Opm::LinearizationType::seqtransport){
-                tol_cnv = (iteration < param_.max_strict_iter_seq_) ? param_.tolerance_cnv_seq_ : param_.tolerance_cnv_relaxed_seq_;
-            }else{
-                tol_cnv = (iteration < param_.max_strict_iter_) ? param_.tolerance_cnv_ : param_.tolerance_cnv_relaxed_;
-            }
 
             const int numComp = numEq;
             Vector R_sum(numComp, 0.0 );
@@ -936,13 +930,20 @@ namespace Opm {
             auto cnvErrorPvFraction = computeCnvErrorPv(B_avg, dt);
             cnvErrorPvFraction /= pvSum;
 
-            const double tol_mb  = param_.tolerance_mb_;
             // Default value of relaxed_max_pv_fraction_ is 1 and
             // max_strict_iter_ is 8. Hence only iteration chooses
             // whether to use relaxed or not.
             // To activate only fraction use fraction below 1 and iter 0.
-            const bool use_relaxed = cnvErrorPvFraction < param_.relaxed_max_pv_fraction_ && iteration >= param_.max_strict_iter_;                                              
-            const double tol_cnv = use_relaxed ? param_.tolerance_cnv_relaxed_ :  param_.tolerance_cnv_;
+            const bool use_relaxed = cnvErrorPvFraction < param_.relaxed_max_pv_fraction_ && iteration >= param_.max_strict_iter_;
+
+            // const double tol_cnv = use_relaxed ? param_.tolerance_cnv_relaxed_ :  param_.tolerance_cnv_;
+            double tol_cnv;
+            if(ebosSimulator_.model().linearizer().getLinearizationType().type == Opm::LinearizationType::seqtransport){
+                // TODO: maybe this one also should change to use_relaxed
+                tol_cnv = (iteration < param_.max_strict_iter_seq_) ? param_.tolerance_cnv_seq_ : param_.tolerance_cnv_relaxed_seq_;
+            }else{
+                tol_cnv = use_relaxed ? param_.tolerance_cnv_ : param_.tolerance_cnv_relaxed_;
+            }
 
             // Finish computation
             std::vector<Scalar> CNV(numComp);
