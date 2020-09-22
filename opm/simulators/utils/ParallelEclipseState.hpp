@@ -20,6 +20,7 @@
 #define PARALLEL_ECLIPSE_STATE_HPP
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/parser/eclipse/EclipseState/Grid/TranCalculator.hpp>
 #include <dune/common/parallel/mpihelper.hh>
 
 #include <functional>
@@ -95,13 +96,20 @@ public:
         m_local2Global = std::bind(&T::cartesianIndex, mapper,
                                    std::placeholders::_1);
     }
+
+    bool tran_active(const std::string& keyword) const override;
+
+    void apply_tran(const std::string& keyword, std::vector<double>& trans) const override;
+
+    void deserialize_tran(const std::vector<char>& buffer) override;
 protected:
-    std::map<std::string, std::vector<int>> m_intProps; //!< Map of integer properties in process-local compressed indices.
-    std::map<std::string, std::vector<double>> m_doubleProps; //!< Map of double properties in process-local compressed indices.
+    std::map<std::string, Opm::Fieldprops::FieldData<int>> m_intProps; //!< Map of integer properties in process-local compressed indices.
+    std::map<std::string, Opm::Fieldprops::FieldData<double>> m_doubleProps; //!< Map of double properties in process-local compressed indices.
     FieldPropsManager& m_manager; //!< Underlying field property manager (only used on root process).
     Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> m_comm; //!< Collective communication handler.
     std::function<int(void)> m_activeSize; //!< active size function of the grid
     std::function<int(const int)> m_local2Global; //!< mapping from local to global cartesian indices
+    std::unordered_map<std::string, Fieldprops::TranCalculator> m_tran; //!< calculators map
 };
 
 
