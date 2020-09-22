@@ -51,7 +51,6 @@
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 
 #include <opm/simulators/linalg/ISTLSolverEbos.hpp>
-#include <opm/common/data/SimulationDataContainer.hpp>
 
 #include <dune/istl/owneroverlapcopy.hh>
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
@@ -69,30 +68,73 @@
 #include <limits>
 #include <vector>
 #include <algorithm>
-#include <filesystem>
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(EclFlowProblem, INHERITS_FROM(BlackOilModel, EclBaseProblem, FlowNonLinearSolver, FlowModelParameters, FlowTimeSteppingParameters));
-SET_STRING_PROP(EclFlowProblem, OutputDir, "");
-SET_BOOL_PROP(EclFlowProblem, EnableDebuggingChecks, false);
+namespace TTag {
+struct EclFlowProblem {
+    using InheritsFrom = std::tuple<FlowTimeSteppingParameters, FlowModelParameters,
+                                    FlowNonLinearSolver, EclBaseProblem, BlackOilModel>;
+};
+}
+template<class TypeTag>
+struct OutputDir<TypeTag, TTag::EclFlowProblem> {
+    static constexpr auto value = "";
+};
+template<class TypeTag>
+struct EnableDebuggingChecks<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = false;
+};
 // default in flow is to formulate the equations in surface volumes
-SET_BOOL_PROP(EclFlowProblem, BlackoilConserveSurfaceVolume, true);
-SET_BOOL_PROP(EclFlowProblem, UseVolumetricResidual, false);
+template<class TypeTag>
+struct BlackoilConserveSurfaceVolume<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = true;
+};
+template<class TypeTag>
+struct UseVolumetricResidual<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = false;
+};
 
-SET_TYPE_PROP(EclFlowProblem, EclAquiferModel, Opm::BlackoilAquiferModel<TypeTag>);
+template<class TypeTag>
+struct EclAquiferModel<TypeTag, TTag::EclFlowProblem> {
+    using type = Opm::BlackoilAquiferModel<TypeTag>;
+};
 
 // disable all extensions supported by black oil model. this should not really be
 // necessary but it makes things a bit more explicit
-SET_BOOL_PROP(EclFlowProblem, EnablePolymer, false);
-SET_BOOL_PROP(EclFlowProblem, EnableSolvent, false);
-SET_BOOL_PROP(EclFlowProblem, EnableTemperature, true);
-SET_BOOL_PROP(EclFlowProblem, EnableEnergy, false);
-SET_BOOL_PROP(EclFlowProblem, EnableFoam, false);
-SET_BOOL_PROP(EclFlowProblem, EnableBrine, false);
+template<class TypeTag>
+struct EnablePolymer<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct EnableSolvent<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct EnableTemperature<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = true;
+};
+template<class TypeTag>
+struct EnableEnergy<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct EnableFoam<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct EnableBrine<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = false;
+};
 
-SET_TYPE_PROP(EclFlowProblem, EclWellModel, Opm::BlackoilWellModel<TypeTag>);
-SET_TAG_PROP(EclFlowProblem, LinearSolverSplice, FlowIstlSolver);
+template<class TypeTag>
+struct EclWellModel<TypeTag, TTag::EclFlowProblem> {
+    using type = Opm::BlackoilWellModel<TypeTag>;
+};
+template<class TypeTag>
+struct LinearSolverSplice<TypeTag, TTag::EclFlowProblem> {
+    using type = TTag::FlowIstlSolver;
+};
 
 } // namespace Opm::Properties
 
@@ -111,17 +153,17 @@ namespace Opm {
         typedef WellStateFullyImplicitBlackoil WellState;
         typedef BlackoilModelParametersEbos<TypeTag> ModelParameters;
 
-        typedef typename GET_PROP_TYPE(TypeTag, Simulator)         Simulator;
-        typedef typename GET_PROP_TYPE(TypeTag, Grid)              Grid;
-        typedef typename GET_PROP_TYPE(TypeTag, ElementContext)    ElementContext;
-        typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
-        typedef typename GET_PROP_TYPE(TypeTag, SolutionVector)    SolutionVector ;
-        typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables)  PrimaryVariables ;
-        typedef typename GET_PROP_TYPE(TypeTag, FluidSystem)       FluidSystem;
-        typedef typename GET_PROP_TYPE(TypeTag, Indices)           Indices;
-        typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw)       MaterialLaw;
-        typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
-        
+        using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+        using Grid = GetPropType<TypeTag, Properties::Grid>;
+        using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+        using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
+        using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
+        using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+        using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+        using Indices = GetPropType<TypeTag, Properties::Indices>;
+        using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+        using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
+
         typedef double Scalar;
         static const int numEq = Indices::numEq;
         static const int contiSolventEqIdx = Indices::contiSolventEqIdx;
@@ -170,12 +212,12 @@ namespace Opm {
         , phaseUsage_(phaseUsageFromDeck(eclState()))
         , has_disgas_(FluidSystem::enableDissolvedGas())
         , has_vapoil_(FluidSystem::enableVaporizedOil())
-        , has_solvent_(GET_PROP_VALUE(TypeTag, EnableSolvent))
-        , has_polymer_(GET_PROP_VALUE(TypeTag, EnablePolymer))
-        , has_polymermw_(GET_PROP_VALUE(TypeTag, EnablePolymerMW))
-        , has_energy_(GET_PROP_VALUE(TypeTag, EnableEnergy))
-        , has_foam_(GET_PROP_VALUE(TypeTag, EnableFoam))
-        , has_brine_(GET_PROP_VALUE(TypeTag, EnableBrine))
+        , has_solvent_(getPropValue<TypeTag, Properties::EnableSolvent>())
+        , has_polymer_(getPropValue<TypeTag, Properties::EnablePolymer>())
+        , has_polymermw_(getPropValue<TypeTag, Properties::EnablePolymerMW>())
+        , has_energy_(getPropValue<TypeTag, Properties::EnableEnergy>())
+        , has_foam_(getPropValue<TypeTag, Properties::EnableFoam>())
+        , has_brine_(getPropValue<TypeTag, Properties::EnableBrine>())
         , param_( param )
         , well_model_ (well_model)
         , terminal_output_ (terminal_output)
@@ -218,7 +260,7 @@ namespace Opm {
             ebosSimulator_.setTimeStepSize(timer.currentStepLength());
             ebosSimulator_.problem().beginTimeStep();
 
-             unsigned numDof = ebosSimulator_.model().numGridDof();
+            unsigned numDof = ebosSimulator_.model().numGridDof();
             wasSwitched_.resize(numDof);
             std::fill(wasSwitched_.begin(), wasSwitched_.end(), false);
 
@@ -351,7 +393,6 @@ namespace Opm {
 
                 // Apply the update, with considering model-dependent limitations and
                 // chopping of the update.
-                // NB !! should be set model().linearizer().constraintsMap();
                 updateSolution(x);
 
                 report.update_time += perfTimer.stop();
@@ -385,7 +426,6 @@ namespace Opm {
             // -------- Mass balance equations --------
             ebosSimulator_.model().newtonMethod().setIterationIndex(iterationIdx);
             ebosSimulator_.problem().beginIteration();
-            //use default linearization 
             ebosSimulator_.model().linearizer().linearizeDomain();
             ebosSimulator_.problem().endIteration();
 
@@ -660,7 +700,7 @@ namespace Opm {
         void updateSolution(const BVector& dx)
         {
             auto& ebosNewtonMethod = ebosSimulator_.model().newtonMethod();
-            SolutionVector& solution = ebosSimulator_.model().solution(/*timeIdx*/ 0);
+            SolutionVector& solution = ebosSimulator_.model().solution(/*timeIdx=*/0);
 
             ebosNewtonMethod.update_(/*nextSolution=*/solution,
                                      /*curSolution=*/solution,
@@ -670,7 +710,7 @@ namespace Opm {
                                                     // residual
 
             // if the solution is updated, the intensive quantities need to be recalculated
-            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx*/ 0);
+            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
         }
 
         /// Return true if output to cout is wanted.
@@ -835,6 +875,40 @@ namespace Opm {
             return pvSumLocal;
         }
 
+        double computeCnvErrorPv(const std::vector<Scalar>& B_avg, double dt)
+        {
+            double errorPV{};
+            const auto& ebosModel = ebosSimulator_.model();
+            const auto& ebosProblem = ebosSimulator_.problem();
+            const auto& ebosResid = ebosSimulator_.model().linearizer().residual();
+            const auto& gridView = ebosSimulator().gridView();
+            ElementContext elemCtx(ebosSimulator_);
+
+            for (const auto& elem: elements(gridView, Dune::Partitions::interiorBorder))
+            {
+                elemCtx.updatePrimaryStencil(elem);
+                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                const unsigned cell_idx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+                const double pvValue = ebosProblem.referencePorosity(cell_idx, /*timeIdx=*/0) * ebosModel.dofTotalVolume( cell_idx );
+                const auto& cellResidual = ebosResid[cell_idx];
+                bool cnvViolated = false;
+
+                for (unsigned eqIdx = 0; eqIdx < cellResidual.size(); ++eqIdx)
+                {
+                    using std::abs;
+                    Scalar CNV = cellResidual[eqIdx] * dt * B_avg[eqIdx] / pvValue;
+                    cnvViolated = cnvViolated || (abs(CNV) > param_.tolerance_cnv_);
+                }
+
+                if (cnvViolated)
+                {
+                    errorPV += pvValue;
+                }
+            }
+
+            return grid_.comm().sum(errorPV);
+        }
+
         ConvergenceReport getReservoirConvergence(const double dt,
                                                   const int iteration,
                                                   std::vector<Scalar>& B_avg,
@@ -858,6 +932,17 @@ namespace Opm {
             // compute global sum and max of quantities
             const double pvSum = convergenceReduction(grid_.comm(), pvSumLocal,
                                                       R_sum, maxCoeff, B_avg);
+
+            auto cnvErrorPvFraction = computeCnvErrorPv(B_avg, dt);
+            cnvErrorPvFraction /= pvSum;
+
+            const double tol_mb  = param_.tolerance_mb_;
+            // Default value of relaxed_max_pv_fraction_ is 1 and
+            // max_strict_iter_ is 8. Hence only iteration chooses
+            // whether to use relaxed or not.
+            // To activate only fraction use fraction below 1 and iter 0.
+            const bool use_relaxed = cnvErrorPvFraction < param_.relaxed_max_pv_fraction_ && iteration >= param_.max_strict_iter_;                                              
+            const double tol_cnv = use_relaxed ? param_.tolerance_cnv_relaxed_ :  param_.tolerance_cnv_;
 
             // Finish computation
             std::vector<Scalar> CNV(numComp);
@@ -948,6 +1033,7 @@ namespace Opm {
                         msg += compNames[compIdx][0];
                         msg += ") ";
                     }
+                    // TODO: changing back to debug
                     // OpmLog::debug(msg);
                     OpmLog::info(msg);
                 }
@@ -963,6 +1049,7 @@ namespace Opm {
                 }
                 ss.precision(oprec);
                 ss.flags(oflags);
+                // TODO: changing back to debug
                 // OpmLog::debug(ss.str());
                 OpmLog::info(ss.str());
             }

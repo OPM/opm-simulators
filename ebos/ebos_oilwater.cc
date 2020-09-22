@@ -32,23 +32,28 @@
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(EbosOilWaterTypeTag, INHERITS_FROM(EbosTypeTag));
+namespace TTag {
+struct EbosOilWaterTypeTag {
+    using InheritsFrom = std::tuple<EbosTypeTag>;
+};
+}
 
 //! The indices indices which only enable oil and water
-SET_PROP(EbosOilWaterTypeTag, Indices)
+template<class TypeTag>
+struct Indices<TypeTag, TTag::EbosOilWaterTypeTag>
 {
 private:
     // it is unfortunately not possible to simply use 'TypeTag' here because this leads
     // to cyclic definitions of some properties. if this happens the compiler error
     // messages unfortunately are *really* confusing and not really helpful.
-    typedef typename GET_PROP_TYPE(TTAG(EbosTypeTag), FluidSystem) FluidSystem;
+    using FluidSystem = GetPropType<TTag::EbosTypeTag, Properties::FluidSystem>;
 
 public:
-    typedef Opm::BlackOilTwoPhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent),
-                                         GET_PROP_VALUE(TypeTag, EnablePolymer),
-                                         GET_PROP_VALUE(TypeTag, EnableEnergy),
-                                         GET_PROP_VALUE(TypeTag, EnableFoam),
-                                         GET_PROP_VALUE(TypeTag, EnableBrine),
+    typedef Opm::BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
+                                         getPropValue<TypeTag, Properties::EnablePolymer>(),
+                                         getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                         getPropValue<TypeTag, Properties::EnableFoam>(),
+                                         getPropValue<TypeTag, Properties::EnableBrine>(),
                                          /*PVOffset=*/0,
                                          /*disabledCompIdx=*/FluidSystem::gasCompIdx> type;
 };
@@ -57,23 +62,23 @@ public:
 
 namespace Opm {
 
-void ebosOilWaterSetDeck(Opm::Deck* deck,
-                         Opm::ParseContext* parseContext,
-                         Opm::ErrorGuard* errorGuard,
+void ebosOilWaterSetDeck(std::unique_ptr<Opm::Deck> deck,
+                         std::unique_ptr<Opm::ParseContext> parseContext,
+                         std::unique_ptr<Opm::ErrorGuard> errorGuard,
                          double externalSetupTime)
 {
-    typedef TTAG(EbosOilWaterTypeTag) ProblemTypeTag;
-    typedef GET_PROP_TYPE(ProblemTypeTag, Vanguard) Vanguard;
+    using ProblemTypeTag = Properties::TTag::EbosOilWaterTypeTag;
+    using Vanguard = GetPropType<ProblemTypeTag, Properties::Vanguard>;
 
     Vanguard::setExternalSetupTime(externalSetupTime);
-    Vanguard::setExternalParseContext(parseContext);
-    Vanguard::setExternalErrorGuard(errorGuard);
-    Vanguard::setExternalDeck(deck);
+    Vanguard::setExternalParseContext(std::move(parseContext));
+    Vanguard::setExternalErrorGuard(std::move(errorGuard));
+    Vanguard::setExternalDeck(std::move(deck));
 }
 
 int ebosOilWaterMain(int argc, char **argv)
 {
-    typedef TTAG(EbosOilWaterTypeTag) ProblemTypeTag;
+    using ProblemTypeTag = Properties::TTag::EbosOilWaterTypeTag;
     return Opm::startEbos<ProblemTypeTag>(argc, argv);
 }
 

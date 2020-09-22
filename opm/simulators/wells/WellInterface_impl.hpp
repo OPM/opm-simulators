@@ -74,7 +74,7 @@ namespace Opm
 
             int all_perf = 0;
             originalConnectionIndex_.reserve(perf_data.size());
-            for (const auto connection : well.getConnections()) {
+            for (const auto& connection : well.getConnections()) {
                 if (connection.state() == Connection::State::OPEN) {
                     originalConnectionIndex_.push_back(all_perf);
                 }

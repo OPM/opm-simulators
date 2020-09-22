@@ -28,25 +28,82 @@
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(FlowModelParameters);
+namespace TTag {
+struct FlowModelParameters {};
+}
 
-NEW_PROP_TAG(DbhpMaxRel);
-NEW_PROP_TAG(DwellFractionMax);
-NEW_PROP_TAG(MaxResidualAllowed);
-NEW_PROP_TAG(ToleranceMb);
-NEW_PROP_TAG(ToleranceCnv);
-NEW_PROP_TAG(ToleranceCnvRelaxed);
-NEW_PROP_TAG(ToleranceWells);
-NEW_PROP_TAG(ToleranceWellControl);
-NEW_PROP_TAG(MaxWelleqIter);
-NEW_PROP_TAG(UseMultisegmentWell);
-NEW_PROP_TAG(MaxSinglePrecisionDays);
-NEW_PROP_TAG(MaxStrictIter);
-NEW_PROP_TAG(SolveWelleqInitially);
-NEW_PROP_TAG(UpdateEquationsScaling);
-NEW_PROP_TAG(UseUpdateStabilization);
-NEW_PROP_TAG(MatrixAddWellContributions);
-NEW_PROP_TAG(EnableWellOperabilityCheck);
+template<class TypeTag, class MyTypeTag>
+struct DbhpMaxRel {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct DwellFractionMax {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct MaxResidualAllowed {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct RelaxedMaxPvFraction {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct ToleranceMb {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct ToleranceCnv {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct ToleranceCnvRelaxed {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct ToleranceWells {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct ToleranceWellControl {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct MaxWelleqIter {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct UseMultisegmentWell {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct MaxSinglePrecisionDays {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct MaxStrictIter {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct SolveWelleqInitially {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct UpdateEquationsScaling {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct UseUpdateStabilization {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct MatrixAddWellContributions {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EnableWellOperabilityCheck {
+    using type = UndefinedProperty;
+};
 
 // for sequential
 NEW_PROP_TAG(MaxStrictIterSeq);
@@ -58,45 +115,174 @@ NEW_PROP_TAG(SimulationType);
 NEW_PROP_TAG(PressureSolverJson);
 
 // parameters for multisegment wells
-NEW_PROP_TAG(TolerancePressureMsWells);
-NEW_PROP_TAG(MaxPressureChangeMsWells);
-NEW_PROP_TAG(UseInnerIterationsMsWells);
-NEW_PROP_TAG(MaxInnerIterMsWells);
-NEW_PROP_TAG(StrictInnerIterMsWells);
-NEW_PROP_TAG(RelaxedFlowTolInnerIterMsw);
-NEW_PROP_TAG(RelaxedPressureTolInnerIterMsw);
-NEW_PROP_TAG(RegularizationFactorMsw);
-NEW_PROP_TAG(UseInnerIterationsWells);
-NEW_PROP_TAG(MaxInnerIterWells);
+template<class TypeTag, class MyTypeTag>
+struct TolerancePressureMsWells {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct MaxPressureChangeMsWells {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct UseInnerIterationsMsWells {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct MaxInnerIterMsWells {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct StrictInnerIterMsWells {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct RelaxedFlowTolInnerIterMsw {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct RelaxedPressureTolInnerIterMsw {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct RegularizationFactorMsw {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct UseInnerIterationsWells {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct MaxInnerIterWells {
+    using type = UndefinedProperty;
+};
 
-SET_SCALAR_PROP(FlowModelParameters, DbhpMaxRel, 1.0);
-SET_SCALAR_PROP(FlowModelParameters, DwellFractionMax, 0.2);
-SET_SCALAR_PROP(FlowModelParameters, MaxResidualAllowed, 1e7);
-SET_SCALAR_PROP(FlowModelParameters, ToleranceMb, 1e-6);
-SET_SCALAR_PROP(FlowModelParameters, ToleranceCnv,1e-2);
-SET_SCALAR_PROP(FlowModelParameters, ToleranceCnvRelaxed, 1e9);
-SET_SCALAR_PROP(FlowModelParameters, ToleranceWells, 1e-4);
-SET_SCALAR_PROP(FlowModelParameters, ToleranceWellControl, 1e-7);
-SET_INT_PROP(FlowModelParameters, MaxWelleqIter, 30);
-SET_BOOL_PROP(FlowModelParameters, UseMultisegmentWell, true);
-SET_SCALAR_PROP(FlowModelParameters, MaxSinglePrecisionDays, 20.0);
-SET_INT_PROP(FlowModelParameters, MaxStrictIter, 8);
-SET_BOOL_PROP(FlowModelParameters, SolveWelleqInitially, true);
-SET_BOOL_PROP(FlowModelParameters, UpdateEquationsScaling, false);
-SET_BOOL_PROP(FlowModelParameters, UseUpdateStabilization, true);
-SET_BOOL_PROP(FlowModelParameters, MatrixAddWellContributions, false);
-SET_SCALAR_PROP(FlowModelParameters, TolerancePressureMsWells, 0.01*1e5);
-SET_SCALAR_PROP(FlowModelParameters, MaxPressureChangeMsWells, 10*1e5);
-SET_BOOL_PROP(FlowModelParameters, UseInnerIterationsMsWells, true);
-SET_INT_PROP(FlowModelParameters, MaxInnerIterMsWells, 100);
-SET_BOOL_PROP(FlowModelParameters, UseInnerIterationsWells, false);
-SET_INT_PROP(FlowModelParameters, MaxInnerIterWells, 50);
-SET_INT_PROP(FlowModelParameters, StrictInnerIterMsWells, 40);
-SET_SCALAR_PROP(FlowModelParameters, RegularizationFactorMsw, 1);
-SET_BOOL_PROP(FlowModelParameters, EnableWellOperabilityCheck, true);
-
-SET_SCALAR_PROP(FlowModelParameters, RelaxedFlowTolInnerIterMsw, 1);
-SET_SCALAR_PROP(FlowModelParameters, RelaxedPressureTolInnerIterMsw, 0.5e5);
+template<class TypeTag>
+struct DbhpMaxRel<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.0;
+};
+template<class TypeTag>
+struct DwellFractionMax<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.2;
+};
+template<class TypeTag>
+struct MaxResidualAllowed<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e7;
+};
+template<class TypeTag>
+struct RelaxedMaxPvFraction<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.0;
+};
+template<class TypeTag>
+struct ToleranceMb<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-6;
+};
+template<class TypeTag>
+struct ToleranceCnv<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-2;
+};
+template<class TypeTag>
+struct ToleranceCnvRelaxed<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e9;
+};
+template<class TypeTag>
+struct ToleranceWells<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-4;
+};
+template<class TypeTag>
+struct ToleranceWellControl<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-7;
+};
+template<class TypeTag>
+struct MaxWelleqIter<TypeTag, TTag::FlowModelParameters> {
+    static constexpr int value = 30;
+};
+template<class TypeTag>
+struct UseMultisegmentWell<TypeTag, TTag::FlowModelParameters> {
+    static constexpr bool value = true;
+};
+template<class TypeTag>
+struct MaxSinglePrecisionDays<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 20.0;
+};
+template<class TypeTag>
+struct MaxStrictIter<TypeTag, TTag::FlowModelParameters> {
+    static constexpr int value = 8;
+};
+template<class TypeTag>
+struct SolveWelleqInitially<TypeTag, TTag::FlowModelParameters> {
+    static constexpr bool value = true;
+};
+template<class TypeTag>
+struct UpdateEquationsScaling<TypeTag, TTag::FlowModelParameters> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct UseUpdateStabilization<TypeTag, TTag::FlowModelParameters> {
+    static constexpr bool value = true;
+};
+template<class TypeTag>
+struct MatrixAddWellContributions<TypeTag, TTag::FlowModelParameters> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct TolerancePressureMsWells<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.01*1e5;
+};
+template<class TypeTag>
+struct MaxPressureChangeMsWells<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 10*1e5;
+};
+template<class TypeTag>
+struct UseInnerIterationsMsWells<TypeTag, TTag::FlowModelParameters> {
+    static constexpr bool value = true;
+};
+template<class TypeTag>
+struct MaxInnerIterMsWells<TypeTag, TTag::FlowModelParameters> {
+    static constexpr int value = 100;
+};
+template<class TypeTag>
+struct UseInnerIterationsWells<TypeTag, TTag::FlowModelParameters> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct MaxInnerIterWells<TypeTag, TTag::FlowModelParameters> {
+    static constexpr int value = 50;
+};
+template<class TypeTag>
+struct StrictInnerIterMsWells<TypeTag, TTag::FlowModelParameters> {
+    static constexpr int value = 40;
+};
+template<class TypeTag>
+struct RegularizationFactorMsw<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1;
+};
+template<class TypeTag>
+struct EnableWellOperabilityCheck<TypeTag, TTag::FlowModelParameters> {
+    static constexpr bool value = true;
+};
+template<class TypeTag>
+struct RelaxedFlowTolInnerIterMsw<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1;
+};
+template<class TypeTag>
+struct RelaxedPressureTolInnerIterMsw<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.5e5;
+};
 
 // for sequential
 SET_INT_PROP(FlowModelParameters, MaxStrictIterSeq, 8);
@@ -109,7 +295,10 @@ SET_STRING_PROP(FlowModelParameters, PressureSolverJson, "pressuresolver.json");
 
 // if openMP is available, determine the number threads per process automatically.
 #if _OPENMP
-SET_INT_PROP(FlowModelParameters, ThreadsPerProcess, -1);
+template<class TypeTag>
+struct ThreadsPerProcess<TypeTag, TTag::FlowModelParameters> {
+    static constexpr int value = -1;
+};
 #endif
 
 } // namespace Opm::Properties
@@ -121,7 +310,7 @@ namespace Opm
     struct BlackoilModelParametersEbos
     {
     private:
-        typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+        using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
     public:
         /// Max relative change in bhp in single iteration.
@@ -130,6 +319,9 @@ namespace Opm
         double dwell_fraction_max_;
         /// Absolute max limit for residuals.
         double max_residual_allowed_;
+        //// Max allowed pore volume faction where CNV is violated. Below the
+        //// relaxed tolerance tolerance_cnv_relaxed_ is used.
+        double relaxed_max_pv_fraction_;
         /// Relative mass balance tolerance (total mass balance error).
         double tolerance_mb_;
         /// Local convergence tolerance (max of local saturation errors).
@@ -222,6 +414,7 @@ namespace Opm
             dbhp_max_rel_=  EWOMS_GET_PARAM(TypeTag, Scalar, DbhpMaxRel);
             dwell_fraction_max_ = EWOMS_GET_PARAM(TypeTag, Scalar, DwellFractionMax);
             max_residual_allowed_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxResidualAllowed);
+            relaxed_max_pv_fraction_ = EWOMS_GET_PARAM(TypeTag, Scalar, RelaxedMaxPvFraction);
             tolerance_mb_ = EWOMS_GET_PARAM(TypeTag, Scalar, ToleranceMb);
             tolerance_cnv_ = EWOMS_GET_PARAM(TypeTag, Scalar, ToleranceCnv);
             tolerance_cnv_relaxed_ = EWOMS_GET_PARAM(TypeTag, Scalar, ToleranceCnvRelaxed);
@@ -264,6 +457,8 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, DbhpMaxRel, "Maximum relative change of the bottom-hole pressure in a single iteration");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, DwellFractionMax, "Maximum absolute change of a well's volume fraction in a single iteration");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaxResidualAllowed, "Absolute maximum tolerated for residuals without cutting the time step size");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, RelaxedMaxPvFraction, "The fraction of the pore volume of the reservoir "
+                                 "where the volumetric error (CNV) may be voilated during strict Newton iterations.");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, ToleranceMb, "Tolerated mass balance error relative to total mass present");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, ToleranceCnv, "Local convergence tolerance (Maximum of local saturation errors)");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, ToleranceCnvRelaxed, "Relaxed local convergence tolerance that applies for iterations after the iterations with the strict tolerance");

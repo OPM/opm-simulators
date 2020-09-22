@@ -37,11 +37,26 @@
 
 namespace Opm::Properties {
 
-NEW_PROP_TAG(EclNewtonSumTolerance);
-NEW_PROP_TAG(EclNewtonStrictIterations);
-NEW_PROP_TAG(EclNewtonRelaxedVolumeFraction);
-NEW_PROP_TAG(EclNewtonSumToleranceExponent);
-NEW_PROP_TAG(EclNewtonRelaxedTolerance);
+template<class TypeTag, class MyTypeTag>
+struct EclNewtonSumTolerance {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EclNewtonStrictIterations {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EclNewtonRelaxedVolumeFraction {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EclNewtonSumToleranceExponent {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EclNewtonRelaxedTolerance {
+    using type = UndefinedProperty;
+};
 
 } // namespace Opm::Properties
 
@@ -54,20 +69,20 @@ template <class TypeTag>
 class EclNewtonMethod : public BlackOilNewtonMethod<TypeTag>
 {
     typedef BlackOilNewtonMethod<TypeTag> ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, DiscNewtonMethod) DiscNewtonMethod;
+    using DiscNewtonMethod = GetPropType<TypeTag, Properties::DiscNewtonMethod>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, SolutionVector) SolutionVector;
-    typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) GlobalEqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Linearizer) Linearizer;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
+    using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Linearizer = GetPropType<TypeTag, Properties::Linearizer>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
-    static const unsigned numEq = GET_PROP_VALUE(TypeTag, NumEq);
+    static const unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
 
     static constexpr int contiSolventEqIdx = Indices::contiSolventEqIdx;
     static constexpr int contiPolymerEqIdx = Indices::contiPolymerEqIdx;
@@ -175,7 +190,7 @@ public:
 
                 // in the case of a volumetric formulation, the residual in the above is
                 // per cubic meter
-                if (GET_PROP_VALUE(TypeTag, UseVolumetricResidual)) {
+                if (getPropValue<TypeTag, Properties::UseVolumetricResidual>()) {
                     tmpError *= dofVolume;
                     tmpError2 *= dofVolume;
                 }

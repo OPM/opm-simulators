@@ -31,6 +31,7 @@
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 #include <cassert>
+#include <unordered_map>
 #include <tuple>
 
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
@@ -63,7 +64,10 @@
 
 namespace Opm::Properties {
 
-NEW_PROP_TAG(EnableTerminalOutput);
+template<class TypeTag, class MyTypeTag>
+struct EnableTerminalOutput {
+    using type = UndefinedProperty;
+};
 
 } // namespace Opm::Properties
 
@@ -78,15 +82,15 @@ namespace Opm {
             typedef WellStateFullyImplicitBlackoil WellState;
             typedef BlackoilModelParametersEbos<TypeTag> ModelParameters;
 
-            typedef typename GET_PROP_TYPE(TypeTag, Grid)                Grid;
-            typedef typename GET_PROP_TYPE(TypeTag, FluidSystem)         FluidSystem;
-            typedef typename GET_PROP_TYPE(TypeTag, ElementContext)      ElementContext;
-            typedef typename GET_PROP_TYPE(TypeTag, Indices)             Indices;
-            typedef typename GET_PROP_TYPE(TypeTag, Simulator)           Simulator;
-            typedef typename GET_PROP_TYPE(TypeTag, Scalar)              Scalar;
-            typedef typename GET_PROP_TYPE(TypeTag, RateVector)          RateVector;
-            typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector)      GlobalEqVector;
-            typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
+            using Grid = GetPropType<TypeTag, Properties::Grid>;
+            using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+            using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+            using Indices = GetPropType<TypeTag, Properties::Indices>;
+            using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+            using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+            using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+            using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
+            using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
 
             typedef typename Opm::BaseAuxiliaryModule<TypeTag>::NeighborSet NeighborSet;
 
@@ -187,19 +191,15 @@ namespace Opm {
 
             void initFromRestartFile(const RestartValue& restartValues);
 
-            Opm::data::GroupValues
-            groupData(const int reportStepIdx, const Opm::Schedule& sched) const
+            Opm::data::GroupAndNetworkValues
+            groupAndNetworkData(const int reportStepIdx, const Opm::Schedule& sched) const
             {
-                auto gvalues = ::Opm::data::GroupValues{};
+                auto grp_nwrk_values = ::Opm::data::GroupAndNetworkValues{};
 
-                for (const auto& gname : sched.groupNames(reportStepIdx)) {
-                    const auto& grup = sched.getGroup(gname, reportStepIdx);
+                this->assignGroupValues(reportStepIdx, sched,
+                                        grp_nwrk_values.groupData);
 
-                    auto& gdata = gvalues[gname];
-                    this->assignGroupControl(grup, gdata);
-                }
-
-                return gvalues;
+                return grp_nwrk_values;
             }
 
             Opm::data::Wells wellData() const
@@ -213,6 +213,9 @@ namespace Opm {
                     }
 
                     xwPos->second.current_control.isProducer = well.isProducer();
+
+                    auto& grval = xwPos->second.guide_rates;  grval.clear();
+                    grval += this->getGuideRateValues(well);
                 }
 
                 return wsrpt;
@@ -406,6 +409,7 @@ namespace Opm {
 
             // convert well data from opm-common to well state from opm-core
             void wellsToState( const data::Wells& wells,
+                               const data::GroupAndNetworkValues& grpNwrkValues,
                                const PhaseUsage& phases,
                                const bool handle_ms_well,
                                WellStateFullyImplicitBlackoil& state ) const;
@@ -435,7 +439,24 @@ namespace Opm {
 
             void setWsolvent(const Group& group, const Schedule& schedule, const int reportStepIdx, double wsolvent);
 
+            void assignGroupValues(const int                               reportStepIdx,
+                                   const Schedule&                         sched,
+                                   std::map<std::string, data::GroupData>& gvalues) const;
+
+            std::unordered_map<std::string, data::GroupGuideRates>
+            calculateAllGroupGuiderates(const int reportStepIdx, const Schedule& sched) const;
+
             void assignGroupControl(const Group& group, data::GroupData& gdata) const;
+            data::GuideRateValue getGuideRateValues(const Well& well) const;
+            data::GuideRateValue getGuideRateValues(const Group& group) const;
+            void getGuideRateValues(const GuideRate::RateVector& qs,
+                                    const bool                   is_inj,
+                                    const std::string&           wgname,
+                                    data::GuideRateValue&        grval) const;
+
+            void assignGroupGuideRates(const Group& group,
+                                       const std::unordered_map<std::string, data::GroupGuideRates>& groupGuideRates,
+                                       data::GroupData& gdata) const;
         };
 
 

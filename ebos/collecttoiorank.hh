@@ -35,7 +35,6 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/EclipseGrid.hpp>
 
-#include <opm/material/common/Exceptions.hpp>
 #include <opm/material/common/Unused.hpp>
 
 #include <dune/grid/common/mcmgmapper.hh>
@@ -309,7 +308,16 @@ public:
 
             typedef Dune::MultipleCodimMultipleGeomTypeMapper<LocalGridView> ElementMapper;
             ElementMapper elemMapper(localGridView, Dune::mcmgElementLayout());
+            const auto& cartMapper = vanguard.cartesianIndexMapper();
+            sortedCartesianIdx_.reserve(vanguard.gridView().size(0));
 
+            for(const auto& elem: elements(localGridView))
+            {
+                auto idx = elemMapper.index(elem);
+                sortedCartesianIdx_.push_back(cartMapper.cartesianIndex(idx));
+            }
+
+            std::sort(sortedCartesianIdx_.begin(), sortedCartesianIdx_.end());
             localIdxToGlobalIdx_.resize(localGridView.size(0), -1);
 
             // the I/O rank receives from all other ranks
@@ -547,17 +555,17 @@ public:
 
     };
 
-    class PackUnPackGroupData : public P2PCommunicatorType::DataHandleInterface
+    class PackUnPackGroupAndNetworkValues : public P2PCommunicatorType::DataHandleInterface
     {
-        const Opm::data::GroupValues& localGroupData_;
-        Opm::data::GroupValues&       globalGroupData_;
+        const Opm::data::GroupAndNetworkValues& localGroupAndNetworkData_;
+        Opm::data::GroupAndNetworkValues&       globalGroupAndNetworkData_;
 
     public:
-        PackUnPackGroupData(const Opm::data::GroupValues& localGroupData,
-                            Opm::data::GroupValues&       globalGroupData,
-                            const bool                    isIORank)
-            : localGroupData_ (localGroupData)
-            , globalGroupData_(globalGroupData)
+        PackUnPackGroupAndNetworkValues(const Opm::data::GroupAndNetworkValues& localGroupAndNetworkData,
+                                        Opm::data::GroupAndNetworkValues&       globalGroupAndNetworkData,
+                                        const bool                              isIORank)
+            : localGroupAndNetworkData_ (localGroupAndNetworkData)
+            , globalGroupAndNetworkData_(globalGroupAndNetworkData)
         {
             if (! isIORank) { return; }
 
@@ -579,13 +587,13 @@ public:
                 };
             }
 
-            // write all group data
-           this->localGroupData_.write(buffer);
+            // write all group and network (node/branch) data
+            this->localGroupAndNetworkData_.write(buffer);
         }
 
         // unpack all data associated with link
         void unpack(int /*link*/, MessageBufferType& buffer)
-        { this->globalGroupData_.read(buffer); }
+        { this->globalGroupAndNetworkData_.read(buffer); }
     };
 
 
@@ -651,17 +659,16 @@ public:
     void collect(const Opm::data::Solution& localCellData,
                  const std::map<std::pair<std::string, int>, double>& localBlockData,
                  const Opm::data::Wells& localWellData,
-                 const Opm::data::GroupValues& localGroupData)
+                 const Opm::data::GroupAndNetworkValues& localGroupAndNetworkData)
     {
         globalCellData_ = {};
         globalBlockData_.clear();
         globalWellData_.clear();
-        globalGroupData_.clear();
+        globalGroupAndNetworkData_.clear();
 
         // index maps only have to be build when reordering is needed
         if(!needsReordering && !isParallel())
             return;
-
 
         // this also linearises the local buffers on ioRank
         PackUnPackCellData packUnpackCellData {
@@ -684,9 +691,9 @@ public:
             this->isIORank()
         };
 
-        PackUnPackGroupData packUnpackGroupData {
-            localGroupData,
-            this->globalGroupData_,
+        PackUnPackGroupAndNetworkValues packUnpackGroupAndNetworkData {
+            localGroupAndNetworkData,
+            this->globalGroupAndNetworkData_,
             this->isIORank()
         };
 
@@ -698,7 +705,7 @@ public:
 
         toIORankComm_.exchange(packUnpackCellData);
         toIORankComm_.exchange(packUnpackWellData);
-        toIORankComm_.exchange(packUnpackGroupData);
+        toIORankComm_.exchange(packUnpackGroupAndNetworkData);
         toIORankComm_.exchange(packUnpackBlockData);
 
 
@@ -718,8 +725,8 @@ public:
     const Opm::data::Wells& globalWellData() const
     { return globalWellData_; }
 
-    const Opm::data::GroupValues& globalGroupData() const
-    { return globalGroupData_; }
+    const Opm::data::GroupAndNetworkValues& globalGroupAndNetworkData() const
+    { return globalGroupAndNetworkData_; }
 
     bool isIORank() const
     { return toIORankComm_.rank() == ioRank; }
@@ -747,15 +754,14 @@ public:
     const std::vector<int>& globalRanks() const
     { return globalRanks_; }
 
-    bool isGlobalIdxOnThisRank(unsigned globalIdx) const
+    bool isCartIdxOnThisRank(int cartIdx) const
     {
         if (!isParallel())
             return true;
 
-        if (localIdxToGlobalIdx_.empty())
-            throw std::logic_error("index map is not created on this rank");
-
-        return std::find(localIdxToGlobalIdx_.begin(), localIdxToGlobalIdx_.end(), globalIdx) != localIdxToGlobalIdx_.end();
+        assert(!needsReordering);
+        auto candidate = std::lower_bound(sortedCartesianIdx_.begin(), sortedCartesianIdx_.end(), cartIdx);
+        return (candidate != sortedCartesianIdx_.end() && *candidate == cartIdx);
     }
 
 protected:
@@ -767,8 +773,12 @@ protected:
     Opm::data::Solution globalCellData_;
     std::map<std::pair<std::string, int>, double> globalBlockData_;
     Opm::data::Wells globalWellData_;
-    Opm::data::GroupValues globalGroupData_;
+    Opm::data::GroupAndNetworkValues globalGroupAndNetworkData_;
     std::vector<int> localIdxToGlobalIdx_;
+    /// \brief sorted list of cartesian indices present-
+    ///
+    /// non-empty only when running in parallel
+    std::vector<int> sortedCartesianIdx_;
 };
 
 } // end namespace Opm

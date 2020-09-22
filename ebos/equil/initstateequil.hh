@@ -48,7 +48,6 @@
 #include <opm/parser/eclipse/EclipseState/Tables/PdvdTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SaltvdTable.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
-#include <opm/common/data/SimulationDataContainer.hpp>
 
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/fluidstates/SimpleModularFluidState.hpp>
@@ -1571,9 +1570,9 @@ equilnum(const Opm::EclipseState& eclipseState,
 template<class TypeTag>
 class InitialStateComputer
 {
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Grid = GetPropType<TypeTag, Properties::Grid>;
 
 public:
     template<class MaterialLawManager>

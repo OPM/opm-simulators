@@ -39,12 +39,25 @@ class EclPolyhedralGridVanguard;
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(EclPolyhedralGridVanguard, INHERITS_FROM(EclBaseVanguard));
+namespace TTag {
+struct EclPolyhedralGridVanguard {
+    using InheritsFrom = std::tuple<EclBaseVanguard>;
+};
+}
 
 // declare the properties
-SET_TYPE_PROP(EclPolyhedralGridVanguard, Vanguard, Opm::EclPolyhedralGridVanguard<TypeTag>);
-SET_TYPE_PROP(EclPolyhedralGridVanguard, Grid, Dune::PolyhedralGrid<3, 3>);
-SET_TYPE_PROP(EclPolyhedralGridVanguard, EquilGrid, typename GET_PROP_TYPE(TypeTag, Grid));
+template<class TypeTag>
+struct Vanguard<TypeTag, TTag::EclPolyhedralGridVanguard> {
+    using type = Opm::EclPolyhedralGridVanguard<TypeTag>;
+};
+template<class TypeTag>
+struct Grid<TypeTag, TTag::EclPolyhedralGridVanguard> {
+    using type = Dune::PolyhedralGrid<3, 3>;
+};
+template<class TypeTag>
+struct EquilGrid<TypeTag, TTag::EclPolyhedralGridVanguard> {
+    using type = GetPropType<TypeTag, Properties::Grid>;
+};
 
 } // namespace Opm::Properties
 
@@ -63,13 +76,13 @@ class EclPolyhedralGridVanguard : public EclBaseVanguard<TypeTag>
     friend class EclBaseVanguard<TypeTag>;
     typedef EclBaseVanguard<TypeTag> ParentType;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
 public:
-    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
-    typedef typename GET_PROP_TYPE(TypeTag, EquilGrid) EquilGrid;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    using Grid = GetPropType<TypeTag, Properties::Grid>;
+    using EquilGrid = GetPropType<TypeTag, Properties::EquilGrid>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
 
 private:
     typedef Grid* GridPointer;

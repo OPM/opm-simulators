@@ -41,64 +41,233 @@ class ISTLSolverEbos;
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(FlowIstlSolverParams);
+namespace TTag {
+struct FlowIstlSolverParams {};
+}
 
-NEW_PROP_TAG(LinearSolverReduction);
-NEW_PROP_TAG(IluRelaxation);
-NEW_PROP_TAG(LinearSolverMaxIter);
-NEW_PROP_TAG(LinearSolverRestart);
-NEW_PROP_TAG(FlowLinearSolverVerbosity);
-NEW_PROP_TAG(IluFillinLevel);
-NEW_PROP_TAG(MiluVariant);
-NEW_PROP_TAG(IluRedblack);
-NEW_PROP_TAG(IluReorderSpheres);
-NEW_PROP_TAG(UseGmres);
-NEW_PROP_TAG(LinearSolverRequireFullSparsityPattern);
-NEW_PROP_TAG(LinearSolverIgnoreConvergenceFailure);
-NEW_PROP_TAG(UseAmg);
-NEW_PROP_TAG(UseCpr);
-NEW_PROP_TAG(PreconditionerAddWellContributions);
-NEW_PROP_TAG(SystemStrategy);
-NEW_PROP_TAG(ScaleLinearSystem);
-NEW_PROP_TAG(CprSolverVerbose);
-NEW_PROP_TAG(CprUseDrs);
-NEW_PROP_TAG(CprMaxEllIter);
-NEW_PROP_TAG(CprEllSolvetype);
-NEW_PROP_TAG(CprReuseSetup);
-NEW_PROP_TAG(LinearSolverConfiguration);
-NEW_PROP_TAG(LinearSolverConfigurationJsonFile);
-NEW_PROP_TAG(GpuMode);
-NEW_PROP_TAG(BdaDeviceId);
-NEW_PROP_TAG(OpenclPlatformId);
+template<class TypeTag, class MyTypeTag>
+struct LinearSolverReduction {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct IluRelaxation {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct LinearSolverMaxIter {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct LinearSolverRestart {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct FlowLinearSolverVerbosity {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct IluFillinLevel {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct MiluVariant {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct IluRedblack {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct IluReorderSpheres {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct UseGmres {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct LinearSolverRequireFullSparsityPattern {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct LinearSolverIgnoreConvergenceFailure{
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct UseAmg {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct UseCpr {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct PreconditionerAddWellContributions {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct SystemStrategy {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct ScaleLinearSystem {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct CprSolverVerbose {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct CprUseDrs {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct CprMaxEllIter {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct CprEllSolvetype {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct CprReuseSetup {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct LinearSolverConfiguration {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct LinearSolverConfigurationJsonFile {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct GpuMode {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct BdaDeviceId {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct OpenclPlatformId {
+    using type = UndefinedProperty;
+};
 
-SET_SCALAR_PROP(FlowIstlSolverParams, LinearSolverReduction, 1e-2);
-SET_SCALAR_PROP(FlowIstlSolverParams, IluRelaxation, 0.9);
-SET_INT_PROP(FlowIstlSolverParams, LinearSolverMaxIter, 200);
-SET_INT_PROP(FlowIstlSolverParams, LinearSolverRestart, 40);
-SET_INT_PROP(FlowIstlSolverParams, FlowLinearSolverVerbosity, 0);
-SET_INT_PROP(FlowIstlSolverParams, IluFillinLevel, 0);
-SET_STRING_PROP(FlowIstlSolverParams, MiluVariant, "ILU");
-SET_BOOL_PROP(FlowIstlSolverParams, IluRedblack, false);
-SET_BOOL_PROP(FlowIstlSolverParams, IluReorderSpheres, false);
-SET_BOOL_PROP(FlowIstlSolverParams, UseGmres, false);
-SET_BOOL_PROP(FlowIstlSolverParams, LinearSolverRequireFullSparsityPattern, false);
-SET_BOOL_PROP(FlowIstlSolverParams, LinearSolverIgnoreConvergenceFailure, false);
-SET_BOOL_PROP(FlowIstlSolverParams, UseAmg, false);
-SET_BOOL_PROP(FlowIstlSolverParams, UseCpr, false);
-SET_TYPE_PROP(FlowIstlSolverParams, LinearSolverBackend, Opm::ISTLSolverEbos<TypeTag>);
-SET_BOOL_PROP(FlowIstlSolverParams, PreconditionerAddWellContributions, false);
-SET_STRING_PROP(FlowIstlSolverParams, SystemStrategy, "none");
-SET_BOOL_PROP(FlowIstlSolverParams, ScaleLinearSystem, false);
-SET_INT_PROP(FlowIstlSolverParams, CprSolverVerbose, 0);
-SET_BOOL_PROP(FlowIstlSolverParams, CprUseDrs, false);
-SET_INT_PROP(FlowIstlSolverParams, CprMaxEllIter, 20);
-SET_INT_PROP(FlowIstlSolverParams, CprEllSolvetype, 0);
-SET_INT_PROP(FlowIstlSolverParams, CprReuseSetup, 3);
-SET_STRING_PROP(FlowIstlSolverParams, LinearSolverConfiguration, "ilu0");
-SET_STRING_PROP(FlowIstlSolverParams, LinearSolverConfigurationJsonFile, "none");
-SET_STRING_PROP(FlowIstlSolverParams, GpuMode, "none");
-SET_INT_PROP(FlowIstlSolverParams, BdaDeviceId, 0);
-SET_INT_PROP(FlowIstlSolverParams, OpenclPlatformId, 0);
+template<class TypeTag>
+struct LinearSolverReduction<TypeTag, TTag::FlowIstlSolverParams> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-2;
+};
+template<class TypeTag>
+struct IluRelaxation<TypeTag, TTag::FlowIstlSolverParams> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.9;
+};
+template<class TypeTag>
+struct LinearSolverMaxIter<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr int value = 200;
+};
+template<class TypeTag>
+struct LinearSolverRestart<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr int value = 40;
+};
+template<class TypeTag>
+struct FlowLinearSolverVerbosity<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr int value = 0;
+};
+template<class TypeTag>
+struct IluFillinLevel<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr int value = 0;
+};
+template<class TypeTag>
+struct MiluVariant<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr auto value = "ILU";
+};
+template<class TypeTag>
+struct IluRedblack<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct IluReorderSpheres<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct UseGmres<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct LinearSolverRequireFullSparsityPattern<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct LinearSolverIgnoreConvergenceFailure<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct UseAmg<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct UseCpr<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct LinearSolverBackend<TypeTag, TTag::FlowIstlSolverParams> {
+    using type = Opm::ISTLSolverEbos<TypeTag>;
+};
+template<class TypeTag>
+struct PreconditionerAddWellContributions<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct SystemStrategy<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr auto value = "none";
+};
+template<class TypeTag>
+struct ScaleLinearSystem<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct CprSolverVerbose<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr int value = 0;
+};
+template<class TypeTag>
+struct CprUseDrs<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct CprMaxEllIter<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr int value = 20;
+};
+template<class TypeTag>
+struct CprEllSolvetype<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr int value = 0;
+};
+template<class TypeTag>
+struct CprReuseSetup<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr int value = 3;
+};
+template<class TypeTag>
+struct LinearSolverConfiguration<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr auto value = "ilu0";
+};
+template<class TypeTag>
+struct LinearSolverConfigurationJsonFile<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr auto value = "none";
+};
+template<class TypeTag>
+struct GpuMode<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr auto value = "none";
+};
+template<class TypeTag>
+struct BdaDeviceId<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr int value = 0;
+};
+template<class TypeTag>
+struct OpenclPlatformId<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr int value = 0;
+};
 
 } // namespace Opm::Properties
 

@@ -42,7 +42,6 @@
 
 #include <opm/grid/CpGrid.hpp>
 
-#include <opm/material/common/Exceptions.hpp>
 #include <opm/material/common/ConditionalStorage.hpp>
 
 #include <dune/grid/common/mcmgmapper.hh>
@@ -66,14 +65,14 @@ namespace Opm {
 template <class TypeTag>
 class EclTransmissibility
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementMapper) ElementMapper;
-    typedef typename GridView::Intersection Intersection;
+    using Grid = GetPropType<TypeTag, Properties::Grid>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
+    using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
+    using Intersection = typename GridView::Intersection;
 
-    static const bool enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy);
+    static const bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
 
     // Grid and world dimension
     enum { dimWorld = GridView::dimensionworld };
@@ -273,13 +272,13 @@ public:
                         A * (n*d)/(d*d);
                 }
 
-                // we only need to calculate a face's transmissibility
-                // once...
-                if (elemIdx > outsideElemIdx)
-                    continue;
-
                 unsigned insideCartElemIdx = cartMapper.cartesianIndex(elemIdx);
                 unsigned outsideCartElemIdx = cartMapper.cartesianIndex(outsideElemIdx);
+
+                // we only need to calculate a face's transmissibility
+                // once...
+                if (insideCartElemIdx > outsideCartElemIdx)
+                    continue;
 
                 // local indices of the faces of the inside and
                 // outside elements which contain the intersection
@@ -345,11 +344,19 @@ public:
                 // for the inside ...
 
                 if (useSmallestMultiplier)
-                    applyAllZMultipliers_(trans, insideFaceIdx, insideCartElemIdx, outsideCartElemIdx, transMult, cartDims);
+                {
+                    // Currently PINCH(4) is never queries and hence  PINCH(4) == TOPBOT is assumed
+                    // and in this branch PINCH(5) == ALL holds
+                    applyAllZMultipliers_(trans, insideFaceIdx, outsideFaceIdx, insideCartElemIdx,
+                                          outsideCartElemIdx, transMult, cartDims,
+                                          /* pinchTop= */ false);
+                }
                 else
+                {
                     applyMultipliers_(trans, insideFaceIdx, insideCartElemIdx, transMult);
-                // ... and outside elements
-                applyMultipliers_(trans, outsideFaceIdx, outsideCartElemIdx, transMult);
+                    // ... and outside elements
+                    applyMultipliers_(trans, outsideFaceIdx, outsideCartElemIdx, transMult);
+                }
 
                 // apply the region multipliers (cf. the MULTREGT keyword)
                 Opm::FaceDir::DirEnum faceDir;
@@ -465,30 +472,44 @@ private:
         }
     }
 
+    /// \brief Apply the Multipliers for the case PINCH(4)==TOPBOT
+    ///
+    /// \param pinchTop Whether PINCH(5) is TOP, otherwise ALL is assumed.
     void applyAllZMultipliers_(Scalar& trans,
                                unsigned insideFaceIdx,
+                               unsigned outsideFaceIdx,
                                unsigned insideCartElemIdx,
                                unsigned outsideCartElemIdx,
                                const Opm::TransMult& transMult,
-                               const std::array<int, dimWorld>& cartDims)
+                               const std::array<int, dimWorld>& cartDims,
+                               bool pinchTop)
     {
         if (insideFaceIdx > 3) { // top or or bottom
-            Scalar mult = 1e20;
-            unsigned cartElemIdx = insideCartElemIdx;
-            // pick the smallest multiplier while looking down the pillar untill reaching the other end of the connection
-            // for the inbetween cells we apply it from both sides
-            while (cartElemIdx != outsideCartElemIdx) {
-                if (insideFaceIdx == 4 || cartElemIdx !=insideCartElemIdx )
-                    mult = std::min(mult, transMult.getMultiplier(cartElemIdx, Opm::FaceDir::ZMinus));
-                if (insideFaceIdx == 5 || cartElemIdx !=insideCartElemIdx)
-                    mult = std::min(mult, transMult.getMultiplier(cartElemIdx, Opm::FaceDir::ZPlus));
+            assert(insideFaceIdx==5); // as insideCartElemIdx < outsideCartElemIdx holds for the Z column
+            assert(outsideCartElemIdx > insideCartElemIdx);
+            auto lastCartElemIdx = outsideCartElemIdx - cartDims[0]*cartDims[1];
+            // Last multiplier
+            Scalar mult = transMult.getMultiplier(lastCartElemIdx , Opm::FaceDir::ZPlus);
 
-                cartElemIdx += cartDims[0]*cartDims[1];
+            if ( !pinchTop )
+            {
+                // pick the smallest multiplier for Z+ while looking down the pillar until reaching the other end of the connection
+                // While Z- is not all used here.
+                for(auto cartElemIdx = insideCartElemIdx; cartElemIdx < lastCartElemIdx;
+                    cartElemIdx += cartDims[0]*cartDims[1])
+                {
+                    mult = std::min(mult, transMult.getMultiplier(cartElemIdx, Opm::FaceDir::ZPlus));
+                }
             }
+
             trans *= mult;
+            applyMultipliers_(trans, outsideFaceIdx, outsideCartElemIdx, transMult);
         }
         else
+        {
             applyMultipliers_(trans, insideFaceIdx, insideCartElemIdx, transMult);
+            applyMultipliers_(trans, outsideFaceIdx, outsideCartElemIdx, transMult);
+        }
     }
 
     void updateFromEclState_()

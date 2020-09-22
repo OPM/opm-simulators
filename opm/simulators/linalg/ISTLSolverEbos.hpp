@@ -33,7 +33,6 @@
 #include <opm/simulators/linalg/setupPropertyTree.hpp>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/WriteSystemMatrixHelper.hpp>
-#include <opm/common/Exceptions.hpp>
 #include <opm/simulators/linalg/ParallelIstlInformation.hpp>
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <opm/material/fluidsystems/BlackOilDefaultIndexTraits.hpp>
@@ -56,18 +55,23 @@
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(FlowIstlSolver, INHERITS_FROM(FlowIstlSolverParams));
+namespace TTag {
+struct FlowIstlSolver {
+    using InheritsFrom = std::tuple<FlowIstlSolverParams>;
+};
+}
 
 template <class TypeTag, class MyTypeTag>
 struct EclWellModel;
 
 //! Set the type of a global jacobian matrix for linear solvers that are based on
 //! dune-istl.
-SET_PROP(FlowIstlSolver, SparseMatrixAdapter)
+template<class TypeTag>
+struct SparseMatrixAdapter<TypeTag, TTag::FlowIstlSolver>
 {
 private:
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     typedef Opm::MatrixBlock<Scalar, numEq, numEq> Block;
 
 public:
@@ -97,21 +101,21 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
     class ISTLSolverEbos
     {
     protected:
-        typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-        typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-        typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
-        typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) Vector;
-        typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
-        typedef typename GET_PROP_TYPE(TypeTag, EclWellModel) WellModel;
-        typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+        using GridView = GetPropType<TypeTag, Properties::GridView>;
+        using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+        using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
+        using Vector = GetPropType<TypeTag, Properties::GlobalEqVector>;
+        using Indices = GetPropType<TypeTag, Properties::Indices>;
+        using WellModel = GetPropType<TypeTag, Properties::EclWellModel>;
+        using Simulator = GetPropType<TypeTag, Properties::Simulator>;
         typedef typename SparseMatrixAdapter::IstlMatrix Matrix;
 
         typedef typename SparseMatrixAdapter::MatrixBlock MatrixBlockType;
         typedef typename Vector::block_type BlockVector;
-        typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-        typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) ThreadManager;
+        using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+        using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;
         typedef typename GridView::template Codim<0>::Entity Element;
-        typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+        using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
         using FlexibleSolverType = Dune::FlexibleSolver<Matrix, Vector>;
         using AbstractOperatorType = Dune::AssembledLinearOperator<Matrix, Vector, Vector>;
         using WellModelOperator = WellModelAsLinearOperator<WellModel, Vector, Vector>;
@@ -176,7 +180,7 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
 #else
             const std::string gpu_mode = EWOMS_GET_PARAM(TypeTag, std::string, GpuMode);
             if (gpu_mode.compare("none") != 0) {
-                OPM_THROW(std::logic_error,"Error cannot use GPU solver since neither CUDA nor OpenCL was not found by cmake");
+                OPM_THROW(std::logic_error,"Error cannot use GPU solver since neither CUDA nor OpenCL were found by cmake");
             }
 #endif
             extractParallelGridInformationToISTL(simulator_.vanguard().grid(), parallelInformation_);
@@ -460,7 +464,8 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
 #if HAVE_CUDA || HAVE_OPENCL
                 bool use_gpu = bdaBridge->getUseGpu();
                 if (use_gpu) {
-                    WellContributions wellContribs;
+                    const std::string gpu_mode = EWOMS_GET_PARAM(TypeTag, std::string, GpuMode);
+                    WellContributions wellContribs(gpu_mode);
                     if (!useWellConn_) {
                         simulator_.problem().wellModel().getWellContributions(wellContribs);
                     }
@@ -473,7 +478,13 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
                         // CPU fallback
                         use_gpu = bdaBridge->getUseGpu();  // update value, BdaBridge might have disabled cusparseSolver
                         if (use_gpu) {
-                            OpmLog::warning("cusparseSolver did not converge, now trying Dune to solve current linear system...");
+                            if(gpu_mode.compare("cusparse") == 0){
+                                OpmLog::warning("cusparseSolver did not converge, now trying Dune to solve current linear system...");
+                            }
+
+                            if(gpu_mode.compare("opencl") == 0){
+                                OpmLog::warning("openclSolver did not converge, now trying Dune to solve current linear system...");
+                            }
                         }
 
                         // call Dune
@@ -512,7 +523,7 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
             const MILU_VARIANT ilu_milu  = parameters_.ilu_milu_;
             const bool ilu_redblack = parameters_.ilu_redblack_;
             const bool ilu_reorder_spheres = parameters_.ilu_reorder_sphere_;
-            std::unique_ptr<SeqPreconditioner> precond(new SeqPreconditioner(opA.getmat(), ilu_fillin, relax, ilu_milu, ilu_redblack, ilu_reorder_spheres));
+            auto precond = std::make_unique<SeqPreconditioner>(opA.getmat(), ilu_fillin, relax, ilu_milu, ilu_redblack, ilu_reorder_spheres);
             return precond;
         }
 
@@ -756,9 +767,16 @@ DenseMatrix transposeDenseMatrix(const DenseMatrix& M)
                     }
 #endif
                 } else {
-                    using SeqLinearOperator = Dune::MatrixAdapter<Matrix, Vector, Vector>;
-                    linearOperatorForFlexibleSolver_ = std::make_unique<SeqLinearOperator>(getMatrix());
-                    flexibleSolver_ = std::make_unique<FlexibleSolverType>(*linearOperatorForFlexibleSolver_, prm_, weightsCalculator);
+                    if (useWellConn_) {
+                        using SeqLinearOperator = Dune::MatrixAdapter<Matrix, Vector, Vector>;
+                        linearOperatorForFlexibleSolver_ = std::make_unique<SeqLinearOperator>(getMatrix());
+                        flexibleSolver_ = std::make_unique<FlexibleSolverType>(*linearOperatorForFlexibleSolver_, prm_, weightsCalculator);
+                    } else {
+                        using SeqLinearOperator = WellModelMatrixAdapter<Matrix, Vector, Vector, false>;
+                        wellOperator_ = std::make_unique<WellModelOperator>(simulator_.problem().wellModel());
+                        linearOperatorForFlexibleSolver_ = std::make_unique<SeqLinearOperator>(getMatrix(), *wellOperator_);
+                        flexibleSolver_ = std::make_unique<FlexibleSolverType>(*linearOperatorForFlexibleSolver_, prm_, weightsCalculator);
+                    }
                 }
             }
             else

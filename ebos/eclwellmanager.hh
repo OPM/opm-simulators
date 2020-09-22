@@ -43,7 +43,6 @@
 
 #include <opm/output/data/Wells.hpp>
 #include <opm/output/data/Groups.hpp>
-#include <opm/material/common/Exceptions.hpp>
 
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/parallel/threadedentityiterator.hh>
@@ -65,16 +64,16 @@ namespace Opm {
 template <class TypeTag>
 class EclWellManager
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Grid = GetPropType<TypeTag, Properties::Grid>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
 
-    enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
+    enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { numPhases = FluidSystem::numPhases };
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
@@ -562,9 +561,9 @@ public:
         return wellDat;
     }
 
-    Opm::data::GroupValues
-    groupData(const int /* reportStepIdx */,
-              const Opm::Schedule& /* sched */) const
+    Opm::data::GroupAndNetworkValues
+    groupAndNetworkData(const int /* reportStepIdx */,
+                        const Opm::Schedule& /* sched */) const
     {
         return {};
     }

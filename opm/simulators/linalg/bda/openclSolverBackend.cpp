@@ -20,6 +20,7 @@
 #include <config.h>
 #include <cmath>
 #include <sstream>
+#include <iostream>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
@@ -70,7 +71,7 @@ unsigned int openclSolverBackend<block_size>::ceilDivision(const unsigned int A,
 template <unsigned int block_size>
 double openclSolverBackend<block_size>::dot_w(cl::Buffer in1, cl::Buffer in2, cl::Buffer out)
 {
-    const unsigned int work_group_size = 1024;
+    const unsigned int work_group_size = 256;
     const unsigned int num_work_groups = ceilDivision(N, work_group_size);
     const unsigned int total_work_items = num_work_groups * work_group_size;
     const unsigned int lmem_per_work_group = sizeof(double) * work_group_size;
@@ -98,7 +99,7 @@ double openclSolverBackend<block_size>::dot_w(cl::Buffer in1, cl::Buffer in2, cl
 template <unsigned int block_size>
 double openclSolverBackend<block_size>::norm_w(cl::Buffer in, cl::Buffer out)
 {
-    const unsigned int work_group_size = 1024;
+    const unsigned int work_group_size = 256;
     const unsigned int num_work_groups = ceilDivision(N, work_group_size);
     const unsigned int total_work_items = num_work_groups * work_group_size;
     const unsigned int lmem_per_work_group = sizeof(double) * work_group_size;
@@ -179,18 +180,13 @@ void openclSolverBackend<block_size>::spmv_blocked_w(cl::Buffer vals, cl::Buffer
     }
 }
 
-
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContribs, BdaResult& res) {
-
     float it;
     double rho, rhop, beta, alpha, omega, tmp1, tmp2;
     double norm, norm_0;
 
     Timer t_total, t_prec(false), t_spmv(false), t_well(false), t_rest(false);
-
-    wellContribs.setOpenCLQueue(queue.get());
-    wellContribs.setReordering(toOrder, true);
 
     // set r to the initial residual
     // if initial x guess is not 0, must call applyblockedscaleadd(), not implemented
@@ -211,6 +207,8 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
     event.wait();
     queue->enqueueCopyBuffer(d_r, d_p, 0, 0, sizeof(double) * N, nullptr, &event);
     event.wait();
+
+    wellContribs.setReordering(toOrder, true);
 
     norm = norm_w(d_r, d_tmp);
     norm_0 = norm;
@@ -243,11 +241,9 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
         t_spmv.stop();
 
         // apply wellContributions
-        if (wellContribs.getNumWells() > 0) {
-            t_well.start();
-            wellContribs.apply(d_pw, d_v);
-            t_well.stop();
-        }
+        t_well.start();
+        wellContribs.apply(d_pw, d_v);
+        t_well.stop();
 
         t_rest.start();
         tmp1 = dot_w(d_rw, d_v, d_tmp);
@@ -274,11 +270,9 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
         t_spmv.stop();
 
         // apply wellContributions
-        if (wellContribs.getNumWells() > 0) {
-            t_well.start();
-            wellContribs.apply(d_s, d_t);
-            t_well.stop();
-        }
+        t_well.start();
+        wellContribs.apply(d_s, d_t);
+        t_well.stop();
 
         t_rest.start();
         tmp1 = dot_w(d_t, d_r, d_tmp);
@@ -314,7 +308,8 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
     }
     if (verbosity >= 4) {
         std::ostringstream out;
-        out << "openclSolver::ily_apply:   " << t_prec.elapsed() << " s\n";
+        out << "openclSolver::ilu_apply:   " << t_prec.elapsed() << " s\n";
+        out << "wellContributions::apply:  " << t_well.elapsed() << " s\n";
         out << "openclSolver::spmv:        " << t_spmv.elapsed() << " s\n";
         out << "openclSolver::rest:        " << t_rest.elapsed() << " s\n";
         out << "openclSolver::total_solve: " << res.elapsed << " s\n";
@@ -466,9 +461,10 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
         source.emplace_back(std::make_pair(spmv_blocked_s, strlen(spmv_blocked_s)));
         source.emplace_back(std::make_pair(ILU_apply1_s, strlen(ILU_apply1_s)));
         source.emplace_back(std::make_pair(ILU_apply2_s, strlen(ILU_apply2_s)));
-        cl::Program program_ = cl::Program(*context, source);
+        source.emplace_back(std::make_pair(add_well_contributions_s, strlen(add_well_contributions_s)));
+        program = cl::Program(*context, source);
 
-        program_.build(devices);
+        program.build(devices);
 
         cl::Event event;
         queue.reset(new cl::CommandQueue(*context, devices[deviceID], 0, &err));
@@ -481,7 +477,6 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
 #if COPY_ROW_BY_ROW
         vals_contiguous = new double[N];
 #endif
-
         mat.reset(new BlockedMatrix<block_size>(Nb, nnzb, vals, cols, rows));
 
         d_x = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
@@ -504,13 +499,13 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
         // cl::make_kernel<> myKernel(); myKernel(args, arg1, arg2); is also blocking
 
         // actually creating the kernels
-        dot_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program_, "dot_1")));
-        norm_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program_, "norm")));
-        axpy_k.reset(new cl::make_kernel<cl::Buffer&, const double, cl::Buffer&, const unsigned int>(cl::Kernel(program_, "axpy")));
-        custom_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const double, const double, const unsigned int>(cl::Kernel(program_, "custom")));
-        spmv_blocked_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program_, "spmv_blocked")));
-        ILU_apply1_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program_, "ILU_apply1")));
-        ILU_apply2_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program_, "ILU_apply2")));
+        dot_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "dot_1")));
+        norm_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "norm")));
+        axpy_k.reset(new cl::make_kernel<cl::Buffer&, const double, cl::Buffer&, const unsigned int>(cl::Kernel(program, "axpy")));
+        custom_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const double, const double, const unsigned int>(cl::Kernel(program, "custom")));
+        spmv_blocked_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "spmv_blocked")));
+        ILU_apply1_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "ILU_apply1")));
+        ILU_apply2_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "ILU_apply2")));
 
         prec->setKernels(ILU_apply1_k.get(), ILU_apply2_k.get());
 
@@ -525,9 +520,18 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
         throw error;
     }
 
-
     initialized = true;
 } // end initialize()
+
+template <unsigned int block_size>
+void openclSolverBackend<block_size>::initialize_wellContribs(WellContributions& wellContribs){
+    add_well_contributions_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::Buffer&, cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg>(cl::Kernel(program, "add_well_contributions")));
+
+    wellContribs.setOpenCLContext(context.get());
+    wellContribs.setOpenCLQueue(queue.get());
+    wellContribs.init();
+    wellContribs.setKernel(add_well_contributions_k.get());
+}
 
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::finalize() {
@@ -702,11 +706,11 @@ void openclSolverBackend<block_size>::get_result(double *x) {
 } // end get_result()
 
 
-
 template <unsigned int block_size>
 SolverStatus openclSolverBackend<block_size>::solve_system(int N_, int nnz_, int dim, double *vals, int *rows, int *cols, double *b, WellContributions& wellContribs, BdaResult &res) {
     if (initialized == false) {
         initialize(N_, nnz_,  dim, vals, rows, cols);
+        initialize_wellContribs(wellContribs);
         if (analysis_done == false) {
             if (!analyse_matrix()) {
                 return SolverStatus::BDA_SOLVER_ANALYSIS_FAILED;
@@ -719,6 +723,7 @@ SolverStatus openclSolverBackend<block_size>::solve_system(int N_, int nnz_, int
         copy_system_to_gpu();
     } else {
         update_system(vals, b);
+        initialize_wellContribs(wellContribs);
         if (!create_preconditioner()) {
             return SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
         }

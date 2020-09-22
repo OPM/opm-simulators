@@ -47,14 +47,14 @@
 #include <opm/output/eclipse/Summary.hpp>
 #include <opm/parser/eclipse/Units/UnitSystem.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/State.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQState.hpp>
 
 #include <opm/simulators/utils/ParallelRestart.hpp>
 #include <opm/grid/GridHelpers.hpp>
 #include <opm/grid/utility/cartesianToCompressed.hpp>
 
 #include <opm/material/common/Valgrind.hpp>
-#include <opm/material/common/Exceptions.hpp>
-
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <list>
@@ -68,9 +68,18 @@
 
 namespace Opm::Properties {
 
-NEW_PROP_TAG(EnableEclOutput);
-NEW_PROP_TAG(EnableAsyncEclOutput);
-NEW_PROP_TAG(EclOutputDoublePrecision);
+template<class TypeTag, class MyTypeTag>
+struct EnableEclOutput {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EnableAsyncEclOutput {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EclOutputDoublePrecision {
+    using type = UndefinedProperty;
+};
 
 } // namespace Opm::Properties
 
@@ -149,23 +158,23 @@ bool directVerticalNeighbors(const std::array<int, 3>& cartDims,
 template <class TypeTag>
 class EclWriter
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
-    typedef typename GET_PROP_TYPE(TypeTag, EquilGrid) EquilGrid;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GridView::template Codim<0>::Entity Element;
-    typedef typename GridView::template Codim<0>::Iterator ElementIterator;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Grid = GetPropType<TypeTag, Properties::Grid>;
+    using EquilGrid = GetPropType<TypeTag, Properties::EquilGrid>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Element = typename GridView::template Codim<0>::Entity;
+    using ElementIterator = typename GridView::template Codim<0>::Iterator;
 
     typedef CollectDataToIORank<Vanguard> CollectDataToIORankType;
 
     typedef std::vector<Scalar> ScalarBuffer;
 
-    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
-    enum { enableSolvent = GET_PROP_VALUE(TypeTag, EnableSolvent) };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
 
 
 public:
@@ -260,15 +269,15 @@ public:
             simulator_.setupTimer().realTimeElapsed() +
             simulator_.vanguard().externalSetupTime();
 
-        const auto localWellData  = simulator_.problem().wellModel().wellData();
-        const auto localGroupData = simulator_.problem().wellModel()
-            .groupData(reportStepNum, simulator_.vanguard().schedule());
+        const auto localWellData            = simulator_.problem().wellModel().wellData();
+        const auto localGroupAndNetworkData = simulator_.problem().wellModel()
+            .groupAndNetworkData(reportStepNum, simulator_.vanguard().schedule());
 
         this->prepareLocalCellData(isSubStep, reportStepNum);
 
         if (collectToIORank_.isParallel())
             collectToIORank_.collect({}, eclOutputModule_.getBlockData(),
-                                     localWellData, localGroupData);
+                                     localWellData, localGroupAndNetworkData);
 
         std::map<std::string, double> miscSummaryData;
         std::map<std::string, std::vector<double>> regionData;
@@ -295,9 +304,9 @@ public:
                 ? this->collectToIORank_.globalWellData()
                 : localWellData;
 
-            const auto& groupData = this->collectToIORank_.isParallel()
-                ? this->collectToIORank_.globalGroupData()
-                : localGroupData;
+            const auto& groupAndNetworkData = this->collectToIORank_.isParallel()
+                ? this->collectToIORank_.globalGroupAndNetworkData()
+                : localGroupAndNetworkData;
 
             const auto& blockData
                 = this->collectToIORank_.isParallel()
@@ -310,10 +319,14 @@ public:
                          eclState,
                          schedule(),
                          wellData,
-                         groupData,
+                         groupAndNetworkData,
                          miscSummaryData,
                          regionData,
                          blockData);
+
+            const auto& udq_config = schedule().getUDQConfig(reportStepNum);
+            udq_config.eval( reportStepNum, summaryState(), udqState() );
+
             buffer = summaryState().serialize();
         }
 
@@ -343,7 +356,8 @@ public:
 
         // output using eclWriter if enabled
         auto localWellData = simulator_.problem().wellModel().wellData();
-        auto localGroupData = simulator_.problem().wellModel().groupData(reportStepNum, simulator_.vanguard().schedule());
+        auto localGroupAndNetworkData = simulator_.problem().wellModel()
+            .groupAndNetworkData(reportStepNum, simulator_.vanguard().schedule());
 
         Opm::data::Solution localCellData = {};
         if (! isSubStep) {
@@ -353,15 +367,16 @@ public:
             this->eclOutputModule_.addRftDataToWells(localWellData, reportStepNum);
         }
 
-        if (collectToIORank_.isParallel()) {
-            collectToIORank_.collect(localCellData, eclOutputModule_.getBlockData(), localWellData, localGroupData);
+        if (this->collectToIORank_.isParallel()) {
+            collectToIORank_.collect(localCellData, eclOutputModule_.getBlockData(),
+                                     localWellData, localGroupAndNetworkData);
         }
 
         if (this->collectToIORank_.isIORank()) {
             this->writeOutput(reportStepNum, isSubStep,
                               std::move(localCellData),
                               std::move(localWellData),
-                              std::move(localGroupData));
+                              std::move(localGroupAndNetworkData));
         }
     }
 
@@ -644,6 +659,7 @@ private:
     {
         Opm::Action::State actionState_;
         Opm::SummaryState summaryState_;
+        Opm::UDQState udqState_;
         Opm::EclipseIO& eclIO_;
         int reportStepNum_;
         bool isSubStep_;
@@ -653,6 +669,7 @@ private:
 
         explicit EclWriteTasklet(const Opm::Action::State& actionState,
                                  const Opm::SummaryState& summaryState,
+                                 const Opm::UDQState& udqState,
                                  Opm::EclipseIO& eclIO,
                                  int reportStepNum,
                                  bool isSubStep,
@@ -661,6 +678,7 @@ private:
                                  bool writeDoublePrecision)
             : actionState_(actionState)
             , summaryState_(summaryState)
+            , udqState_(udqState)
             , eclIO_(eclIO)
             , reportStepNum_(reportStepNum)
             , isSubStep_(isSubStep)
@@ -674,6 +692,7 @@ private:
         {
             eclIO_.writeTimeStep(actionState_,
                                  summaryState_,
+                                 udqState_,
                                  reportStepNum_,
                                  isSubStep_,
                                  secondsElapsed_,
@@ -690,6 +709,9 @@ private:
 
     Opm::Action::State& actionState()
     { return simulator_.vanguard().actionState(); }
+
+    Opm::UDQState& udqState()
+    { return simulator_.vanguard().udqState(); }
 
     const Opm::Schedule& schedule() const
     { return simulator_.vanguard().schedule(); }
@@ -718,11 +740,11 @@ private:
         }
     }
 
-    void writeOutput(const int                  reportStepNum,
-                     const bool                 isSubStep,
-                     ::Opm::data::Solution&&    localCellData,
-                     ::Opm::data::Wells&&       localWellData,
-                     ::Opm::data::GroupValues&& localGroupData)
+    void writeOutput(const int                            reportStepNum,
+                     const bool                           isSubStep,
+                     ::Opm::data::Solution&&              localCellData,
+                     ::Opm::data::Wells&&                 localWellData,
+                     ::Opm::data::GroupAndNetworkValues&& localGroupAndNetworkData)
     {
         const Scalar curTime = simulator_.time() + simulator_.timeStepSize();
         const Scalar nextStepSize = simulator_.problem().nextTimeStepSize();
@@ -735,8 +757,8 @@ private:
             isParallel ? this->collectToIORank_.globalWellData()
                        : std::move(localWellData),
 
-            isParallel ? this->collectToIORank_.globalGroupData()
-                       : std::move(localGroupData)
+            isParallel ? this->collectToIORank_.globalGroupAndNetworkData()
+                       : std::move(localGroupAndNetworkData)
         };
 
         if (simulator_.vanguard().eclState().getSimulationConfig().useThresholdPressure()) {
@@ -752,7 +774,7 @@ private:
         // first, create a tasklet to write the data for the current time
         // step to disk
         auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(
-            this->actionState(), this->summaryState(), *this->eclIO_,
+            this->actionState(), this->summaryState(), this->udqState(), *this->eclIO_,
             reportStepNum, isSubStep, curTime, std::move(restartValue),
             EWOMS_GET_PARAM(TypeTag, bool, EclOutputDoublePrecision)
             );

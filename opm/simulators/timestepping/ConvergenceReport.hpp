@@ -162,7 +162,7 @@ namespace Opm
             for (const auto f : res_failures_) {
                 s = smax(s, f.severity());
             }
-            for (const auto f : well_failures_) {
+            for (const auto& f : well_failures_) {
                 s = smax(s, f.severity());
             }
             return s;

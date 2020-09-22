@@ -169,7 +169,7 @@ namespace Opm {
                     using VT = typename AttributeMap::value_type;
 
                     for (const auto& r : rmap.activeRegions()) {
-                        auto v = std::unique_ptr<Value>(new Value(attr));
+                        auto v = std::make_unique<Value>(attr);
 
                         const auto stat = attr_.insert(VT(r, std::move(v)));
 
@@ -435,13 +435,7 @@ namespace Opm {
 
                 // create map from cell to region
                 // and set all attributes to zero
-                const auto& grid = simulator.vanguard().grid();
-                const unsigned numCells = grid.size(/*codim=*/0);
-                std::vector<int> cell2region(numCells, -1);
                 for (const auto& reg : rmap_.activeRegions()) {
-                    for (const auto& cell : rmap_.cells(reg)) {
-                        cell2region[cell] = reg;
-                    }
                     auto& ra = attr_.attributes(reg);
                     ra.pressure = 0.0;
                     ra.temperature = 0.0;
@@ -483,7 +477,7 @@ namespace Opm {
                         hydrocarbon -= fs.saturation(FluidSystem::waterPhaseIdx).value();
                     }
 
-                    int reg = cell2region[cellIdx];
+                    int reg = rmap_.region(cellIdx);
                     assert(reg >= 0);
                     auto& ra = attr_.attributes(reg);
                     auto& p  = ra.pressure;

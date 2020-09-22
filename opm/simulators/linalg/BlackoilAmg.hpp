@@ -122,7 +122,7 @@ scaleMatrixDRS(const Operator& op, std::size_t pressureEqnIndex, const Vector& w
     using Matrix = typename Operator::matrix_type;
     using Block = typename Matrix::block_type;
     using BlockVector = typename Vector::block_type;
-    std::unique_ptr<Matrix> matrix(new Matrix(op.getmat()));
+    auto matrix = std::make_unique<Matrix>(op.getmat());
     if (param.cpr_use_drs_) {
         const auto endi = matrix->end();
         for (auto i = matrix->begin(); i != endi; ++i) {

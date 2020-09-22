@@ -458,6 +458,20 @@ add_test_compareECLFiles(CASENAME udq_wconprod
                          REL_TOL ${rel_tol}
                          DIR udq_actionx)
 
+add_test_compareECLFiles(CASENAME pinch_multz_all
+                         FILENAME PINCH_MULTZ_ALL
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR pinch)
+
+add_test_compareECLFiles(CASENAME pinch_multz_all_barrier
+                         FILENAME PINCH_MULTZ_ALL_BARRIER
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR pinch)
+
 if (opm-common_EMBEDDED_PYTHON)
   add_test_compareECLFiles(CASENAME udq_pyaction
                            FILENAME PYACTION_WCONPROD
@@ -718,6 +732,13 @@ add_test_compareECLFiles(CASENAME model4_udq_group
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model4)
+
+add_test_compareECLFiles(CASENAME model6_msw
+                         FILENAME 1_MSW_MODEL6
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model6)
 
 add_test_compareECLFiles(CASENAME wsegsicd
 			  FILENAME TEST_WSEGSICD

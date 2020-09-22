@@ -34,20 +34,23 @@
 
 namespace Opm {
 
-void flowEbosBlackoilSetDeck(double setupTime, Deck *deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
+void flowEbosBlackoilSetDeck(double setupTime, std::unique_ptr<Deck> deck,
+                             std::unique_ptr<EclipseState> eclState,
+                             std::unique_ptr<Schedule> schedule,
+                             std::unique_ptr<SummaryConfig> summaryConfig)
 {
-    typedef TTAG(EclFlowProblem) TypeTag;
-    typedef GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
+    using TypeTag = Properties::TTag::EclFlowProblem;
+    using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
 
     Vanguard::setExternalSetupTime(setupTime);
-    Vanguard::setExternalDeck(deck);
-    Vanguard::setExternalEclState(&eclState);
-    Vanguard::setExternalSchedule(&schedule);
-    Vanguard::setExternalSummaryConfig(&summaryConfig);
+    Vanguard::setExternalDeck(std::move(deck));
+    Vanguard::setExternalEclState(std::move(eclState));
+    Vanguard::setExternalSchedule(std::move(schedule));
+    Vanguard::setExternalSummaryConfig(std::move(summaryConfig));
 }
 
-std::unique_ptr<Opm::FlowMainEbos<TTAG(EclFlowProblem)>>
-flowEbosBlackoilMainInit(int argc, char** argv)
+std::unique_ptr<Opm::FlowMainEbos<Properties::TTag::EclFlowProblem>>
+flowEbosBlackoilMainInit(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
@@ -59,14 +62,15 @@ flowEbosBlackoilMainInit(int argc, char** argv)
     Dune::MPIHelper::instance(argc, argv);
 #endif
 
-    return std::make_unique<Opm::FlowMainEbos<TTAG(EclFlowProblem)>>();
+    return std::make_unique<Opm::FlowMainEbos<Properties::TTag::EclFlowProblem>>(
+        argc, argv, outputCout, outputFiles);
 }
 
 // ----------------- Main program -----------------
 int flowEbosBlackoilMain(int argc, char** argv, bool outputCout, bool outputFiles)
 {
-    auto mainfunc = flowEbosBlackoilMainInit(argc, argv);
-    return mainfunc->execute(argc, argv, outputCout, outputFiles);
+    auto mainfunc = flowEbosBlackoilMainInit(argc, argv, outputCout, outputFiles);
+    return mainfunc->execute();
 }
 
 }

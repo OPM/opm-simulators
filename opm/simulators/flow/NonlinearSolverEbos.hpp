@@ -36,18 +36,52 @@
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(FlowNonLinearSolver);
-NEW_PROP_TAG(NewtonMaxRelax);
-NEW_PROP_TAG(FlowNewtonMaxIterations);
-NEW_PROP_TAG(FlowNewtonMinIterations);
-NEW_PROP_TAG(FlowNewtonMaxSeqIterations);
-NEW_PROP_TAG(NewtonRelaxationType);
+namespace TTag {
+struct FlowNonLinearSolver {};
+}
 
-SET_SCALAR_PROP(FlowNonLinearSolver, NewtonMaxRelax, 0.5);
-SET_INT_PROP(FlowNonLinearSolver, FlowNewtonMaxIterations, 20);
-SET_INT_PROP(FlowNonLinearSolver, FlowNewtonMinIterations, 1);
-SET_INT_PROP(FlowNonLinearSolver, FlowNewtonMaxSeqIterations, 10);
-SET_STRING_PROP(FlowNonLinearSolver, NewtonRelaxationType, "dampen");
+template<class TypeTag, class MyTypeTag>
+struct NewtonMaxRelax {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct FlowNewtonMaxIterations {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct FlowNewtonMinIterations{
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct NewtonRelaxationType{
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct FlowNewtonMaxSeqIterations{
+    using type = UndefinedProperty;
+};
+
+template<class TypeTag>
+struct NewtonMaxRelax<TypeTag, TTag::FlowNonLinearSolver> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.5;
+};
+template<class TypeTag>
+struct FlowNewtonMaxIterations<TypeTag, TTag::FlowNonLinearSolver> {
+    static constexpr int value = 20;
+};
+template<class TypeTag>
+struct FlowNewtonMinIterations<TypeTag, TTag::FlowNonLinearSolver> {
+    static constexpr int value = 1;
+};
+template<class TypeTag>
+struct NewtonRelaxationType<TypeTag, TTag::FlowNonLinearSolver> {
+    static constexpr auto value = "dampen";
+};
+template<class TypeTag>
+struct FlowNewtonMaxSeqIterations<TypeTag, TTag::FlowNonLinearSolver> {
+    static constexpr int value = 10;
+};
 
 } // namespace Opm::Properties
 
@@ -59,7 +93,7 @@ namespace Opm {
     template <class TypeTag, class PhysicalModel>
     class NonlinearSolverEbos
     {
-        typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+        using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
     public:
         // Available relaxation scheme types.

@@ -32,32 +32,39 @@
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(EbosThermalTypeTag, INHERITS_FROM(EbosTypeTag));
+namespace TTag {
+struct EbosThermalTypeTag {
+    using InheritsFrom = std::tuple<EbosTypeTag>;
+};
+}
 
 // enable the energy extension of the black oil model
-SET_BOOL_PROP(EbosThermalTypeTag, EnableEnergy, true);
+template<class TypeTag>
+struct EnableEnergy<TypeTag, TTag::EbosThermalTypeTag> {
+    static constexpr bool value = true;
+};
 
 } // namespace Opm::Properties
 
 namespace Opm {
 
-void ebosThermalSetDeck(Opm::Deck* deck,
-                        Opm::ParseContext* parseContext,
-                        Opm::ErrorGuard* errorGuard,
+void ebosThermalSetDeck(std::unique_ptr<Opm::Deck> deck,
+                        std::unique_ptr<Opm::ParseContext> parseContext,
+                        std::unique_ptr<Opm::ErrorGuard> errorGuard,
                         double externalSetupTime)
 {
-    typedef TTAG(EbosThermalTypeTag) ProblemTypeTag;
-    typedef GET_PROP_TYPE(ProblemTypeTag, Vanguard) Vanguard;
+    using ProblemTypeTag = Properties::TTag::EbosThermalTypeTag;
+    using Vanguard = GetPropType<ProblemTypeTag, Properties::Vanguard>;
 
     Vanguard::setExternalSetupTime(externalSetupTime);
-    Vanguard::setExternalParseContext(parseContext);
-    Vanguard::setExternalErrorGuard(errorGuard);
-    Vanguard::setExternalDeck(deck);
+    Vanguard::setExternalParseContext(std::move(parseContext));
+    Vanguard::setExternalErrorGuard(std::move(errorGuard));
+    Vanguard::setExternalDeck(std::move(deck));
 }
 
 int ebosThermalMain(int argc, char **argv)
 {
-    typedef TTAG(EbosThermalTypeTag) ProblemTypeTag;
+    using ProblemTypeTag = Properties::TTag::EbosThermalTypeTag;
     return Opm::startEbos<ProblemTypeTag>(argc, argv);
 }
 

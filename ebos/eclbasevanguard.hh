@@ -48,7 +48,10 @@
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/State.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQState.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQConfig.hpp>
 
+#include <opm/simulators/utils/readDeck.hpp>
 
 #if HAVE_MPI
 #include <mpi.h>
@@ -66,27 +69,80 @@ class EclBaseVanguard;
 
 namespace Opm::Properties {
 
-NEW_TYPE_TAG(EclBaseVanguard);
+namespace TTag {
+struct EclBaseVanguard {};
+}
 
 // declare the properties required by the for the ecl simulator vanguard
-NEW_PROP_TAG(EquilGrid);
-NEW_PROP_TAG(EclDeckFileName);
-NEW_PROP_TAG(EnableOpmRstFile);
-NEW_PROP_TAG(EclStrictParsing);
-NEW_PROP_TAG(SchedRestart);
-NEW_PROP_TAG(EclOutputInterval);
-NEW_PROP_TAG(IgnoreKeywords);
-NEW_PROP_TAG(EdgeWeightsMethod);
-NEW_PROP_TAG(OwnerCellsFirst);
+template<class TypeTag, class MyTypeTag>
+struct EquilGrid {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EclDeckFileName {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EnableOpmRstFile {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EclStrictParsing {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct SchedRestart {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EclOutputInterval {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct IgnoreKeywords {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EdgeWeightsMethod {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct OwnerCellsFirst {
+    using type = UndefinedProperty;
+};
 
-SET_STRING_PROP(EclBaseVanguard, IgnoreKeywords, "");
-SET_STRING_PROP(EclBaseVanguard, EclDeckFileName, "");
-SET_INT_PROP(EclBaseVanguard, EclOutputInterval, -1); // use the deck-provided value
-SET_BOOL_PROP(EclBaseVanguard, EnableOpmRstFile, false);
-SET_BOOL_PROP(EclBaseVanguard, EclStrictParsing, false);
-SET_BOOL_PROP(EclBaseVanguard, SchedRestart, false);
-SET_INT_PROP(EclBaseVanguard, EdgeWeightsMethod, 1);
-SET_BOOL_PROP(EclBaseVanguard, OwnerCellsFirst, true);
+template<class TypeTag>
+struct IgnoreKeywords<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr auto value = "";
+};
+template<class TypeTag>
+struct EclDeckFileName<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr auto value = "";
+};
+template<class TypeTag>
+struct EclOutputInterval<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr int value = -1;
+};
+template<class TypeTag>
+struct EnableOpmRstFile<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct EclStrictParsing<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct SchedRestart<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct EdgeWeightsMethod<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr int value = 1;
+};
+template<class TypeTag>
+struct OwnerCellsFirst<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr bool value = true;
+};
 
 } // namespace Opm::Properties
 
@@ -100,16 +156,16 @@ namespace Opm {
 template <class TypeTag>
 class EclBaseVanguard : public BaseVanguard<TypeTag>
 {
-    typedef BaseVanguard<TypeTag> ParentType;
-    typedef typename GET_PROP_TYPE(TypeTag, Vanguard) Implementation;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+    using ParentType = BaseVanguard<TypeTag>;
+    using Implementation = GetPropType<TypeTag, Properties::Vanguard>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
-    enum { enableExperiments = GET_PROP_VALUE(TypeTag, EnableExperiments) };
+    enum { enableExperiments = getPropValue<TypeTag, Properties::EnableExperiments>() };
 
 public:
-    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    using Grid = GetPropType<TypeTag, Properties::Grid>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
 
 protected:
     static const int dimension = Grid::dimension;
@@ -183,7 +239,7 @@ public:
         tmp.emplace_back(Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN);
         tmp.emplace_back(Opm::ParseContext::PARSE_EXTRA_RECORDS, Opm::InputError::WARN);
 
-        std::unique_ptr<Opm::ParseContext> parseContext(new Opm::ParseContext(tmp));
+        auto parseContext = std::make_unique<Opm::ParseContext>(tmp);
 
         const std::string ignoredKeywords = EWOMS_GET_PARAM(TypeTag, std::string, IgnoreKeywords);
         if (ignoredKeywords.size() > 0) {
@@ -223,14 +279,14 @@ public:
     /*!
      * \brief Set the Opm::ParseContext object which ought to be used for parsing the deck and creating the Opm::EclipseState object.
      */
-    static void setExternalParseContext(Opm::ParseContext* parseContext)
-    { externalParseContext_ = parseContext; }
+    static void setExternalParseContext(std::unique_ptr<Opm::ParseContext> parseContext)
+    { externalParseContext_ = std::move(parseContext); }
 
     /*!
      * \brief Set the Opm::ErrorGuard object which ought to be used for parsing the deck and creating the Opm::EclipseState object.
      */
-    static void setExternalErrorGuard(Opm::ErrorGuard* errorGuard)
-    { externalErrorGuard_ = errorGuard; }
+    static void setExternalErrorGuard(std::unique_ptr<Opm::ErrorGuard> errorGuard)
+    { externalErrorGuard_ = std::move(errorGuard); }
 
     /*!
      * \brief Set the Opm::Deck object which ought to be used when the simulator vanguard
@@ -242,14 +298,14 @@ public:
      * management of these two objects, i.e., they are not allowed to be deleted as long
      * as the simulator vanguard object is alive.
      */
-    static void setExternalDeck(Opm::Deck* deck)
-    { externalDeck_ = deck; externalDeckSet_ = true; }
+    static void setExternalDeck(std::unique_ptr<Opm::Deck> deck)
+    { externalDeck_ = std::move(deck); externalDeckSet_ = true; }
     /*!
      * \brief Set the Opm::EclipseState object which ought to be used when the simulator
      *        vanguard is instantiated.
      */
-    static void setExternalEclState(Opm::EclipseState* eclState)
-    { externalEclState_ = eclState; }
+    static void setExternalEclState(std::unique_ptr<Opm::EclipseState> eclState)
+    { externalEclState_ = std::move(eclState); }
 
     /*!
      * \brief Create the grid for problem data files which use the ECL file format.
@@ -300,81 +356,48 @@ public:
             std::transform(caseName_.begin(), caseName_.end(), caseName_.begin(), ::toupper);
         }
 
-        // create the parser objects for the deck or use their externally specified
-        // versions (if desired)
-        if (!externalParseContext_) {
-            internalParseContext_ = createParseContext();
-            parseContext_ = internalParseContext_.get();
+        std::unique_ptr<ErrorGuard> errorGuard = nullptr;
+
+        // Check that we are in one of the known configurations for external variables
+        // and move them to internal
+        if (externalDeck_)
+        {
+            deck_ = std::move(externalDeck_);
+
+            if (externalParseContext_ && externalErrorGuard_ )
+            {
+                parseContext_ = std::move(externalParseContext_);
+                errorGuard = std::move(externalErrorGuard_);
+            }
+            else if(externalEclState_ && externalEclSchedule_ && externalEclSummaryConfig_)
+            {
+                eclState_ = std::move(externalEclState_);
+                eclSchedule_ = std::move(externalEclSchedule_);
+                eclSummaryConfig_ = std::move(externalEclSummaryConfig_);
+            }
+            else
+            {
+                OPM_THROW(std::logic_error, "Either parse context and error guard or ECL state, schedule, and summary config need to be"
+                          << " set externally.");
+            }
+        }
+        else if (externalParseContext_)
+        {
+            parseContext_ = std::move(externalParseContext_);
         }
         else
-            parseContext_ = externalParseContext_;
-
-        if (!externalParseContext_) {
-            internalErrorGuard_.reset(new Opm::ErrorGuard);
-            errorGuard_ = internalErrorGuard_.get();
-        }
-        else
-            errorGuard_ = externalErrorGuard_;
-
-        if (!externalDeck_ && !externalDeckSet_) {
-            if (myRank == 0)
-                std::cout << "Reading the deck file '" << fileName << "'" << std::endl;
-
-            Opm::Parser parser;
-            internalDeck_.reset(new Opm::Deck(parser.parseFile(fileName, *parseContext_, *errorGuard_)));
-            deck_ = internalDeck_.get();
-
-            if (enableExperiments && myRank == 0)
-                Opm::checkDeck(*deck_, parser,  *parseContext_, *errorGuard_);
-        }
-        else {
-            deck_ = externalDeck_;
+        {
+            parseContext_ = createParseContext();
         }
 
-        if (!externalEclState_) {
-            internalEclState_.reset(new Opm::EclipseState(*deck_));
-            eclState_ = internalEclState_.get();
-        }
-        else {
-            assert(externalEclState_);
+        readDeck(myRank, fileName, deck_, eclState_, eclSchedule_,
+                 eclSummaryConfig_, std::move(errorGuard), python,
+                 std::move(parseContext_), /* initFromRestart = */ false,
+                 /* checkDeck = */ enableExperiments);
 
-            deck_ = externalDeck_;
-            eclState_ = externalEclState_;
-        }
-
-        if (!externalEclSchedule_) {
-            // create the schedule object. Note that if eclState is supposed to represent
-            // the internalized version of the deck, this constitutes a layering
-            // violation.
-            internalEclSchedule_.reset(new Opm::Schedule(*deck_, *eclState_, *parseContext_, *errorGuard_, python));
-            eclSchedule_ = internalEclSchedule_.get();
-        }
-        else
-            eclSchedule_ = externalEclSchedule_;
-        this->summaryState_.reset( new Opm::SummaryState( std::chrono::system_clock::from_time_t(this->eclSchedule_->getStartTime() )));
-        this->actionState_.reset( new Opm::Action::State() );
-
-        if (!externalEclSummaryConfig_) {
-            // create the schedule object. Note that if eclState is supposed to represent
-            // the internalized version of the deck, this constitutes a layering
-            // violation.
-            internalEclSummaryConfig_.reset(new Opm::SummaryConfig(*deck_,
-                                                                   *eclSchedule_,
-                                                                   eclState_->getTableManager(),
-                                                                   *parseContext_,
-                                                                   *errorGuard_));
-
-            eclSummaryConfig_ = internalEclSummaryConfig_.get();
-        }
-        else
-            eclSummaryConfig_ = externalEclSummaryConfig_;
-
-        if (*errorGuard_) {
-            errorGuard_->dump();
-            errorGuard_->clear();
-
-            throw std::runtime_error("Unrecoverable errors were encountered while loading input.");
-        }
+        this->summaryState_ = std::make_unique<Opm::SummaryState>( std::chrono::system_clock::from_time_t(this->eclSchedule_->getStartTime() ));
+        this->udqState_ = std::make_unique<Opm::UDQState>( this->eclSchedule_->getUDQConfig(0).params().undefinedValue() );
+        this->actionState_ = std::make_unique<Opm::Action::State>() ;
 
         // Possibly override IOConfig setting for how often RESTART files should get
         // written to disk (every N report step)
@@ -416,8 +439,8 @@ public:
      * The lifetime of this object is not managed by the vanguard, i.e., the object must
      * stay valid until after the vanguard gets destroyed.
      */
-    static void setExternalSchedule(Opm::Schedule* schedule)
-    { externalEclSchedule_ = schedule; }
+    static void setExternalSchedule(std::unique_ptr<Opm::Schedule> schedule)
+    { externalEclSchedule_ = std::move(schedule); }
 
     /*!
      * \brief Return a reference to the object that determines which quantities ought to
@@ -432,8 +455,8 @@ public:
      * The lifetime of this object is not managed by the vanguard, i.e., the object must
      * stay valid until after the vanguard gets destroyed.
      */
-    static void setExternalSummaryConfig(Opm::SummaryConfig* summaryConfig)
-    { externalEclSummaryConfig_ = summaryConfig; }
+    static void setExternalSummaryConfig(std::unique_ptr<Opm::SummaryConfig> summaryConfig)
+    { externalEclSummaryConfig_ = std::move(summaryConfig); }
 
 
     /*!
@@ -462,6 +485,17 @@ public:
     { return *actionState_; }
 
     /*!
+     * \brief Returns the udq state
+     *
+     * The UDQState keeps track of the result of UDQ evaluations.
+     */
+    Opm::UDQState& udqState()
+    { return *udqState_; }
+
+    const Opm::UDQState& udqState() const
+    { return *udqState_; }
+
+    /*!
      * \brief Parameter deciding the edge-weight strategy of the load balancer.
      */
     Dune::EdgeWeightMethod edgeWeightsMethod() const
@@ -472,7 +506,7 @@ public:
      */
     bool ownersFirst() const
     { return ownersFirst_; }
-    
+
     /*!
      * \brief Returns the name of the case.
      *
@@ -573,8 +607,11 @@ protected:
         asImp_().finalizeInit_();
 
         if (enableExperiments) {
-            Opm::RelpermDiagnostics relpermDiagnostics;
-            relpermDiagnostics.diagnosis(*eclState_, asImp_().grid());
+            if (asImp_().grid().size(0)) //grid not loadbalanced yet for ebos!
+            {
+                Opm::RelpermDiagnostics relpermDiagnostics;
+                relpermDiagnostics.diagnosis(*eclState_, asImp_().grid());
+            }
         }
     }
 private:
@@ -616,31 +653,26 @@ private:
 
     static Scalar externalSetupTime_;
 
-    static Opm::ParseContext* externalParseContext_;
-    static Opm::ErrorGuard* externalErrorGuard_;
-    static Opm::Deck* externalDeck_;
+    static std::unique_ptr<Opm::ParseContext> externalParseContext_;
+    static std::unique_ptr<Opm::ErrorGuard> externalErrorGuard_;
+    static std::unique_ptr<Opm::Deck> externalDeck_;
     static bool externalDeckSet_;
-    static Opm::EclipseState* externalEclState_;
-    static Opm::Schedule* externalEclSchedule_;
-    static Opm::SummaryConfig* externalEclSummaryConfig_;
+    static std::unique_ptr<Opm::EclipseState> externalEclState_;
+    static std::unique_ptr<Opm::Schedule> externalEclSchedule_;
+    static std::unique_ptr<Opm::SummaryConfig> externalEclSummaryConfig_;
 
-    std::unique_ptr<Opm::ParseContext> internalParseContext_;
-    std::unique_ptr<Opm::ErrorGuard> internalErrorGuard_;
-    std::unique_ptr<Opm::Deck> internalDeck_;
-    std::unique_ptr<Opm::EclipseState> internalEclState_;
-    std::unique_ptr<Opm::Schedule> internalEclSchedule_;
-    std::unique_ptr<Opm::SummaryConfig> internalEclSummaryConfig_;
     std::unique_ptr<Opm::SummaryState> summaryState_;
     std::unique_ptr<Opm::Action::State> actionState_;
+    std::unique_ptr<Opm::UDQState> udqState_;
 
     // these attributes point  either to the internal  or to the external version of the
     // parser objects.
-    Opm::ParseContext* parseContext_;
-    Opm::ErrorGuard* errorGuard_;
-    Opm::Deck* deck_;
-    Opm::EclipseState* eclState_;
-    Opm::Schedule* eclSchedule_;
-    Opm::SummaryConfig* eclSummaryConfig_;
+    std::unique_ptr<Opm::ParseContext> parseContext_;
+    std::unique_ptr<Opm::ErrorGuard> errorGuard_;
+    std::unique_ptr<Opm::Deck> deck_;
+    std::unique_ptr<Opm::EclipseState> eclState_;
+    std::unique_ptr<Opm::Schedule> eclSchedule_;
+    std::unique_ptr<Opm::SummaryConfig> eclSummaryConfig_;
     std::shared_ptr<Opm::Python> python = std::make_shared<Opm::Python>();
 
     Dune::EdgeWeightMethod edgeWeightsMethod_;
@@ -657,25 +689,25 @@ template <class TypeTag>
 typename EclBaseVanguard<TypeTag>::Scalar EclBaseVanguard<TypeTag>::externalSetupTime_ = 0.0;
 
 template <class TypeTag>
-Opm::ParseContext* EclBaseVanguard<TypeTag>::externalParseContext_ = nullptr;
+std::unique_ptr<Opm::ParseContext> EclBaseVanguard<TypeTag>::externalParseContext_ = nullptr;
 
 template <class TypeTag>
-Opm::ErrorGuard* EclBaseVanguard<TypeTag>::externalErrorGuard_ = nullptr;
+std::unique_ptr<Opm::ErrorGuard> EclBaseVanguard<TypeTag>::externalErrorGuard_ = nullptr;
 
 template <class TypeTag>
-Opm::Deck* EclBaseVanguard<TypeTag>::externalDeck_ = nullptr;
+std::unique_ptr<Opm::Deck> EclBaseVanguard<TypeTag>::externalDeck_ = nullptr;
 
 template <class TypeTag>
 bool EclBaseVanguard<TypeTag>::externalDeckSet_ = false;
 
 template <class TypeTag>
-Opm::EclipseState* EclBaseVanguard<TypeTag>::externalEclState_;
+std::unique_ptr<Opm::EclipseState> EclBaseVanguard<TypeTag>::externalEclState_;
 
 template <class TypeTag>
-Opm::Schedule* EclBaseVanguard<TypeTag>::externalEclSchedule_ = nullptr;
+std::unique_ptr<Opm::Schedule> EclBaseVanguard<TypeTag>::externalEclSchedule_ = nullptr;
 
 template <class TypeTag>
-Opm::SummaryConfig* EclBaseVanguard<TypeTag>::externalEclSummaryConfig_ = nullptr;
+std::unique_ptr<Opm::SummaryConfig> EclBaseVanguard<TypeTag>::externalEclSummaryConfig_ = nullptr;
 
 } // namespace Opm
 

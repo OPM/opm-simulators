@@ -31,21 +31,31 @@
 
 namespace Opm {
 namespace Properties {
-NEW_TYPE_TAG(EclFlowPolymerProblem, INHERITS_FROM(EclFlowProblem));
-SET_BOOL_PROP(EclFlowPolymerProblem, EnablePolymer, true);
+namespace TTag {
+struct EclFlowPolymerProblem {
+    using InheritsFrom = std::tuple<EclFlowProblem>;
+};
+}
+template<class TypeTag>
+struct EnablePolymer<TypeTag, TTag::EclFlowPolymerProblem> {
+    static constexpr bool value = true;
+};
 }}
 
 namespace Opm {
-void flowEbosPolymerSetDeck(double setupTime, Deck *deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
+void flowEbosPolymerSetDeck(double setupTime, std::unique_ptr<Deck> deck,
+                            std::unique_ptr<EclipseState> eclState,
+                            std::unique_ptr<Schedule> schedule,
+                            std::unique_ptr<SummaryConfig> summaryConfig)
 {
-    typedef TTAG(EclFlowPolymerProblem) TypeTag;
-    typedef GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
+    using TypeTag = Properties::TTag::EclFlowPolymerProblem;
+    using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
 
     Vanguard::setExternalSetupTime(setupTime);
-    Vanguard::setExternalDeck(deck);
-    Vanguard::setExternalEclState(&eclState);
-    Vanguard::setExternalSchedule(&schedule);
-    Vanguard::setExternalSummaryConfig(&summaryConfig);
+    Vanguard::setExternalDeck(std::move(deck));
+    Vanguard::setExternalEclState(std::move(eclState));
+    Vanguard::setExternalSchedule(std::move(schedule));
+    Vanguard::setExternalSummaryConfig(std::move(summaryConfig));
 }
 
 // ----------------- Main program -----------------
@@ -62,8 +72,9 @@ int flowEbosPolymerMain(int argc, char** argv, bool outputCout, bool outputFiles
     Dune::MPIHelper::instance(argc, argv).rank();
 #endif
 
-    Opm::FlowMainEbos<TTAG(EclFlowPolymerProblem)> mainfunc;
-    return mainfunc.execute(argc, argv, outputCout, outputFiles);
+    Opm::FlowMainEbos<Properties::TTag::EclFlowPolymerProblem>
+        mainfunc {argc, argv, outputCout, outputFiles};
+    return mainfunc.execute();
 }
 
 }

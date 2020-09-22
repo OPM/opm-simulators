@@ -33,9 +33,9 @@
 #include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
 
 namespace Opm {
-void ebosFoamSetDeck(Opm::Deck* deck,
-                     Opm::ParseContext* parseContext,
-                     Opm::ErrorGuard* errorGuard,
+void ebosFoamSetDeck(std::unique_ptr<Opm::Deck> deck,
+                     std::unique_ptr<Opm::ParseContext> parseContext,
+                     std::unique_ptr<Opm::ErrorGuard> errorGuard,
                      double externalSetupTime);
 
 int ebosFoamMain(int argc, char** argv);

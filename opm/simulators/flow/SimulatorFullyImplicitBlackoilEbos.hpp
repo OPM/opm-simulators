@@ -31,17 +31,31 @@
 #include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
 #include <opm/grid/utility/StopWatch.hpp>
 
-#include <opm/common/Exceptions.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
 namespace Opm::Properties {
 
-NEW_PROP_TAG(EnableAdaptiveTimeStepping);
-NEW_PROP_TAG(EnableTuning);
+template<class TypeTag, class MyTypeTag>
+struct EnableAdaptiveTimeStepping {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EnableTuning {
+    using type = UndefinedProperty;
+};
 
-SET_BOOL_PROP(EclFlowProblem, EnableTerminalOutput, true);
-SET_BOOL_PROP(EclFlowProblem, EnableAdaptiveTimeStepping, true);
-SET_BOOL_PROP(EclFlowProblem, EnableTuning, false);
+template<class TypeTag>
+struct EnableTerminalOutput<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = true;
+};
+template<class TypeTag>
+struct EnableAdaptiveTimeStepping<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = true;
+};
+template<class TypeTag>
+struct EnableTuning<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = false;
+};
 
 } // namespace Opm::Properties
 
@@ -53,15 +67,15 @@ template<class TypeTag>
 class SimulatorFullyImplicitBlackoilEbos
 {
 public:
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) BlackoilIndices;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables)  PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, SolutionVector)    SolutionVector ;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Grid = GetPropType<TypeTag, Properties::Grid>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using BlackoilIndices = GetPropType<TypeTag, Properties::Indices>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
+    using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
 
     typedef AdaptiveTimeSteppingEbos<TypeTag> TimeStepper;
     typedef Opm::BlackOilPolymerModule<TypeTag> PolymerModule;
@@ -315,12 +329,12 @@ protected:
 
     std::unique_ptr<Solver> createSolver(WellModel& wellModel)
     {
-        auto model = std::unique_ptr<Model>(new Model(ebosSimulator_,
-                                                      modelParam_,
-                                                      wellModel,
-                                                      terminalOutput_));
+        auto model = std::make_unique<Model>(ebosSimulator_,
+                                             modelParam_,
+                                             wellModel,
+                                             terminalOutput_);
 
-        return std::unique_ptr<Solver>(new Solver(solverParam_, std::move(model)));
+        return std::make_unique<Solver>(solverParam_, std::move(model));
     }
 
     void outputTimestampFIP(const SimulatorTimer& timer, const std::string version)

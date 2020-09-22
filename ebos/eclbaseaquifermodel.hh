@@ -48,8 +48,8 @@ namespace Opm {
 template <class TypeTag>
 class EclBaseAquiferModel
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
 
 public:
     EclBaseAquiferModel(Simulator& simulator)

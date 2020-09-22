@@ -76,13 +76,22 @@
     }
 
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
+namespace TTag {
+struct TestEclOutputTypeTag {
+    using InheritsFrom = std::tuple<EclBaseProblem, BlackOilModel>;
+};
+}
+template<class TypeTag>
+struct EnableGravity<TypeTag, TTag::TestEclOutputTypeTag> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct EnableAsyncEclOutput<TypeTag, TTag::TestEclOutputTypeTag> {
+    static constexpr bool value = false;
+};
 
-NEW_TYPE_TAG(TestEclOutputTypeTag, INHERITS_FROM(BlackOilModel, EclBaseProblem));
-SET_BOOL_PROP(TestEclOutputTypeTag, EnableGravity, false);
-SET_BOOL_PROP(TestEclOutputTypeTag, EnableAsyncEclOutput, false);
-
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace {
 std::unique_ptr<Opm::EclIO::ESmry> readsum(const std::string& base)
@@ -105,10 +114,10 @@ double ecl_sum_get_general_var(const Opm::EclIO::ESmry* smry,
 }
 
 template <class TypeTag>
-std::unique_ptr<typename GET_PROP_TYPE(TypeTag, Simulator)>
+std::unique_ptr<Opm::GetPropType<TypeTag, Opm::Properties::Simulator>>
 initSimulator(const char *filename)
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+    using Simulator = Opm::GetPropType<TypeTag, Opm::Properties::Simulator>;
 
     std::string filenameArg = "--ecl-deck-file-name=";
     filenameArg += filename;
@@ -125,12 +134,12 @@ initSimulator(const char *filename)
 
 void test_summary()
 {
-    typedef typename TTAG(TestEclOutputTypeTag) TypeTag;
+    using TypeTag = Opm::Properties::TTag::TestEclOutputTypeTag;
     const std::string filename = "SUMMARY_DECK_NON_CONSTANT_POROSITY.DATA";
     const std::string casename = "SUMMARY_DECK_NON_CONSTANT_POROSITY";
 
     auto simulator = initSimulator<TypeTag>(filename.data());
-    typedef typename GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
+    using Vanguard = Opm::GetPropType<TypeTag, Opm::Properties::Vanguard>;
     typedef Opm::CollectDataToIORank< Vanguard > CollectDataToIORankType;
     CollectDataToIORankType collectToIORank(simulator->vanguard());
     Opm::EclOutputBlackOilModule<TypeTag> eclOutputModule(*simulator, collectToIORank);
@@ -270,7 +279,7 @@ int main(int argc, char** argv)
     Dune::MPIHelper::instance(argc, argv);
 #endif
 
-    typedef TTAG(TestEclOutputTypeTag) TypeTag;
+    using TypeTag = Opm::Properties::TTag::TestEclOutputTypeTag;
     Opm::registerAllParameters_<TypeTag>();
     test_summary();
     test_readWriteWells();

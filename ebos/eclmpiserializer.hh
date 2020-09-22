@@ -97,7 +97,7 @@ public:
     }
 
 
-    //! \brief Handler for std::variant<> with three types
+    //! \brief Handler for std::variant<> with four types
 
     /*
       The std::variant<> serialization is a first attempt and *not* particularly
@@ -146,6 +146,53 @@ public:
         }
     }
 
+
+    //! \brief Handler for std::variant<> with two fundamental types
+
+    /*
+      This std::variant serialization is highly specialized:
+
+        1. It is hardcoded to take exactly two types T0 and T1.
+
+        2. Both T0 and T1 must be basic types where Mpi::pack(T, ...) overloads
+           must exist.
+
+    */
+    template<class T0, class T1>
+    void variant(const std::variant<T0,T1>& data)
+    {
+        auto pack_size = [&](auto& d) {
+                             m_packSize += Mpi::packSize(d, m_comm);
+                         };
+
+        auto pack = [&](auto& d) {
+                          Mpi::pack(d, m_buffer, m_position, m_comm);
+                      };
+
+        if (m_op == Operation::PACKSIZE) {
+            m_packSize += Mpi::packSize(data.index(), m_comm);
+            std::visit( [&] (auto& arg) { pack_size(arg); }, data);
+        } else if (m_op == Operation::PACK) {
+            Mpi::pack(data.index(), m_buffer, m_position, m_comm);
+            std::visit([&](auto& arg) { pack(arg); }, data);
+        } else if (m_op == Operation::UNPACK) {
+            size_t index;
+            std::variant<T0,T1>& mutable_data = const_cast<std::variant<T0,T1>&>(data);
+            Mpi::unpack(index, m_buffer, m_position, m_comm);
+
+            if (index == 0) {
+                T0 t0;
+                Mpi::unpack(t0, m_buffer, m_position, m_comm);
+                mutable_data = t0;
+            } else if (index == 1) {
+                T1 t1;
+                Mpi::unpack(t1, m_buffer, m_position, m_comm);
+                mutable_data = t1;
+            } else
+                throw std::logic_error("Internal meltdown in std::variant<T0,T1> unpack loaded index=" + std::to_string(index) + " allowed range: [0,1]");
+        }
+
+    }
 
     //! \brief Handler for maps.
     //! \tparam Map map type

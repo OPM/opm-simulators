@@ -43,13 +43,21 @@
 namespace Opm::Properties {
 
 // create new type tag for the VTK tracer output
-NEW_TYPE_TAG(VtkEclTracer);
+namespace TTag {
+struct VtkEclTracer {};
+}
 
 // create the property tags needed for the tracer model
-NEW_PROP_TAG(VtkWriteEclTracerConcentration);
+template<class TypeTag, class MyTypeTag>
+struct VtkWriteEclTracerConcentration {
+    using type = UndefinedProperty;
+};
 
 // set default values for what quantities to output
-SET_BOOL_PROP(VtkEclTracer, VtkWriteEclTracerConcentration, false);
+template<class TypeTag>
+struct VtkWriteEclTracerConcentration<TypeTag, TTag::VtkEclTracer> {
+    static constexpr bool value = false;
+};
 
 } // namespace Opm::Properties
 
@@ -64,15 +72,15 @@ namespace Opm {
     {
         typedef BaseOutputModule<TypeTag> ParentType;
 
-        typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-        typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-        typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-        typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+        using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+        using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+        using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+        using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
-        typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-        typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+        using GridView = GetPropType<TypeTag, Properties::GridView>;
+        using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
-        static const int vtkFormat = GET_PROP_VALUE(TypeTag, VtkOutputFormat);
+        static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
         typedef Opm::VtkMultiWriter<GridView, vtkFormat> VtkMultiWriter;
 
 

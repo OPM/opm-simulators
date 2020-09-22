@@ -24,7 +24,10 @@
 
 
 namespace Opm {
-void flowEbosFoamSetDeck(double setupTime, Deck *deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig);
+void flowEbosFoamSetDeck(double setupTime, std::unique_ptr<Deck> deck,
+                         std::unique_ptr<EclipseState> eclState,
+                         std::unique_ptr<Schedule> schedule,
+                         std::unique_ptr<SummaryConfig> summaryConfig);
 int flowEbosFoamMain(int argc, char** argv, bool outputCout, bool outputFiles);
 }
 

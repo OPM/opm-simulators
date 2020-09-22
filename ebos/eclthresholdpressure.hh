@@ -40,8 +40,6 @@
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 
-#include <opm/material/common/Exceptions.hpp>
-
 #include <dune/grid/common/gridenums.hh>
 #include <dune/common/version.hh>
 
@@ -64,13 +62,13 @@ namespace Opm {
 template <class TypeTag>
 class EclThresholdPressure
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
-    enum { enableExperiments = GET_PROP_VALUE(TypeTag, EnableExperiments) };
+    enum { enableExperiments = getPropValue<TypeTag, Properties::EnableExperiments>() };
     enum { numPhases = FluidSystem::numPhases };
 
 public:
