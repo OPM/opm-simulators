@@ -514,9 +514,9 @@ private:
 
     void updateFromEclState_(bool global)
     {
-        const FieldPropsManager* fp =
-            (global) ? &(vanguard_.eclState().fieldProps()) :
-            &(vanguard_.eclState().globalFieldProps());
+        FieldPropsManager* fp =
+            const_cast<FieldPropsManager*>((global) ? &(vanguard_.eclState().fieldProps()) :
+                                           &(vanguard_.eclState().globalFieldProps()));
 
         std::array<bool,3> is_tran {fp->tran_active("TRANX"),
                                     fp->tran_active("TRANY"),
@@ -535,8 +535,10 @@ private:
 
         for (auto it = trans.begin(); it != trans.end(); ++it, ++key, ++perform)
         {
-            if(perform)
+            if(perform) {
                 fp->apply_tran(*key, *it);
+                fp->drop_tran(*key);
+            }
         }
 
         resetTransmissibilityFromArrays(is_tran, trans);
