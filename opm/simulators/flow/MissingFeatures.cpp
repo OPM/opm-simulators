@@ -883,7 +883,7 @@ namespace MissingFeatures {
             it = unsupported_keywords.find(keyword.name());
             if (it != unsupported_keywords.end()) {
                 std::string msg = "Keyword '" + keyword.name() + "' is not supported by flow.\n"
-                    + "In file " + location.filename + ", line " + std::to_string(location.lineno) + "\n";
+                    + "In " + location.filename + " line " + std::to_string(location.lineno) + "\n";
                 parseContext.handleError(ParseContext::SIMULATOR_KEYWORD_NOT_SUPPORTED, msg, errorGuard);
             }
             checkOptions<std::string>(keyword, string_options, parseContext, errorGuard);
