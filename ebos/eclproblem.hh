@@ -1059,9 +1059,8 @@ public:
             // if TUNING is enabled, also limit the time step size after a tuning event to TSINIT
             dt = std::min(dt, initialTimeStepSize_);
         simulator.setTimeStepSize(dt);
-
         if (doInvalidate)
-            this->model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
+            this->model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
     }
 
     /*!
@@ -1104,7 +1103,7 @@ public:
         invalidateIntensiveQuantities = invalidateFromMaxWaterSat || invalidateFromMinPressure;
 
         if (invalidateIntensiveQuantities)
-            this->model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
+            this->model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
 
         wellModel_.beginTimeStep();
         if (enableAquifers_)
