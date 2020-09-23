@@ -322,8 +322,7 @@ public:
             for (const auto& well: schedule.getWells(reportStepNum)) {
 
                 // don't bother with wells not on this process
-                const auto& defunctWellNames = simulator_.vanguard().defunctWellNames();
-                if (defunctWellNames.find(well.name()) != defunctWellNames.end()) {
+                if (isDefunctParallelWell(well.name())) {
                     continue;
                 }
 
@@ -903,8 +902,7 @@ public:
         for (const auto& well: schedule.getWells(reportStepNum)) {
 
             // don't bother with wells not on this process
-            const auto& defunctWellNames = simulator_.vanguard().defunctWellNames();
-            if (defunctWellNames.find(well.name()) != defunctWellNames.end()) {
+            if (isDefunctParallelWell(well.name())) {
                 continue;
             }
 
@@ -1332,8 +1330,7 @@ public:
                         for (const auto& wname: schedule.wellNames(reportStepNum)) {
 
                                 // don't bother with wells not on this process
-                                const auto& defunctWellNames = simulator_.vanguard().defunctWellNames();
-                                if (defunctWellNames.find(wname) != defunctWellNames.end()) {
+                                if (isDefunctParallelWell(wname)) {
                                         continue;
                                 }
 
@@ -1432,8 +1429,7 @@ public:
                         for (const auto& wname: schedule.wellNames(reportStepNum)) {
 
                                 // don't bother with wells not on this process
-                                const auto& defunctWellNames = simulator_.vanguard().defunctWellNames();
-                                if (defunctWellNames.find(wname) != defunctWellNames.end()) {
+                                if (isDefunctParallelWell(wname)) {
                                         continue;
                                 }
 
@@ -1561,8 +1557,7 @@ public:
                         for (const auto& wname : schedule.wellNames(reportStepNum))  {
 
                                 // don't bother with wells not on this process
-                                const auto& defunctWellNames = simulator_.vanguard().defunctWellNames();
-                                if (defunctWellNames.find(wname) != defunctWellNames.end()) {
+                                if (isDefunctParallelWell(wname)) {
                                         continue;
                                 }
 
@@ -1829,6 +1824,17 @@ public:
     { return blockData_; }
 
 private:
+
+    bool isDefunctParallelWell(std::string wname) const
+    {
+        if (simulator_.gridView().comm().size()==1)
+            return false;
+        const auto& parallelWells = simulator_.vanguard().parallelWells();
+        std::pair<std::string,bool> value{wname, true};
+        auto candidate = std::lower_bound(parallelWells.begin(), parallelWells.end(),
+                                          value);
+        return candidate == parallelWells.end() || *candidate != value;
+    }
 
     bool isIORank_() const
     {
