@@ -55,7 +55,6 @@ namespace Opm
 /// - copy data of wellcontributions
 class WellContributions
 {
-
 public:
     /// StandardWell has C, D and B matrices that need to be copied
     enum class MatrixType {
@@ -64,28 +63,18 @@ public:
         B
     };
 
-    unsigned int num_blocks = 0;             // total number of blocks in all wells
-    unsigned int dim;                        // number of columns in blocks in B and C, equal to StandardWell::numEq
-    unsigned int dim_wells;                  // number of rows in blocks in B and C, equal to StandardWell::numStaticWellEq
-    unsigned int num_std_wells = 0;          // number of StandardWells in this object
-    unsigned int num_ms_wells = 0;           // number of MultisegmentWells in this object, must equal multisegments.size()
-    unsigned int num_blocks_so_far = 0;      // keep track of where next data is written
-    unsigned int num_std_wells_so_far = 0;   // keep track of where next data is written
-    unsigned int *val_pointers = nullptr;    // val_pointers[wellID] == index of first block for this well in Ccols and Bcols
-
 #if HAVE_OPENCL
-    double *h_Cnnzs_ocl = nullptr;
-    double *h_Dnnzs_ocl = nullptr;
-    double *h_Bnnzs_ocl = nullptr;
-    int *h_Ccols_ocl = nullptr;
-    int *h_Bcols_ocl = nullptr;
-    double *h_x_ocl = nullptr;
-    double *h_y_ocl = nullptr;
+    std::vector<double> h_Cnnzs_ocl, h_Dnnzs_ocl, h_Bnnzs_ocl;
+    std::vector<int> h_Ccols_ocl, h_Bcols_ocl;
+    std::vector<unsigned int> h_val_pointers_ocl;
+    std::vector<double> h_x_ocl, h_y_ocl;
 #endif
 
 private:
+    unsigned int dim;                        // number of columns in blocks in B and C, equal to StandardWell::numEq
+    unsigned int dim_wells;                  // number of rows in blocks in B and C, equal to StandardWell::numStaticWellEq
+    unsigned int num_ms_wells = 0;           // number of MultisegmentWells in this object, must equal multisegments.size()
     unsigned int N;                          // number of rows (not blockrows) in vectors x and y
-    bool allocated = false;
     std::vector<MultisegmentWellContribution*> multisegments;
 
     int *toOrder = nullptr;
@@ -95,6 +84,12 @@ private:
     bool cuda_gpu = false;
 
 #if HAVE_CUDA
+    bool allocated = false;
+    unsigned int num_blocks = 0;             // total number of blocks in all wells
+    unsigned int num_std_wells = 0;          // number of StandardWells in this object
+    unsigned int num_blocks_so_far = 0;      // keep track of where next data is written
+    unsigned int num_std_wells_so_far = 0;   // keep track of where next data is written
+    unsigned int *val_pointers = nullptr;    // val_pointers[wellID] == index of first block for this well in Ccols and Bcols
     cudaStream_t stream;
 
     // data for StandardWells, could remain nullptrs if not used
@@ -142,6 +137,13 @@ public:
     unsigned int getNumWells(){
         return num_std_wells + num_ms_wells;
     }
+
+    /// Indicate how large the next StandardWell is, this function cannot be called after alloc() is called
+    /// \param[in] numBlocks   number of blocks in C and B of next StandardWell
+    void addNumBlocks(unsigned int numBlocks);
+
+    /// Allocate memory for the StandardWells
+    void alloc();
 #endif
 
     /// Create a new WellContributions
@@ -150,18 +152,11 @@ public:
     /// Destroy a WellContributions, and free memory
     ~WellContributions();
 
-
-    /// Allocate memory for the StandardWells
-    void alloc();
-
     /// Indicate how large the blocks of the StandardWell (C and B) are
     /// \param[in] dim         number of columns
     /// \param[in] dim_wells   number of rows
     void setBlockSize(unsigned int dim, unsigned int dim_wells);
 
-    /// Indicate how large the next StandardWell is, this function cannot be called after alloc() is called
-    /// \param[in] numBlocks   number of blocks in C and B of next StandardWell
-    void addNumBlocks(unsigned int numBlocks);
 
     /// Store a matrix in this object, in blocked csr format, can only be called after alloc() is called
     /// \param[in] type        indicate if C, D or B is sent

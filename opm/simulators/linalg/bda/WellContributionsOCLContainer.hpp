@@ -1,0 +1,70 @@
+/*
+  Copyright 2019 Equinor ASA
+
+  This file is part of the Open Porous Media project (OPM).
+
+  OPM is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OPM is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+#ifndef WELLCONTRIBUTIONSOCLCONTAINER_HPP
+#define WELLCONTRIBUTIONSOCLCONTAINER_HPP
+
+#include <opm/simulators/linalg/bda/opencl.hpp>
+#include <opm/simulators/linalg/bda/WellContributions.hpp>
+
+namespace bda
+{
+    class WellContributionsOCLContainer
+    {
+    private:
+        unsigned int dim, dim_wells;
+        unsigned int num_std_wells = 0;
+        unsigned int num_ms_wells = 0;           // number of MultisegmentWells in this object, must equal multisegments.size()
+        std::vector<int> toOrder;
+
+        typedef struct {
+            cl::Buffer Cnnzs, Dnnzs, Bnnzs;
+            cl::Buffer Ccols, Bcols;
+            cl::Buffer val_pointers, toOrder;
+        } GPU_storage;
+
+        GPU_storage s;
+        cl::Context *context;
+        cl::CommandQueue *queue;
+        cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
+                        cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
+                        const unsigned int, const unsigned int, cl::Buffer&,
+                        cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg> *stdwell_apply;
+
+        void applyStdWells(cl::Buffer& x, cl::Buffer& y);
+
+    public:
+        WellContributionsOCLContainer();
+        ~WellContributionsOCLContainer();
+
+        void apply(cl::Buffer& x, cl::Buffer& y);
+        void initBuffers(WellContributions &wellContribs);
+        void copy_to_gpu(WellContributions &wellContribs);
+        void update_on_gpu(WellContributions &wellContribs);
+        void setOpenCLContext(cl::Context *context);
+        void setOpenCLQueue(cl::CommandQueue *queue);
+        void setKernelParameters(const unsigned int work_group_size, const unsigned int total_work_items, const unsigned int lmem_per_work_group);
+        void setKernel(cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
+                                       cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
+                                       const unsigned int, const unsigned int, cl::Buffer&,
+                                       cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg> *stdwell_apply_);
+    };
+} // end namespace bda
+
+#endif

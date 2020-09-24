@@ -916,6 +916,8 @@ namespace Opm {
     {
         // prepare for StandardWells
         wellContribs.setBlockSize(StandardWell<TypeTag>::numEq, StandardWell<TypeTag>::numStaticWellEq);
+
+#if HAVE_CUDA
         for(unsigned int i = 0; i < well_container_.size(); i++){
             auto& well = well_container_[i];
             std::shared_ptr<StandardWell<TypeTag> > derived = std::dynamic_pointer_cast<StandardWell<TypeTag> >(well);
@@ -928,6 +930,7 @@ namespace Opm {
 
         // allocate memory for data from StandardWells
         wellContribs.alloc();
+#endif
 
         for(unsigned int i = 0; i < well_container_.size(); i++){
             auto& well = well_container_[i];

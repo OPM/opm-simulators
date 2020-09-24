@@ -366,96 +366,78 @@ namespace bda
     }
     )";
 
-    inline const char* add_well_contributions_s = R"(
-    #pragma OPENCL EXTENSION cl_khr_fp64: enable
-    #pragma OPENCL EXTENSION cl_khr_int64_base_atomics: enable
-
-    void atomicAdd(volatile __global double *val, const double delta){
-        union{
-            double f;
-            ulong i;
-        } old;
-
-        union{
-            double f;
-            ulong i;
-        } new;
-
-        do{
-            old.f = *val;
-            new.f = old.f + delta;
-        } while(atom_cmpxchg((volatile __global ulong *)val, old.i, new.i) != old.i);
-    }
-
-    __kernel void add_well_contributions(__global const double *valsC,
-                                         __global const double *valsD,
-                                         __global const double *valsB,
-                                         __global const int *colsC,
-                                         __global const int *colsB,
-                                         __global const double *x,
-                                         __global double *y,
-                                         const unsigned int blnc,
-                                         const unsigned int blnr,
-                                         __global const unsigned int *rowptr,
-                                         __local double *localSum,
-                                         __local double *z1,
-                                         __local double *z2){
+    inline const char* stdwell_apply_s = R"(
+    __kernel void stdwell_apply(__global const double *Cnnzs,
+                                __global const double *Dnnzs,
+                                __global const double *Bnnzs,
+                                __global const int *Ccols,
+                                __global const int *Bcols,
+                                __global const double *x,
+                                __global double *y,
+                                __global const int *toOrder,
+                                const unsigned int dim,
+                                const unsigned int dim_wells,
+                                __global const unsigned int *val_pointers,
+                                __local double *localSum,
+                                __local double *z1,
+                                __local double *z2){
         int wgId = get_group_id(0);
         int wiId = get_local_id(0);
-        int valSize = rowptr[wgId + 1] - rowptr[wgId];
-        int valsPerBlock = blnc*blnr;
+        int valSize = val_pointers[wgId + 1] - val_pointers[wgId];
+        int valsPerBlock = dim*dim_wells;
         int numActiveWorkItems = (32/valsPerBlock)*valsPerBlock;
         int numBlocksPerWarp = 32/valsPerBlock;
-        int c = wiId % blnc;
-        int r = (wiId/blnc) % blnr;
+        int c = wiId % dim;
+        int r = (wiId/dim) % dim_wells;
         double temp;
+
+        barrier(CLK_LOCAL_MEM_FENCE);
 
         localSum[wiId] = 0;
         if(wiId < numActiveWorkItems){
-            int b = wiId/valsPerBlock + rowptr[wgId];
-            while(b < valSize + rowptr[wgId]){
-                int colIdx = colsB[b];
-                localSum[wiId] += valsB[b*blnc*blnr + r*blnc + c]*x[colIdx*blnc + c];
+            int b = wiId/valsPerBlock + val_pointers[wgId];
+            while(b < valSize + val_pointers[wgId]){
+                int colIdx = toOrder[Bcols[b]];
+                localSum[wiId] += Bnnzs[b*dim*dim_wells + r*dim + c]*x[colIdx*dim + c];
                 b += numBlocksPerWarp;
             }
-        }
 
-        barrier(CLK_LOCAL_MEM_FENCE);
-
-        int stride = valsPerBlock;
-        if(wiId < stride){
-            localSum[wiId] += localSum[wiId + stride];
-        }
-
-        barrier(CLK_LOCAL_MEM_FENCE);
-
-        if(c == 0 && wiId < valsPerBlock){
-            for(stride = 2; stride > 0; stride /= 2){
-                localSum[wiId] += localSum[wiId + stride];
+            if(wiId < valsPerBlock){
+                localSum[wiId] += localSum[wiId + valsPerBlock];
             }
-            z1[r] = localSum[wiId];
+
+            b = wiId/valsPerBlock + val_pointers[wgId];
+
+            if(wiId < valsPerBlock){
+                if(c == 0 || c == 2) {localSum[wiId] += localSum[wiId + 2];}
+                if(c == 0 || c == 1) {localSum[wiId] += localSum[wiId + 1];}
+            }
+
+            if(c == 0 && wiId < valsPerBlock){
+                z1[r] = localSum[wiId];
+            }
         }
 
         barrier(CLK_LOCAL_MEM_FENCE);
 
-        if(wiId < blnr){
+        if(wiId < dim_wells){
             temp = 0.0;
-            for(unsigned int i = 0; i < blnr; ++i){
-                temp += valsD[wgId*blnr*blnr + wiId*blnr + i]*z1[i];
+            for(unsigned int i = 0; i < dim_wells; ++i){
+                temp += Dnnzs[wgId*dim_wells*dim_wells + wiId*dim_wells + i]*z1[i];
             }
             z2[wiId] = temp;
         }
 
-        barrier(CLK_GLOBAL_MEM_FENCE);
+        barrier(CLK_LOCAL_MEM_FENCE);
 
-        if(wiId < blnc*valSize){
+        if(wiId < dim*valSize){
             temp = 0.0;
-            int bb = wiId/blnc + rowptr[wgId];
-            int colIdx = colsC[bb];
-            for (unsigned int j = 0; j < blnr; ++j){
-                temp += valsC[bb*blnc*blnr + j*blnc + c]*z2[j];
+            int bb = wiId/dim + val_pointers[wgId];
+            for (unsigned int j = 0; j < dim_wells; ++j){
+                temp += Cnnzs[bb*dim*dim_wells + j*dim + c]*z2[j];
             }
-            atomicAdd(&y[colIdx*blnc + c], -temp);
+            colIdx = toOrder[Ccols[bb]];
+            y[colIdx*dim + c] -= temp;
         }
     }
     )";
