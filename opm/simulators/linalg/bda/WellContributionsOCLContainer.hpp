@@ -31,6 +31,7 @@ namespace bda
         unsigned int dim, dim_wells;
         unsigned int num_std_wells = 0;
         unsigned int num_ms_wells = 0;           // number of MultisegmentWells in this object, must equal multisegments.size()
+        int Nb;
         std::vector<int> toOrder;
 
         typedef struct {
@@ -50,16 +51,15 @@ namespace bda
         void applyStdWells(cl::Buffer& x, cl::Buffer& y);
 
     public:
-        WellContributionsOCLContainer();
-        ~WellContributionsOCLContainer();
+        WellContributionsOCLContainer() {};
+        ~WellContributionsOCLContainer() {};
 
         void apply(cl::Buffer& x, cl::Buffer& y);
-        void initBuffers(WellContributions &wellContribs);
-        void copy_to_gpu(WellContributions &wellContribs);
-        void update_on_gpu(WellContributions &wellContribs);
+        void init(Opm::WellContributions &wellContribs, int Nb);
+        void copy_to_gpu(Opm::WellContributions &wellContribs);
+        void update_on_gpu(Opm::WellContributions &wellContribs);
         void setOpenCLContext(cl::Context *context);
         void setOpenCLQueue(cl::CommandQueue *queue);
-        void setKernelParameters(const unsigned int work_group_size, const unsigned int total_work_items, const unsigned int lmem_per_work_group);
         void setKernel(cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                        cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                        const unsigned int, const unsigned int, cl::Buffer&,

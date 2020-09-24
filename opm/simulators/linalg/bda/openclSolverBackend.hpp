@@ -129,8 +129,6 @@ private:
     /// \param[out] b       output vector
     void spmv_blocked_w(cl::Buffer vals, cl::Buffer cols, cl::Buffer rows, cl::Buffer x, cl::Buffer b);
 
-    void stdwell_w(cl::Buffer Cnnzs, cl::Buffer Dnnzs, cl::Buffer Bnnzs, cl::Buffer Ccols, cl::Buffer Bcols, cl::Buffer x, cl::Buffer y, cl::Buffer val_pointers);
-
     /// Solve linear system using ilu0-bicgstab
     /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
@@ -170,7 +168,7 @@ private:
     /// Solve linear system
     /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
-    void solve_system(WellContributions &wellContribs, BdaResult &res);
+    void solve_system(BdaResult &res);
 
 public:
 

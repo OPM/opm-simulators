@@ -24,19 +24,18 @@
 #include <dune/common/timer.hh>
 
 #include <opm/simulators/linalg/bda/WellContributionsOCLContainer.hpp>
-
+#include<iostream>
 
 namespace bda
 {
     using Opm::OpmLog;
     using Dune::Timer;
 
-    void WellContributionsOCLContainer::initBuffers(WellContributions &wellContribs)
-    {
+    void WellContributionsOCLContainer::init(Opm::WellContributions &wellContribs, int Nb_){
+        Nb = Nb_;
         dim = wellContribs.dim;
         dim_wells = wellContribs.dim_wells;
         num_std_wells = wellContribs.h_val_pointers_ocl.size() - 1;
-        toOrder.insert(toOrder.end(), wellContribs.toOrder, wellContribs.toOrder + wellContribs.h_Ccols_ocl.size());
 
         s.Cnnzs = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * wellContribs.h_Cnnzs_ocl.size());
         s.Dnnzs = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * wellContribs.h_Dnnzs_ocl.size());
@@ -44,10 +43,12 @@ namespace bda
         s.Ccols = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * wellContribs.h_Ccols_ocl.size());
         s.Bcols = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * wellContribs.h_Bcols_ocl.size());
         s.val_pointers = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(unsigned int) * wellContribs.h_val_pointers_ocl.size());
-        s.toOrder = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * toOrder.size());
+        s.toOrder = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * Nb);
     }
 
-    void WellcontributionsOCLContainer::copy_to_gpu(WellContributions &wellContribs){
+    void WellContributionsOCLContainer::copy_to_gpu(Opm::WellContributions &wellContribs){
+        toOrder.insert(toOrder.end(), wellContribs.toOrder, wellContribs.toOrder + Nb);
+
         cl::Event event;
         queue->enqueueWriteBuffer(s.Cnnzs, CL_TRUE, 0, sizeof(double) * wellContribs.h_Cnnzs_ocl.size(), wellContribs.h_Cnnzs_ocl.data());
         queue->enqueueWriteBuffer(s.Dnnzs, CL_TRUE, 0, sizeof(double) * wellContribs.h_Dnnzs_ocl.size(), wellContribs.h_Dnnzs_ocl.data());
@@ -59,7 +60,7 @@ namespace bda
         event.wait();
     }
 
-    void WellcontributionsOCLContainer::update_on_gpu(WellContributions &wellContribs){
+    void WellContributionsOCLContainer::update_on_gpu(Opm::WellContributions &wellContribs){
         cl::Event event;
         queue->enqueueWriteBuffer(s.Cnnzs, CL_TRUE, 0, sizeof(double) * wellContribs.h_Cnnzs_ocl.size(), wellContribs.h_Cnnzs_ocl.data());
         queue->enqueueWriteBuffer(s.Dnnzs, CL_TRUE, 0, sizeof(double) * wellContribs.h_Dnnzs_ocl.size(), wellContribs.h_Dnnzs_ocl.data());
@@ -90,7 +91,7 @@ namespace bda
 
         cl::Event event;
         event = (*stdwell_apply)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
-                                 s.Cnnzs, s.Dnnzs, s.Bnnzs, s.Ccols, s.Bcols, s.toOrder,x, y, dim, dim_wells, s.val_pointers,
+                                 s.Cnnzs, s.Dnnzs, s.Bnnzs, s.Ccols, s.Bcols, x, y, s.toOrder, dim, dim_wells, s.val_pointers,
                                  cl::Local(lmem1), cl::Local(lmem2), cl::Local(lmem2));
     }
 

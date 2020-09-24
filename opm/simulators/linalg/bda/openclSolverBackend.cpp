@@ -236,12 +236,12 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(BdaResult& res) {
 
         // v = A * pw
         t_spmv.start();
-        wcontainer->apply(d_pw, d_v);
+        spmv_blocked_w(d_Avals, d_Acols, d_Arows, d_pw, d_v);
         t_spmv.stop();
 
         // apply wellContributions
         t_well.start();
-        stdwell_w(d_Cnnzs, d_Dnnzs, d_Bnnzs, d_Ccols, d_Bcols, d_pw, d_v, d_val_pointers);
+        wcontainer->apply(d_pw, d_v);
         t_well.stop();
 
         t_rest.start();
@@ -496,7 +496,7 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
         d_Acols = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * nnzb);
         d_Arows = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (Nb + 1));
 
-        wcontainer->initBuffers(wellContribs);
+        wcontainer->init(wellContribs, Nb);
 
         // queue.enqueueNDRangeKernel() is a blocking/synchronous call, at least for NVIDIA
         // cl::make_kernel<> myKernel(); myKernel(args, arg1, arg2); is also blocking
@@ -566,6 +566,7 @@ void openclSolverBackend<block_size>::copy_system_to_gpu(WellContributions &well
     queue->enqueueFillBuffer(d_x, 0, 0, sizeof(double) * N, nullptr, &event);
     event.wait();
 
+    wellContribs.setReordering(toOrder, true);
     wcontainer->copy_to_gpu(wellContribs);
 
     if (verbosity > 2) {

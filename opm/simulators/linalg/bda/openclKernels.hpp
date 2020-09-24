@@ -436,7 +436,7 @@ namespace bda
             for (unsigned int j = 0; j < dim_wells; ++j){
                 temp += Cnnzs[bb*dim*dim_wells + j*dim + c]*z2[j];
             }
-            colIdx = toOrder[Ccols[bb]];
+            int colIdx = toOrder[Ccols[bb]];
             y[colIdx*dim + c] -= temp;
         }
     }
