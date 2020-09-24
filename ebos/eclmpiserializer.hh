@@ -22,6 +22,7 @@
 #define ECL_MPI_SERIALIZER_HH
 
 #include <opm/simulators/utils/ParallelRestart.hpp>
+#include <optional>
 #include <variant>
 
 namespace Opm {
@@ -51,6 +52,8 @@ public:
             pair(data);
         } else if constexpr (is_variant<T>::value) {
             variant(data);
+        } else if constexpr (is_optional<T>::value) {
+          optional(data);
         } else {
           if (m_op == Operation::PACKSIZE)
               m_packSize += Mpi::packSize(data, m_comm);
@@ -190,6 +193,45 @@ public:
                 mutable_data = t1;
             } else
                 throw std::logic_error("Internal meltdown in std::variant<T0,T1> unpack loaded index=" + std::to_string(index) + " allowed range: [0,1]");
+        }
+
+    }
+
+    //! \brief Handler for std::optional.
+    //! \tparam T Type for data
+    //! \param data The optional to (de-)serialize
+    template<class T>
+    void optional(const std::optional<T>& data)
+    {
+        if (m_op == Operation::PACKSIZE) {
+            m_packSize += Mpi::packSize(data.has_value(), m_comm);
+            if (data.has_value()) {
+                if constexpr (has_serializeOp<T>::value) {
+                    const_cast<T&>(*data).serializeOp(*this);
+                } else
+                    m_packSize += Mpi::packSize(*data, m_comm);
+            }
+        } else if (m_op == Operation::PACK) {
+            Mpi::pack(data.has_value(), m_buffer, m_position, m_comm);
+            if (data.has_value()) {
+                if constexpr (has_serializeOp<T>::value) {
+                    const_cast<T&>(*data).serializeOp(*this);
+                } else {
+                    Mpi::pack(*data, m_buffer, m_position, m_comm);
+                }
+            }
+        } else if (m_op == Operation::UNPACK) {
+            bool has;
+            Mpi::unpack(has, m_buffer, m_position, m_comm);
+            if (has) {
+                T res;
+                if constexpr (has_serializeOp<T>::value) {
+                    res.serializeOp(*this);
+                } else {
+                    Mpi::unpack(res, m_buffer, m_position, m_comm);
+                }
+                const_cast<std::optional<T>&>(data) = res;
+            }
         }
 
     }
@@ -371,6 +413,17 @@ protected:
         constexpr static bool value = true;
     };
 
+    //! \brief Predicate for std::optional.
+    template<class T>
+    struct is_optional {
+        constexpr static bool value = false;
+    };
+
+    template<class T1>
+    struct is_optional<std::optional<T1>> {
+        constexpr static bool value = true;
+    };
+
     //! \brief Handler for pairs.
     //! \details If data is POD or a string, we pass it to the underlying serializer,
     //!          if not we assume a complex type.
@@ -403,6 +456,21 @@ protected:
         if (data)
             data->serializeOp(*this);
     }
+
+    //! \brief Checks if a type has a serializeOp member.
+    //! \detail Ideally we would check for the serializeOp member,
+    //!         but this is a member template. For simplicity,
+    //!         we use serializeObject as our check for now.
+    template <typename T>
+    class has_serializeOp
+    {
+        using yes_type = char;
+        using no_type = long;
+        template <typename U> static yes_type test(decltype(&U::serializeObject));
+        template <typename U> static no_type  test(...);
+    public:
+        static constexpr bool value = sizeof(test<T>(0)) == sizeof(yes_type);
+    };
 
     Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> m_comm; //!< Communicator to broadcast using
 
