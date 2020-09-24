@@ -347,9 +347,6 @@ public:
             }
         }
 
-        // always allocate memory for temperature
-        temperature_.resize(bufferSize, 0.0);
-
         // field data should be allocated
         // 1) when we want to restart
         // 2) when it is ask for by the user via restartConfig
@@ -368,6 +365,12 @@ public:
         oilPressure_.resize(bufferSize, 0.0);
         rstKeywords["PRES"] = 0;
         rstKeywords["PRESSURE"] = 0;
+
+        // allocate memory for temperature
+        if (enableEnergy || rstKeywords["TEMP"]) {
+            temperature_.resize(bufferSize, 0.0);
+            rstKeywords["TEMP"] = 0;
+        }
 
         if (FluidSystem::phaseIsActive(oilPhaseIdx))
             rstKeywords["SOIL"] = 0;
@@ -559,7 +562,7 @@ public:
                 Opm::Valgrind::CheckDefined(oilPressure_[globalDofIdx]);
             }
 
-            if (enableEnergy) {
+            if (temperature_.size() > 0) {
                 temperature_[globalDofIdx] = Opm::getValue(fs.temperature(oilPhaseIdx));
                 Opm::Valgrind::CheckDefined(temperature_[globalDofIdx]);
             }
@@ -956,7 +959,7 @@ public:
             sol.insert("PRESSURE", Opm::UnitSystem::measure::pressure, std::move(oilPressure_), Opm::data::TargetType::RESTART_SOLUTION);
         }
 
-        if (enableEnergy) {
+        if (temperature_.size() > 0) {
             sol.insert("TEMP", Opm::UnitSystem::measure::temperature, std::move(temperature_), Opm::data::TargetType::RESTART_SOLUTION);
         }
 
@@ -1697,7 +1700,7 @@ public:
 
         if (oilPressure_.size() > 0 && sol.has("PRESSURE"))
             oilPressure_[elemIdx] = sol.data("PRESSURE")[globalDofIndex];
-        if (enableEnergy && sol.has("TEMP"))
+        if (temperature_.size() > 0 && sol.has("TEMP"))
             temperature_[elemIdx] = sol.data("TEMP")[globalDofIndex];
         if (rs_.size() > 0 && sol.has("RS"))
             rs_[elemIdx] = sol.data("RS")[globalDofIndex];
@@ -1751,7 +1754,7 @@ public:
             }
         }
 
-        if (enableEnergy)
+        if (temperature_.size() > 0)
             fs.setTemperature(temperature_[elemIdx]);
         if (rs_.size() > 0)
            fs.setRs(rs_[elemIdx]);
