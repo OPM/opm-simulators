@@ -896,13 +896,21 @@ public:
         // deal with DRSDT
         unsigned ntpvt = eclState.runspec().tabdims().getNumPVTTables();
         size_t numDof = this->model().numGridDof();
-        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+        //TODO We may want to only allocate these properties only if active.
+        //But since they may be activated at later time we need some more
+        //intrastructure to handle it
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            maxDRv_.resize(ntpvt, 1e30);
+            lastRv_.resize(numDof, 0.0);
             maxDRs_.resize(ntpvt, 1e30);
             dRsDtOnlyFreeGas_.resize(ntpvt, false);
             lastRs_.resize(numDof, 0.0);
             maxDRv_.resize(ntpvt, 1e30);
             lastRv_.resize(numDof, 0.0);
             maxOilSaturation_.resize(numDof, 0.0);
+            if (drsdtConvective_()) {
+                convectiveDrs_.resize(numDof, 1.0);
+            }
         }
 
         readRockParameters_();
@@ -1973,10 +1981,15 @@ public:
         if (!drsdtActive_() || maxDRs_[pvtRegionIdx] < 0.0)
             return std::numeric_limits<Scalar>::max()/2.0;
 
+        Scalar scaling = 1.0;
+        if(drsdtConvective_()) {
+           scaling = convectiveDrs_[globalDofIdx];
+        }
+
         // this is a bit hacky because it assumes that a time discretization with only
         // two time indices is used.
         if (timeIdx == 0)
-            return lastRs_[globalDofIdx] + maxDRs_[pvtRegionIdx];
+            return lastRs_[globalDofIdx] + maxDRs_[pvtRegionIdx] * scaling;
         else
             return lastRs_[globalDofIdx];
     }
@@ -2316,6 +2329,15 @@ private:
 
     }
 
+    bool drsdtConvective_() const
+    {
+        const auto& simulator = this->simulator();
+        int episodeIdx = std::max(simulator.episodeIndex(), 0);
+        const auto& oilVaporizationControl = simulator.vanguard().schedule()[episodeIdx].oilvap();
+        return (oilVaporizationControl.drsdtConvective());
+    }
+
+
     // update the parameters needed for DRSDT and DRVDT
     void updateCompositionChangeLimits_()
     {
@@ -2324,6 +2346,43 @@ private:
         const auto& simulator = this->simulator();
         int episodeIdx = std::max(simulator.episodeIndex(), 0);
         const auto& oilVaporizationControl = simulator.vanguard().schedule()[episodeIdx].oilvap();
+
+        if (drsdtConvective_()) {
+            // This implements the convective DRSDT as described in
+            // Sandve et al. "Convective dissolution in field scale CO2 storage simulations using the OPM Flow simulator"
+            // Submitted to TCCS 11, 2021
+            Scalar g = this->gravity_[dim - 1];
+            ElementContext elemCtx(simulator);
+            const auto& vanguard = simulator.vanguard();
+            auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
+            const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
+            for (; elemIt != elemEndIt; ++elemIt) {
+                const Element& elem = *elemIt;
+                elemCtx.updatePrimaryStencil(elem);
+                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                unsigned compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+                const DimMatrix& perm = intrinsicPermeability(compressedDofIdx);
+                const Scalar permz = perm[dim - 1][dim - 1]; // The Z permeability
+                Scalar distZ = vanguard.cellThickness(compressedDofIdx);
+                const auto& iq = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+                const auto& fs = iq.fluidState();
+                Scalar t = Opm::getValue(fs.temperature(FluidSystem::oilPhaseIdx));
+                Scalar p = Opm::getValue(fs.pressure(FluidSystem::oilPhaseIdx));
+                Scalar so = Opm::getValue(fs.saturation(FluidSystem::oilPhaseIdx));
+                Scalar rssat = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(),t,p);
+                Scalar saturatedDensity = FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(fs.pvtRegionIndex(),t,p);
+                Scalar rsZero = 0.0;
+                Scalar pureDensity = FluidSystem::oilPvt().inverseFormationVolumeFactor(fs.pvtRegionIndex(),t,p,rsZero);
+                Scalar deltaDensity = saturatedDensity-pureDensity;
+                Scalar rs = Opm::getValue(fs.Rs());
+                Scalar visc = FluidSystem::oilPvt().viscosity(fs.pvtRegionIndex(),t,p,rs);
+                Scalar poro =  Opm::getValue(iq.porosity());
+                // Note that for so = 0 this gives no limits (inf) for the dissolution rate
+                // Also we restrict the effect of convective mixing to positive density differences
+                // i.e. we only allow for fingers moving downward
+                convectiveDrs_[compressedDofIdx] = permz * rssat * Opm::max(0.0, deltaDensity) * g / ( so * visc * distZ * poro);
+            }
+        }
 
         if (oilVaporizationControl.drsdtActive()) {
             ElementContext elemCtx(simulator);
@@ -3385,6 +3444,7 @@ private:
     std::vector<bool> dRsDtOnlyFreeGas_; // apply the DRSDT rate limit only to cells that exhibit free gas
     std::vector<Scalar> lastRs_;
     std::vector<Scalar> maxDRs_;
+    std::vector<Scalar> convectiveDrs_;
     std::vector<Scalar> lastRv_;
     std::vector<Scalar> maxDRv_;
     constexpr static Scalar freeGasMinSaturation_ = 1e-7;

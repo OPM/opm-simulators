@@ -731,7 +731,7 @@ public:
     }
 
     /*!
-     * \brief Returns the depth of an degree of freedom [m]
+     * \brief Returns the depth of a degree of freedom [m]
      *
      * For ECL problems this is defined as the average of the depth of an element and is
      * thus slightly different from the depth of an element's centroid.
@@ -739,6 +739,19 @@ public:
     Scalar cellCenterDepth(unsigned globalSpaceIdx) const
     {
         return cellCenterDepth_[globalSpaceIdx];
+    }
+
+    /*!
+     * \brief Returns the thickness of a degree of freedom [m]
+     *
+     * For ECL problems this is defined as the average of the depths of the top surface
+     * corners minus the average of the depths of the bottom surface corners
+     * The cell thickness is computed only when needed.
+     */
+    Scalar cellThickness(unsigned globalSpaceIdx) const
+    {
+        assert(!cellThickness_.empty());
+        return cellThickness_[globalSpaceIdx];
     }
 
     /*!
@@ -793,6 +806,38 @@ protected:
             cellCenterDepth_[elemIdx] = cellCenterDepth(element);
         }
     }
+    void updateCellThickness_()
+    {
+        bool drsdtcon = false;
+        auto schIt = this->schedule().begin();
+        const auto& schEndIt = this->schedule().end();
+        for(; schIt != schEndIt; ++schIt) {
+            const auto& oilVaporizationControl = schIt->oilvap();
+            if(oilVaporizationControl.getType() == Opm::OilVaporizationProperties::OilVaporization::DRSDTCON) {
+                drsdtcon = true;
+                break;
+            }
+        }
+        if (!drsdtcon)
+            return;
+
+        ElementMapper elemMapper(this->gridView(), Dune::mcmgElementLayout());
+
+        int numElements = this->gridView().size(/*codim=*/0);
+        cellThickness_.resize(numElements);
+
+        auto elemIt = this->gridView().template begin</*codim=*/0>();
+        const auto& elemEndIt = this->gridView().template end</*codim=*/0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            const Element& element = *elemIt;
+            const unsigned int elemIdx = elemMapper.index(element);
+            cellThickness_[elemIdx] = asImp_().computeCellThickness(element);
+        }
+    }
+    Scalar computeCellThickness(const Element& element) const {
+        OPM_THROW(std::runtime_error, "cellThickness not implemented for this grid!");
+    }
+
 
 private:
     void updateOutputDir_()
@@ -823,6 +868,8 @@ private:
         ioConfig.setEclCompatibleRST(!EWOMS_GET_PARAM(TypeTag, bool, EnableOpmRstFile));
     }
 
+
+    // computed from averaging cell corner depths
     Scalar cellCenterDepth(const Element& element) const
     {
         typedef typename Element::Geometry Geometry;
@@ -886,10 +933,13 @@ protected:
      */
     std::vector<int> cartesianToCompressed_;
 
-    /*! \brief Cell center depths computed
-     *  from averaging cell corner depths
+    /*! \brief Cell center depths
      */
     std::vector<Scalar> cellCenterDepth_;
+
+    /*! \brief Cell thichness
+     */
+    std::vector<Scalar> cellThickness_;
 
     /*! \brief information about wells in parallel
      *
