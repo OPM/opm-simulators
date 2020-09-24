@@ -321,12 +321,21 @@ public:
             return;
 
         if (m_comm.rank() == 0) {
-            pack(data);
-            m_packSize = m_position;
-            m_comm.broadcast(&m_packSize, 1, 0);
-            m_comm.broadcast(m_buffer.data(), m_position, 0);
+            try {
+                pack(data);
+                m_packSize = m_position;
+                m_comm.broadcast(&m_packSize, 1, 0);
+                m_comm.broadcast(m_buffer.data(), m_position, 0);
+            } catch (...) {
+                m_packSize = std::numeric_limits<size_t>::max();
+                m_comm.broadcast(&m_packSize, 1, 0);
+                throw;
+            }
         } else {
             m_comm.broadcast(&m_packSize, 1, 0);
+            if (m_packSize == std::numeric_limits<size_t>::max()) {
+                throw std::runtime_error("Error detected in parallel serialization");
+            }
             m_buffer.resize(m_packSize);
             m_comm.broadcast(m_buffer.data(), m_packSize, 0);
             unpack(data);
