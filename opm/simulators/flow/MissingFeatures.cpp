@@ -16,6 +16,7 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include <fmt/format.h>
 
 #include <opm/simulators/flow/MissingFeatures.hpp>
 
@@ -64,10 +65,10 @@ namespace MissingFeatures {
                 else
                     val = it->second.item_value;
 
-                std::string msg = "For keyword '" + it->first + "' only value " + val
-                    + " in item " + it->second.item + " is supported by flow.\n"
-                    + "In file " + location.filename + ", line " + std::to_string(location.lineno) + "\n";
-                parseContext.handleError(ParseContext::SIMULATOR_KEYWORD_ITEM_NOT_SUPPORTED, msg, errorGuard);
+                std::string msg_fmt = fmt::format("Unsupported value for {{keyword}}\n"
+                                                  "In {{file}} line {{line}}\n"
+                                                  "Only the value {} in item {} of {{keyword}} is supported by flow", val, it->second.item);
+                parseContext.handleError(ParseContext::SIMULATOR_KEYWORD_ITEM_NOT_SUPPORTED, msg_fmt, keyword.location(), errorGuard);
             }
         }
     }
@@ -882,9 +883,9 @@ namespace MissingFeatures {
             std::unordered_set<std::string>::const_iterator it;
             it = unsupported_keywords.find(keyword.name());
             if (it != unsupported_keywords.end()) {
-                std::string msg = "Keyword '" + keyword.name() + "' is not supported by flow.\n"
-                    + "In file " + location.filename + ", line " + std::to_string(location.lineno) + "\n";
-                parseContext.handleError(ParseContext::SIMULATOR_KEYWORD_NOT_SUPPORTED, msg, errorGuard);
+                std::string msg_fmt = "Keyword {keyword} is not supported by flow.\n"
+                                      "In {file} line {line}.";
+                parseContext.handleError(ParseContext::SIMULATOR_KEYWORD_NOT_SUPPORTED, msg_fmt, keyword.location(), errorGuard);
             }
             checkOptions<std::string>(keyword, string_options, parseContext, errorGuard);
             checkOptions<int>(keyword, int_options, parseContext, errorGuard);
