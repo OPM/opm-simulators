@@ -94,6 +94,10 @@ void WellContributions::addMatrix([[maybe_unused]] MatrixType type, [[maybe_unus
 
 #if HAVE_OPENCL
     if(opencl_gpu){
+        if(h_val_pointers_ocl.empty()){
+            h_val_pointers_ocl.push_back(0);
+        }
+
         switch (type) {
         case MatrixType::C:
             h_Ccols_ocl.insert(h_Ccols_ocl.end(), colIndices, colIndices + val_size);
@@ -107,13 +111,7 @@ void WellContributions::addMatrix([[maybe_unused]] MatrixType type, [[maybe_unus
         case MatrixType::B:
             h_Bcols_ocl.insert(h_Bcols_ocl.end(), colIndices, colIndices + val_size);
             h_Bnnzs_ocl.insert(h_Bnnzs_ocl.end(), values, values + val_size * dim * dim_wells);
-
-            if(h_val_pointers_ocl.empty()){
-                h_val_pointers_ocl.push_back(0);
-            }
-            else{
-                h_val_pointers_ocl.push_back(h_val_pointers_ocl.back() + val_size);
-            }
+            h_val_pointers_ocl.push_back(h_val_pointers_ocl.back() + val_size);
             break;
 
         default:
