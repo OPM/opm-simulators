@@ -3094,13 +3094,13 @@ private:
 
                     switch (bcface.component) {
                     case BCComponent::OIL:
-                        compIdx = oilCompIdx;
+                        compIdx = Indices::canonicalToActiveComponentIndex(oilCompIdx);
                         break;
                     case BCComponent::GAS:
-                        compIdx = gasCompIdx;
+                        compIdx = Indices::canonicalToActiveComponentIndex(gasCompIdx);
                         break;
                     case BCComponent::WATER:
-                        compIdx = waterCompIdx;
+                        compIdx = Indices::canonicalToActiveComponentIndex(waterCompIdx);
                         break;
                     case BCComponent::SOLVENT:
                         if (!enableSolvent)
