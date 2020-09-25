@@ -764,7 +764,7 @@ opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh ""
 
 # Cruder tolerances for the restarted tests
 set(abs_tol_restart 2e-1)
-set(rel_tol_restart 5e-5)
+set(rel_tol_restart 4e-4)
 
 add_test_compare_restarted_simulation(CASENAME spe1
                                       FILENAME SPE1CASE2_ACTNUM
