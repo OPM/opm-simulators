@@ -27,6 +27,7 @@
 #include "readDeck.hpp"
 
 #include <opm/common/utility/String.hpp>
+#include <opm/common/utility/OpmInputError.hpp>
 
 #include <opm/io/eclipse/EclIOdata.hpp>
 
@@ -230,9 +231,13 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
 
             Opm::checkConsistentArrayDimensions(*eclipseState, *schedule, *parseContext, *errorGuard);
         }
-        catch(const std::exception& e)
+        catch(const OpmInputError& input_error) {
+            failureMessage = input_error.what();
+            parseSuccess = 0;
+        }
+        catch(const std::exception& std_error)
         {
-            failureMessage = e.what();
+            failureMessage = std_error.what();
             parseSuccess = 0;
         }
     }
@@ -250,9 +255,9 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
     {
         Opm::eclStateBroadcast(*eclipseState, *schedule, *summaryConfig);
     }
-    catch(const std::exception& e)
+    catch(const std::exception& broadcast_error)
     {
-        failureMessage = e.what();
+        failureMessage = broadcast_error.what();
         parseSuccess = 0;
     }
 
