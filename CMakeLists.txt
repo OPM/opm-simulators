@@ -219,10 +219,15 @@ else()
 endif()
 
 add_library(moduleVersion OBJECT opm/simulators/utils/moduleVersion.cpp)
+set_property(TARGET moduleVersion PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # Strictly we only depend on the update-version target,
 # but this is not exposed in a super-build.
 add_dependencies(moduleVersion opmsimulators)
+
+add_library(flow_libblackoil OBJECT flow/flow_ebos_blackoil.cpp)
+set_property(TARGET flow_libblackoil PROPERTY POSITION_INDEPENDENT_CODE ON)
+add_dependencies(flow_libblackoil opmsimulators)
 
 # the production oriented general-purpose ECL simulator
 opm_add_test(flow
@@ -233,7 +238,6 @@ opm_add_test(flow
   LIBRARIES opmsimulators
   SOURCES
   flow/flow.cpp
-  flow/flow_ebos_blackoil.cpp
   flow/flow_ebos_gasoil.cpp
   flow/flow_ebos_oilwater.cpp
   flow/flow_ebos_polymer.cpp
@@ -244,7 +248,9 @@ opm_add_test(flow
   flow/flow_ebos_energy.cpp
   flow/flow_ebos_oilwater_polymer.cpp
   flow/flow_ebos_oilwater_polymer_injectivity.cpp
-  $<TARGET_OBJECTS:moduleVersion>)
+  $<TARGET_OBJECTS:moduleVersion>
+  $<TARGET_OBJECTS:flow_libblackoil>
+  )
 
 
 if (NOT BUILD_FLOW_BLACKOIL_ONLY)
