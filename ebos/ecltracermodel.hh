@@ -31,6 +31,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/TracerVdTable.hpp>
 
 #include <opm/models/blackoil/blackoilmodel.hh>
+#include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <dune/istl/operators.hh>
 #include <dune/istl/solvers.hh>
@@ -106,9 +107,9 @@ public:
 
         if (!EWOMS_GET_PARAM(TypeTag, bool, EnableTracerModel)) {
             if (simulator_.gridView().comm().rank() == 0) {
-                std::cout << "Warning: Tracer model is disabled but the deck contains the TRACERS keyword\n"
-                          << "The tracer model must be explictly activated using --enable-tracer-model=true\n"
-                          << std::flush;
+                OpmLog::warning("Tracer model is disabled but the deck contains the TRACERS keyword\n"
+                                + std::string("The tracer model must be explictly activated using --enable-tracer-model=true")
+                                + "\n");
             }
             return; // Tracer transport must be enabled by the user
         }
