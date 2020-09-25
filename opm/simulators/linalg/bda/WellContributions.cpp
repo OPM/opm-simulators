@@ -49,6 +49,15 @@ WellContributions::~WellContributions()
     }
     multisegments.clear();
 
+#if HAVE_OPENCL
+    h_Cnnzs_ocl.clear();
+    h_Dnnzs_ocl.clear();
+    h_Bnnzs_ocl.clear();
+    h_Ccols_ocl.clear();
+    h_Bcols_ocl.clear();
+    h_val_pointers_ocl.clear();
+#endif
+
 #if HAVE_CUDA
     if(cuda_gpu){
         freeCudaMemory(); // should come before 'delete[] h_x'
@@ -147,15 +156,4 @@ void WellContributions::addMultisegmentWellContribution(unsigned int dim_, unsig
     ++num_ms_wells;
 }
 
-
-void WellContributions::setReordering(int *toOrder_, bool reorder_)
-{
-    this->toOrder = toOrder_;
-    this->reorder = reorder_;
-    for (auto& ms : multisegments) {
-        ms->setReordering(toOrder_, reorder_);
-    }
-}
-
 } //namespace Opm
-

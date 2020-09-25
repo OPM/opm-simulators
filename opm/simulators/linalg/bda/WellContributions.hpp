@@ -65,24 +65,20 @@ public:
 
     unsigned int dim;                        // number of columns in blocks in B and C, equal to StandardWell::numEq
     unsigned int dim_wells;                  // number of rows in blocks in B and C, equal to StandardWell::numStaticWellEq
+    std::vector<MultisegmentWellContribution*> multisegments;
 
 #if HAVE_OPENCL
     std::vector<double> h_Cnnzs_ocl, h_Dnnzs_ocl, h_Bnnzs_ocl;
     std::vector<int> h_Ccols_ocl, h_Bcols_ocl;
     std::vector<unsigned int> h_val_pointers_ocl;
-    std::vector<double> h_x_ocl, h_y_ocl;
-
-    int *toOrder = nullptr;
-    bool reorder = false;
 #endif
 
 private:
-    unsigned int num_ms_wells = 0;           // number of MultisegmentWells in this object, must equal multisegments.size()
-    unsigned int N;                          // number of rows (not blockrows) in vectors x and y
-    std::vector<MultisegmentWellContribution*> multisegments;
-
     bool opencl_gpu = false;
     bool cuda_gpu = false;
+
+    unsigned int N;                          // number of rows (not blockrows) in vectors x and y
+    unsigned int num_ms_wells = 0;           // number of MultisegmentWells in this object, must equal multisegments.size()
 
 #if HAVE_CUDA
     bool allocated = false;
@@ -120,10 +116,6 @@ private:
 #endif
 
 public:
-//#if HAVE_OPENCL
-//    void applyMSWell(cl::Buffer& d_x, cl::Buffer& d_y);
-//#endif
-
 #if HAVE_CUDA
     /// Set a cudaStream to be used
     /// \param[in] stream           the cudaStream that is used to launch the kernel in
@@ -186,12 +178,6 @@ public:
                                          unsigned int BnumBlocks, std::vector<double> &Bvalues, std::vector<unsigned int> &BcolIndices, std::vector<unsigned int> &BrowPointers,
                                          unsigned int DnumBlocks, double *Dvalues, int *DcolPointers, int *DrowIndices,
                                          std::vector<double> &Cvalues);
-
-    /// If the rows of the matrix are reordered, the columnindices of the matrixdata are incorrect
-    /// Those indices need to be mapped via toOrder
-    /// \param[in] toOrder    array with mappings
-    /// \param[in] reorder    whether the columnindices need to be reordered or not
-    void setReordering(int *toOrder, bool reorder);
 };
 
 } //namespace Opm
