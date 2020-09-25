@@ -81,6 +81,7 @@
 #include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityWaterPvt.hpp>
 #include <opm/material/common/IntervalTabulated2DFunction.hpp>
 #include <opm/material/common/UniformXTabulated2DFunction.hpp>
+#include <opm/material/common/Tabulated1DFunction.hpp>
 
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
@@ -92,6 +93,7 @@
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/RockwnodTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/OverburdTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/RocktabTable.hpp>
 #include <opm/material/common/ConditionalStorage.hpp>
 
 #include <dune/common/version.hh>
@@ -656,6 +658,7 @@ class EclProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     typedef typename GridView::template Codim<0>::Iterator ElementIterator;
 
     typedef Opm::UniformXTabulated2DFunction<Scalar> TabulatedTwoDFunction;
+    typedef Opm::Tabulated1DFunction<Scalar> TabulatedFunction;
 
     struct RockParams {
         Scalar referencePressure;
@@ -1121,7 +1124,7 @@ public:
      * using a pore volume multiplier (i.e., poreVolumeMultiplier() != 1.0)
      */
     bool recycleFirstIterationStorage() const
-    { return !drsdtActive_() && !drvdtActive_() && rockCompPoroMult_.empty();  }
+    { return !drsdtActive_() && !drvdtActive_() && rockCompPoroMultWc_.empty() && rockCompPoroMult_.empty();  }
 
     /*!
      * \brief Called by the simulator before each Newton-Raphson iteration.
@@ -2035,7 +2038,8 @@ public:
     template <class LhsEval>
     LhsEval rockCompPoroMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx) const
     {
-        if (rockCompPoroMult_.empty())
+
+        if (rockCompPoroMult_.empty() && rockCompPoroMultWc_.empty())
             return 1.0;
 
         unsigned tableIdx = 0;
@@ -2043,10 +2047,7 @@ public:
             tableIdx = rockTableIdx_[elementIdx];
 
         const auto& fs = intQuants.fluidState();
-        LhsEval SwMax = Opm::max(Opm::decay<LhsEval>(fs.saturation(waterPhaseIdx)), maxWaterSaturation_[elementIdx]);
-        LhsEval SwDeltaMax = SwMax - initialFluidStates_[elementIdx].saturation(waterPhaseIdx);
         LhsEval effectiveOilPressure = Opm::decay<LhsEval>(fs.pressure(oilPhaseIdx));
-
         if (!minOilPressure_.empty())
             // The pore space change is irreversible
             effectiveOilPressure =
@@ -2056,7 +2057,17 @@ public:
         if (!overburdenPressure_.empty())
             effectiveOilPressure -= overburdenPressure_[elementIdx];
 
-        return rockCompPoroMult_[tableIdx].eval(effectiveOilPressure, SwDeltaMax, /*extrapolation=*/true);
+
+        if (!rockCompPoroMult_.empty()) {
+            return rockCompPoroMult_[tableIdx].eval(effectiveOilPressure, /*extrapolation=*/true);
+        }
+
+        // water compaction
+        assert(!rockCompPoroMultWc_.empty());
+        LhsEval SwMax = Opm::max(Opm::decay<LhsEval>(fs.saturation(waterPhaseIdx)), maxWaterSaturation_[elementIdx]);
+        LhsEval SwDeltaMax = SwMax - initialFluidStates_[elementIdx].saturation(waterPhaseIdx);
+
+        return rockCompPoroMultWc_[tableIdx].eval(effectiveOilPressure, SwDeltaMax, /*extrapolation=*/true);
     }
 
     /*!
@@ -2067,7 +2078,7 @@ public:
     template <class LhsEval>
     LhsEval rockCompTransMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx) const
     {
-        if (rockCompTransMult_.empty())
+        if (rockCompTransMult_.empty() && rockCompTransMultWc_.empty())
             return 1.0;
 
         unsigned tableIdx = 0;
@@ -2075,8 +2086,6 @@ public:
             tableIdx = rockTableIdx_[elementIdx];
 
         const auto& fs = intQuants.fluidState();
-        LhsEval SwMax = Opm::max(Opm::decay<LhsEval>(fs.saturation(waterPhaseIdx)), maxWaterSaturation_[elementIdx]);
-        LhsEval SwDeltaMax = SwMax - initialFluidStates_[elementIdx].saturation(waterPhaseIdx);
         LhsEval effectiveOilPressure = Opm::decay<LhsEval>(fs.pressure(oilPhaseIdx));
 
         if (!minOilPressure_.empty())
@@ -2088,7 +2097,15 @@ public:
         if (overburdenPressure_.size() > 0)
             effectiveOilPressure -= overburdenPressure_[elementIdx];
 
-        return rockCompTransMult_[tableIdx].eval(effectiveOilPressure, SwDeltaMax, /*extrapolation=*/true);
+        if (!rockCompTransMult_.empty())
+            return rockCompTransMult_[tableIdx].eval(effectiveOilPressure, /*extrapolation=*/true);
+
+        // water compaction
+        assert(!rockCompTransMultWc_.empty());
+        LhsEval SwMax = Opm::max(Opm::decay<LhsEval>(fs.saturation(waterPhaseIdx)), maxWaterSaturation_[elementIdx]);
+        LhsEval SwDeltaMax = SwMax - initialFluidStates_[elementIdx].saturation(waterPhaseIdx);
+
+        return rockCompTransMultWc_[tableIdx].eval(effectiveOilPressure, SwDeltaMax, /*extrapolation=*/true);
     }
 
     /*!
@@ -2392,8 +2409,8 @@ private:
         readRockCompactionParameters_();
 
         unsigned numElem = vanguard.gridView().size(0);
-        rockTableIdx_.resize(numElem);
         if (eclState.fieldProps().has_int(rock_config.rocknum_property())) {
+            rockTableIdx_.resize(numElem);
             const auto& num = eclState.fieldProps().get_int(rock_config.rocknum_property());
             for (size_t elemIdx = 0; elemIdx < numElem; ++ elemIdx) {
                 rockTableIdx_[elemIdx] = num[elemIdx] - 1;
@@ -2451,10 +2468,23 @@ private:
         size_t numRocktabTables = rock_config.num_rock_tables();
         bool waterCompaction = rock_config.water_compaction();
 
-        if (!waterCompaction)
-            throw std::runtime_error("Only water compatction allowed");
+        if (!waterCompaction) {
+            const auto& rocktabTables = eclState.getTableManager().getRocktabTables();
+            if (rocktabTables.size() != numRocktabTables)
+                throw std::runtime_error("ROCKCOMP is activated." + std::to_string(numRocktabTables)
+                                         +" ROCKTAB tables is expected, but " + std::to_string(rocktabTables.size()) +" is provided");
 
-        if (waterCompaction) {
+            rockCompPoroMult_.resize(numRocktabTables);
+            rockCompTransMult_.resize(numRocktabTables);
+            for (size_t regionIdx = 0; regionIdx < numRocktabTables; ++regionIdx) {
+                const auto& rocktabTable = rocktabTables.template getTable<Opm::RocktabTable>(regionIdx);
+                const auto& pressureColumn = rocktabTable.getPressureColumn();
+                const auto& poroColumn = rocktabTable.getPoreVolumeMultiplierColumn();
+                const auto& transColumn = rocktabTable.getTransmissibilityMultiplierColumn();
+                rockCompPoroMult_[regionIdx].setXYContainers(pressureColumn, poroColumn);
+                rockCompTransMult_[regionIdx].setXYContainers(pressureColumn, transColumn);
+            }
+        } else {
             const auto& rock2dTables = eclState.getTableManager().getRock2dTables();
             const auto& rock2dtrTables = eclState.getTableManager().getRock2dtrTables();
             const auto& rockwnodTables = eclState.getTableManager().getRockwnodTables();
@@ -2468,7 +2498,7 @@ private:
                 throw std::runtime_error("Water compation option is selected in ROCKCOMP." + std::to_string(numRocktabTables)
                                          +" ROCKWNOD tables is expected, but " + std::to_string(rockwnodTables.size()) +" is provided");
             //TODO check size match
-            rockCompPoroMult_.resize(numRocktabTables, TabulatedTwoDFunction(TabulatedTwoDFunction::InterpolationPolicy::Vertical));
+            rockCompPoroMultWc_.resize(numRocktabTables, TabulatedTwoDFunction(TabulatedTwoDFunction::InterpolationPolicy::Vertical));
             for (size_t regionIdx = 0; regionIdx < numRocktabTables; ++regionIdx) {
                 const Opm::RockwnodTable& rockwnodTable =  rockwnodTables.template getTable<Opm::RockwnodTable>(regionIdx);
                 const auto& rock2dTable = rock2dTables[regionIdx];
@@ -2477,16 +2507,16 @@ private:
                     throw std::runtime_error("Number of entries in ROCKWNOD and ROCK2D needs to match.");
 
                 for (size_t xIdx = 0; xIdx < rock2dTable.size(); ++xIdx) {
-                    rockCompPoroMult_[regionIdx].appendXPos(rock2dTable.getPressureValue(xIdx));
+                    rockCompPoroMultWc_[regionIdx].appendXPos(rock2dTable.getPressureValue(xIdx));
                     for (size_t yIdx = 0; yIdx < rockwnodTable.getSaturationColumn().size(); ++yIdx)
-                        rockCompPoroMult_[regionIdx].appendSamplePoint(xIdx,
+                        rockCompPoroMultWc_[regionIdx].appendSamplePoint(xIdx,
                                                                            rockwnodTable.getSaturationColumn()[yIdx],
                                                                            rock2dTable.getPvmultValue(xIdx, yIdx));
                 }
             }
 
             if (!rock2dtrTables.empty()) {
-                rockCompTransMult_.resize(numRocktabTables, TabulatedTwoDFunction(TabulatedTwoDFunction::InterpolationPolicy::Vertical));
+                rockCompTransMultWc_.resize(numRocktabTables, TabulatedTwoDFunction(TabulatedTwoDFunction::InterpolationPolicy::Vertical));
                 for (size_t regionIdx = 0; regionIdx < numRocktabTables; ++regionIdx) {
                     const Opm::RockwnodTable& rockwnodTable =  rockwnodTables.template getTable<Opm::RockwnodTable>(regionIdx);
                     const auto& rock2dtrTable = rock2dtrTables[regionIdx];
@@ -2495,9 +2525,9 @@ private:
                         throw std::runtime_error("Number of entries in ROCKWNOD and ROCK2DTR needs to match.");
 
                     for (size_t xIdx = 0; xIdx < rock2dtrTable.size(); ++xIdx) {
-                        rockCompTransMult_[regionIdx].appendXPos(rock2dtrTable.getPressureValue(xIdx));
+                        rockCompTransMultWc_[regionIdx].appendXPos(rock2dtrTable.getPressureValue(xIdx));
                         for (size_t yIdx = 0; yIdx < rockwnodTable.getSaturationColumn().size(); ++yIdx)
-                            rockCompTransMult_[regionIdx].appendSamplePoint(xIdx,
+                            rockCompTransMultWc_[regionIdx].appendSamplePoint(xIdx,
                                                                                      rockwnodTable.getSaturationColumn()[yIdx],
                                                                                      rock2dtrTable.getTransMultValue(xIdx, yIdx));
                     }
@@ -3280,8 +3310,10 @@ private:
     std::vector<Scalar> overburdenPressure_;
     std::vector<Scalar> minOilPressure_;
 
-    std::vector<TabulatedTwoDFunction> rockCompPoroMult_;
-    std::vector<TabulatedTwoDFunction> rockCompTransMult_;
+    std::vector<TabulatedTwoDFunction> rockCompPoroMultWc_;
+    std::vector<TabulatedTwoDFunction> rockCompTransMultWc_;
+    std::vector<TabulatedFunction> rockCompPoroMult_;
+    std::vector<TabulatedFunction> rockCompTransMult_;
 
     bool enableDriftCompensation_;
     GlobalEqVector drift_;
