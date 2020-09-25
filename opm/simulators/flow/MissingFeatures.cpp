@@ -67,7 +67,7 @@ namespace MissingFeatures {
                 std::string msg = "For keyword '" + it->first + "' only value " + val
                     + " in item " + it->second.item + " is supported by flow.\n"
                     + "In file " + location.filename + ", line " + std::to_string(location.lineno) + "\n";
-                parseContext.handleError(ParseContext::SIMULATOR_KEYWORD_ITEM_NOT_SUPPORTED, msg, errorGuard);
+                // parseContext.handleError(ParseContext::SIMULATOR_KEYWORD_ITEM_NOT_SUPPORTED, msg, errorGuard);
             }
         }
     }
@@ -884,7 +884,7 @@ namespace MissingFeatures {
             if (it != unsupported_keywords.end()) {
                 std::string msg = "Keyword '" + keyword.name() + "' is not supported by flow.\n"
                     + "In " + location.filename + " line " + std::to_string(location.lineno) + "\n";
-                parseContext.handleError(ParseContext::SIMULATOR_KEYWORD_NOT_SUPPORTED, msg, errorGuard);
+                //parseContext.handleError(ParseContext::SIMULATOR_KEYWORD_NOT_SUPPORTED, msg, errorGuard);
             }
             checkOptions<std::string>(keyword, string_options, parseContext, errorGuard);
             checkOptions<int>(keyword, int_options, parseContext, errorGuard);
