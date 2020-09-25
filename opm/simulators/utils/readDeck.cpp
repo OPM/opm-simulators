@@ -258,6 +258,8 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
     catch(const std::exception& broadcast_error)
     {
         failureMessage = broadcast_error.what();
+        OpmLog::error(fmt::format("Distributing properties to all processes failed\n"
+                                  "Internal error message: {}", broadcast_error.what()));
         parseSuccess = 0;
     }
 
@@ -265,11 +267,10 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
 
     if (*errorGuard) { // errors encountered
         parseSuccess = 0;
+        errorGuard->dump();
+        errorGuard->clear();
     }
 
-    // print errors and warnings!
-    errorGuard->dump();
-    errorGuard->clear();
 
     auto comm = Dune::MPIHelper::getCollectiveCommunication();
     parseSuccess = comm.min(parseSuccess);
@@ -278,7 +279,7 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
     {
         if (rank == 0)
         {
-            OpmLog::error(std::string("Unrecoverable errors were encountered while loading input: ")+failureMessage);
+            OpmLog::error("Unrecoverable errors were encountered while loading input");
         }
 #if HAVE_MPI
         MPI_Finalize();
