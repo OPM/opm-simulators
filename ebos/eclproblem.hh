@@ -1037,13 +1037,6 @@ public:
             tuningEvent = true;
         }
 
-        const bool invalidateFromHyst = updateHysteresis_();
-        const bool invalidateFromMaxOilSat = updateMaxOilSaturation_();
-        const bool doInvalidate = invalidateFromHyst || invalidateFromMaxOilSat;
-
-        if (getPropValue<TypeTag, Properties::EnablePolymer>())
-            updateMaxPolymerAdsorption_();
-
         // set up the wells for the next episode.
         wellModel_.beginEpisode();
 
@@ -1059,8 +1052,6 @@ public:
             // if TUNING is enabled, also limit the time step size after a tuning event to TSINIT
             dt = std::min(dt, initialTimeStepSize_);
         simulator.setTimeStepSize(dt);
-        if (doInvalidate)
-            this->model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
     }
 
     /*!
@@ -1084,7 +1075,7 @@ public:
             OpmLog::info(ss.str());
         }
 
-        bool invalidateIntensiveQuantities = false;
+        // update explicit quantities between timesteps.
         const auto& oilVaporizationControl = simulator.vanguard().schedule().getOilVaporizationProperties(episodeIdx);
         if (drsdtActive_())
             // DRSDT is enabled
@@ -1100,10 +1091,18 @@ public:
         // used when ROCKCOMP is activated
         const bool invalidateFromMaxWaterSat = updateMaxWaterSaturation_();
         const bool invalidateFromMinPressure = updateMinPressure_();
-        invalidateIntensiveQuantities = invalidateFromMaxWaterSat || invalidateFromMinPressure;
 
+        // update hysteresis and max oil saturation used in vappars
+        const bool invalidateFromHyst = updateHysteresis_();
+        const bool invalidateFromMaxOilSat = updateMaxOilSaturation_();
+
+        // the derivatives may have change
+        bool invalidateIntensiveQuantities = invalidateFromMaxWaterSat || invalidateFromMinPressure || invalidateFromHyst || invalidateFromMaxOilSat;
         if (invalidateIntensiveQuantities)
             this->model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
+
+        if (getPropValue<TypeTag, Properties::EnablePolymer>())
+            updateMaxPolymerAdsorption_();
 
         wellModel_.beginTimeStep();
         if (enableAquifers_)
