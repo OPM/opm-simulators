@@ -84,7 +84,7 @@ protected:
 
 
         // We hack the cell depth values for now. We can actually get it from elementcontext pos
-        this->cell_depth_.resize(this->size(), aqufetp_data_.d0);
+        this->cell_depth_.resize(this->size(), this->aquiferDepth());
         this->alphai_.resize(this->size(), 1.0);
         this->faceArea_connected_.resize(this->size(), 0.0);
 
@@ -171,7 +171,7 @@ protected:
     inline Eval dpai(int idx)
     {
         const Eval dp = aquifer_pressure_ - this->pressure_current_.at(idx)
-            + this->rhow_[idx] * this->gravity_() * (this->cell_depth_[idx] - aqufetp_data_.d0);
+            + this->rhow_[idx] * this->gravity_() * (this->cell_depth_[idx] - this->aquiferDepth());
         return dp;
     }
 
@@ -204,47 +204,16 @@ protected:
         }
 
         if (!aqufetp_data_.p0.first) {
-            this->pa0_ = calculateReservoirEquilibrium();
+            this->pa0_ = this->calculateReservoirEquilibrium();
         } else {
             this->pa0_ = aqufetp_data_.p0.second;
         }
         aquifer_pressure_ = this->pa0_;
     }
 
-    inline Scalar calculateReservoirEquilibrium() override
+    virtual Scalar aquiferDepth() const override
     {
-        // Since the global_indices are the reservoir index, we just need to extract the fluidstate at those indices
-        std::vector<Scalar> pw_aquifer;
-        Scalar water_pressure_reservoir;
-
-        ElementContext elemCtx(this->ebos_simulator_);
-        const auto& gridView = this->ebos_simulator_.gridView();
-        auto elemIt = gridView.template begin</*codim=*/0>();
-        const auto& elemEndIt = gridView.template end</*codim=*/0>();
-        for (; elemIt != elemEndIt; ++elemIt) {
-            const auto& elem = *elemIt;
-            elemCtx.updatePrimaryStencil(elem);
-            size_t cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-            int idx = this->cellToConnectionIdx_[cellIdx];
-            if (idx < 0)
-                continue;
-
-            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-            const auto& iq0 = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-            const auto& fs = iq0.fluidState();
-
-            water_pressure_reservoir = fs.pressure(waterPhaseIdx).value();
-            this->rhow_[idx] = fs.density(waterPhaseIdx);
-            pw_aquifer.push_back(
-                (water_pressure_reservoir
-                 - this->rhow_[idx].value() * this->gravity_() * (this->cell_depth_[idx] - aqufetp_data_.d0))
-                * this->alphai_[idx]);
-        }
-
-        // We take the average of the calculated equilibrium pressures.
-        const Scalar sum_alpha = std::accumulate(this->alphai_.begin(), this->alphai_.end(), 0.);
-        const Scalar aquifer_pres_avg = std::accumulate(pw_aquifer.begin(), pw_aquifer.end(), 0.) / sum_alpha;
-        return aquifer_pres_avg;
+        return aqufetp_data_.d0;
     }
 }; // Class AquiferFetkovich
 } // namespace Opm
