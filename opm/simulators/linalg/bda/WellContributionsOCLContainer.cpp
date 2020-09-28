@@ -110,4 +110,8 @@ namespace bda
             applyStdWells(x, y);
         }
     }
+
+    WellContributionsOCLContainer::~WellContributionsOCLContainer(){
+        toOrder.clear();
+    }
 } // end namespace bda

@@ -52,7 +52,7 @@ namespace bda
 
     public:
         WellContributionsOCLContainer() {};
-        ~WellContributionsOCLContainer() {};
+        ~WellContributionsOCLContainer();
 
         void apply(cl::Buffer& x, cl::Buffer& y);
         void init(Opm::WellContributions &wellContribs, int Nb);
