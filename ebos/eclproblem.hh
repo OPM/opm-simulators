@@ -496,7 +496,8 @@ struct RestartWritingInterval<TypeTag, TTag::EclBaseProblem> {
 // as default if experimental mode is enabled.
 template<class TypeTag>
 struct EclEnableDriftCompensation<TypeTag, TTag::EclBaseProblem> {
-    static constexpr bool value = getPropValue<TypeTag, Properties::EnableExperiments>();
+    static constexpr bool value = true;
+
 };
 
 // By default, we enable the debugging checks if we're compiled in debug mode

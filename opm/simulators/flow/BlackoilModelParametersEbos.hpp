@@ -164,7 +164,7 @@ struct MaxResidualAllowed<TypeTag, TTag::FlowModelParameters> {
 template<class TypeTag>
 struct RelaxedMaxPvFraction<TypeTag, TTag::FlowModelParameters> {
     using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1.0;
+    static constexpr type value = 0.03;
 };
 template<class TypeTag>
 struct ToleranceMb<TypeTag, TTag::FlowModelParameters> {
@@ -179,7 +179,7 @@ struct ToleranceCnv<TypeTag, TTag::FlowModelParameters> {
 template<class TypeTag>
 struct ToleranceCnvRelaxed<TypeTag, TTag::FlowModelParameters> {
     using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e9;
+    static constexpr type value = 1;
 };
 template<class TypeTag>
 struct ToleranceWells<TypeTag, TTag::FlowModelParameters> {
@@ -206,7 +206,7 @@ struct MaxSinglePrecisionDays<TypeTag, TTag::FlowModelParameters> {
 };
 template<class TypeTag>
 struct MaxStrictIter<TypeTag, TTag::FlowModelParameters> {
-    static constexpr int value = 8;
+    static constexpr int value = 0;
 };
 template<class TypeTag>
 struct SolveWelleqInitially<TypeTag, TTag::FlowModelParameters> {
