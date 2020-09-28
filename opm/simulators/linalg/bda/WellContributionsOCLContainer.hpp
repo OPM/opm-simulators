@@ -29,6 +29,7 @@ namespace bda
     {
     private:
         unsigned int dim, dim_wells;
+        unsigned int num_blocks = 0;
         unsigned int num_std_wells = 0;
         unsigned int num_ms_wells = 0;           // number of MultisegmentWells in this object, must equal multisegments.size()
         int Nb;
@@ -48,6 +49,7 @@ namespace bda
                         const unsigned int, const unsigned int, cl::Buffer&,
                         cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg> *stdwell_apply;
 
+        void reinit(Opm::WellContributions &wellContribs);
         void applyStdWells(cl::Buffer& x, cl::Buffer& y);
 
     public:

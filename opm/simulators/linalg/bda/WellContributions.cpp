@@ -56,30 +56,6 @@ WellContributions::~WellContributions()
 #endif
 }
 
-/*
-#if HAVE_OPENCL
-void WellContributions::applyMSWell(cl::Buffer& d_x, cl::Buffer& d_y) {
-    // apply MultisegmentWells
-    if (num_ms_wells > 0) {
-        h_x_ocl.reserve(N);
-        h_y_ocl.reserve(N);
-
-        // copy vectors x and y from GPU to CPU
-        queue->enqueueReadBuffer(d_x, CL_TRUE, 0, sizeof(double) * N, h_x_ocl.data());
-        queue->enqueueReadBuffer(d_y, CL_TRUE, 0, sizeof(double) * N, h_y_ocl.data());
-
-        // actually apply MultisegmentWells
-        for (MultisegmentWellContribution *well : multisegments) {
-            well->apply(h_x_ocl.data(), h_y_ocl.data());
-        }
-
-        // copy vector y from CPU to GPU
-        queue->enqueueWriteBuffer(d_y, CL_TRUE, 0, sizeof(double) * N, h_y_ocl.data());
-    }
-}
-#endif
-*/
-
 void WellContributions::addMatrix([[maybe_unused]] MatrixType type, [[maybe_unused]] int *colIndices, [[maybe_unused]] double *values, [[maybe_unused]] unsigned int val_size)
 {
 

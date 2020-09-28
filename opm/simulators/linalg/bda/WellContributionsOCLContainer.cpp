@@ -37,6 +37,7 @@ namespace bda
         dim_wells = wellContribs.dim_wells;
 
         if(!wellContribs.h_val_pointers_ocl.empty()){
+            num_blocks = wellContribs.h_Ccols_ocl.size();
             num_std_wells = wellContribs.h_val_pointers_ocl.size() - 1;
 
             s.Cnnzs = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * wellContribs.h_Cnnzs_ocl.size());
@@ -52,43 +53,50 @@ namespace bda
         }
     }
 
+    void WellContributionsOCLContainer::reinit(Opm::WellContributions &wellContribs){
+        num_blocks = wellContribs.h_Ccols_ocl.size();
+        num_std_wells = wellContribs.h_val_pointers_ocl.size() - 1;
+
+        s.Cnnzs = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * wellContribs.h_Cnnzs_ocl.size());
+        s.Dnnzs = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * wellContribs.h_Dnnzs_ocl.size());
+        s.Bnnzs = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * wellContribs.h_Bnnzs_ocl.size());
+        s.Ccols = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * wellContribs.h_Ccols_ocl.size());
+        s.Bcols = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * wellContribs.h_Bcols_ocl.size());
+        s.val_pointers = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(unsigned int) * wellContribs.h_val_pointers_ocl.size());
+    }
+
     void WellContributionsOCLContainer::copy_to_gpu(Opm::WellContributions &wellContribs){
         if(num_std_wells > 0){
             toOrder.insert(toOrder.end(), wellContribs.toOrder, wellContribs.toOrder + Nb);
 
             cl::Event event;
-            queue->enqueueWriteBuffer(s.Cnnzs, CL_TRUE, 0, sizeof(double) * wellContribs.h_Cnnzs_ocl.size(), wellContribs.h_Cnnzs_ocl.data(), nullptr, &event);
-            event.wait();
-            queue->enqueueWriteBuffer(s.Dnnzs, CL_TRUE, 0, sizeof(double) * wellContribs.h_Dnnzs_ocl.size(), wellContribs.h_Dnnzs_ocl.data(), nullptr, &event);
-            event.wait();
-            queue->enqueueWriteBuffer(s.Bnnzs, CL_TRUE, 0, sizeof(double) * wellContribs.h_Bnnzs_ocl.size(), wellContribs.h_Bnnzs_ocl.data(), nullptr, &event);
-            event.wait();
-            queue->enqueueWriteBuffer(s.Ccols, CL_TRUE, 0, sizeof(int) * wellContribs.h_Ccols_ocl.size(), wellContribs.h_Ccols_ocl.data(), nullptr, &event);
-            event.wait();
-            queue->enqueueWriteBuffer(s.Bcols, CL_TRUE, 0, sizeof(int) * wellContribs.h_Bcols_ocl.size(), wellContribs.h_Bcols_ocl.data(), nullptr, &event);
-            event.wait();
-            queue->enqueueWriteBuffer(s.val_pointers, CL_TRUE, 0, sizeof(unsigned int) * wellContribs.h_val_pointers_ocl.size(), wellContribs.h_val_pointers_ocl.data(), nullptr, &event);
-            event.wait();
-            queue->enqueueWriteBuffer(s.toOrder, CL_TRUE, 0, sizeof(int) * toOrder.size(), toOrder.data(), nullptr, &event);
-            event.wait();
+            std::vector<cl::Event> events(7);
+            queue->enqueueWriteBuffer(s.Cnnzs, CL_FALSE, 0, sizeof(double) * wellContribs.h_Cnnzs_ocl.size(), wellContribs.h_Cnnzs_ocl.data(), nullptr, &events[0]);
+            queue->enqueueWriteBuffer(s.Dnnzs, CL_FALSE, 0, sizeof(double) * wellContribs.h_Dnnzs_ocl.size(), wellContribs.h_Dnnzs_ocl.data(), nullptr, &events[1]);
+            queue->enqueueWriteBuffer(s.Bnnzs, CL_FALSE, 0, sizeof(double) * wellContribs.h_Bnnzs_ocl.size(), wellContribs.h_Bnnzs_ocl.data(), nullptr, &events[2]);
+            queue->enqueueWriteBuffer(s.Ccols, CL_FALSE, 0, sizeof(int) * wellContribs.h_Ccols_ocl.size(), wellContribs.h_Ccols_ocl.data(), nullptr, &events[3]);
+            queue->enqueueWriteBuffer(s.Bcols, CL_FALSE, 0, sizeof(int) * wellContribs.h_Bcols_ocl.size(), wellContribs.h_Bcols_ocl.data(), nullptr, &events[4]);
+            queue->enqueueWriteBuffer(s.val_pointers, CL_FALSE, 0, sizeof(unsigned int) * wellContribs.h_val_pointers_ocl.size(), wellContribs.h_val_pointers_ocl.data(), nullptr, &events[5]);
+            queue->enqueueWriteBuffer(s.toOrder, CL_FALSE, 0, sizeof(int) * toOrder.size(), toOrder.data(), nullptr, &events[6]);
+            event.waitForEvents(events);
         }
     }
 
     void WellContributionsOCLContainer::update_on_gpu(Opm::WellContributions &wellContribs){
         if(num_std_wells > 0){
+            if(num_std_wells != wellContribs.h_val_pointers_ocl.size() || num_blocks != wellContribs.h_Ccols_ocl.size()){
+                reinit(wellContribs);
+            }
+
             cl::Event event;
-            queue->enqueueWriteBuffer(s.Cnnzs, CL_TRUE, 0, sizeof(double) * wellContribs.h_Cnnzs_ocl.size(), wellContribs.h_Cnnzs_ocl.data(), nullptr, &event);
-            event.wait();
-            queue->enqueueWriteBuffer(s.Dnnzs, CL_TRUE, 0, sizeof(double) * wellContribs.h_Dnnzs_ocl.size(), wellContribs.h_Dnnzs_ocl.data(), nullptr, &event);
-            event.wait();
-            queue->enqueueWriteBuffer(s.Bnnzs, CL_TRUE, 0, sizeof(double) * wellContribs.h_Bnnzs_ocl.size(), wellContribs.h_Bnnzs_ocl.data(), nullptr, &event);
-            event.wait();
-            queue->enqueueWriteBuffer(s.Ccols, CL_TRUE, 0, sizeof(int) * wellContribs.h_Ccols_ocl.size(), wellContribs.h_Ccols_ocl.data(), nullptr, &event);
-            event.wait();
-            queue->enqueueWriteBuffer(s.Bcols, CL_TRUE, 0, sizeof(int) * wellContribs.h_Bcols_ocl.size(), wellContribs.h_Bcols_ocl.data(), nullptr, &event);
-            event.wait();
-            queue->enqueueWriteBuffer(s.val_pointers, CL_TRUE, 0, sizeof(unsigned int) * wellContribs.h_val_pointers_ocl.size(), wellContribs.h_val_pointers_ocl.data(), nullptr, &event);
-            event.wait();
+            std::vector<cl::Event> events(6);
+            queue->enqueueWriteBuffer(s.Cnnzs, CL_FALSE, 0, sizeof(double) * wellContribs.h_Cnnzs_ocl.size(), wellContribs.h_Cnnzs_ocl.data(), nullptr, &events[0]);
+            queue->enqueueWriteBuffer(s.Dnnzs, CL_FALSE, 0, sizeof(double) * wellContribs.h_Dnnzs_ocl.size(), wellContribs.h_Dnnzs_ocl.data(), nullptr, &events[1]);
+            queue->enqueueWriteBuffer(s.Bnnzs, CL_FALSE, 0, sizeof(double) * wellContribs.h_Bnnzs_ocl.size(), wellContribs.h_Bnnzs_ocl.data(), nullptr, &events[2]);
+            queue->enqueueWriteBuffer(s.Ccols, CL_FALSE, 0, sizeof(int) * wellContribs.h_Ccols_ocl.size(), wellContribs.h_Ccols_ocl.data(), nullptr, &events[3]);
+            queue->enqueueWriteBuffer(s.Bcols, CL_FALSE, 0, sizeof(int) * wellContribs.h_Bcols_ocl.size(), wellContribs.h_Bcols_ocl.data(), nullptr, &events[4]);
+            queue->enqueueWriteBuffer(s.val_pointers, CL_FALSE, 0, sizeof(unsigned int) * wellContribs.h_val_pointers_ocl.size(), wellContribs.h_val_pointers_ocl.data(), nullptr, &events[5]);
+            event.waitForEvents(events);
         }
     }
 
