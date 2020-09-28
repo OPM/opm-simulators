@@ -385,8 +385,8 @@ namespace bda
         int wiId = get_local_id(0);
         int valSize = val_pointers[wgId + 1] - val_pointers[wgId];
         int valsPerBlock = dim*dim_wells;
-        int numActiveWorkItems = (32/valsPerBlock)*valsPerBlock;
-        int numBlocksPerWarp = 32/valsPerBlock;
+        int numActiveWorkItems = (get_local_size(0)/valsPerBlock)*valsPerBlock;
+        int numBlocksPerWarp = get_local_size(0)/valsPerBlock;
         int c = wiId % dim;
         int r = (wiId/dim) % dim_wells;
         double temp;
