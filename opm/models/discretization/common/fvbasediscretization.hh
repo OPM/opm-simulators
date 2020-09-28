@@ -765,6 +765,26 @@ public:
         }
     }
 
+    void invalidateAndUpdateIntensiveQuantities(unsigned timeIdx) const
+    {
+        invalidateIntensiveQuantitiesCache(timeIdx);
+
+        // loop over all elements...
+        ThreadedEntityIterator<GridView, /*codim=*/0> threadedElemIt(gridView_);
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+        {
+            ElementContext elemCtx(simulator_);
+            ElementIterator elemIt = threadedElemIt.beginParallel();
+            for (; !threadedElemIt.isFinished(elemIt); elemIt = threadedElemIt.increment()) {
+                const Element& elem = *elemIt;
+                elemCtx.updatePrimaryStencil(elem);
+                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+            }
+        }
+    }
+
     /*!
      * \brief Move the intensive quantities for a given time index to the back.
      *
