@@ -408,12 +408,10 @@ namespace bda
 
             b = wiId/valsPerBlock + val_pointers[wgId];
 
-            if(wiId < valsPerBlock){
-                if(c == 0 || c == 2) {localSum[wiId] += localSum[wiId + 2];}
-                if(c == 0 || c == 1) {localSum[wiId] += localSum[wiId + 1];}
-            }
-
             if(c == 0 && wiId < valsPerBlock){
+                for(unsigned int stride = 2; stride > 0; stride >>= 1){
+                    localSum[wiId] += localSum[wiId + stride];
+                }
                 z1[r] = localSum[wiId];
             }
         }
