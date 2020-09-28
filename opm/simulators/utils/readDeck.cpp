@@ -42,6 +42,8 @@
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
 
+#include <fmt/format.h>
+
 #include <cstdlib>
 
 namespace Opm
@@ -54,7 +56,7 @@ void ensureOutputDirExists_(const std::string& cmdline_output_dir)
             Opm::filesystem::create_directories(cmdline_output_dir);
         }
         catch (...) {
-            throw std::runtime_error("Creation of output directory '" + cmdline_output_dir + "' failed\n");
+            throw std::runtime_error(fmt::format("Creation of output directory '{}' failed\n", cmdline_output_dir));
         }
     }
 }
