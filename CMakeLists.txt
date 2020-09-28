@@ -162,6 +162,10 @@ macro (config_hook)
       opm_need_version_of ("dune-fem")
   endif()
   opm_need_version_of ("opm-models")
+
+  add_definitions(-DFMT_HEADER_ONLY)
+  list(APPEND EXTRA_INCLUDES SYSTEM ${PROJECT_SOURCE_DIR}/external/fmtlib/include)
+  include_directories(${EXTRA_INCLUDES})
 endmacro (config_hook)
 
 macro (prereqs_hook)
