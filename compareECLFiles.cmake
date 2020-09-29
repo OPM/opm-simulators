@@ -452,6 +452,13 @@ add_test_compareECLFiles(CASENAME tran_in_edit
                          REL_TOL ${rel_tol}
                          DIR model2)
 
+add_test_compareECLFiles(CASENAME maxmin_tran_in_edit
+                         FILENAME 10_MAX_MIN_VALUE
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2)
+
 add_test_compareECLFiles(CASENAME udq_actionx
                          FILENAME UDQ_ACTIONX
                          SIMULATOR flow
@@ -741,13 +748,6 @@ add_test_compareECLFiles(CASENAME model4_udq_group
                          REL_TOL ${rel_tol}
                          DIR model4)
 
-add_test_compareECLFiles(CASENAME maxvalue_in_edit
-                         FILENAME 3_MAXVALUE_TRANZ
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model5)
-
 add_test_compareECLFiles(CASENAME model6_msw
                          FILENAME 1_MSW_MODEL6
                          SIMULATOR flow
@@ -927,10 +927,10 @@ add_test_compare_parallel_simulation(CASENAME tran_in_edit
                                      DIR model2)
 
 
-add_test_compare_parallel_simulation(CASENAME maxvalue_in_edit
-                                     FILENAME 3_MAXVALUE_TRANZ
+add_test_compare_parallel_simulation(CASENAME maxmin_tran_in_edit
+                                     FILENAME 10_MAX_MIN_VALUE
                                      SIMULATOR flow
                                      ABS_TOL ${abs_tol}
                                      REL_TOL ${rel_tol}
-                                     DIR model5)
+                                     DIR model2)
 endif()
