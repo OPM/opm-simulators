@@ -173,6 +173,7 @@ public:
 
             Dune::EdgeWeightMethod edgeWeightsMethod = this->edgeWeightsMethod();
             bool ownersFirst = this->ownersFirst();
+            bool serialPartitioning = this->serialPartitioning();
 
             // convert to transmissibility for faces
             // TODO: grid_->numFaces() is not generic. use grid_->size(1) instead? (might
@@ -218,7 +219,7 @@ public:
 
                     PropsCentroidsDataHandle<Dune::CpGrid> handle(*grid_, eclState, eclGrid, this->centroids_,
                                                                   cartesianIndexMapper());
-                    this->parallelWells_ = std::get<1>(grid_->loadBalance(handle, edgeWeightsMethod, &wells, faceTrans.data(), ownersFirst));
+                    this->parallelWells_ = std::get<1>(grid_->loadBalance(handle, edgeWeightsMethod, &wells, serialPartitioning, faceTrans.data(), ownersFirst));
                 }
                 catch(const std::bad_cast& e)
                 {
