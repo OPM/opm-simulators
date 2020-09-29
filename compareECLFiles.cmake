@@ -932,5 +932,6 @@ add_test_compare_parallel_simulation(CASENAME maxmin_tran_in_edit
                                      SIMULATOR flow
                                      ABS_TOL ${abs_tol}
                                      REL_TOL ${rel_tol}
-                                     DIR model2)
+                                     DIR model2
+                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 endif()
