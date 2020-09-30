@@ -1375,7 +1375,6 @@ namespace Opm {
                     std::vector<double> potentials;
                     well->computeWellPotentials(ebosSimulator_, B_avg, well_state_copy, potentials, deferred_logger);
                     // putting the sucessfully calculated potentials to the well_potentials
-                    well_state_.updateALQ(well_state_copy);
                     for (int p = 0; p < np; ++p) {
                         well_potentials[well->indexOfWell() * np + p] = std::abs(potentials[p]);
                     }
