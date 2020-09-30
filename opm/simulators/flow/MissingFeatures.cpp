@@ -58,7 +58,6 @@ namespace MissingFeatures {
         for (it = itlow; it != itup; ++it) {
             const auto& record = keyword.getRecord(0);
             if (record.getItem(it->second.item).template get<T>(0) != it->second.item_value) {
-                const auto& location = keyword.location();
                 std::string val;
                 if constexpr (std::is_arithmetic<T>::value)
                     val = std::to_string(it->second.item_value);
@@ -879,7 +878,6 @@ namespace MissingFeatures {
         // check deck and keyword for flow and parser.
         for (size_t idx = 0; idx < deck.size(); ++idx) {
             const auto& keyword = deck.getKeyword(idx);
-            const auto& location = keyword.location();
             std::unordered_set<std::string>::const_iterator it;
             it = unsupported_keywords.find(keyword.name());
             if (it != unsupported_keywords.end()) {
