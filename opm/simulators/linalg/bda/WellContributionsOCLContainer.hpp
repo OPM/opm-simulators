@@ -29,6 +29,8 @@ namespace bda
     class WellContributionsOCLContainer
     {
     private:
+        typedef std::vector<Opm::MultisegmentWellContribution*> mswVecT;
+
         unsigned int dim, dim_wells;
         unsigned int num_blocks = 0;
         unsigned int num_std_wells = 0;
@@ -36,7 +38,7 @@ namespace bda
         int N, Nb;
         std::vector<int> toOrder;
         std::vector<double> x_msw, y_msw;
-        std::vector<Opm::MultisegmentWellContribution*> multisegments;
+        std::unique_ptr<mswVecT> multisegments;
 
         typedef struct {
             cl::Buffer Cnnzs, Dnnzs, Bnnzs;
@@ -57,7 +59,7 @@ namespace bda
         void applyMSWells(cl::Buffer& x, cl::Buffer& y);
 
     public:
-        WellContributionsOCLContainer() {};
+        WellContributionsOCLContainer();
         ~WellContributionsOCLContainer();
 
         void apply(cl::Buffer& x, cl::Buffer& y);

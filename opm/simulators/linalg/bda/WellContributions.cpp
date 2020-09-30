@@ -43,22 +43,13 @@ WellContributions::WellContributions(std::string gpu_mode){
 
 WellContributions::~WellContributions()
 {
+#if HAVE_CUDA
     // delete MultisegmentWellContributions
     for (auto ms : multisegments) {
         delete ms;
     }
     multisegments.clear();
 
-#if HAVE_OPENCL
-    h_Cnnzs_ocl.clear();
-    h_Dnnzs_ocl.clear();
-    h_Bnnzs_ocl.clear();
-    h_Ccols_ocl.clear();
-    h_Bcols_ocl.clear();
-    h_val_pointers_ocl.clear();
-#endif
-
-#if HAVE_CUDA
     if(cuda_gpu){
         freeCudaMemory(); // should come before 'delete[] h_x'
     }
