@@ -26,6 +26,9 @@
 #include <cuda_runtime.h>
 #endif
 
+#include <dune/istl/umfpack.hh>
+#include <dune/common/version.hh>
+
 namespace Opm
 {
 
@@ -75,6 +78,13 @@ private:
 
 public:
 
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
+    using UMFPackIndex =
+        typename Dune::UMFPack<Dune::BCRSMatrix<Dune::FieldMatrix<double,1,1>>>::UMFPackMatrix::Index;
+#else
+    using UMFPackIndex = int;
+#endif
+
 #if HAVE_CUDA
     /// Set a cudaStream to be used
     /// \param[in] stream           the cudaStream that is used
@@ -100,8 +110,8 @@ public:
     MultisegmentWellContribution(unsigned int dim, unsigned int dim_wells,
                                  unsigned int Nb, unsigned int Mb,
                                  unsigned int BnumBlocks, std::vector<double> &Bvalues, std::vector<unsigned int> &BcolIndices, std::vector<unsigned int> &BrowPointers,
-                                 unsigned int DnumBlocks, double *Dvalues, int *DcolPointers, int *DrowIndices,
-                                 std::vector<double> &Cvalues);
+                                 unsigned int DnumBlocks, double *Dvalues, UMFPackIndex *DcolPointers,
+                                 UMFPackIndex *DrowIndices, std::vector<double> &Cvalues);
 
     /// Destroy a MultisegmentWellContribution, and free memory
     ~MultisegmentWellContribution();

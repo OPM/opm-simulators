@@ -677,8 +677,8 @@ namespace Opm
         // duneD
         Dune::UMFPack<DiagMatWell> umfpackMatrix(duneD_, 0);
         double *Dvals = umfpackMatrix.getInternalMatrix().getValues();
-        int *Dcols = umfpackMatrix.getInternalMatrix().getColStart();
-        int *Drows = umfpackMatrix.getInternalMatrix().getRowIndex();
+        auto *Dcols = umfpackMatrix.getInternalMatrix().getColStart();
+        auto *Drows = umfpackMatrix.getInternalMatrix().getRowIndex();
 
         // duneB
         std::vector<unsigned int> Bcols;
