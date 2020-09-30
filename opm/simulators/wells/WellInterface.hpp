@@ -26,6 +26,7 @@
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
@@ -166,6 +167,12 @@ namespace Opm
                                     WellState& well_state,
                                     Opm::DeferredLogger& deferred_logger
                                     ) = 0;
+
+        virtual void maybeDoGasLiftOptimization (
+            const WellState& well_state,
+            const Simulator& ebosSimulator,
+            DeferredLogger& deferred_logger
+        ) const = 0;
 
         void updateWellTestState(const WellState& well_state,
                                  const double& simulationTime,

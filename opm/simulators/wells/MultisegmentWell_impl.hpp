@@ -2169,8 +2169,8 @@ namespace Opm
             const EvalWell inlet_mass_rate = segment_mass_rates_[inlet];
             accelerationPressureLoss -= mswellhelpers::velocityHead(std::max(inlet_area, area), inlet_mass_rate, inlet_density);
         }
-        
-        // We change the sign of the accelerationPressureLoss for injectors. 
+
+        // We change the sign of the accelerationPressureLoss for injectors.
         // Is this correct? Testing indicates that this is what the reference simulator does
         const double sign = mass_rate < 0. ? 1.0 : - 1.0;
         accelerationPressureLoss *= sign;
@@ -2539,7 +2539,7 @@ namespace Opm
                 const EvalWell segment_surface_volume = getSegmentSurfaceVolume(ebosSimulator, seg);
 
                 // Add a regularization_factor to increase the accumulation term
-                // This will make the system less stiff and help convergence for 
+                // This will make the system less stiff and help convergence for
                 // difficult cases
                 const Scalar regularization_factor =  param_.regularization_factor_ms_wells_;
                 // for each component

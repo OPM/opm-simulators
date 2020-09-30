@@ -115,6 +115,14 @@ namespace Opm
 
         virtual void initPrimaryVariablesEvaluation() const override;
 
+        virtual void maybeDoGasLiftOptimization (
+            const WellState&,
+            const Simulator&,
+            DeferredLogger&
+        ) const {
+            // Not implemented yet
+        }
+
         virtual void assembleWellEq(const Simulator& ebosSimulator,
                                     const std::vector<Scalar>& B_avg,
                                     const double dt,
