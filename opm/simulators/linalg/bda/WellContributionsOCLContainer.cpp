@@ -167,18 +167,10 @@ namespace bda
     }
 
     WellContributionsOCLContainer::~WellContributionsOCLContainer(){
-        if(num_std_wells > 0){
-            toOrder.clear();
-        }
-
         if(num_ms_wells > 0){
             for (auto ms : multisegments) {
                 delete ms;
             }
-
-            multisegments.clear();
-            x_msw.clear();
-            y_msw.clear();
         }
     }
 } // end namespace bda
