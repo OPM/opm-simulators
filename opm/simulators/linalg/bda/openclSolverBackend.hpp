@@ -21,11 +21,10 @@
 #define OPM_OPENCLSOLVER_BACKEND_HEADER_INCLUDED
 
 #include <opm/simulators/linalg/bda/opencl.hpp>
-
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 #include <opm/simulators/linalg/bda/BdaSolver.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
-
+#include <opm/simulators/linalg/bda/WellContributionsOCLContainer.hpp>
 #include <opm/simulators/linalg/bda/BILU0.hpp>
 
 namespace bda
@@ -35,9 +34,9 @@ namespace bda
 template <unsigned int block_size>
 class openclSolverBackend : public BdaSolver<block_size>
 {
-
     typedef BdaSolver<block_size> Base;
     typedef BILU0<block_size> Preconditioner;
+    typedef WellContributionsOCLContainer WContainer;
 
     using Base::N;
     using Base::Nb;
@@ -51,7 +50,6 @@ class openclSolverBackend : public BdaSolver<block_size>
     using Base::initialized;
 
 private:
-
     double *rb = nullptr;                 // reordered b vector, the matrix is reordered, so b must also be
     double *vals_contiguous = nullptr;    // only used if COPY_ROW_BY_ROW is true in openclSolverBackend.cpp
 
@@ -64,13 +62,6 @@ private:
     cl::Buffer d_tmp;                            // used as tmp GPU buffer for dot() and norm()
     double *tmp = nullptr;                       // used as tmp CPU buffer for dot() and norm()
 
-    //unsigned int num_blocks, dim_, dim_wells, num_std_wells;
-    //unsigned int *h_val_pointers;
-    //int *h_Ccols, *h_Bcols;
-    //double *h_Cnnzs, *h_Dnnzs, *h_Bnnzs;
-    //cl::Buffer d_Cnnzs, d_Dnnzs, d_Bnnzs;
-    //cl::Buffer d_Ccols, d_Bcols, d_val_pointers;
-
     // shared pointers are also passed to other objects
     cl::Program program;
     std::shared_ptr<cl::Context> context;
@@ -82,14 +73,16 @@ private:
     std::unique_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > spmv_blocked_k;
     std::shared_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> > ILU_apply1_k;
     std::shared_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> > ILU_apply2_k;
-    std::shared_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::Buffer&, cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg> > add_well_contributions_k;
+    std::shared_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
+                                    cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
+                                    const unsigned int, const unsigned int, cl::Buffer&,
+                                    cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg> > stdwell_apply_k;
 
-    Preconditioner *prec = nullptr;                  // only supported preconditioner is BILU0
-    int *toOrder = nullptr, *fromOrder = nullptr;    // BILU0 reorders rows of the matrix via these mappings
+    Preconditioner *prec = nullptr;                               // only supported preconditioner is BILU0
+    WContainer *wcontainer = nullptr;
+    int *toOrder = nullptr, *fromOrder = nullptr;                 // BILU0 reorders rows of the matrix via these mappings
     std::unique_ptr<BlockedMatrix<block_size> > mat = nullptr;    // original matrix 
-    BlockedMatrix<block_size> *rmat = nullptr;       // reordered matrix, used for spmv
-
-
+    BlockedMatrix<block_size> *rmat = nullptr;                    // reordered matrix, used for spmv
 
     /// Divide A by B, and round up: return (int)ceil(A/B)
     /// \param[in] A    dividend
@@ -136,12 +129,10 @@ private:
     /// \param[out] b       output vector
     void spmv_blocked_w(cl::Buffer vals, cl::Buffer cols, cl::Buffer rows, cl::Buffer x, cl::Buffer b);
 
-    //void add_well_contributions_w(cl::Buffer valsC, cl::Buffer valsD, cl::Buffer valsB, cl::Buffer colsC, cl::Buffer colsB, cl::Buffer x, cl::Buffer y, cl::Buffer val_pointers);
-
     /// Solve linear system using ilu0-bicgstab
     /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
-    void gpu_pbicgstab(WellContributions& wellContribs, BdaResult& res);
+    void gpu_pbicgstab(BdaResult& res);
 
     /// Initialize GPU and allocate memory
     /// \param[in] N              number of nonzeroes, divide by dim*dim to get number of blocks
@@ -150,15 +141,13 @@ private:
     /// \param[in] vals           array of nonzeroes, each block is stored row-wise and contiguous, contains nnz values
     /// \param[in] rows           array of rowPointers, contains N/dim+1 values
     /// \param[in] cols           array of columnIndices, contains nnz values
-    void initialize(int N, int nnz, int dim, double *vals, int *rows, int *cols);
-
-    void initialize_wellContribs(WellContributions& wellContribs);
+    void initialize(int N, int nnz, int dim, double *vals, int *rows, int *cols, WellContributions &wellContribs);
 
     /// Clean memory
     void finalize();
 
     /// Copy linear system to GPU
-    void copy_system_to_gpu();
+    void copy_system_to_gpu(WellContributions &wellContribs);
 
     /// Reorder the linear system so it corresponds with the coloring
     /// \param[in] vals           array of nonzeroes, each block is stored row-wise and contiguous, contains nnz values
@@ -166,7 +155,7 @@ private:
     void update_system(double *vals, double *b);
 
     /// Update linear system on GPU, don't copy rowpointers and colindices, they stay the same
-    void update_system_on_gpu();
+    void update_system_on_gpu(WellContributions &wellContribs);
 
     /// Analyse sparsity pattern to extract parallelism
     /// \return true iff analysis was successful
@@ -179,7 +168,7 @@ private:
     /// Solve linear system
     /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
-    void solve_system(WellContributions& wellContribs, BdaResult &res);
+    void solve_system(BdaResult &res);
 
 public:
 

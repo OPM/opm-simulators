@@ -55,7 +55,6 @@ namespace Opm
 /// - copy data of wellcontributions
 class WellContributions
 {
-
 public:
     /// StandardWell has C, D and B matrices that need to be copied
     enum class MatrixType {
@@ -64,26 +63,34 @@ public:
         B
     };
 
-private:
-    unsigned int num_blocks = 0;             // total number of blocks in all wells
     unsigned int dim;                        // number of columns in blocks in B and C, equal to StandardWell::numEq
     unsigned int dim_wells;                  // number of rows in blocks in B and C, equal to StandardWell::numStaticWellEq
-    unsigned int num_std_wells = 0;          // number of StandardWells in this object
-    unsigned int num_ms_wells = 0;           // number of MultisegmentWells in this object, must equal multisegments.size()
-    unsigned int num_blocks_so_far = 0;      // keep track of where next data is written
-    unsigned int num_std_wells_so_far = 0;   // keep track of where next data is written
-    unsigned int *val_pointers = nullptr;    // val_pointers[wellID] == index of first block for this well in Ccols and Bcols
-    unsigned int N;                          // number of rows (not blockrows) in vectors x and y
-    bool allocated = false;
-    std::vector<MultisegmentWellContribution*> multisegments;
+
+#if HAVE_OPENCL
+    std::vector<double> h_Cnnzs_ocl, h_Dnnzs_ocl, h_Bnnzs_ocl;
+    std::vector<int> h_Ccols_ocl, h_Bcols_ocl;
+    std::vector<unsigned int> h_val_pointers_ocl;
+    std::vector<double> h_x_ocl, h_y_ocl;
 
     int *toOrder = nullptr;
     bool reorder = false;
+#endif
+
+private:
+    unsigned int num_ms_wells = 0;           // number of MultisegmentWells in this object, must equal multisegments.size()
+    unsigned int N;                          // number of rows (not blockrows) in vectors x and y
+    std::vector<MultisegmentWellContribution*> multisegments;
 
     bool opencl_gpu = false;
     bool cuda_gpu = false;
 
 #if HAVE_CUDA
+    bool allocated = false;
+    unsigned int num_blocks = 0;             // total number of blocks in all wells
+    unsigned int num_std_wells = 0;          // number of StandardWells in this object
+    unsigned int num_blocks_so_far = 0;      // keep track of where next data is written
+    unsigned int num_std_wells_so_far = 0;   // keep track of where next data is written
+    unsigned int *val_pointers = nullptr;    // val_pointers[wellID] == index of first block for this well in Ccols and Bcols
     cudaStream_t stream;
 
     // data for StandardWells, could remain nullptrs if not used
@@ -97,30 +104,7 @@ private:
     unsigned int *d_val_pointers = nullptr;
     double *h_x = nullptr;
     double *h_y = nullptr;
-#endif
 
-#if HAVE_OPENCL
-    double *h_Cnnzs_ocl = nullptr;
-    double *h_Dnnzs_ocl = nullptr;
-    double *h_Bnnzs_ocl = nullptr;
-    int *h_Ccols_ocl = nullptr;
-    int *h_Bcols_ocl = nullptr;
-    double *h_x_ocl = nullptr;
-    double *h_y_ocl = nullptr;
-
-    cl::Buffer d_Cnnzs_ocl, d_Dnnzs_ocl, d_Bnnzs_ocl;
-    cl::Buffer d_Ccols_ocl, d_Bcols_ocl, d_val_pointers_ocl;
-
-    typedef cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&,
-                            cl::Buffer&, cl::Buffer&, cl::Buffer&,
-                            cl::Buffer&, const unsigned int, const unsigned int,
-                            cl::Buffer&, cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg> kernel_type;
-    kernel_type *stdwell_apply;
-    cl::Context *context;
-    cl::CommandQueue *queue;
-#endif
-
-#if HAVE_CUDA
     /// Store a matrix in this object, in blocked csr format, can only be called after alloc() is called
     /// \param[in] type        indicate if C, D or B is sent
     /// \param[in] colIndices  columnindices of blocks in C or B, ignored for D
@@ -135,12 +119,11 @@ private:
     void freeCudaMemory();
 #endif
 
-#if HAVE_OPENCL
-    void applyStdWell(cl::Buffer& d_x, cl::Buffer& d_y);
-    void applyMSWell(cl::Buffer& d_x, cl::Buffer& d_y);
-#endif
-
 public:
+//#if HAVE_OPENCL
+//    void applyMSWell(cl::Buffer& d_x, cl::Buffer& d_y);
+//#endif
+
 #if HAVE_CUDA
     /// Set a cudaStream to be used
     /// \param[in] stream           the cudaStream that is used to launch the kernel in
@@ -155,14 +138,13 @@ public:
     unsigned int getNumWells(){
         return num_std_wells + num_ms_wells;
     }
-#endif
 
-#if HAVE_OPENCL
-    void init();
-    void apply(cl::Buffer& x, cl::Buffer& y);
-    void setOpenCLContext(cl::Context *context);
-    void setOpenCLQueue(cl::CommandQueue *queue);
-    void setKernel(kernel_type *stdwell_apply);
+    /// Indicate how large the next StandardWell is, this function cannot be called after alloc() is called
+    /// \param[in] numBlocks   number of blocks in C and B of next StandardWell
+    void addNumBlocks(unsigned int numBlocks);
+
+    /// Allocate memory for the StandardWells
+    void alloc();
 #endif
 
     /// Create a new WellContributions
@@ -171,18 +153,11 @@ public:
     /// Destroy a WellContributions, and free memory
     ~WellContributions();
 
-
-    /// Allocate memory for the StandardWells
-    void alloc();
-
     /// Indicate how large the blocks of the StandardWell (C and B) are
     /// \param[in] dim         number of columns
     /// \param[in] dim_wells   number of rows
     void setBlockSize(unsigned int dim, unsigned int dim_wells);
 
-    /// Indicate how large the next StandardWell is, this function cannot be called after alloc() is called
-    /// \param[in] numBlocks   number of blocks in C and B of next StandardWell
-    void addNumBlocks(unsigned int numBlocks);
 
     /// Store a matrix in this object, in blocked csr format, can only be called after alloc() is called
     /// \param[in] type        indicate if C, D or B is sent

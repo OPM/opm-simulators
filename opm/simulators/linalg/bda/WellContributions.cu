@@ -136,7 +136,6 @@ void WellContributions::allocStandardWells()
         val_pointers = new unsigned int[num_std_wells + 1];
         cudaMalloc((void**)&d_val_pointers, sizeof(int) * (num_std_wells + 1));
         cudaCheckLastError("apply_gpu malloc failed");
-        allocated = true;
     }
 }
 
