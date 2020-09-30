@@ -75,9 +75,9 @@ namespace bda
     }
 
     void WellContributionsOCLContainer::copy_to_gpu(Opm::WellContributions &wellContribs, int *toOrder_){
-        if(num_std_wells > 0){
-            toOrder.insert(toOrder.end(), toOrder_, toOrder_ + Nb);
+        toOrder.insert(toOrder.end(), toOrder_, toOrder_ + Nb);
 
+        if(num_std_wells > 0){
             cl::Event event;
             std::vector<cl::Event> events(7);
             queue->enqueueWriteBuffer(s.Cnnzs, CL_FALSE, 0, sizeof(double) * wellContribs.h_Cnnzs_ocl.size(), wellContribs.h_Cnnzs_ocl.data(), nullptr, &events[0]);
@@ -159,9 +159,10 @@ namespace bda
 
         // actually apply MultisegmentWells
         for(auto well: *multisegments){
-            well->setReordering(toOrder.data(), true);
+            well->setReordering(toOrder.data(), reorder);
             well->apply(x_msw.data(), y_msw.data());
         }
+
 
         // copy vector y from CPU to GPU
         queue->enqueueWriteBuffer(y, CL_FALSE, 0, sizeof(double) * N, y_msw.data(), nullptr, &event);

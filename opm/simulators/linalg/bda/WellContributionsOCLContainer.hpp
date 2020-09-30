@@ -31,11 +31,13 @@ namespace bda
     private:
         typedef std::vector<Opm::MultisegmentWellContribution*> mswVecT;
 
+        int N, Nb;
         unsigned int dim, dim_wells;
         unsigned int num_blocks = 0;
         unsigned int num_std_wells = 0;
         unsigned int num_ms_wells = 0;           // number of MultisegmentWells in this object, must equal multisegments.size()
-        int N, Nb;
+
+        bool reorder = true;
         std::vector<int> toOrder;
         std::vector<double> x_msw, y_msw;
         std::unique_ptr<mswVecT> multisegments;
