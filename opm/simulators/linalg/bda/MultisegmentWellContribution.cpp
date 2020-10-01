@@ -32,7 +32,7 @@ namespace Opm
 MultisegmentWellContribution::MultisegmentWellContribution(unsigned int dim_, unsigned int dim_wells_,
         unsigned int Nb_, unsigned int Mb_,
         unsigned int BnumBlocks_, std::vector<double> &Bvalues, std::vector<unsigned int> &BcolIndices, std::vector<unsigned int> &BrowPointers,
-        unsigned int DnumBlocks_, double *Dvalues, int *DcolPointers, int *DrowIndices,
+        unsigned int DnumBlocks_, double *Dvalues, UMFPackIndex *DcolPointers, UMFPackIndex *DrowIndices,
         std::vector<double> &Cvalues)
     :
     dim(dim_),                // size of blockvectors in vectors x and y, equal to MultisegmentWell::numEq

@@ -99,7 +99,6 @@
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
-#include <dune/common/parallel/mpiguard.hh>
 
 #include <opm/output/eclipse/EclipseIO.hpp>
 
@@ -920,7 +919,28 @@ public:
         }
 
         if (enableExperiments)
-            checkDeckCompatibility_();
+        {
+            int success = 1;
+            const auto& cc = simulator.vanguard().grid().comm();
+
+            try
+            {
+                checkDeckCompatibility_();
+            }
+            catch(const std::exception& e)
+            {
+                success = 0;
+                success = cc.min(success);
+                throw;
+            }
+
+            success = cc.min(success);
+
+            if (!success)
+            {
+                throw std::runtime_error("Checking deck compatibility failed");
+            }
+        }
 
         // write the static output files (EGRID, INIT, SMSPEC, etc.)
         if (enableEclOutput_)
@@ -2125,7 +2145,6 @@ private:
     void checkDeckCompatibility_() const
     {
         const auto& comm = this->simulator().gridView().comm();
-        Dune::MPIGuard guard;
 
         if (comm.rank() == 0)
         {
@@ -2181,8 +2200,6 @@ private:
                 throw std::runtime_error("The deck enables water, but this simulator cannot handle it.");
             // the opposite cases should be fine (albeit a bit slower than what's possible)
         }
-        // throws an expeption on all processes if rank 0 had a problem
-        guard.finalize();
     }
 
     bool drsdtActive_() const

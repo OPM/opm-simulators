@@ -137,7 +137,7 @@ void WellContributions::alloc()
 void WellContributions::addMultisegmentWellContribution(unsigned int dim_, unsigned int dim_wells_,
         unsigned int Nb, unsigned int Mb,
         unsigned int BnumBlocks, std::vector<double> &Bvalues, std::vector<unsigned int> &BcolIndices, std::vector<unsigned int> &BrowPointers,
-        unsigned int DnumBlocks, double *Dvalues, int *DcolPointers, int *DrowIndices,
+        unsigned int DnumBlocks, double *Dvalues, UMFPackIndex *DcolPointers, UMFPackIndex *DrowIndices,
         std::vector<double> &Cvalues)
 {
     assert(dim==dim_);
