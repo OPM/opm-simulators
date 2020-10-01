@@ -24,14 +24,14 @@
 #include <dune/common/timer.hh>
 
 #include <opm/simulators/linalg/bda/WellContributionsOCLContainer.hpp>
-#include<iostream>
 
 namespace bda
 {
     using Opm::OpmLog;
     using Dune::Timer;
 
-    void WellContributionsOCLContainer::init(Opm::WellContributions &wellContribs, int Nb_){
+    void WellContributionsOCLContainer::init(Opm::WellContributions &wellContribs, int N_, int Nb_){
+        N = N_;
         Nb = Nb_;
         dim = wellContribs.dim;
         dim_wells = wellContribs.dim_wells;
@@ -48,9 +48,6 @@ namespace bda
             s.val_pointers = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(unsigned int) * wellContribs.h_val_pointers_ocl.size());
             s.toOrder = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * Nb);
         }
-        else{
-            num_std_wells = 0;
-        }
     }
 
     void WellContributionsOCLContainer::reinit(Opm::WellContributions &wellContribs){
@@ -65,10 +62,10 @@ namespace bda
         s.val_pointers = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(unsigned int) * wellContribs.h_val_pointers_ocl.size());
     }
 
-    void WellContributionsOCLContainer::copy_to_gpu(Opm::WellContributions &wellContribs){
-        if(num_std_wells > 0){
-            toOrder.insert(toOrder.end(), wellContribs.toOrder, wellContribs.toOrder + Nb);
+    void WellContributionsOCLContainer::copy_to_gpu(Opm::WellContributions &wellContribs, int *toOrder_){
+        toOrder.insert(toOrder.end(), toOrder_, toOrder_ + Nb);
 
+        if(num_std_wells > 0){
             cl::Event event;
             std::vector<cl::Event> events(7);
             queue->enqueueWriteBuffer(s.Cnnzs, CL_FALSE, 0, sizeof(double) * wellContribs.h_Cnnzs_ocl.size(), wellContribs.h_Cnnzs_ocl.data(), nullptr, &events[0]);
@@ -79,6 +76,13 @@ namespace bda
             queue->enqueueWriteBuffer(s.val_pointers, CL_FALSE, 0, sizeof(unsigned int) * wellContribs.h_val_pointers_ocl.size(), wellContribs.h_val_pointers_ocl.data(), nullptr, &events[5]);
             queue->enqueueWriteBuffer(s.toOrder, CL_FALSE, 0, sizeof(int) * toOrder.size(), toOrder.data(), nullptr, &events[6]);
             event.waitForEvents(events);
+        }
+
+        if(!wellContribs.multisegments.empty()){
+            multisegments = std::move(wellContribs.multisegments);
+            num_ms_wells = multisegments.size();
+            x_msw.reserve(N);
+            y_msw.reserve(N);
         }
     }
 
@@ -97,6 +101,10 @@ namespace bda
             queue->enqueueWriteBuffer(s.Bcols, CL_FALSE, 0, sizeof(int) * wellContribs.h_Bcols_ocl.size(), wellContribs.h_Bcols_ocl.data(), nullptr, &events[4]);
             queue->enqueueWriteBuffer(s.val_pointers, CL_FALSE, 0, sizeof(unsigned int) * wellContribs.h_val_pointers_ocl.size(), wellContribs.h_val_pointers_ocl.data(), nullptr, &events[5]);
             event.waitForEvents(events);
+        }
+
+        if(!wellContribs.multisegments.empty()){
+            multisegments = std::move(wellContribs.multisegments);
         }
     }
 
@@ -127,13 +135,42 @@ namespace bda
                                  cl::Local(lmem1), cl::Local(lmem2), cl::Local(lmem2));
     }
 
+
+    void WellContributionsOCLContainer::applyMSWells(cl::Buffer& x, cl::Buffer& y) {
+        cl::Event event;
+        std::vector<cl::Event> events(2);
+
+        // copy vectors x and y from GPU to CPU
+        queue->enqueueReadBuffer(x, CL_FALSE, 0, sizeof(double) * N, x_msw.data(), nullptr, &events[0]);
+        queue->enqueueReadBuffer(y, CL_FALSE, 0, sizeof(double) * N, y_msw.data(), nullptr, &events[1]);
+        event.waitForEvents(events);
+
+        // actually apply MultisegmentWells
+        for(Opm::MultisegmentWellContribution *well: multisegments){
+            well->setReordering(toOrder.data(), true);
+            well->apply(x_msw.data(), y_msw.data());
+        }
+
+        // copy vector y from CPU to GPU
+        queue->enqueueWriteBuffer(y, CL_FALSE, 0, sizeof(double) * N, y_msw.data(), nullptr, &event);
+        event.wait();
+    }
+
     void WellContributionsOCLContainer::apply(cl::Buffer& x, cl::Buffer& y){
         if(num_std_wells > 0){
             applyStdWells(x, y);
         }
+
+        if(num_ms_wells > 0){
+            applyMSWells(x, y);
+        }
     }
 
     WellContributionsOCLContainer::~WellContributionsOCLContainer(){
-        toOrder.clear();
+        if(num_ms_wells > 0){
+            for (auto ms : multisegments) {
+                delete ms;
+            }
+        }
     }
 } // end namespace bda

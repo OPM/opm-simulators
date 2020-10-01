@@ -496,7 +496,7 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
         d_Acols = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * nnzb);
         d_Arows = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (Nb + 1));
 
-        wcontainer->init(wellContribs, Nb);
+        wcontainer->init(wellContribs, N, Nb);
 
         // queue.enqueueNDRangeKernel() is a blocking/synchronous call, at least for NVIDIA
         // cl::make_kernel<> myKernel(); myKernel(args, arg1, arg2); is also blocking
@@ -566,8 +566,7 @@ void openclSolverBackend<block_size>::copy_system_to_gpu(WellContributions &well
     queue->enqueueFillBuffer(d_x, 0, 0, sizeof(double) * N, nullptr, &event);
     event.wait();
 
-    wellContribs.setReordering(toOrder, true);
-    wcontainer->copy_to_gpu(wellContribs);
+    wcontainer->copy_to_gpu(wellContribs, toOrder);
 
     if (verbosity > 2) {
         std::ostringstream out;

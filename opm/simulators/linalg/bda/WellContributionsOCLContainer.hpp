@@ -22,18 +22,22 @@
 
 #include <opm/simulators/linalg/bda/opencl.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
+#include <opm/simulators/linalg/bda/MultisegmentWellContribution.hpp>
 
 namespace bda
 {
     class WellContributionsOCLContainer
     {
     private:
+        int N, Nb;
         unsigned int dim, dim_wells;
         unsigned int num_blocks = 0;
         unsigned int num_std_wells = 0;
         unsigned int num_ms_wells = 0;           // number of MultisegmentWells in this object, must equal multisegments.size()
-        int Nb;
+
         std::vector<int> toOrder;
+        std::vector<double> x_msw, y_msw;
+        std::vector<Opm::MultisegmentWellContribution*> multisegments;
 
         typedef struct {
             cl::Buffer Cnnzs, Dnnzs, Bnnzs;
@@ -51,14 +55,16 @@ namespace bda
 
         void reinit(Opm::WellContributions &wellContribs);
         void applyStdWells(cl::Buffer& x, cl::Buffer& y);
+        void applyMSWells(cl::Buffer& x, cl::Buffer& y);
 
     public:
         WellContributionsOCLContainer() {};
         ~WellContributionsOCLContainer();
+        WellContributionsOCLContainer(const WellContributionsOCLContainer&) = delete;
 
         void apply(cl::Buffer& x, cl::Buffer& y);
-        void init(Opm::WellContributions &wellContribs, int Nb);
-        void copy_to_gpu(Opm::WellContributions &wellContribs);
+        void init(Opm::WellContributions &wellContribs, int N, int Nb);
+        void copy_to_gpu(Opm::WellContributions &wellContribs, int *toOrder_);
         void update_on_gpu(Opm::WellContributions &wellContribs);
         void setOpenCLContext(cl::Context *context);
         void setOpenCLQueue(cl::CommandQueue *queue);

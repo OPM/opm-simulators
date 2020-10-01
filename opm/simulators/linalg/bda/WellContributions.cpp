@@ -43,13 +43,13 @@ WellContributions::WellContributions(std::string gpu_mode){
 
 WellContributions::~WellContributions()
 {
+#if HAVE_CUDA
     // delete MultisegmentWellContributions
     for (auto ms : multisegments) {
         delete ms;
     }
     multisegments.clear();
 
-#if HAVE_CUDA
     if(cuda_gpu){
         freeCudaMemory(); // should come before 'delete[] h_x'
     }
@@ -147,15 +147,4 @@ void WellContributions::addMultisegmentWellContribution(unsigned int dim_, unsig
     ++num_ms_wells;
 }
 
-
-void WellContributions::setReordering(int *toOrder_, bool reorder_)
-{
-    this->toOrder = toOrder_;
-    this->reorder = reorder_;
-    for (auto& ms : multisegments) {
-        ms->setReordering(toOrder_, reorder_);
-    }
-}
-
 } //namespace Opm
-
