@@ -73,15 +73,14 @@ namespace Opm
 
     void SimulatorReportSingle::reportStep(std::ostringstream& ss) const
     {
-        ss << "Time step summary: ";
         if (total_well_iterations != 0) {
-            ss << "well its = " << std::setw(2) << total_well_iterations << ", ";
+            ss << "Well its=" << std::setw(2) << total_well_iterations << ", ";
         }
-        ss << "newton its = " << std::setw(2) << total_newton_iterations << ", "
-           << "linearizations = "  << std::setw(2) << total_linearizations
-           << " ("  << std::fixed << std::setprecision(3) << std::setw(6) << assemble_time << " sec), "
-           << "linear its = " << std::setw(3) << total_linear_iterations
-           << " ("  << std::fixed << std::setprecision(3) << std::setw(6) << linear_solve_time << " sec)";
+       ss << "Newton its=" << std::setw(2) << total_newton_iterations << ", "
+           << "linearizations="  << std::setw(2) << total_linearizations
+           << " ("  << std::fixed << std::setprecision(1) << std::setw(2) << assemble_time << "sec), "
+           << "linear its=" << std::setw(3) << total_linear_iterations
+           << " ("  << std::fixed << std::setprecision(1) << std::setw(2) << linear_solve_time << "sec)";
     }
 
     void SimulatorReportSingle::reportFullyImplicit(std::ostream& os, const SimulatorReportSingle* failureReport) const
