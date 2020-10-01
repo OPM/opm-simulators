@@ -58,10 +58,10 @@ namespace bda
         void applyMSWells(cl::Buffer& x, cl::Buffer& y);
 
     public:
-        WellContributionsOCLContainer() {};
+        WellContributionsOCLContainer() {}
         ~WellContributionsOCLContainer();
-        WellContributionsOCLContainer(const WellContributionsOCLContainer&) = delete;
-
+        WellContributionsOCLContainer(const  WellContributionsOCLContainer&) = delete;
+        WellContributionsOCLContainer& operator=(const  WellContributionsOCLContainer&) = delete;
         void apply(cl::Buffer& x, cl::Buffer& y);
         void init(Opm::WellContributions &wellContribs, int N, int Nb);
         void copy_to_gpu(Opm::WellContributions &wellContribs, int *toOrder_);

@@ -146,7 +146,7 @@ namespace bda
         event.waitForEvents(events);
 
         // actually apply MultisegmentWells
-        for(Opm::MultisegmentWellContribution *well: multisegments){
+        for(auto well: multisegments){
             well->setReordering(toOrder.data(), true);
             well->apply(x_msw.data(), y_msw.data());
         }
