@@ -46,8 +46,7 @@ GasLiftRuntime(
     std_well_{std_well},
     summary_state_{summary_state},
     well_state_{well_state},
-    debug{true},  // extra debugging output
-    debug_disable{false} // act as glift optimization is disabled
+    debug{false}  // extra debugging output
 {
     int well_index = this->std_well_.indexOfWell();
     const Well::ProducerCMode& control_mode
@@ -77,10 +76,7 @@ GasLiftRuntime(
     this->eco_grad_ = glo.min_eco_gradient();
     auto& gl_well = glo.well(this->well_name_);
 
-    if (this->debug_disable) {
-        this->optimize_ = false;
-    }
-    else if(useFixedAlq_(gl_well)) {
+    if(useFixedAlq_(gl_well)) {
         updateWellStateAlqFixedValue_(gl_well);
         this->optimize_ = false; // lift gas supply is fixed
     }
@@ -155,9 +151,8 @@ void
 Opm::GasLiftRuntime<TypeTag>::
 debugShowIterationInfo_(OptimizeState &state, double alq)
 {
-    std::ostringstream ss;
-    ss << "iteration " << state.it << ", ALQ = " << alq;
-    this->displayDebugMessage_(ss);
+    const std::string msg = fmt::format("iteration {}, ALQ = {}", state.it, alq);
+    this->displayDebugMessage_(msg);
 }
 
 template<typename TypeTag>
@@ -165,25 +160,23 @@ void
 Opm::GasLiftRuntime<TypeTag>::
 debugShowStartIteration_(double alq, bool increase)
 {
-    std::ostringstream ss;
-    auto oil_rate = -this->potentials_[this->oil_pos_];
-    std::string dir = increase ? "increase" : "decrease";
-    ss << "starting " << dir << " iteration, ALQ = " << alq
-       << ", oilrate = " << oil_rate;
-    this->displayDebugMessage_(ss);
+    const std::string msg =
+        fmt::format("starting {} iteration, ALQ = {}, oilrate = {}",
+            (increase ? "increase" : "decrease"),
+            alq,
+            -this->potentials_[this->oil_pos_]);
+    this->displayDebugMessage_(msg);
 }
 
 template<typename TypeTag>
 void
 Opm::GasLiftRuntime<TypeTag>::
-displayDebugMessage_(std::ostringstream &ss)
+displayDebugMessage_(const std::string &msg)
 {
 
-    std::string message = ss.str();
-    if (message.empty()) return;
-    std::ostringstream ss2;
-    ss2 << "  GLIFT (DEBUG) : Well " << this->well_name_ << " : " << message;
-    this->deferred_logger_.info(ss2.str());
+    const std::string message = fmt::format(
+        "  GLIFT (DEBUG) : Well {} : {}", this->well_name_, msg);
+    this->deferred_logger_.info(message);
 }
 
 template<typename TypeTag>
@@ -191,9 +184,9 @@ void
 Opm::GasLiftRuntime<TypeTag>::
 displayWarning_(std::string msg)
 {
-    std::ostringstream ss;
-    ss << "GAS LIFT OPTIMIZATION, WELL: " << this->well_name_ << " : " << msg;
-    this->deferred_logger_.warning("WARNING", ss.str());
+    const std::string message = fmt::format(
+        "GAS LIFT OPTIMIZATION, WELL {} : {}", this->well_name_, msg);
+    this->deferred_logger_.warning("WARNING", message);
 }
 
 // TODO: what if the gas_rate_target_ has been defaulted
@@ -252,12 +245,13 @@ Opm::GasLiftRuntime<TypeTag>::
 logSuccess_()
 {
 
-    std::ostringstream ss;
-    std::string dir;
-    dir = (this->new_alq_ > this->orig_alq_) ? "increased" : "decreased";
-    ss << "GLIFT, WELL " << this->well_name_ << " " << dir << " ALQ from "
-       << this->orig_alq_ << " to " << this->new_alq_;
-    this->deferred_logger_.info(ss.str());
+    const std::string message = fmt::format(
+         "GLIFT, WELL {} {} ALQ from {} to {}",
+         this->well_name_,
+         ((this->new_alq_ > this->orig_alq_) ? "increased" : "decreased"),
+         this->orig_alq_,
+         this->new_alq_);
+    this->deferred_logger_.info(message);
 }
 
 /* - At this point we know that this is a production well, and that its current
@@ -648,7 +642,7 @@ checkAlqOutsideLimits(double alq, double oil_rate)
             }
         }
     }
-    if (this->parent.debug) this->parent.displayDebugMessage_(ss);
+    if (this->parent.debug) this->parent.displayDebugMessage_(ss.str());
     return result;
 }
 
@@ -683,7 +677,7 @@ checkEcoGradient(double gradient)
             if (this->parent.debug) ss << "false";
         }
     }
-    if (this->parent.debug) this->parent.displayDebugMessage_(ss);
+    if (this->parent.debug) this->parent.displayDebugMessage_(ss.str());
     return result;
 }
 
@@ -695,11 +689,10 @@ checkRate(double rate, double limit, const std::string rate_str)
 
     if (limit < rate ) {
         if (this->parent.debug) {
-            std::ostringstream ss;
-            ss << "iteration " << this->it << " : " << rate_str << " rate "
-               << rate << " exceeds target rate "
-               << limit << ". Stopping iteration";
-            this->parent.displayDebugMessage_(ss);
+            const std::string msg = fmt::format(
+                "iteration {} : rate {} exceeds target rate {}. Stopping iteration",
+                this->it, rate_str, rate, limit);
+            this->parent.displayDebugMessage_(msg);
         }
         return true;
     }
@@ -753,11 +746,11 @@ computeBhpAtThpLimit(double alq)
         this->parent.deferred_logger_,
         alq);
     if (!bhp_at_thp_limit) {
-        std::ostringstream ss;
-        ss << "Failed in getting converged bhp potential for well "
-           << this->parent.well_name_;
+        const std::string msg = fmt::format(
+          "Failed in getting converged bhp potential for well {}",
+          this->parent.well_name_);
         this->parent.deferred_logger_.warning(
-            "FAILURE_GETTING_CONVERGED_POTENTIAL", ss.str());
+            "FAILURE_GETTING_CONVERGED_POTENTIAL", msg);
         return false;
     }
     this->bhp = *bhp_at_thp_limit;

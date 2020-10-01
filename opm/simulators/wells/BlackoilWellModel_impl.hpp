@@ -26,6 +26,7 @@
 
 #include <utility>
 #include <algorithm>
+#include <fmt/format.h>
 
 namespace Opm {
     template<typename TypeTag>
@@ -403,22 +404,10 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::gliftDebug(
         const std::string &msg, Opm::DeferredLogger &deferred_logger) const
     {
-        std::ostringstream ss;
-        ss << msg;
-        gliftDebug(ss, deferred_logger);
-    }
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::gliftDebug(
-        std::ostringstream &ss, Opm::DeferredLogger &deferred_logger) const
-    {
         if (this->glift_debug) {
-            std::string message = ss.str();
-            if (message.empty()) return;
-            std::ostringstream ss2;
-            ss2 << "  GLIFT (DEBUG) : BlackoilWellModel : " << message;
-            deferred_logger.info(ss2.str());
+            const std::string message = fmt::format(
+                "  GLIFT (DEBUG) : BlackoilWellModel : {}", msg);
+            deferred_logger.info(message);
         }
     }
 
@@ -841,9 +830,9 @@ namespace Opm {
 
         Opm::DeferredLogger local_deferredLogger;
         if (this->glift_debug) {
-            std::ostringstream os;
-            os << "assemble() : iteration = " << iterationIdx;
-            gliftDebug(os, local_deferredLogger);
+            const std::string msg = fmt::format(
+                "assemble() : iteration {}" , iterationIdx);
+            gliftDebug(msg, local_deferredLogger);
         }
         last_report_ = SimulatorReportSingle();
         Dune::Timer perfTimer;

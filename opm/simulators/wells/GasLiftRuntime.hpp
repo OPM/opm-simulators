@@ -45,6 +45,7 @@ namespace Opm {
 #include <optional>
 #include <string>
 #include <vector>
+#include <fmt/format.h>
 
 namespace Opm
 {
@@ -76,7 +77,7 @@ namespace Opm
         void computeWellRates_(double bhp, std::vector<double> &potentials);
         void debugShowIterationInfo_(OptimizeState &state, double alq);
         void debugShowStartIteration_(double alq, bool increase);
-        void displayDebugMessage_(std::ostringstream &ss);
+        void displayDebugMessage_(const std::string &msg);
         void displayWarning_();
         void displayWarning_(std::string warning);
         double getGasRateWithLimit_(std::vector<double> &potentials);
@@ -100,7 +101,6 @@ namespace Opm
         const WellState &well_state_;
         std::string well_name_;
         bool debug;  // extra debug output
-        bool debug_disable; // act as glift optimization is disabled
 
         double alpha_w_;
         double alpha_g_;

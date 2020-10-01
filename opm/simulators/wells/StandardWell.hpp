@@ -43,6 +43,7 @@
 #include <dune/common/dynmatrix.hh>
 
 #include <optional>
+#include <fmt/format.h>
 
 namespace Opm
 {
@@ -256,10 +257,6 @@ namespace Opm
             const std::string &msg,
             Opm::DeferredLogger& deferred_logger) const;
 
-        void gliftDebug(
-            std::ostringstream &ss,
-            Opm::DeferredLogger& deferred_logger) const;
-
         void gasLiftOptimizeProduction(
             const Simulator& ebosSimulator,
             const SummaryState& summaryState,
@@ -378,7 +375,7 @@ namespace Opm
 
         bool changed_to_stopped_this_step_ = false;
         // Enable GLIFT debug mode. This will enable output of logging messages.
-        bool glift_debug = true;
+        bool glift_debug = false;
 
         const EvalWell& getBhp() const;
 

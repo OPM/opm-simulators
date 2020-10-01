@@ -306,7 +306,7 @@ namespace Opm {
             std::vector<double> depth_;
             bool initial_step_;
             bool report_step_starts_;
-            bool glift_debug = true;
+            bool glift_debug = false;
             std::unique_ptr<RateConverterType> rateConverter_;
             std::unique_ptr<VFPProperties<VFPInjProperties,VFPProdProperties>> vfp_properties_;
 
@@ -329,10 +329,6 @@ namespace Opm {
 
             void gliftDebug(
                 const std::string &msg,
-                Opm::DeferredLogger& deferred_logger) const;
-
-            void gliftDebug(
-                std::ostringstream &ss,
                 Opm::DeferredLogger& deferred_logger) const;
 
             // compute the well fluxes and assemble them in to the reservoir equations as source terms

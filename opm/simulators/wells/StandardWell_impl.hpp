@@ -2589,10 +2589,10 @@ namespace Opm
         //   turned off by entering a zero or negative number."
         if (increment <= 0) {
             if (this->glift_debug) {
-                std::ostringstream ss;
-                ss << "Gas Lift switched off in LIFTOPT item 1 due to non-positive "
-                   << "value: " << increment;
-                gliftDebug(ss, deferred_logger);
+                const std::string msg = fmt::format(
+                    "Gas Lift switched off in LIFTOPT item 1 due to non-positive "
+                    "value: {}", increment);
+                gliftDebug(msg, deferred_logger);
             }
             return false;
         }
@@ -2615,21 +2615,21 @@ namespace Opm
         if (glo.all_newton()) {
             const int nupcol = schedule.getNupcol(report_step_idx);
             if (this->glift_debug) {
-                std::ostringstream ss;
-                ss << "LIFTOPT item4 == YES, it = " << iteration_idx
-                   << ", nupcol = " << nupcol << " -> " << " --> GLIFT optimize = "
-                   << ((iteration_idx <= nupcol) ? "TRUE" : "FALSE");
-                gliftDebug(ss, deferred_logger);
+                const std::string msg = fmt::format(
+                    "LIFTOPT item4 == YES, it = {}, nupcol = {} -->  GLIFT optimize = {}",
+                    iteration_idx,
+                    nupcol,
+                    ((iteration_idx <= nupcol) ? "TRUE" : "FALSE"));
+                gliftDebug(msg, deferred_logger);
             }
             return iteration_idx <= nupcol;
         }
         else {
             if (this->glift_debug) {
-                std::ostringstream ss;
-                ss << "LIFTOPT item4 == NO, it = " << iteration_idx
-                   << " --> GLIFT optimize = "
-                   << ((iteration_idx == 1) ? "TRUE" : "FALSE");
-                gliftDebug(ss, deferred_logger);
+                const std::string msg = fmt::format(
+                    "LIFTOPT item4 == NO, it = {} --> GLIFT optimize = {}",
+                    iteration_idx, ((iteration_idx == 1) ? "TRUE" : "FALSE"));
+                gliftDebug(msg, deferred_logger);
             }
             return iteration_idx == 1;
         }
@@ -2641,22 +2641,11 @@ namespace Opm
     gliftDebug(
         const std::string &msg, DeferredLogger& deferred_logger) const
     {
-        std::ostringstream ss;
-        ss << msg;
-        gliftDebug(ss, deferred_logger);
-    }
-
-    template<typename TypeTag>
-    void
-    StandardWell<TypeTag>::
-    gliftDebug(
-        std::ostringstream &ss, DeferredLogger& deferred_logger) const
-    {
-        std::string message = ss.str();
-        if (message.empty()) return;
-        std::ostringstream ss2;
-        ss2 << "  GLIFT (DEBUG) : Well " << this->name() << " : " << message;
-        deferred_logger.info(ss2.str());
+        if (this->glift_debug) {
+            const std::string message = fmt::format(
+                "  GLIFT (DEBUG) : Well {} : {}", this->name(), msg);
+            deferred_logger.info(message);
+        }
     }
 
     template<typename TypeTag>
