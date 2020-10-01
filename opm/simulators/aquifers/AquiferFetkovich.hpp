@@ -68,6 +68,24 @@ public:
         }
     }
 
+    Opm::data::AquiferData aquiferData() const
+    {
+        // TODO: how to unify the two functions?
+        data::AquiferData data;
+        data.aquiferID = this->aquiferID;
+        data.pressure = this->aquifer_pressure_;
+        data.fluxRate = 0.;
+        for (const auto& q : this->Qai_) {
+            data.fluxRate += q.value();
+        }
+        data.volume = this->W_flux_.value();
+        data.initPressure = this->pa0_;
+        data.type = Opm::data::AquiferType::Fetkovich;
+        // Not handling std::shared_ptr<FetkovichData> aquFet for now,
+        // because we do not need it yet
+        return data;
+    }
+
 protected:
     // Aquifer Fetkovich Specific Variables
     // TODO: using const reference here will cause segmentation fault, which is very strange

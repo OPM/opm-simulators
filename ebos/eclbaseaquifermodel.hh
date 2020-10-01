@@ -149,6 +149,11 @@ public:
     void deserialize(Restarter& res OPM_UNUSED)
     { }
 
+
+    Opm::data::Aquifers aquiferData() const
+    { return Opm::data::Aquifers{}; }
+
+
 protected:
     Simulator& simulator_;
 };
