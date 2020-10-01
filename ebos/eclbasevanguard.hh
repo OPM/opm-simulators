@@ -111,6 +111,11 @@ struct OwnerCellsFirst {
     using type = UndefinedProperty;
 };
 
+template<class TypeTag, class MyTypeTag>
+struct SerialPartitioning {
+    using type = UndefinedProperty;
+};
+
 template<class TypeTag>
 struct IgnoreKeywords<TypeTag, TTag::EclBaseVanguard> {
     static constexpr auto value = "";
@@ -142,6 +147,10 @@ struct EdgeWeightsMethod<TypeTag, TTag::EclBaseVanguard> {
 template<class TypeTag>
 struct OwnerCellsFirst<TypeTag, TTag::EclBaseVanguard> {
     static constexpr bool value = true;
+};
+template<class TypeTag>
+struct SerialPartitioning<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr bool value = false;
 };
 
 } // namespace Opm::Properties
@@ -192,6 +201,8 @@ public:
                              "Choose edge-weighing strategy: 0=uniform, 1=trans, 2=log(trans).");
         EWOMS_REGISTER_PARAM(TypeTag, bool, OwnerCellsFirst,
                              "Order cells owned by rank before ghost/overlap cells.");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, SerialPartitioning,
+                             "Perform partitioning for parallel runs on a single process.");
     }
 
     /*!
@@ -324,6 +335,7 @@ public:
         std::string fileName = EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName);
         edgeWeightsMethod_   = Dune::EdgeWeightMethod(EWOMS_GET_PARAM(TypeTag, int, EdgeWeightsMethod));
         ownersFirst_ = EWOMS_GET_PARAM(TypeTag, bool, OwnerCellsFirst);
+        serialPartitioning_ = EWOMS_GET_PARAM(TypeTag, bool, SerialPartitioning);
 
         // Make proper case name.
         {
@@ -508,6 +520,13 @@ public:
     { return ownersFirst_; }
 
     /*!
+     * \brief Parameter that decides if partitioning for parallel runs
+     *        should be performed on a single process only.
+     */
+    bool serialPartitioning() const
+    { return serialPartitioning_; }
+
+    /*!
      * \brief Returns the name of the case.
      *
      * i.e., the all-uppercase version of the file name from which the
@@ -677,6 +696,7 @@ private:
 
     Dune::EdgeWeightMethod edgeWeightsMethod_;
     bool ownersFirst_;
+    bool serialPartitioning_;
 
 protected:
     /*! \brief The cell centroids after loadbalance was called.
