@@ -30,18 +30,6 @@ namespace bda
     using Opm::OpmLog;
     using Dune::Timer;
 
-    WellContributionsOCLContainer::WellContributionsOCLContainer(){
-        multisegments.reset(new mswVecT());
-    }
-
-    WellContributionsOCLContainer::~WellContributionsOCLContainer(){
-        if(num_ms_wells > 0){
-            for (auto ms : *multisegments) {
-                delete ms;
-            }
-        }
-    }
-
     void WellContributionsOCLContainer::init(Opm::WellContributions &wellContribs, int N_, int Nb_){
         N = N_;
         Nb = Nb_;
@@ -91,8 +79,8 @@ namespace bda
         }
 
         if(!wellContribs.multisegments.empty()){
-            multisegments = std::move(std::make_unique<mswVecT>(wellContribs.multisegments));
-            num_ms_wells = multisegments->size();
+            multisegments = std::move(wellContribs.multisegments);
+            num_ms_wells = multisegments.size();
             x_msw.reserve(N);
             y_msw.reserve(N);
         }
@@ -116,7 +104,7 @@ namespace bda
         }
 
         if(!wellContribs.multisegments.empty()){
-            multisegments = std::move(std::make_unique<mswVecT>(wellContribs.multisegments));
+            multisegments = std::move(wellContribs.multisegments);
         }
     }
 
@@ -158,11 +146,10 @@ namespace bda
         event.waitForEvents(events);
 
         // actually apply MultisegmentWells
-        for(auto well: *multisegments){
-            well->setReordering(toOrder.data(), reorder);
+        for(Opm::MultisegmentWellContribution *well: multisegments){
+            well->setReordering(toOrder.data(), true);
             well->apply(x_msw.data(), y_msw.data());
         }
-
 
         // copy vector y from CPU to GPU
         queue->enqueueWriteBuffer(y, CL_FALSE, 0, sizeof(double) * N, y_msw.data(), nullptr, &event);
@@ -176,6 +163,14 @@ namespace bda
 
         if(num_ms_wells > 0){
             applyMSWells(x, y);
+        }
+    }
+
+    WellContributionsOCLContainer::~WellContributionsOCLContainer(){
+        if(num_ms_wells > 0){
+            for (auto ms : multisegments) {
+                delete ms;
+            }
         }
     }
 } // end namespace bda
