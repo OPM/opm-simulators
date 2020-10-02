@@ -60,12 +60,6 @@
 
 #include <opm/parser/eclipse/Python/Python.hpp>
 
-
-namespace Opm {
-namespace FluidSystemsTest {
-#include <opm/material/components/co2tables.inc>
-} }
-
 #include <dune/common/parallel/mpihelper.hh>
 
 // check that the blackoil fluid system implements all non-standard functions
@@ -248,7 +242,7 @@ void testAllFluidSystems()
     }
 
     // Brine -- CO2
-    {   typedef Opm::BrineCO2FluidSystem<Scalar, Opm::FluidSystemsTest::CO2Tables> FluidSystem;
+    {   typedef Opm::BrineCO2FluidSystem<Scalar, CO2Tables> FluidSystem;
         checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 
     // H2O -- N2

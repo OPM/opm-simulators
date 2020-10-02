@@ -28,9 +28,6 @@
 #ifndef OPM_BINARY_COEFF_BRINE_CO2_HPP
 #define OPM_BINARY_COEFF_BRINE_CO2_HPP
 
-#include <opm/material/components/Brine.hpp>
-#include <opm/material/components/H2O.hpp>
-#include <opm/material/components/CO2.hpp>
 #include <opm/material/IdealGas.hpp>
 
 namespace Opm {
@@ -40,10 +37,8 @@ namespace BinaryCoeff {
  * \ingroup Binarycoefficients
  * \brief Binary coefficients for brine and CO2.
  */
-template<class Scalar, class CO2Tables, bool verbose = true>
+template<class Scalar, class H2O, class CO2, bool verbose = true>
 class Brine_CO2 {
-    typedef Opm::H2O<Scalar> H2O;
-    typedef Opm::CO2<Scalar, CO2Tables> CO2;
     typedef Opm::IdealGas<Scalar> IdealGas;
     static const int liquidPhaseIdx = 0; // index of the liquid phase
     static const int gasPhaseIdx = 1; // index of the gas phase

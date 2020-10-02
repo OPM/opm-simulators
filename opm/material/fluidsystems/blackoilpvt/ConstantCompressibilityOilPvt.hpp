@@ -272,11 +272,8 @@ public:
                                   const Evaluation& /*Rs*/) const
     { return 0.0; /* this is dead oil, so there isn't any meaningful saturation pressure! */ }
 
-    const std::vector<Scalar>& oilReferenceDensity() const
-    { return oilReferenceDensity_; }
-
-    const std::vector<Scalar>& oilReferencePressure() const
-    { return oilReferencePressure_; }
+    const Scalar oilReferenceDensity(unsigned regionIdx) const
+    { return oilReferenceDensity_[regionIdx]; }
 
     const std::vector<Scalar>& oilReferenceFormationVolumeFactor() const
     { return oilReferenceFormationVolumeFactor_; }

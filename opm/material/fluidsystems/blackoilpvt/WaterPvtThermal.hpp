@@ -305,6 +305,9 @@ public:
     const IsothermalPvt* isoThermalPvt() const
     { return isothermalPvt_; }
 
+    const Scalar waterReferenceDensity(unsigned regionIdx) const
+    { return isothermalPvt_->waterReferenceDensity(regionIdx); }
+
     const std::vector<Scalar>& viscrefPress() const
     { return viscrefPress_; }
 

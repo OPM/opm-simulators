@@ -278,8 +278,8 @@ public:
                                         const Evaluation& /*pressure*/) const
     { return 0.0; /* this is dead oil! */ }
 
-    const std::vector<Scalar>& oilReferenceDensity() const
-    { return oilReferenceDensity_; }
+    const Scalar oilReferenceDensity(unsigned regionIdx) const
+    { return oilReferenceDensity_[regionIdx]; }
 
     const std::vector<TabulatedOneDFunction>& inverseOilB() const
     { return inverseOilB_; }

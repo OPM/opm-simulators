@@ -288,8 +288,8 @@ public:
                                               const Evaluation& /*pressure*/) const
     { return 0.0; /* this is dry gas! */ }
 
-    const std::vector<Scalar>& gasReferenceDensity() const
-    { return gasReferenceDensity_; }
+    const Scalar gasReferenceDensity(unsigned regionIdx) const
+    { return gasReferenceDensity_[regionIdx]; }
 
     const std::vector<TabulatedOneDFunction>& inverseGasB() const
     { return inverseGasB_; }

@@ -102,7 +102,7 @@ public:
 
         for (unsigned regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
             Scalar rhoRefO = densityTable[regionIdx].oil;
-            Scalar rhoRefG = densityTable[regionIdx].gas;;
+            Scalar rhoRefG = densityTable[regionIdx].gas;
             Scalar rhoRefW = densityTable[regionIdx].water;
 
             setReferenceDensities(regionIdx, rhoRefO, rhoRefG, rhoRefW);
@@ -602,11 +602,11 @@ public:
         throw NumericalIssue(errlog.str());
     }
 
-    const std::vector<Scalar>& gasReferenceDensity() const
-    { return gasReferenceDensity_; }
+    const Scalar gasReferenceDensity(unsigned regionIdx) const
+    { return gasReferenceDensity_[regionIdx]; }
 
-    const std::vector<Scalar>& oilReferenceDensity() const
-    { return oilReferenceDensity_; }
+    const Scalar oilReferenceDensity(unsigned regionIdx) const
+    { return oilReferenceDensity_[regionIdx]; }
 
     const std::vector<TabulatedTwoDFunction>& inverseOilBTable() const
     { return inverseOilBTable_; }

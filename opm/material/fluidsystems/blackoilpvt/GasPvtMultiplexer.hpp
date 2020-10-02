@@ -30,6 +30,7 @@
 #include "DryGasPvt.hpp"
 #include "WetGasPvt.hpp"
 #include "GasPvtThermal.hpp"
+#include "Co2GasPvt.hpp"
 
 #if HAVE_ECL_INPUT
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
@@ -53,9 +54,14 @@ namespace Opm {
         codeToCall;                                                     \
         break;                                                          \
     }                                                                   \
+    case Co2GasPvt: {                                               \
+        auto& pvtImpl = getRealPvt<Co2GasPvt>();                    \
+        codeToCall;                                                     \
+        break;                                                          \
+    }                                                                   \
     case NoGasPvt:                                                      \
         throw std::logic_error("Not implemented: Gas PVT of this deck!"); \
-    }
+    } \
 
 
 /*!
@@ -78,7 +84,8 @@ public:
         NoGasPvt,
         DryGasPvt,
         WetGasPvt,
-        ThermalGasPvt
+        ThermalGasPvt,
+        Co2GasPvt
     };
 
     GasPvtMultiplexer()
@@ -112,6 +119,10 @@ public:
             delete &getRealPvt<ThermalGasPvt>();
             break;
         }
+        case Co2GasPvt: {
+            delete &getRealPvt<Co2GasPvt>();
+            break;
+        }
         case NoGasPvt:
             break;
         }
@@ -127,8 +138,9 @@ public:
     {
         if (!eclState.runspec().phases().active(Phase::GAS))
             return;
-
-        if (enableThermal && eclState.getSimulationConfig().isThermal())
+        if (eclState.runspec().co2Storage())
+            setApproach(Co2GasPvt);
+        else if (enableThermal && eclState.getSimulationConfig().isThermal())
             setApproach(ThermalGasPvt);
         else if (!eclState.getTableManager().getPvtgTables().empty())
             setApproach(WetGasPvt);
@@ -154,6 +166,10 @@ public:
             realGasPvt_ = new Opm::GasPvtThermal<Scalar>;
             break;
 
+        case Co2GasPvt:
+            realGasPvt_ = new Opm::Co2GasPvt<Scalar>;
+            break;
+
         case NoGasPvt:
             throw std::logic_error("Not implemented: Gas PVT of this deck!");
         }
@@ -169,6 +185,12 @@ public:
      */
     unsigned numRegions() const
     { OPM_GAS_PVT_MULTIPLEXER_CALL(return pvtImpl.numRegions()); return 1; }
+
+    /*!
+     * \brief Return the reference density which are considered by this PVT-object.
+     */
+    const Scalar gasReferenceDensity(unsigned regionIdx)
+    { OPM_GAS_PVT_MULTIPLEXER_CALL(return pvtImpl.gasReferenceDensity(regionIdx)); return 2.; }
 
     /*!
      * \brief Returns the specific enthalpy [J/kg] of gas given a set of parameters.
@@ -303,6 +325,20 @@ public:
         return *static_cast<const Opm::GasPvtThermal<Scalar>* >(realGasPvt_);
     }
 
+    template <GasPvtApproach approachV>
+    typename std::enable_if<approachV == Co2GasPvt, Opm::Co2GasPvt<Scalar> >::type& getRealPvt()
+    {
+        assert(gasPvtApproach() == approachV);
+        return *static_cast<Opm::Co2GasPvt<Scalar>* >(realGasPvt_);
+    }
+
+    template <GasPvtApproach approachV>
+    typename std::enable_if<approachV == Co2GasPvt, const Opm::Co2GasPvt<Scalar> >::type& getRealPvt() const
+    {
+        assert(gasPvtApproach() == approachV);
+        return *static_cast<const Opm::Co2GasPvt<Scalar>* >(realGasPvt_);
+    }
+
     const void* realGasPvt() const { return realGasPvt_; }
 
     bool operator==(const GasPvtMultiplexer<Scalar,enableThermal>& data) const
@@ -320,6 +356,9 @@ public:
         case ThermalGasPvt:
             return *static_cast<const Opm::GasPvtThermal<Scalar>*>(realGasPvt_) ==
                    *static_cast<const Opm::GasPvtThermal<Scalar>*>(data.realGasPvt_);
+        case Co2GasPvt:
+            return *static_cast<const Opm::Co2GasPvt<Scalar>*>(realGasPvt_) ==
+                    *static_cast<const Opm::Co2GasPvt<Scalar>*>(data.realGasPvt_);
         default:
             return true;
         }
@@ -337,6 +376,9 @@ public:
             break;
         case ThermalGasPvt:
             realGasPvt_ = new Opm::GasPvtThermal<Scalar>(*static_cast<const Opm::GasPvtThermal<Scalar>*>(data.realGasPvt_));
+            break;
+        case Co2GasPvt:
+            realGasPvt_ = new Opm::Co2GasPvt<Scalar>(*static_cast<const Opm::Co2GasPvt<Scalar>*>(data.realGasPvt_));
             break;
         default:
             break;
