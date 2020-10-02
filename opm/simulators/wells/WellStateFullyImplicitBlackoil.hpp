@@ -297,6 +297,8 @@ namespace Opm
                 seg_pressdrop_friction_.assign(nw, 0.);
                 seg_pressdrop_acceleration_.assign(nw, 0.);
             }
+            updateWellsDefaultALQ(wells_ecl);
+            do_glift_optimization_ = true;
         }
 
 
@@ -365,7 +367,7 @@ namespace Opm
 
             return it->second;
         }
-        
+
         void setCurrentWellRates(const std::string& wellName, const std::vector<double>& rates ) {
             well_rates[wellName] = rates;
         }
@@ -399,7 +401,7 @@ namespace Opm
         bool hasProductionGroupRates(const std::string& groupName) const {
             return this->production_group_rates.find(groupName) != this->production_group_rates.end();
         }
-        
+
         void setCurrentProductionGroupReductionRates(const std::string& groupName, const std::vector<double>& target ) {
             production_group_reduction_rates[groupName] = target;
         }
@@ -584,6 +586,13 @@ namespace Opm
 
                 if ( pu.has_brine ) {
                     well.rates.set( rt::brine, brineWellRate(w) );
+                }
+
+                if ( well.current_control.isProducer ) {
+                    well.rates.set( rt::alq, getALQ(/*wellName=*/wt.first) );
+                }
+                else {
+                    well.rates.set( rt::alq, 0.0 );
                 }
 
                 well.rates.set( rt::dissolved_gas, this->well_dissolved_gas_rates_[w] );
@@ -1133,6 +1142,41 @@ namespace Opm
             return globalIsProductionGrup_[it->second] != 0;
         }
 
+        void updateALQ( const WellStateFullyImplicitBlackoil &copy ) const
+        {
+            this->current_alq_ = copy.getCurrentALQ();
+        }
+
+        std::map<std::string, double> getCurrentALQ() const
+        {
+            return current_alq_;
+        }
+
+        double getALQ( const std::string& name) const
+        {
+            if (this->current_alq_.count(name) == 0) {
+                this->current_alq_[name] = this->default_alq_[name];
+            }
+            return this->current_alq_[name];
+        }
+
+        void setALQ( const std::string& name, double value) const
+        {
+            this->current_alq_[name] = value;
+        }
+
+        bool gliftOptimizationEnabled() const {
+            return do_glift_optimization_;
+        }
+
+        void disableGliftOptimization() const {
+            do_glift_optimization_ = false;
+        }
+
+        void enableGliftOptimization() const {
+            do_glift_optimization_ = true;
+        }
+
     private:
         std::vector<double> perfphaserates_;
 
@@ -1160,6 +1204,9 @@ namespace Opm
         std::map<std::string, double> injection_group_vrep_rates;
         std::map<std::string, std::vector<double>> injection_group_rein_rates;
         std::map<std::string, double> group_grat_target_from_sales;
+        mutable std::map<std::string, double> current_alq_;
+        mutable std::map<std::string, double> default_alq_;
+        mutable bool do_glift_optimization_;
 
         std::vector<double> perfRateSolvent_;
 
@@ -1288,6 +1335,39 @@ namespace Opm
             const auto top_offset = this->topSegmentIndex(well_id);
 
             return this->seg_number_[top_offset + seg_id];
+        }
+
+        // If the ALQ has changed since the previous report step,
+        // reset current_alq and update default_alq. ALQ is used for
+        // constant lift gas injection and for gas lift optimization
+        // (THP controlled wells).
+        //
+        // NOTE: If a well is no longer used (e.g. it is shut down)
+        // it is still kept in the maps "default_alq_" and "current_alq_". Since the
+        // number of unused entries should be small (negligible memory
+        // overhead) this is simpler than writing code to delete it.
+        //
+        void updateWellsDefaultALQ( const std::vector<Well>& wells_ecl )
+        {
+            const int nw = wells_ecl.size();
+            for (int i = 0; i<nw; i++) {
+                const Well &well = wells_ecl[i];
+                if (well.isProducer()) {
+                    const std::string &name = well.name();
+                    // NOTE: This is the value set in item 12 of WCONPROD, or with WELTARG
+                    auto alq = well.alq_value();
+                    if (this->default_alq_.count(name) != 0) {
+                        if (this->default_alq_[name] == alq) {
+                            // If the previous value was the same, we leave current_alq_
+                            // as it is.
+                            continue;
+                        }
+                    }
+                    this->default_alq_[name] = alq;
+                    // Reset current ALQ if a new value was given in WCONPROD
+                    this->current_alq_[name] = alq;
+                }
+            }
         }
     };
 
