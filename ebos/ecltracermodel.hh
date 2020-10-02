@@ -107,10 +107,10 @@ public:
 
         if (!EWOMS_GET_PARAM(TypeTag, bool, EnableTracerModel)) {
             if (simulator_.gridView().comm().rank() == 0) {
-                OpmLog::warning("Warning: Keyword TRACERS has only experimental support, and is hence ignored.\n"
-                                + std::string("The experimental tracer model can still be used, but must be set explicitely.\n")
-                                + std::string("To use tracers, set the command line option: --enable-tracer-model=true\n")
-                                + "\n");
+                OpmLog::warning("Keyword TRACERS has only experimental support, and is hence ignored.\n"
+                                "The experimental tracer model can still be used, but must be set explicitely.\n"
+                                "To use tracers, set the command line option: --enable-tracer-model=true"
+                                "\n");
             }
             return; // Tracer transport must be enabled by the user
         }
