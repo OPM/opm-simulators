@@ -148,7 +148,7 @@ namespace Opm
 
 	int n = total_well_iterations + (failureReport ? failureReport->total_well_iterations : 0);
 
-	os << fmt::format("Overall Well Iterations:     {:2}", n);
+	os << fmt::format("Overall Well Iterations:      {:2}", n);
         if (failureReport) {
 	  os << fmt::format(" (Failed: {:2}; {:2.1f}%)",
 			    failureReport->total_well_iterations,
