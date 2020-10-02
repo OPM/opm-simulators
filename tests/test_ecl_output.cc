@@ -240,8 +240,8 @@ void test_readWriteWells()
      *  the connection keys (active indices) and well names correspond to the
      *  input deck. All other entries in the well structures are arbitrary.
      */
-    w1.connections.push_back( { 88, rc1, 30.45, 123.45, 0.0, 0.0, 0.0, 0.0 } );
-    w1.connections.push_back( { 288, rc2, 33.19, 67.89, 0.0, 0.0, 0.0, 0.0 } );
+    w1.connections.push_back( { 88, rc1, 30.45, 123.45, 0.0, 0.0, 0.0, 0.0, 123.456 } );
+    w1.connections.push_back( { 288, rc2, 33.19, 67.89, 0.0, 0.0, 0.0, 0.0, 123.456 } );
 
     w2.rates = r2;
     w2.bhp = 2.34;
@@ -249,7 +249,7 @@ void test_readWriteWells()
     w2.control = 1;
     //w1.injectionControl = 2;
     //w1.productionControl = 2;
-    w2.connections.push_back( { 188, rc3, 36.22, 19.28, 0.0, 0.0, 0.0, 0.0 } );
+    w2.connections.push_back( { 188, rc3, 36.22, 19.28, 0.0, 0.0, 0.0, 0.0, 123.456 } );
 
     Opm::data::Wells wellRates;
 
