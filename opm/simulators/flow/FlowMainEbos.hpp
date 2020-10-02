@@ -592,13 +592,13 @@ namespace Opm
             if (this->output_cout_) {
                 std::ostringstream ss;
                 ss << "\n\n================    End of simulation     ===============\n\n";
-                ss << fmt::format("Number of MPI processes  {:11}\n", mpi_size_ );
+                ss << fmt::format("Number of MPI processes: {:9}\n", mpi_size_ );
 #if _OPENMP
                 int threads = omp_get_max_threads();
 #else
                 int threads = 1;
 #endif
-                ss << fmt::format("Threads per MPI process:  {:10}\n", threads);
+                ss << fmt::format("Threads per MPI process: {:9}\n", threads);
                 report.reportFullyImplicit(ss);
                 OpmLog::info(ss.str());
                 const std::string dir = eclState().getIOConfig().getOutputDir();
