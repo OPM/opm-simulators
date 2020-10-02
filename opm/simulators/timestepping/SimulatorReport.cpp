@@ -87,15 +87,15 @@ namespace Opm
 
     void SimulatorReportSingle::reportFullyImplicit(std::ostream& os, const SimulatorReportSingle* failureReport) const
     {
-        os << fmt::format("Total time (seconds):         {:6.1f} \n", total_time);
+        os << fmt::format("Total time (seconds):       {:8.1f} \n", total_time);
 
-         os << fmt::format("Solver time (seconds):        {:6.1f} \n",
+         os << fmt::format("Solver time (seconds):      {:8.1f} \n",
 			  solver_time + (failureReport ? failureReport->solver_time : 0.0));
 
         if (assemble_time > 0.0 || linear_solve_time > 0.0) {
 	  
 	    double t = assemble_time + (failureReport ? failureReport->assemble_time : 0.0);
-            os << fmt::format(" Assembly time (seconds):     {:6.1f}", t);
+            os << fmt::format(" Assembly time (seconds):   {:8.1f}", t);
 
             if (failureReport) {
 	      os << fmt::format(" (Failed: {:2.1f}; {:2.1f}%)",
@@ -114,7 +114,7 @@ namespace Opm
             os << std::endl;
 
 	    t = linear_solve_time + (failureReport ? failureReport->linear_solve_time : 0.0);
-            os << fmt::format(" Linear solve time (seconds): {:6.1f}", t);
+            os << fmt::format(" Linear solve time (seconds):{:7.1f}", t);
             if (failureReport) {
 	      os << fmt::format(" (Failed: {:2.1f}; {:2.1f}%)",
 				failureReport->linear_solve_time,
