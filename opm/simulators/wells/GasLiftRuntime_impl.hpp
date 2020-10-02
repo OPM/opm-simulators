@@ -51,7 +51,8 @@ GasLiftRuntime(
     int well_index = this->std_well_.indexOfWell();
     const Well::ProducerCMode& control_mode
         = well_state_.currentProductionControls()[well_index];
-    assert(control_mode == Well::ProducerCMode::THP );
+    if (control_mode != Well::ProducerCMode::THP)
+        throw std::logic_error("Bug in flow - invalid control mode detected\n");
     const Opm::Schedule& schedule = this->ebos_simulator_.vanguard().schedule();
     const int report_step_idx = this->ebos_simulator_.episodeIndex();
     auto ecl_well = this->std_well_.wellEcl();
