@@ -159,7 +159,7 @@ namespace Opm
         n = total_linearizations + (failureReport ? failureReport->total_linearizations : 0);
         os << fmt::format("Overall Linearizations:       {:6}", n);
         if (failureReport) {
-          os << fmt::format(" (Failed: {:3}; {:2.1f})%",
+          os << fmt::format(" (Failed: {:3}; {:2.1f}%)",
                             failureReport->total_linearizations,
                             100.0*failureReport->total_linearizations/n);
         }
@@ -168,7 +168,7 @@ namespace Opm
         n = total_newton_iterations + (failureReport ? failureReport->total_newton_iterations : 0);
         os << fmt::format("Overall Newton Iterations:    {:6}", n);
         if (failureReport) {
-          os << fmt::format(" (Failed: {:3}; {:2.1f})%",
+          os << fmt::format(" (Failed: {:3}; {:2.1f}%)",
                             failureReport->total_newton_iterations,
                             100.0*failureReport->total_newton_iterations/n);
         }
