@@ -86,16 +86,16 @@ namespace Opm
     void SimulatorReportSingle::reportFullyImplicit(std::ostream& os, const SimulatorReportSingle* failureReport) const
     {
         double t = total_time;
-        os << "Total time (seconds):         " << t;
+        os << "Total time (seconds):         " << std::fixed << std::setprecision(1) << t;
         os << std::endl;
 
         t = solver_time + (failureReport ? failureReport->solver_time : 0.0);
-        os << "Solver time (seconds):        " << t;
+        os << "Solver time (seconds):        " << std::fixed << std::setprecision(1) << t;
         os << std::endl;
 
         if (assemble_time > 0.0 || linear_solve_time > 0.0) {
             t = assemble_time + (failureReport ? failureReport->assemble_time : 0.0);
-            os << " Assembly time (seconds):     " << t;
+            os << " Assembly time (seconds):     " << std::fixed << std::setprecision(1) << t;
             if (failureReport) {
                 os << " (Failed: " << failureReport->assemble_time << "; "
                    << 100*failureReport->assemble_time/t << "%)";
@@ -103,7 +103,7 @@ namespace Opm
             os << std::endl;
 
             t = assemble_time_well + (failureReport ? failureReport->assemble_time_well : 0.0);
-            os << "   Well assembly time (seconds): " << t;
+            os << "   Well assembly time (seconds): " << std::fixed << std::setprecision(1) << t;
             if (failureReport) {
                 os << " (Failed: " << failureReport->assemble_time_well << "; "
                    << 100*failureReport->assemble_time_well/t << "%)";
@@ -111,7 +111,7 @@ namespace Opm
             os << std::endl;
 
             t = linear_solve_time + (failureReport ? failureReport->linear_solve_time : 0.0);
-            os << " Linear solve time (seconds): " << t;
+            os << " Linear solve time (seconds): " << std::fixed << std::setprecision(1) << t;
             if (failureReport) {
                 os << " (Failed: " << failureReport->linear_solve_time << "; "
                    << 100*failureReport->linear_solve_time/t << "%)";
@@ -119,7 +119,7 @@ namespace Opm
             os << std::endl;
 
             t = linear_solve_setup_time + (failureReport ? failureReport->linear_solve_setup_time : 0.0);
-            os << "   Linear solve setup time (seconds): " << t;
+            os << "   Linear solve setup time (seconds): " << std::fixed << std::setprecision(1) << t;
             if (failureReport) {
                 os << " (Failed: " << failureReport->linear_solve_setup_time << "; "
                    << 100*failureReport->linear_solve_setup_time/t << "%)";
@@ -127,7 +127,7 @@ namespace Opm
             os << std::endl;
 
             t = update_time + (failureReport ? failureReport->update_time : 0.0);
-            os << " Update time (seconds):       " << t;
+            os << " Update time (seconds):       " << std::fixed << std::setprecision(1) << t;
             if (failureReport) {
                 os << " (Failed: " << failureReport->update_time << "; "
                    << 100*failureReport->update_time/t << "%)";
@@ -135,7 +135,7 @@ namespace Opm
             os << std::endl;
 
             t = output_write_time + (failureReport ? failureReport->output_write_time : 0.0);
-            os << " Output write time (seconds): " << t;
+            os << " Output write time (seconds): " << std::fixed << std::setprecision(1) << t;
             os << std::endl;
 
         }
