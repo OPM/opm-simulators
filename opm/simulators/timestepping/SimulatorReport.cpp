@@ -77,7 +77,7 @@ namespace Opm
         if (total_well_iterations != 0) {
             ss << fmt::format("Well its={:2}", total_well_iterations);
         }
-        ss << fmt::format(" Newton its={:2}, lineraizations={:2} ({:2.1f}sec), linear its={:3} ({:2.1f}sec)",
+        ss << fmt::format(" Newton its={:2}, linearaizations={:2} ({:2.1f}sec), linear its={:3} ({:2.1f}sec)",
                           total_newton_iterations,
                           total_linearizations,
                           assemble_time,
@@ -93,8 +93,8 @@ namespace Opm
                           solver_time + (failureReport ? failureReport->solver_time : 0.0));
 
         if (assemble_time > 0.0 || linear_solve_time > 0.0) {
-          
-            double t = assemble_time + (failureReport ? failureReport->assemble_time : 0.0);
+
+	  double t = assemble_time + (failureReport ? failureReport->assemble_time : 0.0);
             os << fmt::format(" Assembly time (seconds):   {:9.2f}", t);
 
             if (failureReport) {
@@ -103,7 +103,7 @@ namespace Opm
                                 100*failureReport->assemble_time/t);
              }
             os << std::endl;
-            
+
             t = assemble_time_well + (failureReport ? failureReport->assemble_time_well : 0.0);
             os << fmt::format("   Well assembly (seconds):   {:7.2f}", t);
             if (failureReport) {
@@ -130,7 +130,7 @@ namespace Opm
                                 100*failureReport->linear_solve_setup_time/t);
             }
             os << std::endl;
-            
+
             t = update_time + (failureReport ? failureReport->update_time : 0.0);
             os << fmt::format(" Update time (seconds):       {:7.2f}", t);
             if (failureReport) {
