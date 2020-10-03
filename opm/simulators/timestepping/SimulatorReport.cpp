@@ -94,7 +94,7 @@ namespace Opm
 
         if (assemble_time > 0.0 || linear_solve_time > 0.0) {
 
-	  double t = assemble_time + (failureReport ? failureReport->assemble_time : 0.0);
+	    double t = assemble_time + (failureReport ? failureReport->assemble_time : 0.0);
             os << fmt::format(" Assembly time (seconds):   {:9.2f}", t);
 
             if (failureReport) {
