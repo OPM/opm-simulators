@@ -246,7 +246,7 @@ namespace Opm
             const WellState& well_state,
             const Simulator& ebosSimulator,
             DeferredLogger& deferred_logger
-        ) const;
+        ) const override;
 
         bool checkGliftNewtonIterationIdxOk(
             const Simulator& ebosSimulator,

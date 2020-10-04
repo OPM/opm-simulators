@@ -119,7 +119,7 @@ namespace Opm
             const WellState&,
             const Simulator&,
             DeferredLogger&
-        ) const {
+        ) const override {
             // Not implemented yet
         }
 
