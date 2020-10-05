@@ -631,15 +631,11 @@ public:
             return grid.leafGridView().size(0);
         }
         const auto& gridView = grid.leafGridView();
-        const auto& elemEndIt = gridView.template end</*codim=*/0, Dune::Interior_Partition>();
-        std::size_t global_nc = 0;
-
-        for (auto elemIt = gridView.template begin</*codim=*/0, Dune::Interior_Partition>();
-             elemIt != elemEndIt; ++elemIt)
-        {
-            ++global_nc;
-        }
-        return grid.comm().sum(global_nc);
+        constexpr int codim = 0;
+        constexpr auto Part = Dune::Interior_Partition;
+        auto local_cells = std::distance(gridView.template begin<codim, Part>(),
+                                         gridView.template end<codim, Part>());
+        return grid.comm().sum(local_cells);
     }
 
 protected:
