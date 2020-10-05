@@ -617,6 +617,31 @@ public:
     {
         return centroids_;
     }
+
+    /*!
+     * \brief Get the number of cells in the global leaf grid view.
+     * \warn This is a collective operation that needs to be called
+     * on all ranks.
+     */
+    std::size_t noGlobalCells() const
+    {
+        const auto& grid = asImp_().grid();
+        if (grid.comm().size() == 1)
+        {
+            return grid.leafGridView().size(0);
+        }
+        const auto& gridView = grid.leafGridView();
+        const auto& elemEndIt = gridView.template end</*codim=*/0, Dune::Interior_Partition>();
+        std::size_t global_nc = 0;
+
+        for (auto elemIt = gridView.template begin</*codim=*/0, Dune::Interior_Partition>();
+             elemIt != elemEndIt; ++elemIt)
+        {
+            ++global_nc;
+        }
+        return grid.comm().sum(global_nc);
+    }
+
 protected:
     void callImplementationInit()
     {

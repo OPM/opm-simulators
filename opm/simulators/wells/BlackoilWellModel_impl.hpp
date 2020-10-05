@@ -43,12 +43,9 @@ namespace Opm {
         // Create the guide rate container.
         guideRate_.reset(new GuideRate (ebosSimulator_.vanguard().schedule()));
 
-        // calculate the number of elements of the compressed sequential grid. this needs
-        // to be done in two steps because the dune communicator expects a reference as
-        // argument for sum()
-        const auto& gridView = ebosSimulator_.gridView();
-        number_of_cells_ = gridView.size(/*codim=*/0);
-        global_nc_ = gridView.comm().sum(number_of_cells_);
+        number_of_cells_ = ebosSimulator_.gridView().size(0);
+        // Number of cells the global grid view
+        global_nc_ = ebosSimulator_.vanguard().noGlobalCells();
 
         // Set up cartesian mapping.
         const auto& grid = ebosSimulator_.vanguard().grid();
