@@ -441,10 +441,6 @@ namespace Opm
                          summaryConfig_, nullptr, python, std::move(parseContext),
                          init_from_restart_file, outputCout_);
 
-                if (outputCout_) {
-                    OpmLog::info("Done reading deck file.");
-                }
-
                 setupTime_ = externalSetupTimer.elapsed();
                 outputFiles_ = (outputMode != FileOutputMode::OUTPUT_NONE);
             }

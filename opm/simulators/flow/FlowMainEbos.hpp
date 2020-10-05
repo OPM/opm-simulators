@@ -42,6 +42,8 @@
 #include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 #include <opm/common/utility/String.hpp>
 
+#include <fmt/format.h>
+
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
 #else
@@ -590,13 +592,13 @@ namespace Opm
             if (this->output_cout_) {
                 std::ostringstream ss;
                 ss << "\n\n================    End of simulation     ===============\n\n";
-                ss << "Number of MPI processes: " << std::setw(6) << mpi_size_ << "\n";
+                ss << fmt::format("Number of MPI processes: {:9}\n", mpi_size_ );
 #if _OPENMP
                 int threads = omp_get_max_threads();
 #else
                 int threads = 1;
 #endif
-                ss << "Threads per MPI process:  " << std::setw(5) << threads << "\n";
+                ss << fmt::format("Threads per MPI process: {:9}\n", threads);
                 report.reportFullyImplicit(ss);
                 OpmLog::info(ss.str());
                 const std::string dir = eclState().getIOConfig().getOutputDir();
