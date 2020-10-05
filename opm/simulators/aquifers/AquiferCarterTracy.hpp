@@ -65,6 +65,22 @@ public:
         }
     }
 
+    Opm::data::AquiferData aquiferData() const
+    {
+        data::AquiferData data;
+        data.aquiferID = this->aquiferID;
+        // TODO: not sure how to get this pressure value yet
+        data.pressure = this->pa0_;
+        data.fluxRate = 0.;
+        for (const auto& q : this->Qai_) {
+            data.fluxRate += q.value();
+        }
+        data.volume = this->W_flux_.value();
+        data.initPressure = this->pa0_;
+        data.type = Opm::data::AquiferType::CarterTracey;
+        return data;
+    }
+
 protected:
     // Variables constants
     const AquiferCT::AQUCT_data aquct_data_;

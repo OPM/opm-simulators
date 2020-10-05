@@ -273,6 +273,9 @@ public:
         const auto localGroupAndNetworkData = simulator_.problem().wellModel()
             .groupAndNetworkData(reportStepNum, simulator_.vanguard().schedule());
 
+
+        const auto localAquiferData = simulator_.problem().mutableAquiferModel().aquiferData();
+
         this->prepareLocalCellData(isSubStep, reportStepNum);
 
         if (collectToIORank_.isParallel())
@@ -308,6 +311,9 @@ public:
                 ? this->collectToIORank_.globalGroupAndNetworkData()
                 : localGroupAndNetworkData;
 
+            // Aquifer can not be parallel running yet
+            const auto& aquiferData = localAquiferData;
+
             const auto& blockData
                 = this->collectToIORank_.isParallel()
                 ? this->collectToIORank_.globalBlockData()
@@ -322,7 +328,8 @@ public:
                          groupAndNetworkData,
                          miscSummaryData,
                          regionData,
-                         blockData);
+                         blockData,
+                         aquiferData);
 
             const auto& udq_config = schedule().getUDQConfig(reportStepNum);
             udq_config.eval( reportStepNum, summaryState(), udqState() );
