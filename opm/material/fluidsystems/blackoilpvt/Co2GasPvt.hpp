@@ -25,7 +25,7 @@
  * \copydoc Opm::Co2GasPvt
  */
 #ifndef OPM_CO2_GAS_PVT_HPP
-#define OPM_Co2_GAS_PVT_HPP
+#define OPM_CO2_GAS_PVT_HPP
 
 #include <opm/material/Constants.hpp>
 
