@@ -623,7 +623,7 @@ public:
      * \warn This is a collective operation that needs to be called
      * on all ranks.
      */
-    std::size_t noGlobalCells() const
+    std::size_t globalNumCells() const
     {
         const auto& grid = asImp_().grid();
         if (grid.comm().size() == 1)

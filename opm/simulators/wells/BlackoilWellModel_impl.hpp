@@ -43,9 +43,9 @@ namespace Opm {
         // Create the guide rate container.
         guideRate_.reset(new GuideRate (ebosSimulator_.vanguard().schedule()));
 
-        number_of_cells_ = ebosSimulator_.gridView().size(0);
+        local_num_cells_ = ebosSimulator_.gridView().size(0);
         // Number of cells the global grid view
-        global_nc_ = ebosSimulator_.vanguard().noGlobalCells();
+        global_num_cells_ = ebosSimulator_.vanguard().globalNumCells();
 
         // Set up cartesian mapping.
         const auto& grid = ebosSimulator_.vanguard().grid();
@@ -85,7 +85,7 @@ namespace Opm {
         // add the eWoms auxiliary module for the wells to the list
         ebosSimulator_.model().addAuxiliaryModule(this);
 
-        is_cell_perforated_.resize(number_of_cells_, false);
+        is_cell_perforated_.resize(local_num_cells_, false);
     }
 
     template<typename TypeTag>
@@ -240,7 +240,7 @@ namespace Opm {
 
         // The well state initialize bhp with the cell pressure in the top cell.
         // We must therefore provide it with updated cell pressures
-        size_t nc = number_of_cells_;
+        size_t nc = local_num_cells_;
         std::vector<double> cellPressures(nc, 0.0);
         ElementContext elemCtx(ebosSimulator_);
         const auto& gridView = ebosSimulator_.vanguard().gridView();
@@ -305,7 +305,7 @@ namespace Opm {
 
         // Compute reservoir volumes for RESV controls.
         rateConverter_.reset(new RateConverterType (phase_usage_,
-                                                    std::vector<int>(number_of_cells_, 0)));
+                                                    std::vector<int>(local_num_cells_, 0)));
         rateConverter_->template defineState<ElementContext>(ebosSimulator_);
 
         // update VFP properties
@@ -344,7 +344,7 @@ namespace Opm {
             // TODO: to see whether we can postpone of the intialization of the well containers to
             // optimize the usage of the following several member variables
             for (auto& well : well_container_) {
-                well->init(&phase_usage_, depth_, gravity_, number_of_cells_);
+                well->init(&phase_usage_, depth_, gravity_, local_num_cells_);
             }
 
             // update the updated cell flag
@@ -428,7 +428,7 @@ namespace Opm {
                 WellInterfacePtr well = createWellForWellTest(well_name, timeStepIdx, deferred_logger);
 
                 // some preparation before the well can be used
-                well->init(&phase_usage_, depth_, gravity_, number_of_cells_);
+                well->init(&phase_usage_, depth_, gravity_, local_num_cells_);
                 const Well& wellEcl = schedule().getWell(well_name, timeStepIdx);
                 double well_efficiency_factor = wellEcl.getEfficiencyFactor();
                 WellGroupHelpers::accumulateGroupEfficiencyFactor(schedule().getGroup(wellEcl.groupName(), timeStepIdx), schedule(), timeStepIdx, well_efficiency_factor);
@@ -1461,12 +1461,12 @@ namespace Opm {
     {
         cartesian_to_compressed_.resize(number_of_cartesian_cells, -1);
         if (global_cell) {
-            for (unsigned i = 0; i < number_of_cells_; ++i) {
+            for (unsigned i = 0; i < local_num_cells_; ++i) {
                 cartesian_to_compressed_[global_cell[i]] = i;
             }
         }
         else {
-            for (unsigned i = 0; i < number_of_cells_; ++i) {
+            for (unsigned i = 0; i < local_num_cells_; ++i) {
                 cartesian_to_compressed_[i] = i;
             }
         }
@@ -1527,7 +1527,7 @@ namespace Opm {
         grid.comm().sum(B_avg.data(), B_avg.size());
         for(auto& bval: B_avg)
         {
-            bval/=global_nc_;
+            bval/=global_num_cells_;
         }
     }
 
