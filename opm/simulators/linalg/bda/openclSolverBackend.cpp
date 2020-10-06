@@ -182,6 +182,26 @@ void openclSolverBackend<block_size>::spmv_blocked_w(cl::Buffer vals, cl::Buffer
 }
 
 template <unsigned int block_size>
+void openclSolverBackend<block_size>::blockscaleadd_w(cl::Buffer vals, cl::Buffer cols, cl::Buffer rows, cl::Buffer x, cl::Buffer b, cl::Buffer r)
+{
+    const unsigned int work_group_size = 32;
+    const unsigned int num_work_groups = ceilDivision(N, work_group_size);
+    const unsigned int total_work_items = num_work_groups * work_group_size;
+    const unsigned int lmem_per_work_group = sizeof(double) * work_group_size;
+    Timer t_blockscaleadd;
+
+    cl::Event event = (*blockscaleadd_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
+                                         vals, cols, rows, x, b, r, Nb, block_size, cl::Local(lmem_per_work_group));
+
+    if (verbosity >= 4) {
+        event.wait();
+        std::ostringstream oss;
+        oss << std::scientific << "openclSolver blockscaleadd_w time: " << t_blockscaleadd.stop() << " s";
+        OpmLog::info(oss.str());
+    }
+}
+
+template <unsigned int block_size>
 void openclSolverBackend<block_size>::gpu_pbicgstab(BdaResult& res) {
     float it;
     double rho, rhop, beta, alpha, omega, tmp1, tmp2;
@@ -202,8 +222,15 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(BdaResult& res) {
     alpha = 1.0;
     omega = 1.0;
 
-    queue->enqueueCopyBuffer(d_b, d_r, 0, 0, sizeof(double) * N, nullptr, &event);
-    event.wait();
+    if(first_run){
+        queue->enqueueCopyBuffer(d_b, d_r, 0, 0, sizeof(double) * N, nullptr, &event);
+        event.wait();
+        first_run = false;
+    }
+    else{
+        blockscaleadd_w(d_Avals, d_Acols, d_Arows, d_x, d_b, d_r);
+    }
+
     queue->enqueueCopyBuffer(d_r, d_rw, 0, 0, sizeof(double) * N, nullptr, &event);
     event.wait();
     queue->enqueueCopyBuffer(d_r, d_p, 0, 0, sizeof(double) * N, nullptr, &event);
@@ -461,6 +488,7 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
         source.emplace_back(std::make_pair(ILU_apply1_s, strlen(ILU_apply1_s)));
         source.emplace_back(std::make_pair(ILU_apply2_s, strlen(ILU_apply2_s)));
         source.emplace_back(std::make_pair(stdwell_apply_s, strlen(stdwell_apply_s)));
+        source.emplace_back(std::make_pair(blockscaleadd_s, strlen(blockscaleadd_s)));
         program = cl::Program(*context, source);
 
         program.build(devices);
@@ -513,6 +541,9 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
                                                   cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                                   const unsigned int, const unsigned int, cl::Buffer&,
                                                   cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg>(cl::Kernel(program, "stdwell_apply")));
+        blockscaleadd_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&,
+                                                  cl::Buffer&, cl::Buffer&, cl::Buffer&,
+                                                  const unsigned int, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "blockscaleadd")));
 
         prec->setKernels(ILU_apply1_k.get(), ILU_apply2_k.get());
         wcontainer->setKernel(stdwell_apply_k.get());

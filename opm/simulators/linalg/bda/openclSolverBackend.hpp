@@ -54,6 +54,7 @@ private:
     double *vals_contiguous = nullptr;    // only used if COPY_ROW_BY_ROW is true in openclSolverBackend.cpp
 
     bool analysis_done = false;
+    bool first_run = true;
 
     // OpenCL variables must be reusable, they are initialized in initialize()
     cl::Buffer d_Avals, d_Acols, d_Arows;        // (reordered) matrix in BSR format on GPU
@@ -77,6 +78,9 @@ private:
                                     cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                     const unsigned int, const unsigned int, cl::Buffer&,
                                     cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg> > stdwell_apply_k;
+    std::unique_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&,
+                                    cl::Buffer&, cl::Buffer&, cl::Buffer&,
+                                    const unsigned int, const unsigned int, cl::LocalSpaceArg> > blockscaleadd_k;
 
     Preconditioner *prec = nullptr;                               // only supported preconditioner is BILU0
     WContainer *wcontainer = nullptr;
@@ -128,6 +132,8 @@ private:
     /// \param[in] x        input vector
     /// \param[out] b       output vector
     void spmv_blocked_w(cl::Buffer vals, cl::Buffer cols, cl::Buffer rows, cl::Buffer x, cl::Buffer b);
+
+    void blockscaleadd_w(cl::Buffer vals, cl::Buffer cols, cl::Buffer rows, cl::Buffer x, cl::Buffer b, cl::Buffer r);
 
     /// Solve linear system using ilu0-bicgstab
     /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A
