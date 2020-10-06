@@ -195,7 +195,8 @@ namespace Opm
                     well.rates.set( rt::gas, wv[ wellrate_index + pu.phase_pos[BlackoilPhases::Vapour] ] );
                 }
 
-                const int num_perf_well = this->well_perf_data_[well_index].size();
+                const auto& pd = this->well_perf_data_[well_index];
+                const int num_perf_well = pd.size();
                 well.connections.resize(num_perf_well);
 
                 for( int i = 0; i < num_perf_well; ++i ) {
@@ -204,6 +205,7 @@ namespace Opm
                     connection.index = globalCellIdxMap[active_index];
                     connection.pressure = this->perfPress()[ itr.second[1] + i ];
                     connection.reservoir_rate = this->perfRates()[ itr.second[1] + i ];
+                    connection.trans_factor = pd[i].connection_transmissibility_factor;
                 }
                 assert(num_perf_well == int(well.connections.size()));
             }
