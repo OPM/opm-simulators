@@ -209,9 +209,6 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(BdaResult& res) {
 
     Timer t_total, t_prec(false), t_spmv(false), t_well(false), t_rest(false);
 
-    // set r to the initial residual
-    // if initial x guess is not 0, must call applyblockedscaleadd(), not implemented
-    //applyblockedscaleadd(-1.0, mat, x, r);
 
     // set initial values
     cl::Event event;
@@ -222,6 +219,8 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(BdaResult& res) {
     alpha = 1.0;
     omega = 1.0;
 
+    // x = 0 only on first run, therefore r = b
+    // On subsequent runs x = x_prev and r = b - A*x_prev
     if(first_run){
         queue->enqueueCopyBuffer(d_b, d_r, 0, 0, sizeof(double) * N, nullptr, &event);
         event.wait();
