@@ -77,7 +77,7 @@ namespace Opm
         if (total_well_iterations != 0) {
             ss << fmt::format("Well its={:2}", total_well_iterations);
         }
-        ss << fmt::format(" Newton its={:2}, linearaizations={:2} ({:2.1f}sec), linear its={:3} ({:2.1f}sec)",
+        ss << fmt::format(" Newton its={:2}, linearizations={:2} ({:2.1f}sec), linear its={:3} ({:2.1f}sec)",
                           total_newton_iterations,
                           total_linearizations,
                           assemble_time,
