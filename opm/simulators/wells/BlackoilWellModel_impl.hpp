@@ -52,17 +52,18 @@ namespace Opm {
         const auto& cartDims = Opm::UgGridHelpers::cartDims(grid);
         setupCartesianToCompressed_(Opm::UgGridHelpers::globalCell(grid),
                                     cartDims[0]*cartDims[1]*cartDims[2]);
-
-        is_shut_or_defunct_ = [&ebosSimulator](const Well& well) {
+        auto& parallel_wells = ebosSimulator.vanguard().parallelWells();
+        parallel_well_info_.assign(parallel_wells.begin(), parallel_wells.end());
+        is_shut_or_defunct_ = [this, &ebosSimulator](const Well& well) {
                 if (well.getStatus() == Well::Status::SHUT)
                     return true;
                 if (ebosSimulator.gridView().comm().size() == 1)
                     return false;
                 std::pair<std::string, bool> value{well.name(), true}; // false indicate not active!
-                const auto& parallel_wells = ebosSimulator.vanguard().parallelWells();
-                auto candidate = std::lower_bound(parallel_wells.begin(), parallel_wells.end(),
-                                                 value);
-                return candidate == parallel_wells.end() || *candidate != value;
+                auto candidate = std::lower_bound(parallel_well_info_.begin(),
+                                                  parallel_well_info_.end(),
+                                                  value);
+                return candidate == parallel_well_info_.end() || *candidate != value;
             };
     }
 
