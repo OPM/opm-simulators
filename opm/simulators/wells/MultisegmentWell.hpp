@@ -59,13 +59,13 @@ namespace Opm
         // TODO: we need to have order for the primary variables and also the order for the well equations.
         // sometimes, they are similar, while sometimes, they can have very different forms.
 
-        static const bool has_gas = (Indices::compositionSwitchIdx >= 0);
-        static const bool has_water = (Indices::waterSaturationIdx >= 0);
+        static constexpr bool has_gas = (Indices::compositionSwitchIdx >= 0);
+        static constexpr bool has_water = (Indices::waterSaturationIdx >= 0);
 
-        static const int GTotal = 0;
-        static const int WFrac = has_water? 1: -1000;
-        static const int GFrac = has_gas? has_water + 1 : -1000;
-        static const int SPres = has_gas + has_water + 1;
+        static constexpr int GTotal = 0;
+        static constexpr int WFrac = has_water ? 1: -1000;
+        static constexpr int GFrac = has_gas ? has_water + 1 : -1000;
+        static constexpr int SPres = has_gas + has_water + 1;
 
         //  the number of well equations  TODO: it should have a more general strategy for it
         static const int numWellEq = getPropValue<TypeTag, Properties::EnablePolymer>() ? numEq : numEq + 1;
