@@ -61,6 +61,7 @@
 #include <opm/simulators/wells/MultisegmentWell.hpp>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
+#include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/timestepping/gatherConvergenceReport.hpp>
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -277,6 +278,8 @@ namespace Opm {
             std::vector< Well > wells_ecl_;
             std::vector< std::vector<PerforationData> > well_perf_data_;
             std::vector< WellProdIndexCalculator > prod_index_calc_;
+
+            std::vector< ParallelWellInfo > parallel_well_info_;
 
             bool wells_active_;
 
