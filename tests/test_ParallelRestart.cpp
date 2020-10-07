@@ -443,6 +443,63 @@ BOOST_AUTO_TEST_CASE(RestartValue)
     DO_CHECKS(RestartValue)
 }
 
+BOOST_AUTO_TEST_CASE(Vector_Int)
+{
+    struct Vi
+    {
+        std::vector<int> v{};
+
+        void serializeOp(Opm::EclMpiSerializer& serializer)
+        {
+            serializer.vector<int,false>(this->v);
+        }
+    };
+
+    auto comm = Dune::MPIHelper::getCollectiveCommunication();
+    Opm::EclMpiSerializer ser(comm);
+
+    Vi val1;  val1.v.assign({ 1, 7, 2, 9 });
+
+    ser.pack(val1);
+    const auto pos1 = ser.position();
+
+    Vi val2;
+    ser.unpack(val2);
+    const auto pos2 = ser.position();
+
+    BOOST_CHECK_MESSAGE(pos1   == pos2  , "Packed sizes differ between pack/unpack for vector<int>");
+    BOOST_CHECK_MESSAGE(val1.v == val2.v, "Deserialized vector<int> differs from original");
+}
+
+BOOST_AUTO_TEST_CASE(Vector_Bool)
+{
+    struct Vb
+    {
+        std::vector<bool> v{};
+
+        void serializeOp(Opm::EclMpiSerializer& serializer)
+        {
+            serializer.vector(this->v);
+        }
+    };
+
+    auto comm = Dune::MPIHelper::getCollectiveCommunication();
+    Opm::EclMpiSerializer ser(comm);
+
+    Vb val1;
+    val1.v.assign({ true, true, false, true, false });
+
+    ser.pack(val1);
+    const auto pos1 = ser.position();
+
+    Vb val2;
+    ser.unpack(val2);
+    const auto pos2 = ser.position();
+
+    BOOST_CHECK_MESSAGE(pos1   == pos2  , "Packed sizes differ between pack/unpack for vector<bool>");
+    BOOST_CHECK_MESSAGE(val1.v == val2.v, "Deserialized vector<bool> differs from original");
+}
+
 #define TEST_FOR_TYPE(TYPE) \
 BOOST_AUTO_TEST_CASE(TYPE) \
 { \

@@ -99,6 +99,30 @@ public:
         }
     }
 
+    void vector(std::vector<bool>& data)
+    {
+        std::vector<unsigned char> cdata;
+        if (m_op != Operation::UNPACK) {
+            cdata.resize(data.size());
+        }
+        if (m_op == Operation::PACKSIZE) {
+            this->vector<unsigned char, false>(cdata);
+        } else if (m_op == Operation::PACK) {
+            const auto n = data.size();
+            for (auto i = 0*n; i < n; ++i) {
+                cdata[i] = static_cast<unsigned char>(data[i]);
+            }
+            this->vector<unsigned char, false>(cdata);
+        } else if (m_op == Operation::UNPACK) {
+            this->vector<unsigned char, false>(cdata);
+            const unsigned char zero = 0;
+            const auto n = cdata.size();
+            data.resize(n);
+            for (auto i = 0*n; i < n; ++i) {
+                data[i] = cdata[i] != zero;
+            }
+        }
+    }
 
     //! \brief Handler for std::variant<> with four types
 
