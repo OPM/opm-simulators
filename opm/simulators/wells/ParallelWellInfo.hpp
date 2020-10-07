@@ -62,9 +62,9 @@ struct ParallelWellInfo
     /// \brief Name of the well.
     std::string name_;
     /// \brief Whether local cells are perforated somewhen
-    bool hasLocalCells_ = false;
+    bool hasLocalCells_;
     /// \brief Whether we own the well and should do reports etc.
-    bool isOwner_ = false;
+    bool isOwner_;
     /// \brief Communication object for the well
     ///
     /// Contains only ranks where this well will perforate local cells.
