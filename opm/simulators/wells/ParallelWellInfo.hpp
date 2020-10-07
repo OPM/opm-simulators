@@ -22,6 +22,8 @@
 #include <dune/common/version.hh>
 #include <dune/common/parallel/mpihelper.hh>
 
+#include <memory>
+
 namespace Opm
 {
 

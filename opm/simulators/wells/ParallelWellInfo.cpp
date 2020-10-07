@@ -60,10 +60,14 @@ bool operator<(const ParallelWellInfo& well1, const ParallelWellInfo& well2)
 
 bool operator==(const ParallelWellInfo& well1, const ParallelWellInfo& well2)
 {
+    bool ret = well1.name_ == well2.name_ && well1.hasLocalCells_ == well2.hasLocalCells_
+        && well1.isOwner_ == well2.isOwner_;
+#if HAVE_MPI
     using MPIComm = typename Dune::MPIHelper::MPICommunicator;
-    return well1.name_ == well2.name_ && well1.hasLocalCells_ == well2.hasLocalCells_
-        && well1.isOwner_ == well2.isOwner_ && (well1.comm_.get() == well2.comm_.get()
-                                                || static_cast<MPIComm>(well1.communication()) == static_cast<MPIComm>(well2.communication()));
+    ret = ret && (well1.comm_.get() == well2.comm_.get() // true for nullptr
+                  || static_cast<MPIComm>(well1.communication()) == static_cast<MPIComm>(well2.communication()));
+#endif
+    return ret;
 }
 
 bool operator!=(const ParallelWellInfo& well1, const ParallelWellInfo& well2)

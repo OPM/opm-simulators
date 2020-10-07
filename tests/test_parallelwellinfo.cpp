@@ -126,7 +126,9 @@ BOOST_AUTO_TEST_CASE(ParallelWellComparison)
     Opm::ParallelWellInfo well0, well1;
 
     BOOST_TEST(well0 == well1);
+#if HAVE_MPI
     BOOST_TEST(well0.communication()==helper.getLocalCommunicator());
+#endif
 
     well0.name_ = "Test";
     well0.hasLocalCells_ = false;
