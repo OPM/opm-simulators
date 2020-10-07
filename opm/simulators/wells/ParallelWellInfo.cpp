@@ -32,7 +32,7 @@ void ParallelWellInfo::DestroyComm::operator()(Communication* comm)
 
     if ( del )
     {
-        // Not 100% nice but save as comm is deleted anyway
+        // Not 100% nice but safe as comm is deleted anyway
         // We can only access a copy and no reference.
         MPI_Comm mpi_comm = *comm;
         MPI_Comm_free(&mpi_comm);
