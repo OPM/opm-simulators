@@ -40,6 +40,12 @@ void ParallelWellInfo::DestroyComm::operator()(Communication* comm)
 #endif
     delete comm;
 }
+
+ParallelWellInfo::ParallelWellInfo(const std::string& name)
+    : name_(name), hasLocalCells_ (true),
+      isOwner_(true), comm_(new Communication(Dune::MPIHelper::getLocalCommunicator()))
+    {}
+
 ParallelWellInfo::ParallelWellInfo(const std::pair<std::string,bool>& well_info)
     : name_(well_info.first), hasLocalCells_(well_info.second)
 {

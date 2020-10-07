@@ -46,10 +46,7 @@ struct ParallelWellInfo
     };
 
     /// \brief Constructs object using MPI_COMM_SELF
-    ParallelWellInfo(const std::string& name = {""})
-        : name_(name), hasLocalCells_ (true),
-          isOwner_(true), comm_(new Communication(Dune::MPIHelper::getLocalCommunicator()))
-    {}
+    ParallelWellInfo(const std::string& name = {""});
 
     /// \brief Constructs object with communication between all rank sharing
     ///        a well
