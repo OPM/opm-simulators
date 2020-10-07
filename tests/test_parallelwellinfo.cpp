@@ -99,7 +99,7 @@ std::ostream& operator<<(std::ostream& os, const Opm::ParallelWellInfo& w)
 BOOST_AUTO_TEST_CASE(ParallelWellComparison)
 {
     int argc = 0;
-    char** argv;
+    char** argv = nullptr;
     const auto& helper = Dune::MPIHelper::instance(argc, argv);
     std::vector<std::pair<std::string,bool>> pairs;
     if (helper.rank() == 0)
