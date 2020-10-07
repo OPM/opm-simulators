@@ -90,18 +90,22 @@ bool operator<( const ParallelWellInfo& well, const std::pair<std::string, bool>
 {
     return well.name_ < pair.first || ( !( pair.first < well.name_ ) && well.hasLocalCells_ < pair.second );
 }
+
 bool operator==(const std::pair<std::string, bool>& pair, const ParallelWellInfo& well)
 {
     return pair.first == well.name_ && pair.second == well.hasLocalCells_;
 }
+
 bool operator==(const ParallelWellInfo& well, const std::pair<std::string, bool>& pair)
 {
     return pair == well;
 }
+
 bool operator!=(const std::pair<std::string, bool>& pair, const ParallelWellInfo& well)
 {
     return pair.first != well.name_ || pair.second != well.hasLocalCells_;
 }
+
 bool operator!=(const ParallelWellInfo& well, const std::pair<std::string, bool>& pair)
 {
     return pair != well;
