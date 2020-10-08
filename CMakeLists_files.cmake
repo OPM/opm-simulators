@@ -44,6 +44,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/VFPProdProperties.cpp
   opm/simulators/wells/VFPInjProperties.cpp
   opm/simulators/wells/WellGroupHelpers.cpp
+  opm/simulators/wells/WellProdIndexCalculator.cpp
   )
 
 if(CUDA_FOUND)
@@ -90,6 +91,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_stoppedwells.cpp
   tests/test_relpermdiagnostics.cpp
   tests/test_norne_pvt.cpp
+  tests/test_wellprodindexcalculator.cpp
   tests/test_wellstatefullyimplicitblackoil.cpp
   )
 
@@ -228,6 +230,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/WellHelpers.hpp
   opm/simulators/wells/WellInterface.hpp
   opm/simulators/wells/WellInterface_impl.hpp
+  opm/simulators/wells/WellProdIndexCalculator.hpp
   opm/simulators/wells/StandardWell.hpp
   opm/simulators/wells/StandardWell_impl.hpp
   opm/simulators/wells/MultisegmentWell.hpp
