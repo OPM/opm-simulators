@@ -1440,6 +1440,13 @@ public:
     Scalar referencePorosity(unsigned elementIdx, unsigned timeIdx) const
     { return referencePorosity_[timeIdx][elementIdx]; }
 
+    /*!
+     * \brief Sets the porosity of an element
+     *
+     */
+    void setPorosity(Scalar poro, unsigned elementIdx, unsigned timeIdx = 0)
+    { referencePorosity_[timeIdx][elementIdx] = poro; }
+
 
     /*!
      * \brief Returns the depth of an degree of freedom [m]

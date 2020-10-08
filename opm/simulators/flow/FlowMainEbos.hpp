@@ -388,6 +388,11 @@ namespace Opm
               OpmLog::note(ss.str());
           }
         }
+
+        EbosSimulator *getSimulatorPtr() {
+            return ebosSimulator_.get();
+        }
+
     private:
         // called by execute() or executeInitStep()
         int execute_(int (FlowMainEbos::* runOrInitFunc)(), bool cleanup)
