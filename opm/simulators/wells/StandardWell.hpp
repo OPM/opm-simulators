@@ -27,9 +27,10 @@
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 #endif
 
+#include <opm/simulators/wells/GasLiftRuntime.hpp>
 #include <opm/simulators/wells/RateConverter.hpp>
 #include <opm/simulators/wells/WellInterface.hpp>
-#include <opm/simulators/wells/GasLiftRuntime.hpp>
+#include <opm/simulators/wells/WellProdIndexCalculator.hpp>
 
 #include <opm/models/blackoil/blackoilpolymermodules.hh>
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
@@ -224,6 +225,11 @@ namespace Opm
                                                  const WellState& well_state,
                                                  Opm::DeferredLogger& deferred_logger) override; // should be const?
 
+        virtual void updateProductivityIndex(const Simulator& ebosSimulator,
+                                             const WellProdIndexCalculator& wellPICalc,
+                                             WellState& well_state,
+                                             DeferredLogger& deferred_logger) const override;
+
         virtual void  addWellContributions(SparseMatrixAdapter& mat) const override;
 
         // iterate well equations with the specified control until converged
@@ -315,7 +321,6 @@ namespace Opm
         using Base::wpolymer;
         using Base::wfoam;
         using Base::scalingFactor;
-        using Base::scaleProductivityIndex;
         using Base::mostStrictBhpFromBhpLimits;
 
         // protected member variables from the Base class

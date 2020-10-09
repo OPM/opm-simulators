@@ -85,8 +85,6 @@ namespace Opm
 
         connectionRates_.resize(number_of_perforations_);
 
-        well_productivity_index_logger_counter_ = 0;
-
         wellIsStopped_ = false;
         if (well.getStatus() == Well::Status::STOP) {
             wellIsStopped_ = true;
@@ -1378,40 +1376,6 @@ namespace Opm
                           + std::to_string(max_iter) + " iterations");
             well_state = well_state0;
         }
-    }
-
-    template<typename TypeTag>
-    void
-    WellInterface<TypeTag>::scaleProductivityIndex(const int perfIdx, double& productivity_index, const bool new_well, Opm::DeferredLogger& deferred_logger) const
-    {
-        const auto& connection = well_ecl_.getConnections()[(*perf_data_)[perfIdx].ecl_index];
-        if (well_ecl_.getDrainageRadius() < 0) {
-            if (new_well && perfIdx == 0) {
-                deferred_logger.warning("PRODUCTIVITY_INDEX_WARNING", "Negative drainage radius not supported. The productivity index is set to zero");
-            }
-            productivity_index = 0.0;
-            return;
-        }
-
-        if (connection.r0() > well_ecl_.getDrainageRadius()) {
-            if (new_well && well_productivity_index_logger_counter_ < 1) {
-                deferred_logger.info("PRODUCTIVITY_INDEX_INFO", "The effective radius is larger than the well drainage radius for well " + name() +
-                             " They are set to equal in the well productivity index calculations");
-                well_productivity_index_logger_counter_++;
-            }
-            return;
-        }
-
-        // For zero drainage radius the productivity index is just the transmissibility times the mobility
-        if (well_ecl_.getDrainageRadius() == 0) {
-            return;
-        }
-
-        // Scale the productivity index to account for the drainage radius.
-        // Assumes steady radial flow only valied for horizontal wells
-        productivity_index *=
-        (std::log(connection.r0() / connection.rw()) + connection.skinFactor()) /
-        (std::log(well_ecl_.getDrainageRadius() / connection.rw()) + connection.skinFactor());
     }
 
     template<typename TypeTag>

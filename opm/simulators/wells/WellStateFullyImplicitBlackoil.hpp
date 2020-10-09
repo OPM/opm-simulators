@@ -29,15 +29,15 @@
 
 #include <opm/common/ErrorMacros.hpp>
 
-#include <vector>
-#include <cassert>
-#include <string>
-#include <utility>
-#include <map>
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <iostream>
+#include <map>
 #include <numeric>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace Opm
 {
@@ -161,6 +161,7 @@ namespace Opm
             perfRateSolvent_.clear();
             perfRateSolvent_.resize(nperf, 0.0);
             productivity_index_.resize(nw * np, 0.0);
+            conn_productivity_index_.resize(nperf * np, 0.0);
             well_potentials_.resize(nw * np, 0.0);
 
             perfRatePolymer_.clear();
@@ -515,16 +516,20 @@ namespace Opm
 
             using rt = data::Rates::opt;
             std::vector< rt > phs( np );
+            std::vector<rt> pi(np);
             if( pu.phase_used[Water] ) {
                 phs.at( pu.phase_pos[Water] ) = rt::wat;
+                pi .at( pu.phase_pos[Water] ) = rt::productivity_index_water;
             }
 
             if( pu.phase_used[Oil] ) {
                 phs.at( pu.phase_pos[Oil] ) = rt::oil;
+                pi .at( pu.phase_pos[Oil] ) = rt::productivity_index_oil;
             }
 
             if( pu.phase_used[Gas] ) {
                 phs.at( pu.phase_pos[Gas] ) = rt::gas;
+                pi .at( pu.phase_pos[Gas] ) = rt::productivity_index_gas;
             }
 
             /* this is a reference or example on **how** to convert from
@@ -612,13 +617,14 @@ namespace Opm
 
                 size_t local_comp_index = 0;
                 for( auto& comp : well.connections) {
-                    const auto rates = this->perfPhaseRates().begin()
-                                     + (np * wt.second[ 1 ])
-                                     + (np * local_comp_index);
+                    const auto connPhaseOffset = np * (wt.second[1] + local_comp_index);
 
+                    const auto rates  = this->perfPhaseRates().begin() + connPhaseOffset;
+                    const auto connPI = this->connectionProductivityIndex().begin() + connPhaseOffset;
 
                     for( int i = 0; i < np; ++i ) {
-                        comp.rates.set( phs[ i ], *(rates + i) );
+                        comp.rates.set( phs[ i ], *(rates  + i) );
+                        comp.rates.set( pi [ i ], *(connPI + i) );
                     }
                     if ( pu.has_polymer ) {
                         comp.rates.set( rt::polymer, this->perfRatePolymer()[wt.second[1] + local_comp_index]);
@@ -981,6 +987,14 @@ namespace Opm
             return productivity_index_;
         }
 
+        std::vector<double>& connectionProductivityIndex() {
+            return this->conn_productivity_index_;
+        }
+
+        const std::vector<double>& connectionProductivityIndex() const {
+            return this->conn_productivity_index_;
+        }
+
         std::vector<double>& wellPotentials() {
             return well_potentials_;
         }
@@ -1261,6 +1275,9 @@ namespace Opm
 
         // Productivity Index
         std::vector<double> productivity_index_;
+
+        // Connection-level Productivity Index
+        std::vector<double> conn_productivity_index_;
 
         // Well potentials
         std::vector<double> well_potentials_;

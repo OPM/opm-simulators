@@ -602,9 +602,6 @@ namespace Opm
         well_state.wellDissolvedGasRates()[index_of_well_] = 0.;
 
         const int np = number_of_phases_;
-        for (int p = 0; p < np; ++p) {
-            well_state.productivityIndex()[np*index_of_well_ + p] = 0.;
-        }
 
         std::vector<RateVector> connectionRates = connectionRates_; // Copy to get right size.
         for (int perf = 0; perf < number_of_perforations_; ++perf) {
@@ -683,8 +680,6 @@ namespace Opm
         } catch( ... ) {
             OPM_DEFLOG_THROW(Opm::NumericalIssue,"Error when inverting local well equations for well " + name(), deferred_logger);
         }
-
-
     }
 
 
@@ -703,7 +698,6 @@ namespace Opm
                         Opm::DeferredLogger& deferred_logger) const
     {
         const bool allow_cf = getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebosSimulator);
-        const int np = number_of_phases_;
         const EvalWell& bhp = getBhp();
         const int cell_idx = well_cells_[perf];
         const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
@@ -860,27 +854,6 @@ namespace Opm
 
         // Store the perforation pressure for later usage.
         well_state.perfPress()[first_perf_ + perf] = well_state.bhp()[index_of_well_] + perf_pressure_diffs_[perf];
-
-        // Compute Productivity index if asked for
-        const auto& pu = phaseUsage();
-        const Opm::SummaryConfig& summaryConfig = ebosSimulator.vanguard().summaryConfig();
-        const Opm::Schedule& schedule = ebosSimulator.vanguard().schedule();
-        for (int p = 0; p < np; ++p) {
-            if ( (pu.phase_pos[Water] == p && (summaryConfig.hasSummaryKey("WPIW:" + name()) || summaryConfig.hasSummaryKey("WPIL:" + name())))
-                 || (pu.phase_pos[Oil] == p && (summaryConfig.hasSummaryKey("WPIO:" + name()) || summaryConfig.hasSummaryKey("WPIL:" + name())))
-                 || (pu.phase_pos[Gas] == p && summaryConfig.hasSummaryKey("WPIG:" + name()))) {
-
-                const unsigned int compIdx = flowPhaseToEbosCompIdx(p);
-                const auto& fs = intQuants.fluidState();
-                Eval perf_pressure = getPerfCellPressure(fs);
-                const double drawdown  = well_state.perfPress()[first_perf_ + perf] - perf_pressure.value();
-                const bool new_well = schedule.hasWellGroupEvent(name(), ScheduleEvents::NEW_WELL, current_step_);
-                double productivity_index = cq_s[compIdx].value() / drawdown;
-                scaleProductivityIndex(perf, productivity_index, new_well, deferred_logger);
-                well_state.productivityIndex()[np*index_of_well_ + p] += productivity_index;
-            }
-        }
-
     }
 
 
@@ -2301,6 +2274,94 @@ namespace Opm
         checkConvergenceExtraEqs(res, report);
 
         return report;
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    updateProductivityIndex(const Simulator& ebosSimulator,
+                            const WellProdIndexCalculator& wellPICalc,
+                            WellState& well_state,
+                            DeferredLogger& deferred_logger) const
+    {
+        auto recipFVF = [&ebosSimulator, this](const int perf, const int p) -> double
+        {
+            const auto cell_idx = this->well_cells_[perf];
+            const auto& fs = ebosSimulator.model()
+               .cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0)->fluidState();
+
+            return fs.invB(p).value();
+        };
+
+        auto Rs = [&ebosSimulator, this](const int perf) -> double
+        {
+            const auto cell_idx = this->well_cells_[perf];
+            const auto& fs = ebosSimulator.model()
+               .cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0)->fluidState();
+
+            return fs.Rs().value();
+        };
+
+        auto Rv = [&ebosSimulator, this](const int perf) -> double
+        {
+            const auto cell_idx = this->well_cells_[perf];
+            const auto& fs = ebosSimulator.model()
+               .cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0)->fluidState();
+
+            return fs.Rv().value();
+        };
+
+        const auto& pu = this->phaseUsage();
+        const int   np = this->number_of_phases_;
+
+        auto* wellPI = &well_state.productivityIndex()[this->index_of_well_*np + 0];
+        auto* connPI = &well_state.connectionProductivityIndex()[this->first_perf_*np + 0];
+
+        for (int p = 0; p < np; ++p) {
+            wellPI[p] = 0.0;
+        }
+
+        const auto& allConn = this->well_ecl_.getConnections();
+        const auto  nPerf   = allConn.size();
+        for (auto allPerfID = 0*nPerf, subsetPerfID = 0*nPerf; allPerfID < nPerf; ++allPerfID) {
+            if (allConn[allPerfID].state() == Connection::State::SHUT) {
+                continue;
+            }
+
+            std::vector<EvalWell> mob(num_components_, {numWellEq_ + numEq, 0.0});
+            getMobility(ebosSimulator, static_cast<int>(subsetPerfID), mob, deferred_logger);
+
+            for (int p = 0; p < np; ++p) {
+                // Note: E100's notion of PI value phase mobility includes
+                // the reciprocal FVF.
+                const auto connMob = mob[ flowPhaseToEbosCompIdx(p) ].value() * recipFVF(subsetPerfID, p);
+                connPI[p] = wellPICalc.connectionProdIndStandard(allPerfID, connMob);
+            }
+
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
+                FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))
+            {
+                const auto io = pu.phase_pos[Oil];
+                const auto ig = pu.phase_pos[Gas];
+
+                const auto vapoil = connPI[ig] * Rv(subsetPerfID);
+                const auto disgas = connPI[io] * Rs(subsetPerfID);
+
+                connPI[io] += vapoil;
+                connPI[ig] += disgas;
+            }
+
+            for (int p = 0; p < np; ++p) {
+                wellPI[p] += connPI[p];
+            }
+
+            ++subsetPerfID;
+            connPI += np;
+        }
     }
 
 

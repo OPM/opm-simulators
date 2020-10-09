@@ -39,6 +39,7 @@
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/wells/WellHelpers.hpp>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
+#include <opm/simulators/wells/WellProdIndexCalculator.hpp>
 #include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
 
@@ -220,6 +221,11 @@ namespace Opm
         virtual void calculateExplicitQuantities(const Simulator& ebosSimulator,
                                                  const WellState& well_state,
                                                  Opm::DeferredLogger& deferred_logger) = 0; // should be const?
+
+        virtual void updateProductivityIndex(const Simulator& ebosSimulator,
+                                             const WellProdIndexCalculator& wellPICalc,
+                                             WellState& well_state,
+                                             DeferredLogger& deferred_logger) const = 0;
 
         /// \brief Wether the Jacobian will also have well contributions in it.
         virtual bool jacobianContainsWellContributions() const
@@ -513,13 +519,7 @@ namespace Opm
                                  const std::vector<double>& B_avg,
                                  Opm::DeferredLogger& deferred_logger);
 
-        void scaleProductivityIndex(const int perfIdx, double& productivity_index, const bool new_well, Opm::DeferredLogger& deferred_logger) const;
-
         void initCompletions();
-
-        // count the number of times an output log message is created in the productivity
-        // index calculations
-        mutable int well_productivity_index_logger_counter_;
 
         bool checkConstraints(WellState& well_state,
                               const Schedule& schedule,

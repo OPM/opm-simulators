@@ -237,6 +237,8 @@ namespace Opm {
         int globalNumWells = 0;
         // Make wells_ecl_ contain only this partition's non-shut wells.
         wells_ecl_ = getLocalNonshutWells(timeStepIdx, globalNumWells);
+
+        this->initializeWellProdIndCalculators();
         initializeWellPerfData();
 
         // Wells are active if they are active wells on at least
@@ -507,6 +509,8 @@ namespace Opm {
         const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
         checkGconsaleLimits(fieldGroup, well_state_, local_deferredLogger);
 
+        this->calculateProductivityIndexValues(local_deferredLogger);
+
         previous_well_state_ = well_state_;
 
         Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
@@ -566,6 +570,7 @@ namespace Opm {
         // Make wells_ecl_ contain only this partition's non-shut wells.
         wells_ecl_ = getLocalNonshutWells(report_step, globalNumWells);
 
+        this->initializeWellProdIndCalculators();
         initializeWellPerfData();
 
         const int nw = wells_ecl_.size();
@@ -580,6 +585,22 @@ namespace Opm {
         previous_well_state_ = well_state_;
 
         initial_step_ = false;
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    initializeWellProdIndCalculators()
+    {
+        this->prod_index_calc_.clear();
+        this->prod_index_calc_.reserve(this->wells_ecl_.size());
+        for (const auto& well : this->wells_ecl_) {
+            this->prod_index_calc_.emplace_back(well);
+        }
     }
 
 
@@ -1433,6 +1454,31 @@ namespace Opm {
         // Store it in the well state
         well_state_.wellPotentials() = well_potentials;
 
+    }
+
+
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    calculateProductivityIndexValues(DeferredLogger& deferred_logger)
+    {
+        if (! this->localWellsActive()) {
+            return;
+        }
+
+        auto piCalc = this->prod_index_calc_.begin();
+        for (const auto& wellPtr : this->well_container_) {
+            wellPtr->updateProductivityIndex(this->ebosSimulator_,
+                                             *piCalc,
+                                             this->well_state_,
+                                             deferred_logger);
+            ++piCalc;
+        }
     }
 
 

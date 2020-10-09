@@ -44,7 +44,6 @@ namespace Opm
         using typename Base::RateConverterType;
         using typename Base::SparseMatrixAdapter;
 
-
         /// the number of reservior equations
         using Base::numEq;
 
@@ -167,6 +166,11 @@ namespace Opm
         virtual void calculateExplicitQuantities(const Simulator& ebosSimulator,
                                                  const WellState& well_state,
                                                  Opm::DeferredLogger& deferred_logger) override; // should be const?
+
+        virtual void updateProductivityIndex(const Simulator& ebosSimulator,
+                                             const WellProdIndexCalculator& wellPICalc,
+                                             WellState& well_state,
+                                             DeferredLogger& deferred_logger) const override;
 
         virtual void  addWellContributions(SparseMatrixAdapter& jacobian) const override;
 

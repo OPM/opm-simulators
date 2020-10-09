@@ -1179,6 +1179,94 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
+    updateProductivityIndex(const Simulator& ebosSimulator,
+                            const WellProdIndexCalculator& wellPICalc,
+                            WellState& well_state,
+                            DeferredLogger&) const
+    {
+        auto recipFVF = [&ebosSimulator, this](const int perf, const int p) -> double
+        {
+            const auto cell_idx = this->well_cells_[perf];
+            const auto& fs = ebosSimulator.model()
+               .cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0)->fluidState();
+
+            return fs.invB(p).value();
+        };
+
+        auto Rs = [&ebosSimulator, this](const int perf) -> double
+        {
+            const auto cell_idx = this->well_cells_[perf];
+            const auto& fs = ebosSimulator.model()
+               .cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0)->fluidState();
+
+            return fs.Rs().value();
+        };
+
+        auto Rv = [&ebosSimulator, this](const int perf) -> double
+        {
+            const auto cell_idx = this->well_cells_[perf];
+            const auto& fs = ebosSimulator.model()
+               .cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0)->fluidState();
+
+            return fs.Rv().value();
+        };
+
+        const auto& pu = this->phaseUsage();
+        const int   np = this->number_of_phases_;
+
+        auto* wellPI = &well_state.productivityIndex()[this->index_of_well_*np + 0];
+        auto* connPI = &well_state.connectionProductivityIndex()[this->first_perf_*np + 0];
+
+        for (int p = 0; p < np; ++p) {
+            wellPI[p] = 0.0;
+        }
+
+        const auto& allConn = this->well_ecl_.getConnections();
+        const auto  nPerf   = allConn.size();
+        for (auto allPerfID = 0*nPerf, subsetPerfID = 0*nPerf; allPerfID < nPerf; ++allPerfID) {
+            if (allConn[allPerfID].state() == Connection::State::SHUT) {
+                continue;
+            }
+
+            std::vector<EvalWell> mob(num_components_, 0.0);
+            getMobility(ebosSimulator, static_cast<int>(subsetPerfID), mob);
+
+            for (int p = 0; p < np; ++p) {
+                // Note: E100's notion of PI value phase mobility includes
+                // the reciprocal FVF.
+                const auto connMob = mob[ flowPhaseToEbosCompIdx(p) ].value() * recipFVF(subsetPerfID, p);
+                connPI[p] = wellPICalc.connectionProdIndStandard(allPerfID, connMob);
+            }
+
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
+                FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))
+            {
+                const auto io = pu.phase_pos[Oil];
+                const auto ig = pu.phase_pos[Gas];
+
+                const auto vapoil = connPI[ig] * Rv(subsetPerfID);
+                const auto disgas = connPI[io] * Rs(subsetPerfID);
+
+                connPI[io] += vapoil;
+                connPI[ig] += disgas;
+            }
+
+            for (int p = 0; p < np; ++p) {
+                wellPI[p] += connPI[p];
+            }
+
+            ++subsetPerfID;
+            connPI += np;
+        }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
     addWellContributions(SparseMatrixAdapter& jacobian) const
     {
         const auto invDuneD = mswellhelpers::invertWithUMFPack<DiagMatWell, BVectorWell>(duneD_, duneDSolver_);
