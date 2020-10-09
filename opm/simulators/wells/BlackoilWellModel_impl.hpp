@@ -214,7 +214,16 @@ namespace Opm {
     }
 
 
-
+    template<typename TypeTag>
+    std::vector< Well >
+    BlackoilWellModel<TypeTag>::
+    getLocalNonshutWells(const int timeStepIdx, int& globalNumWells) const
+    {
+        auto w = schedule().getWells(timeStepIdx);
+        globalNumWells = w.size();
+        w.erase(std::remove_if(w.begin(), w.end(), is_shut_or_defunct_), w.end());
+        return w;
+    }
 
     template<typename TypeTag>
     void
@@ -228,12 +237,7 @@ namespace Opm {
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         int globalNumWells = 0;
         // Make wells_ecl_ contain only this partition's non-shut wells.
-        {
-            auto w = schedule().getWells(timeStepIdx);
-            globalNumWells = w.size();
-            w.erase(std::remove_if(w.begin(), w.end(), is_shut_or_defunct_), w.end());
-            wells_ecl_.swap(w);
-        }
+        wells_ecl_ = getLocalNonshutWells(timeStepIdx, globalNumWells);
         initializeWellPerfData();
 
         // Wells are active if they are active wells on at least
@@ -552,12 +556,7 @@ namespace Opm {
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         int globalNumWells = 0;
         // Make wells_ecl_ contain only this partition's non-shut wells.
-        {
-            auto w = schedule().getWells(report_step);
-            globalNumWells = w.size();
-            w.erase(std::remove_if(w.begin(), w.end(), is_shut_or_defunct_), w.end());
-            wells_ecl_.swap(w);
-        }
+        wells_ecl_ = getLocalNonshutWells(report_step, globalNumWells);
 
         initializeWellPerfData();
 
