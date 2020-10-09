@@ -331,6 +331,12 @@ namespace Opm {
                 const std::string &msg,
                 Opm::DeferredLogger& deferred_logger) const;
 
+            /// \brief Get the wells of our partition that are not shut.
+            /// \param timeStepIdx The index of the time step.
+            /// \param[out] globalNumWells the number of wells globally.
+            std::vector< Well > getLocalNonshutWells(const int timeStepIdx,
+                                                     int& globalNumWells) const;
+
             // compute the well fluxes and assemble them in to the reservoir equations as source terms
             // and in the well equations.
             void assemble(const int iterationIdx,
