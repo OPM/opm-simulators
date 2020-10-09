@@ -273,6 +273,7 @@ namespace Opm {
             std::vector< WellProdIndexCalculator > prod_index_calc_;
 
             std::vector< ParallelWellInfo > parallel_well_info_;
+            std::vector< ParallelWellInfo* > local_parallel_well_info_;
 
             bool wells_active_;
 
@@ -344,7 +345,7 @@ namespace Opm {
             /// \param timeStepIdx The index of the time step.
             /// \param[out] globalNumWells the number of wells globally.
             std::vector< Well > getLocalNonshutWells(const int timeStepIdx,
-                                                     int& globalNumWells) const;
+                                                     int& globalNumWells);
 
             // compute the well fluxes and assemble them in to the reservoir equations as source terms
             // and in the well equations.

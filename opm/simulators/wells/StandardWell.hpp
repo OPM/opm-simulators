@@ -31,6 +31,7 @@
 #include <opm/simulators/wells/RateConverter.hpp>
 #include <opm/simulators/wells/WellInterface.hpp>
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
+#include <opm/simulators/wells/ParallelWellInfo.hpp>
 
 #include <opm/models/blackoil/blackoilpolymermodules.hh>
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
@@ -166,7 +167,8 @@ namespace Opm
                      const int num_phases,
                      const int index_of_well,
                      const int first_perf_index,
-                     const std::vector<PerforationData>& perf_data);
+                     const std::vector<PerforationData>& perf_data,
+                     const ParallelWellInfo& pinfo);
 
         virtual void init(const PhaseUsage* phase_usage_arg,
                           const std::vector<double>& depth_arg,
@@ -376,6 +378,9 @@ namespace Opm
         OffDiagMatWell duneC_;
         // diagonal matrix for the well
         DiagMatWell invDuneD_;
+
+        // Wrapper for the parallel application of B for distributed wells
+        wellhelpers::ParallelStandardWellB<Scalar> parallelB_;
 
         // several vector used in the matrix calculation
         mutable BVectorWell Bx_;

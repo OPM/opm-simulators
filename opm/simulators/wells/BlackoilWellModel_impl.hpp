@@ -217,11 +217,29 @@ namespace Opm {
     template<typename TypeTag>
     std::vector< Well >
     BlackoilWellModel<TypeTag>::
-    getLocalNonshutWells(const int timeStepIdx, int& globalNumWells) const
+    getLocalNonshutWells(const int timeStepIdx, int& globalNumWells)
     {
         auto w = schedule().getWells(timeStepIdx);
         globalNumWells = w.size();
         w.erase(std::remove_if(w.begin(), w.end(), is_shut_or_defunct_), w.end());
+        // sort to speed lookup of accompanying parallel_well_info
+        std::sort(w.begin(), w.end(), [](const auto& w1, const auto& w2){
+                                          return w1.name() < w2.name();
+                                      });
+        auto pwell = parallel_well_info_.begin();
+        local_parallel_well_info_.clear();
+        local_parallel_well_info_.reserve(w.size());
+        for (const auto& well : w)
+        {
+            // we could use std::lower_bound here. Not sure whether that
+            // would improve performance
+            while (pwell->name_ < well.name())
+            {
+                ++pwell;
+            }
+            assert(pwell->name_ == well.name());
+            local_parallel_well_info_.push_back(&(*pwell));
+        }
         return w;
     }
 
@@ -767,7 +785,8 @@ namespace Opm {
                                                                           numPhases(),
                                                                           w,
                                                                           well_state_.firstPerfIndex()[w],
-                                                                          well_perf_data_[w]));
+                                                                          well_perf_data_[w],
+                                                                          *local_parallel_well_info_[w]));
                 } else {
                     well_container.emplace_back(new MultisegmentWell<TypeTag>(well_ecl,
                                                                               time_step,
@@ -834,7 +853,8 @@ namespace Opm {
                                                               numPhases(),
                                                               index_well_ecl,
                                                               well_state_.firstPerfIndex()[index_well_ecl],
-                                                              well_perf_data_[index_well_ecl]));
+                                                              well_perf_data_[index_well_ecl],
+                                                              *local_parallel_well_info_[index_well_ecl]));
         } else {
             return WellInterfacePtr(new MultisegmentWell<TypeTag>(well_ecl,
                                                                   report_step,
