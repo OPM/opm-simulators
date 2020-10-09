@@ -31,6 +31,7 @@
 #include <opm/simulators/wells/RateConverter.hpp>
 #include <opm/simulators/wells/WellInterface.hpp>
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
+#include <opm/simulators/wells/ParallelWellInfo.hpp>
 
 #include <opm/models/blackoil/blackoilpolymermodules.hh>
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
@@ -158,7 +159,9 @@ namespace Opm
         using Base::contiBrineEqIdx;
         static const int contiEnergyEqIdx = Indices::contiEnergyEqIdx;
 
-        StandardWell(const Well& well, const int time_step,
+        StandardWell(const Well& well,
+                     const ParallelWellInfo& pw_info,
+                     const int time_step,
                      const ModelParameters& param,
                      const RateConverterType& rate_converter,
                      const int pvtRegionIdx,
@@ -376,6 +379,9 @@ namespace Opm
         OffDiagMatWell duneC_;
         // diagonal matrix for the well
         DiagMatWell invDuneD_;
+
+        // Wrapper for the parallel application of B for distributed wells
+        wellhelpers::ParallelStandardWellB<Scalar> parallelB_;
 
         // several vector used in the matrix calculation
         mutable BVectorWell Bx_;

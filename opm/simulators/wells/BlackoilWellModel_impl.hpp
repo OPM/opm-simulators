@@ -217,11 +217,23 @@ namespace Opm {
     template<typename TypeTag>
     std::vector< Well >
     BlackoilWellModel<TypeTag>::
-    getLocalNonshutWells(const int timeStepIdx, int& globalNumWells) const
+    getLocalNonshutWells(const int timeStepIdx, int& globalNumWells)
     {
         auto w = schedule().getWells(timeStepIdx);
         globalNumWells = w.size();
         w.erase(std::remove_if(w.begin(), w.end(), is_shut_or_defunct_), w.end());
+        local_parallel_well_info_.clear();
+        local_parallel_well_info_.reserve(w.size());
+        for (const auto& well : w)
+        {
+            auto wellPair = std::make_pair(well.name(), true);
+            auto pwell = std::lower_bound(parallel_well_info_.begin(),
+                                          parallel_well_info_.end(),
+                                          wellPair);
+            assert(pwell != parallel_well_info_.end() &&
+                   *pwell == wellPair);
+            local_parallel_well_info_.push_back(&(*pwell));
+        }
         return w;
     }
 
@@ -802,6 +814,7 @@ namespace Opm {
         const auto& perf_data = this->well_perf_data_[wellID];
 
         return std::make_unique<WellType>(this->wells_ecl_[wellID],
+                                          *local_parallel_well_info_[wellID],
                                           time_step,
                                           this->param_,
                                           *this->rateConverter_,
