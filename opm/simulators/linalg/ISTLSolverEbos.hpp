@@ -208,7 +208,7 @@ namespace Opm
             }
             rhs_ = &b;
 
-            if (isParallel()) {
+            if (isParallel() && prm_.get<std::string>("preconditioner.type") != "ParOverILU0") {
                 makeOverlapRowsInvalid(getMatrix());
             }
             prepareFlexibleSolver();
