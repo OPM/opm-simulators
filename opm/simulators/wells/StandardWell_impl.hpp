@@ -1038,19 +1038,32 @@ namespace Opm
     StandardWell<TypeTag>::
     processFractions() const
     {
-        assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
         const auto pu = phaseUsage();
         std::vector<double> F(number_of_phases_, 0.0);
-        F[pu.phase_pos[Oil]] = 1.0;
 
-        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-            F[pu.phase_pos[Water]] = primary_variables_[WFrac];
-            F[pu.phase_pos[Oil]] -= F[pu.phase_pos[Water]];
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+            F[pu.phase_pos[Oil]] = 1.0;
+              
+            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                F[pu.phase_pos[Water]] = primary_variables_[WFrac];
+                F[pu.phase_pos[Oil]] -= F[pu.phase_pos[Water]];
+            }
+
+            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                F[pu.phase_pos[Gas]] = primary_variables_[GFrac];
+                F[pu.phase_pos[Oil]] -= F[pu.phase_pos[Gas]];
+            }
         }
+        else if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            F[pu.phase_pos[Water]] = 1.0;
 
-        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            F[pu.phase_pos[Gas]] = primary_variables_[GFrac];
-            F[pu.phase_pos[Oil]] -= F[pu.phase_pos[Gas]];
+            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                F[pu.phase_pos[Gas]] = primary_variables_[GFrac];
+                F[pu.phase_pos[Water]] -= F[pu.phase_pos[Gas]];
+            }
+        }
+        else if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            F[pu.phase_pos[Gas]] = 1.0;
         }
 
         double F_solvent = 0.0;
@@ -1067,7 +1080,9 @@ namespace Opm
                 if (has_solvent) {
                     F_solvent /= (1.0 - F[pu.phase_pos[Water]]);
                 }
-                F[pu.phase_pos[Oil]] /= (1.0 - F[pu.phase_pos[Water]]);
+                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                    F[pu.phase_pos[Oil]] /= (1.0 - F[pu.phase_pos[Water]]);
+                }
                 F[pu.phase_pos[Water]] = 0.0;
             }
         }
@@ -1080,22 +1095,26 @@ namespace Opm
                 if (has_solvent) {
                     F_solvent /= (1.0 - F[pu.phase_pos[Gas]]);
                 }
-                F[pu.phase_pos[Oil]] /= (1.0 - F[pu.phase_pos[Gas]]);
+                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                    F[pu.phase_pos[Oil]] /= (1.0 - F[pu.phase_pos[Gas]]);
+                }
                 F[pu.phase_pos[Gas]] = 0.0;
             }
         }
 
-        if (F[pu.phase_pos[Oil]] < 0.0) {
-            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                F[pu.phase_pos[Water]] /= (1.0 - F[pu.phase_pos[Oil]]);
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+            if (F[pu.phase_pos[Oil]] < 0.0) {
+                if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                    F[pu.phase_pos[Water]] /= (1.0 - F[pu.phase_pos[Oil]]);
+                }
+                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                    F[pu.phase_pos[Gas]] /= (1.0 - F[pu.phase_pos[Oil]]);
+                }
+                if (has_solvent) {
+                 F_solvent /= (1.0 - F[pu.phase_pos[Oil]]);
+                }
+                F[pu.phase_pos[Oil]] = 0.0;
             }
-            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                F[pu.phase_pos[Gas]] /= (1.0 - F[pu.phase_pos[Oil]]);
-            }
-            if (has_solvent) {
-                F_solvent /= (1.0 - F[pu.phase_pos[Oil]]);
-            }
-            F[pu.phase_pos[Oil]] = 0.0;
         }
 
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
@@ -1119,29 +1138,44 @@ namespace Opm
     updateWellStateFromPrimaryVariables(WellState& well_state, Opm::DeferredLogger& deferred_logger) const
     {
         const PhaseUsage& pu = phaseUsage();
-        assert( FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) );
-        const int oil_pos = pu.phase_pos[Oil];
-
         std::vector<double> F(number_of_phases_, 0.0);
-        F[oil_pos] = 1.0;
-
-        if ( FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) ) {
-            const int water_pos = pu.phase_pos[Water];
-            F[water_pos] = primary_variables_[WFrac];
-            F[oil_pos] -= F[water_pos];
-        }
-
-        if ( FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) ) {
-            const int gas_pos = pu.phase_pos[Gas];
-            F[gas_pos] = primary_variables_[GFrac];
-            F[oil_pos] -= F[gas_pos];
-        }
-
         double F_solvent = 0.0;
-        if (has_solvent) {
-            F_solvent = primary_variables_[SFrac];
-            F[oil_pos] -= F_solvent;
+        if ( FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) ) {
+            const int oil_pos = pu.phase_pos[Oil];            
+            F[oil_pos] = 1.0;
+
+            if ( FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) ) {
+                const int water_pos = pu.phase_pos[Water];
+                F[water_pos] = primary_variables_[WFrac];
+                F[oil_pos] -= F[water_pos];
+            }
+
+            if ( FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) ) {
+                const int gas_pos = pu.phase_pos[Gas];
+                F[gas_pos] = primary_variables_[GFrac];
+                F[oil_pos] -= F[gas_pos];
+            }
+
+            if (has_solvent) {
+                F_solvent = primary_variables_[SFrac];
+                F[oil_pos] -= F_solvent;
+            }
         }
+        else if ( FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) ) {
+            const int water_pos = pu.phase_pos[Water];            
+            F[water_pos] = 1.0;
+
+            if ( FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) ) {
+                const int gas_pos = pu.phase_pos[Gas];
+                F[gas_pos] = primary_variables_[GFrac];
+                F[water_pos] -= F[gas_pos];
+            }
+        }
+        else if ( FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) ) {
+            const int gas_pos = pu.phase_pos[Gas];            
+            F[gas_pos] = 1.0;
+        }
+
 
         // convert the fractions to be Q_p / G_total to calculate the phase rates
         for (int p = 0; p < number_of_phases_; ++p) {
