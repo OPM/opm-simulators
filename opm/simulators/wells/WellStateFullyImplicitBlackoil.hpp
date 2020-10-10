@@ -164,6 +164,9 @@ namespace Opm
             perfRateBrine_.clear();
             perfRateBrine_.resize(nperf, 0.0);
 
+            perfRateZFrac_.clear();
+            perfRateZFrac_.resize(nperf, 0.0);
+
             // intialize wells that have been there before
             // order may change so the mapping is based on the well name
             if (prevState && !prevState->wellMap().empty()) {
@@ -595,6 +598,10 @@ namespace Opm
                     well.rates.set( rt::alq, 0.0 );
                 }
 
+                if ( pu.has_zFraction ) { // shared with the standard solvent model ...
+                    well.rates.set( rt::solvent, zFracWellRate(w) );
+                }
+
                 well.rates.set( rt::dissolved_gas, this->well_dissolved_gas_rates_[w] );
                 well.rates.set( rt::vaporized_oil, this->well_vaporized_oil_rates_[w] );
 
@@ -620,6 +627,9 @@ namespace Opm
                     }
                     if ( pu.has_brine ) {
                         comp.rates.set( rt::brine, this->perfRateBrine()[wt.second[1] + local_comp_index]);
+                    }
+                    if ( pu.has_zFraction ) { // shared with the standard solvent model ...
+                        comp.rates.set( rt::solvent, this->perfRateZFrac()[local_comp_index]);
                     }
                     if ( pu.has_solvent ) {
                         comp.rates.set( rt::solvent, this->perfRateSolvent()[wt.second[1] + local_comp_index]);
@@ -874,6 +884,15 @@ namespace Opm
         /// One rate pr well
         double brineWellRate(const int w) const {
             return std::accumulate(&perfRateBrine_[0] + first_perf_index_[w], &perfRateBrine_[0] + first_perf_index_[w+1], 0.0);
+        }
+
+        /// One rate pr well connection.
+        std::vector<double>& perfRateZFrac() { return perfRateZFrac_; }
+        const std::vector<double>& perfRateZFrac() const { return perfRateZFrac_; }
+
+        /// One rate pr well
+        double zFracWellRate(const int w) const {
+            return std::accumulate(&perfRateZFrac_[0] + first_perf_index_[w], &perfRateZFrac_[0] + first_perf_index_[w+1], 0.0);
         }
 
         std::vector<double>& wellReservoirRates()
@@ -1207,6 +1226,7 @@ namespace Opm
         // only for output
         std::vector<double> perfRatePolymer_;
         std::vector<double> perfRateBrine_;
+        std::vector<double> perfRateZFrac_;
 
         // it is the throughput of water flow through the perforations
         // it is used as a measure of formation damage around well-bore due to particle deposition

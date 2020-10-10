@@ -534,6 +534,10 @@ template<class TypeTag>
 struct EnableFoam<TypeTag, TTag::EclBaseProblem> {
     static constexpr bool value = false;
 };
+template<class TypeTag>
+struct EnableExtbo<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
 
 // disable thermal flux boundaries by default
 template<class TypeTag>
@@ -613,6 +617,7 @@ class EclProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
     enum { enablePolymerMolarWeight = getPropValue<TypeTag, Properties::EnablePolymerMW>() };
     enum { enableFoam = getPropValue<TypeTag, Properties::EnableFoam>() };
+    enum { enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>() };
     enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { enableThermalFluxBoundaries = getPropValue<TypeTag, Properties::EnableThermalFluxBoundaries>() };
@@ -647,6 +652,7 @@ class EclProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     typedef BlackOilPolymerModule<TypeTag> PolymerModule;
     typedef BlackOilFoamModule<TypeTag> FoamModule;
     typedef BlackOilBrineModule<TypeTag> BrineModule;
+    typedef BlackOilExtboModule<TypeTag> ExtboModule;
 
     typedef typename EclEquilInitializer<TypeTag>::ScalarFluidState InitialFluidState;
 
@@ -812,6 +818,7 @@ public:
         PolymerModule::initFromState(vanguard.eclState());
         FoamModule::initFromState(vanguard.eclState());
         BrineModule::initFromState(vanguard.eclState());
+        ExtboModule::initFromState(vanguard.eclState());
 
         // create the ECL writer
         eclWriter_.reset(new EclWriterType(simulator));
@@ -2175,6 +2182,11 @@ private:
                 throw std::runtime_error("The simulator requires the polymer option to be enabled, but the deck does not.");
             else if (!enablePolymer && deck.hasKeyword("POLYMER"))
                 throw std::runtime_error("The deck enables the polymer option, but the simulator is compiled without it.");
+
+            if (enableExtbo && !deck.hasKeyword("PVTSOL"))
+                throw std::runtime_error("The simulator requires the extendedBO option to be enabled, but the deck does not.");
+            else if (!enableExtbo && deck.hasKeyword("PVTSOL"))
+                throw std::runtime_error("The deck enables the extendedBO option, but the simulator is compiled without it.");
 
             if (deck.hasKeyword("TEMP") && deck.hasKeyword("THERMAL"))
                 throw std::runtime_error("The deck enables both, the TEMP and the THERMAL options, but they are mutually exclusive.");

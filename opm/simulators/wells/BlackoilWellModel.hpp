@@ -296,6 +296,7 @@ namespace Opm {
             const ModelParameters param_;
             bool terminal_output_;
             bool has_solvent_;
+            bool has_zFraction_;
             bool has_polymer_;
             std::vector<int> pvt_region_idx_;
             PhaseUsage phase_usage_;

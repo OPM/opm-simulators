@@ -396,6 +396,14 @@ public:
             cFoam_.resize(bufferSize, 0.0);
         if (getPropValue<TypeTag, Properties::EnableBrine>())
             cSalt_.resize(bufferSize, 0.0);
+        if (getPropValue<TypeTag, Properties::EnableExtbo>()) {
+            extboX_.resize(bufferSize, 0.0);
+            extboY_.resize(bufferSize, 0.0);
+            extboZ_.resize(bufferSize, 0.0);
+            mFracOil_.resize(bufferSize, 0.0);
+            mFracGas_.resize(bufferSize, 0.0);
+            mFracCo2_.resize(bufferSize, 0.0);
+        }
 
         if (simulator_.problem().vapparsActive())
             soMax_.resize(bufferSize, 0.0);
@@ -656,6 +664,36 @@ public:
             if (cSalt_.size() > 0) {
                 cSalt_[globalDofIdx] = fs.saltConcentration().value();
             }
+
+            if (extboX_.size() > 0) {
+                extboX_[globalDofIdx] = intQuants.xvalue().value();
+            }
+
+            if (extboY_.size() > 0) {
+                extboY_[globalDofIdx] = intQuants.yvalue().value();
+            }
+
+            if (extboZ_.size() > 0) {
+                extboZ_[globalDofIdx] = intQuants.zFraction().value();
+            }
+
+            if (mFracCo2_.size() > 0) {
+                const Scalar stdVolOil = Opm::getValue(fs.saturation(oilPhaseIdx))*Opm::getValue(fs.invB(oilPhaseIdx))
+                                       + Opm::getValue(fs.saturation(gasPhaseIdx))*Opm::getValue(fs.invB(gasPhaseIdx))*Opm::getValue(fs.Rv());
+                const Scalar stdVolGas = Opm::getValue(fs.saturation(gasPhaseIdx))*Opm::getValue(fs.invB(gasPhaseIdx))*(1.0-intQuants.yvalue().value())
+                                       + Opm::getValue(fs.saturation(oilPhaseIdx))*Opm::getValue(fs.invB(oilPhaseIdx))*Opm::getValue(fs.Rs())*(1.0-intQuants.xvalue().value());
+                const Scalar stdVolCo2 = Opm::getValue(fs.saturation(gasPhaseIdx))*Opm::getValue(fs.invB(gasPhaseIdx))*intQuants.yvalue().value()
+                                       + Opm::getValue(fs.saturation(oilPhaseIdx))*Opm::getValue(fs.invB(oilPhaseIdx))*Opm::getValue(fs.Rs())*intQuants.xvalue().value();
+                const Scalar rhoO= 836.19;
+                const Scalar rhoG= 1.2984;
+                const Scalar rhoCO2=1.8727048125;
+                const Scalar stdMassTotal= 1.0e-10 + stdVolOil*rhoO + stdVolGas*rhoG + stdVolCo2*rhoCO2;
+                mFracOil_[globalDofIdx] = stdVolOil*rhoO/stdMassTotal;
+                mFracGas_[globalDofIdx] = stdVolGas*rhoG/stdMassTotal;
+                mFracCo2_[globalDofIdx] = stdVolCo2*rhoCO2/stdMassTotal;
+            }
+
+
 
             if (bubblePointPressure_.size() > 0) {
                 try {
@@ -1044,6 +1082,24 @@ public:
 
         if (sSol_.size() > 0)
             sol.insert ("SSOLVENT", Opm::UnitSystem::measure::identity, std::move(sSol_), Opm::data::TargetType::RESTART_SOLUTION);
+
+        if (extboX_.size() > 0)
+            sol.insert ("SS_X", Opm::UnitSystem::measure::identity, std::move(extboX_), Opm::data::TargetType::RESTART_AUXILIARY);
+
+        if (extboY_.size() > 0)
+            sol.insert ("SS_Y", Opm::UnitSystem::measure::identity, std::move(extboY_), Opm::data::TargetType::RESTART_AUXILIARY);
+
+        if (extboZ_.size() > 0)
+            sol.insert ("SS_Z", Opm::UnitSystem::measure::identity, std::move(extboZ_), Opm::data::TargetType::RESTART_AUXILIARY);
+
+        if (mFracOil_.size() > 0)
+            sol.insert ("STD_OIL", Opm::UnitSystem::measure::identity, std::move(mFracOil_), Opm::data::TargetType::RESTART_AUXILIARY);
+
+        if (mFracGas_.size() > 0)
+            sol.insert ("STD_GAS", Opm::UnitSystem::measure::identity, std::move(mFracGas_), Opm::data::TargetType::RESTART_AUXILIARY);
+
+        if (mFracCo2_.size() > 0)
+            sol.insert ("STD_CO2", Opm::UnitSystem::measure::identity, std::move(mFracCo2_), Opm::data::TargetType::RESTART_AUXILIARY);
 
         if (cPolymer_.size() > 0)
             sol.insert ("POLYMER", Opm::UnitSystem::measure::identity, std::move(cPolymer_), Opm::data::TargetType::RESTART_SOLUTION);
@@ -2290,6 +2346,12 @@ private:
     ScalarBuffer viscosity_[numPhases];
     ScalarBuffer relativePermeability_[numPhases];
     ScalarBuffer sSol_;
+    ScalarBuffer extboX_;
+    ScalarBuffer extboY_;
+    ScalarBuffer extboZ_;
+    ScalarBuffer mFracOil_;
+    ScalarBuffer mFracGas_;
+    ScalarBuffer mFracCo2_;
     ScalarBuffer cPolymer_;
     ScalarBuffer cFoam_;
     ScalarBuffer cSalt_;

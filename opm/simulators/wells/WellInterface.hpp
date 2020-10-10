@@ -92,6 +92,7 @@ namespace Opm
         typedef DenseAd::Evaluation<double, /*size=*/numEq> Eval;
 
         static const bool has_solvent = getPropValue<TypeTag, Properties::EnableSolvent>();
+        static const bool has_zFraction = getPropValue<TypeTag, Properties::EnableExtbo>();
         static const bool has_polymer = getPropValue<TypeTag, Properties::EnablePolymer>();
         static const bool has_energy = getPropValue<TypeTag, Properties::EnableEnergy>();
         static const bool has_temperature = getPropValue<TypeTag, Properties::EnableTemperature>();
@@ -100,6 +101,7 @@ namespace Opm
         static const bool has_foam = getPropValue<TypeTag, Properties::EnableFoam>();
         static const bool has_brine = getPropValue<TypeTag, Properties::EnableBrine>();
         static const int contiSolventEqIdx = Indices::contiSolventEqIdx;
+        static const int contiZfracEqIdx = Indices::contiZfracEqIdx;
         static const int contiPolymerEqIdx = Indices::contiPolymerEqIdx;
         // index for the polymer molecular weight continuity equation
         static const int contiPolymerMWEqIdx = Indices::contiPolymerMWEqIdx;

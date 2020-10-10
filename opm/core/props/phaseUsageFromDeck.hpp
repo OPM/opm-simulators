@@ -132,6 +132,16 @@ namespace Opm
         else
             pu.phase_pos[BlackoilPhases::Brine] = -1;
 
+        // Add zFraction info
+        pu.has_zFraction = phases.active(Phase::ZFRACTION);
+        if (pu.has_zFraction) {
+            pu.phase_pos[BlackoilPhases::ZFraction] = numActivePhases;
+            ++ numActivePhases;
+        }
+        else
+            pu.phase_pos[BlackoilPhases::ZFraction] = -1;
+
+
         return pu;
     }
 

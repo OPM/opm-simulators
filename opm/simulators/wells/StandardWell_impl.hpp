@@ -388,6 +388,12 @@ namespace Opm
             b_perfcells_dense[contiSolventEqIdx] = extendEval(intQuants.solventInverseFormationVolumeFactor());
         }
 
+        if (has_zFraction && this->isInjector()) {
+            const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+            b_perfcells_dense[gasCompIdx] *= (1.0 - wsolvent());
+            b_perfcells_dense[gasCompIdx] += wsolvent()*intQuants.zPureInvFormationVolumeFactor().value();
+        }
+
         // Pressure drawdown (also used to determine direction of flow)
         const EvalWell well_pressure = bhp + perf_pressure_diffs_[perf];
         EvalWell drawdown = pressure - well_pressure;
@@ -810,6 +816,26 @@ namespace Opm
                 cq_s_foam *= extendEval(intQuants.foamConcentration());
             }
             connectionRates[perf][contiFoamEqIdx] = Base::restrictEval(cq_s_foam);
+        }
+
+        if (has_zFraction) {
+            // TODO: the application of well efficiency factor has not been tested with an example yet
+            const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+            EvalWell cq_s_zfrac = cq_s[gasCompIdx];
+            if (this->isInjector()) {
+                cq_s_zfrac *= wsolvent();
+            } else if (cq_s_zfrac.value() != 0.0) {
+                const double dis_gas_frac = perf_dis_gas_rate / cq_s_zfrac.value();
+                cq_s_zfrac *= extendEval(dis_gas_frac*intQuants.xvalue() + (1.0-dis_gas_frac)*intQuants.yvalue());
+            }
+            well_state.perfRateZFrac()[first_perf_ + perf] = cq_s_zfrac.value();
+
+            cq_s_zfrac *= well_efficiency_factor_;
+            connectionRates_[perf][contiZfracEqIdx] = Base::restrictEval(cq_s_zfrac);
+
+            for (int pvIdx = 0; pvIdx < numWellEq_; ++pvIdx) {
+                duneC_[0][cell_idx][pvIdx][contiZfracEqIdx] -= cq_s_zfrac.derivative(pvIdx+numEq);
+            }
         }
 
         if (has_brine) {
@@ -2919,8 +2945,9 @@ namespace Opm
 
                 if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                     if (phase == InjectorType::GAS) {
-                        primary_variables_[GFrac] = 1.0 - wsolvent();
+                        primary_variables_[GFrac] = 1.0;
                         if (has_solvent) {
+                            primary_variables_[GFrac] = 1.0 - wsolvent();
                             primary_variables_[SFrac] = wsolvent();
                         }
                     } else {

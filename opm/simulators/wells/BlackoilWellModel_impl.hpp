@@ -33,6 +33,7 @@ namespace Opm {
     BlackoilWellModel(Simulator& ebosSimulator)
         : ebosSimulator_(ebosSimulator)
         , has_solvent_(getPropValue<TypeTag, Properties::EnableSolvent>())
+        , has_zFraction_(getPropValue<TypeTag, Properties::EnableExtbo>())
         , has_polymer_(getPropValue<TypeTag, Properties::EnablePolymer>())
     {
         terminal_output_ = false;
