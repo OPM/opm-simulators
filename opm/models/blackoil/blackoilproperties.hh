@@ -40,6 +40,9 @@ struct EnableEclipseOutput { using type = UndefinedProperty; };
 //! Enable the ECL-blackoil extension for solvents. ("Second gas")
 template<class TypeTag, class MyTypeTag>
 struct EnableSolvent { using type = UndefinedProperty; };
+//! Enable the ECL-blackoil extension for extended BO. ("Second gas" - alternative approach)
+template<class TypeTag, class MyTypeTag>
+struct EnableExtbo { using type = UndefinedProperty; };
 //! Enable the ECL-blackoil extension for polymer.
 template<class TypeTag, class MyTypeTag>
 struct EnablePolymer { using type = UndefinedProperty; };

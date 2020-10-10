@@ -35,7 +35,7 @@ namespace Opm {
  *
  * \brief The primary variable and equation indices for the black-oil model.
  */
-template <unsigned numSolventsV, unsigned numPolymersV, unsigned numEnergyV, bool enableFoam, bool enableBrine, unsigned PVOffset>
+template <unsigned numSolventsV, unsigned numExtbosV, unsigned numPolymersV, unsigned numEnergyV, bool enableFoam, bool enableBrine, unsigned PVOffset>
 struct BlackOilIndices
 {
     //! Number of phases active at all times
@@ -49,6 +49,9 @@ struct BlackOilIndices
     //! Are solvents involved?
     static const bool enableSolvent = numSolventsV > 0;
 
+    //! Is extbo invoked?
+    static const bool enableExtbo = numExtbosV > 0;
+
     //! Are polymers involved?
     static const bool enablePolymer = numPolymersV > 0;
 
@@ -57,6 +60,9 @@ struct BlackOilIndices
 
     //! Number of solvent components to be considered
     static const int numSolvents = enableSolvent ? numSolventsV : 0;
+
+    //! Number of components to be considered for extbo
+    static const int numExtbos = enableExtbo ? numExtbosV : 0;
 
     //! Number of polymer components to be considered
     static const int numPolymers = enablePolymer ? numPolymersV : 0;
@@ -71,7 +77,7 @@ struct BlackOilIndices
     static const int numBrine = enableBrine? 1 : 0;
 
     //! The number of equations
-    static const int numEq = numPhases + numSolvents + numPolymers + numEnergy + numFoam + numBrine;
+    static const int numEq = numPhases + numSolvents + numExtbos + numPolymers + numEnergy + numFoam + numBrine;
 
     //! \brief returns the index of "active" component
     static constexpr unsigned canonicalToActiveComponentIndex(unsigned compIdx)
@@ -104,6 +110,10 @@ struct BlackOilIndices
     static const int solventSaturationIdx =
         enableSolvent ? PVOffset + numPhases : -1000;
 
+    //! Index of the primary variable for the first extbo component
+    static const int zFractionIdx =
+        enableExtbo ? PVOffset + numPhases + numSolvents : -1000;
+
     //! Index of the primary variable for the first polymer
     static const int polymerConcentrationIdx =
         enablePolymer ? PVOffset + numPhases + numSolvents : -1000;
@@ -114,15 +124,15 @@ struct BlackOilIndices
 
     //! Index of the primary variable for the foam
     static const int foamConcentrationIdx =
-        enableFoam ? PVOffset + numPhases + numSolvents + numPolymers : -1000;
+        enableFoam ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers : -1000;
 
     //! Index of the primary variable for the brine
     static const int saltConcentrationIdx =
-        enableBrine ? PVOffset + numPhases + numSolvents + numPolymers + numFoam : -1000;
+        enableBrine ? PVOffset + numPhases + numSolvents + numExtbos + numExtbos + numPolymers + numFoam : -1000;
 
     //! Index of the primary variable for temperature
     static const int temperatureIdx  =
-        enableEnergy ? PVOffset + numPhases + numSolvents + numPolymers + numFoam + numBrine : - 1000;
+        enableEnergy ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numFoam + numBrine : - 1000;
 
 
     ////////
@@ -137,9 +147,13 @@ struct BlackOilIndices
     static const int contiSolventEqIdx =
         enableSolvent ? PVOffset + numPhases : -1000;
 
+    //! Index of the continuity equation for the first extbo component
+    static const int contiZfracEqIdx =
+        enableExtbo ? PVOffset + numPhases + numSolvents : -1000;
+
     //! Index of the continuity equation for the first polymer component
     static const int contiPolymerEqIdx =
-        enablePolymer ? PVOffset + numPhases + numSolvents : -1000;
+        enablePolymer ? PVOffset + numPhases + numSolvents + numExtbos : -1000;
 
     //! Index of the continuity equation for the second polymer component (molecular weight)
     static const int contiPolymerMWEqIdx =
@@ -147,16 +161,16 @@ struct BlackOilIndices
 
     //! Index of the continuity equation for the foam component
     static const int contiFoamEqIdx =
-        enableFoam ? PVOffset + numPhases + numSolvents + numPolymers : -1000;
+        enableFoam ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers : -1000;
 
     //! Index of the continuity equation for the salt water component
     static const int contiBrineEqIdx =
-        enableBrine ? PVOffset + numPhases + numSolvents + numPolymers + numFoam : -1000;
+        enableBrine ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numFoam : -1000;
 
 
     //! Index of the continuity equation for energy
     static const int contiEnergyEqIdx =
-        enableEnergy ? PVOffset + numPhases + numSolvents + numPolymers + numFoam + numBrine: -1000;
+        enableEnergy ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numFoam + numBrine: -1000;
 };
 
 } // namespace Opm
