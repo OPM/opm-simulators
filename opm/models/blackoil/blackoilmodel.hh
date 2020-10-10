@@ -45,6 +45,7 @@
 #include "blackoilpolymermodules.hh"
 #include "blackoilfoammodules.hh"
 #include "blackoilbrinemodules.hh"
+#include "blackoilextbomodules.hh"
 #include "blackoildarcyfluxmodule.hh"
 
 #include <opm/models/common/multiphasebasemodel.hh>
@@ -122,6 +123,7 @@ struct FluxModule<TypeTag, TTag::BlackOilModel> { using type = Opm::BlackOilDarc
 template<class TypeTag>
 struct Indices<TypeTag, TTag::BlackOilModel>
 { using type = Opm::BlackOilIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
+                                    getPropValue<TypeTag, Properties::EnableExtbo>(),
                                     getPropValue<TypeTag, Properties::EnablePolymer>(),
                                     getPropValue<TypeTag, Properties::EnableEnergy>(),
                                     getPropValue<TypeTag, Properties::EnableFoam>(),
@@ -143,6 +145,8 @@ public:
 // by default, all ECL extension modules are disabled
 template<class TypeTag>
 struct EnableSolvent<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
+template<class TypeTag>
+struct EnableExtbo<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
 template<class TypeTag>
 struct EnablePolymer<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
 template<class TypeTag>
@@ -271,6 +275,7 @@ class BlackOilModel
     static const bool waterEnabled = Indices::waterEnabled;
 
     using SolventModule = BlackOilSolventModule<TypeTag>;
+    using ExtboModule = BlackOilExtboModule<TypeTag>;
     using PolymerModule = BlackOilPolymerModule<TypeTag>;
     using EnergyModule = BlackOilEnergyModule<TypeTag>;
 public:
@@ -286,6 +291,7 @@ public:
         ParentType::registerParameters();
 
         SolventModule::registerParameters();
+        ExtboModule::registerParameters();
         PolymerModule::registerParameters();
         EnergyModule::registerParameters();
 
@@ -315,6 +321,8 @@ public:
             oss << "composition_switching";
         else if (SolventModule::primaryVarApplies(pvIdx))
             return SolventModule::primaryVarName(pvIdx);
+        else if (ExtboModule::primaryVarApplies(pvIdx))
+            return ExtboModule::primaryVarName(pvIdx);
         else if (PolymerModule::primaryVarApplies(pvIdx))
             return PolymerModule::primaryVarName(pvIdx);
         else if (EnergyModule::primaryVarApplies(pvIdx))
@@ -336,6 +344,8 @@ public:
             oss << "conti_" << FluidSystem::phaseName(eqIdx - Indices::conti0EqIdx);
         else if (SolventModule::eqApplies(eqIdx))
             return SolventModule::eqName(eqIdx);
+        else if (ExtboModule::eqApplies(eqIdx))
+            return ExtboModule::eqName(eqIdx);
         else if (PolymerModule::eqApplies(eqIdx))
             return PolymerModule::eqName(eqIdx);
         else if (EnergyModule::eqApplies(eqIdx))
@@ -368,6 +378,10 @@ public:
         // deal with primary variables stemming from the solvent module
         else if (SolventModule::primaryVarApplies(pvIdx))
             return SolventModule::primaryVarWeight(pvIdx);
+
+        // deal with primary variables stemming from the extBO module
+        else if (ExtboModule::primaryVarApplies(pvIdx))
+            return ExtboModule::primaryVarWeight(pvIdx);
 
         // deal with primary variables stemming from the polymer module
         else if (PolymerModule::primaryVarApplies(pvIdx))
@@ -424,6 +438,9 @@ public:
         if (SolventModule::eqApplies(eqIdx))
             return SolventModule::eqWeight(eqIdx);
 
+        if (ExtboModule::eqApplies(eqIdx))
+            return ExtboModule::eqWeight(eqIdx);
+
         else if (PolymerModule::eqApplies(eqIdx))
             return PolymerModule::eqWeight(eqIdx);
 
@@ -463,6 +480,7 @@ public:
         outstream << priVars.pvtRegionIndex() << " ";
 
         SolventModule::serializeEntity(*this, outstream, dof);
+        ExtboModule::serializeEntity(*this, outstream, dof);
         PolymerModule::serializeEntity(*this, outstream, dof);
         EnergyModule::serializeEntity(*this, outstream, dof);
     }
@@ -500,6 +518,7 @@ public:
             throw std::runtime_error("Could not deserialize degree of freedom "+std::to_string(dofIdx));
 
         SolventModule::deserializeEntity(*this, instream, dof);
+        ExtboModule::deserializeEntity(*this, instream, dof);
         PolymerModule::deserializeEntity(*this, instream, dof);
         EnergyModule::deserializeEntity(*this, instream, dof);
 
