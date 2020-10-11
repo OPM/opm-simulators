@@ -75,6 +75,10 @@ setupPropertyTree(FlowLinearSolverParameters p) // Note: copying the parameters 
         return setupCPR(conf, p);
     }
 
+    if (conf == "amg") {
+        return setupAMG(conf, p);
+    }
+
     // Use ILU0 configuration.
     if (conf == "ilu0") {
         return setupILU(conf, p);

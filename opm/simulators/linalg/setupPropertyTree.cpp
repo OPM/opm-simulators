@@ -64,6 +64,31 @@ setupCPR(const std::string& conf, const FlowLinearSolverParameters& p)
     return prm;
 }
 
+
+boost::property_tree::ptree
+setupAMG([[maybe_unused]] const std::string& conf, const FlowLinearSolverParameters& p)
+{
+    boost::property_tree::ptree prm;
+    prm.put("tol", p.linear_solver_reduction_);
+    prm.put("maxiter", p.linear_solver_maxiter_);
+    prm.put("verbosity", p.linear_solver_verbosity_);
+    prm.put("solver", "bicgstab");
+    prm.put("preconditioner.type", "amg");
+    prm.put("preconditioner.alpha", 0.333333333333);
+    prm.put("preconditioner.relaxation", 1.0);
+    prm.put("preconditioner.iterations", 20);
+    prm.put("preconditioner.coarsenTarget", 1200);
+    prm.put("preconditioner.pre_smooth", 1);
+    prm.put("preconditioner.post_smooth", 1);
+    prm.put("preconditioner.beta", 1e-5);
+    prm.put("preconditioner.smoother", "ILU0");
+    prm.put("preconditioner.verbosity", 0);
+    prm.put("preconditioner.maxlevel", 15);
+    prm.put("preconditioner.skip_isolated", 0);
+    return prm;
+}
+
+
 boost::property_tree::ptree
 setupILU([[maybe_unused]] const std::string& conf, const FlowLinearSolverParameters& p)
 {

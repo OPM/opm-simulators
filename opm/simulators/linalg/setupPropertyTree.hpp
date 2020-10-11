@@ -31,6 +31,7 @@ template<class TypeTag>
 boost::property_tree::ptree setupPropertyTree(FlowLinearSolverParameters p);
 
 boost::property_tree::ptree setupCPR(const std::string& conf, const FlowLinearSolverParameters& p);
+boost::property_tree::ptree setupAMG(const std::string& conf, const FlowLinearSolverParameters& p);
 boost::property_tree::ptree setupILU(const std::string& conf, const FlowLinearSolverParameters& p);
 
 } // namespace Opm
