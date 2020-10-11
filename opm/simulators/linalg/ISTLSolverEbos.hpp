@@ -385,27 +385,28 @@ namespace Opm
             if (!flexibleSolver_) {
                 return true;
             }
-            const int newton_iteration = this->simulator_.model().newtonMethod().numIterations();
-            bool recreate_solver = false;
             if (this->parameters_.cpr_reuse_setup_ == 0) {
                 // Always recreate solver.
-                recreate_solver = true;
-            } else if (this->parameters_.cpr_reuse_setup_ == 1) {
+                return true;
+            }
+            if (this->parameters_.cpr_reuse_setup_ == 1) {
                 // Recreate solver on the first iteration of every timestep.
+                const int newton_iteration = this->simulator_.model().newtonMethod().numIterations();
                 if (newton_iteration == 0) {
-                    recreate_solver = true;
+                    return true;
                 }
-            } else if (this->parameters_.cpr_reuse_setup_ == 2) {
+            }
+            if (this->parameters_.cpr_reuse_setup_ == 2) {
                 // Recreate solver if the last solve used more than 10 iterations.
                 if (this->iterations() > 10) {
-                    recreate_solver = true;
+                    return true;
                 }
-            } else {
-                assert(this->parameters_.cpr_reuse_setup_ == 3);
-                assert(recreate_solver == false);
-                // Never recreate solver.
             }
-            return recreate_solver;
+
+            // Otherwise, do not recreate solver.
+            assert(this->parameters_.cpr_reuse_setup_ == 3);
+
+            return false;
         }
 
 
