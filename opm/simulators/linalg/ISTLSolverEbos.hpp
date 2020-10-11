@@ -392,15 +392,11 @@ namespace Opm
             if (this->parameters_.cpr_reuse_setup_ == 1) {
                 // Recreate solver on the first iteration of every timestep.
                 const int newton_iteration = this->simulator_.model().newtonMethod().numIterations();
-                if (newton_iteration == 0) {
-                    return true;
-                }
+                return newton_iteration == 0;
             }
             if (this->parameters_.cpr_reuse_setup_ == 2) {
                 // Recreate solver if the last solve used more than 10 iterations.
-                if (this->iterations() > 10) {
-                    return true;
-                }
+                return this->iterations() > 10;
             }
 
             // Otherwise, do not recreate solver.
