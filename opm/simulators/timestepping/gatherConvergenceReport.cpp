@@ -68,7 +68,7 @@ namespace
         const auto rf = local_report.reservoirFailures();
         int num_rf = rf.size();
         MPI_Pack(&num_rf, 1, MPI_INT, buf.data(), buf.size(), &offset, MPI_COMM_WORLD);
-        for (const auto f : rf) {
+        for (const auto& f : rf) {
             packReservoirFailure(f, buf, offset);
         }
         // Well failures.

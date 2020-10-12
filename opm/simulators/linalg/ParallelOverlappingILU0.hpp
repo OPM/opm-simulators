@@ -380,7 +380,7 @@ namespace Opm
                 }
             }
             // create the row
-            for(const auto entry: rowPattern)
+            for (const auto& entry : rowPattern)
             {
                 iluRow.insert(entry.first);
             }
