@@ -39,21 +39,19 @@ setupPropertyTree(FlowLinearSolverParameters p) // Note: copying the parameters 
     std::string conf = p.linear_solver_configuration_;
 
     // Get configuration from file.
-    if (conf == "file") {
+    if (conf.substr(conf.size() - 5, 5) == ".json") {
 #if BOOST_VERSION / 100 % 1000 > 48
-        if (p.linear_solver_configuration_json_file_ == "none") {
-            OPM_THROW(std::invalid_argument,
-                      "--linear-solver-configuration=file requires that a filename "
-                          << "is passed with "
-                          << "--linear-solver-configuration-json-file=filename.");
-        } else {
+        try {
             boost::property_tree::ptree prm;
-            boost::property_tree::read_json(p.linear_solver_configuration_json_file_, prm);
+            boost::property_tree::read_json(conf, prm);
             return prm;
+        }
+        catch (...) {
+            OPM_THROW(std::invalid_argument, "Failed reading linear solver configuration from JSON file " << conf);
         }
 #else
         OPM_THROW(std::invalid_argument,
-                  "--linear-solver-configuration=file not supported with "
+                  "--linear-solver-configuration=file.json not supported with "
                       << "boost version. Needs version > 1.48.");
 #endif
     }
