@@ -1,6 +1,7 @@
 /*
   Copyright 2016 IRIS AS
-  Copyright 2019 Equinor ASA
+  Copyright 2019, 2020 Equinor ASA
+  Copyright 2020 SINTEF Digital, Mathematics and Cybernetics
 
   This file is part of the Open Porous Media project (OPM).
 
