@@ -256,30 +256,47 @@ namespace Opm
             return EvalWell(numWellEq_ + numEq, 1.0);
         }
 
-        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx)) {
-            return primary_variables_evaluation_[WFrac];
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx)) {
+                return primary_variables_evaluation_[WFrac];
+            }
+
+            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx)) {
+                return primary_variables_evaluation_[GFrac];
+            }
+
+            if (has_solvent && compIdx == (unsigned)contiSolventEqIdx) {
+                return primary_variables_evaluation_[SFrac];
+            }
+        }
+        else if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx)) {
+             return primary_variables_evaluation_[WFrac];
+
+             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx)) {
+                return primary_variables_evaluation_[GFrac];
+            }
         }
 
-        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx)) {
-            return primary_variables_evaluation_[GFrac];
-        }
-
-        if (has_solvent && compIdx == (unsigned)contiSolventEqIdx) {
-            return primary_variables_evaluation_[SFrac];
-        }
-
-        // Oil fraction
+        // Oil or WATER fraction
         EvalWell well_fraction(numWellEq_ + numEq, 1.0);
-        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-            well_fraction -= primary_variables_evaluation_[WFrac];
-        }
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                well_fraction -= primary_variables_evaluation_[WFrac];
+            }
 
-        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            well_fraction -= primary_variables_evaluation_[GFrac];
+            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                well_fraction -= primary_variables_evaluation_[GFrac];
+            }
+
+            if (has_solvent) {
+                well_fraction -= primary_variables_evaluation_[SFrac];
+            }
         }
-        if (has_solvent) {
-            well_fraction -= primary_variables_evaluation_[SFrac];
+        else if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))) {
+
+                well_fraction -= primary_variables_evaluation_[GFrac];
         }
+        
         return well_fraction;
     }
 
