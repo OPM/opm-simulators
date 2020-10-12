@@ -39,7 +39,7 @@ setupPropertyTree(FlowLinearSolverParameters p) // Note: copying the parameters 
     std::string conf = p.linsolver_;
 
     // Get configuration from file.
-    if (conf.substr(conf.size() - 5, 5) == ".json") {
+    if (conf.size() > 5 && conf.substr(conf.size() - 5, 5) == ".json") { // the ends_with() method is not available until C++20
 #if BOOST_VERSION / 100 % 1000 > 48
         try {
             boost::property_tree::ptree prm;
