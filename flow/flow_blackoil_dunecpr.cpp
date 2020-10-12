@@ -62,7 +62,7 @@ namespace Opm {
         static constexpr int value = 3;
     };
     template<class TypeTag>
-    struct LinearSolverConfiguration<TypeTag, TTag::EclFlowProblemSimple> {
+    struct Linsolver<TypeTag, TTag::EclFlowProblemSimple> {
         static constexpr auto value = "ilu0";
     };
 

@@ -114,7 +114,7 @@ struct CprReuseSetup {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
-struct LinearSolverConfiguration {
+struct Linsolver {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
@@ -205,7 +205,7 @@ struct CprReuseSetup<TypeTag, TTag::FlowIstlSolverParams> {
     static constexpr int value = 3;
 };
 template<class TypeTag>
-struct LinearSolverConfiguration<TypeTag, TTag::FlowIstlSolverParams> {
+struct Linsolver<TypeTag, TTag::FlowIstlSolverParams> {
     static constexpr auto value = "ilu0";
 };
 template<class TypeTag>
@@ -243,7 +243,7 @@ namespace Opm
         bool   require_full_sparsity_pattern_;
         bool   ignoreConvergenceFailure_;
         bool scale_linear_system_;
-        std::string linear_solver_configuration_;
+        std::string linsolver_;
         std::string gpu_mode_;
         int bda_device_id_;
         int opencl_platform_id_;
@@ -270,7 +270,7 @@ namespace Opm
             scale_linear_system_ = EWOMS_GET_PARAM(TypeTag, bool, ScaleLinearSystem);
             cpr_max_ell_iter_  =  EWOMS_GET_PARAM(TypeTag, int, CprMaxEllIter);
             cpr_reuse_setup_  =  EWOMS_GET_PARAM(TypeTag, int, CprReuseSetup);
-            linear_solver_configuration_ = EWOMS_GET_PARAM(TypeTag, std::string, LinearSolverConfiguration);
+            linsolver_ = EWOMS_GET_PARAM(TypeTag, std::string, Linsolver);
             gpu_mode_ = EWOMS_GET_PARAM(TypeTag, std::string, GpuMode);
             bda_device_id_ = EWOMS_GET_PARAM(TypeTag, int, BdaDeviceId);
             opencl_platform_id_ = EWOMS_GET_PARAM(TypeTag, int, OpenclPlatformId);
@@ -294,7 +294,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, bool, ScaleLinearSystem, "Scale linear system according to equation scale and primary variable types");
             EWOMS_REGISTER_PARAM(TypeTag, int, CprMaxEllIter, "MaxIterations of the elliptic pressure part of the cpr solver");
             EWOMS_REGISTER_PARAM(TypeTag, int, CprReuseSetup, "Reuse preconditioner setup. Valid options are 0: recreate the preconditioner for every linear solve, 1: recreate once every timestep, 2: recreate if last linear solve took more than 10 iterations, 3: never recreate");
-            EWOMS_REGISTER_PARAM(TypeTag, std::string, LinearSolverConfiguration, "Configuration of solver. Valid options are: ilu0 (default), cpr (an alias for cpr_trueimpes), cpr_quasiimpes, cpr_trueimpes or amg. Alternatively, you can request a configuration to be read from a JSON file by giving the filename here, ending with '.json.'");
+            EWOMS_REGISTER_PARAM(TypeTag, std::string, Linsolver, "Configuration of solver. Valid options are: ilu0 (default), cpr (an alias for cpr_trueimpes), cpr_quasiimpes, cpr_trueimpes or amg. Alternatively, you can request a configuration to be read from a JSON file by giving the filename here, ending with '.json.'");
             EWOMS_REGISTER_PARAM(TypeTag, std::string, GpuMode, "Use GPU cusparseSolver or openclSolver as the linear solver, usage: '--gpu-mode=[none|cusparse|opencl]'");
             EWOMS_REGISTER_PARAM(TypeTag, int, BdaDeviceId, "Choose device ID for cusparseSolver or openclSolver, use 'nvidia-smi' or 'clinfo' to determine valid IDs");
             EWOMS_REGISTER_PARAM(TypeTag, int, OpenclPlatformId, "Choose platform ID for openclSolver, use 'clinfo' to determine valid platform IDs");

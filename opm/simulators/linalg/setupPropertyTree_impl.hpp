@@ -36,7 +36,7 @@ template<class TypeTag>
 boost::property_tree::ptree
 setupPropertyTree(FlowLinearSolverParameters p) // Note: copying the parameters to potentially override.
 {
-    std::string conf = p.linear_solver_configuration_;
+    std::string conf = p.linsolver_;
 
     // Get configuration from file.
     if (conf.substr(conf.size() - 5, 5) == ".json") {
