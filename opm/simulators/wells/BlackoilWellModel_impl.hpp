@@ -186,6 +186,7 @@ namespace Opm {
                                         const double simulation_time)
     {
 #ifndef NDEBUG
+        // wellnames needs to be the same on all processes!
         auto max = ebosSimulator_.vanguard().grid().comm().max(wellnames.size());
         assert(max == wellnames.size());
 #endif
@@ -194,20 +195,19 @@ namespace Opm {
         // wellnames is the same on all ranks. Hence only
         // store the postions of the shut wells.
         std::vector<std::size_t> shut_wells;
-        // well_container is sorted!
-        auto well = well_container_.begin();
         std::size_t index = 0; // index in set
 
         for (const auto& wellname: wellnames)
         {
-            // Never sure when binary search will become faster. Maybe change
-            // to lower_bound?
-            while (well != well_container_.end() && (*well)->name() < wellname)
+            // We could use binary search here or not search the whole container,
+            // if it would be sorted. Currently, it is not.
+            auto well = well_container_.begin();
+            while (well != well_container_.end() && (*well)->name() != wellname)
             {
                 ++well;
             }
 
-            if ((*well)->name() == wellname && !(*well)->wellIsStopped()) {
+            if (well != well_container_.end() && (*well)->name() == wellname && !(*well)->wellIsStopped()) {
                 if ((*well)->underPredictionMode()) {
                     wellTestState_.closeWell(wellname, WellTestConfig::Reason::PHYSICAL, simulation_time);
                     shut_wells.push_back(index);
