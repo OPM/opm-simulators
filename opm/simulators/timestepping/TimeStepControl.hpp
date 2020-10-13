@@ -106,6 +106,8 @@ namespace Opm
         ///                   in one time step (default is 1e-3)
         /// \param verbose    if true get some output (default = false)
         PIDAndIterationCountTimeStepControl( const int target_iterations = 20,
+                                             const double decayDampingFactor = 1.0,
+                                             const double growthDampingFactor = 1.0/1.2,
                                              const double tol = 1e-3,
                                              const bool verbose = false);
 
@@ -114,6 +116,8 @@ namespace Opm
 
     protected:
         const int     target_iterations_;
+        const double  decayDampingFactor_;
+        const double  growthDampingFactor_;
     };
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////

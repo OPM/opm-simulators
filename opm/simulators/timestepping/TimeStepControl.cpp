@@ -172,26 +172,30 @@ namespace Opm
 
     PIDAndIterationCountTimeStepControl::
     PIDAndIterationCountTimeStepControl( const int target_iterations,
+                                         const double decayDampingFactor,
+                                         const double growthDampingFactor,
                                          const double tol,
                                          const bool verbose)
-        : BaseType( tol, verbose )
+        : PIDTimeStepControl( tol, verbose )
         , target_iterations_( target_iterations )
+        , decayDampingFactor_( decayDampingFactor )
+        , growthDampingFactor_( growthDampingFactor )
     {}
 
     double PIDAndIterationCountTimeStepControl::
     computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& relChange,  const double simulationTimeElapsed ) const
     {
-        double dtEstimatePID = BaseType :: computeTimeStepSize( dt, iterations, relChange, simulationTimeElapsed);
+        double dtEstimatePID = PIDTimeStepControl :: computeTimeStepSize( dt, iterations, relChange, simulationTimeElapsed);
 
         // adjust timesteps based on target iteration
         double dtEstimateIter;
         if (iterations > target_iterations_) {
             double off_target_fraction = double(iterations - target_iterations_) / target_iterations_;
-            dtEstimateIter = dt / (1.0 + off_target_fraction);
+            dtEstimateIter = dt / (1.0 + off_target_fraction * decayDampingFactor_);
         } else {
             double off_target_fraction = double(target_iterations_ - iterations) / target_iterations_;
-            // Be a bit more careful when increasing. The 1.2 factor is from ebos.
-            dtEstimateIter = dt * (1.0 + off_target_fraction / 1.2);
+            // Be a bit more careful when increasing.
+            dtEstimateIter = dt * (1.0 + off_target_fraction * growthDampingFactor_);
         }
 
         return std::min(dtEstimatePID, dtEstimateIter);
