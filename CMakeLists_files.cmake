@@ -32,6 +32,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/linalg/FlexibleSolver2.cpp
   opm/simulators/linalg/FlexibleSolver3.cpp
   opm/simulators/linalg/FlexibleSolver4.cpp
+  opm/simulators/linalg/setupPropertyTree.cpp
   opm/simulators/utils/readDeck.cpp
   opm/simulators/timestepping/TimeStepControl.cpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.cpp
@@ -170,10 +171,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/openclSolverBackend.hpp
   opm/simulators/linalg/bda/MultisegmentWellContribution.hpp
   opm/simulators/linalg/bda/WellContributions.hpp
-  opm/simulators/linalg/BlackoilAmg.hpp
   opm/simulators/linalg/amgcpr.hh
   opm/simulators/linalg/twolevelmethodcpr.hh
-  opm/simulators/linalg/CPRPreconditioner.hpp
   opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp
   opm/simulators/linalg/FlexibleSolver.hpp
   opm/simulators/linalg/FlexibleSolver_impl.hpp

@@ -50,14 +50,6 @@ namespace Opm {
         static constexpr int value = 100;
     };
     template<class TypeTag>
-    struct UseAmg<TypeTag, TTag::EclFlowProblemSimple> { // probably not used
-        static constexpr bool value = true;
-    };
-    template<class TypeTag>
-    struct UseCpr<TypeTag, TTag::EclFlowProblemSimple> {
-        static constexpr bool value = true;
-    };
-    template<class TypeTag>
     struct CprMaxEllIter<TypeTag,TTag::EclFlowProblemSimple> {
         static constexpr int value = 1;
     };
@@ -70,16 +62,8 @@ namespace Opm {
         static constexpr int value = 3;
     };
     template<class TypeTag>
-    struct CprSolverVerbose<TypeTag, TTag::EclFlowProblemSimple> {
-        static constexpr int value = 0;
-    };
-    template<class TypeTag>
-    struct LinearSolverConfiguration<TypeTag, TTag::EclFlowProblemSimple> {
+    struct Linsolver<TypeTag, TTag::EclFlowProblemSimple> {
         static constexpr auto value = "ilu0";
-    };
-    template<class TypeTag>
-    struct SystemStrategy<TypeTag, TTag::EclFlowProblemSimple> {
-        static constexpr auto value = "quasiimpes";
     };
 
     template<class TypeTag>

@@ -34,89 +34,60 @@ namespace Opm
 /// from file the data in the JSON file will override any other options.
 template<class TypeTag>
 boost::property_tree::ptree
-setupPropertyTree(const FlowLinearSolverParameters& p)
+setupPropertyTree(FlowLinearSolverParameters p) // Note: copying the parameters to potentially override.
 {
-    boost::property_tree::ptree prm;
-    if (p.linear_solver_configuration_ == "file") {
+    std::string conf = p.linsolver_;
+
+    // Get configuration from file.
+    if (conf.size() > 5 && conf.substr(conf.size() - 5, 5) == ".json") { // the ends_with() method is not available until C++20
 #if BOOST_VERSION / 100 % 1000 > 48
-        if (p.linear_solver_configuration_json_file_ == "none"){
-            OPM_THROW(std::invalid_argument,
-                      "--linear-solver-configuration=file requires that a filename "
-                      << "is passed with "
-                      << "--linear-solver-configuration-json-file=filename.");
-        }else{
-            boost::property_tree::read_json(p.linear_solver_configuration_json_file_, prm);
+        try {
+            boost::property_tree::ptree prm;
+            boost::property_tree::read_json(conf, prm);
+            return prm;
+        }
+        catch (...) {
+            OPM_THROW(std::invalid_argument, "Failed reading linear solver configuration from JSON file " << conf);
         }
 #else
-       OPM_THROW(std::invalid_argument,
-                 "--linear-solver-configuration=file not supported with "
-                 << "boost version. Needs versoin > 1.48.");
+        OPM_THROW(std::invalid_argument,
+                  "--linear-solver-configuration=file.json not supported with "
+                      << "boost version. Needs version > 1.48.");
 #endif
     }
-    else
-    {
-        std::string conf =  p.linear_solver_configuration_;
-        // Support old UseCpr if not configuration was set
-        if (!EWOMS_PARAM_IS_SET(TypeTag, std::string, LinearSolverConfiguration) && p.use_cpr_)
-        {
+
+    // Use CPR configuration.
+    if ((conf == "cpr") || (conf == "cpr_trueimpes") || (conf == "cpr_quasiimpes")) {
+        if (conf == "cpr") {
+            // Treat "cpr" as short cut for the true IMPES variant.
             conf = "cpr_trueimpes";
         }
-
-        if((conf == "cpr_trueimpes") || (conf == "cpr_quasiimpes")){
-            prm.put("tol", p.linear_solver_reduction_);
-            if (EWOMS_PARAM_IS_SET(TypeTag, int, LinearSolverMaxIter))
-                prm.put("maxiter", p.linear_solver_maxiter_);// Trust that the user knows what he does
-            else
-                prm.put("maxiter", 20); // Use our own default.
-            prm.put("verbosity", p.linear_solver_verbosity_);
-            prm.put("solver", "bicgstab");
-            prm.put("preconditioner.type", "cpr");
-            if (conf == "cpr_quasiimpes" )
-            {
-                prm.put("preconditioner.weight_type","quasiimpes");
-            }
-            else
-            {
-                prm.put("preconditioner.weight_type","trueimpes");
-            }
-            prm.put("preconditioner.finesmoother.type", "ParOverILU0");
-            prm.put("preconditioner.finesmoother.relaxation", 1.0);
-            prm.put("preconditioner.pressure_var_index",1);
-            prm.put("preconditioner.verbosity",0);
-            prm.put("preconditioner.coarsesolver.maxiter",1);
-            prm.put("preconditioner.coarsesolver.tol",1e-1);
-            prm.put("preconditioner.coarsesolver.solver","loopsolver");
-            prm.put("preconditioner.coarsesolver.verbosity",0);
-            prm.put("preconditioner.coarsesolver.preconditioner.type","amg");
-            prm.put("preconditioner.coarsesolver.preconditioner.alpha",0.333333333333);
-            prm.put("preconditioner.coarsesolver.preconditioner.relaxation",1.0);
-            if (EWOMS_PARAM_IS_SET(TypeTag, int, CprMaxEllIter))
-                prm.put("preconditioner.coarsesolver.preconditioner.iterations", p.cpr_max_ell_iter_);
-            else
-                prm.put("preconditioner.coarsesolver.preconditioner.iterations",1);
-            prm.put("preconditioner.coarsesolver.preconditioner.coarsenTarget",1200);
-            prm.put("preconditioner.coarsesolver.preconditioner.pre_smooth",1);
-            prm.put("preconditioner.coarsesolver.preconditioner.post_smooth",1);
-            prm.put("preconditioner.coarsesolver.preconditioner.beta",1e-5);
-            prm.put("preconditioner.coarsesolver.preconditioner.smoother","ILU0");
-            prm.put("preconditioner.coarsesolver.preconditioner.verbosity",0);
-            prm.put("preconditioner.coarsesolver.preconditioner.maxlevel",15);
-            prm.put("preconditioner.coarsesolver.preconditioner.skip_isolated",0);
-        } else {
-            if(conf != "ilu0"){
-                OPM_THROW(std::invalid_argument, conf  << "is not a valid setting for --linear-solver-configuration."
-                          << " Please use ilu0, cpr_trueimpes, or cpr_quasiimpes");
-            }
-            prm.put("tol", p.linear_solver_reduction_);
-            prm.put("maxiter", p.linear_solver_maxiter_);
-            prm.put("verbosity", p.linear_solver_verbosity_);
-            prm.put("solver", "bicgstab");
-            prm.put("preconditioner.type", "ParOverILU0");
-            prm.put("preconditioner.relaxation", p.ilu_relaxation_);
-            prm.put("preconditioner.ilulevel", p.ilu_fillin_level_);
+        if (!EWOMS_PARAM_IS_SET(TypeTag, int, LinearSolverMaxIter)) {
+            // Use our own default unless it was explicitly overridden by user.
+            p.linear_solver_maxiter_ = 20;
         }
+        if (!EWOMS_PARAM_IS_SET(TypeTag, int, CprMaxEllIter)) {
+            // Use our own default unless it was explicitly overridden by user.
+            p.cpr_max_ell_iter_ = 1;
+        }
+        return setupCPR(conf, p);
     }
-    return prm;
+
+    if (conf == "amg") {
+        return setupAMG(conf, p);
+    }
+
+    // Use ILU0 configuration.
+    if (conf == "ilu0") {
+        return setupILU(conf, p);
+    }
+
+    // No valid configuration option found.
+    OPM_THROW(std::invalid_argument,
+              conf << " is not a valid setting for --linear-solver-configuration."
+              << " Please use ilu0, cpr, cpr_trueimpes, or cpr_quasiimpes");
 }
+
+
 
 } // namespace Opm
