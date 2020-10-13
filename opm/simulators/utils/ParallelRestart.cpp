@@ -392,7 +392,7 @@ void pack(const std::vector<bool,A>& data, std::vector<char>& buffer, int& posit
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.size(), buffer, position, comm);
-    for (const auto& entry : data) {
+    for (const auto entry : data) { // Not a reference: vector<bool> range
         bool b = entry;
         pack(b, buffer, position, comm);
     }

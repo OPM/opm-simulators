@@ -38,7 +38,7 @@ namespace
         int messagesize = local_messages.size();
         MPI_Pack(&messagesize, 1, MPI_UNSIGNED, buf.data(), buf.size(), &offset, MPI_COMM_WORLD);
 
-        for (const auto lm : local_messages) {
+        for (const auto& lm : local_messages) {
             MPI_Pack(static_cast<void*>(const_cast<std::int64_t*>(&lm.flag)), 1, MPI_INT64_T, buf.data(), buf.size(), &offset, MPI_COMM_WORLD);
             int tagsize = lm.tag.size();
             MPI_Pack(&tagsize, 1, MPI_UNSIGNED, buf.data(), buf.size(), &offset, MPI_COMM_WORLD);
@@ -122,7 +122,7 @@ namespace Opm
         // store 2 unsigned ints per message for length of tag and length of text
         message_size += num_messages*2*unsigned_int_mpi_pack_size;
 
-        for (const auto lm : local_deferredlogger.messages_) {
+        for (const auto& lm : local_deferredlogger.messages_) {
             int string_mpi_pack_size;
             MPI_Pack_size(lm.tag.size(), MPI_CHAR, MPI_COMM_WORLD, &string_mpi_pack_size);
             message_size += string_mpi_pack_size;
