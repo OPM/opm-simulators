@@ -530,7 +530,7 @@ namespace Opm {
                         } else {
                             // Close all consistently failing wells.
                             bool wells_shut = solver.model().wellModel().forceShutWellByNameIfPredictionMode(failing_wells, substepTimer.simulationTimeElapsed());
-                            if (wells_shut) {
+                            if (!wells_shut) {
                                 // None of the problematic wells were prediction wells,
                                 // so none were shut. We must fall back to chopping again.
                                 chopTimestep();
