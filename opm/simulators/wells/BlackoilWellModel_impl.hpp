@@ -218,10 +218,10 @@ namespace Opm {
 
         // Communicate across processes if a well was shut.
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
-        auto no_wells_shut = shut_wells.size();
-        no_wells_shut = comm.sum(no_wells_shut);
+        auto num_wells_shut = shut_wells.size();
+        num_wells_shut = comm.sum(num_wells_shut);
 
-        if ( no_wells_shut > 0)
+        if ( num_wells_shut > 0)
         {
             // Communicate shut well indices and print on master
             int array_size = (comm.rank() == 0) ? comm.size() : 0;
