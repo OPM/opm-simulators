@@ -219,6 +219,11 @@ namespace Opm {
         auto w = schedule().getWells(timeStepIdx);
         globalNumWells = w.size();
         w.erase(std::remove_if(w.begin(), w.end(), is_shut_or_defunct_), w.end());
+        // sort to speed lookup of accompanying parallel_well_info
+        std::sort(w.begin(), w.end(), [](const auto& w1, const auto& w2){
+                                          return w1.name() < w2.name();
+                                      });
+
         return w;
     }
 
