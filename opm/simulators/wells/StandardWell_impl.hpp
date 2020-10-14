@@ -269,12 +269,12 @@ namespace Opm
                 return primary_variables_evaluation_[SFrac];
             }
         }
-        else if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx)) {
-             return primary_variables_evaluation_[WFrac];
+        else if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx)) {             
 
-             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx)) {
+            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx)) {
                 return primary_variables_evaluation_[GFrac];
             }
+            return primary_variables_evaluation_[WFrac];
         }
 
         // Oil or WATER fraction
