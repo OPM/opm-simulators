@@ -63,6 +63,8 @@ namespace Opm {
                                                  value);
                 return candidate == parallel_wells.end() || *candidate != value;
             };
+
+        alternative_well_rate_init_ = EWOMS_GET_PARAM(TypeTag, bool, AlternativeWellRateInit);
     }
 
     template<typename TypeTag>
@@ -393,9 +395,11 @@ namespace Opm {
             local_deferredLogger.warning("WELL_POTENTIAL_CALCULATION_FAILED", msg);
         }
 
-        // Update the well rates to match state, if only single-phase rates.
-        for (auto& well : well_container_) {
-            well->updateWellStateRates(ebosSimulator_, well_state_, local_deferredLogger);
+        if (alternative_well_rate_init_) {
+            // Update the well rates to match state, if only single-phase rates.
+            for (auto& well : well_container_) {
+                well->updateWellStateRates(ebosSimulator_, well_state_, local_deferredLogger);
+            }
         }
 
         //compute well guideRates

@@ -307,6 +307,7 @@ namespace Opm {
             bool initial_step_;
             bool report_step_starts_;
             bool glift_debug = false;
+            bool alternative_well_rate_init_;
             std::unique_ptr<RateConverterType> rateConverter_;
             std::unique_ptr<VFPProperties<VFPInjProperties,VFPProdProperties>> vfp_properties_;
 

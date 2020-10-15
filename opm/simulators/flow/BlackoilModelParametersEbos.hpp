@@ -145,6 +145,10 @@ template<class TypeTag, class MyTypeTag>
 struct MaxInnerIterWells {
     using type = UndefinedProperty;
 };
+template<class TypeTag, class MyTypeTag>
+struct AlternativeWellRateInit {
+    using type = UndefinedProperty;
+};
 
 template<class TypeTag>
 struct DbhpMaxRel<TypeTag, TTag::FlowModelParameters> {
@@ -249,6 +253,10 @@ struct UseInnerIterationsWells<TypeTag, TTag::FlowModelParameters> {
 template<class TypeTag>
 struct MaxInnerIterWells<TypeTag, TTag::FlowModelParameters> {
     static constexpr int value = 50;
+};
+template<class TypeTag>
+struct AlternativeWellRateInit<TypeTag, TTag::FlowModelParameters> {
+    static constexpr bool value = false;
 };
 template<class TypeTag>
 struct StrictInnerIterMsWells<TypeTag, TTag::FlowModelParameters> {
@@ -432,6 +440,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, int, StrictInnerIterMsWells, "Number of inner iterations for multi-segment wells with strict tolerance");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseInnerIterationsWells, "Use nested iterations for standard wells");
             EWOMS_REGISTER_PARAM(TypeTag, int, MaxInnerIterWells, "Maximum number of inner iterations for standard wells");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, AlternativeWellRateInit, "Use alternative well rate initialization procedure");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, RegularizationFactorMsw, "Regularization factor for ms wells");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaxSinglePrecisionDays, "Maximum time step size where single precision floating point arithmetic can be used solving for the linear systems of equations");
             EWOMS_REGISTER_PARAM(TypeTag, int, MaxStrictIter, "Maximum number of Newton iterations before relaxed tolerances are used for the CNV convergence criterion");
