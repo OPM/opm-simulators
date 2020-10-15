@@ -336,6 +336,7 @@ namespace Opm
 
         void computePerfRatePressure(const IntensiveQuantities& int_quants,
                                      const std::vector<EvalWell>& mob_perfcells,
+                                     const double Tw,
                                      const int seg,
                                      const int perf,
                                      const EvalWell& segment_pressure,

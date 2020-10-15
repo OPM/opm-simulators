@@ -1321,6 +1321,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     computePerfRatePressure(const IntensiveQuantities& int_quants,
                             const std::vector<EvalWell>& mob_perfcells,
+                            const double Tw,
                             const int seg,
                             const int perf,
                             const EvalWell& segment_pressure,
@@ -1376,7 +1377,7 @@ namespace Opm
 
             // compute component volumetric rates at standard conditions
             for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
-                const EvalWell cq_p = - well_index_[perf] * (mob_perfcells[comp_idx] * drawdown);
+                const EvalWell cq_p = - Tw * (mob_perfcells[comp_idx] * drawdown);
                 cq_s[comp_idx] = b_perfcells[comp_idx] * cq_p;
             }
 
@@ -1401,7 +1402,7 @@ namespace Opm
             }
 
             // injection perforations total volume rates
-            const EvalWell cqt_i = - well_index_[perf] * (total_mob * drawdown);
+            const EvalWell cqt_i = - Tw * (total_mob * drawdown);
 
             // compute volume ratio between connection and at standard conditions
             EvalWell volume_ratio = 0.0;
@@ -2602,12 +2603,13 @@ namespace Opm
                 const auto& int_quants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
                 std::vector<EvalWell> mob(num_components_, 0.0);
                 getMobility(ebosSimulator, perf, mob);
+                const double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(int_quants, cell_idx);
+                const double Tw = well_index_[perf] * trans_mult;
                 std::vector<EvalWell> cq_s(num_components_, 0.0);
                 EvalWell perf_press;
                 double perf_dis_gas_rate = 0.;
                 double perf_vap_oil_rate = 0.;
-
-                computePerfRatePressure(int_quants, mob, seg, perf, seg_pressure, allow_cf, cq_s, perf_press, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
+                computePerfRatePressure(int_quants, mob, Tw, seg, perf, seg_pressure, allow_cf, cq_s, perf_press, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
 
                 // updating the solution gas rate and solution oil rate
                 if (this->isProducer()) {
@@ -3829,28 +3831,35 @@ namespace Opm
     computeCurrentWellRates(const Simulator& ebosSimulator,
                             DeferredLogger& deferred_logger) const
     {
-#if 0
         // Calculate the rates that follow from the current primary variables.
         std::vector<EvalWell> well_q_s(num_components_, 0.0);
-        const EvalWell& bhp = getBhp();
         const bool allow_cf = getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebosSimulator);
-        for (int perf = 0; perf < number_of_perforations_; ++perf) {
-            const int cell_idx = well_cells_[perf];
-            const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
-            std::vector<EvalWell> mob(num_components_, 0.0);
-            getMobility(ebosSimulator, perf, mob);
-            std::vector<EvalWell> cq_s(num_components_, 0.0);
-            double perf_dis_gas_rate = 0.;
-            double perf_vap_oil_rate = 0.;
-            double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(intQuants,  cell_idx);
-            const double Tw = well_index_[perf] * trans_mult;
-            // computePerfRate(intQuants, mob, bhp, Tw, perf, allow_cf,
-            //                 cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
-            for (int comp = 0; comp < num_components_; ++comp) {
-                well_q_s[comp] += cq_s[comp];
+        const int nseg = numberOfSegments();
+        for (int seg = 0; seg < nseg; ++seg) {
+            // calculating the perforation rate for each perforation that belongs to this segment
+            const EvalWell seg_pressure = getSegmentPressure(seg);
+            for (const int perf : segment_perforations_[seg]) {
+                const int cell_idx = well_cells_[perf];
+                const auto& int_quants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
+                std::vector<EvalWell> mob(num_components_, 0.0);
+                getMobility(ebosSimulator, perf, mob);
+                const double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(int_quants, cell_idx);
+                const double Tw = well_index_[perf] * trans_mult;
+                std::vector<EvalWell> cq_s(num_components_, 0.0);
+                EvalWell perf_press;
+                double perf_dis_gas_rate = 0.;
+                double perf_vap_oil_rate = 0.;
+                computePerfRatePressure(int_quants, mob, Tw, seg, perf, seg_pressure, allow_cf, cq_s, perf_press, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
+                for (int comp = 0; comp < num_components_; ++comp) {
+                    well_q_s[comp] += cq_s[comp];
+                }
             }
         }
-#endif
+        std::vector<double> well_q_s_noderiv(well_q_s.size());
+        for (int comp = 0; comp < num_components_; ++comp) {
+            well_q_s_noderiv[comp] = well_q_s[comp].value();
+        }
+        return well_q_s_noderiv;
     }
 
 
