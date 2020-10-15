@@ -31,7 +31,9 @@
 #include <vector>
 
 #include <opm/simulators/linalg/bda/MultisegmentWellContribution.hpp>
-#include <dune/istl/umfpack.hh>
+#if HAVE_SUITESPARSE_UMFPACK
+#include<umfpack.h>
+#endif
 #include <dune/common/version.hh>
 
 namespace Opm
@@ -58,8 +60,7 @@ class WellContributions
 {
 public:
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
-    using UMFPackIndex =
-        typename Dune::UMFPack<Dune::BCRSMatrix<Dune::FieldMatrix<double,1,1>>>::UMFPackMatrix::Index;
+    using UMFPackIndex = SuiteSparse_long;
 #else
     using UMFPackIndex = int;
 #endif
