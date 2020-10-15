@@ -37,11 +37,6 @@
 // otherwise, the nonzeroes of the matrix are assumed to be in a contiguous array, and a single GPU memcpy is enough
 #define COPY_ROW_BY_ROW 0
 
-// Level Scheduling respects the depencies in the original matrix
-// Graph Coloring is more aggresive and is likely to change the number of linearizations and linear iterations to converge, but can still be faster on GPU because it results in more parallelism
-#define LEVEL_SCHEDULING 0
-#define GRAPH_COLORING   1
-
 namespace bda
 {
 
@@ -49,8 +44,8 @@ using Opm::OpmLog;
 using Dune::Timer;
 
 template <unsigned int block_size>
-openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_, double tolerance_, unsigned int platformID_, unsigned int deviceID_) : BdaSolver<block_size>(verbosity_, maxit_, tolerance_, platformID_, deviceID_) {
-    prec = new Preconditioner(LEVEL_SCHEDULING, GRAPH_COLORING, verbosity_);
+openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_, double tolerance_, unsigned int platformID_, unsigned int deviceID_, std::string ilu_reorder_strategy) : BdaSolver<block_size>(verbosity_, maxit_, tolerance_, platformID_, deviceID_) {
+    prec = new Preconditioner(ilu_reorder_strategy, verbosity_);
     wcontainer = new WContainer();
 }
 
@@ -734,8 +729,8 @@ SolverStatus openclSolverBackend<block_size>::solve_system(int N_, int nnz_, int
 }
 
 
-#define INSTANTIATE_BDA_FUNCTIONS(n)                                                                 \
-template openclSolverBackend<n>::openclSolverBackend(int, int, double, unsigned int, unsigned int);  \
+#define INSTANTIATE_BDA_FUNCTIONS(n)                                                                              \
+template openclSolverBackend<n>::openclSolverBackend(int, int, double, unsigned int, unsigned int, std::string);  \
 
 INSTANTIATE_BDA_FUNCTIONS(1);
 INSTANTIATE_BDA_FUNCTIONS(2);

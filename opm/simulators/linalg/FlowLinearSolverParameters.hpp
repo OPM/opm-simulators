@@ -129,6 +129,10 @@ template<class TypeTag, class MyTypeTag>
 struct OpenclPlatformId {
     using type = UndefinedProperty;
 };
+template<class TypeTag, class MyTypeTag>
+struct IluReorderStrategy {
+    using type = UndefinedProperty;
+};
 
 template<class TypeTag>
 struct LinearSolverReduction<TypeTag, TTag::FlowIstlSolverParams> {
@@ -220,6 +224,10 @@ template<class TypeTag>
 struct OpenclPlatformId<TypeTag, TTag::FlowIstlSolverParams> {
     static constexpr int value = 0;
 };
+template<class TypeTag>
+struct IluReorderStrategy<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr auto value = "graph_coloring";
+};
 
 } // namespace Opm::Properties
 
@@ -249,7 +257,7 @@ namespace Opm
         int opencl_platform_id_;
         int cpr_max_ell_iter_ = 20;
         int cpr_reuse_setup_ = 0;
-        bool use_gpu_;
+        std::string ilu_reorder_strategy_;
 
         template <class TypeTag>
         void init()
@@ -274,6 +282,7 @@ namespace Opm
             gpu_mode_ = EWOMS_GET_PARAM(TypeTag, std::string, GpuMode);
             bda_device_id_ = EWOMS_GET_PARAM(TypeTag, int, BdaDeviceId);
             opencl_platform_id_ = EWOMS_GET_PARAM(TypeTag, int, OpenclPlatformId);
+            ilu_reorder_strategy_ = EWOMS_GET_PARAM(TypeTag, std::string, IluReorderStrategy);
         }
 
         template <class TypeTag>
@@ -298,6 +307,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, std::string, GpuMode, "Use GPU cusparseSolver or openclSolver as the linear solver, usage: '--gpu-mode=[none|cusparse|opencl]'");
             EWOMS_REGISTER_PARAM(TypeTag, int, BdaDeviceId, "Choose device ID for cusparseSolver or openclSolver, use 'nvidia-smi' or 'clinfo' to determine valid IDs");
             EWOMS_REGISTER_PARAM(TypeTag, int, OpenclPlatformId, "Choose platform ID for openclSolver, use 'clinfo' to determine valid platform IDs");
+            EWOMS_REGISTER_PARAM(TypeTag, std::string, IluReorderStrategy, "Choose the reordering strategy for openclSolver, usage: '--ilu-reorder-strategy=[level_scheduling|graph_coloring], level_scheduling behaves like Dune and cusparse, graph_coloring is more aggressive and likely to be faster, but is random-based and generally increases the number of linear solves and linear iterations significantly.");
         }
 
         FlowLinearSolverParameters() { reset(); }
@@ -320,6 +330,7 @@ namespace Opm
             gpu_mode_                 = "none";
             bda_device_id_            = 0;
             opencl_platform_id_       = 0;
+            ilu_reorder_strategy_     = "graph_coloring";
         }
     };
 

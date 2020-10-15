@@ -40,7 +40,7 @@ namespace Opm
     using bda::SolverStatus;
 
 template <class BridgeMatrix, class BridgeVector, int block_size>
-BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string gpu_mode, int linear_solver_verbosity, int maxit, double tolerance, unsigned int platformID, unsigned int deviceID)
+BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string gpu_mode, int linear_solver_verbosity, int maxit, double tolerance, unsigned int platformID OPM_UNUSED, unsigned int deviceID, std::string ilu_reorder_strategy OPM_UNUSED)
 {
     if (gpu_mode.compare("cusparse") == 0) {
 #if HAVE_CUDA
@@ -52,7 +52,7 @@ BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string gpu_mod
     } else if (gpu_mode.compare("opencl") == 0) {
 #if HAVE_OPENCL
         use_gpu = true;
-        backend.reset(new bda::openclSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance, platformID, deviceID));
+        backend.reset(new bda::openclSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance, platformID, deviceID, ilu_reorder_strategy));
 #else
         OPM_THROW(std::logic_error, "Error openclSolver was chosen, but OpenCL was not found by CMake");
 #endif
@@ -217,7 +217,7 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::get_result(BridgeVector 
 template BdaBridge<Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >,              \
 Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >,                                    \
 n>::BdaBridge                                                                                                                       \
-(std::string gpu_mode_, int linear_solver_verbosity, int maxit, double tolerance, unsigned int platformID, unsigned int deviceID);  \
+(std::string gpu_mode_, int linear_solver_verbosity, int maxit, double tolerance, unsigned int platformID, unsigned int deviceID, std::string ilu_reorder_strategy);  \
                                                                                                                                     \
 template void BdaBridge<Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >,         \
 Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >,                                    \

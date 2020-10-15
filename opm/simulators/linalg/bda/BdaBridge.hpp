@@ -56,7 +56,8 @@ public:
     /// \param[in] tolerance                  required relative tolerance for BdaSolver
     /// \param[in] platformID                 the OpenCL platform ID to be used
     /// \param[in] deviceID                   the device ID to be used by the cusparse- and openclSolvers, too high values could cause runtime errors
-    BdaBridge(std::string gpu_mode, int linear_solver_verbosity, int maxit, double tolerance, unsigned int platformID, unsigned int deviceID);
+    /// \param[in] ilu_reorder_strategy       select either level_scheduling or graph_coloring, see BILU0.hpp for explanation
+    BdaBridge(std::string gpu_mode, int linear_solver_verbosity, int maxit, double tolerance, unsigned int platformID, unsigned int deviceID, std::string ilu_reorder_strategy);
 
 
     /// Solve linear system, A*x = b

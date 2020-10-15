@@ -47,7 +47,9 @@ namespace bda
         int numColors;
         int verbosity;
 
-        bool level_scheduling, graph_coloring;
+        // Level Scheduling respects the dependencies in the original matrix, and behaves like Dune and cusparse
+        // Graph Coloring is more aggresive and is likely to increase the number of linearizations and linear iterations to converge significantly, but can still be faster on GPU because it results in more parallelism
+        bool level_scheduling = false, graph_coloring = false;
 
         typedef struct {
             cl::Buffer Lvals, Uvals, invDiagVals;
@@ -68,7 +70,7 @@ namespace bda
 
     public:
 
-        BILU0(bool level_scheduling, bool graph_coloring, int verbosity);
+        BILU0(std::string ilu_reorder_strategy, int verbosity);
 
         ~BILU0();
 
