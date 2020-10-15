@@ -218,7 +218,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/PerforationData.hpp
   opm/simulators/wells/RateConverter.hpp
   opm/simulators/utils/readDeck.hpp
-  opm/simulators/wells/SimFIBODetails.hpp
   opm/simulators/wells/TargetCalculator.hpp
   opm/simulators/wells/WellConnectionAuxiliaryModule.hpp
   opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp

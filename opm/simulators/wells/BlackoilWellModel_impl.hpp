@@ -21,7 +21,6 @@
 */
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
-#include <opm/simulators/wells/SimFIBODetails.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 
 #include <utility>
