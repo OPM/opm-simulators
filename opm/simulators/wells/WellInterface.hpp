@@ -275,13 +275,17 @@ namespace Opm
         // update perforation water throughput based on solved water rate
         virtual void updateWaterThroughput(const double dt, WellState& well_state) const = 0;
 
-        virtual void updateWellStateRates(const Simulator& ebosSimulator,
-                                          WellState& well_state,
-                                          DeferredLogger& deferred_logger) const
-        {
-            // Default: do nothing.
-            // TODO: make this a pure virtual.
-        }
+        /// Compute well rates based on current reservoir conditions and well variables.
+        /// Used in updateWellStateRates().
+        virtual std::vector<double> computeCurrentWellRates(const Simulator& ebosSimulator,
+                                                            DeferredLogger& deferred_logger) const = 0;
+
+        /// Modify the well_state's rates if there is only one nonzero rate.
+        /// If so, that rate is kept as is, but the others are set proportionally
+        /// to the rates returned by computeCurrentWellRates().
+        void updateWellStateRates(const Simulator& ebosSimulator,
+                                  WellState& well_state,
+                                  DeferredLogger& deferred_logger) const;
 
         void stopWell() {
             wellIsStopped_ = true;

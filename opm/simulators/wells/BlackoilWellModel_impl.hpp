@@ -1290,16 +1290,6 @@ namespace Opm {
                 }
             }
         }
-
-        // Output debug info.
-        if (terminal_output_) {
-            std::ostringstream oss;
-            oss << "Node pressures in network nodes, in bar:\n";
-            for (const auto& [name, pressure] : node_pressures_) {
-                oss << name << "  " << unit::convert::to(pressure, unit::barsa) << '\n';
-            }
-            OpmLog::debug(oss.str());
-        }
     }
 
 

@@ -4031,30 +4031,11 @@ namespace Opm
 
 
     template<typename TypeTag>
-    void
+    std::vector<double>
     StandardWell<TypeTag>::
-    updateWellStateRates(const Simulator& ebosSimulator,
-                         WellState& well_state,
-                         DeferredLogger& deferred_logger) const
+    computeCurrentWellRates(const Simulator& ebosSimulator,
+                            DeferredLogger& deferred_logger) const
     {
-        // Check if the rates of this well only are single-phase, do nothing
-        // if more than one nonzero rate.
-        int nonzero_rate_index = -1;
-        for (int p = 0; p < number_of_phases_; ++p) {
-            if (well_state.wellRates()[index_of_well_ * number_of_phases_ + p] != 0.0) {
-                if (nonzero_rate_index == -1) {
-                    nonzero_rate_index = p;
-                } else {
-                    // More than one nonzero rate.
-                    return;
-                }
-            }
-        }
-        if (nonzero_rate_index == -1) {
-            // No nonzero rates.
-            return;
-        }
-
         // Calculate the rates that follow from the current primary variables.
         std::vector<EvalWell> well_q_s(num_components_, {numWellEq_ + numEq, 0.});
         const EvalWell& bhp = getBhp();
@@ -4075,39 +4056,11 @@ namespace Opm
                 well_q_s[comp] += cq_s[comp];
             }
         }
-
-
-        // We must keep in mind that component and phase indices are different here.
-        // Therefore we set up a mapping to make the last code block simpler.
-        const auto& pu = phaseUsage();
-        const int wpi = Water;
-        const int opi = Oil;
-        const int gpi = Gas;
-        const unsigned int wci = FluidSystem::waterCompIdx;
-        const unsigned int oci = FluidSystem::oilCompIdx;
-        const unsigned int gci = FluidSystem::gasCompIdx;
-        std::pair<int, unsigned int> phase_comp[3] = { {wpi, wci},
-                                                       {opi, oci},
-                                                       {gpi, gci} };
-        std::vector<int> phase_to_comp(number_of_phases_, -1);
-        for (const auto& pc : phase_comp) {
-            if (pu.phase_used[pc.first]) {
-                const int phase_idx = pu.phase_pos[pc.first];
-                const int comp_idx = Indices::canonicalToActiveComponentIndex(pc.second);
-                phase_to_comp[phase_idx] = comp_idx;
-            }
+        std::vector<double> well_q_s_noderiv(well_q_s.size());
+        for (int comp = 0; comp < num_components_; ++comp) {
+            well_q_s_noderiv[comp] = well_q_s[comp].value();
         }
-
-        // Set the currently-zero phase flows to be nonzero in proportion to well_q_s.
-        const double initial_nonzero_rate = well_state.wellRates()[index_of_well_ * number_of_phases_ + nonzero_rate_index];
-        const int comp_idx_nz = phase_to_comp[nonzero_rate_index];
-        for (int p = 0; p < number_of_phases_; ++p) {
-            if (p != nonzero_rate_index) {
-                const int comp_idx = phase_to_comp[p];
-                double& rate = well_state.wellRates()[index_of_well_ * number_of_phases_ + p];
-                rate = (initial_nonzero_rate/well_q_s[comp_idx_nz].value()) * (well_q_s[comp_idx].value());
-            }
-        }
+        return well_q_s_noderiv;
     }
 
 

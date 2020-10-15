@@ -679,7 +679,7 @@ namespace WellGroupHelpers
                                                               rates[BlackoilPhases::Vapour],
                                                               up_press,
                                                               alq);
-#define EXTRA_DEBUG_NETWORK 1
+#define EXTRA_DEBUG_NETWORK 0
 #if EXTRA_DEBUG_NETWORK
                     std::ostringstream oss;
                     oss << "parent: " << (*upbranch).uptree_node() << "  child: " << node
