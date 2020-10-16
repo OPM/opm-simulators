@@ -130,8 +130,8 @@ public:
                            finesmoother_,
                            levelTransferPolicy_,
                            coarseSolverPolicy_,
-                           prm.get<int>("pre_smooth", transpose? 1 : 0),
-                           prm.get<int>("post_smooth", transpose? 0 : 1))
+                           prm.get<int>("pre_smooth",  0),
+                           prm.get<int>("post_smooth", 1))
         , prm_(prm)
     {
         if (prm.get<int>("verbosity", 0) > 10 && comm.communicator().rank() == 0) {
