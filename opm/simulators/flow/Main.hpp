@@ -24,7 +24,14 @@
 
 #include <flow/flow_ebos_blackoil.hpp>
 
-# ifndef FLOW_BLACKOIL_ONLY
+# ifdef FLOW_DYN
+# include <flow/flow_1.hpp>
+# include <flow/flow_2.hpp>
+# include <flow/flow_3.hpp>
+# include <flow/flow_4.hpp>
+# endif
+
+#if !defined(FLOW_BLACKOIL_ONLY) && !defined(FLOW_DYN)
 #  include <flow/flow_ebos_gasoil.hpp>
 #  include <flow/flow_ebos_oilwater.hpp>
 #  include <flow/flow_ebos_solvent.hpp>
@@ -203,8 +210,9 @@ namespace Opm
             //       requested.
 
             if ( false ) {}
-#ifndef FLOW_BLACKOIL_ONLY
             // Twophase cases
+#ifndef FLOW_BLACKOIL_ONLY
+#ifndef FLOW_DYN
             else if( phases.size() == 2 ) {
                 // oil-gas
                 if (phases.active( Opm::Phase::GAS )) {
@@ -300,7 +308,35 @@ namespace Opm
                                            std::move(summaryConfig_));
                 return Opm::flowEbosEnergyMain(argc_, argv_, outputCout_, outputFiles_);
             }
-#endif // FLOW_BLACKOIL_ONLY
+#endif // if NOT FLOW_DYN
+#ifdef FLOW_DYN
+            else if( phases.size() == 1 ) {
+                Opm::flow1SetDeck(setupTime_, std::move(deck_),
+                                             std::move(eclipseState_),
+                                             std::move(schedule_),
+                                             std::move(summaryConfig_));
+                return Opm::flow1Main(argc_, argv_, outputCout_, outputFiles_);
+            } else if( phases.size() == 2 ) {
+                Opm::flow2SetDeck(setupTime_, std::move(deck_),
+                                             std::move(eclipseState_),
+                                             std::move(schedule_),
+                                             std::move(summaryConfig_));
+                return Opm::flow2Main(argc_, argv_, outputCout_, outputFiles_);
+            } else if ( phases.size() == 3 ) {
+                Opm::flow3SetDeck(setupTime_, std::move(deck_),
+                                             std::move(eclipseState_),
+                                             std::move(schedule_),
+                                             std::move(summaryConfig_));
+                return Opm::flow3Main(argc_, argv_, outputCout_, outputFiles_);
+            } else if ( phases.size() == 4 ){
+                Opm::flow4SetDeck(setupTime_, std::move(deck_),
+                                             std::move(eclipseState_),
+                                             std::move(schedule_),
+                                             std::move(summaryConfig_));
+                return Opm::flow4Main(argc_, argv_, outputCout_, outputFiles_);
+            }
+#endif // FLOW_DYN
+#endif // ONLY_BLACKOIL
             // Blackoil case
             else if( phases.size() == 3 ) {
                 Opm::flowEbosBlackoilSetDeck(setupTime_, std::move(deck_),

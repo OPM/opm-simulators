@@ -440,17 +440,17 @@ namespace Opm {
                 const auto& priVarsNew = ebosSimulator_.model().solution(/*timeIdx=*/0)[globalElemIdx];
 
                 Scalar pressureNew;
-                pressureNew = priVarsNew[Indices::pressureSwitchIdx];
+                pressureNew = priVarsNew[Indices::activePressureSwitchIdx()];
 
                 Scalar saturationsNew[FluidSystem::numPhases] = { 0.0 };
                 Scalar oilSaturationNew = 1.0;
                 if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                    saturationsNew[FluidSystem::waterPhaseIdx] = priVarsNew[Indices::waterSaturationIdx];
+                    saturationsNew[FluidSystem::waterPhaseIdx] = priVarsNew[Indices::activeWaterSaturationIdx()];
                     oilSaturationNew -= saturationsNew[FluidSystem::waterPhaseIdx];
                 }
 
                 if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && priVarsNew.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg) {
-                    saturationsNew[FluidSystem::gasPhaseIdx] = priVarsNew[Indices::compositionSwitchIdx];
+                    saturationsNew[FluidSystem::gasPhaseIdx] = priVarsNew[Indices::activeCompositionSwitchIdx()];
                     oilSaturationNew -= saturationsNew[FluidSystem::gasPhaseIdx];
                 }
 
@@ -461,7 +461,7 @@ namespace Opm {
                 const auto& priVarsOld = ebosSimulator_.model().solution(/*timeIdx=*/1)[globalElemIdx];
 
                 Scalar pressureOld;
-                pressureOld = priVarsOld[Indices::pressureSwitchIdx];
+                pressureOld = priVarsOld[Indices::activePressureSwitchIdx()];
 
                 Scalar saturationsOld[FluidSystem::numPhases] = { 0.0 };
                 Scalar oilSaturationOld = 1.0;
@@ -473,14 +473,14 @@ namespace Opm {
 
                 if (FluidSystem::numActivePhases() > 1) {
                     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                        saturationsOld[FluidSystem::waterPhaseIdx] = priVarsOld[Indices::waterSaturationIdx];
+                        saturationsOld[FluidSystem::waterPhaseIdx] = priVarsOld[Indices::activeWaterSaturationIdx()];
                         oilSaturationOld -= saturationsOld[FluidSystem::waterPhaseIdx];
                     }
 
                     if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) &&
                         priVarsOld.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg)
                     {
-                        saturationsOld[FluidSystem::gasPhaseIdx] = priVarsOld[Indices::compositionSwitchIdx];
+                        saturationsOld[FluidSystem::gasPhaseIdx] = priVarsOld[Indices::activeCompositionSwitchIdx()];
                         oilSaturationOld -= saturationsOld[FluidSystem::gasPhaseIdx];
                     }
 
@@ -662,7 +662,7 @@ namespace Opm {
                     maxCoeff[ compIdx ] = std::max( maxCoeff[ compIdx ], std::abs( R2 ) / pvValue );
                 }
 
-                if ( has_solvent_ ) {
+                if ( Indices::solventIsActive() ) {
                     B_avg[ contiSolventEqIdx ] += 1.0 / intQuants.solventInverseFormationVolumeFactor().value();
                     const auto R2 = ebosResid[cell_idx][contiSolventEqIdx];
                     R_sum[ contiSolventEqIdx ] += R2;
@@ -801,7 +801,7 @@ namespace Opm {
                     const unsigned compIdx = Indices::canonicalToActiveComponentIndex(canonicalCompIdx);
                     compNames[compIdx] = FluidSystem::componentName(canonicalCompIdx);
                 }
-                if (has_solvent_) {
+                if (Indices::solventIsActive()) {
                     compNames[solventSaturationIdx] = "Solvent";
                 }
                 if (has_polymer_) {

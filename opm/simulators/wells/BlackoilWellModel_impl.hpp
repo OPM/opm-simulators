@@ -86,6 +86,9 @@ namespace Opm {
         ebosSimulator_.model().addAuxiliaryModule(this);
 
         is_cell_perforated_.resize(local_num_cells_, false);
+
+        has_solvent_ = Indices::solventIsActive();
+
     }
 
     template<typename TypeTag>
@@ -266,10 +269,10 @@ namespace Opm {
             // copy of get perfpressure in Standard well
             // exept for value
             double perf_pressure = 0.0;
-            if (Indices::oilEnabled) {
+            if (Indices::oilIsActive()) {
                 perf_pressure = fs.pressure(FluidSystem::oilPhaseIdx).value();
             } else {
-                if (Indices::waterEnabled) {
+                if (Indices::waterIsActive()) {
                     perf_pressure = fs.pressure(FluidSystem::waterPhaseIdx).value();
                 } else {
                     perf_pressure = fs.pressure(FluidSystem::gasPhaseIdx).value();
@@ -1568,7 +1571,7 @@ namespace Opm {
             return numPhases();
         }
         int numComp = FluidSystem::numComponents;
-        if (has_solvent_) {
+        if (Indices::solventIsActive()) {
             numComp ++;
         }
 

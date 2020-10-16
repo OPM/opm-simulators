@@ -200,10 +200,10 @@ namespace Opm
                 }
                 break;
             case InjectorType::GAS:
-                if (has_solvent && comp_idx == contiSolventEqIdx) { // solvent
+                if (Indices::solventIsActive() && comp_idx == contiSolventEqIdx) { // solvent
                     inj_frac = wsolvent();
                 } else if (comp_idx == int(Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx))) {
-                    inj_frac = has_solvent ? 1.0 - wsolvent() : 1.0;
+                    inj_frac = Indices::solventIsActive() ? 1.0 - wsolvent() : 1.0;
                 }
                 break;
             case InjectorType::OIL:
@@ -264,7 +264,7 @@ namespace Opm
             return primary_variables_evaluation_[GFrac];
         }
 
-        if (has_solvent && compIdx == (unsigned)contiSolventEqIdx) {
+        if (Indices::solventIsActive() && compIdx == (unsigned)contiSolventEqIdx) {
             return primary_variables_evaluation_[SFrac];
         }
 
@@ -277,7 +277,7 @@ namespace Opm
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
             well_fraction -= primary_variables_evaluation_[GFrac];
         }
-        if (has_solvent) {
+        if (Indices::solventIsActive()) {
             well_fraction -= primary_variables_evaluation_[SFrac];
         }
         return well_fraction;
@@ -328,10 +328,10 @@ namespace Opm
     StandardWell<TypeTag>::getPerfCellPressure(const typename StandardWell<TypeTag>::FluidState& fs) const
     {
         Eval pressure;
-        if (Indices::oilEnabled) {
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
             pressure = fs.pressure(FluidSystem::oilPhaseIdx);
         } else {
-            if (Indices::waterEnabled) {
+            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                 pressure = fs.pressure(FluidSystem::waterPhaseIdx);
             } else {
                 pressure = fs.pressure(FluidSystem::gasPhaseIdx);
@@ -369,7 +369,7 @@ namespace Opm
             const unsigned compIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
             b_perfcells_dense[compIdx] = extendEval(fs.invB(phaseIdx));
         }
-        if (has_solvent) {
+        if (Indices::solventIsActive()) {
             b_perfcells_dense[contiSolventEqIdx] = extendEval(intQuants.solventInverseFormationVolumeFactor());
         }
 
@@ -442,7 +442,7 @@ namespace Opm
                 volumeRatio += cmix_s[waterCompIdx] / b_perfcells_dense[waterCompIdx];
             }
 
-            if (has_solvent) {
+            if (Indices::solventIsActive()) {
                 volumeRatio += cmix_s[contiSolventEqIdx] / b_perfcells_dense[contiSolventEqIdx];
             }
 
@@ -624,7 +624,7 @@ namespace Opm
                 }
 
                 // Store the perforation phase flux for later usage.
-                if (has_solvent && componentIdx == contiSolventEqIdx) {
+                if (Indices::solventIsActive() && componentIdx == contiSolventEqIdx) {
                     well_state.perfRateSolvent()[first_perf_ + perf] = cq_s[componentIdx].value();
                 } else {
                     well_state.perfPhaseRates()[(first_perf_ + perf) * np + ebosCompIdxToFlowCompIdx(componentIdx)] = cq_s[componentIdx].value();
@@ -882,7 +882,7 @@ namespace Opm
                 const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
                 mob[activeCompIdx] = extendEval(intQuants.mobility(phaseIdx));
             }
-            if (has_solvent) {
+            if (Indices::solventIsActive()) {
                 mob[contiSolventEqIdx] = extendEval(intQuants.solventMobility());
             }
         } else {
@@ -905,7 +905,7 @@ namespace Opm
             }
 
             // this may not work if viscosity and relperms has been modified?
-            if (has_solvent) {
+            if (Indices::solventIsActive()) {
                 OPM_DEFLOG_THROW(std::runtime_error, "individual mobility for wells does not work in combination with solvent", deferred_logger);
             }
         }
@@ -973,7 +973,7 @@ namespace Opm
             primary_variables_[GFrac] = old_primary_variables[GFrac] - dx3_limited;
         }
 
-        if (has_solvent) {
+        if (Indices::solventIsActive()) {
             const int sign4 = dwells[0][SFrac] > 0 ? 1: -1;
             const double dx4_limited = sign4 * std::min(std::abs(dwells[0][SFrac]) * relaxation_factor_fractions, dFLimit);
             primary_variables_[SFrac] = old_primary_variables[SFrac] - dx4_limited;
@@ -1054,7 +1054,7 @@ namespace Opm
         }
 
         double F_solvent = 0.0;
-        if (has_solvent) {
+        if (Indices::solventIsActive()) {
             F_solvent = primary_variables_[SFrac];
             F[pu.phase_pos[Oil]] -= F_solvent;
         }
@@ -1064,7 +1064,7 @@ namespace Opm
                 if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                         F[pu.phase_pos[Gas]] /= (1.0 - F[pu.phase_pos[Water]]);
                 }
-                if (has_solvent) {
+                if (Indices::solventIsActive()) {
                     F_solvent /= (1.0 - F[pu.phase_pos[Water]]);
                 }
                 F[pu.phase_pos[Oil]] /= (1.0 - F[pu.phase_pos[Water]]);
@@ -1077,7 +1077,7 @@ namespace Opm
                 if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                     F[pu.phase_pos[Water]] /= (1.0 - F[pu.phase_pos[Gas]]);
                 }
-                if (has_solvent) {
+                if (Indices::solventIsActive()) {
                     F_solvent /= (1.0 - F[pu.phase_pos[Gas]]);
                 }
                 F[pu.phase_pos[Oil]] /= (1.0 - F[pu.phase_pos[Gas]]);
@@ -1092,7 +1092,7 @@ namespace Opm
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                 F[pu.phase_pos[Gas]] /= (1.0 - F[pu.phase_pos[Oil]]);
             }
-            if (has_solvent) {
+            if (Indices::solventIsActive()) {
                 F_solvent /= (1.0 - F[pu.phase_pos[Oil]]);
             }
             F[pu.phase_pos[Oil]] = 0.0;
@@ -1104,7 +1104,7 @@ namespace Opm
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
             primary_variables_[GFrac] = F[pu.phase_pos[Gas]];
         }
-        if(has_solvent) {
+        if(Indices::solventIsActive()) {
             primary_variables_[SFrac] = F_solvent;
         }
     }
@@ -1138,7 +1138,7 @@ namespace Opm
         }
 
         double F_solvent = 0.0;
-        if (has_solvent) {
+        if (Indices::solventIsActive()) {
             F_solvent = primary_variables_[SFrac];
             F[oil_pos] -= F_solvent;
         }
@@ -1157,7 +1157,7 @@ namespace Opm
 
         // F_solvent is added to F_gas. This means that well_rate[Gas] also contains solvent.
         // More testing is needed to make sure this is correct for well groups and THP.
-        if (has_solvent){
+        if (Indices::solventIsActive()){
             F_solvent /= scalingFactor(contiSolventEqIdx);
             F[pu.phase_pos[Gas]] += F_solvent;
         }
@@ -1935,7 +1935,7 @@ namespace Opm
             }
 
             // We use cell values for solvent injector
-            if (has_solvent) {
+            if (Indices::solventIsActive()) {
                 b_perf[num_components_ * perf + contiSolventEqIdx] = intQuants.solventInverseFormationVolumeFactor().value();
                 surf_dens_perf[num_components_ * perf + contiSolventEqIdx] = intQuants.solventRefDensity();
             }
@@ -2197,7 +2197,7 @@ namespace Opm
             for (int comp = 0; comp < np; ++comp) {
                 perfRates[perf * num_components_ + comp] =  well_state.perfPhaseRates()[(first_perf_ + perf) * np + ebosCompIdxToFlowCompIdx(comp)];
             }
-            if(has_solvent) {
+            if(Indices::solventIsActive()) {
                 perfRates[perf * num_components_ + contiSolventEqIdx] =  well_state.perfRateSolvent()[first_perf_ + perf];
             }
         }
@@ -2807,7 +2807,7 @@ namespace Opm
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                 primary_variables_[GFrac] = scalingFactor(pu.phase_pos[Gas]) * (well_state.wellRates()[np*well_index + pu.phase_pos[Gas]] - well_state.solventWellRate(well_index)) / total_well_rate ;
             }
-            if (has_solvent) {
+            if (Indices::solventIsActive()) {
                 primary_variables_[SFrac] = scalingFactor(pu.phase_pos[Gas]) * well_state.solventWellRate(well_index) / total_well_rate ;
             }
         } else { // total_well_rate == 0
@@ -2825,7 +2825,7 @@ namespace Opm
                 if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                     if (phase == InjectorType::GAS) {
                         primary_variables_[GFrac] = 1.0 - wsolvent();
-                        if (has_solvent) {
+                        if (Indices::solventIsActive()) {
                             primary_variables_[SFrac] = wsolvent();
                         }
                     } else {

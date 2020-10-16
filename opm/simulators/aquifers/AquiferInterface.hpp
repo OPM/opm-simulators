@@ -50,24 +50,17 @@ public:
     using BlackoilIndices = GetPropType<TypeTag, Properties::Indices>;
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using Eval = GetPropType<TypeTag, Properties::Evaluation>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+
 
     enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
 
     static const int numEq = BlackoilIndices::numEq;
-    typedef double Scalar;
 
-    typedef DenseAd::Evaluation<double, /*size=*/numEq> Eval;
-
-    typedef Opm::BlackOilFluidState<Eval,
-                                    FluidSystem,
-                                    enableTemperature,
-                                    enableEnergy,
-                                    BlackoilIndices::gasEnabled,
-                                    enableBrine,
-                                    BlackoilIndices::numPhases>
-        FluidState;
+    typedef typename BlackOilIntensiveQuantities<TypeTag>::FluidState FluidState;
 
     static const auto waterCompIdx = FluidSystem::waterCompIdx;
     static const auto waterPhaseIdx = FluidSystem::waterPhaseIdx;

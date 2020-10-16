@@ -99,7 +99,7 @@ namespace Opm
 
         wsolvent_ = 0.0;
 
-        if (has_solvent && well.isInjector()) {
+        if (Indices::solventIsActive() && well.isInjector()) {
             auto injectorType = well_ecl_.injectorType();
             if (injectorType == InjectorType::GAS) {
                 wsolvent_ = well_ecl_.getSolventFraction();
@@ -1229,7 +1229,7 @@ namespace Opm
             return 1.0;
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && pu.phase_pos[Gas] == phaseIdx)
             return 0.01;
-        if (has_solvent && phaseIdx == contiSolventEqIdx )
+        if (Indices::solventIsActive() && phaseIdx == contiSolventEqIdx )
             return 0.01;
 
         // we should not come this far

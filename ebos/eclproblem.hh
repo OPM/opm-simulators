@@ -876,6 +876,8 @@ public:
 
         initFluidSystem_();
 
+        initBlackoilIndices_();
+
         // deal with DRSDT
         unsigned ntpvt = eclState.runspec().tabdims().getNumPVTTables();
         size_t numDof = this->model().numGridDof();
@@ -1775,7 +1777,7 @@ public:
         values.setPvtRegionIndex(pvtRegionIndex(context, spaceIdx, timeIdx));
         values.assignNaive(initialFluidStates_[globalDofIdx]);
 
-        if (enableSolvent)
+        if (Indices::solventIsActive())
             values[Indices::solventSaturationIdx] = solventSaturation_[globalDofIdx];
 
         if (enablePolymer)
@@ -2180,23 +2182,23 @@ private:
                           << "conservation as a post processing step. This is currently unsupported, "
                           << "i.e., energy conservation is always handled fully implicitly." << std::endl;
 
-            int numDeckPhases = FluidSystem::numActivePhases();
-            if (numDeckPhases < Indices::numPhases)
-                std::cerr << "WARNING: The number of active phases specified by the deck ("
-                          << numDeckPhases << ") is smaller than the number of compiled-in phases ("
-                          << Indices::numPhases << "). This usually results in a significant "
-                          << "performance degradation compared to using a specialized simulator."  << std::endl;
-            else if (numDeckPhases < Indices::numPhases)
-                throw std::runtime_error("The deck enables "+std::to_string(numDeckPhases)+" phases "
-                                         "while this simulator can only handle "+
-                                         std::to_string(Indices::numPhases)+".");
+//            int numDeckPhases = FluidSystem::numActivePhases();
+//            if (numDeckPhases < Indices::numPhases)
+//                std::cerr << "WARNING: The number of active phases specified by the deck ("
+//                          << numDeckPhases << ") is smaller than the number of compiled-in phases ("
+//                          << Indices::numPhases << "). This usually results in a significant "
+//                          << "performance degradation compared to using a specialized simulator."  << std::endl;
+//            else if (numDeckPhases < Indices::numPhases)
+//                throw std::runtime_error("The deck enables "+std::to_string(numDeckPhases)+" phases "
+//                                         "while this simulator can only handle "+
+//                                         std::to_string(Indices::numPhases)+".");
 
             // make sure that the correct phases are active
-            if (FluidSystem::phaseIsActive(oilPhaseIdx) && !Indices::oilEnabled)
+            if (FluidSystem::phaseIsActive(oilPhaseIdx) && !Indices::oilIsActive())
                 throw std::runtime_error("The deck enables oil, but this simulator cannot handle it.");
-            if (FluidSystem::phaseIsActive(gasPhaseIdx) && !Indices::gasEnabled)
+            if (FluidSystem::phaseIsActive(gasPhaseIdx) && !Indices::gasIsActive())
                 throw std::runtime_error("The deck enables gas, but this simulator cannot handle it.");
-            if (FluidSystem::phaseIsActive(waterPhaseIdx) && !Indices::waterEnabled)
+            if (FluidSystem::phaseIsActive(waterPhaseIdx) && !Indices::waterIsActive())
                 throw std::runtime_error("The deck enables water, but this simulator cannot handle it.");
             // the opposite cases should be fine (albeit a bit slower than what's possible)
         }
@@ -2630,6 +2632,13 @@ private:
         FluidSystem::initFromState(eclState, schedule);
    }
 
+   void initBlackoilIndices_()
+   {
+        const auto& simulator = this->simulator();
+        const auto& eclState = simulator.vanguard().eclState();
+        Indices::init(eclState.runspec().phases());
+   }
+
     void readInitialCondition_()
     {
         const auto& simulator = this->simulator();
@@ -2698,7 +2707,7 @@ private:
 
         size_t numElems = this->model().numGridDof();
         initialFluidStates_.resize(numElems);
-        if (enableSolvent)
+        if (Indices::solventIsActive())
             solventSaturation_.resize(numElems, 0.0);
 
         if (enablePolymer)
@@ -2725,13 +2734,13 @@ private:
             // the function and discard the unchanged result.  Do not index
             // into 'solventSaturation_' unless solvent is enabled.
             {
-                auto ssol = enableSolvent
+                auto ssol = Indices::solventIsActive()
                     ? eclWriter_->eclOutputModule().getSolventSaturation(elemIdx)
                     : Scalar(0);
 
                 processRestartSaturations_(elemFluidState, ssol);
 
-                if (enableSolvent)
+                if (Indices::solventIsActive())
                     solventSaturation_[elemIdx] = ssol;
             }
 
@@ -2803,7 +2812,7 @@ private:
             }
 
         }
-        if (enableSolvent) {
+        if (Indices::solventIsActive()) {
             if (solventSaturation < smallSaturationTolerance)
                 solventSaturation = 0.0;
 
@@ -2818,7 +2827,7 @@ private:
                 elemFluidState.setSaturation(phaseIdx, saturation);
             }
         }
-        if (enableSolvent) {
+        if (Indices::solventIsActive()) {
             solventSaturation = solventSaturation / sumSaturation;
         }
     }
@@ -2934,12 +2943,12 @@ private:
 
             if (FluidSystem::enableDissolvedGas())
                 dofFluidState.setRs(rsData[dofIdx]);
-            else if (Indices::gasEnabled && Indices::oilEnabled)
+            else if (Indices::gasIsActive() && Indices::oilIsActive())
                 dofFluidState.setRs(0.0);
 
             if (FluidSystem::enableVaporizedOil())
                 dofFluidState.setRv(rvData[dofIdx]);
-            else if (Indices::gasEnabled && Indices::oilEnabled)
+            else if (Indices::gasIsActive() && Indices::oilIsActive())
                 dofFluidState.setRv(0.0);
 
             //////
@@ -2966,7 +2975,7 @@ private:
         const auto& eclState = vanguard.eclState();
         size_t numDof = this->model().numGridDof();
 
-        if (enableSolvent) {
+        if (Indices::solventIsActive()) {
             if (eclState.fieldProps().has_double("SSOL"))
                 solventSaturation_ = eclState.fieldProps().get_double("SSOL");
             else
@@ -3149,7 +3158,7 @@ private:
                         compIdx = Indices::canonicalToActiveComponentIndex(waterCompIdx);
                         break;
                     case BCComponent::SOLVENT:
-                        if (!enableSolvent)
+                        if (!Indices::solventIsActive())
                             throw std::logic_error("solvent is disabled and you're trying to add solvent to BC");
 
                         compIdx = Indices::solventSaturationIdx;

@@ -94,6 +94,7 @@ class EclOutputBlackOilModule
     using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
     using Element = typename GridView::template Codim<0>::Entity;
     using ElementIterator = typename GridView::template Codim<0>::Iterator;
 
@@ -388,7 +389,7 @@ public:
             rstKeywords["RV"] = 0;
         }
 
-        if (getPropValue<TypeTag, Properties::EnableSolvent>())
+        if (Indices::solventIsActive())
             sSol_.resize(bufferSize, 0.0);
         if (getPropValue<TypeTag, Properties::EnablePolymer>())
             cPolymer_.resize(bufferSize, 0.0);

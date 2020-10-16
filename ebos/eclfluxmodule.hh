@@ -106,11 +106,11 @@ class EclTransExtensiveQuantities
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
     using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
     enum { dimWorld = GridView::dimensionworld };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
     enum { numPhases = FluidSystem::numPhases };
-    enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
     typedef Opm::MathToolbox<Evaluation> Toolbox;
@@ -438,7 +438,7 @@ protected:
                 volumeFlux_[phaseIdx] =
                     pressureDifference_[phaseIdx]*up.mobility(phaseIdx)*(-transModified/faceArea);
 
-                if (enableSolvent && phaseIdx == gasPhaseIdx)
+                if (Indices::solventIsActive() && phaseIdx == gasPhaseIdx)
                     asImp_().setSolventVolumeFlux( pressureDifference_[phaseIdx]*up.solventMobility()*(-transModified/faceArea));
             }
             else {
@@ -456,7 +456,7 @@ protected:
                     pressureDifference_[phaseIdx]*mob*(-transModified/faceArea);
 
                 // Solvent inflow is not yet supported
-                if (enableSolvent && phaseIdx == gasPhaseIdx)
+                if (Indices::solventIsActive() && phaseIdx == gasPhaseIdx)
                     asImp_().setSolventVolumeFlux(0.0);
             }
         }

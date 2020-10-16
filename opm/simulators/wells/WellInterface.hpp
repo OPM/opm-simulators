@@ -82,16 +82,16 @@ namespace Opm
         using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
         using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
         using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+        using Eval = GetPropType<TypeTag, Properties::Evaluation>;
+        using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
         static const int numEq = Indices::numEq;
-        typedef double Scalar;
 
         typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
         typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
         typedef Dune::BlockVector<VectorBlockType> BVector;
-        typedef DenseAd::Evaluation<double, /*size=*/numEq> Eval;
 
-        static const bool has_solvent = getPropValue<TypeTag, Properties::EnableSolvent>();
+        //static const bool has_solvent = getPropValue<TypeTag, Properties::EnableSolvent>();
         static const bool has_polymer = getPropValue<TypeTag, Properties::EnablePolymer>();
         static const bool has_energy = getPropValue<TypeTag, Properties::EnableEnergy>();
         static const bool has_temperature = getPropValue<TypeTag, Properties::EnableTemperature>();
@@ -109,14 +109,9 @@ namespace Opm
         // For the conversion between the surface volume rate and reservoir voidage rate
         using RateConverterType = RateConverter::
         SurfaceToReservoirVoidage<FluidSystem, std::vector<int> >;
-        static const bool compositionSwitchEnabled = Indices::gasEnabled;
-        using FluidState = Opm::BlackOilFluidState<Eval,
-                                                   FluidSystem,
-                                                   has_temperature,
-                                                   has_energy,
-                                                   compositionSwitchEnabled,
-                                                   has_brine,
-                                                   Indices::numPhases >;
+
+        typedef typename BlackOilIntensiveQuantities<TypeTag>::FluidState FluidState;
+
         /// Constructor
         WellInterface(const Well& well, const int time_step,
                       const ModelParameters& param,

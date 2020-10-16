@@ -166,6 +166,7 @@ class EclWriter
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
     using Element = typename GridView::template Codim<0>::Entity;
     using ElementIterator = typename GridView::template Codim<0>::Iterator;
 
@@ -174,7 +175,6 @@ class EclWriter
     typedef std::vector<Scalar> ScalarBuffer;
 
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
-    enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
 
 
 public:
@@ -396,7 +396,7 @@ public:
             {"SWAT", Opm::UnitSystem::measure::identity, static_cast<bool>(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))},
             {"SGAS", Opm::UnitSystem::measure::identity, static_cast<bool>(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))},
             {"TEMP" , Opm::UnitSystem::measure::temperature, enableEnergy},
-            {"SSOLVENT" , Opm::UnitSystem::measure::identity, enableSolvent},
+            {"SSOLVENT" , Opm::UnitSystem::measure::identity, Indices::solventIsActive()},
             {"RS", Opm::UnitSystem::measure::gas_oil_ratio, FluidSystem::enableDissolvedGas()},
             {"RV", Opm::UnitSystem::measure::oil_gas_ratio, FluidSystem::enableVaporizedOil()},
             {"SOMAX", Opm::UnitSystem::measure::identity, simulator_.problem().vapparsActive()},

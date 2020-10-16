@@ -22,6 +22,7 @@ option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
 set( USE_OPENMP_DEFAULT OFF ) # Use of OpenMP is considered experimental
 option(BUILD_FLOW "Build the production oriented flow simulator?" ON)
 option(BUILD_FLOW_BLACKOIL_ONLY "Build the production oriented flow simulator only supporting the blackoil model?" OFF)
+option(BUILD_FLOW_DYN "Build the flow simulator with dynamic indicies?" OFF)
 option(BUILD_FLOW_VARIANTS "Build the variants for flow by default?" OFF)
 option(BUILD_EBOS "Build the research oriented ebos simulator?" ON)
 option(BUILD_EBOS_EXTENSIONS "Build the variants for various extensions of ebos by default?" OFF)
@@ -292,6 +293,29 @@ opm_add_test(flow_blackoil_dunecpr
   EXE_NAME flow_blackoil_dunecpr
   DEPENDS opmsimulators
   LIBRARIES opmsimulators)
+
+if (NOT BUILD_FLOW_DYN)
+  set(FLOW_DYN_DEFAULT_ENABLE_IF "FALSE")
+else()
+  set(FLOW_DYN_DEFAULT_ENABLE_IF "TRUE")
+endif()
+
+# the production oriented general-purpose ECL simulator
+opm_add_test(flow_dyn
+  ONLY_COMPILE
+  ALWAYS_ENABLE
+  DEFAULT_ENABLE_IF ${FLOW_DYN_DEFAULT_ENABLE_IF}
+  DEPENDS opmsimulators
+  LIBRARIES opmsimulators
+  SOURCES
+  flow/flow.cpp
+  flow/flow_1.cpp
+  flow/flow_2.cpp
+  flow/flow_3.cpp
+  flow/flow_4.cpp
+  flow/flow_ebos_blackoil.cpp
+  $<TARGET_OBJECTS:moduleVersion>)
+target_compile_definitions(flow_dyn PRIVATE "FLOW_DYN")
 
 opm_add_test(flow_onephase
   ONLY_COMPILE

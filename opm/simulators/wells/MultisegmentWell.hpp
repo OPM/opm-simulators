@@ -48,7 +48,7 @@ namespace Opm
         /// the number of reservior equations
         using Base::numEq;
 
-        using Base::has_solvent;
+        //using Base::has_solvent;
         using Base::has_polymer;
         using Base::Water;
         using Base::Oil;
@@ -68,7 +68,7 @@ namespace Opm
         static constexpr int SPres = has_gas + has_water + 1;
 
         //  the number of well equations  TODO: it should have a more general strategy for it
-        static const int numWellEq = getPropValue<TypeTag, Properties::EnablePolymer>() ? numEq : numEq + 1;
+        static const int numWellEq = Indices::numWellEq;
 
         using typename Base::Scalar;
 
