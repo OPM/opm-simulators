@@ -513,7 +513,8 @@ void printParamList_(std::ostream& os, const std::list<std::string>& keyList, bo
 template <class TypeTag>
 void printUsage(const std::string& helpPreamble,
                 const std::string& errorMsg = "",
-                std::ostream& os = std::cerr)
+                std::ostream& os = std::cerr,
+                const bool showAll = false)
 {
     using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
 
@@ -532,12 +533,15 @@ void printUsage(const std::string& helpPreamble,
         pInfo.paramName = "h,--help";
         pInfo.usageString = "Print this help message and exit";
         printParamUsage_(os, pInfo);
+        pInfo.paramName = "-help-all";
+        pInfo.usageString = "Print all parameters, including obsolete, hidden and deprecated ones.";
+        printParamUsage_(os, pInfo);
     }
 
     auto paramIt = ParamsMeta::registry().begin();
     const auto& paramEndIt = ParamsMeta::registry().end();
     for (; paramIt != paramEndIt; ++paramIt) {
-        if (!paramIt->second.isHidden)
+        if (showAll || !paramIt->second.isHidden)
             printParamUsage_(os, paramIt->second);
     }
 }
@@ -691,6 +695,10 @@ std::string parseCommandLineOptions(int argc,
             if (std::string("-h") == argv[i]
                 || std::string("--help") == argv[i]) {
                 printUsage<TypeTag>(helpPreamble, /*errorMsg=*/"", std::cout);
+                return "Help called";
+            }
+            if (std::string("--help-all") == argv[i]) {
+                printUsage<TypeTag>(helpPreamble, /*errorMsg=*/"", std::cout, true);
                 return "Help called";
             }
         }
