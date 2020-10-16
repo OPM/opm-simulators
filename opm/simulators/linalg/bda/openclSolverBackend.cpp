@@ -44,8 +44,8 @@ using Opm::OpmLog;
 using Dune::Timer;
 
 template <unsigned int block_size>
-openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_, double tolerance_, unsigned int platformID_, unsigned int deviceID_, std::string ilu_reorder_strategy) : BdaSolver<block_size>(verbosity_, maxit_, tolerance_, platformID_, deviceID_) {
-    prec = new Preconditioner(ilu_reorder_strategy, verbosity_);
+openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_, double tolerance_, unsigned int platformID_, unsigned int deviceID_, ILUReorder opencl_ilu_reorder) : BdaSolver<block_size>(verbosity_, maxit_, tolerance_, platformID_, deviceID_) {
+    prec = new Preconditioner(opencl_ilu_reorder, verbosity_);
     wcontainer = new WContainer();
 }
 
@@ -730,7 +730,7 @@ SolverStatus openclSolverBackend<block_size>::solve_system(int N_, int nnz_, int
 
 
 #define INSTANTIATE_BDA_FUNCTIONS(n)                                                                              \
-template openclSolverBackend<n>::openclSolverBackend(int, int, double, unsigned int, unsigned int, std::string);  \
+template openclSolverBackend<n>::openclSolverBackend(int, int, double, unsigned int, unsigned int, ILUReorder);   \
 
 INSTANTIATE_BDA_FUNCTIONS(1);
 INSTANTIATE_BDA_FUNCTIONS(2);

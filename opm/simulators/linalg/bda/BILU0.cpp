@@ -35,17 +35,9 @@ namespace bda
     using Dune::Timer;
 
     template <unsigned int block_size>
-    BILU0<block_size>::BILU0(std::string ilu_reorder_strategy, int verbosity_) :
-        verbosity(verbosity_)
-    {
-        if (ilu_reorder_strategy.compare("level_scheduling") == 0) {
-            level_scheduling = true;
-        } else if (ilu_reorder_strategy.compare("graph_coloring") == 0) {
-            graph_coloring = true;
-        } else {
-            OPM_THROW(std::logic_error, "Error invalid argument for --ilu-reorder-strategy, usage: '--ilu-reorder-strategy=[level_scheduling|graph_coloring]'");
-        }
-    }
+    BILU0<block_size>::BILU0(ILUReorder opencl_ilu_reorder_, int verbosity_) :
+        verbosity(verbosity_), opencl_ilu_reorder(opencl_ilu_reorder_)
+    {}
 
     template <unsigned int block_size>
     BILU0<block_size>::~BILU0()
@@ -84,10 +76,10 @@ namespace bda
         rmat = std::make_shared<BlockedMatrix<block_size> >(mat->Nb, mat->nnzbs);
         LUmat = std::make_unique<BlockedMatrix<block_size> >(*rmat);
         std::ostringstream out;
-        if (level_scheduling) {
+        if (opencl_ilu_reorder == ILUReorder::LEVEL_SCHEDULING) {
             out << "BILU0 reordering strategy: " << "level_scheduling\n";
             findLevelScheduling(mat->colIndices, mat->rowPointers, CSCRowIndices, CSCColPointers, mat->Nb, &numColors, toOrder, fromOrder, rowsPerColor);
-        } else if (graph_coloring) {
+        } else if (opencl_ilu_reorder == ILUReorder::GRAPH_COLORING) {
             out << "BILU0 reordering strategy: " << "graph_coloring\n";
             findGraphColoring<block_size>(mat->colIndices, mat->rowPointers, CSCRowIndices, CSCColPointers, mat->Nb, mat->Nb, mat->Nb, &numColors, toOrder, fromOrder, rowsPerColor);
         } else {
@@ -325,7 +317,7 @@ namespace bda
 
 
 #define INSTANTIATE_BDA_FUNCTIONS(n)                                                     \
-template BILU0<n>::BILU0(std::string, int);                                              \
+template BILU0<n>::BILU0(ILUReorder, int);                                               \
 template BILU0<n>::~BILU0();                                                             \
 template bool BILU0<n>::init(BlockedMatrix<n>*);                                         \
 template bool BILU0<n>::create_preconditioner(BlockedMatrix<n>*);                        \

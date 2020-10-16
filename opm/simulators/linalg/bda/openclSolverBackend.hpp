@@ -23,6 +23,7 @@
 #include <opm/simulators/linalg/bda/opencl.hpp>
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 #include <opm/simulators/linalg/bda/BdaSolver.hpp>
+#include <opm/simulators/linalg/bda/ILUReorder.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 #include <opm/simulators/linalg/bda/WellContributionsOCLContainer.hpp>
 #include <opm/simulators/linalg/bda/BILU0.hpp>
@@ -178,8 +179,8 @@ public:
     /// \param[in] tolerance                  required relative tolerance for openclSolver
     /// \param[in] platformID                 the OpenCL platform to be used
     /// \param[in] deviceID                   the device to be used
-    /// \param[in] ilu_reorder_strategy       select either level_scheduling or graph_coloring, see BILU0.hpp for explanation
-    openclSolverBackend(int linear_solver_verbosity, int maxit, double tolerance, unsigned int platformID, unsigned int deviceID, std::string ilu_reorder_strategy);
+    /// \param[in] opencl_ilu_reorder         select either level_scheduling or graph_coloring, see BILU0.hpp for explanation
+    openclSolverBackend(int linear_solver_verbosity, int maxit, double tolerance, unsigned int platformID, unsigned int deviceID, ILUReorder opencl_ilu_reorder);
 
     /// Destroy a openclSolver, and free memory
     ~openclSolverBackend();
