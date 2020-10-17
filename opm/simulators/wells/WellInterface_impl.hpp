@@ -19,6 +19,12 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#if HAVE_MPI
+#include "mpi.h"
+#endif
+#include <fnmatch.h>
+#include <fmt/format.h>
+
 #include <opm/parser/eclipse/EclipseState/Schedule/ScheduleTypes.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
@@ -105,9 +111,35 @@ namespace Opm
                 wsolvent_ = well_ecl_.getSolventFraction();
             }
         }
+
+        {
+            bool debug_log = false;
+            if (!debug_log) {
+                const char * opm_well_debug = getenv("OPM_DEBUG_WELLS");
+                if (opm_well_debug) {
+                    int flags = 0;
+                    if (fnmatch(opm_well_debug, this->well_ecl_.name().c_str(), flags) == 0)
+                        debug_log = true;
+                }
+            }
+
+            if (debug_log) {
+                std::string debug_fname;
+                int mpi_rank = 0;
+#if HAVE_MPI
+                MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+#endif
+                debug_fname = fmt::format("well-debug-{}-{}", this->well_ecl_.name(), mpi_rank);
+                if (time_step == 0)
+                    this->debug_stream_ = std::make_shared<std::ofstream>( debug_fname.c_str() );
+                else
+                    this->debug_stream_ = std::make_shared<std::ofstream>( debug_fname.c_str() , std::ofstream::app);
+            }
+        }
     }
 
     template<typename TypeTag>
+
     void
     WellInterface<TypeTag>::
     updatePerforatedCell(std::vector<bool>& is_cell_perforated)
@@ -456,9 +488,52 @@ namespace Opm
 
     }
 
+    template <typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    debugControl(const std::string& name, double current_value, double limit, bool upper_limit) const {
+        if (!this->debug_stream_)
+            return;
+
+        if (upper_limit) {
+            if (limit > current_value) {
+                auto msg = fmt::format("{0} limit: current: {1} > limit: {2}  changing to {0} control\n",
+                                       name, current_value, limit);
+                *this->debug_stream_ << msg;
+            } else {
+                auto msg = fmt::format("{0} limit: current: {1} <= limit: {2}  {} constraint satisfied\n",
+                                       name, current_value, limit);
+                *this->debug_stream_ << msg;
+            }
+        } else {
+            if (limit < current_value) {
+                auto msg = fmt::format("{0} limit: current: {1} < limit: {2}  changing to {0} control\n",
+                                       name, current_value, limit);
+                *this->debug_stream_ << msg;
+            } else {
+                auto msg = fmt::format("{0} limit: current: {1} >= limit: {2}  {} constraint satisfied\n",
+                                       name, current_value, limit);
+                *this->debug_stream_ << msg;
+            }
+        }
+    }
 
 
+    template <typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    debugControls(const WellState& well_state) const {
+        if (!this->debug_stream_)
+            return;
 
+        std::string current_control;
+        if (this->well_ecl_.isInjector()) {
+            current_control = Well::InjectorCMode2String(well_state.currentInjectionControls()[this->index_of_well_]);
+        } else {
+            current_control = Well::ProducerCMode2String(well_state.currentProductionControls()[this->index_of_well_]);
+        }
+        *this->debug_stream_ << fmt::format("Well: {}  control: {}\n", this->well_ecl_.name(), current_control);
+    }
 
 
     template<typename TypeTag>
@@ -482,6 +557,7 @@ namespace Opm
         } else {
             from = Well::ProducerCMode2String(well_state.currentProductionControls()[index_of_well_]);
         }
+        this->debugControls(well_state);
 
         bool changed = false;
         if (iog == IndividualOrGroup::Individual) {
@@ -513,6 +589,7 @@ namespace Opm
             deferred_logger.info(ss.str());
             updateWellStateWithTarget(ebos_simulator, well_state, deferred_logger);
             updatePrimaryVariables(well_state, deferred_logger);
+            this->debugControls(well_state);
         }
 
         return changed;
@@ -1452,6 +1529,13 @@ namespace Opm
     }
 
 
+    template <typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    debugIndividualConstraints(const WellState& well_state) const {
+        if (!this->debug_fname)
+            return;
+    }
 
 
 
@@ -1549,6 +1633,8 @@ namespace Opm
             {
                 const double bhp = controls.bhp_limit;
                 double current_bhp = well_state.bhp()[well_index];
+                this->debugControl("BHP", current_bhp, bhp, true);
+
                 if (bhp > current_bhp) {
                     currentControl = Well::ProducerCMode::BHP;
                     return true;
@@ -1557,6 +1643,8 @@ namespace Opm
 
             if (controls.hasControl(Well::ProducerCMode::ORAT) && currentControl != Well::ProducerCMode::ORAT) {
                 double current_rate = -well_state.wellRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Liquid] ];
+                this->debugControl("ORAT", current_rate, controls.oil_rate);
+
                 if (controls.oil_rate < current_rate  ) {
                     currentControl = Well::ProducerCMode::ORAT;
                     return true;
@@ -1565,6 +1653,8 @@ namespace Opm
 
             if (controls.hasControl(Well::ProducerCMode::WRAT) && currentControl != Well::ProducerCMode::WRAT ) {
                 double current_rate = -well_state.wellRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Aqua] ];
+                this->debugControl("WRAT", current_rate, controls.water_rate);
+
                 if (controls.water_rate < current_rate  ) {
                     currentControl = Well::ProducerCMode::WRAT;
                     return true;
@@ -1573,6 +1663,8 @@ namespace Opm
 
             if (controls.hasControl(Well::ProducerCMode::GRAT) && currentControl != Well::ProducerCMode::GRAT ) {
                 double current_rate = -well_state.wellRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Vapour] ];
+                this->debugControl("GRAT", current_rate, controls.gas_rate);
+
                 if (controls.gas_rate < current_rate  ) {
                     currentControl = Well::ProducerCMode::GRAT;
                     return true;
@@ -1582,6 +1674,8 @@ namespace Opm
             if (controls.hasControl(Well::ProducerCMode::LRAT) && currentControl != Well::ProducerCMode::LRAT) {
                 double current_rate = -well_state.wellRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Liquid] ];
                 current_rate -= well_state.wellRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Aqua] ];
+                this->debugControl("LRAT", current_rate, controls.liquid_rate);
+
                 if (controls.liquid_rate < current_rate  ) {
                     currentControl = Well::ProducerCMode::LRAT;
                     return true;
@@ -1599,6 +1693,7 @@ namespace Opm
                 if( pu.phase_used[BlackoilPhases::Vapour] )
                     current_rate -= well_state.wellReservoirRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Vapour] ];
 
+                this->debugControl("RESV", current_rate, controls.resv_rate);
                 if (controls.prediction_mode && controls.resv_rate > current_rate) {
                     currentControl = Well::ProducerCMode::RESV;
                     return true;
@@ -1624,6 +1719,7 @@ namespace Opm
                         resv_rate += voidage_rates[p];
                     }
 
+                    this->debugControl("RESV", current_rate, resv_rate, true);
                     if (resv_rate < current_rate) {
                         currentControl = Well::ProducerCMode::RESV;
                         return true;

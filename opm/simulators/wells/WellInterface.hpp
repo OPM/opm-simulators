@@ -52,10 +52,14 @@
 #include <opm/material/densead/Math.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 
-#include <string>
-#include <memory>
-#include <vector>
+#include <iostream>
+#include <fstream>
+
 #include <cassert>
+#include <memory>
+#include <optional>
+#include <string>
+#include <vector>
 
 namespace Opm
 {
@@ -384,6 +388,8 @@ namespace Opm
 
         double wsolvent_;
 
+        mutable std::shared_ptr<std::ofstream> debug_stream_;
+
         const PhaseUsage& phaseUsage() const;
 
         int flowPhaseToEbosCompIdx( const int phaseIdx ) const;
@@ -503,6 +509,9 @@ namespace Opm
         // count the number of times an output log message is created in the productivity
         // index calculations
         int well_productivity_index_logger_counter_;
+        void debugControls(const WellState& well_state) const;
+        void debugControl(const std::string& name, double current_value, double limit, bool upper_limit = false) const;
+        void debugIndividualConstraints(const WellState& well_state) const;
 
         bool checkConstraints(WellState& well_state,
                               const Schedule& schedule,
@@ -618,7 +627,6 @@ namespace Opm
         bool can_obtain_bhp_with_thp_limit = true;
         // whether the well obey bhp limit when operated under thp limit
         bool obey_bhp_limit_with_thp_limit = true;
-
     };
 
 
