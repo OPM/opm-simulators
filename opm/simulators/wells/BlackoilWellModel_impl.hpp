@@ -2591,6 +2591,29 @@ namespace Opm {
         }
     }
 
+
+
+
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    assignWellGuideRates(data::Wells& wsrpt) const
+    {
+        for (const auto& well : this->wells_ecl_) {
+            auto xwPos = wsrpt.find(well.name());
+            if (xwPos == wsrpt.end()) { // No well results.  Unexpected.
+                continue;
+            }
+
+            xwPos->second.guide_rates = this->getGuideRateValues(well);
+        }
+    }
+
+
+
+
+
     template <typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
