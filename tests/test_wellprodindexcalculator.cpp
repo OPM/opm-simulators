@@ -30,17 +30,23 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
+#include <opm/parser/eclipse/Units/UnitSystem.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
 
 #include <cmath>
 #include <cstddef>
 #include <string>
+#include <vector>
 
 namespace {
+    double liquid_PI_unit()
+    {
+        return Opm::UnitSystem::newMETRIC().to_si(Opm::UnitSystem::measure::liquid_productivity_index, 1.0);
+    }
+
     double cp_rm3_per_db()
     {
-        return Opm::prefix::centi*Opm::unit::Poise * Opm::unit::cubic(Opm::unit::meter)
-            / (Opm::unit::day * Opm::unit::barsa);
+        return Opm::UnitSystem::newMETRIC().to_si(Opm::UnitSystem::measure::transmissibility, 1.0);
     }
 
     std::string drainRadDefaulted()
@@ -568,3 +574,193 @@ BOOST_AUTO_TEST_CASE(logarithmic_skin421_DifferentCF)
 }
 
 BOOST_AUTO_TEST_SUITE_END() // WellLevel
+
+// ===========================================================================
+
+BOOST_AUTO_TEST_SUITE(Re_Init_Connection_Level)
+
+BOOST_AUTO_TEST_CASE(allDefaulted_SameCF)
+{
+    auto well = createWell(drainRadDefaulted(), noSkinFactor_SameCF());
+    auto wpiCalc = Opm::WellProdIndexCalculator { well };
+
+    well.updateWellProductivityIndex(2.0);
+    const auto scalingFactor = well.getWellPIScalingFactor(1.0*liquid_PI_unit());
+
+    BOOST_CHECK_CLOSE(scalingFactor, 2.0, 1.0e-10);
+
+    std::vector<bool> scalingApplicable;
+    well.applyWellProdIndexScaling(scalingFactor, scalingApplicable);
+
+    wpiCalc.reInit(well);
+
+    BOOST_REQUIRE_EQUAL(wpiCalc.numConnections(), std::size_t{3});
+
+    const auto expectCF = 200*cp_rm3_per_db();
+    BOOST_CHECK_CLOSE(wpiCalc.connectionProdIndStandard(0, 1.0), 1.0 * expectCF, 1.0e-10);
+    BOOST_CHECK_CLOSE(wpiCalc.connectionProdIndStandard(1, 2.0), 2.0 * expectCF, 1.0e-10);
+    BOOST_CHECK_CLOSE(wpiCalc.connectionProdIndStandard(2, 4.0), 4.0 * expectCF, 1.0e-10);
+}
+
+BOOST_AUTO_TEST_CASE(allDefaulted_DifferentCF)
+{
+    auto well = createWell(drainRadDefaulted(), noSkinFactor_DifferentCF());
+    auto wpiCalc = Opm::WellProdIndexCalculator { well };
+
+    well.updateWellProductivityIndex(2.0);
+    const auto scalingFactor = well.getWellPIScalingFactor(1.0*liquid_PI_unit());
+
+    BOOST_CHECK_CLOSE(scalingFactor, 2.0, 1.0e-10);
+
+    std::vector<bool> scalingApplicable;
+    well.applyWellProdIndexScaling(scalingFactor, scalingApplicable);
+
+    wpiCalc.reInit(well);
+
+    BOOST_REQUIRE_EQUAL(wpiCalc.numConnections(), std::size_t{3});
+
+    const auto expectCF = 200*cp_rm3_per_db();
+    BOOST_CHECK_CLOSE(wpiCalc.connectionProdIndStandard(0, 2.0), expectCF, 1.0e-10);
+    BOOST_CHECK_CLOSE(wpiCalc.connectionProdIndStandard(1, 1.0), expectCF, 1.0e-10);
+    BOOST_CHECK_CLOSE(wpiCalc.connectionProdIndStandard(2, 0.5), expectCF, 1.0e-10);
+}
+
+BOOST_AUTO_TEST_CASE(defaultedDRad_Skin2_SameCF)
+{
+    auto well = createWell(drainRadDefaulted(), skin2_SameCF());
+    auto wpiCalc = Opm::WellProdIndexCalculator { well };
+
+    well.updateWellProductivityIndex(2.0);
+    const auto scalingFactor = well.getWellPIScalingFactor(1.0*liquid_PI_unit());
+
+    BOOST_CHECK_CLOSE(scalingFactor, 2.0, 1.0e-10);
+
+    std::vector<bool> scalingApplicable;
+    well.applyWellProdIndexScaling(scalingFactor, scalingApplicable);
+
+    wpiCalc.reInit(well);
+
+    BOOST_REQUIRE_EQUAL(wpiCalc.numConnections(), std::size_t{3});
+
+    const auto expectCF = 200*cp_rm3_per_db();
+    BOOST_CHECK_CLOSE(wpiCalc.connectionProdIndStandard(0, 1.0), 1.0 * expectCF, 1.0e-10);
+    BOOST_CHECK_CLOSE(wpiCalc.connectionProdIndStandard(1, 2.0), 2.0 * expectCF, 1.0e-10);
+    BOOST_CHECK_CLOSE(wpiCalc.connectionProdIndStandard(2, 4.0), 4.0 * expectCF, 1.0e-10);
+}
+
+BOOST_AUTO_TEST_CASE(defaultedDRad_skin421_DifferentCF)
+{
+    auto well = createWell(drainRadDefaulted(), skin421_DifferentCF());
+    auto wpiCalc = Opm::WellProdIndexCalculator { well };
+
+    well.updateWellProductivityIndex(2.0);
+    const auto scalingFactor = well.getWellPIScalingFactor(1.0*liquid_PI_unit());
+
+    BOOST_CHECK_CLOSE(scalingFactor, 2.0, 1.0e-10);
+
+    std::vector<bool> scalingApplicable;
+    well.applyWellProdIndexScaling(scalingFactor, scalingApplicable);
+
+    wpiCalc.reInit(well);
+
+    BOOST_REQUIRE_EQUAL(wpiCalc.numConnections(), std::size_t{3});
+
+    const auto expectCF = 200*cp_rm3_per_db();
+    BOOST_CHECK_CLOSE(wpiCalc.connectionProdIndStandard(0, 2.0), 1.0 * expectCF, 1.0e-10);
+    BOOST_CHECK_CLOSE(wpiCalc.connectionProdIndStandard(1, 1.0), 1.0 * expectCF, 1.0e-10);
+    BOOST_CHECK_CLOSE(wpiCalc.connectionProdIndStandard(2, 0.5), 1.0 * expectCF, 1.0e-10);
+}
+
+BOOST_AUTO_TEST_CASE(logarithmic_SameCF)
+{
+    auto well = createWell(explicitDrainRad(), noSkinFactor_SameCF());
+    auto wpiCalc = Opm::WellProdIndexCalculator { well };
+
+    well.updateWellProductivityIndex(2.0);
+    const auto scalingFactor = well.getWellPIScalingFactor(1.0*liquid_PI_unit());
+
+    BOOST_CHECK_CLOSE(scalingFactor, 2.0, 1.0e-10);
+
+    std::vector<bool> scalingApplicable;
+    well.applyWellProdIndexScaling(scalingFactor, scalingApplicable);
+
+    wpiCalc.reInit(well);
+
+    BOOST_REQUIRE_EQUAL(wpiCalc.numConnections(), std::size_t{3});
+
+    const auto expectCF = 200*cp_rm3_per_db();
+    BOOST_CHECK_CLOSE(wpiCalc.connectionProdIndStandard(0, 1.0), 0.5 * expectCF, 1.0e-10);
+    BOOST_CHECK_CLOSE(wpiCalc.connectionProdIndStandard(1, 2.0), 1.0 * expectCF, 1.0e-10);
+    BOOST_CHECK_CLOSE(wpiCalc.connectionProdIndStandard(2, 4.0), 2.0 * expectCF, 1.0e-10);
+}
+
+BOOST_AUTO_TEST_CASE(logarithmic_DifferentCF)
+{
+    auto well = createWell(explicitDrainRad(), noSkinFactor_DifferentCF());
+    auto wpiCalc = Opm::WellProdIndexCalculator { well };
+
+    well.updateWellProductivityIndex(2.0);
+    const auto scalingFactor = well.getWellPIScalingFactor(1.0*liquid_PI_unit());
+
+    BOOST_CHECK_CLOSE(scalingFactor, 2.0, 1.0e-10);
+
+    std::vector<bool> scalingApplicable;
+    well.applyWellProdIndexScaling(scalingFactor, scalingApplicable);
+
+    wpiCalc.reInit(well);
+
+    BOOST_REQUIRE_EQUAL(wpiCalc.numConnections(), std::size_t{3});
+
+    const auto expectCF = 200*cp_rm3_per_db();
+    BOOST_CHECK_CLOSE(wpiCalc.connectionProdIndStandard(0, 1.0), 0.25 * expectCF, 1.0e-10);
+    BOOST_CHECK_CLOSE(wpiCalc.connectionProdIndStandard(1, 2.0), 1.0  * expectCF, 1.0e-10);
+    BOOST_CHECK_CLOSE(wpiCalc.connectionProdIndStandard(2, 4.0), 4.0  * expectCF, 1.0e-10);
+}
+
+BOOST_AUTO_TEST_CASE(logarithmic_Skin2_SameCF)
+{
+    auto well = createWell(explicitDrainRad(), skin2_SameCF());
+    auto wpiCalc = Opm::WellProdIndexCalculator { well };
+
+    well.updateWellProductivityIndex(2.0);
+    const auto scalingFactor = well.getWellPIScalingFactor(1.0*liquid_PI_unit());
+
+    BOOST_CHECK_CLOSE(scalingFactor, 2.0, 1.0e-10);
+
+    std::vector<bool> scalingApplicable;
+    well.applyWellProdIndexScaling(scalingFactor, scalingApplicable);
+
+    wpiCalc.reInit(well);
+
+    BOOST_REQUIRE_EQUAL(wpiCalc.numConnections(), std::size_t{3});
+
+    const auto expectCF = 200*cp_rm3_per_db();
+    BOOST_CHECK_CLOSE(wpiCalc.connectionProdIndStandard(0, 1.0), 0.75 * expectCF, 1.0e-10);
+    BOOST_CHECK_CLOSE(wpiCalc.connectionProdIndStandard(1, 2.0), 1.5  * expectCF, 1.0e-10);
+    BOOST_CHECK_CLOSE(wpiCalc.connectionProdIndStandard(2, 4.0), 3.0  * expectCF, 1.0e-10);
+}
+
+BOOST_AUTO_TEST_CASE(logarithmic_skin421_DifferentCF)
+{
+    auto well = createWell(explicitDrainRad(), skin421_DifferentCF());
+    auto wpiCalc = Opm::WellProdIndexCalculator { well };
+
+    well.updateWellProductivityIndex(2.0);
+    const auto scalingFactor = well.getWellPIScalingFactor(1.0*liquid_PI_unit());
+
+    BOOST_CHECK_CLOSE(scalingFactor, 2.0, 1.0e-10);
+
+    std::vector<bool> scalingApplicable;
+    well.applyWellProdIndexScaling(scalingFactor, scalingApplicable);
+
+    wpiCalc.reInit(well);
+
+    BOOST_REQUIRE_EQUAL(wpiCalc.numConnections(), std::size_t{3});
+
+    const auto expectCF = 200*cp_rm3_per_db();
+    BOOST_CHECK_CLOSE(wpiCalc.connectionProdIndStandard(0, 1.0), (5.0 / 6.0) * 0.5 * expectCF, 1.0e-10);
+    BOOST_CHECK_CLOSE(wpiCalc.connectionProdIndStandard(1, 2.0), 1.5         * 1.0 * expectCF, 1.0e-10);
+    BOOST_CHECK_CLOSE(wpiCalc.connectionProdIndStandard(2, 4.0), (8.0 / 3.0) * 2.0 * expectCF, 1.0e-10);
+}
+
+BOOST_AUTO_TEST_SUITE_END() // Re_Init_Connection_Level
