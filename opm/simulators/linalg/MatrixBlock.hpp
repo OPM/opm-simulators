@@ -543,7 +543,7 @@ namespace Detail
     struct Inverter
     {
         template <typename K>
-        void operator()(const K *matrix, K *inverse)
+        void operator()(const K *matrix [[maybe_unused]], K *inverse [[maybe_unused]])
         {
             throw std::logic_error("Not implemented");
         }
