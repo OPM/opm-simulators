@@ -125,24 +125,24 @@ namespace Opm
 #endif
             parameters_.template init<TypeTag>();
             prm_ = setupPropertyTree<TypeTag>(parameters_);
-            const auto& gridForConn = simulator_.vanguard().grid();
 #if HAVE_CUDA || HAVE_OPENCL
-            std::string gpu_mode = EWOMS_GET_PARAM(TypeTag, std::string, GpuMode);
-            int platformID = EWOMS_GET_PARAM(TypeTag, int, OpenclPlatformId);
-            int deviceID = EWOMS_GET_PARAM(TypeTag, int, BdaDeviceId);
-            if (gridForConn.comm().size() > 1 && gpu_mode.compare("none") != 0) {
-                if (on_io_rank) {
-                    OpmLog::warning("Warning cannot use GPU with MPI, GPU is disabled");
+            {
+                std::string gpu_mode = EWOMS_GET_PARAM(TypeTag, std::string, GpuMode);
+                if ((simulator_.vanguard().grid().comm().size() > 1) && (gpu_mode != "none")) {
+                    if (on_io_rank) {
+                        OpmLog::warning("Cannot use GPU with MPI, GPU is disabled");
+                    }
+                    gpu_mode = "none";
                 }
-                gpu_mode = "none";
+                const int platformID = EWOMS_GET_PARAM(TypeTag, int, OpenclPlatformId);
+                const int deviceID = EWOMS_GET_PARAM(TypeTag, int, BdaDeviceId);
+                const int maxit = EWOMS_GET_PARAM(TypeTag, int, LinearSolverMaxIter);
+                const double tolerance = EWOMS_GET_PARAM(TypeTag, double, LinearSolverReduction);
+                const int linear_solver_verbosity = parameters_.linear_solver_verbosity_;
+                bdaBridge.reset(new BdaBridge<Matrix, Vector, block_size>(gpu_mode, linear_solver_verbosity, maxit, tolerance, platformID, deviceID));
             }
-            const int maxit = EWOMS_GET_PARAM(TypeTag, int, LinearSolverMaxIter);
-            const double tolerance = EWOMS_GET_PARAM(TypeTag, double, LinearSolverReduction);
-            const int linear_solver_verbosity = parameters_.linear_solver_verbosity_;
-            bdaBridge.reset(new BdaBridge<Matrix, Vector, block_size>(gpu_mode, linear_solver_verbosity, maxit, tolerance, platformID, deviceID));
 #else
-            const std::string gpu_mode = EWOMS_GET_PARAM(TypeTag, std::string, GpuMode);
-            if (gpu_mode.compare("none") != 0) {
+            if (EWOMS_GET_PARAM(TypeTag, std::string, GpuMode) != "none") {
                 OPM_THROW(std::logic_error,"Error cannot use GPU solver since neither CUDA nor OpenCL were found by cmake");
             }
 #endif
