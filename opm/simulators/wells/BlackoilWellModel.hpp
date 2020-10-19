@@ -283,6 +283,9 @@ namespace Opm {
 
             void initializeWellProdIndCalculators();
             void initializeWellPerfData();
+            void initializeWellState(const int           timeStepIdx,
+                                     const int           globalNumWells,
+                                     const SummaryState& summaryState);
 
             // create the well container
             std::vector<WellInterfacePtr > createWellContainer(const int time_step);

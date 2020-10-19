@@ -239,49 +239,15 @@ namespace Opm {
         wells_ecl_ = getLocalNonshutWells(timeStepIdx, globalNumWells);
 
         this->initializeWellProdIndCalculators();
-        initializeWellPerfData();
+        // The well state initialize bhp with the cell pressure in the top cell.
+        // We must therefore provide it with updated cell pressures
+        this->initializeWellPerfData();
+        this->initializeWellState(timeStepIdx, globalNumWells, summaryState);
 
         // Wells are active if they are active wells on at least
         // one process.
         wells_active_ = localWellsActive() ? 1 : 0;
         wells_active_ = grid.comm().max(wells_active_);
-
-        // The well state initialize bhp with the cell pressure in the top cell.
-        // We must therefore provide it with updated cell pressures
-        size_t nc = local_num_cells_;
-        std::vector<double> cellPressures(nc, 0.0);
-        ElementContext elemCtx(ebosSimulator_);
-        const auto& gridView = ebosSimulator_.vanguard().gridView();
-        const auto& elemEndIt = gridView.template end</*codim=*/0>();
-        for (auto elemIt = gridView.template begin</*codim=*/0>();
-             elemIt != elemEndIt;
-             ++elemIt)
-        {
-            const auto& elem = *elemIt;
-            if (elem.partitionType() != Dune::InteriorEntity) {
-                continue;
-            }
-            elemCtx.updatePrimaryStencil(elem);
-            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-
-            const unsigned cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-            const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-            const auto& fs = intQuants.fluidState();
-            // copy of get perfpressure in Standard well
-            // exept for value
-            double perf_pressure = 0.0;
-            if (Indices::oilEnabled) {
-                perf_pressure = fs.pressure(FluidSystem::oilPhaseIdx).value();
-            } else {
-                if (Indices::waterEnabled) {
-                    perf_pressure = fs.pressure(FluidSystem::waterPhaseIdx).value();
-                } else {
-                    perf_pressure = fs.pressure(FluidSystem::gasPhaseIdx).value();
-                }
-            }
-            cellPressures[cellIdx] = perf_pressure;
-        }
-        well_state_.init(cellPressures, schedule(), wells_ecl_, timeStepIdx, &previous_well_state_, phase_usage_, well_perf_data_, summaryState, globalNumWells);
 
         // handling MS well related
         if (param_.use_multisegment_well_&& anyMSWellOpenLocal()) { // if we use MultisegmentWell model
@@ -650,6 +616,51 @@ namespace Opm {
             }
             ++well_index;
         }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    initializeWellState(const int           timeStepIdx,
+                        const int           globalNumWells,
+                        const SummaryState& summaryState)
+    {
+        std::vector<double> cellPressures(this->local_num_cells_, 0.0);
+        ElementContext elemCtx(ebosSimulator_);
+
+        const auto& gridView = ebosSimulator_.vanguard().gridView();
+        const auto& elemEndIt = gridView.template end</*codim=*/0>();
+        for (auto elemIt = gridView.template begin</*codim=*/0>();
+             elemIt != elemEndIt;
+             ++elemIt)
+        {
+            if (elemIt->partitionType() != Dune::InteriorEntity) {
+                continue;
+            }
+
+            elemCtx.updatePrimaryStencil(*elemIt);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
+            const auto& fs = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0).fluidState();
+
+            // copy of get perfpressure in Standard well except for value
+            double& perf_pressure = cellPressures[elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0)];
+            if (Indices::oilEnabled) {
+                perf_pressure = fs.pressure(FluidSystem::oilPhaseIdx).value();
+            } else if (Indices::waterEnabled) {
+                perf_pressure = fs.pressure(FluidSystem::waterPhaseIdx).value();
+            } else {
+                perf_pressure = fs.pressure(FluidSystem::gasPhaseIdx).value();
+            }
+        }
+
+        well_state_.init(cellPressures, schedule(), wells_ecl_, timeStepIdx,
+                         &previous_well_state_, phase_usage_, well_perf_data_,
+                         summaryState, globalNumWells);
     }
 
 
