@@ -27,12 +27,13 @@
 #include <opm/simulators/wells/PerforationData.hpp>
 
 #include <array>
-#include <map>
-#include <memory>
-#include <string>
-#include <vector>
 #include <cassert>
 #include <cstddef>
+#include <map>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 namespace Opm
 {
@@ -93,6 +94,54 @@ namespace Opm
                 // after init().
                 perfrates_.resize(connpos, 0.0);
                 perfpress_.resize(connpos, -1e100);
+            }
+        }
+
+        /// Special purpose method to support dynamically rescaling a well's
+        /// CTFs through WELPI.
+        ///
+        /// \param[in] well_index Process-local linear index of single well.
+        ///    Must be in the range 0..numWells()-1.
+        ///
+        /// \param[in] well_perf_data New perforation data.  Only
+        ///    PerforationData::connection_transmissibility_factor actually
+        ///    used (overwrites existing internal values).
+        void resetConnectionTransFactors(const int well_index,
+                                         const std::vector<PerforationData>& well_perf_data)
+        {
+            if (this->well_perf_data_[well_index].size() != well_perf_data.size()) {
+                throw std::invalid_argument {
+                    "Size mismatch for perforation data in well "
+                    + std::to_string(well_index)
+                };
+            }
+
+            auto connID = std::size_t{0};
+            auto dst = this->well_perf_data_[well_index].begin();
+            for (const auto& src : well_perf_data) {
+                if (dst->cell_index != src.cell_index) {
+                    throw std::invalid_argument {
+                        "Cell index mismatch in connection "
+                        + std::to_string(connID)
+                        + " of well "
+                        + std::to_string(well_index)
+                    };
+                }
+
+                if (dst->satnum_id != src.satnum_id) {
+                    throw std::invalid_argument {
+                        "Saturation function table mismatch in connection "
+                        + std::to_string(connID)
+                        + " of well "
+                        + std::to_string(well_index)
+                    };
+                }
+
+                dst->connection_transmissibility_factor =
+                    src.connection_transmissibility_factor;
+
+                ++dst;
+                ++connID;
             }
         }
 

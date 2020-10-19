@@ -64,6 +64,7 @@ namespace Opm
         using BaseType :: wellMap;
         using BaseType :: numWells;
         using BaseType :: numPhases;
+        using BaseType :: resetConnectionTransFactors;
 
         /// Allocate and initialize if wells is non-null.  Also tries
         /// to give useful initial values to the bhp(), wellRates()
