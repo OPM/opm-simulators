@@ -58,7 +58,6 @@ if(OPENCL_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BlockedMatrix.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BILU0.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/Reorder.cpp)
-  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/ILUReorder.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/openclSolverBackend.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BdaBridge.cpp)
@@ -169,11 +168,13 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/cuda_header.hpp
   opm/simulators/linalg/bda/cusparseSolverBackend.hpp
   opm/simulators/linalg/bda/Reorder.hpp
+  opm/simulators/linalg/bda/ILUReorder.hpp
   opm/simulators/linalg/bda/opencl.hpp
   opm/simulators/linalg/bda/openclKernels.hpp
   opm/simulators/linalg/bda/openclSolverBackend.hpp
   opm/simulators/linalg/bda/MultisegmentWellContribution.hpp
   opm/simulators/linalg/bda/WellContributions.hpp
+  opm/simulators/linalg/bda/WellContributionsOCLContainer.hpp
   opm/simulators/linalg/amgcpr.hh
   opm/simulators/linalg/twolevelmethodcpr.hh
   opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp
