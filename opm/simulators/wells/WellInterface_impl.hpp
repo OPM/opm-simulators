@@ -2317,33 +2317,12 @@ namespace Opm
         // Calculate the rates that follow from the current primary variables.
         std::vector<double> well_q_s = computeCurrentWellRates(ebosSimulator, deferred_logger);
 
-        // We must keep in mind that component and phase indices are different here.
-        // Therefore we set up a mapping to make the last code block simpler.
-        const auto& pu = phaseUsage();
-        const int wpi = Water;
-        const int opi = Oil;
-        const int gpi = Gas;
-        const unsigned int wci = FluidSystem::waterCompIdx;
-        const unsigned int oci = FluidSystem::oilCompIdx;
-        const unsigned int gci = FluidSystem::gasCompIdx;
-        std::pair<int, unsigned int> phase_comp[3] = { {wpi, wci},
-                                                       {opi, oci},
-                                                       {gpi, gci} };
-        std::vector<int> phase_to_comp(number_of_phases_, -1);
-        for (const auto& pc : phase_comp) {
-            if (pu.phase_used[pc.first]) {
-                const int phase_idx = pu.phase_pos[pc.first];
-                const int comp_idx = Indices::canonicalToActiveComponentIndex(pc.second);
-                phase_to_comp[phase_idx] = comp_idx;
-            }
-        }
-
         // Set the currently-zero phase flows to be nonzero in proportion to well_q_s.
         const double initial_nonzero_rate = well_state.wellRates()[index_of_well_ * number_of_phases_ + nonzero_rate_index];
-        const int comp_idx_nz = phase_to_comp[nonzero_rate_index];
+        const int comp_idx_nz = flowPhaseToEbosCompIdx(nonzero_rate_index);
         for (int p = 0; p < number_of_phases_; ++p) {
             if (p != nonzero_rate_index) {
-                const int comp_idx = phase_to_comp[p];
+                const int comp_idx = flowPhaseToEbosCompIdx(p);
                 double& rate = well_state.wellRates()[index_of_well_ * number_of_phases_ + p];
                 rate = (initial_nonzero_rate/well_q_s[comp_idx_nz]) * (well_q_s[comp_idx]);
             }

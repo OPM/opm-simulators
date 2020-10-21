@@ -1282,8 +1282,11 @@ namespace Opm {
         }
         node_pressures_ = WellGroupHelpers::computeNetworkPressures(network, well_state_, *(vfp_properties_->getProd()));
 
-        // Set the thp limits of wells (producers only, TODO address injectors).
+        // Set the thp limits of wells
         for (auto& well : well_container_) {
+            // Producers only, since we so far only support the
+            // "extended" network model (properties defined by
+            // BRANPROP and NODEPROP) which only applies to producers.
             if (well->isProducer()) {
                 const auto it = node_pressures_.find(well->wellEcl().groupName());
                 if (it != node_pressures_.end()) {
