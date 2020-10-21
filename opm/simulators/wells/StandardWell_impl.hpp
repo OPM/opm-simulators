@@ -1441,7 +1441,7 @@ namespace Opm
             }
             case Well::ProducerCMode::THP:
             {
-                well_state.thp()[well_index] = controls.thp_limit;
+                well_state.thp()[well_index] = this->getTHPConstraint(summaryState);
                 gliftDebug(
                     "computing BHP from THP to update well state",
                     deferred_logger);
@@ -2900,13 +2900,13 @@ namespace Opm
             const auto& controls = well.injectionControls(summaryState);
             const double vfp_ref_depth = vfp_properties_->getInj()->getTable(controls.vfp_table_number)->getDatumDepth();
             const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
-            return vfp_properties_->getInj()->bhp(controls.vfp_table_number, aqua, liquid, vapour, controls.thp_limit) - dp;
+            return vfp_properties_->getInj()->bhp(controls.vfp_table_number, aqua, liquid, vapour, this->getTHPConstraint(summaryState)) - dp;
          }
          else if (this->isProducer()) {
              const auto& controls = well.productionControls(summaryState);
              const double vfp_ref_depth = vfp_properties_->getProd()->getTable(controls.vfp_table_number)->getDatumDepth();
              const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
-             return vfp_properties_->getProd()->bhp(controls.vfp_table_number, aqua, liquid, vapour, controls.thp_limit, getALQ(well_state)) - dp;
+             return vfp_properties_->getProd()->bhp(controls.vfp_table_number, aqua, liquid, vapour, this->getTHPConstraint(summaryState), getALQ(well_state)) - dp;
          }
          else {
              OPM_DEFLOG_THROW(std::logic_error, "Expected INJECTOR or PRODUCER well", deferred_logger);
@@ -3585,9 +3585,9 @@ namespace Opm
     std::optional<double>
     StandardWell<TypeTag>::
     computeBhpAtThpLimitProdWithAlq(const Simulator& ebos_simulator,
-                             const SummaryState& summary_state,
-                                   DeferredLogger& deferred_logger,
-                                   double alq_value) const
+                                    const SummaryState& summary_state,
+                                    DeferredLogger& deferred_logger,
+                                    double alq_value) const
     {
         // Given a VFP function returning bhp as a function of phase
         // rates and thp:
@@ -3633,11 +3633,12 @@ namespace Opm
         const auto& table = *(vfp_properties_->getProd()->getTable(controls.vfp_table_number));
         const double vfp_ref_depth = table.getDatumDepth();
         const double rho = perf_densities_[0]; // Use the density at the top perforation.
+        const double thp_limit = this->getTHPConstraint(summary_state);
         const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
-        auto fbhp = [this, &controls, dp, alq_value](const std::vector<double>& rates) {
+        auto fbhp = [this, &controls, thp_limit, dp, alq_value](const std::vector<double>& rates) {
             assert(rates.size() == 3);
             return this->vfp_properties_->getProd()
-            ->bhp(controls.vfp_table_number, rates[Water], rates[Oil], rates[Gas], controls.thp_limit, alq_value) - dp;
+            ->bhp(controls.vfp_table_number, rates[Water], rates[Oil], rates[Gas], thp_limit, alq_value) - dp;
         };
 
         // Make the flo() function.
@@ -3838,11 +3839,12 @@ namespace Opm
         const auto& table = *(vfp_properties_->getInj()->getTable(controls.vfp_table_number));
         const double vfp_ref_depth = table.getDatumDepth();
         const double rho = perf_densities_[0]; // Use the density at the top perforation.
+        const double thp_limit = this->getTHPConstraint(summary_state);
         const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
-        auto fbhp = [this, &controls, dp](const std::vector<double>& rates) {
+        auto fbhp = [this, &controls, thp_limit, dp](const std::vector<double>& rates) {
             assert(rates.size() == 3);
             return this->vfp_properties_->getInj()
-                    ->bhp(controls.vfp_table_number, rates[Water], rates[Oil], rates[Gas], controls.thp_limit) - dp;
+                    ->bhp(controls.vfp_table_number, rates[Water], rates[Oil], rates[Gas], thp_limit) - dp;
         };
 
         // Make the flo() function.
@@ -4025,6 +4027,40 @@ namespace Opm
         } while (it < max_iter);
 
         return converged;
+    }
+
+
+    template<typename TypeTag>
+    std::vector<double>
+    StandardWell<TypeTag>::
+    computeCurrentWellRates(const Simulator& ebosSimulator,
+                            DeferredLogger& deferred_logger) const
+    {
+        // Calculate the rates that follow from the current primary variables.
+        std::vector<EvalWell> well_q_s(num_components_, {numWellEq_ + numEq, 0.});
+        const EvalWell& bhp = getBhp();
+        const bool allow_cf = getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebosSimulator);
+        for (int perf = 0; perf < number_of_perforations_; ++perf) {
+            const int cell_idx = well_cells_[perf];
+            const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
+            std::vector<EvalWell> mob(num_components_, {numWellEq_ + numEq, 0.});
+            getMobility(ebosSimulator, perf, mob, deferred_logger);
+            std::vector<EvalWell> cq_s(num_components_, {numWellEq_ + numEq, 0.});
+            double perf_dis_gas_rate = 0.;
+            double perf_vap_oil_rate = 0.;
+            double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(intQuants,  cell_idx);
+            const double Tw = well_index_[perf] * trans_mult;
+            computePerfRate(intQuants, mob, bhp, Tw, perf, allow_cf,
+                            cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
+            for (int comp = 0; comp < num_components_; ++comp) {
+                well_q_s[comp] += cq_s[comp];
+            }
+        }
+        std::vector<double> well_q_s_noderiv(well_q_s.size());
+        for (int comp = 0; comp < num_components_; ++comp) {
+            well_q_s_noderiv[comp] = well_q_s[comp].value();
+        }
+        return well_q_s_noderiv;
     }
 
 

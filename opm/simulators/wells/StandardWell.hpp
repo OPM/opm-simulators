@@ -296,6 +296,9 @@ namespace Opm
         using Base::phaseUsage;
         using Base::vfp_properties_;
 
+        virtual std::vector<double> computeCurrentWellRates(const Simulator& ebosSimulator,
+                                                            DeferredLogger& deferred_logger) const override;
+
     protected:
 
         // protected functions from the Base class

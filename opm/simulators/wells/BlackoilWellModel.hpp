@@ -196,8 +196,8 @@ namespace Opm {
             {
                 auto grp_nwrk_values = ::Opm::data::GroupAndNetworkValues{};
 
-                this->assignGroupValues(reportStepIdx, sched,
-                                        grp_nwrk_values.groupData);
+                this->assignGroupValues(reportStepIdx, sched, grp_nwrk_values.groupData);
+                this->assignNodeValues(reportStepIdx, sched, grp_nwrk_values.nodeData);
 
                 return grp_nwrk_values;
             }
@@ -307,6 +307,7 @@ namespace Opm {
             bool initial_step_;
             bool report_step_starts_;
             bool glift_debug = false;
+            bool alternative_well_rate_init_;
             std::unique_ptr<RateConverterType> rateConverter_;
             std::unique_ptr<VFPProperties<VFPInjProperties,VFPProdProperties>> vfp_properties_;
 
@@ -314,6 +315,8 @@ namespace Opm {
 
             WellTestState wellTestState_;
             std::unique_ptr<GuideRate> guideRate_;
+
+            std::map<std::string, double> node_pressures_; // Storing network pressures for output.
 
             // used to better efficiency of calcuation
             mutable BVector scaleAddRes_;
@@ -355,6 +358,7 @@ namespace Opm {
             void updateWellControls(Opm::DeferredLogger& deferred_logger, const bool checkGroupControls);
 
             void updateAndCommunicateGroupData();
+            void updateNetworkPressures();
 
             // setting the well_solutions_ based on well_state.
             void updatePrimaryVariables(Opm::DeferredLogger& deferred_logger);
@@ -451,6 +455,10 @@ namespace Opm {
             void assignGroupValues(const int                               reportStepIdx,
                                    const Schedule&                         sched,
                                    std::map<std::string, data::GroupData>& gvalues) const;
+
+            void assignNodeValues(const int                              reportStepIdx,
+                                  const Schedule&                        sched,
+                                  std::map<std::string, data::NodeData>& gvalues) const;
 
             std::unordered_map<std::string, data::GroupGuideRates>
             calculateAllGroupGuiderates(const int reportStepIdx, const Schedule& sched) const;

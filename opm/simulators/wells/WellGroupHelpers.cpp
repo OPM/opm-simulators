@@ -22,6 +22,7 @@
 #include <opm/simulators/wells/TargetCalculator.hpp>
 
 #include <algorithm>
+#include <stack>
 #include <vector>
 
 namespace {
@@ -584,6 +585,120 @@ namespace WellGroupHelpers
 
         wellState.setCurrentInjectionREINRates(group.name(), rein);
     }
+
+
+
+
+    std::map<std::string, double>
+    computeNetworkPressures(const Opm::Network::ExtNetwork& network,
+                            const WellStateFullyImplicitBlackoil& well_state,
+                            const VFPProdProperties& vfp_prod_props)
+    {
+        // TODO: Only dealing with production networks for now.
+
+        if (!network.active()) {
+            return {};
+        }
+
+        // Fixed pressure nodes of the network are the roots of trees.
+        // Leaf nodes must correspond to groups in the group structure.
+        // Let us first find all leaf nodes of the network. We also
+        // create a vector of all nodes, ordered so that a child is
+        // always after its parent.
+        std::stack<std::string> children;
+        std::set<std::string> leaf_nodes;
+        std::vector<std::string> root_to_child_nodes;
+        children.push(network.root().name());
+        while (!children.empty()) {
+            const auto node = children.top();
+            children.pop();
+            root_to_child_nodes.push_back(node);
+            auto branches = network.downtree_branches(node);
+            if (branches.empty()) {
+                leaf_nodes.insert(node);
+            }
+            for (const auto& branch : branches) {
+                children.push(branch.downtree_node());
+            }
+        }
+        assert(children.empty());
+
+        // Starting with the leaf nodes of the network, get the flow rates
+        // from the corresponding groups.
+        std::map<std::string, std::vector<double>> node_inflows;
+        for (const auto& node : leaf_nodes) {
+            node_inflows[node] = well_state.currentProductionGroupRates(node);
+        }
+
+        // Accumulate in the network, towards the roots. Note that a
+        // root (i.e. fixed pressure node) can still be contributing
+        // flow towards other nodes in the network, i.e.  a node is
+        // the root of a subtree.
+        auto child_to_root_nodes = root_to_child_nodes;
+        std::reverse(child_to_root_nodes.begin(), child_to_root_nodes.end());
+        for (const auto& node : child_to_root_nodes) {
+            const auto upbranch = network.uptree_branch(node);
+            if (upbranch) {
+                // Add downbranch rates to upbranch.
+                std::vector<double>& up = node_inflows[(*upbranch).uptree_node()];
+                const std::vector<double>& down = node_inflows[node];
+                if (up.empty()) {
+                    up = down;
+                } else {
+                    assert (up.size() == down.size());
+                    for (size_t ii = 0; ii < up.size(); ++ii) {
+                        up[ii] += down[ii];
+                    }
+                }
+            }
+        }
+
+        // Going the other way (from roots to leafs), calculate the pressure
+        // at each node using VFP tables and rates.
+        std::map<std::string, double> node_pressures;
+        for (const auto& node : root_to_child_nodes) {
+            auto press = network.node(node).terminal_pressure();
+            if (press) {
+                node_pressures[node] = *press;
+            } else {
+                const auto upbranch = network.uptree_branch(node);
+                assert(upbranch);
+                const double up_press = node_pressures[(*upbranch).uptree_node()];
+                const auto vfp_table = (*upbranch).vfp_table();
+                if (vfp_table) {
+                    // The rates are here positive, but the VFP code expects the
+                    // convention that production rates are negative, so we must
+                    // take a copy and flip signs.
+                    auto rates = node_inflows[node];
+                    for (auto& r : rates) { r *= -1.0; }
+                    assert(rates.size() == 3);
+                    const double alq = 0.0; // TODO: Do not ignore ALQ
+                    node_pressures[node] = vfp_prod_props.bhp(*vfp_table,
+                                                              rates[BlackoilPhases::Aqua],
+                                                              rates[BlackoilPhases::Liquid],
+                                                              rates[BlackoilPhases::Vapour],
+                                                              up_press,
+                                                              alq);
+#define EXTRA_DEBUG_NETWORK 0
+#if EXTRA_DEBUG_NETWORK
+                    std::ostringstream oss;
+                    oss << "parent: " << (*upbranch).uptree_node() << "  child: " << node
+                        << "  rates = [ " << rates[0]*86400 << ", " << rates[1]*86400 << ", " << rates[2]*86400 << " ]"
+                        << "  p(parent) = " << up_press/1e5 << "  p(child) = " << node_pressures[node]/1e5 << std::endl;
+                    OpmLog::debug(oss.str());
+#endif
+                } else {
+                    // Table number specified as 9999 in the deck, no pressure loss.
+                    node_pressures[node] = up_press;
+                }
+            }
+        }
+
+        return node_pressures;
+    }
+
+
+
 
     GuideRate::RateVector
     getRateVector(const WellStateFullyImplicitBlackoil& well_state, const PhaseUsage& pu, const std::string& name)

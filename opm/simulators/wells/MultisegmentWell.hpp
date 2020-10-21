@@ -176,6 +176,9 @@ namespace Opm
 
         int numberOfPerforations() const;
 
+        virtual std::vector<double> computeCurrentWellRates(const Simulator& ebosSimulator,
+                                                            DeferredLogger& deferred_logger) const override;
+
     protected:
         int number_segments_;
 
@@ -333,6 +336,7 @@ namespace Opm
 
         void computePerfRatePressure(const IntensiveQuantities& int_quants,
                                      const std::vector<EvalWell>& mob_perfcells,
+                                     const double Tw,
                                      const int seg,
                                      const int perf,
                                      const EvalWell& segment_pressure,
