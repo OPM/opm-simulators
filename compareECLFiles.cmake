@@ -436,6 +436,29 @@ add_test_compareECLFiles(CASENAME multregt_model2
                          REL_TOL ${rel_tol}
                          DIR model2)
 
+# test tran_in_edit has the same trans as the comment one
+# they are just in the EDIT section
+#add_test_compareECLFiles(CASENAME notran_edit
+#                         FILENAME 10_NOTRAN_IN_EDIT
+#                         SIMULATOR flow
+#                         ABS_TOL ${abs_tol}
+#                         REL_TOL ${rel_tol}
+#                         DIR model2)
+
+add_test_compareECLFiles(CASENAME tran_in_edit
+                         FILENAME 10_TRAN_IN_EDIT
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2)
+
+add_test_compareECLFiles(CASENAME maxmin_tran_in_edit
+                         FILENAME 10_MAX_MIN_VALUE
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2)
+
 add_test_compareECLFiles(CASENAME udq_actionx
                          FILENAME UDQ_ACTIONX
                          SIMULATOR flow
@@ -733,10 +756,10 @@ add_test_compareECLFiles(CASENAME model6_msw
                          DIR model6)
 
 add_test_compareECLFiles(CASENAME wsegsicd
-			  FILENAME TEST_WSEGSICD
-			  SIMULATOR flow
-			  ABS_TOL ${abs_tol}
-			  REL_TOL ${rel_tol})
+                         FILENAME TEST_WSEGSICD
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol})
 
 add_test_compareECLFiles(CASENAME nnc
                          FILENAME NNC_AND_EDITNNC
@@ -895,4 +918,20 @@ if(MPI_FOUND)
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${rel_tol_parallel}
                                        TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
+
+add_test_compare_parallel_simulation(CASENAME tran_in_edit
+                                     FILENAME 10_TRAN_IN_EDIT
+                                     SIMULATOR flow
+                                     ABS_TOL ${abs_tol}
+                                     REL_TOL ${rel_tol}
+                                     DIR model2)
+
+
+add_test_compare_parallel_simulation(CASENAME maxmin_tran_in_edit
+                                     FILENAME 10_MAX_MIN_VALUE
+                                     SIMULATOR flow
+                                     ABS_TOL ${abs_tol}
+                                     REL_TOL ${rel_tol}
+                                     DIR model2
+                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 endif()
