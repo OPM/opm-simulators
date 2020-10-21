@@ -200,7 +200,7 @@ opm_add_test(test_gatherconvergencereport
   CONDITION
     MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
   DRIVER_ARGS
-    5 ${PROJECT_BINARY_DIR}
+    4 ${PROJECT_BINARY_DIR}
 )
 
 opm_add_test(test_gatherdeferredlogger
@@ -211,7 +211,7 @@ opm_add_test(test_gatherdeferredlogger
   CONDITION
     MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
   DRIVER_ARGS
-    5 ${PROJECT_BINARY_DIR}
+    4 ${PROJECT_BINARY_DIR}
 )
 
 include(OpmBashCompletion)
