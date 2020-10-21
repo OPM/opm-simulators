@@ -197,7 +197,7 @@ namespace Opm {
                 auto grp_nwrk_values = ::Opm::data::GroupAndNetworkValues{};
 
                 this->assignGroupValues(reportStepIdx, sched, grp_nwrk_values.groupData);
-                this->assignNodeValues(reportStepIdx, sched, grp_nwrk_values.nodeData);
+                this->assignNodeValues(grp_nwrk_values.nodeData);
 
                 return grp_nwrk_values;
             }
@@ -456,9 +456,7 @@ namespace Opm {
                                    const Schedule&                         sched,
                                    std::map<std::string, data::GroupData>& gvalues) const;
 
-            void assignNodeValues(const int                              reportStepIdx,
-                                  const Schedule&                        sched,
-                                  std::map<std::string, data::NodeData>& gvalues) const;
+            void assignNodeValues(std::map<std::string, data::NodeData>& gvalues) const;
 
             std::unordered_map<std::string, data::GroupGuideRates>
             calculateAllGroupGuiderates(const int reportStepIdx, const Schedule& sched) const;
