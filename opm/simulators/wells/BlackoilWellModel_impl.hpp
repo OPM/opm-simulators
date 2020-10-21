@@ -2549,9 +2549,7 @@ namespace Opm {
     template <typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    assignNodeValues(const int                              reportStepIdx,
-                     const Schedule&                        sched,
-                     std::map<std::string, data::NodeData>& nodevalues) const
+    assignNodeValues(std::map<std::string, data::NodeData>& nodevalues) const
     {
         nodevalues.clear();
         for (const auto& [node, pressure] : node_pressures_) {
