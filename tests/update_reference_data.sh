@@ -135,6 +135,7 @@ tests[bc_lab]="flow bc_lab BC_LAB"
 tests[pinch_multz_all]="flow pinch PINCH_MULTZ_ALL"
 tests[pinch_multz_all_barrier]="flow pinch PINCH_MULTZ_ALL_BARRIER"
 tests[model6_msw]="flow model6 1_MSW_MODEL6"
+tests[norne_reperf]="flow norne NORNE_ATW2013_B1H_RE-PERF"
 
 changed_tests=""
 
