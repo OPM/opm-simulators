@@ -29,7 +29,7 @@ then
     ignore_extra_kw="-x"
 fi
 
-echo "=== Executing comparison for EGRID, INIT, UNRST and RFT files if these exists in refrece folder ==="
+echo "=== Executing comparison for EGRID, INIT, UNRST and RFT files if these exists in reference folder ==="
 ${COMPARE_ECL_COMMAND} ${ignore_extra_kw} ${INPUT_DATA_PATH}/opm-simulation-reference/${EXE_NAME}/${FILENAME} ${RESULT_PATH}/${FILENAME} ${ABS_TOL} ${REL_TOL}
 if [ $? -ne 0 ]
 then
