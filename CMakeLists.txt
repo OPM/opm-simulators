@@ -229,9 +229,14 @@ set_property(TARGET moduleVersion PROPERTY POSITION_INDEPENDENT_CODE ON)
 # but this is not exposed in a super-build.
 add_dependencies(moduleVersion opmsimulators)
 
-add_library(flow_libblackoil OBJECT flow/flow_ebos_blackoil.cpp)
+set(FLOW_TGTS)
+foreach(OBJ blackoil brine energy foam gasoil oilwater
+            oilwater_brine oilwater_polymer
+            oilwater_polymer_injectivity polymer solvent)
+  add_library(flow_lib${OBJ} OBJECT flow/flow_ebos_${OBJ}.cpp)
+  list(APPEND FLOW_TGTS $<TARGET_OBJECTS:flow_lib${OBJ}>)
+endforeach()
 set_property(TARGET flow_libblackoil PROPERTY POSITION_INDEPENDENT_CODE ON)
-add_dependencies(flow_libblackoil opmsimulators)
 
 # the production oriented general-purpose ECL simulator
 opm_add_test(flow
@@ -242,18 +247,8 @@ opm_add_test(flow
   LIBRARIES opmsimulators
   SOURCES
   flow/flow.cpp
-  flow/flow_ebos_gasoil.cpp
-  flow/flow_ebos_oilwater.cpp
-  flow/flow_ebos_polymer.cpp
-  flow/flow_ebos_foam.cpp
-  flow/flow_ebos_brine.cpp
-  flow/flow_ebos_oilwater_brine.cpp
-  flow/flow_ebos_solvent.cpp
-  flow/flow_ebos_energy.cpp
-  flow/flow_ebos_oilwater_polymer.cpp
-  flow/flow_ebos_oilwater_polymer_injectivity.cpp
+  ${FLOW_TGTS}
   $<TARGET_OBJECTS:moduleVersion>
-  $<TARGET_OBJECTS:flow_libblackoil>
   )
 
 
@@ -272,7 +267,7 @@ opm_add_test(flow_blackoil
   LIBRARIES opmsimulators
   SOURCES
   flow/flow.cpp
-  flow/flow_ebos_blackoil.cpp
+  $<TARGET_OBJECTS:flow_libblackoil>
   $<TARGET_OBJECTS:moduleVersion>)
 target_compile_definitions(flow_blackoil PRIVATE "FLOW_BLACKOIL_ONLY")
 
