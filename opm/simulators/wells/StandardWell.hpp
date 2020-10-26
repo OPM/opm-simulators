@@ -91,24 +91,6 @@ namespace Opm
         static const int numStaticWellEq = numWellConservationEq + numWellControlEq;
 
         // the positions of the primary variables for StandardWell
-        // the first one is the weighted total rate (WQ_t), the second and the third ones are F_w and F_g,
-        // which represent the fraction of Water and Gas based on the weighted total rate, the last one is BHP.
-        // correspondingly, we have four well equations for blackoil model, the first three are mass
-        // converstation equations, and the last one is the well control equation.
-        // primary variables related to other components, will be before the Bhp and after F_g.
-        // well control equation is always the last well equation.
-        // TODO: in the current implementation, we use the well rate as the first primary variables for injectors,
-        // instead of G_t.
-//        static const bool gasoil = numEq == 2 &gasoil? -1000: & (Indices::compositionSwitchIdx >= 0);
-        static const int WQTotal = 0;
-        static const int WFrac =  1;
-        static const int GFrac = 2;
-        static const int SFrac = 3;
-#warning TODO make a dynamic maping
-        // the index for Bhp in primary variables and also the index of well control equation
-        // they both will be the last one in their respective system.
-        // TODO: we should have indices for the well equations and well primary variables separately
-        static const int Bhp = numStaticWellEq - numWellControlEq;
 
         using typename Base::Scalar;
 
@@ -155,7 +137,8 @@ namespace Opm
                      const int first_perf_index,
                      const std::vector<PerforationData>& perf_data);
 
-        virtual void init(const PhaseUsage* phase_usage_arg,
+        virtual void init(const Phases& phases,
+                          const PhaseUsage* phase_usage_arg,
                           const std::vector<double>& depth_arg,
                           const double gravity_arg,
                           const int num_cells) override;
@@ -303,6 +286,7 @@ namespace Opm
         using Base::scalingFactor;
         using Base::scaleProductivityIndex;
         using Base::mostStrictBhpFromBhpLimits;
+        using Base::wellIndices;
 
         // protected member variables from the Base class
         using Base::current_step_;
@@ -536,12 +520,12 @@ namespace Opm
 
         // calculate a relaxation factor to avoid overshoot of the fractions for producers
         // which might result in negative rates
-        static double relaxationFactorFractionsProducer(const std::vector<double>& primary_variables,
-                                                        const BVectorWell& dwells);
+        double relaxationFactorFractionsProducer(const std::vector<double>& primary_variables,
+                                                        const BVectorWell& dwells) const;
 
         // calculate a relaxation factor to avoid overshoot of total rates
-        static double relaxationFactorRate(const std::vector<double>& primary_variables,
-                                           const BVectorWell& dwells);
+        double relaxationFactorRate(const std::vector<double>& primary_variables,
+                                           const BVectorWell& dwells) const;
 
         virtual void wellTestingPhysical(const Simulator& simulator, const std::vector<double>& B_avg,
                                          const double simulation_time, const int report_step,

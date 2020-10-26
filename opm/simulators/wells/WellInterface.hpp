@@ -40,6 +40,7 @@
 #include <opm/simulators/wells/WellHelpers.hpp>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/simulators/wells/WellIndices.hpp>
 #include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
 
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
@@ -145,7 +146,8 @@ namespace Opm
 
         void setGuideRate(const GuideRate* guide_rate_arg);
 
-        virtual void init(const PhaseUsage* phase_usage_arg,
+        virtual void init(const Phases& phases,
+                          const PhaseUsage* phase_usage_arg,
                           const std::vector<double>& depth_arg,
                           const double gravity_arg,
                           const int num_cells);
@@ -286,6 +288,8 @@ namespace Opm
 
     protected:
 
+        WellIndices well_indices_;
+
         // to indicate a invalid completion
         static const int INVALIDCOMPLETION = INT_MAX;
 
@@ -378,6 +382,8 @@ namespace Opm
         bool wellIsStopped_;
 
         double wsolvent_;
+
+        const WellIndices& wellIndices() const;
 
         const PhaseUsage& phaseUsage() const;
 

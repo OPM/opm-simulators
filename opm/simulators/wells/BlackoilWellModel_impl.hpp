@@ -338,6 +338,7 @@ namespace Opm {
         well_state_.disableGliftOptimization();
         const int reportStepIdx = ebosSimulator_.episodeIndex();
         const double simulationTime = ebosSimulator_.time();
+        const Opm::Phases& phases = ebosSimulator_.vanguard().eclState().runspec().phases();
 
         int exception_thrown = 0;
         try {
@@ -351,7 +352,7 @@ namespace Opm {
             // TODO: to see whether we can postpone of the intialization of the well containers to
             // optimize the usage of the following several member variables
             for (auto& well : well_container_) {
-                well->init(&phase_usage_, depth_, gravity_, local_num_cells_);
+                well->init(phases, &phase_usage_, depth_, gravity_, local_num_cells_);
             }
 
             // update the updated cell flag
@@ -419,6 +420,8 @@ namespace Opm {
     void
     BlackoilWellModel<TypeTag>::wellTesting(const int timeStepIdx, const double simulationTime, Opm::DeferredLogger& deferred_logger) {
         const auto& wtest_config = schedule().wtestConfig(timeStepIdx);
+        const Opm::Phases& phases = ebosSimulator_.vanguard().eclState().runspec().phases();
+
         if (wtest_config.size() != 0) { // there is a WTEST request
 
             // average B factors are required for the convergence checking of well equations
@@ -435,7 +438,7 @@ namespace Opm {
                 WellInterfacePtr well = createWellForWellTest(well_name, timeStepIdx, deferred_logger);
 
                 // some preparation before the well can be used
-                well->init(&phase_usage_, depth_, gravity_, local_num_cells_);
+                well->init(phases, &phase_usage_, depth_, gravity_, local_num_cells_);
                 const Well& wellEcl = schedule().getWell(well_name, timeStepIdx);
                 double well_efficiency_factor = wellEcl.getEfficiencyFactor();
                 WellGroupHelpers::accumulateGroupEfficiencyFactor(schedule().getGroup(wellEcl.groupName(), timeStepIdx), schedule(), timeStepIdx, well_efficiency_factor);
@@ -1520,7 +1523,7 @@ namespace Opm {
                 B += 1 / fs.invB(phaseIdx).value();
             }
             if (has_solvent_) {
-                auto& B  = B_avg[solventSaturationIdx];
+                auto& B  = B_avg[Indices::activeSolventSaturationIdx()];
                 B += 1 / intQuants.solventInverseFormationVolumeFactor().value();
             }
         }

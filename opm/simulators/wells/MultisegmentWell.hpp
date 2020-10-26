@@ -62,11 +62,6 @@ namespace Opm
         static constexpr bool has_gas = (Indices::compositionSwitchIdx >= 0);
         static constexpr bool has_water = (Indices::waterSaturationIdx >= 0);
 
-        static constexpr int GTotal = 0;
-        static constexpr int WFrac = has_water ? 1: -1000;
-        static constexpr int GFrac = has_gas ? has_water + 1 : -1000;
-        static constexpr int SPres = has_gas + has_water + 1;
-
         //  the number of well equations  TODO: it should have a more general strategy for it
         static const int numWellEq = Indices::numWellEq;
 
@@ -107,7 +102,8 @@ namespace Opm
                          const int first_perf_index,
                          const std::vector<PerforationData>& perf_data);
 
-        virtual void init(const PhaseUsage* phase_usage_arg,
+        virtual void init(const Phases& phases,
+                          const PhaseUsage* phase_usage_arg,
                           const std::vector<double>& depth_arg,
                           const double gravity_arg,
                           const int num_cells) override;
@@ -216,6 +212,7 @@ namespace Opm
         using Base::ebosCompIdxToFlowCompIdx;
         using Base::getAllowCrossFlow;
         using Base::scalingFactor;
+        using Base::wellIndices;
         using Base::wellIsStopped_;
 
 

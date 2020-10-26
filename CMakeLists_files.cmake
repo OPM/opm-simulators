@@ -238,6 +238,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/MSWellHelpers.hpp
   opm/simulators/wells/BlackoilWellModel.hpp
   opm/simulators/wells/BlackoilWellModel_impl.hpp
+  opm/simulators/wells/WellIndices.hpp
   )
 
 list (APPEND EXAMPLE_SOURCE_FILES

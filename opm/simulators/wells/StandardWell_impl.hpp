@@ -59,12 +59,13 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    init(const PhaseUsage* phase_usage_arg,
+    init(const Phases& phases,
+         const PhaseUsage* phase_usage_arg,
          const std::vector<double>& depth_arg,
          const double gravity_arg,
          const int num_cells)
     {
-        Base::init(phase_usage_arg, depth_arg, gravity_arg, num_cells);
+        Base::init(phases, phase_usage_arg, depth_arg, gravity_arg, num_cells);
 
         perf_depth_.resize(number_of_perforations_, 0.);
         for (int perf = 0; perf < number_of_perforations_; ++perf) {
@@ -164,7 +165,7 @@ namespace Opm
     StandardWell<TypeTag>::
     getBhp() const
     {
-        return primary_variables_evaluation_[Bhp];
+        return primary_variables_evaluation_[wellIndices().activePressureIdx()];
     }
 
 
@@ -176,6 +177,7 @@ namespace Opm
     StandardWell<TypeTag>::
     getWQTotal() const
     {
+        const int WQTotal = wellIndices().activeTotalRateIdx();
         return primary_variables_evaluation_[WQTotal];
     }
 
@@ -190,7 +192,7 @@ namespace Opm
     {
         // Note: currently, the WQTotal definition is still depends on Injector/Producer.
         assert(comp_idx < num_components_);
-
+        const int WQTotal = wellIndices().activeTotalRateIdx();
         if (this->isInjector()) { // only single phase injection
             double inj_frac = 0.0;
             switch (this->wellEcl().injectorType()) {
@@ -257,27 +259,33 @@ namespace Opm
         }
 
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx)) {
+            const int WFrac = wellIndices().activeWaterFractionIdx();
             return primary_variables_evaluation_[WFrac];
         }
 
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx)) {
+            const int GFrac = wellIndices().activeGasFractionIdx();
             return primary_variables_evaluation_[GFrac];
         }
 
         if (Indices::solventIsActive() && compIdx == (unsigned)contiSolventEqIdx) {
+            const int SFrac = wellIndices().activeSolventFractionIdx();
             return primary_variables_evaluation_[SFrac];
         }
 
         // Oil fraction
         EvalWell well_fraction(numWellEq_ + numEq, 1.0);
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            const int WFrac = wellIndices().activeWaterFractionIdx();
             well_fraction -= primary_variables_evaluation_[WFrac];
         }
 
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            const int GFrac = wellIndices().activeGasFractionIdx();
             well_fraction -= primary_variables_evaluation_[GFrac];
         }
         if (Indices::solventIsActive()) {
+            const int SFrac = wellIndices().activeSolventFractionIdx();
             well_fraction -= primary_variables_evaluation_[SFrac];
         }
         return well_fraction;
@@ -378,6 +386,7 @@ namespace Opm
         EvalWell drawdown = pressure - well_pressure;
 
         if (this->has_polymermw && this->isInjector()) {
+            const int Bhp = wellIndices().activePressureIdx();
             const int pskin_index = Bhp + 1 + number_of_perforations_ + perf;
             const EvalWell& skin_pressure = primary_variables_evaluation_[pskin_index];
             drawdown += skin_pressure;
@@ -846,6 +855,7 @@ namespace Opm
 
         // using control_eq to update the matrix and residuals
         // TODO: we should use a different index system for the well equations
+        const int Bhp = wellIndices().activePressureIdx();
         resWell_[0][Bhp] = control_eq.value();
         for (int pv_idx = 0; pv_idx < numWellEq_; ++pv_idx) {
             invDuneD_[0][0][Bhp][pv_idx] = control_eq.derivative(pv_idx + numEq);
@@ -958,9 +968,9 @@ namespace Opm
         const double relaxation_factor_fractions = (this->isProducer()) ?
                                          relaxationFactorFractionsProducer(old_primary_variables, dwells)
                                        : 1.0;
-
         // update the second and third well variable (The flux fractions)
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            const int WFrac = wellIndices().activeWaterFractionIdx();
             const int sign2 = dwells[0][WFrac] > 0 ? 1: -1;
             const double dx2_limited = sign2 * std::min(std::abs(dwells[0][WFrac] * relaxation_factor_fractions), dFLimit);
             // primary_variables_[WFrac] = old_primary_variables[WFrac] - dx2_limited;
@@ -968,12 +978,14 @@ namespace Opm
         }
 
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            const int GFrac = wellIndices().activeGasFractionIdx();
             const int sign3 = dwells[0][GFrac] > 0 ? 1: -1;
             const double dx3_limited = sign3 * std::min(std::abs(dwells[0][GFrac] * relaxation_factor_fractions), dFLimit);
             primary_variables_[GFrac] = old_primary_variables[GFrac] - dx3_limited;
         }
 
         if (Indices::solventIsActive()) {
+            const int SFrac = wellIndices().activeSolventFractionIdx();
             const int sign4 = dwells[0][SFrac] > 0 ? 1: -1;
             const double dx4_limited = sign4 * std::min(std::abs(dwells[0][SFrac]) * relaxation_factor_fractions, dFLimit);
             primary_variables_[SFrac] = old_primary_variables[SFrac] - dx4_limited;
@@ -982,11 +994,13 @@ namespace Opm
         processFractions();
 
         // updating the total rates Q_t
+        const int WQTotal = wellIndices().activeTotalRateIdx();
         const double relaxation_factor_rate = relaxationFactorRate(old_primary_variables, dwells);
         primary_variables_[WQTotal] = old_primary_variables[WQTotal] - dwells[0][WQTotal] * relaxation_factor_rate;
 
         // updating the bottom hole pressure
         {
+            const int Bhp = wellIndices().activePressureIdx();
             const double dBHPLimit = param_.dbhp_max_rel_;
             const int sign1 = dwells[0][Bhp] > 0 ? 1: -1;
             const double dx1_limited = sign1 * std::min(std::abs(dwells[0][Bhp]), std::abs(old_primary_variables[Bhp]) * dBHPLimit);
@@ -1014,6 +1028,7 @@ namespace Opm
     updateExtraPrimaryVariables(const BVectorWell& dwells) const
     {
         // for the water velocity and skin pressure
+        const int Bhp = wellIndices().activePressureIdx();
         if (this->has_polymermw && this->isInjector()) {
             for (int perf = 0; perf < number_of_perforations_; ++perf) {
                 const int wat_vel_index = Bhp + 1 + perf;
@@ -1044,17 +1059,20 @@ namespace Opm
         F[pu.phase_pos[Oil]] = 1.0;
 
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            const int WFrac = wellIndices().activeWaterFractionIdx();
             F[pu.phase_pos[Water]] = primary_variables_[WFrac];
             F[pu.phase_pos[Oil]] -= F[pu.phase_pos[Water]];
         }
 
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            const int GFrac = wellIndices().activeGasFractionIdx();
             F[pu.phase_pos[Gas]] = primary_variables_[GFrac];
             F[pu.phase_pos[Oil]] -= F[pu.phase_pos[Gas]];
         }
 
         double F_solvent = 0.0;
         if (Indices::solventIsActive()) {
+            const int SFrac = wellIndices().activeSolventFractionIdx();
             F_solvent = primary_variables_[SFrac];
             F[pu.phase_pos[Oil]] -= F_solvent;
         }
@@ -1099,12 +1117,15 @@ namespace Opm
         }
 
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            const int WFrac = wellIndices().activeWaterFractionIdx();
             primary_variables_[WFrac] = F[pu.phase_pos[Water]];
         }
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            const int GFrac = wellIndices().activeGasFractionIdx();
             primary_variables_[GFrac] = F[pu.phase_pos[Gas]];
         }
         if(Indices::solventIsActive()) {
+            const int SFrac = wellIndices().activeSolventFractionIdx();
             primary_variables_[SFrac] = F_solvent;
         }
     }
@@ -1126,6 +1147,7 @@ namespace Opm
         F[oil_pos] = 1.0;
 
         if ( FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) ) {
+            const int WFrac = wellIndices().activeWaterFractionIdx();
             const int water_pos = pu.phase_pos[Water];
             F[water_pos] = primary_variables_[WFrac];
             F[oil_pos] -= F[water_pos];
@@ -1133,12 +1155,14 @@ namespace Opm
 
         if ( FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) ) {
             const int gas_pos = pu.phase_pos[Gas];
+            const int GFrac = wellIndices().activeGasFractionIdx();
             F[gas_pos] = primary_variables_[GFrac];
             F[oil_pos] -= F[gas_pos];
         }
 
         double F_solvent = 0.0;
         if (Indices::solventIsActive()) {
+            const int SFrac = wellIndices().activeSolventFractionIdx();
             F_solvent = primary_variables_[SFrac];
             F[oil_pos] -= F_solvent;
         }
@@ -1162,10 +1186,12 @@ namespace Opm
             F[pu.phase_pos[Gas]] += F_solvent;
         }
 
+        const int Bhp = wellIndices().activePressureIdx();
         well_state.bhp()[index_of_well_] = primary_variables_[Bhp];
 
         // calculate the phase rates based on the primary variables
         // for producers, this is not a problem, while not sure for injectors here
+        const int WQTotal = wellIndices().activeTotalRateIdx();
         if (this->isProducer()) {
             const double g_total = primary_variables_[WQTotal];
             for (int p = 0; p < number_of_phases_; ++p) {
@@ -2777,6 +2803,7 @@ namespace Opm
 
         // Not: for the moment, the first primary variable for the injectors is not G_total. The injection rate
         // under surface condition is used here
+        const int WQTotal = wellIndices().activeTotalRateIdx();
         if (this->isInjector()) {
             switch (this->wellEcl().injectorType()) {
             case InjectorType::WATER:
@@ -2802,12 +2829,15 @@ namespace Opm
 
         if (std::abs(total_well_rate) > 0.) {
             if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                const int WFrac = wellIndices().activeWaterFractionIdx();
                 primary_variables_[WFrac] = scalingFactor(pu.phase_pos[Water]) * well_state.wellRates()[np*well_index + pu.phase_pos[Water]] / total_well_rate;
             }
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                const int GFrac = wellIndices().activeGasFractionIdx();
                 primary_variables_[GFrac] = scalingFactor(pu.phase_pos[Gas]) * (well_state.wellRates()[np*well_index + pu.phase_pos[Gas]] - well_state.solventWellRate(well_index)) / total_well_rate ;
             }
             if (Indices::solventIsActive()) {
+                const int SFrac = wellIndices().activeSolventFractionIdx();
                 primary_variables_[SFrac] = scalingFactor(pu.phase_pos[Gas]) * well_state.solventWellRate(well_index) / total_well_rate ;
             }
         } else { // total_well_rate == 0
@@ -2815,6 +2845,7 @@ namespace Opm
                 auto phase = well_ecl_.getInjectionProperties().injectorType;
                 // only single phase injection handled
                 if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                    const int WFrac = wellIndices().activeWaterFractionIdx();
                     if (phase == InjectorType::WATER) {
                         primary_variables_[WFrac] = 1.0;
                     } else {
@@ -2823,9 +2854,11 @@ namespace Opm
                 }
 
                 if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                    const int GFrac = wellIndices().activeGasFractionIdx();
                     if (phase == InjectorType::GAS) {
                         primary_variables_[GFrac] = 1.0 - wsolvent();
                         if (Indices::solventIsActive()) {
+                            const int SFrac = wellIndices().activeSolventFractionIdx();
                             primary_variables_[SFrac] = wsolvent();
                         }
                     } else {
@@ -2839,9 +2872,11 @@ namespace Opm
             } else if (this->isProducer()) { // producers
                 // TODO: the following are not addressed for the solvent case yet
                 if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                    const int WFrac = wellIndices().activeWaterFractionIdx();
                     primary_variables_[WFrac] = 1.0 / np;
                 }
                 if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                    const int GFrac = wellIndices().activeGasFractionIdx();
                     primary_variables_[GFrac] = 1.0 / np;
                 }
             } else {
@@ -2851,6 +2886,7 @@ namespace Opm
 
 
         // BHP
+        const int Bhp = wellIndices().activePressureIdx();
         primary_variables_[Bhp] = well_state.bhp()[index_of_well_];
 
         // other primary variables related to polymer injection
@@ -3096,7 +3132,7 @@ namespace Opm
     double
     StandardWell<TypeTag>::
     relaxationFactorFractionsProducer(const std::vector<double>& primary_variables,
-                                      const BVectorWell& dwells)
+                                      const BVectorWell& dwells) const
     {
         // TODO: not considering solvent yet
         // 0.95 is a experimental value, which remains to be optimized
@@ -3104,11 +3140,13 @@ namespace Opm
 
         if (FluidSystem::numActivePhases() > 1) {
             if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                const int WFrac = wellIndices().activeWaterFractionIdx();
                 const double relaxation_factor_w = relaxationFactorFraction(primary_variables[WFrac], dwells[0][WFrac]);
                 relaxation_factor = std::min(relaxation_factor, relaxation_factor_w);
             }
 
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                const int GFrac = wellIndices().activeGasFractionIdx();
                 const double relaxation_factor_g = relaxationFactorFraction(primary_variables[GFrac], dwells[0][GFrac]);
                 relaxation_factor = std::min(relaxation_factor, relaxation_factor_g);
             }
@@ -3116,6 +3154,8 @@ namespace Opm
             if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                 // We need to make sure the even with the relaxation_factor, the sum of F_w and F_g is below one, so there will
                 // not be negative oil fraction later
+                const int GFrac = wellIndices().activeGasFractionIdx();
+                const int WFrac = wellIndices().activeWaterFractionIdx();
                 const double original_sum = primary_variables[WFrac] + primary_variables[GFrac];
                 const double relaxed_update = (dwells[0][WFrac] + dwells[0][GFrac]) * relaxation_factor;
                 const double possible_updated_sum = original_sum - relaxed_update;
@@ -3141,10 +3181,10 @@ namespace Opm
     double
     StandardWell<TypeTag>::
     relaxationFactorRate(const std::vector<double>& primary_variables,
-                         const BVectorWell& dwells)
+                         const BVectorWell& dwells) const
     {
         double relaxation_factor = 1.0;
-
+        const int WQTotal = wellIndices().activeTotalRateIdx();
         // For injector, we only check the total rates to avoid sign change of rates
         const double original_total_rate = primary_variables[WQTotal];
         const double newton_update = dwells[0][WQTotal];
@@ -3328,6 +3368,7 @@ namespace Opm
     updateWaterThroughput(const double dt, WellState &well_state) const
     {
         if (this->has_polymermw && this->isInjector()) {
+            const int Bhp = wellIndices().activePressureIdx();
             for (int perf = 0; perf < number_of_perforations_; ++perf) {
                 const double perf_water_vel = primary_variables_[Bhp + 1 + perf];
                 // we do not consider the formation damage due to water flowing from reservoir into wellbore
@@ -3351,6 +3392,7 @@ namespace Opm
                                       std::vector<EvalWell>& cq_s,
                                       Opm::DeferredLogger& deferred_logger)
     {
+        const int Bhp = wellIndices().activePressureIdx();
         const unsigned water_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
         const EvalWell& water_flux_s = cq_s[water_comp_idx];
         const auto& fs = int_quants.fluidState();
@@ -3465,7 +3507,7 @@ namespace Opm
                 OPM_DEFLOG_THROW(std::runtime_error, "Unknown well control control types for well " << name(), deferred_logger);
             }
         }
-
+        const int Bhp = wellIndices().activePressureIdx();
         const double well_control_residual = std::abs(resWell_[0][Bhp]);
         const int dummy_component = -1;
         const double max_residual_allowed = param_.max_residual_allowed_;
@@ -3499,6 +3541,7 @@ namespace Opm
             using CR = ConvergenceReport;
             const auto wat_vel_failure_type = CR::WellFailure::Type::MassBalance;
             for (int perf = 0; perf < number_of_perforations_; ++perf) {
+                const int Bhp = wellIndices().activePressureIdx();
                 const double wat_vel_residual = res[Bhp + 1 + perf];
                 if (std::isnan(wat_vel_residual)) {
                     report.setWellFailed({wat_vel_failure_type, CR::Severity::NotANumber, dummy_component, name()});
@@ -3513,6 +3556,7 @@ namespace Opm
             const double pskin_tol = 1000.; // 1000 pascal
             const auto pskin_failure_type = CR::WellFailure::Type::Pressure;
             for (int perf = 0; perf < number_of_perforations_; ++perf) {
+                const int Bhp = wellIndices().activePressureIdx();
                 const double pskin_residual = res[Bhp + 1 + perf + number_of_perforations_];
                 if (std::isnan(pskin_residual)) {
                     report.setWellFailed({pskin_failure_type, CR::Severity::NotANumber, dummy_component, name()});
@@ -3541,6 +3585,7 @@ namespace Opm
         // the source term related to transport of molecular weight
         EvalWell cq_s_polymw = cq_s_poly;
         if (this->isInjector()) {
+            const int Bhp = wellIndices().activePressureIdx();
             const int wat_vel_index = Bhp + 1 + perf;
             const EvalWell water_velocity = primary_variables_evaluation_[wat_vel_index];
             if (water_velocity > 0.) { // injecting

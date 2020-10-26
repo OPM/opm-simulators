@@ -123,13 +123,15 @@ namespace Opm
     template<typename TypeTag>
     void
     WellInterface<TypeTag>::
-    init(const PhaseUsage* phase_usage_arg,
+    init(const Phases& phases,
+         const PhaseUsage* phase_usage_arg,
          const std::vector<double>& /* depth_arg */,
          const double gravity_arg,
          const int /* num_cells */)
     {
         phase_usage_ = phase_usage_arg;
         gravity_ = gravity_arg;
+        well_indices_.init(phases);
     }
 
 
@@ -254,6 +256,13 @@ namespace Opm
     }
 
 
+    template<typename TypeTag>
+    const WellIndices&
+    WellInterface<TypeTag>::
+    wellIndices() const
+    {
+        return well_indices_;
+    }
 
     template<typename TypeTag>
     const PhaseUsage&

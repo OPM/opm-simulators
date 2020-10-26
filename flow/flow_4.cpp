@@ -54,6 +54,10 @@ public:
 #warning need to make a 4-3 variant for polymer++
     typedef Opm::BlackOilDynIndices<4,4> type;
 };
+template<class TypeTag>
+struct EnableSolvent<TypeTag, TTag::EclFlow4Problem> {
+    static constexpr bool value = true;
+};
 }}
 
 namespace Opm {
