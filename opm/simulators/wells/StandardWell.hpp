@@ -310,8 +310,18 @@ namespace Opm
         virtual std::vector<double> computeCurrentWellRates(const Simulator& ebosSimulator,
                                                             DeferredLogger& deferred_logger) const override;
 
-    protected:
+        void computeConnLevelProdInd(const FluidState& fs,
+                                     const std::function<double(const EvalWell&)>& connPICalc,
+                                     const std::vector<EvalWell>& mobility,
+                                     double* connPI) const;
 
+        void computeConnLevelInjInd(const FluidState& fs,
+                                    const std::function<double(const EvalWell&)>& connIICalc,
+                                    const std::vector<EvalWell>& mobility,
+                                    double* connII,
+                                    DeferredLogger& deferred_logger) const;
+
+    protected:
         // protected functions from the Base class
         using Base::getAllowCrossFlow;
         using Base::flowPhaseToEbosCompIdx;

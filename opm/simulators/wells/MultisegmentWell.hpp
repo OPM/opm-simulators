@@ -43,6 +43,7 @@ namespace Opm
         using typename Base::Indices;
         using typename Base::RateConverterType;
         using typename Base::SparseMatrixAdapter;
+        using typename Base::FluidState;
 
         /// the number of reservior equations
         using Base::numEq;
@@ -183,6 +184,17 @@ namespace Opm
         virtual std::vector<double> computeCurrentWellRates(const Simulator& ebosSimulator,
                                                             DeferredLogger& deferred_logger) const override;
 
+        void computeConnLevelProdInd(const FluidState& fs,
+                                     const std::function<double(const EvalWell&)>& connPICalc,
+                                     const std::vector<EvalWell>& mobility,
+                                     double* connPI) const;
+
+        void computeConnLevelInjInd(const FluidState& fs,
+                                    const std::function<double(const EvalWell&)>& connIICalc,
+                                    const std::vector<EvalWell>& mobility,
+                                    const int segIx,
+                                    double* connII,
+                                    DeferredLogger& deferred_logger) const;
     protected:
         int number_segments_;
 
