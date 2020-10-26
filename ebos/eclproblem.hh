@@ -2182,16 +2182,16 @@ private:
                           << "conservation as a post processing step. This is currently unsupported, "
                           << "i.e., energy conservation is always handled fully implicitly." << std::endl;
 
-//            int numDeckPhases = FluidSystem::numActivePhases();
-//            if (numDeckPhases < Indices::numPhases)
-//                std::cerr << "WARNING: The number of active phases specified by the deck ("
-//                          << numDeckPhases << ") is smaller than the number of compiled-in phases ("
-//                          << Indices::numPhases << "). This usually results in a significant "
-//                          << "performance degradation compared to using a specialized simulator."  << std::endl;
-//            else if (numDeckPhases < Indices::numPhases)
-//                throw std::runtime_error("The deck enables "+std::to_string(numDeckPhases)+" phases "
-//                                         "while this simulator can only handle "+
-//                                         std::to_string(Indices::numPhases)+".");
+            int numDeckPhases = FluidSystem::numActivePhases();
+            if (numDeckPhases < Indices::numPhases)
+                std::cerr << "WARNING: The number of active phases specified by the deck ("
+                          << numDeckPhases << ") is smaller than the number of compiled-in phases ("
+                          << Indices::numPhases << "). This usually results in a significant "
+                          << "performance degradation compared to using a specialized simulator."  << std::endl;
+            else if (numDeckPhases < Indices::numPhases)
+                throw std::runtime_error("The deck enables "+std::to_string(numDeckPhases)+" phases "
+                                         "while this simulator can only handle "+
+                                         std::to_string(Indices::numPhases)+".");
 
             // make sure that the correct phases are active
             if (FluidSystem::phaseIsActive(oilPhaseIdx) && !Indices::oilIsActive())
