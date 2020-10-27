@@ -22,6 +22,8 @@
 */
 #include "config.h"
 
+#define BOOST_TEST_MODULE Equil
+
 #include <ebos/equil/equilibrationhelpers.hh>
 #include <ebos/eclproblem.hh>
 #include <opm/models/utils/start.hh>
@@ -51,24 +53,14 @@
 #include <vector>
 #include <string.h>
 
-#define CHECK(value, expected)             \
-    {                                      \
-        if ((value) != (expected))         \
-            throw std::runtime_error("Test failed: " + std::to_string(value) + " != " + std::to_string(expected)); \
-    }
+#include <boost/test/unit_test.hpp>
+#include <boost/version.hpp>
+#if BOOST_VERSION / 100000 == 1 && BOOST_VERSION / 100 % 1000 < 71
+#include <boost/test/floating_point_comparison.hpp>
+#else
+#include <boost/test/tools/floating_point_comparison.hpp>
+#endif
 
-#define CHECK_CLOSE(value, expected, reltol_percentage)                            \
-    {                                                                   \
-        if (std::fabs((expected) - (value)) > reltol_percentage / 100.0 * std::fabs(expected) && \
-            std::fabs((expected) - (value)) > reltol_percentage / 100.0 * std::fabs(value)) \
-            throw std::runtime_error("Test failed: " + std::to_string(value) + " != " + std::to_string(expected)); \
-    }
-
-#define REQUIRE(cond)                      \
-    {                                      \
-        if (!(cond))                       \
-            throw std::runtime_error("Test condition failed");    \
-    }
 
 namespace Opm::Properties {
 namespace TTag {
@@ -177,7 +169,26 @@ double centerDepth(const Simulator& sim, const std::size_t cell)
 }
 
 namespace {
-void test_PhasePressure()
+
+struct EquilFixture {
+    EquilFixture() {
+    int argc = boost::unit_test::framework::master_test_suite().argc;
+    char** argv = boost::unit_test::framework::master_test_suite().argv;
+#if HAVE_DUNE_FEM
+    Dune::Fem::MPIManager::initialize(argc, argv);
+#else
+    Dune::MPIHelper::instance(argc, argv);
+#endif
+        using TypeTag = Opm::Properties::TTag::TestEquilTypeTag;
+        Opm::registerAllParameters_<TypeTag>();
+    }
+};
+
+}
+
+BOOST_GLOBAL_FIXTURE(EquilFixture);
+
+BOOST_AUTO_TEST_CASE(PhasePressure)
 {
     const auto record = mkEquilRecord( 0, 1e5, 5, 0, 0, 0 );
 
@@ -220,13 +231,13 @@ void test_PhasePressure()
     const auto first  = centerDepth(*simulator, 0);
     const auto last   = centerDepth(*simulator, simulator->vanguard().grid().size(0) - 1);
 
-    CHECK_CLOSE(ptable.water(first),  90e3  , reltol);
-    CHECK_CLOSE(ptable.water(last) , 180e3  , reltol);
-    CHECK_CLOSE(ptable.oil  (first), 103.5e3, reltol);
-    CHECK_CLOSE(ptable.oil  (last) , 166.5e3, reltol);
+    BOOST_CHECK_CLOSE(ptable.water(first),  90e3  , reltol);
+    BOOST_CHECK_CLOSE(ptable.water(last) , 180e3  , reltol);
+    BOOST_CHECK_CLOSE(ptable.oil  (first), 103.5e3, reltol);
+    BOOST_CHECK_CLOSE(ptable.oil  (last) , 166.5e3, reltol);
 }
 
-void test_CellSubset()
+BOOST_AUTO_TEST_CASE(CellSubset)
 {
     using PVal        = std::vector<double>;
     using PPress      = std::vector<PVal>;
@@ -326,13 +337,13 @@ void test_CellSubset()
 
     const int first = 0, last = simulator->vanguard().grid().size(0) - 1;
     const double reltol = 1.0e-6;
-    CHECK_CLOSE(ppress[FluidSystem::waterPhaseIdx][first] , 105e3   , reltol);
-    CHECK_CLOSE(ppress[FluidSystem::waterPhaseIdx][last ] , 195e3   , reltol);
-    CHECK_CLOSE(ppress[FluidSystem::oilPhaseIdx][first] , 103.5e3 , reltol);
-    CHECK_CLOSE(ppress[FluidSystem::oilPhaseIdx][last ] , 166.5e3 , reltol);
+    BOOST_CHECK_CLOSE(ppress[FluidSystem::waterPhaseIdx][first] , 105e3   , reltol);
+    BOOST_CHECK_CLOSE(ppress[FluidSystem::waterPhaseIdx][last ] , 195e3   , reltol);
+    BOOST_CHECK_CLOSE(ppress[FluidSystem::oilPhaseIdx][first] , 103.5e3 , reltol);
+    BOOST_CHECK_CLOSE(ppress[FluidSystem::oilPhaseIdx][last ] , 166.5e3 , reltol);
 }
 
-void test_RegMapping()
+BOOST_AUTO_TEST_CASE(RegMapping)
 {
     const Opm::EquilRecord record[] = {
         mkEquilRecord( 0, 1e5, 2.5, -0.075e5, 0, 0 ),
@@ -433,13 +444,13 @@ void test_RegMapping()
 
     const int first = 0, last = simulator->vanguard().grid().size(0) - 1;
     const double reltol = 1.0e-6;
-    CHECK_CLOSE(ppress[FluidSystem::waterPhaseIdx][first] , 105e3   , reltol);
-    CHECK_CLOSE(ppress[FluidSystem::waterPhaseIdx][last ] , 195e3   , reltol);
-    CHECK_CLOSE(ppress[FluidSystem::oilPhaseIdx][first] , 103.5e3 , reltol);
-    CHECK_CLOSE(ppress[FluidSystem::oilPhaseIdx][last ] , 166.5e3 , reltol);
+    BOOST_CHECK_CLOSE(ppress[FluidSystem::waterPhaseIdx][first] , 105e3   , reltol);
+    BOOST_CHECK_CLOSE(ppress[FluidSystem::waterPhaseIdx][last ] , 195e3   , reltol);
+    BOOST_CHECK_CLOSE(ppress[FluidSystem::oilPhaseIdx][first] , 103.5e3 , reltol);
+    BOOST_CHECK_CLOSE(ppress[FluidSystem::oilPhaseIdx][last ] , 166.5e3 , reltol);
 }
 
-void test_DeckAllDead()
+BOOST_AUTO_TEST_CASE(DeckAllDead)
 {
     using TypeTag = Opm::Properties::TTag::TestEquilTypeTag;
     using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
@@ -450,8 +461,8 @@ void test_DeckAllDead()
 
     Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().grid(), 10.0);
     const auto& pressures = comp.press();
-    REQUIRE(pressures.size() == 3);
-    REQUIRE(int(pressures[0].size()) == grid.number_of_cells);
+    BOOST_REQUIRE_EQUAL(pressures.size(), 3U);
+    BOOST_REQUIRE_EQUAL(int(pressures[0].size()), grid.number_of_cells);
 
     const int first = 0, last = grid.number_of_cells - 1;
     // The relative tolerance is too loose to be very useful,
@@ -459,12 +470,12 @@ void test_DeckAllDead()
     // solver, and it is unclear if we should check it against
     // the true answer or something else.
     const double reltol = 1.0e-1;
-    CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first] , 1.496329839e7   , reltol);
-    CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last ] , 1.504526940e7   , reltol);
-    CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last] , 1.504526940e7   , reltol);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first] , 1.496329839e7   , reltol);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last ] , 1.504526940e7   , reltol);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last] , 1.504526940e7   , reltol);
 }
 
-void test_CapillaryInversion()
+BOOST_AUTO_TEST_CASE(CapillaryInversion)
 {
     // Test setup.
     using TypeTag = Opm::Properties::TTag::TestEquilTypeTag;
@@ -482,10 +493,10 @@ void test_CapillaryInversion()
         const bool increasing = false;
         const std::vector<double> pc = { 10.0e5, 0.5e5, 0.4e5, 0.3e5, 0.2e5, 0.1e5, 0.099e5, 0.0e5, -10.0e5 };
         const std::vector<double> s = { 0.2, 0.2, 0.2, 0.466666666666, 0.733333333333, 1.0, 1.0, 1.0, 1.0 };
-        REQUIRE(pc.size() == s.size());
+        BOOST_REQUIRE_EQUAL(pc.size(), s.size());
         for (size_t i = 0; i < pc.size(); ++i) {
             const double s_computed = Opm::EQUIL::satFromPc<FluidSystem, MaterialLaw, MaterialLawManager>(*simulator->problem().materialLawManager(), phase, cell, pc[i], increasing);
-            CHECK_CLOSE(s_computed, s[i], reltol);
+            BOOST_CHECK_CLOSE(s_computed, s[i], reltol);
         }
     }
 
@@ -495,10 +506,10 @@ void test_CapillaryInversion()
         const bool increasing = true;
         const std::vector<double> pc = { 10.0e5, 0.6e5, 0.5e5, 0.4e5, 0.3e5, 0.2e5, 0.1e5, 0.0e5, -10.0e5 };
         const std::vector<double> s = { 0.8, 0.8, 0.8, 0.533333333333, 0.266666666666, 0.0, 0.0, 0.0, 0.0 };
-        REQUIRE(pc.size() == s.size());
+        BOOST_REQUIRE_EQUAL(pc.size(), s.size());
         for (size_t i = 0; i < pc.size(); ++i) {
             const double s_computed = Opm::EQUIL::satFromPc<FluidSystem, MaterialLaw, MaterialLawManager>(*simulator->problem().materialLawManager(), phase, cell, pc[i], increasing);
-            CHECK_CLOSE(s_computed, s[i], reltol);
+            BOOST_CHECK_CLOSE(s_computed, s[i], reltol);
         }
     }
 
@@ -508,15 +519,15 @@ void test_CapillaryInversion()
         const int gas = FluidSystem::gasPhaseIdx;
         const std::vector<double> pc = { 0.9e5, 0.8e5, 0.6e5, 0.4e5, 0.3e5 };
         const std::vector<double> s = { 0.2, 0.333333333333, 0.6, 0.866666666666, 1.0 };
-        REQUIRE(pc.size() == s.size());
+        BOOST_REQUIRE_EQUAL(pc.size(), s.size());
         for (size_t i = 0; i < pc.size(); ++i) {
             const double s_computed = Opm::EQUIL::satFromSumOfPcs<FluidSystem, MaterialLaw, MaterialLawManager>(*simulator->problem().materialLawManager(), water, gas, cell, pc[i]);
-            CHECK_CLOSE(s_computed, s[i], reltol);
+            BOOST_CHECK_CLOSE(s_computed, s[i], reltol);
         }
     }
 }
 
-void test_DeckWithCapillary()
+BOOST_AUTO_TEST_CASE(DeckWithCapillary)
 {
     using TypeTag = Opm::Properties::TTag::TestEquilTypeTag;
     using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
@@ -528,8 +539,8 @@ void test_DeckWithCapillary()
     Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().grid(), 10.0);
 
     const auto& pressures = comp.press();
-    REQUIRE(pressures.size() == 3);
-    REQUIRE(int(pressures[0].size()) == grid.number_of_cells);
+    BOOST_REQUIRE_EQUAL(pressures.size(), 3U);
+    BOOST_REQUIRE_EQUAL(int(pressures[0].size()), grid.number_of_cells);
 
     const int first = 0, last = grid.number_of_cells - 1;
     // The relative tolerance is too loose to be very useful,
@@ -537,9 +548,9 @@ void test_DeckWithCapillary()
     // solver, and it is unclear if we should check it against
     // the true answer or something else.
     const double reltol = 1.0e-4;
-    CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.469769063e7     , reltol);
-    CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last ], 15452880.328284413, reltol);
-    CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx]  [last ], 15462880.328284413, reltol);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.469769063e7     , reltol);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last ], 15452880.328284413, reltol);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx]  [last ], 15462880.328284413, reltol);
 
     const auto& sats = comp.saturation();
     std::vector<double> s[3];
@@ -547,14 +558,14 @@ void test_DeckWithCapillary()
     s[FluidSystem::oilPhaseIdx]   = { 0, 0, 0, 0.0073481611123183965, 0.79272270823081337, 0.8, 0.8, 0.8, 0.8, 0.57809705626184749, 0.22199197927693526, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
     s[FluidSystem::gasPhaseIdx]   = { 0.8, 0.8, 0.8, 0.79265183888768165, 0.0072772917691866562, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
     for (int phase = 0; phase < 3; ++phase) {
-        REQUIRE(sats[phase].size() == s[phase].size());
+        BOOST_REQUIRE_EQUAL(sats[phase].size(), s[phase].size());
         for (size_t i = 0; i < s[phase].size(); ++i) {
-            CHECK_CLOSE(sats[phase][i], s[phase][i], reltol);
+            BOOST_CHECK_CLOSE(sats[phase][i], s[phase][i], reltol);
         }
     }
 }
 
-void test_DeckWithCapillaryOverlap()
+BOOST_AUTO_TEST_CASE(DeckWithCapillaryOverlap)
 {
     using TypeTag = Opm::Properties::TTag::TestEquilTypeTag;
     using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
@@ -565,8 +576,8 @@ void test_DeckWithCapillaryOverlap()
 
     Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().grid(), 9.80665);
     const auto& pressures = comp.press();
-    REQUIRE(pressures.size() == 3);
-    REQUIRE(int(pressures[0].size()) == grid.number_of_cells);
+    BOOST_REQUIRE_EQUAL(pressures.size(), 3U);
+    BOOST_REQUIRE_EQUAL(int(pressures[0].size()), grid.number_of_cells);
 
     const int first = 0, last = grid.number_of_cells - 1;
     // The relative tolerance is too loose to be very useful,
@@ -575,14 +586,14 @@ void test_DeckWithCapillaryOverlap()
     // the true answer or something else.
     const double reltol = 1.0e-4;
     const double reltol_ecl = 100.0;
-    CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.48324e+07, reltol_ecl);  // eclipse
-    CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.54801e+07, reltol_ecl);
-    CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.49224e+07, reltol_ecl);
-    CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last],  1.54901e+07, reltol_ecl);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.48324e+07, reltol_ecl);  // eclipse
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.54801e+07, reltol_ecl);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.49224e+07, reltol_ecl);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last],  1.54901e+07, reltol_ecl);
 
-    CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first] , 14832467.14, reltol); // opm
-    CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last ] , 15479883.47, reltol);
-    CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last ] , 15489883.47, reltol);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first] , 14832467.14, reltol); // opm
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last ] , 15479883.47, reltol);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last ] , 15489883.47, reltol);
 
     const auto& sats = comp.saturation();
     // std::cout << "Saturations:\n";
@@ -603,16 +614,16 @@ void test_DeckWithCapillaryOverlap()
     s_opm[FluidSystem::oilPhaseIdx] = { 0,   0,   0,   0,   0,   0,   0,   0,                   0,                   0.20023624994125844,   0.084602875330224592, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
     s_opm[FluidSystem::gasPhaseIdx] = { 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.77107068773113863, 0.46593542169947511, 0.015192997516294321, 0,      0, 0, 0, 0, 0, 0, 0, 0, 0 };
     for (int phase = 0; phase < 3; ++phase) {
-        REQUIRE(sats[phase].size() == s_opm[phase].size());
+        BOOST_REQUIRE_EQUAL(sats[phase].size(), s_opm[phase].size());
         for (size_t i = 0; i < s_opm[phase].size(); ++i) {
             //std::cout << std::setprecision(10) << sats[phase][i] << '\n';
-            CHECK_CLOSE(sats[phase][i], s_ecl[phase][i], reltol_ecl);
-            CHECK_CLOSE(sats[phase][i], s_opm[phase][i], reltol);
+            BOOST_CHECK_CLOSE(sats[phase][i], s_ecl[phase][i], reltol_ecl);
+            BOOST_CHECK_CLOSE(sats[phase][i], s_opm[phase][i], reltol);
         }
     }
 }
 
-void test_DeckWithLiveOil()
+BOOST_AUTO_TEST_CASE(DeckWithLiveOil)
 {
     using TypeTag = Opm::Properties::TTag::TestEquilTypeTag;
     using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
@@ -624,8 +635,8 @@ void test_DeckWithLiveOil()
     // Initialize the fluid system
     Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().grid(), 9.80665);
     const auto& pressures = comp.press();
-    REQUIRE(pressures.size() == 3);
-    REQUIRE(int(pressures[0].size()) == grid.number_of_cells);
+    BOOST_REQUIRE_EQUAL(pressures.size(), 3U);
+    BOOST_REQUIRE_EQUAL(int(pressures[0].size()), grid.number_of_cells);
 
     const int first = 0, last = grid.number_of_cells - 1;
     // The relative tolerance is too loose to be very useful,
@@ -634,15 +645,15 @@ void test_DeckWithLiveOil()
     // the true answer or something else.
     const double reltol = 1.0e-4;
     const double reltol_ecl = 100.0;
-    CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.48324e+07, reltol_ecl);  // eclipse
-    CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.54801e+07, reltol_ecl);
-    CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.49224e+07, reltol_ecl);
-    CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last],  1.54901e+07, reltol_ecl);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.48324e+07, reltol_ecl);  // eclipse
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.54801e+07, reltol_ecl);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.49224e+07, reltol_ecl);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last],  1.54901e+07, reltol_ecl);
 
-    CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.483246714e7, reltol);  // opm
-    CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.547991652e7, reltol);
-    CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.492246714e7, reltol);
-    CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last],  1.548991652e7, reltol);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.483246714e7, reltol);  // opm
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.547991652e7, reltol);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.492246714e7, reltol);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last],  1.548991652e7, reltol);
 
     const auto& sats = comp.saturation();
     // std::cout << "Saturations:\n";
@@ -661,11 +672,11 @@ void test_DeckWithLiveOil()
     s_opm[FluidSystem::oilPhaseIdx] = { 0,   0,   0,   0,   0,   0,   0,   0,            0,            0.20057438297017782,   0.084716756377890667, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
     s_opm[FluidSystem::gasPhaseIdx] = { 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.77083036553538653, 0.46569509476225479, 0.014706750907401245,  0,       0, 0, 0, 0, 0, 0, 0, 0, 0 };
     for (int phase = 0; phase < 3; ++phase) {
-        REQUIRE(sats[phase].size() == s_opm[phase].size());
+        BOOST_REQUIRE_EQUAL(sats[phase].size(), s_opm[phase].size());
         for (size_t i = 0; i < s_opm[phase].size(); ++i) {
             //std::cout << std::setprecision(10) << sats[phase][i] << '\n';
-            CHECK_CLOSE(sats[phase][i], s_opm[phase][i], reltol);
-            CHECK_CLOSE(sats[phase][i], s_ecl[phase][i], reltol_ecl);
+            BOOST_CHECK_CLOSE(sats[phase][i], s_opm[phase][i], reltol);
+            BOOST_CHECK_CLOSE(sats[phase][i], s_ecl[phase][i], reltol_ecl);
         }
         std::cout << std::endl;
     }
@@ -683,12 +694,12 @@ void test_DeckWithLiveOil()
                                       75.000000, 75.000000, 75.000000, 75.000000};
     for (size_t i = 0; i < rs_opm.size(); ++i) {
         //std::cout << std::setprecision(10) << rs[i] << '\n';
-        CHECK_CLOSE(rs[i], rs_opm[i], reltol);
-        CHECK_CLOSE(rs[i], rs_ecl[i], reltol_ecl);
+        BOOST_CHECK_CLOSE(rs[i], rs_opm[i], reltol);
+        BOOST_CHECK_CLOSE(rs[i], rs_ecl[i], reltol_ecl);
     }
 }
 
-void test_DeckWithLiveGas()
+BOOST_AUTO_TEST_CASE(DeckWithLiveGas)
 {
     using TypeTag = Opm::Properties::TTag::TestEquilTypeTag;
     using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
@@ -699,8 +710,8 @@ void test_DeckWithLiveGas()
 
     Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().grid(), 9.80665);
     const auto& pressures = comp.press();
-    REQUIRE(pressures.size() == 3);
-    REQUIRE(int(pressures[0].size()) == grid.number_of_cells);
+    BOOST_REQUIRE_EQUAL(pressures.size(), 3U);
+    BOOST_REQUIRE_EQUAL(int(pressures[0].size()), grid.number_of_cells);
 
     const int first = 0, last = grid.number_of_cells - 1;
     // The relative tolerance is too loose to be very useful,
@@ -709,15 +720,15 @@ void test_DeckWithLiveGas()
     // the true answer or something else.
     const double reltol = 1.0e-1;
     const double reltol_ecl = 100.0;
-    CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.48215e+07, reltol_ecl);  // eclipse
-    CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.54801e+07, reltol_ecl);
-    CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.49115e+07, reltol_ecl);
-    CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last],  1.54901e+07, reltol_ecl);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.48215e+07, reltol_ecl);  // eclipse
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.54801e+07, reltol_ecl);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.49115e+07, reltol_ecl);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last],  1.54901e+07, reltol_ecl);
 
-    CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.482150311e7, reltol);  // opm
-    CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.547988347e7, reltol);
-    CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.491150311e7, reltol);
-    CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last],  1.548988347e7, reltol);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.482150311e7, reltol);  // opm
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.547988347e7, reltol);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.491150311e7, reltol);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last],  1.548988347e7, reltol);
 
     const auto& sats = comp.saturation();
     // std::cout << "Saturations:\n";
@@ -736,11 +747,11 @@ void test_DeckWithLiveGas()
     s_opm[FluidSystem::oilPhaseIdx] =   { 0,   0,   0,   0,   0,   0,   0,   0,          0,      0.18288667, 0.0846,  0, 0, 0, 0, 0, 0, 0, 0, 0 };
     s_opm[FluidSystem::gasPhaseIdx] =   { 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.75689455, 0.4612, 0.03253333, 0,       0, 0, 0, 0, 0, 0, 0, 0, 0 };
     for (int phase = 0; phase < 3; ++phase) {
-        REQUIRE(sats[phase].size() == s_opm[phase].size());
+        BOOST_REQUIRE_EQUAL(sats[phase].size(), s_opm[phase].size());
         for (size_t i = 0; i < s_opm[phase].size(); ++i) {
             //std::cout << std::setprecision(10) << sats[phase][i] << '\n';
-            CHECK_CLOSE(sats[phase][i], s_opm[phase][i], 100.*reltol);
-            CHECK_CLOSE(sats[phase][i], s_ecl[phase][i], reltol_ecl);
+            BOOST_CHECK_CLOSE(sats[phase][i], s_opm[phase][i], 100.*reltol);
+            BOOST_CHECK_CLOSE(sats[phase][i], s_ecl[phase][i], reltol_ecl);
         }
         std::cout << std::endl;
     }
@@ -761,12 +772,12 @@ void test_DeckWithLiveGas()
         0.25104999E-03,   0.25104999E-03,   0.25104999E-03,   0.25104999E-03};
 
     for (size_t i = 0; i < rv_opm.size(); ++i) {
-        CHECK_CLOSE(rv[i], rv_opm[i], reltol);
-        CHECK_CLOSE(rv[i], rv_ecl[i], reltol_ecl);
+        BOOST_CHECK_CLOSE(rv[i], rv_opm[i], reltol);
+        BOOST_CHECK_CLOSE(rv[i], rv_ecl[i], reltol_ecl);
     }
 }
 
-void test_DeckWithRSVDAndRVVD()
+BOOST_AUTO_TEST_CASE(DeckWithRSVDAndRVVD)
 {
     using TypeTag = Opm::Properties::TTag::TestEquilTypeTag;
     using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
@@ -777,8 +788,8 @@ void test_DeckWithRSVDAndRVVD()
 
     Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().grid(), 9.80665);
     const auto& pressures = comp.press();
-    REQUIRE(pressures.size() == 3);
-    REQUIRE(int(pressures[0].size()) == grid.number_of_cells);
+    BOOST_REQUIRE_EQUAL(pressures.size(), 3U);
+    BOOST_REQUIRE_EQUAL(int(pressures[0].size()), grid.number_of_cells);
 
     const int first = 0, last = grid.number_of_cells - 1;
     // The relative tolerance is too loose to be very useful,
@@ -787,15 +798,15 @@ void test_DeckWithRSVDAndRVVD()
     // the true answer or something else.
     const double reltol = 1.0e-4;
     const double reltol_ecl = 100.0;
-    CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.48350e+07, reltol_ecl);  // eclipse
-    CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.54794e+07, reltol_ecl);
-    CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.49250e+07, reltol_ecl);
-    CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last],  1.54894e+07, reltol_ecl);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.48350e+07, reltol_ecl);  // eclipse
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.54794e+07, reltol_ecl);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.49250e+07, reltol_ecl);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last],  1.54894e+07, reltol_ecl);
 
-    CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.483499660e7, reltol);  // opm
-    CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.547924516e7, reltol);
-    CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.492499660e7, reltol);
-    CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last],  1.548924516e7, reltol);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.483499660e7, reltol);  // opm
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.547924516e7, reltol);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.492499660e7, reltol);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last],  1.548924516e7, reltol);
 
     const auto& sats = comp.saturation();
     // std::cout << "Saturations:\n";
@@ -816,11 +827,11 @@ void test_DeckWithRSVDAndRVVD()
     s_opm[FluidSystem::gasPhaseIdx]   = { 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.7776954288307103, 0.47117701424054126, 0.02210249613021811,    0,          0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
     for (int phase = 0; phase < 3; ++phase) {
-        REQUIRE(sats[phase].size() == s_opm[phase].size());
+        BOOST_REQUIRE_EQUAL(sats[phase].size(), s_opm[phase].size());
         for (size_t i = 0; i < s_opm[phase].size(); ++i) {
             //std::cout << std::setprecision(10) << sats[phase][i] << '\n';
-            CHECK_CLOSE(sats[phase][i], s_opm[phase][i], reltol);
-            CHECK_CLOSE(sats[phase][i], s_ecl[phase][i], reltol_ecl);
+            BOOST_CHECK_CLOSE(sats[phase][i], s_opm[phase][i], reltol);
+            BOOST_CHECK_CLOSE(sats[phase][i], s_ecl[phase][i], reltol_ecl);
         }
         std::cout << std::endl;
     }
@@ -857,14 +868,14 @@ void test_DeckWithRSVDAndRVVD()
 
     for (size_t i = 0; i < rv_opm.size(); ++i) {
         //std::cout << std::setprecision(10) << rs[i] << '\n';
-        CHECK_CLOSE(rs[i], rs_opm[i], reltol);
-        CHECK_CLOSE(rs[i], rs_ecl[i], reltol_ecl);
-        CHECK_CLOSE(rv[i], rv_opm[i], reltol);
-        CHECK_CLOSE(rv[i], rv_ecl[i], reltol_ecl);
+        BOOST_CHECK_CLOSE(rs[i], rs_opm[i], reltol);
+        BOOST_CHECK_CLOSE(rs[i], rs_ecl[i], reltol_ecl);
+        BOOST_CHECK_CLOSE(rv[i], rv_opm[i], reltol);
+        BOOST_CHECK_CLOSE(rv[i], rv_ecl[i], reltol_ecl);
     }
 }
 
-void test_DeckWithPBVDAndPDVD()
+BOOST_AUTO_TEST_CASE(DeckWithPBVDAndPDVD)
 {
     using TypeTag = Opm::Properties::TTag::TestEquilTypeTag;
     using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
@@ -875,19 +886,19 @@ void test_DeckWithPBVDAndPDVD()
 
     Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().grid(), 9.80665);
     const auto& pressures = comp.press();
-    REQUIRE(pressures.size() == 3);
-    REQUIRE(int(pressures[0].size()) == grid.number_of_cells);
+    BOOST_REQUIRE_EQUAL(pressures.size(), 3U);
+    BOOST_REQUIRE_EQUAL(int(pressures[0].size()), grid.number_of_cells);
 
     const int first = 0, last = grid.number_of_cells - 1;
     // The relative tolerance is too loose to be very useful,
     // but the answer we are checking is the result of an ODE
     // solver, and it is unclear if we should check it against
     // the true answer or something else.
-    const double reltol = 1.0e-4;
-    CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 14821552, reltol);
-    CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  15479828, reltol);
-    CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 14911552, reltol);
-    CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last],  15489828, reltol);
+    const double reltol = 5.0e-4;
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 14821552.0, reltol);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  15479828.0, reltol);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 14911552.0, reltol);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last],  15489828.0, reltol);
 
     const auto& sats = comp.saturation();
     // std::cout << "Saturations:\n";
@@ -904,10 +915,10 @@ void test_DeckWithPBVDAndPDVD()
     s_opm[FluidSystem::gasPhaseIdx] =   { 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.75742662687407303, 0.46165175235637212, 0.033640411881804465,    0,          0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
     for (int phase = 0; phase < 3; ++phase) {
-        REQUIRE(sats[phase].size() == s_opm[phase].size());
+        BOOST_REQUIRE_EQUAL(sats[phase].size(), s_opm[phase].size());
         for (size_t i = 0; i < s_opm[phase].size(); ++i) {
             //std::cout << std::setprecision(10) << sats[phase][i] << '\n';
-            CHECK_CLOSE(sats[phase][i], s_opm[phase][i], reltol);
+            BOOST_CHECK_CLOSE(sats[phase][i], s_opm[phase][i], reltol);
         }
     }
 
@@ -949,12 +960,12 @@ void test_DeckWithPBVDAndPDVD()
         0.0001075};
 
     for (size_t i = 0; i < rv_opm.size(); ++i) {
-        CHECK_CLOSE(rs[i], rs_opm[i], reltol);
-        CHECK_CLOSE(rv[i], rv_opm[i], reltol);
+        BOOST_CHECK_CLOSE(rs[i], rs_opm[i], reltol);
+        BOOST_CHECK_CLOSE(rv[i], rv_opm[i], reltol);
     }
 }
 
-void test_DeckWithSwatinit()
+BOOST_AUTO_TEST_CASE(DeckWithSwatinit)
 {
 #if 0
     using TypeTag = Opm::Properties::TTag::TestEquilTypeTag;
@@ -1086,46 +1097,16 @@ void test_DeckWithSwatinit()
     const double reltol = 1.0e-1;
     for (int phase = 0; phase < 3; ++phase) {
         for (size_t i = 0; i < 20; ++i) {
-            CHECK_CLOSE( pc_original[3*i + phase ], pc_unscaled[3*i + phase ], reltol);
-            CHECK_CLOSE( pc_scaled_truth[3*i + phase], pc_scaled[3*i + phase ], reltol);
+            BOOST_CHECK_CLOSE( pc_original[3*i + phase ], pc_unscaled[3*i + phase ], reltol);
+            BOOST_CHECK_CLOSE( pc_scaled_truth[3*i + phase], pc_scaled[3*i + phase ], reltol);
         }
     }
 
     for (int phase = 0; phase < 3; ++phase) {
         for (size_t i = 0; i < 20; ++i) {
-            CHECK_CLOSE(compUnscaled.saturation()[phase][i], s[phase][i], reltol);
-            CHECK_CLOSE(compScaled.saturation()[phase][i], swatinit[phase][i], reltol);
+            BOOST_CHECK_CLOSE(compUnscaled.saturation()[phase][i], s[phase][i], reltol);
+            BOOST_CHECK_CLOSE(compScaled.saturation()[phase][i], swatinit[phase][i], reltol);
         }
     }
 #endif
-}
-}
-
-int main(int argc, char** argv)
-try {
-#if HAVE_DUNE_FEM
-    Dune::Fem::MPIManager::initialize(argc, argv);
-#else
-    Dune::MPIHelper::instance(argc, argv);
-#endif
-
-    using TypeTag = Opm::Properties::TTag::TestEquilTypeTag;
-    Opm::registerAllParameters_<TypeTag>();
-
-    test_PhasePressure();
-    test_CellSubset();
-    test_RegMapping();
-    test_DeckAllDead();
-    test_CapillaryInversion();
-    test_DeckWithCapillary();
-    test_DeckWithCapillaryOverlap();
-    test_DeckWithLiveOil();
-    test_DeckWithLiveGas();
-    test_DeckWithRSVDAndRVVD();
-    test_DeckWithPBVDAndPDVD();
-    test_DeckWithSwatinit();
-}
-catch (const std::exception& e) {
-    std::cerr << "Unexpected Termination: " << e.what() << '\n';
-    return EXIT_FAILURE;
 }
