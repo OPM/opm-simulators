@@ -64,10 +64,10 @@
          }                                 \
     }
 
-#define CHECK_CLOSE(value, expected, reltol)                            \
+#define CHECK_CLOSE(value, expected, reltol_percentage)                            \
     {                                                                   \
-        if (std::fabs((expected) - (value)) > reltol*std::fabs(expected) && \
-            std::fabs((expected) - (value)) > reltol*std::fabs(value)) \
+        if (std::fabs((expected) - (value)) > reltol_percentage / 100.0 * std::fabs(expected) && \
+            std::fabs((expected) - (value)) > reltol_percentage / 100.0 * std::fabs(value)) \
             { \
             std::cerr << "Test failure: "; \
             std::cerr << "expected value " << expected << " is not close to value " << value << std::endl; \
@@ -170,36 +170,36 @@ void test_summary()
 
     // fpr = sum_ (p * hcpv ) / hcpv, hcpv = pv * (1 - sw)
     const double fpr =  ( (3 * 0.1 + 8 * 0.2) * 500 * (1 - 0.2) ) / ( (500*0.1 + 500*0.2) * (1 - 0.2));
-    CHECK_CLOSE( fpr, ecl_sum_get_field_var( resp, 1, "FPR" ) , 1e-5 );
+    CHECK_CLOSE( fpr, ecl_sum_get_field_var( resp, 1, "FPR" ) , 1e-3 );
 
     // foip = sum_ (b * s * pv), rs == 0;
     const double foip = ( (0.3 * 0.1 + 0.8 * 0.2) * 500 * (1 - 0.2) );
-    CHECK_CLOSE(foip, ecl_sum_get_field_var( resp, 1, "FOIP" ), 1e-3 );
+    CHECK_CLOSE(foip, ecl_sum_get_field_var( resp, 1, "FOIP" ), 1e-1 );
 
     // fgip = sum_ (b * pv * s), sg == 0;
     const double fgip = 0.0;
-    CHECK_CLOSE(fgip, ecl_sum_get_field_var( resp, 1, "FGIP" ), 1e-3 );
+    CHECK_CLOSE(fgip, ecl_sum_get_field_var( resp, 1, "FGIP" ), 1e-1 );
 
     // fgip = sum_ (b * pv * s),
     const double fwip = 1.0/1000 * ( 0.1 + 0.2) * 500 * 0.2;
-    CHECK_CLOSE(fwip, ecl_sum_get_field_var( resp, 1, "FWIP" ), 1e-3 );
+    CHECK_CLOSE(fwip, ecl_sum_get_field_var( resp, 1, "FWIP" ), 1e-1 );
 
     // region 1
     // rpr = sum_ (p * hcpv ) / hcpv, hcpv = pv * (1 - sw)
     const double rpr1 =  ( 2.5 * 0.1 * 400 * (1 - 0.2) ) / (400*0.1 * (1 - 0.2));
-    CHECK_CLOSE( rpr1, ecl_sum_get_general_var( resp, 1, "RPR:1" ) , 1e-5 );
+    CHECK_CLOSE( rpr1, ecl_sum_get_general_var( resp, 1, "RPR:1" ) , 1e-3 );
     // roip = sum_ (b * s * pv) // rs == 0;
     const double roip1 = ( 0.25 * 0.1 * 400 * (1 - 0.2) );
-    CHECK_CLOSE(roip1, ecl_sum_get_general_var( resp, 1, "ROIP:1" ), 1e-3 );
+    CHECK_CLOSE(roip1, ecl_sum_get_general_var( resp, 1, "ROIP:1" ), 1e-1 );
 
 
     // region 2
     // rpr = sum_ (p * hcpv ) / hcpv, hcpv = pv * (1 - sw)
     const double rpr2 =  ( (5 * 0.1 * 100 + 6 * 0.2 * 100) * (1 - 0.2) ) / ( (100*0.1 + 100*0.2) * (1 - 0.2));
-    CHECK_CLOSE( rpr2, ecl_sum_get_general_var( resp, 1, "RPR:2" ) , 1e-5 );
+    CHECK_CLOSE( rpr2, ecl_sum_get_general_var( resp, 1, "RPR:2" ) , 1e-3 );
     // roip = sum_ (b * s * pv) // rs == 0;
     const double roip2 = ( (0.5 * 0.1 * 100 + 0.6 * 0.2 * 100) * (1 - 0.2) );
-    CHECK_CLOSE(roip2, ecl_sum_get_general_var( resp, 1, "ROIP:2" ), 1e-3 );
+    CHECK_CLOSE(roip2, ecl_sum_get_general_var( resp, 1, "ROIP:2" ), 1e-1 );
 }
 
 void test_readWriteWells()
