@@ -66,8 +66,8 @@
 
 #define CHECK_CLOSE(value, expected, reltol)                            \
     {                                                                   \
-        if (std::fabs((expected) - (value)) > 1e-14 &&                  \
-            std::fabs(((expected) - (value))/((expected) + (value))) > reltol) \
+        if (std::fabs((expected) - (value)) > reltol*std::fabs(expected) && \
+            std::fabs((expected) - (value)) > reltol*std::fabs(value)) \
             { \
             std::cerr << "Test failure: "; \
             std::cerr << "expected value " << expected << " is not close to value " << value << std::endl; \
