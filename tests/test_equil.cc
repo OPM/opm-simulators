@@ -59,8 +59,8 @@
 
 #define CHECK_CLOSE(value, expected, reltol)                            \
     {                                                                   \
-        if (std::fabs((expected) - (value)) > 1e-14 &&                  \
-            std::fabs(((expected) - (value))/((expected) + (value))) > reltol) \
+        if (std::fabs((expected) - (value)) > reltol*std::fabs(expected) && \
+            std::fabs((expected) - (value)) > reltol*std::fabs(value)) \
             throw std::runtime_error("Test failed: " + std::to_string(value) + " != " + std::to_string(expected)); \
     }
 
