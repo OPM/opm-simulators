@@ -57,10 +57,10 @@
             throw std::runtime_error("Test failed: " + std::to_string(value) + " != " + std::to_string(expected)); \
     }
 
-#define CHECK_CLOSE(value, expected, reltol)                            \
+#define CHECK_CLOSE(value, expected, reltol_percentage)                            \
     {                                                                   \
-        if (std::fabs((expected) - (value)) > reltol*std::fabs(expected) && \
-            std::fabs((expected) - (value)) > reltol*std::fabs(value)) \
+        if (std::fabs((expected) - (value)) > reltol_percentage / 100.0 * std::fabs(expected) && \
+            std::fabs((expected) - (value)) > reltol_percentage / 100.0 * std::fabs(value)) \
             throw std::runtime_error("Test failed: " + std::to_string(value) + " != " + std::to_string(expected)); \
     }
 
@@ -216,7 +216,7 @@ void test_PhasePressure()
 
     ptable.equilibrate(region, vspan);
 
-    const auto reltol = 1.0e-8;
+    const auto reltol = 1.0e-6;
     const auto first  = centerDepth(*simulator, 0);
     const auto last   = centerDepth(*simulator, simulator->vanguard().grid().size(0) - 1);
 
@@ -325,7 +325,7 @@ void test_CellSubset()
     }
 
     const int first = 0, last = simulator->vanguard().grid().size(0) - 1;
-    const double reltol = 1.0e-8;
+    const double reltol = 1.0e-6;
     CHECK_CLOSE(ppress[FluidSystem::waterPhaseIdx][first] , 105e3   , reltol);
     CHECK_CLOSE(ppress[FluidSystem::waterPhaseIdx][last ] , 195e3   , reltol);
     CHECK_CLOSE(ppress[FluidSystem::oilPhaseIdx][first] , 103.5e3 , reltol);
@@ -432,7 +432,7 @@ void test_RegMapping()
     }
 
     const int first = 0, last = simulator->vanguard().grid().size(0) - 1;
-    const double reltol = 1.0e-8;
+    const double reltol = 1.0e-6;
     CHECK_CLOSE(ppress[FluidSystem::waterPhaseIdx][first] , 105e3   , reltol);
     CHECK_CLOSE(ppress[FluidSystem::waterPhaseIdx][last ] , 195e3   , reltol);
     CHECK_CLOSE(ppress[FluidSystem::oilPhaseIdx][first] , 103.5e3 , reltol);
@@ -458,7 +458,7 @@ void test_DeckAllDead()
     // but the answer we are checking is the result of an ODE
     // solver, and it is unclear if we should check it against
     // the true answer or something else.
-    const double reltol = 1.0e-3;
+    const double reltol = 1.0e-1;
     CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first] , 1.496329839e7   , reltol);
     CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last ] , 1.504526940e7   , reltol);
     CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last] , 1.504526940e7   , reltol);
@@ -476,7 +476,7 @@ void test_CapillaryInversion()
 
     // Test the capillary inversion for oil-water.
     const int cell = 0;
-    const double reltol = 1.0e-7;
+    const double reltol = 1.0e-5;
     {
         const int phase = FluidSystem::waterPhaseIdx;
         const bool increasing = false;
@@ -536,7 +536,7 @@ void test_DeckWithCapillary()
     // but the answer we are checking is the result of an ODE
     // solver, and it is unclear if we should check it against
     // the true answer or something else.
-    const double reltol = 1.0e-6;
+    const double reltol = 1.0e-4;
     CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.469769063e7     , reltol);
     CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last ], 15452880.328284413, reltol);
     CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx]  [last ], 15462880.328284413, reltol);
@@ -573,8 +573,8 @@ void test_DeckWithCapillaryOverlap()
     // but the answer we are checking is the result of an ODE
     // solver, and it is unclear if we should check it against
     // the true answer or something else.
-    const double reltol = 1.0e-6;
-    const double reltol_ecl = 1.0;
+    const double reltol = 1.0e-4;
+    const double reltol_ecl = 100.0;
     CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.48324e+07, reltol_ecl);  // eclipse
     CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.54801e+07, reltol_ecl);
     CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.49224e+07, reltol_ecl);
@@ -632,8 +632,8 @@ void test_DeckWithLiveOil()
     // but the answer we are checking is the result of an ODE
     // solver, and it is unclear if we should check it against
     // the true answer or something else.
-    const double reltol = 1.0e-6;
-    const double reltol_ecl = 1.0;
+    const double reltol = 1.0e-4;
+    const double reltol_ecl = 100.0;
     CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.48324e+07, reltol_ecl);  // eclipse
     CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.54801e+07, reltol_ecl);
     CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.49224e+07, reltol_ecl);
@@ -707,8 +707,8 @@ void test_DeckWithLiveGas()
     // but the answer we are checking is the result of an ODE
     // solver, and it is unclear if we should check it against
     // the true answer or something else.
-    const double reltol = 1.0e-3;
-    const double reltol_ecl = 1.0;
+    const double reltol = 1.0e-1;
+    const double reltol_ecl = 100.0;
     CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.48215e+07, reltol_ecl);  // eclipse
     CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.54801e+07, reltol_ecl);
     CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.49115e+07, reltol_ecl);
@@ -785,8 +785,8 @@ void test_DeckWithRSVDAndRVVD()
     // but the answer we are checking is the result of an ODE
     // solver, and it is unclear if we should check it against
     // the true answer or something else.
-    const double reltol = 1.0e-6;
-    const double reltol_ecl = 1.0;
+    const double reltol = 1.0e-4;
+    const double reltol_ecl = 100.0;
     CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.48350e+07, reltol_ecl);  // eclipse
     CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.54794e+07, reltol_ecl);
     CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.49250e+07, reltol_ecl);
@@ -883,7 +883,7 @@ void test_DeckWithPBVDAndPDVD()
     // but the answer we are checking is the result of an ODE
     // solver, and it is unclear if we should check it against
     // the true answer or something else.
-    const double reltol = 1.0e-6;
+    const double reltol = 1.0e-4;
     CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 14821552, reltol);
     CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  15479828, reltol);
     CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 14911552, reltol);
@@ -1083,7 +1083,7 @@ void test_DeckWithSwatinit()
     }
 
     // test
-    const double reltol = 1.0e-3;
+    const double reltol = 1.0e-1;
     for (int phase = 0; phase < 3; ++phase) {
         for (size_t i = 0; i < 20; ++i) {
             CHECK_CLOSE( pc_original[3*i + phase ], pc_unscaled[3*i + phase ], reltol);
