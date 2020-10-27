@@ -780,6 +780,13 @@ add_test_compareECLFiles(CASENAME bc_lab
                          REL_TOL ${rel_tol}
                          DIR bc_lab)
 
+add_test_compareECLFiles(CASENAME norne_reperf
+                         FILENAME NORNE_ATW2013_B1H_RE-PERF
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR norne)
+
 # Restart tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
 
