@@ -1207,14 +1207,14 @@ public:
         {
             for (int fip_type = 0; fip_type < FipDataType::numFipTypes; fip_type++) {
                 for (const auto& node : this->regionNodes_[fip_type]) {
-                    const auto& rsum = rsum_map.at(node.fip_region());
+                    const auto& rsum = rsum_map.at(node.extra_string());
                     regionData[node.keyword()] = rsum.regFipValues[fip_type];
                 }
             }
 
             // The exact same quantity is calculated for RPR and RPRP - is that correct?
             for (const auto& node : this->RPRNodes_) {
-                const auto& rsum = rsum_map.at(node.fip_region());
+                const auto& rsum = rsum_map.at(node.extra_string());
                 regionData[node.keyword()] = pressureAverage_(rsum.regPressurePvHydrocarbon,
                                                               rsum.regPvHydrocarbon,
                                                               rsum.regPressurePv,
@@ -1223,7 +1223,7 @@ public:
             }
 
             for (const auto& node : this->RPRPNodes_) {
-                const auto& rsum = rsum_map.at(node.fip_region());
+                const auto& rsum = rsum_map.at(node.extra_string());
                 regionData[node.keyword()] = pressureAverage_(rsum.regPressurePvHydrocarbon,
                                                               rsum.regPvHydrocarbon,
                                                               rsum.regPressurePv,
