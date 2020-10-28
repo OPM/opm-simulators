@@ -508,6 +508,8 @@ namespace Opm {
 
         previous_well_state_ = well_state_;
 
+        this->well_container_.clear();
+
         Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
         if (terminal_output_) {
             global_deferredLogger.logMessages();
