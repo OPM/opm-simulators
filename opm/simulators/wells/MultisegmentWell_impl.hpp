@@ -619,6 +619,11 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     apply(const BVector& x, BVector& Ax) const
     {
+        if ( param_.matrix_add_well_contributions_ )
+        {
+            // Contributions are already in the matrix itself
+            return;
+        }
         BVectorWell Bx(duneB_.N());
 
         duneB_.mv(x, Bx);
@@ -1174,9 +1179,31 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    addWellContributions(SparseMatrixAdapter& /* jacobian */) const
+    addWellContributions(SparseMatrixAdapter& jacobian) const
     {
-        OPM_THROW(std::runtime_error, "addWellContributions is not supported by multisegment well yet");
+        const auto invDuneD = mswellhelpers::invertWithUMFPack<DiagMatWell, BVectorWell>(duneD_, duneDSolver_);
+
+        // We need to change matrix A as follows
+        // A -= C^T D^-1 B
+        // D is a (nseg x nseg) block matrix with (4 x 4) blocks.
+        // B and C are (nseg x ncells) block matrices with (4 x 4 blocks).
+        // They have nonzeros at (i, j) only if this well has a
+        // perforation at cell j connected to segment i.
+        for (int rowC = 0; rowC < duneC_.N(); ++rowC) {
+            for (auto colC = duneC_[rowC].begin(), endC = duneC_[rowC].end(); colC != endC; ++colC) {
+                const auto row_index = colC.index();
+                for (int rowB = 0; rowB < duneB_.N(); ++rowB) {
+                    for (auto colB = duneB_[rowB].begin(), endB = duneB_[rowB].end(); colB != endB; ++colB) {
+                        const auto col_index = colB.index();
+                        OffDiagMatrixBlockWellType tmp1;
+                        Detail::multMatrixImpl(invDuneD[rowC][rowB], (*colB), tmp1, std::true_type());
+                        typename SparseMatrixAdapter::MatrixBlock tmp2;
+                        Detail::multMatrixTransposedImpl((*colC), tmp1, tmp2, std::false_type());
+                        jacobian.addToBlock(row_index, col_index, tmp2);
+                    }
+                }
+            }
+        }
     }
 
 
