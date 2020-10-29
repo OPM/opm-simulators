@@ -458,6 +458,37 @@ namespace Opm
 {
 namespace Detail
 {
+    //! calculates ret = A * B
+    template< class TA, class TB, class TC, class PositiveSign >
+    static inline void multMatrixImpl( const TA &A, // n x m
+                                       const TB &B, // n x p
+                                       TC &ret,     // m x p
+                                       const PositiveSign )
+    {
+        typedef typename TA :: size_type size_type;
+        typedef typename TA :: field_type K;
+        assert( A.N() == B.N() );
+        assert( A.M() == ret.N() );
+        assert( B.M() == ret.M() );
+
+        const size_type n = A.N();
+        const size_type m = ret.N();
+        const size_type p = B.M();
+        for( size_type i = 0; i < m; ++i )
+        {
+            for( size_type j = 0; j < p; ++j )
+            {
+                K sum = 0;
+                for( size_type k = 0; k < n; ++k )
+                {
+                    sum += A[ i ][ k ] * B[ k ][ j ];
+                }
+                // set value depending on given sign
+                ret[ i ][ j ] = PositiveSign::value ? sum : -sum;
+            }
+        }
+    }
+
     //! calculates ret = sign * (A^T * B)
     //! TA, TB, and TC are not necessarily FieldMatrix, but those should
     //! follow the Dune::DenseMatrix interface.
