@@ -215,6 +215,7 @@ namespace Opm {
                 auto wsrpt = well_state_.report(phase_usage_, Opm::UgGridHelpers::globalCell(grid()));
 
                 this->assignWellGuideRates(wsrpt);
+                this->assignShutConnections(wsrpt);
 
                 return wsrpt;
             }
@@ -468,6 +469,7 @@ namespace Opm {
             void setWsolvent(const Group& group, const Schedule& schedule, const int reportStepIdx, double wsolvent);
 
             void assignWellGuideRates(data::Wells& wsrpt) const;
+            void assignShutConnections(data::Wells& wsrpt) const;
             void assignGroupValues(const int                               reportStepIdx,
                                    const Schedule&                         sched,
                                    std::map<std::string, data::GroupData>& gvalues) const;

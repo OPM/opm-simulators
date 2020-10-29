@@ -23,8 +23,8 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 
-#include <utility>
 #include <algorithm>
+#include <utility>
 #include <fmt/format.h>
 
 namespace Opm {
@@ -2618,6 +2618,37 @@ namespace Opm {
             }
 
             xwPos->second.guide_rates = this->getGuideRateValues(well);
+        }
+    }
+
+
+
+
+
+    template <typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    assignShutConnections(data::Wells& wsrpt) const
+    {
+        for (const auto& well : this->wells_ecl_) {
+            auto xwPos = wsrpt.find(well.name());
+            if (xwPos == wsrpt.end()) { // No well results.  Unexpected.
+                continue;
+            }
+
+            auto& xcon = xwPos->second.connections;
+            for (const auto& conn : well.getConnections()) {
+                if (conn.state() != Connection::State::SHUT) {
+                    continue;
+                }
+
+                auto& xc = xcon.emplace_back();
+                xc.index = conn.global_index();
+                xc.pressure = xc.reservoir_rate = 0.0;
+
+                xc.effective_Kh = conn.Kh();
+                xc.trans_factor = conn.CF();
+            }
         }
     }
 
