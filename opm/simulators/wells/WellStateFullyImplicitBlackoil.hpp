@@ -270,6 +270,16 @@ namespace Opm
                                 }
                             }
                         }
+
+                        // Productivity index.
+                        {
+                            auto*       thisWellPI = &this     ->productivityIndex()[newIndex*np + 0];
+                            const auto* thatWellPI = &prevState->productivityIndex()[oldIndex*np + 0];
+
+                            for (int p = 0; p < np; ++p) {
+                                thisWellPI[p] = thatWellPI[p];
+                            }
+                        }
                     }
 
                     // If in the new step, there is no THP related target/limit anymore, its thp value should be

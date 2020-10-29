@@ -34,6 +34,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <unordered_map>
@@ -322,6 +323,9 @@ namespace Opm {
             bool report_step_starts_;
             bool glift_debug = false;
             bool alternative_well_rate_init_;
+
+            std::optional<int> last_run_wellpi_{};
+
             std::unique_ptr<RateConverterType> rateConverter_;
             std::unique_ptr<VFPProperties<VFPInjProperties,VFPProdProperties>> vfp_properties_;
 
@@ -467,6 +471,8 @@ namespace Opm {
             void updateWsolvent(const Group& group, const Schedule& schedule, const int reportStepIdx, const WellStateFullyImplicitBlackoil& wellState);
 
             void setWsolvent(const Group& group, const Schedule& schedule, const int reportStepIdx, double wsolvent);
+
+            void runWellPIScaling(const int timeStepIdx, DeferredLogger& local_deferredLogger);
 
             void assignWellGuideRates(data::Wells& wsrpt) const;
             void assignShutConnections(data::Wells& wsrpt) const;
