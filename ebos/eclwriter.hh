@@ -332,7 +332,7 @@ public:
                          aquiferData);
 
             const auto& udq_config = schedule().getUDQConfig(reportStepNum);
-            udq_config.eval( reportStepNum, summaryState(), udqState() );
+            udq_config.eval( reportStepNum, schedule().wellMatcher(reportStepNum), summaryState(), udqState() );
 
             buffer = summaryState().serialize();
         }
