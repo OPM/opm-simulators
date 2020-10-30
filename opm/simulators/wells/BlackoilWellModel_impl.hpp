@@ -81,8 +81,6 @@ namespace Opm {
 
         gravity_ = ebosSimulator_.problem().gravity()[2];
 
-        initial_step_ = true;
-
         // add the eWoms auxiliary module for the wells to the list
         ebosSimulator_.model().addAuxiliaryModule(this);
 
@@ -577,8 +575,6 @@ namespace Opm {
         }
 
         previous_well_state_ = well_state_;
-
-        initial_step_ = false;
     }
 
 
@@ -869,17 +865,11 @@ namespace Opm {
                 // solve the well equations as a pre-processing step
                 last_report_ = solveWellEq(B_avg, dt, local_deferredLogger);
 
-
-                if (initial_step_) {
-                    // update the explicit quantities to get the initial fluid distribution in the well correct.
-                    calculateExplicitQuantities(local_deferredLogger);
-                    prepareTimeStep(local_deferredLogger);
-                    last_report_ = solveWellEq(B_avg, dt, local_deferredLogger);
-                    initial_step_ = false;
-                }
-                // TODO: should we update the explicit related here again, or even prepareTimeStep().
-                // basically, this is a more updated state from the solveWellEq based on fixed
-                // reservoir state, will tihs be a better place to inialize the explict information?
+                // update the explicit quantities to get the initial fluid distribution in the well correct.
+                calculateExplicitQuantities(local_deferredLogger);
+                // we solve again after the update of the explicit quantities
+                prepareTimeStep(local_deferredLogger);
+                last_report_ = solveWellEq(B_avg, dt, local_deferredLogger);
             }
             gliftDebug("assemble() : running assembleWellEq()..", local_deferredLogger);
             well_state_.enableGliftOptimization();
