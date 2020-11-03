@@ -40,12 +40,12 @@ public:
 
 private:
     const std::string deckFilename_;
-    bool hasRunInit_;
-    bool hasRunCleanup_;
+    bool hasRunInit_ = false;
+    bool hasRunCleanup_ = false;
 
     std::unique_ptr<FlowMainEbosType> mainEbos_;
     std::unique_ptr<Opm::Main> main_;
 };
 
-} // namespace Opm::Python
+} // namespace Opm::Pybind
 #endif // OPM_SIMULATORS_HEADER_INCLUDED

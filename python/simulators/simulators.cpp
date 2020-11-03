@@ -18,7 +18,7 @@ namespace py = pybind11;
 
 namespace Opm::Pybind {
 BlackOilSimulator::BlackOilSimulator( const std::string &deckFilename)
-    : deckFilename_{deckFilename}, hasRunInit_{false}, hasRunCleanup_{false}
+    : deckFilename_{deckFilename}
 {
 }
 
