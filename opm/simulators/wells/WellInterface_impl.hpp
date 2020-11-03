@@ -1382,7 +1382,7 @@ namespace Opm
 
     template<typename TypeTag>
     void
-    WellInterface<TypeTag>::scaleProductivityIndex(const int perfIdx, double& productivity_index, const bool new_well, Opm::DeferredLogger& deferred_logger)
+    WellInterface<TypeTag>::scaleProductivityIndex(const int perfIdx, double& productivity_index, const bool new_well, Opm::DeferredLogger& deferred_logger) const
     {
         const auto& connection = well_ecl_.getConnections()[(*perf_data_)[perfIdx].ecl_index];
         if (well_ecl_.getDrainageRadius() < 0) {

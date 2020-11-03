@@ -511,13 +511,13 @@ namespace Opm
                                  const std::vector<double>& B_avg,
                                  Opm::DeferredLogger& deferred_logger);
 
-        void scaleProductivityIndex(const int perfIdx, double& productivity_index, const bool new_well, Opm::DeferredLogger& deferred_logger);
+        void scaleProductivityIndex(const int perfIdx, double& productivity_index, const bool new_well, Opm::DeferredLogger& deferred_logger) const;
 
         void initCompletions();
 
         // count the number of times an output log message is created in the productivity
         // index calculations
-        int well_productivity_index_logger_counter_;
+        mutable int well_productivity_index_logger_counter_;
 
         bool checkConstraints(WellState& well_state,
                               const Schedule& schedule,
