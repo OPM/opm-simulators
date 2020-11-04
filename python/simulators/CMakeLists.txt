@@ -20,20 +20,13 @@ set(PYTHON_INSTALL_PREFIX "lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MI
 
 install(TARGETS simulators DESTINATION ${DEST_PREFIX}${CMAKE_INSTALL_PREFIX}/${PYTHON_INSTALL_PREFIX}/opm)
 
-configure_file(${PROJECT_SOURCE_DIR}/python/run-python-tests.sh.in
-               ${PROJECT_BINARY_DIR}/tmp/run-python-tests.sh)
-file( COPY ${PROJECT_BINARY_DIR}/tmp/run-python-tests.sh
-      DESTINATION ${PROJECT_BINARY_DIR}/python
-      FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE )
 file( COPY ${PROJECT_SOURCE_DIR}/python/test
       DESTINATION ${PROJECT_BINARY_DIR}/python)
 file( COPY ${PROJECT_SOURCE_DIR}/python/test_data
       DESTINATION ${PROJECT_BINARY_DIR}/python)
 
-find_program (BASH_EXECUTABLE bash)
-if (BASH_EXECUTABLE)
-  add_test(NAME python_tests
+add_test(NAME python_tests
     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/python
-    COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${PROJECT_BINARY_DIR}/python
-            ${BASH_EXECUTABLE} run-python-tests.sh )
-endif(BASH_EXECUTABLE)
+    COMMAND ${CMAKE_COMMAND}
+          -E env PYTHONPATH=${PROJECT_BINARY_DIR}/python:$ENV{PYTHONPATH}
+          ${PYTHON_EXECUTABLE} -m unittest )

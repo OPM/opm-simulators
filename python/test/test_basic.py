@@ -1,11 +1,12 @@
-import unittest
-from opm2.simulators import BlackOilSimulator
 import os
+import unittest
+from contextlib import contextmanager
+from pathlib import Path
+from opm2.simulators import BlackOilSimulator
 
 class TestBasic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        os.chdir('test_data/SPE1CASE1')
         # NOTE: Loading the below extension module involves loading a
         #    a shared library like "simulators.cpython-37m-x86_64-linux-gnu.so"
         #    It turns out Python cannot unload this module, see:
@@ -43,14 +44,20 @@ class TestBasic(unittest.TestCase):
         #    in which each test_xxx() method is called by unittest is not defined).
         #    However, as noted above this is not currently possible.
         #
-        cls.sim = BlackOilSimulator( 'SPE1CASE1.DATA' )
+        test_dir = Path(os.path.dirname(__file__))
+        cls.data_dir = test_dir.parent.joinpath("test_data/SPE1CASE1")
+        with TestBasic.pushd(cls.data_dir):
+            cls.sim = BlackOilSimulator( 'SPE1CASE1.DATA' )
 
     def setUp(self):
+        self.saved_cwd = os.getcwd()
+        os.chdir(self.data_dir)
         self.sim.step_init()
         self.sim.step()
 
     def tearDown(self):
         self.sim.step_cleanup()
+        os.chdir(self.saved_cwd)
 
     def test_all(self):
         sim = self.sim
@@ -61,4 +68,14 @@ class TestBasic(unittest.TestCase):
         sim.set_porosity(poro)
         sim.step()
         poro2 = sim.get_porosity()
-        self.assertAlmostEqual(poro[0], 0.285, places=7, msg='value of porosity 2')
+        self.assertAlmostEqual(poro2[0], 0.285, places=7, msg='value of porosity 2')
+
+    @classmethod
+    @contextmanager
+    def pushd(cls, path):
+        cwd = os.getcwd()
+        if not os.path.isdir(path):
+            os.makedirs(path)
+        os.chdir(path)
+        yield
+        os.chdir(cwd)
