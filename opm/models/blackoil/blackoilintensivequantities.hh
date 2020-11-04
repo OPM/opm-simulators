@@ -313,9 +313,9 @@ public:
 
             const auto& mu = FluidSystem::viscosity(fluidState_, paramCache, phaseIdx);
             if (enableExtbo && phaseIdx == oilPhaseIdx)
-              mobility_[phaseIdx] /= asImp_().visco();
+              mobility_[phaseIdx] /= asImp_().oilViscosity();
             else if (enableExtbo && phaseIdx == gasPhaseIdx)
-              mobility_[phaseIdx] /= asImp_().viscg();
+              mobility_[phaseIdx] /= asImp_().gasViscosity();
             else
               mobility_[phaseIdx] /= mu;
         }
