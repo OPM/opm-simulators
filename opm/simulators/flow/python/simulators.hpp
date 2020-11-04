@@ -35,14 +35,17 @@ public:
     BlackOilSimulator( const std::string &deckFilename);
     int run();
     int step();
-    int step_init();
+    int stepInit();
+    int stepCleanup();
 
 private:
     const std::string deckFilename_;
+    bool hasRunInit_ = false;
+    bool hasRunCleanup_ = false;
+
     std::unique_ptr<FlowMainEbosType> mainEbos_;
     std::unique_ptr<Opm::Main> main_;
-    bool hasRunInit_;
 };
 
-} // namespace Opm::Python
+} // namespace Opm::Pybind
 #endif // OPM_SIMULATORS_HEADER_INCLUDED

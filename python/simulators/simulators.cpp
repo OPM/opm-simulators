@@ -18,7 +18,7 @@ namespace py = pybind11;
 
 namespace Opm::Pybind {
 BlackOilSimulator::BlackOilSimulator( const std::string &deckFilename)
-    : deckFilename_(deckFilename), hasRunInit_(false)
+    : deckFilename_{deckFilename}
 {
 }
 
@@ -33,16 +33,29 @@ int BlackOilSimulator::step()
     if (!hasRunInit_) {
         throw std::logic_error("step() called before step_init()");
     }
+    if (hasRunCleanup_) {
+        throw std::logic_error("step() called after step_cleanup()");
+    }
     return mainEbos_->executeStep();
 }
 
-int BlackOilSimulator::step_init()
+int BlackOilSimulator::stepCleanup()
+{
+    hasRunCleanup_ = true;
+    return mainEbos_->executeStepsCleanup();
+}
+
+int BlackOilSimulator::stepInit()
 {
 
     if (hasRunInit_) {
         // Running step_init() multiple times is not implemented yet,
-        // currently we just do nothing and return
-        return EXIT_SUCCESS;
+        if (hasRunCleanup_) {
+            throw std::logic_error("step_init() called again");
+        }
+        else {
+            return EXIT_SUCCESS;
+        }
     }
     main_ = std::make_unique<Opm::Main>( deckFilename_ );
     int exitCode = EXIT_SUCCESS;
@@ -65,5 +78,6 @@ PYBIND11_MODULE(simulators, m)
         .def(py::init< const std::string& >())
         .def("run", &Opm::Pybind::BlackOilSimulator::run)
         .def("step", &Opm::Pybind::BlackOilSimulator::step)
-        .def("step_init", &Opm::Pybind::BlackOilSimulator::step_init);
+        .def("step_init", &Opm::Pybind::BlackOilSimulator::stepInit)
+        .def("step_cleanup", &Opm::Pybind::BlackOilSimulator::stepCleanup);
 }
