@@ -826,9 +826,9 @@ namespace Opm
                 cq_s_zfrac *= wsolvent();
             } else if (cq_s_zfrac.value() != 0.0) {
                 const double dis_gas_frac = perf_dis_gas_rate / cq_s_zfrac.value();
-                cq_s_zfrac *= extendEval(dis_gas_frac*intQuants.xvalue() + (1.0-dis_gas_frac)*intQuants.yvalue());
+                cq_s_zfrac *= extendEval(dis_gas_frac*intQuants.xVolume() + (1.0-dis_gas_frac)*intQuants.yVolume());
             }
-            well_state.perfRateZFrac()[first_perf_ + perf] = cq_s_zfrac.value();
+            well_state.perfRateSolvent()[first_perf_ + perf] = cq_s_zfrac.value();
 
             cq_s_zfrac *= well_efficiency_factor_;
             connectionRates_[perf][contiZfracEqIdx] = Base::restrictEval(cq_s_zfrac);
@@ -2004,7 +2004,7 @@ namespace Opm
                     const double oilrate = std::abs(well_state.wellRates()[oilpos_well]); //in order to handle negative rates in producers
                     rvmax_perf[perf] = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), temperature, p_avg);
                     if (oilrate > 0) {
-                        const double gasrate = std::abs(well_state.wellRates()[gaspos_well]) - well_state.solventWellRate(w);
+                        const double gasrate = std::abs(well_state.wellRates()[gaspos_well]) - (has_solvent ? well_state.solventWellRate(w) : 0.0);
                         double rv = 0.0;
                         if (gasrate > 0) {
                             rv = oilrate / gasrate;
@@ -2029,7 +2029,7 @@ namespace Opm
                 if (gasPresent) {
                     rsmax_perf[perf] = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(), temperature, p_avg);
                     const int gaspos_well = pu.phase_pos[Gas] + w * pu.num_phases;
-                    const double gasrate = std::abs(well_state.wellRates()[gaspos_well]) - well_state.solventWellRate(w);
+                    const double gasrate = std::abs(well_state.wellRates()[gaspos_well]) - (has_solvent ? well_state.solventWellRate(w) : 0.0);
                     if (gasrate > 0) {
                         const double oilrate = std::abs(well_state.wellRates()[oilpos_well]);
                         double rs = 0.0;
@@ -2926,7 +2926,8 @@ namespace Opm
                 primary_variables_[WFrac] = scalingFactor(pu.phase_pos[Water]) * well_state.wellRates()[np*well_index + pu.phase_pos[Water]] / total_well_rate;
             }
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                primary_variables_[GFrac] = scalingFactor(pu.phase_pos[Gas]) * (well_state.wellRates()[np*well_index + pu.phase_pos[Gas]] - well_state.solventWellRate(well_index)) / total_well_rate ;
+                primary_variables_[GFrac] = scalingFactor(pu.phase_pos[Gas]) * (well_state.wellRates()[np*well_index + pu.phase_pos[Gas]]
+                                                 - (has_solvent ? well_state.solventWellRate(well_index) : 0.0) ) / total_well_rate ;
             }
             if (has_solvent) {
                 primary_variables_[SFrac] = scalingFactor(pu.phase_pos[Gas]) * well_state.solventWellRate(well_index) / total_well_rate ;

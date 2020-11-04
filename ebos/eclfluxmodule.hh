@@ -272,7 +272,8 @@ protected:
 
             const Evaluation& pressureInterior = intQuantsIn.fluidState().pressure(phaseIdx);
             Evaluation pressureExterior = Toolbox::value(intQuantsEx.fluidState().pressure(phaseIdx));
-            if (enableExtbo) //z-dependency ...
+            if (enableExtbo) // added stability; particulary useful for solvent migrating in pure water
+                             // where the solvent fraction displays a 0/1 behaviour ...
                 pressureExterior += Toolbox::value(rhoAvg)*(distZ*g);
             else
                 pressureExterior += rhoAvg*(distZ*g);
