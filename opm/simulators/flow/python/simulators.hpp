@@ -1,8 +1,5 @@
 /*
-  Copyright 2013, 2014, 2015 SINTEF ICT, Applied Mathematics.
-  Copyright 2014 Dr. Blatt - HPC-Simulation-Software & Services
-  Copyright 2015 IRIS AS
-  Copyright 2014 STATOIL ASA.
+  Copyright 2020 Equinor ASA.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -19,21 +16,31 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+
 #ifndef OPM_SIMULATORS_HEADER_INCLUDED
 #define OPM_SIMULATORS_HEADER_INCLUDED
 
 #include <opm/simulators/flow/Main.hpp>
 #include <opm/simulators/flow/FlowMainEbos.hpp>
+#include <opm/models/utils/propertysystem.hh>
+#include <pybind11/pybind11.h>
+#include <pybind11/numpy.h>
+
+namespace py = pybind11;
 
 namespace Opm::Pybind {
 class BlackOilSimulator
 {
 private:
-    using FlowMainEbosType = Opm::FlowMainEbos<Opm::Properties::TTag::EclFlowProblem>;
+    using TypeTag = Opm::Properties::TTag::EclFlowProblem;
+    using Simulator = Opm::GetPropType<TypeTag, Opm::Properties::Simulator>;
 
 public:
     BlackOilSimulator( const std::string &deckFilename);
+    py::array_t<double> getPorosity();
     int run();
+    void setPorosity(
+         py::array_t<double, py::array::c_style | py::array::forcecast> array);
     int step();
     int stepInit();
     int stepCleanup();
@@ -43,8 +50,10 @@ private:
     bool hasRunInit_ = false;
     bool hasRunCleanup_ = false;
 
-    std::unique_ptr<FlowMainEbosType> mainEbos_;
+    std::unique_ptr<Opm::FlowMainEbos<TypeTag>> mainEbos_;
     std::unique_ptr<Opm::Main> main_;
+    Simulator *ebosSimulator_;
+    std::unique_ptr<PyMaterialState<TypeTag>> materialState_;
 };
 
 } // namespace Opm::Pybind
