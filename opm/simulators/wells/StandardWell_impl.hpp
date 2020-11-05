@@ -33,7 +33,9 @@ namespace Opm
 
     template<typename TypeTag>
     StandardWell<TypeTag>::
-    StandardWell(const Well& well, const int time_step,
+    StandardWell(const Well& well,
+                 const ParallelWellInfo& pw_info,
+                 const int time_step,
                  const ModelParameters& param,
                  const RateConverterType& rate_converter,
                  const int pvtRegionIdx,
@@ -41,12 +43,11 @@ namespace Opm
                  const int num_phases,
                  const int index_of_well,
                  const int first_perf_index,
-                 const std::vector<PerforationData>& perf_data,
-                 const ParallelWellInfo& pinfo)
-        : Base(well, time_step, param, rate_converter, pvtRegionIdx, num_components, num_phases, index_of_well, first_perf_index, perf_data)
+                 const std::vector<PerforationData>& perf_data)
+    : Base(well, pw_info, time_step, param, rate_converter, pvtRegionIdx, num_components, num_phases, index_of_well, first_perf_index, perf_data)
     , perf_densities_(number_of_perforations_)
     , perf_pressure_diffs_(number_of_perforations_)
-    , parallelB_(duneB_, pinfo)
+    , parallelB_(duneB_, pw_info)
     , F0_(numWellConservationEq)
     , ipr_a_(number_of_phases_)
     , ipr_b_(number_of_phases_)

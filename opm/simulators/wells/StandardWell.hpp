@@ -159,7 +159,9 @@ namespace Opm
         using Base::contiBrineEqIdx;
         static const int contiEnergyEqIdx = Indices::contiEnergyEqIdx;
 
-        StandardWell(const Well& well, const int time_step,
+        StandardWell(const Well& well,
+                     const ParallelWellInfo& pw_info,
+                     const int time_step,
                      const ModelParameters& param,
                      const RateConverterType& rate_converter,
                      const int pvtRegionIdx,
@@ -167,8 +169,7 @@ namespace Opm
                      const int num_phases,
                      const int index_of_well,
                      const int first_perf_index,
-                     const std::vector<PerforationData>& perf_data,
-                     const ParallelWellInfo& pinfo);
+                     const std::vector<PerforationData>& perf_data);
 
         virtual void init(const PhaseUsage* phase_usage_arg,
                           const std::vector<double>& depth_arg,

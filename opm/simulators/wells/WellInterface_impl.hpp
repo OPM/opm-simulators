@@ -30,6 +30,7 @@ namespace Opm
     template<typename TypeTag>
     WellInterface<TypeTag>::
     WellInterface(const Well& well,
+                  const ParallelWellInfo& pw_info,
                   const int time_step,
                   const ModelParameters& param,
                   const RateConverterType& rate_converter,
@@ -40,6 +41,7 @@ namespace Opm
                   const int first_perf_index,
                   const std::vector<PerforationData>& perf_data)
       : well_ecl_(well)
+      , parallel_well_info_(&pw_info)
       , current_step_(time_step)
       , param_(param)
       , rateConverter_(rate_converter)
@@ -1187,23 +1189,23 @@ namespace Opm
 
         // COMPDAT handling
         const auto& connectionSet = well_ecl_.getConnections();
+        CheckDistributedWellConnections checker(well_ecl_, *parallel_well_info_);
         for (size_t c=0; c<connectionSet.size(); c++) {
             const auto& connection = connectionSet.get(c);
+            const int i = connection.getI();
+            const int j = connection.getJ();
+            const int k = connection.getK();
+
+            const int* cpgdim = cart_dims;
+            const int cart_grid_indx = i + cpgdim[0]*(j + cpgdim[1]*k);
+            const int cell = cartesian_to_compressed[cart_grid_indx];
+            if (connection.state() != Connection::State::OPEN || cell >= 0)
+            {
+                checker.connectionFound(c);
+            }
             if (connection.state() == Connection::State::OPEN) {
-                const int i = connection.getI();
-                const int j = connection.getJ();
-                const int k = connection.getK();
 
-                const int* cpgdim = cart_dims;
-                const int cart_grid_indx = i + cpgdim[0]*(j + cpgdim[1]*k);
-                const int cell = cartesian_to_compressed[cart_grid_indx];
-
-                if (cell < 0) {
-                    OPM_DEFLOG_THROW(std::runtime_error, "Cell with i,j,k indices " << i << ' ' << j << ' '
-                              << k << " not found in grid (well = " << name() << ')', deferred_logger);
-                }
-
-                {
+                if (cell >= 0) {
                     double radius = connection.rw();
                     const std::array<double, 3> cubical =
                         wellhelpers::getCubeDim<3>(cell_to_faces, begin_face_centroids, cell);
@@ -1235,6 +1237,7 @@ namespace Opm
                 }
             }
         }
+        checker.checkAllConnectionsFound();
     }
 
     template<typename TypeTag>

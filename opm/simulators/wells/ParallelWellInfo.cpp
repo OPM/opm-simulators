@@ -18,6 +18,7 @@
 */
 #include <config.h>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
+#include <opm/common/ErrorMacros.hpp>
 
 namespace Opm
 {
@@ -111,4 +112,44 @@ bool operator!=(const ParallelWellInfo& well, const std::pair<std::string, bool>
     return pair != well;
 }
 
+CheckDistributedWellConnections::CheckDistributedWellConnections(const Well& well,
+                                                               const ParallelWellInfo& info)
+    : well_(well), pwinfo_(info)
+{
+    foundConnections_.resize(well.getConnections().size(), 0);
+}
+
+void
+CheckDistributedWellConnections::connectionFound(std::size_t i)
+{
+    foundConnections_[i] = 1;
+}
+
+bool
+CheckDistributedWellConnections::checkAllConnectionsFound()
+{
+    pwinfo_.communication().sum(foundConnections_.data(),
+                              foundConnections_.size());
+
+    std::string msg = std::string("Cells with these i,j,k indices were not found ")
+        + "in grid (well = " + pwinfo_.name_ + "):";
+    bool missingCells = false;
+    auto start = foundConnections_.begin();
+    for(auto conFound = start; conFound != foundConnections_.end(); ++conFound)
+    {
+        if (*conFound == 0)
+        {
+            const auto& completion = well_.getConnections()[conFound - start];
+            msg = msg + " " + std::to_string(completion.getI()) + "," +
+                std::to_string(completion.getJ()) + ","
+                + std::to_string(completion.getK()) + " ";
+            missingCells = true;
+        }
+    }
+    if (missingCells && pwinfo_.isOwner_)
+    {
+        OPM_THROW(std::runtime_error, msg);
+    }
+    return !missingCells;
+}
 } // end namespace Opm

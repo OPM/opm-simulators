@@ -639,19 +639,17 @@ namespace Opm {
             std::size_t completion_index = 0;
             well_perf_data_[well_index].clear();
             well_perf_data_[well_index].reserve(well.getConnections().size());
+            CheckDistributedWellConnections checker(well, *local_parallel_well_info_[well_index]);
+
             for (const auto& completion : well.getConnections()) {
+                const int i = completion.getI();
+                const int j = completion.getJ();
+                const int k = completion.getK();
+                const int cart_grid_indx = i + cartDims[0] * (j + cartDims[1] * k);
+                const int active_index = cartesian_to_compressed_[cart_grid_indx];
                 if (completion.state() == Connection::State::OPEN) {
-                    const int i = completion.getI();
-                    const int j = completion.getJ();
-                    const int k = completion.getK();
-                    const int cart_grid_indx = i + cartDims[0] * (j + cartDims[1] * k);
-                    const int active_index = cartesian_to_compressed_[cart_grid_indx];
-                    if (active_index < 0) {
-                        const std::string msg
-                            = ("Cell with i,j,k indices " + std::to_string(i) + " " + std::to_string(j) + " "
-                               + std::to_string(k) + " not found in grid (well = " + well.name() + ").");
-                        OPM_THROW(std::runtime_error, msg);
-                    } else {
+                    if (active_index >= 0) {
+                        checker.connectionFound(completion_index);
                         PerforationData pd;
                         pd.cell_index = active_index;
                         pd.connection_transmissibility_factor = completion.CF();
@@ -660,6 +658,7 @@ namespace Opm {
                         well_perf_data_[well_index].push_back(pd);
                     }
                 } else {
+                    checker.connectionFound(completion_index);
                     if (completion.state() != Connection::State::SHUT) {
                         OPM_THROW(std::runtime_error,
                                   "Completion state: " << Connection::State2String(completion.state()) << " not handled");
@@ -667,6 +666,7 @@ namespace Opm {
                 }
                 ++completion_index;
             }
+            checker.checkAllConnectionsFound();
             ++well_index;
         }
     }
@@ -777,6 +777,7 @@ namespace Opm {
 
                 if (!well_ecl.isMultiSegment() || !param_.use_multisegment_well_) {
                     well_container.emplace_back(new StandardWell<TypeTag>(well_ecl,
+                                                                          *local_parallel_well_info_[w],
                                                                           time_step,
                                                                           param_,
                                                                           *rateConverter_,
@@ -785,10 +786,10 @@ namespace Opm {
                                                                           numPhases(),
                                                                           w,
                                                                           well_state_.firstPerfIndex()[w],
-                                                                          well_perf_data_[w],
-                                                                          *local_parallel_well_info_[w]));
+                                                                          well_perf_data_[w]));
                 } else {
                     well_container.emplace_back(new MultisegmentWell<TypeTag>(well_ecl,
+                                                                              *local_parallel_well_info_[w],
                                                                               time_step,
                                                                               param_,
                                                                               *rateConverter_,
@@ -845,6 +846,7 @@ namespace Opm {
 
         if (!well_ecl.isMultiSegment() || !param_.use_multisegment_well_) {
             return WellInterfacePtr(new StandardWell<TypeTag>(well_ecl,
+                                                              *local_parallel_well_info_[index_well_ecl],
                                                               report_step,
                                                               param_,
                                                               *rateConverter_,
@@ -853,10 +855,10 @@ namespace Opm {
                                                               numPhases(),
                                                               index_well_ecl,
                                                               well_state_.firstPerfIndex()[index_well_ecl],
-                                                              well_perf_data_[index_well_ecl],
-                                                              *local_parallel_well_info_[index_well_ecl]));
+                                                              well_perf_data_[index_well_ecl]));
         } else {
             return WellInterfacePtr(new MultisegmentWell<TypeTag>(well_ecl,
+                                                                  *local_parallel_well_info_[index_well_ecl],
                                                                   report_step,
                                                                   param_,
                                                                   *rateConverter_,

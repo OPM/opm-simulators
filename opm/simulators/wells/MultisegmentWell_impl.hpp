@@ -31,7 +31,9 @@ namespace Opm
 
     template <typename TypeTag>
     MultisegmentWell<TypeTag>::
-    MultisegmentWell(const Well& well, const int time_step,
+    MultisegmentWell(const Well& well,
+                     const ParallelWellInfo& pw_info,
+                     const int time_step,
                      const ModelParameters& param,
                      const RateConverterType& rate_converter,
                      const int pvtRegionIdx,
@@ -40,7 +42,7 @@ namespace Opm
                      const int index_of_well,
                      const int first_perf_index,
                      const std::vector<PerforationData>& perf_data)
-        : Base(well, time_step, param, rate_converter, pvtRegionIdx, num_components, num_phases, index_of_well, first_perf_index, perf_data)
+    : Base(well, pw_info, time_step, param, rate_converter, pvtRegionIdx, num_components, num_phases, index_of_well, first_perf_index, perf_data)
     , segment_perforations_(numberOfSegments())
     , segment_inlets_(numberOfSegments())
     , cell_perforation_depth_diffs_(number_of_perforations_, 0.0)
