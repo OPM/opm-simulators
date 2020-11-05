@@ -54,14 +54,15 @@ class TestBasic(unittest.TestCase):
         #    in which each test_xxx() method is called by unittest is not defined).
         #    However, as noted above this is not currently possible.
         #
-        cls.data_dir = os.path.join( os.path.dirname(__file__), "test_data/SPE1CASE1")
+        test_dir = Path(os.path.dirname(__file__))
+        cls.data_dir = test_dir.parent.joinpath("test_data/SPE1CASE1")
 
 
     def test_all(self):
-        with self.pushd(cls.data_dir):
+        with pushd(self.data_dir):
             sim = BlackOilSimulator("SPE1CASE1.DATA")
             sim.step_init()
-            self.sim.step()
+            sim.step()
 
             poro = sim.get_porosity()
             self.assertEqual(len(poro), 300, 'length of porosity vector')
