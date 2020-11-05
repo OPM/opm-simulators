@@ -4,6 +4,16 @@ from contextlib import contextmanager
 from pathlib import Path
 from opm2.simulators import BlackOilSimulator
 
+@contextmanager
+def pushd(path):
+    cwd = os.getcwd()
+    if not os.path.isdir(path):
+        os.makedirs(path)
+    os.chdir(path)
+    yield
+    os.chdir(cwd)
+
+
 class TestBasic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -44,38 +54,21 @@ class TestBasic(unittest.TestCase):
         #    in which each test_xxx() method is called by unittest is not defined).
         #    However, as noted above this is not currently possible.
         #
-        test_dir = Path(os.path.dirname(__file__))
-        cls.data_dir = test_dir.parent.joinpath("test_data/SPE1CASE1")
-        with TestBasic.pushd(cls.data_dir):
-            cls.sim = BlackOilSimulator( 'SPE1CASE1.DATA' )
+        cls.data_dir = os.path.join( os.path.dirname(__file__), "test_data/SPE1CASE1")
 
-    def setUp(self):
-        self.saved_cwd = os.getcwd()
-        os.chdir(self.data_dir)
-        self.sim.step_init()
-        self.sim.step()
-
-    def tearDown(self):
-        self.sim.step_cleanup()
-        os.chdir(self.saved_cwd)
 
     def test_all(self):
-        sim = self.sim
-        poro = sim.get_porosity()
-        self.assertEqual(len(poro), 300, 'length of porosity vector')
-        self.assertAlmostEqual(poro[0], 0.3, places=7, msg='value of porosity')
-        poro = poro *.95
-        sim.set_porosity(poro)
-        sim.step()
-        poro2 = sim.get_porosity()
-        self.assertAlmostEqual(poro2[0], 0.285, places=7, msg='value of porosity 2')
+        with self.pushd(cls.data_dir):
+            sim = BlackOilSimulator("SPE1CASE1.DATA")
+            sim.step_init()
+            self.sim.step()
 
-    @classmethod
-    @contextmanager
-    def pushd(cls, path):
-        cwd = os.getcwd()
-        if not os.path.isdir(path):
-            os.makedirs(path)
-        os.chdir(path)
-        yield
-        os.chdir(cwd)
+            poro = sim.get_porosity()
+            self.assertEqual(len(poro), 300, 'length of porosity vector')
+            self.assertAlmostEqual(poro[0], 0.3, places=7, msg='value of porosity')
+            poro = poro *.95
+            sim.set_porosity(poro)
+            sim.step()
+            poro2 = sim.get_porosity()
+            self.assertAlmostEqual(poro2[0], 0.285, places=7, msg='value of porosity 2')
+
