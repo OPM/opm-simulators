@@ -35,14 +35,13 @@ GasLiftRuntime(
     const Simulator &ebos_simulator,
     const SummaryState &summary_state,
     DeferredLogger &deferred_logger,
-    std::vector<double> &potentials,
     const WellState &well_state,
     const Well::ProductionControls &controls
 ) :
     controls_{controls},
     deferred_logger_{deferred_logger},
     ebos_simulator_{ebos_simulator},
-    potentials_{potentials},
+    potentials_(well_state.numPhases(),0.0),
     std_well_{std_well},
     summary_state_{summary_state},
     well_state_{well_state},
@@ -237,6 +236,15 @@ getOilRateWithLimit_(std::vector<double> &potentials)
         if (new_rate > target)
             new_rate = target;
     }
+    if (this->controls_.hasControl(Well::ProducerCMode::LRAT)) {
+        auto target = this->controls_.liquid_rate;
+        auto oil_rate = -potentials[this->oil_pos_];
+        auto water_rate = -potentials[this->water_pos_];
+        auto liq_rate = oil_rate + water_rate;
+        if (liq_rate > target) {
+            new_rate = oil_rate * (target/liq_rate);
+       }
+    }
     return new_rate;
 }
 
@@ -342,6 +350,9 @@ runOptimizeLoop_(bool increase)
     auto gas_rate = -cur_potentials[this->gas_pos_];
     bool success = false;  // did we succeed to increase alq?
     auto cur_alq = this->orig_alq_;
+    if (cur_alq == 0 && !increase) // we don't decrease alq below zero
+        return false;
+
     auto alq = cur_alq;
     OptimizeState state {*this, increase};
     if (this->debug) debugShowStartIteration_(alq, increase);
