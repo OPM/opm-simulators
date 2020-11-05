@@ -134,6 +134,10 @@ private:
         criterion.setNoPreSmoothSteps(prm.get<int>("pre_smooth", 1));
         criterion.setNoPostSmoothSteps(prm.get<int>("post_smooth", 1));
         criterion.setDebugLevel(prm.get<int>("verbosity", 0));
+        // As the default we request to accumulate data to 1 process always as our matrix
+        // graph might be unsymmetric and hence not supported by the PTScotch/ParMetis
+        // calls in DUNE. Accumulating to 1 skips PTScotch/ParMetis
+        criterion.setAccumulate(static_cast<Dune::Amg::AccumulationMode>(prm.get<int>("accumulate", 1)));
         return criterion;
     }
 
