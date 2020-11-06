@@ -1243,15 +1243,15 @@ namespace Opm
             setToZero(connPI);
 
             const auto segIx = this->segmentNumberToIndex(allConn[allPerfID].segment());
-            if (! isInjecting(fs, segIx, subsetPerfID)) {  // Production or zero flow rate
-                if (allow_xflow || this->isProducer()) {
-                    this->computeConnLevelProdInd(fs, connPICalc, mob, connPI);
-                }
-            }
-            else {              // Connection injects into reservoir
-                if (allow_xflow || this->isInjector()) {
+            if (isInjecting(fs, segIx, subsetPerfID)) { // Connection injects into reservoir
+                if (this->isInjector() || allow_xflow) {
                     this->computeConnLevelInjInd(fs, connPICalc, mob, segIx,
                                                  connPI, deferred_logger);
+                }
+            }
+            else {  // Production or zero flow rate
+                if (this->isProducer() || allow_xflow) {
+                    this->computeConnLevelProdInd(fs, connPICalc, mob, connPI);
                 }
             }
 
