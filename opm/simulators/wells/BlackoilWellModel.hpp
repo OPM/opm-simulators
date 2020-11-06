@@ -297,7 +297,7 @@ namespace Opm {
             bool terminal_output_;
             bool has_solvent_;
             bool has_polymer_;
-            std::vector<int> pvt_region_idx_;
+            std::function<std::size_t (std::size_t)> pvt_region_idx_;
             PhaseUsage phase_usage_;
             size_t global_num_cells_;
             // the number of the cells in the local grid

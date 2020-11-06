@@ -729,7 +729,7 @@ namespace Opm {
 
                 // Use the pvtRegionIdx from the top cell
                 const int well_cell_top = well_perf_data_[w][0].cell_index;
-                const int pvtreg = pvt_region_idx_[well_cell_top];
+                const int pvtreg = pvt_region_idx_(well_cell_top);
 
                 if (!well_ecl.isMultiSegment() || !param_.use_multisegment_well_) {
                     well_container.emplace_back(new StandardWell<TypeTag>(well_ecl,
@@ -796,7 +796,7 @@ namespace Opm {
 
         // Use the pvtRegionIdx from the top cell
         const int well_cell_top = well_perf_data_[index_well_ecl][0].cell_index;
-        const int pvtreg = pvt_region_idx_[well_cell_top];
+        const int pvtreg = pvt_region_idx_(well_cell_top);
 
         if (!well_ecl.isMultiSegment() || !param_.use_multisegment_well_) {
             return WellInterfacePtr(new StandardWell<TypeTag>(well_ecl,
@@ -1591,15 +1591,11 @@ namespace Opm {
     void
     BlackoilWellModel<TypeTag>::extractLegacyCellPvtRegionIndex_()
     {
-        const auto& grid = ebosSimulator_.vanguard().grid();
         const auto& eclProblem = ebosSimulator_.problem();
-        const unsigned numCells = grid.size(/*codim=*/0);
-
-        pvt_region_idx_.resize(numCells);
-        for (unsigned cellIdx = 0; cellIdx < numCells; ++cellIdx) {
-            pvt_region_idx_[cellIdx] =
-                eclProblem.pvtRegionIndex(cellIdx);
-        }
+        pvt_region_idx_ = [&eclProblem](std::size_t cellIdx)
+                          {
+                              return eclProblem.pvtRegionIndex(cellIdx);
+                          };
     }
 
     // The number of components in the model.
@@ -2382,8 +2378,8 @@ namespace Opm {
         // What is the proper approach?
         const int fipnum = 0;
         const int pvtreg = well_perf_data_.empty()
-            ? pvt_region_idx_[0]
-            : pvt_region_idx_[well_perf_data_[0][0].cell_index];
+            ? pvt_region_idx_(0)
+            : pvt_region_idx_(well_perf_data_[0][0].cell_index);
         std::vector<double> resv_coeff(phase_usage_.num_phases, 0.0);
         rateConverter_->calcCoeff(fipnum, pvtreg, resv_coeff);
 
