@@ -2330,7 +2330,8 @@ namespace Opm
 
         const auto& allConn = this->well_ecl_.getConnections();
         const auto  nPerf   = allConn.size();
-        for (auto allPerfID = 0*nPerf, subsetPerfID = 0*nPerf; allPerfID < nPerf; ++allPerfID) {
+        auto subsetPerfID   = 0*nPerf;
+        for (auto allPerfID = 0*nPerf; allPerfID < nPerf; ++allPerfID) {
             if (allConn[allPerfID].state() == Connection::State::SHUT) {
                 continue;
             }
@@ -2363,6 +2364,9 @@ namespace Opm
             ++subsetPerfID;
             connPI += np;
         }
+
+        assert (static_cast<int>(subsetPerfID) == this->number_of_perforations_ &&
+                "Internal logic error in processing connections for PI/II");
     }
 
 
