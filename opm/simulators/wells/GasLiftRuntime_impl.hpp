@@ -35,14 +35,13 @@ GasLiftRuntime(
     const Simulator &ebos_simulator,
     const SummaryState &summary_state,
     DeferredLogger &deferred_logger,
-    std::vector<double> &potentials,
     const WellState &well_state,
     const Well::ProductionControls &controls
 ) :
     controls_{controls},
     deferred_logger_{deferred_logger},
     ebos_simulator_{ebos_simulator},
-    potentials_{potentials},
+    potentials_(well_state.numPhases(),0.0),
     std_well_{std_well},
     summary_state_{summary_state},
     well_state_{well_state},
@@ -203,17 +202,20 @@ displayWarning_(std::string msg)
 //   computation of the economic gradient making the gradient
 //   smaller than it should be since the term appears in the denominator.
 template<typename TypeTag>
-double
+bool
 Opm::GasLiftRuntime<TypeTag>::
-getGasRateWithLimit_(std::vector<double> &potentials)
+getGasRateWithLimit_(double& new_rate, const std::vector<double> &potentials)
 {
-    auto new_rate = -potentials[this->gas_pos_];
+    new_rate = -potentials[this->gas_pos_];
+    bool limit = false;
     if (this->controls_.hasControl(Well::ProducerCMode::GRAT)) {
         auto target = this->controls_.gas_rate;
-        if (new_rate > target)
+        if (new_rate > target) {
             new_rate = target;
+            limit = true;
+        }
     }
-    return new_rate;
+    return limit;
 }
 
 
@@ -227,17 +229,30 @@ getGasRateWithLimit_(std::vector<double> &potentials)
 //  also since we also reduced the rate. This might involve
 //   some sort of iteration though..
 template<typename TypeTag>
-double
+bool
 Opm::GasLiftRuntime<TypeTag>::
-getOilRateWithLimit_(std::vector<double> &potentials)
+getOilRateWithLimit_(double& new_rate, const std::vector<double> &potentials)
 {
-    auto new_rate = -potentials[this->oil_pos_];
+    new_rate = -potentials[this->oil_pos_];
+    bool limit = false;
     if (this->controls_.hasControl(Well::ProducerCMode::ORAT)) {
         auto target = this->controls_.oil_rate;
-        if (new_rate > target)
+        if (new_rate > target) {
             new_rate = target;
+            limit = true;
+        }
     }
-    return new_rate;
+    if (this->controls_.hasControl(Well::ProducerCMode::LRAT)) {
+        auto target = this->controls_.liquid_rate;
+        auto oil_rate = -potentials[this->oil_pos_];
+        auto water_rate = -potentials[this->water_pos_];
+        auto liq_rate = oil_rate + water_rate;
+        if (liq_rate > target) {
+            new_rate = oil_rate * (target/liq_rate);
+            limit = true;
+       }
+    }
+    return limit;
 }
 
 template<typename TypeTag>
@@ -342,6 +357,9 @@ runOptimizeLoop_(bool increase)
     auto gas_rate = -cur_potentials[this->gas_pos_];
     bool success = false;  // did we succeed to increase alq?
     auto cur_alq = this->orig_alq_;
+    if (cur_alq == 0 && !increase) // we don't decrease alq below zero
+        return false;
+
     auto alq = cur_alq;
     OptimizeState state {*this, increase};
     if (this->debug) debugShowStartIteration_(alq, increase);
@@ -354,8 +372,14 @@ runOptimizeLoop_(bool increase)
         // NOTE: if BHP is below limit, we set state.stop_iteration = true
         auto bhp = state.getBhpWithLimit();
         computeWellRates_(bhp, cur_potentials);
-        auto new_oil_rate = getOilRateWithLimit_(cur_potentials);
-        auto new_gas_rate = getGasRateWithLimit_(cur_potentials);
+        double new_oil_rate = 0.0;
+        bool oil_is_limited = getOilRateWithLimit_(new_oil_rate, cur_potentials);
+        if (oil_is_limited && !increase) //if oil is limited we do not want to decrease
+            break;
+        double new_gas_rate = 0.0;
+        bool gas_is_limited = getGasRateWithLimit_(new_gas_rate, cur_potentials);
+        if (gas_is_limited && increase) // if gas is limited we do not want to increase
+            break;
         auto gradient = state.calcGradient(
             oil_rate, new_oil_rate, gas_rate, new_gas_rate);
         if (state.checkEcoGradient(gradient)) {

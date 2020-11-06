@@ -2756,12 +2756,11 @@ namespace Opm
                 = well_state.currentProductionControls()[this->index_of_well_];
             if ( this->Base::wellHasTHPConstraints(summary_state)
                 && current_control != Well::ProducerCMode::BHP ) {
-                std::vector<double> potentials = well_state.wellPotentials();
                 if (doGasLiftOptimize(well_state, ebos_simulator, deferred_logger)) {
                     const auto& controls = well.productionControls(summary_state);
                     GasLiftHandler glift {
                         *this, ebos_simulator, summary_state,
-                        deferred_logger, potentials, well_state, controls };
+                        deferred_logger, well_state, controls };
                     glift.runOptimize();
                 }
             }
