@@ -162,7 +162,7 @@ namespace Opm
                      const std::vector<PerforationData>& perf_data);
 
         virtual void init(const PhaseUsage* phase_usage_arg,
-                          const std::vector<double>& depth_arg,
+                          const std::function<double (std::size_t)>& depth_arg,
                           const double gravity_arg,
                           const int num_cells) override;
 

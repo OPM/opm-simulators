@@ -303,7 +303,7 @@ namespace Opm {
             // the number of the cells in the local grid
             size_t local_num_cells_;
             double gravity_;
-            std::vector<double> depth_;
+            std::function<double (std::size_t)> depth_;
             bool initial_step_;
             bool report_step_starts_;
             bool glift_debug = false;

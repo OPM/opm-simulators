@@ -60,7 +60,7 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     init(const PhaseUsage* phase_usage_arg,
-         const std::vector<double>& depth_arg,
+         const std::function<double (std::size_t)>& depth_arg,
          const double gravity_arg,
          const int num_cells)
     {
@@ -69,7 +69,7 @@ namespace Opm
         perf_depth_.resize(number_of_perforations_, 0.);
         for (int perf = 0; perf < number_of_perforations_; ++perf) {
             const int cell_idx = well_cells_[perf];
-            perf_depth_[perf] = depth_arg[cell_idx];
+            perf_depth_[perf] = depth_arg(cell_idx);
         }
 
         // counting/updating primary variable numbers

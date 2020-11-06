@@ -1637,12 +1637,11 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::extractLegacyDepth_()
     {
         const auto& grid = ebosSimulator_.vanguard().grid();
-        const unsigned numCells = grid.size(/*codim=*/0);
 
-        depth_.resize(numCells);
-        for (unsigned cellIdx = 0; cellIdx < numCells; ++cellIdx) {
-            depth_[cellIdx] = Opm::UgGridHelpers::cellCenterDepth( grid, cellIdx );
-        }
+        depth_ = [&grid](std::size_t cellIdx)
+                 {
+                     return Opm::UgGridHelpers::cellCenterDepth( grid, cellIdx );
+                 };
     }
 
     template<typename TypeTag>
