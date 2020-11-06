@@ -2299,16 +2299,6 @@ namespace Opm
                .cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0)->fluidState();
         };
 
-        auto isInjecting = [this](const typename StandardWell<TypeTag>::FluidState& fs,
-                                  const int perf) -> bool
-        {
-            const auto cell_press = this->extendEval(this->getPerfCellPressure(fs));
-            const auto conn_press = this->getBhp() + this->perf_pressure_diffs_[perf];
-            const auto drawdown   = cell_press - conn_press;
-
-            return drawdown.value() < 0.0;
-        };
-
         const int np = this->number_of_phases_;
         auto setToZero = [np](double* x) -> void
         {
@@ -2320,13 +2310,12 @@ namespace Opm
             std::transform(src, src + np, dest, dest, std::plus<>{});
         };
 
-        const auto allow_xflow = this->getAllowCrossFlow()
-            || this->openCrossFlowAvoidSingularity(ebosSimulator);
-
         auto* wellPI = &well_state.productivityIndex()[this->index_of_well_*np + 0];
         auto* connPI = &well_state.connectionProductivityIndex()[this->first_perf_*np + 0];
 
         setToZero(wellPI);
+
+        const auto preferred_phase = this->well_ecl_.getPreferredPhase();
 
         const auto& allConn = this->well_ecl_.getConnections();
         const auto  nPerf   = allConn.size();
@@ -2336,27 +2325,23 @@ namespace Opm
                 continue;
             }
 
+            auto connPICalc = [&wellPICalc, allPerfID](const double mobility) -> double
+            {
+                return wellPICalc.connectionProdIndStandard(allPerfID, mobility);
+            };
+
             std::vector<EvalWell> mob(num_components_, {numWellEq_ + numEq, 0.0});
             getMobility(ebosSimulator, static_cast<int>(subsetPerfID), mob, deferred_logger);
 
             const auto& fs = fluidState(subsetPerfID);
-
-            auto connPICalc = [&wellPICalc, allPerfID](const EvalWell& mobility) -> double
-            {
-                return wellPICalc.connectionProdIndStandard(allPerfID, mobility.value());
-            };
-
             setToZero(connPI);
-            if (isInjecting(fs, subsetPerfID)) { // Connection injects into reservoir
-                if (this->isInjector() || allow_xflow) {
-                    this->computeConnLevelInjInd(fs, connPICalc, mob,
-                                                 connPI, deferred_logger);
-                }
+
+            if (this->isInjector()) {
+                this->computeConnLevelInjInd(fs, preferred_phase, connPICalc,
+                                             mob, connPI, deferred_logger);
             }
             else {  // Production or zero flow rate
-                if (this->isProducer() || allow_xflow) {
-                    this->computeConnLevelProdInd(fs, connPICalc, mob, connPI);
-                }
+                this->computeConnLevelProdInd(fs, connPICalc, mob, connPI);
             }
 
             addVector(connPI, wellPI);
@@ -4283,7 +4268,7 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     computeConnLevelProdInd(const typename StandardWell<TypeTag>::FluidState& fs,
-                            const std::function<double(const EvalWell&)>& connPICalc,
+                            const std::function<double(const double)>& connPICalc,
                             const std::vector<EvalWell>& mobility,
                             double* connPI) const
     {
@@ -4292,8 +4277,8 @@ namespace Opm
         for (int p = 0; p < np; ++p) {
             // Note: E100's notion of PI value phase mobility includes
             // the reciprocal FVF.
-            const auto connMob = mobility[ flowPhaseToEbosCompIdx(p) ]
-                * this->extendEval(fs.invB(p));
+            const auto connMob =
+                mobility[ flowPhaseToEbosCompIdx(p) ].value() * fs.invB(p).value();
 
             connPI[p] = connPICalc(connMob);
         }
@@ -4320,71 +4305,36 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     computeConnLevelInjInd(const typename StandardWell<TypeTag>::FluidState& fs,
-                           const std::function<double(const EvalWell&)>& connIICalc,
+                           const Phase preferred_phase,
+                           const std::function<double(const double)>& connIICalc,
                            const std::vector<EvalWell>& mobility,
                            double* connII,
                            DeferredLogger& deferred_logger) const
     {
+        // Assumes single phase injection
         const auto& pu = this->phaseUsage();
-        const int   np = this->number_of_phases_;
 
-        const auto zero = EvalWell { this->numWellEq_ + this->numEq, 0.0 };
-        const auto mt   = std::accumulate(mobility.begin(), mobility.end(), zero);
-
-        auto cmix_s = std::vector<EvalWell>(this->num_components_, zero);
-        for (auto componentIdx = 0*this->num_components_;
-             componentIdx < this->num_components_; ++componentIdx)
-        {
-            cmix_s[componentIdx] = this->wellSurfaceVolumeFraction(componentIdx);
+        auto phase_pos = 0;
+        if (preferred_phase == Phase::GAS) {
+            phase_pos = pu.phase_pos[Gas];
         }
-
-        auto volumeRatio = zero;
-        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-            const auto waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-            volumeRatio += cmix_s[waterCompIdx] / this->extendEval(fs.invB(pu.phase_pos[Water]));
+        else if (preferred_phase == Phase::OIL) {
+            phase_pos = pu.phase_pos[Oil];
         }
-
-        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
-            FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))
-        {
-            const auto oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
-            const auto gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-
-            const auto rs = this->extendEval(fs.Rs());
-            const auto rv = this->extendEval(fs.Rv());
-
-            // Incorporate RS/RV factors if both oil and gas active
-            const auto d = EvalWell { this->numWellEq_ + this->numEq, 1.0 } - rv*rs;
-
-            if (d.value() == 0.0) {
-                OPM_DEFLOG_THROW(Opm::NumericalIssue,
-                                 "Zero d value obtained for well " << this->name()
-                                 << " during connection I.I. calculation"
-                                 << " with rs " << rs << " and rv " << rv,
-                                 deferred_logger);
-            }
-
-            const auto tmp_oil = (cmix_s[oilCompIdx] - rv*cmix_s[gasCompIdx]) / d;
-            volumeRatio += tmp_oil / this->extendEval(fs.invB(pu.phase_pos[Oil]));
-
-            const auto tmp_gas = (cmix_s[gasCompIdx] - rs*cmix_s[oilCompIdx]) / d;
-            volumeRatio += tmp_gas / this->extendEval(fs.invB(pu.phase_pos[Gas]));
+        else if (preferred_phase == Phase::WATER) {
+            phase_pos = pu.phase_pos[Water];
         }
         else {
-            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-                const auto oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
-                volumeRatio += cmix_s[oilCompIdx] / this->extendEval(fs.invB(pu.phase_pos[Oil]));
-            }
-
-            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                const auto gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-                volumeRatio += cmix_s[gasCompIdx] / this->extendEval(fs.invB(pu.phase_pos[Gas]));
-            }
+            OPM_DEFLOG_THROW(Opm::NotImplemented,
+                             "Unsupported Injector Type ("
+                             << static_cast<int>(preferred_phase)
+                             << ") for well " << this->name()
+                             << " during connection I.I. calculation",
+                             deferred_logger);
         }
 
-        const auto cqt_is = mt / volumeRatio;
-        for (int p = 0; p < np; ++p) {
-            connII[p] = connIICalc(cmix_s[ flowPhaseToEbosCompIdx(p) ] * cqt_is);
-        }
+        const auto zero   = EvalWell { this->numWellEq_ + this->numEq, 0.0 };
+        const auto mt     = std::accumulate(mobility.begin(), mobility.end(), zero);
+        connII[phase_pos] = connIICalc(mt.value() * fs.invB(phase_pos).value());
     }
 } // namespace Opm

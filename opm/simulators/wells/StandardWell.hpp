@@ -39,6 +39,7 @@
 #include <opm/models/blackoil/blackoilbrinemodules.hh>
 
 #include <opm/material/densead/DynamicEvaluation.hpp>
+#include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/ScheduleTypes.hpp>
 
 #include <dune/common/dynvector.hh>
@@ -311,12 +312,13 @@ namespace Opm
                                                             DeferredLogger& deferred_logger) const override;
 
         void computeConnLevelProdInd(const FluidState& fs,
-                                     const std::function<double(const EvalWell&)>& connPICalc,
+                                     const std::function<double(const double)>& connPICalc,
                                      const std::vector<EvalWell>& mobility,
                                      double* connPI) const;
 
-        void computeConnLevelInjInd(const FluidState& fs,
-                                    const std::function<double(const EvalWell&)>& connIICalc,
+        void computeConnLevelInjInd(const typename StandardWell<TypeTag>::FluidState& fs,
+                                    const Phase preferred_phase,
+                                    const std::function<double(const double)>& connIICalc,
                                     const std::vector<EvalWell>& mobility,
                                     double* connII,
                                     DeferredLogger& deferred_logger) const;

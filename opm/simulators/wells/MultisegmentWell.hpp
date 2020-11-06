@@ -22,8 +22,9 @@
 #ifndef OPM_MULTISEGMENTWELL_HEADER_INCLUDED
 #define OPM_MULTISEGMENTWELL_HEADER_INCLUDED
 
-
 #include <opm/simulators/wells/WellInterface.hpp>
+
+#include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 
 namespace Opm
 {
@@ -185,14 +186,14 @@ namespace Opm
                                                             DeferredLogger& deferred_logger) const override;
 
         void computeConnLevelProdInd(const FluidState& fs,
-                                     const std::function<double(const EvalWell&)>& connPICalc,
+                                     const std::function<double(const double)>& connPICalc,
                                      const std::vector<EvalWell>& mobility,
                                      double* connPI) const;
 
         void computeConnLevelInjInd(const FluidState& fs,
-                                    const std::function<double(const EvalWell&)>& connIICalc,
+                                    const Phase preferred_phase,
+                                    const std::function<double(const double)>& connIICalc,
                                     const std::vector<EvalWell>& mobility,
-                                    const int segIx,
                                     double* connII,
                                     DeferredLogger& deferred_logger) const;
     protected:
