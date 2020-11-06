@@ -269,12 +269,10 @@ namespace Opm
                 return primary_variables_evaluation_[SFrac];
             }
         }
-        else if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx)) {             
-
+        else if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {             
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx)) {
                 return primary_variables_evaluation_[GFrac];
             }
-            return primary_variables_evaluation_[WFrac];
         }
 
         // Oil or WATER fraction
@@ -2092,7 +2090,7 @@ namespace Opm
             x = mix;
 
             // Subtract dissolved gas from oil phase and vapporized oil from gas phase
-            if (FluidSystem::phaseIsActive(FluidSystem::gasCompIdx) && FluidSystem::phaseIsActive(FluidSystem::oilCompIdx)) {
+            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
                 const unsigned gaspos = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
                 const unsigned oilpos = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
                 double rs = 0.0;
