@@ -2660,13 +2660,6 @@ private:
             auto& elemFluidState = initialFluidStates_[elemIdx];
             elemFluidState.assign(equilInitializer.initialFluidState(elemIdx));
         }
-        const auto& aquifer_cells = simulator.vanguard().eclState().aquifer().numericalAquifers().aquiferCells();
-
-        const auto& vanguard = simulator.vanguard();
-        size_t numCartDof = vanguard.cartesianSize();
-        std::vector<int> cartesianToCompressedElemIdx(numCartDof, -1);
-        for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx)
-            cartesianToCompressedElemIdx[vanguard.cartesianIndex(elemIdx)] = elemIdx;
     }
 
     void readEclRestartSolution_()

@@ -62,6 +62,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include <string>
 
 namespace Opm {
 
@@ -1929,6 +1930,15 @@ private:
             } */
 
             saturations = psat.deriveSaturations(pos, eqreg, ptable);
+            if (aquifer.hasCell(global_index)) {
+                saturations = {0.0, 0.0, 1.0};
+                const auto& aqu_cell = aquifer.getCell(global_index);
+                std::ostringstream ss;
+                ss << "FOR AQUIFER CELL AT { " << aqu_cell.I + 1 << " " << aqu_cell.J + 1 << " "
+                   << aqu_cell.J + 1 << " } OF NUMERICAL AQUIFER " << aqu_cell.aquifer_id << " , "
+                   << "WATER SATURATION IS SET TO BE UNITY";
+                OpmLog::info(ss.str());
+            }
             pressures   = psat.correctedPhasePressures();
 
             const auto temp = this->temperature_[cell];
