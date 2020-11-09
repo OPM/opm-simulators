@@ -60,6 +60,7 @@ namespace Opm
             wellMap_.clear();
 
             well_perf_data_ = well_perf_data;
+            parallel_well_info_ = parallel_well_info;
 
             {
                 // const int nw = wells->number_of_wells;
@@ -372,6 +373,7 @@ namespace Opm
 
     protected:
         std::vector<std::vector<PerforationData>> well_perf_data_;
+        std::vector<ParallelWellInfo*> parallel_well_info_;
     };
 
 } // namespace Opm

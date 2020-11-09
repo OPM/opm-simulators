@@ -82,6 +82,10 @@ namespace Opm
             // call init on base class
             BaseType :: init(cellPressures, wells_ecl, parallel_well_info, pu, well_perf_data, summary_state);
 
+            for (const auto& winfo: parallel_well_info)
+            {
+                well_rates.insert({winfo->name_, std::make_pair(winfo->isOwner_, std::vector<double>())});
+            }
             globalIsInjectionGrup_.assign(globalNumberOfWells,0);
             globalIsProductionGrup_.assign(globalNumberOfWells,0);
             wellNameToGlobalIdx_.clear();
@@ -376,7 +380,7 @@ namespace Opm
         }
 
         void setCurrentWellRates(const std::string& wellName, const std::vector<double>& rates ) {
-            well_rates[wellName] = rates;
+            well_rates[wellName].second = rates;
         }
 
         const std::vector<double>& currentWellRates(const std::string& wellName) const {
@@ -385,7 +389,7 @@ namespace Opm
             if (it == well_rates.end())
                 OPM_THROW(std::logic_error, "Could not find any rates for well  " << wellName);
 
-            return it->second;
+            return it->second.second;
         }
 
         bool hasWellRates(const std::string& wellName) const {
@@ -1046,9 +1050,25 @@ namespace Opm
             // Create a function that calls some function
             // for all the individual data items to simplify
             // the further code.
-            auto iterateContainer = [](auto& container, auto& func) {
+            auto iterateContainer = [this](auto& container, auto& func) {
                 for (auto& x : container) {
                     func(x.second);
+                }
+            };
+            auto iterateRatesContainer = [this](auto& container, auto& func) {
+                for (auto& x : container) {
+                    if (x.second.first)
+                    {
+                        func(x.second.second);
+                    }
+                    else
+                    {
+                        // We might actually store non-zero values for
+                        // distributed wells even if they are not owned.
+                        std::vector<double> dummyRate;
+                        dummyRate.assign(x.second.second.size(), 0);
+                        func(dummyRate);
+                    }
                 }
             };
 
@@ -1058,7 +1078,7 @@ namespace Opm
                 iterateContainer(injection_group_reduction_rates, func);
                 iterateContainer(injection_group_reservoir_rates, func);
                 iterateContainer(production_group_rates, func);
-                iterateContainer(well_rates, func);
+                iterateRatesContainer(well_rates, func);
             };
 
             // Compute the size of the data.
@@ -1208,7 +1228,7 @@ namespace Opm
         std::map<std::string, Group::ProductionCMode> current_production_group_controls_;
         std::map<std::pair<Opm::Phase, std::string>, Group::InjectionCMode> current_injection_group_controls_;
 
-        std::map<std::string, std::vector<double>> well_rates;
+        std::map<std::string, std::pair<bool, std::vector<double>>> well_rates;
         std::map<std::string, std::vector<double>> production_group_rates;
         std::map<std::string, std::vector<double>> production_group_reduction_rates;
         std::map<std::string, std::vector<double>> injection_group_reduction_rates;
