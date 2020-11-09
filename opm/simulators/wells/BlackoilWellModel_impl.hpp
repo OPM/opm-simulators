@@ -300,7 +300,7 @@ namespace Opm {
             }
             cellPressures[cellIdx] = perf_pressure;
         }
-        well_state_.init(cellPressures, schedule(), wells_ecl_, timeStepIdx, &previous_well_state_, phase_usage_, well_perf_data_, summaryState, globalNumWells);
+        well_state_.init(cellPressures, schedule(), wells_ecl_, local_parallel_well_info_, timeStepIdx, &previous_well_state_, phase_usage_, well_perf_data_, summaryState, globalNumWells);
 
         // handling MS well related
         if (param_.use_multisegment_well_&& anyMSWellOpenLocal()) { // if we use MultisegmentWell model
@@ -597,7 +597,7 @@ namespace Opm {
             const auto phaseUsage = phaseUsageFromDeck(eclState());
             const size_t numCells = Opm::UgGridHelpers::numCells(grid());
             const bool handle_ms_well = (param_.use_multisegment_well_ && anyMSWellOpenLocal());
-            well_state_.resize(wells_ecl_, schedule(), handle_ms_well, numCells, phaseUsage, well_perf_data_, summaryState, globalNumWells); // Resize for restart step
+            well_state_.resize(wells_ecl_, local_parallel_well_info_, schedule(), handle_ms_well, numCells, phaseUsage, well_perf_data_, summaryState, globalNumWells); // Resize for restart step
             wellsToState(restartValues.wells, restartValues.grp_nwrk, phaseUsage, handle_ms_well, well_state_);
         }
 
@@ -640,6 +640,8 @@ namespace Opm {
             well_perf_data_[well_index].clear();
             well_perf_data_[well_index].reserve(well.getConnections().size());
             CheckDistributedWellConnections checker(well, *local_parallel_well_info_[well_index]);
+            bool hasFirstPerforation = false;
+            bool firstOpenCompletion = true;
 
             for (const auto& completion : well.getConnections()) {
                 const int i = completion.getI();
@@ -649,6 +651,10 @@ namespace Opm {
                 const int active_index = cartesian_to_compressed_[cart_grid_indx];
                 if (completion.state() == Connection::State::OPEN) {
                     if (active_index >= 0) {
+                        if (firstOpenCompletion)
+                        {
+                            hasFirstPerforation = true;
+                        }
                         checker.connectionFound(completion_index);
                         PerforationData pd;
                         pd.cell_index = active_index;
@@ -657,6 +663,7 @@ namespace Opm {
                         pd.ecl_index = completion_index;
                         well_perf_data_[well_index].push_back(pd);
                     }
+                    firstOpenCompletion = false;
                 } else {
                     checker.connectionFound(completion_index);
                     if (completion.state() != Connection::State::SHUT) {
@@ -667,6 +674,7 @@ namespace Opm {
                 ++completion_index;
             }
             checker.checkAllConnectionsFound();
+            local_parallel_well_info_[well_index]->communicateFirstPerforation(hasFirstPerforation);
             ++well_index;
         }
     }
@@ -772,16 +780,19 @@ namespace Opm {
                 }
 
                 // Use the pvtRegionIdx from the top cell
-                const int well_cell_top = well_perf_data_[w][0].cell_index;
-                const int pvtreg = pvt_region_idx_[well_cell_top];
+                // Cater for case where local part might have no perforations.
+                const int pvtreg = well_perf_data_[w].size() ?
+                    pvt_region_idx_[well_perf_data_[w][0].cell_index] : 0;
+                const auto& parallel_well_info = *local_parallel_well_info_[w];
+                auto global_pvtreg = parallel_well_info.broadcastFirstPerforationValue(pvtreg);
 
                 if (!well_ecl.isMultiSegment() || !param_.use_multisegment_well_) {
                     well_container.emplace_back(new StandardWell<TypeTag>(well_ecl,
-                                                                          *local_parallel_well_info_[w],
+                                                                          parallel_well_info,
                                                                           time_step,
                                                                           param_,
                                                                           *rateConverter_,
-                                                                          pvtreg,
+                                                                          global_pvtreg,
                                                                           numComponents(),
                                                                           numPhases(),
                                                                           w,
@@ -789,11 +800,11 @@ namespace Opm {
                                                                           well_perf_data_[w]));
                 } else {
                     well_container.emplace_back(new MultisegmentWell<TypeTag>(well_ecl,
-                                                                              *local_parallel_well_info_[w],
+                                                                              parallel_well_info,
                                                                               time_step,
                                                                               param_,
                                                                               *rateConverter_,
-                                                                              pvtreg,
+                                                                              global_pvtreg,
                                                                               numComponents(),
                                                                               numPhases(),
                                                                               w,

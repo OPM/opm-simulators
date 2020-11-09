@@ -60,6 +60,16 @@ ParallelWellInfo::ParallelWellInfo(const std::pair<std::string,bool>& well_info)
 #endif
 }
 
+void ParallelWellInfo::communicateFirstPerforation(bool hasFirst)
+{
+    int first = hasFirst;
+    std::vector<int> firstVec(comm_->size());
+    comm_->allgather(&first, 1, firstVec.data());
+    auto found = std::find_if(firstVec.begin(), firstVec.end(),
+                              [](int i) -> bool{ return i;});
+    rankWithFirstPerf_ = found - firstVec.begin();
+}
+
 bool operator<(const ParallelWellInfo& well1, const ParallelWellInfo& well2)
 {
     return well1.name_ < well2.name_ || (! (well2.name_ < well1.name_) && well1.hasLocalCells_ < well2.hasLocalCells_);

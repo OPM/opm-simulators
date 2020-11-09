@@ -71,6 +71,7 @@ namespace Opm
         void init(const std::vector<double>& cellPressures,
                   const Schedule& schedule,
                   const std::vector<Well>& wells_ecl,
+                  const std::vector<ParallelWellInfo*>& parallel_well_info,
                   const int report_step,
                   const WellStateFullyImplicitBlackoil* prevState,
                   const PhaseUsage& pu,
@@ -79,7 +80,7 @@ namespace Opm
                   const int globalNumberOfWells)
         {
             // call init on base class
-            BaseType :: init(cellPressures, wells_ecl, pu, well_perf_data, summary_state);
+            BaseType :: init(cellPressures, wells_ecl, parallel_well_info, pu, well_perf_data, summary_state);
 
             globalIsInjectionGrup_.assign(globalNumberOfWells,0);
             globalIsProductionGrup_.assign(globalNumberOfWells,0);
@@ -308,6 +309,7 @@ namespace Opm
 
 
         void resize(const std::vector<Well>& wells_ecl,
+                    const std::vector<ParallelWellInfo*>& parallel_well_info,
                     const Schedule& schedule,
                     const bool handle_ms_well,
                     const size_t numCells,
@@ -317,7 +319,7 @@ namespace Opm
                     const int globalNumWells)
         {
             const std::vector<double> tmp(numCells, 0.0); // <- UGLY HACK to pass the size
-            init(tmp, schedule, wells_ecl, 0, nullptr, pu, well_perf_data, summary_state, globalNumWells);
+            init(tmp, schedule, wells_ecl, parallel_well_info, 0, nullptr, pu, well_perf_data, summary_state, globalNumWells);
 
             if (handle_ms_well) {
                 initWellStateMSWell(wells_ecl, pu, nullptr);

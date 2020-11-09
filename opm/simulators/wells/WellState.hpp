@@ -25,6 +25,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
+#include <opm/simulators/wells/ParallelWellInfo.hpp>
 
 #include <array>
 #include <map>
@@ -50,6 +51,7 @@ namespace Opm
         /// with -1e100.
         void init(const std::vector<double>& cellPressures,
                   const std::vector<Well>& wells_ecl,
+                  const std::vector<ParallelWellInfo*>& parallel_well_info,
                   const PhaseUsage& pu,
                   const std::vector<std::vector<PerforationData>>& well_perf_data,
                   const SummaryState& summary_state)
@@ -75,7 +77,7 @@ namespace Opm
                     const Well& well = wells_ecl[w];
               
                     // Initialize bhp(), thp(), wellRates(), temperature().
-                    initSingleWell(cellPressures, w, well, pu, summary_state);
+                    initSingleWell(cellPressures, w, well, *parallel_well_info[w], pu, summary_state);
 
                     // Setup wellname -> well index mapping.
                     const int num_perf_this_well = well_perf_data[w].size();
@@ -236,6 +238,7 @@ namespace Opm
         void initSingleWell(const std::vector<double>& cellPressures,
                             const int w,
                             const Well& well,
+                            const ParallelWellInfo& well_info,
                             const PhaseUsage& pu,
                             const SummaryState& summary_state)
         {
@@ -270,7 +273,9 @@ namespace Opm
                 : (prod_controls.cmode == Well::ProducerCMode::GRUP);
 
             const double inj_surf_rate = well.isInjector() ? inj_controls.surface_rate : 0.0; // To avoid a "maybe-uninitialized" warning.
-
+            const double local_pressure = well_perf_data_[w].size() ?
+                cellPressures[well_perf_data_[w][0].cell_index] : 0;
+            const double global_pressure = well_info.broadcastFirstPerforationValue(local_pressure);
             if (well.getStatus() == Well::Status::STOP) {
                 // Stopped well:
                 // 1. Rates: zero well rates.
@@ -280,8 +285,7 @@ namespace Opm
                 if (is_bhp) {
                     bhp_[w] = bhp_limit;
                 } else {
-                    const int first_cell = well_perf_data_[w][0].cell_index;
-                    bhp_[w] = cellPressures[first_cell];
+                    bhp_[w] = global_pressure;
                 }
             } else if (is_grup) {
                 // Well under group control.
@@ -290,9 +294,8 @@ namespace Opm
                 //    little above or below (depending on if
                 //    the well is an injector or producer)
                 //    pressure in first perforation cell.
-                const int first_cell = well_perf_data_[w][0].cell_index;
                 const double safety_factor = well.isInjector() ? 1.01 : 0.99;
-                bhp_[w] = safety_factor*cellPressures[first_cell];
+                bhp_[w] = safety_factor * global_pressure;
             } else {
                 // Open well, under own control:
                 // 1. Rates: initialize well rates to match
@@ -351,9 +354,8 @@ namespace Opm
                 if (is_bhp) {
                     bhp_[w] = bhp_limit;
                 } else {
-                    const int first_cell = well_perf_data_[w][0].cell_index;
                     const double safety_factor = well.isInjector() ? 1.01 : 0.99;
-                    bhp_[w] = safety_factor*cellPressures[first_cell];
+                    bhp_[w] = safety_factor * global_pressure;
                 }
             }
 

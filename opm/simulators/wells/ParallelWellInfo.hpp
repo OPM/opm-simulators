@@ -61,12 +61,25 @@ struct ParallelWellInfo
         return *comm_;
     }
 
+    /// \brief Collectively decide which ran has first perforation.
+    void communicateFirstPerforation(bool hasFirst);
+
+    template<class T>
+    T broadcastFirstPerforationValue(const T& t) const
+    {
+        T res=t;
+        comm_->broadcast(&res, 1, rankWithFirstPerf_);
+        return res;
+    }
+
     /// \brief Name of the well.
     std::string name_;
     /// \brief Whether local cells are perforated somewhen
     bool hasLocalCells_;
     /// \brief Whether we own the well and should do reports etc.
     bool isOwner_;
+    /// \brief Rank with the first perforation on it.
+    int rankWithFirstPerf_;
     /// \brief Communication object for the well
     ///
     /// Contains only ranks where this well will perforate local cells.
