@@ -1284,7 +1284,8 @@ namespace Opm {
         if (!network.active()) {
             return;
         }
-        node_pressures_ = WellGroupHelpers::computeNetworkPressures(network, well_state_, *(vfp_properties_->getProd()));
+        node_pressures_ = WellGroupHelpers::computeNetworkPressures(
+            network, well_state_, *(vfp_properties_->getProd()), schedule(), reportStepIdx);
 
         // Set the thp limits of wells
         for (auto& well : well_container_) {
