@@ -1591,6 +1591,7 @@ public:
         }
 
         //Querry cell depth, cell top-bottom.
+        // aquifer should enter here
         updateCellProps_(gridView);
 
         // Get the equilibration records.
@@ -1914,7 +1915,7 @@ private:
         using CellID  = std::remove_cv_t<std::remove_reference_t<
             decltype(std::declval<CellPos>().cell)>>;
 
-        this->cellLoop(cells, [this, &eqreg, &ptable, &psat]
+        this->cellLoop(cells, [this, &eqreg,  &ptable, &psat]
             (const CellID                 cell,
              Details::PhaseQuantityValue& pressures,
              Details::PhaseQuantityValue& saturations,
@@ -1924,6 +1925,16 @@ private:
             const auto pos = CellPos {
                 cell, cellCenterDepth_[cell]
             };
+
+/*            const size_t global_index = UgGridHelpers::globalCell(grid)[cell];
+
+            if (aquifer.hasCell(global_index)) {
+                const auto& aqu_cells = aquifer.aquiferCells();
+                const auto& aqu_cell = aqu_cells.at(global_index);
+                pos = CellPos {
+                    cell, aqu_cell.depth
+                };
+            } */
 
             saturations = psat.deriveSaturations(pos, eqreg, ptable);
             pressures   = psat.correctedPhasePressures();

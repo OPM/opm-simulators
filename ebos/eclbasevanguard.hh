@@ -791,6 +791,15 @@ protected:
             const Element& element = *elemIt;
             const unsigned int elemIdx = elemMapper.index(element);
             cellCenterDepth_[elemIdx] = cellCenterDepth(element);
+
+            if (this->eclState_->aquifer().hasNumericalAquifer()) {
+                const auto& num_aquifer = this->eclState_->aquifer().numericalAquifers();
+                const unsigned int global_index = cartesianIndex(elemIdx);
+                if (num_aquifer.hasCell(global_index)) {
+                    const auto& cell = num_aquifer.aquiferCells().at(global_index);
+                    cellCenterDepth_[elemIdx] = cell.depth;
+                }
+            }
         }
     }
 
