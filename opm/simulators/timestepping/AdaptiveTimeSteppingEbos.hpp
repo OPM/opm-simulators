@@ -162,7 +162,7 @@ struct TimeStepAfterEventInDays<TypeTag, TTag::FlowTimeSteppingParameters> {
 };
 template<class TypeTag>
 struct TimeStepControl<TypeTag, TTag::FlowTimeSteppingParameters> {
-    static constexpr auto value = "pid";
+    static constexpr auto value = "pid+newtoniteration";
 };
 template<class TypeTag>
 struct TimeStepControlTolerance<TypeTag, TTag::FlowTimeSteppingParameters> {
@@ -195,7 +195,7 @@ struct TimeStepControlDecayDampingFactor<TypeTag, TTag::FlowTimeSteppingParamete
 template<class TypeTag>
 struct TimeStepControlGrowthDampingFactor<TypeTag, TTag::FlowTimeSteppingParameters> {
     using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1.0/1.2;
+    static constexpr type value = 1.0/0.2;
 };
 template<class TypeTag>
 struct TimeStepControlFileName<TypeTag, TTag::FlowTimeSteppingParameters> {
