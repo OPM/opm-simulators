@@ -195,7 +195,7 @@ struct TimeStepControlDecayDampingFactor<TypeTag, TTag::FlowTimeSteppingParamete
 template<class TypeTag>
 struct TimeStepControlGrowthDampingFactor<TypeTag, TTag::FlowTimeSteppingParameters> {
     using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 5;
+    static constexpr type value = 3.2;
 };
 template<class TypeTag>
 struct TimeStepControlFileName<TypeTag, TTag::FlowTimeSteppingParameters> {
@@ -629,13 +629,13 @@ namespace Opm {
             else if (control == "pid+iteration") {
                 const int iterations =  EWOMS_GET_PARAM(TypeTag, int, TimeStepControlTargetIterations); // 30
                 const double decayDampingFactor = EWOMS_GET_PARAM(TypeTag, double, TimeStepControlDecayDampingFactor); // 1.0
-                const double growthDampingFactor = EWOMS_GET_PARAM(TypeTag, double, TimeStepControlGrowthDampingFactor); // 5
+                const double growthDampingFactor = EWOMS_GET_PARAM(TypeTag, double, TimeStepControlGrowthDampingFactor); // 3.2
                 timeStepControl_ = TimeStepControlType(new PIDAndIterationCountTimeStepControl(iterations, decayDampingFactor, growthDampingFactor, tol));
             }
             else if (control == "pid+newtoniteration") {
                 const int iterations =  EWOMS_GET_PARAM(TypeTag, int, TimeStepControlTargetNewtonIterations); // 8
                 const double decayDampingFactor = EWOMS_GET_PARAM(TypeTag, double, TimeStepControlDecayDampingFactor); // 1.0
-                const double growthDampingFactor = EWOMS_GET_PARAM(TypeTag, double, TimeStepControlGrowthDampingFactor); // 5
+                const double growthDampingFactor = EWOMS_GET_PARAM(TypeTag, double, TimeStepControlGrowthDampingFactor); // 3.2
                 timeStepControl_ = TimeStepControlType(new PIDAndIterationCountTimeStepControl(iterations, decayDampingFactor, growthDampingFactor, tol));
                 useNewtonIteration_ = true;
             }
