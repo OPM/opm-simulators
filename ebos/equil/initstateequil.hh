@@ -1932,7 +1932,7 @@ private:
             saturations = psat.deriveSaturations(pos, eqreg, ptable);
             if (aquifer.hasCell(global_index)) {
                 saturations = {0.0, 0.0, 1.0};
-                const auto& aqu_cell = aquifer.getCell(global_index);
+                const auto &aqu_cell = aquifer.getCell(global_index);
                 std::ostringstream ss;
                 ss << "FOR AQUIFER CELL AT { " << aqu_cell.I + 1 << " " << aqu_cell.J + 1 << " "
                    << aqu_cell.J + 1 << " } OF NUMERICAL AQUIFER " << aqu_cell.aquifer_id << " , "
@@ -1940,6 +1940,14 @@ private:
                 OpmLog::info(ss.str());
             }
             pressures   = psat.correctedPhasePressures();
+            if (aquifer.hasCell(global_index)) {
+                const auto &aqu_cell = aquifer.getCell(global_index);
+                // TODO: NOT totally sure what we should do here to empoly the pressure specified by AQUNUM
+                if (aqu_cell.init_pressure > 0.) {
+                    const double pres = aqu_cell.init_pressure;
+                    pressures = {pres, pres, pres};
+                }
+            }
 
             const auto temp = this->temperature_[cell];
 
