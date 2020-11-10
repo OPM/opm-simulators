@@ -522,20 +522,16 @@ namespace Opm
 
             using rt = data::Rates::opt;
             std::vector< rt > phs( np );
-            std::vector<rt> pi(np);
             if( pu.phase_used[Water] ) {
                 phs.at( pu.phase_pos[Water] ) = rt::wat;
-                pi .at( pu.phase_pos[Water] ) = rt::productivity_index_water;
             }
 
             if( pu.phase_used[Oil] ) {
                 phs.at( pu.phase_pos[Oil] ) = rt::oil;
-                pi .at( pu.phase_pos[Oil] ) = rt::productivity_index_oil;
             }
 
             if( pu.phase_used[Gas] ) {
                 phs.at( pu.phase_pos[Gas] ) = rt::gas;
-                pi .at( pu.phase_pos[Gas] ) = rt::productivity_index_gas;
             }
 
             /* this is a reference or example on **how** to convert from
@@ -621,31 +617,6 @@ namespace Opm
                     curr.inj  = this->currentInjectionControls() [w];
                 }
 
-                size_t local_comp_index = 0;
-                for( auto& comp : well.connections) {
-                    const auto connPhaseOffset = np * (wt.second[1] + local_comp_index);
-
-                    const auto rates  = this->perfPhaseRates().begin() + connPhaseOffset;
-                    const auto connPI = this->connectionProductivityIndex().begin() + connPhaseOffset;
-
-                    for( int i = 0; i < np; ++i ) {
-                        comp.rates.set( phs[ i ], *(rates  + i) );
-                        comp.rates.set( pi [ i ], *(connPI + i) );
-                    }
-                    if ( pu.has_polymer ) {
-                        comp.rates.set( rt::polymer, this->perfRatePolymer()[wt.second[1] + local_comp_index]);
-                    }
-                    if ( pu.has_brine ) {
-                        comp.rates.set( rt::brine, this->perfRateBrine()[wt.second[1] + local_comp_index]);
-                    }
-                    if ( pu.has_solvent || pu.has_zFraction) {
-                        comp.rates.set( rt::solvent, this->perfRateSolvent()[wt.second[1] + local_comp_index]);
-                    }
-
-                    ++local_comp_index;
-                }
-                assert(local_comp_index == this->well_perf_data_[w].size());
-
                 const auto nseg = this->numSegments(w);
                 for (auto seg_ix = 0*nseg; seg_ix < nseg; ++seg_ix) {
                     const auto seg_no = this->segmentNumber(w, seg_ix);
@@ -657,6 +628,55 @@ namespace Opm
             return res;
         }
 
+        virtual void reportConnections(data::Well& well, const PhaseUsage &pu,
+                                       const WellMapType::value_type& wt,
+                                       const int* globalCellIdxMap) const
+        {
+            using rt = data::Rates::opt;
+            WellState::reportConnections(well, pu, wt, globalCellIdxMap);
+            const auto w = wt.second[ 0 ];
+            const int np = pu.num_phases;
+            size_t local_comp_index = 0;
+            std::vector< rt > phs( np );
+            std::vector<rt> pi(np);
+            if( pu.phase_used[Water] ) {
+                phs.at( pu.phase_pos[Water] ) = rt::wat;
+                pi .at( pu.phase_pos[Water] ) = rt::productivity_index_water;
+            }
+
+            if( pu.phase_used[Oil] ) {
+                phs.at( pu.phase_pos[Oil] ) = rt::oil;
+                pi .at( pu.phase_pos[Oil] ) = rt::productivity_index_oil;
+            }
+
+            if( pu.phase_used[Gas] ) {
+                phs.at( pu.phase_pos[Gas] ) = rt::gas;
+                pi .at( pu.phase_pos[Gas] ) = rt::productivity_index_gas;
+            }
+            for( auto& comp : well.connections) {
+                const auto connPhaseOffset = np * (wt.second[1] + local_comp_index);
+
+                const auto rates  = this->perfPhaseRates().begin() + connPhaseOffset;
+                const auto connPI = this->connectionProductivityIndex().begin() + connPhaseOffset;
+
+                for( int i = 0; i < np; ++i ) {
+                    comp.rates.set( phs[ i ], *(rates  + i) );
+                    comp.rates.set( pi [ i ], *(connPI + i) );
+                }
+                if ( pu.has_polymer ) {
+                    comp.rates.set( rt::polymer, this->perfRatePolymer()[wt.second[1] + local_comp_index]);
+                }
+                if ( pu.has_brine ) {
+                    comp.rates.set( rt::brine, this->perfRateBrine()[wt.second[1] + local_comp_index]);
+                }
+                if ( pu.has_solvent ) {
+                    comp.rates.set( rt::solvent, this->perfRateSolvent()[wt.second[1] + local_comp_index]);
+                }
+
+                ++local_comp_index;
+            }
+            assert(local_comp_index == this->well_perf_data_[w].size());
+        }
 
         /// init the MS well related.
         void initWellStateMSWell(const std::vector<Well>& wells_ecl,
