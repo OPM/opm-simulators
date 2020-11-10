@@ -1596,8 +1596,15 @@ namespace Opm {
     {
         cartesian_to_compressed_.resize(number_of_cartesian_cells, -1);
         if (global_cell) {
+            auto elemIt = ebosSimulator_.gridView().template begin</*codim=*/ 0>();
             for (unsigned i = 0; i < local_num_cells_; ++i) {
-                cartesian_to_compressed_[global_cell[i]] = i;
+                // Skip perforations in the overlap/ghost for distributed wells.
+                if (elemIt->partitionType() == Dune::InteriorEntity)
+                {
+                    assert(ebosSimulator_.gridView().indexSet().index(*elemIt) == static_cast<int>(i));
+                    cartesian_to_compressed_[global_cell[i]] = i;
+                }
+                ++elemIt;
             }
         }
         else {

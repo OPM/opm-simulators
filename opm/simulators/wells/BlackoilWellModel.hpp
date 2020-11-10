@@ -281,6 +281,8 @@ namespace Opm {
             std::vector<WellInterfacePtr > well_container_;
 
             // map from logically cartesian cell indices to compressed ones
+            // cells not in the interior are not mapped. This deactivates
+            // these for distributed wells and make the distribution non-overlapping.
             std::vector<int> cartesian_to_compressed_;
 
             std::vector<bool> is_cell_perforated_;
