@@ -37,7 +37,6 @@
 #include <opm/parser/eclipse/EclipseState/EclipseConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 #include <opm/parser/eclipse/EclipseState/TracerConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/Fault.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/FaultCollection.hpp>
@@ -483,7 +482,6 @@ TEST_FOR_TYPE(DenT)
 TEST_FOR_TYPE(Dimension)
 TEST_FOR_TYPE(EclHysterConfig)
 TEST_FOR_TYPE(EclipseConfig)
-TEST_FOR_TYPE(EDITNNC)
 TEST_FOR_TYPE(EndpointScaling)
 TEST_FOR_TYPE(Eqldims)
 TEST_FOR_TYPE(Equil)

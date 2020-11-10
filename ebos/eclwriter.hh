@@ -39,8 +39,6 @@
 #include <opm/models/io/baseoutputwriter.hh>
 #include <opm/models/parallel/tasklets.hh>
 
-#include <ebos/nncsorter.hpp>
-
 #include <opm/output/eclipse/EclipseIO.hpp>
 
 #include <opm/output/eclipse/RestartValue.hpp>
@@ -549,12 +547,11 @@ private:
                 {"TRANZ", tranz}};
     }
 
-    Opm::NNC exportNncStructure_(const std::unordered_map<int,int>& cartesianToActive) const
+    std::vector<NNCdata> exportNncStructure_(const std::unordered_map<int,int>& cartesianToActive) const
     {
         std::size_t nx = eclState().getInputGrid().getNX();
         std::size_t ny = eclState().getInputGrid().getNY();
-        auto nncData = sortNncAndApplyEditnnc(eclState().getInputNNC().data(),
-                                              eclState().getInputEDITNNC().data());
+        auto nncData = eclState().getInputNNC().input();
         const auto& unitSystem = simulator_.vanguard().eclState().getDeckUnitSystem();
         std::vector<Opm::NNCdata> outputNnc;
         std::size_t index = 0;
@@ -573,13 +570,6 @@ private:
             }
             ++index;
         }
-
-        auto nncCompare =  []( const Opm::NNCdata& nnc1, const Opm::NNCdata& nnc2){
-                               return nnc1.cell1 < nnc2.cell1 ||
-                                      ( nnc1.cell1 == nnc2.cell1 && nnc1.cell2 < nnc2.cell2);};
-        // Sort the nncData values from the deck as they need to be
-        // Checked when writing NNC transmissibilities from the simulation.
-        std::sort(nncData.begin(), nncData.end(), nncCompare);
 
         typedef typename EquilGrid :: LeafGridView  GlobalGridView;
         const GlobalGridView& globalGridView = globalGrid().leafGridView();
@@ -603,7 +593,6 @@ private:
 
         // Cartesian index mapper for the serial I/O grid
         const auto& equilCartMapper =  simulator_.vanguard().equilCartesianIndexMapper();
-
         const auto& cartDims = simulator_.vanguard().cartesianIndexMapper().cartesianDimensions();
         auto elemIt = globalGridView.template begin</*codim=*/0>();
         const auto& elemEndIt = globalGridView.template end</*codim=*/0>();
@@ -639,7 +628,7 @@ private:
                     // We need to check whether an NNC for this face was also specified
                     // via the NNC keyword in the deck (i.e. in the first origNncSize entries.
                     auto t = globalTrans->transmissibility(c1, c2);
-                    auto candidate = std::lower_bound(nncData.begin(), nncData.end(), Opm::NNCdata(cc1, cc2, 0.0), nncCompare);
+                    auto candidate = std::lower_bound(nncData.begin(), nncData.end(), Opm::NNCdata(cc1, cc2, 0.0));
 
                     while ( candidate != nncData.end() && candidate->cell1 == cc1
                          && candidate->cell2 == cc2) {
@@ -655,10 +644,7 @@ private:
                 }
             }
         }
-        Opm::NNC ret;
-        for(const auto& nncItem: outputNnc)
-            ret.addNNC(nncItem.cell1, nncItem.cell2, nncItem.trans);
-        return ret;
+        return outputNnc;
     }
 
     struct EclWriteTasklet
