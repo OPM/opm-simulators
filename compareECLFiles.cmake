@@ -906,7 +906,7 @@ if(MPI_FOUND)
                                        FILENAME SPE1FOAM
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol}
-                                       REL_TOL ${rel_tol})
+                                       REL_TOL ${coarse_rel_tol_parallel})
 
   add_test_compare_parallel_simulation(CASENAME spe1_thermal
                                        FILENAME SPE1CASE2_THERMAL
