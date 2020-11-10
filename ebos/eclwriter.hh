@@ -427,7 +427,6 @@ public:
             Opm::Action::State& actionState = simulator_.vanguard().actionState();
             auto restartValues = loadParallelRestart(eclIO_.get(), actionState, summaryState, solutionKeys, extraKeys,
                                                      gridView.grid().comm());
-
             for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
                 unsigned globalIdx = collectToIORank_.localIdxToGlobalIdx(elemIdx);
                 eclOutputModule_.setRestart(restartValues.solution, elemIdx, globalIdx);

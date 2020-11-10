@@ -26,7 +26,7 @@ option(BUILD_FLOW_VARIANTS "Build the variants for flow by default?" OFF)
 option(BUILD_EBOS "Build the research oriented ebos simulator?" ON)
 option(BUILD_EBOS_EXTENSIONS "Build the variants for various extensions of ebos by default?" OFF)
 option(BUILD_EBOS_DEBUG_EXTENSIONS "Build the ebos variants which are purely for debugging by default?" OFF)
-
+option(BUILD_FLOW_POLY_GRID "Build flow blackoil with polyhedral grid" OFF)
 option(ENABLE_3DPROPS_TESTING "Build and use the new experimental 3D properties" OFF)
 if (ENABLE_3DPROPS_TESTING)
   add_definitions(-DENABLE_3DPROPS_TESTING)
@@ -270,6 +270,25 @@ opm_add_test(flow_blackoil
   $<TARGET_OBJECTS:flow_libblackoil>
   $<TARGET_OBJECTS:moduleVersion>)
 target_compile_definitions(flow_blackoil PRIVATE "FLOW_BLACKOIL_ONLY")
+
+if (NOT BUILD_FLOW_POLY_GRID)
+  set(FLOW_POLY_ONLY_DEFAULT_ENABLE_IF "FALSE")
+else()
+  set(FLOW_POLY_ONLY_DEFAULT_ENABLE_IF "TRUE")
+endif()
+
+# the production oriented general-purpose ECL simulator
+opm_add_test(flow_poly
+  ONLY_COMPILE
+  ALWAYS_ENABLE
+  DEFAULT_ENABLE_IF ${FLOW_POLY_ONLY_DEFAULT_ENABLE_IF}
+  DEPENDS opmsimulators
+  LIBRARIES opmsimulators
+  SOURCES
+  flow/flow_blackoil_poly.cpp
+  $<TARGET_OBJECTS:moduleVersion>)
+target_compile_definitions(flow_poly PRIVATE USE_POLYHEDRALGRID)
+
 
 if (NOT BUILD_FLOW_VARIANTS)
   set(FLOW_VARIANTS_DEFAULT_ENABLE_IF "FALSE")
