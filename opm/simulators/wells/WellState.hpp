@@ -228,7 +228,10 @@ namespace Opm
                 if (!this->open_for_output_[well_index])
                     continue;
 
-                auto& well = dw[ itr.first ];
+                const auto& pwinfo = *parallel_well_info_[well_index];
+                using WellT = typename std::remove_reference<decltype(dw[ itr.first ])>::type;
+                WellT dummyWell; // dummy if we are not owner
+                auto& well = pwinfo.isOwner() ? dw[ itr.first ] : dummyWell;
                 well.bhp = this->bhp().at( well_index );
                 well.thp = this->thp().at( well_index );
                 well.temperature = this->temperature().at( well_index );
@@ -247,25 +250,43 @@ namespace Opm
                     well.rates.set( rt::gas, wv[ wellrate_index + pu.phase_pos[BlackoilPhases::Vapour] ] );
                 }
 
-                const auto& pd = this->well_perf_data_[well_index];
-                const int num_perf_well = pd.size();
-                well.connections.resize(num_perf_well);
-
-                for( int i = 0; i < num_perf_well; ++i ) {
-                    const auto active_index = this->well_perf_data_[well_index][i].cell_index;
-                    auto& connection = well.connections[ i ];
-                    connection.index = globalCellIdxMap[active_index];
-                    connection.pressure = this->perfPress()[ itr.second[1] + i ];
-                    connection.reservoir_rate = this->perfRates()[ itr.second[1] + i ];
-                    connection.trans_factor = pd[i].connection_transmissibility_factor;
+                if (pwinfo.communication().size()==1)
+                {
+                    reportConnections(well, pu, itr, globalCellIdxMap);
                 }
-                assert(num_perf_well == int(well.connections.size()));
+                else
+                {
+                    assert(pwinfo.communication().rank() != 0 || &dummyWell != &well);
+                    // report the local connections
+                    reportConnections(dummyWell, pu, itr, globalCellIdxMap);
+                    // gather them to to well on root.
+                    gatherVectorsOnRoot(dummyWell.connections, well.connections, pwinfo.communication());
+                }
             }
 
             return dw;
 
         }
 
+        virtual void reportConnections(data::Well& well, [[maybe_unused]] const PhaseUsage& pu,
+                                       const WellMapType::value_type& itr,
+                                       const int* globalCellIdxMap) const
+        {
+            const auto well_index = itr.second[ 0 ];
+            const auto& pd = this->well_perf_data_[well_index];
+            const int num_perf_well = pd.size();
+            well.connections.resize(num_perf_well);
+
+            for( int i = 0; i < num_perf_well; ++i ) {
+                const auto active_index = this->well_perf_data_[well_index][i].cell_index;
+                auto& connection = well.connections[ i ];
+                connection.index = globalCellIdxMap[active_index];
+                connection.pressure = this->perfPress()[ itr.second[1] + i ];
+                connection.reservoir_rate = this->perfRates()[ itr.second[1] + i ];
+                connection.trans_factor = pd[i].connection_transmissibility_factor;
+            }
+            assert(num_perf_well == int(well.connections.size()));
+        }
         virtual ~WellState() = default;
         WellState() = default;
         WellState(const WellState& rhs)  = default;
@@ -285,6 +306,33 @@ namespace Opm
 
         WellMapType wellMap_;
 
+        using MPIComm = typename Dune::MPIHelper::MPICommunicator;
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+        using Communication = Dune::Communication<MPIComm>;
+#else
+        using Communication = Dune::CollectiveCommunication<MPIComm>;
+#endif
+        void gatherVectorsOnRoot(std::vector< data::Connection > from_connections,
+                                 std::vector< data::Connection > to_connections,
+                                 const Communication& comm) const
+        {
+            int size = from_connections.size();
+            std::vector<int> sizes;
+            std::vector<int> displ;
+            if (comm.rank()==0){
+                sizes.resize(comm.size());
+            }
+            comm.gather(&size, sizes.data(), 1, 0);
+
+            if (comm.rank()==0){
+                displ.resize(comm.size()+1, 0);
+                std::transform(displ.begin(), displ.end()-1, sizes.begin(), displ.begin()+1,
+                               std::plus<int>());
+                to_connections.resize(displ.back());
+            }
+            comm.gatherv(from_connections.data(), size, to_connections.data(),
+                         sizes.data(), displ.data(), 0);
+        }
         void initSingleWell(const std::vector<double>& cellPressures,
                             const int w,
                             const Well& well,
