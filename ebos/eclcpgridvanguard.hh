@@ -234,15 +234,10 @@ public:
 
             cartesianIndexMapper_.reset();
 
-            if ( ! equilGrid_ )
-            {
-                // for processes that do not hold the global grid we filter here using the local grid.
-                // If we would filter in filterConnection_ our partition would be empty and the connections of all
-                // wells would be removed.
-                ActiveGridCells activeCells(grid().logicalCartesianSize(),
-                                            grid().globalCell().data(), grid().size(0));
-                this->schedule().filterConnections(activeCells);
-            }
+            // Calling Schedule::filterConnectins would remove any perforated
+            // cells that exist on other ranks in the case of distributed wells
+            // But we need them to figure out the first cell of a well (e.g. for
+            // pressure). Hence this is now skipped. Rank 0 had everything even before.
         }
 #endif
 
