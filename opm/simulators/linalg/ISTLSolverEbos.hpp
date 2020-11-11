@@ -251,6 +251,12 @@ namespace Opm
             if (use_gpu) {
                 const std::string gpu_mode = EWOMS_GET_PARAM(TypeTag, std::string, GpuMode);
                 WellContributions wellContribs(gpu_mode);
+#if HAVE_OPENCL
+                if(gpu_mode.compare("opencl") == 0){
+                    const auto openclBackend = static_cast<const bda::openclSolverBackend<block_size>*>(&bdaBridge->getBackend());
+                    wellContribs.setOpenCLEnv(openclBackend->context.get(), openclBackend->queue.get());
+                }
+#endif
                 if (!useWellConn_) {
                     simulator_.problem().wellModel().getWellContributions(wellContribs);
                 }
@@ -301,7 +307,6 @@ namespace Opm
         const std::any& parallelInformation() const { return parallelInformation_; }
 
     protected:
-
         // 3x3 matrix block inversion was unstable at least 2.3 until and including
         // 2.5.0. There may still be some issue with the 4x4 matrix block inversion
         // we therefore still use the block inversion in OPM
