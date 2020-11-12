@@ -855,6 +855,7 @@ namespace Opm
                 }
             } // end of for (const int c : conns)
 
+            parallel_well_info_.communication().sum(completion_rates.data(), completion_rates.size());
             const double ratio_completion = ratioFunc(completion_rates, phaseUsage());
 
             if (ratio_completion > max_ratio_completion) {
