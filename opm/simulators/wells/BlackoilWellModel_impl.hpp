@@ -595,6 +595,7 @@ namespace Opm {
         well_perf_data_.resize(wells_ecl_.size());
         int well_index = 0;
         for (const auto& well : wells_ecl_) {
+            std::size_t completion_index = 0;
             well_perf_data_[well_index].clear();
             well_perf_data_[well_index].reserve(well.getConnections().size());
             for (const auto& completion : well.getConnections()) {
@@ -614,6 +615,7 @@ namespace Opm {
                         pd.cell_index = active_index;
                         pd.connection_transmissibility_factor = completion.CF();
                         pd.satnum_id = completion.satTableId();
+                        pd.ecl_index = completion_index;
                         well_perf_data_[well_index].push_back(pd);
                     }
                 } else {
@@ -622,6 +624,7 @@ namespace Opm {
                                   "Completion state: " << Connection::State2String(completion.state()) << " not handled");
                     }
                 }
+                ++completion_index;
             }
             ++well_index;
         }

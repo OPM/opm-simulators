@@ -29,6 +29,8 @@ struct PerforationData
     int cell_index;
     double connection_transmissibility_factor;
     int satnum_id;
+    /// \brief The original index of the perforation in ECL Schedule
+    std::size_t ecl_index;
 };
 
 } // namespace Opm

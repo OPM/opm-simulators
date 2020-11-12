@@ -48,6 +48,7 @@ namespace Opm
       , number_of_phases_(num_phases)
       , index_of_well_(index_of_well)
       , first_perf_(first_perf_index)
+      , perf_data_(&perf_data)
     {
         if (time_step < 0) {
             OPM_THROW(std::invalid_argument, "Negtive time step is used to construct WellInterface");
@@ -71,16 +72,6 @@ namespace Opm
                 saturation_table_number_[perf] = pd.satnum_id;
                 ++perf;
             }
-
-            int all_perf = 0;
-            originalConnectionIndex_.reserve(perf_data.size());
-            for (const auto& connection : well.getConnections()) {
-                if (connection.state() == Connection::State::OPEN) {
-                    originalConnectionIndex_.push_back(all_perf);
-                }
-                ++all_perf;
-            }
-            assert(originalConnectionIndex_.size() == perf_data.size());
         }
 
         // initialization of the completions mapping
@@ -1382,7 +1373,7 @@ namespace Opm
     void
     WellInterface<TypeTag>::scaleProductivityIndex(const int perfIdx, double& productivity_index, const bool new_well, Opm::DeferredLogger& deferred_logger)
     {
-        const auto& connection = well_ecl_.getConnections()[originalConnectionIndex_[perfIdx]];
+        const auto& connection = well_ecl_.getConnections()[(*perf_data_)[perfIdx].ecl_index];
         if (well_ecl_.getDrainageRadius() < 0) {
             if (new_well && perfIdx == 0) {
                 deferred_logger.warning("PRODUCTIVITY_INDEX_WARNING", "Negative drainage radius not supported. The productivity index is set to zero");

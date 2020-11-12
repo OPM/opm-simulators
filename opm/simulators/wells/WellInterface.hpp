@@ -389,7 +389,7 @@ namespace Opm
         // of states of individual well.
         int first_perf_;
 
-        std::vector<int> originalConnectionIndex_;
+        const std::vector<PerforationData>* perf_data_;
 
         std::vector<RateVector> connectionRates_;
 
