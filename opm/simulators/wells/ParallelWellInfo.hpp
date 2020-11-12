@@ -54,7 +54,10 @@ struct ParallelWellInfo
     ///        a well
     /// \param well_info Pair of well name and whether local cells might be perforated
     ///        on this rank
-    ParallelWellInfo(const std::pair<std::string,bool>& well_info);
+    /// \param allComm The communication object with all MPI ranks active in the simulation.
+    ///                Default is the one with all ranks available.
+    ParallelWellInfo(const std::pair<std::string,bool>& well_info,
+                     Communication allComm = Communication());
 
     const Communication& communication() const
     {

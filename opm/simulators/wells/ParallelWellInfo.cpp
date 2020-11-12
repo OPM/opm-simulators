@@ -47,17 +47,19 @@ ParallelWellInfo::ParallelWellInfo(const std::string& name)
       isOwner_(true), comm_(new Communication(Dune::MPIHelper::getLocalCommunicator()))
     {}
 
-ParallelWellInfo::ParallelWellInfo(const std::pair<std::string,bool>& well_info)
+ParallelWellInfo::ParallelWellInfo(const std::pair<std::string,bool>& well_info,
+                                   Communication allComm)
     : name_(well_info.first), hasLocalCells_(well_info.second)
 {
 #if HAVE_MPI
-    Communication allComm;
     MPI_Comm newComm;
     int color = hasLocalCells_ ? 1 : MPI_UNDEFINED;
     MPI_Comm_split(allComm, color, allComm.rank(), &newComm);
     comm_.reset(new Communication(newComm));
-    isOwner_ = (comm_->rank() == 0);
+#else
+    comm_.reset(new Communication(Dune::MPIHelper::getLocalCommunicator())
 #endif
+    isOwner_ = (comm_->rank() == 0);
 }
 
 void ParallelWellInfo::communicateFirstPerforation(bool hasFirst)
@@ -138,8 +140,10 @@ CheckDistributedWellConnections::connectionFound(std::size_t i)
 bool
 CheckDistributedWellConnections::checkAllConnectionsFound()
 {
+    // Ecl does not hold any information of remote connections.
+    assert(pwinfo_.communication().max(foundConnections_.size()) == foundConnections_.size());
     pwinfo_.communication().sum(foundConnections_.data(),
-                              foundConnections_.size());
+                                foundConnections_.size());
 
     std::string msg = std::string("Cells with these i,j,k indices were not found ")
         + "in grid (well = " + pwinfo_.name_ + "):";
