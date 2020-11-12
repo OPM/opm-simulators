@@ -543,7 +543,8 @@ namespace Opm
 
             for( const auto& wt : this->wellMap() ) {
                 const auto w = wt.second[ 0 ];
-                if (!this->open_for_output_[w])
+                const auto& pwinfo = *parallel_well_info_[w];
+                if (!this->open_for_output_[w] || !pwinfo.isOwner_)
                     continue;
 
                 auto& well = res.at( wt.first );
