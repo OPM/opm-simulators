@@ -50,6 +50,10 @@ namespace Opm
       , first_perf_(first_perf_index)
       , perf_data_(&perf_data)
     {
+        assert(std::is_sorted(perf_data.begin(), perf_data.end(),
+                              [](const auto& perf1, const auto& perf2){
+                                  return perf1.ecl_index < perf2.ecl_index;
+                              }));
         if (time_step < 0) {
             OPM_THROW(std::invalid_argument, "Negtive time step is used to construct WellInterface");
         }
@@ -135,15 +139,22 @@ namespace Opm
         assert(completions_.empty() );
 
         const WellConnections& connections = well_ecl_.getConnections();
-        const int num_conns = connections.size();
+        const std::size_t num_conns = connections.size();
 
         int num_active_connections = 0;
-        for (int c = 0; c < num_conns; ++c) {
+        auto my_next_perf = perf_data_->begin();
+        for (std::size_t c = 0; c < num_conns; ++c) {
+            if (my_next_perf->ecl_index > c)
+            {
+                continue;
+            }
+            assert(my_next_perf->ecl_index == c);
             if (connections[c].state() == Connection::State::OPEN) {
                 completions_[connections[c].complnum()].push_back(num_active_connections++);
             }
+            ++my_next_perf;
         }
-        assert(num_active_connections == number_of_perforations_);
+        assert(my_next_perf == perf_data_->end());
     }
 
 
