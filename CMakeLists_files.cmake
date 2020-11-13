@@ -160,6 +160,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/aquifers/AquiferInterface.hpp
   opm/simulators/aquifers/AquiferCarterTracy.hpp
   opm/simulators/aquifers/AquiferFetkovich.hpp
+  opm/simulators/aquifers/AquiferNumerical.hpp
   opm/simulators/aquifers/BlackoilAquiferModel.hpp
   opm/simulators/aquifers/BlackoilAquiferModel_impl.hpp
   opm/simulators/linalg/bda/BdaBridge.hpp
