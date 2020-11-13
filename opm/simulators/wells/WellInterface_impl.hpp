@@ -48,7 +48,12 @@ namespace Opm
       , number_of_phases_(num_phases)
       , index_of_well_(index_of_well)
       , first_perf_(first_perf_index)
+      , perf_data_(&perf_data)
     {
+        assert(std::is_sorted(perf_data.begin(), perf_data.end(),
+                              [](const auto& perf1, const auto& perf2){
+                                  return perf1.ecl_index < perf2.ecl_index;
+                              }));
         if (time_step < 0) {
             OPM_THROW(std::invalid_argument, "Negtive time step is used to construct WellInterface");
         }
@@ -71,16 +76,6 @@ namespace Opm
                 saturation_table_number_[perf] = pd.satnum_id;
                 ++perf;
             }
-
-            int all_perf = 0;
-            originalConnectionIndex_.reserve(perf_data.size());
-            for (const auto& connection : well.getConnections()) {
-                if (connection.state() == Connection::State::OPEN) {
-                    originalConnectionIndex_.push_back(all_perf);
-                }
-                ++all_perf;
-            }
-            assert(originalConnectionIndex_.size() == perf_data.size());
         }
 
         // initialization of the completions mapping
@@ -144,15 +139,22 @@ namespace Opm
         assert(completions_.empty() );
 
         const WellConnections& connections = well_ecl_.getConnections();
-        const int num_conns = connections.size();
+        const std::size_t num_conns = connections.size();
 
         int num_active_connections = 0;
-        for (int c = 0; c < num_conns; ++c) {
+        auto my_next_perf = perf_data_->begin();
+        for (std::size_t c = 0; c < num_conns; ++c) {
+            if (my_next_perf->ecl_index > c)
+            {
+                continue;
+            }
+            assert(my_next_perf->ecl_index == c);
             if (connections[c].state() == Connection::State::OPEN) {
                 completions_[connections[c].complnum()].push_back(num_active_connections++);
             }
+            ++my_next_perf;
         }
-        assert(num_active_connections == number_of_perforations_);
+        assert(my_next_perf == perf_data_->end());
     }
 
 
@@ -1382,7 +1384,7 @@ namespace Opm
     void
     WellInterface<TypeTag>::scaleProductivityIndex(const int perfIdx, double& productivity_index, const bool new_well, Opm::DeferredLogger& deferred_logger)
     {
-        const auto& connection = well_ecl_.getConnections()[originalConnectionIndex_[perfIdx]];
+        const auto& connection = well_ecl_.getConnections()[(*perf_data_)[perfIdx].ecl_index];
         if (well_ecl_.getDrainageRadius() < 0) {
             if (new_well && perfIdx == 0) {
                 deferred_logger.warning("PRODUCTIVITY_INDEX_WARNING", "Negative drainage radius not supported. The productivity index is set to zero");

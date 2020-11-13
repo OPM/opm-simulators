@@ -1025,25 +1025,19 @@ namespace Opm
             // Create a function that calls some function
             // for all the individual data items to simplify
             // the further code.
+            auto iterateContainer = [](auto& container, auto& func) {
+                for (auto& x : container) {
+                    func(x.second);
+                }
+            };
+
             auto forAllGroupData = [&](auto& func) {
-                for (auto& x : injection_group_rein_rates) {
-                    func(x.second);
-                }
-                for (auto& x : production_group_reduction_rates) {
-                    func(x.second);
-                }
-                for (auto& x : injection_group_reduction_rates) {
-                    func(x.second);
-                }
-                for (auto& x : injection_group_reservoir_rates) {
-                    func(x.second);
-                }
-                for (auto& x : production_group_rates) {
-                    func(x.second);
-                }
-                for (auto& x : well_rates) {
-                    func(x.second);
-                }
+                iterateContainer(injection_group_rein_rates, func);
+                iterateContainer(production_group_reduction_rates, func);
+                iterateContainer(injection_group_reduction_rates, func);
+                iterateContainer(injection_group_reservoir_rates, func);
+                iterateContainer(production_group_rates, func);
+                iterateContainer(well_rates,func);
             };
 
             // Compute the size of the data.
