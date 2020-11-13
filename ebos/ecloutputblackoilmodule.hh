@@ -133,7 +133,7 @@ class EclOutputBlackOilModule
             case FipDataType::OilInPlaceInGasPhase: return "OIPG";
             case FipDataType::GasInPlaceInLiquidPhase: return "GIPL";
             case FipDataType::GasInPlaceInGasPhase: return "GIPG";
-            case FipDataType::PoreVolume: return "PV";
+            case FipDataType::PoreVolume: return "RPV";
             }
             throw std::logic_error("fip_type:  " + std::to_string(fip_type) + " not recognized");
         }
