@@ -1347,6 +1347,16 @@ namespace Opm {
 
         // We use the rates from the privious time-step to reduce oscilations
         WellGroupHelpers::updateWellRates(fieldGroup, schedule(), reportStepIdx, previous_well_state_, well_state_);
+
+        // Set ALQ for off-process wells to zero
+        for (const auto& wname : schedule().wellNames(reportStepIdx)) {
+            const bool is_producer = schedule().getWell(wname, reportStepIdx).isProducer();
+            const bool not_on_this_process = well_state_.wellMap().count(wname) == 0;
+            if (is_producer && not_on_this_process) {
+                well_state_.setALQ(wname, 0.0);
+            }
+        }
+
         well_state_.communicateGroupRates(comm);
 
         // compute wsolvent fraction for REIN wells
