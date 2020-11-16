@@ -49,6 +49,12 @@ BlackoilAquiferModel<TypeTag>::initialSolutionApplied()
             aquifer.initialSolutionApplied();
         }
     }
+
+    if (this->aquiferNumericalActive()) {
+        for (auto& aquifer : this->aquifers_numerical) {
+            aquifer.initialSolutionApplied();
+        }
+    }
 }
 
 template <typename TypeTag>
@@ -135,6 +141,11 @@ BlackoilAquiferModel<TypeTag>::endTimeStep()
             aquifer.endTimeStep();
         }
     }
+    if (aquiferNumericalActive()) {
+        for (auto& aquifer : this->aquifers_numerical) {
+            aquifer.endTimeStep();
+        }
+    }
 }
 template <typename TypeTag>
 void
@@ -185,7 +196,8 @@ BlackoilAquiferModel<TypeTag>::init()
 
     if (aquifer.hasNumericalAquifer()) {
         for (const auto& elem : aquifer.numericalAquifers().aquifers()) {
-            this->aquifers_numerical.emplace_back(elem.second);
+            this->aquifers_numerical.emplace_back(elem.second,
+                              this->cartesian_to_compressed_, this->simulator_);
         }
     }
 }
