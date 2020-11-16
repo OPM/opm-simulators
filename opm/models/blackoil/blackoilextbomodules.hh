@@ -180,8 +180,6 @@ public:
 
             Scalar bo0=0.0;
             Scalar po0=0.0;
-            Scalar bg0=0.0;
-            Scalar rv0=0.0;
             for (unsigned innerIdx = 0; innerIdx < numRows; ++ innerIdx) {
               Scalar po = underSaturatedTable.get("P", innerIdx);
               Scalar bo = underSaturatedTable.get("B_O", innerIdx);
@@ -225,8 +223,6 @@ public:
 
               bo0=bo;
               po0=po;
-              bg0=bg;
-              rv0=rv;
 
               BO_[regionIdx].appendSamplePoint(outerIdx,po,bo);
               BG_[regionIdx].appendSamplePoint(outerIdx,po,bg);
