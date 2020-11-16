@@ -234,9 +234,9 @@ public:
 
             cartesianIndexMapper_.reset();
 
-            // Calling Schedule::filterConnectins would remove any perforated
-            // cells that exist on other ranks in the case of distributed wells
-            // But we need them to figure out the first cell of a well (e.g. for
+            // Calling Schedule::filterConnections would remove any perforated
+            // cells that exist only on other ranks even in the case of distributed wells
+            // But we need all connections to figure out the first cell of a well (e.g. for
             // pressure). Hence this is now skipped. Rank 0 had everything even before.
         }
 #endif
