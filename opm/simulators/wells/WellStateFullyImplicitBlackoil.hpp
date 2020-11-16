@@ -150,6 +150,11 @@ namespace Opm
                 first_perf_index_[w+1] = connpos;
             }
 
+            is_producer_.resize(nw, false);
+            for (int w = 0; w < nw; ++w) {
+                is_producer_[w] = wells_ecl[w].isProducer();
+            }
+
             current_injection_controls_.resize(nw);
             current_production_controls_.resize(nw);
 
@@ -587,7 +592,7 @@ namespace Opm
                     well.rates.set( rt::brine, brineWellRate(w) );
                 }
 
-                if ( well.current_control.isProducer ) {
+                if ( is_producer_[w] ) {
                     well.rates.set( rt::alq, getALQ(/*wellName=*/wt.first) );
                 }
                 else {
@@ -600,6 +605,7 @@ namespace Opm
                 {
                     auto& curr = well.current_control;
 
+                    curr.isProducer = this->is_producer_[w];
                     curr.prod = this->currentProductionControls()[w];
                     curr.inj  = this->currentInjectionControls() [w];
                 }
@@ -1162,6 +1168,7 @@ namespace Opm
 
     private:
         std::vector<double> perfphaserates_;
+        std::vector<bool> is_producer_; // Size equal to number of local wells.
 
         // vector with size number of wells +1.
         // iterate over all perforations of a given well
