@@ -30,6 +30,7 @@
 #include <opm/simulators/utils/ParallelFileMerger.hpp>
 #include <opm/simulators/utils/moduleVersion.hpp>
 #include <opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp>
+#include <opm/simulators/utils/ParallelEclipseState.hpp>
 
 #include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
 

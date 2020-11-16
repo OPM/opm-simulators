@@ -121,7 +121,7 @@ namespace detail
     {
         size_t numInterior = 0;
         if (!ownerFirst || grid.comm().size()==1)
-            return grid.numCells();
+            return grid.leafGridView().size(0);
         const auto& gridView = grid.leafGridView();
         auto elemIt = gridView.template begin<0>();
         const auto& elemEndIt = gridView.template end<0>();

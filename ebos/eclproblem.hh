@@ -47,10 +47,12 @@
 
 #if EBOS_USE_ALUGRID
 #include "eclalugridvanguard.hh"
+#elif USE_POLYHEDRALGRID
+#include "eclpolyhedralgridvanguard.hh"
 #else
-//#include "eclpolyhedralgridvanguard.hh"
 #include "eclcpgridvanguard.hh"
 #endif
+
 #include "eclwellmanager.hh"
 #include "eclequilinitializer.hh"
 #include "eclwriter.hh"
@@ -124,13 +126,14 @@ namespace TTag {
 struct EclBaseProblem {
   using InheritstFrom = std::tuple<VtkEclTracer, EclOutputBlackOil, EclAluGridVanguard>;
 };
+#elif USE_POLYHEDRALGRID
+struct EclBaseProblem {
+  using InheritsFrom = std::tuple<VtkEclTracer, EclOutputBlackOil, EclPolyhedralGridVanguard>;
+};
 #else
 struct EclBaseProblem {
   using InheritsFrom = std::tuple<VtkEclTracer, EclOutputBlackOil, EclCpGridVanguard>;
 };
-//struct EclBaseProblem {
-//    using InheritsFrom = std::tuple<VtkEclTracer, EclOutputBlackOil, EclPolyhedralGridVanguard>;
-//};
 #endif
 }
 
