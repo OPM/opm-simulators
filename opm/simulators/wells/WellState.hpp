@@ -359,7 +359,7 @@ namespace Opm
                 temperature_[w] = well.injectionControls(summary_state).temperature;
             }
 
-            const int num_perf_this_well = well_perf_data_[w].size();
+            const int num_perf_this_well = well_info.communication().sum(well_perf_data_[w].size());
             if ( num_perf_this_well == 0 ) {
                 // No perforations of the well. Initialize to zero.
                 bhp_[w] = 0.;
