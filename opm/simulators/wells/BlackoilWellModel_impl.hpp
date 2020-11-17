@@ -2483,7 +2483,7 @@ namespace Opm {
         // What is the proper approach?
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
         const int fipnum = 0;
-        int pvtreg = well_perf_data_.empty()
+        int pvtreg = well_perf_data_.empty() || well_perf_data_[0].empty()
             ? pvt_region_idx_[0]
             : pvt_region_idx_[well_perf_data_[0][0].cell_index];
 
