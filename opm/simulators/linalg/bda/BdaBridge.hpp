@@ -25,6 +25,7 @@
 #include "dune/istl/bcrsmatrix.hh"
 #include <opm/simulators/linalg/matrixblock.hh>
 
+#include <opm/simulators/linalg/bda/ILUReorder.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 
 #if HAVE_CUDA
@@ -39,6 +40,7 @@ namespace Opm
 {
 
 typedef Dune::InverseOperatorResult InverseOperatorResult;
+using bda::ILUReorder;
 
 /// BdaBridge acts as interface between opm-simulators with the BdaSolvers
 template <class BridgeMatrix, class BridgeVector, int block_size>
@@ -56,7 +58,8 @@ public:
     /// \param[in] tolerance                  required relative tolerance for BdaSolver
     /// \param[in] platformID                 the OpenCL platform ID to be used
     /// \param[in] deviceID                   the device ID to be used by the cusparse- and openclSolvers, too high values could cause runtime errors
-    BdaBridge(std::string gpu_mode, int linear_solver_verbosity, int maxit, double tolerance, unsigned int platformID, unsigned int deviceID);
+    /// \param[in] opencl_ilu_reorder         select either level_scheduling or graph_coloring, see BILU0.hpp for explanation
+    BdaBridge(std::string gpu_mode, int linear_solver_verbosity, int maxit, double tolerance, unsigned int platformID, unsigned int deviceID, std::string opencl_ilu_reorder);
 
 
     /// Solve linear system, A*x = b

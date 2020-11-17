@@ -21,6 +21,7 @@
 #define BILU0_HPP
 
 #include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
+#include <opm/simulators/linalg/bda/ILUReorder.hpp>
 
 #include <opm/simulators/linalg/bda/opencl.hpp>
 
@@ -47,7 +48,7 @@ namespace bda
         int numColors;
         int verbosity;
 
-        bool level_scheduling, graph_coloring;
+        ILUReorder opencl_ilu_reorder;
 
         typedef struct {
             cl::Buffer Lvals, Uvals, invDiagVals;
@@ -68,7 +69,7 @@ namespace bda
 
     public:
 
-        BILU0(bool level_scheduling, bool graph_coloring, int verbosity);
+        BILU0(ILUReorder opencl_ilu_reorder, int verbosity);
 
         ~BILU0();
 

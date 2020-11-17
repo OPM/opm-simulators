@@ -35,13 +35,9 @@ namespace bda
     using Dune::Timer;
 
     template <unsigned int block_size>
-    BILU0<block_size>::BILU0(bool level_scheduling_, bool graph_coloring_, int verbosity_) :
-        verbosity(verbosity_), level_scheduling(level_scheduling_), graph_coloring(graph_coloring_)
-    {
-        if (level_scheduling == graph_coloring) {
-            OPM_THROW(std::logic_error, "Error, either level_scheduling or graph_coloring must be true, not both\n");
-        }
-    }
+    BILU0<block_size>::BILU0(ILUReorder opencl_ilu_reorder_, int verbosity_) :
+        verbosity(verbosity_), opencl_ilu_reorder(opencl_ilu_reorder_)
+    {}
 
     template <unsigned int block_size>
     BILU0<block_size>::~BILU0()
@@ -79,16 +75,20 @@ namespace bda
         Timer t_analysis;
         rmat = std::make_shared<BlockedMatrix<block_size> >(mat->Nb, mat->nnzbs);
         LUmat = std::make_unique<BlockedMatrix<block_size> >(*rmat);
-        if (level_scheduling) {
+        std::ostringstream out;
+        if (opencl_ilu_reorder == ILUReorder::LEVEL_SCHEDULING) {
+            out << "BILU0 reordering strategy: " << "level_scheduling\n";
             findLevelScheduling(mat->colIndices, mat->rowPointers, CSCRowIndices, CSCColPointers, mat->Nb, &numColors, toOrder, fromOrder, rowsPerColor);
-        } else if (graph_coloring) {
+        } else if (opencl_ilu_reorder == ILUReorder::GRAPH_COLORING) {
+            out << "BILU0 reordering strategy: " << "graph_coloring\n";
             findGraphColoring<block_size>(mat->colIndices, mat->rowPointers, CSCRowIndices, CSCColPointers, mat->Nb, mat->Nb, mat->Nb, &numColors, toOrder, fromOrder, rowsPerColor);
+        } else {
+            OPM_THROW(std::logic_error, "Error ilu reordering strategy not set correctly\n");
         }
         if(verbosity >= 3){
-            std::ostringstream out;
             out << "BILU0 analysis took: " << t_analysis.stop() << " s, " << numColors << " colors";
-            OpmLog::info(out.str());
         }
+        OpmLog::info(out.str());
 
         delete[] CSCRowIndices;
         delete[] CSCColPointers;
@@ -317,7 +317,7 @@ namespace bda
 
 
 #define INSTANTIATE_BDA_FUNCTIONS(n)                                                     \
-template BILU0<n>::BILU0(bool, bool, int);                                               \
+template BILU0<n>::BILU0(ILUReorder, int);                                               \
 template BILU0<n>::~BILU0();                                                             \
 template bool BILU0<n>::init(BlockedMatrix<n>*);                                         \
 template bool BILU0<n>::create_preconditioner(BlockedMatrix<n>*);                        \

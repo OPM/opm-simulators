@@ -138,8 +138,9 @@ namespace Opm
                 const int deviceID = EWOMS_GET_PARAM(TypeTag, int, BdaDeviceId);
                 const int maxit = EWOMS_GET_PARAM(TypeTag, int, LinearSolverMaxIter);
                 const double tolerance = EWOMS_GET_PARAM(TypeTag, double, LinearSolverReduction);
+                const std::string opencl_ilu_reorder = EWOMS_GET_PARAM(TypeTag, std::string, OpenclIluReorder);
                 const int linear_solver_verbosity = parameters_.linear_solver_verbosity_;
-                bdaBridge.reset(new BdaBridge<Matrix, Vector, block_size>(gpu_mode, linear_solver_verbosity, maxit, tolerance, platformID, deviceID));
+                bdaBridge.reset(new BdaBridge<Matrix, Vector, block_size>(gpu_mode, linear_solver_verbosity, maxit, tolerance, platformID, deviceID, opencl_ilu_reorder));
             }
 #else
             if (EWOMS_GET_PARAM(TypeTag, std::string, GpuMode) != "none") {
