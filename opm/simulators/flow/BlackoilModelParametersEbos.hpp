@@ -256,7 +256,7 @@ struct MaxInnerIterWells<TypeTag, TTag::FlowModelParameters> {
 };
 template<class TypeTag>
 struct AlternativeWellRateInit<TypeTag, TTag::FlowModelParameters> {
-    static constexpr bool value = false;
+    static constexpr bool value = true;
 };
 template<class TypeTag>
 struct StrictInnerIterMsWells<TypeTag, TTag::FlowModelParameters> {
