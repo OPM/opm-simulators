@@ -2384,10 +2384,27 @@ namespace Opm {
         // TODO fix this!
         // This is only used for converting RESV rates.
         // What is the proper approach?
+        const auto& comm = ebosSimulator_.vanguard().grid().comm();
         const int fipnum = 0;
-        const int pvtreg = well_perf_data_.empty()
+        int pvtreg = well_perf_data_.empty()
             ? pvt_region_idx_[0]
             : pvt_region_idx_[well_perf_data_[0][0].cell_index];
+
+        if ( comm.size() > 1)
+        {
+            // Just like in the sequential case the pvtregion is determined
+            // by the first cell of the first well. What is the first well
+            // is decided by the order in the Schedule using Well::seqIndex()
+            int firstWellIndex = well_perf_data_.empty() ?
+                std::numeric_limits<int>::max() : wells_ecl_[0].seqIndex();
+            auto regIndexPair = std::make_pair(pvtreg, firstWellIndex);
+            std::vector<decltype(regIndexPair)> pairs(comm.size());
+            comm.allgather(&regIndexPair, 1, pairs.data());
+            pvtreg = std::min_element(pairs.begin(), pairs.end(),
+                                      [](const auto& p1, const auto& p2){ return p1.second < p2.second;})
+                ->first;
+        }
+
         std::vector<double> resv_coeff(phase_usage_.num_phases, 0.0);
         rateConverter_->calcCoeff(fipnum, pvtreg, resv_coeff);
 
@@ -2395,7 +2412,6 @@ namespace Opm {
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
 
         std::vector<double> rates(phase_usage_.num_phases, 0.0);
-        const auto& comm = ebosSimulator_.vanguard().grid().comm();
 
         const bool skip = switched_groups.count(group.name()) || group.name() == "FIELD";
 
