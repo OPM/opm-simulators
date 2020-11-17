@@ -383,38 +383,38 @@ public:
         if (blackoilConserveSurfaceVolume) {
             unsigned inIdx = extQuants.interiorIndex();
 
-            unsigned upIdx = static_cast<unsigned>(extQuants.upstreamIndex(gasPhaseIdx));
-            const auto& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
-            const auto& fs = up.fluidState();
-            if (upIdx == inIdx) {
+            unsigned upIdxGas = static_cast<unsigned>(extQuants.upstreamIndex(gasPhaseIdx));
+            const auto& upGas = elemCtx.intensiveQuantities(upIdxGas, timeIdx);
+            const auto& fsGas = upGas.fluidState();
+            if (upIdxGas == inIdx) {
                 flux[contiZfracEqIdx] =
                     extQuants.volumeFlux(gasPhaseIdx)
-                    * (up.yVolume())
-                    * fs.invB(gasPhaseIdx);
+                    * (upGas.yVolume())
+                    * fsGas.invB(gasPhaseIdx);
             }
             else {
                 flux[contiZfracEqIdx] =
                         extQuants.volumeFlux(gasPhaseIdx)
-                        * (Opm::decay<Scalar>(up.yVolume()))
-                        * Opm::decay<Scalar>(fs.invB(gasPhaseIdx));
+                        * (Opm::decay<Scalar>(upGas.yVolume()))
+                        * Opm::decay<Scalar>(fsGas.invB(gasPhaseIdx));
             }
             if (FluidSystem::enableDissolvedGas()) { // account for dissolved z in oil phase
-                unsigned upIdx = static_cast<unsigned>(extQuants.upstreamIndex(oilPhaseIdx));
-                const auto& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
-                const auto& fs = up.fluidState();
-                if (upIdx == inIdx) {
+                unsigned upIdxOil = static_cast<unsigned>(extQuants.upstreamIndex(oilPhaseIdx));
+                const auto& upOil = elemCtx.intensiveQuantities(upIdxOil, timeIdx);
+                const auto& fsOil = upOil.fluidState();
+                if (upIdxOil == inIdx) {
                     flux[contiZfracEqIdx] +=
                         extQuants.volumeFlux(oilPhaseIdx)
-                        * up.xVolume()
-                        * fs.Rs()
-                        * fs.invB(oilPhaseIdx);
+                        * upOil.xVolume()
+                        * fsOil.Rs()
+                        * fsOil.invB(oilPhaseIdx);
                 }
                 else {
                     flux[contiZfracEqIdx] +=
                         extQuants.volumeFlux(oilPhaseIdx)
-                        * Opm::decay<Scalar>(up.xVolume())
-                        * Opm::decay<Scalar>(fs.Rs())
-                        * Opm::decay<Scalar>(fs.invB(oilPhaseIdx));
+                        * Opm::decay<Scalar>(upOil.xVolume())
+                        * Opm::decay<Scalar>(fsOil.Rs())
+                        * Opm::decay<Scalar>(fsOil.invB(oilPhaseIdx));
                 }
             }
         }
