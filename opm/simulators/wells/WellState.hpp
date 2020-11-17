@@ -195,6 +195,11 @@ namespace Opm
         const WellMapType& wellMap() const { return wellMap_; }
         WellMapType& wellMap() { return wellMap_; }
 
+        const ParallelWellInfo& parallelWellInfo(std::size_t well_index) const
+        {
+            return *parallel_well_info_[well_index];
+        }
+
         /// The number of wells present.
         int numWells() const
         {
