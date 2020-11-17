@@ -68,6 +68,7 @@ namespace Opm
         using typename Base::RateConverterType;
         using typename Base::SparseMatrixAdapter;
         using typename Base::FluidState;
+        using typename Base::RateVector;
         using GasLiftHandler = Opm::GasLiftRuntime<TypeTag>;
 
         using Base::numEq;
@@ -511,6 +512,19 @@ namespace Opm
                                                     WellState& well_state,
                                                     Opm::DeferredLogger& deferred_logger) override;
 
+        void assembleWellEqWithoutIterationImpl(const Simulator& ebosSimulator,
+                                                const double dt,
+                                                WellState& well_state,
+                                                Opm::DeferredLogger& deferred_logger);
+
+        void calculateSinglePerf(const Simulator& ebosSimulator,
+                                 const int perf,
+                                 WellState& well_state,
+                                 std::vector<RateVector>& connectionRates,
+                                 std::vector<EvalWell>& cq_s,
+                                 EvalWell& water_flux_s,
+                                 Opm::DeferredLogger& deferred_logger) const;
+
         // check whether the well is operable under the current reservoir condition
         // mostly related to BHP limit and THP limit
         void updateWellOperability(const Simulator& ebos_simulator,
@@ -576,12 +590,17 @@ namespace Opm
                             const EvalWell& water_velocity,
                             Opm::DeferredLogger& deferred_logger) const;
 
+        // modify the water rate for polymer injectivity study
+        void handleInjectivityRate(const Simulator& ebosSimulator,
+                                   const int perf,
+                                   std::vector<EvalWell>& cq_s) const;
+
         // handle the extra equations for polymer injectivity study
-        void handleInjectivityRateAndEquations(const IntensiveQuantities& int_quants,
-                                               const WellState& well_state,
-                                               const int perf,
-                                               std::vector<EvalWell>& cq_s,
-                                               Opm::DeferredLogger& deferred_logger);
+        void handleInjectivityEquations(const Simulator& ebosSimulator,
+                                        const WellState& well_state,
+                                        const int perf,
+                                        const EvalWell& water_flux_s,
+                                        Opm::DeferredLogger& deferred_logger);
 
         virtual void updateWaterThroughput(const double dt, WellState& well_state) const override;
 
@@ -599,7 +618,8 @@ namespace Opm
                                         const IntensiveQuantities& int_quants,
                                         const WellState& well_state,
                                         const int perf,
-                                        DeferredLogger& deferred_logger);
+                                        std::vector<RateVector>& connectionRates,
+                                        DeferredLogger& deferred_logger) const;
 
 
         std::optional<double> computeBhpAtThpLimitProd(const WellState& well_state,
