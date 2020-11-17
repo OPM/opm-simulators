@@ -80,6 +80,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQInput.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/PAvg.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Connection.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellFoamProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellPolymerProperties.hpp>
@@ -510,6 +511,7 @@ TEST_FOR_TYPE(MULTREGTScanner)
 TEST_FOR_TYPE(NNC)
 TEST_FOR_TYPE2(Network, Node)
 TEST_FOR_TYPE(OilVaporizationProperties)
+TEST_FOR_TYPE(PAvg)
 TEST_FOR_TYPE(Phases)
 TEST_FOR_TYPE(PlymwinjTable)
 TEST_FOR_TYPE(PlyshlogTable)
