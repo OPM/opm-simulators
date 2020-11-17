@@ -621,7 +621,7 @@ namespace Opm
                         comp.rates.set( rt::brine, this->perfRateBrine()[wt.second[1] + local_comp_index]);
                     }
                     if ( pu.has_solvent || pu.has_zFraction) {
-                        comp.rates.set( rt::solvent, this->perfRateSolvent()[local_comp_index]);
+                        comp.rates.set( rt::solvent, this->perfRateSolvent()[wt.second[1] + local_comp_index]);
                     }
 
                     ++local_comp_index;
