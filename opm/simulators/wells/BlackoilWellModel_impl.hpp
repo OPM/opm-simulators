@@ -730,6 +730,9 @@ namespace Opm {
                     wellIsStopped = true;
                 }
 
+                if ( well_perf_data_[w].size() == 0)
+                    OPM_THROW(std::runtime_error, "Well has no connections: " + well_ecl.name());
+
                 // Use the pvtRegionIdx from the top cell
                 const int well_cell_top = well_perf_data_[w][0].cell_index;
                 const int pvtreg = pvt_region_idx_[well_cell_top];
