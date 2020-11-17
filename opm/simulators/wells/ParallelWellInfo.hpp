@@ -70,8 +70,11 @@ struct ParallelWellInfo
     template<class T>
     T broadcastFirstPerforationValue(const T& t) const
     {
-        T res=t;
+        assert(rankWithFirstPerf_ >= 0 && rankWithFirstPerf_ < comm_->size());
+        T res = t;
+        comm_->barrier();
         comm_->broadcast(&res, 1, rankWithFirstPerf_);
+        comm_->barrier();
         return res;
     }
 

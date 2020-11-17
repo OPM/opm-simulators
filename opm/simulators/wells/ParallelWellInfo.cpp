@@ -44,12 +44,14 @@ void ParallelWellInfo::DestroyComm::operator()(Communication* comm)
 
 ParallelWellInfo::ParallelWellInfo(const std::string& name)
     : name_(name), hasLocalCells_ (true),
-      isOwner_(true), comm_(new Communication(Dune::MPIHelper::getLocalCommunicator()))
+      isOwner_(true), rankWithFirstPerf_(0),
+      comm_(new Communication(Dune::MPIHelper::getLocalCommunicator()))
     {}
 
 ParallelWellInfo::ParallelWellInfo(const std::pair<std::string,bool>& well_info,
                                    Communication allComm)
-    : name_(well_info.first), hasLocalCells_(well_info.second)
+    : name_(well_info.first), hasLocalCells_(well_info.second),
+      rankWithFirstPerf_(-1)
 {
 #if HAVE_MPI
     MPI_Comm newComm;
@@ -57,7 +59,8 @@ ParallelWellInfo::ParallelWellInfo(const std::pair<std::string,bool>& well_info,
     MPI_Comm_split(allComm, color, allComm.rank(), &newComm);
     comm_.reset(new Communication(newComm));
 #else
-    comm_.reset(new Communication(Dune::MPIHelper::getLocalCommunicator())
+    comm_.reset(new Communication(Dune::MPIHelper::getLocalCommunicator()));
+    rankWithFirstPerf_ = 0;
 #endif
     isOwner_ = (comm_->rank() == 0);
 }
