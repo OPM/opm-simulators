@@ -527,6 +527,7 @@ namespace Opm
                                  std::vector<RateVector>& connectionRates,
                                  std::vector<EvalWell>& cq_s,
                                  EvalWell& water_flux_s,
+                                 EvalWell& cq_s_zfrac_effective,
                                  Opm::DeferredLogger& deferred_logger) const;
 
         // check whether the well is operable under the current reservoir condition

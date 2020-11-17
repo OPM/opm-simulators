@@ -611,7 +611,8 @@ namespace Opm
             // Calculate perforation quantities.
             std::vector<EvalWell> cq_s(num_components_, {numWellEq_ + numEq, 0.0});
             EvalWell water_flux_s{numWellEq_ + numEq, 0.0};
-            calculateSinglePerf(ebosSimulator, perf, well_state, connectionRates, cq_s, water_flux_s, deferred_logger);
+            EvalWell cq_s_zfrac_effective{numWellEq_ + numEq, 0.0};
+            calculateSinglePerf(ebosSimulator, perf, well_state, connectionRates, cq_s, water_flux_s, cq_s_zfrac_effective, deferred_logger);
 
             // Equation assembly for this perforation.
             if (has_polymer && this->has_polymermw && this->isInjector()) {
@@ -643,6 +644,12 @@ namespace Opm
                     well_state.perfRateSolvent()[first_perf_ + perf] = cq_s[componentIdx].value();
                 } else {
                     well_state.perfPhaseRates()[(first_perf_ + perf) * np + ebosCompIdxToFlowCompIdx(componentIdx)] = cq_s[componentIdx].value();
+                }
+            }
+
+            if (has_zFraction) {
+                for (int pvIdx = 0; pvIdx < numWellEq_; ++pvIdx) {
+                    duneC_[0][cell_idx][pvIdx][contiZfracEqIdx] -= cq_s_zfrac_effective.derivative(pvIdx+numEq);
                 }
             }
         }
@@ -692,6 +699,7 @@ namespace Opm
                         std::vector<RateVector>& connectionRates,
                         std::vector<EvalWell>& cq_s,
                         EvalWell& water_flux_s,
+                        EvalWell& cq_s_zfrac_effective,
                         Opm::DeferredLogger& deferred_logger) const
     {
         const bool allow_cf = getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebosSimulator);
@@ -821,21 +829,17 @@ namespace Opm
         if (has_zFraction) {
             // TODO: the application of well efficiency factor has not been tested with an example yet
             const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-            EvalWell cq_s_zfrac = cq_s[gasCompIdx];
+            cq_s_zfrac_effective = cq_s[gasCompIdx];
             if (this->isInjector()) {
-                cq_s_zfrac *= wsolvent();
-            } else if (cq_s_zfrac.value() != 0.0) {
-                const double dis_gas_frac = perf_dis_gas_rate / cq_s_zfrac.value();
-                cq_s_zfrac *= extendEval(dis_gas_frac*intQuants.xVolume() + (1.0-dis_gas_frac)*intQuants.yVolume());
+                cq_s_zfrac_effective *= wsolvent();
+            } else if (cq_s_zfrac_effective.value() != 0.0) {
+                const double dis_gas_frac = perf_dis_gas_rate / cq_s_zfrac_effective.value();
+                cq_s_zfrac_effective *= extendEval(dis_gas_frac*intQuants.xVolume() + (1.0-dis_gas_frac)*intQuants.yVolume());
             }
-            well_state.perfRateSolvent()[first_perf_ + perf] = cq_s_zfrac.value();
+            well_state.perfRateSolvent()[first_perf_ + perf] = cq_s_zfrac_effective.value();
 
-            cq_s_zfrac *= well_efficiency_factor_;
-            connectionRates_[perf][contiZfracEqIdx] = Base::restrictEval(cq_s_zfrac);
-
-            for (int pvIdx = 0; pvIdx < numWellEq_; ++pvIdx) {
-                duneC_[0][cell_idx][pvIdx][contiZfracEqIdx] -= cq_s_zfrac.derivative(pvIdx+numEq);
-            }
+            cq_s_zfrac_effective *= well_efficiency_factor_;
+            connectionRates[perf][contiZfracEqIdx] = Base::restrictEval(cq_s_zfrac_effective);
         }
 
         if (has_brine) {
@@ -2250,7 +2254,7 @@ namespace Opm
     {
         // the following implementation assume that the polymer is always after the w-o-g phases
         // For the polymer, energy and foam cases, there is one more mass balance equations of reservoir than wells
-        assert((int(B_avg.size()) == num_components_) || has_polymer || has_energy || has_foam || has_brine);
+        assert((int(B_avg.size()) == num_components_) || has_polymer || has_energy || has_foam || has_brine || has_zFraction);
 
         const double tol_wells = param_.tolerance_wells_;
         const double maxResidualAllowed = param_.max_residual_allowed_;
