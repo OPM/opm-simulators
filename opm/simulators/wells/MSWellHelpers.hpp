@@ -80,7 +80,7 @@ namespace mswellhelpers
 
     /// Applies umfpack and checks for singularity
     template <typename MatrixType, typename VectorType>
-    MatrixType
+    Dune::Matrix<typename MatrixType::block_type>
     invertWithUMFPack(const MatrixType& D, std::shared_ptr<Dune::UMFPack<MatrixType> >& linsolver)
     {
 #if HAVE_UMFPACK
@@ -89,13 +89,8 @@ namespace mswellhelpers
         VectorType e(sz);
         e = 0.0;
 
-        // Make a block matrix with a full pattern.
-        MatrixType inv(sz, sz, sz*sz, MatrixType::row_wise);
-        for (auto row = inv.createbegin(); row != inv.createend(); ++row) {
-            for (int c = 0; c < sz; ++c) {
-                row.insert(c);
-            }
-        }
+        // Make a full block matrix.
+        Dune::Matrix<typename MatrixType::block_type> inv(sz, sz);
 
         // Create inverse by passing basis vectors to the solver.
         for (int ii = 0; ii < sz; ++ii) {

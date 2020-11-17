@@ -1188,7 +1188,9 @@ namespace Opm
         // D is a (nseg x nseg) block matrix with (4 x 4) blocks.
         // B and C are (nseg x ncells) block matrices with (4 x 4 blocks).
         // They have nonzeros at (i, j) only if this well has a
-        // perforation at cell j connected to segment i.
+        // perforation at cell j connected to segment i.  The code
+        // assumes that no cell is connected to more than one segment,
+        // i.e. the columns of B/C have no more than one nonzero.
         for (int rowC = 0; rowC < duneC_.N(); ++rowC) {
             for (auto colC = duneC_[rowC].begin(), endC = duneC_[rowC].end(); colC != endC; ++colC) {
                 const auto row_index = colC.index();
