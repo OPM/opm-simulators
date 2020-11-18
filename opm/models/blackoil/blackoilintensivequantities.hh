@@ -377,7 +377,7 @@ public:
         porosity_ *= problem.template rockCompPoroMultiplier<Evaluation>(*this, globalSpaceIdx);
 
         asImp_().solventPvtUpdate_(elemCtx, dofIdx, timeIdx);
-        asImp_().zPvtUpdate_(elemCtx, dofIdx, timeIdx);
+        asImp_().zPvtUpdate_();
         asImp_().polymerPropertiesUpdate_(elemCtx, dofIdx, timeIdx);
         asImp_().updateEnergyQuantities_(elemCtx, dofIdx, timeIdx, paramCache);
         asImp_().foamPropertiesUpdate_(elemCtx, dofIdx, timeIdx);
