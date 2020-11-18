@@ -98,8 +98,6 @@ class BlackOilExtboModule
     static constexpr unsigned waterPhaseIdx = FluidSystem::waterPhaseIdx;
     static constexpr bool blackoilConserveSurfaceVolume = getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>();
 
-
-
 public:
 #if HAVE_ECL_INPUT
     /*!
@@ -499,136 +497,75 @@ public:
         priVars1 = priVars0[zFractionIdx];
     }
 
-    static const Scalar xVolume(unsigned pvtRegionIdx, const Scalar& pressure, const Scalar& z) {
-        const auto& xVolumeTable = X_[pvtRegionIdx];
-        return xVolumeTable.eval(z, pressure);
+    template <typename Value>
+    static Value xVolume(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
+        return X_[pvtRegionIdx].eval(z, pressure);
     }
 
-    static const Evaluation xVolume(unsigned pvtRegionIdx, const Evaluation& pressure, const Evaluation& z) {
-        const auto& xVolumeTable = X_[pvtRegionIdx];
-        return xVolumeTable.eval(z, pressure);
+    template <typename Value>
+    static Value yVolume(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
+        return Y_[pvtRegionIdx].eval(z, pressure);
     }
 
-    static const Scalar yVolume(unsigned pvtRegionIdx, const Scalar& pressure, const Scalar& z) {
-        const auto& yVolumeTable = Y_[pvtRegionIdx];
-        return yVolumeTable.eval(z, pressure);
+    template <typename Value>
+    static Value pbubRs(unsigned pvtRegionIdx, const Value& z, const Value& rs) {
+        return PBUB_RS_[pvtRegionIdx].eval(z, rs);
     }
 
-    static const Evaluation yVolume(unsigned pvtRegionIdx, const Evaluation& pressure, const Evaluation& z) {
-        const auto& yVolumeTable = Y_[pvtRegionIdx];
-        return yVolumeTable.eval(z, pressure);
+    template <typename Value>
+    static Value pbubRv(unsigned pvtRegionIdx, const Value& z, const Value& rv) {
+        return PBUB_RV_[pvtRegionIdx].eval(z, rv);
     }
 
-    static const Scalar pbubRs(unsigned pvtRegionIdx, const Scalar& z, const Scalar& rs) {
-        const auto& pbubRsTable = PBUB_RS_[pvtRegionIdx];
-        return pbubRsTable.eval(z, rs);
+    template <typename Value>
+    static Value oilViscosity(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
+        return VISCO_[pvtRegionIdx].eval(z, pressure);
     }
 
-    static const Evaluation pbubRs(unsigned pvtRegionIdx, const Evaluation& z, const Evaluation& rs) {
-        const auto& pbubRsTable = PBUB_RS_[pvtRegionIdx];
-        return pbubRsTable.eval(z, rs);
+    template <typename Value>
+    static Value gasViscosity(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
+        return VISCG_[pvtRegionIdx].eval(z, pressure);
     }
 
-    static const Scalar pbubRv(unsigned pvtRegionIdx, const Scalar& z, const Scalar& rv) {
-        const auto& pbubRvTable = PBUB_RV_[pvtRegionIdx];
-        return pbubRvTable.eval(z, rv);
+    template <typename Value>
+    static Value bo(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
+        return BO_[pvtRegionIdx].eval(z, pressure);
     }
 
-    static const Evaluation pbubRv(unsigned pvtRegionIdx, const Evaluation& z, const Evaluation& rv) {
-        const auto& pbubRvTable = PBUB_RV_[pvtRegionIdx];
-        return pbubRvTable.eval(z, rv);
+    template <typename Value>
+    static Value bg(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
+        return BG_[pvtRegionIdx].eval(z, pressure);
     }
 
-    static const Scalar oilViscosity(unsigned pvtRegionIdx, const Scalar& pressure, const Scalar& z) {
-        const auto& oilViscosityTable = VISCO_[pvtRegionIdx];
-        return oilViscosityTable.eval(z, pressure);
+    template <typename Value>
+    static Value rs(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
+        return RS_[pvtRegionIdx].eval(z, pressure);
     }
 
-    static const Evaluation oilViscosity(unsigned pvtRegionIdx, const Evaluation& pressure, const Evaluation& z) {
-        const auto& oilViscosityTable = VISCO_[pvtRegionIdx];
-        return oilViscosityTable.eval(z, pressure);
+    template <typename Value>
+    static Value rv(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
+        return RV_[pvtRegionIdx].eval(z, pressure);
     }
 
-    static const Scalar gasViscosity(unsigned pvtRegionIdx, const Scalar& pressure, const Scalar& z) {
-        const auto& gasViscosityTable = VISCG_[pvtRegionIdx];
-        return gasViscosityTable.eval(z, pressure);
-    }
-
-    static const Evaluation gasViscosity(unsigned pvtRegionIdx, const Evaluation& pressure, const Evaluation& z) {
-        const auto& gasViscosityTable = VISCG_[pvtRegionIdx];
-        return gasViscosityTable.eval(z, pressure);
-    }
-
-    static const Scalar bo(unsigned pvtRegionIdx, const Scalar& pressure, const Scalar& z) {
-        const auto& boTable = BO_[pvtRegionIdx];
-        return boTable.eval(z, pressure);
-    }
-
-    static const Evaluation bo(unsigned pvtRegionIdx, const Evaluation& pressure, const Evaluation& z) {
-        const auto& boTable = BO_[pvtRegionIdx];
-        return boTable.eval(z, pressure);
-    }
-
-    static const Scalar bg(unsigned pvtRegionIdx, const Scalar& pressure, const Scalar& z) {
-        const auto& bgTable = BG_[pvtRegionIdx];
-        return bgTable.eval(z, pressure);
-    }
-
-    static const Evaluation bg(unsigned pvtRegionIdx, const Evaluation& pressure, const Evaluation& z) {
-        const auto& bgTable = BG_[pvtRegionIdx];
-        return bgTable.eval(z, pressure);
-    }
-
-    static const Scalar rs(unsigned pvtRegionIdx, const Scalar& pressure, const Scalar& z) {
-        const auto& rsTable = RS_[pvtRegionIdx];
-        return rsTable.eval(z, pressure);
-    }
-
-    static const Evaluation rs(unsigned pvtRegionIdx, const Evaluation& pressure, const Evaluation& z) {
-        const auto& rsTable = RS_[pvtRegionIdx];
-        return rsTable.eval(z, pressure);
-    }
-
-    static const Scalar rv(unsigned pvtRegionIdx, const Scalar& pressure, const Scalar& z) {
-        const auto& rvTable = RV_[pvtRegionIdx];
-        return rvTable.eval(z, pressure);
-    }
-
-    static const Evaluation rv(unsigned pvtRegionIdx, const Evaluation& pressure, const Evaluation& z) {
-        const auto& rvTable = RV_[pvtRegionIdx];
-        return rvTable.eval(z, pressure);
-    }
-
-    static const Scalar referenceDensity(unsigned regionIdx) {
+    static Scalar referenceDensity(unsigned regionIdx) {
         return zReferenceDensity_[regionIdx];
     }
 
-    static const Scalar zLim(unsigned regionIdx) {
+    static Scalar zLim(unsigned regionIdx) {
         return zLim_[regionIdx];
     }
 
-    static const Scalar oilCmp(unsigned pvtRegionIdx, const Scalar& z) {
-        const auto& oilCmpTable = oilCmp_[pvtRegionIdx];
-        return oilCmpTable.eval(z);
+    template <typename Value>
+    static Value oilCmp(unsigned pvtRegionIdx, const Value& z) {
+        return oilCmp_[pvtRegionIdx].eval(z);
     }
 
-    static const Evaluation oilCmp(unsigned pvtRegionIdx, const Evaluation& z) {
-        const auto& oilCmpTable = oilCmp_[pvtRegionIdx];
-        return oilCmpTable.eval(z);
-    }
-
-    static const Scalar gasCmp(unsigned pvtRegionIdx, const Scalar& z) {
-        const auto& gasCmpTable = gasCmp_[pvtRegionIdx];
-        return gasCmpTable.eval(z);
-    }
-
-    static const Evaluation gasCmp(unsigned pvtRegionIdx, const Evaluation& z) {
-        const auto& gasCmpTable = gasCmp_[pvtRegionIdx];
-        return gasCmpTable.eval(z);
+    template <typename Value>
+    static Value gasCmp(unsigned pvtRegionIdx, const Value& z) {
+        return gasCmp_[pvtRegionIdx].eval(z);
     }
 
 private:
-
     static std::vector<Tabulated2DFunction> X_;
     static std::vector<Tabulated2DFunction> Y_;
     static std::vector<Tabulated2DFunction> PBUB_RS_;
@@ -755,7 +692,7 @@ public:
         bo_ = ExtboModule::bo(pvtRegionIdx, fs.pressure(oilPhaseIdx), zFraction_);
         bg_ = ExtboModule::bg(pvtRegionIdx, fs.pressure(gasPhaseIdx), zFraction_);
 
-        bz_ = ExtboModule::bg(pvtRegionIdx, fs.pressure(oilPhaseIdx), 0.99);
+        bz_ = ExtboModule::bg(pvtRegionIdx, fs.pressure(oilPhaseIdx), Evaluation{0.99});
 
         if (FluidSystem::enableDissolvedGas())
             rs_ = ExtboModule::rs(pvtRegionIdx, fs.pressure(oilPhaseIdx), zFraction_);
