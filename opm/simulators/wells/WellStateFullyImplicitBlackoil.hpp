@@ -163,7 +163,6 @@ namespace Opm
 
             perfRateBrine_.clear();
             perfRateBrine_.resize(nperf, 0.0);
-
             // intialize wells that have been there before
             // order may change so the mapping is based on the well name
             if (prevState && !prevState->wellMap().empty()) {
@@ -576,7 +575,7 @@ namespace Opm
                     well.rates.set( rt::well_potential_gas, this->well_potentials_[well_rate_index + pu.phase_pos[Gas]] );
                 }
 
-                if ( pu.has_solvent ) {
+                if ( pu.has_solvent || pu.has_zFraction) {
                     well.rates.set( rt::solvent, solventWellRate(w) );
                 }
 
@@ -621,7 +620,7 @@ namespace Opm
                     if ( pu.has_brine ) {
                         comp.rates.set( rt::brine, this->perfRateBrine()[wt.second[1] + local_comp_index]);
                     }
-                    if ( pu.has_solvent ) {
+                    if ( pu.has_solvent || pu.has_zFraction) {
                         comp.rates.set( rt::solvent, this->perfRateSolvent()[wt.second[1] + local_comp_index]);
                     }
 

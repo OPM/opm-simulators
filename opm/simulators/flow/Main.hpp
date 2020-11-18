@@ -29,6 +29,7 @@
 #  include <flow/flow_ebos_oilwater.hpp>
 #  include <flow/flow_ebos_solvent.hpp>
 #  include <flow/flow_ebos_polymer.hpp>
+#  include <flow/flow_ebos_extbo.hpp>
 #  include <flow/flow_ebos_foam.hpp>
 #  include <flow/flow_ebos_brine.hpp>
 #  include <flow/flow_ebos_oilwater_brine.hpp>
@@ -291,6 +292,14 @@ namespace Opm
                                             std::move(schedule_),
                                             std::move(summaryConfig_));
                 return Opm::flowEbosSolventMain(argc_, argv_, outputCout_, outputFiles_);
+            }
+            // Extended BO case
+            else if ( phases.active( Opm::Phase::ZFRACTION ) ) {
+                Opm::flowEbosExtboSetDeck(setupTime_, std::move(deck_),
+                                            std::move(eclipseState_),
+                                            std::move(schedule_),
+                                            std::move(summaryConfig_));
+                return Opm::flowEbosExtboMain(argc_, argv_, outputCout_, outputFiles_);
             }
             // Energy case
             else if (eclipseState_->getSimulationConfig().isThermal()) {

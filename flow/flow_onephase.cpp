@@ -43,6 +43,7 @@ private:
 
 public:
     typedef Opm::BlackOilOnePhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
+                                         getPropValue<TypeTag, Properties::EnableExtbo>(),
                                          getPropValue<TypeTag, Properties::EnablePolymer>(),
                                          getPropValue<TypeTag, Properties::EnableEnergy>(),
                                          getPropValue<TypeTag, Properties::EnableFoam>(),

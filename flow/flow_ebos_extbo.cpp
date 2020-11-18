@@ -16,11 +16,9 @@
 */
 #include "config.h"
 
-#include <flow/flow_ebos_oilwater.hpp>
+#include <flow/flow_ebos_extbo.hpp>
 
 #include <opm/material/common/ResetLocale.hpp>
-#include <opm/models/blackoil/blackoiltwophaseindices.hh>
-
 #include <opm/grid/CpGrid.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/simulators/flow/FlowMainEbos.hpp>
@@ -34,41 +32,23 @@
 namespace Opm {
 namespace Properties {
 namespace TTag {
-struct EclFlowOilWaterProblem {
+struct EclFlowExtboProblem {
     using InheritsFrom = std::tuple<EclFlowProblem>;
 };
 }
-
-//! The indices required by the model
 template<class TypeTag>
-struct Indices<TypeTag, TTag::EclFlowOilWaterProblem>
-{
-private:
-    // it is unfortunately not possible to simply use 'TypeTag' here because this leads
-    // to cyclic definitions of some properties. if this happens the compiler error
-    // messages unfortunately are *really* confusing and not really helpful.
-    using BaseTypeTag = TTag::EclFlowProblem;
-    using FluidSystem = GetPropType<BaseTypeTag, Properties::FluidSystem>;
-
-public:
-    typedef Opm::BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
-                                         getPropValue<TypeTag, Properties::EnableExtbo>(),
-                                         getPropValue<TypeTag, Properties::EnablePolymer>(),
-                                         getPropValue<TypeTag, Properties::EnableEnergy>(),
-                                         getPropValue<TypeTag, Properties::EnableFoam>(),
-                                         getPropValue<TypeTag, Properties::EnableBrine>(),
-                                         /*PVOffset=*/0,
-                                         /*disabledCompIdx=*/FluidSystem::gasCompIdx> type;
+struct EnableExtbo<TypeTag, TTag::EclFlowExtboProblem> {
+    static constexpr bool value = true;
 };
 }}
 
 namespace Opm {
-void flowEbosOilWaterSetDeck(double setupTime, std::unique_ptr<Deck> deck,
-                             std::unique_ptr<EclipseState> eclState,
-                             std::unique_ptr<Schedule> schedule,
-                             std::unique_ptr<SummaryConfig> summaryConfig)
+void flowEbosExtboSetDeck(double setupTime, std::unique_ptr<Deck> deck,
+                            std::unique_ptr<EclipseState> eclState,
+                            std::unique_ptr<Schedule> schedule,
+                            std::unique_ptr<SummaryConfig> summaryConfig)
 {
-    using TypeTag = Properties::TTag::EclFlowOilWaterProblem;
+    using TypeTag = Properties::TTag::EclFlowExtboProblem;
     using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
 
     Vanguard::setExternalSetupTime(setupTime);
@@ -79,19 +59,20 @@ void flowEbosOilWaterSetDeck(double setupTime, std::unique_ptr<Deck> deck,
 }
 
 // ----------------- Main program -----------------
-int flowEbosOilWaterMain(int argc, char** argv, bool outputCout, bool outputFiles)
+int flowEbosExtboMain(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
     Opm::resetLocale();
 
+    // initialize MPI, finalize is done automatically on exit
 #if HAVE_DUNE_FEM
     Dune::Fem::MPIManager::initialize(argc, argv);
 #else
-    Dune::MPIHelper::instance(argc, argv);
+    Dune::MPIHelper::instance(argc, argv).rank();
 #endif
 
-    Opm::FlowMainEbos<Properties::TTag::EclFlowOilWaterProblem>
+    Opm::FlowMainEbos<Properties::TTag::EclFlowExtboProblem>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }

@@ -61,6 +61,7 @@ private:
 
 public:
     typedef Opm::BlackOilTwoPhaseIndices<0,
+                                         0,
                                          2,
                                          0,
                                          getPropValue<TypeTag, Properties::EnableFoam>(),

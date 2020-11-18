@@ -33,6 +33,7 @@
 
 #include <opm/models/blackoil/blackoilpolymermodules.hh>
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
+#include <opm/models/blackoil/blackoilextbomodules.hh>
 #include <opm/models/blackoil/blackoilfoammodules.hh>
 #include <opm/models/blackoil/blackoilbrinemodules.hh>
 
@@ -74,6 +75,7 @@ namespace Opm
         using Base::numEq;
 
         using Base::has_solvent;
+        using Base::has_zFraction;
         using Base::has_polymer;
         using Base::has_foam;
         using Base::has_brine;
@@ -89,9 +91,10 @@ namespace Opm
         static const int numEnergyEq = Indices::numEnergy;
         static const int numFoamEq = Indices::numFoam;
         static const int numBrineEq = Indices::numBrine;
+        static const int numExtbos = Indices::numExtbos;
 
         // number of the conservation equations
-        static const int numWellConservationEq = numEq - numPolymerEq - numEnergyEq - numFoamEq - numBrineEq;
+        static const int numWellConservationEq = numEq - numPolymerEq - numEnergyEq - numFoamEq - numBrineEq - numExtbos;
         // number of the well control equations
         static const int numWellControlEq = 1;
         // number of the well equations that will always be used
@@ -147,6 +150,7 @@ namespace Opm
         typedef DenseAd::DynamicEvaluation<Scalar, numStaticWellEq + numEq + 1> EvalWell;
 
         using Base::contiSolventEqIdx;
+        using Base::contiZfracEqIdx;
         using Base::contiPolymerEqIdx;
         using Base::contiFoamEqIdx;
         using Base::contiBrineEqIdx;
@@ -523,6 +527,7 @@ namespace Opm
                                  std::vector<RateVector>& connectionRates,
                                  std::vector<EvalWell>& cq_s,
                                  EvalWell& water_flux_s,
+                                 EvalWell& cq_s_zfrac_effective,
                                  Opm::DeferredLogger& deferred_logger) const;
 
         // check whether the well is operable under the current reservoir condition

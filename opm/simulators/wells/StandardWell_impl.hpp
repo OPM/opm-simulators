@@ -388,6 +388,12 @@ namespace Opm
             b_perfcells_dense[contiSolventEqIdx] = extendEval(intQuants.solventInverseFormationVolumeFactor());
         }
 
+        if (has_zFraction && this->isInjector()) {
+            const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+            b_perfcells_dense[gasCompIdx] *= (1.0 - wsolvent());
+            b_perfcells_dense[gasCompIdx] += wsolvent()*intQuants.zPureInvFormationVolumeFactor().value();
+        }
+
         // Pressure drawdown (also used to determine direction of flow)
         const EvalWell well_pressure = bhp + perf_pressure_diffs_[perf];
         EvalWell drawdown = pressure - well_pressure;
@@ -605,7 +611,8 @@ namespace Opm
             // Calculate perforation quantities.
             std::vector<EvalWell> cq_s(num_components_, {numWellEq_ + numEq, 0.0});
             EvalWell water_flux_s{numWellEq_ + numEq, 0.0};
-            calculateSinglePerf(ebosSimulator, perf, well_state, connectionRates, cq_s, water_flux_s, deferred_logger);
+            EvalWell cq_s_zfrac_effective{numWellEq_ + numEq, 0.0};
+            calculateSinglePerf(ebosSimulator, perf, well_state, connectionRates, cq_s, water_flux_s, cq_s_zfrac_effective, deferred_logger);
 
             // Equation assembly for this perforation.
             if (has_polymer && this->has_polymermw && this->isInjector()) {
@@ -637,6 +644,12 @@ namespace Opm
                     well_state.perfRateSolvent()[first_perf_ + perf] = cq_s[componentIdx].value();
                 } else {
                     well_state.perfPhaseRates()[(first_perf_ + perf) * np + ebosCompIdxToFlowCompIdx(componentIdx)] = cq_s[componentIdx].value();
+                }
+            }
+
+            if (has_zFraction) {
+                for (int pvIdx = 0; pvIdx < numWellEq_; ++pvIdx) {
+                    duneC_[0][cell_idx][pvIdx][contiZfracEqIdx] -= cq_s_zfrac_effective.derivative(pvIdx+numEq);
                 }
             }
         }
@@ -686,6 +699,7 @@ namespace Opm
                         std::vector<RateVector>& connectionRates,
                         std::vector<EvalWell>& cq_s,
                         EvalWell& water_flux_s,
+                        EvalWell& cq_s_zfrac_effective,
                         Opm::DeferredLogger& deferred_logger) const
     {
         const bool allow_cf = getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebosSimulator);
@@ -810,6 +824,22 @@ namespace Opm
                 cq_s_foam *= extendEval(intQuants.foamConcentration());
             }
             connectionRates[perf][contiFoamEqIdx] = Base::restrictEval(cq_s_foam);
+        }
+
+        if (has_zFraction) {
+            // TODO: the application of well efficiency factor has not been tested with an example yet
+            const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+            cq_s_zfrac_effective = cq_s[gasCompIdx];
+            if (this->isInjector()) {
+                cq_s_zfrac_effective *= wsolvent();
+            } else if (cq_s_zfrac_effective.value() != 0.0) {
+                const double dis_gas_frac = perf_dis_gas_rate / cq_s_zfrac_effective.value();
+                cq_s_zfrac_effective *= extendEval(dis_gas_frac*intQuants.xVolume() + (1.0-dis_gas_frac)*intQuants.yVolume());
+            }
+            well_state.perfRateSolvent()[first_perf_ + perf] = cq_s_zfrac_effective.value();
+
+            cq_s_zfrac_effective *= well_efficiency_factor_;
+            connectionRates[perf][contiZfracEqIdx] = Base::restrictEval(cq_s_zfrac_effective);
         }
 
         if (has_brine) {
@@ -1978,7 +2008,7 @@ namespace Opm
                     const double oilrate = std::abs(well_state.wellRates()[oilpos_well]); //in order to handle negative rates in producers
                     rvmax_perf[perf] = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), temperature, p_avg);
                     if (oilrate > 0) {
-                        const double gasrate = std::abs(well_state.wellRates()[gaspos_well]) - well_state.solventWellRate(w);
+                        const double gasrate = std::abs(well_state.wellRates()[gaspos_well]) - (has_solvent ? well_state.solventWellRate(w) : 0.0);
                         double rv = 0.0;
                         if (gasrate > 0) {
                             rv = oilrate / gasrate;
@@ -2003,7 +2033,7 @@ namespace Opm
                 if (gasPresent) {
                     rsmax_perf[perf] = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(), temperature, p_avg);
                     const int gaspos_well = pu.phase_pos[Gas] + w * pu.num_phases;
-                    const double gasrate = std::abs(well_state.wellRates()[gaspos_well]) - well_state.solventWellRate(w);
+                    const double gasrate = std::abs(well_state.wellRates()[gaspos_well]) - (has_solvent ? well_state.solventWellRate(w) : 0.0);
                     if (gasrate > 0) {
                         const double oilrate = std::abs(well_state.wellRates()[oilpos_well]);
                         double rs = 0.0;
@@ -2224,7 +2254,7 @@ namespace Opm
     {
         // the following implementation assume that the polymer is always after the w-o-g phases
         // For the polymer, energy and foam cases, there is one more mass balance equations of reservoir than wells
-        assert((int(B_avg.size()) == num_components_) || has_polymer || has_energy || has_foam || has_brine);
+        assert((int(B_avg.size()) == num_components_) || has_polymer || has_energy || has_foam || has_brine || has_zFraction);
 
         const double tol_wells = param_.tolerance_wells_;
         const double maxResidualAllowed = param_.max_residual_allowed_;
@@ -2900,7 +2930,8 @@ namespace Opm
                 primary_variables_[WFrac] = scalingFactor(pu.phase_pos[Water]) * well_state.wellRates()[np*well_index + pu.phase_pos[Water]] / total_well_rate;
             }
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                primary_variables_[GFrac] = scalingFactor(pu.phase_pos[Gas]) * (well_state.wellRates()[np*well_index + pu.phase_pos[Gas]] - well_state.solventWellRate(well_index)) / total_well_rate ;
+                primary_variables_[GFrac] = scalingFactor(pu.phase_pos[Gas]) * (well_state.wellRates()[np*well_index + pu.phase_pos[Gas]]
+                                                 - (has_solvent ? well_state.solventWellRate(well_index) : 0.0) ) / total_well_rate ;
             }
             if (has_solvent) {
                 primary_variables_[SFrac] = scalingFactor(pu.phase_pos[Gas]) * well_state.solventWellRate(well_index) / total_well_rate ;
@@ -2919,8 +2950,9 @@ namespace Opm
 
                 if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                     if (phase == InjectorType::GAS) {
-                        primary_variables_[GFrac] = 1.0 - wsolvent();
+                        primary_variables_[GFrac] = 1.0;
                         if (has_solvent) {
+                            primary_variables_[GFrac] = 1.0 - wsolvent();
                             primary_variables_[SFrac] = wsolvent();
                         }
                     } else {
