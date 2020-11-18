@@ -1191,10 +1191,10 @@ namespace Opm
         // perforation at cell j connected to segment i.  The code
         // assumes that no cell is connected to more than one segment,
         // i.e. the columns of B/C have no more than one nonzero.
-        for (int rowC = 0; rowC < duneC_.N(); ++rowC) {
+        for (size_t rowC = 0; rowC < duneC_.N(); ++rowC) {
             for (auto colC = duneC_[rowC].begin(), endC = duneC_[rowC].end(); colC != endC; ++colC) {
                 const auto row_index = colC.index();
-                for (int rowB = 0; rowB < duneB_.N(); ++rowB) {
+                for (size_t rowB = 0; rowB < duneB_.N(); ++rowB) {
                     for (auto colB = duneB_[rowB].begin(), endB = duneB_[rowB].end(); colB != endB; ++colB) {
                         const auto col_index = colB.index();
                         OffDiagMatrixBlockWellType tmp1;
