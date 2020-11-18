@@ -192,10 +192,11 @@ private:
                 const auto &exQuants = elem_ctx.extensiveQuantities(face_idx, /*timeIdx*/ 0);
                 const double water_flux = Toolbox::value(exQuants.volumeFlux(waterPhaseIdx));
 
-                const auto &intQuantsIn = elem_ctx.intensiveQuantities(i, 0);
+                const size_t up_id = water_flux >= 0. ? i : j;
+                const auto &intQuantsIn = elem_ctx.intensiveQuantities(up_id, 0);
                 const double invB = Toolbox::value(intQuantsIn.fluidState().invB(waterPhaseIdx));
-                // for NNC, the face area is one, so we do not need to multiply the face area here
-                aquifer_flux += water_flux * invB;
+                const double face_area = face.area();
+                aquifer_flux += water_flux * invB * face_area;
             }
 
             // we only need to handle the first aquifer cell, we can exit loop here
