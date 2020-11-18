@@ -72,7 +72,45 @@ namespace mswellhelpers
 #else
         // this is not thread safe
         OPM_THROW(std::runtime_error, "Cannot use applyUMFPack() without UMFPACK. "
-                  "Reconfigure opm-simulator with SuiteSparse/UMFPACK support and recompile.");
+                  "Reconfigure opm-simulators with SuiteSparse/UMFPACK support and recompile.");
+#endif // HAVE_UMFPACK
+    }
+
+
+
+    /// Applies umfpack and checks for singularity
+    template <typename MatrixType, typename VectorType>
+    Dune::Matrix<typename MatrixType::block_type>
+    invertWithUMFPack(const MatrixType& D, std::shared_ptr<Dune::UMFPack<MatrixType> >& linsolver)
+    {
+#if HAVE_UMFPACK
+        const int sz = D.M();
+        const int bsz = D[0][0].M();
+        VectorType e(sz);
+        e = 0.0;
+
+        // Make a full block matrix.
+        Dune::Matrix<typename MatrixType::block_type> inv(sz, sz);
+
+        // Create inverse by passing basis vectors to the solver.
+        for (int ii = 0; ii < sz; ++ii) {
+            for (int jj = 0; jj < bsz; ++jj) {
+                e[ii][jj] = 1.0;
+                auto col = applyUMFPack(D, linsolver, e);
+                for (int cc = 0; cc < sz; ++cc) {
+                    for (int dd = 0; dd < bsz; ++dd) {
+                        inv[cc][ii][dd][jj] = col[cc][dd];
+                    }
+                }
+                e[ii][jj] = 0.0;
+            }
+        }
+
+        return inv;
+#else
+        // this is not thread safe
+        OPM_THROW(std::runtime_error, "Cannot use invertWithUMFPack() without UMFPACK. "
+                  "Reconfigure opm-simulators with SuiteSparse/UMFPACK support and recompile.");
 #endif // HAVE_UMFPACK
     }
 
