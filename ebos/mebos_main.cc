@@ -36,7 +36,7 @@
 #include "ebos_oilwater_polymer.hh"
 #include "ebos_gasoil.hh"
 // TODO (?): #include "ebos_watergas.hh"
-#include "ebos_thermal.hh"
+#include "ebos_energy.hh"
 #include "ebos_solvent.hh"
 #include "ebos_polymer.hh"
 #include "ebos_foam.hh"
@@ -295,11 +295,11 @@ int main(int argc, char **argv)
         // run ebos_thermal
         if (myRank == 0)
             std::cout << "Using thermal mode" << std::endl;
-        Opm::ebosThermalSetDeck(std::move(deck),
-                                std::move(parseContext),
-                                std::move(errorGuard),
-                                externalSetupTimer.elapsed());
-        return Opm::ebosThermalMain(argc, argv);
+        Opm::ebosEnergySetDeck(std::move(deck),
+                               std::move(parseContext),
+                               std::move(errorGuard),
+                               externalSetupTimer.elapsed());
+        return Opm::ebosEnergyMain(argc, argv);
     }
     else {
         if (myRank == 0)

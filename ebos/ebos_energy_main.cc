@@ -29,9 +29,9 @@
  */
 #include "config.h"
 
-#include "ebos_thermal.hh"
+#include "ebos_energy.hh"
 
 int main(int argc, char** argv)
 {
-    return Opm::ebosThermalMain(argc, argv);
+    return Opm::ebosEnergyMain(argc, argv);
 }

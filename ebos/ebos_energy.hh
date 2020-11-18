@@ -25,20 +25,20 @@
  *
  * \brief The function prototypes required to start the thermal variant of ebos
  */
-#ifndef EBOS_THERMAL_HH
-#define EBOS_THERMAL_HH
+#ifndef EBOS_ENERGY_HH
+#define EBOS_ENERGY_HH
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
 
 namespace Opm {
-void ebosThermalSetDeck(std::unique_ptr<Opm::Deck> deck,
-                        std::unique_ptr<Opm::ParseContext> parseContext,
-                        std::unique_ptr<Opm::ErrorGuard> errorGuard,
-                        double externalSetupTime);
+void ebosEnergySetDeck(std::unique_ptr<Opm::Deck> deck,
+                       std::unique_ptr<Opm::ParseContext> parseContext,
+                       std::unique_ptr<Opm::ErrorGuard> errorGuard,
+                       double externalSetupTime);
 
-int ebosThermalMain(int argc, char** argv);
+int ebosEnergyMain(int argc, char** argv);
 }
 
 #endif
