@@ -25,8 +25,10 @@ file( COPY ${PROJECT_SOURCE_DIR}/python/test
 file( COPY ${PROJECT_SOURCE_DIR}/python/test_data
       DESTINATION ${PROJECT_BINARY_DIR}/python)
 
-add_test(NAME python_tests
-    WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/python
-    COMMAND ${CMAKE_COMMAND}
-          -E env PYTHONPATH=${PROJECT_BINARY_DIR}/python:$ENV{PYTHONPATH}
-          ${PYTHON_EXECUTABLE} -m unittest )
+if(OPM_ENABLE_PYTHON_TESTS)
+  add_test(NAME python_tests
+      WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/python
+      COMMAND ${CMAKE_COMMAND}
+            -E env PYTHONPATH=${PROJECT_BINARY_DIR}/python:$ENV{PYTHONPATH}
+            ${PYTHON_EXECUTABLE} -m unittest )
+endif()
