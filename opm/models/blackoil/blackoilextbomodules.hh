@@ -809,9 +809,7 @@ public:
      *
      * At this point the pressures and saturations of the fluid state are correct.
      */
-    void zPvtUpdate_(const ElementContext& elemCtx,
-                           unsigned scvIdx,
-                           unsigned timeIdx)
+    void zPvtUpdate_()
     {
         const auto& iq = asImp_();
         auto& fs = asImp_().fluidState_;
@@ -904,9 +902,7 @@ class BlackOilExtboIntensiveQuantities<TypeTag, false>
 
 public:
 
-    void zPvtUpdate_(const ElementContext& elemCtx OPM_UNUSED,
-                     unsigned scvIdx OPM_UNUSED,
-                     unsigned timeIdx OPM_UNUSED)
+    void zPvtUpdate_()
     { }
 
     void zFractionUpdate_(const ElementContext& elemCtx OPM_UNUSED,
