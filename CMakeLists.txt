@@ -225,8 +225,8 @@ set_property(TARGET moduleVersion PROPERTY POSITION_INDEPENDENT_CODE ON)
 # but this is not exposed in a super-build.
 add_dependencies(moduleVersion opmsimulators)
 
-set(COMMON_MODELS brine extbo foam gasoil oilwater polymer solvent)
-set(FLOW_MODELS   blackoil energy oilwater_brine oilwater_polymer oilwater_polymer_injectivity)
+set(COMMON_MODELS brine extbo foam gasoil oilwater oilwater_polymer polymer solvent)
+set(FLOW_MODELS   blackoil energy oilwater_brine oilwater_polymer_injectivity)
 
 set(FLOW_TGTS)
 foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS})
@@ -343,7 +343,7 @@ endif()
 # the research oriented general-purpose ECL simulator ("ebos" == &ecl
 # &black-&oil &simulator)
 set(MEBOS_TARGETS "")
-set(EBOS_MODELS oilwaterpolymer thermal)
+set(EBOS_MODELS thermal)
 foreach(OBJ ${COMMON_MODELS} blackoil ${EBOS_MODELS})
   add_library(ebos_lib${OBJ} OBJECT EXCLUDE_FROM_ALL ebos/ebos_${OBJ}.cc)
   list(APPEND MEBOS_TARGETS $<TARGET_OBJECTS:ebos_lib${OBJ}>)

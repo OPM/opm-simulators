@@ -29,7 +29,7 @@
  */
 #include "config.h"
 
-#include "ebos_oilwaterpolymer.hh"
+#include "ebos_oilwater_polymer.hh"
 
 int main(int argc, char** argv)
 {

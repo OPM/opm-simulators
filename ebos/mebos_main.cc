@@ -33,7 +33,7 @@
 
 #include "ebos_blackoil.hh"
 #include "ebos_oilwater.hh"
-#include "ebos_oilwaterpolymer.hh"
+#include "ebos_oilwater_polymer.hh"
 #include "ebos_gasoil.hh"
 // TODO (?): #include "ebos_watergas.hh"
 #include "ebos_thermal.hh"
