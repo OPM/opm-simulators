@@ -212,6 +212,7 @@ protected:
                                  const EqVector& currentResidual)
     {
         static constexpr bool enableSolvent = Indices::solventSaturationIdx >= 0;
+        static constexpr bool enableExtbo = Indices::zFractionIdx >= 0;
         static constexpr bool enablePolymer = Indices::polymerConcentrationIdx >= 0;
         static constexpr bool enablePolymerWeight = Indices::polymerMoleWeightIdx >= 0;
         static constexpr bool enableEnergy = Indices::temperatureIdx >= 0;
@@ -287,6 +288,13 @@ protected:
             else if (enableSolvent && pvIdx == Indices::solventSaturationIdx)
                 // solvent saturation updates are also subject to the Appleyard chop
                 delta *= satAlpha;
+            else if (enableExtbo && pvIdx == Indices::zFractionIdx) {
+                // z fraction updates are also subject to the Appleyard chop
+                if (delta > currentValue[Indices::zFractionIdx])
+                        delta = currentValue[Indices::zFractionIdx];
+                if (delta < currentValue[Indices::zFractionIdx]-1.0)
+                        delta = currentValue[Indices::zFractionIdx]-1.0;
+            }
             else if (enablePolymerWeight && pvIdx == Indices::polymerMoleWeightIdx) {
                 const double sign = delta >= 0. ? 1. : -1.;
                 // maximum change of polymer molecular weight, the unit is MDa.
@@ -301,6 +309,10 @@ protected:
 
             // keep the solvent saturation between 0 and 1
             if (enableSolvent && pvIdx == Indices::solventSaturationIdx)
+                nextValue[pvIdx] = std::min(std::max(nextValue[pvIdx], 0.0), 1.0);
+
+            // keep the z fraction between 0 and 1
+            if (enableExtbo && pvIdx == Indices::zFractionIdx)
                 nextValue[pvIdx] = std::min(std::max(nextValue[pvIdx], 0.0), 1.0);
 
             // keep the polymer concentration above 0
