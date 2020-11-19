@@ -635,7 +635,6 @@ namespace Opm
         {
             using rt = data::Rates::opt;
             WellState::reportConnections(well, pu, wt, globalCellIdxMap);
-            const auto w = wt.second[ 0 ];
             const int np = pu.num_phases;
             size_t local_comp_index = 0;
             std::vector< rt > phs( np );
@@ -676,7 +675,7 @@ namespace Opm
 
                 ++local_comp_index;
             }
-            assert(local_comp_index == this->well_perf_data_[w].size());
+            assert(local_comp_index == this->well_perf_data_[wt.second[0]].size());
         }
 
         /// init the MS well related.
