@@ -90,6 +90,7 @@ namespace Opm
         using FlexibleSolverType = Dune::FlexibleSolver<Matrix, Vector>;
         using AbstractOperatorType = Dune::AssembledLinearOperator<Matrix, Vector, Vector>;
         using WellModelOperator = WellModelAsLinearOperator<WellModel, Vector, Vector>;
+        using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
 
 #if HAVE_CUDA || HAVE_OPENCL
         static const unsigned int block_size = Matrix::block_type::rows;
@@ -152,9 +153,7 @@ namespace Opm
             // For some reason simulator_.model().elementMapper() is not initialized at this stage
             // Hence const auto& elemMapper = simulator_.model().elementMapper(); does not work.
             // Set it up manually
-            using ElementMapper =
-                Dune::MultipleCodimMultipleGeomTypeMapper<GridView>;
-            ElementMapper elemMapper(simulator_.vanguard().grid().leafGridView(), Dune::mcmgElementLayout());
+            ElementMapper elemMapper(simulator_.vanguard().gridView(), Dune::mcmgElementLayout());
             detail::findOverlapAndInterior(simulator_.vanguard().grid(), elemMapper, overlapRows_, interiorRows_);
 
             useWellConn_ = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
