@@ -44,6 +44,7 @@
 #include <opm/output/data/Cells.hpp>
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/output/eclipse/Inplace.hpp>
 
 #include <dune/common/fvector.hh>
 
@@ -69,6 +70,30 @@ struct ForceDisableFluidInPlaceOutput<TypeTag, TTag::EclOutputBlackOil> {
 } // namespace Opm::Properties
 
 namespace Opm {
+
+namespace {
+
+std::string EclString(Opm::Inplace::Phase phase) {
+    switch(phase) {
+    case Opm::Inplace::Phase::WATER: return "WIP";
+    case Opm::Inplace::Phase::OIL: return "OIP";
+    case Opm::Inplace::Phase::GAS: return "GIP";
+    case Opm::Inplace::Phase::OilInLiquidPhase: return "OIPL";
+    case Opm::Inplace::Phase::OilInGasPhase: return "OIPG";
+    case Opm::Inplace::Phase::GasInLiquidPhase: return "GIPL";
+    case Opm::Inplace::Phase::GasInGasPhase: return "GIPG";
+    case Opm::Inplace::Phase::PoreVolume: return "RPV";
+    }
+    throw std::logic_error("Phase not recognized");
+}
+
+namespace ID {
+static const std::string PressurePV = "PressurePV";
+static const std::string HydroCarbonPV = "PVHydroCarbon";
+static const std::string PressureHydroCarbonPV = "PressurePVHydroCarbon";
+}
+}
+
 
 
 
@@ -108,36 +133,6 @@ class EclOutputBlackOilModule
     typedef std::vector<Scalar> ScalarBuffer;
     typedef std::vector<std::string> StringBuffer;
 
-    struct FipDataType
-    {
-        enum FipId
-        {
-            WaterInPlace = 0, //WIP
-            OilInPlace = 1, //OIP
-            GasInPlace = 2, //GIP
-            OilInPlaceInLiquidPhase = 3, //OIPL
-            OilInPlaceInGasPhase = 4, //OIPG
-            GasInPlaceInLiquidPhase = 5, //GIPL
-            GasInPlaceInGasPhase = 6,  //GIPG
-            PoreVolume = 7, //PV
-        };
-        static const int numFipTypes = PoreVolume + 1 ;
-
-
-        static std::string EclString(int fip_type) {
-            switch(static_cast<FipId>(fip_type)) {
-            case FipDataType::WaterInPlace: return "WIP";
-            case FipDataType::OilInPlace: return "OIP";
-            case FipDataType::GasInPlace: return "GIP";
-            case FipDataType::OilInPlaceInLiquidPhase: return "OIPL";
-            case FipDataType::OilInPlaceInGasPhase: return "OIPG";
-            case FipDataType::GasInPlaceInLiquidPhase: return "GIPL";
-            case FipDataType::GasInPlaceInGasPhase: return "GIPG";
-            case FipDataType::PoreVolume: return "RPV";
-            }
-            throw std::logic_error("fip_type:  " + std::to_string(fip_type) + " not recognized");
-        }
-    };
     struct WellProdDataType
     {
         enum WPId
@@ -203,19 +198,6 @@ class EclOutputBlackOilModule
         static const int numWCNames = 3;
     };
 
-    struct RegionSum {
-        std::size_t ntFip;
-        std::array<ScalarBuffer, FipDataType::numFipTypes> regFipValues;
-        ScalarBuffer regPressurePv;
-        ScalarBuffer regPvHydrocarbon;
-        ScalarBuffer regPressurePvHydrocarbon;
-
-        std::array<Scalar, FipDataType::numFipTypes> fieldFipValues;
-        Scalar fieldPressurePv;
-        Scalar fieldPvHydrocarbon;
-        Scalar fieldPressurePvHydrocarbon;
-    };
-
 public:
     template<class CollectDataToIORankType>
     EclOutputBlackOilModule(const Simulator& simulator, const CollectDataToIORankType& collectToIORank)
@@ -234,9 +216,9 @@ public:
         this->RPRNodes_  = summaryConfig.keywords("RPR*");
         this->RPRPNodes_ = summaryConfig.keywords("RPRP*");
 
-        for (int fip_type = 0; fip_type < FipDataType::numFipTypes; fip_type++) {
-            std::string key_pattern = "R" + FipDataType::EclString(fip_type) + "*";
-            this->regionNodes_[fip_type] = summaryConfig.keywords(key_pattern);
+        for (const auto& phase : Opm::Inplace::phases()) {
+            std::string key_pattern = "R" + EclString(phase) + "*";
+            this->regionNodes_[phase] = summaryConfig.keywords(key_pattern);
         }
 
         for (const auto& node: summaryConfig) {
@@ -291,20 +273,21 @@ public:
         computeFip_ = false;
 
         // Fluid in place
-        for (int i = 0; i<FipDataType::numFipTypes; i++) {
-            if (!substep || summaryConfig.require3DField(FipDataType::EclString(i))) {
+        for (const auto& phase : Opm::Inplace::phases()) {
+            if (!substep || summaryConfig.require3DField(EclString(phase))) {
                 if (rstKeywords["FIP"] > 0) {
                     rstKeywords["FIP"] = 0;
                     outputFipRestart_ = true;
                 }
-                fip_[i].resize(bufferSize, 0.0);
+                fip_[phase].resize(bufferSize, 0.0);
                 computeFip_ = true;
             }
             else
-                fip_[i].clear();
+                fip_[phase].clear();
         }
+
         if (!substep || summaryConfig.hasKeyword("FPR") || summaryConfig.hasKeyword("FPRP") || !this->RPRNodes_.empty()) {
-            fip_[FipDataType::PoreVolume].resize(bufferSize, 0.0);
+            fip_[Opm::Inplace::Phase::PoreVolume].resize(bufferSize, 0.0);
             hydrocarbonPoreVolume_.resize(bufferSize, 0.0);
             pressureTimesPoreVolume_.resize(bufferSize, 0.0);
             pressureTimesHydrocarbonVolume_.resize(bufferSize, 0.0);
@@ -1137,11 +1120,11 @@ public:
 
 
         // Fluid in place
-        for (int i = 0; i<FipDataType::numFipTypes; i++) {
-            if (outputFipRestart_ && fip_[i].size() > 0) {
-                sol.insert(FipDataType::EclString(i),
+        for (const auto& phase : Opm::Inplace::phases()) {
+            if (outputFipRestart_ && fip_[phase].size() > 0) {
+                sol.insert(EclString(phase),
                            Opm::UnitSystem::measure::volume,
-                           fip_[i],
+                           fip_[phase],
                            Opm::data::TargetType::SUMMARY);
             }
         }
@@ -1161,73 +1144,67 @@ public:
         return this->simulator_.gridView().comm().max(max_value);
     }
 
-
-    RegionSum makeRegionSum(const std::vector<int>& region, bool is_fipnum) {
-        RegionSum rsum;
-        rsum.ntFip = this->regionMax(region);
-
-        // sum values over each region
-        rsum.regPressurePv = this->regionSum(this->pressureTimesPoreVolume_, region, rsum.ntFip);
-        rsum.regPvHydrocarbon = this->regionSum(this->hydrocarbonPoreVolume_, region, rsum.ntFip);
-        rsum.regPressurePvHydrocarbon = this->regionSum(pressureTimesHydrocarbonVolume_, region, rsum.ntFip);
-        for (int fip_type = 0; fip_type < FipDataType::numFipTypes; fip_type++)
-            rsum.regFipValues[fip_type] = this->regionSum(this->fip_[fip_type], region, rsum.ntFip);
-
-
-
-        // sum all region values to compute the field total
-        rsum.fieldPressurePv = sum(rsum.regPressurePv);
-        rsum.fieldPvHydrocarbon = sum(rsum.regPvHydrocarbon);
-        rsum.fieldPressurePvHydrocarbon = sum(rsum.regPressurePvHydrocarbon);
-        for (int fip_type = 0; fip_type < FipDataType::numFipTypes; fip_type++) {
-            const auto& regionFip = rsum.regFipValues[fip_type];
-            rsum.fieldFipValues[fip_type] = sum(regionFip);
+    void update(Opm::Inplace& inplace, const std::string& region_name, const std::string& string_id, std::size_t ntFip, const std::vector<double>& values) {
+        double sum = 0;
+        for (std::size_t region_number = 0; region_number < ntFip; region_number++) {
+            inplace.add( region_name, string_id, region_number + 1, values[region_number] );
+            sum += values[region_number];
         }
+        inplace.add( string_id, sum );
+    }
 
-        if (is_fipnum) {
-            // The first time the outputFipLog function is run we store the inplace values in
-            // the initialInplace_ member. This has at least two problems:
-            //
-            //   o We really want the *initial* value - now we get the value after
-            //     the first timestep.
-            //
-            //   o For restarted runs this is obviously wrong.
-            //
-            // Finally it is of course not desirable to mutate state in an output
-            // routine.
-            if (!this->regionInitialInplace_) {
-                this->regionInitialInplace_.emplace();
-                for (int fip_type = 0; fip_type < FipDataType::numFipTypes; fip_type++)
-                    this->regionInitialInplace_.value()[fip_type] = rsum.regFipValues[fip_type];
-            }
-
-            if (!this->fieldInitialInplace_)
-                this->fieldInitialInplace_ = rsum.fieldFipValues;
+    void update(Opm::Inplace& inplace, const std::string& region_name, Opm::Inplace::Phase phase, std::size_t ntFip, const std::vector<double>& values) {
+        double sum = 0;
+        for (std::size_t region_number = 0; region_number < ntFip; region_number++) {
+            inplace.add( region_name, phase, region_number + 1, values[region_number] );
+            sum += values[region_number];
         }
-        return rsum;
+        inplace.add( phase, sum );
     }
 
 
-    std::unordered_map<std::string, RegionSum> accumulateRegionSums() {
-        std::unordered_map<std::string, RegionSum> rsum_map;
+    void makeRegionSum(Opm::Inplace& inplace, const std::string& region_name) {
+        const auto& region = this->regions_.at(region_name);
+        std::size_t ntFip = this->regionMax(region);
+
+        update(inplace, region_name, ID::PressurePV, ntFip, this->regionSum(this->pressureTimesPoreVolume_, region, ntFip));
+        update(inplace, region_name, ID::HydroCarbonPV, ntFip, this->regionSum(this->hydrocarbonPoreVolume_, region, ntFip));
+        update(inplace, region_name, ID::PressureHydroCarbonPV, ntFip, this->regionSum(this->pressureTimesHydrocarbonVolume_, region, ntFip));
+
+        for (const auto& phase : Opm::Inplace::phases())
+            update(inplace, region_name, phase, ntFip, this->regionSum(this->fip_[phase], region, ntFip));
+    }
+
+
+    Opm::Inplace accumulateRegionSums() {
         const Opm::SummaryConfig summaryConfig = simulator_.vanguard().summaryConfig();
+        Opm::Inplace inplace;
 
-        rsum_map.emplace("FIPNUM", makeRegionSum(this->regions_.at("FIPNUM"), true));
-        for (const auto& fip_region : summaryConfig.fip_regions()) {
-            if (fip_region == "FIPNUM")
-                continue;
-
-            const auto& region = this->regions_.at(fip_region);
-            rsum_map.emplace(fip_region, makeRegionSum(region, false));
+        for (const auto& [region_name, _] : this->regions_) {
+            (void)_;
+            makeRegionSum(inplace, region_name);
         }
-        return rsum_map;
+
+        // The first time the outputFipLog function is run we store the inplace values in
+        // the initialInplace_ member. This has at least two problems:
+        //
+        //   o We really want the *initial* value - now we get the value after
+        //     the first timestep.
+        //
+        //   o For restarted runs this is obviously wrong.
+        //
+        // Finally it is of course not desirable to mutate state in an output
+        // routine.
+        if (!this->initialInplace_.has_value())
+            this->initialInplace_ = inplace;
+        return inplace;
     }
 
     Scalar sum(const ScalarBuffer& v) {
         return std::accumulate(v.begin(), v.end(), Scalar{0});
     }
 
-    void updateSummaryRegionValues(const std::unordered_map<std::string, RegionSum>& rsum_map,
+    void updateSummaryRegionValues(const Inplace& inplace,
                                    std::map<std::string, double>& miscSummaryData,
                                    std::map<std::string, std::vector<double>>& regionData) const {
 
@@ -1235,75 +1212,79 @@ public:
 
         // The field summary vectors should only use the FIPNUM based region sum.
         {
-            const auto& rsum = rsum_map.at("FIPNUM");
-            for (int fip_type = 0; fip_type < FipDataType::numFipTypes; fip_type++) {
-                std::string key = "F" + FipDataType::EclString(fip_type);
+            for (const auto& phase : Opm::Inplace::phases()) {
+                std::string key = "F" + EclString(phase);
                 if (summaryConfig.hasKeyword(key))
-                    miscSummaryData[key] = rsum.fieldFipValues[fip_type];
+                    miscSummaryData[key] = inplace.get(phase);
             }
-            if (summaryConfig.hasKeyword("FOE") && this->fieldInitialInplace_)
-                miscSummaryData["FOE"] = rsum.fieldFipValues[FipDataType::OilInPlace]
-                    / this->fieldInitialInplace_.value()[FipDataType::OilInPlace];
+
+            if (summaryConfig.hasKeyword("FOE") && this->initialInplace_)
+                miscSummaryData["FOE"] = inplace.get(Opm::Inplace::Phase::OIL)
+                    / this->initialInplace_.value().get(Opm::Inplace::Phase::OIL);
 
             if (summaryConfig.hasKeyword("FPR"))
-                miscSummaryData["FPR"] = pressureAverage_(rsum.fieldPressurePvHydrocarbon,
-                                                          rsum.fieldPvHydrocarbon,
-                                                          rsum.fieldPressurePv,
-                                                          rsum.fieldFipValues[FipDataType::PoreVolume],
+                miscSummaryData["FPR"] = pressureAverage_(inplace.get(ID::PressureHydroCarbonPV),
+                                                          inplace.get(ID::HydroCarbonPV),
+                                                          inplace.get(ID::PressurePV),
+                                                          inplace.get(Opm::Inplace::Phase::PoreVolume),
                                                           true);
 
-            if (summaryConfig.hasKeyword("FPRP"))
-                miscSummaryData["FPRP"] = pressureAverage_(rsum.fieldPressurePvHydrocarbon,
-                                                           rsum.fieldPvHydrocarbon,
-                                                           rsum.fieldPressurePv,
-                                                           rsum.fieldFipValues[FipDataType::PoreVolume],
-                                                           false);
 
+            if (summaryConfig.hasKeyword("FPRP"))
+                miscSummaryData["FPRP"] = pressureAverage_(inplace.get(ID::PressureHydroCarbonPV),
+                                                           inplace.get(ID::HydroCarbonPV),
+                                                           inplace.get(ID::PressurePV),
+                                                           inplace.get(Opm::Inplace::Phase::PoreVolume),
+                                                           false);
         }
 
         // The region summary vectors should loop through the FIPxxx regions to
         // support the RPR__xxx summary keywords.
         {
-            for (int fip_type = 0; fip_type < FipDataType::numFipTypes; fip_type++) {
-                for (const auto& node : this->regionNodes_[fip_type]) {
-                    const auto& rsum = rsum_map.at(node.fip_region());
-                    regionData[node.keyword()] = rsum.regFipValues[fip_type];
-                }
+            for (const auto& phase : Opm::Inplace::phases()) {
+                for (const auto& node : this->regionNodes_.at(phase))
+                    regionData[node.keyword()] = inplace.get_vector(node.fip_region(), phase);
             }
 
             // The exact same quantity is calculated for RPR and RPRP - is that correct?
-            for (const auto& node : this->RPRNodes_) {
-                const auto& rsum = rsum_map.at(node.fip_region());
-                regionData[node.keyword()] = pressureAverage_(rsum.regPressurePvHydrocarbon,
-                                                              rsum.regPvHydrocarbon,
-                                                              rsum.regPressurePv,
-                                                              rsum.regFipValues[FipDataType::PoreVolume],
+            for (const auto& node : this->RPRNodes_)
+                regionData[node.keyword()] = pressureAverage_(inplace.get_vector(node.fip_region(), ID::PressureHydroCarbonPV),
+                                                              inplace.get_vector(node.fip_region(), ID::HydroCarbonPV),
+                                                              inplace.get_vector(node.fip_region(), ID::PressurePV),
+                                                              inplace.get_vector(node.fip_region(), Opm::Inplace::Phase::PoreVolume),
                                                               true);
-            }
 
-            for (const auto& node : this->RPRPNodes_) {
-                const auto& rsum = rsum_map.at(node.fip_region());
-                regionData[node.keyword()] = pressureAverage_(rsum.regPressurePvHydrocarbon,
-                                                              rsum.regPvHydrocarbon,
-                                                              rsum.regPressurePv,
-                                                              rsum.regFipValues[FipDataType::PoreVolume],
+
+            for (const auto& node : this->RPRPNodes_)
+                regionData[node.keyword()] = pressureAverage_(inplace.get_vector(node.fip_region(), ID::PressureHydroCarbonPV),
+                                                              inplace.get_vector(node.fip_region(), ID::HydroCarbonPV),
+                                                              inplace.get_vector(node.fip_region(), ID::PressurePV),
+                                                              inplace.get_vector(node.fip_region(), Opm::Inplace::Phase::PoreVolume),
                                                               false);
-            }
+
         }
     }
 
 
-    void outputFipLogImpl(const RegionSum& rsum) const {
+    void outputFipLogImpl(const Inplace& inplace) const {
 
 
         {
-            Scalar fieldHydroCarbonPoreVolumeAveragedPressure = pressureAverage_(rsum.fieldPressurePvHydrocarbon,
-                                                                                 rsum.fieldPvHydrocarbon,
-                                                                                 rsum.fieldPressurePv,
-                                                                                 rsum.fieldFipValues[FipDataType::PoreVolume],
+            Scalar fieldHydroCarbonPoreVolumeAveragedPressure = pressureAverage_(inplace.get(ID::PressureHydroCarbonPV),
+                                                                                 inplace.get(ID::HydroCarbonPV),
+                                                                                 inplace.get(ID::PressurePV),
+                                                                                 inplace.get(Opm::Inplace::Phase::PoreVolume),
                                                                                  true);
-            std::array<Scalar, FipDataType::numFipTypes> initial_values = *this->fieldInitialInplace_;
-            std::array<Scalar, FipDataType::numFipTypes> current_values = rsum.fieldFipValues;
+
+            std::unordered_map<Opm::Inplace::Phase, Scalar> initial_values;
+            std::unordered_map<Opm::Inplace::Phase, Scalar> current_values;
+
+            for (const auto& phase : Opm::Inplace::phases()) {
+                initial_values[phase] = this->initialInplace_->get(phase);
+                current_values[phase] = inplace.get(phase);
+            }
+
+
             fipUnitConvert_(initial_values);
             fipUnitConvert_(current_values);
 
@@ -1313,25 +1294,25 @@ public:
                                       fieldHydroCarbonPoreVolumeAveragedPressure);
         }
 
-        for (size_t reg = 0; reg < rsum.ntFip; ++reg) {
-            std::array<Scalar, FipDataType::numFipTypes> initial_values;
-            std::array<Scalar, FipDataType::numFipTypes> current_values;
+        for (size_t reg = 1; reg <= inplace.max_region("FIPNUM"); ++reg) {
+            std::unordered_map<Opm::Inplace::Phase, Scalar> initial_values;
+            std::unordered_map<Opm::Inplace::Phase, Scalar> current_values;
 
-            for (std::size_t fip_type = 0; fip_type < FipDataType::numFipTypes; fip_type++) {
-                initial_values[fip_type] = this->regionInitialInplace_.value()[fip_type][reg];
-                current_values[fip_type] = rsum.regFipValues[fip_type][reg];
+            for (const auto& phase : Opm::Inplace::phases()) {
+                initial_values[phase] = this->initialInplace_->get("FIPNUM", phase, reg);
+                current_values[phase] = inplace.get("FIPNUM", phase, reg);
             }
             fipUnitConvert_(initial_values);
             fipUnitConvert_(current_values);
 
             Scalar regHydroCarbonPoreVolumeAveragedPressure
-                = pressureAverage_(rsum.regPressurePvHydrocarbon[reg],
-                                   rsum.regPvHydrocarbon[reg],
-                                   rsum.regPressurePv[reg],
-                                   rsum.regFipValues[FipDataType::PoreVolume][reg],
-                                   true);
+                               = pressureAverage_(inplace.get("FIPNUM", ID::PressureHydroCarbonPV, reg),
+                                                  inplace.get("FIPNUM", ID::HydroCarbonPV, reg),
+                                                  inplace.get("FIPNUM", ID::PressurePV, reg),
+                                                  inplace.get("FIPNUM", Opm::Inplace::Phase::PoreVolume, reg),
+                                                  true);
             pressureUnitConvert_(regHydroCarbonPoreVolumeAveragedPressure);
-            outputRegionFluidInPlace_(initial_values, current_values, regHydroCarbonPoreVolumeAveragedPressure, reg + 1);
+            outputRegionFluidInPlace_(initial_values, current_values, regHydroCarbonPoreVolumeAveragedPressure, reg);
         }
     }
 
@@ -1341,16 +1322,16 @@ public:
     // write Fluid In Place to output log
     void outputFipLog(std::map<std::string, double>& miscSummaryData,  std::map<std::string, std::vector<double>>& regionData, const bool substep)
     {
-        auto rsum_map = this->accumulateRegionSums();
+        auto inplace = this->accumulateRegionSums();
         if (!isIORank_())
             return;
 
-        updateSummaryRegionValues(rsum_map,
+        updateSummaryRegionValues(inplace,
                                   miscSummaryData,
                                   regionData);
 
         if (!substep)
-            outputFipLogImpl(rsum_map.at("FIPNUM"));
+            outputFipLogImpl(inplace);
     }
 
 
@@ -1926,9 +1907,9 @@ private:
 
         if (pressureTimesHydrocarbonVolume_.size() > 0 && pressureTimesPoreVolume_.size() > 0) {
             assert(hydrocarbonPoreVolume_.size() ==  pressureTimesHydrocarbonVolume_.size());
-            assert(fip_[FipDataType::PoreVolume].size() == pressureTimesPoreVolume_.size());
+            assert(fip_[Opm::Inplace::Phase::PoreVolume].size() == pressureTimesPoreVolume_.size());
 
-            fip_[FipDataType::PoreVolume][globalDofIdx] = pv;
+            fip_[Opm::Inplace::Phase::PoreVolume][globalDofIdx] = pv;
 
             Scalar hydrocarbon = 0.0;
             if (FluidSystem::phaseIsActive(oilPhaseIdx))
@@ -1957,34 +1938,34 @@ private:
                 fip[phaseIdx] = b * s * pv;
             }
 
-            if (FluidSystem::phaseIsActive(oilPhaseIdx) && fip_[FipDataType::OilInPlace].size() > 0)
-                fip_[FipDataType::OilInPlace][globalDofIdx] = fip[oilPhaseIdx];
-            if (FluidSystem::phaseIsActive(gasPhaseIdx) && fip_[FipDataType::GasInPlace].size() > 0)
-                fip_[FipDataType::GasInPlace][globalDofIdx] = fip[gasPhaseIdx];
-            if (FluidSystem::phaseIsActive(waterPhaseIdx) && fip_[FipDataType::WaterInPlace].size() > 0)
-                fip_[FipDataType::WaterInPlace][globalDofIdx] = fip[waterPhaseIdx];
+            if (FluidSystem::phaseIsActive(oilPhaseIdx) && fip_[Opm::Inplace::Phase::OIL].size() > 0)
+                fip_[Opm::Inplace::Phase::OIL][globalDofIdx] = fip[oilPhaseIdx];
+            if (FluidSystem::phaseIsActive(gasPhaseIdx) && fip_[Opm::Inplace::Phase::GAS].size() > 0)
+                fip_[Opm::Inplace::Phase::GAS][globalDofIdx] = fip[gasPhaseIdx];
+            if (FluidSystem::phaseIsActive(waterPhaseIdx) && fip_[Opm::Inplace::Phase::WATER].size() > 0)
+                fip_[Opm::Inplace::Phase::WATER][globalDofIdx] = fip[waterPhaseIdx];
 
             // Store the pure oil and gas Fip
-            if (FluidSystem::phaseIsActive(oilPhaseIdx) && fip_[FipDataType::OilInPlaceInLiquidPhase].size() > 0)
-                fip_[FipDataType::OilInPlaceInLiquidPhase][globalDofIdx] = fip[oilPhaseIdx];
+            if (FluidSystem::phaseIsActive(oilPhaseIdx) && fip_[Opm::Inplace::Phase::OilInLiquidPhase].size() > 0)
+                fip_[Opm::Inplace::Phase::OilInLiquidPhase][globalDofIdx] = fip[oilPhaseIdx];
 
-            if (FluidSystem::phaseIsActive(gasPhaseIdx) && fip_[FipDataType::GasInPlaceInGasPhase].size() > 0)
-                fip_[FipDataType::GasInPlaceInGasPhase][globalDofIdx] = fip[gasPhaseIdx];
+            if (FluidSystem::phaseIsActive(gasPhaseIdx) && fip_[Opm::Inplace::Phase::GasInGasPhase].size() > 0)
+                fip_[Opm::Inplace::Phase::GasInGasPhase][globalDofIdx] = fip[gasPhaseIdx];
 
             if (FluidSystem::phaseIsActive(oilPhaseIdx) && FluidSystem::phaseIsActive(gasPhaseIdx)) {
                 // Gas dissolved in oil and vaporized oil
                 Scalar gasInPlaceLiquid = Opm::getValue(fs.Rs()) * fip[oilPhaseIdx];
                 Scalar oilInPlaceGas = Opm::getValue(fs.Rv()) * fip[gasPhaseIdx];
-                if (fip_[FipDataType::GasInPlaceInLiquidPhase].size() > 0)
-                    fip_[FipDataType::GasInPlaceInLiquidPhase][globalDofIdx] = gasInPlaceLiquid;
-                if (fip_[FipDataType::OilInPlaceInGasPhase].size() > 0)
-                    fip_[FipDataType::OilInPlaceInGasPhase][globalDofIdx] = oilInPlaceGas;
+                if (fip_[Opm::Inplace::Phase::GasInLiquidPhase].size() > 0)
+                    fip_[Opm::Inplace::Phase::GasInLiquidPhase][globalDofIdx] = gasInPlaceLiquid;
+                if (fip_[Opm::Inplace::Phase::OilInGasPhase].size() > 0)
+                    fip_[Opm::Inplace::Phase::OilInGasPhase][globalDofIdx] = oilInPlaceGas;
 
                 // Add dissolved gas and vaporized oil to total Fip
-                if (fip_[FipDataType::OilInPlace].size() > 0)
-                    fip_[FipDataType::OilInPlace][globalDofIdx] += oilInPlaceGas;
-                if (fip_[FipDataType::GasInPlace].size() > 0)
-                    fip_[FipDataType::GasInPlace][globalDofIdx] += gasInPlaceLiquid;
+                if (fip_[Opm::Inplace::Phase::OIL].size() > 0)
+                    fip_[Opm::Inplace::Phase::OIL][globalDofIdx] += oilInPlaceGas;
+                if (fip_[Opm::Inplace::Phase::GAS].size() > 0)
+                    fip_[Opm::Inplace::Phase::GAS][globalDofIdx] += gasInPlaceLiquid;
             }
         }
 
@@ -2051,29 +2032,29 @@ private:
         return pressurePv / pv;
     }
 
-    void fipUnitConvert_(std::array<Scalar, FipDataType::numFipTypes>& fip) const
+    void fipUnitConvert_(std::unordered_map<Opm::Inplace::Phase, Scalar>& fip) const
     {
         const Opm::UnitSystem& units = simulator_.vanguard().eclState().getUnits();
         if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-            fip[FipDataType::WaterInPlace] = Opm::unit::convert::to(fip[FipDataType::WaterInPlace], Opm::unit::stb);
-            fip[FipDataType::OilInPlace] = Opm::unit::convert::to(fip[FipDataType::OilInPlace], Opm::unit::stb);
-            fip[FipDataType::OilInPlaceInLiquidPhase] = Opm::unit::convert::to(fip[FipDataType::OilInPlaceInLiquidPhase], Opm::unit::stb);
-            fip[FipDataType::OilInPlaceInGasPhase] = Opm::unit::convert::to(fip[FipDataType::OilInPlaceInGasPhase], Opm::unit::stb);
-            fip[FipDataType::GasInPlace] = Opm::unit::convert::to(fip[FipDataType::GasInPlace], 1000*Opm::unit::cubic(Opm::unit::feet));
-            fip[FipDataType::GasInPlaceInLiquidPhase] = Opm::unit::convert::to(fip[FipDataType::GasInPlaceInLiquidPhase], 1000*Opm::unit::cubic(Opm::unit::feet));
-            fip[FipDataType::GasInPlaceInGasPhase] = Opm::unit::convert::to(fip[FipDataType::GasInPlaceInGasPhase], 1000*Opm::unit::cubic(Opm::unit::feet));
-            fip[FipDataType::PoreVolume] = Opm::unit::convert::to(fip[FipDataType::PoreVolume], Opm::unit::stb);
+            fip[Opm::Inplace::Phase::WATER] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::WATER], Opm::unit::stb);
+            fip[Opm::Inplace::Phase::OIL] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::OIL], Opm::unit::stb);
+            fip[Opm::Inplace::Phase::OilInLiquidPhase] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::OilInLiquidPhase], Opm::unit::stb);
+            fip[Opm::Inplace::Phase::OilInGasPhase] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::OilInGasPhase], Opm::unit::stb);
+            fip[Opm::Inplace::Phase::GAS] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::GAS], 1000*Opm::unit::cubic(Opm::unit::feet));
+            fip[Opm::Inplace::Phase::GasInLiquidPhase] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::GasInLiquidPhase], 1000*Opm::unit::cubic(Opm::unit::feet));
+            fip[Opm::Inplace::Phase::GasInGasPhase] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::GasInGasPhase], 1000*Opm::unit::cubic(Opm::unit::feet));
+            fip[Opm::Inplace::Phase::PoreVolume] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::PoreVolume], Opm::unit::stb);
         }
         else if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_LAB) {
             Scalar scc = Opm::unit::cubic(Opm::prefix::centi * Opm::unit::meter); //standard cubic cm.
-            fip[FipDataType::WaterInPlace] = Opm::unit::convert::to(fip[FipDataType::WaterInPlace], scc);
-            fip[FipDataType::OilInPlace] = Opm::unit::convert::to(fip[FipDataType::OilInPlace], scc);
-            fip[FipDataType::OilInPlaceInLiquidPhase] = Opm::unit::convert::to(fip[FipDataType::OilInPlaceInLiquidPhase], scc);
-            fip[FipDataType::OilInPlaceInGasPhase] = Opm::unit::convert::to(fip[FipDataType::OilInPlaceInGasPhase], scc);
-            fip[FipDataType::GasInPlace] = Opm::unit::convert::to(fip[FipDataType::GasInPlace], scc);
-            fip[FipDataType::GasInPlaceInLiquidPhase] = Opm::unit::convert::to(fip[FipDataType::GasInPlaceInLiquidPhase], scc);
-            fip[FipDataType::GasInPlaceInGasPhase] = Opm::unit::convert::to(fip[FipDataType::GasInPlaceInGasPhase], scc);
-            fip[FipDataType::PoreVolume] = Opm::unit::convert::to(fip[FipDataType::PoreVolume], scc);
+            fip[Opm::Inplace::Phase::WATER] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::WATER], scc);
+            fip[Opm::Inplace::Phase::OIL] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::OIL], scc);
+            fip[Opm::Inplace::Phase::OilInLiquidPhase] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::OilInLiquidPhase], scc);
+            fip[Opm::Inplace::Phase::OilInGasPhase] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::OilInGasPhase], scc);
+            fip[Opm::Inplace::Phase::GAS] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::GAS], scc);
+            fip[Opm::Inplace::Phase::GasInLiquidPhase] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::GasInLiquidPhase], scc);
+            fip[Opm::Inplace::Phase::GasInGasPhase] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::GasInGasPhase], scc);
+            fip[Opm::Inplace::Phase::PoreVolume] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::PoreVolume], scc);
         }
         else if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_METRIC) {
             // nothing to do
@@ -2101,15 +2082,15 @@ private:
         }
     }
 
-    void outputRegionFluidInPlace_(const std::array<Scalar, FipDataType::numFipTypes>& oip,
-                                   const std::array<Scalar, FipDataType::numFipTypes>& cip,
+    void outputRegionFluidInPlace_(std::unordered_map<Opm::Inplace::Phase, Scalar> oip,
+                                   std::unordered_map<Opm::Inplace::Phase, Scalar> cip,
                                    const Scalar& pav, const int reg = 0) const
     {
         if (forceDisableFipOutput_)
             return;
 
         // don't output FIPNUM report if the region has no porv.
-        if (cip[FipDataType::PoreVolume] == 0)
+        if (cip[Opm::Inplace::Phase::PoreVolume] == 0)
             return;
 
         const Opm::UnitSystem& units = simulator_.vanguard().eclState().getUnits();
@@ -2126,7 +2107,7 @@ private:
         if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_METRIC) {
             ss << "                                                  :      PAV  =" << std::setw(14) << pav << " BARSA                 :\n"
                << std::fixed << std::setprecision(0)
-               << "                                                  :      PORV =" << std::setw(14) << cip[FipDataType::PoreVolume] << "   RM3                 :\n";
+               << "                                                  :      PORV =" << std::setw(14) << cip[Opm::Inplace::Phase::PoreVolume] << "   RM3                 :\n";
             if (!reg) {
                 ss << "                                                  : Pressure is weighted by hydrocarbon pore volume :\n"
                    << "                                                  : Porv volumes are taken at reference conditions  :\n";
@@ -2136,7 +2117,7 @@ private:
         if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_FIELD) {
             ss << "                                                  :      PAV  =" << std::setw(14) << pav << "  PSIA                 :\n"
                << std::fixed << std::setprecision(0)
-               << "                                                  :      PORV =" << std::setw(14) << cip[FipDataType::PoreVolume] << "   RB                  :\n";
+               << "                                                  :      PORV =" << std::setw(14) << cip[Opm::Inplace::Phase::PoreVolume] << "   RB                  :\n";
             if (!reg) {
                 ss << "                                                  : Pressure is weighted by hydrocarbon pore volume :\n"
                    << "                                                  : Pore volumes are taken at reference conditions  :\n";
@@ -2145,11 +2126,11 @@ private:
         }
         ss << "                         :      Liquid        Vapour        Total   :      Total     :      Free        Dissolved       Total   :" << "\n"
            << ":------------------------:------------------------------------------:----------------:------------------------------------------:" << "\n"
-           << ":Currently   in place    :" << std::setw(14) << cip[FipDataType::OilInPlaceInLiquidPhase] << std::setw(14) << cip[FipDataType::OilInPlaceInGasPhase] << std::setw(14) << cip[FipDataType::OilInPlace] << ":"
-           << std::setw(13) << cip[FipDataType::WaterInPlace] << "   :" << std::setw(14) << (cip[FipDataType::GasInPlaceInGasPhase]) << std::setw(14) << cip[FipDataType::GasInPlaceInLiquidPhase] << std::setw(14) << cip[FipDataType::GasInPlace] << ":\n"
+           << ":Currently   in place    :" << std::setw(14) << cip[Opm::Inplace::Phase::OilInLiquidPhase] << std::setw(14) << cip[Opm::Inplace::Phase::OilInGasPhase] << std::setw(14) << cip[Opm::Inplace::Phase::OIL] << ":"
+           << std::setw(13) << cip[Opm::Inplace::Phase::WATER] << "   :" << std::setw(14) << (cip[Opm::Inplace::Phase::GasInGasPhase]) << std::setw(14) << cip[Opm::Inplace::Phase::GasInLiquidPhase] << std::setw(14) << cip[Opm::Inplace::Phase::GAS] << ":\n"
            << ":------------------------:------------------------------------------:----------------:------------------------------------------:\n"
-           << ":Originally  in place    :" << std::setw(14) << oip[FipDataType::OilInPlaceInLiquidPhase] << std::setw(14) << oip[FipDataType::OilInPlaceInGasPhase] << std::setw(14) << oip[FipDataType::OilInPlace] << ":"
-           << std::setw(13) << oip[FipDataType::WaterInPlace] << "   :" << std::setw(14) << oip[FipDataType::GasInPlaceInGasPhase] << std::setw(14) << oip[FipDataType::GasInPlaceInLiquidPhase] << std::setw(14) << oip[FipDataType::GasInPlace] << ":\n"
+           << ":Originally  in place    :" << std::setw(14) << oip[Opm::Inplace::Phase::OilInLiquidPhase] << std::setw(14) << oip[Opm::Inplace::Phase::OilInGasPhase] << std::setw(14) << oip[Opm::Inplace::Phase::OIL] << ":"
+           << std::setw(13) << oip[Opm::Inplace::Phase::WATER] << "   :" << std::setw(14) << oip[Opm::Inplace::Phase::GasInGasPhase] << std::setw(14) << oip[Opm::Inplace::Phase::GasInLiquidPhase] << std::setw(14) << oip[Opm::Inplace::Phase::GAS] << ":\n"
            << ":========================:==========================================:================:==========================================:\n";
         Opm::OpmLog::note(ss.str());
     }
@@ -2375,13 +2356,13 @@ private:
     std::vector<int> failedCellsPb_;
     std::vector<int> failedCellsPd_;
     std::unordered_map<std::string, std::vector<int>> regions_;
-    std::array<ScalarBuffer, FipDataType::numFipTypes> fip_;
-    std::optional<std::array<ScalarBuffer, FipDataType::numFipTypes>> regionInitialInplace_;
-    std::optional<std::array<Scalar, FipDataType::numFipTypes>> fieldInitialInplace_;
+    std::unordered_map<Opm::Inplace::Phase, ScalarBuffer> fip_;
+    std::optional<Opm::Inplace> initialInplace_;
+
 
     std::vector<Opm::SummaryConfigNode> RPRNodes_;
     std::vector<Opm::SummaryConfigNode> RPRPNodes_;
-    std::array<std::vector<Opm::SummaryConfigNode>, FipDataType::numFipTypes> regionNodes_;
+    std::unordered_map<Opm::Inplace::Phase, std::vector<Opm::SummaryConfigNode>> regionNodes_;
 
 
 
