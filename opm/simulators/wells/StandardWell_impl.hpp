@@ -2843,9 +2843,7 @@ namespace Opm
                 break;
             }
         } else {
-            for (int p = 0; p < np; ++p) {
                 primary_variables_[WQTotal] = total_well_rate;
-            }
         }
 
         if (std::abs(total_well_rate) > 0.) {
