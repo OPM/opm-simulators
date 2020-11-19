@@ -320,8 +320,6 @@ public:
             summary.eval(summaryState(),
                          reportStepNum,
                          curTime,
-                         eclState,
-                         schedule(),
                          wellData,
                          groupAndNetworkData,
                          miscSummaryData,
