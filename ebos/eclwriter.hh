@@ -294,7 +294,6 @@ public:
         std::vector<char> buffer;
         if (this->collectToIORank_.isIORank()) {
             const auto& summary = eclIO_->summary();
-            const auto& eclState = simulator_.vanguard().eclState();
 
             // Add TCPU
             if (totalCpuTime != 0.0) {
