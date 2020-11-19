@@ -35,7 +35,7 @@ GasLiftRuntime(
     const Simulator &ebos_simulator,
     const SummaryState &summary_state,
     DeferredLogger &deferred_logger,
-    const WellState &well_state,
+    WellState &well_state,
     const Well::ProductionControls &controls
 ) :
     controls_{controls},

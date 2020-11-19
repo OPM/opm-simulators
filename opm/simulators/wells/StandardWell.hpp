@@ -248,7 +248,7 @@ namespace Opm
         ) const;
 
         virtual void maybeDoGasLiftOptimization (
-            const WellState& well_state,
+            WellState& well_state,
             const Simulator& ebosSimulator,
             DeferredLogger& deferred_logger
         ) const override;

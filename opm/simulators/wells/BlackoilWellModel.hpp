@@ -212,9 +212,8 @@ namespace Opm {
                         continue;
                     }
 
-                    xwPos->second.current_control.isProducer = well.isProducer();
-
-                    auto& grval = xwPos->second.guide_rates;  grval.clear();
+                    auto& grval = xwPos->second.guide_rates;
+                    grval.clear();
                     grval += this->getGuideRateValues(well);
                 }
 
