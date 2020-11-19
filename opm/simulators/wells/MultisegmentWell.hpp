@@ -116,7 +116,7 @@ namespace Opm
         virtual void initPrimaryVariablesEvaluation() const override;
 
         virtual void maybeDoGasLiftOptimization (
-            const WellState&,
+            WellState&,
             const Simulator&,
             DeferredLogger&
         ) const override {

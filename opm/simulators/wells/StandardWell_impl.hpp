@@ -2822,7 +2822,7 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     maybeDoGasLiftOptimization(
-                          const WellState& well_state,
+                          WellState& well_state,
                           const Simulator& ebos_simulator,
                           Opm::DeferredLogger& deferred_logger) const
     {
