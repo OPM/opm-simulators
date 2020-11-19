@@ -171,7 +171,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/openclSolverBackend.hpp
   opm/simulators/linalg/bda/MultisegmentWellContribution.hpp
   opm/simulators/linalg/bda/WellContributions.hpp
-  opm/simulators/linalg/bda/WellContributionsOCLContainer.hpp
   opm/simulators/linalg/amgcpr.hh
   opm/simulators/linalg/twolevelmethodcpr.hh
   opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp
