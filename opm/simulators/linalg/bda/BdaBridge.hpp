@@ -47,8 +47,8 @@ template <class BridgeMatrix, class BridgeVector, int block_size>
 class BdaBridge
 {
 private:
-    std::unique_ptr<bda::BdaSolver<block_size> > backend;
     bool use_gpu = false;
+    std::unique_ptr<bda::BdaSolver<block_size> > backend;
 
 public:
     /// Construct a BdaBridge
@@ -60,7 +60,6 @@ public:
     /// \param[in] deviceID                   the device ID to be used by the cusparse- and openclSolvers, too high values could cause runtime errors
     /// \param[in] opencl_ilu_reorder         select either level_scheduling or graph_coloring, see BILU0.hpp for explanation
     BdaBridge(std::string gpu_mode, int linear_solver_verbosity, int maxit, double tolerance, unsigned int platformID, unsigned int deviceID, std::string opencl_ilu_reorder);
-
 
     /// Solve linear system, A*x = b
     /// \warning Values of A might get overwritten!
@@ -78,6 +77,10 @@ public:
     /// return whether the BdaBridge will use the GPU or not
     bool getUseGpu(){
         return use_gpu;
+    }
+
+    const bda::BdaSolver<block_size>& getBackend() const {
+        return *backend;
     }
 
 }; // end class BdaBridge

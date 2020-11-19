@@ -222,7 +222,7 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::get_result(BridgeVector 
     }
 }
 
-#define INSTANTIATE_BDA_FUNCTIONS(n)                                                                                                \
+#define INSTANTIATE_BDA_FUNCTIONS(n)                                    \
 template BdaBridge<Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >,              \
 Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >,                                    \
 n>::BdaBridge                                                                                                                       \

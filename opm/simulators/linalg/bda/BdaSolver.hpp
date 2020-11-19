@@ -66,7 +66,6 @@ namespace bda
         bool initialized = false;
 
     public:
-
         /// Construct a BdaSolver, can be cusparseSolver or openclSolver
         /// \param[in] linear_solver_verbosity    verbosity of solver
         /// \param[in] maxit                      maximum number of iterations for solver

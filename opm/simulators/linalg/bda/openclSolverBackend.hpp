@@ -25,8 +25,9 @@
 #include <opm/simulators/linalg/bda/BdaSolver.hpp>
 #include <opm/simulators/linalg/bda/ILUReorder.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
-#include <opm/simulators/linalg/bda/WellContributionsOCLContainer.hpp>
 #include <opm/simulators/linalg/bda/BILU0.hpp>
+
+#include <tuple>
 
 namespace bda
 {
@@ -37,7 +38,6 @@ class openclSolverBackend : public BdaSolver<block_size>
 {
     typedef BdaSolver<block_size> Base;
     typedef BILU0<block_size> Preconditioner;
-    typedef WellContributionsOCLContainer WContainer;
 
     using Base::N;
     using Base::Nb;
@@ -54,19 +54,17 @@ private:
     double *rb = nullptr;                 // reordered b vector, the matrix is reordered, so b must also be
     double *vals_contiguous = nullptr;    // only used if COPY_ROW_BY_ROW is true in openclSolverBackend.cpp
 
-    bool analysis_done = false;
-
     // OpenCL variables must be reusable, they are initialized in initialize()
     cl::Buffer d_Avals, d_Acols, d_Arows;        // (reordered) matrix in BSR format on GPU
     cl::Buffer d_x, d_b, d_rb, d_r, d_rw, d_p;   // vectors, used during linear solve
     cl::Buffer d_pw, d_s, d_t, d_v;              // vectors, used during linear solve
     cl::Buffer d_tmp;                            // used as tmp GPU buffer for dot() and norm()
+    cl::Buffer d_toOrder;
     double *tmp = nullptr;                       // used as tmp CPU buffer for dot() and norm()
 
     // shared pointers are also passed to other objects
+    std::vector<cl::Device> devices;
     cl::Program program;
-    std::shared_ptr<cl::Context> context;
-    std::shared_ptr<cl::CommandQueue> queue;
     std::unique_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > dot_k;
     std::unique_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > norm_k;
     std::unique_ptr<cl::make_kernel<cl::Buffer&, const double, cl::Buffer&, const unsigned int> > axpy_k;
@@ -80,8 +78,8 @@ private:
                                     cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg> > stdwell_apply_k;
 
     Preconditioner *prec = nullptr;                               // only supported preconditioner is BILU0
-    WContainer *wcontainer = nullptr;
     int *toOrder = nullptr, *fromOrder = nullptr;                 // BILU0 reorders rows of the matrix via these mappings
+    bool analysis_done = false;
     std::unique_ptr<BlockedMatrix<block_size> > mat = nullptr;    // original matrix 
     BlockedMatrix<block_size> *rmat = nullptr;                    // reordered matrix, used for spmv
 
@@ -133,7 +131,7 @@ private:
     /// Solve linear system using ilu0-bicgstab
     /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
-    void gpu_pbicgstab(BdaResult& res);
+    void gpu_pbicgstab(WellContributions& wellContribs, BdaResult& res);
 
     /// Initialize GPU and allocate memory
     /// \param[in] N              number of nonzeroes, divide by dim*dim to get number of blocks
@@ -142,13 +140,13 @@ private:
     /// \param[in] vals           array of nonzeroes, each block is stored row-wise and contiguous, contains nnz values
     /// \param[in] rows           array of rowPointers, contains N/dim+1 values
     /// \param[in] cols           array of columnIndices, contains nnz values
-    void initialize(int N, int nnz, int dim, double *vals, int *rows, int *cols, WellContributions &wellContribs);
+    void initialize(int N, int nnz, int dim, double *vals, int *rows, int *cols);
 
     /// Clean memory
     void finalize();
 
     /// Copy linear system to GPU
-    void copy_system_to_gpu(WellContributions &wellContribs);
+    void copy_system_to_gpu();
 
     /// Reorder the linear system so it corresponds with the coloring
     /// \param[in] vals           array of nonzeroes, each block is stored row-wise and contiguous, contains nnz values
@@ -156,7 +154,7 @@ private:
     void update_system(double *vals, double *b);
 
     /// Update linear system on GPU, don't copy rowpointers and colindices, they stay the same
-    void update_system_on_gpu(WellContributions &wellContribs);
+    void update_system_on_gpu();
 
     /// Analyse sparsity pattern to extract parallelism
     /// \return true iff analysis was successful
@@ -169,9 +167,11 @@ private:
     /// Solve linear system
     /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
-    void solve_system(BdaResult &res);
+    void solve_system(WellContributions &wellContribs, BdaResult &res);
 
 public:
+    std::shared_ptr<cl::Context> context;
+    std::shared_ptr<cl::CommandQueue> queue;
 
     /// Construct a openclSolver
     /// \param[in] linear_solver_verbosity    verbosity of openclSolver

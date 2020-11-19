@@ -127,16 +127,13 @@ __global__ void apply_well_contributions(
 
 void WellContributions::allocStandardWells()
 {
-    if (num_std_wells > 0) {
-        cudaMalloc((void**)&d_Cnnzs, sizeof(double) * num_blocks * dim * dim_wells);
-        cudaMalloc((void**)&d_Dnnzs, sizeof(double) * num_std_wells * dim_wells * dim_wells);
-        cudaMalloc((void**)&d_Bnnzs, sizeof(double) * num_blocks * dim * dim_wells);
-        cudaMalloc((void**)&d_Ccols, sizeof(int) * num_blocks);
-        cudaMalloc((void**)&d_Bcols, sizeof(int) * num_blocks);
-        val_pointers = new unsigned int[num_std_wells + 1];
-        cudaMalloc((void**)&d_val_pointers, sizeof(int) * (num_std_wells + 1));
-        cudaCheckLastError("apply_gpu malloc failed");
-    }
+    cudaMalloc((void**)&d_Cnnzs, sizeof(double) * num_blocks * dim * dim_wells);
+    cudaMalloc((void**)&d_Dnnzs, sizeof(double) * num_std_wells * dim_wells * dim_wells);
+    cudaMalloc((void**)&d_Bnnzs, sizeof(double) * num_blocks * dim * dim_wells);
+    cudaMalloc((void**)&d_Ccols, sizeof(int) * num_blocks);
+    cudaMalloc((void**)&d_Bcols, sizeof(int) * num_blocks);
+    cudaMalloc((void**)&d_val_pointers, sizeof(unsigned int) * (num_std_wells + 1));
+    cudaCheckLastError("apply_gpu malloc failed");
 }
 
 void WellContributions::freeCudaMemory() {
@@ -147,14 +144,13 @@ void WellContributions::freeCudaMemory() {
         cudaFree(d_Bnnzs);
         cudaFree(d_Ccols);
         cudaFree(d_Bcols);
-        delete[] val_pointers;
         cudaFree(d_val_pointers);
     }
 
     if (num_ms_wells > 0 && h_x) {
         cudaFreeHost(h_x);
-	cudaFreeHost(h_y);
-	h_x = h_y = nullptr; // Mark as free for constructor
+        cudaFreeHost(h_y);
+        h_x = h_y = nullptr; // Mark as free for constructor
     }
 }
 
@@ -200,10 +196,6 @@ void WellContributions::apply(double *d_x, double *d_y)
 
 void WellContributions::addMatrixGpu(MatrixType type, int *colIndices, double *values, unsigned int val_size)
 {
-    if (!allocated) {
-        OPM_THROW(std::logic_error, "Error cannot add wellcontribution before allocating memory in WellContributions");
-    }
-
     switch (type) {
     case MatrixType::C:
         cudaMemcpy(d_Cnnzs + num_blocks_so_far * dim * dim_wells, values, sizeof(double) * val_size * dim * dim_wells, cudaMemcpyHostToDevice);
@@ -218,17 +210,13 @@ void WellContributions::addMatrixGpu(MatrixType type, int *colIndices, double *v
         val_pointers[num_std_wells_so_far] = num_blocks_so_far;
         if (num_std_wells_so_far == num_std_wells - 1) {
             val_pointers[num_std_wells] = num_blocks;
+            cudaMemcpy(d_val_pointers, val_pointers, sizeof(unsigned int) * (num_std_wells + 1), cudaMemcpyHostToDevice);
         }
-        cudaMemcpy(d_val_pointers, val_pointers, sizeof(int) * (num_std_wells + 1), cudaMemcpyHostToDevice);
         break;
     default:
         OPM_THROW(std::logic_error, "Error unsupported matrix ID for WellContributions::addMatrix()");
     }
     cudaCheckLastError("WellContributions::addMatrix() failed");
-    if (MatrixType::B == type) {
-        num_blocks_so_far += val_size;
-        num_std_wells_so_far++;
-    }
 }
 
 void WellContributions::setCudaStream(cudaStream_t stream_)

@@ -46,7 +46,142 @@ using Dune::Timer;
 template <unsigned int block_size>
 openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_, double tolerance_, unsigned int platformID_, unsigned int deviceID_, ILUReorder opencl_ilu_reorder) : BdaSolver<block_size>(verbosity_, maxit_, tolerance_, platformID_, deviceID_) {
     prec = new Preconditioner(opencl_ilu_reorder, verbosity_);
-    wcontainer = new WContainer();
+
+    cl_int err = CL_SUCCESS;
+    std::ostringstream out;
+    try {
+        std::vector<cl::Platform> platforms;
+        cl::Platform::get(&platforms);
+        if (platforms.size() == 0) {
+            OPM_THROW(std::logic_error, "Error openclSolver is selected but no OpenCL platforms are found");
+        }
+        out << "Found " << platforms.size() << " OpenCL platforms" << "\n";
+
+        if (verbosity >= 1) {
+            std::string platform_info;
+            for (unsigned int i = 0; i < platforms.size(); ++i) {
+                platforms[i].getInfo(CL_PLATFORM_NAME, &platform_info);
+                out << "Platform name      : " << platform_info << "\n";
+                platforms[i].getInfo(CL_PLATFORM_VENDOR, &platform_info);
+                out << "Platform vendor    : " << platform_info << "\n";
+                platforms[i].getInfo(CL_PLATFORM_VERSION, &platform_info);
+                out << "Platform version   : " << platform_info << "\n";
+                platforms[i].getInfo(CL_PLATFORM_PROFILE, &platform_info);
+                out << "Platform profile   : " << platform_info << "\n";
+                platforms[i].getInfo(CL_PLATFORM_EXTENSIONS, &platform_info);
+                out << "Platform extensions: " << platform_info << "\n\n";
+            }
+        }
+        OpmLog::info(out.str());
+        out.str("");
+        out.clear();
+
+        if (platforms.size() <= platformID) {
+            OPM_THROW(std::logic_error, "Error chosen too high OpenCL platform ID");
+        } else {
+            std::string platform_info;
+            out << "Chosen:\n";
+            platforms[platformID].getInfo(CL_PLATFORM_NAME, &platform_info);
+            out << "Platform name      : " << platform_info << "\n";
+            platforms[platformID].getInfo(CL_PLATFORM_VERSION, &platform_info);
+            out << "Platform version   : " << platform_info << "\n";
+            OpmLog::info(out.str());
+            out.str("");
+            out.clear();
+        }
+
+        cl_context_properties properties[] = {CL_CONTEXT_PLATFORM, (cl_context_properties)(platforms[platformID])(), 0};
+        context.reset(new cl::Context(CL_DEVICE_TYPE_GPU, properties));
+
+        devices = context->getInfo<CL_CONTEXT_DEVICES>();
+        if (devices.size() == 0){
+            OPM_THROW(std::logic_error, "Error openclSolver is selected but no OpenCL devices are found");
+        }
+        out << "Found " << devices.size() << " OpenCL devices" << "\n";
+
+        if (verbosity >= 1) {
+            for (unsigned int i = 0; i < devices.size(); ++i) {
+                std::string device_info;
+                std::vector<size_t> work_sizes;
+                std::vector<cl_device_partition_property> partitions;
+
+                devices[i].getInfo(CL_DEVICE_NAME, &device_info);
+                out << "CL_DEVICE_NAME            : " << device_info << "\n";
+                devices[i].getInfo(CL_DEVICE_VENDOR, &device_info);
+                out << "CL_DEVICE_VENDOR          : " << device_info << "\n";
+                devices[i].getInfo(CL_DRIVER_VERSION, &device_info);
+                out << "CL_DRIVER_VERSION         : " << device_info << "\n";
+                devices[i].getInfo(CL_DEVICE_BUILT_IN_KERNELS, &device_info);
+                out << "CL_DEVICE_BUILT_IN_KERNELS: " << device_info << "\n";
+                devices[i].getInfo(CL_DEVICE_PROFILE, &device_info);
+                out << "CL_DEVICE_PROFILE         : " << device_info << "\n";
+                devices[i].getInfo(CL_DEVICE_OPENCL_C_VERSION, &device_info);
+                out << "CL_DEVICE_OPENCL_C_VERSION: " << device_info << "\n";
+                devices[i].getInfo(CL_DEVICE_EXTENSIONS, &device_info);
+                out << "CL_DEVICE_EXTENSIONS      : " << device_info << "\n";
+
+                devices[i].getInfo(CL_DEVICE_MAX_WORK_ITEM_SIZES, &work_sizes);
+                for (unsigned int j = 0; j < work_sizes.size(); ++j) {
+                    out << "CL_DEVICE_MAX_WORK_ITEM_SIZES[" << j << "]: " << work_sizes[j] << "\n";
+                }
+                devices[i].getInfo(CL_DEVICE_PARTITION_PROPERTIES, &partitions);
+                for (unsigned int j = 0; j < partitions.size(); ++j) {
+                    out << "CL_DEVICE_PARTITION_PROPERTIES[" << j << "]: " << partitions[j] << "\n";
+                }
+                partitions.clear();
+                devices[i].getInfo(CL_DEVICE_PARTITION_TYPE, &partitions);
+                for (unsigned int j = 0; j < partitions.size(); ++j) {
+                    out << "CL_DEVICE_PARTITION_PROPERTIES[" << j << "]: " << partitions[j] << "\n";
+                }
+
+                // C-style properties
+                cl_device_id tmp_id = devices[i]();
+                cl_ulong size;
+                clGetDeviceInfo(tmp_id, CL_DEVICE_LOCAL_MEM_SIZE, sizeof(cl_ulong), &size, 0);
+                out << "CL_DEVICE_LOCAL_MEM_SIZE       : " << size / 1024 << " KB\n";
+                clGetDeviceInfo(tmp_id, CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(cl_ulong), &size, 0);
+                out << "CL_DEVICE_GLOBAL_MEM_SIZE      : " << size / 1024 / 1024 / 1024 << " GB\n";
+                clGetDeviceInfo(tmp_id, CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_ulong), &size, 0);
+                out << "CL_DEVICE_MAX_COMPUTE_UNITS    : " << size << "\n";
+                clGetDeviceInfo(tmp_id, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong), &size, 0);
+                out << "CL_DEVICE_MAX_MEM_ALLOC_SIZE   : " << size / 1024 / 1024 << " MB\n";
+                clGetDeviceInfo(tmp_id, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(cl_ulong), &size, 0);
+                out << "CL_DEVICE_MAX_WORK_GROUP_SIZE  : " << size << "\n";
+                clGetDeviceInfo(tmp_id, CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(cl_ulong), &size, 0);
+                out << "CL_DEVICE_GLOBAL_MEM_SIZE      : " << size / 1024 / 1024 / 1024 << " GB\n\n";
+            }
+        }
+        OpmLog::info(out.str());
+        out.str("");
+        out.clear();
+
+        if (devices.size() <= deviceID){
+            OPM_THROW(std::logic_error, "Error chosen too high OpenCL device ID");
+        } else {
+            std::string device_info;
+            out << "Chosen:\n";
+            devices[deviceID].getInfo(CL_DEVICE_NAME, &device_info);
+            out << "CL_DEVICE_NAME            : " << device_info << "\n";
+            devices[deviceID].getInfo(CL_DEVICE_VERSION, &device_info);
+            out << "CL_DEVICE_VERSION         : " << device_info << "\n";
+            OpmLog::info(out.str());
+            out.str("");
+            out.clear();
+        }
+
+        cl::Event event;
+        queue.reset(new cl::CommandQueue(*context, devices[deviceID], 0, &err));
+       
+    } catch (const cl::Error& error) {
+        std::ostringstream oss;
+        oss << "OpenCL Error: " << error.what() << "(" << error.err() << ")\n";
+        oss << getErrorString(error.err());
+        // rethrow exception
+        OPM_THROW(std::logic_error, oss.str());
+    } catch (const std::logic_error& error) {
+        // rethrow exception by OPM_THROW in the try{}, without this, a segfault occurs
+        throw error;
+    }
 }
 
 
@@ -177,10 +312,14 @@ void openclSolverBackend<block_size>::spmv_blocked_w(cl::Buffer vals, cl::Buffer
 }
 
 template <unsigned int block_size>
-void openclSolverBackend<block_size>::gpu_pbicgstab(BdaResult& res) {
+void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContribs, BdaResult& res) {
     float it;
     double rho, rhop, beta, alpha, omega, tmp1, tmp2;
     double norm, norm_0;
+
+    if(wellContribs.getNumWells() > 0){
+        wellContribs.setKernel(stdwell_apply_k.get());
+    }
 
     Timer t_total, t_prec(false), t_spmv(false), t_well(false), t_rest(false);
 
@@ -236,7 +375,9 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(BdaResult& res) {
 
         // apply wellContributions
         t_well.start();
-        wcontainer->apply(d_pw, d_v);
+        if(wellContribs.getNumWells() > 0){
+            wellContribs.apply(d_pw, d_v, d_toOrder);
+        }
         t_well.stop();
 
         t_rest.start();
@@ -265,7 +406,9 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(BdaResult& res) {
 
         // apply wellContributions
         t_well.start();
-        wcontainer->apply(d_s, d_t);
+        if(wellContribs.getNumWells() > 0){
+            wellContribs.apply(d_s, d_t, d_toOrder);
+        }
         t_well.stop();
 
         t_rest.start();
@@ -313,7 +456,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(BdaResult& res) {
 
 
 template <unsigned int block_size>
-void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, double *vals, int *rows, int *cols, WellContributions &wellContribs) {
+void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, double *vals, int *rows, int *cols) {
     this->N = N_;
     this->nnz = nnz_;
     this->nnzb = nnz_ / block_size / block_size;
@@ -327,127 +470,7 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
     out.str("");
     out.clear();
 
-    cl_int err = CL_SUCCESS;
     try {
-        std::vector<cl::Platform> platforms;
-        cl::Platform::get(&platforms);
-        if (platforms.size() == 0) {
-            OPM_THROW(std::logic_error, "Error openclSolver is selected but no OpenCL platforms are found");
-        }
-        out << "Found " << platforms.size() << " OpenCL platforms" << "\n";
-
-        if (verbosity >= 1) {
-            std::string platform_info;
-            for (unsigned int i = 0; i < platforms.size(); ++i) {
-                platforms[i].getInfo(CL_PLATFORM_NAME, &platform_info);
-                out << "Platform name      : " << platform_info << "\n";
-                platforms[i].getInfo(CL_PLATFORM_VENDOR, &platform_info);
-                out << "Platform vendor    : " << platform_info << "\n";
-                platforms[i].getInfo(CL_PLATFORM_VERSION, &platform_info);
-                out << "Platform version   : " << platform_info << "\n";
-                platforms[i].getInfo(CL_PLATFORM_PROFILE, &platform_info);
-                out << "Platform profile   : " << platform_info << "\n";
-                platforms[i].getInfo(CL_PLATFORM_EXTENSIONS, &platform_info);
-                out << "Platform extensions: " << platform_info << "\n\n";
-            }
-        }
-        OpmLog::info(out.str());
-        out.str("");
-        out.clear();
-
-        if (platforms.size() <= platformID) {
-            OPM_THROW(std::logic_error, "Error chosen too high OpenCL platform ID");
-        } else {
-            std::string platform_info;
-            out << "Chosen:\n";
-            platforms[platformID].getInfo(CL_PLATFORM_NAME, &platform_info);
-            out << "Platform name      : " << platform_info << "\n";
-            platforms[platformID].getInfo(CL_PLATFORM_VERSION, &platform_info);
-            out << "Platform version   : " << platform_info << "\n";
-            OpmLog::info(out.str());
-            out.str("");
-            out.clear();
-        }
-
-        cl_context_properties properties[] = {CL_CONTEXT_PLATFORM, (cl_context_properties)(platforms[platformID])(), 0};
-        context.reset(new cl::Context(CL_DEVICE_TYPE_GPU, properties));
-
-        std::vector<cl::Device> devices = context->getInfo<CL_CONTEXT_DEVICES>();
-        if (devices.size() == 0){
-            OPM_THROW(std::logic_error, "Error openclSolver is selected but no OpenCL devices are found");
-        }
-        out << "Found " << devices.size() << " OpenCL devices" << "\n";
-
-        if (verbosity >= 1) {
-            for (unsigned int i = 0; i < devices.size(); ++i) {
-                std::string device_info;
-                std::vector<size_t> work_sizes;
-                std::vector<cl_device_partition_property> partitions;
-
-                devices[i].getInfo(CL_DEVICE_NAME, &device_info);
-                out << "CL_DEVICE_NAME            : " << device_info << "\n";
-                devices[i].getInfo(CL_DEVICE_VENDOR, &device_info);
-                out << "CL_DEVICE_VENDOR          : " << device_info << "\n";
-                devices[i].getInfo(CL_DRIVER_VERSION, &device_info);
-                out << "CL_DRIVER_VERSION         : " << device_info << "\n";
-                devices[i].getInfo(CL_DEVICE_BUILT_IN_KERNELS, &device_info);
-                out << "CL_DEVICE_BUILT_IN_KERNELS: " << device_info << "\n";
-                devices[i].getInfo(CL_DEVICE_PROFILE, &device_info);
-                out << "CL_DEVICE_PROFILE         : " << device_info << "\n";
-                devices[i].getInfo(CL_DEVICE_OPENCL_C_VERSION, &device_info);
-                out << "CL_DEVICE_OPENCL_C_VERSION: " << device_info << "\n";
-                devices[i].getInfo(CL_DEVICE_EXTENSIONS, &device_info);
-                out << "CL_DEVICE_EXTENSIONS      : " << device_info << "\n";
-
-                devices[i].getInfo(CL_DEVICE_MAX_WORK_ITEM_SIZES, &work_sizes);
-                for (unsigned int j = 0; j < work_sizes.size(); ++j) {
-                    out << "CL_DEVICE_MAX_WORK_ITEM_SIZES[" << j << "]: " << work_sizes[j] << "\n";
-                }
-                devices[i].getInfo(CL_DEVICE_PARTITION_PROPERTIES, &partitions);
-                for (unsigned int j = 0; j < partitions.size(); ++j) {
-                    out << "CL_DEVICE_PARTITION_PROPERTIES[" << j << "]: " << partitions[j] << "\n";
-                }
-                partitions.clear();
-                devices[i].getInfo(CL_DEVICE_PARTITION_TYPE, &partitions);
-                for (unsigned int j = 0; j < partitions.size(); ++j) {
-                    out << "CL_DEVICE_PARTITION_PROPERTIES[" << j << "]: " << partitions[j] << "\n";
-                }
-
-                // C-style properties
-                cl_device_id tmp_id = devices[i]();
-                cl_ulong size;
-                clGetDeviceInfo(tmp_id, CL_DEVICE_LOCAL_MEM_SIZE, sizeof(cl_ulong), &size, 0);
-                out << "CL_DEVICE_LOCAL_MEM_SIZE       : " << size / 1024 << " KB\n";
-                clGetDeviceInfo(tmp_id, CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(cl_ulong), &size, 0);
-                out << "CL_DEVICE_GLOBAL_MEM_SIZE      : " << size / 1024 / 1024 / 1024 << " GB\n";
-                clGetDeviceInfo(tmp_id, CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_ulong), &size, 0);
-                out << "CL_DEVICE_MAX_COMPUTE_UNITS    : " << size << "\n";
-                clGetDeviceInfo(tmp_id, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong), &size, 0);
-                out << "CL_DEVICE_MAX_MEM_ALLOC_SIZE   : " << size / 1024 / 1024 << " MB\n";
-                clGetDeviceInfo(tmp_id, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(cl_ulong), &size, 0);
-                out << "CL_DEVICE_MAX_WORK_GROUP_SIZE  : " << size << "\n";
-                clGetDeviceInfo(tmp_id, CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(cl_ulong), &size, 0);
-                out << "CL_DEVICE_GLOBAL_MEM_SIZE      : " << size / 1024 / 1024 / 1024 << " GB\n\n";
-            }
-        }
-        OpmLog::info(out.str());
-        out.str("");
-        out.clear();
-
-        if (devices.size() <= deviceID){
-            OPM_THROW(std::logic_error, "Error chosen too high OpenCL device ID");
-        } else {
-            std::string device_info;
-            out << "Chosen:\n";
-            devices[deviceID].getInfo(CL_DEVICE_NAME, &device_info);
-            out << "CL_DEVICE_NAME            : " << device_info << "\n";
-            devices[deviceID].getInfo(CL_DEVICE_VERSION, &device_info);
-            out << "CL_DEVICE_VERSION         : " << device_info << "\n";
-            OpmLog::info(out.str());
-            out.str("");
-            out.clear();
-        }
-
         cl::Program::Sources source(1, std::make_pair(axpy_s, strlen(axpy_s)));  // what does this '1' mean? cl::Program::Sources is of type 'std::vector<std::pair<const char*, long unsigned int> >'
         source.emplace_back(std::make_pair(dot_1_s, strlen(dot_1_s)));
         source.emplace_back(std::make_pair(norm_s, strlen(norm_s)));
@@ -457,16 +480,10 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
         source.emplace_back(std::make_pair(ILU_apply2_s, strlen(ILU_apply2_s)));
         source.emplace_back(std::make_pair(stdwell_apply_s, strlen(stdwell_apply_s)));
         program = cl::Program(*context, source);
-
         program.build(devices);
-
-        cl::Event event;
-        queue.reset(new cl::CommandQueue(*context, devices[deviceID], 0, &err));
 
         prec->setOpenCLContext(context.get());
         prec->setOpenCLQueue(queue.get());
-        wcontainer->setOpenCLContext(context.get());
-        wcontainer->setOpenCLQueue(queue.get());
 
         rb = new double[N];
         tmp = new double[N];
@@ -491,7 +508,7 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
         d_Acols = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * nnzb);
         d_Arows = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (Nb + 1));
 
-        wcontainer->init(wellContribs, N, Nb);
+        d_toOrder = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * Nb);
 
         // queue.enqueueNDRangeKernel() is a blocking/synchronous call, at least for NVIDIA
         // cl::make_kernel<> myKernel(); myKernel(args, arg1, arg2); is also blocking
@@ -510,7 +527,6 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
                                                   cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg>(cl::Kernel(program, "stdwell_apply")));
 
         prec->setKernels(ILU_apply1_k.get(), ILU_apply2_k.get());
-        wcontainer->setKernel(stdwell_apply_k.get());
 
     } catch (const cl::Error& error) {
         std::ostringstream oss;
@@ -534,12 +550,10 @@ void openclSolverBackend<block_size>::finalize() {
     delete[] vals_contiguous;
 #endif
     delete prec;
-    delete wcontainer;
 } // end finalize()
 
-
 template <unsigned int block_size>
-void openclSolverBackend<block_size>::copy_system_to_gpu(WellContributions &wellContribs) {
+void openclSolverBackend<block_size>::copy_system_to_gpu() {
     Timer t;
     cl::Event event;
 
@@ -558,10 +572,9 @@ void openclSolverBackend<block_size>::copy_system_to_gpu(WellContributions &well
     queue->enqueueWriteBuffer(d_Acols, CL_TRUE, 0, sizeof(int) * nnzb, rmat->colIndices);
     queue->enqueueWriteBuffer(d_Arows, CL_TRUE, 0, sizeof(int) * (Nb + 1), rmat->rowPointers);
     queue->enqueueWriteBuffer(d_b, CL_TRUE, 0, sizeof(double) * N, rb);
+    queue->enqueueWriteBuffer(d_toOrder, CL_TRUE, 0, sizeof(int) * Nb, toOrder);
     queue->enqueueFillBuffer(d_x, 0, 0, sizeof(double) * N, nullptr, &event);
     event.wait();
-
-    wcontainer->copy_to_gpu(wellContribs, toOrder);
 
     if (verbosity > 2) {
         std::ostringstream out;
@@ -572,7 +585,7 @@ void openclSolverBackend<block_size>::copy_system_to_gpu(WellContributions &well
 
 // don't copy rowpointers and colindices, they stay the same
 template <unsigned int block_size>
-void openclSolverBackend<block_size>::update_system_on_gpu(WellContributions &wellContribs) {
+void openclSolverBackend<block_size>::update_system_on_gpu() {
     Timer t;
     cl::Event event;
 
@@ -591,8 +604,6 @@ void openclSolverBackend<block_size>::update_system_on_gpu(WellContributions &we
     queue->enqueueWriteBuffer(d_b, CL_TRUE, 0, sizeof(double) * N, rb);
     queue->enqueueFillBuffer(d_x, 0, 0, sizeof(double) * N, nullptr, &event);
     event.wait();
-
-    wcontainer->update_on_gpu(wellContribs);
 
     if (verbosity > 2) {
         std::ostringstream out;
@@ -660,12 +671,12 @@ bool openclSolverBackend<block_size>::create_preconditioner() {
 
 
 template <unsigned int block_size>
-void openclSolverBackend<block_size>::solve_system(BdaResult &res) {
+void openclSolverBackend<block_size>::solve_system(WellContributions &wellContribs, BdaResult &res) {
     Timer t;
 
     // actually solve
     try {
-        gpu_pbicgstab(res);
+        gpu_pbicgstab(wellContribs, res);
     } catch (const cl::Error& error) {
         std::ostringstream oss;
         oss << "openclSolverBackend::solve_system error: " << error.what() << "(" << error.err() << ")\n";
@@ -706,7 +717,7 @@ void openclSolverBackend<block_size>::get_result(double *x) {
 template <unsigned int block_size>
 SolverStatus openclSolverBackend<block_size>::solve_system(int N_, int nnz_, int dim, double *vals, int *rows, int *cols, double *b, WellContributions& wellContribs, BdaResult &res) {
     if (initialized == false) {
-        initialize(N_, nnz_,  dim, vals, rows, cols, wellContribs);
+        initialize(N_, nnz_,  dim, vals, rows, cols);
         if (analysis_done == false) {
             if (!analyse_matrix()) {
                 return SolverStatus::BDA_SOLVER_ANALYSIS_FAILED;
@@ -716,15 +727,15 @@ SolverStatus openclSolverBackend<block_size>::solve_system(int N_, int nnz_, int
         if (!create_preconditioner()) {
             return SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
         }
-        copy_system_to_gpu(wellContribs);
+        copy_system_to_gpu();
     } else {
         update_system(vals, b);
         if (!create_preconditioner()) {
             return SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
         }
-        update_system_on_gpu(wellContribs);
+        update_system_on_gpu();
     }
-    solve_system(res);
+    solve_system(wellContribs, res);
     return SolverStatus::BDA_SOLVER_SUCCESS;
 }
 

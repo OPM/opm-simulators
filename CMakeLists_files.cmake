@@ -61,7 +61,6 @@ if(OPENCL_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/openclSolverBackend.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BdaBridge.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/WellContributions.cpp)
-  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/WellContributionsOCLContainer.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/MultisegmentWellContribution.cpp)
 endif()
 if(MPI_FOUND)
@@ -172,7 +171,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/openclSolverBackend.hpp
   opm/simulators/linalg/bda/MultisegmentWellContribution.hpp
   opm/simulators/linalg/bda/WellContributions.hpp
-  opm/simulators/linalg/bda/WellContributionsOCLContainer.hpp
   opm/simulators/linalg/amgcpr.hh
   opm/simulators/linalg/twolevelmethodcpr.hh
   opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp
