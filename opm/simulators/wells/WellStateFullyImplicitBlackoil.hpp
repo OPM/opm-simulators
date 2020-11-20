@@ -1042,7 +1042,7 @@ namespace Opm
                 iterateContainer(injection_group_reduction_rates, func);
                 iterateContainer(injection_group_reservoir_rates, func);
                 iterateContainer(production_group_rates, func);
-                iterateContainer(well_rates,func);
+                iterateContainer(well_rates, func);
             };
 
             // Compute the size of the data.
@@ -1052,6 +1052,7 @@ namespace Opm
             };
             forAllGroupData(computeSize);
             sz += injection_group_vrep_rates.size();
+            sz += current_alq_.size();
 
             // Make a vector and collect all data into it.
             std::vector<double> data(sz);
@@ -1063,6 +1064,9 @@ namespace Opm
             };
             forAllGroupData(collect);
             for (const auto& x : injection_group_vrep_rates) {
+                data[pos++] = x.second;
+            }
+            for (const auto& x : current_alq_) {
                 data[pos++] = x.second;
             }
             assert(pos == sz);
@@ -1079,6 +1083,9 @@ namespace Opm
             };
             forAllGroupData(distribute);
             for (auto& x : injection_group_vrep_rates) {
+                x.second = data[pos++];
+            }
+            for (auto& x : current_alq_) {
                 x.second = data[pos++];
             }
             assert(pos == sz);

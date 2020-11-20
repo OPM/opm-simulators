@@ -592,7 +592,9 @@ namespace WellGroupHelpers
     std::map<std::string, double>
     computeNetworkPressures(const Opm::Network::ExtNetwork& network,
                             const WellStateFullyImplicitBlackoil& well_state,
-                            const VFPProdProperties& vfp_prod_props)
+                            const VFPProdProperties& vfp_prod_props,
+                            const Schedule& schedule,
+                            const int report_time_step)
     {
         // TODO: Only dealing with production networks for now.
 
@@ -628,6 +630,13 @@ namespace WellGroupHelpers
         std::map<std::string, std::vector<double>> node_inflows;
         for (const auto& node : leaf_nodes) {
             node_inflows[node] = well_state.currentProductionGroupRates(node);
+            // Add the ALQ amounts to the gas rates if requested.
+            if (network.node(node).add_gas_lift_gas()) {
+                const auto& group = schedule.getGroup(node, report_time_step);
+                for (const std::string& wellname : group.wells()) {
+                    node_inflows[node][BlackoilPhases::Vapour] += well_state.getALQ(wellname);
+                }
+            }
         }
 
         // Accumulate in the network, towards the roots. Note that a
