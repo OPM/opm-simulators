@@ -1866,6 +1866,10 @@ public:
     const std::map<std::pair<std::string, int>, double>& getBlockData()
     { return blockData_; }
 
+    const Opm::Inplace& initialInplace() const {
+        return this->initialInplace_.value();
+    }
+
 private:
 
     bool isDefunctParallelWell(std::string wname) const
@@ -2308,6 +2312,9 @@ private:
             || (keyword == "RESTART")                        // From RPTSCHED
             || (keyword == "SAVE")  || (keyword == "SFREQ"); // Not really supported
     }
+
+
+
 
     const Simulator& simulator_;
 

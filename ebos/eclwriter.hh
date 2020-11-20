@@ -322,6 +322,7 @@ public:
                          wellData,
                          groupAndNetworkData,
                          miscSummaryData,
+                         eclOutputModule_.initialInplace(),
                          regionData,
                          blockData,
                          aquiferData);
