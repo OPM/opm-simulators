@@ -83,15 +83,10 @@ std::string EclString(Opm::Inplace::Phase phase) {
     case Opm::Inplace::Phase::GasInLiquidPhase: return "GIPL";
     case Opm::Inplace::Phase::GasInGasPhase: return "GIPG";
     case Opm::Inplace::Phase::PoreVolume: return "RPV";
+    default: throw std::logic_error("Phase not recognized");
     }
-    throw std::logic_error("Phase not recognized");
 }
 
-namespace ID {
-static const std::string PressurePV = "PressurePV";
-static const std::string HydroCarbonPV = "PVHydroCarbon";
-static const std::string PressureHydroCarbonPV = "PressurePVHydroCarbon";
-}
 }
 
 
@@ -1144,14 +1139,6 @@ public:
         return this->simulator_.gridView().comm().max(max_value);
     }
 
-    void update(Opm::Inplace& inplace, const std::string& region_name, const std::string& string_id, std::size_t ntFip, const std::vector<double>& values) {
-        double sum = 0;
-        for (std::size_t region_number = 0; region_number < ntFip; region_number++) {
-            inplace.add( region_name, string_id, region_number + 1, values[region_number] );
-            sum += values[region_number];
-        }
-        inplace.add( string_id, sum );
-    }
 
     void update(Opm::Inplace& inplace, const std::string& region_name, Opm::Inplace::Phase phase, std::size_t ntFip, const std::vector<double>& values) {
         double sum = 0;
@@ -1167,9 +1154,9 @@ public:
         const auto& region = this->regions_.at(region_name);
         std::size_t ntFip = this->regionMax(region);
 
-        update(inplace, region_name, ID::PressurePV, ntFip, this->regionSum(this->pressureTimesPoreVolume_, region, ntFip));
-        update(inplace, region_name, ID::HydroCarbonPV, ntFip, this->regionSum(this->hydrocarbonPoreVolume_, region, ntFip));
-        update(inplace, region_name, ID::PressureHydroCarbonPV, ntFip, this->regionSum(this->pressureTimesHydrocarbonVolume_, region, ntFip));
+        update(inplace, region_name, Opm::Inplace::Phase::PressurePV, ntFip, this->regionSum(this->pressureTimesPoreVolume_, region, ntFip));
+        update(inplace, region_name, Opm::Inplace::Phase::HydroCarbonPV, ntFip, this->regionSum(this->hydrocarbonPoreVolume_, region, ntFip));
+        update(inplace, region_name, Opm::Inplace::Phase::PressureHydroCarbonPV, ntFip, this->regionSum(this->pressureTimesHydrocarbonVolume_, region, ntFip));
 
         for (const auto& phase : Opm::Inplace::phases())
             update(inplace, region_name, phase, ntFip, this->regionSum(this->fip_[phase], region, ntFip));
@@ -1223,17 +1210,17 @@ public:
                     / this->initialInplace_.value().get(Opm::Inplace::Phase::OIL);
 
             if (summaryConfig.hasKeyword("FPR"))
-                miscSummaryData["FPR"] = pressureAverage_(inplace.get(ID::PressureHydroCarbonPV),
-                                                          inplace.get(ID::HydroCarbonPV),
-                                                          inplace.get(ID::PressurePV),
+                miscSummaryData["FPR"] = pressureAverage_(inplace.get(Opm::Inplace::Phase::PressureHydroCarbonPV),
+                                                          inplace.get(Opm::Inplace::Phase::HydroCarbonPV),
+                                                          inplace.get(Opm::Inplace::Phase::PressurePV),
                                                           inplace.get(Opm::Inplace::Phase::PoreVolume),
                                                           true);
 
 
             if (summaryConfig.hasKeyword("FPRP"))
-                miscSummaryData["FPRP"] = pressureAverage_(inplace.get(ID::PressureHydroCarbonPV),
-                                                           inplace.get(ID::HydroCarbonPV),
-                                                           inplace.get(ID::PressurePV),
+                miscSummaryData["FPRP"] = pressureAverage_(inplace.get(Opm::Inplace::Phase::PressureHydroCarbonPV),
+                                                           inplace.get(Opm::Inplace::Phase::HydroCarbonPV),
+                                                           inplace.get(Opm::Inplace::Phase::PressurePV),
                                                            inplace.get(Opm::Inplace::Phase::PoreVolume),
                                                            false);
         }
@@ -1248,17 +1235,17 @@ public:
 
             // The exact same quantity is calculated for RPR and RPRP - is that correct?
             for (const auto& node : this->RPRNodes_)
-                regionData[node.keyword()] = pressureAverage_(inplace.get_vector(node.fip_region(), ID::PressureHydroCarbonPV),
-                                                              inplace.get_vector(node.fip_region(), ID::HydroCarbonPV),
-                                                              inplace.get_vector(node.fip_region(), ID::PressurePV),
+                regionData[node.keyword()] = pressureAverage_(inplace.get_vector(node.fip_region(), Opm::Inplace::Phase::PressureHydroCarbonPV),
+                                                              inplace.get_vector(node.fip_region(), Opm::Inplace::Phase::HydroCarbonPV),
+                                                              inplace.get_vector(node.fip_region(), Opm::Inplace::Phase::PressurePV),
                                                               inplace.get_vector(node.fip_region(), Opm::Inplace::Phase::PoreVolume),
                                                               true);
 
 
             for (const auto& node : this->RPRPNodes_)
-                regionData[node.keyword()] = pressureAverage_(inplace.get_vector(node.fip_region(), ID::PressureHydroCarbonPV),
-                                                              inplace.get_vector(node.fip_region(), ID::HydroCarbonPV),
-                                                              inplace.get_vector(node.fip_region(), ID::PressurePV),
+                regionData[node.keyword()] = pressureAverage_(inplace.get_vector(node.fip_region(), Opm::Inplace::Phase::PressureHydroCarbonPV),
+                                                              inplace.get_vector(node.fip_region(), Opm::Inplace::Phase::HydroCarbonPV),
+                                                              inplace.get_vector(node.fip_region(), Opm::Inplace::Phase::PressurePV),
                                                               inplace.get_vector(node.fip_region(), Opm::Inplace::Phase::PoreVolume),
                                                               false);
 
@@ -1270,9 +1257,9 @@ public:
 
 
         {
-            Scalar fieldHydroCarbonPoreVolumeAveragedPressure = pressureAverage_(inplace.get(ID::PressureHydroCarbonPV),
-                                                                                 inplace.get(ID::HydroCarbonPV),
-                                                                                 inplace.get(ID::PressurePV),
+            Scalar fieldHydroCarbonPoreVolumeAveragedPressure = pressureAverage_(inplace.get(Opm::Inplace::Phase::PressureHydroCarbonPV),
+                                                                                 inplace.get(Opm::Inplace::Phase::HydroCarbonPV),
+                                                                                 inplace.get(Opm::Inplace::Phase::PressurePV),
                                                                                  inplace.get(Opm::Inplace::Phase::PoreVolume),
                                                                                  true);
 
@@ -1306,9 +1293,9 @@ public:
             fipUnitConvert_(current_values);
 
             Scalar regHydroCarbonPoreVolumeAveragedPressure
-                               = pressureAverage_(inplace.get("FIPNUM", ID::PressureHydroCarbonPV, reg),
-                                                  inplace.get("FIPNUM", ID::HydroCarbonPV, reg),
-                                                  inplace.get("FIPNUM", ID::PressurePV, reg),
+                               = pressureAverage_(inplace.get("FIPNUM", Opm::Inplace::Phase::PressureHydroCarbonPV, reg),
+                                                  inplace.get("FIPNUM", Opm::Inplace::Phase::HydroCarbonPV, reg),
+                                                  inplace.get("FIPNUM", Opm::Inplace::Phase::PressurePV, reg),
                                                   inplace.get("FIPNUM", Opm::Inplace::Phase::PoreVolume, reg),
                                                   true);
             pressureUnitConvert_(regHydroCarbonPoreVolumeAveragedPressure);
