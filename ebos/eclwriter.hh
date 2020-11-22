@@ -282,7 +282,7 @@ public:
 
         std::map<std::string, double> miscSummaryData;
         std::map<std::string, std::vector<double>> regionData;
-        eclOutputModule_.outputFipLog(miscSummaryData, regionData, isSubStep);
+        auto inplace = eclOutputModule_.outputFipLog(miscSummaryData, regionData, isSubStep);
 
         bool forceDisableProdOutput = false;
         bool forceDisableInjOutput = false;
@@ -323,6 +323,7 @@ public:
                          groupAndNetworkData,
                          miscSummaryData,
                          eclOutputModule_.initialInplace(),
+                         inplace,
                          regionData,
                          blockData,
                          aquiferData);

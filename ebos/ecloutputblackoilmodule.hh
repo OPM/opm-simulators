@@ -1307,11 +1307,11 @@ public:
 
 
     // write Fluid In Place to output log
-    void outputFipLog(std::map<std::string, double>& miscSummaryData,  std::map<std::string, std::vector<double>>& regionData, const bool substep)
+    Opm::Inplace outputFipLog(std::map<std::string, double>& miscSummaryData,  std::map<std::string, std::vector<double>>& regionData, const bool substep)
     {
         auto inplace = this->accumulateRegionSums();
         if (!isIORank_())
-            return;
+            return inplace;
 
         updateSummaryRegionValues(inplace,
                                   miscSummaryData,
@@ -1319,6 +1319,8 @@ public:
 
         if (!substep)
             outputFipLogImpl(inplace);
+
+        return inplace;
     }
 
 
