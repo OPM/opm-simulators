@@ -27,6 +27,8 @@ option(BUILD_EBOS "Build the research oriented ebos simulator?" ON)
 option(BUILD_EBOS_EXTENSIONS "Build the variants for various extensions of ebos by default?" OFF)
 option(BUILD_EBOS_DEBUG_EXTENSIONS "Build the ebos variants which are purely for debugging by default?" OFF)
 option(BUILD_FLOW_POLY_GRID "Build flow blackoil with polyhedral grid" OFF)
+option(OPM_ENABLE_PYTHON "Enable python bindings?" OFF)
+option(OPM_ENABLE_PYTHON_TESTS "Enable tests for the python bindings?" ON)
 
 if(SIBLING_SEARCH AND NOT opm-common_DIR)
   # guess the sibling dir
