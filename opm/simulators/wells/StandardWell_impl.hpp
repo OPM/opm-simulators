@@ -2125,42 +2125,46 @@ namespace Opm
                 }
             } else {
                 std::fill(mix.begin(), mix.end(), 0.0);
-                // No flow => use well specified fractions for mix.
-                if (this->isInjector()) {
-                    switch (this->wellEcl().injectorType()) {
-                    case InjectorType::WATER:
-                        mix[FluidSystem::waterCompIdx] = 1.0;
-                        break;
-                    case InjectorType::GAS:
-                        mix[FluidSystem::gasCompIdx] = 1.0;
-                        break;
-                    case InjectorType::OIL:
-                        mix[FluidSystem::oilCompIdx] = 1.0;
-                        break;
-                    case InjectorType::MULTI:
-                        // Not supported.
-                        // deferred_logger.warning("MULTI_PHASE_INJECTOR_NOT_SUPPORTED",
-                        //                         "Multi phase injectors are not supported, requested for well " + name());
-                        break;
-                    }
-                } else {
-                    assert(this->isProducer());
-                    // Using the preferred phase to decide the mix initialization.
-                    switch (this->wellEcl().getPreferredPhase()) {
-                    case Phase::OIL:
-                        mix[FluidSystem::oilCompIdx] = 1.0;
-                        break;
-                    case Phase::GAS:
-                        mix[FluidSystem::gasCompIdx] = 1.0;
-                        break;
-                    case Phase::WATER:
-                        mix[FluidSystem::waterCompIdx] = 1.0;
-                        break;
-                    default:
-                        // No others supported.
-                        break;
-                    }
+                if (num_comp == 1){
+                    mix[num_comp-1] = 1.0;
+                }else{
+                 // No flow => use well specified fractions for mix.
+                    if (this->isInjector()) {
+                        switch (this->wellEcl().injectorType()) {
+                        case InjectorType::WATER:
+                            mix[FluidSystem::waterCompIdx] = 1.0;
+                            break;
+                        case InjectorType::GAS:
+                            mix[FluidSystem::gasCompIdx] = 1.0;
+                            break;
+                        case InjectorType::OIL:
+                            mix[FluidSystem::oilCompIdx] = 1.0;
+                            break;
+                        case InjectorType::MULTI:
+                            // Not supported.
+                            // deferred_logger.warning("MULTI_PHASE_INJECTOR_NOT_SUPPORTED",
+                            //                         "Multi phase injectors are not supported, requested for well " + name());
+                            break;
+                        }
+                    } else {
+                        assert(this->isProducer());
+                        // Using the preferred phase to decide the mix initialization.
+                        switch (this->wellEcl().getPreferredPhase()) {
+                        case Phase::OIL:
+                            mix[FluidSystem::oilCompIdx] = 1.0;
+                            break;
+                        case Phase::GAS:
+                            mix[FluidSystem::gasCompIdx] = 1.0;
+                            break;
+                        case Phase::WATER:
+                            mix[FluidSystem::waterCompIdx] = 1.0;
+                            break;
+                        default:
+                            // No others supported.
+                            break;
+                        }
 
+                    }
                 }
             }
             // Compute volume ratio.
