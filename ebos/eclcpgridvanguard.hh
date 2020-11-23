@@ -35,6 +35,7 @@
 #include <opm/grid/cpgrid/GridHelpers.hpp>
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 #include <opm/simulators/utils/PropsCentroidsDataHandle.hpp>
+#include <opm/simulators/utils/ParallelSerialization.hpp>
 
 #include <dune/grid/common/mcmgmapper.hh>
 
@@ -346,6 +347,21 @@ protected:
                                         equilGrid().size(0));
             this->schedule().filterConnections(activeCells);
         }
+#if HAVE_MPI
+        try
+        {
+            // Broadcast another time to remove inactive peforations on
+            // slave processors.
+            Opm::eclScheduleBroadcast(this->schedule());
+        }
+        catch(const std::exception& broadcast_error)
+        {
+            OpmLog::error(fmt::format("Distributing properties to all processes failed\n"
+                                      "Internal error message: {}", broadcast_error.what()));
+            MPI_Finalize();
+            std::exit(EXIT_FAILURE);
+        }
+#endif
     }
 
     std::unique_ptr<Grid> grid_;

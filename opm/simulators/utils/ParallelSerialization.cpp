@@ -49,4 +49,9 @@ void eclStateBroadcast(EclipseState& eclState, Schedule& schedule,
     ser.broadcast(summaryConfig);
 }
 
+void eclScheduleBroadcast(Schedule& schedule)
+{
+    Opm::EclMpiSerializer ser(Dune::MPIHelper::getCollectiveCommunication());
+    ser.broadcast(schedule);
+}
 }
