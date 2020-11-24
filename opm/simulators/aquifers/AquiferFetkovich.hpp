@@ -47,6 +47,7 @@ public:
     using typename Base::RateVector;
     using typename Base::Scalar;
     using typename Base::Simulator;
+    using typename Base::ElementMapper;
 
     using Base::waterCompIdx;
     using Base::waterPhaseIdx;
@@ -95,16 +96,12 @@ protected:
     inline void initializeConnections() override
     {
         const auto& eclState = this->ebos_simulator_.vanguard().eclState();
-        const auto& ugrid = this->ebos_simulator_.vanguard().grid();
         const auto& grid = eclState.getInputGrid();
 
         // We hack the cell depth values for now. We can actually get it from elementcontext pos
         this->cell_depth_.resize(this->size(), this->aquiferDepth());
         this->alphai_.resize(this->size(), 1.0);
         this->faceArea_connected_.resize(this->size(), 0.0);
-
-        auto cell2Faces = Opm::UgGridHelpers::cell2Faces(ugrid);
-        auto faceCells = Opm::UgGridHelpers::faceCells(ugrid);
 
         // Translate the C face tag into the enum used by opm-parser's TransMult class
         Opm::FaceDir::DirEnum faceDirection;
@@ -115,21 +112,37 @@ protected:
         for (size_t idx = 0; idx < this->size(); ++idx) {
             const auto global_index = this->connections_[idx].global_index;
             const int cell_index = this->cartesian_to_compressed_.at(global_index);
-
             this->cellToConnectionIdx_[cell_index] = idx;
             const auto cellCenter = grid.getCellCenter(global_index);
             this->cell_depth_.at(idx) = cellCenter[2];
+        }
+        // get areas for all connections
+        const auto& gridView = this->ebos_simulator_.vanguard().gridView();
+        ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
+        auto elemIt = gridView.template begin</*codim=*/ 0>();
+        const auto& elemEndIt = gridView.template end</*codim=*/ 0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            const auto& elem = *elemIt;
+            unsigned cell_index = elemMapper.index(elem);
+            int idx = this->cellToConnectionIdx_[cell_index];
+
+            // only deal with connections given by the aquifer
+            if( idx < 0)
+                continue;
 
             if (!this->connections_[idx].influx_coeff.first) { // influx_coeff is defaulted
-                const auto cellFacesRange = cell2Faces[cell_index];
-                for (auto cellFaceIter = cellFacesRange.begin(); cellFaceIter != cellFacesRange.end(); ++cellFaceIter) {
-                    // The index of the face in the compressed grid
-                    const int faceIdx = *cellFaceIter;
+                auto isIt = gridView.ibegin(elem);
+                const auto& isEndIt = gridView.iend(elem);
+                for (; isIt != isEndIt; ++ isIt) {
+                    // store intersection, this might be costly
+                    const auto& intersection = *isIt;
 
-                    // the logically-Cartesian direction of the face
-                    const int faceTag = Opm::UgGridHelpers::faceTag(ugrid, cellFaceIter);
+                    // only deal with grid boundaries
+                    if (!intersection.boundary())
+                        continue;
 
-                    switch (faceTag) {
+                    int insideFaceIdx  = intersection.indexInInside();
+                    switch (insideFaceIdx) {
                     case 0:
                         faceDirection = Opm::FaceDir::XMinus;
                         break;
@@ -150,11 +163,11 @@ protected:
                         break;
                     default:
                         OPM_THROW(Opm::NumericalIssue,
-                                  "Initialization of Aquifer problem. Make sure faceTag is correctly defined");
-                    }
+                            "Initialization of Aquifer Fetkovich problem. Make sure faceTag is correctly defined");                }
+
 
                     if (faceDirection == this->connections_[idx].face_dir) {
-                        this->faceArea_connected_[idx] = this->getFaceArea(faceCells, ugrid, faceIdx, idx);
+                        this->faceArea_connected_[idx] = this->getFaceArea(intersection, idx);
                         break;
                     }
                 }

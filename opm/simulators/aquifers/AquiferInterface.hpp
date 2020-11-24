@@ -50,6 +50,7 @@ public:
     using BlackoilIndices = GetPropType<TypeTag, Properties::Indices>;
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
 
     enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
@@ -201,29 +202,13 @@ protected:
         rhow_.at(idx) = fs.density(waterPhaseIdx);
     }
 
-    template <class faceCellType, class ugridType>
-    inline double getFaceArea(const faceCellType& faceCells,
-                              const ugridType& ugrid,
-                              const int faceIdx,
-                              const int idx) const
+    template <class Intersection>
+    inline double getFaceArea(const Intersection& intersection,
+                              unsigned idx) const
     {
-        // Check now if the face is outside of the reservoir, or if it adjoins an inactive cell
-        // Do not make the connection if the product of the two cellIdx > 0. This is because the
-        // face is within the reservoir/not connected to boundary. (We still have yet to check for inactive cell
-        // adjoining)
-        double faceArea = 0.;
-        const auto cellNeighbour0 = faceCells(faceIdx, 0);
-        const auto cellNeighbour1 = faceCells(faceIdx, 1);
-        const auto defaultFaceArea = Opm::UgGridHelpers::faceArea(ugrid, faceIdx);
-        const auto calculatedFaceArea
-            = (!this->connections_[idx].influx_coeff.first) ? defaultFaceArea : this->connections_[idx].influx_coeff.second;
-        faceArea = (cellNeighbour0 * cellNeighbour1 > 0) ? 0. : calculatedFaceArea;
-        if (cellNeighbour1 == 0) {
-            faceArea = (cellNeighbour0 < 0) ? faceArea : 0.;
-        } else if (cellNeighbour0 == 0) {
-            faceArea = (cellNeighbour1 < 0) ? faceArea : 0.;
-        }
-        return faceArea;
+        const auto& geometry = intersection.geometry();
+        const auto defaultFaceArea = geometry.volume();
+        return (!this->connections_[idx].influx_coeff.first) ? defaultFaceArea : this->connections_[idx].influx_coeff.second;
     }
 
     virtual void endTimeStep() = 0;

@@ -170,11 +170,10 @@ BlackoilAquiferModel<TypeTag>::init()
         throw std::runtime_error("Aquifers currently do not work in parallel.");
 
     // Get all the carter tracy aquifer properties data and put it in aquifers vector
-    const auto& ugrid = simulator_.vanguard().grid();
     const int number_of_cells = simulator_.gridView().size(0);
 
     cartesian_to_compressed_ = cartesianToCompressed(number_of_cells,
-                                                     Opm::UgGridHelpers::globalCell(ugrid));
+                                                     this->simulator_.vanguard().grid().globalCell().data());
 
     const auto& connections = aquifer.connections();
     for (const auto& aq : aquifer.ct()) {
