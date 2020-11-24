@@ -2123,6 +2123,8 @@ namespace Opm
                 for (int component = 0; component < num_comp; ++component) {
                     mix[component] = std::fabs(q_out_perf[perf*num_comp + component]/tot_surf_rate);
                 }
+            } else if (num_comp == 1) {
+                mix[num_comp-1] = 1.0;
             } else {
                 std::fill(mix.begin(), mix.end(), 0.0);
                 // No flow => use well specified fractions for mix.
