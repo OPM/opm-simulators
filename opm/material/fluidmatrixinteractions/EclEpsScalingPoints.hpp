@@ -184,7 +184,9 @@ struct EclEpsScalingPointsInfo
             Swcr = 0.0;
             bool family1 = (!sgofTables.empty() || !slgofTables.empty());
             bool family2 = !sgfnTables.empty() && !sof2Tables.empty();
-            if (family1) {
+            if (!hasOil) {
+                return;
+            } else if (family1) {
                 if (!sgofTables.empty())
                     extractUnscaledSgof_(sgofTables.getTable<SgofTable>(satRegionIdx));
                 else {
@@ -206,7 +208,9 @@ struct EclEpsScalingPointsInfo
             Sgcr = 0.0;
             bool family1 = !swofTables.empty();
             bool family2 = !swfnTables.empty() && !sof2Tables.empty();
-            if (family1) {
+            if (!hasOil) {
+                return;
+            } else if (family1) {
                 extractUnscaledSwof_(swofTables.getTable<SwofTable>(satRegionIdx));
             } else if (family2) {
                 extractUnscaledSwfn_(swfnTables.getTable<SwfnTable>(satRegionIdx));
