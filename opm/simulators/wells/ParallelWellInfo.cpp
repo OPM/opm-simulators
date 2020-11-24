@@ -42,10 +42,12 @@ void ParallelWellInfo::DestroyComm::operator()(Communication* comm)
     delete comm;
 }
 
-ParallelWellInfo::ParallelWellInfo(const std::string& name)
-    : name_(name), hasLocalCells_ (true),
+ParallelWellInfo::ParallelWellInfo(const std::string& name,
+                                   bool hasLocalCells)
+    : name_(name), hasLocalCells_ (hasLocalCells),
       isOwner_(true), rankWithFirstPerf_(0),
-      comm_(new Communication(Dune::MPIHelper::getLocalCommunicator()))
+      comm_(new Communication(Dune::MPIHelper::getLocalCommunicator())),
+      commAbove_(new CommunicateAbove(*comm_))
     {}
 
 ParallelWellInfo::ParallelWellInfo(const std::pair<std::string,bool>& well_info,
@@ -77,17 +79,17 @@ void ParallelWellInfo::communicateFirstPerforation(bool hasFirst)
 
 bool operator<(const ParallelWellInfo& well1, const ParallelWellInfo& well2)
 {
-    return well1.name_ < well2.name_ || (! (well2.name_ < well1.name_) && well1.hasLocalCells_ < well2.hasLocalCells_);
+    return well1.name() < well2.name() || (! (well2.name() < well1.name()) && well1.hasLocalCells() < well2.hasLocalCells());
 }
 
 bool operator==(const ParallelWellInfo& well1, const ParallelWellInfo& well2)
 {
-    bool ret = well1.name_ == well2.name_ && well1.hasLocalCells_ == well2.hasLocalCells_
-        && well1.isOwner_ == well2.isOwner_;
+    bool ret = well1.name() == well2.name() && well1.hasLocalCells() == well2.hasLocalCells()
+        && well1.isOwner() == well2.isOwner();
 #if HAVE_MPI
     using MPIComm = typename Dune::MPIHelper::MPICommunicator;
-    ret = ret && (well1.comm_.get() == well2.comm_.get() // true for nullptr
-                  || static_cast<MPIComm>(well1.communication()) == static_cast<MPIComm>(well2.communication()));
+    ret = ret &&
+        static_cast<MPIComm>(well1.communication()) == static_cast<MPIComm>(well2.communication());
 #endif
     return ret;
 }
@@ -99,17 +101,17 @@ bool operator!=(const ParallelWellInfo& well1, const ParallelWellInfo& well2)
 
 bool operator<(const std::pair<std::string, bool>& pair, const ParallelWellInfo& well)
 {
-    return pair.first < well.name_ || ( !( well.name_ < pair.first ) && pair.second < well.hasLocalCells_ );
+    return pair.first < well.name() || ( !( well.name() < pair.first ) && pair.second < well.hasLocalCells() );
 }
 
 bool operator<( const ParallelWellInfo& well, const std::pair<std::string, bool>& pair)
 {
-    return well.name_ < pair.first || ( !( pair.first < well.name_ ) && well.hasLocalCells_ < pair.second );
+    return well.name() < pair.first || ( !( pair.first < well.name() ) && well.hasLocalCells() < pair.second );
 }
 
 bool operator==(const std::pair<std::string, bool>& pair, const ParallelWellInfo& well)
 {
-    return pair.first == well.name_ && pair.second == well.hasLocalCells_;
+    return pair.first == well.name() && pair.second == well.hasLocalCells();
 }
 
 bool operator==(const ParallelWellInfo& well, const std::pair<std::string, bool>& pair)
@@ -119,7 +121,7 @@ bool operator==(const ParallelWellInfo& well, const std::pair<std::string, bool>
 
 bool operator!=(const std::pair<std::string, bool>& pair, const ParallelWellInfo& well)
 {
-    return pair.first != well.name_ || pair.second != well.hasLocalCells_;
+    return pair.first != well.name() || pair.second != well.hasLocalCells();
 }
 
 bool operator!=(const ParallelWellInfo& well, const std::pair<std::string, bool>& pair)
@@ -149,7 +151,7 @@ CheckDistributedWellConnections::checkAllConnectionsFound()
                                 foundConnections_.size());
 
     std::string msg = std::string("Cells with these i,j,k indices were not found ")
-        + "in grid (well = " + pwinfo_.name_ + "):";
+        + "in grid (well = " + pwinfo_.name() + "):";
     bool missingCells = false;
     auto start = foundConnections_.begin();
     for(auto conFound = start; conFound != foundConnections_.end(); ++conFound)
@@ -163,7 +165,7 @@ CheckDistributedWellConnections::checkAllConnectionsFound()
             missingCells = true;
         }
     }
-    if (missingCells && pwinfo_.isOwner_)
+    if (missingCells && pwinfo_.isOwner())
     {
         OPM_THROW(std::runtime_error, msg);
     }

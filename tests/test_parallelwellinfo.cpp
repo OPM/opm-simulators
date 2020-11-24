@@ -91,8 +91,8 @@ namespace Opm
 {
 std::ostream& operator<<(std::ostream& os, const Opm::ParallelWellInfo& w)
 {
-    return os << "{" << w.name_ << " "<< w.hasLocalCells_ << " "<<
-        w.isOwner_ << "}";
+    return os << "{" << w.name() << " "<< w.hasLocalCells() << " "<<
+        w.isOwner() << "}";
 }
 }
 
@@ -129,15 +129,13 @@ BOOST_AUTO_TEST_CASE(ParallelWellComparison)
 #if HAVE_MPI
     BOOST_TEST(well0.communication()==helper.getLocalCommunicator());
 #endif
-
-    well0.name_ = "Test";
-    well0.hasLocalCells_ = false;
+    Opm::ParallelWellInfo well2("Test", false);
     std::pair<std::string, bool> pwell={"Test", true};
-    BOOST_TEST(well0 < pwell);
-    well0.hasLocalCells_ = true;
-    BOOST_TEST(! (well0 < pwell));
+    BOOST_TEST(well2 < pwell);
+    Opm::ParallelWellInfo well3("Test", true);
+    BOOST_TEST(! (well3 < pwell));
     pwell.second = false;
-    BOOST_TEST(! (well0 < pwell));
+    BOOST_TEST(! (well3 < pwell));
 
     if (helper.rank() == 0)
         BOOST_TEST(well_info[0].communication().size()==1);

@@ -233,11 +233,11 @@ namespace Opm {
         {
             // we could use std::lower_bound here. Not sure whether that
             // would improve performance
-            while (pwell->name_ < well.name())
+            while (pwell->name() < well.name())
             {
                 ++pwell;
             }
-            assert(pwell->name_ == well.name());
+            assert(pwell->name() == well.name());
             local_parallel_well_info_.push_back(&(*pwell));
         }
         return w;

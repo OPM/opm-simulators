@@ -116,9 +116,9 @@ namespace WellGroupHelpers
                      const WellStateFullyImplicitBlackoil& wellState)
     {
         const auto& well_info = wellState.parallelWellInfo(well_index);
-        assert(well_info.name_ == wellName);
+        assert(well_info.name() == wellName);
 
-        return well_info.isOwner_;
+        return well_info.isOwner();
     }
 
     double sumWellPhaseRates(const std::vector<double>& rates,

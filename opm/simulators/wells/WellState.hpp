@@ -187,7 +187,7 @@ namespace Opm
                 const auto& pwinfo = *parallel_well_info_[well_index];
                 using WellT = typename std::remove_reference<decltype(dw[ itr.first ])>::type;
                 WellT dummyWell; // dummy if we are not owner
-                auto& well = pwinfo.isOwner_ ? dw[ itr.first ] : dummyWell;
+                auto& well = pwinfo.isOwner() ? dw[ itr.first ] : dummyWell;
                 well.bhp = this->bhp().at( well_index );
                 well.thp = this->thp().at( well_index );
                 well.temperature = this->temperature().at( well_index );

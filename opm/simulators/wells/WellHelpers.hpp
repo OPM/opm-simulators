@@ -68,27 +68,27 @@ namespace Opm {
     #if !defined(NDEBUG) && HAVE_MPI
                 // We need to make sure that all ranks are actually computing
                 // for the same well. Doing this by checking the name of the well.
-                int cstring_size = pinfo_->name_.size()+1;
+                int cstring_size = pinfo_->name().size()+1;
                 std::vector<int> sizes(pinfo_->communication().size());
                 pinfo_->communication().allgather(&cstring_size, 1, sizes.data());
                 std::vector<int> offsets(sizes.size()+1, 0); //last entry will be accumulated size
                 std::partial_sum(sizes.begin(), sizes.end(), offsets.begin() + 1);
                 std::vector<char> cstrings(offsets[sizes.size()]);
                 bool consistentWells = true;
-                char* send = const_cast<char*>(pinfo_->name_.c_str());
+                char* send = const_cast<char*>(pinfo_->name().c_str());
                 pinfo_->communication().allgatherv(send, cstring_size,
                                                    cstrings.data(), sizes.data(),
                                                    offsets.data());
                 for(std::size_t i = 0; i < sizes.size(); ++i)
                 {
                     std::string name(cstrings.data()+offsets[i]);
-                    if (name != pinfo_->name_)
+                    if (name != pinfo_->name())
                     {
                         if (pinfo_->communication().rank() == 0)
                         {
                             //only one process per well logs, might not be 0 of MPI_COMM_WORLD, though
                             std::string msg = std::string("Fatal Error: Not all ranks are computing for the same well")
-                                          + " well should be " + pinfo_->name_ + " but is "
+                                          + " well should be " + pinfo_->name() + " but is "
                                 + name;
                             OpmLog::debug(msg);
                         }
@@ -165,7 +165,7 @@ namespace Opm {
                 std::copy(pos, pos + cols, &(row[0]));
                 pos += cols;
             }
-            assert(allEntries.end() - pos == vec.size());
+            assert(std::size_t(allEntries.end() - pos) == vec.size());
             std::copy(pos, allEntries.end(), &(vec[0]));
         }
 

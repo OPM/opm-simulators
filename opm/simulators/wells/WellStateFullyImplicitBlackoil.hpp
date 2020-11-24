@@ -84,7 +84,7 @@ namespace Opm
 
             for (const auto& winfo: parallel_well_info)
             {
-                well_rates.insert({winfo->name_, std::make_pair(winfo->isOwner_, std::vector<double>())});
+                well_rates.insert({winfo->name(), std::make_pair(winfo->isOwner(), std::vector<double>())});
             }
             globalIsInjectionGrup_.assign(globalNumberOfWells,0);
             globalIsProductionGrup_.assign(globalNumberOfWells,0);
@@ -544,7 +544,7 @@ namespace Opm
             for( const auto& wt : this->wellMap() ) {
                 const auto w = wt.second[ 0 ];
                 const auto& pwinfo = *parallel_well_info_[w];
-                if (!this->open_for_output_[w] || !pwinfo.isOwner_)
+                if (!this->open_for_output_[w] || !pwinfo.isOwner())
                     continue;
 
                 auto& well = res.at( wt.first );

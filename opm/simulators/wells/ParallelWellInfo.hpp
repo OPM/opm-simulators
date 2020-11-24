@@ -32,8 +32,9 @@ namespace Opm
 /// \brief Class encapsulating some information about parallel wells
 ///
 /// e.g. It provides a communicator for well information
-struct ParallelWellInfo
+class ParallelWellInfo
 {
+public:
     using MPIComm = typename Dune::MPIHelper::MPICommunicator;
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
     using Communication = Dune::Communication<MPIComm>;
@@ -41,14 +42,10 @@ struct ParallelWellInfo
     using Communication = Dune::CollectiveCommunication<MPIComm>;
 #endif
 
-    /// \brief Deleter that also frees custom MPI communicators
-    struct DestroyComm
-    {
-        void operator()(Communication* comm);
-    };
 
     /// \brief Constructs object using MPI_COMM_SELF
-    ParallelWellInfo(const std::string& name = {""});
+    ParallelWellInfo(const std::string& name = {""},
+                     bool hasLocalCells = true);
 
     /// \brief Constructs object with communication between all rank sharing
     ///        a well
@@ -77,6 +74,31 @@ struct ParallelWellInfo
         comm_->barrier();
         return res;
     }
+
+    /// \brief Name of the well.
+    const std::string& name() const
+    {
+        return name_;
+    }
+
+    /// \brief Whether local cells are perforated somewhen
+    bool hasLocalCells() const
+    {
+        return hasLocalCells_;
+    }
+    bool isOwner() const
+    {
+        return isOwner_;
+    }
+
+private:
+
+    /// \brief Deleter that also frees custom MPI communicators
+    struct DestroyComm
+    {
+        void operator()(Communication* comm);
+    };
+
 
     /// \brief Name of the well.
     std::string name_;
