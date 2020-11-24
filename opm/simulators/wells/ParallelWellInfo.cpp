@@ -20,8 +20,123 @@
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
+namespace Dune
+{
+#if HAVE_MPI
+template<>
+struct CommPolicy<double*>
+{
+    using Type = double*;
+    using IndexedType = double;
+    using IndexedTypeFlag = Dune::SizeOne;
+    static const void* getAddress(const double*& v, int index)
+    {
+        return v + index;
+    }
+    static int getSize(const double*&, int)
+    {
+        return 1;
+    }
+};
+#endif
+}
+
 namespace Opm
 {
+CommunicateAbove::CommunicateAbove([[maybe_unused]] const Communication& comm)
+#if HAVE_MPI
+    : comm_(comm), interface_(comm_)
+#endif
+{}
+
+void CommunicateAbove::clear()
+{
+#if HAVE_MPI
+    above_indices_ = {};
+    current_indices_ = {};
+    interface_.free();
+    communicator_.free();
+#endif
+    count_ = 0;
+}
+
+void CommunicateAbove::beginReset()
+{
+    clear();
+#if HAVE_MPI
+    if (comm_.size() > 1)
+    {
+        current_indices_.beginResize();
+        above_indices_.beginResize();
+    }
+#endif
+}
+
+void CommunicateAbove::endReset()
+{
+#if HAVE_MPI
+    if (comm_.size() > 1)
+    {
+        above_indices_.endResize();
+        current_indices_.endResize();
+        remote_indices_.setIndexSets(current_indices_, above_indices_, comm_);
+        remote_indices_.setIncludeSelf(true);
+        remote_indices_.rebuild<true>();
+        using FromSet = Dune::EnumItem<Attribute,owner>;
+        using ToSet = Dune::AllSet<Attribute>;
+        interface_.build(remote_indices_, FromSet(), ToSet());
+        communicator_.build<double*>(interface_);
+    }
+#endif
+}
+
+std::vector<double> CommunicateAbove::communicate(double first_above,
+                                                  const double* current,
+                                                  std::size_t size)
+{
+    std::vector<double> above(size, first_above);
+
+#if HAVE_MPI
+    if (comm_.size() > 1)
+    {
+        using Handle = Dune::OwnerOverlapCopyCommunication<int,int>::CopyGatherScatter<double*>;
+        auto aboveData = above.data();
+        // Ugly const_cast needed as my compiler says, that
+        // passing const double*& and double* as parameter is
+        // incompatible with function decl template<Data> forward(const Data&, Data&))
+        // That would need the first argument to be double* const&
+        communicator_.forward<Handle>(const_cast<double*>(current), aboveData);
+    }
+    else
+#endif
+    {
+        if (above.size() > 1)
+        {
+            // No comunication needed, just copy.
+            std::copy(current, current + (above.size() - 1), above.begin()+1);
+        }
+    }
+    return above;
+}
+
+void CommunicateAbove::pushBackEclIndex([[maybe_unused]] int above,
+                                        [[maybe_unused]] int current,
+                                        [[maybe_unused]] bool isOwner)
+{
+#if HAVE_MPI
+    if (comm_.size() > 1)
+    {
+        Attribute attr = owner;
+        if (!isOwner)
+        {
+            attr = overlap;
+        }
+        above_indices_.add(above, {count_, attr, true});
+        current_indices_.add(current, {count_++, attr, true});
+    }
+#endif
+}
+
 
 void ParallelWellInfo::DestroyComm::operator()(Communication* comm)
 {
@@ -51,7 +166,7 @@ ParallelWellInfo::ParallelWellInfo(const std::string& name,
     {}
 
 ParallelWellInfo::ParallelWellInfo(const std::pair<std::string,bool>& well_info,
-                                   Communication allComm)
+                                   [[maybe_unused]] Communication allComm)
     : name_(well_info.first), hasLocalCells_(well_info.second),
       rankWithFirstPerf_(-1)
 {
@@ -64,6 +179,7 @@ ParallelWellInfo::ParallelWellInfo(const std::pair<std::string,bool>& well_info,
     comm_.reset(new Communication(Dune::MPIHelper::getLocalCommunicator()));
     rankWithFirstPerf_ = 0;
 #endif
+    commAbove_.reset(new CommunicateAbove(*comm_));
     isOwner_ = (comm_->rank() == 0);
 }
 
@@ -75,6 +191,42 @@ void ParallelWellInfo::communicateFirstPerforation(bool hasFirst)
     auto found = std::find_if(firstVec.begin(), firstVec.end(),
                               [](int i) -> bool{ return i;});
     rankWithFirstPerf_ = found - firstVec.begin();
+}
+
+void ParallelWellInfo::pushBackEclIndex(int above, int current)
+{
+    commAbove_->pushBackEclIndex(above, current);
+}
+
+void ParallelWellInfo::beginReset()
+{
+    commAbove_->beginReset();
+}
+
+
+void ParallelWellInfo::endReset()
+{
+    commAbove_->beginReset();
+}
+
+void ParallelWellInfo::clearCommunicateAbove()
+{
+    commAbove_->clear();
+}
+
+std::vector<double> ParallelWellInfo::communicateAboveValues(double zero_value,
+                                                             const double* current_values,
+                                                             std::size_t size) const
+{
+    return commAbove_->communicate(zero_value, current_values,
+                                   size);
+}
+
+std::vector<double> ParallelWellInfo::communicateAboveValues(double zero_value,
+                                                             const std::vector<double>& current_values) const
+{
+    return commAbove_->communicate(zero_value, current_values.data(),
+                                   current_values.size());
 }
 
 bool operator<(const ParallelWellInfo& well1, const ParallelWellInfo& well2)

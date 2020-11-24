@@ -152,3 +152,127 @@ BOOST_AUTO_TEST_CASE(ParallelWellComparison)
 #endif
 
 }
+
+BOOST_AUTO_TEST_CASE(CommunicateAboveSelf)
+{
+    auto comm = Dune::MPIHelper::getLocalCommunicator();
+    Opm::CommunicateAbove commAbove{ comm };
+    for(std::size_t count=0; count < 2; ++count)
+    {
+        std::vector<int> eclIndex = {0, 1, 2, 3, 7 , 8, 10, 11};
+        std::vector<double> current(eclIndex.size());
+        std::transform(eclIndex.begin(), eclIndex.end(), current.begin(),
+                       [](double v){ return 1+10.0*v;});
+        commAbove.beginReset();
+        for (std::size_t i = 0; i < current.size(); ++i)
+        {
+            if (i==0)
+                commAbove.pushBackEclIndex(-1, eclIndex[i]);
+            else
+                commAbove.pushBackEclIndex(eclIndex[i-1], eclIndex[i]);
+        }
+        commAbove.endReset();
+        auto above = commAbove.communicate(-10.0, current.data(), current.size());
+        BOOST_TEST(above[0]==-10.0);
+        BOOST_TEST(above.size() == current.size());
+        auto a = above.begin()+1;
+        std::for_each(current.begin(), current.begin() + (current.size()-1),
+                      [&a](double v){ BOOST_TEST(*(a++) == v);});
+    }
+}
+
+
+BOOST_AUTO_TEST_CASE(CommunicateAboveSelf1)
+{
+    auto comm = Dune::MPIHelper::getLocalCommunicator();
+    Opm::CommunicateAbove commAbove{ comm };
+    for(std::size_t count=0; count < 2; ++count)
+    {
+        std::vector<int> eclIndex = {0};
+        std::vector<double> current(eclIndex.size());
+        std::transform(eclIndex.begin(), eclIndex.end(), current.begin(),
+                       [](double v){ return 1+10.0*v;});
+        commAbove.beginReset();
+        for (std::size_t i = 0; i < current.size(); ++i)
+        {
+            if (i==0)
+                commAbove.pushBackEclIndex(-1, eclIndex[i]);
+            else
+                commAbove.pushBackEclIndex(eclIndex[i-1], eclIndex[i]);
+        }
+        commAbove.endReset();
+        auto above = commAbove.communicate(-10.0, current.data(), current.size());
+        BOOST_TEST(above[0]==-10.0);
+        BOOST_TEST(above.size() == current.size());
+        auto a = above.begin()+1;
+        std::for_each(current.begin(), current.begin() + (current.size()-1),
+                      [&a](double v){ BOOST_TEST(*(a++) == v);});
+    }
+}
+
+BOOST_AUTO_TEST_CASE(CommunicateAboveParalle)
+{
+    using MPIComm = typename Dune::MPIHelper::MPICommunicator;
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+    using Communication = Dune::Communication<MPIComm>;
+#else
+    using Communication = Dune::CollectiveCommunication<MPIComm>;
+#endif
+    auto comm = Communication(Dune::MPIHelper::getCommunicator());
+
+    Opm::CommunicateAbove commAbove{ comm };
+    for(std::size_t count=0; count < 2; ++count)
+    {
+        std::vector<int> globalEclIndex = {0, 1, 2, 3, 7 , 8, 10, 11};
+        auto oldSize = globalEclIndex.size();
+        std::size_t globalSize = 3 * comm.size();
+        auto lastIndex = globalEclIndex.back();
+        globalEclIndex.resize(globalSize);
+        if ( globalSize > oldSize)
+        {
+            ++lastIndex;
+            for(auto entry = globalEclIndex.begin() + oldSize;
+                entry != globalEclIndex.end(); ++entry, ++lastIndex)
+            {
+                *entry = lastIndex;
+            }
+        }
+
+        std::vector<double> globalCurrent(globalEclIndex.size());
+        std::transform(globalEclIndex.begin(), globalEclIndex.end(), globalCurrent.begin(),
+                       [](double v){ return 1+10.0*v;});
+
+        std::vector<double> current(3);
+
+        commAbove.beginReset();
+        for (std::size_t i = 0; i < current.size(); ++i)
+        {
+            auto gi = comm.rank() + comm.size() * i;
+
+            if (gi==0)
+            {
+                commAbove.pushBackEclIndex(-1, globalEclIndex[gi]);
+            }
+            else
+            {
+                commAbove.pushBackEclIndex(globalEclIndex[gi-1], globalEclIndex[gi]);
+            }
+            current[i] = globalCurrent[gi];
+        }
+        commAbove.endReset();
+        auto above = commAbove.communicate(-10.0, current.data(), current.size());
+        if (comm.rank() == 0)
+            BOOST_TEST(above[0]==-10.0);
+
+        BOOST_TEST(above.size() == current.size());
+
+        for (std::size_t i = 0; i < current.size(); ++i)
+        {
+            auto gi = comm.rank() + comm.size() * i;
+            if (gi > 0)
+            {
+                BOOST_TEST(above[i]==globalCurrent[gi-1]);
+            }
+        }
+    }
+}
