@@ -53,6 +53,7 @@
 #include <opm/simulators/wells/StandardWell.hpp>
 #include <opm/simulators/wells/MultisegmentWell.hpp>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
+#include <opm/simulators/wells/WellProdIndexCalculator.hpp>
 #include <opm/simulators/timestepping/gatherConvergenceReport.hpp>
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -268,6 +269,7 @@ namespace Opm {
 
             std::vector< Well > wells_ecl_;
             std::vector< std::vector<PerforationData> > well_perf_data_;
+            std::vector< WellProdIndexCalculator > prod_index_calc_;
 
             bool wells_active_;
 
@@ -281,6 +283,7 @@ namespace Opm {
 
             std::function<bool(const Well&)> is_shut_or_defunct_;
 
+            void initializeWellProdIndCalculators();
             void initializeWellPerfData();
 
             // create the well container
@@ -376,6 +379,8 @@ namespace Opm {
             const std::vector<double>& wellPerfEfficiencyFactors() const;
 
             void calculateEfficiencyFactors(const int reportStepIdx);
+
+            void calculateProductivityIndexValues(DeferredLogger& deferred_logger);
 
             // it should be able to go to prepareTimeStep(), however, the updateWellControls() and initPrimaryVariablesEvaluation()
             // makes it a little more difficult. unless we introduce if (iterationIdx != 0) to avoid doing the above functions

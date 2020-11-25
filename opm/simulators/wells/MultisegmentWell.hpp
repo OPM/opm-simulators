@@ -22,8 +22,9 @@
 #ifndef OPM_MULTISEGMENTWELL_HEADER_INCLUDED
 #define OPM_MULTISEGMENTWELL_HEADER_INCLUDED
 
-
 #include <opm/simulators/wells/WellInterface.hpp>
+
+#include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 
 namespace Opm
 {
@@ -43,7 +44,7 @@ namespace Opm
         using typename Base::Indices;
         using typename Base::RateConverterType;
         using typename Base::SparseMatrixAdapter;
-
+        using typename Base::FluidState;
 
         /// the number of reservior equations
         using Base::numEq;
@@ -168,6 +169,11 @@ namespace Opm
                                                  const WellState& well_state,
                                                  Opm::DeferredLogger& deferred_logger) override; // should be const?
 
+        virtual void updateProductivityIndex(const Simulator& ebosSimulator,
+                                             const WellProdIndexCalculator& wellPICalc,
+                                             WellState& well_state,
+                                             DeferredLogger& deferred_logger) const override;
+
         virtual void  addWellContributions(SparseMatrixAdapter& jacobian) const override;
 
         /// number of segments for this well
@@ -179,6 +185,17 @@ namespace Opm
         virtual std::vector<double> computeCurrentWellRates(const Simulator& ebosSimulator,
                                                             DeferredLogger& deferred_logger) const override;
 
+        void computeConnLevelProdInd(const FluidState& fs,
+                                     const std::function<double(const double)>& connPICalc,
+                                     const std::vector<EvalWell>& mobility,
+                                     double* connPI) const;
+
+        void computeConnLevelInjInd(const FluidState& fs,
+                                    const Phase preferred_phase,
+                                    const std::function<double(const double)>& connIICalc,
+                                    const std::vector<EvalWell>& mobility,
+                                    double* connII,
+                                    DeferredLogger& deferred_logger) const;
     protected:
         int number_segments_;
 

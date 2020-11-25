@@ -27,9 +27,10 @@
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 #endif
 
+#include <opm/simulators/wells/GasLiftRuntime.hpp>
 #include <opm/simulators/wells/RateConverter.hpp>
 #include <opm/simulators/wells/WellInterface.hpp>
-#include <opm/simulators/wells/GasLiftRuntime.hpp>
+#include <opm/simulators/wells/WellProdIndexCalculator.hpp>
 
 #include <opm/models/blackoil/blackoilpolymermodules.hh>
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
@@ -38,6 +39,7 @@
 #include <opm/models/blackoil/blackoilbrinemodules.hh>
 
 #include <opm/material/densead/DynamicEvaluation.hpp>
+#include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/ScheduleTypes.hpp>
 
 #include <dune/common/dynvector.hh>
@@ -224,6 +226,11 @@ namespace Opm
                                                  const WellState& well_state,
                                                  Opm::DeferredLogger& deferred_logger) override; // should be const?
 
+        virtual void updateProductivityIndex(const Simulator& ebosSimulator,
+                                             const WellProdIndexCalculator& wellPICalc,
+                                             WellState& well_state,
+                                             DeferredLogger& deferred_logger) const override;
+
         virtual void  addWellContributions(SparseMatrixAdapter& mat) const override;
 
         // iterate well equations with the specified control until converged
@@ -304,8 +311,19 @@ namespace Opm
         virtual std::vector<double> computeCurrentWellRates(const Simulator& ebosSimulator,
                                                             DeferredLogger& deferred_logger) const override;
 
-    protected:
+        void computeConnLevelProdInd(const FluidState& fs,
+                                     const std::function<double(const double)>& connPICalc,
+                                     const std::vector<EvalWell>& mobility,
+                                     double* connPI) const;
 
+        void computeConnLevelInjInd(const typename StandardWell<TypeTag>::FluidState& fs,
+                                    const Phase preferred_phase,
+                                    const std::function<double(const double)>& connIICalc,
+                                    const std::vector<EvalWell>& mobility,
+                                    double* connII,
+                                    DeferredLogger& deferred_logger) const;
+
+    protected:
         // protected functions from the Base class
         using Base::getAllowCrossFlow;
         using Base::flowPhaseToEbosCompIdx;
@@ -315,7 +333,6 @@ namespace Opm
         using Base::wpolymer;
         using Base::wfoam;
         using Base::scalingFactor;
-        using Base::scaleProductivityIndex;
         using Base::mostStrictBhpFromBhpLimits;
 
         // protected member variables from the Base class
