@@ -2858,15 +2858,16 @@ private:
         bool has_pressure = fp.has_double("PRESSURE");
 
         // make sure all required quantities are enables
-        if (FluidSystem::phaseIsActive(waterPhaseIdx) && !has_swat)
-            throw std::runtime_error("The ECL input file requires the presence of the SWAT keyword if "
+        if (Indices::numPhases > 1) {
+            if (FluidSystem::phaseIsActive(waterPhaseIdx) && !has_swat)
+                throw std::runtime_error("The ECL input file requires the presence of the SWAT keyword if "
                                      "the water phase is active");
-        if (FluidSystem::phaseIsActive(gasPhaseIdx) && !has_sgas)
-            throw std::runtime_error("The ECL input file requires the presence of the SGAS keyword if "
+            if (FluidSystem::phaseIsActive(gasPhaseIdx) && !has_sgas && FluidSystem::phaseIsActive(oilPhaseIdx))
+                throw std::runtime_error("The ECL input file requires the presence of the SGAS keyword if "
                                      "the gas phase is active");
-
+        }
         if (!has_pressure)
-             throw std::runtime_error("The ECL input file requires the presence of the PRESSURE "
+            throw std::runtime_error("The ECL input file requires the presence of the PRESSURE "
                                       "keyword if the model is initialized explicitly");
         if (FluidSystem::enableDissolvedGas() && !has_rs)
             throw std::runtime_error("The ECL input file requires the RS keyword to be present if"
