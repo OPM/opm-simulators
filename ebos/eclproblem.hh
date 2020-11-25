@@ -2887,12 +2887,12 @@ private:
         std::vector<double> rvData;
         std::vector<double> tempiData;
 
-        if (FluidSystem::phaseIsActive(waterPhaseIdx))
+        if (FluidSystem::phaseIsActive(waterPhaseIdx) && Indices::numPhases > 1)
             waterSaturationData = fp.get_double("SWAT");
         else
             waterSaturationData.resize(numDof);
 
-        if (FluidSystem::phaseIsActive(gasPhaseIdx))
+        if (FluidSystem::phaseIsActive(gasPhaseIdx) && FluidSystem::phaseIsActive(oilPhaseIdx))
             gasSaturationData = fp.get_double("SGAS");
         else
             gasSaturationData.resize(numDof);
