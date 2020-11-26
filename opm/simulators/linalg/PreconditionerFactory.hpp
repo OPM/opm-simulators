@@ -138,6 +138,11 @@ private:
         // graph might be unsymmetric and hence not supported by the PTScotch/ParMetis
         // calls in DUNE. Accumulating to 1 skips PTScotch/ParMetis
         criterion.setAccumulate(static_cast<Dune::Amg::AccumulationMode>(prm.get<int>("accumulate", 1)));
+        criterion.setProlongationDampingFactor(prm.get<double>("prolongationdamping", 1.6));
+        criterion.setMaxDistance(prm.get<int>("maxdistance", 2));
+        criterion.setMaxConnectivity(prm.get<int>("maxconnectivity", 15));
+        criterion.setMaxAggregateSize(prm.get<int>("maxaggsize", 6));
+        criterion.setMinAggregateSize(prm.get<int>("minaggsize", 4));
         return criterion;
     }
 

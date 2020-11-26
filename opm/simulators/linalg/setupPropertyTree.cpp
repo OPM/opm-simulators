@@ -65,6 +65,11 @@ setupCPR(const std::string& conf, const FlowLinearSolverParameters& p)
     // graph might be unsymmetric and hence not supported by the PTScotch/ParMetis
     // calls in DUNE. Accumulating to 1 skips PTScotch/ParMetis
     prm.put("preconditioner.coarsesolver.preconditioner.accumulate", 1);
+    prm.put("preconditioner.coarsesolver.preconditioner.prolongationdamping", 1.6);
+    prm.put("preconditioner.coarsesolver.preconditioner.maxdistance", 2);
+    prm.put("preconditioner.coarsesolver.preconditioner.maxconnectivity", 15);
+    prm.put("preconditioner.coarsesolver.preconditioner.maxaggsize", 6);
+    prm.put("preconditioner.coarsesolver.preconditioner.minaggsize", 4);
     return prm;
 }
 
@@ -93,6 +98,11 @@ setupAMG([[maybe_unused]] const std::string& conf, const FlowLinearSolverParamet
     // graph might be unsymmetric and hence not supported by the PTScotch/ParMetis
     // calls in DUNE. Accumulating to 1 skips PTScotch/ParMetis
     prm.put("preconditioner.accumulate", 1);
+    prm.put("preconditioner.prolongationdamping", 1.6);
+    prm.put("preconditioner.maxdistance", 2);
+    prm.put("preconditioner.maxconnectivity", 15);
+    prm.put("preconditioner.maxaggsize", 6);
+    prm.put("preconditioner.minaggsize", 4);
     return prm;
 }
 
