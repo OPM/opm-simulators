@@ -51,11 +51,13 @@ public:
     // Constructor
     AquiferNumerical(const SingleNumericalAquifer& aquifer,
                      const std::unordered_map<int, int>& cartesian_to_compressed,
-                     const Simulator& ebos_simulator)
+                     const Simulator& ebos_simulator,
+                     const int* global_cell)
     : aquifer_(aquifer)
     , ebos_simulator_(ebos_simulator)
     , flux_rate_(0.)
     , cumulative_flux_(0.)
+    , global_cell_(global_cell)
     {
 
         this->cell_to_aquifer_cell_idx_.resize(this->ebos_simulator_.gridView().size(/*codim=*/0), -1);
@@ -106,6 +108,7 @@ private:
     const Simulator& ebos_simulator_;
     double flux_rate_; // aquifer influx rate
     double cumulative_flux_; // cumulative aquifer influx
+    const int* global_cell_; // mapping to global index
     double init_pressure_;
     double pressure_; // aquifer pressure
 
@@ -137,7 +140,7 @@ private:
             const double water_pressure_reservoir = fs.pressure(waterPhaseIdx).value();
             const auto& pvs = this->ebos_simulator_.vanguard().eclState().fieldProps().porv(true);
             // TODO: should get this PV, how to consider the rock compressiblity
-            const double pv = pvs[cell_index];
+            const double pv = pvs[global_cell_[cell_index]];
             sum_pv_pressure += pv * water_pressure_reservoir;
             sum_pv += pv;
         }
