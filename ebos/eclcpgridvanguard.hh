@@ -35,6 +35,7 @@
 #include <opm/grid/cpgrid/GridHelpers.hpp>
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 #include <opm/simulators/utils/PropsCentroidsDataHandle.hpp>
+#include <opm/simulators/utils/ParallelSerialization.hpp>
 
 #include <dune/grid/common/mcmgmapper.hh>
 
@@ -234,15 +235,10 @@ public:
 
             cartesianIndexMapper_.reset();
 
-            if ( ! equilGrid_ )
-            {
-                // for processes that do not hold the global grid we filter here using the local grid.
-                // If we would filter in filterConnection_ our partition would be empty and the connections of all
-                // wells would be removed.
-                ActiveGridCells activeCells(grid().logicalCartesianSize(),
-                                            grid().globalCell().data(), grid().size(0));
-                this->schedule().filterConnections(activeCells);
-            }
+            // Calling Schedule::filterConnections would remove any perforated
+            // cells that exist only on other ranks even in the case of distributed wells
+            // But we need all connections to figure out the first cell of a well (e.g. for
+            // pressure). Hence this is now skipped. Rank 0 had everything even before.
         }
 #endif
 
@@ -351,6 +347,21 @@ protected:
                                         equilGrid().size(0));
             this->schedule().filterConnections(activeCells);
         }
+#if HAVE_MPI
+        try
+        {
+            // Broadcast another time to remove inactive peforations on
+            // slave processors.
+            Opm::eclScheduleBroadcast(this->schedule());
+        }
+        catch(const std::exception& broadcast_error)
+        {
+            OpmLog::error(fmt::format("Distributing properties to all processes failed\n"
+                                      "Internal error message: {}", broadcast_error.what()));
+            MPI_Finalize();
+            std::exit(EXIT_FAILURE);
+        }
+#endif
     }
 
     std::unique_ptr<Grid> grid_;
