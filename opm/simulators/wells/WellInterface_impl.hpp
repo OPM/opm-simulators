@@ -52,6 +52,7 @@ namespace Opm
       , first_perf_(first_perf_index)
       , perf_data_(&perf_data)
     {
+        assert(well.name()==pw_info.name());
         assert(std::is_sorted(perf_data.begin(), perf_data.end(),
                               [](const auto& perf1, const auto& perf2){
                                   return perf1.ecl_index < perf2.ecl_index;

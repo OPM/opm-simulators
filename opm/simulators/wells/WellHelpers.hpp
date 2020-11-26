@@ -104,23 +104,38 @@ namespace Opm {
                 }
 #endif
                 B_->mv(x, y);
-                // The B matrix is basically a component-wise multiplication
-                // with a vector followed by a parallel reduction. We do that
-                // reduction to all ranks computing for the well to save the
-                // broadcast when applying C^T.
-                using YField = typename Y::block_type::value_type;
-                assert(y.size() == 1);
-                this->pinfo_->communication().allreduce<std::plus<YField>>(y[0].container().data(),
-                                                                           y[0].container().size());
+
+                if (this->pinfo_->communication().size() > 1)
+                {
+                    // Only do communication if we must.
+                    // The B matrix is basically a component-wise multiplication
+                    // with a vector followed by a parallel reduction. We do that
+                    // reduction to all ranks computing for the well to save the
+                    // broadcast when applying C^T.
+                    using YField = typename Y::block_type::value_type;
+                    assert(y.size() == 1);
+                    this->pinfo_->communication().allreduce<std::plus<YField>>(y[0].container().data(),
+                                                                               y[0].container().size());
+                }
             }
 
             //! y = A x
             template<class X, class Y>
             void mmv (const X& x, Y& y) const
             {
+                if (this->pinfo_->communication().size() == 1)
+                {
+                    // Do the same thing as before. The else branch
+                    // produces different rounding errors and results
+                    // slightly different iteration counts / well curves
+                    B_->mmv(x, y);
+                }
+                else
+                {
                 Y temp(y);
                 mv(x, temp); // includes parallel reduction
                 y -= temp;
+                }
             }
         private:
             const Matrix* B_;
