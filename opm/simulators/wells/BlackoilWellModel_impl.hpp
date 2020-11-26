@@ -223,9 +223,6 @@ namespace Opm {
         globalNumWells = w.size();
         w.erase(std::remove_if(w.begin(), w.end(), is_shut_or_defunct_), w.end());
         // sort to speed lookup of accompanying parallel_well_info
-        std::sort(w.begin(), w.end(), [](const auto& w1, const auto& w2){
-                                          return w1.name() < w2.name();
-                                      });
         auto pwell = parallel_well_info_.begin();
         local_parallel_well_info_.clear();
         local_parallel_well_info_.reserve(w.size());
@@ -233,11 +230,15 @@ namespace Opm {
         {
             // we could use std::lower_bound here. Not sure whether that
             // would improve performance
-            while (pwell->name() < well.name())
+            for (pwell = parallel_well_info_.begin(); pwell != parallel_well_info_.end();
+                 ++pwell)
             {
-                ++pwell;
+                if (pwell->name() == well.name())
+                {
+                    break;
+                }
             }
-            assert(pwell->name() == well.name());
+            assert(pwell != parallel_well_info_.end() && pwell->name() == well.name());
             local_parallel_well_info_.push_back(&(*pwell));
         }
         return w;
