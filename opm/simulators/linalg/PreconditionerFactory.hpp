@@ -119,7 +119,7 @@ public:
 
 private:
     using CriterionBase
-        = Dune::Amg::AggregationCriterion<Dune::Amg::SymmetricMatrixDependency<Matrix, Dune::Amg::FirstDiagonal>>;
+        = Dune::Amg::AggregationCriterion<Dune::Amg::SymmetricDependency<Matrix, Dune::Amg::FirstDiagonal>>;
     using Criterion = Dune::Amg::CoarsenCriterion<CriterionBase>;
 
     // Helpers for creation of AMG preconditioner.
