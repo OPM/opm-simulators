@@ -45,7 +45,8 @@ void ParallelWellInfo::DestroyComm::operator()(Communication* comm)
 ParallelWellInfo::ParallelWellInfo(const std::string& name,
                                    bool hasLocalCells)
     : name_(name), hasLocalCells_ (hasLocalCells),
-      isOwner_(true), comm_(new Communication(Dune::MPIHelper::getLocalCommunicator()))
+      isOwner_(true), rankWithFirstPerf_(-1),
+      comm_(new Communication(Dune::MPIHelper::getLocalCommunicator()))
     {}
 
 ParallelWellInfo::ParallelWellInfo(const std::pair<std::string,bool>& well_info,
@@ -61,6 +62,16 @@ ParallelWellInfo::ParallelWellInfo(const std::pair<std::string,bool>& well_info,
     comm_.reset(new Communication(Dune::MPIHelper::getLocalCommunicator()));
 #endif
     isOwner_ = (comm_->rank() == 0);
+}
+
+void ParallelWellInfo::communicateFirstPerforation(bool hasFirst)
+{
+    int first = hasFirst;
+    std::vector<int> firstVec(comm_->size());
+    comm_->allgather(&first, 1, firstVec.data());
+    auto found = std::find_if(firstVec.begin(), firstVec.end(),
+                              [](int i) -> bool{ return i;});
+    rankWithFirstPerf_ = found - firstVec.begin();
 }
 
 bool operator<(const ParallelWellInfo& well1, const ParallelWellInfo& well2)
