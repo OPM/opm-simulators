@@ -23,22 +23,15 @@
 /*!
  * \file
  *
- * \brief The function prototypes required to start the thermal variant of ebos
+ * \brief The main function for the stand alone oil-water plus polymer variant of ebos.
+ *
+ * This only calls the ebosOilWaterPolymerMain() function.
  */
-#ifndef EBOS_THERMAL_HH
-#define EBOS_THERMAL_HH
+#include "config.h"
 
-#include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/parser/eclipse/Parser/ParseContext.hpp>
-#include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
+#include "ebos_oilwater_polymer.hh"
 
-namespace Opm {
-void ebosThermalSetDeck(std::unique_ptr<Opm::Deck> deck,
-                        std::unique_ptr<Opm::ParseContext> parseContext,
-                        std::unique_ptr<Opm::ErrorGuard> errorGuard,
-                        double externalSetupTime);
-
-int ebosThermalMain(int argc, char** argv);
+int main(int argc, char** argv)
+{
+    return Opm::ebosOilWaterPolymerMain(argc, argv);
 }
-
-#endif

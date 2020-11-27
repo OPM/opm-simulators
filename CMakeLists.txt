@@ -227,10 +227,11 @@ set_property(TARGET moduleVersion PROPERTY POSITION_INDEPENDENT_CODE ON)
 # but this is not exposed in a super-build.
 add_dependencies(moduleVersion opmsimulators)
 
+set(COMMON_MODELS brine energy extbo foam gasoil oilwater oilwater_polymer polymer solvent)
+set(FLOW_MODELS   blackoil oilwater_brine oilwater_polymer_injectivity)
+
 set(FLOW_TGTS)
-foreach(OBJ blackoil brine energy foam gasoil oilwater
-            oilwater_brine oilwater_polymer
-            oilwater_polymer_injectivity polymer solvent extbo)
+foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS})
   add_library(flow_lib${OBJ} OBJECT flow/flow_ebos_${OBJ}.cpp)
   list(APPEND FLOW_TGTS $<TARGET_OBJECTS:flow_lib${OBJ}>)
 endforeach()
@@ -344,7 +345,7 @@ endif()
 # the research oriented general-purpose ECL simulator ("ebos" == &ecl
 # &black-&oil &simulator)
 set(MEBOS_TARGETS "")
-foreach(OBJ blackoil solvent extbo polymer foam brine gasoil oilwater oilwaterpolymer thermal)
+foreach(OBJ ${COMMON_MODELS} blackoil)
   add_library(ebos_lib${OBJ} OBJECT EXCLUDE_FROM_ALL ebos/ebos_${OBJ}.cc)
   list(APPEND MEBOS_TARGETS $<TARGET_OBJECTS:ebos_lib${OBJ}>)
 endforeach()
@@ -368,7 +369,7 @@ else()
   set(EBOS_EXTENSIONS_DEFAULT_ENABLE_IF "TRUE")
 endif()
 
-foreach(OBJ solvent extbo polymer foam brine gasoil oilwater oilwaterpolymer thermal)
+foreach(OBJ ${COMMON_MODELS})
   opm_add_test(ebos_${OBJ}
     ONLY_COMPILE
     DEFAULT_ENABLE_IF ${EBOS_EXTENSIONS_DEFAULT_ENABLE_IF}
@@ -408,10 +409,12 @@ opm_add_test(ebos_plain
   LIBRARIES opmsimulators)
 
 if (BUILD_EBOS_EXTENSIONS)
-  foreach(TGT ebos_solvent ebos_extbo ebos_polymer ebos_foam ebos_brine ebos_gasoil ebos_oilwater ebos_oilwaterpolymer ebos_thermal mebos)
-    install(TARGETS ${TGT} DESTINATION bin)
-    opm_add_bash_completion(${TGT})
+  foreach(TGT ${COMMON_MODELS})
+    install(TARGETS ebos_${TGT} DESTINATION bin)
+    opm_add_bash_completion(ebos_${TGT})
   endforeach()
+  install(TARGETS mebos DESTINATION bin)
+  opm_add_bash_completion(mebos)
 endif()
 
 if (OPM_ENABLE_PYTHON)

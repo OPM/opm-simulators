@@ -23,15 +23,15 @@
 /*!
  * \file
  *
- * \brief The main function for the stand alone oil-water plus polymer variant of ebos.
+ * \brief The main function for the stand alone thermal variant of ebos.
  *
- * This only calls the ebosOilWaterPolymerMain() function.
+ * This only calls the ebosThermalMain() function.
  */
 #include "config.h"
 
-#include "ebos_oilwaterpolymer.hh"
+#include "ebos_energy.hh"
 
 int main(int argc, char** argv)
 {
-    return Opm::ebosOilWaterPolymerMain(argc, argv);
+    return Opm::ebosEnergyMain(argc, argv);
 }

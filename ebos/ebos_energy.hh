@@ -23,15 +23,22 @@
 /*!
  * \file
  *
- * \brief The main function for the stand alone thermal variant of ebos.
- *
- * This only calls the ebosThermalMain() function.
+ * \brief The function prototypes required to start the thermal variant of ebos
  */
-#include "config.h"
+#ifndef EBOS_ENERGY_HH
+#define EBOS_ENERGY_HH
 
-#include "ebos_thermal.hh"
+#include <opm/parser/eclipse/Deck/Deck.hpp>
+#include <opm/parser/eclipse/Parser/ParseContext.hpp>
+#include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
 
-int main(int argc, char** argv)
-{
-    return Opm::ebosThermalMain(argc, argv);
+namespace Opm {
+void ebosEnergySetDeck(std::unique_ptr<Opm::Deck> deck,
+                       std::unique_ptr<Opm::ParseContext> parseContext,
+                       std::unique_ptr<Opm::ErrorGuard> errorGuard,
+                       double externalSetupTime);
+
+int ebosEnergyMain(int argc, char** argv);
 }
+
+#endif

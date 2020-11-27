@@ -33,14 +33,14 @@
 namespace Opm::Properties {
 
 namespace TTag {
-struct EbosThermalTypeTag {
+struct EbosEnergyTypeTag {
     using InheritsFrom = std::tuple<EbosTypeTag>;
 };
 }
 
 // enable the energy extension of the black oil model
 template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::EbosThermalTypeTag> {
+struct EnableEnergy<TypeTag, TTag::EbosEnergyTypeTag> {
     static constexpr bool value = true;
 };
 
@@ -48,12 +48,12 @@ struct EnableEnergy<TypeTag, TTag::EbosThermalTypeTag> {
 
 namespace Opm {
 
-void ebosThermalSetDeck(std::unique_ptr<Opm::Deck> deck,
-                        std::unique_ptr<Opm::ParseContext> parseContext,
-                        std::unique_ptr<Opm::ErrorGuard> errorGuard,
-                        double externalSetupTime)
+void ebosEnergySetDeck(std::unique_ptr<Opm::Deck> deck,
+                       std::unique_ptr<Opm::ParseContext> parseContext,
+                       std::unique_ptr<Opm::ErrorGuard> errorGuard,
+                       double externalSetupTime)
 {
-    using ProblemTypeTag = Properties::TTag::EbosThermalTypeTag;
+    using ProblemTypeTag = Properties::TTag::EbosEnergyTypeTag;
     using Vanguard = GetPropType<ProblemTypeTag, Properties::Vanguard>;
 
     Vanguard::setExternalSetupTime(externalSetupTime);
@@ -62,9 +62,9 @@ void ebosThermalSetDeck(std::unique_ptr<Opm::Deck> deck,
     Vanguard::setExternalDeck(std::move(deck));
 }
 
-int ebosThermalMain(int argc, char **argv)
+int ebosEnergyMain(int argc, char **argv)
 {
-    using ProblemTypeTag = Properties::TTag::EbosThermalTypeTag;
+    using ProblemTypeTag = Properties::TTag::EbosEnergyTypeTag;
     return Opm::startEbos<ProblemTypeTag>(argc, argv);
 }
 
