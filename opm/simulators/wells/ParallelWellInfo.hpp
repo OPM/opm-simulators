@@ -17,10 +17,12 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #ifndef OPM_PARALLELWELLINFO_HEADER_INCLUDED
-#define OPM_PARALLELWELLINFO_HEADER_INCLUDED
 
+#define OPM_PARALLELWELLINFO_HEADER_INCLUDED
 #include <dune/common/version.hh>
 #include <dune/common/parallel/mpihelper.hh>
+
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 
 #include <memory>
 
@@ -94,6 +96,28 @@ private:
     ///
     /// Contains only ranks where this well will perforate local cells.
     std::unique_ptr<Communication, DestroyComm> comm_;
+};
+
+/// \brief Class checking that all connections are on active cells
+///
+/// Works for distributed wells, too
+class CheckDistributedWellConnections
+{
+public:
+    CheckDistributedWellConnections(const Well& well,
+                                   const ParallelWellInfo& info);
+
+    /// \brief Inidicate that the i-th completion was found
+    ///
+    /// in the local grid.
+    /// \param index The index of the completion in Well::getConnections
+    void connectionFound(std::size_t index);
+
+    bool checkAllConnectionsFound();
+private:
+    std::vector<std::size_t> foundConnections_;
+    const Well& well_;
+    const ParallelWellInfo& pwinfo_;
 };
 
 bool operator<(const ParallelWellInfo& well1, const ParallelWellInfo& well2);
