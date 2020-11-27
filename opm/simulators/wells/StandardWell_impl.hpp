@@ -1963,6 +1963,10 @@ namespace Opm
         }
 
         // Compute the average pressure in each well block
+        auto p_above =  this->parallel_well_info_.communicateAboveValues(well_state.bhp()[w],
+                                                                          well_state.perfPress().data()+first_perf_,
+                                                                          nperf);
+
         for (int perf = 0; perf < nperf; ++perf) {
             const int cell_idx = well_cells_[perf];
             const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
@@ -1970,8 +1974,7 @@ namespace Opm
 
             // TODO: this is another place to show why WellState need to be a vector of WellState.
             // TODO: to check why should be perf - 1
-            const double p_above = perf == 0 ? well_state.bhp()[w] : well_state.perfPress()[first_perf_ + perf - 1];
-            const double p_avg = (well_state.perfPress()[first_perf_ + perf] + p_above)/2;
+            const double p_avg = (well_state.perfPress()[first_perf_ + perf] + p_above[perf])/2;
             const double temperature = fs.temperature(FluidSystem::oilPhaseIdx).value();
             const double saltConcentration = fs.saltConcentration().value();
 
@@ -2209,10 +2212,10 @@ namespace Opm
 
         const int nperf = number_of_perforations_;
         perf_pressure_diffs_.resize(nperf, 0.0);
+        auto z_above = this->parallel_well_info_.communicateAboveValues(ref_depth_, perf_depth_);
 
         for (int perf = 0; perf < nperf; ++perf) {
-            const double z_above = perf == 0 ? ref_depth_ : perf_depth_[perf - 1];
-            const double dz = perf_depth_[perf] - z_above;
+            const double dz = perf_depth_[perf] - z_above[perf];
             perf_pressure_diffs_[perf] = dz * perf_densities_[perf] * gravity_;
         }
 
