@@ -1471,13 +1471,11 @@ namespace Opm {
             return;
         }
 
-        auto piCalc = this->prod_index_calc_.begin();
         for (const auto& wellPtr : this->well_container_) {
             wellPtr->updateProductivityIndex(this->ebosSimulator_,
-                                             *piCalc,
+                                             this->prod_index_calc_[wellPtr->indexOfWell()],
                                              this->well_state_,
                                              deferred_logger);
-            ++piCalc;
         }
     }
 
