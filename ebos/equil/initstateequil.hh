@@ -1543,12 +1543,12 @@ getEquil(const Opm::EclipseState& state)
     return { equil.begin(), equil.end() };
 }
 
-template<class Grid>
+template<class GridView>
 std::vector<int>
 equilnum(const Opm::EclipseState& eclipseState,
-         const Grid& grid)
+         const GridView& gridview)
 {
-    std::vector<int> eqlnum(grid.size(0), 0);
+    std::vector<int> eqlnum(gridview.size(0), 0);
 
     if (eclipseState.fieldProps().has_int("EQLNUM")) {
         const auto& e = eclipseState.fieldProps().get_int("EQLNUM");
@@ -1565,25 +1565,23 @@ class InitialStateComputer
     using GridView = GetPropType<TypeTag, Properties::GridView>;
     using Element = typename GridView::template Codim<0>::Entity;
     using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
-    using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
     using Grid = GetPropType<TypeTag, Properties::Grid>;
-
 
 public:
     template<class MaterialLawManager>
     InitialStateComputer(MaterialLawManager& materialLawManager,
                          const Opm::EclipseState& eclipseState,
-                         const Vanguard& vanguard,
+                         const GridView& gridView,
                          const double grav = Opm::unit::gravity,
                          const bool applySwatInit = true)
-        : temperature_(vanguard.grid().size(/*codim=*/0)),
-          saltConcentration_(vanguard.grid().size(/*codim=*/0)),
+        : temperature_(gridView.size(/*codim=*/0)),
+          saltConcentration_(gridView.size(/*codim=*/0)),
           pp_(FluidSystem::numPhases,
-          std::vector<double>(vanguard.grid().size(/*codim=*/0))),
+          std::vector<double>(gridView.size(/*codim=*/0))),
           sat_(FluidSystem::numPhases,
-          std::vector<double>(vanguard.grid().size(/*codim=*/0))),
-          rs_(vanguard.grid().size(/*codim=*/0)),
-          rv_(vanguard.grid().size(/*codim=*/0))
+          std::vector<double>(gridView.size(/*codim=*/0))),
+          rs_(gridView.size(/*codim=*/0)),
+          rv_(gridView.size(/*codim=*/0))
     {
         //Check for presence of kw SWATINIT
         if (applySwatInit) {
@@ -1593,15 +1591,13 @@ public:
         }
 
         //Querry cell depth, cell top-bottom.
-        updateCellProps_(vanguard);
-
-        const Grid& grid = vanguard.grid();
+        updateCellProps_(gridView);
 
         // Get the equilibration records.
         const std::vector<Opm::EquilRecord> rec = getEquil(eclipseState);
         const auto& tables = eclipseState.getTableManager();
         // Create (inverse) region mapping.
-        const Opm::RegionMapping<> eqlmap(equilnum(eclipseState, grid));
+        const Opm::RegionMapping<> eqlmap(equilnum(eclipseState, gridView));
         const int invalidRegion = -1;
         regionPvtIdx_.resize(rec.size(), invalidRegion);
         setRegionPvtIdx(eclipseState, eqlmap);
@@ -1709,7 +1705,7 @@ public:
         updateInitialSaltConcentration_(eclipseState, eqlmap);
 
         // Compute pressures, saturations, rs and rv factors.
-        const auto& comm = vanguard.gridView().comm();
+        const auto& comm = gridView.comm();
         calcPressSatRsRv(eqlmap, rec, materialLawManager, comm, grav);
 
         // Modify oil pressure in no-oil regions so that the pressures of present phases can
@@ -1778,10 +1774,8 @@ private:
     std::vector<std::pair<double,double>> cellZSpan_;
     std::vector<std::pair<double,double>> cellZMinMax_;
 
-    template<class Vanguard>
-    void updateCellProps_(const Vanguard& vanguard)
+    void updateCellProps_(const GridView& gridView)
     {
-        const auto& gridView = vanguard.gridView();
         ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
         int numElements = gridView.size(/*codim=*/0);
         cellCenterDepth_.resize(numElements);
