@@ -158,7 +158,8 @@ namespace Opm
         virtual void init(const PhaseUsage* phase_usage_arg,
                           const std::vector<double>& depth_arg,
                           const double gravity_arg,
-                          const int num_cells);
+                          const int num_cells,
+                          const std::vector< Scalar >& B_avg);
 
         virtual void initPrimaryVariablesEvaluation() const = 0;
 
@@ -271,7 +272,14 @@ namespace Opm
 
         void updatePerforatedCell(std::vector<bool>& is_cell_perforated);
 
-        virtual void checkWellOperability(const Simulator& ebos_simulator, const WellState& well_state, Opm::DeferredLogger& deferred_logger) = 0;
+        void checkWellOperability(const Simulator& ebos_simulator, const WellState& well_state, Opm::DeferredLogger& deferred_logger);
+
+        // check whether the well is operable under the current reservoir condition
+        // mostly related to BHP limit and THP limit
+        void updateWellOperability(const Simulator& ebos_simulator,
+                                   const WellState& well_state,
+                                   Opm::DeferredLogger& deferred_logger);
+
 
         // whether the well is operable
         bool isOperable() const;
@@ -411,6 +419,17 @@ namespace Opm
 
         std::optional<double> dynamic_thp_limit_;
 
+        std::vector< Scalar > B_avg_;
+
+        // the vectors used to describe the inflow performance relationship (IPR)
+        // Q = IPR_A - BHP * IPR_B
+        // TODO: it minght need to go to WellInterface, let us implement it in StandardWell first
+        // it is only updated and used for producers for now
+        mutable std::vector<double> ipr_a_;
+        mutable std::vector<double> ipr_b_;
+
+        bool changed_to_stopped_this_step_ = false;
+
         const PhaseUsage& phaseUsage() const;
 
         int flowPhaseToEbosCompIdx( const int phaseIdx ) const;
@@ -476,13 +495,22 @@ namespace Opm
 
         OperabilityStatus operability_status_;
 
+        // check whether the well is operable under BHP limit with current reservoir condition
+        virtual void checkOperabilityUnderBHPLimitProducer(const WellState& well_state, const Simulator& ebos_simulator, Opm::DeferredLogger& deferred_logger) =0;
+
+        // check whether the well is operable under THP limit with current reservoir condition
+        virtual void checkOperabilityUnderTHPLimitProducer(const Simulator& ebos_simulator, const WellState& well_state, Opm::DeferredLogger& deferred_logger) =0;
+
+        virtual void updateIPR(const Simulator& ebos_simulator, Opm::DeferredLogger& deferred_logger) const=0;
+
+
         void wellTestingEconomic(const Simulator& simulator, const std::vector<double>& B_avg,
                                  const double simulation_time, const WellState& well_state,
                                  WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger);
 
-        virtual void wellTestingPhysical(const Simulator& simulator, const std::vector<double>& B_avg,
+        void wellTestingPhysical(const Simulator& simulator, const std::vector<double>& B_avg,
                                  const double simulation_time, const int report_step,
-                                         WellState& well_state, WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger) = 0;
+                                 WellState& well_state, WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger);
 
 
         virtual void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
