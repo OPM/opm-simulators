@@ -573,7 +573,7 @@ namespace Opm {
             const auto phaseUsage = phaseUsageFromDeck(eclState());
             const size_t numCells = Opm::UgGridHelpers::numCells(grid());
             const bool handle_ms_well = (param_.use_multisegment_well_ && anyMSWellOpenLocal());
-            well_state_.resize(wells_ecl_, schedule(), handle_ms_well, numCells, phaseUsage, well_perf_data_, summaryState, globalNumWells); // Resize for restart step
+            well_state_.resize(wells_ecl_, local_parallel_well_info_, schedule(), handle_ms_well, numCells, phaseUsage, well_perf_data_, summaryState, globalNumWells); // Resize for restart step
             wellsToState(restartValues.wells, restartValues.grp_nwrk, phaseUsage, handle_ms_well, well_state_);
         }
 
@@ -616,6 +616,8 @@ namespace Opm {
             well_perf_data_[well_index].clear();
             well_perf_data_[well_index].reserve(well.getConnections().size());
             CheckDistributedWellConnections checker(well, *local_parallel_well_info_[well_index]);
+            bool hasFirstPerforation = false;
+            bool firstOpenCompletion = true;
 
             for (const auto& completion : well.getConnections()) {
                 const int i = completion.getI();
@@ -625,6 +627,10 @@ namespace Opm {
                 const int active_index = cartesian_to_compressed_[cart_grid_indx];
                 if (completion.state() == Connection::State::OPEN) {
                     if (active_index >= 0) {
+                        if (firstOpenCompletion)
+                        {
+                            hasFirstPerforation = true;
+                        }
                         checker.connectionFound(completion_index);
                         PerforationData pd;
                         pd.cell_index = active_index;
@@ -633,6 +639,7 @@ namespace Opm {
                         pd.ecl_index = completion_index;
                         well_perf_data_[well_index].push_back(pd);
                     }
+                    firstOpenCompletion = false;
                 } else {
                     checker.connectionFound(completion_index);
                     if (completion.state() != Connection::State::SHUT) {
@@ -643,6 +650,7 @@ namespace Opm {
                 ++completion_index;
             }
             checker.checkAllConnectionsFound();
+            local_parallel_well_info_[well_index]->communicateFirstPerforation(hasFirstPerforation);
             ++well_index;
         }
     }
@@ -687,7 +695,7 @@ namespace Opm {
             }
         }
 
-        well_state_.init(cellPressures, schedule(), wells_ecl_, timeStepIdx,
+        well_state_.init(cellPressures, schedule(), wells_ecl_, local_parallel_well_info_, timeStepIdx,
                          &previous_well_state_, phase_usage_, well_perf_data_,
                          summaryState, globalNumWells);
     }
@@ -840,12 +848,18 @@ namespace Opm {
         // Use the pvtRegionIdx from the top cell
         const auto& perf_data = this->well_perf_data_[wellID];
 
+        // Cater for case where local part might have no perforations.
+        const int pvtreg = perf_data.size() ?
+            pvt_region_idx_[perf_data.front().cell_index] : 0;
+        const auto& parallel_well_info = *local_parallel_well_info_[wellID];
+        auto global_pvtreg = parallel_well_info.broadcastFirstPerforationValue(pvtreg);
+
         return std::make_unique<WellType>(this->wells_ecl_[wellID],
-                                          *local_parallel_well_info_[wellID],
+                                          parallel_well_info,
                                           time_step,
                                           this->param_,
                                           *this->rateConverter_,
-                                          this->pvt_region_idx_[perf_data.front().cell_index],
+                                          global_pvtreg,
                                           this->numComponents(),
                                           this->numPhases(),
                                           wellID,

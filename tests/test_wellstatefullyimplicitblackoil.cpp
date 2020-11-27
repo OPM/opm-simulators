@@ -122,8 +122,22 @@ namespace {
             std::vector<double>(setup.grid.c_grid()->number_of_cells,
                                 100.0*Opm::unit::barsa);
 
+        auto wells = setup.sched.getWells(timeStep);
+        std::vector<Opm::ParallelWellInfo> pinfos(wells.size());
+        std::vector<Opm::ParallelWellInfo*> ppinfos(wells.size());
+        auto pw = pinfos.begin();
+        auto ppw = ppinfos.begin();
+
+        for (const auto& well : wells)
+        {
+            *pw = {well.name()};
+            *ppw = &(*pw);
+            ++pw;
+            ++ppw;
+        }
+
         state.init(cpress, setup.sched,
-                   setup.sched.getWells(timeStep),
+                   wells, ppinfos,
                    timeStep, nullptr, setup.pu, setup.well_perf_data, setup.st, setup.sched.getWells(timeStep).size());
 
         state.initWellStateMSWell(setup.sched.getWells(timeStep),
