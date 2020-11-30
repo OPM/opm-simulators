@@ -2393,7 +2393,7 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    checkOperabilityUnderBHPLimitProducer(const WellState& well_state, const Simulator& ebos_simulator, Opm::DeferredLogger& deferred_logger)
+    checkOperabilityUnderBHPLimitProducer(const WellState& /*well_state*/, const Simulator& ebos_simulator, Opm::DeferredLogger& deferred_logger)
     {
         const auto& summaryState = ebos_simulator.vanguard().summaryState();
         const double bhp_limit = Base::mostStrictBhpFromBhpLimits(summaryState);
@@ -2554,7 +2554,7 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    checkOperabilityUnderTHPLimitProducer(const Simulator& ebos_simulator, const WellState& well_state, Opm::DeferredLogger& deferred_logger)
+    checkOperabilityUnderTHPLimitProducer(const Simulator& ebos_simulator, const WellState& /*well_state*/, Opm::DeferredLogger& deferred_logger)
     {
         const auto& summaryState = ebos_simulator.vanguard().summaryState();
         const auto obtain_bhp = computeBhpAtThpLimitProd(ebos_simulator, Base::B_avg_, summaryState, deferred_logger);
