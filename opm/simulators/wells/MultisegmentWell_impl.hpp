@@ -2404,12 +2404,12 @@ namespace Opm
             // if the BHP limit is not defaulted or the well does not have a THP limit
             // we need to check the BHP limit
 
+            double temp = 0;
             for (int p = 0; p < number_of_phases_; ++p) {
-                const double temp = ipr_a_[p] - ipr_b_[p] * bhp_limit;
-                if (temp < 0.) {
-                    this->operability_status_.operable_under_only_bhp_limit = false;
-                    break;
-                }
+                temp += ipr_a_[p] - ipr_b_[p] * bhp_limit;
+            }
+            if (temp < 0.) {
+                this->operability_status_.operable_under_only_bhp_limit = false;
             }
 
             // checking whether running under BHP limit will violate THP limit
