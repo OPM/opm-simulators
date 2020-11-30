@@ -47,6 +47,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/State.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQState.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/PAvgCalculatorCollection.hpp>
 
 #include <opm/simulators/utils/ParallelRestart.hpp>
 #include <opm/grid/GridHelpers.hpp>
@@ -240,6 +241,7 @@ public:
 
     void evalSummaryState(bool isSubStep)
     {
+        PAvgCalculatorCollection wbp_calculators;
         const int reportStepNum = simulator_.episodeIndex() + 1;
         /*
           The summary data is not evaluated for timestep 0, that is
@@ -324,6 +326,7 @@ public:
                          miscSummaryData,
                          eclOutputModule_.initialInplace(),
                          inplace,
+                         wbp_calculators,
                          regionData,
                          blockData,
                          aquiferData);
