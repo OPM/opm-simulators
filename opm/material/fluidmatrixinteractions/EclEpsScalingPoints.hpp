@@ -178,7 +178,9 @@ struct EclEpsScalingPointsInfo
         bool hasGas = eclState.runspec().phases().active(Phase::GAS);
         bool hasOil = eclState.runspec().phases().active(Phase::OIL);
 
-        if (!hasWater) {
+        if (int(hasWater) + int(hasGas) + int(hasOil) == 1) {
+            return;
+        } else if (!hasWater) {
             Swl = 0.0;
             Swu = 0.0;
             Swcr = 0.0;
@@ -199,8 +201,7 @@ struct EclEpsScalingPointsInfo
                 throw std::domain_error("No valid saturation keyword family specified");
             }
             return;
-        }
-        else if (!hasGas) {
+        } else if (!hasGas) {
             Sgl = 0.0;
             Sgu = 0.0;
             Sgcr = 0.0;
