@@ -60,7 +60,7 @@ public:
                                          getPropValue<TypeTag, Properties::EnableFoam>(),
                                          getPropValue<TypeTag, Properties::EnableBrine>(),
                                          /*PVOffset=*/0,
-                                         /*disabledCompIdx=*/FluidSystem::waterCompIdx> type;
+                                         /*disabledCompIdx=*/FluidSystem::oilCompIdx> type;
 };
 }}
 

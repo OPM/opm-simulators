@@ -31,7 +31,59 @@
 
 #include "ebos_gaswater.hh"
 
-int main(int argc, char** argv)
+#include "ebos.hh"
+#include "startEbos.hh"
+
+namespace Opm::Properties {
+
+namespace TTag {
+struct EbosGasWaterTypeTag {
+    using InheritsFrom = std::tuple<EbosTypeTag>;
+};
+}
+
+//! The indices indices which only enable oil and water
+template<class TypeTag>
+struct Indices<TypeTag, TTag::EbosGasWaterTypeTag>
 {
-    return Opm::ebosGasWaterMain(argc, argv);
+private:
+    // it is unfortunately not possible to simply use 'TypeTag' here because this leads
+    // to cyclic definitions of some properties. if this happens the compiler error
+    // messages unfortunately are *really* confusing and not really helpful.
+    using FluidSystem = GetPropType<TTag::EbosTypeTag, Properties::FluidSystem>;
+
+public:
+    typedef Opm::BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
+                                         getPropValue<TypeTag, Properties::EnablePolymer>(),
+                                         getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                         getPropValue<TypeTag, Properties::EnableFoam>(),
+                                         getPropValue<TypeTag, Properties::EnableBrine>(),
+                                         /*PVOffset=*/0,
+                                         /*disabledCompIdx=*/FluidSystem::oilCompIdx> type;
+};
+
+} // namespace Opm::Properties
+
+namespace Opm {
+
+void ebosGasWaterSetDeck(std::unique_ptr<Opm::Deck> deck,
+                         std::unique_ptr<Opm::ParseContext> parseContext,
+                         std::unique_ptr<Opm::ErrorGuard> errorGuard,
+                         double externalSetupTime)
+{
+    using ProblemTypeTag = Properties::TTag::EbosOilWaterTypeTag;
+    using Vanguard = GetPropType<ProblemTypeTag, Properties::Vanguard>;
+
+    Vanguard::setExternalSetupTime(externalSetupTime);
+    Vanguard::setExternalParseContext(std::move(parseContext));
+    Vanguard::setExternalErrorGuard(std::move(errorGuard));
+    Vanguard::setExternalDeck(std::move(deck));
+}
+
+int ebosGasWaterMain(int argc, char **argv)
+{
+    using ProblemTypeTag = Properties::TTag::EbosGasWaterTypeTag;
+    return Opm::startEbos<ProblemTypeTag>(argc, argv);
+}
+
 }
