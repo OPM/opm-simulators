@@ -142,6 +142,10 @@ namespace Opm
         int num_active_connections = 0;
         auto my_next_perf = perf_data_->begin();
         for (std::size_t c = 0; c < num_conns; ++c) {
+            if (my_next_perf == perf_data_->end())
+            {
+                break;
+            }
             if (my_next_perf->ecl_index > c)
             {
                 continue;
