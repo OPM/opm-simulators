@@ -2316,14 +2316,10 @@ namespace Opm
         setToZero(wellPI);
 
         const auto preferred_phase = this->well_ecl_.getPreferredPhase();
+        auto subsetPerfID   = 0;
 
-        const auto& allConn = this->well_ecl_.getConnections();
-        const auto  nPerf   = allConn.size();
-        auto subsetPerfID   = 0*nPerf;
-        for (auto allPerfID = 0*nPerf; allPerfID < nPerf; ++allPerfID) {
-            if (allConn[allPerfID].state() == Connection::State::SHUT) {
-                continue;
-            }
+        for ( const auto& perf : *this->perf_data_){
+            auto allPerfID = perf.ecl_index;
 
             auto connPICalc = [&wellPICalc, allPerfID](const double mobility) -> double
             {
