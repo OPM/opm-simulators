@@ -149,7 +149,7 @@ BOOST_AUTO_TEST_CASE(Summary)
     using Vanguard = Opm::GetPropType<TypeTag, Opm::Properties::Vanguard>;
     typedef Opm::CollectDataToIORank< Vanguard > CollectDataToIORankType;
     CollectDataToIORankType collectToIORank(simulator->vanguard());
-    Opm::EclOutputBlackOilModule<TypeTag> eclOutputModule(*simulator, collectToIORank);
+    Opm::EclOutputBlackOilModule<TypeTag> eclOutputModule(*simulator, {}, collectToIORank);
 
     typedef Opm::EclWriter<TypeTag> EclWriterType;
     // create the actual ECL writer

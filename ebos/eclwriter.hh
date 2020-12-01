@@ -192,14 +192,27 @@ public:
         : simulator_(simulator)
         , collectToIORank_(simulator_.vanguard())
     {
-        this->eclOutputModule_ = std::make_unique<EclOutputBlackOilModule<TypeTag>>(simulator, this->collectToIORank_);
+        std::vector<std::size_t> wbp_index_list;
         if (collectToIORank_.isIORank()) {
+            const auto& schedule = simulator_.vanguard().schedule();
             eclIO_.reset(new Opm::EclipseIO(simulator_.vanguard().eclState(),
                                             Opm::UgGridHelpers::createEclipseGrid(globalGrid(), simulator_.vanguard().eclState().getInputGrid()),
-                                            simulator_.vanguard().schedule(),
+                                            schedule,
                                             simulator_.vanguard().summaryConfig()));
-        }
 
+            const auto& wbp_calculators = eclIO_->summary().wbp_calculators( schedule.size() - 1 );
+            wbp_index_list = wbp_calculators.index_list();
+        }
+        if (collectToIORank_.isParallel()) {
+#ifdef HAVE_MPI
+            unsigned long size = wbp_index_list.size();
+            MPI_Bcast(&size, 1, MPI_UNSIGNED_LONG, collectToIORank_.ioRank, MPI_COMM_WORLD);
+            if (!collectToIORank_.isIORank())
+                wbp_index_list.resize( size );
+
+            MPI_Bcast(wbp_index_list.data(), size * sizeof(std::size_t), MPI_CHAR, collectToIORank_.ioRank, MPI_COMM_WORLD);
+#endif
+        }
         // create output thread if enabled and rank is I/O rank
         // async output is enabled by default if pthread are enabled
         bool enableAsyncOutput = EWOMS_GET_PARAM(TypeTag, bool, EnableAsyncEclOutput);
@@ -207,6 +220,8 @@ public:
         if (enableAsyncOutput && collectToIORank_.isIORank())
             numWorkerThreads = 1;
         taskletRunner_.reset(new TaskletRunner(numWorkerThreads));
+
+        this->eclOutputModule_ = std::make_unique<EclOutputBlackOilModule<TypeTag>>(simulator, wbp_index_list, this->collectToIORank_);
     }
 
     ~EclWriter()

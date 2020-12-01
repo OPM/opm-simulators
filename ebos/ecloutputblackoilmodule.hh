@@ -195,7 +195,7 @@ class EclOutputBlackOilModule
 
 public:
     template<class CollectDataToIORankType>
-    EclOutputBlackOilModule(const Simulator& simulator, const CollectDataToIORankType& collectToIORank)
+    EclOutputBlackOilModule(const Simulator& simulator, const std::vector<std::size_t>& wbp_index_list, const CollectDataToIORankType& collectToIORank)
         : simulator_(simulator)
     {
         const Opm::SummaryConfig summaryConfig = simulator_.vanguard().summaryConfig();
