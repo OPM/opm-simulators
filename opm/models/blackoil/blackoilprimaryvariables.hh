@@ -306,7 +306,6 @@ public:
         // assign the actual primary variables
         if (primaryVarsMeaning() == OnePhase_p) {
             if (waterEnabled) {
-                (*this)[waterSaturationIdx] = FsToolbox::value(fluidState.saturation(waterPhaseIdx));
                 (*this)[pressureSwitchIdx] = FsToolbox::value(fluidState.pressure(waterPhaseIdx));
             } else {
                 throw std::logic_error("For single-phase runs, only pure water is presently allowed.");
