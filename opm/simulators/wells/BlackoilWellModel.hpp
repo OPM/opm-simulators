@@ -31,8 +31,15 @@
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 #include <cassert>
-#include <unordered_map>
+#include <functional>
+#include <map>
+#include <memory>
+#include <string>
 #include <tuple>
+#include <unordered_map>
+#include <vector>
+
+#include <stddef.h>
 
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 
@@ -288,6 +295,15 @@ namespace Opm {
 
             // create the well container
             std::vector<WellInterfacePtr > createWellContainer(const int time_step);
+
+            WellInterfacePtr
+            createWellPointer(const int wellID,
+                              const int time_step) const;
+
+            template <typename WellType>
+            std::unique_ptr<WellType>
+            createTypedWellPointer(const int wellID,
+                                   const int time_step) const;
 
             WellInterfacePtr createWellForWellTest(const std::string& well_name, const int report_step, Opm::DeferredLogger& deferred_logger) const;
 
