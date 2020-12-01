@@ -204,14 +204,12 @@ public:
             wbp_index_list = wbp_calculators.index_list();
         }
         if (collectToIORank_.isParallel()) {
-#ifdef HAVE_MPI
+            const auto& comm = simulator_.vanguard().grid().comm();
             unsigned long size = wbp_index_list.size();
-            MPI_Bcast(&size, 1, MPI_UNSIGNED_LONG, collectToIORank_.ioRank, MPI_COMM_WORLD);
+            comm.broadcast(&size, 1, collectToIORank_.ioRank);
             if (!collectToIORank_.isIORank())
                 wbp_index_list.resize( size );
-
-            MPI_Bcast(wbp_index_list.data(), size * sizeof(std::size_t), MPI_CHAR, collectToIORank_.ioRank, MPI_COMM_WORLD);
-#endif
+            comm.broadcast(wbp_index_list.data(), size, collectToIORank_.ioRank);
         }
         // create output thread if enabled and rank is I/O rank
         // async output is enabled by default if pthread are enabled
@@ -256,7 +254,6 @@ public:
 
     void evalSummaryState(bool isSubStep)
     {
-        PAvgCalculatorCollection wbp_calculators;
         const int reportStepNum = simulator_.episodeIndex() + 1;
         /*
           The summary data is not evaluated for timestep 0, that is
@@ -294,8 +291,11 @@ public:
         this->prepareLocalCellData(isSubStep, reportStepNum);
 
         if (collectToIORank_.isParallel())
-            collectToIORank_.collect({}, eclOutputModule_->getBlockData(),
-                                     localWellData, localGroupAndNetworkData);
+            collectToIORank_.collect({},
+                                     eclOutputModule_->getBlockData(),
+                                     eclOutputModule_->getWBPData(),
+                                     localWellData,
+                                     localGroupAndNetworkData);
 
         std::map<std::string, double> miscSummaryData;
         std::map<std::string, std::vector<double>> regionData;
@@ -308,9 +308,18 @@ public:
         eclOutputModule_->outputInjLog(reportStepNum, isSubStep, forceDisableInjOutput);
         eclOutputModule_->outputCumLog(reportStepNum, isSubStep, forceDisableCumOutput);
 
+
         std::vector<char> buffer;
         if (this->collectToIORank_.isIORank()) {
             const auto& summary = eclIO_->summary();
+            auto wbp_calculators = summary.wbp_calculators(reportStepNum);
+            const auto& wbpData
+                = this->collectToIORank_.isParallel()
+                ? this->collectToIORank_.globalWBPData()
+                : this->eclOutputModule_->getWBPData();
+
+            for (const auto& [global_index, pressure] : wbpData)
+                wbp_calculators.add_pressure( global_index, pressure );
 
             // Add TCPU
             if (totalCpuTime != 0.0) {
@@ -390,8 +399,11 @@ public:
         }
 
         if (this->collectToIORank_.isParallel()) {
-            collectToIORank_.collect(localCellData, eclOutputModule_->getBlockData(),
-                                     localWellData, localGroupAndNetworkData);
+            collectToIORank_.collect(localCellData,
+                                     eclOutputModule_->getBlockData(),
+                                     eclOutputModule_->getWBPData(),
+                                     localWellData,
+                                     localGroupAndNetworkData);
         }
 
         if (this->collectToIORank_.isIORank()) {
