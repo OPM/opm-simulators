@@ -1475,13 +1475,13 @@ horizontalSubdivision(const CellID cell,
 }
 
 template <class Element>
-inline double cellCenterDepth(const Element& element)
+double cellCenterDepth(const Element& element)
 {
     typedef typename Element::Geometry Geometry;
     static constexpr int zCoord = Element::dimension - 1;
     double zz = 0.0;
 
-    const Geometry geometry = element.geometry();
+    const Geometry& geometry = element.geometry();
     const int corners = geometry.corners();
     for (int i=0; i < corners; ++i)
         zz += geometry.corner(i)[zCoord];
@@ -1490,14 +1490,14 @@ inline double cellCenterDepth(const Element& element)
 }
 
 template <class Element>
-inline std::pair<double,double> cellZSpan(const Element& element)
+std::pair<double,double> cellZSpan(const Element& element)
 {
     typedef typename Element::Geometry Geometry;
     static constexpr int zCoord = Element::dimension - 1;
     double bot = 0.0;
     double top = 0.0;
 
-    const Geometry geometry = element.geometry();
+    const Geometry& geometry = element.geometry();
     const int corners = geometry.corners();
     assert(corners == 8);
     for (int i=0; i < 4; ++i)
@@ -1509,11 +1509,11 @@ inline std::pair<double,double> cellZSpan(const Element& element)
 }
 
 template <class Element>
-inline std::pair<double,double> cellZMinMax(const Element& element)
+std::pair<double,double> cellZMinMax(const Element& element)
 {
     typedef typename Element::Geometry Geometry;
     static constexpr int zCoord = Element::dimension - 1;
-    const Geometry geometry = element.geometry();
+    const Geometry& geometry = element.geometry();
     const int corners = geometry.corners();
     assert(corners == 8);
     auto min = std::numeric_limits<double>::max();
