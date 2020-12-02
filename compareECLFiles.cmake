@@ -260,6 +260,15 @@ add_test_compareECLFiles(CASENAME spe1_metric_vfp1
                          REL_TOL ${rel_tol}
                          DIR vfpprod_spe1)
 
+if(BUILD_FLOW_VARIANTS)
+  add_test_compareECLFiles(CASENAME spe1_water
+                           FILENAME SPE1CASE1_WATER
+                           SIMULATOR flow_onephase
+                           ABS_TOL ${abs_tol}
+                           REL_TOL ${rel_tol}
+                           DIR spe1)
+endif()
+
 add_test_compareECLFiles(CASENAME ctaquifer_2d_oilwater
                          FILENAME 2D_OW_CTAQUIFER
                          SIMULATOR flow
