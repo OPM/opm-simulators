@@ -752,33 +752,8 @@ namespace Opm {
                     wellIsStopped = true;
                 }
 
-                // Use the pvtRegionIdx from the top cell
-                const int well_cell_top = well_perf_data_[w][0].cell_index;
-                const int pvtreg = pvt_region_idx_[well_cell_top];
+                well_container.emplace_back(this->createWellPointer(w, time_step));
 
-                if (!well_ecl.isMultiSegment() || !param_.use_multisegment_well_) {
-                    well_container.emplace_back(new StandardWell<TypeTag>(well_ecl,
-                                                                          time_step,
-                                                                          param_,
-                                                                          *rateConverter_,
-                                                                          pvtreg,
-                                                                          numComponents(),
-                                                                          numPhases(),
-                                                                          w,
-                                                                          well_state_.firstPerfIndex()[w],
-                                                                          well_perf_data_[w]));
-                } else {
-                    well_container.emplace_back(new MultisegmentWell<TypeTag>(well_ecl,
-                                                                              time_step,
-                                                                              param_,
-                                                                              *rateConverter_,
-                                                                              pvtreg,
-                                                                              numComponents(),
-                                                                              numPhases(),
-                                                                              w,
-                                                                              well_state_.firstPerfIndex()[w],
-                                                                              well_perf_data_[w]));
-                }
                 if (wellIsStopped)
                     well_container.back()->stopWell();
             }
@@ -791,6 +766,50 @@ namespace Opm {
         }
 
         return well_container;
+    }
+
+
+
+
+
+    template <typename TypeTag>
+    typename BlackoilWellModel<TypeTag>::WellInterfacePtr
+    BlackoilWellModel<TypeTag>::
+    createWellPointer(const int wellID, const int time_step) const
+    {
+        const auto is_multiseg = this->wells_ecl_[wellID].isMultiSegment();
+
+        if (! (this->param_.use_multisegment_well_ && is_multiseg)) {
+            return this->template createTypedWellPointer<StandardWell<TypeTag>>(wellID, time_step);
+        }
+        else {
+            return this->template createTypedWellPointer<MultisegmentWell<TypeTag>>(wellID, time_step);
+        }
+    }
+
+
+
+
+
+    template <typename TypeTag>
+    template <typename WellType>
+    std::unique_ptr<WellType>
+    BlackoilWellModel<TypeTag>::
+    createTypedWellPointer(const int wellID, const int time_step) const
+    {
+        // Use the pvtRegionIdx from the top cell
+        const auto& perf_data = this->well_perf_data_[wellID];
+
+        return std::make_unique<WellType>(this->wells_ecl_[wellID],
+                                          time_step,
+                                          this->param_,
+                                          *this->rateConverter_,
+                                          this->pvt_region_idx_[perf_data.front().cell_index],
+                                          this->numComponents(),
+                                          this->numPhases(),
+                                          wellID,
+                                          this->well_state_.firstPerfIndex()[wellID],
+                                          perf_data);
     }
 
 
@@ -817,35 +836,7 @@ namespace Opm {
             OPM_DEFLOG_THROW(std::logic_error, "Could not find well " << well_name << " in wells_ecl ", deferred_logger);
         }
 
-        const Well& well_ecl = wells_ecl_[index_well_ecl];
-
-        // Use the pvtRegionIdx from the top cell
-        const int well_cell_top = well_perf_data_[index_well_ecl][0].cell_index;
-        const int pvtreg = pvt_region_idx_[well_cell_top];
-
-        if (!well_ecl.isMultiSegment() || !param_.use_multisegment_well_) {
-            return WellInterfacePtr(new StandardWell<TypeTag>(well_ecl,
-                                                              report_step,
-                                                              param_,
-                                                              *rateConverter_,
-                                                              pvtreg,
-                                                              numComponents(),
-                                                              numPhases(),
-                                                              index_well_ecl,
-                                                              well_state_.firstPerfIndex()[index_well_ecl],
-                                                              well_perf_data_[index_well_ecl]));
-        } else {
-            return WellInterfacePtr(new MultisegmentWell<TypeTag>(well_ecl,
-                                                                  report_step,
-                                                                  param_,
-                                                                  *rateConverter_,
-                                                                  pvtreg,
-                                                                  numComponents(),
-                                                                  numPhases(),
-                                                                  index_well_ecl,
-                                                                  well_state_.firstPerfIndex()[index_well_ecl],
-                                                                  well_perf_data_[index_well_ecl]));
-        }
+        return this->createWellPointer(index_well_ecl, report_step);
     }
 
 
