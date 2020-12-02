@@ -54,16 +54,18 @@ namespace Opm {
                                     cartDims[0]*cartDims[1]*cartDims[2]);
         auto& parallel_wells = ebosSimulator.vanguard().parallelWells();
         parallel_well_info_.assign(parallel_wells.begin(), parallel_wells.end());
-        is_shut_or_defunct_ = [this, &ebosSimulator](const Well& well) {
+        const auto& pwell_info = parallel_well_info_;
+        std::size_t numProcs = ebosSimulator.gridView().comm().size();
+        is_shut_or_defunct_ = [&pwell_info, numProcs](const Well& well) {
                 if (well.getStatus() == Well::Status::SHUT)
                     return true;
-                if (ebosSimulator.gridView().comm().size() == 1)
+                if (numProcs == 1u)
                     return false;
                 std::pair<std::string, bool> value{well.name(), true}; // false indicate not active!
-                auto candidate = std::lower_bound(parallel_well_info_.begin(),
-                                                  parallel_well_info_.end(),
+                auto candidate = std::lower_bound(pwell_info.begin(),
+                                                  pwell_info.end(),
                                                   value);
-                return candidate == parallel_well_info_.end() || *candidate != value;
+                return candidate == pwell_info.end() || *candidate != value;
             };
 
         alternative_well_rate_init_ = EWOMS_GET_PARAM(TypeTag, bool, AlternativeWellRateInit);
