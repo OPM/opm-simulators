@@ -331,8 +331,15 @@ public:
                          blockData,
                          aquiferData);
 
-            const auto& udq_config = schedule().getUDQConfig(reportStepNum);
-            udq_config.eval( reportStepNum, schedule().wellMatcher(reportStepNum), summaryState(), udqState() );
+            /*
+              Off-by-one-fun: The reportStepNum argument corresponds to the
+              report step these results will be written to, whereas the argument
+              to UDQ function evaluation corresponds to the report step we are
+              currently on.
+            */
+            auto udq_step = reportStepNum - 1;
+            const auto& udq_config = schedule().getUDQConfig(udq_step);
+            udq_config.eval( udq_step, schedule().wellMatcher(udq_step), summaryState(), udqState() );
 
             buffer = summaryState().serialize();
         }
