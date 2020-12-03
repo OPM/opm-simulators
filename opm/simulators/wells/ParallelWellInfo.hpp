@@ -51,7 +51,7 @@ class CommunicateAbove
 #endif
 
 public:
-    CommunicateAbove(const Communication& comm);
+    explicit CommunicateAbove(const Communication& comm);
     /// \brief Adds information about the ecl indices of the perforations.
     ///
     /// \warning Theses indices need to be push in the same order as they
