@@ -72,7 +72,7 @@ void ebosGasWaterSetDeck(std::unique_ptr<Opm::Deck> deck,
                          std::unique_ptr<Opm::ErrorGuard> errorGuard,
                          double externalSetupTime)
 {
-    using ProblemTypeTag = Properties::TTag::EbosOilWaterTypeTag;
+    using ProblemTypeTag = Properties::TTag::EbosGasWaterTypeTag;
     using Vanguard = GetPropType<ProblemTypeTag, Properties::Vanguard>;
 
     Vanguard::setExternalSetupTime(externalSetupTime);
