@@ -65,7 +65,7 @@ namespace Opm {
             template<class X, class Y>
             void mv (const X& x, Y& y) const
             {
-    #if !defined(NDEBUG) && HAVE_MPI
+#if !defined(NDEBUG) && HAVE_MPI
                 // We need to make sure that all ranks are actually computing
                 // for the same well. Doing this by checking the name of the well.
                 int cstring_size = pinfo_->name().size()+1;
@@ -132,9 +132,9 @@ namespace Opm {
                 }
                 else
                 {
-                Y temp(y);
-                mv(x, temp); // includes parallel reduction
-                y -= temp;
+                    Y temp(y);
+                    mv(x, temp); // includes parallel reduction
+                    y -= temp;
                 }
             }
         private:
