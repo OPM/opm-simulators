@@ -52,7 +52,7 @@ class CommunicateAbove
 
 public:
     explicit CommunicateAbove(const Communication& comm);
-    /// \brief Adds information about the ecl indices of the perforations.
+    /// \brief Adds information about original index of the perforations in ECL Schedule.
     ///
     /// \warning Theses indices need to be push in the same order as they
     ///          appear in the ECL well specifiation. Use -1 if there is
@@ -130,7 +130,7 @@ public:
         return *comm_;
     }
 
-    /// \brief Collectively decide which ran has first perforation.
+    /// \brief Collectively decide which rank has first perforation.
     void communicateFirstPerforation(bool hasFirst);
 
     template<class T>
