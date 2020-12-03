@@ -2769,21 +2769,21 @@ namespace Opm
                 assembleControlEq(well_state, schedule, summaryState, inj_controls, prod_controls, deferred_logger);
             } else {
                 // TODO: maybe the following should go to the function assemblePressureEq()
-		switch(segmentSet()[seg].segmentType()) {
-		    case Segment::SegmentType::SICD :
-		        assembleSICDPressureEq(seg, well_state);
-			break;
-            case Segment::SegmentType::AICD : {
-                const UnitSystem& unit_system = ebosSimulator.vanguard().eclState().getDeckUnitSystem();
-                assembleAICDPressureEq(seg, well_state, unit_system);
-                break;
-            }
-		    case Segment::SegmentType::VALVE :
-		        assembleValvePressureEq(seg, well_state);
-			break;
-		    default :
-		        assemblePressureEq(seg, well_state);
-		}
+                switch(segmentSet()[seg].segmentType()) {
+                    case Segment::SegmentType::SICD :
+                    assembleSICDPressureEq(seg, well_state);
+                    break;
+                case Segment::SegmentType::AICD : {
+                    const UnitSystem& unit_system = ebosSimulator.vanguard().eclState().getDeckUnitSystem();
+                    assembleAICDPressureEq(seg, well_state, unit_system);
+                    break;
+                    }
+                case Segment::SegmentType::VALVE :
+                    assembleValvePressureEq(seg, well_state);
+                    break;
+                default :
+                    assemblePressureEq(seg, well_state);
+                }
             }
 
             well_state.segPressDrop()[seg] = well_state.segPressDropHydroStatic()[seg] +
@@ -4001,7 +4001,7 @@ namespace Opm
         using MathTool = MathToolbox<EvalWell>;
         const EvalWell mixture_viscosity = MathTool::pow(water_fraction, aicd.waterViscExponent()) * water_viscosity
                                          + MathTool::pow(oil_fraction, aicd.oilViscExponent()) * oil_viscosity
-                                         + MathTool::pow(gas_fraction, aicd.oilViscExponent()) * gas_viscosity;
+                                         + MathTool::pow(gas_fraction, aicd.gasViscExponent()) * gas_viscosity;
 
         const EvalWell mixture_density = MathTool::pow(water_fraction, aicd.waterDensityExponent()) * water_density
                                        + MathTool::pow(oil_fraction, aicd.oilDensityExponent()) * oil_density
