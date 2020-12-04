@@ -319,7 +319,7 @@ namespace Opm
 
         Well well_ecl_;
 
-        const ParallelWellInfo* parallel_well_info_;
+        const ParallelWellInfo& parallel_well_info_;
 
         const int current_step_;
 

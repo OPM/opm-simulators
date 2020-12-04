@@ -662,7 +662,7 @@ namespace Opm
 
         // accumulate resWell_ and invDuneD_ in parallel to get effects of all perforations (might be distributed)
         wellhelpers::sumDistributedWellEntries(invDuneD_[0][0], resWell_[0],
-                                            this->parallel_well_info_->communication());
+                                            this->parallel_well_info_.communication());
         // add vol * dF/dt + Q to the well equations;
         for (int componentIdx = 0; componentIdx < numWellConservationEq; ++componentIdx) {
             // TODO: following the development in MSW, we need to convert the volume of the wellbore to be surface volume

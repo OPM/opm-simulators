@@ -41,7 +41,7 @@ namespace Opm
                   const int first_perf_index,
                   const std::vector<PerforationData>& perf_data)
       : well_ecl_(well)
-      , parallel_well_info_(&pw_info)
+      , parallel_well_info_(pw_info)
       , current_step_(time_step)
       , param_(param)
       , rateConverter_(rate_converter)
