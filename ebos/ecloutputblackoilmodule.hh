@@ -195,7 +195,7 @@ class EclOutputBlackOilModule
 
 public:
     template<class CollectDataToIORankType>
-    EclOutputBlackOilModule(const Simulator& simulator, const CollectDataToIORankType& collectToIORank)
+    EclOutputBlackOilModule(const Simulator& simulator, const std::vector<std::size_t>& wbp_index_list, const CollectDataToIORankType& collectToIORank)
         : simulator_(simulator)
     {
         const Opm::SummaryConfig summaryConfig = simulator_.vanguard().summaryConfig();
@@ -223,6 +223,11 @@ public:
                     blockData_[key] = 0.0;
                 }
             }
+        }
+
+        for (const auto& global_index : wbp_index_list) {
+            if (collectToIORank.isCartIdxOnThisRank(global_index - 1))
+                this->wbpData_[global_index] = 0.0;
         }
 
         forceDisableFipOutput_ = EWOMS_GET_PARAM(TypeTag, bool, ForceDisableFluidInPlaceOutput);
@@ -837,6 +842,8 @@ public:
             if (gasConnectionSaturations_.count(cartesianIdx) > 0) {
                 gasConnectionSaturations_[cartesianIdx] = Opm::getValue(fs.saturation(gasPhaseIdx));
             }
+            if (this->wbpData_.count(cartesianIdx) > 0)
+                this->wbpData_[cartesianIdx] = Opm::getValue(fs.pressure(oilPhaseIdx));
 
             // tracers
             const auto& tracerModel = simulator_.problem().tracerModel();
@@ -1852,6 +1859,10 @@ public:
         return 0;
     }
 
+    const std::map<std::size_t, double>& getWBPData() const {
+        return this->wbpData_;
+    }
+
     const std::map<std::pair<std::string, int>, double>& getBlockData()
     { return blockData_; }
 
@@ -2365,6 +2376,7 @@ private:
     ScalarBuffer hydrocarbonPoreVolume_;
     ScalarBuffer pressureTimesPoreVolume_;
     ScalarBuffer pressureTimesHydrocarbonVolume_;
+    std::map<std::size_t , double> wbpData_;
     std::map<std::pair<std::string, int>, double> blockData_;
     std::map<size_t, Scalar> oilConnectionPressures_;
     std::map<size_t, Scalar> waterConnectionSaturations_;

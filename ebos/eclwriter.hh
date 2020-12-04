@@ -191,15 +191,26 @@ public:
     EclWriter(Simulator& simulator)
         : simulator_(simulator)
         , collectToIORank_(simulator_.vanguard())
-        , eclOutputModule_(simulator, collectToIORank_)
     {
+        std::vector<std::size_t> wbp_index_list;
         if (collectToIORank_.isIORank()) {
+            const auto& schedule = simulator_.vanguard().schedule();
             eclIO_.reset(new Opm::EclipseIO(simulator_.vanguard().eclState(),
                                             Opm::UgGridHelpers::createEclipseGrid(globalGrid(), simulator_.vanguard().eclState().getInputGrid()),
-                                            simulator_.vanguard().schedule(),
+                                            schedule,
                                             simulator_.vanguard().summaryConfig()));
-        }
 
+            const auto& wbp_calculators = eclIO_->summary().wbp_calculators( schedule.size() - 1 );
+            wbp_index_list = wbp_calculators.index_list();
+        }
+        if (collectToIORank_.isParallel()) {
+            const auto& comm = simulator_.vanguard().grid().comm();
+            unsigned long size = wbp_index_list.size();
+            comm.broadcast(&size, 1, collectToIORank_.ioRank);
+            if (!collectToIORank_.isIORank())
+                wbp_index_list.resize( size );
+            comm.broadcast(wbp_index_list.data(), size, collectToIORank_.ioRank);
+        }
         // create output thread if enabled and rank is I/O rank
         // async output is enabled by default if pthread are enabled
         bool enableAsyncOutput = EWOMS_GET_PARAM(TypeTag, bool, EnableAsyncEclOutput);
@@ -207,6 +218,8 @@ public:
         if (enableAsyncOutput && collectToIORank_.isIORank())
             numWorkerThreads = 1;
         taskletRunner_.reset(new TaskletRunner(numWorkerThreads));
+
+        this->eclOutputModule_ = std::make_unique<EclOutputBlackOilModule<TypeTag>>(simulator, wbp_index_list, this->collectToIORank_);
     }
 
     ~EclWriter()
@@ -241,7 +254,6 @@ public:
 
     void evalSummaryState(bool isSubStep)
     {
-        PAvgCalculatorCollection wbp_calculators;
         const int reportStepNum = simulator_.episodeIndex() + 1;
         /*
           The summary data is not evaluated for timestep 0, that is
@@ -279,23 +291,35 @@ public:
         this->prepareLocalCellData(isSubStep, reportStepNum);
 
         if (collectToIORank_.isParallel())
-            collectToIORank_.collect({}, eclOutputModule_.getBlockData(),
-                                     localWellData, localGroupAndNetworkData);
+            collectToIORank_.collect({},
+                                     eclOutputModule_->getBlockData(),
+                                     eclOutputModule_->getWBPData(),
+                                     localWellData,
+                                     localGroupAndNetworkData);
 
         std::map<std::string, double> miscSummaryData;
         std::map<std::string, std::vector<double>> regionData;
-        auto inplace = eclOutputModule_.outputFipLog(miscSummaryData, regionData, isSubStep);
+        auto inplace = eclOutputModule_->outputFipLog(miscSummaryData, regionData, isSubStep);
 
         bool forceDisableProdOutput = false;
         bool forceDisableInjOutput = false;
         bool forceDisableCumOutput = false;
-        eclOutputModule_.outputProdLog(reportStepNum, isSubStep, forceDisableProdOutput);
-        eclOutputModule_.outputInjLog(reportStepNum, isSubStep, forceDisableInjOutput);
-        eclOutputModule_.outputCumLog(reportStepNum, isSubStep, forceDisableCumOutput);
+        eclOutputModule_->outputProdLog(reportStepNum, isSubStep, forceDisableProdOutput);
+        eclOutputModule_->outputInjLog(reportStepNum, isSubStep, forceDisableInjOutput);
+        eclOutputModule_->outputCumLog(reportStepNum, isSubStep, forceDisableCumOutput);
+
 
         std::vector<char> buffer;
         if (this->collectToIORank_.isIORank()) {
             const auto& summary = eclIO_->summary();
+            auto wbp_calculators = summary.wbp_calculators(reportStepNum);
+            const auto& wbpData
+                = this->collectToIORank_.isParallel()
+                ? this->collectToIORank_.globalWBPData()
+                : this->eclOutputModule_->getWBPData();
+
+            for (const auto& [global_index, pressure] : wbpData)
+                wbp_calculators.add_pressure( global_index, pressure );
 
             // Add TCPU
             if (totalCpuTime != 0.0) {
@@ -316,7 +340,7 @@ public:
             const auto& blockData
                 = this->collectToIORank_.isParallel()
                 ? this->collectToIORank_.globalBlockData()
-                : this->eclOutputModule_.getBlockData();
+                : this->eclOutputModule_->getBlockData();
 
             summary.eval(summaryState(),
                          reportStepNum,
@@ -324,7 +348,7 @@ public:
                          wellData,
                          groupAndNetworkData,
                          miscSummaryData,
-                         eclOutputModule_.initialInplace(),
+                         eclOutputModule_->initialInplace(),
                          inplace,
                          wbp_calculators,
                          regionData,
@@ -366,7 +390,7 @@ public:
         const int reportStepNum = simulator_.episodeIndex() + 1;
 
         this->prepareLocalCellData(isSubStep, reportStepNum);
-        this->eclOutputModule_.outputErrorLog();
+        this->eclOutputModule_->outputErrorLog();
 
         // output using eclWriter if enabled
         auto localWellData = simulator_.problem().wellModel().wellData();
@@ -375,15 +399,18 @@ public:
 
         Opm::data::Solution localCellData = {};
         if (! isSubStep) {
-            this->eclOutputModule_.assignToSolution(localCellData);
+            this->eclOutputModule_->assignToSolution(localCellData);
 
             // add cell data to perforations for Rft output
-            this->eclOutputModule_.addRftDataToWells(localWellData, reportStepNum);
+            this->eclOutputModule_->addRftDataToWells(localWellData, reportStepNum);
         }
 
         if (this->collectToIORank_.isParallel()) {
-            collectToIORank_.collect(localCellData, eclOutputModule_.getBlockData(),
-                                     localWellData, localGroupAndNetworkData);
+            collectToIORank_.collect(localCellData,
+                                     eclOutputModule_->getBlockData(),
+                                     eclOutputModule_->getWBPData(),
+                                     localWellData,
+                                     localGroupAndNetworkData);
         }
 
         if (this->collectToIORank_.isIORank()) {
@@ -427,7 +454,7 @@ public:
 
         const auto& gridView = simulator_.vanguard().gridView();
         unsigned numElements = gridView.size(/*codim=*/0);
-        eclOutputModule_.allocBuffers(numElements, restartStepIdx, /*isSubStep=*/false, /*log=*/false, /*isRestart*/ true);
+        eclOutputModule_->allocBuffers(numElements, restartStepIdx, /*isSubStep=*/false, /*log=*/false, /*isRestart*/ true);
 
         {
             Opm::SummaryState& summaryState = simulator_.vanguard().summaryState();
@@ -436,7 +463,7 @@ public:
                                                      gridView.grid().comm());
             for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
                 unsigned globalIdx = collectToIORank_.localIdxToGlobalIdx(elemIdx);
-                eclOutputModule_.setRestart(restartValues.solution, elemIdx, globalIdx);
+                eclOutputModule_->setRestart(restartValues.solution, elemIdx, globalIdx);
             }
 
             if (inputThpres.active()) {
@@ -459,7 +486,7 @@ public:
     {}
 
     const EclOutputBlackOilModule<TypeTag>& eclOutputModule() const
-    { return eclOutputModule_; }
+    { return *eclOutputModule_; }
 
     Scalar restartTimeStepSize() const
     { return restartTimeStepSize_; }
@@ -724,7 +751,7 @@ private:
         const int numElements = gridView.size(/*codim=*/0);
         const bool log = collectToIORank_.isIORank();
 
-        eclOutputModule_.allocBuffers(numElements, reportStepNum,
+        eclOutputModule_->allocBuffers(numElements, reportStepNum,
                                       isSubStep, log, /*isRestart*/ false);
 
         ElementContext elemCtx(simulator_);
@@ -737,7 +764,7 @@ private:
             elemCtx.updatePrimaryStencil(elem);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
-            eclOutputModule_.processElement(elemCtx);
+            eclOutputModule_->processElement(elemCtx);
         }
     }
 
@@ -791,7 +818,7 @@ private:
 
     Simulator& simulator_;
     CollectDataToIORankType collectToIORank_;
-    EclOutputBlackOilModule<TypeTag> eclOutputModule_;
+    std::unique_ptr<EclOutputBlackOilModule<TypeTag>> eclOutputModule_;
     std::unique_ptr<Opm::EclipseIO> eclIO_;
     std::unique_ptr<TaskletRunner> taskletRunner_;
     Scalar restartTimeStepSize_;
