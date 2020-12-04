@@ -217,14 +217,21 @@ namespace Opm {
     template<typename TypeTag>
     std::vector< Well >
     BlackoilWellModel<TypeTag>::
-    getLocalNonshutWells(const int timeStepIdx, int& globalNumWells)
+    getLocalNonshutWells(const int timeStepIdx, int& globalNumWells) const
     {
         auto w = schedule().getWells(timeStepIdx);
         globalNumWells = w.size();
         w.erase(std::remove_if(w.begin(), w.end(), is_shut_or_defunct_), w.end());
-        local_parallel_well_info_.clear();
-        local_parallel_well_info_.reserve(w.size());
-        for (const auto& well : w)
+        return w;
+    }
+
+    template<typename TypeTag>
+    std::vector< ParallelWellInfo* >
+    BlackoilWellModel<TypeTag>::createLocalParallelWellInfo(const std::vector<Well>& wells)
+    {
+        std::vector< ParallelWellInfo* > local_parallel_well_info;
+        local_parallel_well_info.reserve(wells.size());
+        for (const auto& well : wells)
         {
             auto wellPair = std::make_pair(well.name(), true);
             auto pwell = std::lower_bound(parallel_well_info_.begin(),
@@ -232,9 +239,9 @@ namespace Opm {
                                           wellPair);
             assert(pwell != parallel_well_info_.end() &&
                    *pwell == wellPair);
-            local_parallel_well_info_.push_back(&(*pwell));
+            local_parallel_well_info.push_back(&(*pwell));
         }
-        return w;
+        return local_parallel_well_info;
     }
 
     template<typename TypeTag>
@@ -250,6 +257,7 @@ namespace Opm {
         int globalNumWells = 0;
         // Make wells_ecl_ contain only this partition's non-shut wells.
         wells_ecl_ = getLocalNonshutWells(timeStepIdx, globalNumWells);
+        local_parallel_well_info_ = createLocalParallelWellInfo(wells_ecl_);
 
         this->initializeWellProdIndCalculators();
         initializeWellPerfData();

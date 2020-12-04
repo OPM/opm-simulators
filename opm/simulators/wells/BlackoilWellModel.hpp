@@ -361,7 +361,12 @@ namespace Opm {
             /// \param timeStepIdx The index of the time step.
             /// \param[out] globalNumWells the number of wells globally.
             std::vector< Well > getLocalNonshutWells(const int timeStepIdx,
-                                                     int& globalNumWells);
+                                                     int& globalNumWells) const;
+
+            /// \brief Create the parallel well information
+            /// \param localWells The local wells from ECL schedule
+            std::vector< ParallelWellInfo* >
+            createLocalParallelWellInfo(const std::vector<Well>& localWells);
 
             // compute the well fluxes and assemble them in to the reservoir equations as source terms
             // and in the well equations.
