@@ -23,8 +23,10 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 
-#include <utility>
+#include <opm/parser/eclipse/Units/UnitSystem.hpp>
+
 #include <algorithm>
+#include <utility>
 #include <fmt/format.h>
 
 namespace Opm {
@@ -261,50 +263,15 @@ namespace Opm {
         wells_ecl_ = getLocalNonshutWells(timeStepIdx, globalNumWells);
         local_parallel_well_info_ = createLocalParallelWellInfo(wells_ecl_);
 
-        this->initializeWellProdIndCalculators();
-        initializeWellPerfData();
+        // The well state initialize bhp with the cell pressure in the top cell.
+        // We must therefore provide it with updated cell pressures
+        this->initializeWellPerfData();
+        this->initializeWellState(timeStepIdx, globalNumWells, summaryState);
 
         // Wells are active if they are active wells on at least
         // one process.
         wells_active_ = localWellsActive() ? 1 : 0;
         wells_active_ = grid.comm().max(wells_active_);
-
-        // The well state initialize bhp with the cell pressure in the top cell.
-        // We must therefore provide it with updated cell pressures
-        size_t nc = local_num_cells_;
-        std::vector<double> cellPressures(nc, 0.0);
-        ElementContext elemCtx(ebosSimulator_);
-        const auto& gridView = ebosSimulator_.vanguard().gridView();
-        const auto& elemEndIt = gridView.template end</*codim=*/0>();
-        for (auto elemIt = gridView.template begin</*codim=*/0>();
-             elemIt != elemEndIt;
-             ++elemIt)
-        {
-            const auto& elem = *elemIt;
-            if (elem.partitionType() != Dune::InteriorEntity) {
-                continue;
-            }
-            elemCtx.updatePrimaryStencil(elem);
-            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-
-            const unsigned cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-            const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-            const auto& fs = intQuants.fluidState();
-            // copy of get perfpressure in Standard well
-            // exept for value
-            double perf_pressure = 0.0;
-            if (Indices::oilEnabled) {
-                perf_pressure = fs.pressure(FluidSystem::oilPhaseIdx).value();
-            } else {
-                if (Indices::waterEnabled) {
-                    perf_pressure = fs.pressure(FluidSystem::waterPhaseIdx).value();
-                } else {
-                    perf_pressure = fs.pressure(FluidSystem::gasPhaseIdx).value();
-                }
-            }
-            cellPressures[cellIdx] = perf_pressure;
-        }
-        well_state_.init(cellPressures, schedule(), wells_ecl_, timeStepIdx, &previous_well_state_, phase_usage_, well_perf_data_, summaryState, globalNumWells);
 
         // handling MS well related
         if (param_.use_multisegment_well_&& anyMSWellOpenLocal()) { // if we use MultisegmentWell model
@@ -344,9 +311,13 @@ namespace Opm {
                                    schedule().getVFPInjTables(timeStepIdx),
                                    schedule().getVFPProdTables(timeStepIdx)) );
 
+        this->initializeWellProdIndCalculators();
+        if (this->schedule().getEvents().hasEvent(ScheduleEvents::Events::WELL_PRODUCTIVITY_INDEX, timeStepIdx)) {
+            this->runWellPIScaling(timeStepIdx, local_deferredLogger);
+        }
+
         // update the previous well state. This is used to restart failed steps.
         previous_well_state_ = well_state_;
-
     }
 
 
@@ -673,6 +644,51 @@ namespace Opm {
             }
             ++well_index;
         }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    initializeWellState(const int           timeStepIdx,
+                        const int           globalNumWells,
+                        const SummaryState& summaryState)
+    {
+        std::vector<double> cellPressures(this->local_num_cells_, 0.0);
+        ElementContext elemCtx(ebosSimulator_);
+
+        const auto& gridView = ebosSimulator_.vanguard().gridView();
+        const auto& elemEndIt = gridView.template end</*codim=*/0>();
+        for (auto elemIt = gridView.template begin</*codim=*/0>();
+             elemIt != elemEndIt;
+             ++elemIt)
+        {
+            if (elemIt->partitionType() != Dune::InteriorEntity) {
+                continue;
+            }
+
+            elemCtx.updatePrimaryStencil(*elemIt);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
+            const auto& fs = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0).fluidState();
+
+            // copy of get perfpressure in Standard well except for value
+            double& perf_pressure = cellPressures[elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0)];
+            if (Indices::oilEnabled) {
+                perf_pressure = fs.pressure(FluidSystem::oilPhaseIdx).value();
+            } else if (Indices::waterEnabled) {
+                perf_pressure = fs.pressure(FluidSystem::waterPhaseIdx).value();
+            } else {
+                perf_pressure = fs.pressure(FluidSystem::gasPhaseIdx).value();
+            }
+        }
+
+        well_state_.init(cellPressures, schedule(), wells_ecl_, timeStepIdx,
+                         &previous_well_state_, phase_usage_, well_perf_data_,
+                         summaryState, globalNumWells);
     }
 
 
@@ -2563,6 +2579,127 @@ namespace Opm {
 
 
 
+
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    runWellPIScaling(const int timeStepIdx, DeferredLogger& local_deferredLogger)
+    {
+        if (this->last_run_wellpi_.has_value() && (*this->last_run_wellpi_ == timeStepIdx)) {
+            // We've already run WELPI scaling for this report step.  Most
+            // common for the very first report step.  Don't redo WELPI scaling.
+            return;
+        }
+
+        auto hasWellPIEvent = [this, timeStepIdx](const int well_index) -> bool
+        {
+            return this->schedule()
+                .hasWellGroupEvent(this->wells_ecl_[well_index].name(),
+                                   ScheduleEvents::Events::WELL_PRODUCTIVITY_INDEX,
+                                   timeStepIdx);
+        };
+
+        auto getWellPI = [this](const int well_index) -> double
+        {
+            const auto& pu = this->phase_usage_;
+            const auto  np = this->numPhases();
+            const auto* pi = &this->well_state_.productivityIndex()[np*well_index + 0];
+
+            const auto preferred = this->wells_ecl_[well_index].getPreferredPhase();
+            switch (preferred) { // Should really have LIQUID = OIL + WATER here too...
+            case Phase::WATER:
+                return pu.phase_used[BlackoilPhases::PhaseIndex::Aqua]
+                    ? pi[pu.phase_pos[BlackoilPhases::PhaseIndex::Aqua]]
+                    : 0.0;
+
+            case Phase::OIL:
+                return pu.phase_used[BlackoilPhases::PhaseIndex::Liquid]
+                    ? pi[pu.phase_pos[BlackoilPhases::PhaseIndex::Liquid]]
+                    : 0.0;
+
+            case Phase::GAS:
+                return pu.phase_used[BlackoilPhases::PhaseIndex::Vapour]
+                    ? pi[pu.phase_pos[BlackoilPhases::PhaseIndex::Vapour]]
+                    : 0.0;
+
+            default:
+                throw std::invalid_argument {
+                    "Unsupported preferred phase " +
+                    std::to_string(static_cast<int>(preferred))
+                };
+            }
+        };
+
+        auto getWellPIScalingFactor = [this](const int    well_index,
+                                             const double newWellPI) -> double
+        {
+            return this->wells_ecl_[well_index].getWellPIScalingFactor(newWellPI);
+        };
+
+        auto rescaleWellPI =
+            [this, timeStepIdx](const int    well_index,
+                                const double scalingFactor) -> void
+        {
+            {
+                const auto& wname = this->wells_ecl_[well_index].name();
+                auto& schedule = this->ebosSimulator_.vanguard().schedule(); // Mutable
+
+                schedule.applyWellProdIndexScaling(wname, timeStepIdx, scalingFactor);
+                this->wells_ecl_[well_index] = schedule.getWell(wname, timeStepIdx);
+            }
+
+            const auto& well = this->wells_ecl_[well_index];
+            auto& pd     = this->well_perf_data_[well_index];
+            auto  pdIter = pd.begin();
+            for (const auto& conn : well.getConnections()) {
+                if (conn.state() != Connection::State::SHUT) {
+                    pdIter->connection_transmissibility_factor = conn.CF();
+                    ++pdIter;
+                }
+            }
+
+            this->well_state_.resetConnectionTransFactors(well_index, pd);
+            this->prod_index_calc_[well_index].reInit(well);
+        };
+
+        // Minimal well setup to compute PI/II values
+        {
+            auto saved_previous_well_state = this->previous_well_state_;
+            this->previous_well_state_ = this->well_state_;
+
+            well_container_ = createWellContainer(timeStepIdx);
+
+            for (auto& well : well_container_) {
+                well->init(&phase_usage_, depth_, gravity_, local_num_cells_);
+            }
+
+            std::fill(is_cell_perforated_.begin(), is_cell_perforated_.end(), false);
+            for (auto& well : well_container_) {
+                well->updatePerforatedCell(is_cell_perforated_);
+            }
+
+            this->calculateProductivityIndexValues(local_deferredLogger);
+
+            this->previous_well_state_ = std::move(saved_previous_well_state);
+        }
+
+        const auto nw = this->numLocalWells();
+        for (auto wellID = 0*nw; wellID < nw; ++wellID) {
+            if (hasWellPIEvent(wellID)) {
+                const auto newWellPI = getWellPI(wellID);
+                const auto scalingFactor = getWellPIScalingFactor(wellID, newWellPI);
+                rescaleWellPI(wellID, scalingFactor);
+            }
+        }
+
+        this->last_run_wellpi_ = timeStepIdx;
+    }
+
+
+
+
+
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
@@ -2614,6 +2751,60 @@ namespace Opm {
             well->setWsolvent(wsolvent);
         }
     }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    assignWellGuideRates(data::Wells& wsrpt) const
+    {
+        for (const auto& well : this->wells_ecl_) {
+            auto xwPos = wsrpt.find(well.name());
+            if (xwPos == wsrpt.end()) { // No well results.  Unexpected.
+                continue;
+            }
+
+            xwPos->second.guide_rates = this->getGuideRateValues(well);
+        }
+    }
+
+
+
+
+
+    template <typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    assignShutConnections(data::Wells& wsrpt) const
+    {
+        for (const auto& well : this->wells_ecl_) {
+            auto xwPos = wsrpt.find(well.name());
+            if (xwPos == wsrpt.end()) { // No well results.  Unexpected.
+                continue;
+            }
+
+            auto& xcon = xwPos->second.connections;
+            for (const auto& conn : well.getConnections()) {
+                if (conn.state() != Connection::State::SHUT) {
+                    continue;
+                }
+
+                auto& xc = xcon.emplace_back();
+                xc.index = conn.global_index();
+                xc.pressure = xc.reservoir_rate = 0.0;
+
+                xc.effective_Kh = conn.Kh();
+                xc.trans_factor = conn.CF();
+            }
+        }
+    }
+
+
+
+
 
     template <typename TypeTag>
     void

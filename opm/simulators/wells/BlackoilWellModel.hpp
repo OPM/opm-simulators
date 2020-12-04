@@ -34,6 +34,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <unordered_map>
@@ -215,16 +216,8 @@ namespace Opm {
             {
                 auto wsrpt = well_state_.report(phase_usage_, Opm::UgGridHelpers::globalCell(grid()));
 
-                for (const auto& well : this->wells_ecl_) {
-                    auto xwPos = wsrpt.find(well.name());
-                    if (xwPos == wsrpt.end()) { // No well results.  Unexpected.
-                        continue;
-                    }
-
-                    auto& grval = xwPos->second.guide_rates;
-                    grval.clear();
-                    grval += this->getGuideRateValues(well);
-                }
+                this->assignWellGuideRates(wsrpt);
+                this->assignShutConnections(wsrpt);
 
                 return wsrpt;
             }
@@ -296,6 +289,9 @@ namespace Opm {
 
             void initializeWellProdIndCalculators();
             void initializeWellPerfData();
+            void initializeWellState(const int           timeStepIdx,
+                                     const int           globalNumWells,
+                                     const SummaryState& summaryState);
 
             // create the well container
             std::vector<WellInterfacePtr > createWellContainer(const int time_step);
@@ -331,6 +327,9 @@ namespace Opm {
             bool report_step_starts_;
             bool glift_debug = false;
             bool alternative_well_rate_init_;
+
+            std::optional<int> last_run_wellpi_{};
+
             std::unique_ptr<RateConverterType> rateConverter_;
             std::unique_ptr<VFPProperties<VFPInjProperties,VFPProdProperties>> vfp_properties_;
 
@@ -482,6 +481,10 @@ namespace Opm {
 
             void setWsolvent(const Group& group, const Schedule& schedule, const int reportStepIdx, double wsolvent);
 
+            void runWellPIScaling(const int timeStepIdx, DeferredLogger& local_deferredLogger);
+
+            void assignWellGuideRates(data::Wells& wsrpt) const;
+            void assignShutConnections(data::Wells& wsrpt) const;
             void assignGroupValues(const int                               reportStepIdx,
                                    const Schedule&                         sched,
                                    std::map<std::string, data::GroupData>& gvalues) const;

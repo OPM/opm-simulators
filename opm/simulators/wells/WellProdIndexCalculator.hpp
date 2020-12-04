@@ -41,6 +41,16 @@ namespace Opm {
         ///   per-connection static data.
         explicit WellProdIndexCalculator(const Well& well);
 
+        /// Reinitialization operation
+        ///
+        /// Needed to repopulate the internal data members in case of
+        /// changes to the Well's properties, e.g., as a result of the
+        /// Well's CTFs being rescaled due to WELPI.
+        ///
+        /// \param[in] well Individual well for which to collect
+        ///   per-connection static data.
+        void reInit(const Well& well);
+
         /// Compute connection-level steady-state productivity index value
         /// using dynamic phase mobility.
         ///

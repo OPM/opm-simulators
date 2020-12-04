@@ -791,7 +791,6 @@ namespace MissingFeatures {
             "WELEVNT",
             "WELMOVEL"
             "WELOPENL"
-            "WELPI",
             "WELPRI",
             "WELSOMIN",
             "WELSPECL",

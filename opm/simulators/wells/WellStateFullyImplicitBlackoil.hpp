@@ -64,6 +64,7 @@ namespace Opm
         using BaseType :: wellMap;
         using BaseType :: numWells;
         using BaseType :: numPhases;
+        using BaseType :: resetConnectionTransFactors;
 
         /// Allocate and initialize if wells is non-null.  Also tries
         /// to give useful initial values to the bhp(), wellRates()
@@ -267,6 +268,16 @@ namespace Opm
                                     perf_skin_pressure_[ perf ] = prevState->perfSkinPressure()[ oldPerf_idx ];
                                     perf_water_velocity_[ perf ] = prevState->perfWaterVelocity()[ oldPerf_idx ];
                                 }
+                            }
+                        }
+
+                        // Productivity index.
+                        {
+                            auto*       thisWellPI = &this     ->productivityIndex()[newIndex*np + 0];
+                            const auto* thatWellPI = &prevState->productivityIndex()[oldIndex*np + 0];
+
+                            for (int p = 0; p < np; ++p) {
+                                thisWellPI[p] = thatWellPI[p];
                             }
                         }
                     }

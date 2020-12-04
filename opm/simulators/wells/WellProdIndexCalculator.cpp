@@ -96,6 +96,11 @@ Opm::WellProdIndexCalculator::WellProdIndexCalculator(const Well& well)
     : standardConnFactors_{ calculateStandardConnFactors(well) }
 {}
 
+void Opm::WellProdIndexCalculator::reInit(const Well& well)
+{
+    this->standardConnFactors_ = calculateStandardConnFactors(well);
+}
+
 double
 Opm::WellProdIndexCalculator::
 connectionProdIndStandard(const std::size_t connIdx,
