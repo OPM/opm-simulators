@@ -40,6 +40,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/utils/DeferredLogger.cpp
   opm/simulators/utils/gatherDeferredLogger.cpp
   opm/simulators/utils/ParallelRestart.cpp
+  opm/simulators/wells/ParallelWellInfo.cpp
   opm/simulators/wells/VFPProdProperties.cpp
   opm/simulators/wells/VFPInjProperties.cpp
   opm/simulators/wells/WellGroupHelpers.cpp
@@ -90,6 +91,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_norne_pvt.cpp
   tests/test_wellprodindexcalculator.cpp
   tests/test_wellstatefullyimplicitblackoil.cpp
+  tests/test_parallelwellinfo.cpp
   )
 
 if(MPI_FOUND)
@@ -235,6 +237,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/MSWellHelpers.hpp
   opm/simulators/wells/BlackoilWellModel.hpp
   opm/simulators/wells/BlackoilWellModel_impl.hpp
+  opm/simulators/wells/ParallelWellInfo.hpp
   )
 
 list (APPEND EXAMPLE_SOURCE_FILES

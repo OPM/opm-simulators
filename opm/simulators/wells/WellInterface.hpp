@@ -121,7 +121,9 @@ namespace Opm
                                                    has_brine,
                                                    Indices::numPhases >;
         /// Constructor
-        WellInterface(const Well& well, const int time_step,
+        WellInterface(const Well& well,
+                      const ParallelWellInfo& pw_info,
+                      const int time_step,
                       const ModelParameters& param,
                       const RateConverterType& rate_converter,
                       const int pvtRegionIdx,
@@ -316,6 +318,8 @@ namespace Opm
         static const int INVALIDCOMPLETION = INT_MAX;
 
         Well well_ecl_;
+
+        const ParallelWellInfo& parallel_well_info_;
 
         const int current_step_;
 

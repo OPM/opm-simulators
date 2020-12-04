@@ -33,7 +33,9 @@ namespace Opm
 
     template<typename TypeTag>
     StandardWell<TypeTag>::
-    StandardWell(const Well& well, const int time_step,
+    StandardWell(const Well& well,
+                 const ParallelWellInfo& pw_info,
+                 const int time_step,
                  const ModelParameters& param,
                  const RateConverterType& rate_converter,
                  const int pvtRegionIdx,
@@ -42,9 +44,10 @@ namespace Opm
                  const int index_of_well,
                  const int first_perf_index,
                  const std::vector<PerforationData>& perf_data)
-        : Base(well, time_step, param, rate_converter, pvtRegionIdx, num_components, num_phases, index_of_well, first_perf_index, perf_data)
+    : Base(well, pw_info, time_step, param, rate_converter, pvtRegionIdx, num_components, num_phases, index_of_well, first_perf_index, perf_data)
     , perf_densities_(number_of_perforations_)
     , perf_pressure_diffs_(number_of_perforations_)
+    , parallelB_(duneB_, pw_info)
     , F0_(numWellConservationEq)
     , ipr_a_(number_of_phases_)
     , ipr_b_(number_of_phases_)
@@ -657,6 +660,9 @@ namespace Opm
         // Update the connection
         connectionRates_ = connectionRates;
 
+        // accumulate resWell_ and invDuneD_ in parallel to get effects of all perforations (might be distributed)
+        wellhelpers::sumDistributedWellEntries(invDuneD_[0][0], resWell_[0],
+                                            this->parallel_well_info_.communication());
         // add vol * dF/dt + Q to the well equations;
         for (int componentIdx = 0; componentIdx < numWellConservationEq; ++componentIdx) {
             // TODO: following the development in MSW, we need to convert the volume of the wellbore to be surface volume
@@ -2475,7 +2481,8 @@ namespace Opm
         assert( invDrw_.size() == invDuneD_.N() );
 
         // Bx_ = duneB_ * x
-        duneB_.mv(x, Bx_);
+        parallelB_.mv(x, Bx_);
+
         // invDBx = invDuneD_ * Bx_
         // TODO: with this, we modified the content of the invDrw_.
         // Is it necessary to do this to save some memory?
@@ -2574,7 +2581,7 @@ namespace Opm
 
         BVectorWell resWell = resWell_;
         // resWell = resWell - B * x
-        duneB_.mmv(x, resWell);
+        parallelB_.mmv(x, resWell);
         // xw = D^-1 * resWell
         invDuneD_.mv(resWell, xw);
     }

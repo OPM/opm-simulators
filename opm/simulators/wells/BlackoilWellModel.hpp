@@ -61,6 +61,7 @@
 #include <opm/simulators/wells/MultisegmentWell.hpp>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
+#include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/timestepping/gatherConvergenceReport.hpp>
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -278,6 +279,9 @@ namespace Opm {
             std::vector< std::vector<PerforationData> > well_perf_data_;
             std::vector< WellProdIndexCalculator > prod_index_calc_;
 
+            std::vector< ParallelWellInfo > parallel_well_info_;
+            std::vector< ParallelWellInfo* > local_parallel_well_info_;
+
             bool wells_active_;
 
             // a vector of all the wells.
@@ -358,6 +362,11 @@ namespace Opm {
             /// \param[out] globalNumWells the number of wells globally.
             std::vector< Well > getLocalNonshutWells(const int timeStepIdx,
                                                      int& globalNumWells) const;
+
+            /// \brief Create the parallel well information
+            /// \param localWells The local wells from ECL schedule
+            std::vector< ParallelWellInfo* >
+            createLocalParallelWellInfo(const std::vector<Well>& localWells);
 
             // compute the well fluxes and assemble them in to the reservoir equations as source terms
             // and in the well equations.

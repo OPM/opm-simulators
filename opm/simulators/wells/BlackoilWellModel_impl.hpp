@@ -52,17 +52,20 @@ namespace Opm {
         const auto& cartDims = Opm::UgGridHelpers::cartDims(grid);
         setupCartesianToCompressed_(Opm::UgGridHelpers::globalCell(grid),
                                     cartDims[0]*cartDims[1]*cartDims[2]);
-
-        is_shut_or_defunct_ = [&ebosSimulator](const Well& well) {
+        auto& parallel_wells = ebosSimulator.vanguard().parallelWells();
+        parallel_well_info_.assign(parallel_wells.begin(), parallel_wells.end());
+        const auto& pwell_info = parallel_well_info_;
+        std::size_t numProcs = ebosSimulator.gridView().comm().size();
+        is_shut_or_defunct_ = [&pwell_info, numProcs](const Well& well) {
                 if (well.getStatus() == Well::Status::SHUT)
                     return true;
-                if (ebosSimulator.gridView().comm().size() == 1)
+                if (numProcs == 1u)
                     return false;
                 std::pair<std::string, bool> value{well.name(), true}; // false indicate not active!
-                const auto& parallel_wells = ebosSimulator.vanguard().parallelWells();
-                auto candidate = std::lower_bound(parallel_wells.begin(), parallel_wells.end(),
-                                                 value);
-                return candidate == parallel_wells.end() || *candidate != value;
+                auto candidate = std::lower_bound(pwell_info.begin(),
+                                                  pwell_info.end(),
+                                                  value);
+                return candidate == pwell_info.end() || *candidate != value;
             };
 
         alternative_well_rate_init_ = EWOMS_GET_PARAM(TypeTag, bool, AlternativeWellRateInit);
@@ -225,6 +228,25 @@ namespace Opm {
     }
 
     template<typename TypeTag>
+    std::vector< ParallelWellInfo* >
+    BlackoilWellModel<TypeTag>::createLocalParallelWellInfo(const std::vector<Well>& wells)
+    {
+        std::vector< ParallelWellInfo* > local_parallel_well_info;
+        local_parallel_well_info.reserve(wells.size());
+        for (const auto& well : wells)
+        {
+            auto wellPair = std::make_pair(well.name(), true);
+            auto pwell = std::lower_bound(parallel_well_info_.begin(),
+                                          parallel_well_info_.end(),
+                                          wellPair);
+            assert(pwell != parallel_well_info_.end() &&
+                   *pwell == wellPair);
+            local_parallel_well_info.push_back(&(*pwell));
+        }
+        return local_parallel_well_info;
+    }
+
+    template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
     beginReportStep(const int timeStepIdx)
@@ -237,6 +259,7 @@ namespace Opm {
         int globalNumWells = 0;
         // Make wells_ecl_ contain only this partition's non-shut wells.
         wells_ecl_ = getLocalNonshutWells(timeStepIdx, globalNumWells);
+        local_parallel_well_info_ = createLocalParallelWellInfo(wells_ecl_);
 
         this->initializeWellProdIndCalculators();
         initializeWellPerfData();
@@ -801,6 +824,7 @@ namespace Opm {
         const auto& perf_data = this->well_perf_data_[wellID];
 
         return std::make_unique<WellType>(this->wells_ecl_[wellID],
+                                          *local_parallel_well_info_[wellID],
                                           time_step,
                                           this->param_,
                                           *this->rateConverter_,

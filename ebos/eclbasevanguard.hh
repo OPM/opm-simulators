@@ -416,6 +416,16 @@ public:
         int outputInterval = EWOMS_GET_PARAM(TypeTag, int, EclOutputInterval);
         if (outputInterval >= 0)
             schedule().restart().overrideRestartWriteInterval(outputInterval);
+
+        // Initialize parallelWells with all local wells
+        const auto& schedule_wells = schedule().getWellsatEnd();
+        parallelWells_.reserve(schedule_wells.size());
+
+        for (const auto& well: schedule_wells)
+        {
+            parallelWells_.emplace_back(well.name(), true);
+        }
+        std::sort(parallelWells_.begin(), parallelWells_.end());
     }
 
     /*!
