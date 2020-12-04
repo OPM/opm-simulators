@@ -769,6 +769,12 @@ add_test_compareECLFiles(CASENAME wsegsicd
 			  ABS_TOL ${abs_tol}
 			  REL_TOL ${rel_tol})
 
+add_test_compareECLFiles(CASENAME wsegaicd
+			  FILENAME BASE_MSW_WSEGAICD
+			  SIMULATOR flow
+			  ABS_TOL ${abs_tol}
+			  REL_TOL ${rel_tol})
+
 add_test_compareECLFiles(CASENAME nnc
                          FILENAME NNC_AND_EDITNNC
                          SIMULATOR flow

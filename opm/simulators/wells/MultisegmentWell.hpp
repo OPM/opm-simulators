@@ -313,6 +313,8 @@ namespace Opm
 
         std::vector<std::vector<EvalWell>> segment_phase_viscosities_;
 
+        std::vector<std::vector<EvalWell>> segment_phase_densities_;
+
 
         void initMatrixAndVectors(const int num_cells) const;
 
@@ -504,8 +506,10 @@ namespace Opm
         double maxPerfPress(const Simulator& ebos_simulator) const;
 
         void assembleSICDPressureEq(const int seg, WellState& well_state) const;
-
         EvalWell pressureDropSpiralICD(const int seg) const;
+
+        void assembleAICDPressureEq(const int seg, WellState& well_state, const UnitSystem& unit_system) const;
+        EvalWell pressureDropAutoICD(const int seg, const UnitSystem& unit_system) const;
 
         // assemble the pressure equation for sub-critical valve (WSEGVALV)
         void assembleValvePressureEq(const int seg, WellState& well_state) const;
