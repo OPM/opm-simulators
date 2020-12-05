@@ -346,14 +346,16 @@ protected:
         if (this->eclState().aquifer().hasNumericalAquifer()) {
             aquifer_cell_volumes = this->eclState().aquifer().numericalAquifers().cellVolumes();
         }
-        grid_->processEclipseFormat(mpiRank == 0 ? &this->eclState().getInputGrid()
+        grid_->processEclipseFormat(this->eclState(),
+                                    this->deck(),
+                                    mpiRank == 0 ? &this->eclState().getInputGrid()
                                                  : nullptr,
                                     /*isPeriodic=*/false,
+                                    this->eclState().getInputNNC(),
                                     /*flipNormals=*/false,
                                     /*clipZ=*/false,
                                     mpiRank == 0 ? this->eclState().fieldProps().porv(true)
                                                  : std::vector<double>(),
-                                    this->eclState().getInputNNC(),
                                     aquifer_cell_volumes);
 
         // we use separate grid objects: one for the calculation of the initial condition
