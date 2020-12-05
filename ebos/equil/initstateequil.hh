@@ -1935,7 +1935,7 @@ private:
                 const auto &aqu_cell = aquifer.getCell(global_index);
                 std::ostringstream ss;
                 ss << "FOR AQUIFER CELL AT { " << aqu_cell.I + 1 << " " << aqu_cell.J + 1 << " "
-                   << aqu_cell.J + 1 << " } OF NUMERICAL AQUIFER " << aqu_cell.aquifer_id << " , "
+                   << aqu_cell.K + 1 << " } OF NUMERICAL AQUIFER " << aqu_cell.aquifer_id << " with global_index " << global_index << ", "
                    << "WATER SATURATION IS SET TO BE UNITY";
                 OpmLog::info(ss.str());
             }

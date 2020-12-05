@@ -753,7 +753,7 @@ private:
                 // Discard the NNC if it is between active cell and inactive cell
                 std::ostringstream sstr;
                 sstr << "NNC between active and inactive cells ("
-                     << low << " -> " << high << ")";
+                     << low << " -> " << high << ") with globalcell is (" << c1 << "->" << c2 <<")";
                 Opm::OpmLog::warning(sstr.str());
                 continue;
             }
