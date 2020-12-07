@@ -114,8 +114,8 @@ namespace Opm {
                     // broadcast when applying C^T.
                     using YField = typename Y::block_type::value_type;
                     assert(y.size() == 1);
-                    this->parallel_well_info_->communication().allreduce<std::plus<YField>>(y[0].container().data(),
-                                                                               y[0].container().size());
+                    this->parallel_well_info_->communication().template allreduce<std::plus<YField>>(y[0].container().data(),
+                                                                                                     y[0].container().size());
                 }
             }
 
