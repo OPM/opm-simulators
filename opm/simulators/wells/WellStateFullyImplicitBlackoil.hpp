@@ -146,11 +146,12 @@ namespace Opm
                 const auto& well_info = this->wellMap().at(wname);
                 const int connpos = well_info[1];
                 const int num_perf_this_well = well_info[2];
+                int global_num_perf_this_well = parallel_well_info[w]->communication().sum(num_perf_this_well);
 
                 for (int perf = connpos; perf < connpos + num_perf_this_well; ++perf) {
                     if (wells_ecl[w].getStatus() == Well::Status::OPEN) {
                         for (int p = 0; p < np; ++p) {
-                            perfphaserates_[np*perf + p] = wellRates()[np*w + p] / double(num_perf_this_well);
+                            perfphaserates_[np*perf + p] = wellRates()[np*w + p] / double(global_num_perf_this_well);
                         }
                     }
                     perfPress()[perf] = cellPressures[well_perf_data[w][perf-connpos].cell_index];
@@ -224,6 +225,10 @@ namespace Opm
                         // perfPhaseRates
                         const int oldPerf_idx_beg = (*it).second[ 1 ];
                         const int num_perf_old_well = (*it).second[ 2 ];
+                        int num_perf_changed = (num_perf_old_well != num_perf_this_well) ? 1 : 0;
+                        num_perf_changed = parallel_well_info[w]->communication().sum(num_perf_changed);
+                        bool global_num_perf_same = (num_perf_changed == 0);
+
                         // copy perforation rates when the number of perforations is equal,
                         // otherwise initialize perfphaserates to well rates divided by the number of perforations.
 
@@ -231,7 +236,7 @@ namespace Opm
                         if (new_iter == this->wellMap().end())
                             throw std::logic_error("Fatal error in WellStateFullyImplicitBlackoil - could not find well: " + well.name());
                         int connpos = new_iter->second[1];
-                        if( num_perf_old_well == num_perf_this_well )
+                        if( global_num_perf_same )
                         {
                             int old_perf_phase_idx = oldPerf_idx_beg *np;
                             for (int perf_phase_idx = connpos*np;
@@ -240,14 +245,15 @@ namespace Opm
                                 perfPhaseRates()[ perf_phase_idx ] = prevState->perfPhaseRates()[ old_perf_phase_idx ];
                             }
                         } else {
+                            int global_num_perf_this_well = parallel_well_info[w]->communication().sum(num_perf_this_well);
                             for (int perf = connpos; perf < connpos + num_perf_this_well; ++perf) {
                                 for (int p = 0; p < np; ++p) {
-                                    perfPhaseRates()[np*perf + p] = wellRates()[np*newIndex + p] / double(num_perf_this_well);
+                                    perfPhaseRates()[np*perf + p] = wellRates()[np*newIndex + p] / double(global_num_perf_this_well);
                                 }
                             }
                         }
                         // perfPressures
-                        if( num_perf_old_well == num_perf_this_well )
+                        if( global_num_perf_same )
                         {
                             int oldPerf_idx = oldPerf_idx_beg;
                             for (int perf = connpos; perf < connpos + num_perf_this_well; ++perf, ++oldPerf_idx )
@@ -257,7 +263,7 @@ namespace Opm
                         }
                         // perfSolventRates
                         if (pu.has_solvent) {
-                            if( num_perf_old_well == num_perf_this_well )
+                            if( global_num_perf_same )
                             {
                                 int oldPerf_idx = oldPerf_idx_beg;
                                 for (int perf = connpos; perf < connpos + num_perf_this_well; ++perf, ++oldPerf_idx )
@@ -907,7 +913,7 @@ namespace Opm
 
         /// One rate pr well
         double solventWellRate(const int w) const {
-            return std::accumulate(&perfRateSolvent_[0] + first_perf_index_[w], &perfRateSolvent_[0] + first_perf_index_[w+1], 0.0);
+            return parallel_well_info_[w]->sumPerfValues(&perfRateSolvent_[0] + first_perf_index_[w], &perfRateSolvent_[0] + first_perf_index_[w+1]);
         }
 
         /// One rate pr well connection.
@@ -916,7 +922,7 @@ namespace Opm
 
         /// One rate pr well
         double polymerWellRate(const int w) const {
-            return std::accumulate(&perfRatePolymer_[0] + first_perf_index_[w], &perfRatePolymer_[0] + first_perf_index_[w+1], 0.0);
+            return parallel_well_info_[w]->sumPerfValues(&perfRatePolymer_[0] + first_perf_index_[w], &perfRatePolymer_[0] + first_perf_index_[w+1]);
         }
 
         /// One rate pr well connection.
@@ -925,7 +931,7 @@ namespace Opm
 
         /// One rate pr well
         double brineWellRate(const int w) const {
-            return std::accumulate(&perfRateBrine_[0] + first_perf_index_[w], &perfRateBrine_[0] + first_perf_index_[w+1], 0.0);
+            return parallel_well_info_[w]->sumPerfValues(&perfRateBrine_[0] + first_perf_index_[w], &perfRateBrine_[0] + first_perf_index_[w+1]);
         }
 
         std::vector<double>& wellReservoirRates()

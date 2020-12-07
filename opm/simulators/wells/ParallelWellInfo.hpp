@@ -27,6 +27,8 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 
 #include <memory>
+#include <iterator>
+#include <numeric>
 
 namespace Opm
 {
@@ -196,6 +198,16 @@ public:
 
     /// \brief Inidicate completion of reset of the ecl index information
     void endReset();
+
+    /// \brief Sum all the values of the perforations
+    template<typename It>
+    typename std::iterator_traits<It>::value_type sumPerfValues(It begin, It end)
+    {
+        using V = typename std::iterator_traits<It>::value_type;
+        /// \todo cater for overlap later. Currently only owner
+        auto local = std::accumulate(begin, end, V());
+        return communication().sum(local);
+    }
 
     /// \brief Free data of communication data structures.
     void clearCommunicateAbove();
