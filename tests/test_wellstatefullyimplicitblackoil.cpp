@@ -143,7 +143,8 @@ namespace {
 
         state.init(cpress, setup.sched,
                    wells, ppinfos,
-                   timeStep, nullptr, setup.pu, setup.well_perf_data, setup.st, setup.sched.getWells(timeStep).size());
+                   timeStep, nullptr, setup.pu, setup.well_perf_data, setup.st,
+                   wells.size());
 
         state.initWellStateMSWell(setup.sched.getWells(timeStep),
                                   setup.pu, nullptr);
