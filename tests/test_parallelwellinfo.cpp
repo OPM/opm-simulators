@@ -116,38 +116,38 @@ BOOST_AUTO_TEST_CASE(ParallelWellComparison)
     BOOST_CHECK_EQUAL_COLLECTIONS(well_info.begin(), well_info.end(),
                                   pairs.begin(), pairs.end());
 
-    BOOST_TEST(well_info[0] < pairs[1]);
-    BOOST_TEST(pairs[0] != well_info[1]);
-    BOOST_TEST(pairs[0] < well_info[1]);
-    BOOST_TEST(well_info[0] == pairs[0]);
+    BOOST_CHECK(well_info[0] < pairs[1]);
+    BOOST_CHECK(pairs[0] != well_info[1]);
+    BOOST_CHECK(pairs[0] < well_info[1]);
+    BOOST_CHECK(well_info[0] == pairs[0]);
 
-    BOOST_TEST(well_info[0] != well_info[1]);
+    BOOST_CHECK(well_info[0] != well_info[1]);
 
     Opm::ParallelWellInfo well0, well1;
 
-    BOOST_TEST(well0 == well1);
+    BOOST_CHECK(well0 == well1);
 #if HAVE_MPI
-    BOOST_TEST(well0.communication()==helper.getLocalCommunicator());
+    BOOST_CHECK(well0.communication()==helper.getLocalCommunicator());
 #endif
     Opm::ParallelWellInfo well2("Test", false);
     std::pair<std::string, bool> pwell={"Test", true};
-    BOOST_TEST(well2 < pwell);
+    BOOST_CHECK(well2 < pwell);
     Opm::ParallelWellInfo well3("Test", true);
-    BOOST_TEST(! (well3 < pwell));
+    BOOST_CHECK(! (well3 < pwell));
     pwell.second = false;
-    BOOST_TEST(! (well3 < pwell));
+    BOOST_CHECK(! (well3 < pwell));
 
     if (helper.rank() == 0)
-        BOOST_TEST(well_info[0].communication().size()==1);
+        BOOST_CHECK(well_info[0].communication().size()==1);
 
 #if HAVE_MPI
     Opm::ParallelWellInfo::Communication comm{MPI_COMM_WORLD};
 
-    BOOST_TEST(well_info[1].communication().size() == comm.size());
+    BOOST_CHECK(well_info[1].communication().size() == comm.size());
 
     if (helper.rank() > 0)
     {
-        BOOST_TEST(well_info[2].communication().size() == comm.size()-1);
+        BOOST_CHECK(well_info[2].communication().size() == comm.size()-1);
     }
 #endif
 
@@ -173,11 +173,11 @@ BOOST_AUTO_TEST_CASE(CommunicateAboveSelf)
         }
         commAbove.endReset();
         auto above = commAbove.communicate(-10.0, current.data(), current.size());
-        BOOST_TEST(above[0]==-10.0);
-        BOOST_TEST(above.size() == current.size());
+        BOOST_CHECK(above[0]==-10.0);
+        BOOST_CHECK(above.size() == current.size());
         auto a = above.begin()+1;
         std::for_each(current.begin(), current.begin() + (current.size()-1),
-                      [&a](double v){ BOOST_TEST(*(a++) == v);});
+                      [&a](double v){ BOOST_CHECK(*(a++) == v);});
     }
 }
 
@@ -202,11 +202,11 @@ BOOST_AUTO_TEST_CASE(CommunicateAboveSelf1)
         }
         commAbove.endReset();
         auto above = commAbove.communicate(-10.0, current.data(), current.size());
-        BOOST_TEST(above[0]==-10.0);
-        BOOST_TEST(above.size() == current.size());
+        BOOST_CHECK(above[0]==-10.0);
+        BOOST_CHECK(above.size() == current.size());
         auto a = above.begin()+1;
         std::for_each(current.begin(), current.begin() + (current.size()-1),
-                      [&a](double v){ BOOST_TEST(*(a++) == v);});
+                      [&a](double v){ BOOST_CHECK(*(a++) == v);});
     }
 }
 
@@ -262,16 +262,16 @@ BOOST_AUTO_TEST_CASE(CommunicateAboveParalle)
         commAbove.endReset();
         auto above = commAbove.communicate(-10.0, current.data(), current.size());
         if (comm.rank() == 0)
-            BOOST_TEST(above[0]==-10.0);
+            BOOST_CHECK(above[0]==-10.0);
 
-        BOOST_TEST(above.size() == current.size());
+        BOOST_CHECK(above.size() == current.size());
 
         for (std::size_t i = 0; i < current.size(); ++i)
         {
             auto gi = comm.rank() + comm.size() * i;
             if (gi > 0)
             {
-                BOOST_TEST(above[i]==globalCurrent[gi-1]);
+                BOOST_CHECK(above[i]==globalCurrent[gi-1]);
             }
         }
     }
