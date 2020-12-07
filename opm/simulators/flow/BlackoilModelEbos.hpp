@@ -205,14 +205,6 @@ namespace Opm {
         : ebosSimulator_(ebosSimulator)
         , grid_(ebosSimulator_.vanguard().grid())
         , phaseUsage_(phaseUsageFromDeck(eclState()))
-        , has_disgas_(FluidSystem::enableDissolvedGas())
-        , has_vapoil_(FluidSystem::enableVaporizedOil())
-        , has_solvent_(getPropValue<TypeTag, Properties::EnableSolvent>())
-        , has_polymer_(getPropValue<TypeTag, Properties::EnablePolymer>())
-        , has_polymermw_(getPropValue<TypeTag, Properties::EnablePolymerMW>())
-        , has_energy_(getPropValue<TypeTag, Properties::EnableEnergy>())
-        , has_foam_(getPropValue<TypeTag, Properties::EnableFoam>())
-        , has_brine_(getPropValue<TypeTag, Properties::EnableBrine>())
         , param_( param )
         , well_model_ (well_model)
         , terminal_output_ (terminal_output)
@@ -662,33 +654,33 @@ namespace Opm {
                     maxCoeff[ compIdx ] = std::max( maxCoeff[ compIdx ], std::abs( R2 ) / pvValue );
                 }
 
-                if ( has_solvent_ ) {
+                if constexpr (has_solvent_) {
                     B_avg[ contiSolventEqIdx ] += 1.0 / intQuants.solventInverseFormationVolumeFactor().value();
                     const auto R2 = ebosResid[cell_idx][contiSolventEqIdx];
                     R_sum[ contiSolventEqIdx ] += R2;
                     maxCoeff[ contiSolventEqIdx ] = std::max( maxCoeff[ contiSolventEqIdx ], std::abs( R2 ) / pvValue );
                 }
-                if (has_polymer_ ) {
+                if constexpr (has_polymer_) {
                     B_avg[ contiPolymerEqIdx ] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
                     const auto R2 = ebosResid[cell_idx][contiPolymerEqIdx];
                     R_sum[ contiPolymerEqIdx ] += R2;
                     maxCoeff[ contiPolymerEqIdx ] = std::max( maxCoeff[ contiPolymerEqIdx ], std::abs( R2 ) / pvValue );
                 }
-                if (has_foam_ ) {
+                if constexpr (has_foam_) {
                     B_avg[ contiFoamEqIdx ] += 1.0 / fs.invB(FluidSystem::gasPhaseIdx).value();
                     const auto R2 = ebosResid[cell_idx][contiFoamEqIdx];
                     R_sum[ contiFoamEqIdx ] += R2;
                     maxCoeff[ contiFoamEqIdx ] = std::max( maxCoeff[ contiFoamEqIdx ], std::abs( R2 ) / pvValue );
                 }
-                if (has_brine_ ) {
+                if constexpr (has_brine_) {
                     B_avg[ contiBrineEqIdx ] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
                     const auto R2 = ebosResid[cell_idx][contiBrineEqIdx];
                     R_sum[ contiBrineEqIdx ] += R2;
                     maxCoeff[ contiBrineEqIdx ] = std::max( maxCoeff[ contiBrineEqIdx ], std::abs( R2 ) / pvValue );
                 }
 
-                if (has_polymermw_) {
-                    assert(has_polymer_);
+                if constexpr (has_polymermw_) {
+                    static_assert(has_polymer_);
 
                     B_avg[contiPolymerMWEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
                     // the residual of the polymer molecular equation is scaled down by a 100, since molecular weight
@@ -699,7 +691,7 @@ namespace Opm {
                     maxCoeff[contiPolymerMWEqIdx] = std::max( maxCoeff[contiPolymerMWEqIdx], std::abs( R2 ) / pvValue );
                 }
 
-                if (has_energy_ ) {
+                if constexpr (has_energy_) {
                     B_avg[ contiEnergyEqIdx ] += 1.0;
                     const auto R2 = ebosResid[cell_idx][contiEnergyEqIdx];
                     R_sum[ contiEnergyEqIdx ] += R2;
@@ -801,23 +793,23 @@ namespace Opm {
                     const unsigned compIdx = Indices::canonicalToActiveComponentIndex(canonicalCompIdx);
                     compNames[compIdx] = FluidSystem::componentName(canonicalCompIdx);
                 }
-                if (has_solvent_) {
+                if constexpr (has_solvent_) {
                     compNames[solventSaturationIdx] = "Solvent";
                 }
-                if (has_polymer_) {
+                if constexpr (has_polymer_) {
                     compNames[polymerConcentrationIdx] = "Polymer";
                 }
-                if (has_polymermw_) {
+                if constexpr (has_polymermw_) {
                     assert(has_polymer_);
                     compNames[polymerMoleWeightIdx] = "MolecularWeightP";
                 }
-                if (has_energy_) {
+                if constexpr (has_energy_) {
                     compNames[temperatureIdx] = "Energy";
                 }
-                if (has_foam_) {
+                if constexpr (has_foam_) {
                     compNames[foamConcentrationIdx] = "Foam";
                 }
-                if (has_brine_) {
+                if constexpr (has_brine_) {
                     compNames[saltConcentrationIdx] = "Brine";
                 }
             }
@@ -958,14 +950,12 @@ namespace Opm {
         Simulator& ebosSimulator_;
         const Grid&            grid_;
         const PhaseUsage phaseUsage_;
-        const bool has_disgas_;
-        const bool has_vapoil_;
-        const bool has_solvent_;
-        const bool has_polymer_;
-        const bool has_polymermw_;
-        const bool has_energy_;
-        const bool has_foam_;
-	const bool has_brine_;
+        static constexpr bool has_solvent_ = getPropValue<TypeTag, Properties::EnableSolvent>();
+        static constexpr bool has_polymer_ = getPropValue<TypeTag, Properties::EnablePolymer>();
+        static constexpr bool has_polymermw_ = getPropValue<TypeTag, Properties::EnablePolymerMW>();
+        static constexpr bool has_energy_ = getPropValue<TypeTag, Properties::EnableEnergy>();
+        static constexpr bool has_foam_ = getPropValue<TypeTag, Properties::EnableFoam>();
+        static constexpr bool has_brine_ = getPropValue<TypeTag, Properties::EnableBrine>();
 
         ModelParameters                 param_;
         SimulatorReportSingle failureReport_;
