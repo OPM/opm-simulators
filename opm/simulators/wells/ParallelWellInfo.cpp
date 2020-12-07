@@ -90,6 +90,20 @@ void CommunicateAbove::endReset()
 #endif
 }
 
+struct CopyGatherScatter
+{
+    static const double& gather(const double* a, std::size_t i)
+    {
+        return a[i];
+    }
+
+    static void scatter(double* a, const double& v, std::size_t i)
+    {
+        a[i] = v;
+    }
+};
+
+
 std::vector<double> CommunicateAbove::communicate(double first_above,
                                                   const double* current,
                                                   std::size_t size)
@@ -99,13 +113,12 @@ std::vector<double> CommunicateAbove::communicate(double first_above,
 #if HAVE_MPI
     if (comm_.size() > 1)
     {
-        using Handle = Dune::OwnerOverlapCopyCommunication<int,int>::CopyGatherScatter<double*>;
         auto aboveData = above.data();
         // Ugly const_cast needed as my compiler says, that
         // passing const double*& and double* as parameter is
         // incompatible with function decl template<Data> forward(const Data&, Data&))
         // That would need the first argument to be double* const&
-        communicator_.forward<Handle>(const_cast<double*>(current), aboveData);
+        communicator_.forward<CopyGatherScatter>(const_cast<double*>(current), aboveData);
     }
     else
 #endif
