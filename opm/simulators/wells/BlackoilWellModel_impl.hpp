@@ -106,7 +106,6 @@ namespace Opm {
 
         // Create cartesian to compressed mapping
         const auto& schedule_wells = schedule().getWellsatEnd();
-        const auto& cartesianSize = Opm::UgGridHelpers::cartDims(grid());
 
         // initialize the additional cell connections introduced by wells.
         for (const auto& well : schedule_wells)
@@ -119,11 +118,8 @@ namespace Opm {
             for ( size_t c=0; c < connectionSet.size(); c++ )
             {
                 const auto& connection = connectionSet.get(c);
-                int i = connection.getI();
-                int j = connection.getJ();
-                int k = connection.getK();
-                int cart_grid_idx = i + cartesianSize[0]*(j + cartesianSize[1]*k);
-                int compressed_idx = cartesian_to_compressed_.at(cart_grid_idx);
+                int compressed_idx = cartesian_to_compressed_
+                    .at(connection.global_index());
 
                 if ( compressed_idx >= 0 ) { // Ignore connections in inactive/remote cells.
                     wellCells.push_back(compressed_idx);
@@ -607,8 +603,6 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     initializeWellPerfData()
     {
-        const auto& grid = ebosSimulator_.vanguard().grid();
-        const auto& cartDims = Opm::UgGridHelpers::cartDims(grid);
         well_perf_data_.resize(wells_ecl_.size());
         int well_index = 0;
         for (const auto& well : wells_ecl_) {
@@ -620,11 +614,8 @@ namespace Opm {
             bool firstOpenCompletion = true;
 
             for (const auto& completion : well.getConnections()) {
-                const int i = completion.getI();
-                const int j = completion.getJ();
-                const int k = completion.getK();
-                const int cart_grid_indx = i + cartDims[0] * (j + cartDims[1] * k);
-                const int active_index = cartesian_to_compressed_[cart_grid_indx];
+                const int active_index =
+                    cartesian_to_compressed_[completion.global_index()];
                 if (completion.state() == Connection::State::OPEN) {
                     if (active_index >= 0) {
                         if (firstOpenCompletion)

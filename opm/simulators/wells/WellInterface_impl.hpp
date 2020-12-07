@@ -1178,7 +1178,6 @@ namespace Opm
                                Opm::DeferredLogger& deferred_logger
                                )
     {
-        const int* cart_dims = Opm::UgGridHelpers::cartDims(grid);
         auto cell_to_faces = Opm::UgGridHelpers::cell2Faces(grid);
         auto begin_face_centroids = Opm::UgGridHelpers::beginFaceCentroids(grid);
 
@@ -1197,13 +1196,8 @@ namespace Opm
         CheckDistributedWellConnections checker(well_ecl_, parallel_well_info_);
         for (size_t c=0; c<connectionSet.size(); c++) {
             const auto& connection = connectionSet.get(c);
-            const int i = connection.getI();
-            const int j = connection.getJ();
-            const int k = connection.getK();
-
-            const int* cpgdim = cart_dims;
-            const int cart_grid_indx = i + cpgdim[0]*(j + cpgdim[1]*k);
-            const int cell = cartesian_to_compressed[cart_grid_indx];
+            const int cell =
+                cartesian_to_compressed[connection.global_index()];
             if (connection.state() != Connection::State::OPEN || cell >= 0)
             {
                 checker.connectionFound(c);
