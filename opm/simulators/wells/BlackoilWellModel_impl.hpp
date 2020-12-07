@@ -396,9 +396,14 @@ namespace Opm {
         }
 
         if (alternative_well_rate_init_) {
-            // Update the well rates to match state, if only single-phase rates.
+            // Update the well rates of well_state_, if only single-phase rates, to
+            // have proper multi-phase rates proportional to rates at bhp zero.
+            // This is done only for producers, as injectors will only have a single
+            // nonzero phase anyway.
             for (auto& well : well_container_) {
-                well->updateWellStateRates(ebosSimulator_, well_state_, local_deferredLogger);
+                if (well->isProducer()) {
+                    well->updateWellStateRates(ebosSimulator_, well_state_, local_deferredLogger);
+                }
             }
         }
 
