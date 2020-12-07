@@ -25,6 +25,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
+#include <opm/simulators/wells/ParallelWellInfo.hpp>
 
 #include <array>
 #include <cassert>
@@ -51,6 +52,7 @@ namespace Opm
         /// with -1e100.
         void init(const std::vector<double>& cellPressures,
                   const std::vector<Well>& wells_ecl,
+                  const std::vector<ParallelWellInfo*>& parallel_well_info,
                   const PhaseUsage& pu,
                   const std::vector<std::vector<PerforationData>>& well_perf_data,
                   const SummaryState& summary_state)
@@ -59,6 +61,7 @@ namespace Opm
             wellMap_.clear();
 
             well_perf_data_ = well_perf_data;
+            parallel_well_info_ = parallel_well_info;
 
             {
                 // const int nw = wells->number_of_wells;
@@ -76,7 +79,7 @@ namespace Opm
                     const Well& well = wells_ecl[w];
               
                     // Initialize bhp(), thp(), wellRates(), temperature().
-                    initSingleWell(cellPressures, w, well, pu, summary_state);
+                    initSingleWell(cellPressures, w, well, *parallel_well_info[w], pu, summary_state);
 
                     // Setup wellname -> well index mapping.
                     const int num_perf_this_well = well_perf_data[w].size();
@@ -192,6 +195,11 @@ namespace Opm
         const WellMapType& wellMap() const { return wellMap_; }
         WellMapType& wellMap() { return wellMap_; }
 
+        const ParallelWellInfo& parallelWellInfo(std::size_t well_index) const
+        {
+            return *parallel_well_info_[well_index];
+        }
+
         /// The number of wells present.
         int numWells() const
         {
@@ -225,7 +233,10 @@ namespace Opm
                 if (!this->open_for_output_[well_index])
                     continue;
 
-                auto& well = dw[ itr.first ];
+                const auto& pwinfo = *parallel_well_info_[well_index];
+                using WellT = std::remove_reference_t<decltype(dw[ itr.first ])>;
+                WellT dummyWell; // dummy if we are not owner
+                auto& well = pwinfo.isOwner() ? dw[ itr.first ] : dummyWell;
                 well.bhp = this->bhp().at( well_index );
                 well.thp = this->thp().at( well_index );
                 well.temperature = this->temperature().at( well_index );
@@ -244,25 +255,44 @@ namespace Opm
                     well.rates.set( rt::gas, wv[ wellrate_index + pu.phase_pos[BlackoilPhases::Vapour] ] );
                 }
 
-                const auto& pd = this->well_perf_data_[well_index];
-                const int num_perf_well = pd.size();
-                well.connections.resize(num_perf_well);
-
-                for( int i = 0; i < num_perf_well; ++i ) {
-                    const auto active_index = this->well_perf_data_[well_index][i].cell_index;
-                    auto& connection = well.connections[ i ];
-                    connection.index = globalCellIdxMap[active_index];
-                    connection.pressure = this->perfPress()[ itr.second[1] + i ];
-                    connection.reservoir_rate = this->perfRates()[ itr.second[1] + i ];
-                    connection.trans_factor = pd[i].connection_transmissibility_factor;
+                if (pwinfo.communication().size()==1)
+                {
+                    reportConnections(well, pu, itr, globalCellIdxMap);
                 }
-                assert(num_perf_well == int(well.connections.size()));
+                else
+                {
+                    assert(pwinfo.communication().rank() != 0 || &dummyWell != &well);
+                    // report the local connections
+                    reportConnections(dummyWell, pu, itr, globalCellIdxMap);
+                    // gather them to well on root.
+                    gatherVectorsOnRoot(dummyWell.connections, well.connections,
+                                        pwinfo.communication());
+                }
             }
 
             return dw;
 
         }
 
+        virtual void reportConnections(data::Well& well, [[maybe_unused]] const PhaseUsage& pu,
+                                       const WellMapType::value_type& itr,
+                                       const int* globalCellIdxMap) const
+        {
+            const auto well_index = itr.second[ 0 ];
+            const auto& pd = this->well_perf_data_[well_index];
+            const int num_perf_well = pd.size();
+            well.connections.resize(num_perf_well);
+
+            for( int i = 0; i < num_perf_well; ++i ) {
+                const auto active_index = this->well_perf_data_[well_index][i].cell_index;
+                auto& connection = well.connections[ i ];
+                connection.index = globalCellIdxMap[active_index];
+                connection.pressure = this->perfPress()[ itr.second[1] + i ];
+                connection.reservoir_rate = this->perfRates()[ itr.second[1] + i ];
+                connection.trans_factor = pd[i].connection_transmissibility_factor;
+            }
+            assert(num_perf_well == int(well.connections.size()));
+        }
         virtual ~WellState() = default;
         WellState() = default;
         WellState(const WellState& rhs)  = default;
@@ -282,9 +312,37 @@ namespace Opm
 
         WellMapType wellMap_;
 
+        using MPIComm = typename Dune::MPIHelper::MPICommunicator;
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+        using Communication = Dune::Communication<MPIComm>;
+#else
+        using Communication = Dune::CollectiveCommunication<MPIComm>;
+#endif
+        void gatherVectorsOnRoot(const std::vector< data::Connection >& from_connections,
+                                 std::vector< data::Connection >& to_connections,
+                                 const Communication& comm) const
+        {
+            int size = from_connections.size();
+            std::vector<int> sizes;
+            std::vector<int> displ;
+            if (comm.rank()==0){
+                sizes.resize(comm.size());
+            }
+            comm.gather(&size, sizes.data(), 1, 0);
+
+            if (comm.rank()==0){
+                displ.resize(comm.size()+1, 0);
+                std::transform(displ.begin(), displ.end()-1, sizes.begin(), displ.begin()+1,
+                               std::plus<int>());
+                to_connections.resize(displ.back());
+            }
+            comm.gatherv(from_connections.data(), size, to_connections.data(),
+                         sizes.data(), displ.data(), 0);
+        }
         void initSingleWell(const std::vector<double>& cellPressures,
                             const int w,
                             const Well& well,
+                            const ParallelWellInfo& well_info,
                             const PhaseUsage& pu,
                             const SummaryState& summary_state)
         {
@@ -319,7 +377,9 @@ namespace Opm
                 : (prod_controls.cmode == Well::ProducerCMode::GRUP);
 
             const double inj_surf_rate = well.isInjector() ? inj_controls.surface_rate : 0.0; // To avoid a "maybe-uninitialized" warning.
-
+            const double local_pressure = well_perf_data_[w].empty() ?
+                0 : cellPressures[well_perf_data_[w][0].cell_index];
+            const double global_pressure = well_info.broadcastFirstPerforationValue(local_pressure);
             if (well.getStatus() == Well::Status::STOP) {
                 // Stopped well:
                 // 1. Rates: zero well rates.
@@ -329,8 +389,7 @@ namespace Opm
                 if (is_bhp) {
                     bhp_[w] = bhp_limit;
                 } else {
-                    const int first_cell = well_perf_data_[w][0].cell_index;
-                    bhp_[w] = cellPressures[first_cell];
+                    bhp_[w] = global_pressure;
                 }
             } else if (is_grup) {
                 // Well under group control.
@@ -339,9 +398,8 @@ namespace Opm
                 //    little above or below (depending on if
                 //    the well is an injector or producer)
                 //    pressure in first perforation cell.
-                const int first_cell = well_perf_data_[w][0].cell_index;
                 const double safety_factor = well.isInjector() ? 1.01 : 0.99;
-                bhp_[w] = safety_factor*cellPressures[first_cell];
+                bhp_[w] = safety_factor * global_pressure;
             } else {
                 // Open well, under own control:
                 // 1. Rates: initialize well rates to match
@@ -400,9 +458,8 @@ namespace Opm
                 if (is_bhp) {
                     bhp_[w] = bhp_limit;
                 } else {
-                    const int first_cell = well_perf_data_[w][0].cell_index;
                     const double safety_factor = well.isInjector() ? 1.01 : 0.99;
-                    bhp_[w] = safety_factor*cellPressures[first_cell];
+                    bhp_[w] = safety_factor * global_pressure;
                 }
             }
 
@@ -419,6 +476,7 @@ namespace Opm
 
     protected:
         std::vector<std::vector<PerforationData>> well_perf_data_;
+        std::vector<ParallelWellInfo*> parallel_well_info_;
     };
 
 } // namespace Opm

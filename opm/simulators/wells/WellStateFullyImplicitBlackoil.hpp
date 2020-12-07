@@ -72,6 +72,7 @@ namespace Opm
         void init(const std::vector<double>& cellPressures,
                   const Schedule& schedule,
                   const std::vector<Well>& wells_ecl,
+                  const std::vector<ParallelWellInfo*>& parallel_well_info,
                   const int report_step,
                   const WellStateFullyImplicitBlackoil* prevState,
                   const PhaseUsage& pu,
@@ -80,8 +81,12 @@ namespace Opm
                   const int globalNumberOfWells)
         {
             // call init on base class
-            BaseType :: init(cellPressures, wells_ecl, pu, well_perf_data, summary_state);
+            BaseType :: init(cellPressures, wells_ecl, parallel_well_info, pu, well_perf_data, summary_state);
 
+            for (const auto& winfo: parallel_well_info)
+            {
+                well_rates.insert({winfo->name(), std::make_pair(winfo->isOwner(), std::vector<double>())});
+            }
             globalIsInjectionGrup_.assign(globalNumberOfWells,0);
             globalIsProductionGrup_.assign(globalNumberOfWells,0);
             wellNameToGlobalIdx_.clear();
@@ -319,6 +324,7 @@ namespace Opm
 
 
         void resize(const std::vector<Well>& wells_ecl,
+                    const std::vector<ParallelWellInfo*>& parallel_well_info,
                     const Schedule& schedule,
                     const bool handle_ms_well,
                     const size_t numCells,
@@ -328,7 +334,7 @@ namespace Opm
                     const int globalNumWells)
         {
             const std::vector<double> tmp(numCells, 0.0); // <- UGLY HACK to pass the size
-            init(tmp, schedule, wells_ecl, 0, nullptr, pu, well_perf_data, summary_state, globalNumWells);
+            init(tmp, schedule, wells_ecl, parallel_well_info, 0, nullptr, pu, well_perf_data, summary_state, globalNumWells);
 
             if (handle_ms_well) {
                 initWellStateMSWell(wells_ecl, pu, nullptr);
@@ -385,7 +391,7 @@ namespace Opm
         }
 
         void setCurrentWellRates(const std::string& wellName, const std::vector<double>& rates ) {
-            well_rates[wellName] = rates;
+            well_rates[wellName].second = rates;
         }
 
         const std::vector<double>& currentWellRates(const std::string& wellName) const {
@@ -394,7 +400,7 @@ namespace Opm
             if (it == well_rates.end())
                 OPM_THROW(std::logic_error, "Could not find any rates for well  " << wellName);
 
-            return it->second;
+            return it->second.second;
         }
 
         bool hasWellRates(const std::string& wellName) const {
@@ -527,20 +533,16 @@ namespace Opm
 
             using rt = data::Rates::opt;
             std::vector< rt > phs( np );
-            std::vector<rt> pi(np);
             if( pu.phase_used[Water] ) {
                 phs.at( pu.phase_pos[Water] ) = rt::wat;
-                pi .at( pu.phase_pos[Water] ) = rt::productivity_index_water;
             }
 
             if( pu.phase_used[Oil] ) {
                 phs.at( pu.phase_pos[Oil] ) = rt::oil;
-                pi .at( pu.phase_pos[Oil] ) = rt::productivity_index_oil;
             }
 
             if( pu.phase_used[Gas] ) {
                 phs.at( pu.phase_pos[Gas] ) = rt::gas;
-                pi .at( pu.phase_pos[Gas] ) = rt::productivity_index_gas;
             }
 
             /* this is a reference or example on **how** to convert from
@@ -552,7 +554,8 @@ namespace Opm
 
             for( const auto& wt : this->wellMap() ) {
                 const auto w = wt.second[ 0 ];
-                if (!this->open_for_output_[w])
+                const auto& pwinfo = *parallel_well_info_[w];
+                if (!this->open_for_output_[w] || !pwinfo.isOwner())
                     continue;
 
                 auto& well = res.at( wt.first );
@@ -626,31 +629,6 @@ namespace Opm
                     curr.inj  = this->currentInjectionControls() [w];
                 }
 
-                size_t local_comp_index = 0;
-                for( auto& comp : well.connections) {
-                    const auto connPhaseOffset = np * (wt.second[1] + local_comp_index);
-
-                    const auto rates  = this->perfPhaseRates().begin() + connPhaseOffset;
-                    const auto connPI = this->connectionProductivityIndex().begin() + connPhaseOffset;
-
-                    for( int i = 0; i < np; ++i ) {
-                        comp.rates.set( phs[ i ], *(rates  + i) );
-                        comp.rates.set( pi [ i ], *(connPI + i) );
-                    }
-                    if ( pu.has_polymer ) {
-                        comp.rates.set( rt::polymer, this->perfRatePolymer()[wt.second[1] + local_comp_index]);
-                    }
-                    if ( pu.has_brine ) {
-                        comp.rates.set( rt::brine, this->perfRateBrine()[wt.second[1] + local_comp_index]);
-                    }
-                    if ( pu.has_solvent || pu.has_zFraction) {
-                        comp.rates.set( rt::solvent, this->perfRateSolvent()[wt.second[1] + local_comp_index]);
-                    }
-
-                    ++local_comp_index;
-                }
-                assert(local_comp_index == this->well_perf_data_[w].size());
-
                 const auto nseg = this->numSegments(w);
                 for (auto seg_ix = 0*nseg; seg_ix < nseg; ++seg_ix) {
                     const auto seg_no = this->segmentNumber(w, seg_ix);
@@ -662,6 +640,54 @@ namespace Opm
             return res;
         }
 
+        virtual void reportConnections(data::Well& well, const PhaseUsage &pu,
+                                       const WellMapType::value_type& wt,
+                                       const int* globalCellIdxMap) const
+        {
+            using rt = data::Rates::opt;
+            WellState::reportConnections(well, pu, wt, globalCellIdxMap);
+            const int np = pu.num_phases;
+            size_t local_comp_index = 0;
+            std::vector< rt > phs( np );
+            std::vector<rt> pi(np);
+            if( pu.phase_used[Water] ) {
+                phs.at( pu.phase_pos[Water] ) = rt::wat;
+                pi .at( pu.phase_pos[Water] ) = rt::productivity_index_water;
+            }
+
+            if( pu.phase_used[Oil] ) {
+                phs.at( pu.phase_pos[Oil] ) = rt::oil;
+                pi .at( pu.phase_pos[Oil] ) = rt::productivity_index_oil;
+            }
+
+            if( pu.phase_used[Gas] ) {
+                phs.at( pu.phase_pos[Gas] ) = rt::gas;
+                pi .at( pu.phase_pos[Gas] ) = rt::productivity_index_gas;
+            }
+            for( auto& comp : well.connections) {
+                const auto connPhaseOffset = np * (wt.second[1] + local_comp_index);
+
+                const auto rates  = this->perfPhaseRates().begin() + connPhaseOffset;
+                const auto connPI = this->connectionProductivityIndex().begin() + connPhaseOffset;
+
+                for( int i = 0; i < np; ++i ) {
+                    comp.rates.set( phs[ i ], *(rates  + i) );
+                    comp.rates.set( pi [ i ], *(connPI + i) );
+                }
+                if ( pu.has_polymer ) {
+                    comp.rates.set( rt::polymer, this->perfRatePolymer()[wt.second[1] + local_comp_index]);
+                }
+                if ( pu.has_brine ) {
+                    comp.rates.set( rt::brine, this->perfRateBrine()[wt.second[1] + local_comp_index]);
+                }
+                if ( pu.has_solvent ) {
+                    comp.rates.set( rt::solvent, this->perfRateSolvent()[wt.second[1] + local_comp_index]);
+                }
+
+                ++local_comp_index;
+            }
+            assert(local_comp_index == this->well_perf_data_[wt.second[0]].size());
+        }
 
         /// init the MS well related.
         void initWellStateMSWell(const std::vector<Well>& wells_ecl,
@@ -1055,9 +1081,25 @@ namespace Opm
             // Create a function that calls some function
             // for all the individual data items to simplify
             // the further code.
-            auto iterateContainer = [](auto& container, auto& func) {
+            auto iterateContainer = [this](auto& container, auto& func) {
                 for (auto& x : container) {
                     func(x.second);
+                }
+            };
+            auto iterateRatesContainer = [this](auto& container, auto& func) {
+                for (auto& x : container) {
+                    if (x.second.first)
+                    {
+                        func(x.second.second);
+                    }
+                    else
+                    {
+                        // We might actually store non-zero values for
+                        // distributed wells even if they are not owned.
+                        std::vector<double> dummyRate;
+                        dummyRate.assign(x.second.second.size(), 0);
+                        func(dummyRate);
+                    }
                 }
             };
 
@@ -1067,7 +1109,7 @@ namespace Opm
                 iterateContainer(injection_group_reduction_rates, func);
                 iterateContainer(injection_group_reservoir_rates, func);
                 iterateContainer(production_group_rates, func);
-                iterateContainer(well_rates, func);
+                iterateRatesContainer(well_rates, func);
             };
 
             // Compute the size of the data.
@@ -1217,7 +1259,7 @@ namespace Opm
         std::map<std::string, Group::ProductionCMode> current_production_group_controls_;
         std::map<std::pair<Opm::Phase, std::string>, Group::InjectionCMode> current_injection_group_controls_;
 
-        std::map<std::string, std::vector<double>> well_rates;
+        std::map<std::string, std::pair<bool, std::vector<double>>> well_rates;
         std::map<std::string, std::vector<double>> production_group_rates;
         std::map<std::string, std::vector<double>> production_group_reduction_rates;
         std::map<std::string, std::vector<double>> injection_group_reduction_rates;
