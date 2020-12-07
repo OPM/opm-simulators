@@ -205,8 +205,6 @@ namespace Opm {
         : ebosSimulator_(ebosSimulator)
         , grid_(ebosSimulator_.vanguard().grid())
         , phaseUsage_(phaseUsageFromDeck(eclState()))
-        , has_disgas_(FluidSystem::enableDissolvedGas())
-        , has_vapoil_(FluidSystem::enableVaporizedOil())
         , has_solvent_(getPropValue<TypeTag, Properties::EnableSolvent>())
         , has_polymer_(getPropValue<TypeTag, Properties::EnablePolymer>())
         , has_polymermw_(getPropValue<TypeTag, Properties::EnablePolymerMW>())
@@ -958,8 +956,6 @@ namespace Opm {
         Simulator& ebosSimulator_;
         const Grid&            grid_;
         const PhaseUsage phaseUsage_;
-        const bool has_disgas_;
-        const bool has_vapoil_;
         const bool has_solvent_;
         const bool has_polymer_;
         const bool has_polymermw_;
