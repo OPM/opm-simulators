@@ -377,8 +377,8 @@ namespace Opm
                 : (prod_controls.cmode == Well::ProducerCMode::GRUP);
 
             const double inj_surf_rate = well.isInjector() ? inj_controls.surface_rate : 0.0; // To avoid a "maybe-uninitialized" warning.
-            const double local_pressure = well_perf_data_[w].size() ?
-                cellPressures[well_perf_data_[w][0].cell_index] : 0;
+            const double local_pressure = well_perf_data_[w].empty() ?
+                0 : cellPressures[well_perf_data_[w][0].cell_index];
             const double global_pressure = well_info.broadcastFirstPerforationValue(local_pressure);
             if (well.getStatus() == Well::Status::STOP) {
                 // Stopped well:

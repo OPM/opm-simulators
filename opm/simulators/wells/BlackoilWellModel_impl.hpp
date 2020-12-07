@@ -840,8 +840,8 @@ namespace Opm {
         const auto& perf_data = this->well_perf_data_[wellID];
 
         // Cater for case where local part might have no perforations.
-        const int pvtreg = perf_data.size() ?
-            pvt_region_idx_[perf_data.front().cell_index] : 0;
+        const int pvtreg = perf_data.empty() ?
+            0 : pvt_region_idx_[perf_data.front().cell_index];
         const auto& parallel_well_info = *local_parallel_well_info_[wellID];
         auto global_pvtreg = parallel_well_info.broadcastFirstPerforationValue(pvtreg);
 
