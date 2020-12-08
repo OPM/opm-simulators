@@ -2678,9 +2678,11 @@ namespace Opm {
             this->previous_well_state_ = this->well_state_;
 
             well_container_ = createWellContainer(timeStepIdx);
-
+            std::vector< Scalar > B_avg(numComponents(), Scalar() );
+            // we don't plan to iterate so just passing trivial B_avg
+            // for now
             for (auto& well : well_container_) {
-                well->init(&phase_usage_, depth_, gravity_, local_num_cells_);
+                well->init(&phase_usage_, depth_, gravity_, local_num_cells_, B_avg);
             }
 
             std::fill(is_cell_perforated_.begin(), is_cell_perforated_.end(), false);
