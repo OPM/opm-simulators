@@ -269,14 +269,12 @@ if(BUILD_FLOW_VARIANTS)
                            DIR spe1)
 endif()
 
-if(BUILD_FLOW_VARIANTS)
-  add_test_compareECLFiles(CASENAME spe1_spider
+add_test_compareECLFiles(CASENAME spe1_spider
                            FILENAME SPIDER_CAKESLICE
                            SIMULATOR flow
                            ABS_TOL ${abs_tol}
                            REL_TOL ${rel_tol}
                            DIR radial_grid)
-endif()
 
 add_test_compareECLFiles(CASENAME ctaquifer_2d_oilwater
                          FILENAME 2D_OW_CTAQUIFER
