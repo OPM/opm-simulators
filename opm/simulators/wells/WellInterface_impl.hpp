@@ -1536,15 +1536,15 @@ namespace Opm
     {
         this->operability_status_.reset();
 
-        updateIPR(ebos_simulator, deferred_logger);
-
-        // checking the BHP limit related
-        checkOperabilityUnderBHPLimitProducer(well_state, ebos_simulator, deferred_logger);
-
-        const auto& summaryState = ebos_simulator.vanguard().summaryState();
-
-        // checking whether the well can operate under the THP constraints.
-        if (this->wellHasTHPConstraints(summaryState)) {
+        const Well::ProducerCMode& current_control = well_state.currentProductionControls()[this->index_of_well_];
+        // Operability checking is not free
+        // Only check wells under BHP and THP control
+        if(current_control == Well::ProducerCMode::BHP || current_control == Well::ProducerCMode::THP) {
+            updateIPR(ebos_simulator, deferred_logger);
+            checkOperabilityUnderBHPLimitProducer(well_state, ebos_simulator, deferred_logger);
+        }
+        // we do some extra checking for wells under THP control.
+        if (current_control == Well::ProducerCMode::THP) {
             checkOperabilityUnderTHPLimitProducer(ebos_simulator, well_state, deferred_logger);
         }
     }

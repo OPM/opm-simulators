@@ -2574,11 +2574,10 @@ namespace Opm
                 deferred_logger.debug(msg);
             }
         } else {
-            // Shutting wells that can not find bhp value from thp may results in
-            // too early shutting of the well during startup of new wells.
-            // Lets try to keep them open.
-            //this->operability_status_.can_obtain_bhp_with_thp_limit = false;
-            //this->operability_status_.obey_bhp_limit_with_thp_limit = false;
+            // Shutting wells that can not find bhp value from thp
+            // when under THP control
+            this->operability_status_.can_obtain_bhp_with_thp_limit = false;
+            this->operability_status_.obey_bhp_limit_with_thp_limit = false;
             if (!this->wellIsStopped()) {
                 const double thp_limit = this->getTHPConstraint(summaryState);
                 deferred_logger.debug(" could not find bhp value at thp limit "
