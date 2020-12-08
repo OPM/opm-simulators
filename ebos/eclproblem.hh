@@ -898,7 +898,6 @@ public:
             maxOilSaturation_.resize(numDof, 0.0);
         }
 
-        updateElementDepths_();
         readRockParameters_();
         readMaterialParameters_();
         readThermalParameters_();
@@ -1468,8 +1467,9 @@ public:
     Scalar dofCenterDepth(const Context& context, unsigned spaceIdx, unsigned timeIdx) const
     {
         unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-        return elementCenterDepth_[globalSpaceIdx];
+        return this->simulator().vanguard().cellCenterDepth(globalSpaceIdx);
     }
+
 
     /*!
      * \copydoc BlackoilProblem::rockCompressibility
@@ -2241,40 +2241,6 @@ private:
 
     }
 
-    Scalar cellCenterDepth(const Element& element) const
-    {
-        typedef typename Element::Geometry Geometry;
-        static constexpr int zCoord = Element::dimension - 1;
-        Scalar zz = 0.0;
-
-        const Geometry geometry = element.geometry();
-        const int corners = geometry.corners();
-        for (int i=0; i < corners; ++i)
-            zz += geometry.corner(i)[zCoord];
-
-        return zz/Scalar(corners);
-    }
-
-    void updateElementDepths_()
-    {
-        const auto& simulator = this->simulator();
-        const auto& vanguard = simulator.vanguard();
-        const auto& gridView = vanguard.gridView();
-        const auto& elemMapper = this->elementMapper();;
-
-        int numElements = gridView.size(/*codim=*/0);
-        elementCenterDepth_.resize(numElements);
-
-        auto elemIt = gridView.template begin</*codim=*/0>();
-        const auto& elemEndIt = gridView.template end</*codim=*/0>();
-        for (; elemIt != elemEndIt; ++elemIt) {
-            const Element& element = *elemIt;
-            const unsigned int elemIdx = elemMapper.index(element);
-
-            elementCenterDepth_[elemIdx] = cellCenterDepth(element);
-        }
-    }
-
     // update the parameters needed for DRSDT and DRVDT
     void updateCompositionChangeLimits_()
     {
@@ -2475,7 +2441,7 @@ private:
                 if (!rockTableIdx_.empty()) {
                     tableIdx = rockTableIdx_[elemIdx];
                 }
-                overburdenPressure_[elemIdx] = overburdenTables[tableIdx].eval(elementCenterDepth_[elemIdx], /*extrapolation=*/true);
+                overburdenPressure_[elemIdx] = overburdenTables[tableIdx].eval(vanguard.cellCenterDepth(elemIdx), /*extrapolation=*/true);
             }
         }
 
@@ -3313,7 +3279,6 @@ private:
     static std::string briefDescription_;
 
     std::array<std::vector<Scalar>, 2> referencePorosity_;
-    std::vector<Scalar> elementCenterDepth_;
     EclTransmissibility<TypeTag> transmissibilities_;
 
     std::shared_ptr<EclMaterialLawManager> materialLawManager_;

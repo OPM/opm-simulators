@@ -51,10 +51,9 @@ public:
     using Base::waterCompIdx;
     using Base::waterPhaseIdx;
     AquiferCarterTracy(const std::vector<Aquancon::AquancCell>& connections,
-                       const std::unordered_map<int, int>& cartesian_to_compressed,
                        const Simulator& ebosSimulator,
                        const AquiferCT::AQUCT_data& aquct_data)
-        : Base(aquct_data.aquiferID, connections, cartesian_to_compressed, ebosSimulator)
+        : Base(aquct_data.aquiferID, connections, ebosSimulator)
         , aquct_data_(aquct_data)
     {
     }
@@ -92,10 +91,6 @@ protected:
     // This function is used to initialize and calculate the alpha_i for each grid connection to the aquifer
     inline void initializeConnections() override
     {
-        const auto& eclState = this->ebos_simulator_.vanguard().eclState();
-        const auto& grid = eclState.getInputGrid();
-
-        // We hack the cell depth values for now. We can actually get it from elementcontext pos
         this->cell_depth_.resize(this->size(), this->aquiferDepth());
         this->alphai_.resize(this->size(), 1.0);
         this->faceArea_connected_.resize(this->size(), 0.0);
@@ -108,10 +103,13 @@ protected:
         this->cellToConnectionIdx_.resize(this->ebos_simulator_.gridView().size(/*codim=*/0), -1);
         for (size_t idx = 0; idx < this->size(); ++idx) {
             const auto global_index = this->connections_[idx].global_index;
-            const int cell_index = this->cartesian_to_compressed_.at(global_index);
+            const int cell_index = this->ebos_simulator_.vanguard().compressedIndex(global_index);
+
+            if (cell_index < 0) //the global_index is not part of this grid
+                continue;
+
             this->cellToConnectionIdx_[cell_index] = idx;
-            const auto cellCenter = grid.getCellCenter(global_index);
-            this->cell_depth_.at(idx) = cellCenter[2];
+            this->cell_depth_.at(idx) = this->ebos_simulator_.vanguard().cellCenterDepth(cell_index);
         }
         // get default areas for all intersections
         const auto& gridView = this->ebos_simulator_.vanguard().gridView();

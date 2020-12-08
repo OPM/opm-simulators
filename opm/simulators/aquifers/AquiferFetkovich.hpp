@@ -53,10 +53,9 @@ public:
     using Base::waterPhaseIdx;
 
     AquiferFetkovich(const std::vector<Aquancon::AquancCell>& connections,
-                     const std::unordered_map<int, int>& cartesian_to_compressed,
                      const Simulator& ebosSimulator,
                      const Aquifetp::AQUFETP_data& aqufetp_data)
-        : Base(aqufetp_data.aquiferID, connections, cartesian_to_compressed, ebosSimulator)
+        : Base(aqufetp_data.aquiferID, connections, ebosSimulator)
         , aqufetp_data_(aqufetp_data)
     {
     }
@@ -95,10 +94,6 @@ protected:
 
     inline void initializeConnections() override
     {
-        const auto& eclState = this->ebos_simulator_.vanguard().eclState();
-        const auto& grid = eclState.getInputGrid();
-
-        // We hack the cell depth values for now. We can actually get it from elementcontext pos
         this->cell_depth_.resize(this->size(), this->aquiferDepth());
         this->alphai_.resize(this->size(), 1.0);
         this->faceArea_connected_.resize(this->size(), 0.0);
@@ -111,10 +106,12 @@ protected:
         this->cellToConnectionIdx_.resize(this->ebos_simulator_.gridView().size(/*codim=*/0), -1);
         for (size_t idx = 0; idx < this->size(); ++idx) {
             const auto global_index = this->connections_[idx].global_index;
-            const int cell_index = this->cartesian_to_compressed_.at(global_index);
+            const int cell_index = this->ebos_simulator_.vanguard().compressedIndex(global_index);
+            if (cell_index < 0) //the global_index is not part of this grid
+                continue;
+
             this->cellToConnectionIdx_[cell_index] = idx;
-            const auto cellCenter = grid.getCellCenter(global_index);
-            this->cell_depth_.at(idx) = cellCenter[2];
+            this->cell_depth_.at(idx) = this->ebos_simulator_.vanguard().cellCenterDepth(cell_index);
         }
         // get areas for all connections
         const auto& gridView = this->ebos_simulator_.vanguard().gridView();

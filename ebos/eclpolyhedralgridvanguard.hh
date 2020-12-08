@@ -185,6 +185,8 @@ protected:
     {
         grid_ = new Grid(this->eclState().getInputGrid(), this->eclState().fieldProps().porv(true));
         cartesianIndexMapper_ = new CartesianIndexMapper(*grid_);
+        this->updateCartesianToCompressedMapping_();
+        this->updateCellDepths_();
     }
 
     void filterConnections_()

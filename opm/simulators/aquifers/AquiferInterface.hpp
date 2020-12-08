@@ -76,12 +76,10 @@ public:
     // Constructor
     AquiferInterface(int aqID,
                      const std::vector<Aquancon::AquancCell>& connections,
-                     const std::unordered_map<int, int>& cartesian_to_compressed,
                      const Simulator& ebosSimulator)
         : aquiferID(aqID)
         , connections_(connections)
         , ebos_simulator_(ebosSimulator)
-        , cartesian_to_compressed_(cartesian_to_compressed)
     {
     }
 
@@ -216,7 +214,6 @@ protected:
     const int aquiferID;
     const std::vector<Aquancon::AquancCell> connections_;
     const Simulator& ebos_simulator_;
-    const std::unordered_map<int, int> cartesian_to_compressed_;
 
     // Grid variables
     std::vector<Scalar> faceArea_connected_;
