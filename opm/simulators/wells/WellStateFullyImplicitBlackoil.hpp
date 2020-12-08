@@ -642,7 +642,7 @@ namespace Opm
 
         virtual void reportConnections(data::Well& well, const PhaseUsage &pu,
                                        const WellMapType::value_type& wt,
-                                       const int* globalCellIdxMap) const
+                                       const int* globalCellIdxMap) const override
         {
             using rt = data::Rates::opt;
             WellState::reportConnections(well, pu, wt, globalCellIdxMap);
@@ -1081,12 +1081,12 @@ namespace Opm
             // Create a function that calls some function
             // for all the individual data items to simplify
             // the further code.
-            auto iterateContainer = [this](auto& container, auto& func) {
+            auto iterateContainer = [](auto& container, auto& func) {
                 for (auto& x : container) {
                     func(x.second);
                 }
             };
-            auto iterateRatesContainer = [this](auto& container, auto& func) {
+            auto iterateRatesContainer = [](auto& container, auto& func) {
                 for (auto& x : container) {
                     if (x.second.first)
                     {
