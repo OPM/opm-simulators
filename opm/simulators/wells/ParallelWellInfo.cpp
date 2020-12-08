@@ -43,13 +43,13 @@ struct CommPolicy<double*>
 
 namespace Opm
 {
-CommunicateAbove::CommunicateAbove([[maybe_unused]] const Communication& comm)
+CommunicateAboveBelow::CommunicateAboveBelow([[maybe_unused]] const Communication& comm)
 #if HAVE_MPI
     : comm_(comm), interface_(comm_)
 #endif
 {}
 
-void CommunicateAbove::clear()
+void CommunicateAboveBelow::clear()
 {
 #if HAVE_MPI
     above_indices_ = {};
@@ -60,7 +60,7 @@ void CommunicateAbove::clear()
     count_ = 0;
 }
 
-void CommunicateAbove::beginReset()
+void CommunicateAboveBelow::beginReset()
 {
     clear();
 #if HAVE_MPI
@@ -72,7 +72,7 @@ void CommunicateAbove::beginReset()
 #endif
 }
 
-void CommunicateAbove::endReset()
+void CommunicateAboveBelow::endReset()
 {
 #if HAVE_MPI
     if (comm_.size() > 1)
@@ -104,9 +104,9 @@ struct CopyGatherScatter
 };
 
 
-std::vector<double> CommunicateAbove::communicate(double first_above,
-                                                  const double* current,
-                                                  std::size_t size)
+std::vector<double> CommunicateAboveBelow::communicateAbove(double first_above,
+                                                            const double* current,
+                                                            std::size_t size)
 {
     std::vector<double> above(size, first_above);
 
@@ -131,10 +131,37 @@ std::vector<double> CommunicateAbove::communicate(double first_above,
     }
     return above;
 }
+std::vector<double> CommunicateAboveBelow::communicateBelow(double last_below,
+                                                            const double* current,
+                                                            std::size_t size)
+{
+    std::vector<double> below(size, last_below);
 
-void CommunicateAbove::pushBackEclIndex([[maybe_unused]] int above,
-                                        [[maybe_unused]] int current,
-                                        [[maybe_unused]] bool isOwner)
+#if HAVE_MPI
+    if (comm_.size() > 1)
+    {
+        auto belowData = below.data();
+        // Ugly const_cast needed as my compiler says, that
+        // passing const double*& and double* as parameter is
+        // incompatible with function decl template<Data> backward(Data&, const Data&)
+        // That would need the first argument to be double* const&
+        communicator_.backward<CopyGatherScatter>(belowData, const_cast<double*>(current));
+    }
+    else
+#endif
+    {
+        if (below.size() > 1)
+        {
+            // No comunication needed, just copy.
+            std::copy(current+1, current + below.size(), below.begin());
+        }
+    }
+    return below;
+}
+
+void CommunicateAboveBelow::pushBackEclIndex([[maybe_unused]] int above,
+                                             [[maybe_unused]] int current,
+                                             [[maybe_unused]] bool isOwner)
 {
 #if HAVE_MPI
     if (comm_.size() > 1)
@@ -175,8 +202,8 @@ ParallelWellInfo::ParallelWellInfo(const std::string& name,
     : name_(name), hasLocalCells_ (hasLocalCells),
       isOwner_(true), rankWithFirstPerf_(-1),
       comm_(new Communication(Dune::MPIHelper::getLocalCommunicator())),
-      commAbove_(new CommunicateAbove(*comm_))
-    {}
+      commAboveBelow_(new CommunicateAboveBelow(*comm_))
+{}
 
 ParallelWellInfo::ParallelWellInfo(const std::pair<std::string,bool>& well_info,
                                    [[maybe_unused]] Communication allComm)
@@ -191,7 +218,7 @@ ParallelWellInfo::ParallelWellInfo(const std::pair<std::string,bool>& well_info,
 #else
     comm_.reset(new Communication(Dune::MPIHelper::getLocalCommunicator()));
 #endif
-    commAbove_.reset(new CommunicateAbove(*comm_));
+    commAboveBelow_.reset(new CommunicateAboveBelow(*comm_));
     isOwner_ = (comm_->rank() == 0);
 }
 
@@ -207,38 +234,53 @@ void ParallelWellInfo::communicateFirstPerforation(bool hasFirst)
 
 void ParallelWellInfo::pushBackEclIndex(int above, int current)
 {
-    commAbove_->pushBackEclIndex(above, current);
+    commAboveBelow_->pushBackEclIndex(above, current);
 }
 
 void ParallelWellInfo::beginReset()
 {
-    commAbove_->beginReset();
+    commAboveBelow_->beginReset();
 }
 
 
 void ParallelWellInfo::endReset()
 {
-    commAbove_->beginReset();
+    commAboveBelow_->beginReset();
 }
 
-void ParallelWellInfo::clearCommunicateAbove()
+void ParallelWellInfo::clearCommunicateAboveBelow()
 {
-    commAbove_->clear();
+    commAboveBelow_->clear();
 }
 
 std::vector<double> ParallelWellInfo::communicateAboveValues(double zero_value,
                                                              const double* current_values,
                                                              std::size_t size) const
 {
-    return commAbove_->communicate(zero_value, current_values,
-                                   size);
+    return commAboveBelow_->communicateAbove(zero_value, current_values,
+                                             size);
 }
 
 std::vector<double> ParallelWellInfo::communicateAboveValues(double zero_value,
                                                              const std::vector<double>& current_values) const
 {
-    return commAbove_->communicate(zero_value, current_values.data(),
-                                   current_values.size());
+    return commAboveBelow_->communicateAbove(zero_value, current_values.data(),
+                                             current_values.size());
+}
+
+std::vector<double> ParallelWellInfo::communicateBelowValues(double last_value,
+                                                             const double* current_values,
+                                                             std::size_t size) const
+{
+    return commAboveBelow_->communicateBelow(last_value, current_values,
+                                             size);
+}
+
+std::vector<double> ParallelWellInfo::communicateBelowValues(double last_value,
+                                                             const std::vector<double>& current_values) const
+{
+    return commAboveBelow_->communicateBelow(last_value, current_values.data(),
+                                             current_values.size());
 }
 
 bool operator<(const ParallelWellInfo& well1, const ParallelWellInfo& well2)
@@ -294,7 +336,7 @@ bool operator!=(const ParallelWellInfo& well, const std::pair<std::string, bool>
 }
 
 CheckDistributedWellConnections::CheckDistributedWellConnections(const Well& well,
-                                                               const ParallelWellInfo& info)
+                                                                 const ParallelWellInfo& info)
     : well_(well), pwinfo_(info)
 {
     foundConnections_.resize(well.getConnections().size(), 0);

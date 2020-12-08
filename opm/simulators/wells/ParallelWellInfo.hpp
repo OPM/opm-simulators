@@ -33,9 +33,9 @@
 namespace Opm
 {
 
-/// \brief Class to facilitate getting values associated with the above perforation
+/// \brief Class to facilitate getting values associated with the above/below perforation
 ///
-class CommunicateAbove
+class CommunicateAboveBelow
 {
     enum Attribute {
       owner=1, overlap=2
@@ -53,7 +53,7 @@ class CommunicateAbove
 #endif
 
 public:
-    explicit CommunicateAbove(const Communication& comm);
+    explicit CommunicateAboveBelow(const Communication& comm);
     /// \brief Adds information about original index of the perforations in ECL Schedule.
     ///
     /// \warning Theses indices need to be push in the same order as they
@@ -81,10 +81,18 @@ public:
     /// \param current C-array of the values at the perforations
     /// \param size The size of the C-array and the returned vector
     /// \return a vector containing the values for the perforation above.
-    std::vector<double> communicate(double first_value,
-                                    const double* current,
-                                    std::size_t size);
+    std::vector<double> communicateAbove(double first_value,
+                                         const double* current,
+                                         std::size_t size);
 
+    /// \brief Creates an array of values for the perforation below.
+    /// \param first_value Value to use for above of the first perforation
+    /// \param current C-array of the values at the perforations
+    /// \param size The size of the C-array and the returned vector
+    /// \return a vector containing the values for the perforation above.
+    std::vector<double> communicateBelow(double first_value,
+                                         const double* current,
+                                         std::size_t size);
 private:
 #if HAVE_MPI
     Communication comm_;
@@ -157,15 +165,31 @@ public:
     /// \param current C-array of the values at the perforations
     /// \param size The size of the C-array and the returned vector
     /// \return a vector containing the values for the perforation above.
-    std::vector<double> communicateAboveValues(double zero_value,
+    std::vector<double> communicateAboveValues(double first_value,
                                                const double* current,
                                                std::size_t size) const;
 
     /// \brief Creates an array of values for the perforation above.
     /// \param first_value Value to use for above of the first perforation
     /// \param current vector of current values
-    std::vector<double> communicateAboveValues(double zero_value,
+    std::vector<double> communicateAboveValues(double first_value,
                                                const std::vector<double>& current) const;
+
+    /// \brief Creates an array of values for the perforation below.
+    /// \param last_value Value to use for below of the last perforation
+    /// \param current C-array of the values at the perforations
+    /// \param size The size of the C-array and the returned vector
+    /// \return a vector containing the values for the perforation above.
+    std::vector<double> communicateBelowValues(double last_value,
+                                               const double* current,
+                                               std::size_t size) const;
+
+    /// \brief Creates an array of values for the perforation above.
+    /// \param last_value Value to use for below of the last perforation
+    /// \param current vector of current values
+    std::vector<double> communicateBelowValues(double last_value,
+                                               const std::vector<double>& current) const;
+
     /// \brief Adds information about the ecl indices of the perforations.
     ///
     /// \warning Theses indices need to be push in the same order as they
@@ -210,7 +234,7 @@ public:
     }
 
     /// \brief Free data of communication data structures.
-    void clearCommunicateAbove();
+    void clearCommunicateAboveBelow();
 private:
 
     /// \brief Deleter that also frees custom MPI communicators
@@ -234,7 +258,7 @@ private:
     std::unique_ptr<Communication, DestroyComm> comm_;
 
     /// \brief used to communicate the values for the perforation above.
-    std::unique_ptr<CommunicateAbove> commAbove_;
+    std::unique_ptr<CommunicateAboveBelow> commAboveBelow_;
 };
 
 /// \brief Class checking that all connections are on active cells

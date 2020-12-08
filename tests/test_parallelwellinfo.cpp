@@ -153,64 +153,76 @@ BOOST_AUTO_TEST_CASE(ParallelWellComparison)
 
 }
 
-BOOST_AUTO_TEST_CASE(CommunicateAboveSelf)
+BOOST_AUTO_TEST_CASE(CommunicateAboveBelowSelf)
 {
     auto comm = Dune::MPIHelper::getLocalCommunicator();
-    Opm::CommunicateAbove commAbove{ comm };
+    Opm::CommunicateAboveBelow commAboveBelow{ comm };
     for(std::size_t count=0; count < 2; ++count)
     {
         std::vector<int> eclIndex = {0, 1, 2, 3, 7 , 8, 10, 11};
         std::vector<double> current(eclIndex.size());
         std::transform(eclIndex.begin(), eclIndex.end(), current.begin(),
                        [](double v){ return 1+10.0*v;});
-        commAbove.beginReset();
+        commAboveBelow.beginReset();
         for (std::size_t i = 0; i < current.size(); ++i)
         {
             if (i==0)
-                commAbove.pushBackEclIndex(-1, eclIndex[i]);
+                commAboveBelow.pushBackEclIndex(-1, eclIndex[i]);
             else
-                commAbove.pushBackEclIndex(eclIndex[i-1], eclIndex[i]);
+                commAboveBelow.pushBackEclIndex(eclIndex[i-1], eclIndex[i]);
         }
-        commAbove.endReset();
-        auto above = commAbove.communicate(-10.0, current.data(), current.size());
+        commAboveBelow.endReset();
+        auto above = commAboveBelow.communicateAbove(-10.0, current.data(), current.size());
         BOOST_CHECK(above[0]==-10.0);
         BOOST_CHECK(above.size() == current.size());
         auto a = above.begin()+1;
         std::for_each(current.begin(), current.begin() + (current.size()-1),
                       [&a](double v){ BOOST_CHECK(*(a++) == v);});
+        auto below = commAboveBelow.communicateBelow(-10.0, current.data(), current.size());
+        BOOST_CHECK(below.back() == -10.0);
+        BOOST_CHECK(below.size() == current.size());
+        auto b = below.begin();
+        std::for_each(current.begin()+1, current.end(),
+                      [&b](double v){ BOOST_CHECK(*(b++) == v);});
     }
 }
 
 
-BOOST_AUTO_TEST_CASE(CommunicateAboveSelf1)
+BOOST_AUTO_TEST_CASE(CommunicateAboveBelowSelf1)
 {
     auto comm = Dune::MPIHelper::getLocalCommunicator();
-    Opm::CommunicateAbove commAbove{ comm };
+    Opm::CommunicateAboveBelow commAboveBelow{ comm };
     for(std::size_t count=0; count < 2; ++count)
     {
         std::vector<int> eclIndex = {0};
         std::vector<double> current(eclIndex.size());
         std::transform(eclIndex.begin(), eclIndex.end(), current.begin(),
                        [](double v){ return 1+10.0*v;});
-        commAbove.beginReset();
+        commAboveBelow.beginReset();
         for (std::size_t i = 0; i < current.size(); ++i)
         {
             if (i==0)
-                commAbove.pushBackEclIndex(-1, eclIndex[i]);
+                commAboveBelow.pushBackEclIndex(-1, eclIndex[i]);
             else
-                commAbove.pushBackEclIndex(eclIndex[i-1], eclIndex[i]);
+                commAboveBelow.pushBackEclIndex(eclIndex[i-1], eclIndex[i]);
         }
-        commAbove.endReset();
-        auto above = commAbove.communicate(-10.0, current.data(), current.size());
+        commAboveBelow.endReset();
+        auto above = commAboveBelow.communicateAbove(-10.0, current.data(), current.size());
         BOOST_CHECK(above[0]==-10.0);
         BOOST_CHECK(above.size() == current.size());
         auto a = above.begin()+1;
         std::for_each(current.begin(), current.begin() + (current.size()-1),
                       [&a](double v){ BOOST_CHECK(*(a++) == v);});
+        auto below = commAboveBelow.communicateBelow(-10.0, current.data(), current.size());
+        BOOST_CHECK(below.back() == -10.0);
+        BOOST_CHECK(below.size() == current.size());
+        auto b = below.begin();
+        std::for_each(current.begin()+1, current.end(),
+                      [&b](double v){ BOOST_CHECK(*(b++) == v);});
     }
 }
 
-BOOST_AUTO_TEST_CASE(CommunicateAboveParalle)
+BOOST_AUTO_TEST_CASE(CommunicateAboveBelowParallel)
 {
     using MPIComm = typename Dune::MPIHelper::MPICommunicator;
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
@@ -220,7 +232,7 @@ BOOST_AUTO_TEST_CASE(CommunicateAboveParalle)
 #endif
     auto comm = Communication(Dune::MPIHelper::getCommunicator());
 
-    Opm::CommunicateAbove commAbove{ comm };
+    Opm::CommunicateAboveBelow commAboveBelow{ comm };
     for(std::size_t count=0; count < 2; ++count)
     {
         std::vector<int> globalEclIndex = {0, 1, 2, 3, 7 , 8, 10, 11};
@@ -244,23 +256,23 @@ BOOST_AUTO_TEST_CASE(CommunicateAboveParalle)
 
         std::vector<double> current(3);
 
-        commAbove.beginReset();
+        commAboveBelow.beginReset();
         for (std::size_t i = 0; i < current.size(); ++i)
         {
             auto gi = comm.rank() + comm.size() * i;
 
             if (gi==0)
             {
-                commAbove.pushBackEclIndex(-1, globalEclIndex[gi]);
+                commAboveBelow.pushBackEclIndex(-1, globalEclIndex[gi]);
             }
             else
             {
-                commAbove.pushBackEclIndex(globalEclIndex[gi-1], globalEclIndex[gi]);
+                commAboveBelow.pushBackEclIndex(globalEclIndex[gi-1], globalEclIndex[gi]);
             }
             current[i] = globalCurrent[gi];
         }
-        commAbove.endReset();
-        auto above = commAbove.communicate(-10.0, current.data(), current.size());
+        commAboveBelow.endReset();
+        auto above = commAboveBelow.communicateAbove(-10.0, current.data(), current.size());
         if (comm.rank() == 0)
             BOOST_CHECK(above[0]==-10.0);
 
@@ -272,6 +284,20 @@ BOOST_AUTO_TEST_CASE(CommunicateAboveParalle)
             if (gi > 0)
             {
                 BOOST_CHECK(above[i]==globalCurrent[gi-1]);
+            }
+        }
+        auto below = commAboveBelow.communicateBelow(-10.0, current.data(), current.size());
+        if (comm.rank() == comm.size() - 1)
+            BOOST_CHECK(below.back() == -10.0);
+
+        BOOST_CHECK(below.size() == current.size());
+
+        for (std::size_t i = 0; i < current.size(); ++i)
+        {
+            auto gi = comm.rank() + comm.size() * i;
+            if (gi < globalCurrent.size() - 1)
+            {
+                BOOST_CHECK(below[i]==globalCurrent[gi+1]);
             }
         }
     }
