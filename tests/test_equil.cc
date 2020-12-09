@@ -89,6 +89,25 @@ initSimulator(const char *filename)
     return std::unique_ptr<Simulator>(new Simulator);
 }
 
+template <class GridView>
+static std::vector<std::pair<double,double>> cellVerticalExtent(const GridView& gridView)
+{
+    using ElementMapper = Dune::MultipleCodimMultipleGeomTypeMapper<GridView>;
+    ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
+
+    int numElements = gridView.size(/*codim=*/0);
+    std::vector<std::pair<double,double>> cellZMinMax(numElements);
+
+    auto elemIt = gridView.template begin</*codim=*/0>();
+    const auto& elemEndIt = gridView.template end</*codim=*/0>();
+    for (; elemIt != elemEndIt; ++elemIt) {
+        const auto& element = *elemIt;
+        const unsigned int elemIdx = elemMapper.index(element);
+        cellZMinMax[elemIdx] = Opm::EQUIL::Details::cellZMinMax(element);
+    }
+    return cellZMinMax;
+}
+
 template <class TypeTag>
 static void initDefaultFluidSystem()
 {
@@ -215,8 +234,8 @@ BOOST_AUTO_TEST_CASE(PhasePressure)
         auto cells = std::vector<int>(simulator->vanguard().grid().size(0));
         std::iota(cells.begin(), cells.end(), 0);
 
-        Opm::EQUIL::Details::verticalExtent(simulator->vanguard().grid(),
-                                            cells, vspan);
+        Opm::EQUIL::Details::verticalExtent(cells, cellVerticalExtent(simulator->vanguard().gridView()),
+                                            simulator->vanguard().gridView().comm(), vspan);
     }
 
     const auto grav = 10.0;
@@ -309,8 +328,8 @@ BOOST_AUTO_TEST_CASE(CellSubset)
         auto vspancells = std::vector<int>(simulator->vanguard().grid().size(0));
         std::iota(vspancells.begin(), vspancells.end(), 0);
 
-        Opm::EQUIL::Details::verticalExtent(simulator->vanguard().grid(),
-                                            vspancells, vspan);
+        Opm::EQUIL::Details::verticalExtent(vspancells, cellVerticalExtent(simulator->vanguard().gridView()),
+                                            simulator->vanguard().gridView().comm(), vspan);
     }
 
     const auto grav = 10.0;
@@ -392,8 +411,8 @@ BOOST_AUTO_TEST_CASE(RegMapping)
         auto cells = std::vector<int>(simulator->vanguard().grid().size(0));
         std::iota(cells.begin(), cells.end(), 0);
 
-        Opm::EQUIL::Details::verticalExtent(simulator->vanguard().grid(),
-                                            cells, vspan);
+        Opm::EQUIL::Details::verticalExtent(cells, cellVerticalExtent(simulator->vanguard().gridView()),
+                                            simulator->vanguard().gridView().comm(), vspan);
     }
 
     const auto grav = 10.0;
@@ -456,7 +475,7 @@ BOOST_AUTO_TEST_CASE(DeckAllDead)
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
 
-    Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().grid(), 10.0);
+    Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().gridView(), 10.0);
     const auto& pressures = comp.press();
     BOOST_REQUIRE_EQUAL(pressures.size(), 3U);
     BOOST_REQUIRE_EQUAL(int(pressures[0].size()), grid.number_of_cells);
@@ -533,7 +552,7 @@ BOOST_AUTO_TEST_CASE(DeckWithCapillary)
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
 
-    Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().grid(), 10.0);
+    Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().gridView(), 10.0);
 
     const auto& pressures = comp.press();
     BOOST_REQUIRE_EQUAL(pressures.size(), 3U);
@@ -571,7 +590,7 @@ BOOST_AUTO_TEST_CASE(DeckWithCapillaryOverlap)
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
 
-    Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().grid(), 9.80665);
+    Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().gridView(), 9.80665);
     const auto& pressures = comp.press();
     BOOST_REQUIRE_EQUAL(pressures.size(), 3U);
     BOOST_REQUIRE_EQUAL(int(pressures[0].size()), grid.number_of_cells);
@@ -630,7 +649,7 @@ BOOST_AUTO_TEST_CASE(DeckWithLiveOil)
     const UnstructuredGrid& grid = *(gm.c_grid());
 
     // Initialize the fluid system
-    Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().grid(), 9.80665);
+    Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().gridView(), 9.80665);
     const auto& pressures = comp.press();
     BOOST_REQUIRE_EQUAL(pressures.size(), 3U);
     BOOST_REQUIRE_EQUAL(int(pressures[0].size()), grid.number_of_cells);
@@ -705,7 +724,7 @@ BOOST_AUTO_TEST_CASE(DeckWithLiveGas)
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
 
-    Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().grid(), 9.80665);
+    Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().gridView(), 9.80665);
     const auto& pressures = comp.press();
     BOOST_REQUIRE_EQUAL(pressures.size(), 3U);
     BOOST_REQUIRE_EQUAL(int(pressures[0].size()), grid.number_of_cells);
@@ -783,7 +802,7 @@ BOOST_AUTO_TEST_CASE(DeckWithRSVDAndRVVD)
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
 
-    Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().grid(), 9.80665);
+    Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().gridView(), 9.80665);
     const auto& pressures = comp.press();
     BOOST_REQUIRE_EQUAL(pressures.size(), 3U);
     BOOST_REQUIRE_EQUAL(int(pressures[0].size()), grid.number_of_cells);
@@ -881,7 +900,7 @@ BOOST_AUTO_TEST_CASE(DeckWithPBVDAndPDVD)
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
 
-    Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().grid(), 9.80665);
+    Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().gridView(), 9.80665);
     const auto& pressures = comp.press();
     BOOST_REQUIRE_EQUAL(pressures.size(), 3U);
     BOOST_REQUIRE_EQUAL(int(pressures[0].size()), grid.number_of_cells);
@@ -1051,9 +1070,9 @@ BOOST_AUTO_TEST_CASE(DeckWithSwatinit)
 
     // compute the initial state
     // apply swatinit
-    Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> compScaled(materialLawManagerScaled, eclipseState, simulator->vanguard().grid(), 9.81, true);
+    Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> compScaled(materialLawManagerScaled, eclipseState, simulator->vanguard().gridView(), 9.81, true);
     // don't apply swatinit
-    Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> compUnscaled(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().grid(), 9.81, false);
+    Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> compUnscaled(*simulator->problem().materialLawManager(), eclipseState, simulator->vanguard().gridView(), 9.81, false);
 
     // compute pc
     std::vector<double> pc_scaled(numCells * FluidSystem::numPhases);

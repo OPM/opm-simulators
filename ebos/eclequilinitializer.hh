@@ -100,7 +100,7 @@ public:
 
         EQUIL::DeckDependent::InitialStateComputer<TypeTag> initialState(materialLawManager,
                                                                          eclState,
-                                                                         vanguard.grid(),
+                                                                         vanguard.gridView(),
                                                                          simulator.problem().gravity()[dimWorld - 1]);
 
         // copy the result into the array of initial fluid states
