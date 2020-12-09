@@ -166,12 +166,14 @@ namespace Opm {
         typedef double Scalar;
         static const int numEq = Indices::numEq;
         static const int contiSolventEqIdx = Indices::contiSolventEqIdx;
+        static const int contiZfracEqIdx = Indices::contiZfracEqIdx;
         static const int contiPolymerEqIdx = Indices::contiPolymerEqIdx;
         static const int contiEnergyEqIdx = Indices::contiEnergyEqIdx;
         static const int contiPolymerMWEqIdx = Indices::contiPolymerMWEqIdx;
         static const int contiFoamEqIdx = Indices::contiFoamEqIdx;
 	static const int contiBrineEqIdx = Indices::contiBrineEqIdx;
         static const int solventSaturationIdx = Indices::solventSaturationIdx;
+        static const int zFractionIdx = Indices::zFractionIdx;
         static const int polymerConcentrationIdx = Indices::polymerConcentrationIdx;
         static const int polymerMoleWeightIdx = Indices::polymerMoleWeightIdx;
         static const int temperatureIdx = Indices::temperatureIdx;
@@ -660,6 +662,12 @@ namespace Opm {
                     R_sum[ contiSolventEqIdx ] += R2;
                     maxCoeff[ contiSolventEqIdx ] = std::max( maxCoeff[ contiSolventEqIdx ], std::abs( R2 ) / pvValue );
                 }
+                if constexpr (has_extbo_) {
+                    B_avg[ contiZfracEqIdx ] += 1.0 / fs.invB(FluidSystem::gasPhaseIdx).value();
+                    const auto R2 = ebosResid[cell_idx][contiZfracEqIdx];
+                    R_sum[ contiZfracEqIdx ] += R2;
+                    maxCoeff[ contiZfracEqIdx ] = std::max( maxCoeff[ contiZfracEqIdx ], std::abs( R2 ) / pvValue );
+                }
                 if constexpr (has_polymer_) {
                     B_avg[ contiPolymerEqIdx ] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
                     const auto R2 = ebosResid[cell_idx][contiPolymerEqIdx];
@@ -795,6 +803,9 @@ namespace Opm {
                 }
                 if constexpr (has_solvent_) {
                     compNames[solventSaturationIdx] = "Solvent";
+                }
+                if constexpr (has_extbo_) {
+                    compNames[zFractionIdx] = "ZFraction";
                 }
                 if constexpr (has_polymer_) {
                     compNames[polymerConcentrationIdx] = "Polymer";
@@ -951,6 +962,7 @@ namespace Opm {
         const Grid&            grid_;
         const PhaseUsage phaseUsage_;
         static constexpr bool has_solvent_ = getPropValue<TypeTag, Properties::EnableSolvent>();
+        static constexpr bool has_extbo_ = getPropValue<TypeTag, Properties::EnableExtbo>();
         static constexpr bool has_polymer_ = getPropValue<TypeTag, Properties::EnablePolymer>();
         static constexpr bool has_polymermw_ = getPropValue<TypeTag, Properties::EnablePolymerMW>();
         static constexpr bool has_energy_ = getPropValue<TypeTag, Properties::EnableEnergy>();
