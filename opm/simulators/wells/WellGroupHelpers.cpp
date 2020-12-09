@@ -112,15 +112,6 @@ namespace WellGroupHelpers
                 schedule.getGroup(group.parent(), reportStepIdx), schedule, reportStepIdx, factor);
     }
 
-    bool wellIsOwned(std::size_t well_index, [[maybe_unused]] const std::string& wellName,
-                     const WellStateFullyImplicitBlackoil& wellState)
-    {
-        const auto& well_info = wellState.parallelWellInfo(well_index);
-        assert(well_info.name() == wellName);
-
-        return well_info.isOwner();
-    }
-
     double sumWellPhaseRates(const std::vector<double>& rates,
                              const Group& group,
                              const Schedule& schedule,
@@ -144,7 +135,7 @@ namespace WellGroupHelpers
 
             int well_index = it->second[0];
 
-            if (! wellIsOwned(well_index, wellName, wellState) ) // Only sum once
+            if (! wellState.wellIsOwned(well_index, wellName) ) // Only sum once
             {
                 continue;
             }
@@ -209,7 +200,7 @@ namespace WellGroupHelpers
 
             int well_index = it->second[0];
 
-            if (! wellIsOwned(well_index, wellName, wellState) ) // Only sum once
+            if (! wellState.wellIsOwned(well_index, wellName) ) // Only sum once
             {
                 continue;
             }
@@ -323,7 +314,7 @@ namespace WellGroupHelpers
 
             int well_index = it->second[0];
 
-            if (! wellIsOwned(well_index, wellName, wellState) ) // Only sum once
+            if (! wellState.wellIsOwned(well_index, wellName) ) // Only sum once
             {
                 continue;
             }
@@ -462,27 +453,22 @@ namespace WellGroupHelpers
                 double waterpot = 0.0;
 
                 const auto& it = wellState.wellMap().find( well.name());
-                if (it == end)   // the well is not found
-                    continue;
-                int well_index = it->second[0];
-
-                if (! wellIsOwned(well_index, wellName, wellState) ) // Only sum once
+                if (it != end && wellState.wellIsOwned(it->second[0], well.name()))
                 {
-                    continue;
+                    // the well is found and owned
+
+                    const auto wpot = wellState.wellPotentials().data() + well_index*wellState.numPhases();
+                    if (pu.phase_used[BlackoilPhases::Liquid] > 0)
+                        oilpot = wpot[pu.phase_pos[BlackoilPhases::Liquid]];
+
+                    if (pu.phase_used[BlackoilPhases::Vapour] > 0)
+                        gaspot = wpot[pu.phase_pos[BlackoilPhases::Vapour]];
+
+                    if (pu.phase_used[BlackoilPhases::Aqua] > 0)
+                        waterpot = wpot[pu.phase_pos[BlackoilPhases::Aqua]];
+
+                    const double wefac = well.getEfficiencyFactor();
                 }
-
-
-                const auto wpot = wellState.wellPotentials().data() + well_index*wellState.numPhases();
-                if (pu.phase_used[BlackoilPhases::Liquid] > 0)
-                    oilpot = wpot[pu.phase_pos[BlackoilPhases::Liquid]];
-
-                if (pu.phase_used[BlackoilPhases::Vapour] > 0)
-                    gaspot = wpot[pu.phase_pos[BlackoilPhases::Vapour]];
-
-                if (pu.phase_used[BlackoilPhases::Aqua] > 0)
-                    waterpot = wpot[pu.phase_pos[BlackoilPhases::Aqua]];
-
-                const double wefac = well.getEfficiencyFactor();
                 oilpot = comm.sum(oilpot) * wefac;
                 gaspot = comm.sum(gaspot) * wefac;
                 waterpot = comm.sum(waterpot) * wefac;

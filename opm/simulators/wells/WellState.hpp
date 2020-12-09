@@ -200,6 +200,13 @@ namespace Opm
             return *parallel_well_info_[well_index];
         }
 
+        bool wellIsOwned(std::size_t well_index, [[maybe_unused]] const std::string& wellName) const
+        {
+            const auto& well_info = parallelWellInfo(well_index);
+            assert(well_info.name() == wellName);
+
+            return well_info.isOwner();
+        }
         /// The number of wells present.
         int numWells() const
         {
