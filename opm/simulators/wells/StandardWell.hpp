@@ -174,7 +174,8 @@ namespace Opm
         virtual void init(const PhaseUsage* phase_usage_arg,
                           const std::vector<double>& depth_arg,
                           const double gravity_arg,
-                          const int num_cells) override;
+                          const int num_cells,
+                          const std::vector< Scalar >& B_avg) override;
 
 
         virtual void initPrimaryVariablesEvaluation() const override;
@@ -337,6 +338,8 @@ namespace Opm
         using Base::wfoam;
         using Base::scalingFactor;
         using Base::mostStrictBhpFromBhpLimits;
+        using Base::updateWellOperability;
+        using Base::checkWellOperability;
 
         // protected member variables from the Base class
         using Base::current_step_;
@@ -359,6 +362,9 @@ namespace Opm
         using Base::perf_rep_radius_;
         using Base::perf_length_;
         using Base::bore_diameters_;
+        using Base::ipr_a_;
+        using Base::ipr_b_;
+        using Base::changed_to_stopped_this_step_;
 
         using Base::wellIsStopped_;
 
@@ -397,14 +403,6 @@ namespace Opm
         // the saturations in the well bore under surface conditions at the beginning of the time step
         std::vector<double> F0_;
 
-        // the vectors used to describe the inflow performance relationship (IPR)
-        // Q = IPR_A - BHP * IPR_B
-        // TODO: it minght need to go to WellInterface, let us implement it in StandardWell first
-        // it is only updated and used for producers for now
-        mutable std::vector<double> ipr_a_;
-        mutable std::vector<double> ipr_b_;
-
-        bool changed_to_stopped_this_step_ = false;
         // Enable GLIFT debug mode. This will enable output of logging messages.
         bool glift_debug = false;
 
@@ -523,14 +521,6 @@ namespace Opm
         // handle the non reasonable fractions due to numerical overshoot
         void processFractions() const;
 
-        // updating the inflow based on the current reservoir condition
-        void updateIPR(const Simulator& ebos_simulator, Opm::DeferredLogger& deferred_logger) const;
-
-        // update the operability status of the well is operable under the current reservoir condition
-        // mostly related to BHP limit and THP limit
-        virtual void checkWellOperability(const Simulator& ebos_simulator,
-                                          const WellState& well_state,
-                                          Opm::DeferredLogger& deferred_logger) override;
 
         virtual void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
                                                     const double dt,
@@ -553,17 +543,14 @@ namespace Opm
                                  EvalWell& cq_s_zfrac_effective,
                                  Opm::DeferredLogger& deferred_logger) const;
 
-        // check whether the well is operable under the current reservoir condition
-        // mostly related to BHP limit and THP limit
-        void updateWellOperability(const Simulator& ebos_simulator,
-                                   const WellState& well_state,
-                                   Opm::DeferredLogger& deferred_logger);
-
         // check whether the well is operable under BHP limit with current reservoir condition
-        void checkOperabilityUnderBHPLimitProducer(const WellState& well_state, const Simulator& ebos_simulator, Opm::DeferredLogger& deferred_logger);
+        virtual void checkOperabilityUnderBHPLimitProducer(const WellState& well_state, const Simulator& ebos_simulator, Opm::DeferredLogger& deferred_logger) override;
 
         // check whether the well is operable under THP limit with current reservoir condition
-        void checkOperabilityUnderTHPLimitProducer(const Simulator& ebos_simulator, const WellState& well_state, Opm::DeferredLogger& deferred_logger);
+        virtual void checkOperabilityUnderTHPLimitProducer(const Simulator& ebos_simulator, const WellState& well_state, Opm::DeferredLogger& deferred_logger) override;
+
+        // updating the inflow based on the current reservoir condition
+        virtual void updateIPR(const Simulator& ebos_simulator, Opm::DeferredLogger& deferred_logger) const override;
 
         // for a well, when all drawdown are in the wrong direction, then this well will not
         // be able to produce/inject .
@@ -593,11 +580,6 @@ namespace Opm
         // calculate a relaxation factor to avoid overshoot of total rates
         static double relaxationFactorRate(const std::vector<double>& primary_variables,
                                            const BVectorWell& dwells);
-
-        virtual void wellTestingPhysical(const Simulator& simulator, const std::vector<double>& B_avg,
-                                         const double simulation_time, const int report_step,
-                                         WellState& well_state, WellTestState& welltest_state,
-                                         Opm::DeferredLogger& deferred_logger) override;
 
         // calculate the skin pressure based on water velocity, throughput and polymer concentration.
         // throughput is used to describe the formation damage during water/polymer injection.

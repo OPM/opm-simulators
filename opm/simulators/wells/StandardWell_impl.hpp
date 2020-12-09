@@ -49,8 +49,6 @@ namespace Opm
     , perf_pressure_diffs_(number_of_perforations_)
     , parallelB_(duneB_, pw_info)
     , F0_(numWellConservationEq)
-    , ipr_a_(number_of_phases_)
-    , ipr_b_(number_of_phases_)
     {
         assert(num_components_ == numWellConservationEq);
 
@@ -69,9 +67,10 @@ namespace Opm
     init(const PhaseUsage* phase_usage_arg,
          const std::vector<double>& depth_arg,
          const double gravity_arg,
-         const int num_cells)
+         const int num_cells,
+         const std::vector< Scalar >& B_avg)
     {
-        Base::init(phase_usage_arg, depth_arg, gravity_arg, num_cells);
+        Base::init(phase_usage_arg, depth_arg, gravity_arg, num_cells, B_avg);
 
         perf_depth_.resize(number_of_perforations_, 0.);
         for (int perf = 0; perf < number_of_perforations_; ++perf) {
@@ -1680,88 +1679,6 @@ namespace Opm
     }
 
 
-
-
-
-    template<typename TypeTag>
-    void
-    StandardWell<TypeTag>::
-    checkWellOperability(const Simulator& ebos_simulator,
-                         const WellState& well_state,
-                         Opm::DeferredLogger& deferred_logger)
-    {
-
-        const bool checkOperability = EWOMS_GET_PARAM(TypeTag, bool, EnableWellOperabilityCheck);
-        if (!checkOperability) {
-            return;
-        }
-
-        // focusing on PRODUCER for now
-        if (this->isInjector()) {
-            return;
-        }
-
-        if (!this->underPredictionMode() ) {
-            return;
-        }
-
-        if (this->wellIsStopped() && !changed_to_stopped_this_step_) {
-            return;
-        }
-
-        const bool old_well_operable = this->operability_status_.isOperable();
-
-        updateWellOperability(ebos_simulator, well_state, deferred_logger);
-
-        const bool well_operable = this->operability_status_.isOperable();
-
-        if (!well_operable && old_well_operable) {
-            if (well_ecl_.getAutomaticShutIn()) {
-                deferred_logger.info(" well " + name() + " gets SHUT during iteration ");
-            } else {
-                if (!this->wellIsStopped()) {
-                    deferred_logger.info(" well " + name() + " gets STOPPED during iteration ");
-                    this->stopWell();
-                    changed_to_stopped_this_step_ = true;
-                }
-            }
-        } else if (well_operable && !old_well_operable) {
-            deferred_logger.info(" well " + name() + " gets REVIVED during iteration ");
-            this->openWell();
-            changed_to_stopped_this_step_ = false;
-        }
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    StandardWell<TypeTag>::
-    updateWellOperability(const Simulator& ebos_simulator,
-                          const WellState& well_state,
-                          Opm::DeferredLogger& deferred_logger)
-    {
-        this->operability_status_.reset();
-
-        updateIPR(ebos_simulator, deferred_logger);
-
-        // checking the BHP limit related
-        checkOperabilityUnderBHPLimitProducer(well_state, ebos_simulator, deferred_logger);
-
-        const auto& summaryState = ebos_simulator.vanguard().summaryState();
-
-        // checking whether the well can operate under the THP constraints.
-        if (this->wellHasTHPConstraints(summaryState)) {
-            checkOperabilityUnderTHPLimitProducer(ebos_simulator, well_state, deferred_logger);
-        }
-    }
-
-
-
-
-
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
@@ -3342,70 +3259,6 @@ namespace Opm
 
         return relaxation_factor;
     }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    StandardWell<TypeTag>::
-    wellTestingPhysical(const Simulator& ebos_simulator, const std::vector<double>& B_avg,
-                        const double /* simulation_time */, const int /* report_step */,
-                        WellState& well_state, WellTestState& welltest_state,
-                        Opm::DeferredLogger& deferred_logger)
-    {
-        deferred_logger.info(" well " + name() + " is being tested for physical limits");
-
-        // some most difficult things are the explicit quantities, since there is no information
-        // in the WellState to do a decent initialization
-
-        // TODO: Let us assume that the simulator is updated
-
-        // Let us try to do a normal simualtion running, to keep checking the operability status
-        // If the well is not operable during any of the time. It means it does not pass the physical
-        // limit test.
-
-        // create a copy of the well_state to use. If the operability checking is sucessful, we use this one
-        // to replace the original one
-        WellState well_state_copy = well_state;
-
-        // TODO: well state for this well is kind of all zero status
-        // we should be able to provide a better initialization
-        calculateExplicitQuantities(ebos_simulator, well_state_copy, deferred_logger);
-
-        updateWellOperability(ebos_simulator, well_state_copy, deferred_logger);
-
-        if ( !this->isOperable() ) {
-            const std::string msg = " well " + name() + " is not operable during well testing for physical reason";
-            deferred_logger.debug(msg);
-            return;
-        }
-
-        updateWellStateWithTarget(ebos_simulator, well_state_copy, deferred_logger);
-
-        calculateExplicitQuantities(ebos_simulator, well_state_copy, deferred_logger);
-
-        const double dt = ebos_simulator.timeStepSize();
-        const bool converged = this->iterateWellEquations(ebos_simulator, B_avg, dt, well_state_copy, deferred_logger);
-
-        if (!converged) {
-            const std::string msg = " well " + name() + " did not get converged during well testing for physical reason";
-            deferred_logger.debug(msg);
-            return;
-        }
-
-        if (this->isOperable() ) {
-            welltest_state.openWell(name(), WellTestConfig::PHYSICAL );
-            const std::string msg = " well " + name() + " is re-opened through well testing for physical reason";
-            deferred_logger.info(msg);
-            well_state = well_state_copy;
-        } else {
-            const std::string msg = " well " + name() + " is not operable during well testing for physical reason";
-            deferred_logger.debug(msg);
-        }
-    }
-
 
 
 

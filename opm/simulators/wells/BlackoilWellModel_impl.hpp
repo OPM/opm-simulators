@@ -343,8 +343,11 @@ namespace Opm {
             // do the initialization for all the wells
             // TODO: to see whether we can postpone of the intialization of the well containers to
             // optimize the usage of the following several member variables
+            std::vector< Scalar > B_avg(numComponents(), Scalar() );
+            computeAverageFormationFactor(B_avg);
+
             for (auto& well : well_container_) {
-                well->init(&phase_usage_, depth_, gravity_, local_num_cells_);
+                well->init(&phase_usage_, depth_, gravity_, local_num_cells_, B_avg);
             }
 
             // update the updated cell flag
@@ -440,7 +443,7 @@ namespace Opm {
                 WellInterfacePtr well = createWellForWellTest(well_name, timeStepIdx, deferred_logger);
 
                 // some preparation before the well can be used
-                well->init(&phase_usage_, depth_, gravity_, local_num_cells_);
+                well->init(&phase_usage_, depth_, gravity_, local_num_cells_, B_avg);
                 const Well& wellEcl = schedule().getWell(well_name, timeStepIdx);
                 double well_efficiency_factor = wellEcl.getEfficiencyFactor();
                 WellGroupHelpers::accumulateGroupEfficiencyFactor(schedule().getGroup(wellEcl.groupName(), timeStepIdx), schedule(), timeStepIdx, well_efficiency_factor);
@@ -2680,9 +2683,11 @@ namespace Opm {
             this->previous_well_state_ = this->well_state_;
 
             well_container_ = createWellContainer(timeStepIdx);
-
+            std::vector< Scalar > B_avg(numComponents(), Scalar() );
+            // we don't plan to iterate so just passing trivial B_avg
+            // for now
             for (auto& well : well_container_) {
-                well->init(&phase_usage_, depth_, gravity_, local_num_cells_);
+                well->init(&phase_usage_, depth_, gravity_, local_num_cells_, B_avg);
             }
 
             std::fill(is_cell_perforated_.begin(), is_cell_perforated_.end(), false);
