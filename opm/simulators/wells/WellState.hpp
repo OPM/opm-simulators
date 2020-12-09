@@ -339,8 +339,7 @@ namespace Opm
 
             if (comm.rank()==0){
                 displ.resize(comm.size()+1, 0);
-                std::transform(displ.begin(), displ.end()-1, sizes.begin(), displ.begin()+1,
-                               std::plus<int>());
+                std::partial_sum(sizes.begin(), sizes.end(), displ.begin()+1);
                 to_connections.resize(displ.back());
             }
             comm.gatherv(from_connections.data(), size, to_connections.data(),
