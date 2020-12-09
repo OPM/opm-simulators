@@ -137,13 +137,16 @@ namespace Opm
             perf_skin_pressure_.clear();
             perf_skin_pressure_.resize(nperf, 0.0);
 
-            int connpos = 0;
             first_perf_index_.resize(nw+1, 0);
-            first_perf_index_[0] = connpos;
+            first_perf_index_[0] = 0;
             for (int w = 0; w < nw; ++w) {
                 // Initialize perfphaserates_ to well
                 // rates divided by the number of perforations.
-                const int num_perf_this_well = well_perf_data[w].size();
+                const auto& wname = wells_ecl[w].name();
+                const auto& well_info = this->wellMap().at(wname);
+                const int connpos = well_info[1];
+                const int num_perf_this_well = well_info[2];
+
                 for (int perf = connpos; perf < connpos + num_perf_this_well; ++perf) {
                     if (wells_ecl[w].getStatus() == Well::Status::OPEN) {
                         for (int p = 0; p < np; ++p) {
@@ -152,8 +155,8 @@ namespace Opm
                     }
                     perfPress()[perf] = cellPressures[well_perf_data[w][perf-connpos].cell_index];
                 }
-                connpos += num_perf_this_well;
-                first_perf_index_[w+1] = connpos;
+
+                first_perf_index_[w+1] = connpos + num_perf_this_well;
             }
 
             is_producer_.resize(nw, false);
@@ -178,7 +181,6 @@ namespace Opm
             // intialize wells that have been there before
             // order may change so the mapping is based on the well name
             if (prevState && !prevState->wellMap().empty()) {
-                connpos = 0;
                 auto end = prevState->wellMap().end();
                 for (int w = 0; w < nw; ++w) {
                     const Well& well = wells_ecl[w];
@@ -224,6 +226,11 @@ namespace Opm
                         const int num_perf_old_well = (*it).second[ 2 ];
                         // copy perforation rates when the number of perforations is equal,
                         // otherwise initialize perfphaserates to well rates divided by the number of perforations.
+
+                        const auto new_iter = this->wellMap().find(well.name());
+                        if (new_iter == this->wellMap().end())
+                            throw std::logic_error("Fatal error in WellStateFullyImplicitBlackoil - could not find well: " + well.name());
+                        int connpos = new_iter->second[1];
                         if( num_perf_old_well == num_perf_this_well )
                         {
                             int old_perf_phase_idx = oldPerf_idx_beg *np;
@@ -294,9 +301,6 @@ namespace Opm
                     if (!has_thp) {
                         thp()[w] = 0.0;
                     }
-
-                    // Increment connection position offset.
-                    connpos += num_perf_this_well;
                 }
             }
 
