@@ -301,7 +301,7 @@ namespace Opm {
 
             std::vector<bool> is_cell_perforated_;
 
-            std::function<bool(const Well&)> is_shut_or_defunct_;
+            std::function<bool(const Well&)> not_on_process_;
 
             void initializeWellProdIndCalculators();
             void initializeWellPerfData();
@@ -373,8 +373,8 @@ namespace Opm {
             /// \brief Get the wells of our partition that are not shut.
             /// \param timeStepIdx The index of the time step.
             /// \param[out] globalNumWells the number of wells globally.
-            std::vector< Well > getLocalNonshutWells(const int timeStepIdx,
-                                                     int& globalNumWells) const;
+            std::vector< Well > getLocalWells(const int timeStepIdx,
+                                              int& globalNumWells) const;
 
             /// \brief Create the parallel well information
             /// \param localWells The local wells from ECL schedule
