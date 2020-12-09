@@ -340,6 +340,7 @@ namespace Opm
         using Base::mostStrictBhpFromBhpLimits;
         using Base::updateWellOperability;
         using Base::checkWellOperability;
+        using Base::wellIsStopped;
 
         // protected member variables from the Base class
         using Base::current_step_;
@@ -366,7 +367,6 @@ namespace Opm
         using Base::ipr_b_;
         using Base::changed_to_stopped_this_step_;
 
-        using Base::wellIsStopped_;
 
         // total number of the well equations and primary variables
         // there might be extra equations be used, numWellEq will be updated during the initialization

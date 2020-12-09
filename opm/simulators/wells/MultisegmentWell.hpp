@@ -242,7 +242,7 @@ namespace Opm
         using Base::ebosCompIdxToFlowCompIdx;
         using Base::getAllowCrossFlow;
         using Base::scalingFactor;
-        using Base::wellIsStopped_;
+        using Base::wellIsStopped;
         using Base::updateWellOperability;
         using Base::checkWellOperability;
 

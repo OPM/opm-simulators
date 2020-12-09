@@ -306,14 +306,15 @@ namespace Opm
                                   DeferredLogger& deferred_logger) const;
 
         void stopWell() {
-            wellIsStopped_ = true;
+            this->wellStatus_ = Well::Status::STOP;
         }
+
         void openWell() {
-            wellIsStopped_ = false;
+            this->wellStatus_ = Well::Status::OPEN;
         }
 
         bool wellIsStopped() const {
-            return wellIsStopped_;
+            return this->wellStatus_ == Well::Status::STOP;
         }
 
         void setWsolvent(const double wsolvent);
@@ -413,7 +414,7 @@ namespace Opm
 
         std::vector<RateVector> connectionRates_;
 
-        bool wellIsStopped_;
+        Well::Status wellStatus_;
 
         double wsolvent_;
 

@@ -893,7 +893,7 @@ namespace Opm
             return rates;
         };
 
-        if (wellIsStopped_) {
+        if (this->wellIsStopped()) {
             control_eq = getWQTotal();
         } else if (this->isInjector()) {
             // Find injection rate.
@@ -1366,7 +1366,7 @@ namespace Opm
         const int np = well_state.numPhases();
         const auto& summaryState = ebos_simulator.vanguard().summaryState();
 
-        if (wellIsStopped_) {
+        if (this->wellIsStopped()) {
             for (int p = 0; p<np; ++p) {
                 well_state.wellRates()[well_index*np + p] = 0.0;
             }
@@ -3462,7 +3462,7 @@ namespace Opm
         CR::WellFailure::Type ctrltype = CR::WellFailure::Type::Invalid;
 
         const int well_index = index_of_well_;
-        if (wellIsStopped_) {
+        if (this->wellIsStopped()) {
             ctrltype = CR::WellFailure::Type::ControlRate;
             control_tolerance = 1.e-6; // use smaller tolerance for zero control?
         }
