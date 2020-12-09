@@ -62,10 +62,10 @@ namespace Opm {
             std::string cellIdx;
             {
                 std::array<int, 3> ijk;
-                const int cartIdx = compressedToCartesianIdx[c];
-                ijk[0] = cartIdx % dims[0];
-                ijk[1] = (cartIdx / dims[0]) % dims[1];
-                ijk[2] = cartIdx / dims[0] / dims[1];
+                int cartIdx = compressedToCartesianIdx[c];
+                ijk[0] = cartIdx % dims[0];   cartIdx /= dims[0];
+                ijk[1] = cartIdx % dims[1];
+                ijk[2] = cartIdx / dims[1];
                 cellIdx = "(" + std::to_string(ijk[0]) + ", " +
                     std::to_string(ijk[1]) + ", " +
                     std::to_string(ijk[2]) + ")";

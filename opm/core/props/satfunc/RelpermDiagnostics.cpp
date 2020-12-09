@@ -19,9 +19,21 @@
 
 #include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
+
 #include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/Sof2Table.hpp>
+
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/parser/eclipse/EclipseState/Grid/SatfuncPropertyInitializers.hpp>
+#include <opm/parser/eclipse/EclipseState/Runspec.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SgfnTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SgofTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SgwfnTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SlgofTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/Sof2Table.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/Sof3Table.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SwfnTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SwofTable.hpp>
 
 namespace Opm{
 
@@ -609,10 +621,27 @@ namespace Opm{
     void RelpermDiagnostics::unscaledEndPointsCheck_(const EclipseState& eclState)
     {
         // get the number of saturation regions and the number of cells in the deck
-        const int numSatRegions = eclState.runspec().tabdims().getNumSatTables();
+        const auto& runspec       = eclState.runspec();
+        const int   numSatRegions = runspec.tabdims().getNumSatTables();
+
+        if (numSatRegions < 1) {
+            return;
+        }
+
         unscaledEpsInfo_.resize(numSatRegions);
 
         const auto& tables = eclState.getTableManager();
+        const auto& phases = runspec.phases();
+        const auto tolcrit = runspec.saturationFunctionControls()
+            .minimumRelpermMobilityThreshold();
+        const auto family  = runspec.saturationFunctionControls().family();
+
+        const auto rtepPtr =
+            satfunc::getRawTableEndpoints(tables, phases, tolcrit);
+
+        const auto rfuncPtr =
+            satfunc::getRawFunctionValues(tables, phases, *rtepPtr);
+
         const TableContainer&  swofTables = tables.getSwofTables();
         const TableContainer&  sgofTables = tables.getSgofTables();
         const TableContainer& slgofTables = tables.getSlgofTables();
@@ -620,7 +649,9 @@ namespace Opm{
 
         // std::cout << "***************\nEnd-Points In all the Tables\n";
         for (int satnumIdx = 0; satnumIdx < numSatRegions; ++satnumIdx) {
-             unscaledEpsInfo_[satnumIdx].extractUnscaled(eclState, satnumIdx);
+             this->unscaledEpsInfo_[satnumIdx]
+                 .extractUnscaled(*rtepPtr, *rfuncPtr, family, satnumIdx);
+
              const std::string regionIdx = std::to_string(satnumIdx + 1);
              ///Consistency check.
              if (unscaledEpsInfo_[satnumIdx].Sgu > (1. - unscaledEpsInfo_[satnumIdx].Swl)) {
