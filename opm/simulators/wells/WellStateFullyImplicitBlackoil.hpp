@@ -194,6 +194,9 @@ namespace Opm
                 auto end = prevState->wellMap().end();
                 for (int w = 0; w < nw; ++w) {
                     const Well& well = wells_ecl[w];
+                    if (well.getStatus() == Well::Status::SHUT)
+                        continue;
+
                     const int num_perf_this_well = well_perf_data[w].size();
                     auto it = prevState->wellMap().find(well.name());
                     if ( it != end )
