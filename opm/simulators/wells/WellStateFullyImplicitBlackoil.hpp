@@ -190,6 +190,23 @@ namespace Opm
 
             perfRateBrine_.clear();
             perfRateBrine_.resize(nperf, 0.0);
+
+            for (int w = 0; w < nw; ++w) {
+                switch (wells_ecl[w].getStatus()) {
+                case Well::Status::SHUT:
+                    this->shutWell(w);
+                    break;
+
+                case Well::Status::STOP:
+                    this->stopWell(w);
+                    break;
+
+                default:
+                    this->openWell(w);
+                    break;
+                }
+            }
+
             // intialize wells that have been there before
             // order may change so the mapping is based on the well name
             if (prevState && !prevState->wellMap().empty()) {
