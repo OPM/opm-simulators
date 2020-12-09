@@ -181,6 +181,15 @@ namespace Opm
             perfRateBrine_.resize(nperf, 0.0);
             // intialize wells that have been there before
             // order may change so the mapping is based on the well name
+
+            for (int w = 0; w < nw; ++w) {
+                const Well& well = wells_ecl[w];
+                if (well.getStatus() == Well::Status::SHUT || well.getStatus() == Well::Status::STOP)
+                    this->shutWell(w);
+                else
+                    this->openWell(w);
+            }
+
             if (prevState && !prevState->wellMap().empty()) {
                 auto end = prevState->wellMap().end();
                 for (int w = 0; w < nw; ++w) {
