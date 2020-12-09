@@ -50,7 +50,10 @@
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 
 #include <algorithm>
-
+#include <cassert>
+#include <memory>
+#include <stdexcept>
+#include <vector>
 
 namespace Opm {
 
@@ -116,32 +119,57 @@ public:
     void initFromState(const Opm::EclipseState& eclState)
     {
         // get the number of saturation regions and the number of cells in the deck
-        const size_t numSatRegions = eclState.runspec().tabdims().getNumSatTables();
+        const auto&  runspec       = eclState.runspec();
+        const size_t numSatRegions = runspec.tabdims().getNumSatTables();
 
-        const auto& ph = eclState.runspec().phases();
-        hasGas = ph.active(Phase::GAS);
-        hasOil = ph.active(Phase::OIL);
-        hasWater = ph.active(Phase::WATER);
+        const auto& ph = runspec.phases();
+        this->hasGas = ph.active(Phase::GAS);
+        this->hasOil = ph.active(Phase::OIL);
+        this->hasWater = ph.active(Phase::WATER);
 
         readGlobalEpsOptions_(eclState);
         readGlobalHysteresisOptions_(eclState);
-        readGlobalThreePhaseOptions_(eclState.runspec());
+        readGlobalThreePhaseOptions_(runspec);
 
-        // read the end point scaling configuration. this needs to be done only once per
-        // deck.
+        // Read the end point scaling configuration (once per run).
         gasOilConfig = std::make_shared<Opm::EclEpsConfig>();
         oilWaterConfig = std::make_shared<Opm::EclEpsConfig>();
         gasOilConfig->initFromState(eclState, Opm::EclGasOilSystem);
         oilWaterConfig->initFromState(eclState, Opm::EclOilWaterSystem);
 
-        unscaledEpsInfo_.resize(numSatRegions);
-        const auto& stone1exTable = eclState.getTableManager().getStone1exTable();
-        if (!stone1exTable.empty())
-            stoneEtas.resize(numSatRegions);
+        const auto& tables = eclState.getTableManager();
+
+        {
+            const auto& stone1exTables = tables.getStone1exTable();
+
+            if (! stone1exTables.empty()) {
+                stoneEtas.clear();
+                stoneEtas.reserve(numSatRegions);
+
+                for (const auto& table : stone1exTables) {
+                    stoneEtas.push_back(table.eta);
+                }
+            }
+        }
+
+        this->unscaledEpsInfo_.resize(numSatRegions);
+
+        if (this->hasGas + this->hasOil + this->hasWater == 1) {
+            // Single-phase simulation.  Special case.  Nothing to do here.
+            return;
+        }
+
+        // Multiphase simulation.  Common case.
+        const auto tolcrit = runspec.saturationFunctionControls()
+            .minimumRelpermMobilityThreshold();
+
+        const auto family   = runspec.saturationFunctionControls().family();
+        const auto rtepPtr  = satfunc::getRawTableEndpoints(tables, ph, tolcrit);
+        const auto rfuncPtr = satfunc::getRawFunctionValues(tables, ph, *rtepPtr);
+
         for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++satRegionIdx) {
-            unscaledEpsInfo_[satRegionIdx].extractUnscaled(eclState, satRegionIdx);
-            if (!stoneEtas.empty())
-                stoneEtas[satRegionIdx] = stone1exTable[satRegionIdx].eta;
+            this->unscaledEpsInfo_[satRegionIdx]
+                .extractUnscaled(*rtepPtr, *rfuncPtr, family, satRegionIdx);
         }
     }
 
@@ -222,7 +250,6 @@ public:
                                       eclState,
                                       epsGridProperties,
                                       elemIdx);
-
         }
 
         if (enableHysteresis()) {

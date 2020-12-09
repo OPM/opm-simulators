@@ -176,28 +176,20 @@ public:
             enableKrnScaling_ = false;
             return;
         }
+
         // endpoint scaling is used, i.e., at least saturation scaling needs to be enabled
         enableSatScaling_ = true;
         enableThreePointKrSatScaling_ = endscale.threepoint();
 
-        if (twoPhaseSystemType == EclOilWaterSystem) {
-            // check if Leverett capillary pressure scaling is requested
-            if (eclState.getTableManager().useJFunc()) {
-                const auto& jfunc = eclState.getTableManager().getJFunc();
-                auto flag = jfunc.flag();
-                if (flag == Opm::JFunc::Flag::BOTH || flag == Opm::JFunc::Flag::WATER)
-                    enableLeverettScaling_ = true;
-            }
-        } else {
-            // check if Leverett capillary pressure scaling is requested
-            if (eclState.getTableManager().useJFunc()) {
-                const auto& jfunc = eclState.getTableManager().getJFunc();
-                auto flag = jfunc.flag();
-                if (flag == Opm::JFunc::Flag::BOTH || flag == Opm::JFunc::Flag::GAS)
-                    enableLeverettScaling_ = true;
-            }
-        }
+        if (eclState.getTableManager().useJFunc()) {
+            const auto flag = eclState.getTableManager().getJFunc().flag();
 
+            enableLeverettScaling_ = (flag == Opm::JFunc::Flag::BOTH)
+                || ((twoPhaseSystemType == EclOilWaterSystem) &&
+                    (flag == Opm::JFunc::Flag::WATER))
+                || ((twoPhaseSystemType == EclGasOilSystem) &&
+                    (flag == Opm::JFunc::Flag::GAS));
+        }
 
         const auto& fp = eclState.fieldProps();
         // check if we are supposed to scale the Y axis of the capillary pressure
@@ -212,11 +204,13 @@ public:
             enablePcScaling_  = fp.has_double("PCG");
         }
 
-        if (enablePcScaling_ && enableLeverettScaling_)
-            throw std::runtime_error("Capillary pressure scaling and the Leverett scaling function are "
-                                     "mutually exclusive: The deck contains the PCW/PCG property and the "
-                                     "JFUNC keyword applies to the water phase.");
-
+        if (enablePcScaling_ && enableLeverettScaling_) {
+            throw std::runtime_error {
+                "Capillary pressure scaling and the Leverett scaling function "
+                "are mutually exclusive. The deck contains the PCW/PCG property "
+                "and the JFUNC keyword applies to the water phase."
+            };
+        }
     }
 #endif
 
