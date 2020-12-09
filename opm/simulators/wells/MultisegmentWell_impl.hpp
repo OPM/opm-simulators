@@ -302,7 +302,7 @@ namespace Opm
         const int np = well_state.numPhases();
         const auto& summaryState = ebos_simulator.vanguard().summaryState();
 
-        if (wellIsStopped_) {
+        if (this->wellIsStopped()) {
             for (int p = 0; p<np; ++p) {
                 well_state.wellRates()[well_index*np + p] = 0.0;
             }
@@ -2030,7 +2030,7 @@ namespace Opm
             return rates;
         };
 
-        if (wellIsStopped_) {
+        if (this->wellIsStopped()) {
             control_eq = getWQTotal();
         } else if (this->isInjector() ) {
             // Find scaling factor to get injection rate,
