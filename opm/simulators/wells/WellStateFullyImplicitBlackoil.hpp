@@ -188,8 +188,12 @@ namespace Opm
                     auto it = prevState->wellMap().find(well.name());
                     if ( it != end )
                     {
-                        const int oldIndex = (*it).second[ 0 ];
                         const int newIndex = w;
+                        const int oldIndex = it->second[ 0 ];
+                        if (prevState->status_[oldIndex] == Well::Status::SHUT) {
+                            // Well was shut in previous state, do not use its values.
+                            continue;
+                        }
 
                         // bhp
                         bhp()[ newIndex ] = prevState->bhp()[ oldIndex ];
