@@ -197,7 +197,6 @@ namespace Opm
                     if (well.getStatus() == Well::Status::SHUT)
                         continue;
 
-                    const int num_perf_this_well = well_perf_data[w].size();
                     auto it = prevState->wellMap().find(well.name());
                     if ( it != end )
                     {
