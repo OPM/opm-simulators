@@ -2562,6 +2562,7 @@ namespace Opm
                 well_flux[ebosCompIdxToFlowCompIdx(p)] += cq_s[p].value();
             }
         }
+        this->parallel_well_info_.communication().sum(well_flux.data(), well_flux.size());
     }
 
 
