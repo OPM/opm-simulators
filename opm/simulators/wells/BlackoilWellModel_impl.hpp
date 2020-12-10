@@ -382,8 +382,7 @@ namespace Opm {
 
         // calculate the well potentials
         try {
-            std::vector<double> well_potentials;
-            computeWellPotentials(well_potentials, reportStepIdx, local_deferredLogger);
+            updateWellPotentials(reportStepIdx, /*onlyAfterEvent*/true, local_deferredLogger);
         } catch ( std::runtime_error& e ) {
             const std::string msg = "A zero well potential is returned for output purposes. ";
             local_deferredLogger.warning("WELL_POTENTIAL_CALCULATION_FAILED", msg);
@@ -558,9 +557,7 @@ namespace Opm {
 
         // calculate the well potentials
         try {
-            std::vector<double> well_potentials;
-
-            computeWellPotentials(well_potentials, reportStepIdx, local_deferredLogger);
+            updateWellPotentials(reportStepIdx, /*onlyAfterEvent*/false, local_deferredLogger);
         } catch ( std::runtime_error& e ) {
             const std::string msg = "A zero well potential is returned for output purposes. ";
             local_deferredLogger.warning("WELL_POTENTIAL_CALCULATION_FAILED", msg);
@@ -1555,38 +1552,58 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    computeWellPotentials(std::vector<double>& well_potentials, const int reportStepIdx, DeferredLogger& deferred_logger)
+    updateWellPotentials(const int reportStepIdx, const bool onlyAfterEvent, DeferredLogger& deferred_logger)
     {
-        // number of wells and phases
-        const int nw = numLocalWells();
         const int np = numPhases();
-        well_potentials.resize(nw * np, 0.0);
 
-        auto well_state = this->wellState();
+        auto well_state_copy = this->wellState();
 
         const SummaryConfig& summaryConfig = ebosSimulator_.vanguard().summaryConfig();
         const bool write_restart_file = ebosSimulator_.vanguard().schedule().write_rst_file(reportStepIdx);
         auto exc_type = ExceptionType::NONE;
         std::string exc_msg;
         for (const auto& well : well_container_) {
-            const bool needed_for_summary = ((summaryConfig.hasSummaryKey( "WWPI:" + well->name()) ||
-                                              summaryConfig.hasSummaryKey( "WOPI:" + well->name()) ||
-                                              summaryConfig.hasSummaryKey( "WGPI:" + well->name())) && well->isInjector()) ||
+            const bool needed_for_summary =
+                    ((summaryConfig.hasSummaryKey( "WWPI:" + well->name()) ||
+                      summaryConfig.hasSummaryKey( "WOPI:" + well->name()) ||
+                      summaryConfig.hasSummaryKey( "WGPI:" + well->name())) && well->isInjector()) ||
+                    ((summaryConfig.hasKeyword( "GWPI") ||
+                      summaryConfig.hasKeyword( "GOPI") ||
+                      summaryConfig.hasKeyword( "GGPI")) && well->isInjector()) ||
+                    ((summaryConfig.hasKeyword( "FWPI") ||
+                      summaryConfig.hasKeyword( "FOPI") ||
+                      summaryConfig.hasKeyword( "FGPI")) && well->isInjector()) ||
                     ((summaryConfig.hasSummaryKey( "WWPP:" + well->name()) ||
                       summaryConfig.hasSummaryKey( "WOPP:" + well->name()) ||
-                      summaryConfig.hasSummaryKey( "WGPP:" + well->name())) && well->isProducer());
+                      summaryConfig.hasSummaryKey( "WGPP:" + well->name())) && well->isProducer()) ||
+                    ((summaryConfig.hasKeyword( "GWPP") ||
+                      summaryConfig.hasKeyword( "GOPP") ||
+                      summaryConfig.hasKeyword( "GGPP")) && well->isProducer()) ||
+                    ((summaryConfig.hasKeyword( "FWPP") ||
+                      summaryConfig.hasKeyword( "FOPP") ||
+                      summaryConfig.hasKeyword( "FGPP")) && well->isProducer());
 
-            bool needPotentialsForGuideRate = true;//eclWell.getGuideRatePhase() == Well::GuideRateTarget::UNDEFINED;
-            if (write_restart_file || needed_for_summary || needPotentialsForGuideRate)
+            // At the moment, the following events are considered
+            // for potentials update
+            const uint64_t effective_events_mask = ScheduleEvents::WELL_STATUS_CHANGE
+                                                 + ScheduleEvents::COMPLETION_CHANGE
+                                                 + ScheduleEvents::WELL_PRODUCTIVITY_INDEX
+                                                 + ScheduleEvents::WELL_WELSPECS_UPDATE
+                                                 + ScheduleEvents::WELLGROUP_EFFICIENCY_UPDATE
+                                                 + ScheduleEvents::NEW_WELL
+                                                 + ScheduleEvents::PRODUCTION_UPDATE
+                                                 + ScheduleEvents::INJECTION_UPDATE;
+            const auto& events = schedule()[reportStepIdx].wellgroup_events();
+            const bool event = report_step_starts_ && events.hasEvent(well->name(), effective_events_mask);
+            const bool needPotentialsForGuideRates = well->underPredictionMode() && (!onlyAfterEvent || event);
+            const bool needPotentialsForOutput = !onlyAfterEvent && (needed_for_summary || write_restart_file);
+            const bool compute_potential = needPotentialsForOutput || needPotentialsForGuideRates;
+            if (compute_potential)
             {
+                std::vector<double> potentials;
                 try {
-                    std::vector<double> potentials;
-                    well->computeWellPotentials(ebosSimulator_, well_state, potentials, deferred_logger);
-                    // putting the sucessfully calculated potentials to the well_potentials
-                    for (int p = 0; p < np; ++p) {
-                        well_potentials[well->indexOfWell() * np + p] = std::abs(potentials[p]);
-                    }
-                } catch (const std::runtime_error& e) {
+                    well->computeWellPotentials(ebosSimulator_, well_state_copy, potentials, deferred_logger);
+                 } catch (const std::runtime_error& e) {
                     exc_type = ExceptionType::RUNTIME_ERROR;
                     exc_msg = e.what();
                 } catch (const std::invalid_argument& e) {
@@ -1599,14 +1616,18 @@ namespace Opm {
                     exc_type = ExceptionType::DEFAULT;
                     exc_msg = e.what();
                 }
+                // Store it in the well state
+                // potentials is resized and set to zero in the beginning of well->ComputeWellPotentials
+                // and updated only if sucessfull. i.e. the potentials are zero for exceptions
+                for (int p = 0; p < np; ++p) {
+                    this->wellState().wellPotentials()[well->indexOfWell() * np + p] = std::abs(potentials[p]);
+                }
             }
         }
         logAndCheckForExceptionsAndThrow(deferred_logger, exc_type,
                                          "computeWellPotentials() failed: " + exc_msg,
                                          terminal_output_);
 
-        // Store it in the well state
-        this->wellState().wellPotentials() = well_potentials;
     }
 
 
