@@ -559,7 +559,7 @@ namespace Opm
             for( const auto& wt : this->wellMap() ) {
                 const auto w = wt.second[ 0 ];
                 const auto& pwinfo = *parallel_well_info_[w];
-                if (!this->open_for_output_[w] || !pwinfo.isOwner())
+                if ((this->status_[w] != Well::Status::OPEN) || !pwinfo.isOwner())
                     continue;
 
                 auto& well = res.at( wt.first );
@@ -1178,7 +1178,7 @@ namespace Opm
                 if (it != end) {
                     // ... set the GRUP/not GRUP states.
                     const int well_index = it->second[0];
-                    if (!this->open_for_output_[well_index]) {
+                    if (this->status_[well_index] != Well::Status::OPEN) {
                         // Well is shut.
                         if (well.isInjector()) {
                             globalIsInjectionGrup_[global_well_index] = 0;
