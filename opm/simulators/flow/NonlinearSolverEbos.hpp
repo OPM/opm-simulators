@@ -183,7 +183,7 @@ namespace Opm {
             report.timestep_length = timer.currentStepLength();
 
             // Do model-specific once-per-step calculations.
-            model_->prepareStep(timer);
+            report += model_->prepareStep(timer);
 
             int iteration = 0;
 
@@ -224,7 +224,7 @@ namespace Opm {
             }
 
             // Do model-specific post-step actions.
-            model_->afterStep(timer);
+            report += model_->afterStep(timer);
             report.converged = true;
             return report;
         }

@@ -36,6 +36,7 @@ namespace Opm
           total_time(0.0),
           solver_time(0.0),
           assemble_time(0.0),
+          pre_post_time(0.0),
           assemble_time_well(0.0),
           linear_solve_setup_time(0.0),
           linear_solve_time(0.0),
@@ -60,6 +61,7 @@ namespace Opm
         linear_solve_time += sr.linear_solve_time;
         solver_time += sr.solver_time;
         assemble_time += sr.assemble_time;
+        pre_post_time += sr.pre_post_time;
         assemble_time_well += sr.assemble_time_well;
         update_time += sr.update_time;
         output_write_time += sr.output_write_time;
@@ -137,6 +139,14 @@ namespace Opm
               os << fmt::format(" (Failed: {:2.1f}; {:2.1f}%)",
                                 failureReport->update_time,
                                 100*failureReport->update_time/t);
+            }
+            os << std::endl;
+            t = pre_post_time + (failureReport ? failureReport->pre_post_time : 0.0);
+            os << fmt::format(" Pre/post step (seconds):     {:7.2f}", t);
+            if (failureReport) {
+              os << fmt::format(" (Failed: {:2.1f}; {:2.1f}%)",
+                                failureReport->pre_post_time,
+                                100*failureReport->pre_post_time/t);
             }
             os << std::endl;
 
