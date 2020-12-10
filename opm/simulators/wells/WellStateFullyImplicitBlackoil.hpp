@@ -183,9 +183,12 @@ namespace Opm
             // order may change so the mapping is based on the well name
 
             for (int w = 0; w < nw; ++w) {
-                const Well& well = wells_ecl[w];
-                if (well.getStatus() == Well::Status::SHUT || well.getStatus() == Well::Status::STOP)
+                const auto well_status = wells_ecl[w].getStatus();
+
+                if (well_status == Well::Status::SHUT)
                     this->shutWell(w);
+                else if (well_status == Well::Status::STOP)
+                    this->stopWell(w);
                 else
                     this->openWell(w);
             }
