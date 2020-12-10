@@ -1075,6 +1075,10 @@ namespace Opm
                 this->well_reservoir_rates_[np * well_index + p] = 0;
         }
 
+        virtual void stopWell(int well_index) override {
+            WellState::stopWell(well_index);
+        }
+
         template<class Comm>
         void communicateGroupRates(const Comm& comm)
         {

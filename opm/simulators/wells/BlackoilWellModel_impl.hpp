@@ -748,7 +748,7 @@ namespace Opm {
                         continue;
                     } else {
                         // stopped wells are added to the container but marked as stopped
-                        well_state_.thp()[w] = 0.;
+                        well_state_.stopWell(w);
                         wellIsStopped = true;
                     }
                 }
@@ -795,7 +795,7 @@ namespace Opm {
                 }
 
                 if (well_status == Well::Status::STOP) {
-                    well_state_.thp()[w] = 0.;
+                    well_state_.stopWell(w);
                     wellIsStopped = true;
                 }
 

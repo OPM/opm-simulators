@@ -225,6 +225,10 @@ namespace Opm
                 this->wellrates_[np * well_index + p] = 0;
         }
 
+        virtual void stopWell(int well_index) {
+            this->status_[well_index] = Well::Status::STOP;
+            this->thp_[well_index] = 0;
+        }
 
         virtual data::Wells report(const PhaseUsage& pu, const int* globalCellIdxMap) const
         {
