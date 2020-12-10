@@ -200,6 +200,13 @@ namespace Opm
             return *parallel_well_info_[well_index];
         }
 
+        bool wellIsOwned(std::size_t well_index, [[maybe_unused]] const std::string& wellName) const
+        {
+            const auto& well_info = parallelWellInfo(well_index);
+            assert(well_info.name() == wellName);
+
+            return well_info.isOwner();
+        }
         /// The number of wells present.
         int numWells() const
         {
@@ -332,8 +339,7 @@ namespace Opm
 
             if (comm.rank()==0){
                 displ.resize(comm.size()+1, 0);
-                std::transform(displ.begin(), displ.end()-1, sizes.begin(), displ.begin()+1,
-                               std::plus<int>());
+                std::partial_sum(sizes.begin(), sizes.end(), displ.begin()+1);
                 to_connections.resize(displ.back());
             }
             comm.gatherv(from_connections.data(), size, to_connections.data(),
@@ -359,7 +365,7 @@ namespace Opm
                 temperature_[w] = well.injectionControls(summary_state).temperature;
             }
 
-            const int num_perf_this_well = well_perf_data_[w].size();
+            const int num_perf_this_well = well_info.communication().sum(well_perf_data_[w].size());
             if ( num_perf_this_well == 0 ) {
                 // No perforations of the well. Initialize to zero.
                 bhp_[w] = 0.;

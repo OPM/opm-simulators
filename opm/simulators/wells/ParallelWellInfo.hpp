@@ -136,8 +136,17 @@ public:
     template<class T>
     T broadcastFirstPerforationValue(const T& t) const
     {
-        T res=t;
+        T res = t;
+#ifndef NDEBUG
+        assert(rankWithFirstPerf_ >= 0 && rankWithFirstPerf_ < comm_->size());
+        // At least on some OpenMPI version this might broadcast might interfere
+        // with other communication if there are bugs
+        comm_->barrier();
+#endif
         comm_->broadcast(&res, 1, rankWithFirstPerf_);
+#ifndef NDEBUG
+        comm_->barrier();
+#endif
         return res;
     }
 

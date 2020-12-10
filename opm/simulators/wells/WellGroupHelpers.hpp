@@ -160,6 +160,12 @@ namespace WellGroupHelpers
                 continue;
 
             int well_index = it->second[0];
+
+            if (! wellState.wellIsOwned(well_index, wellName) ) // Only sum once
+            {
+                continue;
+            }
+
             const auto wellrate_index = well_index * wellState.numPhases();
             // add contribution from wells unconditionally
             for (int phase = 0; phase < np; phase++) {
@@ -207,8 +213,9 @@ namespace WellGroupHelpers
             double waterpot = 0.0;
 
             const auto& it = wellState.wellMap().find(well.name());
-            if (it != end) { // the well is found
-
+            if (it != end && wellState.wellIsOwned(it->second[0], well.name()))
+            {
+                // the well is found and owned
                 int well_index = it->second[0];
 
                 const auto wpot = wellState.wellPotentials().data() + well_index * wellState.numPhases();

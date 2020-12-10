@@ -464,6 +464,11 @@ namespace Opm {
     void
     BlackoilWellModel<TypeTag>::
     endReportStep() {
+        // Clear the communication data structures for above values.
+        for(auto&& pinfo : local_parallel_well_info_)
+        {
+            pinfo->clearCommunicateAbove();
+        }
     }
 
     // called at the end of a report step
@@ -614,12 +619,15 @@ namespace Opm {
         well_perf_data_.resize(wells_ecl_.size());
         int well_index = 0;
         for (const auto& well : wells_ecl_) {
-            std::size_t completion_index = 0;
+            int completion_index = 0;
+            int completion_index_above = -1; // -1 marks no above perf available
             well_perf_data_[well_index].clear();
             well_perf_data_[well_index].reserve(well.getConnections().size());
             CheckDistributedWellConnections checker(well, *local_parallel_well_info_[well_index]);
             bool hasFirstPerforation = false;
             bool firstOpenCompletion = true;
+            auto& parallelWellInfo = *local_parallel_well_info_[well_index];
+            parallelWellInfo.beginReset();
 
             for (const auto& completion : well.getConnections()) {
                 const int active_index =
@@ -637,6 +645,8 @@ namespace Opm {
                         pd.satnum_id = completion.satTableId();
                         pd.ecl_index = completion_index;
                         well_perf_data_[well_index].push_back(pd);
+                        parallelWellInfo.pushBackEclIndex(completion_index_above,
+                                                          completion_index);
                     }
                     firstOpenCompletion = false;
                 } else {
@@ -646,10 +656,14 @@ namespace Opm {
                                   "Completion state: " << Connection::State2String(completion.state()) << " not handled");
                     }
                 }
+                // Note: we rely on the connections being filtered! I.e. there are only connections
+                // to active cells in the global grid.
                 ++completion_index;
+                ++completion_index_above;
             }
+            parallelWellInfo.endReset();
             checker.checkAllConnectionsFound();
-            local_parallel_well_info_[well_index]->communicateFirstPerforation(hasFirstPerforation);
+            parallelWellInfo.communicateFirstPerforation(hasFirstPerforation);
             ++well_index;
         }
     }
@@ -1605,8 +1619,15 @@ namespace Opm {
     {
         cartesian_to_compressed_.resize(number_of_cartesian_cells, -1);
         if (global_cell) {
+            auto elemIt = ebosSimulator_.gridView().template begin</*codim=*/ 0>();
             for (unsigned i = 0; i < local_num_cells_; ++i) {
-                cartesian_to_compressed_[global_cell[i]] = i;
+                // Skip perforations in the overlap/ghost for distributed wells.
+                if (elemIt->partitionType() == Dune::InteriorEntity)
+                {
+                    assert(ebosSimulator_.gridView().indexSet().index(*elemIt) == static_cast<int>(i));
+                    cartesian_to_compressed_[global_cell[i]] = i;
+                }
+                ++elemIt;
             }
         }
         else {
@@ -2485,7 +2506,7 @@ namespace Opm {
         // What is the proper approach?
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
         const int fipnum = 0;
-        int pvtreg = well_perf_data_.empty()
+        int pvtreg = well_perf_data_.empty() || well_perf_data_[0].empty()
             ? pvt_region_idx_[0]
             : pvt_region_idx_[well_perf_data_[0][0].cell_index];
 
