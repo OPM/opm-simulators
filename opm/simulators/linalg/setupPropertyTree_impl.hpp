@@ -17,8 +17,6 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <config.h>
-
 #include <opm/simulators/linalg/setupPropertyTree.hpp>
 
 #include <boost/version.hpp>
