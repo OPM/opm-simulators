@@ -128,7 +128,7 @@ public:
             {
                 if (pair.local().attribute() == owner)
                 {
-                    my_pairs.emplace_back(pair.global(), *(begin+(static_cast<const int&>(pair.local()))));
+                    my_pairs.emplace_back(pair.global(), begin[pair.local()]);
                 }
             }
             int mySize = my_pairs.size();
