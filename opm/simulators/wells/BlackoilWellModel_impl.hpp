@@ -1484,30 +1484,29 @@ namespace Opm {
         const Opm::SummaryConfig& summaryConfig = ebosSimulator_.vanguard().summaryConfig();
         const bool write_restart_file = ebosSimulator_.vanguard().schedule().restart().getWriteRestartFile(reportStepIdx);
         int exception_thrown = 0;
-        try {
-            for (const auto& well : well_container_) {
-                const bool needed_for_summary = ((summaryConfig.hasSummaryKey( "WWPI:" + well->name()) ||
-                                                  summaryConfig.hasSummaryKey( "WOPI:" + well->name()) ||
-                                                  summaryConfig.hasSummaryKey( "WGPI:" + well->name())) && well->isInjector()) ||
-                                                ((summaryConfig.hasSummaryKey( "WWPP:" + well->name()) ||
-                                                  summaryConfig.hasSummaryKey( "WOPP:" + well->name()) ||
-                                                  summaryConfig.hasSummaryKey( "WGPP:" + well->name())) && well->isProducer());
+        for (const auto& well : well_container_) {
+            const bool needed_for_summary = ((summaryConfig.hasSummaryKey( "WWPI:" + well->name()) ||
+                                              summaryConfig.hasSummaryKey( "WOPI:" + well->name()) ||
+                                              summaryConfig.hasSummaryKey( "WGPI:" + well->name())) && well->isInjector()) ||
+                    ((summaryConfig.hasSummaryKey( "WWPP:" + well->name()) ||
+                      summaryConfig.hasSummaryKey( "WOPP:" + well->name()) ||
+                      summaryConfig.hasSummaryKey( "WGPP:" + well->name())) && well->isProducer());
 
-                bool needPotentialsForGuideRate = true;//eclWell.getGuideRatePhase() == Well::GuideRateTarget::UNDEFINED;
-                if (write_restart_file || needed_for_summary || needPotentialsForGuideRate)
-                {
+            bool needPotentialsForGuideRate = true;//eclWell.getGuideRatePhase() == Well::GuideRateTarget::UNDEFINED;
+            if (write_restart_file || needed_for_summary || needPotentialsForGuideRate)
+            {
+                try {
                     std::vector<double> potentials;
                     well->computeWellPotentials(ebosSimulator_, B_avg, well_state_copy, potentials, deferred_logger);
                     // putting the sucessfully calculated potentials to the well_potentials
                     for (int p = 0; p < np; ++p) {
                         well_potentials[well->indexOfWell() * np + p] = std::abs(potentials[p]);
                     }
+                } catch (std::exception& e) {
+                    exception_thrown = 1;
                 }
-            } // end of for (int w = 0; w < nw; ++w)
-        } catch (std::exception& e) {
-            exception_thrown = 1;
+            }
         }
-
         logAndCheckForExceptionsAndThrow(deferred_logger, exception_thrown, "computeWellPotentials() failed.", terminal_output_);
 
         // Store it in the well state
