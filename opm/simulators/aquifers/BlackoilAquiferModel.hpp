@@ -44,9 +44,35 @@
 #include <opm/material/densead/Math.hpp>
 
 #include <vector>
+#include <type_traits>
 
 namespace Opm
 {
+
+template<class Grid>
+class SupportsFaceTag
+    : public std::bool_constant<false>
+{};
+
+
+template<>
+class SupportsFaceTag<Dune::CpGrid>
+    : public std::bool_constant<true>
+{};
+
+
+template<>
+class SupportsFaceTag<Dune::PolyhedralGrid<3, 3>>
+    : public std::bool_constant<true>
+{};
+
+#if HAVE_DUNE_ALUGRID
+template<>
+class SupportsFaceTag<Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming>>
+    : public std::bool_constant<true>
+{};
+#endif
+
 
 /// Class for handling the blackoil well model.
 template <typename TypeTag>
@@ -55,13 +81,6 @@ class BlackoilAquiferModel
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
 
-    constexpr bool supportsFaceTag(const Dune::CpGrid&){ return true;}
-    constexpr bool supportsFaceTag(const Dune::PolyhedralGrid<3, 3>&){ return true;}
-#if HAVE_DUNE_ALUGRID
-    constexpr bool supportsFaceTag(const Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming>&){ return true;}
-#endif
-    template<class G>
-    constexpr bool supportsFaceTag(const G&){ return false;}
 
 public:
     explicit BlackoilAquiferModel(Simulator& simulator);
