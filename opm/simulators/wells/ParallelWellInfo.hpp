@@ -153,7 +153,7 @@ public:
                                                { return val1.first < val2; });
                 assert(global_pair != global_pairs.end());
                 assert(global_pair->first == pair.global());
-                *(begin + static_cast<const int&>(pair.local())) = sums[global_pair - global_pairs.begin()];
+                begin[pair.local()] = sums[global_pair - global_pairs.begin()];
             }
 #else
             OPM_THROW(std::logic_error, "In a sequential run the size of the communicator should be 1!");
