@@ -4119,6 +4119,11 @@ namespace Opm
         for (int comp = 0; comp < num_components_; ++comp) {
             well_q_s_noderiv[comp] = well_q_s[comp].value();
         }
+        const auto& comm = this->parallel_well_info_.communication();
+        if (comm.size() > 1)
+        {
+            comm.sum(well_q_s_noderiv.data(), well_q_s_noderiv.size());
+        }
         return well_q_s_noderiv;
     }
 
