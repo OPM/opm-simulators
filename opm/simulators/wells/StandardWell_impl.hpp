@@ -1676,6 +1676,8 @@ namespace Opm
                 ipr_b_[ebosCompIdxToFlowCompIdx(p)] += ipr_b_perf[p];
             }
         }
+        this->parallel_well_info_.communication().sum(ipr_a_.data(), ipr_a_.size());
+        this->parallel_well_info_.communication().sum(ipr_b_.data(), ipr_b_.size());
     }
 
 
