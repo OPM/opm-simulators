@@ -25,6 +25,9 @@ template <typename TypeTag>
 BlackoilAquiferModel<TypeTag>::BlackoilAquiferModel(Simulator& simulator)
     : simulator_(simulator)
 {
+    // Grid needs to support Facetag
+    assert(supportsFaceTag(simulator.vanguard().grid()));
+
     init();
 }
 

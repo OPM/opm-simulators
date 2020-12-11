@@ -35,6 +35,12 @@
 #include <opm/simulators/aquifers/AquiferCarterTracy.hpp>
 #include <opm/simulators/aquifers/AquiferFetkovich.hpp>
 
+#include <opm/grid/CpGrid.hpp>
+#include <opm/grid/polyhedralgrid.hh>
+#if HAVE_DUNE_ALUGRID
+#include <dune/alugrid/grid.hh>
+#endif
+
 #include <opm/material/densead/Math.hpp>
 
 #include <vector>
@@ -48,6 +54,14 @@ class BlackoilAquiferModel
 {
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+
+    constexpr bool supportsFaceTag(const Dune::CpGrid&){ return true;}
+    constexpr bool supportsFaceTag(const Dune::PolyhedralGrid<3, 3>&){ return true;}
+#if HAVE_DUNE_ALUGRID
+    constexpr bool supportsFaceTag(const Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming>&){ return true;}
+#endif
+    template<class G>
+    constexpr bool supportsFaceTag(const G&){ return false;}
 
 public:
     explicit BlackoilAquiferModel(Simulator& simulator);
