@@ -62,6 +62,17 @@ public:
         resize(minX, maxX, m, minY, maxY, n);
     }
 
+    UniformTabulated2DFunction(Scalar minX, Scalar maxX, unsigned m,
+                               Scalar minY, Scalar maxY, unsigned n,
+                               const std::vector<std::vector<Scalar>>& vals)
+    {
+        resize(minX, maxX, m, minY, maxY, n);
+
+        for (unsigned i = 0; i < m; ++i)
+            for (unsigned j = 0; j < n; ++j)
+                this->setSamplePoint(i, j, vals[i][j]);
+    }
+
     /*!
      * \brief Resize the tabulation to a new range.
      */
