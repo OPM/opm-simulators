@@ -24,16 +24,19 @@
 #include <dune/common/parallel/plocalindex.hh>
 #include <dune/istl/owneroverlapcopy.hh>
 
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 
 #include <memory>
+#include <iterator>
+#include <numeric>
 
 namespace Opm
 {
 
-/// \brief Class to facilitate getting values associated with the above perforation
+/// \brief Class to facilitate getting values associated with the above/below perforation
 ///
-class CommunicateAbove
+class CommunicateAboveBelow
 {
     enum Attribute {
       owner=1, overlap=2
@@ -51,7 +54,7 @@ class CommunicateAbove
 #endif
 
 public:
-    explicit CommunicateAbove(const Communication& comm);
+    explicit CommunicateAboveBelow(const Communication& comm);
     /// \brief Adds information about original index of the perforations in ECL Schedule.
     ///
     /// \warning Theses indices need to be push in the same order as they
@@ -79,13 +82,88 @@ public:
     /// \param current C-array of the values at the perforations
     /// \param size The size of the C-array and the returned vector
     /// \return a vector containing the values for the perforation above.
-    std::vector<double> communicate(double first_value,
-                                    const double* current,
-                                    std::size_t size);
+    std::vector<double> communicateAbove(double first_value,
+                                         const double* current,
+                                         std::size_t size);
+
+    /// \brief Creates an array of values for the perforation below.
+    /// \param first_value Value to use for above of the first perforation
+    /// \param current C-array of the values at the perforations
+    /// \param size The size of the C-array and the returned vector
+    /// \return a vector containing the values for the perforation above.
+    std::vector<double> communicateBelow(double first_value,
+                                         const double* current,
+                                         std::size_t size);
+
+    /// \brief Do a (in place) partial sum on values attached to all perforations.
+    ///
+    /// For distributed wells this may include perforations stored elsewhere.
+    /// The result is stored in ther range given as the parameters
+    /// \param begin The start of the range
+    /// \param ebd The end of the range
+    /// \tparam RAIterator The type og random access iterator
+    template<class RAIterator>
+    void partialSumPerfValues(RAIterator begin, RAIterator end) const
+    {
+        if (this->comm_.size() < 2)
+        {
+            std::partial_sum(begin, end, begin);
+        }
+        else
+        {
+#if HAVE_MPI
+            // The global index used in the index set current_indices
+            // is the index of the perforation in ECL Schedule definition.
+            // This is assumed to give the topological order that is used
+            // when doing the partial sum.
+            // allgather the index of the perforation in ECL schedule and the value.
+            using Value = typename std::iterator_traits<RAIterator>::value_type;
+            std::vector<int> sizes(comm_.size());
+            std::vector<int> displ(comm_.size(), 0);
+            using GlobalIndex = typename IndexSet::IndexPair::GlobalIndex;
+            using Pair = std::pair<GlobalIndex,Value>;
+            std::vector<Pair> my_pairs;
+            my_pairs.reserve(current_indices_.size());
+            for (const auto& pair: current_indices_)
+            {
+                if (pair.local().attribute() == owner)
+                {
+                    my_pairs.emplace_back(pair.global(), begin[pair.local()]);
+                }
+            }
+            int mySize = my_pairs.size();
+            comm_.allgather(&mySize, 1, sizes.data());
+            std::partial_sum(sizes.begin(), sizes.end(), displ.begin()+1);
+            std::vector<Pair> global_pairs(displ.back());
+            comm_.allgatherv(my_pairs.data(), my_pairs.size(), global_pairs.data(), sizes.data(), displ.data());
+            // sort the complete range to get the correct ordering
+            std::sort(global_pairs.begin(), global_pairs.end(),
+                      [](const Pair& p1, const Pair& p2){ return p1.first < p2.first; } );
+            std::vector<Value> sums(global_pairs.size());
+            std::transform(global_pairs.begin(), global_pairs.end(), sums.begin(),
+                           [](const Pair& p) { return p.second; });
+            std::partial_sum(sums.begin(), sums.end(),sums.begin());
+            // assign the values (both ranges are sorted by the ecl index)
+            auto global_pair = global_pairs.begin();
+            for (const auto& pair: current_indices_)
+            {
+                global_pair = std::lower_bound(global_pair, global_pairs.end(),
+                                               pair.global(),
+                                               [](const Pair& val1, const GlobalIndex& val2)
+                                               { return val1.first < val2; });
+                assert(global_pair != global_pairs.end());
+                assert(global_pair->first == pair.global());
+                *(begin + static_cast<const int&>(pair.local())) = sums[global_pair - global_pairs.begin()];
+            }
+#else
+            OPM_THROW(std::logic_error, "In a sequential run the size of the communicator should be 1!");
+#endif
+        }
+    }
 
 private:
-#if HAVE_MPI
     Communication comm_;
+#if HAVE_MPI
     /// \brief Mapping of the local well index to ecl index
     IndexSet current_indices_;
     /// \brief Mapping of the above well index to ecl index
@@ -155,15 +233,31 @@ public:
     /// \param current C-array of the values at the perforations
     /// \param size The size of the C-array and the returned vector
     /// \return a vector containing the values for the perforation above.
-    std::vector<double> communicateAboveValues(double zero_value,
+    std::vector<double> communicateAboveValues(double first_value,
                                                const double* current,
                                                std::size_t size) const;
 
     /// \brief Creates an array of values for the perforation above.
     /// \param first_value Value to use for above of the first perforation
     /// \param current vector of current values
-    std::vector<double> communicateAboveValues(double zero_value,
+    std::vector<double> communicateAboveValues(double first_value,
                                                const std::vector<double>& current) const;
+
+    /// \brief Creates an array of values for the perforation below.
+    /// \param last_value Value to use for below of the last perforation
+    /// \param current C-array of the values at the perforations
+    /// \param size The size of the C-array and the returned vector
+    /// \return a vector containing the values for the perforation above.
+    std::vector<double> communicateBelowValues(double last_value,
+                                               const double* current,
+                                               std::size_t size) const;
+
+    /// \brief Creates an array of values for the perforation above.
+    /// \param last_value Value to use for below of the last perforation
+    /// \param current vector of current values
+    std::vector<double> communicateBelowValues(double last_value,
+                                               const std::vector<double>& current) const;
+
     /// \brief Adds information about the ecl indices of the perforations.
     ///
     /// \warning Theses indices need to be push in the same order as they
@@ -197,8 +291,31 @@ public:
     /// \brief Inidicate completion of reset of the ecl index information
     void endReset();
 
+    /// \brief Sum all the values of the perforations
+    template<typename It>
+    typename std::iterator_traits<It>::value_type sumPerfValues(It begin, It end) const
+    {
+        using V = typename std::iterator_traits<It>::value_type;
+        /// \todo cater for overlap later. Currently only owner
+        auto local = std::accumulate(begin, end, V());
+        return communication().sum(local);
+    }
+
+    /// \brief Do a (in place) partial sum on values attached to all perforations.
+    ///
+    /// For distributed wells this may include perforations stored elsewhere.
+    /// The result is stored in ther range given as the parameters
+    /// \param begin The start of the range
+    /// \param ebd The end of the range
+    /// \tparam RAIterator The type og random access iterator
+    template<class RAIterator>
+    void partialSumPerfValues(RAIterator begin, RAIterator end) const
+    {
+        commAboveBelow_->partialSumPerfValues(begin, end);
+    }
+
     /// \brief Free data of communication data structures.
-    void clearCommunicateAbove();
+    void clearCommunicateAboveBelow();
 private:
 
     /// \brief Deleter that also frees custom MPI communicators
@@ -222,7 +339,7 @@ private:
     std::unique_ptr<Communication, DestroyComm> comm_;
 
     /// \brief used to communicate the values for the perforation above.
-    std::unique_ptr<CommunicateAbove> commAbove_;
+    std::unique_ptr<CommunicateAboveBelow> commAboveBelow_;
 };
 
 /// \brief Class checking that all connections are on active cells

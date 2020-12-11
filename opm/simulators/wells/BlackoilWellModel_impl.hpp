@@ -467,7 +467,7 @@ namespace Opm {
         // Clear the communication data structures for above values.
         for(auto&& pinfo : local_parallel_well_info_)
         {
-            pinfo->clearCommunicateAbove();
+            pinfo->clearCommunicateAboveBelow();
         }
     }
 
