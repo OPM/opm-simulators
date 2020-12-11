@@ -26,7 +26,8 @@ BlackoilAquiferModel<TypeTag>::BlackoilAquiferModel(Simulator& simulator)
     : simulator_(simulator)
 {
     // Grid needs to support Facetag
-    assert(supportsFaceTag(simulator.vanguard().grid()));
+    using Grid = std::remove_const_t<std::remove_reference_t<decltype(simulator.vanguard().grid())>>;
+    static_assert(SupportsFaceTag<Grid>::value, "Grid has to support assumptions about face tag.");
 
     init();
 }
