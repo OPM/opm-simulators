@@ -722,12 +722,15 @@ namespace Opm
             seg_number_.clear();
 
             nseg_ = 0;
-            int connpos = 0;
             // in the init function, the well rates and perforation rates have been initialized or copied from prevState
             // what we do here, is to set the segment rates and perforation rates
             for (int w = 0; w < nw; ++w) {
                 const auto& well_ecl = wells_ecl[w];
-                int num_perf_this_well = well_perf_data_[w].size();
+                const auto& wname = wells_ecl[w].name();
+                const auto& well_info = this->wellMap().at(wname);
+                const int connpos = well_info[1];
+                const int num_perf_this_well = well_info[2];
+
                 top_segment_index_.push_back(nseg_);
                 if ( !well_ecl.isMultiSegment() ) { // not multi-segment well
                     nseg_ += 1;
@@ -748,6 +751,7 @@ namespace Opm
                     for (auto segID = 0*well_nseg; segID < well_nseg; ++segID) {
                         this->seg_number_.push_back(segment_set[segID].segmentNumber());
                     }
+
                     // we need to know for each segment, how many perforation it has and how many segments using it as outlet_segment
                     // that is why I think we should use a well model to initialize the WellState here
                     std::vector<std::vector<int>> segment_perforations(well_nseg);
@@ -826,7 +830,6 @@ namespace Opm
                         }
                     }
                 }
-                connpos += num_perf_this_well;
             }
             assert(int(seg_press_.size()) == nseg_);
             assert(int(seg_rates_.size()) == nseg_ * numPhases() );
