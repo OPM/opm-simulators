@@ -1802,6 +1802,13 @@ namespace Opm
             }
         }
 
+        const auto& comm = this->parallel_well_info_.communication();
+        if (comm.size() > 1)
+        {
+            all_drawdown_wrong_direction =
+                (comm.min(all_drawdown_wrong_direction ? 1 : 0) == 1);
+        }
+
         return all_drawdown_wrong_direction;
     }
 
