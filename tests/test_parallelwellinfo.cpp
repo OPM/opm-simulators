@@ -222,56 +222,71 @@ BOOST_AUTO_TEST_CASE(CommunicateAboveBelowSelf1)
     }
 }
 
+using MPIComm = typename Dune::MPIHelper::MPICommunicator;
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+using Communication = Dune::Communication<MPIComm>;
+#else
+using Communication = Dune::CollectiveCommunication<MPIComm>;
+#endif
+std::vector<int> createGlobalEclIndex(const Communication& comm)
+{
+    std::vector<int> globalEclIndex = {0, 1, 2, 3, 7 , 8, 10, 11};
+    auto oldSize = globalEclIndex.size();
+    std::size_t globalSize = 3 * comm.size();
+    auto lastIndex = globalEclIndex.back();
+    globalEclIndex.resize(globalSize);
+    if ( globalSize > oldSize)
+    {
+        ++lastIndex;
+        for(auto entry = globalEclIndex.begin() + oldSize;
+            entry != globalEclIndex.end(); ++entry, ++lastIndex)
+        {
+            *entry = lastIndex;
+        }
+    }
+    return globalEclIndex;
+}
+
+template<class C>
+std::vector<double> populateCommAbove(C& commAboveBelow,
+                                      const Communication& comm,
+                                      const std::vector<int>& globalEclIndex,
+                                      const std::vector<double> globalCurrent)
+{
+    std::vector<double> current(3);
+
+    commAboveBelow.beginReset();
+    for (std::size_t i = 0; i < current.size(); ++i)
+    {
+        auto gi = comm.rank() + comm.size() * i;
+
+        if (gi==0)
+        {
+            commAboveBelow.pushBackEclIndex(-1, globalEclIndex[gi]);
+        }
+        else
+        {
+            commAboveBelow.pushBackEclIndex(globalEclIndex[gi-1], globalEclIndex[gi]);
+        }
+        current[i] = globalCurrent[gi];
+    }
+    commAboveBelow.endReset();
+    return current;
+}
+
 BOOST_AUTO_TEST_CASE(CommunicateAboveBelowParallel)
 {
-    using MPIComm = typename Dune::MPIHelper::MPICommunicator;
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
-    using Communication = Dune::Communication<MPIComm>;
-#else
-    using Communication = Dune::CollectiveCommunication<MPIComm>;
-#endif
     auto comm = Communication(Dune::MPIHelper::getCommunicator());
 
     Opm::CommunicateAboveBelow commAboveBelow{ comm };
     for(std::size_t count=0; count < 2; ++count)
     {
-        std::vector<int> globalEclIndex = {0, 1, 2, 3, 7 , 8, 10, 11};
-        auto oldSize = globalEclIndex.size();
-        std::size_t globalSize = 3 * comm.size();
-        auto lastIndex = globalEclIndex.back();
-        globalEclIndex.resize(globalSize);
-        if ( globalSize > oldSize)
-        {
-            ++lastIndex;
-            for(auto entry = globalEclIndex.begin() + oldSize;
-                entry != globalEclIndex.end(); ++entry, ++lastIndex)
-            {
-                *entry = lastIndex;
-            }
-        }
-
+        auto globalEclIndex = createGlobalEclIndex(comm);
         std::vector<double> globalCurrent(globalEclIndex.size());
         std::transform(globalEclIndex.begin(), globalEclIndex.end(), globalCurrent.begin(),
                        [](double v){ return 1+10.0*v;});
 
-        std::vector<double> current(3);
-
-        commAboveBelow.beginReset();
-        for (std::size_t i = 0; i < current.size(); ++i)
-        {
-            auto gi = comm.rank() + comm.size() * i;
-
-            if (gi==0)
-            {
-                commAboveBelow.pushBackEclIndex(-1, globalEclIndex[gi]);
-            }
-            else
-            {
-                commAboveBelow.pushBackEclIndex(globalEclIndex[gi-1], globalEclIndex[gi]);
-            }
-            current[i] = globalCurrent[gi];
-        }
-        commAboveBelow.endReset();
+        auto current = populateCommAbove(commAboveBelow, comm, globalEclIndex, globalCurrent);
         auto above = commAboveBelow.communicateAbove(-10.0, current.data(), current.size());
         if (comm.rank() == 0)
             BOOST_CHECK(above[0]==-10.0);
