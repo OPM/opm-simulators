@@ -48,8 +48,8 @@ class CommunicateAboveBelow
     using Communication = Dune::CollectiveCommunication<MPIComm>;
 #endif
     using LocalIndex = Dune::ParallelLocalIndex<Attribute>;
+    using IndexSet = Dune::ParallelIndexSet<int,LocalIndex,50>;
 #if HAVE_MPI
-    using IndexSet = Dune::ParallelIndexSet<std::size_t,LocalIndex,50>;
     using RI = Dune::RemoteIndices<IndexSet>;
 #endif
 
@@ -189,6 +189,7 @@ public:
     using Communication = Dune::CollectiveCommunication<MPIComm>;
 #endif
 
+    static constexpr int INVALID_ECL_INDEX = -1;
 
     /// \brief Constructs object using MPI_COMM_SELF
     ParallelWellInfo(const std::string& name = {""},

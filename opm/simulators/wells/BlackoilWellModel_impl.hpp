@@ -620,7 +620,8 @@ namespace Opm {
         int well_index = 0;
         for (const auto& well : wells_ecl_) {
             int completion_index = 0;
-            int completion_index_above = -1; // -1 marks no above perf available
+            // INVALID_ECL_INDEX marks no above perf available
+            int completion_index_above = ParallelWellInfo::INVALID_ECL_INDEX;
             well_perf_data_[well_index].clear();
             well_perf_data_[well_index].reserve(well.getConnections().size());
             CheckDistributedWellConnections checker(well, *local_parallel_well_info_[well_index]);
