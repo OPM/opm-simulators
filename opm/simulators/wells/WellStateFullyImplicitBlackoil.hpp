@@ -722,12 +722,15 @@ namespace Opm
             seg_number_.clear();
 
             nseg_ = 0;
-            int connpos = 0;
             // in the init function, the well rates and perforation rates have been initialized or copied from prevState
             // what we do here, is to set the segment rates and perforation rates
             for (int w = 0; w < nw; ++w) {
                 const auto& well_ecl = wells_ecl[w];
-                int num_perf_this_well = well_perf_data_[w].size();
+                const auto& wname = wells_ecl[w].name();
+                const auto& well_info = this->wellMap().at(wname);
+                const int connpos = well_info[1];
+                const int num_perf_this_well = well_info[2];
+
                 top_segment_index_.push_back(nseg_);
                 if ( !well_ecl.isMultiSegment() ) { // not multi-segment well
                     nseg_ += 1;
@@ -748,6 +751,7 @@ namespace Opm
                     for (auto segID = 0*well_nseg; segID < well_nseg; ++segID) {
                         this->seg_number_.push_back(segment_set[segID].segmentNumber());
                     }
+
                     // we need to know for each segment, how many perforation it has and how many segments using it as outlet_segment
                     // that is why I think we should use a well model to initialize the WellState here
                     std::vector<std::vector<int>> segment_perforations(well_nseg);
@@ -826,7 +830,6 @@ namespace Opm
                         }
                     }
                 }
-                connpos += num_perf_this_well;
             }
             assert(int(seg_press_.size()) == nseg_);
             assert(int(seg_rates_.size()) == nseg_ * numPhases() );
@@ -837,18 +840,24 @@ namespace Opm
             seg_pressdrop_acceleration_.assign(nseg_, 0.);
 
             if (prev_well_state && !prev_well_state->wellMap().empty()) {
-                // copying MS well related
                 const auto& end = prev_well_state->wellMap().end();
                 const int np = numPhases();
                 for (int w = 0; w < nw; ++w) {
-                    const auto& it = prev_well_state->wellMap().find( wells_ecl[w].name() );
+                    const Well& well = wells_ecl[w];
+                    if (well.getStatus() == Well::Status::SHUT)
+                        continue;
 
+                    const auto& it = prev_well_state->wellMap().find( wells_ecl[w].name() );
                     if (it != end) { // the well is found in the prev_well_state
                         // TODO: the well with same name can change a lot, like they might not have same number of segments
                         // we need to handle that later.
                         // for now, we just copy them.
                         const int old_index_well = (*it).second[0];
                         const int new_index_well = w;
+                        if (prev_well_state->status_[old_index_well] == Well::Status::SHUT) {
+                            continue;
+                        }
+
                         const int old_top_segment_index = prev_well_state->topSegmentIndex(old_index_well);
                         const int new_top_segmnet_index = topSegmentIndex(new_index_well);
                         int number_of_segment = 0;
