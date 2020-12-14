@@ -364,12 +364,13 @@ namespace Opm
             }
             case Well::InjectorCMode::BHP:
             {
-                well_state.segPress()[top_segment_index] = controls.bhp_limit;
+                well_state.bhp()[well_index] = controls.bhp_limit;
                 break;
             }
             case Well::InjectorCMode::GRUP:
             {
-                //do nothing at the moment
+                // for GRUP the well rates are scaled
+                // in checkGroupConstraints
                 break;
             }
             case Well::InjectorCMode::CMODE_UNDEFINED:
@@ -478,7 +479,7 @@ namespace Opm
             }
             case Well::ProducerCMode::BHP:
             {
-                well_state.segPress()[top_segment_index] = controls.bhp_limit;
+                well_state.bhp()[well_index] = controls.bhp_limit;
                 break;
             }
             case Well::ProducerCMode::THP:
@@ -493,7 +494,8 @@ namespace Opm
             }
             case Well::ProducerCMode::GRUP:
             {
-                //do nothing at the moment
+                // for GRUP the well rates are scaled
+                // in checkGroupConstraints
                 break;
             }
             case Well::ProducerCMode::CMODE_UNDEFINED:
@@ -508,8 +510,9 @@ namespace Opm
             }
         }
 
-        // compute the segment rates based on the wellRates
-        initSegmentRatesWithWellRates(well_state);
+        // scale segment rates based on the wellRates
+        // and segment pressure based on bhp
+        scaleSegmentRatesAndPressureWithWellRatesAndPressure(well_state);
     }
 
 
@@ -519,28 +522,30 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    initSegmentRatesWithWellRates(WellState& well_state) const
+    scaleSegmentRatesAndPressureWithWellRatesAndPressure(WellState& well_state) const
     {
+        const int top_segment_index = well_state.topSegmentIndex(index_of_well_);
+
         for (int phase = 0; phase < number_of_phases_; ++phase) {
-            const double perf_phaserate = well_state.wellRates()[number_of_phases_ * index_of_well_ + phase] / number_of_perforations_;
-            for (int perf = 0; perf < number_of_perforations_; ++perf) {
-                well_state.perfPhaseRates()[number_of_phases_ * (first_perf_ + perf) + phase] = perf_phaserate;
+            const double well_phase_rate = well_state.wellRates()[number_of_phases_*index_of_well_ + phase];
+            const double unscaled_top_seg_rate = well_state.segRates()[number_of_phases_*top_segment_index + phase];
+            if (std::abs(unscaled_top_seg_rate) > 1e-12)
+            {
+                for (int seg = 0; seg < numberOfSegments(); ++seg) {
+                    const int seg_index = top_segment_index + seg;
+                    well_state.segRates()[number_of_phases_*seg_index + phase] *= well_phase_rate/unscaled_top_seg_rate;
+                }
             }
         }
 
-        const std::vector<double> perforation_rates(well_state.perfPhaseRates().begin() + number_of_phases_ * first_perf_,
-                                                    well_state.perfPhaseRates().begin() +
-                                                    number_of_phases_ * (first_perf_ + number_of_perforations_) );
-        std::vector<double> segment_rates;
-        WellState::calculateSegmentRates(segment_inlets_, segment_perforations_, perforation_rates, number_of_phases_,
-                                         0, segment_rates);
-        const int top_segment_index = well_state.topSegmentIndex(index_of_well_);
-        std::copy(segment_rates.begin(), segment_rates.end(),
-                  well_state.segRates().begin() + number_of_phases_ * top_segment_index );
-        // we need to check the top segment rates should be same with the well rates
+        //scale segment pressures
+        const double bhp = well_state.bhp()[index_of_well_];
+        const double unscaled_top_seg_pressure = well_state.segPress()[top_segment_index];
+        for (int seg = 0; seg < numberOfSegments(); ++seg) {
+            const int seg_index = top_segment_index + seg;
+            well_state.segPress()[seg_index] *= bhp/unscaled_top_seg_pressure;
+        }
     }
-
-
 
 
 
@@ -865,6 +870,15 @@ namespace Opm
         }
         well_state_copy.bhp()[well_copy.index_of_well_] = bhp;
 
+        // initialized the well rates with the potentials i.e. the well rates based on bhp
+        const int np = number_of_phases_;
+        const double sign = well_copy.well_ecl_.isInjector()? 1.0:-1.0;
+        for (int phase = 0; phase < np; ++phase){
+            well_state_copy.wellRates()[well_copy.index_of_well_*np + phase] = sign*well_state_copy.wellPotentials()[well_copy.index_of_well_*np + phase];
+        }
+        // we also want to adjust the segment rates and pressure
+        well_copy.scaleSegmentRatesAndPressureWithWellRatesAndPressure(well_state_copy);
+
         well_copy.calculateExplicitQuantities(ebosSimulator, well_state_copy, deferred_logger);
         const double dt = ebosSimulator.timeStepSize();
         // iterate to get a solution at the given bhp.
@@ -873,7 +887,6 @@ namespace Opm
 
         // compute the potential and store in the flux vector.
         well_flux.clear();
-        const int np = number_of_phases_;
         well_flux.resize(np, 0.0);
         for (int compIdx = 0; compIdx < num_components_; ++compIdx) {
             const EvalWell rate = well_copy.getQs(compIdx);
