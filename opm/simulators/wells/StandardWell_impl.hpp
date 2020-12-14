@@ -2281,6 +2281,12 @@ namespace Opm
             connPI += np;
         }
 
+        //  Sum with communication in case of distributed well.
+        const auto& comm = this->parallel_well_info_.communication();
+        if (comm.size() > 1)
+        {
+            comm.sum(wellPI, np);
+        }
         assert (static_cast<int>(subsetPerfID) == this->number_of_perforations_ &&
                 "Internal logic error in processing connections for PI/II");
     }
