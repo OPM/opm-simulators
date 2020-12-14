@@ -840,18 +840,24 @@ namespace Opm
             seg_pressdrop_acceleration_.assign(nseg_, 0.);
 
             if (prev_well_state && !prev_well_state->wellMap().empty()) {
-                // copying MS well related
                 const auto& end = prev_well_state->wellMap().end();
                 const int np = numPhases();
                 for (int w = 0; w < nw; ++w) {
-                    const auto& it = prev_well_state->wellMap().find( wells_ecl[w].name() );
+                    const Well& well = wells_ecl[w];
+                    if (well.getStatus() == Well::Status::SHUT)
+                        continue;
 
+                    const auto& it = prev_well_state->wellMap().find( wells_ecl[w].name() );
                     if (it != end) { // the well is found in the prev_well_state
                         // TODO: the well with same name can change a lot, like they might not have same number of segments
                         // we need to handle that later.
                         // for now, we just copy them.
                         const int old_index_well = (*it).second[0];
                         const int new_index_well = w;
+                        if (prev_well_state->status_[old_index_well] == Well::Status::SHUT) {
+                            continue;
+                        }
+
                         const int old_top_segment_index = prev_well_state->topSegmentIndex(old_index_well);
                         const int new_top_segmnet_index = topSegmentIndex(new_index_well);
                         int number_of_segment = 0;
