@@ -467,7 +467,7 @@ namespace Opm {
         // Clear the communication data structures for above values.
         for(auto&& pinfo : local_parallel_well_info_)
         {
-            pinfo->clearCommunicateAboveBelow();
+            pinfo->clear();
         }
     }
 
@@ -650,6 +650,9 @@ namespace Opm {
                                                           completion_index);
                     }
                     firstOpenCompletion = false;
+                    // Next time this index is the one above as each open completion is
+                    // is stored somehwere.
+                    completion_index_above = completion_index;
                 } else {
                     checker.connectionFound(completion_index);
                     if (completion.state() != Connection::State::SHUT) {
@@ -660,7 +663,6 @@ namespace Opm {
                 // Note: we rely on the connections being filtered! I.e. there are only connections
                 // to active cells in the global grid.
                 ++completion_index;
-                ++completion_index_above;
             }
             parallelWellInfo.endReset();
             checker.checkAllConnectionsFound();
