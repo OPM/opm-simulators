@@ -233,7 +233,97 @@ protected:
 
     bool solution_set_from_restart_ {false};
 
-    virtual void initializeConnections() = 0;
+    void initializeConnections()
+    {
+        this->cell_depth_.resize(this->size(), this->aquiferDepth());
+        this->alphai_.resize(this->size(), 1.0);
+        this->faceArea_connected_.resize(this->size(), 0.0);
+
+        // Translate the C face tag into the enum used by opm-parser's TransMult class
+        Opm::FaceDir::DirEnum faceDirection;
+
+        // denom_face_areas is the sum of the areas connected to an aquifer
+        Scalar denom_face_areas = 0.;
+        this->cellToConnectionIdx_.resize(this->ebos_simulator_.gridView().size(/*codim=*/0), -1);
+        for (size_t idx = 0; idx < this->size(); ++idx) {
+            const auto global_index = this->connections_[idx].global_index;
+            const int cell_index = this->ebos_simulator_.vanguard().compressedIndex(global_index);
+            if (cell_index < 0) //the global_index is not part of this grid
+                continue;
+
+            this->cellToConnectionIdx_[cell_index] = idx;
+            this->cell_depth_.at(idx) = this->ebos_simulator_.vanguard().cellCenterDepth(cell_index);
+        }
+        // get areas for all connections
+        const auto& gridView = this->ebos_simulator_.vanguard().gridView();
+        ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
+        auto elemIt = gridView.template begin</*codim=*/ 0>();
+        const auto& elemEndIt = gridView.template end</*codim=*/ 0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            const auto& elem = *elemIt;
+            if (elem.partitionType() != Dune::InteriorEntity)
+              continue;
+            unsigned cell_index = elemMapper.index(elem);
+            int idx = this->cellToConnectionIdx_[cell_index];
+
+            // only deal with connections given by the aquifer
+            if( idx < 0)
+                continue;
+
+            auto isIt = gridView.ibegin(elem);
+            const auto& isEndIt = gridView.iend(elem);
+            for (; isIt != isEndIt; ++ isIt) {
+                // store intersection, this might be costly
+                const auto& intersection = *isIt;
+
+                // only deal with grid boundaries
+                if (!intersection.boundary())
+                    continue;
+
+                int insideFaceIdx  = intersection.indexInInside();
+                switch (insideFaceIdx) {
+                case 0:
+                    faceDirection = Opm::FaceDir::XMinus;
+                    break;
+                case 1:
+                    faceDirection = Opm::FaceDir::XPlus;
+                    break;
+                case 2:
+                    faceDirection = Opm::FaceDir::YMinus;
+                    break;
+                case 3:
+                    faceDirection = Opm::FaceDir::YPlus;
+                    break;
+                case 4:
+                    faceDirection = Opm::FaceDir::ZMinus;
+                    break;
+                case 5:
+                    faceDirection = Opm::FaceDir::ZPlus;
+                    break;
+                default:
+                    OPM_THROW(std::logic_error,
+                        "Internal error in initialization of aquifer.");
+                }
+
+
+                if (faceDirection == this->connections_[idx].face_dir) {
+                    this->faceArea_connected_[idx] = this->getFaceArea(intersection, idx);
+                    break;
+                }
+            }
+            denom_face_areas += (this->connections_[idx].influx_mult * this->faceArea_connected_.at(idx));
+        }
+
+        const auto& comm = this->ebos_simulator_.vanguard().grid().comm();
+        comm.sum(&denom_face_areas, 1);
+        const double eps_sqrt = std::sqrt(std::numeric_limits<double>::epsilon());
+        for (size_t idx = 0; idx < this->size(); ++idx) {
+            this->alphai_.at(idx) = (denom_face_areas < eps_sqrt)
+                ? // Prevent no connection NaNs due to division by zero
+                0.
+                : (this->connections_[idx].influx_mult * this->faceArea_connected_.at(idx)) / denom_face_areas;
+        }
+    }
 
     virtual void assignRestartData(const data::AquiferData& xaq) = 0;
 
