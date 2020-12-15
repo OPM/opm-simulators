@@ -35,12 +35,44 @@
 #include <opm/simulators/aquifers/AquiferCarterTracy.hpp>
 #include <opm/simulators/aquifers/AquiferFetkovich.hpp>
 
+#include <opm/grid/CpGrid.hpp>
+#include <opm/grid/polyhedralgrid.hh>
+#if HAVE_DUNE_ALUGRID
+#include <dune/alugrid/grid.hh>
+#endif
+
 #include <opm/material/densead/Math.hpp>
 
 #include <vector>
+#include <type_traits>
 
 namespace Opm
 {
+
+template<class Grid>
+class SupportsFaceTag
+    : public std::bool_constant<false>
+{};
+
+
+template<>
+class SupportsFaceTag<Dune::CpGrid>
+    : public std::bool_constant<true>
+{};
+
+
+template<>
+class SupportsFaceTag<Dune::PolyhedralGrid<3, 3>>
+    : public std::bool_constant<true>
+{};
+
+#if HAVE_DUNE_ALUGRID
+template<>
+class SupportsFaceTag<Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming>>
+    : public std::bool_constant<true>
+{};
+#endif
+
 
 /// Class for handling the blackoil well model.
 template <typename TypeTag>
@@ -48,6 +80,7 @@ class BlackoilAquiferModel
 {
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+
 
 public:
     explicit BlackoilAquiferModel(Simulator& simulator);
@@ -83,7 +116,6 @@ protected:
 
     Simulator& simulator_;
 
-    std::unordered_map<int, int> cartesian_to_compressed_;
     // TODO: probably we can use one variable to store both types of aquifers, because
     // they share the base class
     mutable std::vector<AquiferCarterTracy_object> aquifers_CarterTracy;

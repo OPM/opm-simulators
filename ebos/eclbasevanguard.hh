@@ -169,6 +169,7 @@ class EclBaseVanguard : public BaseVanguard<TypeTag>
     using Implementation = GetPropType<TypeTag, Properties::Vanguard>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
 
     enum { enableExperiments = getPropValue<TypeTag, Properties::EnableExperiments>() };
 
@@ -178,6 +179,8 @@ public:
 
 protected:
     static const int dimension = Grid::dimension;
+    using Element = typename GridView::template Codim<0>::Entity;
+
 
 public:
     /*!
@@ -585,6 +588,16 @@ public:
     }
 
     /*!
+     * \brief Return compressed index from cartesian index
+     *
+     */
+    int compressedIndex(int cartesianCellIdx) const
+    {
+        int index = cartesianToCompressed_[cartesianCellIdx];
+        return index;
+    }
+
+    /*!
      * \brief Extract Cartesian index triplet (i,j,k) of an active cell.
      *
      * \param [in] cellIdx Active cell index.
@@ -629,6 +642,17 @@ public:
     }
 
     /*!
+     * \brief Returns the depth of an degree of freedom [m]
+     *
+     * For ECL problems this is defined as the average of the depth of an element and is
+     * thus slightly different from the depth of an element's centroid.
+     */
+    Scalar cellCenterDepth(unsigned globalSpaceIdx) const
+    {
+        return cellCenterDepth_[globalSpaceIdx];
+    }
+
+    /*!
      * \brief Get the number of cells in the global leaf grid view.
      * \warn This is a collective operation that needs to be called
      * on all ranks.
@@ -664,6 +688,31 @@ protected:
             }
         }
     }
+    void updateCartesianToCompressedMapping_()
+    {
+        size_t num_cells = asImp_().grid().leafGridView().size(0);
+        cartesianToCompressed_.resize(cartesianSize(), -1);
+        for (unsigned i = 0; i < num_cells; ++i) {
+            unsigned cartesianCellIdx = cartesianIndex(i);
+            cartesianToCompressed_[cartesianCellIdx] = i;
+        }
+    }
+
+    void updateCellDepths_()
+    {
+        int numCells = this->gridView().size(/*codim=*/0);
+        cellCenterDepth_.resize(numCells);
+
+        ElementMapper elemMapper(this->gridView(), Dune::mcmgElementLayout());
+        auto elemIt = this->gridView().template begin</*codim=*/0>();
+        const auto& elemEndIt = this->gridView().template end</*codim=*/0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            const Element& element = *elemIt;
+            const unsigned int elemIdx = elemMapper.index(element);
+            cellCenterDepth_[elemIdx] = cellCenterDepth(element);
+        }
+    }
+
 private:
     void updateOutputDir_()
     {
@@ -691,6 +740,20 @@ private:
         ioConfig.setOutputDir(outputDir);
 
         ioConfig.setEclCompatibleRST(!EWOMS_GET_PARAM(TypeTag, bool, EnableOpmRstFile));
+    }
+
+    Scalar cellCenterDepth(const Element& element) const
+    {
+        typedef typename Element::Geometry Geometry;
+        static constexpr int zCoord = Element::dimension - 1;
+        Scalar zz = 0.0;
+
+        const Geometry geometry = element.geometry();
+        const int corners = geometry.corners();
+        for (int i=0; i < corners; ++i)
+            zz += geometry.corner(i)[zCoord];
+
+        return zz/Scalar(corners);
     }
 
     Implementation& asImp_()
@@ -734,12 +797,25 @@ protected:
      * Empty otherwise. Used by EclTransmissibilty.
      */
     std::vector<double> centroids_;
+
+    /*! \brief Mapping between cartesian and compressed cells.
+     *  It is initialized the first time it is called
+     */
+    std::vector<int> cartesianToCompressed_;
+
+    /*! \brief Cell center depths computed
+     *  from averaging cell corner depths
+     */
+    std::vector<Scalar> cellCenterDepth_;
+
     /*! \brief information about wells in parallel
      *
      * For each well in the model there is an entry with its name
      * and a boolean indicating whether it perforates local cells.
      */
     std::vector<std::pair<std::string,bool>> parallelWells_;
+
+
 };
 
 template <class TypeTag>

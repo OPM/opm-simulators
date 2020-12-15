@@ -18,7 +18,6 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <opm/grid/utility/cartesianToCompressed.hpp>
 namespace Opm
 {
 
@@ -26,6 +25,10 @@ template <typename TypeTag>
 BlackoilAquiferModel<TypeTag>::BlackoilAquiferModel(Simulator& simulator)
     : simulator_(simulator)
 {
+    // Grid needs to support Facetag
+    using Grid = std::remove_const_t<std::remove_reference_t<decltype(simulator.vanguard().grid())>>;
+    static_assert(SupportsFaceTag<Grid>::value, "Grid has to support assumptions about face tag.");
+
     init();
 }
 
@@ -170,21 +173,15 @@ BlackoilAquiferModel<TypeTag>::init()
         throw std::runtime_error("Aquifers currently do not work in parallel.");
 
     // Get all the carter tracy aquifer properties data and put it in aquifers vector
-    const auto& ugrid = simulator_.vanguard().grid();
-    const int number_of_cells = simulator_.gridView().size(0);
-
-    cartesian_to_compressed_ = cartesianToCompressed(number_of_cells,
-                                                     Opm::UgGridHelpers::globalCell(ugrid));
-
     const auto& connections = aquifer.connections();
     for (const auto& aq : aquifer.ct()) {
         aquifers_CarterTracy.emplace_back(connections[aq.aquiferID],
-                                          cartesian_to_compressed_, this->simulator_, aq);
+                                          this->simulator_, aq);
     }
 
     for (const auto& aq : aquifer.fetp()) {
         aquifers_Fetkovich.emplace_back(connections[aq.aquiferID],
-                                        cartesian_to_compressed_, this->simulator_, aq);
+                                        this->simulator_, aq);
     }
 }
 template <typename TypeTag>
