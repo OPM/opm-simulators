@@ -168,9 +168,10 @@ protected:
 
                 if (faceDirection == this->connections_[idx].face_dir) {
                     this->faceArea_connected_[idx] = this->getFaceArea(intersection, idx);
-                    denom_face_areas += (this->connections_[idx].influx_mult * this->faceArea_connected_.at(idx));
+                    break;
                 }
             }
+            denom_face_areas += (this->connections_[idx].influx_mult * this->faceArea_connected_.at(idx));
         }
 
         const double eps_sqrt = std::sqrt(std::numeric_limits<double>::epsilon());

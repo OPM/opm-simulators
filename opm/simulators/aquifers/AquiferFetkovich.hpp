@@ -129,49 +129,45 @@ protected:
             if( idx < 0)
                 continue;
 
-            if (!this->connections_[idx].influx_coeff.first) { // influx_coeff is defaulted
-                auto isIt = gridView.ibegin(elem);
-                const auto& isEndIt = gridView.iend(elem);
-                for (; isIt != isEndIt; ++ isIt) {
-                    // store intersection, this might be costly
-                    const auto& intersection = *isIt;
+            auto isIt = gridView.ibegin(elem);
+            const auto& isEndIt = gridView.iend(elem);
+            for (; isIt != isEndIt; ++ isIt) {
+                // store intersection, this might be costly
+                const auto& intersection = *isIt;
 
-                    // only deal with grid boundaries
-                    if (!intersection.boundary())
-                        continue;
+                // only deal with grid boundaries
+                if (!intersection.boundary())
+                    continue;
 
-                    int insideFaceIdx  = intersection.indexInInside();
-                    switch (insideFaceIdx) {
-                    case 0:
-                        faceDirection = Opm::FaceDir::XMinus;
-                        break;
-                    case 1:
-                        faceDirection = Opm::FaceDir::XPlus;
-                        break;
-                    case 2:
-                        faceDirection = Opm::FaceDir::YMinus;
-                        break;
-                    case 3:
-                        faceDirection = Opm::FaceDir::YPlus;
-                        break;
-                    case 4:
-                        faceDirection = Opm::FaceDir::ZMinus;
-                        break;
-                    case 5:
-                        faceDirection = Opm::FaceDir::ZPlus;
-                        break;
-                    default:
-                        OPM_THROW(Opm::NumericalIssue,
-                            "Initialization of Aquifer Fetkovich problem. Make sure faceTag is correctly defined");                }
+                int insideFaceIdx  = intersection.indexInInside();
+                switch (insideFaceIdx) {
+                case 0:
+                    faceDirection = Opm::FaceDir::XMinus;
+                    break;
+                case 1:
+                    faceDirection = Opm::FaceDir::XPlus;
+                    break;
+                case 2:
+                    faceDirection = Opm::FaceDir::YMinus;
+                    break;
+                case 3:
+                    faceDirection = Opm::FaceDir::YPlus;
+                    break;
+                case 4:
+                    faceDirection = Opm::FaceDir::ZMinus;
+                    break;
+                case 5:
+                    faceDirection = Opm::FaceDir::ZPlus;
+                    break;
+                default:
+                    OPM_THROW(Opm::NumericalIssue,
+                        "Initialization of Aquifer Fetkovich problem. Make sure faceTag is correctly defined");                }
 
 
-                    if (faceDirection == this->connections_[idx].face_dir) {
-                        this->faceArea_connected_[idx] = this->getFaceArea(intersection, idx);
-                        break;
-                    }
+                if (faceDirection == this->connections_[idx].face_dir) {
+                    this->faceArea_connected_[idx] = this->getFaceArea(intersection, idx);
+                    break;
                 }
-            } else {
-                this->faceArea_connected_.at(idx) = this->connections_[idx].influx_coeff.second;
             }
             denom_face_areas += (this->connections_[idx].influx_mult * this->faceArea_connected_.at(idx));
         }
