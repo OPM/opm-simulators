@@ -278,9 +278,12 @@ protected:
         }
 
         // We take the average of the calculated equilibrium pressures.
-        const Scalar sum_alpha = std::accumulate(this->alphai_.begin(), this->alphai_.end(), 0.);
-        const Scalar aquifer_pres_avg = std::accumulate(pw_aquifer.begin(), pw_aquifer.end(), 0.) / sum_alpha;
-        return aquifer_pres_avg;
+        const auto& comm = ebos_simulator_.vanguard().grid().comm();
+        Scalar vals[2];
+        vals[0] = std::accumulate(this->alphai_.begin(), this->alphai_.end(), 0.);
+        vals[1] = std::accumulate(pw_aquifer.begin(), pw_aquifer.end(), 0.);
+        comm.sum(vals, 2);
+        return vals[1] / vals[0];
     }
 
     // This function is used to initialize and calculate the alpha_i for each grid connection to the aquifer

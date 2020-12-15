@@ -176,6 +176,8 @@ protected:
             denom_face_areas += (this->connections_[idx].influx_mult * this->faceArea_connected_.at(idx));
         }
 
+        const auto& comm = this->ebos_simulator_.vanguard().grid().comm();
+        comm.sum(&denom_face_areas, 1);
         const double eps_sqrt = std::sqrt(std::numeric_limits<double>::epsilon());
         for (size_t idx = 0; idx < this->size(); ++idx) {
             this->alphai_.at(idx) = (denom_face_areas < eps_sqrt)
@@ -206,6 +208,8 @@ protected:
     inline Scalar aquiferPressure()
     {
         Scalar Flux = this->W_flux_.value();
+        const auto& comm = this->ebos_simulator_.vanguard().grid().comm();
+        comm.sum(&Flux, 1);
         Scalar pa_ = this->pa0_ - Flux / (aqufetp_data_.C_t * aqufetp_data_.V0);
         return pa_;
     }

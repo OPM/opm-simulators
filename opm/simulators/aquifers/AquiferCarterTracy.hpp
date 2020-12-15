@@ -63,6 +63,9 @@ public:
         for (const auto& q : this->Qai_) {
             this->W_flux_ += q * this->ebos_simulator_.timeStepSize();
         }
+        this->fluxValue_ = this->W_flux_.value();
+        const auto& comm = this->ebos_simulator_.vanguard().grid().comm();
+        comm.sum(&this->fluxValue_, 1);
     }
 
     Opm::data::AquiferData aquiferData() const
@@ -87,6 +90,7 @@ protected:
     Scalar beta_; // Influx constant
     // TODO: it is possible it should be a AD variable
     Scalar mu_w_; // water viscosity
+    Scalar fluxValue_; // value of flux
 
     // This function is used to initialize and calculate the alpha_i for each grid connection to the aquifer
     inline void initializeConnections() override
@@ -170,6 +174,8 @@ protected:
         }
 
         const double eps_sqrt = std::sqrt(std::numeric_limits<double>::epsilon());
+        const auto& comm = this->ebos_simulator_.vanguard().grid().comm();
+        comm.sum(&denom_face_areas, 1);
         for (size_t idx = 0; idx < this->size(); ++idx) {
             this->alphai_.at(idx) = (denom_face_areas < eps_sqrt)
                 ? // Prevent no connection NaNs due to division by zero
@@ -207,7 +213,7 @@ protected:
         Scalar PItdprime = 0.;
         Scalar PItd = 0.;
         getInfluenceTableValues(PItd, PItdprime, td_plus_dt);
-        a = 1.0 / this->Tc_ * ((beta_ * dpai(idx)) - (this->W_flux_.value() * PItdprime)) / (PItd - td * PItdprime);
+        a = 1.0 / this->Tc_ * ((beta_ * dpai(idx)) - (this->fluxValue_ * PItdprime)) / (PItd - td * PItdprime);
         b = beta_ / (this->Tc_ * (PItd - td * PItdprime));
     }
 
