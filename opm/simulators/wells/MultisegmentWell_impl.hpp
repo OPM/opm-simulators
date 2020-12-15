@@ -535,6 +535,27 @@ namespace Opm
                     const int seg_index = top_segment_index + seg;
                     well_state.segRates()[number_of_phases_*seg_index + phase] *= well_phase_rate/unscaled_top_seg_rate;
                 }
+            } else {
+                // for newly opened wells, the unscaled rate top segment rate is zero
+                // and we need to initialize the segment rates differently
+                double sumTw = 0;
+                for (int perf = 0; perf < number_of_perforations_; ++perf) {
+                    sumTw += well_index_[perf];
+                }
+
+                std::vector<double> perforation_rates(number_of_phases_ * number_of_perforations_,0.0);
+                for (int phase = 0; phase < number_of_phases_; ++phase) {
+                    const double perf_phaserate_scaled = well_state.wellRates()[number_of_phases_ * index_of_well_ + phase] / sumTw;
+                    for (int perf = 0; perf < number_of_perforations_; ++perf) {
+                        perforation_rates[number_of_phases_ * perf + phase] = well_index_[perf] * perf_phaserate_scaled;
+                    }
+                }
+                std::vector<double> segment_rates;
+                WellState::calculateSegmentRates(segment_inlets_, segment_perforations_, perforation_rates, number_of_phases_,
+                                                 0, segment_rates);
+                const int top_segment_index = well_state.topSegmentIndex(index_of_well_);
+                std::copy(segment_rates.begin(), segment_rates.end(),
+                          well_state.segRates().begin() + number_of_phases_ * top_segment_index );
             }
         }
 
@@ -872,9 +893,10 @@ namespace Opm
 
         // initialized the well rates with the potentials i.e. the well rates based on bhp
         const int np = number_of_phases_;
-        const double sign = well_copy.well_ecl_.isInjector()? 1.0:-1.0;
+        const double sign = well_copy.well_ecl_.isInjector() ? 1.0 : -1.0;
         for (int phase = 0; phase < np; ++phase){
-            well_state_copy.wellRates()[well_copy.index_of_well_*np + phase] = sign*well_state_copy.wellPotentials()[well_copy.index_of_well_*np + phase];
+            well_state_copy.wellRates()[well_copy.index_of_well_*np + phase]
+                    = sign * well_state_copy.wellPotentials()[well_copy.index_of_well_*np + phase];
         }
         // we also want to adjust the segment rates and pressure
         well_copy.scaleSegmentRatesAndPressureWithWellRatesAndPressure(well_state_copy);
