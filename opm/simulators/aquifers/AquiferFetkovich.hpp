@@ -120,6 +120,8 @@ protected:
         const auto& elemEndIt = gridView.template end</*codim=*/ 0>();
         for (; elemIt != elemEndIt; ++elemIt) {
             const auto& elem = *elemIt;
+            if (elem.partitionType() != Dune::InteriorEntity)
+              continue;
             unsigned cell_index = elemMapper.index(elem);
             int idx = this->cellToConnectionIdx_[cell_index];
 
