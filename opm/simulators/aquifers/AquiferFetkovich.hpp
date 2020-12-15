@@ -64,8 +64,8 @@ public:
     {
         for (const auto& q : this->Qai_) {
             this->W_flux_ += q * this->ebos_simulator_.timeStepSize();
-            aquifer_pressure_ = aquiferPressure();
         }
+        aquifer_pressure_ = aquiferPressure();
     }
 
     Opm::data::AquiferData aquiferData() const
