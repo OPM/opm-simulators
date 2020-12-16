@@ -126,7 +126,7 @@ public:
             // allgather the index of the perforation in ECL schedule and the value.
             using Value = typename std::iterator_traits<RAIterator>::value_type;
             std::vector<int> sizes(comm_.size());
-            std::vector<int> displ(comm_.size(), 0);
+            std::vector<int> displ(comm_.size() + 1, 0);
             using GlobalIndex = typename IndexSet::IndexPair::GlobalIndex;
             using Pair = std::pair<GlobalIndex,Value>;
             std::vector<Pair> my_pairs;
