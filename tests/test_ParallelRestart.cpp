@@ -61,6 +61,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRateModel.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MessageLimits.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/icd.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/MSW/AICD.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/SICD.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Network/Node.hpp>
@@ -466,6 +467,7 @@ TEST_FOR_TYPE(Aquancon)
 TEST_FOR_TYPE(AquiferConfig)
 TEST_FOR_TYPE(AquiferCT)
 TEST_FOR_TYPE(Aquifetp)
+TEST_FOR_TYPE(AutoICD)
 TEST_FOR_TYPE2(Action, Actions)
 TEST_FOR_TYPE2(Action, ActionX)
 TEST_FOR_TYPE2(Action, AST)
