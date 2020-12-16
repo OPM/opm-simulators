@@ -296,7 +296,6 @@ namespace Opm
 
         const auto& well = well_ecl_;
         const int well_index = index_of_well_;
-        const int top_segment_index = well_state.topSegmentIndex(index_of_well_);
         const auto& pu = phaseUsage();
         const int np = well_state.numPhases();
         const auto& summaryState = ebos_simulator.vanguard().summaryState();
@@ -512,7 +511,8 @@ namespace Opm
 
         // scale segment rates based on the wellRates
         // and segment pressure based on bhp
-        scaleSegmentRatesAndPressureWithWellRatesAndPressure(well_state);
+        scaleSegmentPressuresWithBhp(well_state);
+        scaleSegmentRatesWithWellRates(well_state);
     }
 
 
@@ -522,10 +522,9 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    scaleSegmentRatesAndPressureWithWellRatesAndPressure(WellState& well_state) const
+    scaleSegmentRatesWithWellRates(WellState& well_state) const
     {
         const int top_segment_index = well_state.topSegmentIndex(index_of_well_);
-
         for (int phase = 0; phase < number_of_phases_; ++phase) {
             const double well_phase_rate = well_state.wellRates()[number_of_phases_*index_of_well_ + phase];
             const double unscaled_top_seg_rate = well_state.segRates()[number_of_phases_*top_segment_index + phase];
@@ -544,22 +543,27 @@ namespace Opm
                 }
 
                 std::vector<double> perforation_rates(number_of_phases_ * number_of_perforations_,0.0);
-                for (int phase = 0; phase < number_of_phases_; ++phase) {
-                    const double perf_phaserate_scaled = well_state.wellRates()[number_of_phases_ * index_of_well_ + phase] / sumTw;
-                    for (int perf = 0; perf < number_of_perforations_; ++perf) {
-                        perforation_rates[number_of_phases_ * perf + phase] = well_index_[perf] * perf_phaserate_scaled;
-                    }
+                const double perf_phaserate_scaled = well_state.wellRates()[number_of_phases_ * index_of_well_ + phase] / sumTw;
+                for (int perf = 0; perf < number_of_perforations_; ++perf) {
+                    perforation_rates[number_of_phases_ * perf + phase] = well_index_[perf] * perf_phaserate_scaled;
                 }
+
                 std::vector<double> segment_rates;
                 WellState::calculateSegmentRates(segment_inlets_, segment_perforations_, perforation_rates, number_of_phases_,
                                                  0, segment_rates);
-                const int top_segment_index = well_state.topSegmentIndex(index_of_well_);
                 std::copy(segment_rates.begin(), segment_rates.end(),
                           well_state.segRates().begin() + number_of_phases_ * top_segment_index );
             }
         }
+    }
 
+    template <typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    scaleSegmentPressuresWithBhp(WellState& well_state) const
+    {
         //scale segment pressures
+        const int top_segment_index = well_state.topSegmentIndex(index_of_well_);
         const double bhp = well_state.bhp()[index_of_well_];
         const double unscaled_top_seg_pressure = well_state.segPress()[top_segment_index];
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
@@ -567,7 +571,6 @@ namespace Opm
             well_state.segPress()[seg_index] *= bhp/unscaled_top_seg_pressure;
         }
     }
-
 
 
     template <typename TypeTag>
@@ -890,6 +893,7 @@ namespace Opm
             well_state_copy.currentProductionControls()[index_of_well_] = Well::ProducerCMode::BHP;
         }
         well_state_copy.bhp()[well_copy.index_of_well_] = bhp;
+        well_copy.scaleSegmentPressuresWithBhp(well_state_copy);
 
         // initialized the well rates with the potentials i.e. the well rates based on bhp
         const int np = number_of_phases_;
@@ -898,8 +902,7 @@ namespace Opm
             well_state_copy.wellRates()[well_copy.index_of_well_*np + phase]
                     = sign * well_state_copy.wellPotentials()[well_copy.index_of_well_*np + phase];
         }
-        // we also want to adjust the segment rates and pressure
-        well_copy.scaleSegmentRatesAndPressureWithWellRatesAndPressure(well_state_copy);
+        well_copy.scaleSegmentRatesWithWellRates(well_state_copy);
 
         well_copy.calculateExplicitQuantities(ebosSimulator, well_state_copy, deferred_logger);
         const double dt = ebosSimulator.timeStepSize();

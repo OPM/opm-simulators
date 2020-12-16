@@ -340,7 +340,8 @@ namespace Opm
 
 
         // scale the segment rates and pressure based on well rates and bhp
-        void scaleSegmentRatesAndPressureWithWellRatesAndPressure(WellState& well_state) const;
+        void scaleSegmentRatesWithWellRates(WellState& well_state) const;
+        void scaleSegmentPressuresWithBhp(WellState& well_state) const;
 
         // computing the accumulation term for later use in well mass equations
         void computeInitialSegmentFluids(const Simulator& ebos_simulator);
