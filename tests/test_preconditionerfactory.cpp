@@ -232,6 +232,157 @@ BOOST_AUTO_TEST_CASE(TestAddingPreconditioner)
     test3(prm);
 }
 
+
+template<class Mat, class Vec>
+class RepeatingOperator : public Dune::AssembledLinearOperator<Mat, Vec, Vec>
+{
+public:
+    using matrix_type = Mat;
+    using domain_type = Vec;
+    using range_type = Vec;
+    using field_type = typename Vec::field_type;
+
+    Dune::SolverCategory::Category category() const override
+    {
+        return Dune::SolverCategory::sequential;
+    }
+
+    RepeatingOperator(const Mat& matrix, const int repeats)
+        : matrix_(matrix)
+        , repeats_(repeats)
+    {
+    }
+
+    // y = A*x;
+    virtual void apply(const Vec& x, Vec& y) const override
+    {
+        y = 0;
+        applyscaleadd(1.0, x, y);
+    }
+
+    // y += \alpha * A * x
+    virtual void applyscaleadd(field_type alpha, const Vec& x, Vec& y) const override
+    {
+        Vec temp1 = x;
+        Vec temp2 = x; // For size.
+        temp2 = 0.0;
+        for (int rr = 0; rr < repeats_; ++rr) {
+            // mv below means: temp2 = matrix_ * temp1;
+            matrix_.mv(temp1, temp2);
+            temp1 = temp2;
+        }
+        temp2 *= alpha;
+        y += temp2;
+    }
+
+    virtual const matrix_type& getmat() const override
+    {
+        return matrix_;
+    }
+
+protected:
+    const Mat& matrix_;
+    const int repeats_;
+};
+
+
+template <int bz>
+Dune::BlockVector<Dune::FieldVector<double, bz>>
+testPrecRepeating(const boost::property_tree::ptree& prm, const std::string& matrix_filename, const std::string& rhs_filename)
+{
+    using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
+    using Vector = Dune::BlockVector<Dune::FieldVector<double, bz>>;
+    Matrix matrix;
+    {
+        std::ifstream mfile(matrix_filename);
+        if (!mfile) {
+            throw std::runtime_error("Could not read matrix file");
+        }
+        readMatrixMarket(matrix, mfile);
+    }
+    Vector rhs;
+    {
+        std::ifstream rhsfile(rhs_filename);
+        if (!rhsfile) {
+            throw std::runtime_error("Could not read rhs file");
+        }
+        readMatrixMarket(rhs, rhsfile);
+    }
+    using Operator = RepeatingOperator<Matrix, Vector>;
+    Operator op(matrix, 2);
+    using PrecFactory = Opm::PreconditionerFactory<Operator>;
+
+    // Add no-oppreconditioner to factory for block size 1.
+    PrecFactory::addCreator("nothing", [](const Operator&, const pt::ptree&, const std::function<Vector()>&) {
+        return Dune::wrapPreconditioner<NothingPreconditioner<Vector>>();
+    });
+
+    auto prec = PrecFactory::create(op, prm.get_child("preconditioner"));
+    Dune::BiCGSTABSolver<Vector> solver(op, *prec, prm.get<double>("tol"), prm.get<int>("maxiter"), prm.get<int>("verbosity"));
+    Vector x(rhs.size());
+    Dune::InverseOperatorResult res;
+    solver.apply(x, rhs, res);
+    return x;
+}
+
+void test1rep(const pt::ptree& prm)
+{
+    const int bz = 1;
+    auto sol = testPrecRepeating<bz>(prm, "matr33rep.txt", "rhs3rep.txt");
+    Dune::BlockVector<Dune::FieldVector<double, bz>> expected {0.285714285714286,
+                                                               0.285714285714286,
+                                                               0.285714285714286,
+                                                               -0.214285714285714,
+                                                               -0.214285714285714,
+                                                               -0.214285714285714,
+                                                               -0.214285714285714,
+                                                               -0.214285714285714,
+                                                               -0.214285714285714};
+    BOOST_REQUIRE_EQUAL(sol.size(), expected.size());
+    for (size_t i = 0; i < sol.size(); ++i) {
+        for (int row = 0; row < bz; ++row) {
+            BOOST_CHECK_CLOSE(sol[i][row], expected[i][row], 1e-3);
+        }
+    }
+}
+
+void test3rep(const pt::ptree& prm)
+{
+    const int bz = 3;
+    auto sol = testPrecRepeating<bz>(prm, "matr33rep.txt", "rhs3rep.txt");
+    Dune::BlockVector<Dune::FieldVector<double, bz>> expected {
+        {0.285714285714286, 0.285714285714286, 0.285714285714286},
+        {-0.214285714285714, -0.214285714285714, -0.214285714285714},
+        {-0.214285714285714, -0.214285714285714, -0.214285714285714}
+    };
+    BOOST_REQUIRE_EQUAL(sol.size(), expected.size());
+    for (size_t i = 0; i < sol.size(); ++i) {
+        for (int row = 0; row < bz; ++row) {
+            BOOST_CHECK_CLOSE(sol[i][row], expected[i][row], 1e-3);
+        }
+    }
+}
+
+
+BOOST_AUTO_TEST_CASE(TestWithRepeatingOperator)
+{
+    pt::ptree prm;
+
+    // Read parameters.
+    {
+        std::ifstream file("options_flexiblesolver_simple.json");
+        pt::read_json(file, prm);
+    }
+
+    // Test with 1x1 block solvers.
+    test1rep(prm);
+
+    // Test with 3x3 block solvers.
+    test3rep(prm);
+}
+
+
+
 #else
 
 // Do nothing if we do not have at least Dune 2.6.

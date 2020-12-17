@@ -132,6 +132,8 @@ list (APPEND TEST_DATA_FILES
   tests/wells_no_perforation.data
   tests/matr33.txt
   tests/rhs3.txt
+  tests/matr33rep.txt
+  tests/rhs3rep.txt
   tests/options_flexiblesolver.json
   tests/options_flexiblesolver_simple.json
   )
