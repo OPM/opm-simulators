@@ -245,24 +245,27 @@ protected:
         // denom_face_areas is the sum of the areas connected to an aquifer
         Scalar denom_face_areas = 0.;
         this->cellToConnectionIdx_.resize(this->ebos_simulator_.gridView().size(/*codim=*/0), -1);
+        const auto& gridView = this->ebos_simulator_.vanguard().gridView();
         for (size_t idx = 0; idx < this->size(); ++idx) {
             const auto global_index = this->connections_[idx].global_index;
             const int cell_index = this->ebos_simulator_.vanguard().compressedIndex(global_index);
-            if (cell_index < 0) //the global_index is not part of this grid
+            auto elemIt = gridView.template begin</*codim=*/ 0>();
+            if (cell_index > 0)
+                std::advance(elemIt, cell_index);
+
+           //the global_index is not part of this grid
+            if ( cell_index < 0 || elemIt->partitionType() != Dune::InteriorEntity)
                 continue;
 
             this->cellToConnectionIdx_[cell_index] = idx;
             this->cell_depth_.at(idx) = this->ebos_simulator_.vanguard().cellCenterDepth(cell_index);
         }
         // get areas for all connections
-        const auto& gridView = this->ebos_simulator_.vanguard().gridView();
         ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
         auto elemIt = gridView.template begin</*codim=*/ 0>();
         const auto& elemEndIt = gridView.template end</*codim=*/ 0>();
         for (; elemIt != elemEndIt; ++elemIt) {
             const auto& elem = *elemIt;
-            if (elem.partitionType() != Dune::InteriorEntity)
-              continue;
             unsigned cell_index = elemMapper.index(elem);
             int idx = this->cellToConnectionIdx_[cell_index];
 
