@@ -37,7 +37,7 @@ namespace bda
 //    FINE-GRAINED PARALLEL INCOMPLETE LU FACTORIZATION, E. Chow and A. Patel, SIAM 2015, https://doi.org/10.1137/140968896
 // if CHOW_PATEL_GPU is 0, the decomposition is done on CPU
 // if CHOW_PATEL_GPU is 1, the decomposition is done by bda::FGPILU::decomposition() on GPU
-#define CHOW_PATEL     1
+#define CHOW_PATEL     0
 #define CHOW_PATEL_GPU 1
 
     using Opm::OpmLog;
