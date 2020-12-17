@@ -25,11 +25,20 @@
 
 #include <opm/simulators/linalg/bda/BdaSolver.hpp>
 #include <opm/simulators/linalg/bda/BILU0.hpp>
+#include <opm/simulators/linalg/bda/fgpilu.hpp>
 #include <opm/simulators/linalg/bda/Reorder.hpp>
 
 
 namespace bda
 {
+
+// if CHOW_PATEL is 0, exact ILU decomposition is performed on CPU
+// if CHOW_PATEL is 1, iterative ILU decomposition (FGPILU) is done, as described in:
+//    FINE-GRAINED PARALLEL INCOMPLETE LU FACTORIZATION, E. Chow and A. Patel, SIAM 2015, https://doi.org/10.1137/140968896
+// if CHOW_PATEL_GPU is 0, the decomposition is done on CPU
+// if CHOW_PATEL_GPU is 1, the decomposition is done by bda::FGPILU::decomposition() on GPU
+#define CHOW_PATEL     1
+#define CHOW_PATEL_GPU 1
 
     using Opm::OpmLog;
     using Dune::Timer;
@@ -82,11 +91,26 @@ namespace bda
         } else if (opencl_ilu_reorder == ILUReorder::GRAPH_COLORING) {
             out << "BILU0 reordering strategy: " << "graph_coloring\n";
             findGraphColoring<block_size>(mat->colIndices, mat->rowPointers, CSCRowIndices, CSCColPointers, mat->Nb, mat->Nb, mat->Nb, &numColors, toOrder, fromOrder, rowsPerColor);
+        } else if (opencl_ilu_reorder == ILUReorder::NONE) {
+            out << "BILU0 reordering strategy: none\n";
+            numColors = 1;
+            rowsPerColor.emplace_back(Nb);
+            // numColors = Nb;
+            // for(int i = 0; i < Nb; ++i){
+            //     rowsPerColor.emplace_back(1);
+            // }
+            for(int i = 0; i < Nb; ++i){
+                toOrder[i] = i;
+                fromOrder[i] = i;
+            }
         } else {
             OPM_THROW(std::logic_error, "Error ilu reordering strategy not set correctly\n");
         }
         if(verbosity >= 3){
-            out << "BILU0 analysis took: " << t_analysis.stop() << " s, " << numColors << " colors";
+            out << "BILU0 analysis took: " << t_analysis.stop() << " s, " << numColors << " colors\n";
+        }
+        if(verbosity >= 2){
+            out << "BILU0 CHOW_PATEL: " << CHOW_PATEL << ", CHOW_PATEL_GPU: " << CHOW_PATEL_GPU;
         }
         OpmLog::info(out.str());
 
@@ -129,6 +153,233 @@ namespace bda
         return true;
     } // end init()
 
+    // implements Fine-Grained Parallel ILU algorithm (FGPILU), Chow and Patel 2015
+    template <unsigned int block_size>
+    void BILU0<block_size>::chow_patel_decomposition()
+    {
+        const unsigned int bs = block_size;
+        int num_sweeps = 6;
+
+        // split matrix into L and U
+        // also convert U into BSC format (Ut)
+        // Ut stores diagonal for now
+        int num_blocks_L = 0;
+
+        // Ut is actually BSC format
+        std::unique_ptr<BlockedMatrix<bs> > Ut = std::make_unique<BlockedMatrix<bs> >(Umat->Nb, Umat->nnzbs + Umat->Nb);
+
+        Lmat->rowPointers[0] = 0;
+        for (int i = 0; i < Nb+1; i++) {
+            Ut->rowPointers[i] = 0;
+        }
+
+        // for every row
+        for (int i = 0; i < Nb; i++) {
+            int iRowStart = LUmat->rowPointers[i];
+            int iRowEnd = LUmat->rowPointers[i + 1];
+            // for every block in this row
+            for (int ij = iRowStart; ij < iRowEnd; ij++) {
+                int j = LUmat->colIndices[ij];
+                if (i <= j) {
+                    Ut->rowPointers[j+1]++;   // actually colPointers
+                } else {
+                    Lmat->colIndices[num_blocks_L] = j;
+                    memcpy(Lmat->nnzValues + num_blocks_L * bs * bs, LUmat->nnzValues + ij * bs * bs, sizeof(double) * bs * bs);
+                    num_blocks_L++;
+                }
+            }
+            Lmat->rowPointers[i+1] = num_blocks_L;
+        }
+
+        // prefix sum
+        int sum = 0;
+        for (int i = 1; i < Nb+1; i++) {
+            sum += Ut->rowPointers[i];
+            Ut->rowPointers[i] = sum;
+        }
+
+        // for every row
+        for (int i = 0; i < Nb; i++) {
+            int iRowStart = LUmat->rowPointers[i];
+            int iRowEnd = LUmat->rowPointers[i + 1];
+            // for every block in this row
+            for (int ij = iRowStart; ij < iRowEnd; ij++) {
+                int j = LUmat->colIndices[ij];
+                if (i <= j){
+                    int idx = Ut->rowPointers[j]++;
+                    Ut->colIndices[idx] = i;     // actually rowIndices
+                    memcpy(Ut->nnzValues + idx * bs * bs, LUmat->nnzValues + ij * bs * bs, sizeof(double) * bs * bs);
+                }
+            }
+        }
+
+        // rotate
+        // the Ut->rowPointers were increased in the last loop
+        for (int i = Nb; i > 0; --i) {
+            Ut->rowPointers[i] = Ut->rowPointers[i-1];
+        }
+        Ut->rowPointers[0] = 0;
+
+        Opm::Detail::Inverter<bs> inverter;
+
+        // Utmp is needed for CPU and GPU decomposition, because U is transposed, and reversed at the end
+        // Ltmp is only needed for CPU decomposition, GPU creates GPU buffer for Ltmp
+        double *Utmp = new double[Ut->nnzbs * block_size * block_size];
+
+        // actual ILU decomposition
+#if CHOW_PATEL_GPU
+        fgpilu.decomposition(queue, context,
+                    Ut->rowPointers, Ut->colIndices, Ut->nnzValues, Ut->nnzbs,
+                    Lmat->rowPointers, Lmat->colIndices, Lmat->nnzValues, Lmat->nnzbs,
+                    LUmat->rowPointers, LUmat->colIndices, LUmat->nnzValues, LUmat->nnzbs,
+                    Nb, num_sweeps, verbosity);
+#else
+        double *Ltmp = new double[Lmat->nnzbs * block_size * block_size];
+        for (int sweep = 0; sweep < num_sweeps; ++sweep) {
+
+            // for every row
+            for (int row = 0; row < Nb; row++) {
+                // update U
+                int jColStart = Ut->rowPointers[row];
+                int jColEnd = Ut->rowPointers[row + 1];
+                // for every block in this row
+                for (int ij = jColStart; ij < jColEnd; ij++) {
+                    int col = Ut->colIndices[ij];
+                    // refine Uij element (or diagonal)
+                    int i1 = LUmat->rowPointers[col];
+                    int i2 = LUmat->rowPointers[col+1];
+                    int kk = 0;
+                    for(kk = i1; kk < i2; ++kk) {
+                        ptrdiff_t c = LUmat->colIndices[kk];
+                        if (c >= row) {
+                            break;
+                        }
+                    }
+                    double aij[bs*bs];
+                    memcpy(&aij[0], LUmat->nnzValues + kk * bs * bs, sizeof(double) * bs * bs);
+                    int jk = Lmat->rowPointers[col];
+                    int ik = (jk < Lmat->rowPointers[col+1]) ? Lmat->colIndices[jk] : Nb;
+
+                    for (int k = jColStart; k < ij; ++k) {
+                        int ki = Ut->colIndices[k];
+                        while (ik < ki) {
+                            ++jk;
+                            ik = Lmat->colIndices[jk];
+                        }
+                        if (ik == ki) {
+                            blockMultSub<bs>(&aij[0], Lmat->nnzValues + jk * bs * bs, Ut->nnzValues + k * bs * bs);
+                        }
+                    }
+
+                    memcpy(Utmp + ij * bs * bs, &aij[0], sizeof(double) * bs * bs);
+                }
+
+                // update L
+                int iRowStart = Lmat->rowPointers[row];
+                int iRowEnd = Lmat->rowPointers[row + 1];
+
+                for (int ij = iRowStart; ij < iRowEnd; ij++) {
+                    int j = Lmat->colIndices[ij];
+                    // refine Lij element
+                    int i1 = LUmat->rowPointers[row];
+                    int i2 = LUmat->rowPointers[row+1];
+                    int kk = 0;
+                    for(kk = i1; kk < i2; ++kk) {
+                        ptrdiff_t c = LUmat->colIndices[kk];
+                        if (c >= j) {
+                            break;
+                        }
+                    }
+                    double aij[bs*bs];
+                    memcpy(&aij[0], LUmat->nnzValues + kk * bs * bs, sizeof(double) * bs * bs);
+                    int jk = Ut->rowPointers[j];
+                    int ik = Ut->colIndices[jk];
+                    for (int k = iRowStart; k < ij; ++k) {
+                        int ki = Lmat->colIndices[k];
+                        while(ik < ki) {
+                            ++jk;
+                            ik = Ut->colIndices[jk];
+                        }
+
+                        if(ik == ki) {
+                            blockMultSub<bs>(&aij[0], Lmat->nnzValues + k * bs * bs , Ut->nnzValues + jk * bs * bs);
+                        }
+                    }
+                    // calculate aij / ujj
+                    double ujj[bs*bs];
+                    inverter(Ut->nnzValues + (Ut->rowPointers[j+1] - 1) * bs * bs, &ujj[0]);
+                    // lij = aij / ujj
+                    blockMult<bs>(&aij[0], &ujj[0], Ltmp + ij * bs * bs);
+
+                }
+            }
+            double *t = Lmat->nnzValues;
+            Lmat->nnzValues = Ltmp;
+            Ltmp = t;
+            t = Ut->nnzValues;
+            Ut->nnzValues = Utmp;
+            Utmp = t;
+        } // end sweep
+        delete[] Ltmp;
+#endif
+
+        // convert Ut to BSR
+        // diagonal stored separately
+        std::vector<int> ptr(Nb+1, 0);
+        std::vector<int> col(Ut->rowPointers[Nb]);
+
+        // count blocks per row for U (BSR)
+        // store diagonal in invDiagVals
+        for(int i = 0; i < Nb; ++i) {
+            for(int k = Ut->rowPointers[i]; k < Ut->rowPointers[i+1]; ++k) {
+                int j = Ut->colIndices[k];
+                if (j == i) {
+                    inverter(Ut->nnzValues + k * bs * bs, invDiagVals + i * bs * bs);
+                } else {
+                    ++ptr[j+1];
+                }
+            }
+        }
+
+        // prefix sum
+        int sumU = 0;
+        for (int i = 1; i < Nb+1; i++) {
+            sumU += ptr[i];
+            ptr[i] = sumU;
+        }
+
+        // actually copy nonzero values for U
+        for(int i = 0; i < Nb; ++i) {
+            for(int k = Ut->rowPointers[i]; k < Ut->rowPointers[i+1]; ++k) {
+                int j = Ut->colIndices[k];
+                if (j != i) {
+                    int head = ptr[j]++;
+                    col[head]  = i;
+                    memcpy(Utmp + head * bs * bs, Ut->nnzValues + k * bs * bs, sizeof(double) * bs * bs);
+                }
+            }
+        }
+
+        // the ptr[] were increased in the last loop
+        std::rotate(ptr.begin(), ptr.end() - 1, ptr.end());
+        ptr.front() = 0;
+
+        // reversing the rows of U, because that is the order they are used in
+        int URowIndex = 0;
+        int offsetU = 0;   // number of nnz blocks that are already copied to Umat
+        Umat->rowPointers[0] = 0;
+        for (int i = LUmat->Nb - 1; i >= 0; i--) {
+            int rowSize = ptr[i + 1] - ptr[i];   // number of blocks in this row
+            memcpy(Umat->nnzValues + offsetU * bs * bs, Utmp + ptr[i] * bs * bs, sizeof(double) * bs * bs * rowSize);
+            memcpy(Umat->colIndices + offsetU, col.data() + ptr[i], sizeof(int) * rowSize);
+            offsetU += rowSize;
+            Umat->rowPointers[URowIndex + 1] = offsetU;
+            URowIndex++;
+        }
+
+        delete[] Utmp;
+
+    }
 
     template <unsigned int block_size>
     bool BILU0<block_size>::create_preconditioner(BlockedMatrix<block_size> *mat)
@@ -153,14 +404,16 @@ namespace bda
             OpmLog::info(out.str());
         }
 
+        Timer t_decomposition;
+#if CHOW_PATEL
+        chow_patel_decomposition();
+#else
         int i, j, ij, ik, jk;
         int iRowStart, iRowEnd, jRowEnd;
         double pivot[bs * bs];
 
         int LSize = 0;
         Opm::Detail::Inverter<bs> inverter;   // reuse inverter to invert blocks
-
-        Timer t_decomposition;
 
         // go through all rows
         for (i = 0; i < LUmat->Nb; i++) {
@@ -239,6 +492,7 @@ namespace bda
             Umat->rowPointers[URowIndex + 1] = offsetU;
             URowIndex++;
         }
+#endif
         if (verbosity >= 3) {
             std::ostringstream out;
             out << "BILU0 decomposition: " << t_decomposition.stop() << " s";
@@ -278,6 +532,7 @@ namespace bda
             event = (*ILU_apply1)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), s.Lvals, s.Lcols, s.Lrows, (unsigned int)Nb, x, y, s.rowsPerColor, color, block_size, cl::Local(lmem_per_work_group));
             // event.wait();
         }
+
         for(int color = numColors-1; color >= 0; --color){
             event = (*ILU_apply2)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), s.Uvals, s.Ucols, s.Urows, (unsigned int)Nb, s.invDiagVals, y, s.rowsPerColor, color, block_size, cl::Local(lmem_per_work_group));
             // event.wait();
@@ -320,6 +575,7 @@ namespace bda
 template BILU0<n>::BILU0(ILUReorder, int);                                               \
 template BILU0<n>::~BILU0();                                                             \
 template bool BILU0<n>::init(BlockedMatrix<n>*);                                         \
+template void BILU0<n>::chow_patel_decomposition();                                      \
 template bool BILU0<n>::create_preconditioner(BlockedMatrix<n>*);                        \
 template void BILU0<n>::apply(cl::Buffer& x, cl::Buffer& y);                             \
 template void BILU0<n>::setOpenCLContext(cl::Context*);                                  \

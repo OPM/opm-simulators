@@ -24,6 +24,7 @@
 #include <opm/simulators/linalg/bda/ILUReorder.hpp>
 
 #include <opm/simulators/linalg/bda/opencl.hpp>
+#include <opm/simulators/linalg/bda/fgpilu.hpp>
 
 namespace bda
 {
@@ -66,6 +67,10 @@ namespace bda
         int total_work_items = 0;
         int lmem_per_work_group = 0;
         bool pattern_uploaded = false;
+
+        FGPILU fgpilu;
+
+        void chow_patel_decomposition();
 
     public:
 
