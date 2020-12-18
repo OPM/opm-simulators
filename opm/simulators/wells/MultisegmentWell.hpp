@@ -339,10 +339,9 @@ namespace Opm
                              const double relaxation_factor=1.0) const;
 
 
-        // initialize the segment rates with well rates
-        // when there is no more accurate way to initialize the segment rates, we initialize
-        // the segment rates based on well rates with a simple strategy
-        void initSegmentRatesWithWellRates(WellState& well_state) const;
+        // scale the segment rates and pressure based on well rates and bhp
+        void scaleSegmentRatesWithWellRates(WellState& well_state) const;
+        void scaleSegmentPressuresWithBhp(WellState& well_state) const;
 
         // computing the accumulation term for later use in well mass equations
         void computeInitialSegmentFluids(const Simulator& ebos_simulator);
