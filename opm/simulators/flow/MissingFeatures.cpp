@@ -824,7 +824,6 @@ namespace MissingFeatures {
             "WSCCLEAN",
             "WSCCLENL",
             "WSCTAB",
-            "WSEGAICD",
             "WSEGDFIN",
             "WSEGDFMD",
             "WSEGDFPA",
