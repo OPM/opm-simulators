@@ -804,7 +804,7 @@ public:
                     else if (key.first == "BGSAT")
                         val.second = Opm::getValue(fs.saturation(gasPhaseIdx));
                     else if (key.first == "BOSAT")
-                        val.second = 1. - Opm::getValue(fs.saturation(gasPhaseIdx)) - Opm::getValue(fs.saturation(waterPhaseIdx));
+                        val.second = Opm::getValue(fs.saturation(oilPhaseIdx));
                     else if (key.first == "BPR")
                         val.second = Opm::getValue(fs.pressure(oilPhaseIdx));
                     else if (key.first == "BWKR" || key.first == "BKRW")
