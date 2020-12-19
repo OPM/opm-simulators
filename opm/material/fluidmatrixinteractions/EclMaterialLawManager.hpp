@@ -688,65 +688,6 @@ private:
         }
     }
 
-    // The saturation function family.
-    // If SWOF and SGOF are specified in the deck it return FamilyI
-    // If SWFN, SGFN and SOF3 are specified in the deck it return FamilyII
-    // If keywords are missing or mixed, an error is given.
-    enum SaturationFunctionFamily {
-        noFamily,
-        FamilyI,
-        FamilyII
-    };
-
-    SaturationFunctionFamily getSaturationFunctionFamily(const Opm::EclipseState& eclState) const
-    {
-        const auto& tableManager = eclState.getTableManager();
-        const TableContainer& swofTables = tableManager.getSwofTables();
-        const TableContainer& slgofTables= tableManager.getSlgofTables();
-        const TableContainer& sgofTables = tableManager.getSgofTables();
-        const TableContainer& swfnTables = tableManager.getSwfnTables();
-        const TableContainer& sgfnTables = tableManager.getSgfnTables();
-        const TableContainer& sof3Tables = tableManager.getSof3Tables();
-        const TableContainer& sof2Tables = tableManager.getSof2Tables();
-
-        bool family1 = false;
-        bool family2 = false;
-        if (!hasGas) {
-            // oil-water case
-            family1 = !swofTables.empty();
-            family2 = !swfnTables.empty() && !sof2Tables.empty();
-        }
-        else if (!hasWater) {
-            // oil-gas case
-            family1 = !sgofTables.empty();
-            family2 = !sgfnTables.empty() && !sof2Tables.empty();
-        }
-        else if (!hasOil) {
-            // water-gas case
-            throw std::runtime_error("water-gas two-phase simulations are currently not supported");
-        }
-        else {
-            // three-phase case
-            family1 = (!sgofTables.empty() || !slgofTables.empty()) && !swofTables.empty();
-            family2 = !swfnTables.empty() && !sgfnTables.empty() && !sof3Tables.empty();
-        }
-
-        if (family1 && family2)
-            throw std::invalid_argument("Saturation families should not be mixed \n"
-                                        "Use either SGOF and SWOF or SGFN, SWFN and SOF3");
-
-        if (!family1 && !family2)
-            throw std::invalid_argument("Saturations function must be specified using either "
-                                        "family 1 or family 2 keywords \n"
-                                        "Use either SGOF and SWOF or SGFN, SWFN and SOF3" );
-
-        if (family1 && !family2)
-            return SaturationFunctionFamily::FamilyI;
-        else if (family2 && !family1)
-            return SaturationFunctionFamily::FamilyII;
-        return SaturationFunctionFamily::noFamily; // no family or two families
-    }
-
     template <class Container>
     void readGasOilEffectiveParameters_(Container& dest,
                                         const Opm::EclipseState& eclState,
@@ -762,11 +703,11 @@ private:
 
         // the situation for the gas phase is complicated that all saturations are
         // shifted by the connate water saturation.
-        Scalar Swco = unscaledEpsInfo_[satRegionIdx].Swl;
+        const Scalar Swco = unscaledEpsInfo_[satRegionIdx].Swl;
         const auto& tableManager = eclState.getTableManager();
 
-        switch (getSaturationFunctionFamily(eclState)) {
-        case FamilyI:
+        switch (eclState.runspec().saturationFunctionControls().family()) {
+        case SatFuncControls::KeywordFamily::Family_I:
         {
             const TableContainer& sgofTables = tableManager.getSgofTables();
             const TableContainer& slgofTables = tableManager.getSlgofTables();
@@ -781,7 +722,7 @@ private:
             break;
         }
 
-        case FamilyII:
+        case SatFuncControls::KeywordFamily::Family_II:
         {
             const SgfnTable& sgfnTable = tableManager.getSgfnTables().getTable<SgfnTable>( satRegionIdx );
             if (!hasWater) {
@@ -801,8 +742,7 @@ private:
             break;
         }
 
-        //default:
-        case noFamily:
+        case SatFuncControls::KeywordFamily::Undefined:
             throw std::domain_error("No valid saturation keyword family specified");
         }
     }
@@ -893,8 +833,9 @@ private:
         const auto& tableManager = eclState.getTableManager();
         auto& effParams = *dest[satRegionIdx];
 
-        switch (getSaturationFunctionFamily(eclState)) {
-        case FamilyI: {
+        switch (eclState.runspec().saturationFunctionControls().family()) {
+        case SatFuncControls::KeywordFamily::Family_I:
+        {
             const auto& swofTable = tableManager.getSwofTables().getTable<SwofTable>(satRegionIdx);
             std::vector<double> SwColumn = swofTable.getColumn("SW").vectorCopy();
 
@@ -904,7 +845,8 @@ private:
             effParams.finalize();
             break;
         }
-        case FamilyII:
+
+        case SatFuncControls::KeywordFamily::Family_II:
         {
             const auto& swfnTable = tableManager.getSwfnTables().getTable<SwfnTable>(satRegionIdx);
             const auto& sof3Table = tableManager.getSof3Tables().getTable<Sof3Table>(satRegionIdx);
@@ -922,10 +864,8 @@ private:
             break;
         }
 
-        case noFamily:
-        //default:
+        case SatFuncControls::KeywordFamily::Undefined:
             throw std::domain_error("No valid saturation keyword family specified");
-
         }
     }
 
