@@ -31,6 +31,10 @@
 
 #include <opm/material/fluidstates/SaturationOverlayFluidState.hpp>
 
+#include <algorithm>
+#include <cstddef>
+#include <type_traits>
+
 namespace Opm {
 /*!
  * \ingroup FluidMatrixInteractions
@@ -376,7 +380,7 @@ private:
         return
             unscaledSats[0]
             +
-            (scaledSat - scaledSats[0])*((unscaledSats[1] - unscaledSats[0])/(scaledSats[1] - scaledSats[0]));
+            (scaledSat - scaledSats[0])*((unscaledSats[2] - unscaledSats[0])/(scaledSats[2] - scaledSats[0]));
     }
 
     template <class Evaluation, class PointsContainer>
@@ -387,7 +391,7 @@ private:
         return
             scaledSats[0]
             +
-            (unscaledSat - unscaledSats[0])*((scaledSats[1] - scaledSats[0])/(unscaledSats[1] - unscaledSats[0]));
+            (unscaledSat - unscaledSats[0])*((scaledSats[2] - scaledSats[0])/(unscaledSats[2] - unscaledSats[0]));
     }
 
     template <class Evaluation, class PointsContainer>
@@ -395,28 +399,38 @@ private:
                                                      const PointsContainer& unscaledSats,
                                                      const PointsContainer& scaledSats)
     {
-        if (unscaledSats[1] >= unscaledSats[2])
-            return scaledToUnscaledSatTwoPoint_(scaledSat, unscaledSats, scaledSats);
+        using UnscaledSat = std::remove_cv_t<std::remove_reference_t<decltype(unscaledSats[0])>>;
 
-        if (scaledSat < scaledSats[1]) {
-            Scalar delta = scaledSats[1] - scaledSats[0];
-            if (delta <= 1e-20)
-                delta = 1.0; // prevent division by zero for (possibly) incorrect input data
+        auto map = [&scaledSat, &unscaledSats, &scaledSats](const std::size_t i)
+        {
+            const auto distance = (scaledSat         - scaledSats[i])
+                                / (scaledSats[i + 1] - scaledSats[i]);
 
-            return
-                unscaledSats[0]
-                +
-                (scaledSat - scaledSats[0])*((unscaledSats[1] - unscaledSats[0])/delta);
+            const auto displacement =
+                std::max(unscaledSats[i + 1] - unscaledSats[i], UnscaledSat{ 0 });
+
+            return std::min(unscaledSats[i] + distance*displacement,
+                            Evaluation { unscaledSats[i + 1] });
+        };
+
+        if (! (scaledSat > scaledSats[0])) {
+            // s <= sL
+            return unscaledSats[0];
+        }
+        else if (scaledSat < std::min(scaledSats[1], scaledSats[2])) {
+            // Scaled saturation in interval [sL, sR).
+            // Map to tabulated saturation in [unscaledSats[0], unscaledSats[1]).
+            return map(0);
+        }
+        else if (scaledSat < scaledSats[2]) {
+            // Scaled saturation in interval [sR, sU); sR guaranteed to be less
+            // than sU from previous condition.  Map to tabulated saturation in
+            // [unscaledSats[1], unscaledSats[2]).
+            return map(1);
         }
         else {
-            Scalar delta = scaledSats[2] - scaledSats[1];
-            if (delta <= 1e-20)
-                delta = 1.0; // prevent division by zero for (possibly) incorrect input data
-
-            return
-                unscaledSats[1]
-                +
-                (scaledSat - scaledSats[1])*((unscaledSats[2] - unscaledSats[1])/delta);
+            // s >= sU
+            return unscaledSats[2];
         }
     }
 
@@ -425,28 +439,35 @@ private:
                                                      const PointsContainer& unscaledSats,
                                                      const PointsContainer& scaledSats)
     {
-        if (unscaledSats[1] >= unscaledSats[2])
-            return unscaledToScaledSatTwoPoint_(unscaledSat, unscaledSats, scaledSats);
+        using ScaledSat = std::remove_cv_t<std::remove_reference_t<decltype(scaledSats[0])>>;
 
-        if (unscaledSat < unscaledSats[1]) {
-            Scalar delta = unscaledSats[1] - unscaledSats[0];
-            if (delta <= 1e-20)
-                delta = 1.0; // prevent division by zero for (possibly) incorrect input data
+        auto map = [&unscaledSat, &unscaledSats, &scaledSats](const std::size_t i)
+        {
+            const auto distance = (unscaledSat         - unscaledSats[i])
+                                / (unscaledSats[i + 1] - unscaledSats[i]);
 
-            return
-                scaledSats[0]
-                +
-                (unscaledSat - unscaledSats[0])*((scaledSats[1] - scaledSats[0])/delta);
+            const auto displacement =
+                std::max(scaledSats[i + 1] - scaledSats[i], ScaledSat{ 0 });
+
+            return std::min(scaledSats[i] + distance*displacement,
+                            Evaluation { scaledSats[i + 1] });
+        };
+
+        if (! (unscaledSat > unscaledSats[0])) {
+            return scaledSats[0];
+        }
+        else if (unscaledSat < unscaledSats[1]) {
+            // Tabulated saturation in interval [unscaledSats[0], unscaledSats[1]).
+            // Map to scaled saturation in [sL, sR).
+            return map(0);
+        }
+        else if (unscaledSat < unscaledSats[2]) {
+            // Tabulated saturation in interval [unscaledSats[1], unscaledSats[2]).
+            // Map to scaled saturation in [sR, sU).
+            return map(1);
         }
         else {
-            Scalar delta = unscaledSats[2] - unscaledSats[1];
-            if (delta <= 1e-20)
-                delta = 1.0; // prevent division by zero for (possibly) incorrect input data
-
-            return
-                scaledSats[1]
-                +
-                (unscaledSat - unscaledSats[1])*((scaledSats[2] - scaledSats[1])/delta);
+            return scaledSats[2];
         }
     }
 
