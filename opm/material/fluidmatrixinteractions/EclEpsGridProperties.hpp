@@ -99,8 +99,12 @@ public:
         this->compressed_pcw = try_get( fp, kwPrefix+"PCW");
         this->compressed_pcg = try_get( fp, kwPrefix+"PCG");
         this->compressed_krw = try_get( fp, kwPrefix+"KRW");
+        this->compressed_krwr = try_get( fp, kwPrefix+"KRWR");
         this->compressed_kro = try_get( fp, kwPrefix+"KRO");
+        this->compressed_krorg = try_get( fp, kwPrefix+"KRORG");
+        this->compressed_krorw = try_get( fp, kwPrefix+"KRORW");
         this->compressed_krg = try_get( fp, kwPrefix+"KRG");
+        this->compressed_krgr = try_get( fp, kwPrefix+"KRGR");
 
         // _may_ be needed to calculate the Leverett capillary pressure scaling factor
         if (fp.has_double("PORO"))
@@ -185,14 +189,29 @@ public:
         return this->satfunc(this->compressed_krw, active_index);
     }
 
+    const double * krwr(std::size_t active_index) const {
+        return this->satfunc(this->compressed_krwr, active_index);
+    }
+
     const double * krg(std::size_t active_index) const {
         return this->satfunc(this->compressed_krg, active_index);
+    }
+
+    const double * krgr(std::size_t active_index) const {
+        return this->satfunc(this->compressed_krgr, active_index);
     }
 
     const double * kro(std::size_t active_index) const {
         return this->satfunc(this->compressed_kro, active_index);
     }
 
+    const double * krorg(std::size_t active_index) const {
+        return this->satfunc(this->compressed_krorg, active_index);
+    }
+
+    const double * krorw(std::size_t active_index) const {
+        return this->satfunc(this->compressed_krorw, active_index);
+    }
 
 private:
     const double *
@@ -215,8 +234,12 @@ private:
     std::vector<double> compressed_pcw;
     std::vector<double> compressed_pcg;
     std::vector<double> compressed_krw;
+    std::vector<double> compressed_krwr;
     std::vector<double> compressed_kro;
+    std::vector<double> compressed_krorg;
+    std::vector<double> compressed_krorw;
     std::vector<double> compressed_krg;
+    std::vector<double> compressed_krgr;
 
     std::vector<double> compressed_permx;
     std::vector<double> compressed_permy;

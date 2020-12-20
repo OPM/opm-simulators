@@ -111,6 +111,20 @@ public:
     { return enableKrwScaling_; }
 
     /*!
+     * \brief Specify whether three-point relative permeability value
+     * scaling is enabled for the wetting phase (KRWR + KRW).
+     */
+    void setEnableThreePointKrwScaling(const bool enable)
+    { this->enableThreePointKrwScaling_ = enable; }
+
+    /*!
+     * \brief Whether or not three-point relative permeability value scaling
+     * is enabled for the wetting phase (KRWR + KRW).
+     */
+    bool enableThreePointKrwScaling() const
+    { return this->enableThreePointKrwScaling_; }
+
+    /*!
      * \brief Specify whether relative permeability scaling is enabled for the non-wetting phase.
      */
     void setEnableKrnScaling(bool yesno)
@@ -161,7 +175,9 @@ public:
      * This requires that the opm-parser module is available.
      */
     void initFromState(const Opm::EclipseState& eclState,
-                       Opm::EclTwoPhaseSystemType twoPhaseSystemType)
+                       Opm::EclTwoPhaseSystemType twoPhaseSystemType,
+                       const std::string& prefix = "",
+                       const std::string& suffix = "")
     {
         const auto& endscale = eclState.runspec().endpointScaling();
         // find out if endpoint scaling is used in the first place
@@ -192,16 +208,28 @@ public:
         }
 
         const auto& fp = eclState.fieldProps();
+        auto hasKR = [&fp, &prefix, &suffix](const std::string& scaling)
+        {
+            return fp.has_double(prefix + "KR" + scaling + suffix);
+        };
+        auto hasPC = [&fp, &prefix](const std::string& scaling)
+        {
+            return fp.has_double(prefix + "PC" + scaling);
+        };
+
         // check if we are supposed to scale the Y axis of the capillary pressure
         if (twoPhaseSystemType == EclOilWaterSystem) {
-            enableKrnScaling_ = fp.has_double("KRO");
-            enableKrwScaling_ = fp.has_double("KRW");
-            enablePcScaling_  = fp.has_double("PCW") || fp.has_double("SWATINIT");
-        } else {
+            this->setEnableThreePointKrwScaling(hasKR("WR"));
+
+            this->enableKrnScaling_ = hasKR("O");
+            this->enableKrwScaling_ = hasKR("W") || this->enableThreePointKrwScaling();
+            this->enablePcScaling_  = hasPC("W") || fp.has_double("SWATINIT");
+        }
+        else {
             assert(twoPhaseSystemType == EclGasOilSystem);
-            enableKrnScaling_ = fp.has_double("KRG");
-            enableKrwScaling_ = fp.has_double("KRO");
-            enablePcScaling_  = fp.has_double("PCG");
+            this->enableKrnScaling_ = hasKR("G");
+            this->enableKrwScaling_ = hasKR("O");
+            this->enablePcScaling_  = hasPC("G");
         }
 
         if (enablePcScaling_ && enableLeverettScaling_) {
@@ -231,6 +259,9 @@ private:
     bool enableLeverettScaling_;
     bool enableKrwScaling_;
     bool enableKrnScaling_;
+
+    // Employ three-point vertical scaling (e.g., KRWR and KRW).
+    bool enableThreePointKrwScaling_{false};
 };
 
 } // namespace Opm

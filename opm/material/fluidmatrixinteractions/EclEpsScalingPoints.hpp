@@ -83,6 +83,12 @@ struct EclEpsScalingPointsInfo
     Scalar pcowLeverettFactor;
     Scalar pcgoLeverettFactor;
 
+    // Scaled relative permeabilities at residual displacing saturation
+    Scalar Krwr;  // water
+    Scalar Krgr;  // gas
+    Scalar Krorw; // oil in water-oil system
+    Scalar Krorg; // oil in gas-oil system
+
     // maximum relative permabilities
     Scalar maxKrw; // maximum relative permability of water
     Scalar maxKrow; // maximum relative permability of oil in the oil-water system
@@ -103,6 +109,10 @@ struct EclEpsScalingPointsInfo
                maxPcgo == data.maxPcgo &&
                pcowLeverettFactor == data.pcowLeverettFactor &&
                pcgoLeverettFactor == data.pcgoLeverettFactor &&
+               Krwr == data.Krwr &&
+               Krgr == data.Krgr &&
+               Krorw == data.Krorw &&
+               Krorg == data.Krorg &&
                maxKrw == data.maxKrw &&
                maxKrow == data.maxKrow &&
                maxKrog == data.maxKrog &&
@@ -123,6 +133,10 @@ struct EclEpsScalingPointsInfo
                   << "    maxPcgo: " << maxPcgo << '\n'
                   << "    pcowLeverettFactor: " << pcowLeverettFactor << '\n'
                   << "    pcgoLeverettFactor: " << pcgoLeverettFactor << '\n'
+                  << "    Krwr: " << Krwr << '\n'
+                  << "    Krgr: " << Krgr << '\n'
+                  << "    Krorw: " << Krorw << '\n'
+                  << "    Krorg: " << Krorg << '\n'
                   << "    maxKrw: " << maxKrw << '\n'
                   << "    maxKrg: " << maxKrg << '\n'
                   << "    maxKrow: " << maxKrow << '\n'
@@ -163,6 +177,11 @@ struct EclEpsScalingPointsInfo
         this->pcowLeverettFactor = 1.0;
         this->pcgoLeverettFactor = 1.0;
 
+        this->Krwr    = rfunc.krw.r [satRegionIdx];
+        this->Krgr    = rfunc.krg.r [satRegionIdx];
+        this->Krorw   = rfunc.kro.rw[satRegionIdx];
+        this->Krorg   = rfunc.kro.rg[satRegionIdx];
+
         this->maxKrw  = rfunc.krw.max[satRegionIdx];
         this->maxKrow = rfunc.kro.max[satRegionIdx];
         this->maxKrog = rfunc.kro.max[satRegionIdx];
@@ -196,6 +215,12 @@ struct EclEpsScalingPointsInfo
         update(Sgu,     epsProperties.sgu(activeIndex));
         update(maxPcow, epsProperties.pcw(activeIndex));
         update(maxPcgo, epsProperties.pcg(activeIndex));
+
+        update(this->Krwr,  epsProperties.krwr(activeIndex));
+        update(this->Krgr,  epsProperties.krgr(activeIndex));
+        update(this->Krorw, epsProperties.krorw(activeIndex));
+        update(this->Krorg, epsProperties.krorg(activeIndex));
+
         update(maxKrw,  epsProperties.krw(activeIndex));
         update(maxKrg,  epsProperties.krg(activeIndex));
         update(maxKrow, epsProperties.kro(activeIndex));
@@ -316,6 +341,10 @@ public:
                 maxPcnwOrLeverettFactor_ = epsInfo.pcowLeverettFactor;
             else
                 maxPcnwOrLeverettFactor_ = epsInfo.maxPcow;
+
+            Krwr_   = epsInfo.Krwr;
+            Krnr_   = epsInfo.Krorw;
+
             maxKrw_ = epsInfo.maxKrw;
             maxKrn_ = epsInfo.maxKrow;
         }
@@ -343,6 +372,9 @@ public:
                 maxPcnwOrLeverettFactor_ = epsInfo.pcgoLeverettFactor;
             else
                 maxPcnwOrLeverettFactor_ = epsInfo.maxPcgo;
+
+            Krwr_   = epsInfo.Krorg;
+            Krnr_   = epsInfo.Krgr;
 
             maxKrw_ = epsInfo.maxKrog;
             maxKrn_ = epsInfo.maxKrg;
@@ -410,6 +442,20 @@ public:
     { return maxPcnwOrLeverettFactor_; }
 
     /*!
+     * \brief Set wetting-phase relative permeability at residual saturation
+     * of non-wetting phase.
+     */
+    void setKrwr(Scalar value)
+    { this->Krwr_ = value; }
+
+    /*!
+     * \brief Returns wetting-phase relative permeability at residual
+     * saturation of non-wetting phase.
+     */
+    Scalar krwr() const
+    { return this->Krwr_; }
+
+    /*!
      * \brief Sets the maximum wetting phase relative permeability
      */
     void setMaxKrw(Scalar value)
@@ -420,6 +466,20 @@ public:
      */
     Scalar maxKrw() const
     { return maxKrw_; }
+
+    /*!
+     * \brief Set non-wetting phase relative permeability at residual
+     * saturation of wetting phase.
+     */
+    void setKrnr(Scalar value)
+    { this->Krnr_ = value; }
+
+    /*!
+     * \brief Returns non-wetting phase relative permeability at residual
+     * saturation of wetting phase.
+     */
+    Scalar krnr() const
+    { return this->Krnr_; }
 
     /*!
      * \brief Sets the maximum wetting phase relative permeability
@@ -447,8 +507,16 @@ private:
     // Maximum wetting phase relative permability value.
     Scalar maxKrw_;
 
+    // Scaled wetting phase relative permeability value at residual
+    // saturation of non-wetting phase.
+    Scalar Krwr_;
+
     // Maximum non-wetting phase relative permability value
     Scalar maxKrn_;
+
+    // Scaled non-wetting phase relative permeability value at residual
+    // saturation of wetting phase.
+    Scalar Krnr_;
 
     // The the points used for saturation ("x-axis") scaling of capillary pressure
     std::array<Scalar, 3> saturationPcPoints_;
