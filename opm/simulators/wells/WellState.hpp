@@ -244,7 +244,7 @@ namespace Opm
             data::Wells dw;
             for( const auto& itr : this->wellMap_ ) {
                 const auto well_index = itr.second[ 0 ];
-                if (this->status_[well_index] != Well::Status::OPEN)
+                if (this->status_[well_index] == Well::Status::SHUT)
                     continue;
 
                 const auto& pwinfo = *parallel_well_info_[well_index];

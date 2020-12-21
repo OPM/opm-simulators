@@ -569,7 +569,7 @@ namespace Opm
             for( const auto& wt : this->wellMap() ) {
                 const auto w = wt.second[ 0 ];
                 const auto& pwinfo = *parallel_well_info_[w];
-                if ((this->status_[w] != Well::Status::OPEN) || !pwinfo.isOwner())
+                if ((this->status_[w] == Well::Status::SHUT) || !pwinfo.isOwner())
                     continue;
 
                 auto& well = res.at( wt.first );
