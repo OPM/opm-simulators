@@ -945,4 +945,20 @@ if(MPI_FOUND)
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${rel_tol_parallel}
                                        TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
+
+  add_test_compare_parallel_simulation(CASENAME fetkovich_2d
+                                       FILENAME 2D_FETKOVICHAQUIFER
+                                       SIMULATOR flow
+                                       ABS_TOL ${abs_tol_parallel}
+                                       REL_TOL ${rel_tol_parallel}
+                                       DIR aquifer-fetkovich
+                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
+
+  add_test_compare_parallel_simulation(CASENAME ctaquifer_2d_oilwater
+                                       FILENAME 2D_OW_CTAQUIFER
+                                       SIMULATOR flow
+                                       ABS_TOL ${abs_tol_parallel}
+                                       REL_TOL ${rel_tol_parallel}
+                                       DIR aquifer-oilwater
+                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
 endif()

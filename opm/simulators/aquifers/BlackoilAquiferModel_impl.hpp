@@ -168,10 +168,6 @@ BlackoilAquiferModel<TypeTag>::init()
         return;
     }
 
-    const auto& comm = this->simulator_.vanguard().gridView().comm();
-    if (comm.size() > 1)
-        throw std::runtime_error("Aquifers currently do not work in parallel.");
-
     // Get all the carter tracy aquifer properties data and put it in aquifers vector
     const auto& connections = aquifer.connections();
     for (const auto& aq : aquifer.ct()) {

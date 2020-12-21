@@ -709,18 +709,79 @@ public:
         }
 
     };
+
+    class PackUnPackAquiferData : public P2PCommunicatorType::DataHandleInterface
+    {
+        const Opm::data::Aquifers& localAquiferData_;
+        data::Aquifers& globalAquiferData_;
+
+    public:
+        PackUnPackAquiferData(const Opm::data::Aquifers& localAquiferData,
+                              Opm::data::Aquifers& globalAquiferData,
+                              bool isIORank)
+            : localAquiferData_(localAquiferData)
+            , globalAquiferData_(globalAquiferData)
+        {
+            if (isIORank) {
+                MessageBufferType buffer;
+                pack(0, buffer);
+
+                // pass a dummyLink to satisfy virtual class
+                int dummyLink = -1;
+                unpack(dummyLink, buffer);
+            }
+        }
+
+        // pack all data associated with link
+        void pack(int link, MessageBufferType& buffer)
+        {
+            // we should only get one link
+            if (link != 0)
+                throw std::logic_error("link in method pack is not 0 as expected");
+
+            int size = localAquiferData_.size();
+            buffer.write(size);
+            for (const auto& [key, data] : localAquiferData_) {
+              buffer.write(key);
+              data.write(buffer);
+            }
+        }
+
+        // unpack all data associated with link
+        void unpack(int /*link*/, MessageBufferType& buffer)
+        {
+            int size;
+            buffer.read(size);
+            for (int i = 0; i < size; ++i) {
+              int key;
+              buffer.read(key);
+              data::AquiferData data;
+              data.read(buffer);
+              auto& aq = globalAquiferData_[key];
+              aq.aquiferID = std::max(aq.aquiferID, data.aquiferID);
+              aq.pressure = std::max(aq.pressure, data.pressure);
+              aq.initPressure = std::max(aq.initPressure, data.initPressure);
+              aq.datumDepth = std::max(aq.datumDepth, data.datumDepth);
+              aq.fluxRate += data.fluxRate;
+              aq.volume += data.volume;
+            }
+        }
+
+    };
     // gather solution to rank 0 for EclipseWriter
     void collect(const Opm::data::Solution& localCellData,
                  const std::map<std::pair<std::string, int>, double>& localBlockData,
                  const std::map<std::size_t, double>& localWBPData,
                  const Opm::data::Wells& localWellData,
-                 const Opm::data::GroupAndNetworkValues& localGroupAndNetworkData)
+                 const Opm::data::GroupAndNetworkValues& localGroupAndNetworkData,
+                 const Opm::data::Aquifers& localAquiferData)
     {
         globalCellData_ = {};
         globalBlockData_.clear();
         globalWBPData_.clear();
         globalWellData_.clear();
         globalGroupAndNetworkData_.clear();
+        globalAquiferData_.clear();
 
         // index maps only have to be build when reordering is needed
         if(!needsReordering && !isParallel())
@@ -765,11 +826,18 @@ public:
             this->isIORank()
         };
 
+        PackUnPackAquiferData packUnpackAquiferData {
+            localAquiferData,
+            this->globalAquiferData_,
+            this->isIORank()
+        };
+
         toIORankComm_.exchange(packUnpackCellData);
         toIORankComm_.exchange(packUnpackWellData);
         toIORankComm_.exchange(packUnpackGroupAndNetworkData);
         toIORankComm_.exchange(packUnpackBlockData);
         toIORankComm_.exchange(packUnpackWBPData);
+        toIORankComm_.exchange(packUnpackAquiferData);
 
 #ifndef NDEBUG
         // mkae sure every process is on the same page
@@ -791,6 +859,9 @@ public:
 
     const Opm::data::GroupAndNetworkValues& globalGroupAndNetworkData() const
     { return globalGroupAndNetworkData_; }
+
+    const Opm::data::Aquifers& globalAquiferData() const
+    { return globalAquiferData_; }
 
     bool isIORank() const
     { return toIORankComm_.rank() == ioRank; }
@@ -839,6 +910,7 @@ protected:
     std::map<std::size_t, double> globalWBPData_;
     Opm::data::Wells globalWellData_;
     Opm::data::GroupAndNetworkValues globalGroupAndNetworkData_;
+    Opm::data::Aquifers globalAquiferData_;
     std::vector<int> localIdxToGlobalIdx_;
     /// \brief sorted list of cartesian indices present-
     ///

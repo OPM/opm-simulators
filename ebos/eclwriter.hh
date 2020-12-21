@@ -295,7 +295,9 @@ public:
                                      eclOutputModule_->getBlockData(),
                                      eclOutputModule_->getWBPData(),
                                      localWellData,
-                                     localGroupAndNetworkData);
+                                     localGroupAndNetworkData,
+                                     localAquiferData);
+
 
         std::map<std::string, double> miscSummaryData;
         std::map<std::string, std::vector<double>> regionData;
@@ -334,8 +336,9 @@ public:
                 ? this->collectToIORank_.globalGroupAndNetworkData()
                 : localGroupAndNetworkData;
 
-            // Aquifer can not be parallel running yet
-            const auto& aquiferData = localAquiferData;
+            const auto& aquiferData = this->collectToIORank_.isParallel()
+                ? this->collectToIORank_.globalAquiferData()
+                : localAquiferData;
 
             const auto& blockData
                 = this->collectToIORank_.isParallel()
@@ -410,7 +413,8 @@ public:
                                      eclOutputModule_->getBlockData(),
                                      eclOutputModule_->getWBPData(),
                                      localWellData,
-                                     localGroupAndNetworkData);
+                                     localGroupAndNetworkData,
+                                     {});
         }
 
         if (this->collectToIORank_.isIORank()) {
