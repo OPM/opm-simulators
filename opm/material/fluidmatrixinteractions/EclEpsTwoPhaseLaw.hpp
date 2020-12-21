@@ -225,7 +225,7 @@ public:
     {
         const Evaluation& SwUnscaled = scaledToUnscaledSatKrw(params, SwScaled);
         const Evaluation& krwUnscaled = EffLaw::twoPhaseSatKrw(params.effectiveLawParams(), SwUnscaled);
-        return unscaledToScaledKrw_(params, krwUnscaled);
+        return unscaledToScaledKrw_(SwScaled, params, krwUnscaled);
     }
 
     template <class Evaluation>
@@ -508,14 +508,63 @@ private:
      * \brief Scale the wetting phase relative permeability of a phase according to the given parameters
      */
     template <class Evaluation>
-    static Evaluation unscaledToScaledKrw_(const Params& params, const Evaluation& unscaledKrw)
+    static Evaluation unscaledToScaledKrw_(const Evaluation& SwScaled,
+                                           const Params& params,
+                                           const Evaluation& unscaledKrw)
     {
-        if (!params.config().enableKrwScaling())
+        const auto& cfg = params.config();
+
+        if (! cfg.enableKrwScaling())
             return unscaledKrw;
 
-        // TODO: three point krw y-scaling
-        Scalar alpha = params.scaledPoints().maxKrw()/params.unscaledPoints().maxKrw();
-        return unscaledKrw*alpha;
+        const auto& scaled   = params.scaledPoints();
+        const auto& unscaled = params.unscaledPoints();
+
+        if (! cfg.enableThreePointKrwScaling()) {
+            // Simple case: Run uses pure vertical scaling of water relperm (keyword KRW)
+            const Scalar alpha = scaled.maxKrw() / unscaled.maxKrw();
+            return unscaledKrw * alpha;
+        }
+
+        // Otherwise, run uses three-point vertical scaling (keywords KRWR and KRW)
+        const auto fdisp = unscaled.krwr();
+        const auto fmax  = unscaled.maxKrw();
+
+        const auto sm = scaled.saturationKrwPoints()[2];
+        const auto sr = std::min(scaled.saturationKrwPoints()[1], sm);
+        const auto fr = scaled.krwr();
+        const auto fm = scaled.maxKrw();
+
+        if (! (SwScaled > sr)) {
+            // Pure vertical scaling in left interval ([SWL, SR])
+            return unscaledKrw * (fr / fdisp);
+        }
+        else if (fmax > fdisp) {
+            // s \in [sr, sm), sm > sr; normal case: Kr(Smax) > Kr(Sr).
+            //
+            // Linear function between (sr,fr) and (sm,fm) in terms of
+            // function value 'unscaledKrw'.  This usually alters the shape
+            // of the relative permeability function in this interval (e.g.,
+            // roughly quadratic to linear).
+            const auto t = (unscaledKrw - fdisp) / (fmax - fdisp);
+
+            return fr + t*(fm - fr);
+        }
+        else if (sr < sm) {
+            // s \in [sr, sm), sm > sr; special case: Kr(Smax) == Kr(Sr).
+            //
+            // Linear function between (sr,fr) and (sm,fm) in terms of
+            // saturation value 'SwScaled'.  This usually alters the shape
+            // of the relative permeability function in this interval (e.g.,
+            // roughly quadratic to linear).
+            const auto t = (SwScaled - sr) / (sm - sr);
+
+            return fr + t*(fm - fr);
+        }
+        else {
+            // sm == sr (pure scaling).  Almost arbitrarily pick 'fm'.
+            return fm;
+        }
     }
 
     template <class Evaluation>
