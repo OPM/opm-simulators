@@ -18,8 +18,6 @@
 */
 
 #include <config.h>
-#include <memory>
-#include <sstream>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
@@ -54,21 +52,23 @@ namespace Opm
     using bda::ILUReorder;
 
 template <class BridgeMatrix, class BridgeVector, int block_size>
-BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string gpu_mode_, int linear_solver_verbosity, int maxit, double tolerance, unsigned int platformID OPM_UNUSED, unsigned int deviceID, std::string opencl_ilu_reorder OPM_UNUSED)
-: gpu_mode(gpu_mode_)
+BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string accelerator_mode_, std::string fpga_bitstream, int linear_solver_verbosity, int maxit, double tolerance, unsigned int platformID, unsigned int deviceID, std::string opencl_ilu_reorder OPM_UNUSED)
+: accelerator_mode(accelerator_mode_)
 {
-    if (gpu_mode.compare("cusparse") == 0) {
+    if (accelerator_mode.compare("cusparse") == 0) {
 #if HAVE_CUDA
         use_gpu = true;
         backend.reset(new bda::cusparseSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance, deviceID));
 #else
         OPM_THROW(std::logic_error, "Error cusparseSolver was chosen, but CUDA was not found by CMake");
 #endif
-    } else if (gpu_mode.compare("opencl") == 0) {
+    } else if (accelerator_mode.compare("opencl") == 0) {
 #if HAVE_OPENCL
         use_gpu = true;
-        ILUReorder ilu_reorder = bda::ILUReorder::GRAPH_COLORING;
-        if (opencl_ilu_reorder == "level_scheduling") {
+        ILUReorder ilu_reorder;
+        if (opencl_ilu_reorder == "") {
+            ilu_reorder = bda::ILUReorder::GRAPH_COLORING;  // default when not selected by user
+        } else if (opencl_ilu_reorder == "level_scheduling") {
             ilu_reorder = bda::ILUReorder::LEVEL_SCHEDULING;
         } else if (opencl_ilu_reorder == "graph_coloring") {
             ilu_reorder = bda::ILUReorder::GRAPH_COLORING;
@@ -81,10 +81,28 @@ BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string gpu_mod
 #else
         OPM_THROW(std::logic_error, "Error openclSolver was chosen, but OpenCL was not found by CMake");
 #endif
-    } else if (gpu_mode.compare("none") == 0) {
+    } else if (accelerator_mode.compare("fpga") == 0) {
+#if HAVE_FPGA
+        use_fpga = true;
+        ILUReorder ilu_reorder;
+        if (opencl_ilu_reorder == "") {
+            ilu_reorder = bda::ILUReorder::LEVEL_SCHEDULING;  // default when not selected by user
+        } else if (opencl_ilu_reorder == "level_scheduling") {
+            ilu_reorder = bda::ILUReorder::LEVEL_SCHEDULING;
+        } else if (opencl_ilu_reorder == "graph_coloring") {
+            ilu_reorder = bda::ILUReorder::GRAPH_COLORING;
+        } else {
+            OPM_THROW(std::logic_error, "Error invalid argument for --opencl-ilu-reorder, usage: '--opencl-ilu-reorder=[level_scheduling|graph_coloring]'");
+        }
+        backend.reset(new bda::FpgaSolverBackend<block_size>(fpga_bitstream, linear_solver_verbosity, maxit, tolerance, ilu_reorder));
+#else
+        OPM_THROW(std::logic_error, "Error fpgaSolver was chosen, but FPGA was not enabled by CMake");
+#endif
+    } else if (accelerator_mode.compare("none") == 0) {
         use_gpu = false;
+        use_fpga = false;
     } else {
-        OPM_THROW(std::logic_error, "Error unknown value for parameter 'GpuMode', should be passed like '--gpu-mode=[none|cusparse|opencl]");
+        OPM_THROW(std::logic_error, "Error unknown value for parameter 'AcceleratorMode', should be passed like '--accelerator-mode=[none|cusparse|opencl|fpga]");
     }
 }
 
@@ -161,7 +179,7 @@ template <class BridgeMatrix, class BridgeVector, int block_size>
 void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatrix *mat OPM_UNUSED, BridgeVector &b OPM_UNUSED, WellContributions& wellContribs OPM_UNUSED, InverseOperatorResult &res OPM_UNUSED)
 {
 
-    if (use_gpu) {
+    if (use_gpu || use_fpga) {
         BdaResult result;
         result.converged = false;
         static std::vector<int> h_rows;
@@ -225,7 +243,7 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatri
         res.converged = result.converged;
         res.conv_rate = result.conv_rate;
         res.elapsed = result.elapsed;
-    }else{
+    } else {
         res.converged = false;
     }
 }
@@ -233,14 +251,14 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatri
 
 template <class BridgeMatrix, class BridgeVector, int block_size>
 void BdaBridge<BridgeMatrix, BridgeVector, block_size>::get_result(BridgeVector &x OPM_UNUSED) {
-    if (use_gpu) {
+    if (use_gpu || use_fpga) {
         backend->get_result(static_cast<double*>(&(x[0][0])));
     }
 }
 
 template <class BridgeMatrix, class BridgeVector, int block_size>
 void BdaBridge<BridgeMatrix, BridgeVector, block_size>::initWellContributions(WellContributions& wellContribs) {
-    if(gpu_mode.compare("opencl") == 0){
+    if(accelerator_mode.compare("opencl") == 0){
 #if HAVE_OPENCL
         const auto openclBackend = static_cast<const bda::openclSolverBackend<block_size>*>(backend.get());
         wellContribs.setOpenCLEnv(openclBackend->context.get(), openclBackend->queue.get());
@@ -250,12 +268,12 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::initWellContributions(We
     }
 }
 
-
-#define INSTANTIATE_BDA_FUNCTIONS(n)                                    \
+#define INSTANTIATE_BDA_FUNCTIONS(n)                                                                                                \
 template BdaBridge<Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >,              \
 Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >,                                    \
 n>::BdaBridge                                                                                                                       \
-(std::string gpu_mode_, int linear_solver_verbosity, int maxit, double tolerance, unsigned int platformID, unsigned int deviceID, std::string opencl_ilu_reorder);  \
+(std::string accelerator_mode_, std::string fpga_bitstream, int linear_solver_verbosity, int maxit, double tolerance,               \
+unsigned int platformID, unsigned int deviceID, std::string opencl_ilu_reorder);                                                    \
                                                                                                                                     \
 template void BdaBridge<Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >,         \
 Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >,                                    \

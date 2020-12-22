@@ -118,7 +118,7 @@ struct Linsolver {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
-struct GpuMode {
+struct AcceleratorMode {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
@@ -131,6 +131,10 @@ struct OpenclPlatformId {
 };
 template<class TypeTag, class MyTypeTag>
 struct OpenclIluReorder {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct FpgaBitstream {
     using type = UndefinedProperty;
 };
 
@@ -213,7 +217,7 @@ struct Linsolver<TypeTag, TTag::FlowIstlSolverParams> {
     static constexpr auto value = "ilu0";
 };
 template<class TypeTag>
-struct GpuMode<TypeTag, TTag::FlowIstlSolverParams> {
+struct AcceleratorMode<TypeTag, TTag::FlowIstlSolverParams> {
     static constexpr auto value = "none";
 };
 template<class TypeTag>
@@ -226,7 +230,11 @@ struct OpenclPlatformId<TypeTag, TTag::FlowIstlSolverParams> {
 };
 template<class TypeTag>
 struct OpenclIluReorder<TypeTag, TTag::FlowIstlSolverParams> {
-    static constexpr auto value = "graph_coloring";
+    static constexpr auto value = ""; // note: default value is chosen depending on the solver used
+};
+template<class TypeTag>
+struct FpgaBitstream<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr auto value = "";
 };
 
 } // namespace Opm::Properties
@@ -252,12 +260,13 @@ namespace Opm
         bool   ignoreConvergenceFailure_;
         bool scale_linear_system_;
         std::string linsolver_;
-        std::string gpu_mode_;
+        std::string accelerator_mode_;
         int bda_device_id_;
         int opencl_platform_id_;
         int cpr_max_ell_iter_ = 20;
         int cpr_reuse_setup_ = 0;
         std::string opencl_ilu_reorder_;
+        std::string fpga_bitstream_;
 
         template <class TypeTag>
         void init()
@@ -279,10 +288,11 @@ namespace Opm
             cpr_max_ell_iter_  =  EWOMS_GET_PARAM(TypeTag, int, CprMaxEllIter);
             cpr_reuse_setup_  =  EWOMS_GET_PARAM(TypeTag, int, CprReuseSetup);
             linsolver_ = EWOMS_GET_PARAM(TypeTag, std::string, Linsolver);
-            gpu_mode_ = EWOMS_GET_PARAM(TypeTag, std::string, GpuMode);
+            accelerator_mode_ = EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode);
             bda_device_id_ = EWOMS_GET_PARAM(TypeTag, int, BdaDeviceId);
             opencl_platform_id_ = EWOMS_GET_PARAM(TypeTag, int, OpenclPlatformId);
             opencl_ilu_reorder_ = EWOMS_GET_PARAM(TypeTag, std::string, OpenclIluReorder);
+            fpga_bitstream_ = EWOMS_GET_PARAM(TypeTag, std::string, FpgaBitstream);
         }
 
         template <class TypeTag>
@@ -304,10 +314,11 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, int, CprMaxEllIter, "MaxIterations of the elliptic pressure part of the cpr solver");
             EWOMS_REGISTER_PARAM(TypeTag, int, CprReuseSetup, "Reuse preconditioner setup. Valid options are 0: recreate the preconditioner for every linear solve, 1: recreate once every timestep, 2: recreate if last linear solve took more than 10 iterations, 3: never recreate");
             EWOMS_REGISTER_PARAM(TypeTag, std::string, Linsolver, "Configuration of solver. Valid options are: ilu0 (default), cpr (an alias for cpr_trueimpes), cpr_quasiimpes, cpr_trueimpes or amg. Alternatively, you can request a configuration to be read from a JSON file by giving the filename here, ending with '.json.'");
-            EWOMS_REGISTER_PARAM(TypeTag, std::string, GpuMode, "Use GPU cusparseSolver or openclSolver as the linear solver, usage: '--gpu-mode=[none|cusparse|opencl]'");
+            EWOMS_REGISTER_PARAM(TypeTag, std::string, AcceleratorMode, "Use GPU (cusparseSolver or openclSolver) or FPGA (fpgaSolver) as the linear solver, usage: '--accelerator-mode=[none|cusparse|opencl|fpga]'");
             EWOMS_REGISTER_PARAM(TypeTag, int, BdaDeviceId, "Choose device ID for cusparseSolver or openclSolver, use 'nvidia-smi' or 'clinfo' to determine valid IDs");
             EWOMS_REGISTER_PARAM(TypeTag, int, OpenclPlatformId, "Choose platform ID for openclSolver, use 'clinfo' to determine valid platform IDs");
-            EWOMS_REGISTER_PARAM(TypeTag, std::string, OpenclIluReorder, "Choose the reordering strategy for ILU for openclSolver, usage: '--opencl-ilu-reorder=[level_scheduling|graph_coloring], level_scheduling behaves like Dune and cusparse, graph_coloring is more aggressive and likely to be faster, but is random-based and generally increases the number of linear solves and linear iterations significantly.");
+            EWOMS_REGISTER_PARAM(TypeTag, std::string, OpenclIluReorder, "Choose the reordering strategy for ILU for openclSolver and fpgaSolver, usage: '--opencl-ilu-reorder=[level_scheduling|graph_coloring], level_scheduling behaves like Dune and cusparse, graph_coloring is more aggressive and likely to be faster, but is random-based and generally increases the number of linear solves and linear iterations significantly.");
+            EWOMS_REGISTER_PARAM(TypeTag, std::string, FpgaBitstream, "Specify the bitstream file for fpgaSolver (including path), usage: '--fpga-bitstream=<filename>'");
         }
 
         FlowLinearSolverParameters() { reset(); }
@@ -327,10 +338,11 @@ namespace Opm
             ilu_milu_                 = MILU_VARIANT::ILU;
             ilu_redblack_             = false;
             ilu_reorder_sphere_       = true;
-            gpu_mode_                 = "none";
+            accelerator_mode_         = "none";
             bda_device_id_            = 0;
             opencl_platform_id_       = 0;
-            opencl_ilu_reorder_       = "graph_coloring";
+            opencl_ilu_reorder_       = "";  // note: the default value is chosen depending on the solver used
+            fpga_bitstream_           = "";
         }
     };
 

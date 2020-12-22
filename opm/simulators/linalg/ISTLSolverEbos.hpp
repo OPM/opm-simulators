@@ -35,7 +35,7 @@
 #include <opm/simulators/linalg/setupPropertyTree.hpp>
 
 
-#if HAVE_CUDA || HAVE_OPENCL
+#if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
 #endif
 
@@ -92,7 +92,7 @@ namespace Opm
         using WellModelOperator = WellModelAsLinearOperator<WellModel, Vector, Vector>;
         using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
 
-#if HAVE_CUDA || HAVE_OPENCL
+#if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA
         static const unsigned int block_size = Matrix::block_type::rows;
         std::unique_ptr<BdaBridge<Matrix, Vector, block_size>> bdaBridge;
 #endif
@@ -126,14 +126,14 @@ namespace Opm
 #endif
             parameters_.template init<TypeTag>();
             prm_ = setupPropertyTree<TypeTag>(parameters_);
-#if HAVE_CUDA || HAVE_OPENCL
+#if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA
             {
-                std::string gpu_mode = EWOMS_GET_PARAM(TypeTag, std::string, GpuMode);
-                if ((simulator_.vanguard().grid().comm().size() > 1) && (gpu_mode != "none")) {
+                std::string accelerator_mode = EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode);
+                if ((simulator_.vanguard().grid().comm().size() > 1) && (accelerator_mode != "none")) {
                     if (on_io_rank) {
-                        OpmLog::warning("Cannot use GPU with MPI, GPU is disabled");
+                        OpmLog::warning("Cannot use GPU or FPGA with MPI, GPU/FPGA are disabled");
                     }
-                    gpu_mode = "none";
+                    accelerator_mode = "none";
                 }
                 const int platformID = EWOMS_GET_PARAM(TypeTag, int, OpenclPlatformId);
                 const int deviceID = EWOMS_GET_PARAM(TypeTag, int, BdaDeviceId);
@@ -141,11 +141,12 @@ namespace Opm
                 const double tolerance = EWOMS_GET_PARAM(TypeTag, double, LinearSolverReduction);
                 const std::string opencl_ilu_reorder = EWOMS_GET_PARAM(TypeTag, std::string, OpenclIluReorder);
                 const int linear_solver_verbosity = parameters_.linear_solver_verbosity_;
-                bdaBridge.reset(new BdaBridge<Matrix, Vector, block_size>(gpu_mode, linear_solver_verbosity, maxit, tolerance, platformID, deviceID, opencl_ilu_reorder));
+                std::string fpga_bitstream = EWOMS_GET_PARAM(TypeTag, std::string, FpgaBitstream);
+                bdaBridge.reset(new BdaBridge<Matrix, Vector, block_size>(accelerator_mode, fpga_bitstream, linear_solver_verbosity, maxit, tolerance, platformID, deviceID, opencl_ilu_reorder));
             }
 #else
-            if (EWOMS_GET_PARAM(TypeTag, std::string, GpuMode) != "none") {
-                OPM_THROW(std::logic_error,"Error cannot use GPU solver since neither CUDA nor OpenCL were found by cmake");
+            if (EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode) != "none") {
+                OPM_THROW(std::logic_error,"Cannot use accelerated solver since neither CUDA nor OpenCL were found by cmake and FPGA was not enabled");
             }
 #endif
             extractParallelGridInformationToISTL(simulator_.vanguard().grid(), parallelInformation_);
@@ -157,6 +158,12 @@ namespace Opm
             detail::findOverlapAndInterior(simulator_.vanguard().grid(), elemMapper, overlapRows_, interiorRows_);
 
             useWellConn_ = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
+#if HAVE_FPGA
+            // check usage of MatrixAddWellContributions: for FPGA they must be included
+            if (EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode) == "fpga" && !useWellConn_) {
+                OPM_THROW(std::logic_error,"fpgaSolver needs --matrix-add-well-contributions=true");
+            }
+#endif
             const bool ownersFirst = EWOMS_GET_PARAM(TypeTag, bool, OwnerCellsFirst);
             if (!ownersFirst) {
                 const std::string msg = "The linear solver no longer supports --owner-cells-first=false.";
@@ -242,35 +249,41 @@ namespace Opm
 
             // Solve system.
             Dune::InverseOperatorResult result;
-            bool gpu_was_used = false;
+            bool accelerator_was_used = false;
 
             // Use GPU if: available, chosen by user, and successful.
-#if HAVE_CUDA || HAVE_OPENCL
+            // Use FPGA if: support compiled, chosen by user, and successful.
+#if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA
             bool use_gpu = bdaBridge->getUseGpu();
-            if (use_gpu) {
-                const std::string gpu_mode = EWOMS_GET_PARAM(TypeTag, std::string, GpuMode);
-                WellContributions wellContribs(gpu_mode);
-
+            bool use_fpga = bdaBridge->getUseFpga();
+            if (use_gpu || use_fpga) {
+                const std::string accelerator_mode = EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode);
+                WellContributions wellContribs(accelerator_mode);
                 bdaBridge->initWellContributions(wellContribs);
 
                 if (!useWellConn_) {
                     simulator_.problem().wellModel().getWellContributions(wellContribs);
                 }
+
                 // Const_cast needed since the CUDA stuff overwrites values for better matrix condition..
                 bdaBridge->solve_system(const_cast<Matrix*>(&getMatrix()), *rhs_, wellContribs, result);
                 if (result.converged) {
                     // get result vector x from non-Dune backend, iff solve was successful
                     bdaBridge->get_result(x);
-                    gpu_was_used = true;
+                    accelerator_was_used = true;
                 } else {
                     // CPU fallback
                     use_gpu = bdaBridge->getUseGpu();  // update value, BdaBridge might have disabled cusparseSolver
-                    if (use_gpu && simulator_.gridView().comm().rank() == 0) {
-                        if (gpu_mode.compare("cusparse") == 0) {
+                    use_fpga = bdaBridge->getUseFpga();
+                    if (simulator_.gridView().comm().rank() == 0) {
+                        if (use_gpu && accelerator_mode.compare("cusparse") == 0) {
                             OpmLog::warning("cusparseSolver did not converge, now trying Dune to solve current linear system...");
                         }
-                        if (gpu_mode.compare("opencl") == 0) {
+                        if (use_gpu && accelerator_mode.compare("opencl") == 0) {
                             OpmLog::warning("openclSolver did not converge, now trying Dune to solve current linear system...");
+                        }
+                        if (use_fpga && accelerator_mode.compare("fpga") == 0) {
+                            OpmLog::warning("fpgaSolver did not converge, now trying Dune to solve current linear system...");
                         }
                     }
                 }
@@ -278,7 +291,7 @@ namespace Opm
 #endif
 
             // Otherwise, use flexible istl solver.
-            if (!gpu_was_used) {
+            if (!accelerator_was_used) {
                 assert(flexibleSolver_);
                 flexibleSolver_->apply(x, *rhs_, result);
             }
