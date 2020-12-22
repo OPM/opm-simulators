@@ -288,17 +288,25 @@ private:
             const double w = prm.get<double>("relaxation", 1.0);
             return wrapBlockPreconditioner<DummyUpdatePreconditioner<SeqSSOR<M, V, V>>>(comm, op.getmat(), n, w);
         });
-        doAddCreator("amg", [](const O& op, const P& prm, const std::function<Vector()>&, const C& comm) {
-            const std::string smoother = prm.get<std::string>("smoother", "ParOverILU0");
-            if (smoother == "ILU0" || smoother == "ParOverILU0") {
-                using Smoother = Opm::ParallelOverlappingILU0<M, V, V, C>;
-                auto crit = amgCriterion(prm);
-                auto sargs = amgSmootherArgs<Smoother>(prm);
-                return std::make_shared<Dune::Amg::AMGCPR<O, V, Smoother, C>>(op, crit, sargs, comm);
-            } else {
-                OPM_THROW(std::invalid_argument, "Properties: No smoother with name " << smoother <<".");
-            }
-        });
+
+        // Only add AMG preconditioners to the factory if the operator
+        // is the overlapping schwarz operator. This could be extended
+        // later, but at this point no other operators are compatible
+        // with the AMG hierarchy construction.
+        if constexpr (std::is_same_v<O, Dune::OverlappingSchwarzOperator<M, V, V, C>>) {
+            doAddCreator("amg", [](const O& op, const P& prm, const std::function<Vector()>&, const C& comm) {
+                const std::string smoother = prm.get<std::string>("smoother", "ParOverILU0");
+                if (smoother == "ILU0" || smoother == "ParOverILU0") {
+                    using Smoother = Opm::ParallelOverlappingILU0<M, V, V, C>;
+                    auto crit = amgCriterion(prm);
+                    auto sargs = amgSmootherArgs<Smoother>(prm);
+                    return std::make_shared<Dune::Amg::AMGCPR<O, V, Smoother, C>>(op, crit, sargs, comm);
+                } else {
+                    OPM_THROW(std::invalid_argument, "Properties: No smoother with name " << smoother << ".");
+                }
+            });
+        }
+
         doAddCreator("cpr", [](const O& op, const P& prm, const std::function<Vector()> weightsCalculator, const C& comm) {
             assert(weightsCalculator);
             return std::make_shared<OwningTwoLevelPreconditioner<O, V, false, Comm>>(op, prm, weightsCalculator, comm);
@@ -355,74 +363,79 @@ private:
             const double w = prm.get<double>("relaxation", 1.0);
             return wrapPreconditioner<SeqSSOR<M, V, V>>(op.getmat(), n, w);
         });
-        doAddCreator("amg", [](const O& op, const P& prm, const std::function<Vector()>&) {
-            const std::string smoother = prm.get<std::string>("smoother", "ParOverILU0");
-            if (smoother == "ILU0" || smoother == "ParOverILU0") {
+
+        // Only add AMG preconditioners to the factory if the operator
+        // is an actual matrix operator.
+        if constexpr (std::is_same_v<O, Dune::MatrixAdapter<M, V, V>>) {
+            doAddCreator("amg", [](const O& op, const P& prm, const std::function<Vector()>&) {
+                const std::string smoother = prm.get<std::string>("smoother", "ParOverILU0");
+                if (smoother == "ILU0" || smoother == "ParOverILU0") {
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
-                using Smoother = SeqILU<M, V, V>;
+                    using Smoother = SeqILU<M, V, V>;
 #else
-                using Smoother = SeqILU0<M, V, V>;
+                    using Smoother = SeqILU0<M, V, V>;
 #endif
-                return makeAmgPreconditioner<Smoother>(op, prm);
-            } else if (smoother == "Jac") {
-                using Smoother = SeqJac<M, V, V>;
-                return makeAmgPreconditioner<Smoother>(op, prm);
-            } else if (smoother == "SOR") {
-                using Smoother = SeqSOR<M, V, V>;
-                return makeAmgPreconditioner<Smoother>(op, prm);
-            } else if (smoother == "SSOR") {
-                using Smoother = SeqSSOR<M, V, V>;
-                return makeAmgPreconditioner<Smoother>(op, prm);
-            } else if (smoother == "ILUn") {
+                    return makeAmgPreconditioner<Smoother>(op, prm);
+                } else if (smoother == "Jac") {
+                    using Smoother = SeqJac<M, V, V>;
+                    return makeAmgPreconditioner<Smoother>(op, prm);
+                } else if (smoother == "SOR") {
+                    using Smoother = SeqSOR<M, V, V>;
+                    return makeAmgPreconditioner<Smoother>(op, prm);
+                } else if (smoother == "SSOR") {
+                    using Smoother = SeqSSOR<M, V, V>;
+                    return makeAmgPreconditioner<Smoother>(op, prm);
+                } else if (smoother == "ILUn") {
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
-                using Smoother = SeqILU<M, V, V>;
+                    using Smoother = SeqILU<M, V, V>;
 #else
-                using Smoother = SeqILUn<M, V, V>;
+                            using Smoother = SeqILUn<M, V, V>;
 #endif
-                return makeAmgPreconditioner<Smoother>(op, prm);
-            } else {
-                OPM_THROW(std::invalid_argument, "Properties: No smoother with name " << smoother <<".");
-            }
-        });
-	doAddCreator("kamg", [](const O& op, const P& prm, const std::function<Vector()>&) {
-            const std::string smoother = prm.get<std::string>("smoother", "ParOverILU0");
-            if (smoother == "ILU0" || smoother == "ParOverILU0") {
+                    return makeAmgPreconditioner<Smoother>(op, prm);
+                } else {
+                    OPM_THROW(std::invalid_argument, "Properties: No smoother with name " << smoother << ".");
+                }
+            });
+            doAddCreator("kamg", [](const O& op, const P& prm, const std::function<Vector()>&) {
+                const std::string smoother = prm.get<std::string>("smoother", "ParOverILU0");
+                if (smoother == "ILU0" || smoother == "ParOverILU0") {
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
-                using Smoother = SeqILU<M, V, V>;
+                    using Smoother = SeqILU<M, V, V>;
 #else
-                using Smoother = SeqILU0<M, V, V>;
+                        using Smoother = SeqILU0<M, V, V>;
 #endif
-                return makeAmgPreconditioner<Smoother>(op, prm, true);
-            } else if (smoother == "Jac") {
-                using Smoother = SeqJac<M, V, V>;
-                return makeAmgPreconditioner<Smoother>(op, prm, true);
-            } else if (smoother == "SOR") {
-                using Smoother = SeqSOR<M, V, V>;
-                return makeAmgPreconditioner<Smoother>(op, prm, true);
-	    // } else if (smoother == "GS") {
-            //     using Smoother = SeqGS<M, V, V>;
-            //     return makeAmgPreconditioner<Smoother>(op, prm, true);
-            } else if (smoother == "SSOR") {
-                using Smoother = SeqSSOR<M, V, V>;
-                return makeAmgPreconditioner<Smoother>(op, prm, true);
-            } else if (smoother == "ILUn") {
+                    return makeAmgPreconditioner<Smoother>(op, prm, true);
+                } else if (smoother == "Jac") {
+                    using Smoother = SeqJac<M, V, V>;
+                    return makeAmgPreconditioner<Smoother>(op, prm, true);
+                } else if (smoother == "SOR") {
+                    using Smoother = SeqSOR<M, V, V>;
+                    return makeAmgPreconditioner<Smoother>(op, prm, true);
+                    // } else if (smoother == "GS") {
+                    //     using Smoother = SeqGS<M, V, V>;
+                    //     return makeAmgPreconditioner<Smoother>(op, prm, true);
+                } else if (smoother == "SSOR") {
+                    using Smoother = SeqSSOR<M, V, V>;
+                    return makeAmgPreconditioner<Smoother>(op, prm, true);
+                } else if (smoother == "ILUn") {
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
-                using Smoother = SeqILU<M, V, V>;
+                    using Smoother = SeqILU<M, V, V>;
 #else
-                using Smoother = SeqILUn<M, V, V>;
+                        using Smoother = SeqILUn<M, V, V>;
 #endif
-                return makeAmgPreconditioner<Smoother>(op, prm, true);
-            } else {
-                OPM_THROW(std::invalid_argument, "Properties: No smoother with name " << smoother <<".");
-            }
-        });
-        doAddCreator("famg", [](const O& op, const P& prm, const std::function<Vector()>&) {
-            auto crit = amgCriterion(prm);
-            Dune::Amg::Parameters parms;
-            parms.setNoPreSmoothSteps(1);
-            parms.setNoPostSmoothSteps(1);
-            return wrapPreconditioner<Dune::Amg::FastAMG<O, V>>(op, crit, parms);
-        });
+                    return makeAmgPreconditioner<Smoother>(op, prm, true);
+                } else {
+                    OPM_THROW(std::invalid_argument, "Properties: No smoother with name " << smoother << ".");
+                }
+            });
+            doAddCreator("famg", [](const O& op, const P& prm, const std::function<Vector()>&) {
+                auto crit = amgCriterion(prm);
+                Dune::Amg::Parameters parms;
+                parms.setNoPreSmoothSteps(1);
+                parms.setNoPostSmoothSteps(1);
+                return wrapPreconditioner<Dune::Amg::FastAMG<O, V>>(op, crit, parms);
+            });
+        }
         doAddCreator("cpr", [](const O& op, const P& prm, const std::function<Vector()>& weightsCalculator) {
             return std::make_shared<OwningTwoLevelPreconditioner<O, V, false>>(op, prm, weightsCalculator);
         });
