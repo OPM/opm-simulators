@@ -22,6 +22,7 @@
 #endif
 
 #include "ParallelRestart.hpp"
+#include <ctime>
 #include <dune/common/parallel/mpitraits.hh>
 
 #define HANDLE_AS_POD(T) \
@@ -281,6 +282,13 @@ std::size_t packSize(const RestartValue& data, Dune::MPIHelper::MPICommunicator 
         +  packSize(data.grp_nwrk, comm)
         +  packSize(data.extra, comm);
 }
+
+std::size_t packSize(const std::chrono::system_clock::time_point&, Dune::MPIHelper::MPICommunicator comm)
+{
+    std::time_t tp;
+    return packSize(tp, comm);
+}
+
 
 ////// pack routines
 
@@ -567,6 +575,13 @@ void pack(const RestartValue& data, std::vector<char>& buffer, int& position,
     pack(data.grp_nwrk, buffer, position, comm);
     pack(data.extra, buffer, position, comm);
 }
+
+void pack(const std::chrono::system_clock::time_point& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(std::chrono::system_clock::to_time_t(data), buffer, position, comm);
+}
+
 
 /// unpack routines
 
@@ -871,6 +886,15 @@ void unpack(RestartValue& data, std::vector<char>& buffer, int& position,
     unpack(data.grp_nwrk, buffer, position, comm);
     unpack(data.extra, buffer, position, comm);
 }
+
+void unpack(std::chrono::system_clock::time_point& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::time_t tp;
+    unpack(tp, buffer, position, comm);
+    data = std::chrono::system_clock::from_time_t(tp);
+}
+
 
 #define INSTANTIATE_PACK_VECTOR(...) \
 template std::size_t packSize(const std::vector<__VA_ARGS__>& data, \

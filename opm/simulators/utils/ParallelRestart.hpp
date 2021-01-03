@@ -30,6 +30,7 @@
 
 #include <dune/common/parallel/mpihelper.hh>
 
+#include <chrono>
 #include <optional>
 #include <map>
 #include <set>
@@ -317,6 +318,7 @@ ADD_PACK_PROTOTYPES(data::WellRates)
 ADD_PACK_PROTOTYPES(RestartKey)
 ADD_PACK_PROTOTYPES(RestartValue)
 ADD_PACK_PROTOTYPES(std::string)
+ADD_PACK_PROTOTYPES(std::chrono::system_clock::time_point)
 
 } // end namespace Mpi
 
