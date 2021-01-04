@@ -233,8 +233,19 @@ namespace Opm {
         }
 
 
-    } // namespace wellhelpers
+        template <class DenseMatrix>
+        DenseMatrix transposeDenseDynMatrix(const DenseMatrix& M)
+        {
+            DenseMatrix tmp{M.cols(), M.rows()};
+            for (int i = 0; i < M.rows(); ++i) {
+                for (int j = 0; j < M.cols(); ++j) {
+                    tmp[j][i] = M[i][j];
+                }
+            }
+            return tmp;
+        }
 
+    } // namespace wellhelpers
 }
 
 #endif
