@@ -74,7 +74,7 @@ testSolver(const Opm::PropertyTree& prm, const std::string& matrix_filename, con
 
     using SeqOperatorType = Dune::MatrixAdapter<Matrix, Vector, Vector>;
     SeqOperatorType op(matrix);
-    Dune::FlexibleSolver<Matrix, Vector> solver(op, prm, wc, 1);
+    Dune::FlexibleSolver<SeqOperatorType> solver(op, prm, wc, 1);
     Vector x(rhs.size());
     Dune::InverseOperatorResult res;
     solver.apply(x, rhs, res);

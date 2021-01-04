@@ -94,6 +94,7 @@ namespace Opm
         using PolymerModule =  BlackOilPolymerModule<TypeTag>;
         using FoamModule = BlackOilFoamModule<TypeTag>;
         using BrineModule = BlackOilBrineModule<TypeTag>;
+        using PressureMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
 
         // number of the conservation equations
         static constexpr int numWellConservationEq = Indices::numPhases + Indices::numSolvents;
@@ -178,7 +179,11 @@ namespace Opm
                                              WellState& well_state,
                                              DeferredLogger& deferred_logger) const override;
 
-        virtual void  addWellContributions(SparseMatrixAdapter& mat) const override;
+        virtual void addWellContributions(SparseMatrixAdapter& mat) const override;
+
+        virtual void addWellPressureEquationsStruct(PressureMatrix& mat) const override;
+
+        virtual void addWellPressureEquations(PressureMatrix& mat, const BVector& x) const override;
 
         // iterate well equations with the specified control until converged
         bool iterateWellEqWithControl(const Simulator& ebosSimulator,
