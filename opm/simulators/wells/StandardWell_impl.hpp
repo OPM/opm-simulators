@@ -547,6 +547,8 @@ namespace Opm
                    WellState& well_state,
                    Opm::DeferredLogger& deferred_logger)
     {
+        checkWellOperability(ebosSimulator, well_state, deferred_logger);
+
         const bool use_inner_iterations = param_.use_inner_iterations_wells_;
         if (use_inner_iterations) {
             this->iterateWellEquations(ebosSimulator, B_avg, dt, well_state, deferred_logger);
@@ -574,9 +576,6 @@ namespace Opm
     {
         // TODO: only_wells should be put back to save some computation
         // for example, the matrices B C does not need to update if only_wells
-
-        checkWellOperability(ebosSimulator, well_state, deferred_logger);
-
         if (!this->isOperable() && !this->wellIsStopped()) return;
 
         // clear all entries
