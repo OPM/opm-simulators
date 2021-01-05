@@ -50,7 +50,10 @@
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 
 #include <algorithm>
-
+#include <cassert>
+#include <memory>
+#include <stdexcept>
+#include <vector>
 
 namespace Opm {
 
@@ -116,32 +119,57 @@ public:
     void initFromState(const Opm::EclipseState& eclState)
     {
         // get the number of saturation regions and the number of cells in the deck
-        const size_t numSatRegions = eclState.runspec().tabdims().getNumSatTables();
+        const auto&  runspec       = eclState.runspec();
+        const size_t numSatRegions = runspec.tabdims().getNumSatTables();
 
-        const auto& ph = eclState.runspec().phases();
-        hasGas = ph.active(Phase::GAS);
-        hasOil = ph.active(Phase::OIL);
-        hasWater = ph.active(Phase::WATER);
+        const auto& ph = runspec.phases();
+        this->hasGas = ph.active(Phase::GAS);
+        this->hasOil = ph.active(Phase::OIL);
+        this->hasWater = ph.active(Phase::WATER);
 
         readGlobalEpsOptions_(eclState);
         readGlobalHysteresisOptions_(eclState);
-        readGlobalThreePhaseOptions_(eclState.runspec());
+        readGlobalThreePhaseOptions_(runspec);
 
-        // read the end point scaling configuration. this needs to be done only once per
-        // deck.
+        // Read the end point scaling configuration (once per run).
         gasOilConfig = std::make_shared<Opm::EclEpsConfig>();
         oilWaterConfig = std::make_shared<Opm::EclEpsConfig>();
         gasOilConfig->initFromState(eclState, Opm::EclGasOilSystem);
         oilWaterConfig->initFromState(eclState, Opm::EclOilWaterSystem);
 
-        unscaledEpsInfo_.resize(numSatRegions);
-        const auto& stone1exTable = eclState.getTableManager().getStone1exTable();
-        if (!stone1exTable.empty())
-            stoneEtas.resize(numSatRegions);
+        const auto& tables = eclState.getTableManager();
+
+        {
+            const auto& stone1exTables = tables.getStone1exTable();
+
+            if (! stone1exTables.empty()) {
+                stoneEtas.clear();
+                stoneEtas.reserve(numSatRegions);
+
+                for (const auto& table : stone1exTables) {
+                    stoneEtas.push_back(table.eta);
+                }
+            }
+        }
+
+        this->unscaledEpsInfo_.resize(numSatRegions);
+
+        if (this->hasGas + this->hasOil + this->hasWater == 1) {
+            // Single-phase simulation.  Special case.  Nothing to do here.
+            return;
+        }
+
+        // Multiphase simulation.  Common case.
+        const auto tolcrit = runspec.saturationFunctionControls()
+            .minimumRelpermMobilityThreshold();
+
+        const auto family   = runspec.saturationFunctionControls().family();
+        const auto rtepPtr  = satfunc::getRawTableEndpoints(tables, ph, tolcrit);
+        const auto rfuncPtr = satfunc::getRawFunctionValues(tables, ph, *rtepPtr);
+
         for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++satRegionIdx) {
-            unscaledEpsInfo_[satRegionIdx].extractUnscaled(eclState, satRegionIdx);
-            if (!stoneEtas.empty())
-                stoneEtas[satRegionIdx] = stone1exTable[satRegionIdx].eta;
+            this->unscaledEpsInfo_[satRegionIdx]
+                .extractUnscaled(*rtepPtr, *rfuncPtr, family, satRegionIdx);
         }
     }
 
@@ -222,7 +250,6 @@ public:
                                       eclState,
                                       epsGridProperties,
                                       elemIdx);
-
         }
 
         if (enableHysteresis()) {
@@ -661,65 +688,6 @@ private:
         }
     }
 
-    // The saturation function family.
-    // If SWOF and SGOF are specified in the deck it return FamilyI
-    // If SWFN, SGFN and SOF3 are specified in the deck it return FamilyII
-    // If keywords are missing or mixed, an error is given.
-    enum SaturationFunctionFamily {
-        noFamily,
-        FamilyI,
-        FamilyII
-    };
-
-    SaturationFunctionFamily getSaturationFunctionFamily(const Opm::EclipseState& eclState) const
-    {
-        const auto& tableManager = eclState.getTableManager();
-        const TableContainer& swofTables = tableManager.getSwofTables();
-        const TableContainer& slgofTables= tableManager.getSlgofTables();
-        const TableContainer& sgofTables = tableManager.getSgofTables();
-        const TableContainer& swfnTables = tableManager.getSwfnTables();
-        const TableContainer& sgfnTables = tableManager.getSgfnTables();
-        const TableContainer& sof3Tables = tableManager.getSof3Tables();
-        const TableContainer& sof2Tables = tableManager.getSof2Tables();
-
-        bool family1 = false;
-        bool family2 = false;
-        if (!hasGas) {
-            // oil-water case
-            family1 = !swofTables.empty();
-            family2 = !swfnTables.empty() && !sof2Tables.empty();
-        }
-        else if (!hasWater) {
-            // oil-gas case
-            family1 = !sgofTables.empty();
-            family2 = !sgfnTables.empty() && !sof2Tables.empty();
-        }
-        else if (!hasOil) {
-            // water-gas case
-            throw std::runtime_error("water-gas two-phase simulations are currently not supported");
-        }
-        else {
-            // three-phase case
-            family1 = (!sgofTables.empty() || !slgofTables.empty()) && !swofTables.empty();
-            family2 = !swfnTables.empty() && !sgfnTables.empty() && !sof3Tables.empty();
-        }
-
-        if (family1 && family2)
-            throw std::invalid_argument("Saturation families should not be mixed \n"
-                                        "Use either SGOF and SWOF or SGFN, SWFN and SOF3");
-
-        if (!family1 && !family2)
-            throw std::invalid_argument("Saturations function must be specified using either "
-                                        "family 1 or family 2 keywords \n"
-                                        "Use either SGOF and SWOF or SGFN, SWFN and SOF3" );
-
-        if (family1 && !family2)
-            return SaturationFunctionFamily::FamilyI;
-        else if (family2 && !family1)
-            return SaturationFunctionFamily::FamilyII;
-        return SaturationFunctionFamily::noFamily; // no family or two families
-    }
-
     template <class Container>
     void readGasOilEffectiveParameters_(Container& dest,
                                         const Opm::EclipseState& eclState,
@@ -735,11 +703,11 @@ private:
 
         // the situation for the gas phase is complicated that all saturations are
         // shifted by the connate water saturation.
-        Scalar Swco = unscaledEpsInfo_[satRegionIdx].Swl;
+        const Scalar Swco = unscaledEpsInfo_[satRegionIdx].Swl;
         const auto& tableManager = eclState.getTableManager();
 
-        switch (getSaturationFunctionFamily(eclState)) {
-        case FamilyI:
+        switch (eclState.runspec().saturationFunctionControls().family()) {
+        case SatFuncControls::KeywordFamily::Family_I:
         {
             const TableContainer& sgofTables = tableManager.getSgofTables();
             const TableContainer& slgofTables = tableManager.getSlgofTables();
@@ -754,7 +722,7 @@ private:
             break;
         }
 
-        case FamilyII:
+        case SatFuncControls::KeywordFamily::Family_II:
         {
             const SgfnTable& sgfnTable = tableManager.getSgfnTables().getTable<SgfnTable>( satRegionIdx );
             if (!hasWater) {
@@ -774,8 +742,7 @@ private:
             break;
         }
 
-        //default:
-        case noFamily:
+        case SatFuncControls::KeywordFamily::Undefined:
             throw std::domain_error("No valid saturation keyword family specified");
         }
     }
@@ -866,8 +833,9 @@ private:
         const auto& tableManager = eclState.getTableManager();
         auto& effParams = *dest[satRegionIdx];
 
-        switch (getSaturationFunctionFamily(eclState)) {
-        case FamilyI: {
+        switch (eclState.runspec().saturationFunctionControls().family()) {
+        case SatFuncControls::KeywordFamily::Family_I:
+        {
             const auto& swofTable = tableManager.getSwofTables().getTable<SwofTable>(satRegionIdx);
             std::vector<double> SwColumn = swofTable.getColumn("SW").vectorCopy();
 
@@ -877,7 +845,8 @@ private:
             effParams.finalize();
             break;
         }
-        case FamilyII:
+
+        case SatFuncControls::KeywordFamily::Family_II:
         {
             const auto& swfnTable = tableManager.getSwfnTables().getTable<SwfnTable>(satRegionIdx);
             const auto& sof3Table = tableManager.getSof3Tables().getTable<Sof3Table>(satRegionIdx);
@@ -895,10 +864,8 @@ private:
             break;
         }
 
-        case noFamily:
-        //default:
+        case SatFuncControls::KeywordFamily::Undefined:
             throw std::domain_error("No valid saturation keyword family specified");
-
         }
     }
 

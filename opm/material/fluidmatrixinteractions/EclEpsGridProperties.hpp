@@ -44,13 +44,13 @@
 
 #include <opm/material/common/Means.hpp>
 
-#include <array>
-#include <vector>
-#include <string>
-#include <iostream>
-#include <cassert>
 #include <algorithm>
+#include <array>
+#include <cassert>
 #include <memory>
+#include <string>
+#include <vector>
+
 namespace Opm {
 /*!
  * \brief Collects all grid properties which are relevant for end point scaling.
@@ -81,14 +81,12 @@ public:
     EclEpsGridProperties(const Opm::EclipseState& eclState,
                          bool useImbibition)
     {
-        std::string kwPrefix = useImbibition?"I":"";
+        const std::string kwPrefix = useImbibition ? "I" : "";
 
         const auto& fp = eclState.fieldProps();
 
-        if (useImbibition)
-            compressed_satnum = fp.get_int("IMBNUM");
-        else
-            compressed_satnum = fp.get_int("SATNUM");
+        compressed_satnum = useImbibition
+            ? fp.get_int("IMBNUM") : fp.get_int("SATNUM");
 
         this->compressed_swl = try_get( fp, kwPrefix+"SWL");
         this->compressed_sgl = try_get( fp, kwPrefix+"SGL");
@@ -108,20 +106,15 @@ public:
         if (fp.has_double("PORO"))
             this->compressed_poro = fp.get_double("PORO");
 
-        if (fp.has_double("PERMX"))
-            this->compressed_permx = fp.get_double("PERMX");
-        else
-            this->compressed_permx = std::vector<double>(this->compressed_satnum.size());
+        this->compressed_permx = fp.has_double("PERMX")
+            ? fp.get_double("PERMX")
+            : std::vector<double>(this->compressed_satnum.size());
 
-        if (fp.has_double("PERMY"))
-            this->compressed_permy = fp.get_double("PERMY");
-        else
-            this->compressed_permy = this->compressed_permx;
+        this->compressed_permy = fp.has_double("PERMY")
+            ? fp.get_double("PERMY") : this->compressed_permx;
 
-        if (fp.has_double("PERMZ"))
-            this->compressed_permz = fp.get_double("PERMZ");
-        else
-            this->compressed_permz= this->compressed_permx;
+        this->compressed_permz = fp.has_double("PERMZ")
+            ? fp.get_double("PERMZ") : this->compressed_permx;
     }
 
 #endif
@@ -202,11 +195,11 @@ public:
 
 
 private:
-
-    const double * satfunc(const std::vector<double>& data, std::size_t active_index) const {
-        if (data.empty())
-            return nullptr;
-        return &(data[active_index]);
+    const double *
+    satfunc(const std::vector<double>& data,
+            const std::size_t          active_index) const
+    {
+        return data.empty() ? nullptr : &data[active_index];
     }
 
 
