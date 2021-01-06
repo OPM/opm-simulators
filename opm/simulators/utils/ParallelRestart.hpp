@@ -34,7 +34,9 @@
 #include <optional>
 #include <map>
 #include <set>
+#include <string>
 #include <tuple>
+#include <typeinfo>
 #include <unordered_map>
 #include <vector>
 
@@ -58,7 +60,8 @@ template<class T>
 std::size_t packSize(const T&, Dune::MPIHelper::MPICommunicator,
                      std::integral_constant<bool, false>)
 {
-    OPM_THROW(std::logic_error, "Packing not (yet) supported for this non-pod type.");
+    std::string msg = std::string{"Packing not (yet) supported for non-pod type: "} + typeid(T).name();
+    OPM_THROW(std::logic_error, msg);
 }
 
 template<class T>
