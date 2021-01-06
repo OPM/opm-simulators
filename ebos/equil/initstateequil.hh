@@ -1593,6 +1593,7 @@ public:
 
         //Querry cell depth, cell top-bottom.
         // aquifer should enter here
+        const auto& num_aquifers = eclipseState.aquifer().numericalAquifers();
         updateCellProps_(gridView);
 
         // Get the equilibration records.
@@ -1708,7 +1709,7 @@ public:
 
         // Compute pressures, saturations, rs and rv factors.
         const auto& comm = gridView.comm();
-        calcPressSatRsRv(eqlmap, rec, materialLawManager, comm, grav);
+        calcPressSatRsRv(eqlmap, rec, materialLawManager, num_aquifers, comm, grav);
 
         // Modify oil pressure in no-oil regions so that the pressures of present phases can
         // be recovered from the oil pressure and capillary relations.
@@ -1810,6 +1811,7 @@ private:
     void calcPressSatRsRv(const RMap& reg,
                           const std::vector< Opm::EquilRecord >& rec,
                           MaterialLawManager& materialLawManager,
+                          const NumericalAquifers& aquifer,
                           const Comm& comm,
                           const double grav)
     {
@@ -1846,7 +1848,7 @@ private:
             const auto acc = eqreg.equilibrationAccuracy();
             if (acc == 0) {
                 // Centre-point method
-                this->equilibrateCellCentres(cells, eqreg, ptable, psat);
+                this->equilibrateCellCentres(cells, eqreg, ptable, aquifer, psat);
             }
             else if (acc < 0) {
                 // Horizontal subdivision
@@ -1902,13 +1904,14 @@ private:
     void equilibrateCellCentres(const CellRange&  cells,
                                 const EquilReg&   eqreg,
                                 const PressTable& ptable,
+                                const NumericalAquifers& aquifer,
                                 PhaseSat&         psat)
     {
         using CellPos = typename PhaseSat::Position;
         using CellID  = std::remove_cv_t<std::remove_reference_t<
             decltype(std::declval<CellPos>().cell)>>;
 
-        this->cellLoop(cells, [this, &eqreg,  &ptable, &psat]
+        this->cellLoop(cells, [this, &eqreg,  &ptable, &aquifer, &psat]
             (const CellID                 cell,
              Details::PhaseQuantityValue& pressures,
              Details::PhaseQuantityValue& saturations,
@@ -1930,7 +1933,7 @@ private:
             } */
 
             saturations = psat.deriveSaturations(pos, eqreg, ptable);
-            if (aquifer.hasCell(global_index)) {
+/*            if (aquifer.hasCell(global_index)) {
                 saturations = {0.0, 0.0, 1.0};
                 const auto &aqu_cell = aquifer.getCell(global_index);
                 std::ostringstream ss;
@@ -1938,16 +1941,16 @@ private:
                    << aqu_cell.K + 1 << " } OF NUMERICAL AQUIFER " << aqu_cell.aquifer_id << " with global_index " << global_index << ", "
                    << "WATER SATURATION IS SET TO BE UNITY";
                 OpmLog::info(ss.str());
-            }
+            } */
             pressures   = psat.correctedPhasePressures();
-            if (aquifer.hasCell(global_index)) {
+            /* if (aquifer.hasCell(global_index)) {
                 const auto &aqu_cell = aquifer.getCell(global_index);
                 // TODO: NOT totally sure what we should do here to empoly the pressure specified by AQUNUM
                 if (aqu_cell.init_pressure > 0.) {
                     const double pres = aqu_cell.init_pressure;
                     pressures = {pres, pres, pres};
                 }
-            }
+            } */
 
             const auto temp = this->temperature_[cell];
 

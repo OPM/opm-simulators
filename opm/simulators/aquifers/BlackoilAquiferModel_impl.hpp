@@ -182,13 +182,6 @@ BlackoilAquiferModel<TypeTag>::init()
         return;
     }
 
-    // Get all the carter tracy aquifer properties data and put it in aquifers vector
-    const auto& ugrid = simulator_.vanguard().grid();
-    const int number_of_cells = simulator_.gridView().size(0);
-
-    const int* global_cell = Opm::UgGridHelpers::globalCell(ugrid);
-    cartesian_to_compressed_ = cartesianToCompressed(number_of_cells,
-                                                     global_cell);
 
     const auto& connections = aquifer.connections();
     for (const auto& aq : aquifer.ct()) {
@@ -202,9 +195,14 @@ BlackoilAquiferModel<TypeTag>::init()
     }
 
     if (aquifer.hasNumericalAquifer()) {
+        const auto& ugrid = simulator_.vanguard().grid();
+        const int number_of_cells = simulator_.gridView().size(0);
+        const int* global_cell = Opm::UgGridHelpers::globalCell(ugrid);
+        const std::unordered_map<int, int> cartesian_to_compressed = cartesianToCompressed(number_of_cells,
+                                                                                           global_cell);
         for (const auto& elem : aquifer.numericalAquifers().aquifers()) {
             this->aquifers_numerical.emplace_back(elem.second,
-                              this->cartesian_to_compressed_, this->simulator_, global_cell);
+                              cartesian_to_compressed, this->simulator_, global_cell);
         }
     }
 }
