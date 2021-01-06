@@ -2715,7 +2715,7 @@ namespace Opm
         const GasLiftOpt& glo = schedule.glo(report_step_idx);
         const int iteration_idx = ebos_simulator.model().newtonMethod().numIterations();
         if (glo.all_newton()) {
-            const int nupcol = schedule.getNupcol(report_step_idx);
+            const int nupcol = schedule[report_step_idx].nupcol();
             if (this->glift_debug) {
                 const std::string msg = fmt::format(
                     "LIFTOPT item4 == YES, it = {}, nupcol = {} -->  GLIFT optimize = {}",

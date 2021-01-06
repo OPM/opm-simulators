@@ -1391,7 +1391,7 @@ namespace Opm {
     {
         const int reportStepIdx = ebosSimulator_.episodeIndex();
         const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
-        const int nupcol = schedule().getNupcol(reportStepIdx);
+        const int nupcol = schedule()[reportStepIdx].nupcol();
         const int iterationIdx = ebosSimulator_.model().newtonMethod().numIterations();
 
         // This builds some necessary lookup structures, so it must be called
@@ -1977,7 +1977,7 @@ namespace Opm {
     {
         const int reportStepIdx = ebosSimulator_.episodeIndex();
 
-        const int nupcol = schedule().getNupcol(reportStepIdx);
+        const int nupcol = schedule()[reportStepIdx].nupcol();
         const int iterationIdx = ebosSimulator_.model().newtonMethod().numIterations();
         // don't switch group control when iterationIdx > nupcol
         // to avoid oscilations between group controls
