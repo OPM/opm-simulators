@@ -116,6 +116,11 @@ struct SerialPartitioning {
     using type = UndefinedProperty;
 };
 
+template<class TypeTag, class MyTypeTag>
+struct ZoltanImbalanceTol {
+    using type = UndefinedProperty;
+};
+
 template<class TypeTag>
 struct IgnoreKeywords<TypeTag, TTag::EclBaseVanguard> {
     static constexpr auto value = "";
@@ -151,6 +156,12 @@ struct OwnerCellsFirst<TypeTag, TTag::EclBaseVanguard> {
 template<class TypeTag>
 struct SerialPartitioning<TypeTag, TTag::EclBaseVanguard> {
     static constexpr bool value = false;
+};
+
+template<class TypeTag>
+struct ZoltanImbalanceTol<TypeTag, TTag::EclBaseVanguard> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.1;
 };
 
 } // namespace Opm::Properties
@@ -206,6 +217,9 @@ public:
                              "Order cells owned by rank before ghost/overlap cells.");
         EWOMS_REGISTER_PARAM(TypeTag, bool, SerialPartitioning,
                              "Perform partitioning for parallel runs on a single process.");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, ZoltanImbalanceTol,
+                             "Perform partitioning for parallel runs on a single process.");
+
     }
 
     /*!
@@ -339,6 +353,7 @@ public:
         edgeWeightsMethod_   = Dune::EdgeWeightMethod(EWOMS_GET_PARAM(TypeTag, int, EdgeWeightsMethod));
         ownersFirst_ = EWOMS_GET_PARAM(TypeTag, bool, OwnerCellsFirst);
         serialPartitioning_ = EWOMS_GET_PARAM(TypeTag, bool, SerialPartitioning);
+        zoltanImbalanceTol_ = EWOMS_GET_PARAM(TypeTag, Scalar, ZoltanImbalanceTol);
 
         // Make proper case name.
         {
@@ -538,6 +553,12 @@ public:
      */
     bool serialPartitioning() const
     { return serialPartitioning_; }
+
+    /*!
+     * \brief Parameter that sets the zoltan imbalance tolarance.
+     */
+    Scalar zoltanImbalanceTol() const
+    { return zoltanImbalanceTol_; }
 
     /*!
      * \brief Returns the name of the case.
@@ -791,6 +812,7 @@ private:
     Dune::EdgeWeightMethod edgeWeightsMethod_;
     bool ownersFirst_;
     bool serialPartitioning_;
+    Scalar zoltanImbalanceTol_;
 
 protected:
     /*! \brief The cell centroids after loadbalance was called.
