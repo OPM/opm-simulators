@@ -1108,7 +1108,7 @@ public:
         }
 
         // update explicit quantities between timesteps.
-        const auto& oilVaporizationControl = simulator.vanguard().schedule().getOilVaporizationProperties(episodeIdx);
+        const auto& oilVaporizationControl = simulator.vanguard().schedule()[episodeIdx].oilvap();
         if (drsdtActive_())
             // DRSDT is enabled
             for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRs_.size(); ++pvtRegionIdx)
@@ -2019,8 +2019,8 @@ public:
     bool vapparsActive() const
     {
         const auto& simulator = this->simulator();
-        int epsiodeIdx = std::max(simulator.episodeIndex(), 0);
-        const auto& oilVaporizationControl = simulator.vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
+        int episodeIdx = std::max(simulator.episodeIndex(), 0);
+        const auto& oilVaporizationControl = simulator.vanguard().schedule()[episodeIdx].oilvap();
         return (oilVaporizationControl.getType() == Opm::OilVaporizationProperties::OilVaporization::VAPPARS);
     }
 
@@ -2227,16 +2227,16 @@ private:
     bool drsdtActive_() const
     {
         const auto& simulator = this->simulator();
-        int epsiodeIdx = std::max(simulator.episodeIndex(), 0);
-        const auto& oilVaporizationControl = simulator.vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
+        int episodeIdx = std::max(simulator.episodeIndex(), 0);
+        const auto& oilVaporizationControl = simulator.vanguard().schedule()[episodeIdx].oilvap();
         return (oilVaporizationControl.drsdtActive());
     }
 
     bool drvdtActive_() const
     {
         const auto& simulator = this->simulator();
-        int epsiodeIdx = std::max(simulator.episodeIndex(), 0);
-        const auto& oilVaporizationControl = simulator.vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
+        int episodeIdx = std::max(simulator.episodeIndex(), 0);
+        const auto& oilVaporizationControl = simulator.vanguard().schedule()[episodeIdx].oilvap();
         return (oilVaporizationControl.drvdtActive());
 
     }
@@ -2247,8 +2247,8 @@ private:
         // update the "last Rs" values for all elements, including the ones in the ghost
         // and overlap regions
         const auto& simulator = this->simulator();
-        int epsiodeIdx = std::max(simulator.episodeIndex(), 0);
-        const auto& oilVaporizationControl = simulator.vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
+        int episodeIdx = std::max(simulator.episodeIndex(), 0);
+        const auto& oilVaporizationControl = simulator.vanguard().schedule()[episodeIdx].oilvap();
 
         if (oilVaporizationControl.drsdtActive()) {
             ElementContext elemCtx(simulator);
@@ -2670,15 +2670,16 @@ private:
         const auto& eclState = simulator.vanguard().eclState();
         const auto& timeMap = schedule.getTimeMap();
         const auto& initconfig = eclState.getInitConfig();
-        int episodeIdx = initconfig.getRestartStep();
+        {
+            int restart_step = initconfig.getRestartStep();
 
-        simulator.setStartTime(timeMap.getStartTime(/*timeStepIdx=*/0));
-        simulator.setTime(timeMap.getTimePassedUntil(episodeIdx));
+            simulator.setStartTime(timeMap.getStartTime(/*timeStepIdx=*/0));
+            simulator.setTime(timeMap.getTimePassedUntil(restart_step));
 
-        simulator.startNextEpisode(simulator.startTime() + simulator.time(),
-                                   timeMap.getTimeStepLength(episodeIdx));
-        simulator.setEpisodeIndex(episodeIdx);
-
+            simulator.startNextEpisode(simulator.startTime() + simulator.time(),
+                                       timeMap.getTimeStepLength(restart_step));
+            simulator.setEpisodeIndex(restart_step);
+        }
         eclWriter_->beginRestart();
 
         Scalar dt = std::min(eclWriter_->restartTimeStepSize(), simulator.episodeLength());
@@ -2731,8 +2732,8 @@ private:
             // if we need to restart for polymer molecular weight simulation, we need to add related here
         }
 
-        const int epsiodeIdx = simulator.episodeIndex();
-        const auto& oilVaporizationControl = simulator.vanguard().schedule().getOilVaporizationProperties(epsiodeIdx);
+        const int episodeIdx = simulator.episodeIndex();
+        const auto& oilVaporizationControl = simulator.vanguard().schedule()[episodeIdx].oilvap();
         if (drsdtActive_())
             // DRSDT is enabled
             for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRs_.size(); ++pvtRegionIdx)
