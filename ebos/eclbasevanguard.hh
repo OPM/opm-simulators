@@ -209,6 +209,7 @@ public:
 protected:
     static const int dimension = Grid::dimension;
     using Element = typename GridView::template Codim<0>::Entity;
+    using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
 
 
 public:
@@ -636,6 +637,10 @@ public:
      */
     const std::string& caseName() const
     { return caseName_; }
+
+    // TODO: revising this function later
+    const CartesianIndexMapper& cartesianMapper() const
+    {  return asImp_().cartesianIndexMapper(); }
 
     /*!
      * \brief Returns the number of logically Cartesian cells in each direction

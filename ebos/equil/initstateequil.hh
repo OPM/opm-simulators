@@ -1567,12 +1567,14 @@ class InitialStateComputer
     using Element = typename GridView::template Codim<0>::Entity;
     using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
     using Grid = GetPropType<TypeTag, Properties::Grid>;
+    using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
 
 public:
     template<class MaterialLawManager>
     InitialStateComputer(MaterialLawManager& materialLawManager,
                          const Opm::EclipseState& eclipseState,
                          const GridView& gridView,
+                         const CartesianIndexMapper& cartMapper,
                          const double grav = Opm::unit::gravity,
                          const bool applySwatInit = true)
         : temperature_(gridView.size(/*codim=*/0)),
@@ -1582,7 +1584,8 @@ public:
           sat_(FluidSystem::numPhases,
           std::vector<double>(gridView.size(/*codim=*/0))),
           rs_(gridView.size(/*codim=*/0)),
-          rv_(gridView.size(/*codim=*/0))
+          rv_(gridView.size(/*codim=*/0)),
+          cartesianIndexMapper_(cartMapper)
     {
         //Check for presence of kw SWATINIT
         if (applySwatInit) {
@@ -1594,7 +1597,7 @@ public:
         //Querry cell depth, cell top-bottom.
         // aquifer should enter here
         const auto& num_aquifers = eclipseState.aquifer().numericalAquifers();
-        updateCellProps_(gridView);
+        updateCellProps_(gridView, num_aquifers);
 
         // Get the equilibration records.
         const std::vector<Opm::EquilRecord> rec = getEquil(eclipseState);
@@ -1709,7 +1712,7 @@ public:
 
         // Compute pressures, saturations, rs and rv factors.
         const auto& comm = gridView.comm();
-        calcPressSatRsRv(eqlmap, rec, materialLawManager, num_aquifers, comm, grav);
+        calcPressSatRsRv(eqlmap, rec, materialLawManager, gridView, num_aquifers, comm, grav);
 
         // Modify oil pressure in no-oil regions so that the pressures of present phases can
         // be recovered from the oil pressure and capillary relations.
@@ -1772,12 +1775,14 @@ private:
     PVec sat_;
     Vec rs_;
     Vec rv_;
+    const CartesianIndexMapper& cartesianIndexMapper_;
     Vec swatInit_;
     Vec cellCenterDepth_;
     std::vector<std::pair<double,double>> cellZSpan_;
     std::vector<std::pair<double,double>> cellZMinMax_;
 
-    void updateCellProps_(const GridView& gridView)
+    void updateCellProps_(const GridView& gridView,
+                          const NumericalAquifers& aquifer)
     {
         ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
         int numElements = gridView.size(/*codim=*/0);
@@ -1791,6 +1796,12 @@ private:
             const Element& element = *elemIt;
             const unsigned int elemIdx = elemMapper.index(element);
             cellCenterDepth_[elemIdx] = Details::cellCenterDepth(element);
+            const auto cartIx = cartesianIndexMapper_.cartesianIndex(elemIdx);
+            if (aquifer.hasCell(cartIx)) {
+                const auto& aqu_cells = aquifer.aquiferCells();
+                const auto& aqu_cell = aqu_cells.at(cartIx);
+                cellCenterDepth_[elemIdx] = aqu_cell.depth;
+            }
             cellZSpan_[elemIdx] = Details::cellZSpan(element);
             cellZMinMax_[elemIdx] = Details::cellZMinMax(element);
         }
@@ -1811,6 +1822,7 @@ private:
     void calcPressSatRsRv(const RMap& reg,
                           const std::vector< Opm::EquilRecord >& rec,
                           MaterialLawManager& materialLawManager,
+                          const GridView& gridView,
                           const NumericalAquifers& aquifer,
                           const Comm& comm,
                           const double grav)
@@ -1848,7 +1860,7 @@ private:
             const auto acc = eqreg.equilibrationAccuracy();
             if (acc == 0) {
                 // Centre-point method
-                this->equilibrateCellCentres(cells, eqreg, ptable, aquifer, psat);
+                this->equilibrateCellCentres(cells, eqreg, ptable, gridView, aquifer, psat);
             }
             else if (acc < 0) {
                 // Horizontal subdivision
@@ -1912,14 +1924,17 @@ private:
     void equilibrateCellCentres(const CellRange&  cells,
                                 const EquilReg&   eqreg,
                                 const PressTable& ptable,
+                                const GridView& gridView,
                                 const NumericalAquifers& aquifer,
                                 PhaseSat&         psat)
     {
         using CellPos = typename PhaseSat::Position;
         using CellID  = std::remove_cv_t<std::remove_reference_t<
             decltype(std::declval<CellPos>().cell)>>;
+        // TODO: might not needed
+        ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
 
-        this->cellLoop(cells, [this, &eqreg,  &ptable, &aquifer, &psat]
+        this->cellLoop(cells, [this, &eqreg,  &ptable, &elemMapper, &aquifer, &psat]
             (const CellID                 cell,
              Details::PhaseQuantityValue& pressures,
              Details::PhaseQuantityValue& saturations,
@@ -1930,18 +1945,11 @@ private:
                 cell, cellCenterDepth_[cell]
             };
 
-/*            const size_t global_index = UgGridHelpers::globalCell(grid)[cell];
-
-            if (aquifer.hasCell(global_index)) {
-                const auto& aqu_cells = aquifer.aquiferCells();
-                const auto& aqu_cell = aqu_cells.at(global_index);
-                pos = CellPos {
-                    cell, aqu_cell.depth
-                };
-            } */
-
             saturations = psat.deriveSaturations(pos, eqreg, ptable);
-/*            if (aquifer.hasCell(global_index)) {
+
+            // TODO: not totally sure this is the cartesian Index
+            const auto global_index = cartesianIndexMapper_.cartesianIndex(cell);
+            if (aquifer.hasCell(global_index)) {
                 saturations = {0.0, 0.0, 1.0};
                 const auto &aqu_cell = aquifer.getCell(global_index);
                 std::ostringstream ss;
@@ -1949,16 +1957,16 @@ private:
                    << aqu_cell.K + 1 << " } OF NUMERICAL AQUIFER " << aqu_cell.aquifer_id << " with global_index " << global_index << ", "
                    << "WATER SATURATION IS SET TO BE UNITY";
                 OpmLog::info(ss.str());
-            } */
+            }
             pressures   = psat.correctedPhasePressures();
-            /* if (aquifer.hasCell(global_index)) {
+            if (aquifer.hasCell(global_index)) {
                 const auto &aqu_cell = aquifer.getCell(global_index);
-                // TODO: NOT totally sure what we should do here to empoly the pressure specified by AQUNUM
+                // TODO: NOT totally sure what we should do here to employ the pressure specified by AQUNUM
                 if (aqu_cell.init_pressure > 0.) {
                     const double pres = aqu_cell.init_pressure;
                     pressures = {pres, pres, pres};
                 }
-            } */
+            }
 
             const auto temp = this->temperature_[cell];
 
