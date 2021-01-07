@@ -32,7 +32,7 @@
 #include "blackoilsolventmodules.hh"
 #include "blackoilpolymermodules.hh"
 #include "blackoilenergymodules.hh"
-
+#include "blackoildiffusionmodule.hh"
 #include <opm/models/common/multiphasebaseextensivequantities.hh>
 
 namespace Opm {
@@ -54,12 +54,17 @@ class BlackOilExtensiveQuantities
     , public BlackOilSolventExtensiveQuantities<TypeTag>
     , public BlackOilPolymerExtensiveQuantities<TypeTag>
     , public BlackOilEnergyExtensiveQuantities<TypeTag>
+    , public BlackOilDiffusionExtensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableDiffusion>()>
 {
     using MultiPhaseParent = MultiPhaseBaseExtensiveQuantities<TypeTag>;
 
     using Implementation = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+
+    enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
+    using DiffusionExtensiveQuantities = Opm::BlackOilDiffusionExtensiveQuantities<TypeTag, enableDiffusion>;
+
 
 public:
     /*!
@@ -77,6 +82,7 @@ public:
         asImp_().updateSolvent(elemCtx, scvfIdx, timeIdx);
         asImp_().updatePolymer(elemCtx, scvfIdx, timeIdx);
         asImp_().updateEnergy(elemCtx, scvfIdx, timeIdx);
+        DiffusionExtensiveQuantities::update_(elemCtx, scvfIdx, timeIdx);
     }
 
     template <class Context, class FluidState>
@@ -88,6 +94,8 @@ public:
         MultiPhaseParent::updateBoundary(ctx, bfIdx, timeIdx, fluidState);
 
         asImp_().updateEnergyBoundary(ctx, bfIdx, timeIdx, fluidState);
+
+        DiffusionExtensiveQuantities::updateBoundary_(ctx, bfIdx, timeIdx, fluidState);
     }
 
 protected:
