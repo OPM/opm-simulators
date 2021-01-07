@@ -409,11 +409,12 @@ namespace Opm {
         updateAndCommunicateGroupData();
         // Compute initial well solution for new wells
         for (auto& well : well_container_) {
-            const uint64_t effective_events_mask = ScheduleEvents::WELL_STATUS_CHANGE;
+            const uint64_t effective_events_mask = ScheduleEvents::WELL_STATUS_CHANGE
+                                                 + ScheduleEvents::NEW_WELL;
             const bool event = report_step_starts_ && schedule().hasWellGroupEvent(well->name(), effective_events_mask, reportStepIdx);
             if (event) {
                 well->calculateExplicitQuantities(ebosSimulator_, well_state_, local_deferredLogger);
-                well->solveWellToInitialize(ebosSimulator_, well_state_, local_deferredLogger);
+                well->solveWellEquation(ebosSimulator_, well_state_, local_deferredLogger);
             }
         }
 
@@ -962,6 +963,14 @@ namespace Opm {
 
             std::vector< Scalar > B_avg(numComponents(), Scalar() );
             computeAverageFormationFactor(B_avg);
+
+            if (param_.solve_welleq_initially_ && iterationIdx == 0) {
+                for (auto& well : well_container_) {
+                    well->solveWellEquation(ebosSimulator_, well_state_, local_deferredLogger);
+                }
+                updateWellControls(local_deferredLogger, /* check group controls */ true);
+            }
+
             gliftDebug("assemble() : running assembleWellEq()..", local_deferredLogger);
             well_state_.enableGliftOptimization();
             assembleWellEq(B_avg, dt, local_deferredLogger);

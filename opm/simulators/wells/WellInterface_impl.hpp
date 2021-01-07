@@ -1388,9 +1388,9 @@ namespace Opm
     template<typename TypeTag>
     void
     WellInterface<TypeTag>::
-    solveWellToInitialize(const Simulator& ebosSimulator,
-                          WellState& well_state,
-                          Opm::DeferredLogger& deferred_logger)
+    solveWellEquation(const Simulator& ebosSimulator,
+                      WellState& well_state,
+                      Opm::DeferredLogger& deferred_logger)
     {
         // keep a copy of the original well state
         const WellState well_state0 = well_state;

@@ -207,6 +207,7 @@ public:
         EWOMS_HIDE_PARAM(TypeTag, MaxInnerIterWells);
         EWOMS_HIDE_PARAM(TypeTag, MaxSinglePrecisionDays);
         EWOMS_HIDE_PARAM(TypeTag, MaxStrictIter);
+        EWOMS_HIDE_PARAM(TypeTag, SolveWelleqInitially);
         EWOMS_HIDE_PARAM(TypeTag, UpdateEquationsScaling);
         EWOMS_HIDE_PARAM(TypeTag, UseUpdateStabilization);
         EWOMS_HIDE_PARAM(TypeTag, MatrixAddWellContributions);

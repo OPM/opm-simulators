@@ -320,9 +320,9 @@ namespace Opm
 
         void setDynamicThpLimit(const double thp_limit);
 
-        void solveWellToInitialize(const Simulator& ebosSimulator,
-                                   WellState& well_state,
-                                   Opm::DeferredLogger& deferred_logger);
+        void solveWellEquation(const Simulator& ebosSimulator,
+                               WellState& well_state,
+                               Opm::DeferredLogger& deferred_logger);
 
 
     protected:
