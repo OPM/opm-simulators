@@ -195,7 +195,7 @@ public:
         }
 
         vapPar2_ = 0.0;
-        const auto& oilVap = schedule.getOilVaporizationProperties(0);
+        const auto& oilVap = schedule[0].oilvap();
         if (oilVap.getType() == OilVaporizationProperties::OilVaporization::VAPPARS) {
             vapPar2_ = oilVap.vap2();
         }
