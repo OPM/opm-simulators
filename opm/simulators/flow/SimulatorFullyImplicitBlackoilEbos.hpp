@@ -166,8 +166,7 @@ public:
         bool enableTUNING = EWOMS_GET_PARAM(TypeTag, bool, EnableTuning);
         if (enableAdaptive) {
             if (enableTUNING) {
-                adaptiveTimeStepping_ = std::make_unique<TimeStepper>(
-                    schedule().getTuning(timer.currentStepNum()), terminalOutput_);
+                adaptiveTimeStepping_ = std::make_unique<TimeStepper>(schedule()[timer.currentStepNum()].tuning(), terminalOutput_);
             }
             else {
                 adaptiveTimeStepping_ = std::make_unique<TimeStepper>(terminalOutput_);
@@ -247,7 +246,7 @@ public:
         if (adaptiveTimeStepping_) {
             if (enableTUNING) {
                 if (events.hasEvent(ScheduleEvents::TUNING_CHANGE,timer.currentStepNum())) {
-                    adaptiveTimeStepping_->updateTUNING(schedule().getTuning(timer.currentStepNum()));
+                    adaptiveTimeStepping_->updateTUNING(schedule()[timer.currentStepNum()].tuning());
                 }
             }
 

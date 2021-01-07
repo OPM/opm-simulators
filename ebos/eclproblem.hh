@@ -876,7 +876,7 @@ public:
         if (enableTuning_) {
             // if support for the TUNING keyword is enabled, we get the initial time
             // steping parameters from it instead of from command line parameters
-            const auto& tuning = schedule.getTuning(0);
+            const auto& tuning = schedule[0].tuning();
             initialTimeStepSize_ = tuning.TSINIT;
             maxTimeStepAfterWellEvent_ = tuning.TMAXWC;
             maxTimeStepSize_ = tuning.TSMAXZ;
@@ -1060,7 +1060,7 @@ public:
         bool tuningEvent = false;
         if (episodeIdx > 0 && enableTuning_ && events.hasEvent(Opm::ScheduleEvents::TUNING_CHANGE, episodeIdx))
         {
-            const auto& tuning = schedule.getTuning(episodeIdx);
+            const auto& tuning = schedule[episodeIdx].tuning();
             initialTimeStepSize_ = tuning.TSINIT;
             maxTimeStepAfterWellEvent_ = tuning.TMAXWC;
             maxTimeStepSize_ = tuning.TSMAXZ;
