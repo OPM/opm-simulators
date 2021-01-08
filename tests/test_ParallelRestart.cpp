@@ -30,10 +30,10 @@
 #include <opm/common/OpmLog/KeywordLocation.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Deck/DeckItem.hpp>
-#include <opm/parser/eclipse/EclipseState/Aquancon.hpp>
-#include <opm/parser/eclipse/EclipseState/AquiferCT.hpp>
-#include <opm/parser/eclipse/EclipseState/AquiferConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/Aquifetp.hpp>
+#include <opm/parser/eclipse/EclipseState/Aquifer/Aquancon.hpp>
+#include <opm/parser/eclipse/EclipseState/Aquifer/AquiferCT.hpp>
+#include <opm/parser/eclipse/EclipseState/Aquifer/AquiferConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/Aquifer/Aquifetp.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 #include <opm/parser/eclipse/EclipseState/TracerConfig.hpp>
