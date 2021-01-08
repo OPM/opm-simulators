@@ -968,7 +968,7 @@ namespace Opm {
                 for (auto& well : well_container_) {
                     well->solveWellEquation(ebosSimulator_, well_state_, local_deferredLogger);
                 }
-                updateWellControls(local_deferredLogger, /* check group controls */ true);
+                updateWellControls(local_deferredLogger, /* check group controls */ false);
             }
 
             gliftDebug("assemble() : running assembleWellEq()..", local_deferredLogger);

@@ -38,10 +38,6 @@ struct EclFlowGasOilProblem {
     using InheritsFrom = std::tuple<EclFlowProblem>;
 };
 }
-template<class TypeTag>
-struct EnableDiffusion<TypeTag, TTag::EclFlowGasOilProblem> {
-    static constexpr bool value = true;
-};
 
 //! The indices required by the model
 template<class TypeTag>
