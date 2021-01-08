@@ -1274,6 +1274,26 @@ public:
         return canonicalToActivePhaseIdx_[phaseIdx];
     }
 
+    /*!
+     * \copydoc BaseFluidSystem::diffusionCoefficient
+     */
+    template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
+    static LhsEval diffusionCoefficient(const FluidState& fluidState,
+                                        const ParameterCache<ParamCacheEval>& /*paramCache*/,
+                                        unsigned phaseIdx,
+                                        unsigned compIdx)
+    {
+        const auto& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
+
+        switch (phaseIdx) {
+        case oilPhaseIdx: return oilPvt().diffusionCoefficient(T, p, compIdx);
+        case gasPhaseIdx: return gasPvt().diffusionCoefficient(T, p, compIdx);
+        case waterPhaseIdx: return 0.0;
+        default: throw std::logic_error("Unhandled phase index "+std::to_string(phaseIdx));
+        }
+    }
+
 private:
     static void resizeArrays_(size_t numRegions)
     {

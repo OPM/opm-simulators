@@ -288,6 +288,14 @@ public:
                                               const Evaluation& /*pressure*/) const
     { return 0.0; /* this is dry gas! */ }
 
+    template <class Evaluation>
+    Evaluation diffusionCoefficient(const Evaluation& /*temperature*/,
+                                    const Evaluation& /*pressure*/,
+                                    unsigned /*compIdx*/) const
+    {
+        throw std::runtime_error("Not implemented: The PVT model does not provide a diffusionCoefficient()");
+    }
+
     const Scalar gasReferenceDensity(unsigned regionIdx) const
     { return gasReferenceDensity_[regionIdx]; }
 

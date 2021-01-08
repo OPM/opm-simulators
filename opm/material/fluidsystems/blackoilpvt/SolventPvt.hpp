@@ -189,6 +189,14 @@ public:
         return invBg/invMugBg;
     }
 
+    template <class Evaluation>
+    Evaluation diffusionCoefficient(const Evaluation& /*temperature*/,
+                                    const Evaluation& /*pressure*/,
+                                    unsigned /*compIdx*/) const
+    {
+        throw std::runtime_error("Not implemented: The PVT model does not provide a diffusionCoefficient()");
+    }
+
     /*!
      * \brief Return the reference density the solvent phase for a given PVT region
      */

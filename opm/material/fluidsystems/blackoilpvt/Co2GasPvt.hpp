@@ -31,7 +31,9 @@
 
 #include <opm/material/common/Tabulated1DFunction.hpp>
 #include <opm/material/components/CO2.hpp>
+#include <opm/material/components/SimpleHuDuanH2O.hpp>
 #include <opm/material/common/UniformTabulated2DFunction.hpp>
+#include <opm/material/binarycoefficients/Brine_CO2.hpp>
 #include <opm/material/components/co2tables.inc>
 
 #if HAVE_ECL_INPUT
@@ -52,9 +54,13 @@ class Co2GasPvt
 {
     typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
     typedef Opm::CO2<Scalar, CO2Tables> CO2;
+    typedef Opm::SimpleHuDuanH2O<Scalar> H2O;
 
 public:
     typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
+
+    //! The binary coefficients for brine and CO2 used by this fluid system
+    typedef Opm::BinaryCoeff::Brine_CO2<Scalar, H2O, CO2> BinaryCoeffBrineCO2;
 
     explicit Co2GasPvt() = default;
     Co2GasPvt(const std::vector<Scalar>& gasReferenceDensity)
@@ -204,6 +210,14 @@ public:
                                               const Evaluation& /*temperature*/,
                                               const Evaluation& /*pressure*/) const
     { return 0.0; /* this is dry gas! */ }
+
+    template <class Evaluation>
+    Evaluation diffusionCoefficient(const Evaluation& temperature,
+                                    const Evaluation& pressure,
+                                    unsigned /*compIdx*/) const
+    {
+        return BinaryCoeffBrineCO2::gasDiffCoeff(temperature, pressure);
+    }
 
     const Scalar gasReferenceDensity(unsigned regionIdx) const
     { return gasReferenceDensity_[regionIdx]; }

@@ -377,6 +377,14 @@ public:
                                   const Evaluation& pressure) const
     { return isothermalPvt_->saturationPressure(regionIdx, temperature, pressure); }
 
+    template <class Evaluation>
+    Evaluation diffusionCoefficient(const Evaluation& temperature,
+                                    const Evaluation& pressure,
+                                    unsigned compIdx) const
+    {
+        return isothermalPvt_->diffusionCoefficient(temperature, pressure, compIdx);
+    }
+
     const IsothermalPvt* isoThermalPvt() const
     { return isothermalPvt_; }
 

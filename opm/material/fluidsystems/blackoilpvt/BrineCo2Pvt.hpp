@@ -276,6 +276,14 @@ public:
                 brineReferenceDensity_ == data.brineReferenceDensity_;
     }
 
+    template <class Evaluation>
+    Evaluation diffusionCoefficient(const Evaluation& temperature,
+                                    const Evaluation& pressure,
+                                    unsigned /*compIdx*/) const
+    {
+        return BinaryCoeffBrineCO2::liquidDiffCoeff(temperature, pressure);
+    }
+
 private:
     std::vector<Scalar> brineReferenceDensity_;
     std::vector<Scalar> co2ReferenceDensity_;
