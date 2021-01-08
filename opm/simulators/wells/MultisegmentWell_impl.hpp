@@ -2998,17 +2998,13 @@ namespace Opm
             } else {
                 // TODO: maybe the following should go to the function assemblePressureEq()
                 switch(segmentSet()[seg].segmentType()) {
-                    case Segment::SegmentType::SICD :
-                    assembleSICDPressureEq(seg, well_state);
-                    break;
-                case Segment::SegmentType::AICD : {
+                case Segment::SegmentType::SICD :
+                case Segment::SegmentType::AICD :
+                case Segment::SegmentType::VALVE : {
                     const UnitSystem& unit_system = ebosSimulator.vanguard().eclState().getDeckUnitSystem();
-                    assembleAICDPressureEq(seg, well_state, unit_system);
+                    assembleICDPressureEq(seg, well_state, unit_system, deferred_logger);
                     break;
-                    }
-                case Segment::SegmentType::VALVE :
-                    assembleValvePressureEq(seg, well_state);
-                    break;
+                }
                 default :
                     assemblePressureEq(seg, well_state);
                 }
@@ -3512,13 +3508,11 @@ namespace Opm
 
 
 
-
-
-    // TODO: the three ICD functions probably can be refactored a little bit to reduce some code duplication
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    assembleSICDPressureEq(const int seg, WellState& well_state) const
+    assembleICDPressureEq(const int seg, WellState& well_state,
+                          const UnitSystem& unit_system, DeferredLogger& deferred_logger) const
     {
         // TODO: upwinding needs to be taken care of
         // top segment can not be a spiral ICD device
@@ -3530,9 +3524,22 @@ namespace Opm
 
         EvalWell pressure_equation = getSegmentPressure(seg);
 
-        const auto sicd_pressure_drop = pressureDropSpiralICD(seg);
-        pressure_equation = pressure_equation - sicd_pressure_drop;
-        well_state.segPressDropFriction()[seg] = sicd_pressure_drop.value();
+        EvalWell icd_pressure_drop;
+        switch(segmentSet()[seg].segmentType()) {
+            case Segment::SegmentType::SICD :
+                icd_pressure_drop = pressureDropSpiralICD(seg);
+                break;
+            case Segment::SegmentType::AICD :
+                icd_pressure_drop = pressureDropAutoICD(seg, unit_system);
+            case Segment::SegmentType::VALVE :
+                icd_pressure_drop = pressureDropValve(seg);
+            default: {
+                OPM_DEFLOG_THROW(std::runtime_error, "Segment " + std::to_string(segmentSet()[seg].segmentNumber())
+                                 + " for well " + name() + " is not of ICD type", deferred_logger);
+            }
+        }
+        pressure_equation = pressure_equation - icd_pressure_drop;
+        well_state.segPressDropFriction()[seg] = icd_pressure_drop.value();
 
         const int seg_upwind = upwinding_segments_[seg];
         resWell_[seg][SPres] = pressure_equation.value();
@@ -3555,93 +3562,6 @@ namespace Opm
 
         }
     }
-
-
-
-    template<typename TypeTag>
-    void
-    MultisegmentWell<TypeTag>::
-    assembleAICDPressureEq(const int seg, WellState& well_state, const UnitSystem& unit_system) const
-    {
-        // top segment can not be an AICD device
-        assert(seg != 0);
-
-        // the pressure equation is something like
-        // p_seg - deltaP - p_outlet = 0.
-        // the major part is how to calculate the deltaP
-
-        EvalWell pressure_equation = getSegmentPressure(seg);
-
-        const auto aicd_pressure_drop = pressureDropAutoICD(seg, unit_system);
-        pressure_equation = pressure_equation - aicd_pressure_drop;
-        well_state.segPressDropFriction()[seg] = aicd_pressure_drop.value();
-
-        const int seg_upwind = upwinding_segments_[seg];
-        resWell_[seg][SPres] = pressure_equation.value();
-        duneD_[seg][seg][SPres][SPres] += pressure_equation.derivative(SPres + numEq);
-        duneD_[seg][seg][SPres][GTotal] += pressure_equation.derivative(GTotal + numEq);
-        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-            duneD_[seg][seg_upwind][SPres][WFrac] += pressure_equation.derivative(WFrac + numEq);
-        }
-        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            duneD_[seg][seg_upwind][SPres][GFrac] += pressure_equation.derivative(GFrac + numEq);
-        }
-
-        // contribution from the outlet segment
-        const int outlet_segment_index = segmentNumberToIndex(segmentSet()[seg].outletSegment());
-        const EvalWell outlet_pressure = getSegmentPressure(outlet_segment_index);
-
-        resWell_[seg][SPres] -= outlet_pressure.value();
-        for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-            duneD_[seg][outlet_segment_index][SPres][pv_idx] = -outlet_pressure.derivative(pv_idx + numEq);
-        }
-    }
-
-
-
-
-    template<typename TypeTag>
-    void
-    MultisegmentWell<TypeTag>::
-    assembleValvePressureEq(const int seg, WellState& well_state) const
-    {
-        // top segment can not be a spiral ICD device
-        assert(seg != 0);
-
-        // const Valve& valve = *segmentSet()[seg].Valve();
-
-        // the pressure equation is something like
-        // p_seg - deltaP - p_outlet = 0.
-        // the major part is how to calculate the deltaP
-
-        EvalWell pressure_equation = getSegmentPressure(seg);
-
-        const int seg_upwind = upwinding_segments_[seg];
-
-        const auto valve_pressure_drop = pressureDropValve(seg);
-        pressure_equation = pressure_equation - valve_pressure_drop;
-        well_state.segPressDropFriction()[seg] = valve_pressure_drop.value();
-
-        resWell_[seg][SPres] = pressure_equation.value();
-        duneD_[seg][seg][SPres][SPres] += pressure_equation.derivative(SPres + numEq);
-        duneD_[seg][seg][SPres][GTotal] += pressure_equation.derivative(GTotal + numEq);
-        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-            duneD_[seg][seg_upwind][SPres][WFrac] += pressure_equation.derivative(WFrac + numEq);
-        }
-        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            duneD_[seg][seg_upwind][SPres][GFrac] += pressure_equation.derivative(GFrac + numEq);
-        }
-
-        // contribution from the outlet segment
-        const int outlet_segment_index = segmentNumberToIndex(segmentSet()[seg].outletSegment());
-        const EvalWell outlet_pressure = getSegmentPressure(outlet_segment_index);
-
-        resWell_[seg][SPres] -= outlet_pressure.value();
-        for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-            duneD_[seg][outlet_segment_index][SPres][pv_idx] = -outlet_pressure.derivative(pv_idx + numEq);
-        }
-    }
-
 
 
 
