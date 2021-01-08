@@ -2213,7 +2213,7 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    assemblePressureEq(const int seg, WellState& well_state) const
+    assembleDefaultPressureEq(const int seg, WellState& well_state) const
     {
         assert(seg != 0); // not top segment
 
@@ -2996,23 +2996,34 @@ namespace Opm
                 const Opm::Schedule& schedule = ebosSimulator.vanguard().schedule();
                 assembleControlEq(well_state, schedule, summaryState, inj_controls, prod_controls, deferred_logger);
             } else {
-                // TODO: maybe the following should go to the function assemblePressureEq()
-                switch(segmentSet()[seg].segmentType()) {
-                case Segment::SegmentType::SICD :
-                case Segment::SegmentType::AICD :
-                case Segment::SegmentType::VALVE : {
-                    const UnitSystem& unit_system = ebosSimulator.vanguard().eclState().getDeckUnitSystem();
-                    assembleICDPressureEq(seg, well_state, unit_system, deferred_logger);
-                    break;
-                }
-                default :
-                    assemblePressureEq(seg, well_state);
-                }
+                const UnitSystem& unit_system = ebosSimulator.vanguard().eclState().getDeckUnitSystem();
+                assemblePressureEq(seg, unit_system, well_state, deferred_logger);
             }
 
             well_state.segPressDrop()[seg] = well_state.segPressDropHydroStatic()[seg] +
                                              well_state.segPressDropFriction()[seg] +
                                              well_state.segPressDropAcceleration()[seg];
+        }
+    }
+
+
+
+
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    assemblePressureEq(const int seg, const UnitSystem& unit_system,
+                       WellState& well_state, DeferredLogger& deferred_logger) const
+    {
+        switch(segmentSet()[seg].segmentType()) {
+            case Segment::SegmentType::SICD :
+            case Segment::SegmentType::AICD :
+            case Segment::SegmentType::VALVE : {
+                assembleICDPressureEq(seg, unit_system, well_state,deferred_logger);
+                break;
+            }
+            default :
+                assembleDefaultPressureEq(seg, well_state);
         }
     }
 
@@ -3511,8 +3522,8 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    assembleICDPressureEq(const int seg, WellState& well_state,
-                          const UnitSystem& unit_system, DeferredLogger& deferred_logger) const
+    assembleICDPressureEq(const int seg, const UnitSystem& unit_system,
+                          WellState& well_state, DeferredLogger& deferred_logger) const
     {
         // TODO: upwinding needs to be taken care of
         // top segment can not be a spiral ICD device
@@ -3531,8 +3542,10 @@ namespace Opm
                 break;
             case Segment::SegmentType::AICD :
                 icd_pressure_drop = pressureDropAutoICD(seg, unit_system);
+                break;
             case Segment::SegmentType::VALVE :
                 icd_pressure_drop = pressureDropValve(seg);
+                break;
             default: {
                 OPM_DEFLOG_THROW(std::runtime_error, "Segment " + std::to_string(segmentSet()[seg].segmentNumber())
                                  + " for well " + name() + " is not of ICD type", deferred_logger);

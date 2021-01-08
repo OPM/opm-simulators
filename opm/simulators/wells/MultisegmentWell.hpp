@@ -422,7 +422,10 @@ namespace Opm
                                const Well::ProductionControls& prod_controls,
                                Opm::DeferredLogger& deferred_logger);
 
-        void assemblePressureEq(const int seg, WellState& well_state) const;
+        void assemblePressureEq(const int seg, const UnitSystem& unit_system,
+                                WellState& well_state, DeferredLogger& deferred_logger) const;
+
+        void assembleDefaultPressureEq(const int seg, WellState& well_state) const;
 
         // hytrostatic pressure loss
         EvalWell getHydroPressureLoss(const int seg) const;
@@ -511,8 +514,8 @@ namespace Opm
         EvalWell pressureDropValve(const int seg) const;
 
         // assemble pressure equation for ICD segments
-        void assembleICDPressureEq(const int seg, WellState& well_state,
-                                   const UnitSystem& unit_system, DeferredLogger& deferred_logger) const;
+        void assembleICDPressureEq(const int seg, const UnitSystem& unit_system,
+                                   WellState& well_state, DeferredLogger& deferred_logger) const;
 
         // check whether the well is operable under BHP limit with current reservoir condition
         virtual void checkOperabilityUnderBHPLimitProducer(const WellState& well_state, const Simulator& ebos_simulator, Opm::DeferredLogger& deferred_logger) override;
