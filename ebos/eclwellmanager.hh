@@ -609,11 +609,10 @@ public:
             // for the "until the universe dies" episode, the wells don't change
             return false;
 
-        const Opm::Events& events = schedule.getEvents();
+        const Opm::Events& events = schedule[reportStepIdx].events();
         return events.hasEvent(Opm::ScheduleEvents::PRODUCTION_UPDATE |
                                Opm::ScheduleEvents::INJECTION_UPDATE |
-                               Opm::ScheduleEvents::WELL_STATUS_CHANGE,
-                               reportStepIdx);
+                               Opm::ScheduleEvents::WELL_STATUS_CHANGE );
     }
 
     void initFromRestartFile(const RestartValue& restartValues OPM_UNUSED){
@@ -636,10 +635,9 @@ protected:
             // for the "until the universe dies" episode, the wells don't change
             return false;
 
-        const Opm::Events& events = schedule.getEvents();
+        const Opm::Events& events = schedule[reportStepIdx].events();
         return events.hasEvent(Opm::ScheduleEvents::NEW_WELL |
-                               Opm::ScheduleEvents::COMPLETION_CHANGE,
-                               reportStepIdx);
+                               Opm::ScheduleEvents::COMPLETION_CHANGE);
     }
 
     void updateWellTopology_(unsigned reportStepIdx OPM_UNUSED,

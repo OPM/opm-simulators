@@ -79,8 +79,9 @@ namespace WellGroupHelpers
             wellState.setCurrentProductionGroupControl(group.name(), Group::ProductionCMode::NONE);
         }
 
+        const auto& events = schedule[reportStepIdx].wellgroup_events();
         if (group.isInjectionGroup()
-            && schedule.hasWellGroupEvent(group.name(), ScheduleEvents::GROUP_INJECTION_UPDATE, reportStepIdx)) {
+            && events.hasEvent(group.name(), ScheduleEvents::GROUP_INJECTION_UPDATE)) {
 
             for (Phase phase : all) {
                 if (!group.hasInjectionControl(phase))
@@ -92,7 +93,7 @@ namespace WellGroupHelpers
         }
 
         if (group.isProductionGroup()
-            && schedule.hasWellGroupEvent(group.name(), ScheduleEvents::GROUP_PRODUCTION_UPDATE, reportStepIdx)) {
+            && events.hasEvent(group.name(), ScheduleEvents::GROUP_PRODUCTION_UPDATE)) {
             const auto controls = group.productionControls(summaryState);
             wellState.setCurrentProductionGroupControl(group.name(), controls.cmode);
         }

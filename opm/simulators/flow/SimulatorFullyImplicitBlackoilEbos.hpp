@@ -235,7 +235,6 @@ public:
             timer.currentStepLength());
         ebosSimulator_.setEpisodeIndex(timer.currentStepNum());
         solver->model().beginReportStep();
-        const auto& events = schedule().getEvents();
         bool enableTUNING = EWOMS_GET_PARAM(TypeTag, bool, EnableTuning);
 
         // If sub stepping is enabled allow the solver to sub cycle
@@ -244,16 +243,17 @@ public:
         // \Note: The report steps are met in any case
         // \Note: The sub stepping will require a copy of the state variables
         if (adaptiveTimeStepping_) {
+            const auto& events = schedule()[timer.currentStepNum()].events();
             if (enableTUNING) {
-                if (events.hasEvent(ScheduleEvents::TUNING_CHANGE,timer.currentStepNum())) {
+                if (events.hasEvent(ScheduleEvents::TUNING_CHANGE)) {
                     adaptiveTimeStepping_->updateTUNING(schedule()[timer.currentStepNum()].tuning());
                 }
             }
 
-            bool event = events.hasEvent(ScheduleEvents::NEW_WELL, timer.currentStepNum()) ||
-                events.hasEvent(ScheduleEvents::PRODUCTION_UPDATE, timer.currentStepNum()) ||
-                events.hasEvent(ScheduleEvents::INJECTION_UPDATE, timer.currentStepNum()) ||
-                events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE, timer.currentStepNum());
+            bool event = events.hasEvent(ScheduleEvents::NEW_WELL) ||
+                events.hasEvent(ScheduleEvents::PRODUCTION_UPDATE) ||
+                events.hasEvent(ScheduleEvents::INJECTION_UPDATE) ||
+                events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE);
             auto stepReport = adaptiveTimeStepping_->step(timer, *solver, event, nullptr);
             report_ += stepReport;
         } else {
