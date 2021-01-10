@@ -39,18 +39,23 @@
 namespace Opm
 {
     /// The state of a set of wells.
-    class WellState
+    class WellState 
     {
     public:
         typedef std::array< int, 3 >  mapentry_t;
         typedef std::map< std::string, mapentry_t > WellMapType;
-
+        
         /// Allocate and initialize if wells is non-null.
         /// Also tries to give useful initial values to the bhp() and
         /// wellRates() fields, depending on controls.  The
         /// perfRates() field is filled with zero, and perfPress()
         /// with -1e100.
         void init(const std::vector<double>& cellPressures,
+                  const std::vector<double>& cellTemperatures,
+                  const std::vector<std::vector<double>>& cellInternalEnergy,
+                  const std::vector<std::vector<double>>& cellBinv,
+                  const std::vector<std::vector<double>>& cellDensity,
+                  const std::vector<double>& perforationRates,
                   const std::vector<Well>& wells_ecl,
                   const std::vector<ParallelWellInfo*>& parallel_well_info,
                   const PhaseUsage& pu,
@@ -73,13 +78,13 @@ namespace Opm
                 bhp_.resize(nw, 0.0);
                 thp_.resize(nw, 0.0);
                 temperature_.resize(nw, 273.15 + 15.56); // standard condition temperature
-                wellrates_.resize(nw * np, 0.0);
+                wellrates_.resize(nw * np, 0.0);              
                 int connpos = 0;
                 for (int w = 0; w < nw; ++w) {
                     const Well& well = wells_ecl[w];
               
                     // Initialize bhp(), thp(), wellRates(), temperature().
-                    initSingleWell(cellPressures, w, well, *parallel_well_info[w], pu, summary_state);
+                    initSingleWell(cellPressures, cellTemperatures, cellInternalEnergy, cellBinv, cellDensity, perforationRates, w, well, *parallel_well_info[w], pu, summary_state);
 
                     // Setup wellname -> well index mapping.
                     const int num_perf_this_well = well_perf_data[w].size();
@@ -353,6 +358,11 @@ namespace Opm
                          sizes.data(), displ.data(), 0);
         }
         void initSingleWell(const std::vector<double>& cellPressures,
+                            const std::vector<double>& cellTemperatures,
+                            const std::vector<std::vector<double>>& cellInternalEnergy,
+                            const std::vector<std::vector<double>>& cellBinv,
+                            const std::vector<std::vector<double>>& cellDensity,
+                            const std::vector<double>& perforationRates,
                             const int w,
                             const Well& well,
                             const ParallelWellInfo& well_info,
@@ -368,8 +378,34 @@ namespace Opm
                 wellrates_[np*w + p] = 0.0;
             }
 
+            const int num_perf_this_well = well_perf_data_[w].size();
             if ( well.isInjector() ) { 
                 temperature_[w] = well.injectionControls(summary_state).temperature;
+            }
+            if ( well.isProducer() ) { 
+                int sz = perforationRates.size();
+                int connpos = 0;
+                for (int i = 0; i < w; ++i){
+                    connpos += well_perf_data_[i].size();
+                }
+                connpos *= np;
+                double weighted_temperature = 0.0;              
+                double total_weight = 0.0;  
+                if (sz > 0){
+                   for (int i = 0; i < num_perf_this_well; ++i){
+                        int perf_cell_index = well_perf_data_[w][i].cell_index;
+                        double weight_factor = 0.0;
+                        for (int p = 0; p < np; ++p) {     
+                            weight_factor += cellDensity[perf_cell_index][p]  * perforationRates[connpos + i*np + p]/cellBinv[perf_cell_index][p] * cellInternalEnergy[perf_cell_index][p]/cellTemperatures[perf_cell_index];
+                        }
+                        total_weight += weight_factor;
+                        weighted_temperature += weight_factor * cellTemperatures[perf_cell_index];
+                    }
+                    temperature_[w] = weighted_temperature/total_weight;
+                }
+                else {
+                    temperature_[w]=0;
+                }
             }
 
             const int num_perf_this_well = well_info.communication().sum(well_perf_data_[w].size());
@@ -489,9 +525,9 @@ namespace Opm
 
     protected:
         std::vector<std::vector<PerforationData>> well_perf_data_;
-        std::vector<ParallelWellInfo*> parallel_well_info_;
+        std::vector<ParallelWellInfo*> parallel_well_info_;      
     };
-
+    
 } // namespace Opm
 
 #endif // OPM_WELLSTATE_HEADER_INCLUDED

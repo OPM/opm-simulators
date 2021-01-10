@@ -703,6 +703,12 @@ namespace Opm {
                         const SummaryState& summaryState)
     {
         std::vector<double> cellPressures(this->local_num_cells_, 0.0);
+        std::vector<double> cellTemperatures(this->local_num_cells_, 0.0);
+        const int np = numPhases();
+        std::vector<std::vector<double>> cellInternalEnergy(this->local_num_cells_, std::vector<double>(np));
+        std::vector<std::vector<double>> cellBinv(this->local_num_cells_, std::vector<double>(np));
+        std::vector<std::vector<double>> cellDensity(this->local_num_cells_, std::vector<double>(np));
+        
         ElementContext elemCtx(ebosSimulator_);
 
         const auto& gridView = ebosSimulator_.vanguard().gridView();
@@ -719,6 +725,15 @@ namespace Opm {
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
             const auto& fs = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0).fluidState();
+            
+            cellTemperatures[elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0)] = fs.temperature(/*phaseIdx*/0).value();
+
+            for (int phaseIdx = 0; phaseIdx  < np; ++phaseIdx)
+            {
+                cellInternalEnergy[elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0)][phaseIdx] = fs.enthalpy(phaseIdx).value() - fs.pressure(phaseIdx).value() / fs.density(phaseIdx).value();
+                cellBinv[elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0)][phaseIdx] = fs.invB(phaseIdx).value();
+                cellDensity[elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0)][phaseIdx] = fs.density(phaseIdx).value();
+            }
 
             // copy of get perfpressure in Standard well except for value
             double& perf_pressure = cellPressures[elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0)];
@@ -731,7 +746,7 @@ namespace Opm {
             }
         }
 
-        well_state_.init(cellPressures, schedule(), wells_ecl_, local_parallel_well_info_, timeStepIdx,
+        well_state_.init(cellPressures, cellTemperatures, cellInternalEnergy, cellBinv, cellDensity, schedule(), wells_ecl_, local_parallel_well_info_, timeStepIdx,
                          &previous_well_state_, phase_usage_, well_perf_data_,
                          summaryState, globalNumWells);
     }
