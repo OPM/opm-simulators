@@ -151,16 +151,16 @@ public:
     template <class Evaluation>
     static Evaluation twoPhaseSatPcnw(const Params& params, const Evaluation& SwScaled)
     {
-        const Evaluation& SwUnscaled = scaledToUnscaledSatPc(params, SwScaled);
-        const Evaluation& pcUnscaled = EffLaw::twoPhaseSatPcnw(params.effectiveLawParams(), SwUnscaled);
+        const Evaluation SwUnscaled = scaledToUnscaledSatPc(params, SwScaled);
+        const Evaluation pcUnscaled = EffLaw::twoPhaseSatPcnw(params.effectiveLawParams(), SwUnscaled);
         return unscaledToScaledPcnw_(params, pcUnscaled);
     }
 
     template <class Evaluation>
     static Evaluation twoPhaseSatPcnwInv(const Params& params, const Evaluation& pcnwScaled)
     {
-        Evaluation pcnwUnscaled = scaledToUnscaledPcnw_(params, pcnwScaled);
-        Evaluation SwUnscaled = EffLaw::twoPhaseSatPcnwInv(params.effectiveLawParams(), pcnwUnscaled);
+        const Evaluation pcnwUnscaled = scaledToUnscaledPcnw_(params, pcnwScaled);
+        const Evaluation SwUnscaled = EffLaw::twoPhaseSatPcnwInv(params.effectiveLawParams(), pcnwUnscaled);
         return unscaledToScaledSatPc(params, SwUnscaled);
     }
 
@@ -223,16 +223,16 @@ public:
     template <class Evaluation>
     static Evaluation twoPhaseSatKrw(const Params& params, const Evaluation& SwScaled)
     {
-        const Evaluation& SwUnscaled = scaledToUnscaledSatKrw(params, SwScaled);
-        const Evaluation& krwUnscaled = EffLaw::twoPhaseSatKrw(params.effectiveLawParams(), SwUnscaled);
+        const Evaluation SwUnscaled = scaledToUnscaledSatKrw(params, SwScaled);
+        const Evaluation krwUnscaled = EffLaw::twoPhaseSatKrw(params.effectiveLawParams(), SwUnscaled);
         return unscaledToScaledKrw_(SwScaled, params, krwUnscaled);
     }
 
     template <class Evaluation>
     static Evaluation twoPhaseSatKrwInv(const Params& params, const Evaluation& krwScaled)
     {
-        Evaluation krwUnscaled = scaledToUnscaledKrw_(params, krwScaled);
-        Evaluation SwUnscaled = EffLaw::twoPhaseSatKrwInv(params.effectiveLawParams(), krwUnscaled);
+        const Evaluation krwUnscaled = scaledToUnscaledKrw_(params, krwScaled);
+        const Evaluation SwUnscaled = EffLaw::twoPhaseSatKrwInv(params.effectiveLawParams(), krwUnscaled);
         return unscaledToScaledSatKrw(params, SwUnscaled);
     }
 
@@ -248,16 +248,16 @@ public:
     template <class Evaluation>
     static Evaluation twoPhaseSatKrn(const Params& params, const Evaluation& SwScaled)
     {
-        const Evaluation& SwUnscaled = scaledToUnscaledSatKrn(params, SwScaled);
-        const Evaluation& krnUnscaled = EffLaw::twoPhaseSatKrn(params.effectiveLawParams(), SwUnscaled);
+        const Evaluation SwUnscaled = scaledToUnscaledSatKrn(params, SwScaled);
+        const Evaluation krnUnscaled = EffLaw::twoPhaseSatKrn(params.effectiveLawParams(), SwUnscaled);
         return unscaledToScaledKrn_(params, krnUnscaled);
     }
 
     template <class Evaluation>
     static Evaluation twoPhaseSatKrnInv(const Params& params, const Evaluation& krnScaled)
     {
-        Evaluation krnUnscaled = scaledToUnscaledKrn_(params, krnScaled);
-        Evaluation SwUnscaled = EffLaw::twoPhaseSatKrnInv(params.effectiveLawParams(), krnUnscaled);
+        const Evaluation krnUnscaled = scaledToUnscaledKrn_(params, krnScaled);
+        const Evaluation SwUnscaled = EffLaw::twoPhaseSatKrnInv(params.effectiveLawParams(), krnUnscaled);
         return unscaledToScaledSatKrn(params, SwUnscaled);
     }
 

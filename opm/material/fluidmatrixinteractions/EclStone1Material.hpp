@@ -34,6 +34,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <stdexcept>
+#include <type_traits>
 
 namespace Opm {
 
@@ -218,7 +220,7 @@ public:
     static Evaluation pcgn(const Params& params,
                            const FluidState& fs)
     {
-        const auto& Sw = 1.0 - Opm::decay<Evaluation>(fs.saturation(gasPhaseIdx));
+        const auto Sw = 1.0 - Opm::decay<Evaluation>(fs.saturation(gasPhaseIdx));
         return GasOilMaterialLaw::twoPhaseSatPcnw(params.gasOilParams(), Sw);
     }
 
@@ -235,10 +237,12 @@ public:
     static Evaluation pcnw(const Params& params,
                            const FluidState& fs)
     {
-        const auto& Sw = Opm::decay<Evaluation>(fs.saturation(waterPhaseIdx));
+        const auto Sw = Opm::decay<Evaluation>(fs.saturation(waterPhaseIdx));
         Valgrind::CheckDefined(Sw);
-        const auto& result = OilWaterMaterialLaw::twoPhaseSatPcnw(params.oilWaterParams(), Sw);
+
+        const auto result = OilWaterMaterialLaw::twoPhaseSatPcnw(params.oilWaterParams(), Sw);
         Valgrind::CheckDefined(result);
+
         return result;
     }
 
@@ -317,7 +321,7 @@ public:
     static Evaluation krg(const Params& params,
                           const FluidState& fluidState)
     {
-        const Evaluation& Sw = 1 - Opm::decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
+        const Evaluation Sw = 1 - Opm::decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
         return GasOilMaterialLaw::twoPhaseSatKrn(params.gasOilParams(), Sw);
     }
 
@@ -328,7 +332,7 @@ public:
     static Evaluation krw(const Params& params,
                           const FluidState& fluidState)
     {
-        const Evaluation& Sw = Opm::decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
+        const Evaluation Sw = Opm::decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
         return OilWaterMaterialLaw::twoPhaseSatKrw(params.oilWaterParams(), Sw);
     }
 
@@ -342,16 +346,16 @@ public:
         // the Eclipse docu is inconsistent with naming the variable of connate water: In
         // some places the connate water saturation is represented by "Swl", in others
         // "Swco" is used.
-        Scalar Swco = params.Swl();
+        const Scalar Swco = params.Swl();
 
         // oil relperm at connate water saturations (with Sg=0)
-        Scalar krocw = params.krocw();
+        const Scalar krocw = params.krocw();
 
         const Evaluation& Sw = Opm::decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
         const Evaluation& Sg = Opm::decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
 
-        Evaluation kro_ow = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sw);
-        Evaluation kro_go = GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), 1 - Sg - Swco);
+        const Evaluation kro_ow = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sw);
+        const Evaluation kro_go = GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), 1 - Sg - Swco);
 
         Evaluation beta;
         if (Sw <= Swco)
@@ -360,9 +364,9 @@ public:
             // there seems to be an error in the ECL documentation: using the approach to
             // the scaled saturations as described there leads to significant deviations
             // from the results produced by Eclipse 100.
-            Evaluation SSw = (Sw - Swco)/(1.0 - Swco);
-            Evaluation SSg = Sg/(1.0 - Swco);
-            Evaluation SSo = 1.0 - SSw - SSg;
+            const Evaluation SSw = (Sw - Swco)/(1.0 - Swco);
+            const Evaluation SSg = Sg/(1.0 - Swco);
+            const Evaluation SSo = 1.0 - SSw - SSg;
 
             if (SSw >= 1.0 || SSg >= 1.0)
                 beta = 1.0;
@@ -383,8 +387,8 @@ public:
     template <class FluidState>
     static void updateHysteresis(Params& params, const FluidState& fluidState)
     {
-        Scalar Sw = Opm::scalarValue(fluidState.saturation(waterPhaseIdx));
-        Scalar Sg = Opm::scalarValue(fluidState.saturation(gasPhaseIdx));
+        const Scalar Sw = Opm::scalarValue(fluidState.saturation(waterPhaseIdx));
+        const Scalar Sg = Opm::scalarValue(fluidState.saturation(gasPhaseIdx));
 
         params.oilWaterParams().update(/*pcSw=*/Sw, /*krwSw=*/Sw, /*krnSw=*/Sw);
         params.gasOilParams().update(/*pcSw=*/1 - Sg, /*krwSw=*/1 - Sg, /*krnSw=*/1 - Sg);
