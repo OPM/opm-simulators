@@ -151,17 +151,17 @@ void setupMessageLimiter(const Opm::MessageLimits msgLimits,  const std::string&
     std::shared_ptr<Opm::StreamLog> stream_log = Opm::OpmLog::getBackend<Opm::StreamLog>(stdout_log_id);
 
     const std::map<int64_t, int> limits = {{Opm::Log::MessageType::Note,
-                                            msgLimits.getCommentPrintLimit(0)},
+                                            msgLimits.getCommentPrintLimit()},
                                            {Opm::Log::MessageType::Info,
-                                            msgLimits.getMessagePrintLimit(0)},
+                                            msgLimits.getMessagePrintLimit()},
                                            {Opm::Log::MessageType::Warning,
-                                            msgLimits.getWarningPrintLimit(0)},
+                                            msgLimits.getWarningPrintLimit()},
                                            {Opm::Log::MessageType::Error,
-                                            msgLimits.getErrorPrintLimit(0)},
+                                            msgLimits.getErrorPrintLimit()},
                                            {Opm::Log::MessageType::Problem,
-                                            msgLimits.getProblemPrintLimit(0)},
+                                            msgLimits.getProblemPrintLimit()},
                                            {Opm::Log::MessageType::Bug,
-                                            msgLimits.getBugPrintLimit(0)}};
+                                            msgLimits.getBugPrintLimit()}};
     stream_log->setMessageLimiter(std::make_shared<Opm::MessageLimiter>(10, limits));
 }
 }
@@ -224,7 +224,7 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
             }
             if (Opm::OpmLog::hasBackend("STDOUT_LOGGER")) // loggers might not be set up!
             {
-                setupMessageLimiter(schedule->getMessageLimits(), "STDOUT_LOGGER");
+                setupMessageLimiter(schedule->operator[](0).message_limits(), "STDOUT_LOGGER");
             }
             if (!summaryConfig)
                 summaryConfig = std::make_unique<Opm::SummaryConfig>(*deck, *schedule,eclipseState->getTableManager(),
