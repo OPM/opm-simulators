@@ -186,8 +186,12 @@ public:
                                        Scalar& krnSwMdc,
                                        const Params& params)
     {
-        pcSwMdc = params.gasOilParams().pcSwMdc();
-        krnSwMdc = params.gasOilParams().krnSwMdc();
+        const auto Swco = params.Swl();
+
+        // Pretend oil saturation is 'Swco' larger than it really is in
+        // order to infer correct maximum Sg values in output layer.
+        pcSwMdc = std::min(params.gasOilParams().pcSwMdc() + Swco, Scalar{2.0});
+        krnSwMdc = std::min(params.gasOilParams().krnSwMdc() + Swco, Scalar{2.0});
 
         Valgrind::CheckDefined(pcSwMdc);
         Valgrind::CheckDefined(krnSwMdc);
@@ -203,8 +207,10 @@ public:
                                           const Scalar& krnSwMdc,
                                           Params& params)
     {
+        // Maximum attainable oil saturation is 1-SWL
+        const auto Swco = params.Swl();
         const double krwSw = 2.0; //Should not be used
-        params.gasOilParams().update(pcSwMdc, krwSw, krnSwMdc);
+        params.gasOilParams().update(pcSwMdc - Swco, krwSw, krnSwMdc - Swco);
     }
 
     /*!
@@ -220,7 +226,8 @@ public:
     static Evaluation pcgn(const Params& params,
                            const FluidState& fs)
     {
-        const auto Sw = 1.0 - Opm::decay<Evaluation>(fs.saturation(gasPhaseIdx));
+        // Maximum attainable oil saturation is 1-SWL.
+        const auto Sw = 1.0 - params.Swl() - Opm::decay<Evaluation>(fs.saturation(gasPhaseIdx));
         return GasOilMaterialLaw::twoPhaseSatPcnw(params.gasOilParams(), Sw);
     }
 
@@ -316,7 +323,8 @@ public:
     static Evaluation krg(const Params& params,
                           const FluidState& fluidState)
     {
-        const Evaluation Sw = 1.0 - Opm::decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
+        // Maximum attainable oil saturation is 1-SWL.
+        const Evaluation Sw = 1.0 - params.Swl() - Opm::decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
         return GasOilMaterialLaw::twoPhaseSatKrn(params.gasOilParams(), Sw);
     }
 
@@ -379,12 +387,13 @@ public:
     template <class FluidState>
     static void updateHysteresis(Params& params, const FluidState& fluidState)
     {
-        Scalar Sw = Opm::scalarValue(fluidState.saturation(waterPhaseIdx));
-        Scalar So = Opm::scalarValue(fluidState.saturation(oilPhaseIdx));
-        Scalar Sg = Opm::scalarValue(fluidState.saturation(gasPhaseIdx));
+        const Scalar Swco = params.Swl();
+
+        const Scalar Sw = clampSaturation(fluidState, waterPhaseIdx);
+        const Scalar So = clampSaturation(fluidState, oilPhaseIdx);
+        const Scalar Sg = clampSaturation(fluidState, gasPhaseIdx);
 
         if (params.inconsistentHysteresisUpdate()) {
-            Sg = std::min(Scalar(1.0), std::max(Scalar(0.0), Sg));
             // NOTE: the saturations which are passed to update the hysteresis curves are
             // inconsistent with the ones used to calculate the relative permabilities. We do
             // it like this anyway because (a) the saturation functions of opm-core do it
@@ -394,20 +403,33 @@ public:
             //
             // Though be aware that from a physical perspective this is definitively
             // incorrect!
-            params.oilWaterParams().update(/*pcSw=*/1 - So, /*krwSw=*/1 - So, /*krn_Sw=*/1 - So);
-            params.gasOilParams().update(/*pcSw=*/1 - Sg, /*krwSw=*/1 - Sg, /*krn_Sw=*/1 - Sg);
+            params.oilWaterParams().update(/*pcSw=*/  1.0 - So,
+                                           /*krwSw=*/ 1.0 - So,
+                                           /*krnSw=*/ 1.0 - So);
+
+            params.gasOilParams().update(/*pcSw=*/  1.0 - Swco - Sg,
+                                         /*krwSw=*/ 1.0 - Swco - Sg,
+                                         /*krnSw=*/ 1.0 - Swco - Sg);
         }
         else {
-            const Scalar Swco = params.Swl();
-            Sw = std::min(Scalar(1.0), std::max(Scalar(0.0), Sw));
-            Sg = std::min(Scalar(1.0), std::max(Scalar(0.0), Sg));
-
             const Scalar Sw_ow = Sg + std::max(Swco, Sw);
-            const Scalar So_go = 1 + Sw_ow;
+            const Scalar So_go = 1.0 - Sw_ow;
 
-            params.oilWaterParams().update(/*pcSw=*/Sw, /*krwSw=*/1 - Sg, /*krnSw=*/Sw_ow);
-            params.gasOilParams().update(/*pcSw=*/1 - Sg, /*krwSw=*/So_go, /*krnSw=*/1 - Sg);
+            params.oilWaterParams().update(/*pcSw=*/  Sw,
+                                           /*krwSw=*/ 1 - Sg,
+                                           /*krnSw=*/ Sw_ow);
+
+            params.gasOilParams().update(/*pcSw=*/  1.0 - Swco - Sg,
+                                         /*krwSw=*/ So_go,
+                                         /*krnSw=*/ 1.0 - Swco - Sg);
         }
+    }
+
+    template <class FluidState>
+    static Scalar clampSaturation(const FluidState& fluidState, const int phaseIndex)
+    {
+        const auto sat = Opm::scalarValue(fluidState.saturation(phaseIndex));
+        return std::clamp(sat, Scalar{0.0}, Scalar{1.0});
     }
 };
 } // namespace Opm

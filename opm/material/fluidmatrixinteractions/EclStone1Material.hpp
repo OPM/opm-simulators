@@ -186,8 +186,12 @@ public:
                                        Scalar& krnSwMdc,
                                        const Params& params)
     {
-        pcSwMdc = params.gasOilParams().pcSwMdc();
-        krnSwMdc = params.gasOilParams().krnSwMdc();
+        const auto Swco = params.Swl();
+
+        // Pretend oil saturation is 'Swco' larger than it really is in
+        // order to infer correct maximum Sg values in output layer.
+        pcSwMdc = std::min(params.gasOilParams().pcSwMdc() + Swco, Scalar{2.0});
+        krnSwMdc = std::min(params.gasOilParams().krnSwMdc() + Swco, Scalar{2.0});
 
         Valgrind::CheckDefined(pcSwMdc);
         Valgrind::CheckDefined(krnSwMdc);
@@ -203,8 +207,10 @@ public:
                                           const Scalar& krnSwMdc,
                                           Params& params)
     {
+        // Maximum attainable oil saturation is 1-SWL
+        const auto Swco = params.Swl();
         const double krwSw = 2.0; //Should not be used
-        params.gasOilParams().update(pcSwMdc, krwSw, krnSwMdc);
+        params.gasOilParams().update(pcSwMdc - Swco, krwSw, krnSwMdc - Swco);
     }
 
     /*!
@@ -220,7 +226,8 @@ public:
     static Evaluation pcgn(const Params& params,
                            const FluidState& fs)
     {
-        const auto Sw = 1.0 - Opm::decay<Evaluation>(fs.saturation(gasPhaseIdx));
+        // Maximum attainable oil saturation is 1-SWL
+        const auto Sw = 1.0 - params.Swl() - Opm::decay<Evaluation>(fs.saturation(gasPhaseIdx));
         return GasOilMaterialLaw::twoPhaseSatPcnw(params.gasOilParams(), Sw);
     }
 
@@ -321,7 +328,8 @@ public:
     static Evaluation krg(const Params& params,
                           const FluidState& fluidState)
     {
-        const Evaluation Sw = 1 - Opm::decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
+        // Maximum attainable oil saturation is 1-SWL,
+        const Evaluation Sw = 1 - params.Swl() - Opm::decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
         return GasOilMaterialLaw::twoPhaseSatKrn(params.gasOilParams(), Sw);
     }
 
@@ -387,11 +395,14 @@ public:
     template <class FluidState>
     static void updateHysteresis(Params& params, const FluidState& fluidState)
     {
+        const Scalar Swco = params.Swl();
         const Scalar Sw = Opm::scalarValue(fluidState.saturation(waterPhaseIdx));
         const Scalar Sg = Opm::scalarValue(fluidState.saturation(gasPhaseIdx));
 
         params.oilWaterParams().update(/*pcSw=*/Sw, /*krwSw=*/Sw, /*krnSw=*/Sw);
-        params.gasOilParams().update(/*pcSw=*/1 - Sg, /*krwSw=*/1 - Sg, /*krnSw=*/1 - Sg);
+        params.gasOilParams().update(/*pcSw=*/  1.0 - Swco - Sg,
+                                     /*krwSw=*/ 1.0 - Swco - Sg,
+                                     /*krnSw=*/ 1.0 - Swco - Sg);
     }
 };
 } // namespace Opm

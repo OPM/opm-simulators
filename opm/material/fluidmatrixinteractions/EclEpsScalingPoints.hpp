@@ -150,10 +150,9 @@ struct EclEpsScalingPointsInfo
      * I.e., the values which are used for the nested Fluid-Matrix interactions and which
      * are produced by them.
      */
-    void extractUnscaled(const Opm::satfunc::RawTableEndPoints&    rtep,
-                         const Opm::satfunc::RawFunctionValues&    rfunc,
-                         const Opm::SatFuncControls::KeywordFamily family,
-                         const std::vector<double>::size_type      satRegionIdx)
+    void extractUnscaled(const Opm::satfunc::RawTableEndPoints& rtep,
+                         const Opm::satfunc::RawFunctionValues& rfunc,
+                         const std::vector<double>::size_type   satRegionIdx)
     {
         this->Swl = rtep.connate.water[satRegionIdx];
         this->Sgl = rtep.connate.gas  [satRegionIdx];
@@ -162,10 +161,6 @@ struct EclEpsScalingPointsInfo
         this->Sgcr  = rtep.critical.gas         [satRegionIdx];
         this->Sowcr = rtep.critical.oil_in_water[satRegionIdx];
         this->Sogcr = rtep.critical.oil_in_gas  [satRegionIdx];
-        if (family == SatFuncControls::KeywordFamily::Family_I) {
-            // Hack.  Papers over unknown problems elsewhere.
-            this->Sogcr += this->Swl;
-        }
 
         this->Swu = rtep.maximum.water[satRegionIdx];
         this->Sgu = rtep.maximum.gas  [satRegionIdx];
@@ -352,21 +347,23 @@ public:
             assert(epsSystemType == EclGasOilSystem);
 
             // saturation scaling for capillary pressure
-            saturationPcPoints_[0] = 1.0 - epsInfo.Sgu;
-            saturationPcPoints_[2] = saturationPcPoints_[1] = 1.0 - epsInfo.Sgl;
+            saturationPcPoints_[0] = 1.0 - epsInfo.Swl - epsInfo.Sgu;
+            saturationPcPoints_[2] = saturationPcPoints_[1] = 1.0 - epsInfo.Swl - epsInfo.Sgl;
 
             // krw saturation scaling endpoints
             saturationKrwPoints_[0] = epsInfo.Sogcr;
-            saturationKrwPoints_[1] = 1 - epsInfo.Sgcr - epsInfo.Swl;
-            saturationKrwPoints_[2] = 1 - epsInfo.Swl - epsInfo.Sgl;
+            saturationKrwPoints_[1] = 1.0 - epsInfo.Sgcr - epsInfo.Swl;
+            saturationKrwPoints_[2] = 1.0 - epsInfo.Swl - epsInfo.Sgl;
 
             // krn saturation scaling endpoints (with the non-wetting phase being gas).
-            // because opm-material specifies non-wetting phase relperms in terms of the
-            // wetting phase saturations, the code here uses 1 minus the values specified
-            // by the Eclipse TD and the order of the scaling points is reversed
-            saturationKrnPoints_[2] = 1.0 - epsInfo.Sgcr;
-            saturationKrnPoints_[1] = epsInfo.Sogcr + epsInfo.Swl;
-            saturationKrnPoints_[0] = 1.0 - epsInfo.Sgu;
+            //
+            // As opm-material specifies non-wetting phase relative
+            // permeabilities in terms of the wetting phase saturations, the
+            // code here uses (1-SWL) minus the values specified by the
+            // ECLIPSE TD and the order of the scaling points is reversed.
+            saturationKrnPoints_[2] = 1.0 - epsInfo.Swl - epsInfo.Sgcr;
+            saturationKrnPoints_[1] = epsInfo.Sogcr;
+            saturationKrnPoints_[0] = 1.0 - epsInfo.Swl - epsInfo.Sgu;
 
             if (config.enableLeverettScaling())
                 maxPcnwOrLeverettFactor_ = epsInfo.pcgoLeverettFactor;
