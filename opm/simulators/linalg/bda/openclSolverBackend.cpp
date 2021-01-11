@@ -44,7 +44,7 @@ using Opm::OpmLog;
 using Dune::Timer;
 
 template <unsigned int block_size>
-openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_, double tolerance_, unsigned int platformID_, unsigned int deviceID_, ILUReorder opencl_ilu_reorder) : BdaSolver<block_size>(verbosity_, maxit_, tolerance_, platformID_, deviceID_) {
+openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_, double tolerance_, unsigned int platformID_, unsigned int deviceID_, ILUReorder opencl_ilu_reorder_) : BdaSolver<block_size>(verbosity_, maxit_, tolerance_, platformID_, deviceID_), opencl_ilu_reorder(opencl_ilu_reorder_) {
     prec = new Preconditioner(opencl_ilu_reorder, verbosity_);
 
     cl_int err = CL_SUCCESS;
@@ -485,7 +485,6 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
         prec->setOpenCLContext(context.get());
         prec->setOpenCLQueue(queue.get());
 
-        rb = new double[N];
         tmp = new double[N];
 #if COPY_ROW_BY_ROW
         vals_contiguous = new double[N];
@@ -508,7 +507,12 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
         d_Acols = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * nnzb);
         d_Arows = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (Nb + 1));
 
-        d_toOrder = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * Nb);
+        bool reorder = (opencl_ilu_reorder != ILUReorder::NONE);
+        if (reorder) {
+            rb = new double[N];
+            d_toOrder = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * Nb);
+        }
+        wcontainer->init(wellContribs, N, Nb, reorder);
 
         // queue.enqueueNDRangeKernel() is a blocking/synchronous call, at least for NVIDIA
         // cl::make_kernel<> myKernel(); myKernel(args, arg1, arg2); is also blocking
@@ -544,7 +548,9 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
 
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::finalize() {
-    delete[] rb;
+    if (opencl_ilu_reorder != ILUReorder::NONE) {
+        delete[] rb;
+    }
     delete[] tmp;
 #if COPY_ROW_BY_ROW
     delete[] vals_contiguous;
@@ -572,7 +578,9 @@ void openclSolverBackend<block_size>::copy_system_to_gpu() {
     queue->enqueueWriteBuffer(d_Acols, CL_TRUE, 0, sizeof(int) * nnzb, rmat->colIndices);
     queue->enqueueWriteBuffer(d_Arows, CL_TRUE, 0, sizeof(int) * (Nb + 1), rmat->rowPointers);
     queue->enqueueWriteBuffer(d_b, CL_TRUE, 0, sizeof(double) * N, rb);
-    queue->enqueueWriteBuffer(d_toOrder, CL_TRUE, 0, sizeof(int) * Nb, toOrder);
+    if (opencl_ilu_reorder != ILUReorder::NONE) {
+        queue->enqueueWriteBuffer(d_toOrder, CL_TRUE, 0, sizeof(int) * Nb, toOrder);
+    }
     queue->enqueueFillBuffer(d_x, 0, 0, sizeof(double) * N, nullptr, &event);
     event.wait();
 
@@ -624,9 +632,13 @@ bool openclSolverBackend<block_size>::analyse_matrix() {
     int lmem_per_work_group = work_group_size * sizeof(double);
     prec->setKernelParameters(work_group_size, total_work_items, lmem_per_work_group);
 
-    toOrder = prec->getToOrder();
-    fromOrder = prec->getFromOrder();
-    rmat = prec->getRMat();
+    if (opencl_ilu_reorder == ILUReorder::NONE) {
+        rmat = mat.get();
+    } else {
+        toOrder = prec->getToOrder();
+        fromOrder = prec->getFromOrder();
+        rmat = prec->getRMat();
+    }
 
     if (verbosity > 2) {
         std::ostringstream out;
@@ -645,7 +657,11 @@ void openclSolverBackend<block_size>::update_system(double *vals, double *b) {
     Timer t;
 
     mat->nnzValues = vals;
-    reorderBlockedVectorByPattern<block_size>(mat->Nb, b, fromOrder, rb);
+    if (opencl_ilu_reorder != ILUReorder::NONE) {
+        reorderBlockedVectorByPattern<block_size>(mat->Nb, b, fromOrder, rb);
+    } else {
+        rb = b;
+    }
 
     if (verbosity > 2) {
         std::ostringstream out;
@@ -703,8 +719,12 @@ template <unsigned int block_size>
 void openclSolverBackend<block_size>::get_result(double *x) {
     Timer t;
 
-    queue->enqueueReadBuffer(d_x, CL_TRUE, 0, sizeof(double) * N, rb);
-    reorderBlockedVectorByPattern<block_size>(mat->Nb, rb, toOrder, x);
+    if (opencl_ilu_reorder != ILUReorder::NONE) {
+        queue->enqueueReadBuffer(d_x, CL_TRUE, 0, sizeof(double) * N, rb);
+        reorderBlockedVectorByPattern<block_size>(mat->Nb, rb, toOrder, x);
+    } else {
+        queue->enqueueReadBuffer(d_x, CL_TRUE, 0, sizeof(double) * N, x);
+    }
 
     if (verbosity > 2) {
         std::ostringstream out;

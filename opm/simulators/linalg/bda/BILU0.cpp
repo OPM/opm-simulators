@@ -53,8 +53,11 @@ namespace bda
     {
         delete[] invDiagVals;
         delete[] diagIndex;
-        delete[] toOrder;
-        delete[] fromOrder;
+        if (opencl_ilu_reorder != ILUReorder::NONE) {
+            delete[] toOrder;
+            delete[] fromOrder;
+        }
+        delete[] LUmat->nnzValues;
     }
 
     template <unsigned int block_size>
@@ -67,23 +70,29 @@ namespace bda
         this->nnz = mat->nnzbs * block_size * block_size;
         this->nnzbs = mat->nnzbs;
 
-        toOrder = new int[Nb];
-        fromOrder = new int[Nb];
+        int *CSCRowIndices = nullptr;
+        int *CSCColPointers = nullptr;
 
-        int *CSCRowIndices = new int[nnzbs];
-        int *CSCColPointers = new int[Nb + 1];
+        if (opencl_ilu_reorder == ILUReorder::NONE) {
+            LUmat = std::make_unique<BlockedMatrix<block_size> >(*mat);
+        } else {
+            toOrder = new int[Nb];
+            fromOrder = new int[Nb];
+            CSCRowIndices = new int[nnzbs];
+            CSCColPointers = new int[Nb + 1];
+            rmat = std::make_shared<BlockedMatrix<block_size> >(mat->Nb, mat->nnzbs);
+            LUmat = std::make_unique<BlockedMatrix<block_size> >(*rmat);
 
-        Timer t_convert;
-        csrPatternToCsc(mat->colIndices, mat->rowPointers, CSCRowIndices, CSCColPointers, mat->Nb);
-        if(verbosity >= 3){
-            std::ostringstream out;
-            out << "BILU0 convert CSR to CSC: " << t_convert.stop() << " s";
-            OpmLog::info(out.str());
+            Timer t_convert;
+            csrPatternToCsc(mat->colIndices, mat->rowPointers, CSCRowIndices, CSCColPointers, mat->Nb);
+            if(verbosity >= 3){
+                std::ostringstream out;
+                out << "BILU0 convert CSR to CSC: " << t_convert.stop() << " s";
+                OpmLog::info(out.str());
+            }
         }
 
         Timer t_analysis;
-        rmat = std::make_shared<BlockedMatrix<block_size> >(mat->Nb, mat->nnzbs);
-        LUmat = std::make_unique<BlockedMatrix<block_size> >(*rmat);
         std::ostringstream out;
         if (opencl_ilu_reorder == ILUReorder::LEVEL_SCHEDULING) {
             out << "BILU0 reordering strategy: " << "level_scheduling\n";
@@ -93,15 +102,11 @@ namespace bda
             findGraphColoring<block_size>(mat->colIndices, mat->rowPointers, CSCRowIndices, CSCColPointers, mat->Nb, mat->Nb, mat->Nb, &numColors, toOrder, fromOrder, rowsPerColor);
         } else if (opencl_ilu_reorder == ILUReorder::NONE) {
             out << "BILU0 reordering strategy: none\n";
-            numColors = 1;
-            rowsPerColor.emplace_back(Nb);
-            // numColors = Nb;
-            // for(int i = 0; i < Nb; ++i){
-            //     rowsPerColor.emplace_back(1);
-            // }
+            // numColors = 1;
+            // rowsPerColor.emplace_back(Nb);
+            numColors = Nb;
             for(int i = 0; i < Nb; ++i){
-                toOrder[i] = i;
-                fromOrder[i] = i;
+                rowsPerColor.emplace_back(1);
             }
         } else {
             OPM_THROW(std::logic_error, "Error ilu reordering strategy not set correctly\n");
@@ -114,8 +119,10 @@ namespace bda
         }
         OpmLog::info(out.str());
 
-        delete[] CSCRowIndices;
-        delete[] CSCColPointers;
+        if (opencl_ilu_reorder != ILUReorder::NONE) {
+            delete[] CSCRowIndices;
+            delete[] CSCColPointers;
+        }
 
         diagIndex = new int[mat->Nb];
         invDiagVals = new double[mat->Nb * bs * bs];
@@ -385,18 +392,24 @@ namespace bda
     bool BILU0<block_size>::create_preconditioner(BlockedMatrix<block_size> *mat)
     {
         const unsigned int bs = block_size;
-        Timer t_reorder;
-        reorderBlockedMatrixByPattern<block_size>(mat, toOrder, fromOrder, rmat.get());
+        auto *m = mat;
 
-        if (verbosity >= 3){
-            std::ostringstream out;
-            out << "BILU0 reorder matrix: " << t_reorder.stop() << " s";
-            OpmLog::info(out.str());
+        if (opencl_ilu_reorder != ILUReorder::NONE) {
+            m = rmat.get();
+            Timer t_reorder;
+            reorderBlockedMatrixByPattern<block_size>(mat, toOrder, fromOrder, rmat.get());
+
+            if (verbosity >= 3){
+                std::ostringstream out;
+                out << "BILU0 reorder matrix: " << t_reorder.stop() << " s";
+                OpmLog::info(out.str());
+            }
         }
 
         // TODO: remove this copy by replacing inplace ilu decomp by out-of-place ilu decomp
+        // this copy can have mat or rmat ->nnzValues as origin, depending on the reorder strategy
         Timer t_copy;
-        memcpy(LUmat->nnzValues, rmat->nnzValues, sizeof(double) * bs * bs * rmat->nnzbs);
+        memcpy(LUmat->nnzValues, m->nnzValues, sizeof(double) * bs * bs * m->nnzbs);
 
         if (verbosity >= 3){
             std::ostringstream out;
