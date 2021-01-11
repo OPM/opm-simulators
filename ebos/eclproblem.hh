@@ -1019,18 +1019,18 @@ public:
         int episodeIdx = simulator.episodeIndex();
         auto& eclState = simulator.vanguard().eclState();
         const auto& schedule = simulator.vanguard().schedule();
-        const auto& events = schedule.getEvents();
+        const auto& events = schedule[episodeIdx].events();
         const auto& timeMap = schedule.getTimeMap();
 
-        if (episodeIdx >= 0 && events.hasEvent(Opm::ScheduleEvents::GEO_MODIFIER, episodeIdx)) {
+        if (episodeIdx >= 0 && events.hasEvent(Opm::ScheduleEvents::GEO_MODIFIER)) {
             // bring the contents of the keywords to the current state of the SCHEDULE
             // section.
             //
             // TODO (?): make grid topology changes possible (depending on what exactly
             // has changed, the grid may need be re-created which has some serious
             // implications on e.g., the solution of the simulation.)
-            const auto& miniDeck = schedule.getModifierDeck(episodeIdx);
-            eclState.applyModifierDeck(miniDeck);
+            const auto& miniDeck = schedule[episodeIdx].geo_keywords();
+            eclState.apply_geo_keywords( miniDeck );
 
             // re-compute all quantities which may possibly be affected.
             transmissibilities_.update(true);
@@ -1058,7 +1058,7 @@ public:
 
         // react to TUNING changes
         bool tuningEvent = false;
-        if (episodeIdx > 0 && enableTuning_ && events.hasEvent(Opm::ScheduleEvents::TUNING_CHANGE, episodeIdx))
+        if (episodeIdx > 0 && enableTuning_ && events.hasEvent(Opm::ScheduleEvents::TUNING_CHANGE))
         {
             const auto& tuning = schedule[episodeIdx].tuning();
             initialTimeStepSize_ = tuning.TSINIT;
@@ -3243,7 +3243,6 @@ private:
             return dtNext;
 
         const auto& simulator = this->simulator();
-        const auto& events = simulator.vanguard().schedule().getEvents();
         int episodeIdx = simulator.episodeIndex();
 
         // first thing in the morning, limit the time step size to the maximum size
@@ -3265,11 +3264,12 @@ private:
             // if a well event occured, respect the limit for the maximum time step after
             // that, too
             int reportStepIdx = std::max(episodeIdx, 0);
+            const auto& events = simulator.vanguard().schedule()[reportStepIdx].events();
             bool wellEventOccured =
-                    events.hasEvent(Opm::ScheduleEvents::NEW_WELL, reportStepIdx)
-                    || events.hasEvent(Opm::ScheduleEvents::PRODUCTION_UPDATE, reportStepIdx)
-                    || events.hasEvent(Opm::ScheduleEvents::INJECTION_UPDATE, reportStepIdx)
-                    || events.hasEvent(Opm::ScheduleEvents::WELL_STATUS_CHANGE, reportStepIdx);
+                    events.hasEvent(Opm::ScheduleEvents::NEW_WELL)
+                    || events.hasEvent(Opm::ScheduleEvents::PRODUCTION_UPDATE)
+                    || events.hasEvent(Opm::ScheduleEvents::INJECTION_UPDATE)
+                    || events.hasEvent(Opm::ScheduleEvents::WELL_STATUS_CHANGE);
             if (episodeIdx >= 0 && wellEventOccured && maxTimeStepAfterWellEvent_ > 0)
                 dtNext = std::min(dtNext, maxTimeStepAfterWellEvent_);
         }

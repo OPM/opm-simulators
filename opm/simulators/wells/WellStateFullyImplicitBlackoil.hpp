@@ -121,7 +121,7 @@ namespace Opm
                                                      + ScheduleEvents::INJECTION_UPDATE;
                 for (int w = 0; w < nw; ++w) {
                     effective_events_occurred_[w]
-                        = schedule.hasWellGroupEvent(wells_ecl[w].name(), effective_events_mask, report_step);
+                        = schedule[report_step].wellgroup_events().hasEvent(wells_ecl[w].name(), effective_events_mask);
                 }
             } // end of if (!well_ecl.empty() )
 

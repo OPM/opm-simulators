@@ -282,7 +282,7 @@ namespace Opm {
                                                  + ScheduleEvents::INJECTION_UPDATE
                                                  + ScheduleEvents::NEW_WELL;
 
-            if(!schedule().hasWellGroupEvent(well.name(), effective_events_mask, timeStepIdx))
+            if(!schedule()[timeStepIdx].wellgroup_events().hasEvent(well.name(), effective_events_mask))
                 continue;
 
             if (well.isProducer()) {
@@ -308,7 +308,7 @@ namespace Opm {
                                    schedule().getVFPProdTables(timeStepIdx)) );
 
         this->initializeWellProdIndCalculators();
-        if (this->schedule().getEvents().hasEvent(ScheduleEvents::Events::WELL_PRODUCTIVITY_INDEX, timeStepIdx)) {
+        if (this->schedule()[timeStepIdx].events().hasEvent(ScheduleEvents::Events::WELL_PRODUCTIVITY_INDEX)) {
             this->runWellPIScaling(timeStepIdx, local_deferredLogger);
         }
 
@@ -2628,10 +2628,9 @@ namespace Opm {
 
         auto hasWellPIEvent = [this, timeStepIdx](const int well_index) -> bool
         {
-            return this->schedule()
-                .hasWellGroupEvent(this->wells_ecl_[well_index].name(),
-                                   ScheduleEvents::Events::WELL_PRODUCTIVITY_INDEX,
-                                   timeStepIdx);
+            return this->schedule()[timeStepIdx]
+                .wellgroup_events().hasEvent(this->wells_ecl_[well_index].name(),
+                                             ScheduleEvents::Events::WELL_PRODUCTIVITY_INDEX);
         };
 
         auto getWellPI = [this](const int well_index) -> double
