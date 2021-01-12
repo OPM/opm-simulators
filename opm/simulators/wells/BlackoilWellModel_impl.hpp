@@ -426,7 +426,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::wellTesting(const int timeStepIdx, const double simulationTime, Opm::DeferredLogger& deferred_logger) {
-        const auto& wtest_config = schedule().wtestConfig(timeStepIdx);
+        const auto& wtest_config = schedule()[timeStepIdx].wtest_config();
         if (wtest_config.size() != 0) { // there is a WTEST request
 
             // average B factors are required for the convergence checking of well equations
