@@ -56,7 +56,7 @@ GasLiftRuntime(
     const int report_step_idx = this->ebos_simulator_.episodeIndex();
     auto ecl_well = this->std_well_.wellEcl();
     this->well_name_ = ecl_well.name();
-    const GasLiftOpt& glo = schedule.glo(report_step_idx);
+    const GasLiftOpt& glo = schedule[report_step_idx].glo();
     // NOTE: According to LIFTOPT, item 1:
     //   "Increment size for lift gas injection rate. Lift gas is
     //   allocated to individual wells in whole numbers of the increment

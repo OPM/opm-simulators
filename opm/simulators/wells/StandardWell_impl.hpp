@@ -2681,7 +2681,7 @@ namespace Opm
         }
         const int report_step_idx = ebos_simulator.episodeIndex();
         const Opm::Schedule& schedule = ebos_simulator.vanguard().schedule();
-        const GasLiftOpt& glo = schedule.glo(report_step_idx);
+        const GasLiftOpt& glo = schedule[report_step_idx].glo();
         auto increment = glo.gaslift_increment();
         // NOTE: According to the manual: LIFTOPT, item 1, :
         //   "Increment size for lift gas injection rate. Lift gas is
@@ -2711,7 +2711,7 @@ namespace Opm
     {
         const int report_step_idx = ebos_simulator.episodeIndex();
         const Opm::Schedule& schedule = ebos_simulator.vanguard().schedule();
-        const GasLiftOpt& glo = schedule.glo(report_step_idx);
+        const GasLiftOpt& glo = schedule[report_step_idx].glo();
         const int iteration_idx = ebos_simulator.model().newtonMethod().numIterations();
         if (glo.all_newton()) {
             const int nupcol = schedule[report_step_idx].nupcol();
