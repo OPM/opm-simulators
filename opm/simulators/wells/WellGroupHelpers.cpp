@@ -21,6 +21,8 @@
 #include <config.h>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group/GConSump.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group/GConSale.hpp>
 
 #include <algorithm>
 #include <stack>
@@ -98,7 +100,7 @@ namespace WellGroupHelpers
             wellState.setCurrentProductionGroupControl(group.name(), controls.cmode);
         }
 
-        if (schedule.gConSale(reportStepIdx).has(group.name())) {
+        if (schedule[reportStepIdx].gconsale().has(group.name())) {
             wellState.setCurrentInjectionGroupControl(Phase::GAS, group.name(), Group::InjectionCMode::SALE);
         }
     }
@@ -600,8 +602,8 @@ namespace WellGroupHelpers
         }
 
         // add import rate and substract consumption rate for group for gas
-        if (schedule.gConSump(reportStepIdx).has(group.name())) {
-            const auto& gconsump = schedule.gConSump(reportStepIdx).get(group.name(), st);
+        if (schedule[reportStepIdx].gconsump().has(group.name())) {
+            const auto& gconsump = schedule[reportStepIdx].gconsump().get(group.name(), st);
             if (pu.phase_used[BlackoilPhases::Vapour]) {
                 rein[pu.phase_pos[BlackoilPhases::Vapour]] += gconsump.import_rate;
                 rein[pu.phase_pos[BlackoilPhases::Vapour]] -= gconsump.consumption_rate;
@@ -1158,7 +1160,7 @@ namespace WellGroupHelpers
             // Gas injection rate = Total gas production rate + gas import rate - gas consumption rate - sales rate;
             // Gas import and consumption is already included in the REIN rates
             double inj_rate = wellState.currentInjectionREINRates(group.name())[phasePos];
-            const auto& gconsale = schedule.gConSale(reportStepIdx).get(group.name(), summaryState);
+            const auto& gconsale = schedule[reportStepIdx].gconsale().get(group.name(), summaryState);
             inj_rate -= gconsale.sales_target;
 
             const double current_rate = rates[phasePos];

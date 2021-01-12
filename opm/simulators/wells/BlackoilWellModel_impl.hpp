@@ -2291,7 +2291,7 @@ namespace Opm {
         }
 
         // check if gconsale is used for this group
-        if (!schedule().gConSale(reportStepIdx).has(group.name()))
+        if (!schedule()[reportStepIdx].gconsale().has(group.name()))
             return;
 
         std::ostringstream ss;
@@ -2299,7 +2299,7 @@ namespace Opm {
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
 
-        const auto& gconsale = schedule().gConSale(reportStepIdx).get(group.name(), summaryState);
+        const auto& gconsale = schedule()[reportStepIdx].gconsale().get(group.name(), summaryState);
         const Group::ProductionCMode& oldProductionControl = well_state.currentProductionGroupControl(group.name());
 
 
@@ -2315,8 +2315,8 @@ namespace Opm {
         double production_target = gconsale.sales_target + injection_rate;
 
         // add import rate and substract consumption rate for group for gas
-        if (schedule().gConSump(reportStepIdx).has(group.name())) {
-            const auto& gconsump = schedule().gConSump(reportStepIdx).get(group.name(), summaryState);
+        if (schedule()[reportStepIdx].gconsump().has(group.name())) {
+            const auto& gconsump = schedule()[reportStepIdx].gconsump().get(group.name(), summaryState);
             if (phase_usage_.phase_used[BlackoilPhases::Vapour]) {
                 sales_rate += gconsump.import_rate;
                 sales_rate -= gconsump.consumption_rate;
