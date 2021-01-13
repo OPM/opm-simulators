@@ -76,6 +76,10 @@ private:
                                     cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                     const unsigned int, const unsigned int, cl::Buffer&,
                                     cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg> > stdwell_apply_k;
+    std::shared_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
+                                    cl::Buffer&, cl::Buffer&, cl::Buffer&,
+                                    const unsigned int, const unsigned int, cl::Buffer&,
+                                    cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg> > stdwell_apply_no_reorder_k;
 
     Preconditioner *prec = nullptr;                               // only supported preconditioner is BILU0
     int *toOrder = nullptr, *fromOrder = nullptr;                 // BILU0 reorders rows of the matrix via these mappings
@@ -152,7 +156,8 @@ private:
     /// Reorder the linear system so it corresponds with the coloring
     /// \param[in] vals           array of nonzeroes, each block is stored row-wise and contiguous, contains nnz values
     /// \param[in] b              input vectors, contains N values
-    void update_system(double *vals, double *b);
+    /// \param[out] wellContribs  WellContributions, to set reordering
+    void update_system(double *vals, double *b, WellContributions &wellContribs);
 
     /// Update linear system on GPU, don't copy rowpointers and colindices, they stay the same
     void update_system_on_gpu();

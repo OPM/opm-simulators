@@ -20,7 +20,6 @@
 #include <config.h>
 #include <cmath>
 #include <sstream>
-#include <iostream>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
@@ -318,7 +317,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
     double norm, norm_0;
 
     if(wellContribs.getNumWells() > 0){
-        wellContribs.setKernel(stdwell_apply_k.get());
+        wellContribs.setKernel(stdwell_apply_k.get(), stdwell_apply_no_reorder_k.get());
     }
 
     Timer t_total, t_prec(false), t_spmv(false), t_well(false), t_rest(false);
@@ -479,6 +478,7 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
         source.emplace_back(std::make_pair(ILU_apply1_s, strlen(ILU_apply1_s)));
         source.emplace_back(std::make_pair(ILU_apply2_s, strlen(ILU_apply2_s)));
         source.emplace_back(std::make_pair(stdwell_apply_s, strlen(stdwell_apply_s)));
+        source.emplace_back(std::make_pair(stdwell_apply_no_reorder_s, strlen(stdwell_apply_no_reorder_s)));
         program = cl::Program(*context, source);
         program.build(devices);
 
@@ -512,7 +512,6 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
             rb = new double[N];
             d_toOrder = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * Nb);
         }
-        wcontainer->init(wellContribs, N, Nb, reorder);
 
         // queue.enqueueNDRangeKernel() is a blocking/synchronous call, at least for NVIDIA
         // cl::make_kernel<> myKernel(); myKernel(args, arg1, arg2); is also blocking
@@ -529,6 +528,10 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
                                                   cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                                   const unsigned int, const unsigned int, cl::Buffer&,
                                                   cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg>(cl::Kernel(program, "stdwell_apply")));
+        stdwell_apply_no_reorder_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
+                                                  cl::Buffer&, cl::Buffer&, cl::Buffer&,
+                                                  const unsigned int, const unsigned int, cl::Buffer&,
+                                                  cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg>(cl::Kernel(program, "stdwell_apply_no_reorder")));
 
         prec->setKernels(ILU_apply1_k.get(), ILU_apply2_k.get());
 
@@ -653,14 +656,16 @@ bool openclSolverBackend<block_size>::analyse_matrix() {
 
 
 template <unsigned int block_size>
-void openclSolverBackend<block_size>::update_system(double *vals, double *b) {
+void openclSolverBackend<block_size>::update_system(double *vals, double *b, WellContributions &wellContribs) {
     Timer t;
 
     mat->nnzValues = vals;
     if (opencl_ilu_reorder != ILUReorder::NONE) {
         reorderBlockedVectorByPattern<block_size>(mat->Nb, b, fromOrder, rb);
+        wellContribs.setReordering(toOrder, true);
     } else {
         rb = b;
+        wellContribs.setReordering(nullptr, false);
     }
 
     if (verbosity > 2) {
@@ -743,13 +748,13 @@ SolverStatus openclSolverBackend<block_size>::solve_system(int N_, int nnz_, int
                 return SolverStatus::BDA_SOLVER_ANALYSIS_FAILED;
             }
         }
-        update_system(vals, b);
+        update_system(vals, b, wellContribs);
         if (!create_preconditioner()) {
             return SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
         }
         copy_system_to_gpu();
     } else {
-        update_system(vals, b);
+        update_system(vals, b, wellContribs);
         if (!create_preconditioner()) {
             return SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
         }

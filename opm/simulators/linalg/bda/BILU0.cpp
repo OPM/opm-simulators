@@ -57,7 +57,6 @@ namespace bda
             delete[] toOrder;
             delete[] fromOrder;
         }
-        delete[] LUmat->nnzValues;
     }
 
     template <unsigned int block_size>
@@ -129,8 +128,6 @@ namespace bda
 
         Lmat = std::make_unique<BlockedMatrix<block_size> >(mat->Nb, (mat->nnzbs - mat->Nb) / 2);
         Umat = std::make_unique<BlockedMatrix<block_size> >(mat->Nb, (mat->nnzbs - mat->Nb) / 2);
-
-        LUmat->nnzValues = new double[mat->nnzbs * bs * bs];
 
         s.Lvals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * bs * bs * Lmat->nnzbs);
         s.Uvals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * bs * bs * Umat->nnzbs);
