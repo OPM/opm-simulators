@@ -353,6 +353,8 @@ protected:
 
         grid_.reset(new Dune::CpGrid());
         grid_->processEclipseFormat(input_grid,
+                                    this->deck(),
+                                    this->eclState().aquifer(),
                                     /*isPeriodic=*/false,
                                     /*flipNormals=*/false,
                                     /*clipZ=*/false,
