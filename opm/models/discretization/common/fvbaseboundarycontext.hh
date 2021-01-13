@@ -77,8 +77,15 @@ public:
     void increment()
     {
         const auto& iend = gridView().iend(element());
-        while (intersectionIt_ != iend && !intersectionIt_->boundary())
-            ++ intersectionIt_;
+
+        if(intersectionIt_ == iend)
+          return;
+
+        ++intersectionIt_;
+        // iterate to the next boundary intersection
+        while (intersectionIt_ != iend && !intersectionIt_->boundary()) {
+            ++intersectionIt_;
+        }
     }
 
     /*!
