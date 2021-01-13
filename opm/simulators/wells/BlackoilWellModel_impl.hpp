@@ -1358,7 +1358,7 @@ namespace Opm {
     {
         // Get the network and return if inactive.
         const int reportStepIdx = ebosSimulator_.episodeIndex();
-        const auto& network = schedule().network(reportStepIdx);
+        const auto& network = schedule()[reportStepIdx].network();
         if (!network.active()) {
             return;
         }
