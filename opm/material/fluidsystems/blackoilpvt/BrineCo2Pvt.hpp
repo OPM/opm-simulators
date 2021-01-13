@@ -111,7 +111,7 @@ public:
         const Scalar MmNaCl = 58e-3; // molar mass of NaCl [kg/mol]
         // convert to mass fraction
         Brine::salinity = 1 / ( 1 + 1 / (molality*MmNaCl)); //
-        salinity_[numRegions] = Brine::salinity;
+        salinity_[regionIdx] = Brine::salinity;
         // set the surface conditions using the STCOND keyword
         Scalar T_ref = eclState.getTableManager().stCond().temperature;
         Scalar P_ref = eclState.getTableManager().stCond().pressure;
