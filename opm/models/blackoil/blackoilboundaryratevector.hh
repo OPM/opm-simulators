@@ -106,6 +106,9 @@ public:
         ////////
         (*this) = 0.0;
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                continue;
+            }
             const auto& pBoundary = fluidState.pressure(phaseIdx);
             const Evaluation& pInside = insideIntQuants.fluidState().pressure(phaseIdx);
 
