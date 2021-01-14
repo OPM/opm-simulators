@@ -72,6 +72,7 @@ class EclTransmissibility
     using Intersection = typename GridView::Intersection;
 
     static const bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
+    static const bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
 
     // Grid and world dimension
     enum { dimWorld = GridView::dimensionworld };
@@ -179,6 +180,13 @@ public:
             thermalHalfTrans_->reserve(numElements*6*1.05);
 
             thermalHalfTransBoundary_.clear();
+        }
+
+        // if diffusion is enabled, let's do the same for the "diffusivity"
+        if (enableDiffusion) {
+            diffusivity_->clear();
+            diffusivity_->reserve(numElements*3*1.05);
+            extractPorosity_();
         }
 
         // The MULTZ needs special case if the option is ALL
@@ -386,6 +394,42 @@ public:
                                                        faceDir);
 
                 trans_[isId_(elemIdx, outsideElemIdx)] = trans;
+
+                // update the "thermal half transmissibility" for the intersection
+                if (enableDiffusion) {
+
+                    Scalar halfDiffusivity1;
+                    Scalar halfDiffusivity2;
+
+                    computeHalfDiffusivity_(halfDiffusivity1,
+                                            faceAreaNormal,
+                                            distanceVector_(faceCenterInside,
+                                                            intersection.indexInInside(),
+                                                            elemIdx,
+                                                            axisCentroids),
+                                            porosity_[elemIdx]);
+                    computeHalfDiffusivity_(halfDiffusivity2,
+                                            faceAreaNormal,
+                                            distanceVector_(faceCenterOutside,
+                                                            intersection.indexInOutside(),
+                                                            outsideElemIdx,
+                                                            axisCentroids),
+                                            porosity_[outsideElemIdx]);
+
+                    applyNtg_(halfDiffusivity1, insideFaceIdx, elemIdx, ntg);
+                    applyNtg_(halfDiffusivity2, outsideFaceIdx, outsideElemIdx, ntg);
+
+                    //TODO Add support for multipliers
+                    Scalar diffusivity;
+                    if (std::abs(halfDiffusivity1) < 1e-30 || std::abs(halfDiffusivity2) < 1e-30)
+                        // avoid division by zero
+                        diffusivity = 0.0;
+                    else
+                        diffusivity = 1.0 / (1.0/halfDiffusivity1 + 1.0/halfDiffusivity2);
+
+
+                    (*diffusivity_)[isId_(elemIdx, outsideElemIdx)] = diffusivity;
+               }
             }
         }
 
@@ -449,6 +493,12 @@ public:
 
     Scalar thermalHalfTransBoundary(unsigned insideElemIdx, unsigned boundaryFaceIdx) const
     { return thermalHalfTransBoundary_.at(std::make_pair(insideElemIdx, boundaryFaceIdx)); }
+
+    /*!
+     * \brief Return the diffusivity for the intersection between two elements.
+     */
+    Scalar diffusivity(unsigned elemIdx1, unsigned elemIdx2) const
+    { return diffusivity_->at(isId_(elemIdx1, elemIdx2)); }
 
 private:
 
@@ -881,6 +931,21 @@ private:
                                    "(The PERM{X,Y,Z} keywords are missing)");
     }
 
+    void extractPorosity_()
+    {
+        // read the intrinsic porosity from the eclState. Note that all arrays
+        // provided by eclState are one-per-cell of "uncompressed" grid, whereas the
+        // simulation grid might remove a few elements. (e.g. because it is distributed
+        // over several processes.)
+        const auto& fp = vanguard_.eclState().fieldProps();
+        if (fp.has_double("PORO")) {
+            porosity_ = fp.get_double("PORO");
+        }
+        else
+            throw std::logic_error("Can't read the porosityfrom the ecl state. "
+                                   "(The PORO keywords are missing)");
+    }
+
     std::uint64_t isId_(std::uint32_t elemIdx1, std::uint32_t elemIdx2) const
     {
         std::uint32_t elemAIdx = std::min(elemIdx1, elemIdx2);
@@ -922,6 +987,20 @@ private:
 
         halfTrans *= std::abs(val);
         halfTrans /= distance.two_norm2();
+    }
+
+    void computeHalfDiffusivity_(Scalar& halfDiff,
+                                 const DimVector& areaNormal,
+                                 const DimVector& distance,
+                                 const Scalar& poro) const
+    {
+        halfDiff = poro;
+        Scalar val = 0;
+        for (unsigned i = 0; i < areaNormal.size(); ++i)
+            val += areaNormal[i]*distance[i];
+
+        halfDiff *= std::abs(val);
+        halfDiff /= distance.two_norm2();
     }
 
     DimVector distanceVector_(const DimVector& center,
@@ -1000,11 +1079,14 @@ private:
     const Vanguard& vanguard_;
     Scalar transmissibilityThreshold_;
     std::vector<DimMatrix> permeability_;
+    std::vector<Scalar> porosity_;
     std::unordered_map<std::uint64_t, Scalar> trans_;
     std::map<std::pair<unsigned, unsigned>, Scalar> transBoundary_;
     std::map<std::pair<unsigned, unsigned>, Scalar> thermalHalfTransBoundary_;
     Opm::ConditionalStorage<enableEnergy,
                             std::unordered_map<std::uint64_t, Scalar> > thermalHalfTrans_;
+    Opm::ConditionalStorage<enableDiffusion,
+                            std::unordered_map<std::uint64_t, Scalar> > diffusivity_;
 };
 
 } // namespace Opm
