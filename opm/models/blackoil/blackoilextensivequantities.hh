@@ -94,8 +94,6 @@ public:
         MultiPhaseParent::updateBoundary(ctx, bfIdx, timeIdx, fluidState);
 
         asImp_().updateEnergyBoundary(ctx, bfIdx, timeIdx, fluidState);
-
-        DiffusionExtensiveQuantities::updateBoundary_(ctx, bfIdx, timeIdx, fluidState);
     }
 
 protected:
