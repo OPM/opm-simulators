@@ -388,27 +388,13 @@ protected:
      */
     void update_(const ElementContext& elemCtx, unsigned faceIdx, unsigned timeIdx)
     {
-        // This uses a simple finite difference approach and is only correct for a Cartesian grids.
-        // TODO compute diffusive "transmissibilities" by re-using the logic in EclTransmissibility
         const auto& stencil = elemCtx.stencil(timeIdx);
         const auto& face = stencil.interiorFace(faceIdx);
         const auto& extQuants = elemCtx.extensiveQuantities(faceIdx, timeIdx);
-
         const auto& intQuantsInside = elemCtx.intensiveQuantities(extQuants.interiorIndex(), timeIdx);
         const auto& intQuantsOutside = elemCtx.intensiveQuantities(extQuants.exteriorIndex(), timeIdx);
 
-        // distance between the centers
-        const auto& insideScv = stencil.subControlVolume(face.interiorIndex());
-        const auto& outsideScv = stencil.subControlVolume(face.exteriorIndex());
-
-        DimVector distVec = outsideScv.globalPos();
-        distVec -= insideScv.globalPos();
-        Scalar dist = distVec.two_norm();
-
-        // if the following assertation triggers, the center of the
-        // center of the interior SCV was not inside the element!
-        assert(dist > 0);
-
+        Scalar diffusivity = elemCtx.problem().diffusivity(elemCtx, face.interiorIndex(), face.exteriorIndex());
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
@@ -422,7 +408,7 @@ protected:
                     (intQuantsOutside.fluidState().moleFraction(phaseIdx, compIdx)
                      -
                      intQuantsInside.fluidState().moleFraction(phaseIdx, compIdx))
-                    / dist;
+                    * diffusivity;
                 Opm::Valgrind::CheckDefined(moleFractionGradientNormal_[phaseIdx][compIdx]);
 
                 // use the arithmetic average for the effective
@@ -439,59 +425,12 @@ protected:
     }
 
     template <class Context, class FluidState>
-    void updateBoundary_(const Context& context,
-                         unsigned bfIdx,
-                         unsigned timeIdx,
-                         const FluidState& fluidState)
+    void updateBoundary_(const Context& context OPM_UNUSED,
+                         unsigned bfIdx OPM_UNUSED,
+                         unsigned timeIdx OPM_UNUSED,
+                         const FluidState& fluidState OPM_UNUSED)
     {
-        // This uses a simple finite difference approach and is only correct for a Cartesian grids.
-        // TODO compute diffusive "transmissibilities" by re-using the logic in EclTransmissibility
-        const auto& stencil = context.stencil(timeIdx);
-        const auto& face = stencil.boundaryFace(bfIdx);
-
-        const auto& elemCtx = context.elementContext();
-        unsigned insideScvIdx = face.interiorIndex();
-        const auto& insideScv = stencil.subControlVolume(insideScvIdx);
-
-        const auto& intQuantsInside = elemCtx.intensiveQuantities(insideScvIdx, timeIdx);
-        const auto& fluidStateInside = intQuantsInside.fluidState();
-
-        // distance between the center of the SCV and center of the boundary face
-        DimVector distVec = face.integrationPos();
-        distVec -= context.element().geometry().global(insideScv.localGeometry().center());
-
-        Scalar dist = distVec.two_norm();
-
-        // if the following assertation triggers, the center of the
-        // center of the interior SCV was not inside the element!
-        assert(dist > 0);
-
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                continue;
-            }
-            // no diffusion in water for blackoil models
-            if (FluidSystem::waterPhaseIdx == phaseIdx) {
-                continue;
-            }
-            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                // calculate mole fraction gradient using two-point
-                // gradients
-                moleFractionGradientNormal_[phaseIdx][compIdx] =
-                    (fluidState.moleFraction(phaseIdx, compIdx)
-                     -
-                     fluidStateInside.moleFraction(phaseIdx, compIdx))
-                    / dist;
-                Opm::Valgrind::CheckDefined(moleFractionGradientNormal_[phaseIdx][compIdx]);
-
-                // use effective diffusion coefficients of the interior finite
-                // volume.
-                effectiveDiffusionCoefficient_[phaseIdx][compIdx] =
-                    intQuantsInside.effectiveDiffusionCoefficient(phaseIdx, compIdx);
-
-                Opm::Valgrind::CheckDefined(effectiveDiffusionCoefficient_[phaseIdx][compIdx]);
-            }
-        }
+        throw std::runtime_error("Not implemented: Diffusion across boundary not implemented for blackoil");
     }
 
 public:
