@@ -411,7 +411,9 @@ namespace Opm {
         for (auto& well : well_container_) {
             const uint64_t effective_events_mask = ScheduleEvents::WELL_STATUS_CHANGE
                                                  + ScheduleEvents::NEW_WELL;
-            const bool event = report_step_starts_ && schedule().hasWellGroupEvent(well->name(), effective_events_mask, reportStepIdx);
+
+            const auto& events = schedule()[reportStepIdx].wellgroup_events();
+            const bool event = report_step_starts_ && events.hasEvent(well->name(), effective_events_mask);
             if (event) {
                 well->calculateExplicitQuantities(ebosSimulator_, well_state_, local_deferredLogger);
                 well->solveWellEquation(ebosSimulator_, well_state_, local_deferredLogger);
