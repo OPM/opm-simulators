@@ -33,23 +33,6 @@ namespace Opm {
 
 
 
-VFPProdProperties::VFPProdProperties() {
-
-}
-
-
-VFPProdProperties::VFPProdProperties(const VFPProdTable* table){
-    m_tables[table->getTableNum()] = table;
-}
-
-
-VFPProdProperties::VFPProdProperties(const VFPProdProperties::ProdTable& tables) {
-    for (const auto& table : tables) {
-        m_tables[table.first] = table.second.get();
-    }
-}
-
-
 double VFPProdProperties::thp(int table_id,
                               const double& aqua,
                               const double& liquid,
@@ -261,5 +244,8 @@ calculateBhpWithTHPTarget(const std::vector<double>& ipr_a,
     }
 }
 
+void VFPProdProperties::addTable(const VFPProdTable * new_table) {
+    this->m_tables.emplace( new_table->getTableNum(), new_table );
+}
 
 }

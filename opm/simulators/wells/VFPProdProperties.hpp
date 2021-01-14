@@ -38,25 +38,11 @@ namespace Opm {
  */
 class VFPProdProperties {
 public:
+    VFPProdProperties() = default;
     /**
-     * Empty constructor
-     */
-    VFPProdProperties();
-
-    /**
-     * Constructor
      * Takes *no* ownership of data.
-     * @param prod_table A *single* VFPPROD table
      */
-    explicit VFPProdProperties(const VFPProdTable* prod_table);
-
-    /**
-     * Constructor
-     * Takes *no* ownership of data.
-     * @param prod_tables A map of different VFPPROD tables.
-     */
-    using ProdTable = std::map<int, std::shared_ptr<const VFPProdTable> >;
-    explicit VFPProdProperties(const ProdTable& prod_tables);
+    void addTable(const VFPProdTable * new_table);
 
     /**
      * Linear interpolation of bhp as a function of the input parameters given as

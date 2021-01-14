@@ -302,14 +302,14 @@ namespace Opm {
                                                     std::vector<int>(local_num_cells_, 0)));
         rateConverter_->template defineState<ElementContext>(ebosSimulator_);
 
-        // update VFP properties
-        vfp_properties_.reset (new VFPProperties<VFPInjProperties,VFPProdProperties> (
-                                   schedule().getVFPInjTables(timeStepIdx),
-                                   schedule().getVFPProdTables(timeStepIdx)) );
-
-        this->initializeWellProdIndCalculators();
-        if (this->schedule()[timeStepIdx].events().hasEvent(ScheduleEvents::Events::WELL_PRODUCTIVITY_INDEX)) {
-            this->runWellPIScaling(timeStepIdx, local_deferredLogger);
+        {
+            const auto& sched_state = this->schedule()[timeStepIdx];
+            // update VFP properties
+            vfp_properties_.reset(new VFPProperties( sched_state.vfpinj(), sched_state.vfpprod()) );
+            this->initializeWellProdIndCalculators();
+            if (sched_state.events().hasEvent(ScheduleEvents::Events::WELL_PRODUCTIVITY_INDEX)) {
+                this->runWellPIScaling(timeStepIdx, local_deferredLogger);
+            }
         }
 
         // update the previous well state. This is used to restart failed steps.

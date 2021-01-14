@@ -32,21 +32,6 @@
 namespace Opm {
 
 
-VFPInjProperties::VFPInjProperties() {
-
-}
-
-
-VFPInjProperties::VFPInjProperties(const VFPInjTable* table){
-    m_tables[table->getTableNum()] = table;
-}
-
-
-VFPInjProperties::VFPInjProperties(const VFPInjProperties::InjTable& tables) {
-    for (const auto& table : tables) {
-        m_tables[table.first] = table.second.get();
-    }
-}
 
 
 double VFPInjProperties::bhp(int table_id,
@@ -97,5 +82,10 @@ const VFPInjTable* VFPInjProperties::getTable(const int table_id) const {
 bool VFPInjProperties::hasTable(const int table_id) const {
     return detail::hasTable(m_tables, table_id);
 }
+
+void VFPInjProperties::addTable(const VFPInjTable * new_table) {
+    this->m_tables.emplace( new_table->getTableNum(), new_table );
+}
+
 
 } //Namespace Opm

@@ -23,6 +23,9 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
 
+#include <opm/simulators/wells/VFPInjProperties.hpp>
+#include <opm/simulators/wells/VFPProdProperties.hpp>
+
 #include <map>
 
 namespace Opm {
@@ -31,26 +34,10 @@ namespace Opm {
  * A thin wrapper class that holds one VFPProdProperties and one
  * VFPInjProperties object.
  */
-template<typename VFPInjProp, typename VFPProdProp>
 class VFPProperties {
 public:
-    VFPProperties() {}
+    VFPProperties() = default;
 
-    /**
-     * Constructor
-     * Takes *no* ownership of data.
-     * @param inj_table  A *single* VFPINJ table or NULL (no table)
-     * @param prod_table A *single* VFPPROD table or NULL (no table)
-     */
-    explicit VFPProperties(const VFPInjTable* inj_table, const VFPProdTable* prod_table)
-    {
-      if (inj_table != nullptr) {
-        m_inj.reset(new VFPInjProp(inj_table));
-      }
-      if (prod_table != nullptr) {
-        m_prod.reset(new VFPProdProp(prod_table));
-      }
-    }
 
     /**
      * Constructor
@@ -58,27 +45,34 @@ public:
      * @param inj_tables A map of different VFPINJ tables.
      * @param prod_tables A map of different VFPPROD tables.
      */
-    VFPProperties(const std::map<int, std::shared_ptr<const VFPInjTable> >& inj_tables,
-                  const std::map<int, std::shared_ptr<const VFPProdTable> >& prod_tables)
-      : m_inj(new VFPInjProp(inj_tables)), m_prod(new VFPProdProp(prod_tables)) {}
+
+    VFPProperties(const std::vector<const VFPInjTable *>& inj_tables,
+                  const std::vector<const VFPProdTable *>& prod_tables)
+    {
+        for (const auto& vfpinj_ptr : inj_tables)
+            this->m_inj.addTable( vfpinj_ptr );
+
+        for (const auto& vfpprod_ptr : prod_tables)
+            this->m_prod.addTable( vfpprod_ptr );
+    };
 
     /**
      * Returns the VFP properties for injection wells
      */
-    const VFPInjProp* getInj() const {
-        return m_inj.get();
+    const VFPInjProperties* getInj() const {
+        return &m_inj;
     }
 
     /**
      * Returns the VFP properties for production wells
      */
-    const VFPProdProp* getProd() const {
-        return m_prod.get();
+    const VFPProdProperties* getProd() const {
+        return &m_prod;
     }
 
 private:
-    std::shared_ptr<VFPInjProp> m_inj;
-    std::shared_ptr<VFPProdProp> m_prod;
+    VFPInjProperties m_inj;
+    VFPProdProperties m_prod;
 };
 
 

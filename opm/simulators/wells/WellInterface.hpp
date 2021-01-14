@@ -151,7 +151,7 @@ namespace Opm
         /// Well cells.
         const std::vector<int>& cells() const {return well_cells_; }
 
-        void setVFPProperties(const VFPProperties<VFPInjProperties,VFPProdProperties>* vfp_properties_arg);
+        void setVFPProperties(const VFPProperties* vfp_properties_arg);
 
         void setGuideRate(const GuideRate* guide_rate_arg);
 
@@ -384,7 +384,7 @@ namespace Opm
 
         bool getAllowCrossFlow() const;
 
-        const VFPProperties<VFPInjProperties,VFPProdProperties>* vfp_properties_;
+        const VFPProperties* vfp_properties_;
 
         const GuideRate* guide_rate_;
 
