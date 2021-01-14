@@ -31,6 +31,10 @@
 
 #include <opm/material/fluidstates/SaturationOverlayFluidState.hpp>
 
+#include <algorithm>
+#include <cstddef>
+#include <type_traits>
+
 namespace Opm {
 /*!
  * \ingroup FluidMatrixInteractions
@@ -221,7 +225,7 @@ public:
     {
         const Evaluation& SwUnscaled = scaledToUnscaledSatKrw(params, SwScaled);
         const Evaluation& krwUnscaled = EffLaw::twoPhaseSatKrw(params.effectiveLawParams(), SwUnscaled);
-        return unscaledToScaledKrw_(params, krwUnscaled);
+        return unscaledToScaledKrw_(SwScaled, params, krwUnscaled);
     }
 
     template <class Evaluation>
@@ -376,7 +380,7 @@ private:
         return
             unscaledSats[0]
             +
-            (scaledSat - scaledSats[0])*((unscaledSats[1] - unscaledSats[0])/(scaledSats[1] - scaledSats[0]));
+            (scaledSat - scaledSats[0])*((unscaledSats[2] - unscaledSats[0])/(scaledSats[2] - scaledSats[0]));
     }
 
     template <class Evaluation, class PointsContainer>
@@ -387,7 +391,7 @@ private:
         return
             scaledSats[0]
             +
-            (unscaledSat - unscaledSats[0])*((scaledSats[1] - scaledSats[0])/(unscaledSats[1] - unscaledSats[0]));
+            (unscaledSat - unscaledSats[0])*((scaledSats[2] - scaledSats[0])/(unscaledSats[2] - unscaledSats[0]));
     }
 
     template <class Evaluation, class PointsContainer>
@@ -395,28 +399,38 @@ private:
                                                      const PointsContainer& unscaledSats,
                                                      const PointsContainer& scaledSats)
     {
-        if (unscaledSats[1] >= unscaledSats[2])
-            return scaledToUnscaledSatTwoPoint_(scaledSat, unscaledSats, scaledSats);
+        using UnscaledSat = std::remove_cv_t<std::remove_reference_t<decltype(unscaledSats[0])>>;
 
-        if (scaledSat < scaledSats[1]) {
-            Scalar delta = scaledSats[1] - scaledSats[0];
-            if (delta <= 1e-20)
-                delta = 1.0; // prevent division by zero for (possibly) incorrect input data
+        auto map = [&scaledSat, &unscaledSats, &scaledSats](const std::size_t i)
+        {
+            const auto distance = (scaledSat         - scaledSats[i])
+                                / (scaledSats[i + 1] - scaledSats[i]);
 
-            return
-                unscaledSats[0]
-                +
-                (scaledSat - scaledSats[0])*((unscaledSats[1] - unscaledSats[0])/delta);
+            const auto displacement =
+                std::max(unscaledSats[i + 1] - unscaledSats[i], UnscaledSat{ 0 });
+
+            return std::min(unscaledSats[i] + distance*displacement,
+                            Evaluation { unscaledSats[i + 1] });
+        };
+
+        if (! (scaledSat > scaledSats[0])) {
+            // s <= sL
+            return unscaledSats[0];
+        }
+        else if (scaledSat < std::min(scaledSats[1], scaledSats[2])) {
+            // Scaled saturation in interval [sL, sR).
+            // Map to tabulated saturation in [unscaledSats[0], unscaledSats[1]).
+            return map(0);
+        }
+        else if (scaledSat < scaledSats[2]) {
+            // Scaled saturation in interval [sR, sU); sR guaranteed to be less
+            // than sU from previous condition.  Map to tabulated saturation in
+            // [unscaledSats[1], unscaledSats[2]).
+            return map(1);
         }
         else {
-            Scalar delta = scaledSats[2] - scaledSats[1];
-            if (delta <= 1e-20)
-                delta = 1.0; // prevent division by zero for (possibly) incorrect input data
-
-            return
-                unscaledSats[1]
-                +
-                (scaledSat - scaledSats[1])*((unscaledSats[2] - unscaledSats[1])/delta);
+            // s >= sU
+            return unscaledSats[2];
         }
     }
 
@@ -425,28 +439,35 @@ private:
                                                      const PointsContainer& unscaledSats,
                                                      const PointsContainer& scaledSats)
     {
-        if (unscaledSats[1] >= unscaledSats[2])
-            return unscaledToScaledSatTwoPoint_(unscaledSat, unscaledSats, scaledSats);
+        using ScaledSat = std::remove_cv_t<std::remove_reference_t<decltype(scaledSats[0])>>;
 
-        if (unscaledSat < unscaledSats[1]) {
-            Scalar delta = unscaledSats[1] - unscaledSats[0];
-            if (delta <= 1e-20)
-                delta = 1.0; // prevent division by zero for (possibly) incorrect input data
+        auto map = [&unscaledSat, &unscaledSats, &scaledSats](const std::size_t i)
+        {
+            const auto distance = (unscaledSat         - unscaledSats[i])
+                                / (unscaledSats[i + 1] - unscaledSats[i]);
 
-            return
-                scaledSats[0]
-                +
-                (unscaledSat - unscaledSats[0])*((scaledSats[1] - scaledSats[0])/delta);
+            const auto displacement =
+                std::max(scaledSats[i + 1] - scaledSats[i], ScaledSat{ 0 });
+
+            return std::min(scaledSats[i] + distance*displacement,
+                            Evaluation { scaledSats[i + 1] });
+        };
+
+        if (! (unscaledSat > unscaledSats[0])) {
+            return scaledSats[0];
+        }
+        else if (unscaledSat < unscaledSats[1]) {
+            // Tabulated saturation in interval [unscaledSats[0], unscaledSats[1]).
+            // Map to scaled saturation in [sL, sR).
+            return map(0);
+        }
+        else if (unscaledSat < unscaledSats[2]) {
+            // Tabulated saturation in interval [unscaledSats[1], unscaledSats[2]).
+            // Map to scaled saturation in [sR, sU).
+            return map(1);
         }
         else {
-            Scalar delta = unscaledSats[2] - unscaledSats[1];
-            if (delta <= 1e-20)
-                delta = 1.0; // prevent division by zero for (possibly) incorrect input data
-
-            return
-                scaledSats[1]
-                +
-                (unscaledSat - unscaledSats[1])*((scaledSats[2] - scaledSats[1])/delta);
+            return scaledSats[2];
         }
     }
 
@@ -487,14 +508,63 @@ private:
      * \brief Scale the wetting phase relative permeability of a phase according to the given parameters
      */
     template <class Evaluation>
-    static Evaluation unscaledToScaledKrw_(const Params& params, const Evaluation& unscaledKrw)
+    static Evaluation unscaledToScaledKrw_(const Evaluation& SwScaled,
+                                           const Params& params,
+                                           const Evaluation& unscaledKrw)
     {
-        if (!params.config().enableKrwScaling())
+        const auto& cfg = params.config();
+
+        if (! cfg.enableKrwScaling())
             return unscaledKrw;
 
-        // TODO: three point krw y-scaling
-        Scalar alpha = params.scaledPoints().maxKrw()/params.unscaledPoints().maxKrw();
-        return unscaledKrw*alpha;
+        const auto& scaled   = params.scaledPoints();
+        const auto& unscaled = params.unscaledPoints();
+
+        if (! cfg.enableThreePointKrwScaling()) {
+            // Simple case: Run uses pure vertical scaling of water relperm (keyword KRW)
+            const Scalar alpha = scaled.maxKrw() / unscaled.maxKrw();
+            return unscaledKrw * alpha;
+        }
+
+        // Otherwise, run uses three-point vertical scaling (keywords KRWR and KRW)
+        const auto fdisp = unscaled.krwr();
+        const auto fmax  = unscaled.maxKrw();
+
+        const auto sm = scaled.saturationKrwPoints()[2];
+        const auto sr = std::min(scaled.saturationKrwPoints()[1], sm);
+        const auto fr = scaled.krwr();
+        const auto fm = scaled.maxKrw();
+
+        if (! (SwScaled > sr)) {
+            // Pure vertical scaling in left interval ([SWL, SR])
+            return unscaledKrw * (fr / fdisp);
+        }
+        else if (fmax > fdisp) {
+            // s \in [sr, sm), sm > sr; normal case: Kr(Smax) > Kr(Sr).
+            //
+            // Linear function between (sr,fr) and (sm,fm) in terms of
+            // function value 'unscaledKrw'.  This usually alters the shape
+            // of the relative permeability function in this interval (e.g.,
+            // roughly quadratic to linear).
+            const auto t = (unscaledKrw - fdisp) / (fmax - fdisp);
+
+            return fr + t*(fm - fr);
+        }
+        else if (sr < sm) {
+            // s \in [sr, sm), sm > sr; special case: Kr(Smax) == Kr(Sr).
+            //
+            // Linear function between (sr,fr) and (sm,fm) in terms of
+            // saturation value 'SwScaled'.  This usually alters the shape
+            // of the relative permeability function in this interval (e.g.,
+            // roughly quadratic to linear).
+            const auto t = (SwScaled - sr) / (sm - sr);
+
+            return fr + t*(fm - fr);
+        }
+        else {
+            // sm == sr (pure scaling).  Almost arbitrarily pick 'fm'.
+            return fm;
+        }
     }
 
     template <class Evaluation>

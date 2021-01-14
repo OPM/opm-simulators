@@ -83,6 +83,12 @@ struct EclEpsScalingPointsInfo
     Scalar pcowLeverettFactor;
     Scalar pcgoLeverettFactor;
 
+    // Scaled relative permeabilities at residual displacing saturation
+    Scalar Krwr;  // water
+    Scalar Krgr;  // gas
+    Scalar Krorw; // oil in water-oil system
+    Scalar Krorg; // oil in gas-oil system
+
     // maximum relative permabilities
     Scalar maxKrw; // maximum relative permability of water
     Scalar maxKrow; // maximum relative permability of oil in the oil-water system
@@ -103,6 +109,10 @@ struct EclEpsScalingPointsInfo
                maxPcgo == data.maxPcgo &&
                pcowLeverettFactor == data.pcowLeverettFactor &&
                pcgoLeverettFactor == data.pcgoLeverettFactor &&
+               Krwr == data.Krwr &&
+               Krgr == data.Krgr &&
+               Krorw == data.Krorw &&
+               Krorg == data.Krorg &&
                maxKrw == data.maxKrw &&
                maxKrow == data.maxKrow &&
                maxKrog == data.maxKrog &&
@@ -123,6 +133,10 @@ struct EclEpsScalingPointsInfo
                   << "    maxPcgo: " << maxPcgo << '\n'
                   << "    pcowLeverettFactor: " << pcowLeverettFactor << '\n'
                   << "    pcgoLeverettFactor: " << pcgoLeverettFactor << '\n'
+                  << "    Krwr: " << Krwr << '\n'
+                  << "    Krgr: " << Krgr << '\n'
+                  << "    Krorw: " << Krorw << '\n'
+                  << "    Krorg: " << Krorg << '\n'
                   << "    maxKrw: " << maxKrw << '\n'
                   << "    maxKrg: " << maxKrg << '\n'
                   << "    maxKrow: " << maxKrow << '\n'
@@ -163,6 +177,11 @@ struct EclEpsScalingPointsInfo
         this->pcowLeverettFactor = 1.0;
         this->pcgoLeverettFactor = 1.0;
 
+        this->Krwr    = rfunc.krw.r [satRegionIdx];
+        this->Krgr    = rfunc.krg.r [satRegionIdx];
+        this->Krorw   = rfunc.kro.rw[satRegionIdx];
+        this->Krorg   = rfunc.kro.rg[satRegionIdx];
+
         this->maxKrw  = rfunc.krw.max[satRegionIdx];
         this->maxKrow = rfunc.kro.max[satRegionIdx];
         this->maxKrog = rfunc.kro.max[satRegionIdx];
@@ -196,9 +215,14 @@ struct EclEpsScalingPointsInfo
         update(Sgu,     epsProperties.sgu(activeIndex));
         update(maxPcow, epsProperties.pcw(activeIndex));
         update(maxPcgo, epsProperties.pcg(activeIndex));
+
+        update(this->Krwr,  epsProperties.krwr(activeIndex));
+        update(this->Krgr,  epsProperties.krgr(activeIndex));
+        update(this->Krorw, epsProperties.krorw(activeIndex));
+        update(this->Krorg, epsProperties.krorg(activeIndex));
+
         update(maxKrw,  epsProperties.krw(activeIndex));
         update(maxKrg,  epsProperties.krg(activeIndex));
-        // quite likely that's wrong!
         update(maxKrow, epsProperties.kro(activeIndex));
         update(maxKrog, epsProperties.kro(activeIndex));
 
@@ -298,37 +322,29 @@ public:
         if (epsSystemType == EclOilWaterSystem) {
             // saturation scaling for capillary pressure
             saturationPcPoints_[0] = epsInfo.Swl;
-            saturationPcPoints_[1] = epsInfo.Swu;
+            saturationPcPoints_[2] = saturationPcPoints_[1] = epsInfo.Swu;
 
             // krw saturation scaling endpoints
-            if (config.enableThreePointKrSatScaling()) {
-                saturationKrwPoints_[0] = epsInfo.Swcr;
-                saturationKrwPoints_[1] = 1.0 - epsInfo.Sowcr - epsInfo.Sgl;
-                saturationKrwPoints_[2] = epsInfo.Swu;
-            }
-            else {
-                saturationKrwPoints_[0] = epsInfo.Swcr;
-                saturationKrwPoints_[1] = epsInfo.Swu;
-            }
+            saturationKrwPoints_[0] = epsInfo.Swcr;
+            saturationKrwPoints_[1] = 1.0 - epsInfo.Sowcr - epsInfo.Sgl;
+            saturationKrwPoints_[2] = epsInfo.Swu;
 
             // krn saturation scaling endpoints (with the non-wetting phase being oil).
             // because opm-material specifies non-wetting phase relperms in terms of the
             // wetting phase saturations, the code here uses 1 minus the values specified
             // by the Eclipse TD and the order of the scaling points is reversed
-            if (config.enableThreePointKrSatScaling()) {
-                saturationKrnPoints_[2] = 1.0 - epsInfo.Sowcr;
-                saturationKrnPoints_[1] = epsInfo.Swcr + epsInfo.Sgl;
-                saturationKrnPoints_[0] = epsInfo.Swl + epsInfo.Sgl;
-            }
-            else {
-                saturationKrnPoints_[1] = 1 - epsInfo.Sowcr;
-                saturationKrnPoints_[0] = epsInfo.Swl + epsInfo.Sgl;
-            }
+            saturationKrnPoints_[2] = 1.0 - epsInfo.Sowcr;
+            saturationKrnPoints_[1] = epsInfo.Swcr + epsInfo.Sgl;
+            saturationKrnPoints_[0] = epsInfo.Swl + epsInfo.Sgl;
 
             if (config.enableLeverettScaling())
                 maxPcnwOrLeverettFactor_ = epsInfo.pcowLeverettFactor;
             else
                 maxPcnwOrLeverettFactor_ = epsInfo.maxPcow;
+
+            Krwr_   = epsInfo.Krwr;
+            Krnr_   = epsInfo.Krorw;
+
             maxKrw_ = epsInfo.maxKrw;
             maxKrn_ = epsInfo.maxKrow;
         }
@@ -337,37 +353,28 @@ public:
 
             // saturation scaling for capillary pressure
             saturationPcPoints_[0] = 1.0 - epsInfo.Sgu;
-            saturationPcPoints_[1] = 1.0 - epsInfo.Sgl;
+            saturationPcPoints_[2] = saturationPcPoints_[1] = 1.0 - epsInfo.Sgl;
 
             // krw saturation scaling endpoints
-            if (config.enableThreePointKrSatScaling()) {
-                saturationKrwPoints_[0] = epsInfo.Sogcr;
-                saturationKrwPoints_[1] = 1 - epsInfo.Sgcr - epsInfo.Swl;
-                saturationKrwPoints_[2] = 1 - epsInfo.Swl - epsInfo.Sgl;
-            }
-            else {
-                saturationKrwPoints_[0] = epsInfo.Sogcr;
-                saturationKrwPoints_[1] = 1 - epsInfo.Swl - epsInfo.Sgl;
-            }
+            saturationKrwPoints_[0] = epsInfo.Sogcr;
+            saturationKrwPoints_[1] = 1 - epsInfo.Sgcr - epsInfo.Swl;
+            saturationKrwPoints_[2] = 1 - epsInfo.Swl - epsInfo.Sgl;
 
             // krn saturation scaling endpoints (with the non-wetting phase being gas).
             // because opm-material specifies non-wetting phase relperms in terms of the
             // wetting phase saturations, the code here uses 1 minus the values specified
             // by the Eclipse TD and the order of the scaling points is reversed
-            if (config.enableThreePointKrSatScaling()) {
-                saturationKrnPoints_[2] = 1.0 - epsInfo.Sgcr;
-                saturationKrnPoints_[1] = epsInfo.Sogcr + epsInfo.Swl;
-                saturationKrnPoints_[0] = 1.0 - epsInfo.Sgu;
-            }
-            else {
-                saturationKrnPoints_[1] = 1.0 - epsInfo.Sgcr;
-                saturationKrnPoints_[0] = 1.0 - epsInfo.Sgu;
-            }
+            saturationKrnPoints_[2] = 1.0 - epsInfo.Sgcr;
+            saturationKrnPoints_[1] = epsInfo.Sogcr + epsInfo.Swl;
+            saturationKrnPoints_[0] = 1.0 - epsInfo.Sgu;
 
             if (config.enableLeverettScaling())
                 maxPcnwOrLeverettFactor_ = epsInfo.pcgoLeverettFactor;
             else
                 maxPcnwOrLeverettFactor_ = epsInfo.maxPcgo;
+
+            Krwr_   = epsInfo.Krorg;
+            Krnr_   = epsInfo.Krgr;
 
             maxKrw_ = epsInfo.maxKrog;
             maxKrn_ = epsInfo.maxKrg;
@@ -383,7 +390,7 @@ public:
     /*!
      * \brief Returns the points used for capillary pressure saturation scaling
      */
-    const std::array<Scalar, 2>& saturationPcPoints() const
+    const std::array<Scalar, 3>& saturationPcPoints() const
     { return saturationPcPoints_; }
 
     /*!
@@ -435,6 +442,20 @@ public:
     { return maxPcnwOrLeverettFactor_; }
 
     /*!
+     * \brief Set wetting-phase relative permeability at residual saturation
+     * of non-wetting phase.
+     */
+    void setKrwr(Scalar value)
+    { this->Krwr_ = value; }
+
+    /*!
+     * \brief Returns wetting-phase relative permeability at residual
+     * saturation of non-wetting phase.
+     */
+    Scalar krwr() const
+    { return this->Krwr_; }
+
+    /*!
      * \brief Sets the maximum wetting phase relative permeability
      */
     void setMaxKrw(Scalar value)
@@ -445,6 +466,20 @@ public:
      */
     Scalar maxKrw() const
     { return maxKrw_; }
+
+    /*!
+     * \brief Set non-wetting phase relative permeability at residual
+     * saturation of wetting phase.
+     */
+    void setKrnr(Scalar value)
+    { this->Krnr_ = value; }
+
+    /*!
+     * \brief Returns non-wetting phase relative permeability at residual
+     * saturation of wetting phase.
+     */
+    Scalar krnr() const
+    { return this->Krnr_; }
 
     /*!
      * \brief Sets the maximum wetting phase relative permeability
@@ -466,17 +501,25 @@ public:
     }
 
 private:
-    // The the points used for the "y-axis" scaling of capillary pressure
+    // Points used for vertical scaling of capillary pressure
     Scalar maxPcnwOrLeverettFactor_;
 
-    // The the points used for the "y-axis" scaling of wetting phase relative permability
+    // Maximum wetting phase relative permability value.
     Scalar maxKrw_;
 
-    // The the points used for the "y-axis" scaling of non-wetting phase relative permability
+    // Scaled wetting phase relative permeability value at residual
+    // saturation of non-wetting phase.
+    Scalar Krwr_;
+
+    // Maximum non-wetting phase relative permability value
     Scalar maxKrn_;
 
+    // Scaled non-wetting phase relative permeability value at residual
+    // saturation of wetting phase.
+    Scalar Krnr_;
+
     // The the points used for saturation ("x-axis") scaling of capillary pressure
-    std::array<Scalar, 2> saturationPcPoints_;
+    std::array<Scalar, 3> saturationPcPoints_;
 
     // The the points used for saturation ("x-axis") scaling of wetting phase relative permeability
     std::array<Scalar, 3> saturationKrwPoints_;
