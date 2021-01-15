@@ -1291,7 +1291,7 @@ public:
                       Opm::Schedule& schedule,
                       Opm::Action::State& actionState,
                       Opm::SummaryState& summaryState) {
-        const auto& actions = schedule.actions(reportStep);
+        const auto& actions = schedule[reportStep].actions();
         if (actions.empty())
             return;
 
