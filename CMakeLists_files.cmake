@@ -66,7 +66,7 @@ if(OPENCL_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/WellContributions.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/MultisegmentWellContribution.cpp)
 endif()
-if(CMAKE_ENABLE_FPGA)
+if(HAVE_FPGA)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BdaBridge.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/FPGAMatrix.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/FPGABILU0.cpp)
@@ -184,10 +184,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/FPGAMatrix.hpp
   opm/simulators/linalg/bda/FPGABILU0.hpp
   opm/simulators/linalg/bda/FPGASolverBackend.hpp
-  opm/simulators/linalg/bda/fpga/src/sda_app/bicgstab_solver_config.hpp
-  opm/simulators/linalg/bda/fpga/src/sda_app/common/dev_config.hpp
-  opm/simulators/linalg/bda/fpga/src/sda_app/common/fpga_functions_bicgstab.hpp
-  opm/simulators/linalg/bda/fpga/src/sda_app/common/opencl_lib.hpp
   opm/simulators/linalg/bda/FPGAUtils.hpp
   opm/simulators/linalg/bda/Reorder.hpp
   opm/simulators/linalg/bda/ILUReorder.hpp

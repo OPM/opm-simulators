@@ -29,6 +29,7 @@ option(BUILD_EBOS_DEBUG_EXTENSIONS "Build the ebos variants which are purely for
 option(BUILD_FLOW_POLY_GRID "Build flow blackoil with polyhedral grid" OFF)
 option(OPM_ENABLE_PYTHON "Enable python bindings?" OFF)
 option(OPM_ENABLE_PYTHON_TESTS "Enable tests for the python bindings?" ON)
+option(ENABLE_FPGA "Enable FPGA kernels integration?" OFF)
 
 if(SIBLING_SEARCH AND NOT opm-common_DIR)
   # guess the sibling dir
