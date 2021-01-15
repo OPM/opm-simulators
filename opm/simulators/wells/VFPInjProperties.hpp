@@ -34,25 +34,11 @@ namespace Opm {
 
 class VFPInjProperties {
 public:
+    VFPInjProperties() = default;
     /**
-     * Empty constructor
-     */
-    VFPInjProperties();
-
-    /**
-     * Constructor
      * Takes *no* ownership of data.
-     * @param inj_table A *single* VFPINJ table
      */
-    explicit VFPInjProperties(const VFPInjTable* inj_table);
-
-    /**
-     * Constructor
-     * Takes *no* ownership of data.
-     * @param inj_tables A map of different VFPINJ tables.
-     */
-    using InjTable = std::map<int, std::shared_ptr<const VFPInjTable> >;
-    explicit VFPInjProperties(const InjTable& inj_tables);
+    void addTable(const VFPInjTable * new_table);
 
     /**
      * Linear interpolation of bhp as a function of the input parameters given as

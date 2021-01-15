@@ -174,7 +174,7 @@ namespace Opm
     template<typename TypeTag>
     void
     WellInterface<TypeTag>::
-    setVFPProperties(const VFPProperties<VFPInjProperties,VFPProdProperties>* vfp_properties_arg)
+    setVFPProperties(const VFPProperties* vfp_properties_arg)
     {
         vfp_properties_ = vfp_properties_arg;
     }

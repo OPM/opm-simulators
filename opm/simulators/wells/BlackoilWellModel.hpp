@@ -333,7 +333,7 @@ namespace Opm {
             std::optional<int> last_run_wellpi_{};
 
             std::unique_ptr<RateConverterType> rateConverter_;
-            std::unique_ptr<VFPProperties<VFPInjProperties,VFPProdProperties>> vfp_properties_;
+            std::unique_ptr<VFPProperties> vfp_properties_;
 
             SimulatorReportSingle last_report_;
 

@@ -36,12 +36,11 @@ using namespace Opm;
 
 struct Setup
 {
-    using VFP = VFPProperties<VFPInjProperties, VFPProdProperties>;
     std::unique_ptr<const EclipseState> ecl_state;
     std::shared_ptr<Python> python;
     std::unique_ptr<const Schedule> schedule;
     std::unique_ptr<SummaryState> summary_state;
-    std::unique_ptr<VFP> vfp_properties;
+    std::unique_ptr<VFPProperties> vfp_properties;
 
     Setup(const std::string& file)
     {
@@ -56,7 +55,8 @@ struct Setup
           summary_state.reset( new SummaryState(std::chrono::system_clock::from_time_t(schedule->getStartTime())));
         }
         const int step = 0;
-        vfp_properties = std::make_unique<VFP>(schedule->getVFPInjTables(step), schedule->getVFPProdTables(step));
+        const auto& sched_state = schedule->operator[](step);
+        vfp_properties = std::make_unique<VFPProperties>(sched_state.vfpinj(), sched_state.vfpprod());
     };
 };
 
