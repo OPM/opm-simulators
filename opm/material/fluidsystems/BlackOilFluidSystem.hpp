@@ -243,7 +243,32 @@ public:
                                   regionIdx);
         }
 
+        // set default molarMass and mappings
         initEnd();
+
+        setEnableDiffusion(eclState.getSimulationConfig().isDiffusive());
+        if(enableDiffusion()) {
+            const auto& diffCoeffTables = eclState.getTableManager().getDiffusionCoefficientTable();
+            if(!diffCoeffTables.empty()) {
+                // if diffusion coefficient table is empty we relay on the PVT model to
+                // to give us the coefficients.
+                diffusionCoefficients_.resize(numRegions,{0,0,0,0,0,0,0,0,0});
+                assert(diffCoeffTable.size() == numRegions);
+                for (unsigned regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
+                    const auto& diffCoeffTable = diffCoeffTables[regionIdx];
+                    molarMass_[regionIdx][oilCompIdx] = diffCoeffTable.oil_mw;
+                    molarMass_[regionIdx][gasCompIdx] = diffCoeffTable.gas_mw;
+                    setDiffusionCoefficient(diffCoeffTable.gas_in_gas, gasCompIdx, gasPhaseIdx, regionIdx);
+                    setDiffusionCoefficient(diffCoeffTable.oil_in_gas, oilCompIdx, gasPhaseIdx, regionIdx);
+                    setDiffusionCoefficient(diffCoeffTable.gas_in_oil, gasCompIdx, oilPhaseIdx, regionIdx);
+                    setDiffusionCoefficient(diffCoeffTable.oil_in_oil, oilCompIdx, oilPhaseIdx, regionIdx);
+                    if(diffCoeffTable.gas_in_oil_cross_phase > 0 || diffCoeffTable.oil_in_oil_cross_phase > 0) {
+                        throw std::runtime_error("Cross phase diffusion is set in the deck, but not implemented in Flow. "
+                                                 "Please default DIFFC item 7 and item 8 or set it to zero.");
+                    }
+                }
+            }
+        }
     }
 #endif // HAVE_ECL_INPUT
 
@@ -261,6 +286,7 @@ public:
 
         enableDissolvedGas_ = true;
         enableVaporizedOil_ = false;
+        enableDiffusion_ = false;
 
         oilPvt_ = nullptr;
         gasPvt_ = nullptr;
@@ -293,6 +319,15 @@ public:
      */
     static void setEnableVaporizedOil(bool yesno)
     { enableVaporizedOil_ = yesno; }
+
+    /*!
+     * \brief Specify whether the fluid system should consider diffusion
+     *
+     * By default, diffusion is not considered.
+     */
+    static void setEnableDiffusion(bool yesno)
+    { enableDiffusion_ = yesno; }
+
 
     /*!
      * \brief Set the pressure-volume-saturation (PVT) relations for the gas phase.
@@ -328,6 +363,7 @@ public:
         referenceDensity_[regionIdx][waterPhaseIdx] = rhoWater;
         referenceDensity_[regionIdx][gasPhaseIdx] = rhoGas;
     }
+
 
     /*!
      * \brief Finish initializing the black oil fluid system.
@@ -542,6 +578,14 @@ public:
      */
     static bool enableVaporizedOil()
     { return enableVaporizedOil_; }
+
+    /*!
+     * \brief Returns whether the fluid system should consider diffusion
+     *
+     * By default, diffusion is not considered.
+     */
+    static bool enableDiffusion()
+    { return enableDiffusion_; }
 
     /*!
      * \brief Returns the density of a fluid phase at surface pressure [kg/m^3]
@@ -1274,15 +1318,32 @@ public:
         return canonicalToActivePhaseIdx_[phaseIdx];
     }
 
+    //! \copydoc BaseFluidSystem::diffusionCoefficient
+    static Scalar diffusionCoefficient(unsigned compIdx, unsigned phaseIdx, unsigned regionIdx = 0)
+    { return diffusionCoefficients_[regionIdx][numPhases*compIdx + phaseIdx]; }
+
+    //! \copydoc BaseFluidSystem::setDiffusionCoefficient
+    static void setDiffusionCoefficient(Scalar coefficient, unsigned compIdx, unsigned phaseIdx, unsigned regionIdx = 0)
+    { diffusionCoefficients_[regionIdx][numPhases*compIdx + phaseIdx] = coefficient ; }
+
     /*!
      * \copydoc BaseFluidSystem::diffusionCoefficient
      */
     template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
     static LhsEval diffusionCoefficient(const FluidState& fluidState,
-                                        const ParameterCache<ParamCacheEval>& /*paramCache*/,
+                                        const ParameterCache<ParamCacheEval>& paramCache,
                                         unsigned phaseIdx,
                                         unsigned compIdx)
     {
+        // diffusion is disabled by the user
+        if(!enableDiffusion())
+            return 0.0;
+
+        // diffusion coefficients are set, and we use them
+        if(!diffusionCoefficients_.empty()) {
+            return diffusionCoefficient(compIdx, phaseIdx, paramCache.regionIndex());
+        }
+
         const auto& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
         const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
 
@@ -1309,12 +1370,14 @@ private:
 
     static bool enableDissolvedGas_;
     static bool enableVaporizedOil_;
+    static bool enableDiffusion_;
 
     // HACK for GCC 4.4: the array size has to be specified using the literal value '3'
     // here, because GCC 4.4 seems to be unable to determine the number of phases from
     // the BlackOil fluid system in the attribute declaration below...
     static std::vector<std::array<Scalar, /*numPhases=*/3> > referenceDensity_;
     static std::vector<std::array<Scalar, /*numComponents=*/3> > molarMass_;
+    static std::vector<std::array<Scalar, /*numComponents=*/3 * /*numPhases=*/3> > diffusionCoefficients_;
 
     static std::array<short, numPhases> activeToCanonicalPhaseIdx_;
     static std::array<short, numPhases> canonicalToActivePhaseIdx_;
@@ -1353,6 +1416,9 @@ template <class Scalar, class IndexTraits>
 bool BlackOilFluidSystem<Scalar, IndexTraits>::enableVaporizedOil_;
 
 template <class Scalar, class IndexTraits>
+bool BlackOilFluidSystem<Scalar, IndexTraits>::enableDiffusion_;
+
+template <class Scalar, class IndexTraits>
 std::shared_ptr<OilPvtMultiplexer<Scalar> >
 BlackOilFluidSystem<Scalar, IndexTraits>::oilPvt_;
 
@@ -1371,6 +1437,10 @@ BlackOilFluidSystem<Scalar, IndexTraits>::referenceDensity_;
 template <class Scalar, class IndexTraits>
 std::vector<std::array<Scalar, 3> >
 BlackOilFluidSystem<Scalar, IndexTraits>::molarMass_;
+
+template <class Scalar, class IndexTraits>
+std::vector<std::array<Scalar, 9> >
+BlackOilFluidSystem<Scalar, IndexTraits>::diffusionCoefficients_;
 
 template <class Scalar, class IndexTraits>
 bool BlackOilFluidSystem<Scalar, IndexTraits>::isInitialized_ = false;
