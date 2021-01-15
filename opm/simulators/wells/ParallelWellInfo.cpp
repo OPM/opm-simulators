@@ -43,6 +43,143 @@ struct CommPolicy<double*>
 
 namespace Opm
 {
+
+GlobalPerfContainerFactory::GlobalPerfContainerFactory(const IndexSet& local_indices, const Communication comm,
+                                                       const int num_local_perfs)
+    : local_indices_(local_indices), comm_(comm)
+{
+    if ( comm_.size() > 1 )
+    {
+        // The global index used in the index set current_indices
+        // is the index of the perforation in ECL Schedule definition.
+        // This is assumed to give the topological order.
+        // allgather the index of the perforation in ECL schedule and the value.
+        sizes_.resize(comm_.size());
+        displ_.resize(comm_.size() + 1, 0);
+        // Send the int for convenience. It will be used to get the place where the
+        // data comes from
+        using Pair = std::pair<GlobalIndex,int>;
+        std::vector<Pair> my_pairs;
+        my_pairs.reserve(local_indices_.size());
+        for (const auto& pair: local_indices_)
+        {
+            if (pair.local().attribute() == Attribute::owner)
+            {
+                my_pairs.emplace_back(pair.global(), -1);
+            }
+        }
+        int mySize = my_pairs.size();
+        comm_.allgather(&mySize, 1, sizes_.data());
+        std::partial_sum(sizes_.begin(), sizes_.end(), displ_.begin()+1);
+        std::vector<Pair> global_pairs(displ_.back());
+        comm_.allgatherv(my_pairs.data(), my_pairs.size(), global_pairs.data(), sizes_.data(), displ_.data());
+        // Set the the index where we receive
+        int count = 0;
+        std::for_each(global_pairs.begin(), global_pairs.end(), [&count](Pair& pair){ pair.second = count++;});
+        // sort the complete range to get the correct ordering
+        std::sort(global_pairs.begin(), global_pairs.end(),
+                  [](const Pair& p1, const Pair& p2){ return p1.first < p2.first; } );
+        map_received_.resize(global_pairs.size());
+        std::transform(global_pairs.begin(), global_pairs.end(), map_received_.begin(),
+                       [](const Pair& pair){ return pair.second; });
+        perf_ecl_index_.resize(global_pairs.size());
+        std::transform(global_pairs.begin(), global_pairs.end(), perf_ecl_index_.begin(),
+                       [](const Pair& pair){ return pair.first; });
+        num_global_perfs_ = global_pairs.size();
+    }
+    else
+    {
+        num_global_perfs_ = num_local_perfs;
+    }
+}
+
+
+
+std::vector<double> GlobalPerfContainerFactory::createGlobal(const std::vector<double>& local_perf_container,
+                                                             std::size_t num_components) const
+{
+    // Could be become templated later.
+    using Value = double;
+
+    if (comm_.size() > 1)
+    {
+        std::vector<Value> global_recv(perf_ecl_index_.size() * num_components);
+        if (num_components == 1)
+        {
+            comm_.allgatherv(local_perf_container.data(), local_perf_container.size(),
+                             global_recv.data(), const_cast<int*>(sizes_.data()),
+                             const_cast<int*>(displ_.data()));
+        }
+        else
+        {
+#if HAVE_MPI
+            // Create MPI type for sending num_components entries
+            MPI_Datatype data_type;
+            MPI_Type_contiguous(num_components, Dune::MPITraits<Value>::getType(), &data_type);
+            MPI_Type_commit(&data_type);
+            MPI_Allgatherv(local_perf_container.data(),
+                           local_perf_container.size()/num_components,
+                           data_type, global_recv.data(), sizes_.data(),
+                           displ_.data(), data_type, comm_);
+            MPI_Type_free(&data_type);
+#endif
+        }
+
+        // reorder by ascending ecl index.
+        std::vector<Value> global_remapped(perf_ecl_index_.size() * num_components);
+        auto global = global_remapped.begin();
+        for (auto map_entry = map_received_.begin(); map_entry !=  map_received_.end(); ++map_entry)
+        {
+            auto global_index = *map_entry * num_components;
+
+            for(std::size_t i = 0; i < num_components; ++i)
+                *(global++) = global_recv[global_index++];
+        }
+        assert(global == global_remapped.end());
+        return global_remapped;
+    }
+    else
+    {
+        return local_perf_container;
+    }
+}
+
+void GlobalPerfContainerFactory::copyGlobalToLocal(const std::vector<double>& global, std::vector<double>& local,
+                                                   std::size_t num_components) const
+{
+    if (global.empty())
+    {
+        return;
+    }
+
+    if (comm_.size() > 1)
+    {
+        // assign the values (both ranges are sorted by the ecl index)
+        auto global_perf = perf_ecl_index_.begin();
+
+        for (const auto& pair: local_indices_)
+        {
+            global_perf = std::lower_bound(global_perf, perf_ecl_index_.end(), pair.global());
+            assert(global_perf != perf_ecl_index_.end());
+            assert(*global_perf == pair.global());
+            auto local_index = pair.local() * num_components;
+            auto global_index = (global_perf - perf_ecl_index_.begin()) * num_components;
+            for (std::size_t i = 0; i < num_components; ++i)
+                local[local_index++] = global[global_index++];
+        }
+    }
+    else
+    {
+        std::copy(global.begin(), global.end(), local.begin());
+    }
+}
+
+int GlobalPerfContainerFactory::numGlobalPerfs() const
+{
+    return num_global_perfs_;
+}
+
+
 CommunicateAboveBelow::CommunicateAboveBelow([[maybe_unused]] const Communication& comm)
 #if HAVE_MPI
     : comm_(comm), interface_(comm_)
@@ -57,7 +194,7 @@ void CommunicateAboveBelow::clear()
     interface_.free();
     communicator_.free();
 #endif
-    count_ = 0;
+    num_local_perfs_ = 0;
 }
 
 void CommunicateAboveBelow::beginReset()
@@ -72,7 +209,7 @@ void CommunicateAboveBelow::beginReset()
 #endif
 }
 
-void CommunicateAboveBelow::endReset()
+int CommunicateAboveBelow::endReset()
 {
 #if HAVE_MPI
     if (comm_.size() > 1)
@@ -80,7 +217,7 @@ void CommunicateAboveBelow::endReset()
         above_indices_.endResize();
         current_indices_.endResize();
         remote_indices_.setIndexSets(current_indices_, above_indices_, comm_);
-        remote_indices_.setIncludeSelf(true);
+        // It is mandatory to not set includeSelf to true, as this will skip some entries.
         remote_indices_.rebuild<true>();
         using FromSet = Dune::EnumItem<Attribute,owner>;
         using ToSet = Dune::AllSet<Attribute>;
@@ -88,6 +225,7 @@ void CommunicateAboveBelow::endReset()
         communicator_.build<double*>(interface_);
     }
 #endif
+    return num_local_perfs_;
 }
 
 struct CopyGatherScatter
@@ -171,10 +309,11 @@ void CommunicateAboveBelow::pushBackEclIndex([[maybe_unused]] int above,
         {
             attr = overlap;
         }
-        above_indices_.add(above, {count_, attr, true});
-        current_indices_.add(current, {count_++, attr, true});
+        above_indices_.add(above, {num_local_perfs_, attr, true});
+        current_indices_.add(current, {num_local_perfs_, attr, true});
     }
 #endif
+    ++num_local_perfs_;
 }
 
 
@@ -195,6 +334,17 @@ void ParallelWellInfo::DestroyComm::operator()(Communication* comm)
     }
 #endif
     delete comm;
+}
+
+
+const CommunicateAboveBelow::IndexSet& CommunicateAboveBelow::getIndexSet() const
+{
+    return current_indices_;
+}
+
+int CommunicateAboveBelow::numLocalPerfs() const
+{
+    return num_local_perfs_;
 }
 
 ParallelWellInfo::ParallelWellInfo(const std::string& name,
@@ -245,12 +395,17 @@ void ParallelWellInfo::beginReset()
 
 void ParallelWellInfo::endReset()
 {
-    commAboveBelow_->beginReset();
+    int local_num_perfs = commAboveBelow_->endReset();
+    globalPerfCont_
+        .reset(new GlobalPerfContainerFactory(commAboveBelow_->getIndexSet(),
+                                              *comm_,
+                                              local_num_perfs));
 }
 
-void ParallelWellInfo::clearCommunicateAboveBelow()
+void ParallelWellInfo::clear()
 {
     commAboveBelow_->clear();
+    globalPerfCont_.reset();
 }
 
 std::vector<double> ParallelWellInfo::communicateAboveValues(double zero_value,
@@ -281,6 +436,16 @@ std::vector<double> ParallelWellInfo::communicateBelowValues(double last_value,
 {
     return commAboveBelow_->communicateBelow(last_value, current_values.data(),
                                              current_values.size());
+}
+
+const GlobalPerfContainerFactory&
+ParallelWellInfo::getGlobalPerfContainerFactory() const
+{
+    if(globalPerfCont_)
+        return *globalPerfCont_;
+    else
+        OPM_THROW(std::logic_error,
+                  "No ecl indices have been added via beginReset, pushBackEclIndex, endReset");
 }
 
 bool operator<(const ParallelWellInfo& well1, const ParallelWellInfo& well2)

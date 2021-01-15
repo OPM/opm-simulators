@@ -467,7 +467,7 @@ namespace Opm {
         // Clear the communication data structures for above values.
         for(auto&& pinfo : local_parallel_well_info_)
         {
-            pinfo->clearCommunicateAboveBelow();
+            pinfo->clear();
         }
     }
 
@@ -620,7 +620,8 @@ namespace Opm {
         int well_index = 0;
         for (const auto& well : wells_ecl_) {
             int completion_index = 0;
-            int completion_index_above = -1; // -1 marks no above perf available
+            // INVALID_ECL_INDEX marks no above perf available
+            int completion_index_above = ParallelWellInfo::INVALID_ECL_INDEX;
             well_perf_data_[well_index].clear();
             well_perf_data_[well_index].reserve(well.getConnections().size());
             CheckDistributedWellConnections checker(well, *local_parallel_well_info_[well_index]);
@@ -649,6 +650,9 @@ namespace Opm {
                                                           completion_index);
                     }
                     firstOpenCompletion = false;
+                    // Next time this index is the one above as each open completion is
+                    // is stored somehwere.
+                    completion_index_above = completion_index;
                 } else {
                     checker.connectionFound(completion_index);
                     if (completion.state() != Connection::State::SHUT) {
@@ -659,7 +663,6 @@ namespace Opm {
                 // Note: we rely on the connections being filtered! I.e. there are only connections
                 // to active cells in the global grid.
                 ++completion_index;
-                ++completion_index_above;
             }
             parallelWellInfo.endReset();
             checker.checkAllConnectionsFound();

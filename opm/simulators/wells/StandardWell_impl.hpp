@@ -1675,6 +1675,8 @@ namespace Opm
                 ipr_b_[ebosCompIdxToFlowCompIdx(p)] += ipr_b_perf[p];
             }
         }
+        this->parallel_well_info_.communication().sum(ipr_a_.data(), ipr_a_.size());
+        this->parallel_well_info_.communication().sum(ipr_b_.data(), ipr_b_.size());
     }
 
 
@@ -1797,6 +1799,13 @@ namespace Opm
                 all_drawdown_wrong_direction = false;
                 break;
             }
+        }
+
+        const auto& comm = this->parallel_well_info_.communication();
+        if (comm.size() > 1)
+        {
+            all_drawdown_wrong_direction =
+                (comm.min(all_drawdown_wrong_direction ? 1 : 0) == 1);
         }
 
         return all_drawdown_wrong_direction;
@@ -1991,23 +2000,36 @@ namespace Opm
         //    component) exiting up the wellbore from each perforation,
         //    taking into account flow from lower in the well, and
         //    in/out-flow at each perforation.
-        std::vector<double> q_out_perf(nperf*num_comp);
+        std::vector<double> q_out_perf((nperf)*num_comp, 0.0);
+
+        // Step 1 depends on the order of the perforations. Hence we need to
+        // do the modifications globally.
+        // Create and get the global perforation information and do this sequentially
+        // on each process
+
+        const auto& factory = this->parallel_well_info_.getGlobalPerfContainerFactory();
+        auto global_q_out_perf = factory.createGlobal(q_out_perf, num_comp);
+        auto global_perf_comp_rates = factory.createGlobal(perfComponentRates, num_comp);
 
         // TODO: investigate whether we should use the following techniques to calcuate the composition of flows in the wellbore
         // Iterate over well perforations from bottom to top.
-        for (int perf = nperf - 1; perf >= 0; --perf) {
+        for (int perf = factory.numGlobalPerfs() - 1; perf >= 0; --perf) {
             for (int component = 0; component < num_comp; ++component) {
-                if (perf == nperf - 1) {
+                auto index = perf * num_comp + component;
+                if (perf == factory.numGlobalPerfs() - 1) {
                     // This is the bottom perforation. No flow from below.
-                    q_out_perf[perf*num_comp+ component] = 0.0;
+                    global_q_out_perf[index] = 0.0;
                 } else {
                     // Set equal to flow from below.
-                    q_out_perf[perf*num_comp + component] = q_out_perf[(perf+1)*num_comp + component];
+                    global_q_out_perf[index] = global_q_out_perf[index + num_comp];
                 }
                 // Subtract outflow through perforation.
-                q_out_perf[perf*num_comp + component] -= perfComponentRates[perf*num_comp + component];
+                global_q_out_perf[index] -= global_perf_comp_rates[index];
             }
         }
+
+        // Copy the data back to local view
+        factory.copyGlobalToLocal(global_q_out_perf, q_out_perf, num_comp);
 
         // 2. Compute the component mix at each perforation as the
         //    absolute values of the surface rates divided by their sum.
@@ -2271,6 +2293,12 @@ namespace Opm
             connPI += np;
         }
 
+        //  Sum with communication in case of distributed well.
+        const auto& comm = this->parallel_well_info_.communication();
+        if (comm.size() > 1)
+        {
+            comm.sum(wellPI, np);
+        }
         assert (static_cast<int>(subsetPerfID) == this->number_of_perforations_ &&
                 "Internal logic error in processing connections for PI/II");
     }
@@ -2561,6 +2589,7 @@ namespace Opm
                 well_flux[ebosCompIdxToFlowCompIdx(p)] += cq_s[p].value();
             }
         }
+        this->parallel_well_info_.communication().sum(well_flux.data(), well_flux.size());
     }
 
 
@@ -4114,6 +4143,11 @@ namespace Opm
         std::vector<double> well_q_s_noderiv(well_q_s.size());
         for (int comp = 0; comp < num_components_; ++comp) {
             well_q_s_noderiv[comp] = well_q_s[comp].value();
+        }
+        const auto& comm = this->parallel_well_info_.communication();
+        if (comm.size() > 1)
+        {
+            comm.sum(well_q_s_noderiv.data(), well_q_s_noderiv.size());
         }
         return well_q_s_noderiv;
     }
