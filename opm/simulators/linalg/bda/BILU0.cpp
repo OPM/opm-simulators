@@ -167,7 +167,6 @@ namespace bda
         // split matrix into L and U
         // also convert U into BSC format (Ut)
         // Ut stores diagonal for now
-        int num_blocks_L = 0;
 
         // Ut is actually BSC format
         std::unique_ptr<BlockedMatrix<bs> > Ut = std::make_unique<BlockedMatrix<bs> >(Umat->Nb, Umat->nnzbs + Umat->Nb);
@@ -177,6 +176,7 @@ namespace bda
             Ut->rowPointers[i] = 0;
         }
 
+        int num_blocks_L = 0;
         // for every row
         for (int i = 0; i < Nb; i++) {
             int iRowStart = LUmat->rowPointers[i];
@@ -188,19 +188,16 @@ namespace bda
                     Ut->rowPointers[j+1]++;   // actually colPointers
                 } else {
                     Lmat->colIndices[num_blocks_L] = j;
-                    memcpy(Lmat->nnzValues + num_blocks_L * bs * bs, LUmat->nnzValues + ij * bs * bs, sizeof(double) * bs * bs);
+                    std::copy(LUmat->nnzValues + ij * bs * bs, LUmat->nnzValues + (ij+1) * bs * bs, Lmat->nnzValues + num_blocks_L * bs * bs);
                     num_blocks_L++;
                 }
             }
+            // TODO: copy all blocks for L at once, instead of copying each block individually
             Lmat->rowPointers[i+1] = num_blocks_L;
         }
 
         // prefix sum
-        int sum = 0;
-        for (int i = 1; i < Nb+1; i++) {
-            sum += Ut->rowPointers[i];
-            Ut->rowPointers[i] = sum;
-        }
+        std::partial_sum(Ut->rowPointers, Ut->rowPointers+Nb+1, Ut->rowPointers);
 
         // for every row
         for (int i = 0; i < Nb; i++) {
@@ -317,13 +314,17 @@ namespace bda
 
                 }
             }
-            double *t = Lmat->nnzValues;
-            Lmat->nnzValues = Ltmp;
-            Ltmp = t;
-            t = Ut->nnzValues;
-            Ut->nnzValues = Utmp;
-            Utmp = t;
+            // 1st sweep writes to Ltmp
+            // 2nd sweep writes to Lmat->nnzValues
+            std::swap(Lmat->nnzValues, Ltmp);
+            std::swap(Ut->nnzValues, Utmp);
         } // end sweep
+
+        // if number of sweeps is odd, swap again so data is in Lmat->nnzValues
+        if (num_sweeps % 2 == 1) {
+            std::swap(Lmat->nnzValues, Ltmp);
+            std::swap(Ut->nnzValues, Utmp);
+        }
         delete[] Ltmp;
 #endif
 
@@ -346,11 +347,7 @@ namespace bda
         }
 
         // prefix sum
-        int sumU = 0;
-        for (int i = 1; i < Nb+1; i++) {
-            sumU += ptr[i];
-            ptr[i] = sumU;
-        }
+        std::partial_sum(ptr.begin(), ptr.end(), ptr.begin());
 
         // actually copy nonzero values for U
         for(int i = 0; i < Nb; ++i) {
