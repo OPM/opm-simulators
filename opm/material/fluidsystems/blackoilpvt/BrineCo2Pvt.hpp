@@ -57,8 +57,6 @@ template <class Scalar>
 class BrineCo2Pvt
 {
     typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
-    typedef Opm::SimpleHuDuanH2O<Scalar> H2O;
-    typedef Opm::Brine<Scalar, H2O> Brine;
 
     //typedef Opm::H2O<Scalar> H2O_IAPWS;
     //typedef Opm::Brine<Scalar, H2O_IAPWS> Brine_IAPWS;
@@ -68,9 +66,12 @@ class BrineCo2Pvt
     //typedef H2O_Tabulated H2O;
     //typedef Brine_Tabulated Brine;
 
-    typedef Opm::CO2<Scalar, CO2Tables> CO2;
 
 public:
+    typedef Opm::SimpleHuDuanH2O<Scalar> H2O;
+    typedef Opm::Brine<Scalar, H2O> Brine;
+    typedef Opm::CO2<Scalar, CO2Tables> CO2;
+
     typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
 
     //! The binary coefficients for brine and CO2 used by this fluid system
@@ -380,8 +381,8 @@ private:
     LhsEval convertXoGToxoG_(const LhsEval& XoG) const
     {
         Scalar M_CO2 = CO2::molarMass();
-        Scalar M_H2O = H2O::molarMass();
-        return XoG*M_H2O / (M_CO2*(1 - XoG) + XoG*M_H2O);
+        Scalar M_Brine = Brine::molarMass();
+        return XoG*M_Brine / (M_CO2*(1 - XoG) + XoG*M_Brine);
     }
 
 
@@ -392,9 +393,9 @@ private:
     LhsEval convertxoGToXoG(const LhsEval& xoG) const
     {
         Scalar M_CO2 = CO2::molarMass();
-        Scalar M_H2O = H2O::molarMass();
+        Scalar M_Brine = Brine::molarMass();
 
-        return xoG*M_CO2 / (xoG*(M_CO2 - M_H2O) + M_H2O);
+        return xoG*M_CO2 / (xoG*(M_CO2 - M_Brine) + M_Brine);
     }
 
 

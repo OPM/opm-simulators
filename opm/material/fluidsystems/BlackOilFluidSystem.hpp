@@ -246,6 +246,17 @@ public:
         // set default molarMass and mappings
         initEnd();
 
+        // use molarMass of CO2 and Brine as default
+        // when we are using the the CO2STORE option
+        // NB the oil component is used internally for
+        // brine
+        if (eclState.runspec().co2Storage()) {
+            for (unsigned regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
+                molarMass_[regionIdx][oilCompIdx] = BrineCo2Pvt<Scalar>::Brine::molarMass();
+                molarMass_[regionIdx][gasCompIdx] = BrineCo2Pvt<Scalar>::CO2::molarMass();
+            }
+        }
+
         setEnableDiffusion(eclState.getSimulationConfig().isDiffusive());
         if(enableDiffusion()) {
             const auto& diffCoeffTables = eclState.getTableManager().getDiffusionCoefficientTable();
@@ -256,8 +267,11 @@ public:
                 assert(diffCoeffTable.size() == numRegions);
                 for (unsigned regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
                     const auto& diffCoeffTable = diffCoeffTables[regionIdx];
-                    molarMass_[regionIdx][oilCompIdx] = diffCoeffTable.oil_mw;
-                    molarMass_[regionIdx][gasCompIdx] = diffCoeffTable.gas_mw;
+                    // if molar weights are not provided in the deck we use the default values
+                    if(diffCoeffTable.oil_mw > 0)
+                        molarMass_[regionIdx][oilCompIdx] = diffCoeffTable.oil_mw;
+                    if(diffCoeffTable.gas_mw > 0)
+                        molarMass_[regionIdx][gasCompIdx] = diffCoeffTable.gas_mw;
                     setDiffusionCoefficient(diffCoeffTable.gas_in_gas, gasCompIdx, gasPhaseIdx, regionIdx);
                     setDiffusionCoefficient(diffCoeffTable.oil_in_gas, oilCompIdx, gasPhaseIdx, regionIdx);
                     setDiffusionCoefficient(diffCoeffTable.gas_in_oil, gasCompIdx, oilPhaseIdx, regionIdx);
