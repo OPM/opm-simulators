@@ -77,8 +77,15 @@ public:
     void increment()
     {
         const auto& iend = gridView().iend(element());
-        while (intersectionIt_ != iend && !intersectionIt_->boundary())
-            ++ intersectionIt_;
+
+        if(intersectionIt_ == iend)
+          return;
+
+        ++intersectionIt_;
+        // iterate to the next boundary intersection
+        while (intersectionIt_ != iend && !intersectionIt_->boundary()) {
+            ++intersectionIt_;
+        }
     }
 
     /*!
@@ -245,7 +252,7 @@ public:
      *
      * \param boundaryFaceIdx The local index of the boundary segment
      */
-    const Intersection& intersection(unsigned boundaryFaceIdx OPM_UNUSED) const
+    const Intersection intersection(unsigned boundaryFaceIdx OPM_UNUSED) const
     { return *intersectionIt_; }
 
     /*!
