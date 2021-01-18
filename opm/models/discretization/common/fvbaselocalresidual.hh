@@ -425,6 +425,9 @@ protected:
             return;
 
         BoundaryContext boundaryCtx(elemCtx);
+        // move the iterator to the first boundary
+        if(!boundaryCtx.intersection(0).boundary())
+            boundaryCtx.increment();
 
         // evaluate the boundary for all boundary faces of the current context
         size_t numBoundaryFaces = boundaryCtx.numBoundaryFaces(/*timeIdx=*/0);
