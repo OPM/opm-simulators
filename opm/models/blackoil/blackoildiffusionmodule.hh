@@ -122,16 +122,20 @@ public:
                 continue;
             }
 
-            // arithmetic mean of the phase's b factor
-            Evaluation bAvg = fluidStateI.invB(phaseIdx);
-            bAvg += Toolbox::value(fluidStateJ.invB(phaseIdx));
-            bAvg /= 2;
+            // arithmetic mean of the phase's b factor weighed by saturation
+            Evaluation bSAvg = fluidStateI.saturation(phaseIdx) * fluidStateI.invB(phaseIdx);
+            bSAvg += Toolbox::value(fluidStateJ.saturation(phaseIdx)) * Toolbox::value(fluidStateJ.invB(phaseIdx));
+            bSAvg /= 2;
+
+            // phase not present, skip
+            if(bSAvg < 1.0e-6)
+                continue;
 
             // mass flux of solvent component (oil in oil or gas in gas)
             unsigned solventCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
             unsigned activeSolventCompIdx = Indices::canonicalToActiveComponentIndex(solventCompIdx);
             flux[conti0EqIdx + activeSolventCompIdx] +=
-                    -bAvg
+                    -bSAvg
                     * extQuants.moleFractionGradientNormal(phaseIdx, solventCompIdx)
                     * extQuants.effectiveDiffusionCoefficient(phaseIdx, solventCompIdx);
 
@@ -139,7 +143,7 @@ public:
             unsigned soluteCompIdx = FluidSystem::soluteComponentIndex(phaseIdx);
             unsigned activeSoluteCompIdx = Indices::canonicalToActiveComponentIndex(soluteCompIdx);
             flux[conti0EqIdx + activeSoluteCompIdx] +=
-                    -bAvg
+                    -bSAvg
                     * extQuants.moleFractionGradientNormal(phaseIdx, soluteCompIdx)
                     * extQuants.effectiveDiffusionCoefficient(phaseIdx, soluteCompIdx);
         }
