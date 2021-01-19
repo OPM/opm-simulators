@@ -1392,6 +1392,9 @@ namespace Opm
                       WellState& well_state,
                       Opm::DeferredLogger& deferred_logger)
     {
+        if (!this->isOperable())
+            return;
+
         // keep a copy of the original well state
         const WellState well_state0 = well_state;
         const double dt = ebosSimulator.timeStepSize();
