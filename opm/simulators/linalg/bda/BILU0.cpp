@@ -185,7 +185,7 @@ namespace bda
             for (int ij = iRowStart; ij < iRowEnd; ij++) {
                 int j = LUmat->colIndices[ij];
                 if (i <= j) {
-                    Ut->rowPointers[j+1]++;   // actually colPointers
+                    Ut->rowPointers[j+1]++;   // actually colPointers, now simply indicates how many blocks this col holds
                 } else {
                     Lmat->colIndices[num_blocks_L] = j;
                     std::copy(LUmat->nnzValues + ij * bs * bs, LUmat->nnzValues + (ij+1) * bs * bs, Lmat->nnzValues + num_blocks_L * bs * bs);
@@ -196,7 +196,7 @@ namespace bda
             Lmat->rowPointers[i+1] = num_blocks_L;
         }
 
-        // prefix sum
+        // prefix sum to sum rowsizes into colpointers
         std::partial_sum(Ut->rowPointers, Ut->rowPointers+Nb+1, Ut->rowPointers);
 
         // for every row
@@ -207,7 +207,7 @@ namespace bda
             for (int ij = iRowStart; ij < iRowEnd; ij++) {
                 int j = LUmat->colIndices[ij];
                 if (i <= j){
-                    int idx = Ut->rowPointers[j]++;
+                    int idx = Ut->rowPointers[j]++; // rowPointers[i] is (mis)used as the write offset of the current row i
                     Ut->colIndices[idx] = i;     // actually rowIndices
                     memcpy(Ut->nnzValues + idx * bs * bs, LUmat->nnzValues + ij * bs * bs, sizeof(double) * bs * bs);
                 }
@@ -216,6 +216,7 @@ namespace bda
 
         // rotate
         // the Ut->rowPointers were increased in the last loop
+        // now Ut->rowPointers[i+1] is at the same position as Ut->rowPointers[i] should have for a crs matrix. reset to correct expected value
         for (int i = Nb; i > 0; --i) {
             Ut->rowPointers[i] = Ut->rowPointers[i-1];
         }
@@ -223,7 +224,8 @@ namespace bda
 
         Opm::Detail::Inverter<bs> inverter;
 
-        // Utmp is needed for CPU and GPU decomposition, because U is transposed, and reversed at the end
+        // Utmp is needed for CPU and GPU decomposition, because U is transposed, and reversed after decomposition
+        // U will be reversed because it is used with backwards substitution, the last row is used first
         // Ltmp is only needed for CPU decomposition, GPU creates GPU buffer for Ltmp
         double *Utmp = new double[Ut->nnzbs * block_size * block_size];
 
@@ -273,6 +275,7 @@ namespace bda
                     // if row rowU1 is empty, skip row
                     if (jk < Lmat->rowPointers[rowU1+1]) {
                         int colL = Lmat->colIndices[jk];
+                        // for every block on colU
                         for (int k = jColStart; k < ij; ++k) {
                             int rowU2 = Ut->colIndices[k];
                             while (colL < rowU2) {
@@ -385,7 +388,7 @@ namespace bda
         std::rotate(ptr.begin(), ptr.end() - 1, ptr.end());
         ptr.front() = 0;
 
-        // reversing the rows of U, because that is the order they are used in
+        // reversing the rows of U, because that is the order they are used in during ILU apply
         int URowIndex = 0;
         int offsetU = 0;   // number of nnz blocks that are already copied to Umat
         Umat->rowPointers[0] = 0;
