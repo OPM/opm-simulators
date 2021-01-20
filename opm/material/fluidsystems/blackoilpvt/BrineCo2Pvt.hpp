@@ -160,12 +160,18 @@ public:
      * \brief Returns the specific enthalpy [J/kg] of gas given a set of parameters.
      */
     template <class Evaluation>
-    Evaluation internalEnergy(unsigned regionIdx OPM_UNUSED,
-                        const Evaluation& temperature OPM_UNUSED,
-                        const Evaluation& pressure OPM_UNUSED,
-                        const Evaluation& Rs OPM_UNUSED) const
+    Evaluation internalEnergy(unsigned regionIdx,
+                        const Evaluation& temperature,
+                        const Evaluation& pressure,
+                        const Evaluation& Rs) const
     {
-        throw std::runtime_error("Requested the enthalpy of brine but the thermal option is not enabled");
+
+        const Evaluation xlCO2 = convertXoGToxoG_(convertRsToXoG_(Rs,regionIdx));
+        return (liquidEnthalpyBrineCO2_(temperature,
+                                       pressure,
+                                       salinity_[regionIdx],
+                                       xlCO2)
+        - pressure / density_(regionIdx, temperature, pressure, Rs));
     }
 
     /*!
@@ -418,6 +424,76 @@ private:
         xlCO2 = Opm::max(0.0, Opm::min(1.0, xlCO2));
 
         return convertXoGToRs(convertxoGToXoG(xlCO2), regionIdx);
+    }
+
+    template <class LhsEval>
+    static LhsEval liquidEnthalpyBrineCO2_(const LhsEval& T,
+                                           const LhsEval& p,
+                                           Scalar S, // salinity
+                                           const LhsEval& X_CO2_w)
+    {
+        /* X_CO2_w : mass fraction of CO2 in brine */
+
+        /* same function as enthalpy_brine, only extended by CO2 content */
+
+        /*Numerical coefficents from PALLISER*/
+        static Scalar f[] = {
+            2.63500E-1, 7.48368E-6, 1.44611E-6, -3.80860E-10
+        };
+
+        /*Numerical coefficents from MICHAELIDES for the enthalpy of brine*/
+        static Scalar a[4][3] = {
+            { 9633.6, -4080.0, +286.49 },
+            { +166.58, +68.577, -4.6856 },
+            { -0.90963, -0.36524, +0.249667E-1 },
+            { +0.17965E-2, +0.71924E-3, -0.4900E-4 }
+        };
+
+        LhsEval theta, h_NaCl;
+        LhsEval h_ls1, d_h;
+        LhsEval delta_h;
+        LhsEval delta_hCO2, hg, hw;
+
+        theta = T - 273.15;
+
+        // Regularization
+        Scalar scalarTheta = Opm::scalarValue(theta);
+        Scalar S_lSAT = f[0] + scalarTheta*(f[1] + scalarTheta*(f[2] + scalarTheta*f[3]));
+        if (S > S_lSAT)
+            S = S_lSAT;
+
+        hw = H2O::liquidEnthalpy(T, p) /1E3; /* kJ/kg */
+
+        /*DAUBERT and DANNER*/
+        /*U=*/h_NaCl = (3.6710E4*T + 0.5*(6.2770E1)*T*T - ((6.6670E-2)/3)*T*T*T
+                        +((2.8000E-5)/4)*(T*T*T*T))/(58.44E3)- 2.045698e+02; /* kJ/kg */
+
+        Scalar m = 1E3/58.44 * S/(1-S);
+        int i = 0;
+        int j = 0;
+        d_h = 0;
+
+        for (i = 0; i<=3; i++) {
+            for (j=0; j<=2; j++) {
+                d_h = d_h + a[i][j] * Opm::pow(theta, static_cast<Scalar>(i)) * std::pow(m, j);
+            }
+        }
+        /* heat of dissolution for halite according to Michaelides 1971 */
+        delta_h = (4.184/(1E3 + (58.44 * m)))*d_h;
+
+        /* Enthalpy of brine without CO2 */
+        h_ls1 =(1-S)*hw + S*h_NaCl + S*delta_h; /* kJ/kg */
+
+        /* heat of dissolution for CO2 according to Fig. 6 in Duan and Sun 2003. (kJ/kg)
+           In the relevant temperature ranges CO2 dissolution is
+           exothermal */
+        delta_hCO2 = (-57.4375 + T * 0.1325) * 1000/44;
+
+        /* enthalpy contribution of CO2 (kJ/kg) */
+        hg = CO2::gasEnthalpy(T, p)/1E3 + delta_hCO2;
+
+        /* Enthalpy of brine with dissolved CO2 */
+        return (h_ls1 - X_CO2_w*hw + hg*X_CO2_w)*1E3; /*J/kg*/
     }
 
 };
