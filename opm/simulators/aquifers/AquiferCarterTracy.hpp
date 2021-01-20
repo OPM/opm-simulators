@@ -89,8 +89,8 @@ protected:
     const AquiferCT::AQUCT_data aquct_data_;
     Scalar beta_; // Influx constant
     // TODO: it is possible it should be a AD variable
-    Scalar mu_w_; // water viscosity
-    Scalar fluxValue_; // value of flux
+    Scalar mu_w_{1}; // water viscosity
+    Scalar fluxValue_{0}; // value of flux
 
     void assignRestartData(const data::AquiferData& /* xaq */) override
     {
