@@ -138,7 +138,6 @@ public:
                     -bSAvg
                     * extQuants.moleFractionGradientNormal(phaseIdx, solventCompIdx)
                     * extQuants.effectiveDiffusionCoefficient(phaseIdx, solventCompIdx);
-
             // mass flux of solute component (gas in oil or oil in gas)
             unsigned soluteCompIdx = FluidSystem::soluteComponentIndex(phaseIdx);
             unsigned activeSoluteCompIdx = Indices::canonicalToActiveComponentIndex(soluteCompIdx);
@@ -398,7 +397,9 @@ protected:
         const auto& intQuantsInside = elemCtx.intensiveQuantities(extQuants.interiorIndex(), timeIdx);
         const auto& intQuantsOutside = elemCtx.intensiveQuantities(extQuants.exteriorIndex(), timeIdx);
 
-        Scalar diffusivity = elemCtx.problem().diffusivity(elemCtx, face.interiorIndex(), face.exteriorIndex());
+        const Scalar diffusivity = elemCtx.problem().diffusivity(elemCtx, face.interiorIndex(), face.exteriorIndex());
+        const Scalar faceArea = face.area();
+
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
@@ -412,7 +413,7 @@ protected:
                     (intQuantsOutside.fluidState().moleFraction(phaseIdx, compIdx)
                      -
                      intQuantsInside.fluidState().moleFraction(phaseIdx, compIdx))
-                    * diffusivity;
+                    * diffusivity / faceArea; //opm-models expects pr area flux
                 Opm::Valgrind::CheckDefined(moleFractionGradientNormal_[phaseIdx][compIdx]);
 
                 // use the arithmetic average for the effective
