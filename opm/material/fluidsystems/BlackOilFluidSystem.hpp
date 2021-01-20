@@ -267,11 +267,8 @@ public:
                 assert(diffCoeffTable.size() == numRegions);
                 for (unsigned regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
                     const auto& diffCoeffTable = diffCoeffTables[regionIdx];
-                    // if molar weights are not provided in the deck we use the default values
-                    if(diffCoeffTable.oil_mw > 0)
-                        molarMass_[regionIdx][oilCompIdx] = diffCoeffTable.oil_mw;
-                    if(diffCoeffTable.gas_mw > 0)
-                        molarMass_[regionIdx][gasCompIdx] = diffCoeffTable.gas_mw;
+                    molarMass_[regionIdx][oilCompIdx] = diffCoeffTable.oil_mw;
+                    molarMass_[regionIdx][gasCompIdx] = diffCoeffTable.gas_mw;
                     setDiffusionCoefficient(diffCoeffTable.gas_in_gas, gasCompIdx, gasPhaseIdx, regionIdx);
                     setDiffusionCoefficient(diffCoeffTable.oil_in_gas, oilCompIdx, gasPhaseIdx, regionIdx);
                     setDiffusionCoefficient(diffCoeffTable.gas_in_oil, gasCompIdx, oilPhaseIdx, regionIdx);
