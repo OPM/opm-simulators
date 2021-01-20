@@ -343,8 +343,8 @@ namespace bda
             std::swap(Ut->nnzValues, Utmp);
         } // end sweep
 
-        // if number of sweeps is odd, swap again so data is in Lmat->nnzValues
-        if (num_sweeps % 2 == 1) {
+        // if number of sweeps is even, swap again so data is in Lmat->nnzValues
+        if (num_sweeps % 2 == 0) {
             std::swap(Lmat->nnzValues, Ltmp);
             std::swap(Ut->nnzValues, Utmp);
         }
