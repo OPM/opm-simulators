@@ -85,6 +85,7 @@ namespace Opm
         using RateVector = GetPropType<TypeTag, Properties::RateVector>;
 
         static const int numEq = Indices::numEq;
+        static const int numPhases = Indices::numPhases;
         typedef double Scalar;
 
         typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
@@ -433,6 +434,8 @@ namespace Opm
         const PhaseUsage& phaseUsage() const;
 
         int flowPhaseToEbosCompIdx( const int phaseIdx ) const;
+
+        int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const;
 
         int ebosCompIdxToFlowCompIdx( const unsigned compIdx ) const;
 

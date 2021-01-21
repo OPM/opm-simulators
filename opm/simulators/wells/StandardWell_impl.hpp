@@ -4170,7 +4170,8 @@ namespace Opm
             // Note: E100's notion of PI value phase mobility includes
             // the reciprocal FVF.
             const auto connMob =
-                mobility[ flowPhaseToEbosCompIdx(p) ].value() * fs.invB(p).value();
+                mobility[ flowPhaseToEbosCompIdx(p) ].value()
+                    * fs.invB(flowPhaseToEbosPhaseIdx(p)).value();
 
             connPI[p] = connPICalc(connMob);
         }
@@ -4227,6 +4228,6 @@ namespace Opm
 
         const auto zero   = EvalWell { this->numWellEq_ + this->numEq, 0.0 };
         const auto mt     = std::accumulate(mobility.begin(), mobility.end(), zero);
-        connII[phase_pos] = connIICalc(mt.value() * fs.invB(phase_pos).value());
+        connII[phase_pos] = connIICalc(mt.value() * fs.invB(flowPhaseToEbosPhaseIdx(phase_pos)).value());
     }
 } // namespace Opm
