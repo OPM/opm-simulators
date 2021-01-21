@@ -300,6 +300,23 @@ namespace Opm
     template<typename TypeTag>
     int
     WellInterface<TypeTag>::
+    flowPhaseToEbosPhaseIdx( const int phaseIdx ) const
+    {
+        const auto& pu = phaseUsage();
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && pu.phase_pos[Water] == phaseIdx)
+            return FluidSystem::waterPhaseIdx;
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && pu.phase_pos[Oil] == phaseIdx)
+            return FluidSystem::oilPhaseIdx;
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && pu.phase_pos[Gas] == phaseIdx)
+            return FluidSystem::gasPhaseIdx;
+
+        // for other phases return the index
+        return phaseIdx;
+    }
+
+    template<typename TypeTag>
+    int
+    WellInterface<TypeTag>::
     ebosCompIdxToFlowCompIdx( const unsigned compIdx ) const
     {
         const auto& pu = phaseUsage();

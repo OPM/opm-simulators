@@ -48,6 +48,7 @@ namespace Opm
 
         /// the number of reservior equations
         using Base::numEq;
+        using Base::numPhases;
 
         using Base::has_solvent;
         using Base::has_polymer;
@@ -69,7 +70,7 @@ namespace Opm
         static constexpr int SPres = has_gas + has_water + 1;
 
         //  the number of well equations  TODO: it should have a more general strategy for it
-        static const int numWellEq = getPropValue<TypeTag, Properties::EnablePolymer>() ? numEq : numEq + 1;
+        static const int numWellEq = numPhases + 1;
 
         using typename Base::Scalar;
 
@@ -239,6 +240,7 @@ namespace Opm
         using Base::phaseUsage;
         using Base::name;
         using Base::flowPhaseToEbosCompIdx;
+        using Base::flowPhaseToEbosPhaseIdx;
         using Base::ebosCompIdxToFlowCompIdx;
         using Base::getAllowCrossFlow;
         using Base::scalingFactor;

@@ -76,6 +76,7 @@ namespace Opm
         using GasLiftHandler = Opm::GasLiftRuntime<TypeTag>;
 
         using Base::numEq;
+        using Base::numPhases;
 
         using Base::has_solvent;
         using Base::has_zFraction;
@@ -88,16 +89,10 @@ namespace Opm
         using FoamModule = Opm::BlackOilFoamModule<TypeTag>;
         using BrineModule = Opm::BlackOilBrineModule<TypeTag>;
 
-        // polymer concentration and temperature are already known by the well, so
-        // polymer and energy conservation do not need to be considered explicitly
-        static const int numPolymerEq = Indices::numPolymers;
-        static const int numEnergyEq = Indices::numEnergy;
-        static const int numFoamEq = Indices::numFoam;
-        static const int numBrineEq = Indices::numBrine;
-        static const int numExtbos = Indices::numExtbos;
+        static const int numSolventEq = Indices::numSolvents;
 
         // number of the conservation equations
-        static const int numWellConservationEq = numEq - numPolymerEq - numEnergyEq - numFoamEq - numBrineEq - numExtbos;
+        static const int numWellConservationEq = numPhases + numSolventEq;
         // number of the well control equations
         static const int numWellControlEq = 1;
         // number of the well equations that will always be used
@@ -113,7 +108,7 @@ namespace Opm
         // well control equation is always the last well equation.
         // TODO: in the current implementation, we use the well rate as the first primary variables for injectors,
         // instead of G_t.
-        static const bool gasoil = numEq == 2 && (Indices::compositionSwitchIdx >= 0);
+        static const bool gasoil = numPhases == 2 && (Indices::compositionSwitchIdx >= 0);
         static const int WQTotal = 0;
         static const int WFrac = gasoil? -1000: 1;
         static const int GFrac = gasoil? 1: 2;
@@ -331,6 +326,7 @@ namespace Opm
         // protected functions from the Base class
         using Base::getAllowCrossFlow;
         using Base::flowPhaseToEbosCompIdx;
+        using Base::flowPhaseToEbosPhaseIdx;
         using Base::ebosCompIdxToFlowCompIdx;
         using Base::wsalt;
         using Base::wsolvent;
