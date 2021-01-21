@@ -16,18 +16,17 @@
 */
 #include "config.h"
 #include <opm/simulators/flow/Main.hpp>
-#include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
 namespace Opm {
 namespace Properties {
 namespace TTag {
-struct EclFlowCo2Problem {
+struct EclFlowDiffusionProblem {
     using InheritsFrom = std::tuple<EclFlowProblem>;
 };
 }
 
 template<class TypeTag>
-struct EnableDiffusion<TypeTag, TTag::EclFlowProblem> {
+struct EnableDiffusion<TypeTag, TTag::EclFlowDiffusionProblem> {
     static constexpr bool value = true;
 };
 
@@ -38,7 +37,7 @@ struct EnableDiffusion<TypeTag, TTag::EclFlowProblem> {
 // ----------------- Main program -----------------
 int main(int argc, char** argv)
 {
-    using TypeTag = Opm::Properties::TTag::EclFlowCo2Problem;
+    using TypeTag = Opm::Properties::TTag::EclFlowDiffusionProblem;
     auto mainObject = Opm::Main(argc, argv);
     return mainObject.runStatic<TypeTag>();
 }
