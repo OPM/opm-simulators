@@ -175,6 +175,7 @@ public:
             Dune::EdgeWeightMethod edgeWeightsMethod = this->edgeWeightsMethod();
             bool ownersFirst = this->ownersFirst();
             bool serialPartitioning = this->serialPartitioning();
+            bool enableDistributedWells = this->enableDistributedWells();
             Scalar zoltanImbalanceTol = this->zoltanImbalanceTol();
 
             // convert to transmissibility for faces
@@ -222,7 +223,8 @@ public:
                     PropsCentroidsDataHandle<Dune::CpGrid> handle(*grid_, eclState, eclGrid, this->centroids_,
                                                                   cartesianIndexMapper());
                     this->parallelWells_ = std::get<1>(grid_->loadBalance(handle, edgeWeightsMethod, &wells, serialPartitioning,
-                                                                          faceTrans.data(), ownersFirst, false, 1, true, zoltanImbalanceTol));
+                                                                          faceTrans.data(), ownersFirst, false, 1, true, zoltanImbalanceTol,
+                                                                          enableDistributedWells));
                 }
                 catch(const std::bad_cast& e)
                 {

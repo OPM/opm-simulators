@@ -23,6 +23,7 @@
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
 
+#include <ebos/eclbasevanguard.hh>
 #include <string>
 
 namespace Opm::Properties {
@@ -30,6 +31,10 @@ namespace Opm::Properties {
 namespace TTag {
 struct FlowModelParameters {};
 }
+
+// forward declaration to make this header usable from eclbasevanguard.hh
+template<class TypeTag, class MyTypeTag>
+struct EclDeckFileName;
 
 template<class TypeTag, class MyTypeTag>
 struct DbhpMaxRel {
