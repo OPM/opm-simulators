@@ -264,7 +264,7 @@ public:
                 // if diffusion coefficient table is empty we relay on the PVT model to
                 // to give us the coefficients.
                 diffusionCoefficients_.resize(numRegions,{0,0,0,0,0,0,0,0,0});
-                assert(diffCoeffTable.size() == numRegions);
+                assert(diffCoeffTables.size() == numRegions);
                 for (unsigned regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
                     const auto& diffCoeffTable = diffCoeffTables[regionIdx];
                     molarMass_[regionIdx][oilCompIdx] = diffCoeffTable.oil_mw;
