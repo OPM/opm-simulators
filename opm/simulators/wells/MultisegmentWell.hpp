@@ -240,6 +240,7 @@ namespace Opm
         using Base::phaseUsage;
         using Base::name;
         using Base::flowPhaseToEbosCompIdx;
+        using Base::flowPhaseToEbosPhaseIdx;
         using Base::ebosCompIdxToFlowCompIdx;
         using Base::getAllowCrossFlow;
         using Base::scalingFactor;
