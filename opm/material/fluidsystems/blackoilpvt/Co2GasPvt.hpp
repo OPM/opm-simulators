@@ -124,11 +124,11 @@ public:
      */
     template <class Evaluation>
     Evaluation internalEnergy(unsigned regionIdx OPM_UNUSED,
-                        const Evaluation& temperature OPM_UNUSED,
-                        const Evaluation& pressure OPM_UNUSED,
+                        const Evaluation& temperature,
+                        const Evaluation& pressure,
                         const Evaluation& Rv OPM_UNUSED) const
     {
-        throw std::runtime_error("Requested the enthalpy of gas but the thermal option is not enabled");
+        return CO2::gasInternalEnergy(temperature, pressure);
     }
 
     /*!
