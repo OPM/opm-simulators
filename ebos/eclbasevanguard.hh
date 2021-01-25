@@ -175,6 +175,12 @@ template<class TypeTag>
 struct AllowDistributedWells<TypeTag, TTag::EclBaseVanguard> {
     static constexpr bool value = false;
 };
+
+// Same as in BlackoilModelParametersEbos.hpp but for here.
+template<class TypeTag>
+struct UseMultisegmentWell<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr bool value = true;
+};
 } // namespace Opm::Properties
 
 namespace Opm {
@@ -232,6 +238,8 @@ public:
                              "Tolerable imbalance of the loadbalancing provided by Zoltan (default: 1.1).");
         EWOMS_REGISTER_PARAM(TypeTag, bool, AllowDistributedWells,
                              "Allow the perforations of a well to be distributed to interior of multiple processes");
+        // register here for the use in the tests without BlackoildModelParametersEbos
+        EWOMS_REGISTER_PARAM(TypeTag, bool, UseMultisegmentWell, "Use the well model for multi-segment wells instead of the one for single-segment wells");
 
     }
 
@@ -464,7 +472,7 @@ public:
         {
             int hasMsWell = false;
 
-            if (BlackoilModelParametersEbos<TypeTag>().use_multisegment_well_)
+            if (EWOMS_GET_PARAM(TypeTag, bool, UseMultisegmentWell))
             {
                 if (myRank == 0)
                 {
