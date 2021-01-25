@@ -46,14 +46,14 @@ public:
      * @param prod_tables A map of different VFPPROD tables.
      */
 
-    VFPProperties(const std::vector<const VFPInjTable *>& inj_tables,
-                  const std::vector<const VFPProdTable *>& prod_tables)
+    VFPProperties(const std::vector<std::reference_wrapper<const VFPInjTable>>& inj_tables,
+                  const std::vector<std::reference_wrapper<const VFPProdTable>>& prod_tables)
     {
-        for (const auto& vfpinj_ptr : inj_tables)
-            this->m_inj.addTable( vfpinj_ptr );
+        for (const auto& vfpinj : inj_tables)
+            this->m_inj.addTable( vfpinj );
 
-        for (const auto& vfpprod_ptr : prod_tables)
-            this->m_prod.addTable( vfpprod_ptr );
+        for (const auto& vfpprod : prod_tables)
+            this->m_prod.addTable( vfpprod );
     };
 
     /**

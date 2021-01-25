@@ -38,7 +38,7 @@ public:
     /**
      * Takes *no* ownership of data.
      */
-    void addTable(const VFPInjTable * new_table);
+    void addTable(const VFPInjTable& new_table);
 
     /**
      * Linear interpolation of bhp as a function of the input parameters given as
@@ -64,27 +64,21 @@ public:
                  const double& thp) const {
 
         //Get the table
-        const VFPInjTable* table = detail::getTable(m_tables, table_id);
+        const VFPInjTable& table = detail::getTable(m_tables, table_id);
         EvalWell bhp = 0.0 * aqua;
 
         //Find interpolation variables
-        EvalWell flo = detail::getFlo(aqua, liquid, vapour, table->getFloType());
+        EvalWell flo = detail::getFlo(aqua, liquid, vapour, table.getFloType());
 
-        //Compute the BHP for each well independently
-        if (table != nullptr) {
-            //First, find the values to interpolate between
-            //Value of FLO is negative in OPM for producers, but positive in VFP table
-            auto flo_i = detail::findInterpData(flo.value(), table->getFloAxis());
-            auto thp_i = detail::findInterpData( thp, table->getTHPAxis()); // assume constant
+        //First, find the values to interpolate between
+        //Value of FLO is negative in OPM for producers, but positive in VFP table
+        auto flo_i = detail::findInterpData(flo.value(), table.getFloAxis());
+        auto thp_i = detail::findInterpData( thp, table.getTHPAxis()); // assume constant
 
-            detail::VFPEvaluation bhp_val = detail::interpolate(*table, flo_i, thp_i);
+        detail::VFPEvaluation bhp_val = detail::interpolate(table, flo_i, thp_i);
 
-            bhp = bhp_val.dflo * flo;
-            bhp.setValue(bhp_val.value); // thp is assumed constant i.e.
-        }
-        else {
-            bhp.setValue(-1e100); //Signal that this value has not been calculated properly, due to "missing" table
-        }
+        bhp = bhp_val.dflo * flo;
+        bhp.setValue(bhp_val.value); // thp is assumed constant i.e.
         return bhp;
     }
 
@@ -92,7 +86,7 @@ public:
      * Returns the table associated with the ID, or throws an exception if
      * the table does not exist
      */
-    const VFPInjTable* getTable(const int table_id) const;
+    const VFPInjTable& getTable(const int table_id) const;
 
     /**
      * Check whether there is table associated with ID
@@ -142,7 +136,7 @@ public:
 
 protected:
     // Map which connects the table number with the table itself
-    std::map<int, const VFPInjTable*> m_tables;
+    std::map<int, std::reference_wrapper<const VFPInjTable>> m_tables;
 };
 
 

@@ -42,7 +42,7 @@ public:
     /**
      * Takes *no* ownership of data.
      */
-    void addTable(const VFPProdTable * new_table);
+    void addTable(const VFPProdTable& new_table);
 
     /**
      * Linear interpolation of bhp as a function of the input parameters given as
@@ -70,32 +70,26 @@ public:
                  const double& alq) const {
 
         //Get the table
-        const VFPProdTable* table = detail::getTable(m_tables, table_id);
+        const VFPProdTable& table = detail::getTable(m_tables, table_id);
         EvalWell bhp = 0.0 * aqua;
 
         //Find interpolation variables
-        EvalWell flo = detail::getFlo(aqua, liquid, vapour, table->getFloType());
-        EvalWell wfr = detail::getWFR(aqua, liquid, vapour, table->getWFRType());
-        EvalWell gfr = detail::getGFR(aqua, liquid, vapour, table->getGFRType());
+        EvalWell flo = detail::getFlo(aqua, liquid, vapour, table.getFloType());
+        EvalWell wfr = detail::getWFR(aqua, liquid, vapour, table.getWFRType());
+        EvalWell gfr = detail::getGFR(aqua, liquid, vapour, table.getGFRType());
 
-        //Compute the BHP for each well independently
-        if (table != nullptr) {
-            //First, find the values to interpolate between
-            //Value of FLO is negative in OPM for producers, but positive in VFP table
-            auto flo_i = detail::findInterpData(-flo.value(), table->getFloAxis());
-            auto thp_i = detail::findInterpData( thp, table->getTHPAxis()); // assume constant
-            auto wfr_i = detail::findInterpData( wfr.value(), table->getWFRAxis());
-            auto gfr_i = detail::findInterpData( gfr.value(), table->getGFRAxis());
-            auto alq_i = detail::findInterpData( alq, table->getALQAxis()); //assume constant
+        //First, find the values to interpolate between
+        //Value of FLO is negative in OPM for producers, but positive in VFP table
+        auto flo_i = detail::findInterpData(-flo.value(), table.getFloAxis());
+        auto thp_i = detail::findInterpData( thp, table.getTHPAxis()); // assume constant
+        auto wfr_i = detail::findInterpData( wfr.value(), table.getWFRAxis());
+        auto gfr_i = detail::findInterpData( gfr.value(), table.getGFRAxis());
+        auto alq_i = detail::findInterpData( alq, table.getALQAxis()); //assume constant
 
-            detail::VFPEvaluation bhp_val = detail::interpolate(*table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
+        detail::VFPEvaluation bhp_val = detail::interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
 
-            bhp = (bhp_val.dwfr * wfr) + (bhp_val.dgfr * gfr) - (bhp_val.dflo * flo);
-            bhp.setValue(bhp_val.value);
-        }
-        else {
-            bhp.setValue(-1e100); //Signal that this value has not been calculated properly, due to "missing" table
-        }
+        bhp = (bhp_val.dwfr * wfr) + (bhp_val.dgfr * gfr) - (bhp_val.dflo * flo);
+        bhp.setValue(bhp_val.value);
         return bhp;
     }
 
@@ -141,7 +135,7 @@ public:
      * Returns the table associated with the ID, or throws an exception if
      * the table does not exist
      */
-    const VFPProdTable* getTable(const int table_id) const;
+    const VFPProdTable& getTable(const int table_id) const;
 
     /**
      * Check whether there is table associated with ID
@@ -180,7 +174,7 @@ protected:
                                    const double dp) const;
 
     // Map which connects the table number with the table itself
-    std::map<int, const VFPProdTable*> m_tables;
+    std::map<int, std::reference_wrapper<const VFPProdTable>> m_tables;
 };
 
 

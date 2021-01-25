@@ -115,7 +115,7 @@ int main(int argc, char** argv)
         thps[ii] = (1.0 - q) * thp_min + q * thp_max;
     }
 
-    const VFPProdTable& table = *(setup.vfp_properties->getProd()->getTable(table_id));
+    const VFPProdTable& table = setup.vfp_properties->getProd()->getTable(table_id);
     std::cout.precision(12);
     for (double rate : rates) {
         for (double thp : thps) {

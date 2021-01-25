@@ -503,26 +503,26 @@ inline VFPEvaluation interpolate(
     return nn[0][0];
 }
 
-inline VFPEvaluation bhp(const VFPProdTable* table,
+inline VFPEvaluation bhp(const VFPProdTable& table,
         const double& aqua,
         const double& liquid,
         const double& vapour,
         const double& thp,
         const double& alq) {
     //Find interpolation variables
-    double flo = detail::getFlo(aqua, liquid, vapour, table->getFloType());
-    double wfr = detail::getWFR(aqua, liquid, vapour, table->getWFRType());
-    double gfr = detail::getGFR(aqua, liquid, vapour, table->getGFRType());
+    double flo = detail::getFlo(aqua, liquid, vapour, table.getFloType());
+    double wfr = detail::getWFR(aqua, liquid, vapour, table.getWFRType());
+    double gfr = detail::getGFR(aqua, liquid, vapour, table.getGFRType());
 
     //First, find the values to interpolate between
     //Recall that flo is negative in Opm, so switch sign.
-    auto flo_i = detail::findInterpData(-flo, table->getFloAxis());
-    auto thp_i = detail::findInterpData( thp, table->getTHPAxis());
-    auto wfr_i = detail::findInterpData( wfr, table->getWFRAxis());
-    auto gfr_i = detail::findInterpData( gfr, table->getGFRAxis());
-    auto alq_i = detail::findInterpData( alq, table->getALQAxis());
+    auto flo_i = detail::findInterpData(-flo, table.getFloAxis());
+    auto thp_i = detail::findInterpData( thp, table.getTHPAxis());
+    auto wfr_i = detail::findInterpData( wfr, table.getWFRAxis());
+    auto gfr_i = detail::findInterpData( gfr, table.getGFRAxis());
+    auto alq_i = detail::findInterpData( alq, table.getALQAxis());
 
-    detail::VFPEvaluation retval = detail::interpolate(*table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
+    detail::VFPEvaluation retval = detail::interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
 
     return retval;
 }
@@ -531,20 +531,20 @@ inline VFPEvaluation bhp(const VFPProdTable* table,
 
 
 
-inline VFPEvaluation bhp(const VFPInjTable* table,
+inline VFPEvaluation bhp(const VFPInjTable& table,
         const double& aqua,
         const double& liquid,
         const double& vapour,
         const double& thp) {
     //Find interpolation variables
-    double flo = detail::getFlo(aqua, liquid, vapour, table->getFloType());
+    double flo = detail::getFlo(aqua, liquid, vapour, table.getFloType());
 
     //First, find the values to interpolate between
-    auto flo_i = detail::findInterpData(flo, table->getFloAxis());
-    auto thp_i = detail::findInterpData(thp, table->getTHPAxis());
+    auto flo_i = detail::findInterpData(flo, table.getFloAxis());
+    auto thp_i = detail::findInterpData(thp, table.getTHPAxis());
 
     //Then perform the interpolation itself
-    detail::VFPEvaluation retval = detail::interpolate(*table, flo_i, thp_i);
+    detail::VFPEvaluation retval = detail::interpolate(table, flo_i, thp_i);
 
     return retval;
 }
@@ -560,13 +560,13 @@ inline VFPEvaluation bhp(const VFPInjTable* table,
  * Returns the table from the map if found, or throws an exception
  */
 template <typename T>
-const T* getTable(const std::map<int, T*> tables, int table_id) {
+const T& getTable(const std::map<int, std::reference_wrapper<const T>> tables, int table_id) {
     auto entry = tables.find(table_id);
     if (entry == tables.end()) {
         OPM_THROW(std::invalid_argument, "Nonexistent VFP table " << table_id << " referenced.");
     }
     else {
-        return entry->second;
+        return entry->second.get();
     }
 }
 
@@ -574,7 +574,7 @@ const T* getTable(const std::map<int, T*> tables, int table_id) {
  * Check whether we have a table with the table number
  */
 template <typename T>
-bool hasTable(const std::map<int, T*> tables, int table_id) {
+bool hasTable(const std::map<int, std::reference_wrapper<const T>> tables, int table_id) {
     const auto entry = tables.find(table_id);
     return (entry != tables.end() );
 }
@@ -584,24 +584,24 @@ bool hasTable(const std::map<int, T*> tables, int table_id) {
  * Returns the type variable for FLO/GFR/WFR for production tables
  */
 template <typename TYPE, typename TABLE>
-TYPE getType(const TABLE* table);
+TYPE getType(const TABLE& table);
 
 template <>
 inline
-VFPProdTable::FLO_TYPE getType(const VFPProdTable* table) {
-    return table->getFloType();
+VFPProdTable::FLO_TYPE getType(const VFPProdTable& table) {
+    return table.getFloType();
 }
 
 template <>
 inline
-VFPProdTable::WFR_TYPE getType(const VFPProdTable* table) {
-    return table->getWFRType();
+VFPProdTable::WFR_TYPE getType(const VFPProdTable& table) {
+    return table.getWFRType();
 }
 
 template <>
 inline
-VFPProdTable::GFR_TYPE getType(const VFPProdTable* table) {
-    return table->getGFRType();
+VFPProdTable::GFR_TYPE getType(const VFPProdTable& table) {
+    return table.getGFRType();
 }
 
 
@@ -610,8 +610,8 @@ VFPProdTable::GFR_TYPE getType(const VFPProdTable* table) {
  */
 template <>
 inline
-VFPInjTable::FLO_TYPE getType(const VFPInjTable* table) {
-    return table->getFloType();
+VFPInjTable::FLO_TYPE getType(const VFPInjTable& table) {
+    return table.getFloType();
 }
 
 
