@@ -80,7 +80,8 @@ namespace Opm {
 
 
         ///Check the phase that used.
-        void phaseCheck_(const EclipseState& es);
+        /// return false if one-phase system
+        bool phaseCheck_(const EclipseState& es);
 
         ///Check saturation family I and II.
         void satFamilyCheck_(const EclipseState& eclState);

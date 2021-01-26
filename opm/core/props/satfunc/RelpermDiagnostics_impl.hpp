@@ -36,7 +36,9 @@ namespace Opm {
                                        const CartesianIndexMapper& cartesianIndexMapper)
     {
         OpmLog::info("\n===============Saturation Functions Diagnostics===============\n");
-        phaseCheck_(eclState);
+        bool doDiagnostics = phaseCheck_(eclState);
+        if (!doDiagnostics) // no diagnostics needed for single phase problems
+            return;
         satFamilyCheck_(eclState);
         tableCheck_(eclState);
         unscaledEndPointsCheck_(eclState);
