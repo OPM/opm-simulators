@@ -275,7 +275,7 @@ namespace bda
                     // if row rowU1 is empty, skip row
                     if (jk < Lmat->rowPointers[rowU1+1]) {
                         int colL = Lmat->colIndices[jk];
-                        // for every block on colU
+                        // only check until block U(i,j) is reached
                         for (int k = jColStart; k < ij; ++k) {
                             int rowU2 = Ut->colIndices[k];
                             while (colL < rowU2) {
@@ -316,7 +316,7 @@ namespace bda
 
                     int jk = Ut->rowPointers[j];  // actually colPointers, jk points to col j in U
                     int rowU = Ut->colIndices[jk];  // actually rowIndices, rowU is the row of block jk
-                    // check if L has a matching block where colL == rowU
+                    // only check until block L(i,j) is reached
                     for (int k = iRowStart; k < ij; ++k) {
                         int colL = Lmat->colIndices[k];
                         while (rowU < colL) {

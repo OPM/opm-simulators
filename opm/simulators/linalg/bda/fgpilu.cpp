@@ -45,6 +45,7 @@ namespace bda
 // PARALLEL 1 should be run with at least 32 workitems per workgroup.
 // The recommended number of workgroups for both options is Nb, which gives every row their own workgroup.
 // PARALLEL 0 is generally faster, despite not having parallelization.
+// only 3x3 blocks are supported
 
 #define PARALLEL 0
 
@@ -54,6 +55,8 @@ inline const char* fgpilu_sweep_s  = R"(
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
+// subtract blocks: a = a - b * c
+// the output block has 9 entries, each entry is calculated by 1 thread
 void blockMultSub(
     __local double * restrict a,
     __global const double * restrict b,
@@ -74,7 +77,8 @@ void blockMultSub(
     }
 }
 
-
+// multiply blocks: resMat = mat1 * mat2
+// the output block has 9 entries, each entry is calculated by 1 thread
 void blockMult(
     __local const double * restrict mat1,
     __local const double * restrict mat2,
@@ -95,13 +99,14 @@ void blockMult(
     }
 }
 
-
+// invert block: inverse = matrix^{-1}
+// the output block has 9 entries, each entry is calculated by 1 thread
 void invert(
     __global const double * restrict matrix,
     __local double * restrict inverse)
 {
     const unsigned int block_size = 3;
-    const unsigned int bs = block_size;
+    const unsigned int bs = block_size;                           // rename to shorter name
     const unsigned int warp_size = 32;
     const unsigned int idx_t = get_local_id(0);                   // thread id in work group
     const unsigned int thread_id_in_warp = idx_t % warp_size;     // thread id in warp (32 threads)
@@ -128,6 +133,10 @@ void invert(
     }
 }
 
+// perform the fixed-point iteration
+// all entries in L and U are updated once
+// output is written to [LU]tmp
+// aij and ujj are local arrays whose size is specified before kernel launch
 __kernel void fgpilu_sweep(
     __global const double * restrict Ut_vals,
     __global const double * restrict L_vals,
@@ -145,26 +154,30 @@ __kernel void fgpilu_sweep(
     __local double *ujj)
 {
     const int bs = 3;
-
-    // for every row
     const unsigned int warp_size = 32;
-    const unsigned int bsize = get_local_size(0);
-    const unsigned int idx_b = get_global_id(0) / bsize;
+    const unsigned int work_group_size = get_local_size(0);
+    const unsigned int idx_b = get_global_id(0) / work_group_size;
     const unsigned int num_groups = get_num_groups(0);
-    const unsigned int warps_per_group = bsize / warp_size;
+    const unsigned int warps_per_group = work_group_size / warp_size;
     const unsigned int idx_t = get_local_id(0);                   // thread id in work group
     const unsigned int thread_id_in_warp = idx_t % warp_size;     // thread id in warp (32 threads)
     const unsigned int warp_id_in_group = idx_t / warp_size;
-    const unsigned int lmem_offset = warp_id_in_group * bs * bs;            // each workgroup gets some lmem, but the workitems have to share it
+    const unsigned int lmem_offset = warp_id_in_group * bs * bs;  // each workgroup gets some lmem, but the workitems have to share it
+                                                                  // every workitem in a warp has the same lmem_offset
+
+    // for every row of L or every col of U
     for (int row = idx_b; row < Nb; row+=num_groups) {
-        int jColStart = Ut_rows[row];
+        // Uij = (Aij - sum k=1 to i-1 {Lik*Ukj})
+        int jColStart = Ut_rows[row];    // actually colPointers to U
         int jColEnd = Ut_rows[row + 1];
+        // for every block on this column
         for (int ij = jColStart + warp_id_in_group; ij < jColEnd; ij+=warps_per_group) {
-            int col = Ut_cols[ij];
+            int rowU1 = Ut_cols[ij]; // actually rowIndices for U
             // refine Uij element (or diagonal)
-            int i1 = LU_rows[col];
-            int i2 = LU_rows[col+1];
+            int i1 = LU_rows[rowU1];
+            int i2 = LU_rows[rowU1+1];
             int kk = 0;
+            // LUmat->nnzValues[kk] is block Aij
             for(kk = i1; kk < i2; ++kk) {
                 int c = LU_cols[kk];
                 if (c >= row) {
@@ -172,40 +185,48 @@ __kernel void fgpilu_sweep(
                 }
             }
 
+            // copy block Aij so operations can be done on it without affecting LUmat
             if(thread_id_in_warp < bs*bs){
                 aij[lmem_offset+thread_id_in_warp] = LU_vals[kk*bs*bs + thread_id_in_warp];
             }
 
-            int jk = L_rows[col];
-            int ik = (jk < L_rows[col+1]) ? L_cols[jk] : Nb;
-
-            for (int k = jColStart; k < ij; ++k) {
-                int ki = Ut_cols[k];
-                while (ik < ki) {
-                    ++jk;
-                    ik = L_cols[jk];
-                }
-                if (ik == ki) {
-                    blockMultSub(aij+lmem_offset, L_vals + jk * bs * bs, Ut_vals + k * bs * bs);
+            int jk = L_rows[rowU1]; // points to row rowU1 in L
+            // if row rowU1 is empty: skip row. The whole warp looks at the same row, so no divergence
+            if (jk < L_rows[rowU1+1]) {
+                int colL = L_cols[jk];
+                // only check until block U(i,j) is reached
+                for (int k = jColStart; k < ij; ++k) {
+                    int rowU2 = Ut_cols[k]; // actually rowIndices for U
+                    while (colL < rowU2) {
+                        ++jk; // check next block on row rowU1 of L
+                        colL = L_cols[jk];
+                    }
+                    if (colL == rowU2) {
+                        // Aij -= (Lik * Ukj)
+                        blockMultSub(aij+lmem_offset, L_vals + jk * bs * bs, Ut_vals + k * bs * bs);
+                    }
                 }
             }
 
+            // Uij_new = Aij - sum
+            // write result of this sweep
             if(thread_id_in_warp < bs*bs){
                 Utmp[ij*bs*bs + thread_id_in_warp] = aij[lmem_offset + thread_id_in_warp];
             }
         }
 
         // update L
+        // Lij = (Aij - sum k=1 to j-1 {Lik*Ukj}) / Ujj
         int iRowStart = L_rows[row];
         int iRowEnd = L_rows[row + 1];
 
         for (int ij = iRowStart + warp_id_in_group; ij < iRowEnd; ij+=warps_per_group) {
-        // for (int ij = iRowStart + idx_t; ij < iRowEnd; ij+=bsize) {
             int j = L_cols[ij];
             // // refine Lij element
             int i1 = LU_rows[row];
             int i2 = LU_rows[row+1];
             int kk = 0;
+            // LUmat->nnzValues[kk] is block Aij
             for(kk = i1; kk < i2; ++kk) {
                 int c = LU_cols[kk];
                 if (c >= j) {
@@ -213,28 +234,32 @@ __kernel void fgpilu_sweep(
                 }
             }
 
+            // copy block Aij so operations can be done on it without affecting LUmat
             if(thread_id_in_warp < bs*bs){
                 aij[lmem_offset+thread_id_in_warp] = LU_vals[kk*bs*bs + thread_id_in_warp];
             }
 
-            int jk = Ut_rows[j];
-            int ik = Ut_cols[jk];
+            int jk = Ut_rows[j];    // actually colPointers, jk points to col j in U
+            int rowU = Ut_cols[jk]; // actually rowIndices, rowU is the row of block jk
+            // only check until block L(i,j) is reached
             for (int k = iRowStart; k < ij; ++k) {
-                int ki = L_cols[k];
-                while(ik < ki) {
-                    ++jk;
-                    ik = Ut_cols[jk];
+                int colL = L_cols[k];
+                while(rowU < colL) {
+                    ++jk; // check next block on col j of U
+                    rowU = Ut_cols[jk];
                 }
 
-                if(ik == ki) {
+                if(rowU == colL) {
+                    // Aij -= (Lik * Ukj)
                     blockMultSub(aij+lmem_offset, L_vals + k * bs * bs , Ut_vals + jk * bs * bs);
                 }
             }
 
-            // calculate aij / ujj
+            // calculate 1 / Ujj
             invert(Ut_vals + (Ut_rows[j+1] - 1) * bs * bs, ujj+lmem_offset);
 
-            // lij = aij / ujj
+            // Lij_new = (Aij - sum) / Ujj
+            // write result of this sweep
             blockMult(aij+lmem_offset, ujj+lmem_offset, Ltmp + ij * bs * bs);
         }
     }
@@ -247,6 +272,8 @@ inline const char* fgpilu_sweep_s  = R"(
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
+// subtract blocks: a = a - b * c
+// only one workitem performs this action
 void blockMultSub(
     __local double * restrict a,
     __global const double * restrict b,
@@ -264,7 +291,8 @@ void blockMultSub(
     }
 }
 
-
+// multiply blocks: resMat = mat1 * mat2
+// only one workitem performs this action
 void blockMult(
     __local const double * restrict mat1,
     __local const double * restrict mat2,
@@ -282,7 +310,8 @@ void blockMult(
     }
 }
 
-
+// invert block: inverse = matrix^{-1}
+// only one workitem performs this action
 __kernel void inverter(
     __global const double * restrict matrix,
     __local double * restrict inverse)
@@ -310,6 +339,10 @@ __kernel void inverter(
     inverse[8] =  (t4 - t8) * t17;
 }
 
+// perform the fixed-point iteration
+// all entries in L and U are updated once
+// output is written to [LU]tmp
+// aij and ujj are local arrays whose size is specified before kernel launch
 __kernel void fgpilu_sweep(
     __global const double * restrict Ut_vals,
     __global const double * restrict L_vals,
@@ -328,24 +361,28 @@ __kernel void fgpilu_sweep(
 {
     const int bs = 3;
 
-    // for every row
     const unsigned int warp_size = 32;
-    const unsigned int bsize = get_local_size(0);
-    const unsigned int idx_b = get_global_id(0) / bsize;
+    const unsigned int work_group_size = get_local_size(0);
+    const unsigned int idx_b = get_global_id(0) / work_group_size;
     const unsigned int num_groups = get_num_groups(0);
-    const unsigned int warps_per_group = bsize / warp_size;
+    const unsigned int warps_per_group = work_group_size / warp_size;
     const unsigned int idx_t = get_local_id(0);                   // thread id in work group
     const unsigned int thread_id_in_warp = idx_t % warp_size;     // thread id in warp (32 threads)
     const unsigned int warp_id_in_group = idx_t / warp_size;
+
+    // for every row of L or every col of U
     for (int row = idx_b; row < Nb; row+=num_groups) {
-        int jColStart = Ut_rows[row];
+        // Uij = (Aij - sum k=1 to i-1 {Lik*Ukj})
+        int jColStart = Ut_rows[row];    // actually colPointers to U
         int jColEnd = Ut_rows[row + 1];
-        for (int ij = jColStart + idx_t; ij < jColEnd; ij+=bsize) {
-            int col = Ut_cols[ij];
+        // for every block on this column
+        for (int ij = jColStart + idx_t; ij < jColEnd; ij+=work_group_size) {
+            int rowU1 = Ut_cols[ij]; // actually rowIndices for U
             // refine Uij element (or diagonal)
-            int i1 = LU_rows[col];
-            int i2 = LU_rows[col+1];
+            int i1 = LU_rows[rowU1];
+            int i2 = LU_rows[rowU1+1];
             int kk = 0;
+            // LUmat->nnzValues[kk] is block Aij
             for(kk = i1; kk < i2; ++kk) {
                 int c = LU_cols[kk];
                 if (c >= row) {
@@ -353,39 +390,47 @@ __kernel void fgpilu_sweep(
                 }
             }
 
+            // copy block Aij so operations can be done on it without affecting LUmat
             for(int z = 0; z < bs*bs; ++z){
                 aij[idx_t*bs*bs+z] = LU_vals[kk*bs*bs + z];
             }
 
-            int jk = L_rows[col];
-            int ik = (jk < L_rows[col+1]) ? L_cols[jk] : Nb;
+            int jk = L_rows[rowU1];
+            // if row rowU1 is empty: do not sum. The workitems have different rowU1 values, divergence is possible
+            int colL = (jk < L_rows[rowU1+1]) ? L_cols[jk] : Nb;
 
+            // only check until block U(i,j) is reached
             for (int k = jColStart; k < ij; ++k) {
-                int ki = Ut_cols[k];
-                while (ik < ki) {
-                    ++jk;
-                    ik = L_cols[jk];
+                int rowU2 = Ut_cols[k]; // actually rowIndices for U
+                while (colL < rowU2) {
+                    ++jk; // check next block on row rowU1 of L
+                    colL = L_cols[jk];
                 }
-                if (ik == ki) {
+                if (colL == rowU2) {
+                    // Aij -= (Lik * Ukj)
                     blockMultSub(aij+idx_t*bs*bs, L_vals + jk * bs * bs, Ut_vals + k * bs * bs);
                 }
             }
 
+            // Uij_new = Aij - sum
+            // write result of this sweep
             for(int z = 0; z < bs*bs; ++z){
                 Utmp[ij*bs*bs + z] = aij[idx_t*bs*bs+z];
             }
         }
 
         // update L
+        // Lij = (Aij - sum k=1 to j-1 {Lik*Ukj}) / Ujj
         int iRowStart = L_rows[row];
         int iRowEnd = L_rows[row + 1];
 
-        for (int ij = iRowStart + idx_t; ij < iRowEnd; ij+=bsize) {
+        for (int ij = iRowStart + idx_t; ij < iRowEnd; ij+=work_group_size) {
             int j = L_cols[ij];
             // // refine Lij element
             int i1 = LU_rows[row];
             int i2 = LU_rows[row+1];
             int kk = 0;
+            // LUmat->nnzValues[kk] is block Aij
             for(kk = i1; kk < i2; ++kk) {
                 int c = LU_cols[kk];
                 if (c >= j) {
@@ -393,27 +438,31 @@ __kernel void fgpilu_sweep(
                 }
             }
 
+            // copy block Aij so operations can be done on it without affecting LUmat
             for(int z = 0; z < bs*bs; ++z){
                 aij[idx_t*bs*bs+z] = LU_vals[kk*bs*bs + z];
             }
 
-            int jk = Ut_rows[j];
-            int ik = Ut_cols[jk];
+            int jk = Ut_rows[j];    // actually colPointers, jk points to col j in U
+            int rowU = Ut_cols[jk]; // actually rowIndices, rowU is the row of block jk
+            // only check until block L(i,j) is reached
             for (int k = iRowStart; k < ij; ++k) {
-                int ki = L_cols[k];
-                while(ik < ki) {
-                    ++jk;
-                    ik = Ut_cols[jk];
+                int colL = L_cols[k];
+                while(rowU < colL) {
+                    ++jk; // check next block on col j of U
+                    rowU = Ut_cols[jk];
                 }
 
-                if(ik == ki) {
+                if(rowU == colL) {
+                    // Aij -= (Lik * Ukj)
                     blockMultSub(aij+idx_t*bs*bs, L_vals + k * bs * bs , Ut_vals + jk * bs * bs);
                 }
             }
-            // calculate aij / ujj
+            // calculate 1 / ujj
             inverter(Ut_vals + (Ut_rows[j+1] - 1) * bs * bs, ujj+idx_t*bs*bs);
 
-            // lij = aij / ujj
+            // Lij_new = (Aij - sum) / Ujj
+            // write result of this sweep
             blockMult(aij+idx_t*bs*bs, ujj+idx_t*bs*bs, Ltmp + ij * bs * bs);
         }
     }
