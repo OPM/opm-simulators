@@ -156,17 +156,7 @@ namespace Opm
 
         }
 
-        int n = total_well_iterations + (failureReport ? failureReport->total_well_iterations : 0);
-
-        os << fmt::format("Overall Well Iterations:   {:7}", n);
-        if (failureReport) {
-          os << fmt::format("    (Failed: {:3}; {:2.1f}%)",
-                            failureReport->total_well_iterations,
-                            100.0*failureReport->total_well_iterations/n);
-        }
-        os << std::endl;
-
-        n = total_linearizations + (failureReport ? failureReport->total_linearizations : 0);
+        int n = total_linearizations + (failureReport ? failureReport->total_linearizations : 0);
         os << fmt::format("Overall Linearizations:    {:7}", n);
         if (failureReport) {
           os << fmt::format("    (Failed: {:3}; {:2.1f}%)",

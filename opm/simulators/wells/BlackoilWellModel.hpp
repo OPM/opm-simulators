@@ -415,8 +415,6 @@ namespace Opm {
             /// at the beginning of the time step and no derivatives are included in these quantities
             void calculateExplicitQuantities(Opm::DeferredLogger& deferred_logger) const;
 
-            SimulatorReportSingle solveWellEq(const std::vector<Scalar>& B_avg, const double dt, Opm::DeferredLogger& deferred_logger);
-
             void initPrimaryVariablesEvaluation() const;
 
             // The number of components in the model.

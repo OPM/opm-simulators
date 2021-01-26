@@ -1404,6 +1404,30 @@ namespace Opm
 
     template<typename TypeTag>
     void
+    WellInterface<TypeTag>::
+    solveWellEquation(const Simulator& ebosSimulator,
+                      WellState& well_state,
+                      Opm::DeferredLogger& deferred_logger)
+    {
+        if (!this->isOperable())
+            return;
+
+        // keep a copy of the original well state
+        const WellState well_state0 = well_state;
+        const double dt = ebosSimulator.timeStepSize();
+        const bool converged = iterateWellEquations(ebosSimulator, B_avg_, dt, well_state, deferred_logger);
+        if (converged) {
+            deferred_logger.debug("Compute initial well solution for well " + name() +  ". Converged");
+        } else {
+            const int max_iter = param_.max_welleq_iter_;
+            deferred_logger.debug("Compute initial well solution for well " +name() + ". Failed to converge in "
+                                  + std::to_string(max_iter) + " iterations");
+            well_state = well_state0;
+        }
+    }
+
+    template<typename TypeTag>
+    void
     WellInterface<TypeTag>::addCellRates(RateVector& rates, int cellIdx) const
     {
         for (int perfIdx = 0; perfIdx < number_of_perforations_; ++perfIdx) {
