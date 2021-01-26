@@ -66,6 +66,8 @@
 #include "ecltracermodel.hh"
 #include "vtkecltracermodule.hh"
 
+#include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
+
 #include <opm/models/utils/pffgridvector.hh>
 #include <opm/models/blackoil/blackoilmodel.hh>
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
@@ -839,6 +841,9 @@ public:
         maxTimeStepAfterWellEvent_ = EWOMS_GET_PARAM(TypeTag, Scalar, EclMaxTimeStepSizeAfterWellEvent);
         restartShrinkFactor_ = EWOMS_GET_PARAM(TypeTag, Scalar, EclRestartShrinkFactor);
         maxFails_ = EWOMS_GET_PARAM(TypeTag, unsigned, MaxTimeStepDivisions);
+
+        Opm::RelpermDiagnostics relpermDiagnostics;
+        relpermDiagnostics.diagnosis(vanguard.eclState(), vanguard.cartesianIndexMapper());
     }
 
     /*!
