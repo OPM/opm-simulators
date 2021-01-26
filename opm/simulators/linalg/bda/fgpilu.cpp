@@ -487,9 +487,13 @@ void FGPILU::decomposition(
     const int block_size = 3;
 
     try {
-        if (initialized == false) {
+        // just put everything in the capture list
+        std::call_once(initialize_flag, [&](){
             cl::Program::Sources source(1, std::make_pair(fgpilu_sweep_s, strlen(fgpilu_sweep_s)));  // what does this '1' mean? cl::Program::Sources is of type 'std::vector<std::pair<const char*, long unsigned int> >'
             cl::Program program = cl::Program(*context, source, &err);
+            if (err != CL_SUCCESS) {
+                OPM_THROW(std::logic_error, "FGPILU OpenCL could not create Program");
+            }
 
             std::vector<cl::Device> devices = context->getInfo<CL_CONTEXT_DEVICES>();
             program.build(devices);
@@ -499,6 +503,9 @@ void FGPILU::decomposition(
                                                      cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                                      cl::Buffer&, cl::Buffer&,
                                                      const int, cl::LocalSpaceArg, cl::LocalSpaceArg>(cl::Kernel(program, "fgpilu_sweep", &err)));
+            if (err != CL_SUCCESS) {
+                OPM_THROW(std::logic_error, "FGPILU OpenCL could not create Kernel");
+            }
 
             // allocate GPU memory
             d_Ut_vals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * Ut_nnzbs * block_size * block_size);
@@ -530,9 +537,7 @@ void FGPILU::decomposition(
                 out << "FGPILU PARALLEL: " << PARALLEL;
                 OpmLog::info(out.str());
             }
-
-            initialized = true;
-        }
+        });
 
 
         // copy to GPU

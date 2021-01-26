@@ -21,8 +21,9 @@
 #define FGPILU_HEADER_INCLUDED
 
 
-#include <opm/simulators/linalg/bda/opencl.hpp>
+#include <mutex>
 
+#include <opm/simulators/linalg/bda/opencl.hpp>
 
 
 namespace bda
@@ -43,14 +44,13 @@ namespace bda
 
         cl::Event event;
         cl_int err;
+        std::once_flag initialize_flag;
 
         std::unique_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                         cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                         cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                         cl::Buffer&, cl::Buffer&,
                                         const int, cl::LocalSpaceArg, cl::LocalSpaceArg> > fgpilu_sweep_k;
-
-        bool initialized = false;
 
     public:
         /// Executes the FGPILU sweeps
