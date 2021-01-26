@@ -206,7 +206,7 @@ struct TrivialFixture {
                                           data));
 
         properties = std::make_shared<Opm::VFPProdProperties>();
-        properties->addTable( table.get() );
+        properties->addTable( *table );
     }
 
     double& operator()(size_t thp_idx, size_t wfr_idx, size_t gfr_idx, size_t alq_idx, size_t flo_idx) {
@@ -592,7 +592,7 @@ VFPPROD \n\
     auto deck = parser.parseString(table_str);
     Opm::VFPProdTable table(deck.getKeyword("VFPPROD", 0), units);
     Opm::VFPProdProperties properties;
-    properties.addTable( &table );
+    properties.addTable( table );
 
     const int n = 5; //Number of points to check per axis
     double bhp_sad = 0.0; //Sum of absolute difference
@@ -652,7 +652,7 @@ BOOST_AUTO_TEST_CASE(ParseInterpolateRealisticVFPPROD)
 
     Opm::VFPProdTable table(deck.getKeyword("VFPPROD", 0), units);
     Opm::VFPProdProperties properties;
-    properties.addTable(&table);
+    properties.addTable(table);
 
     //Do some rudimentary testing
     //Get the BHP as a function of rate, thp, wfr, gfr, alq

@@ -2144,7 +2144,7 @@ namespace Opm
         double thp = 0.0;
         if (this->isInjector()) {
             const int table_id = well_ecl_.vfp_table_number();
-            const double vfp_ref_depth = vfp_properties_->getInj()->getTable(table_id)->getDatumDepth();
+            const double vfp_ref_depth = vfp_properties_->getInj()->getTable(table_id).getDatumDepth();
             const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
 
             thp = vfp_properties_->getInj()->thp(table_id, aqua, liquid, vapour, bhp + dp);
@@ -2152,7 +2152,7 @@ namespace Opm
         else if (this->isProducer()) {
             const int table_id = well_ecl_.vfp_table_number();
             const double alq = well_ecl_.alq_value();
-            const double vfp_ref_depth = vfp_properties_->getProd()->getTable(table_id)->getDatumDepth();
+            const double vfp_ref_depth = vfp_properties_->getProd()->getTable(table_id).getDatumDepth();
             const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
 
             thp = vfp_properties_->getProd()->thp(table_id, aqua, liquid, vapour, bhp + dp, alq);
@@ -2193,13 +2193,13 @@ namespace Opm
         if (well.isInjector() )
         {
             const auto& controls = well.injectionControls(summaryState);
-            const double vfp_ref_depth = vfp_properties_->getInj()->getTable(controls.vfp_table_number)->getDatumDepth();
+            const double vfp_ref_depth = vfp_properties_->getInj()->getTable(controls.vfp_table_number).getDatumDepth();
             const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
             return vfp_properties_->getInj()->bhp(controls.vfp_table_number, aqua, liquid, vapour, this->getTHPConstraint(summaryState)) - dp;
          }
          else if (well.isProducer()) {
              const auto& controls = well.productionControls(summaryState);
-             const double vfp_ref_depth = vfp_properties_->getProd()->getTable(controls.vfp_table_number)->getDatumDepth();
+             const double vfp_ref_depth = vfp_properties_->getProd()->getTable(controls.vfp_table_number).getDatumDepth();
              const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
              return vfp_properties_->getProd()->bhp(controls.vfp_table_number, aqua, liquid, vapour, this->getTHPConstraint(summaryState), controls.alq_value) - dp;
          }
@@ -3605,7 +3605,7 @@ namespace Opm
 
         // Make the fbhp() function.
         const auto& controls = well_ecl_.productionControls(summary_state);
-        const auto& table = *(vfp_properties_->getProd()->getTable(controls.vfp_table_number));
+        const auto& table = vfp_properties_->getProd()->getTable(controls.vfp_table_number);
         const double vfp_ref_depth = table.getDatumDepth();
         const double rho = segment_densities_[0].value(); // Use the density at the top perforation.
         const double thp_limit = this->getTHPConstraint(summary_state);
@@ -3829,7 +3829,7 @@ namespace Opm
 
         // Make the fbhp() function.
         const auto& controls = well_ecl_.injectionControls(summary_state);
-        const auto& table = *(vfp_properties_->getInj()->getTable(controls.vfp_table_number));
+        const auto& table = vfp_properties_->getInj()->getTable(controls.vfp_table_number);
         const double vfp_ref_depth = table.getDatumDepth();
         const double rho = segment_densities_[0].value(); // Use the density at the top perforation.
         const double thp_limit = this->getTHPConstraint(summary_state);

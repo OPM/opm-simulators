@@ -39,7 +39,7 @@ double VFPInjProperties::bhp(int table_id,
                                  const double& liquid,
                                  const double& vapour,
                                  const double& thp_arg) const {
-    const VFPInjTable* table = detail::getTable(m_tables, table_id);
+    const VFPInjTable& table = detail::getTable(m_tables, table_id);
 
     detail::VFPEvaluation retval = detail::bhp(table, aqua, liquid, vapour, thp_arg);
     return retval.value;
@@ -51,12 +51,12 @@ double VFPInjProperties::thp(int table_id,
                              const double& liquid,
                              const double& vapour,
                              const double& bhp_arg) const {
-    const VFPInjTable* table = detail::getTable(m_tables, table_id);
+    const VFPInjTable& table = detail::getTable(m_tables, table_id);
 
     //Find interpolation variables
-    double flo = detail::getFlo(aqua, liquid, vapour, table->getFloType());
+    double flo = detail::getFlo(aqua, liquid, vapour, table.getFloType());
 
-    const std::vector<double> thp_array = table->getTHPAxis();
+    const std::vector<double> thp_array = table.getTHPAxis();
     int nthp = thp_array.size();
 
     /**
@@ -64,18 +64,18 @@ double VFPInjProperties::thp(int table_id,
      * by interpolating for every value of thp. This might be somewhat
      * expensive, but let us assome that nthp is small
      */
-    auto flo_i = detail::findInterpData(flo, table->getFloAxis());
+    auto flo_i = detail::findInterpData(flo, table.getFloAxis());
     std::vector<double> bhp_array(nthp);
     for (int i=0; i<nthp; ++i) {
         auto thp_i = detail::findInterpData(thp_array[i], thp_array);
-        bhp_array[i] = detail::interpolate(*table, flo_i, thp_i).value;
+        bhp_array[i] = detail::interpolate(table, flo_i, thp_i).value;
     }
 
     double retval = detail::findTHP(bhp_array, thp_array, bhp_arg);
     return retval;
 }
 
-const VFPInjTable* VFPInjProperties::getTable(const int table_id) const {
+const VFPInjTable& VFPInjProperties::getTable(const int table_id) const {
     return detail::getTable(m_tables, table_id);
 }
 
@@ -83,8 +83,8 @@ bool VFPInjProperties::hasTable(const int table_id) const {
     return detail::hasTable(m_tables, table_id);
 }
 
-void VFPInjProperties::addTable(const VFPInjTable * new_table) {
-    this->m_tables.emplace( new_table->getTableNum(), new_table );
+void VFPInjProperties::addTable(const VFPInjTable& new_table) {
+    this->m_tables.emplace( new_table.getTableNum(), new_table );
 }
 
 

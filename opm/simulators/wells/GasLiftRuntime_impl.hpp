@@ -420,8 +420,8 @@ setAlqMaxRate_(const GasLiftOpt::Well &well)
         // According to the Eclipse manual for WLIFTOPT, item 3:
         //   The default value should be set to the largest ALQ
         //   value in the well's VFP table
-        const auto& table = *(std_well_.vfp_properties_->getProd()->getTable(
-                this->controls_.vfp_table_number));
+        const auto& table = std_well_.vfp_properties_->getProd()->getTable(
+                this->controls_.vfp_table_number);
         const auto& alq_values = table.getALQAxis();
         // Assume the alq_values are sorted in ascending order, so
         // the last item should be the largest value:
