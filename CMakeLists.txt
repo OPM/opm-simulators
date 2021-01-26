@@ -299,6 +299,18 @@ opm_add_test(flow_poly
   $<TARGET_OBJECTS:moduleVersion>)
 target_compile_definitions(flow_poly PRIVATE USE_POLYHEDRALGRID)
 
+# the production oriented general-purpose ECL simulator
+opm_add_test(flow_distribute_z
+  ONLY_COMPILE
+  ALWAYS_ENABLE
+  DEFAULT_ENABLE_IF ${FLOW_DEFAULT_ENABLE_IF}
+  DEPENDS opmsimulators
+  LIBRARIES opmsimulators
+  SOURCES
+  flow/flow_distribute_z.cpp
+  ${FLOW_TGTS}
+  $<TARGET_OBJECTS:moduleVersion>
+  )
 
 if (NOT BUILD_FLOW_VARIANTS)
   set(FLOW_VARIANTS_DEFAULT_ENABLE_IF "FALSE")
