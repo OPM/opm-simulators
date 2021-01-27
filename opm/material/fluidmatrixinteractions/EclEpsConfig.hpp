@@ -125,6 +125,20 @@ public:
     { return this->enableThreePointKrwScaling_; }
 
     /*!
+     * \brief Specify whether three-point relative permeability value
+     * scaling is enabled for the wetting phase (e.g., KRORW + KRO).
+     */
+    void setEnableThreePointKrnScaling(const bool enable)
+    { this->enableThreePointKrnScaling_ = enable; }
+
+    /*!
+     * \brief Whether or not three-point relative permeability value scaling
+     * is enabled for the non-wetting phase (e.g., KRORW + KRO).
+     */
+    bool enableThreePointKrnScaling() const
+    { return this->enableThreePointKrnScaling_; }
+
+    /*!
      * \brief Specify whether relative permeability scaling is enabled for the non-wetting phase.
      */
     void setEnableKrnScaling(bool yesno)
@@ -220,15 +234,20 @@ public:
         // check if we are supposed to scale the Y axis of the capillary pressure
         if (twoPhaseSystemType == EclOilWaterSystem) {
             this->setEnableThreePointKrwScaling(hasKR("WR"));
+            this->setEnableThreePointKrnScaling(hasKR("ORW"));
 
-            this->enableKrnScaling_ = hasKR("O");
+            this->enableKrnScaling_ = hasKR("O") || this->enableThreePointKrnScaling();
             this->enableKrwScaling_ = hasKR("W") || this->enableThreePointKrwScaling();
             this->enablePcScaling_  = hasPC("W") || fp.has_double("SWATINIT");
         }
         else {
             assert(twoPhaseSystemType == EclGasOilSystem);
-            this->enableKrnScaling_ = hasKR("G");
-            this->enableKrwScaling_ = hasKR("O");
+
+            this->setEnableThreePointKrwScaling(hasKR("ORG"));
+            this->setEnableThreePointKrnScaling(hasKR("GR"));
+
+            this->enableKrnScaling_ = hasKR("G") || this->enableThreePointKrnScaling();
+            this->enableKrwScaling_ = hasKR("O") || this->enableThreePointKrwScaling();
             this->enablePcScaling_  = hasPC("G");
         }
 
@@ -262,6 +281,9 @@ private:
 
     // Employ three-point vertical scaling (e.g., KRWR and KRW).
     bool enableThreePointKrwScaling_{false};
+
+    // Employ three-point vertical scaling (e.g., KRORW and KRO).
+    bool enableThreePointKrnScaling_{false};
 };
 
 } // namespace Opm

@@ -48,6 +48,7 @@
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/TableColumn.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -703,6 +704,9 @@ private:
         // the situation for the gas phase is complicated that all saturations are
         // shifted by the connate water saturation.
         const Scalar Swco = unscaledEpsInfo_[satRegionIdx].Swl;
+        const auto tolcrit = eclState.runspec().saturationFunctionControls()
+            .minimumRelpermMobilityThreshold();
+
         const auto& tableManager = eclState.getTableManager();
 
         switch (eclState.runspec().saturationFunctionControls().family()) {
@@ -711,12 +715,10 @@ private:
             const TableContainer& sgofTables = tableManager.getSgofTables();
             const TableContainer& slgofTables = tableManager.getSlgofTables();
             if (!sgofTables.empty())
-                readGasOilEffectiveParametersSgof_(effParams,
-                                                   Swco,
+                readGasOilEffectiveParametersSgof_(effParams, Swco, tolcrit,
                                                    sgofTables.getTable<SgofTable>(satRegionIdx));
             else if (!slgofTables.empty())
-                readGasOilEffectiveParametersSlgof_(effParams,
-                                                    Swco,
+                readGasOilEffectiveParametersSlgof_(effParams, Swco, tolcrit,
                                                     slgofTables.getTable<SlgofTable>(satRegionIdx));
             break;
         }
@@ -727,16 +729,11 @@ private:
             if (!hasWater) {
                 // oil and gas case
                 const Sof2Table& sof2Table = tableManager.getSof2Tables().getTable<Sof2Table>( satRegionIdx );
-                readGasOilEffectiveParametersFamily2_(effParams,
-                                                      Swco,
-                                                      sof2Table,
-                                                      sgfnTable);
-            } else {
+                readGasOilEffectiveParametersFamily2_(effParams, Swco, tolcrit, sof2Table, sgfnTable);
+            }
+            else {
                 const Sof3Table& sof3Table = tableManager.getSof3Tables().getTable<Sof3Table>( satRegionIdx );
-                readGasOilEffectiveParametersFamily2_(effParams,
-                                                      Swco,
-                                                      sof3Table,
-                                                      sgfnTable);
+                readGasOilEffectiveParametersFamily2_(effParams, Swco, tolcrit, sof3Table, sgfnTable);
             }
             break;
         }
@@ -747,7 +744,8 @@ private:
     }
 
     void readGasOilEffectiveParametersSgof_(GasOilEffectiveTwoPhaseParams& effParams,
-                                            Scalar Swco,
+                                            const Scalar Swco,
+                                            const double tolcrit,
                                             const Opm::SgofTable& sgofTable)
     {
         // convert the saturations of the SGOF keyword from gas to oil saturations
@@ -756,14 +754,15 @@ private:
             SoSamples[sampleIdx] = (1.0 - Swco) - sgofTable.get("SG", sampleIdx);
         }
 
-        effParams.setKrwSamples(SoSamples, sgofTable.getColumn("KROG").vectorCopy());
-        effParams.setKrnSamples(SoSamples, sgofTable.getColumn("KRG").vectorCopy());
+        effParams.setKrwSamples(SoSamples, normalizeKrValues_(tolcrit, sgofTable.getColumn("KROG")));
+        effParams.setKrnSamples(SoSamples, normalizeKrValues_(tolcrit, sgofTable.getColumn("KRG")));
         effParams.setPcnwSamples(SoSamples, sgofTable.getColumn("PCOG").vectorCopy());
         effParams.finalize();
     }
 
     void readGasOilEffectiveParametersSlgof_(GasOilEffectiveTwoPhaseParams& effParams,
-                                             Scalar Swco,
+                                             const Scalar Swco,
+                                             const double tolcrit,
                                              const Opm::SlgofTable& slgofTable)
     {
         // convert the saturations of the SLGOF keyword from "liquid" to oil saturations
@@ -772,14 +771,15 @@ private:
             SoSamples[sampleIdx] = slgofTable.get("SL", sampleIdx) - Swco;
         }
 
-        effParams.setKrwSamples(SoSamples, slgofTable.getColumn("KROG").vectorCopy());
-        effParams.setKrnSamples(SoSamples, slgofTable.getColumn("KRG").vectorCopy());
+        effParams.setKrwSamples(SoSamples, normalizeKrValues_(tolcrit, slgofTable.getColumn("KROG")));
+        effParams.setKrnSamples(SoSamples, normalizeKrValues_(tolcrit, slgofTable.getColumn("KRG")));
         effParams.setPcnwSamples(SoSamples, slgofTable.getColumn("PCOG").vectorCopy());
         effParams.finalize();
     }
 
     void readGasOilEffectiveParametersFamily2_(GasOilEffectiveTwoPhaseParams& effParams,
-                                               Scalar Swco,
+                                               const Scalar Swco,
+                                               const double tolcrit,
                                                const Opm::Sof3Table& sof3Table,
                                                const Opm::SgfnTable& sgfnTable)
     {
@@ -790,14 +790,15 @@ private:
             SoSamples[sampleIdx] = (1.0 - Swco) - sgfnTable.get("SG", sampleIdx);
         }
 
-        effParams.setKrwSamples(SoColumn, sof3Table.getColumn("KROG").vectorCopy());
-        effParams.setKrnSamples(SoSamples, sgfnTable.getColumn("KRG").vectorCopy());
+        effParams.setKrwSamples(SoColumn, normalizeKrValues_(tolcrit, sof3Table.getColumn("KROG")));
+        effParams.setKrnSamples(SoSamples, normalizeKrValues_(tolcrit, sgfnTable.getColumn("KRG")));
         effParams.setPcnwSamples(SoSamples, sgfnTable.getColumn("PCOG").vectorCopy());
         effParams.finalize();
     }
 
     void readGasOilEffectiveParametersFamily2_(GasOilEffectiveTwoPhaseParams& effParams,
-                                               Scalar Swco,
+                                               const Scalar Swco,
+                                               const double tolcrit,
                                                const Opm::Sof2Table& sof2Table,
                                                const Opm::SgfnTable& sgfnTable)
     {
@@ -808,8 +809,8 @@ private:
             SoSamples[sampleIdx] = (1.0 - Swco) - sgfnTable.get("SG", sampleIdx);
         }
 
-        effParams.setKrwSamples(SoColumn, sof2Table.getColumn("KRO").vectorCopy());
-        effParams.setKrnSamples(SoSamples, sgfnTable.getColumn("KRG").vectorCopy());
+        effParams.setKrwSamples(SoColumn, normalizeKrValues_(tolcrit, sof2Table.getColumn("KRO")));
+        effParams.setKrnSamples(SoSamples, normalizeKrValues_(tolcrit, sgfnTable.getColumn("KRG")));
         effParams.setPcnwSamples(SoSamples, sgfnTable.getColumn("PCOG").vectorCopy());
         effParams.finalize();
     }
@@ -825,6 +826,9 @@ private:
 
         dest[satRegionIdx] = std::make_shared<OilWaterEffectiveTwoPhaseParams>();
 
+        const auto tolcrit = eclState.runspec().saturationFunctionControls()
+            .minimumRelpermMobilityThreshold();
+
         const auto& tableManager = eclState.getTableManager();
         auto& effParams = *dest[satRegionIdx];
 
@@ -832,10 +836,10 @@ private:
         case SatFuncControls::KeywordFamily::Family_I:
         {
             const auto& swofTable = tableManager.getSwofTables().getTable<SwofTable>(satRegionIdx);
-            std::vector<double> SwColumn = swofTable.getColumn("SW").vectorCopy();
+            const std::vector<double> SwColumn = swofTable.getColumn("SW").vectorCopy();
 
-            effParams.setKrwSamples(SwColumn, swofTable.getColumn("KRW").vectorCopy());
-            effParams.setKrnSamples(SwColumn, swofTable.getColumn("KROW").vectorCopy());
+            effParams.setKrwSamples(SwColumn, normalizeKrValues_(tolcrit, swofTable.getColumn("KRW")));
+            effParams.setKrnSamples(SwColumn, normalizeKrValues_(tolcrit, swofTable.getColumn("KROW")));
             effParams.setPcnwSamples(SwColumn, swofTable.getColumn("PCOW").vectorCopy());
             effParams.finalize();
             break;
@@ -845,15 +849,15 @@ private:
         {
             const auto& swfnTable = tableManager.getSwfnTables().getTable<SwfnTable>(satRegionIdx);
             const auto& sof3Table = tableManager.getSof3Tables().getTable<Sof3Table>(satRegionIdx);
-            std::vector<double> SwColumn = swfnTable.getColumn("SW").vectorCopy();
+            const std::vector<double> SwColumn = swfnTable.getColumn("SW").vectorCopy();
 
             // convert the saturations of the SOF3 keyword from oil to water saturations
             std::vector<double> SwSamples(sof3Table.numRows());
             for (size_t sampleIdx = 0; sampleIdx < sof3Table.numRows(); ++ sampleIdx)
                 SwSamples[sampleIdx] = 1 - sof3Table.get("SO", sampleIdx);
 
-            effParams.setKrwSamples(SwColumn, swfnTable.getColumn("KRW").vectorCopy());
-            effParams.setKrnSamples(SwSamples, sof3Table.getColumn("KROW").vectorCopy());
+            effParams.setKrwSamples(SwColumn, normalizeKrValues_(tolcrit, swfnTable.getColumn("KRW")));
+            effParams.setKrnSamples(SwSamples, normalizeKrValues_(tolcrit, sof3Table.getColumn("KROW")));
             effParams.setPcnwSamples(SwColumn, swfnTable.getColumn("PCOW").vectorCopy());
             effParams.finalize();
             break;
@@ -983,6 +987,20 @@ private:
             break;
         }
         }
+    }
+
+    // Relative permeability values not strictly greater than 'tolcrit' treated as zero.
+    std::vector<double> normalizeKrValues_(const double tolcrit,
+                                           const TableColumn& krValues) const
+    {
+        auto kr = krValues.vectorCopy();
+        std::transform(kr.begin(), kr.end(), kr.begin(),
+            [tolcrit](const double kri)
+        {
+            return (kri > tolcrit) ? kri : 0.0;
+        });
+
+        return kr;
     }
 
     bool enableEndPointScaling_;

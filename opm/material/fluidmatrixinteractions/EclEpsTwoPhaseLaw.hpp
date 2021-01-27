@@ -250,7 +250,7 @@ public:
     {
         const Evaluation SwUnscaled = scaledToUnscaledSatKrn(params, SwScaled);
         const Evaluation krnUnscaled = EffLaw::twoPhaseSatKrn(params.effectiveLawParams(), SwUnscaled);
-        return unscaledToScaledKrn_(params, krnUnscaled);
+        return unscaledToScaledKrn_(SwScaled, params, krnUnscaled);
     }
 
     template <class Evaluation>
@@ -581,14 +581,68 @@ private:
      * \brief Scale the non-wetting phase relative permeability of a phase according to the given parameters
      */
     template <class Evaluation>
-    static Evaluation unscaledToScaledKrn_(const Params& params, const Evaluation& unscaledKrn)
+    static Evaluation unscaledToScaledKrn_(const Evaluation& SwScaled,
+                                           const Params& params,
+                                           const Evaluation& unscaledKrn)
     {
-        if (!params.config().enableKrnScaling())
+        const auto& cfg = params.config();
+
+        if (! cfg.enableKrnScaling())
             return unscaledKrn;
 
-        //TODO: three point krn y-scaling
-        Scalar alpha = params.scaledPoints().maxKrn()/params.unscaledPoints().maxKrn();
-        return unscaledKrn*alpha;
+        const auto& scaled = params.scaledPoints();
+        const auto& unscaled = params.unscaledPoints();
+
+        if (! cfg.enableThreePointKrnScaling()) {
+            // Simple case: Run uses pure vertical scaling of non-wetting
+            // phase's relative permeability (e.g., KRG)
+            const Scalar alpha = scaled.maxKrn() / unscaled.maxKrn();
+            return unscaledKrn * alpha;
+        }
+
+        // Otherwise, run uses three-point vertical scaling (e.g., keywords KRGR and KRG)
+        const auto fdisp = unscaled.krnr();
+        const auto fmax  = unscaled.maxKrn();
+
+        const auto sl = scaled.saturationKrnPoints()[0];
+        const auto sr = std::max(scaled.saturationKrnPoints()[1], sl);
+        const auto fr = scaled.krnr();
+        const auto fm = scaled.maxKrn();
+
+        // Note logic here.  Krn is a decreasing function of Sw (dKrn/dSw <=
+        // 0) so the roles of left and right intervals are reversed viz
+        // unscaledToScaledKrw_().
+
+        if (! (SwScaled < sr)) {
+            // Pure vertical scaling in right-hand interval ([SR, SWU])
+            return unscaledKrn * (fr / fdisp);
+        }
+        else if (fmax > fdisp) {
+            // s \in [SWL, SR), SWL < SR; normal case: Kr(Swl) > Kr(Sr).
+            //
+            // Linear function between (sr,fr) and (sl,fm) in terms of
+            // function value 'unscaledKrn'.  This usually alters the shape
+            // of the relative permeability function in this interval (e.g.,
+            // roughly quadratic to linear).
+            const auto t = (unscaledKrn - fdisp) / (fmax - fdisp);
+
+            return fr + t*(fm - fr);
+        }
+        else if (sr > sl) {
+            // s \in [SWL, SR), SWL < SR; special case: Kr(Swl) == Kr(Sr).
+            //
+            // Linear function between (sr,fr) and (sl,fm) in terms of
+            // saturation value 'SwScaled'.  This usually alters the shape
+            // of the relative permeability function in this interval (e.g.,
+            // roughly quadratic to linear).
+            const auto t = (sr - SwScaled) / (sr - sl);
+
+            return fr + t*(fm - fr);
+        }
+        else {
+            // sl == sr (pure scaling).  Almost arbitrarily pick 'fm'.
+            return fm;
+        }
     }
 
     template <class Evaluation>
