@@ -32,10 +32,6 @@ namespace TTag {
 struct FlowModelParameters {};
 }
 
-// forward declaration to make this header usable from eclbasevanguard.hh
-template<class TypeTag, class MyTypeTag>
-struct EclDeckFileName;
-
 template<class TypeTag, class MyTypeTag>
 struct DbhpMaxRel {
     using type = UndefinedProperty;

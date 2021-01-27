@@ -51,7 +51,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQConfig.hpp>
 
-#include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
 
 #include <opm/simulators/utils/readDeck.hpp>
 
@@ -175,6 +174,9 @@ template<class TypeTag>
 struct AllowDistributedWells<TypeTag, TTag::EclBaseVanguard> {
     static constexpr bool value = false;
 };
+
+template<class T1, class T2>
+struct UseMultisegmentWell;
 
 // Same as in BlackoilModelParametersEbos.hpp but for here.
 template<class TypeTag>
