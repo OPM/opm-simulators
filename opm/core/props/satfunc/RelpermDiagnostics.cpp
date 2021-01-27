@@ -37,7 +37,7 @@
 
 namespace Opm{
 
-    void RelpermDiagnostics::phaseCheck_(const EclipseState& es)
+    bool RelpermDiagnostics::phaseCheck_(const EclipseState& es)
     {
         const auto& phases = es.runspec().phases();
         bool hasWater   = phases.active( Phase::WATER );
@@ -45,6 +45,23 @@ namespace Opm{
         bool hasOil     = phases.active( Phase::OIL );
         bool hasSolvent = phases.active( Phase::SOLVENT );
 
+        if (hasWater && !hasGas && !hasOil && !hasSolvent) {
+            const std::string msg = "System:  Single phase Water system. Nothing to check";
+            OpmLog::info(msg);
+            return false;
+        }
+
+        if (!hasWater && hasGas && !hasOil && !hasSolvent) {
+            const std::string msg = "System:  Single phase Gas system. Nothing to check";
+            OpmLog::info(msg);
+            return false;
+        }
+
+        if (!hasWater && !hasGas && hasOil && !hasSolvent) {
+            const std::string msg = "System:  Single phase Oil system. Nothing to check";
+            OpmLog::info(msg);
+            return false;
+        }
         if (hasWater && hasGas && !hasOil && !hasSolvent) {
             const std::string msg = "System:  Water-Gas system.";
             OpmLog::info(msg);
@@ -70,6 +87,7 @@ namespace Opm{
             OpmLog::info(msg);
             fluidSystem_ = FluidSystem::Solvent;
         }
+        return true;
     }
 
 

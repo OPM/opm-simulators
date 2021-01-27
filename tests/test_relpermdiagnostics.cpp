@@ -36,29 +36,54 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/OpmLog/CounterLog.hpp>
 
-#include <opm/grid/UnstructuredGrid.h>
-#include <opm/grid/cart_grid.h>
-#include <opm/grid/GridManager.hpp>
+#include <opm/grid/CpGrid.hpp>
+#include <dune/grid/common/mcmgmapper.hh>
 
 #include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 
+#if HAVE_DUNE_FEM
+#include <dune/fem/misc/mpimanager.hh>
+#else
+#include <dune/common/parallel/mpihelper.hh>
+#endif
+
 BOOST_AUTO_TEST_SUITE ()
 
 BOOST_AUTO_TEST_CASE(diagnosis)
 {
+    // MPI setup.
+    int argcDummy = 1;
+    const char *tmp[] = {"test_relpermdiagnostic"};
+    char **argvDummy = const_cast<char**>(tmp);
+
+#if HAVE_DUNE_FEM
+    Dune::Fem::MPIManager::initialize(argcDummy, argvDummy);
+#else
+    Dune::MPIHelper::instance(argcDummy, argvDummy);
+#endif
+
     using namespace Opm;
     Parser parser;
 
     Opm::Deck deck = parser.parseFile("../tests/relpermDiagnostics.DATA");
     EclipseState eclState(deck);
-    GridManager gm(eclState.getInputGrid());
-    const UnstructuredGrid& grid = *gm.c_grid();
+    typedef Dune::CpGrid Grid;
+    Grid grid = Grid();
+    grid.processEclipseFormat(&eclState.getInputGrid(),
+                                /*isPeriodic=*/false,
+                                /*flipNormals=*/false,
+                                /*clipZ=*/false,
+                                eclState.fieldProps().porv(true),
+                                eclState.getInputNNC());
+
+    typedef Dune::CartesianIndexMapper<Grid> CartesianIndexMapper;
+    CartesianIndexMapper cartesianIndexMapper = CartesianIndexMapper(grid);
     std::shared_ptr<CounterLog> counterLog = std::make_shared<CounterLog>(Log::DefaultMessageTypes);
     OpmLog::addBackend( "COUNTERLOG" , counterLog );
     RelpermDiagnostics diagnostics;
-    diagnostics.diagnosis(eclState, grid);
+    diagnostics.diagnosis(eclState, cartesianIndexMapper);
     BOOST_CHECK_EQUAL(1, counterLog->numMessages(Log::MessageType::Warning));
 }
 BOOST_AUTO_TEST_SUITE_END()

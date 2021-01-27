@@ -34,7 +34,6 @@
 
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/cpgrid/GridHelpers.hpp>
-#include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
 
 #include <opm/parser/eclipse/Python/Python.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
@@ -700,14 +699,6 @@ protected:
         asImp_().filterConnections_();
         asImp_().updateOutputDir_();
         asImp_().finalizeInit_();
-
-        if (enableExperiments) {
-            if (asImp_().grid().size(0)) //grid not loadbalanced yet for ebos!
-            {
-                Opm::RelpermDiagnostics relpermDiagnostics;
-                relpermDiagnostics.diagnosis(*eclState_, asImp_().grid());
-            }
-        }
     }
     void updateCartesianToCompressedMapping_()
     {

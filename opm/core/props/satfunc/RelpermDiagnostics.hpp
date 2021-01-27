@@ -52,9 +52,9 @@ namespace Opm {
         ///output if they're found.
         ///\param[in] eclState  eclipse state.
         ///\param[in] grid      unstructured grid.
-        template <class GridT>
+        template <class CartesianIndexMapper>
         void diagnosis(const EclipseState& eclState,
-                       const GridT& grid);
+                       const CartesianIndexMapper& cartesianIndexMapper);
 
     private:
         enum FluidSystem {
@@ -80,7 +80,8 @@ namespace Opm {
 
 
         ///Check the phase that used.
-        void phaseCheck_(const EclipseState& es);
+        /// return false if one-phase system
+        bool phaseCheck_(const EclipseState& es);
 
         ///Check saturation family I and II.
         void satFamilyCheck_(const EclipseState& eclState);
@@ -91,9 +92,9 @@ namespace Opm {
         ///Check endpoints in the saturation tables.
         void unscaledEndPointsCheck_(const EclipseState& eclState);
 
-        template <class GridT>
+        template <class CartesianIndexMapper>
         void scaledEndPointsCheck_(const EclipseState& eclState,
-                                   const GridT& grid);
+                                   const CartesianIndexMapper& cartesianIndexMapper);
 
         ///For every table, need to deal with case by case.
         void swofTableCheck_(const Opm::SwofTable& swofTables,

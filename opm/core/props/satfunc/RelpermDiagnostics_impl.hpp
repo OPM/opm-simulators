@@ -31,28 +31,27 @@
 
 namespace Opm {
 
-    template <class GridT>
+    template <class CartesianIndexMapper>
     void RelpermDiagnostics::diagnosis(const Opm::EclipseState& eclState,
-                                       const GridT& grid)
+                                       const CartesianIndexMapper& cartesianIndexMapper)
     {
         OpmLog::info("\n===============Saturation Functions Diagnostics===============\n");
-        phaseCheck_(eclState);
+        bool doDiagnostics = phaseCheck_(eclState);
+        if (!doDiagnostics) // no diagnostics needed for single phase problems
+            return;
         satFamilyCheck_(eclState);
         tableCheck_(eclState);
         unscaledEndPointsCheck_(eclState);
-        scaledEndPointsCheck_(eclState, grid);
+        scaledEndPointsCheck_(eclState, cartesianIndexMapper);
     }
 
-    template <class GridT>
+    template <class CartesianIndexMapper>
     void RelpermDiagnostics::scaledEndPointsCheck_(const EclipseState& eclState,
-                                                   const GridT& grid)
+                                                   const CartesianIndexMapper& cartesianIndexMapper)
     {
         // All end points are subject to round-off errors, checks should account for it
         const float tolerance = 1e-6;
-        const int nc = Opm::UgGridHelpers::numCells(grid);
-        const auto& global_cell = Opm::UgGridHelpers::globalCell(grid);
-        const auto dims = Opm::UgGridHelpers::cartDims(grid);
-        const auto& compressedToCartesianIdx = Opm::compressedToCartesian(nc, global_cell);
+        const int nc = cartesianIndexMapper.compressedSize();
         const bool threepoint = eclState.runspec().endpointScaling().threepoint();
         scaledEpsInfo_.resize(nc);
         EclEpsGridProperties epsGridProperties(eclState, false);
@@ -62,10 +61,7 @@ namespace Opm {
             std::string cellIdx;
             {
                 std::array<int, 3> ijk;
-                int cartIdx = compressedToCartesianIdx[c];
-                ijk[0] = cartIdx % dims[0];   cartIdx /= dims[0];
-                ijk[1] = cartIdx % dims[1];
-                ijk[2] = cartIdx / dims[1];
+                cartesianIndexMapper.cartesianCoordinate(c, ijk);
                 cellIdx = "(" + std::to_string(ijk[0]) + ", " +
                     std::to_string(ijk[1]) + ", " +
                     std::to_string(ijk[2]) + ")";
