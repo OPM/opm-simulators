@@ -1291,11 +1291,11 @@ public:
                       Opm::Schedule& schedule,
                       Opm::Action::State& actionState,
                       Opm::SummaryState& summaryState) {
-        const auto& actions = schedule[reportStep].actions();
+        const auto& actions = schedule[reportStep].actions.get();
         if (actions.empty())
             return;
 
-        Opm::Action::Context context( summaryState, schedule[reportStep].wlist_manager() );
+        Opm::Action::Context context( summaryState, schedule[reportStep].wlist_manager.get() );
         auto now = Opm::TimeStampUTC( schedule.getStartTime() ) + std::chrono::duration<double>(sim_time);
         std::string ts;
         {

@@ -450,7 +450,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::wellTesting(const int timeStepIdx, const double simulationTime, Opm::DeferredLogger& deferred_logger) {
-        const auto& wtest_config = schedule()[timeStepIdx].wtest_config();
+        const auto& wtest_config = schedule()[timeStepIdx].wtest_config.get();
         if (wtest_config.size() != 0) { // there is a WTEST request
 
             // average B factors are required for the convergence checking of well equations
@@ -1298,7 +1298,7 @@ namespace Opm {
     {
         // Get the network and return if inactive.
         const int reportStepIdx = ebosSimulator_.episodeIndex();
-        const auto& network = schedule()[reportStepIdx].network();
+        const auto& network = schedule()[reportStepIdx].network.get();
         if (!network.active()) {
             return;
         }
@@ -2231,7 +2231,7 @@ namespace Opm {
         }
 
         // check if gconsale is used for this group
-        if (!schedule()[reportStepIdx].gconsale().has(group.name()))
+        if (!schedule()[reportStepIdx].gconsale.get().has(group.name()))
             return;
 
         std::ostringstream ss;
@@ -2239,7 +2239,7 @@ namespace Opm {
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
 
-        const auto& gconsale = schedule()[reportStepIdx].gconsale().get(group.name(), summaryState);
+        const auto& gconsale = schedule()[reportStepIdx].gconsale.get().get(group.name(), summaryState);
         const Group::ProductionCMode& oldProductionControl = well_state.currentProductionGroupControl(group.name());
 
 
@@ -2255,8 +2255,8 @@ namespace Opm {
         double production_target = gconsale.sales_target + injection_rate;
 
         // add import rate and substract consumption rate for group for gas
-        if (schedule()[reportStepIdx].gconsump().has(group.name())) {
-            const auto& gconsump = schedule()[reportStepIdx].gconsump().get(group.name(), summaryState);
+        if (schedule()[reportStepIdx].gconsump.get().has(group.name())) {
+            const auto& gconsump = schedule()[reportStepIdx].gconsump.get().get(group.name(), summaryState);
             if (phase_usage_.phase_used[BlackoilPhases::Vapour]) {
                 sales_rate += gconsump.import_rate;
                 sales_rate -= gconsump.consumption_rate;

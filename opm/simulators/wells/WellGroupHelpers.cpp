@@ -100,7 +100,7 @@ namespace WellGroupHelpers
             wellState.setCurrentProductionGroupControl(group.name(), controls.cmode);
         }
 
-        if (schedule[reportStepIdx].gconsale().has(group.name())) {
+        if (schedule[reportStepIdx].gconsale.get().has(group.name())) {
             wellState.setCurrentInjectionGroupControl(Phase::GAS, group.name(), Group::InjectionCMode::SALE);
         }
     }
@@ -602,11 +602,12 @@ namespace WellGroupHelpers
         }
 
         // add import rate and substract consumption rate for group for gas
-        if (schedule[reportStepIdx].gconsump().has(group.name())) {
-            const auto& gconsump = schedule[reportStepIdx].gconsump().get(group.name(), st);
-            if (pu.phase_used[BlackoilPhases::Vapour]) {
-                rein[pu.phase_pos[BlackoilPhases::Vapour]] += gconsump.import_rate;
-                rein[pu.phase_pos[BlackoilPhases::Vapour]] -= gconsump.consumption_rate;
+        if (pu.phase_used[BlackoilPhases::Vapour]) {
+            const auto& gconsump = schedule[reportStepIdx].gconsump.get();
+            if (gconsump.has(group.name())) {
+                const auto& rates = gconsump.get(group.name(), st);
+                rein[pu.phase_pos[BlackoilPhases::Vapour]] += rates.import_rate;
+                rein[pu.phase_pos[BlackoilPhases::Vapour]] -= rates.consumption_rate;
             }
         }
 
@@ -1160,7 +1161,7 @@ namespace WellGroupHelpers
             // Gas injection rate = Total gas production rate + gas import rate - gas consumption rate - sales rate;
             // Gas import and consumption is already included in the REIN rates
             double inj_rate = wellState.currentInjectionREINRates(group.name())[phasePos];
-            const auto& gconsale = schedule[reportStepIdx].gconsale().get(group.name(), summaryState);
+            const auto& gconsale = schedule[reportStepIdx].gconsale.get().get(group.name(), summaryState);
             inj_rate -= gconsale.sales_target;
 
             const double current_rate = rates[phasePos];

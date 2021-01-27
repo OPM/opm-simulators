@@ -2329,7 +2329,7 @@ namespace Opm
             // Gas injection rate = Total gas production rate + gas import rate - gas consumption rate - sales rate;
             // The import and consumption is already included in the REIN rates.
             double inj_rate = well_state.currentInjectionREINRates(group.name())[phasePos];
-            const auto& gconsale = schedule[current_step_].gconsale().get(group.name(), summaryState);
+            const auto& gconsale = schedule[current_step_].gconsale.get().get(group.name(), summaryState);
             inj_rate -= gconsale.sales_target;
 
             double target = std::max(0.0, (inj_rate - groupTargetReduction)) / efficiencyFactor;
