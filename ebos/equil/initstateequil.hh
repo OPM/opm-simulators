@@ -1819,14 +1819,14 @@ private:
         auto psat   = PhaseSat { materialLawManager, this->swatInit_ };
         auto vspan  = std::array<double, 2>{};
 
+        std::vector<int> regionIsEmpty(rec.size(), 0);
         for (size_t r = 0; r < rec.size(); ++r) {
             const auto& cells = reg.cells(r);
 
             Details::verticalExtent(cells, cellZMinMax_, comm, vspan);
 
             if (cells.empty()) {
-                Opm::OpmLog::warning("Equilibration region " + std::to_string(r + 1)
-                                     + " has no active cells");
+                regionIsEmpty[r] = 1;
                 continue;
             }
 
@@ -1850,6 +1850,14 @@ private:
                 // Horizontal subdivision
                 this->equilibrateHorizontal(cells, eqreg, -acc,
                                             ptable, psat);
+            }
+        }
+        comm.min(regionIsEmpty.data(),regionIsEmpty.size());
+        if (comm.rank() == 0) {
+            for (size_t r = 0; r < rec.size(); ++r) {
+                if (regionIsEmpty[r]) //region is empty on all partitions
+                    Opm::OpmLog::warning("Equilibration region " + std::to_string(r + 1)
+                                         + " has no active cells");
             }
         }
     }
