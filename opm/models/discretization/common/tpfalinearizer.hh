@@ -50,6 +50,7 @@
 #include <set>
 #include <exception>   // current_exception, rethrow_exception
 #include <mutex>
+#include <numeric>
 
 namespace Opm::Properties {
     template<class TypeTag, class MyTypeTag>
@@ -188,6 +189,22 @@ public:
      */
     void linearizeDomain()
     {
+        linearizeDomain(fullDomain_);
+    }
+
+    /*!
+     * \brief Linearize the part of the non-linear system of equations that is associated
+     *        with a part of the spatial domain.
+     *
+     * That means that the Jacobian of the residual is assembled and the residual
+     * is evaluated for the current solution, on the domain passed in as argument.
+     *
+     * The current state of affairs (esp. the previous and the current solutions) is
+     * represented by the model object.
+     */
+    template <class SubDomainType>
+    void linearizeDomain(const SubDomainType& domain)
+    {
         OPM_TIMEBLOCK(linearizeDomain);
         // we defer the initialization of the Jacobian matrix until here because the
         // auxiliary modules usually assume the problem, model and grid to be fully
@@ -195,9 +212,17 @@ public:
         if (!jacobian_)
             initFirstIteration_();
 
+        // Called here because it is no longer called from linearize_().
+        if (domain.cells.size() == model_().numTotalDof()) {
+            // We are on the full domain.
+            resetSystem_();
+        } else {
+            resetSystem_(domain);
+        }
+
         int succeeded;
         try {
-            linearize_();
+            linearize_(domain);
             succeeded = 1;
         }
         catch (const std::exception& e)
@@ -214,7 +239,7 @@ public:
                       << "\n"  << std::flush;
             succeeded = 0;
         }
-        succeeded = gridView_().comm().min(succeeded);
+        succeeded = simulator_().gridView().comm().min(succeeded);
 
         if (!succeeded)
             throw NumericalProblem("A process did not succeed in linearizing the system");
@@ -313,6 +338,18 @@ public:
      */
     const std::map<unsigned, Constraints> constraintsMap() const
     { return {}; }
+
+    template <class SubDomainType>
+    void resetSystem_(const SubDomainType& domain)
+    {
+        if (!jacobian_) {
+            initFirstIteration_();
+        }
+        for (int globI : domain.cells) {
+            residual_[globI] = 0.0;
+            jacobian_->clearRow(globI, 0.0);
+        }
+    }
 
 private:
     Simulator& simulator_()
@@ -434,6 +471,10 @@ private:
                 nbInfo.matBlockAddress = jacobian_->blockAddress(nbInfo.neighbor, globI);
             }
         }
+
+        // Create dummy full domain.
+        fullDomain_.cells.resize(numCells);
+        std::iota(fullDomain_.cells.begin(), fullDomain_.cells.end(), 0);
     }
 
     // reset the global linear system of equations.
@@ -530,7 +571,8 @@ public:
     }
 
 private:
-    void linearize_()
+    template <class SubDomainType>
+    void linearize_(const SubDomainType& domain)
     {
         // This check should be removed once this is addressed by
         // for example storing the previous timesteps' values for
@@ -542,16 +584,23 @@ private:
         }
 
         OPM_TIMEBLOCK(linearize);
-        resetSystem_();
-        unsigned numCells = model_().numTotalDof();
+
+        // We do not call resetSystem_() here, since that will set
+        // the full system to zero, not just our part.
+        // Instead, that must be called before starting the linearization.
+
         const bool& enableFlows = simulator_().problem().eclWriter()->eclOutputModule().hasFlows();
         const bool& enableFlores = simulator_().problem().eclWriter()->eclOutputModule().hasFlores();
+        const unsigned int numCells = domain.cells.size();
+        const bool on_full_domain = (numCells == model_().numTotalDof());
+
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-        for (unsigned globI = 0; globI < numCells; globI++) {
+        for (unsigned ii = 0; ii < numCells; ++ii) {
             OPM_TIMEBLOCK_LOCAL(linearizationForEachCell);
-            const auto& nbInfos = neighborInfo_[globI]; // this is a set but should maybe be changed
+            const unsigned globI = domain.cells[ii];
+            const auto& nbInfos = neighborInfo_[globI];
             VectorBlock res(0.0);
             MatrixBlock bMat(0.0);
             ADVectorBlock adres(0.0);
@@ -617,7 +666,15 @@ private:
                     if (problem_().recycleFirstIterationStorage()) {
                         // Assumes nothing have changed in the system which
                         // affects masses calculated from primary variables.
-                        model_().updateCachedStorage(globI, /*timeIdx=*/1, res);
+                        if (on_full_domain) {
+                            // This is to avoid resetting the start-of-step storage
+                            // to incorrect numbers when we do local solves, where the iteration
+                            // number will start from 0, but the starting state may not be identical
+                            // to the start-of-step state.
+                            // Note that a full assembly must be done before local solves
+                            // otherwise this will be left un-updated.
+                            model_().updateCachedStorage(globI, /*timeIdx=*/1, res);
+                        }
                     } else {
                         Dune::FieldVector<Scalar, numEq> tmp;
                         IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
@@ -751,6 +808,12 @@ private:
     };
     std::vector<BoundaryInfo> boundaryInfo_;
     bool separateSparseSourceTerms_ = false;
+    struct FullDomain
+    {
+        std::vector<int> cells;
+        std::vector<bool> interior;
+    };
+    FullDomain fullDomain_;
 };
 
 } // namespace Opm

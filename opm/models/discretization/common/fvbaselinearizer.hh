@@ -152,6 +152,7 @@ public:
             delete *it;
         }
         elementCtx_.resize(0);
+        fullDomain_ = std::make_unique<FullDomain>(simulator.gridView());
     }
 
     /*!
@@ -193,6 +194,12 @@ public:
      */
     void linearizeDomain()
     {
+        linearizeDomain(*fullDomain_);
+    }
+
+    template <class SubDomainType>
+    void linearizeDomain(const SubDomainType& domain)
+    {
         OPM_TIMEBLOCK(linearizeDomain);
         // we defer the initialization of the Jacobian matrix until here because the
         // auxiliary modules usually assume the problem, model and grid to be fully
@@ -200,9 +207,17 @@ public:
         if (!jacobian_)
             initFirstIteration_();
 
+        // Called here because it is no longer called from linearize_().
+        if (static_cast<std::size_t>(domain.view.size(0)) == model_().numTotalDof()) {
+            // We are on the full domain.
+            resetSystem_();
+        } else {
+            resetSystem_(domain);
+        }
+
         int succeeded;
         try {
-            linearize_();
+            linearize_(domain);
             succeeded = 1;
         }
         catch (const std::exception& e)
@@ -219,7 +234,7 @@ public:
                       << "\n"  << std::flush;
             succeeded = 0;
         }
-        succeeded = gridView_().comm().min(succeeded);
+        succeeded = simulator_().gridView().comm().min(succeeded);
 
         if (!succeeded)
             throw NumericalProblem("A process did not succeed in linearizing the system");
@@ -315,6 +330,41 @@ public:
     const auto& getFloresInfo() const
     {return floresInfo_;}
 
+    template <class SubDomainType>
+    void resetSystem_(const SubDomainType& domain)
+    {
+        if (!jacobian_) {
+            initFirstIteration_();
+        }
+
+        // loop over selected elements
+        using GridViewType = decltype(domain.view);
+        ThreadedEntityIterator<GridViewType, /*codim=*/0> threadedElemIt(domain.view);
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+        {
+            unsigned threadId = ThreadManager::threadId();
+            auto elemIt = threadedElemIt.beginParallel();
+            MatrixBlock zeroBlock;
+            zeroBlock = 0.0;
+            for (; !threadedElemIt.isFinished(elemIt); elemIt = threadedElemIt.increment()) {
+                const Element& elem = *elemIt;
+                ElementContext& elemCtx = *elementCtx_[threadId];
+                elemCtx.updatePrimaryStencil(elem);
+                // Set to zero the relevant residual and jacobian parts.
+                for (unsigned primaryDofIdx = 0;
+                     primaryDofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0);
+                     ++primaryDofIdx)
+                {
+                    unsigned globI = elemCtx.globalSpaceIndex(primaryDofIdx, /*timeIdx=*/0);
+                    residual_[globI] = 0.0;
+                    jacobian_->clearRow(globI, 0.0);
+                }
+            }
+        }
+    }
+
 private:
     Simulator& simulator_()
     { return *simulatorPtr_; }
@@ -363,8 +413,8 @@ private:
 
         // for the main model, find out the global indices of the neighboring degrees of
         // freedom of each primary degree of freedom
-        using NeighborSet = std::set< unsigned >;
-        std::vector<NeighborSet> sparsityPattern(model.numTotalDof());
+        sparsityPattern_.clear();
+        sparsityPattern_.resize(model.numTotalDof());
 
         for (const auto& elem : elements(gridView_())) {
             stencil.update(elem);
@@ -374,7 +424,7 @@ private:
 
                 for (unsigned dofIdx = 0; dofIdx < stencil.numDof(); ++dofIdx) {
                     unsigned neighborIdx = stencil.globalSpaceIndex(dofIdx);
-                    sparsityPattern[myIdx].insert(neighborIdx);
+                    sparsityPattern_[myIdx].insert(neighborIdx);
                 }
             }
         }
@@ -383,13 +433,13 @@ private:
         // equations
         size_t numAuxMod = model.numAuxiliaryModules();
         for (unsigned auxModIdx = 0; auxModIdx < numAuxMod; ++auxModIdx)
-            model.auxiliaryModule(auxModIdx)->addNeighbors(sparsityPattern);
+            model.auxiliaryModule(auxModIdx)->addNeighbors(sparsityPattern_);
 
         // allocate raw matrix
         jacobian_.reset(new SparseMatrixAdapter(simulator_()));
 
         // create matrix structure based on sparsity pattern
-        jacobian_->reserve(sparsityPattern);
+        jacobian_->reserve(sparsityPattern_);
     }
 
     // reset the global linear system of equations.
@@ -446,11 +496,15 @@ private:
         }
     }
 
-    // linearize the whole system
-    void linearize_()
+    // linearize the whole or part of the system
+    template <class SubDomainType>
+    void linearize_(const SubDomainType& domain)
     {
         OPM_TIMEBLOCK(linearize_);
-        resetSystem_();
+
+        // We do not call resetSystem_() here, since that will set
+        // the full system to zero, not just our part.
+        // Instead, that must be called before starting the linearization.
 
         // before the first iteration of each time step, we need to update the
         // constraints. (i.e., we assume that constraints can be time dependent, but they
@@ -470,13 +524,14 @@ private:
         std::exception_ptr exceptionPtr = nullptr;
 
         // relinearize the elements...
-        ThreadedEntityIterator<GridView, /*codim=*/0> threadedElemIt(gridView_());
+        using GridViewType = decltype(domain.view);
+        ThreadedEntityIterator<GridViewType, /*codim=*/0> threadedElemIt(domain.view);
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
         {
-            ElementIterator elemIt = threadedElemIt.beginParallel();
-            ElementIterator nextElemIt = elemIt;
+            auto elemIt = threadedElemIt.beginParallel();
+            auto nextElemIt = elemIt;
             try {
                 for (; !threadedElemIt.isFinished(elemIt); elemIt = nextElemIt) {
                     // give the model and the problem a chance to prefetch the data required
@@ -492,7 +547,7 @@ private:
                         }
                     }
 
-                    const Element& elem = *elemIt;
+                    const auto& elem = *elemIt;
                     if (!linearizeNonLocalElements && elem.partitionType() != Dune::InteriorEntity)
                         continue;
 
@@ -525,8 +580,10 @@ private:
         applyConstraintsToLinearization_();
     }
 
+
     // linearize an element in the interior of the process' grid partition
-    void linearizeElement_(const Element& elem)
+    template <class ElementType>
+    void linearizeElement_(const ElementType& elem)
     {
         unsigned threadId = ThreadManager::threadId();
 
@@ -628,6 +685,19 @@ private:
     LinearizationType linearizationType_;
 
     std::mutex globalMatrixMutex_;
+
+    std::vector<std::set<unsigned int>> sparsityPattern_;
+
+    struct FullDomain
+    {
+        explicit FullDomain(const GridView& v) : view (v) {}
+        GridView view;
+        std::vector<bool> interior; // Should remain empty.
+    };
+    // Simple domain object used for full-domain linearization, it allows
+    // us to have the same interface for sub-domain and full-domain work.
+    // Pointer since it must defer construction, due to GridView member.
+    std::unique_ptr<FullDomain> fullDomain_;
 };
 
 } // namespace Opm

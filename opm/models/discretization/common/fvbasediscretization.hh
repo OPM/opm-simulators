@@ -72,6 +72,7 @@
 #endif
 
 #include <algorithm>
+#include <cstddef>
 #include <limits>
 #include <list>
 #include <stdexcept>
@@ -805,6 +806,36 @@ public:
                 const Element& elem = *elemIt;
                 elemCtx.updatePrimaryStencil(elem);
                 elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
+            }
+        }
+    }
+
+    template <class GridViewType>
+    void invalidateAndUpdateIntensiveQuantities(unsigned timeIdx, const GridViewType& gridView) const
+    {
+        // loop over all elements...
+        ThreadedEntityIterator<GridViewType, /*codim=*/0> threadedElemIt(gridView);
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+        {
+
+            ElementContext elemCtx(simulator_);
+            auto elemIt = threadedElemIt.beginParallel();
+            for (; !threadedElemIt.isFinished(elemIt); elemIt = threadedElemIt.increment()) {
+                if (elemIt->partitionType() != Dune::InteriorEntity) {
+                    continue;
+                }
+                const Element& elem = *elemIt;
+                elemCtx.updatePrimaryStencil(elem);
+                // Mark cache for this element as invalid.
+                const std::size_t numPrimaryDof = elemCtx.numPrimaryDof(timeIdx);
+                for (unsigned dofIdx = 0; dofIdx < numPrimaryDof; ++dofIdx) {
+                    const unsigned globalIndex = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
+                    setIntensiveQuantitiesCacheEntryValidity(globalIndex, timeIdx, false);
+                }
+                // Update for this element.
+                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
             }
         }
     }
