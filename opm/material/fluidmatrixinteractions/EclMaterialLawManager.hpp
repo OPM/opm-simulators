@@ -163,13 +163,12 @@ public:
         const auto tolcrit = runspec.saturationFunctionControls()
             .minimumRelpermMobilityThreshold();
 
-        const auto family   = runspec.saturationFunctionControls().family();
         const auto rtepPtr  = satfunc::getRawTableEndpoints(tables, ph, tolcrit);
         const auto rfuncPtr = satfunc::getRawFunctionValues(tables, ph, *rtepPtr);
 
         for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++satRegionIdx) {
             this->unscaledEpsInfo_[satRegionIdx]
-                .extractUnscaled(*rtepPtr, *rfuncPtr, family, satRegionIdx);
+                .extractUnscaled(*rtepPtr, *rfuncPtr, satRegionIdx);
         }
     }
 
@@ -753,13 +752,11 @@ private:
     {
         // convert the saturations of the SGOF keyword from gas to oil saturations
         std::vector<double> SoSamples(sgofTable.numRows());
-        std::vector<double> SoKroSamples(sgofTable.numRows());
         for (size_t sampleIdx = 0; sampleIdx < sgofTable.numRows(); ++ sampleIdx) {
-            SoSamples[sampleIdx] = 1 - sgofTable.get("SG", sampleIdx);
-            SoKroSamples[sampleIdx] = SoSamples[sampleIdx] - Swco;
+            SoSamples[sampleIdx] = (1.0 - Swco) - sgofTable.get("SG", sampleIdx);
         }
 
-        effParams.setKrwSamples(SoKroSamples, sgofTable.getColumn("KROG").vectorCopy());
+        effParams.setKrwSamples(SoSamples, sgofTable.getColumn("KROG").vectorCopy());
         effParams.setKrnSamples(SoSamples, sgofTable.getColumn("KRG").vectorCopy());
         effParams.setPcnwSamples(SoSamples, sgofTable.getColumn("PCOG").vectorCopy());
         effParams.finalize();
@@ -771,20 +768,18 @@ private:
     {
         // convert the saturations of the SLGOF keyword from "liquid" to oil saturations
         std::vector<double> SoSamples(slgofTable.numRows());
-        std::vector<double> SoKroSamples(slgofTable.numRows());
         for (size_t sampleIdx = 0; sampleIdx < slgofTable.numRows(); ++ sampleIdx) {
-            SoSamples[sampleIdx] = slgofTable.get("SL", sampleIdx);
-            SoKroSamples[sampleIdx] = slgofTable.get("SL", sampleIdx) - Swco;
+            SoSamples[sampleIdx] = slgofTable.get("SL", sampleIdx) - Swco;
         }
 
-        effParams.setKrwSamples(SoKroSamples, slgofTable.getColumn("KROG").vectorCopy());
+        effParams.setKrwSamples(SoSamples, slgofTable.getColumn("KROG").vectorCopy());
         effParams.setKrnSamples(SoSamples, slgofTable.getColumn("KRG").vectorCopy());
         effParams.setPcnwSamples(SoSamples, slgofTable.getColumn("PCOG").vectorCopy());
         effParams.finalize();
     }
 
     void readGasOilEffectiveParametersFamily2_(GasOilEffectiveTwoPhaseParams& effParams,
-                                               Scalar /* Swco */,
+                                               Scalar Swco,
                                                const Opm::Sof3Table& sof3Table,
                                                const Opm::SgfnTable& sgfnTable)
     {
@@ -792,7 +787,7 @@ private:
         std::vector<double> SoSamples(sgfnTable.numRows());
         std::vector<double> SoColumn = sof3Table.getColumn("SO").vectorCopy();
         for (size_t sampleIdx = 0; sampleIdx < sgfnTable.numRows(); ++ sampleIdx) {
-            SoSamples[sampleIdx] = 1 - sgfnTable.get("SG", sampleIdx);
+            SoSamples[sampleIdx] = (1.0 - Swco) - sgfnTable.get("SG", sampleIdx);
         }
 
         effParams.setKrwSamples(SoColumn, sof3Table.getColumn("KROG").vectorCopy());
@@ -802,7 +797,7 @@ private:
     }
 
     void readGasOilEffectiveParametersFamily2_(GasOilEffectiveTwoPhaseParams& effParams,
-                                               Scalar /* Swco */,
+                                               Scalar Swco,
                                                const Opm::Sof2Table& sof2Table,
                                                const Opm::SgfnTable& sgfnTable)
     {
@@ -810,7 +805,7 @@ private:
         std::vector<double> SoSamples(sgfnTable.numRows());
         std::vector<double> SoColumn = sof2Table.getColumn("SO").vectorCopy();
         for (size_t sampleIdx = 0; sampleIdx < sgfnTable.numRows(); ++ sampleIdx) {
-            SoSamples[sampleIdx] = 1 - sgfnTable.get("SG", sampleIdx);
+            SoSamples[sampleIdx] = (1.0 - Swco) - sgfnTable.get("SG", sampleIdx);
         }
 
         effParams.setKrwSamples(SoColumn, sof2Table.getColumn("KRO").vectorCopy());
