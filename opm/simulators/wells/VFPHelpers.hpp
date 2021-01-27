@@ -37,43 +37,15 @@
 namespace Opm {
 namespace detail {
 
+static double threshold = 1e-12;
 
 /**
- * Returns zero if input value is NaN of INF
+ * Returns zero if input value is negative
  */
-inline double zeroIfNanInf(const double& value, const std::string& rate, const VFPProdTable& table) {
-    const bool nan_or_inf = std::isnan(value) || std::isinf(value);
-
-    if (nan_or_inf) {
-        std::string msg = "Problem with VFPPROD keyword table " + std::to_string(table.getTableNum()) + "\n" +
-                          "In " + table.location().filename + " line " + std::to_string(table.location().lineno) + "\n"
-                          "Nan or inf encountered while calculating " + rate + " - using zero";
-        OpmLog::warning("NAN_OR_INF_VFP", msg);
-    }
-
-    return nan_or_inf ? 0.0 : value;
+template <typename T>
+static T chopNegativeValues(const T& value) {
+    return Opm::max(0.0, value);
 }
-
-
-/**
- * Returns zero if input value is NaN or INF
- */
-template <class EvalWell>
-inline EvalWell zeroIfNanInf(const EvalWell& value, const std::string& rate, const VFPProdTable& table) {
-    const bool nan_or_inf = std::isnan(value.value()) || std::isinf(value.value());
-
-    if (nan_or_inf) {
-        std::string msg = "Problem with VFPPROD keyword table " + std::to_string(table.getTableNum()) + "\n" +
-            "In " + table.location().filename + " line " + std::to_string(table.location().lineno) + "\n"
-            "Nan or inf encountered while calculating " + rate + " - using zero";
-        OpmLog::warning("NAN_OR_INF_VFP_EVAL", msg);
-    }
-
-    using Toolbox = MathToolbox<EvalWell>;
-
-    return nan_or_inf ? Toolbox::createConstantZero(value) : value;
-}
-
 
 /**
  * Computes the flo parameter according to the flo_type_
@@ -137,18 +109,16 @@ template <typename T>
 static T getWFR(const VFPProdTable& table, const T& aqua, const T& liquid, const T& vapour) {
     auto type = table.getWFRType();
     switch(type) {
-    case VFPProdTable::WFR_TYPE::WFR_WOR:
+    case VFPProdTable::WFR_TYPE::WFR_WOR: {
         //Water-oil ratio = water / oil
-        return zeroIfNanInf(aqua/liquid, "WOR", table);
-
+        return chopNegativeValues(-aqua) / Opm::max(threshold, chopNegativeValues(-liquid));
+    }
     case VFPProdTable::WFR_TYPE::WFR_WCT:
         //Water cut = water / (water + oil)
-        return zeroIfNanInf(aqua / (aqua + liquid), "WCT", table);
-
+        return chopNegativeValues(-aqua) / Opm::max(threshold, chopNegativeValues(-aqua - liquid));
     case VFPProdTable::WFR_TYPE::WFR_WGR:
         //Water-gas ratio = water / gas
-        return zeroIfNanInf(aqua / vapour, "WGR", table);
-
+        return chopNegativeValues(-aqua) / Opm::max(threshold, chopNegativeValues(-vapour));
     default:
         throw std::logic_error("Invalid WFR_TYPE");
     }
@@ -169,13 +139,13 @@ static T getGFR(const VFPProdTable& table, const T& aqua, const T& liquid, const
     switch(type) {
     case VFPProdTable::GFR_TYPE::GFR_GOR:
         // Gas-oil ratio = gas / oil
-        return zeroIfNanInf(vapour / liquid, "GOR", table);
+        return chopNegativeValues(-vapour) / Opm::max(threshold, chopNegativeValues(-liquid));
     case VFPProdTable::GFR_TYPE::GFR_GLR:
         // Gas-liquid ratio = gas / (oil + water)
-        return zeroIfNanInf(vapour / (liquid + aqua), "GLR", table);
+        return chopNegativeValues(-vapour) / Opm::max(threshold, chopNegativeValues(-liquid - aqua));
     case VFPProdTable::GFR_TYPE::GFR_OGR:
         // Oil-gas ratio = oil / gas
-        return zeroIfNanInf(liquid / vapour, "OGR", table);
+        return chopNegativeValues(-liquid) / Opm::max(threshold, chopNegativeValues(-vapour));
     default:
         throw std::logic_error("Invalid GFR_TYPE");
     }
