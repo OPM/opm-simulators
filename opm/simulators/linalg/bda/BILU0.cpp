@@ -169,15 +169,32 @@ namespace bda
         // Ut stores diagonal for now
 
         // Ut is actually BSC format
-        std::unique_ptr<BlockedMatrix<bs> > Ut = std::make_unique<BlockedMatrix<bs> >(Umat->Nb, Umat->nnzbs + Umat->Nb);
+        std::unique_ptr<BlockedMatrix<bs> > Ut = std::make_unique<BlockedMatrix<bs> >(Nb, (nnzbs + Nb) / 2);
 
         Lmat->rowPointers[0] = 0;
         for (int i = 0; i < Nb+1; i++) {
             Ut->rowPointers[i] = 0;
         }
 
+        Opm::Detail::Inverter<bs> inverter;
+
+        // store inverted diagonal
+        for (int i = 0; i < Nb; i++) {
+            int iRowStart = LUmat->rowPointers[i];
+            int iRowEnd = LUmat->rowPointers[i + 1];
+            // for every block in this row
+            for (int ij = iRowStart; ij < iRowEnd; ij++) {
+                int j = LUmat->colIndices[ij];
+                if (i == j) {
+                    inverter(LUmat->nnzValues + ij * bs * bs, invDiagVals + i * bs * bs);
+                }
+            }
+        }
+
+        // initialize initial guess for L: L_A * D
+        // L_A is strictly lower triangular part of A
+        // D is inv(diag(A))
         int num_blocks_L = 0;
-        // for every row
         for (int i = 0; i < Nb; i++) {
             int iRowStart = LUmat->rowPointers[i];
             int iRowEnd = LUmat->rowPointers[i + 1];
@@ -188,7 +205,8 @@ namespace bda
                     Ut->rowPointers[j+1]++;   // actually colPointers, now simply indicates how many blocks this col holds
                 } else {
                     Lmat->colIndices[num_blocks_L] = j;
-                    std::copy(LUmat->nnzValues + ij * bs * bs, LUmat->nnzValues + (ij+1) * bs * bs, Lmat->nnzValues + num_blocks_L * bs * bs);
+                    // multiply block of L with corresponding diag block
+                    blockMult<bs>(LUmat->nnzValues + ij * bs * bs, invDiagVals + i * bs * bs, Lmat->nnzValues + num_blocks_L * bs * bs);
                     num_blocks_L++;
                 }
             }
@@ -199,7 +217,7 @@ namespace bda
         // prefix sum to sum rowsizes into colpointers
         std::partial_sum(Ut->rowPointers, Ut->rowPointers+Nb+1, Ut->rowPointers);
 
-        // for every row
+        // initialize initial guess for U
         for (int i = 0; i < Nb; i++) {
             int iRowStart = LUmat->rowPointers[i];
             int iRowEnd = LUmat->rowPointers[i + 1];
@@ -222,7 +240,6 @@ namespace bda
         }
         Ut->rowPointers[0] = 0;
 
-        Opm::Detail::Inverter<bs> inverter;
 
         // Utmp is needed for CPU and GPU decomposition, because U is transposed, and reversed after decomposition
         // U will be reversed because it is used with backwards substitution, the last row is used first
