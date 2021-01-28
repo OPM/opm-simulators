@@ -494,11 +494,11 @@ public:
             {
                 if (myRank == 0)
                 {
-                    std::string message = std::string("Option --allow-distributed-wells=true is only allowed ")
-                        + "if model only has only standard wells."
-                        + "You need to provide option "
-                        + " with --enable-multisegement-wells=false to treat "
-                        + "existing multisegment wells as standard wells.";
+                    std::string message =
+                        std::string("Option --allow-distributed-wells=true is only allowed if model\n")
+                        + "only has only standard wells. You need to provide option \n"
+                        + " with --enable-multisegement-wells=false to treat existing \n"
+                        + "multisegment wells as standard wells.";
                     OpmLog::error(message);
                 }
                 comm.barrier();
