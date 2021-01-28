@@ -34,9 +34,6 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     BlackoilWellModel(Simulator& ebosSimulator)
         : ebosSimulator_(ebosSimulator)
-        , has_solvent_(getPropValue<TypeTag, Properties::EnableSolvent>())
-        , has_zFraction_(getPropValue<TypeTag, Properties::EnableExtbo>())
-        , has_polymer_(getPropValue<TypeTag, Properties::EnablePolymer>())
     {
         terminal_output_ = false;
         if (ebosSimulator.gridView().comm().rank() == 0)
@@ -359,7 +356,7 @@ namespace Opm {
             // calculate the efficiency factors for each well
             calculateEfficiencyFactors(reportStepIdx);
 
-            if (has_polymer_)
+            if constexpr (has_polymer_)
             {
                 if (PolymerModule::hasPlyshlog() || getPropValue<TypeTag, Properties::EnablePolymerMW>() ) {
                     setRepRadiusPerfLength();
@@ -1620,7 +1617,7 @@ namespace Opm {
 
                 B += 1 / fs.invB(phaseIdx).value();
             }
-            if (has_solvent_) {
+            if constexpr (has_solvent_) {
                 auto& B  = B_avg[solventSaturationIdx];
                 B += 1 / intQuants.solventInverseFormationVolumeFactor().value();
             }
@@ -1672,7 +1669,7 @@ namespace Opm {
             return numPhases();
         }
         int numComp = FluidSystem::numComponents;
-        if (has_solvent_) {
+        if constexpr (has_solvent_) {
             numComp ++;
         }
 

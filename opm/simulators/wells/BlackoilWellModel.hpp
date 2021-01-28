@@ -106,6 +106,8 @@ namespace Opm {
 
             static const int numEq = Indices::numEq;
             static const int solventSaturationIdx = Indices::solventSaturationIdx;
+            static constexpr bool has_solvent_ = getPropValue<TypeTag, Properties::EnableSolvent>();
+            static constexpr bool has_polymer_ = getPropValue<TypeTag, Properties::EnablePolymer>();
 
             // TODO: where we should put these types, WellInterface or Well Model?
             // or there is some other strategy, like TypeTag
@@ -315,9 +317,6 @@ namespace Opm {
 
             const ModelParameters param_;
             bool terminal_output_;
-            bool has_solvent_;
-            bool has_zFraction_;
-            bool has_polymer_;
             std::vector<int> pvt_region_idx_;
             PhaseUsage phase_usage_;
             size_t global_num_cells_;
