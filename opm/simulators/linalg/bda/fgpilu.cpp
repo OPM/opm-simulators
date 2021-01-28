@@ -521,12 +521,15 @@ void FGPILU::decomposition(
             d_Utmp = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * Ut_nnzbs * block_size * block_size);
 
             Dune::Timer t_copy_pattern;
-            err |= queue->enqueueWriteBuffer(d_Ut_ptrs, CL_TRUE, 0, sizeof(int) * (Nb+1), Ut_ptrs);
-            err |= queue->enqueueWriteBuffer(d_L_rows, CL_TRUE, 0, sizeof(int) * (Nb+1), L_rows);
-            err |= queue->enqueueWriteBuffer(d_LU_rows, CL_TRUE, 0, sizeof(int) * (Nb+1), LU_rows);
-            err |= queue->enqueueWriteBuffer(d_Ut_idxs, CL_TRUE, 0, sizeof(int) * Ut_nnzbs, Ut_idxs);
-            err |= queue->enqueueWriteBuffer(d_L_cols, CL_TRUE, 0, sizeof(int) * L_nnzbs, L_cols);
-            err |= queue->enqueueWriteBuffer(d_LU_cols, CL_TRUE, 0, sizeof(int) * LU_nnzbs, LU_cols);
+            events.resize(6);
+            err |= queue->enqueueWriteBuffer(d_Ut_ptrs, CL_FALSE, 0, sizeof(int) * (Nb+1), Ut_ptrs, nullptr, &events[0]);
+            err |= queue->enqueueWriteBuffer(d_L_rows, CL_FALSE, 0, sizeof(int) * (Nb+1), L_rows, nullptr, &events[1]);
+            err |= queue->enqueueWriteBuffer(d_LU_rows, CL_FALSE, 0, sizeof(int) * (Nb+1), LU_rows, nullptr, &events[2]);
+            err |= queue->enqueueWriteBuffer(d_Ut_idxs, CL_FALSE, 0, sizeof(int) * Ut_nnzbs, Ut_idxs, nullptr, &events[3]);
+            err |= queue->enqueueWriteBuffer(d_L_cols, CL_FALSE, 0, sizeof(int) * L_nnzbs, L_cols, nullptr, &events[4]);
+            err |= queue->enqueueWriteBuffer(d_LU_cols, CL_FALSE, 0, sizeof(int) * LU_nnzbs, LU_cols, nullptr, &events[5]);
+            cl::WaitForEvents(events);
+            events.clear();
             if (verbosity >= 3){
                 std::ostringstream out;
                 out << "FGPILU copy sparsity pattern time: " << t_copy_pattern.stop() << " s";
@@ -542,9 +545,12 @@ void FGPILU::decomposition(
 
         // copy to GPU
         Dune::Timer t_copy1;
-        err = queue->enqueueWriteBuffer(d_Ut_vals, CL_TRUE, 0, sizeof(double) * Ut_nnzbs * block_size * block_size, Ut_vals);
-        err |= queue->enqueueWriteBuffer(d_L_vals, CL_TRUE, 0, sizeof(double) * L_nnzbs * block_size * block_size, L_vals);
-        err |= queue->enqueueWriteBuffer(d_LU_vals, CL_TRUE, 0, sizeof(double) * LU_nnzbs * block_size * block_size, LU_vals);
+        events.resize(3);
+        err = queue->enqueueWriteBuffer(d_Ut_vals, CL_FALSE, 0, sizeof(double) * Ut_nnzbs * block_size * block_size, Ut_vals, nullptr, &events[0]);
+        err |= queue->enqueueWriteBuffer(d_L_vals, CL_FALSE, 0, sizeof(double) * L_nnzbs * block_size * block_size, L_vals, nullptr, &events[1]);
+        err |= queue->enqueueWriteBuffer(d_LU_vals, CL_FALSE, 0, sizeof(double) * LU_nnzbs * block_size * block_size, LU_vals, nullptr, &events[2]);
+        cl::WaitForEvents(events);
+        events.clear();
         if (verbosity >= 3){
             std::ostringstream out;
             out << "FGPILU copy1 time: " << t_copy1.stop() << " s";
@@ -582,21 +588,23 @@ void FGPILU::decomposition(
             event.wait();
             if (verbosity >= 3){
                 std::ostringstream out;
-                out << "FGPILU sweep kernel time: " << t_copy1.stop() << " s";
+                out << "FGPILU sweep kernel time: " << t_kernel.stop() << " s";
                 OpmLog::info(out.str());
             }
         }
 
         // copy back
         Dune::Timer t_copy2;
+        events.resize(2);
         if (num_sweeps % 2 == 0) {
-            err = queue->enqueueReadBuffer(d_Ut_vals, CL_TRUE, 0, sizeof(double) * Ut_nnzbs * block_size * block_size, Ut_vals);
-            err |= queue->enqueueReadBuffer(d_L_vals, CL_TRUE, 0, sizeof(double) * L_nnzbs * block_size * block_size, L_vals);
+            err = queue->enqueueReadBuffer(d_Ut_vals, CL_FALSE, 0, sizeof(double) * Ut_nnzbs * block_size * block_size, Ut_vals, nullptr, &events[0]);
+            err |= queue->enqueueReadBuffer(d_L_vals, CL_FALSE, 0, sizeof(double) * L_nnzbs * block_size * block_size, L_vals, nullptr, &events[1]);
         } else {
-            err = queue->enqueueReadBuffer(d_Utmp, CL_TRUE, 0, sizeof(double) * Ut_nnzbs * block_size * block_size, Ut_vals);
-            err |= queue->enqueueReadBuffer(d_Ltmp, CL_TRUE, 0, sizeof(double) * L_nnzbs * block_size * block_size, L_vals);
+            err = queue->enqueueReadBuffer(d_Utmp, CL_FALSE, 0, sizeof(double) * Ut_nnzbs * block_size * block_size, Ut_vals, nullptr, &events[0]);
+            err |= queue->enqueueReadBuffer(d_Ltmp, CL_FALSE, 0, sizeof(double) * L_nnzbs * block_size * block_size, L_vals, nullptr, &events[1]);
         }
-        err |= queue->enqueueBarrierWithWaitList();
+        cl::WaitForEvents(events);
+        events.clear();
         if (verbosity >= 3){
             std::ostringstream out;
             out << "FGPILU copy2 time: " << t_copy2.stop() << " s";

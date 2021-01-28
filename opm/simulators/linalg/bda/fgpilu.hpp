@@ -43,6 +43,7 @@ namespace bda
         cl::Buffer d_Ltmp, d_Utmp;
 
         cl::Event event;
+        std::vector<cl::Event> events;
         cl_int err;
         std::once_flag initialize_flag;
 
