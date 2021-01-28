@@ -45,8 +45,7 @@ class ThreadedEntityIterator
     using EntityIterator = typename GridView::template Codim<codim>::Iterator;
 public:
     ThreadedEntityIterator(const GridView& gridView)
-        : gridView_(gridView)
-        , sequentialIt_(gridView_.template begin<codim>())
+        : sequentialIt_(gridView.template begin<codim>())
         , sequentialEnd_(gridView.template end<codim>())
     { }
 
@@ -90,7 +89,6 @@ public:
     }
 
 private:
-    GridView gridView_;
     EntityIterator sequentialIt_;
     EntityIterator sequentialEnd_;
 
