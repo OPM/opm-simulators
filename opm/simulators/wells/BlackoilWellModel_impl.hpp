@@ -361,9 +361,8 @@ namespace Opm {
 
             if (has_polymer_)
             {
-                const Grid& grid = ebosSimulator_.vanguard().grid();
                 if (PolymerModule::hasPlyshlog() || getPropValue<TypeTag, Properties::EnablePolymerMW>() ) {
-                        computeRepRadiusPerfLength(grid, local_deferredLogger);
+                        setRepRadiusPerfLength(local_deferredLogger);
                 }
             }
         } catch (std::exception& e) {
@@ -1580,10 +1579,10 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    computeRepRadiusPerfLength(const Grid& grid, Opm::DeferredLogger& deferred_logger)
+    setRepRadiusPerfLength(Opm::DeferredLogger& deferred_logger)
     {
         for (const auto& well : well_container_) {
-            well->computeRepRadiusPerfLength(grid, cartesian_to_compressed_, deferred_logger);
+            well->setRepRadiusPerfLength(cartesian_to_compressed_, deferred_logger);
         }
     }
 

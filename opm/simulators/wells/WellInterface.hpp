@@ -189,7 +189,7 @@ namespace Opm
 
         void setWellEfficiencyFactor(const double efficiency_factor);
 
-        void computeRepRadiusPerfLength(const Grid& grid, const std::vector<int>& cartesian_to_compressed, Opm::DeferredLogger& deferred_logger);
+        void setRepRadiusPerfLength(const std::vector<int>& cartesian_to_compressed, Opm::DeferredLogger& deferred_logger);
 
         /// using the solution x to recover the solution xw for wells and applying
         /// xw to update Well State

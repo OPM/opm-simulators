@@ -1195,14 +1195,10 @@ namespace Opm
     template<typename TypeTag>
     void
     WellInterface<TypeTag>::
-    computeRepRadiusPerfLength(const Grid& grid,
-                               const std::vector<int>& cartesian_to_compressed,
+    setRepRadiusPerfLength(const std::vector<int>& cartesian_to_compressed,
                                Opm::DeferredLogger& deferred_logger
                                )
     {
-        auto cell_to_faces = Opm::UgGridHelpers::cell2Faces(grid);
-        auto begin_face_centroids = Opm::UgGridHelpers::beginFaceCentroids(grid);
-
         const int nperf = number_of_perforations_;
 
         perf_rep_radius_.clear();
@@ -1228,29 +1224,8 @@ namespace Opm
 
                 if (cell >= 0) {
                     double radius = connection.rw();
-                    const std::array<double, 3> cubical =
-                        wellhelpers::getCubeDim<3>(cell_to_faces, begin_face_centroids, cell);
-
-                    double re; // area equivalent radius of the grid block
-                    double perf_length; // the length of the well perforation
-
-                    switch (connection.dir()) {
-                        case Opm::Connection::Direction::X:
-                            re = std::sqrt(cubical[1] * cubical[2] / M_PI);
-                            perf_length = cubical[0];
-                            break;
-                        case Opm::Connection::Direction::Y:
-                            re = std::sqrt(cubical[0] * cubical[2] / M_PI);
-                            perf_length = cubical[1];
-                            break;
-                        case Opm::Connection::Direction::Z:
-                            re = std::sqrt(cubical[0] * cubical[1] / M_PI);
-                            perf_length = cubical[2];
-                            break;
-                        default:
-                            OPM_DEFLOG_THROW(std::runtime_error, " Dirtecion of well is not supported ", deferred_logger);
-                    }
-
+                    double re = connection.re(); // area equivalent radius of the grid block
+                    double perf_length = connection.connectionLength(); // the length of the well perforation
                     const double repR = std::sqrt(re * radius);
                     perf_rep_radius_.push_back(repR);
                     perf_length_.push_back(perf_length);
