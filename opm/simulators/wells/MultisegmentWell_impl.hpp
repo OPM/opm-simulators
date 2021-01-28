@@ -812,28 +812,17 @@ namespace Opm
                 return;
             }
         } */
-
-        // creating a copy of the well itself, to avoid messing up the explicit informations
-        // during this copy, the only information not copied properly is the well controls
-        MultisegmentWell<TypeTag> well(*this);
-        well.debug_cost_counter_ = 0;
-
-        well.updatePrimaryVariables(well_state, deferred_logger);
-
-        // initialize the primary variables in Evaluation, which is used in computePerfRate for computeWellPotentials
-        // TODO: for computeWellPotentials, no derivative is required actually
-        well.initPrimaryVariablesEvaluation();
-
+        debug_cost_counter_ = 0;
         // does the well have a THP related constraint?
         const auto& summaryState = ebosSimulator.vanguard().summaryState();
         const Well::ProducerCMode& current_control = well_state.currentProductionControls()[this->index_of_well_];
-        if ( !well.Base::wellHasTHPConstraints(summaryState) || current_control == Well::ProducerCMode::BHP) {
-            well.computeWellRatesAtBhpLimit(ebosSimulator, B_avg, well_potentials, deferred_logger);
+        if ( !Base::wellHasTHPConstraints(summaryState) || current_control == Well::ProducerCMode::BHP) {
+            computeWellRatesAtBhpLimit(ebosSimulator, B_avg, well_potentials, deferred_logger);
         } else {
-            well_potentials = well.computeWellPotentialWithTHP(ebosSimulator, B_avg, deferred_logger);
+            well_potentials = computeWellPotentialWithTHP(ebosSimulator, B_avg, deferred_logger);
         }
         deferred_logger.debug("Cost in iterations of finding well potential for well "
-                              + name() + ": " + std::to_string(well.debug_cost_counter_));
+                              + name() + ": " + std::to_string(debug_cost_counter_));
     }
 
 
