@@ -1195,9 +1195,7 @@ namespace Opm
     template<typename TypeTag>
     void
     WellInterface<TypeTag>::
-    setRepRadiusPerfLength(const std::vector<int>& cartesian_to_compressed,
-                               Opm::DeferredLogger& deferred_logger
-                               )
+    setRepRadiusPerfLength(const std::vector<int>& cartesian_to_compressed)
     {
         const int nperf = number_of_perforations_;
 
