@@ -394,7 +394,7 @@ namespace Opm {
 
             void setupCartesianToCompressed_(const int* global_cell, int local_num__cells);
 
-            void setRepRadiusPerfLength(Opm::DeferredLogger& deferred_logger);
+            void setRepRadiusPerfLength();
 
 
             void computeAverageFormationFactor(std::vector<Scalar>& B_avg) const;
