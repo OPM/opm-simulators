@@ -792,17 +792,20 @@ protected:
         ElementMapper elemMapper(this->gridView(), Dune::mcmgElementLayout());
         auto elemIt = this->gridView().template begin</*codim=*/0>();
         const auto& elemEndIt = this->gridView().template end</*codim=*/0>();
+
+        const auto num_aqu_cells = this->eclState_->aquifer().numericalAquifers().allAquiferCells();
+
         for (; elemIt != elemEndIt; ++elemIt) {
             const Element& element = *elemIt;
             const unsigned int elemIdx = elemMapper.index(element);
             cellCenterDepth_[elemIdx] = cellCenterDepth(element);
 
             if (this->eclState_->aquifer().hasNumericalAquifer()) {
-                const auto& num_aquifer = this->eclState_->aquifer().numericalAquifers();
                 const unsigned int global_index = cartesianIndex(elemIdx);
-                if (num_aquifer.hasCell(global_index)) {
-                    const auto& cell = num_aquifer.aquiferCells().at(global_index);
-                    cellCenterDepth_[elemIdx] = cell.depth;
+                const auto search = num_aqu_cells.find(global_index);
+                if (search != num_aqu_cells.end()) {
+                    // updating the cell depth using aquifer cell depth
+                    cellCenterDepth_[elemIdx] = search->second->depth;
                 }
             }
         }

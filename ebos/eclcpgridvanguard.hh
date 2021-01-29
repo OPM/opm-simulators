@@ -342,21 +342,14 @@ protected:
     {
         grid_.reset(new Dune::CpGrid());
 
-        std::unordered_map<size_t, double> aquifer_cell_volumes;
-        if (this->eclState().aquifer().hasNumericalAquifer()) {
-            aquifer_cell_volumes = this->eclState().aquifer().numericalAquifers().cellVolumes();
-        }
-        grid_->processEclipseFormat(this->eclState(),
-                                    this->deck(),
-                                    mpiRank == 0 ? &this->eclState().getInputGrid()
+        grid_->processEclipseFormat(mpiRank == 0 ? &this->eclState().getInputGrid()
                                                  : nullptr,
                                     /*isPeriodic=*/false,
-                                    this->eclState().getInputNNC(),
                                     /*flipNormals=*/false,
                                     /*clipZ=*/false,
                                     mpiRank == 0 ? this->eclState().fieldProps().porv(true)
                                                  : std::vector<double>(),
-                                    aquifer_cell_volumes);
+                                    this->eclState().getInputNNC());
 
         // we use separate grid objects: one for the calculation of the initial condition
         // via EQUIL and one for the actual simulation. The reason is that the EQUIL code

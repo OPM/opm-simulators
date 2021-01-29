@@ -23,7 +23,7 @@
 
 #include <opm/output/data/Aquifer.hpp>
 
-#include <opm/parser/eclipse/EclipseState/NumericalAquifer.hpp>
+#include <opm/parser/eclipse/EclipseState/Aquifer/NumericalAquifer/NumericalAquifers.hpp>
 
 namespace Opm
 {
@@ -59,13 +59,12 @@ public:
     , cumulative_flux_(0.)
     , global_cell_(global_cell)
     {
-
         this->cell_to_aquifer_cell_idx_.resize(this->ebos_simulator_.gridView().size(/*codim=*/0), -1);
-        const auto& cells = this->aquifer_.cells();
 
-        // TODO: here, the parallisam is obviously ignored
-        for (size_t idx = 0; idx < cells.size(); ++idx) {
-            const int global_idx = cells[idx].global_index;
+        // TODO: here, the parallelisation is obviously ignored
+        for (size_t idx = 0; idx < aquifer.numCells(); ++idx) {
+            const auto& cell = *(aquifer.getCellPrt(idx));
+            const int global_idx = cell.global_index;
             const int cell_idx = cartesian_to_compressed.at(global_idx);
             this->cell_to_aquifer_cell_idx_[cell_idx] = idx;
         }
@@ -172,7 +171,7 @@ private:
             elem_ctx.updateAllExtensiveQuantities();
 
             const size_t num_interior_faces = elem_ctx.numInteriorFaces(/*timeIdx*/ 0);
-            const auto &problem = elem_ctx.problem();
+            // const auto &problem = elem_ctx.problem();
             const auto &stencil = elem_ctx.stencil(0);
             // const auto& inQuants = elem_ctx.intensiveQuantities(0, /*timeIdx*/ 0);
 
@@ -182,10 +181,10 @@ private:
                 const size_t i = face.interiorIndex();
                 const size_t j = face.exteriorIndex();
                 // compressed index
-                const size_t I = stencil.globalSpaceIndex(i);
+                // const size_t I = stencil.globalSpaceIndex(i);
                 const size_t J = stencil.globalSpaceIndex(j);
 
-                assert(I == cell_index);
+                assert(stencil.globalSpaceIndex(i) == cell_index);
 
                 // we do not consider the flux within aquifer cells
                 // we only need the flux to the connections

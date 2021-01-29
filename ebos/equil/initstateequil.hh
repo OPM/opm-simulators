@@ -48,6 +48,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/PdvdTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SaltvdTable.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <fmt/format.h>
 
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/fluidstates/SimpleModularFluidState.hpp>
@@ -1792,15 +1793,18 @@ private:
 
         auto elemIt = gridView.template begin</*codim=*/0>();
         const auto& elemEndIt = gridView.template end</*codim=*/0>();
+        const auto num_aqu_cells = aquifer.allAquiferCells();
         for (; elemIt != elemEndIt; ++elemIt) {
             const Element& element = *elemIt;
             const unsigned int elemIdx = elemMapper.index(element);
             cellCenterDepth_[elemIdx] = Details::cellCenterDepth(element);
             const auto cartIx = cartesianIndexMapper_.cartesianIndex(elemIdx);
-            if (aquifer.hasCell(cartIx)) {
-                const auto& aqu_cells = aquifer.aquiferCells();
-                const auto& aqu_cell = aqu_cells.at(cartIx);
-                cellCenterDepth_[elemIdx] = aqu_cell.depth;
+            if (!num_aqu_cells.empty()) {
+                const auto search = num_aqu_cells.find(cartIx);
+                if (search != num_aqu_cells.end()) {
+                    const auto* aqu_cell = num_aqu_cells.at(cartIx);
+                    cellCenterDepth_[elemIdx] = aqu_cell->depth;
+                }
             }
             cellZSpan_[elemIdx] = Details::cellZSpan(element);
             cellZMinMax_[elemIdx] = Details::cellZMinMax(element);
@@ -1933,8 +1937,8 @@ private:
             decltype(std::declval<CellPos>().cell)>>;
         // TODO: might not needed
         ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
-
-        this->cellLoop(cells, [this, &eqreg,  &ptable, &elemMapper, &aquifer, &psat]
+        const auto num_aqu_cells = aquifer.allAquiferCells();
+        this->cellLoop(cells, [this, &eqreg,  &ptable, &elemMapper, &num_aqu_cells, &psat]
             (const CellID                 cell,
              Details::PhaseQuantityValue& pressures,
              Details::PhaseQuantityValue& saturations,
@@ -1946,26 +1950,26 @@ private:
             };
 
             saturations = psat.deriveSaturations(pos, eqreg, ptable);
+            pressures   = psat.correctedPhasePressures();
 
             // TODO: not totally sure this is the cartesian Index
             const auto global_index = cartesianIndexMapper_.cartesianIndex(cell);
-            if (aquifer.hasCell(global_index)) {
-                saturations = {0.0, 0.0, 1.0};
-                const auto &aqu_cell = aquifer.getCell(global_index);
-                std::ostringstream ss;
-                ss << "FOR AQUIFER CELL AT { " << aqu_cell.I + 1 << " " << aqu_cell.J + 1 << " "
-                   << aqu_cell.K + 1 << " } OF NUMERICAL AQUIFER " << aqu_cell.aquifer_id << " with global_index " << global_index << ", "
-                   << "WATER SATURATION IS SET TO BE UNITY";
-                OpmLog::info(ss.str());
-            }
-            pressures   = psat.correctedPhasePressures();
-            if (aquifer.hasCell(global_index)) {
-                const auto &aqu_cell = aquifer.getCell(global_index);
-                // TODO: NOT totally sure what we should do here to employ the pressure specified by AQUNUM
-                if (aqu_cell.init_pressure > 0.) {
-                    const double pres = aqu_cell.init_pressure;
-                    pressures = {pres, pres, pres};
+            if (!num_aqu_cells.empty()) {
+                const auto search = num_aqu_cells.find(global_index);
+                if (search != num_aqu_cells.end()) {
+                    const auto* aqu_cell = num_aqu_cells.at(global_index);
+                    const auto msg = fmt::format("FOR AQUIFER CELL AT ({}, {}, {}) OF NUMERICAL "
+                                                 "AQUIFER {}, WATER SATURATION IS SET TO BE UNITY",
+                                                 aqu_cell->I+1, aqu_cell->J+1, aqu_cell->K+1, aqu_cell->aquifer_id);
+                    OpmLog::info(msg);
+
+                    if (aqu_cell->init_pressure) {
+                        // TODO: NOT totally sure what we should do here to employ the pressure specified by AQUNUM
+                        const double pres = *(aqu_cell->init_pressure);
+                        pressures = {pres, pres, pres};
+                    }
                 }
+
             }
 
             const auto temp = this->temperature_[cell];
