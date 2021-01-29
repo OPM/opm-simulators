@@ -245,6 +245,8 @@ namespace Opm {
             ebosSimulator_.setTime(timer.simulationTimeElapsed());
             ebosSimulator_.setTimeStepSize(timer.currentStepLength());
             ebosSimulator_.problem().beginTimeStep();
+            // we also need to reset the iteration count
+            ebosSimulator_.model().newtonMethod().setIterationIndex(0);
 
             unsigned numDof = ebosSimulator_.model().numGridDof();
             wasSwitched_.resize(numDof);
