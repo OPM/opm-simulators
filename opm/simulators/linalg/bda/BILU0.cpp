@@ -167,6 +167,34 @@ namespace bda
         // split matrix into L and U
         // also convert U into BSC format (Ut)
         // Ut stores diagonal for now
+        // original matrix LUmat is assumed to be symmetric
+
+#ifndef NDEBUG
+        // verify that matrix is symmetric
+        for (int i = 0; i < Nb; ++i){
+            int iRowStart = LUmat->rowPointers[i];
+            int iRowEnd = LUmat->rowPointers[i + 1];
+            // for every block (i, j) in this row, check if (j, i) also exists
+            for (int ij = iRowStart; ij < iRowEnd; ij++) {
+                int j = LUmat->colIndices[ij];
+                int jRowStart = LUmat->rowPointers[j];
+                int jRowEnd = LUmat->rowPointers[j + 1];
+                bool blockFound = false;
+                // check all blocks on row j
+                // binary search is possible
+                for (int ji = jRowStart; ji < jRowEnd; ji++) {
+                    int row = LUmat->colIndices[ji];
+                    if (i == row) {
+                        blockFound = true;
+                        break;
+                    }
+                }
+                if (false == blockFound) {
+                    OPM_THROW(std::logic_error, "Error sparsity pattern must be symmetric when using chow_patel_decomposition()");
+                }
+            }
+        }
+#endif
 
         // Ut is actually BSC format
         std::unique_ptr<BlockedMatrix<bs> > Ut = std::make_unique<BlockedMatrix<bs> >(Nb, (nnzbs + Nb) / 2);
