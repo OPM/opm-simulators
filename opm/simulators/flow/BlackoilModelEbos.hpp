@@ -238,15 +238,15 @@ namespace Opm {
                 ebosSimulator_.model().advanceTimeLevel();
             }
 
-            // set the timestep size and episode index for ebos explicitly. ebos needs to
-            // know the report step/episode index because of timing dependend data
-            // despide the fact that flow uses its own time stepper. (The length of the
-            // episode does not matter, though.)
+            // Set the timestep size, episode index, and non-linear iteration index
+            // for ebos explicitly. ebos needs to know the report step/episode index
+            // because of timing dependent data despite the fact that flow uses its
+            // own time stepper. (The length of the episode does not matter, though.)
             ebosSimulator_.setTime(timer.simulationTimeElapsed());
             ebosSimulator_.setTimeStepSize(timer.currentStepLength());
-            ebosSimulator_.problem().beginTimeStep();
-            // we also need to reset the iteration count
             ebosSimulator_.model().newtonMethod().setIterationIndex(0);
+
+            ebosSimulator_.problem().beginTimeStep();
 
             unsigned numDof = ebosSimulator_.model().numGridDof();
             wasSwitched_.resize(numDof);
