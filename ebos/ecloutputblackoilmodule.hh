@@ -809,6 +809,16 @@ public:
                         val.second = Opm::getValue(intQuants.relativePermeability(gasPhaseIdx));
                     else if (key.first == "BOKR" || key.first == "BKRO")
                         val.second = Opm::getValue(intQuants.relativePermeability(oilPhaseIdx));
+                    else if (key.first == "BKROG") {
+                        const auto& materialParams = problem.materialLawParams(elemCtx, dofIdx, /* timeIdx = */ 0);
+                        const auto krog = MaterialLaw::template relpermOilInOilGasSystem<Evaluation>(materialParams, fs);
+                        val.second = Opm::getValue(krog);
+                    }
+                    else if (key.first == "BKROW") {
+                        const auto& materialParams = problem.materialLawParams(elemCtx, dofIdx, /* timeIdx = */ 0);
+                        const auto krow = MaterialLaw::template relpermOilInOilWaterSystem<Evaluation>(materialParams, fs);
+                        val.second = Opm::getValue(krow);
+                    }
                     else if (key.first == "BWPC")
                         val.second = Opm::getValue(fs.pressure(oilPhaseIdx)) - Opm::getValue(fs.pressure(waterPhaseIdx));
                     else if (key.first == "BGPC")
