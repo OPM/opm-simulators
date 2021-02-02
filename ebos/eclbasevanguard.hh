@@ -50,6 +50,8 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQConfig.hpp>
 
+#include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
+
 #include <opm/simulators/utils/readDeck.hpp>
 
 #if HAVE_MPI
@@ -120,6 +122,11 @@ struct ZoltanImbalanceTol {
     using type = UndefinedProperty;
 };
 
+template<class TypeTag, class MyTypeTag>
+struct AllowDistributedWells {
+    using type = UndefinedProperty;
+};
+
 template<class TypeTag>
 struct IgnoreKeywords<TypeTag, TTag::EclBaseVanguard> {
     static constexpr auto value = "";
@@ -163,6 +170,16 @@ struct ZoltanImbalanceTol<TypeTag, TTag::EclBaseVanguard> {
     static constexpr type value = 1.1;
 };
 
+template<class TypeTag>
+struct AllowDistributedWells<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr bool value = false;
+};
+
+// Same as in BlackoilModelParametersEbos.hpp but for here.
+template<class TypeTag>
+struct UseMultisegmentWell<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr bool value = true;
+};
 } // namespace Opm::Properties
 
 namespace Opm {
@@ -217,7 +234,11 @@ public:
         EWOMS_REGISTER_PARAM(TypeTag, bool, SerialPartitioning,
                              "Perform partitioning for parallel runs on a single process.");
         EWOMS_REGISTER_PARAM(TypeTag, Scalar, ZoltanImbalanceTol,
-                             "Perform partitioning for parallel runs on a single process.");
+                             "Tolerable imbalance of the loadbalancing provided by Zoltan (default: 1.1).");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, AllowDistributedWells,
+                             "Allow the perforations of a well to be distributed to interior of multiple processes");
+        // register here for the use in the tests without BlackoildModelParametersEbos
+        EWOMS_REGISTER_PARAM(TypeTag, bool, UseMultisegmentWell, "Use the well model for multi-segment wells instead of the one for single-segment wells");
 
     }
 
@@ -353,6 +374,7 @@ public:
         ownersFirst_ = EWOMS_GET_PARAM(TypeTag, bool, OwnerCellsFirst);
         serialPartitioning_ = EWOMS_GET_PARAM(TypeTag, bool, SerialPartitioning);
         zoltanImbalanceTol_ = EWOMS_GET_PARAM(TypeTag, Scalar, ZoltanImbalanceTol);
+        enableDistributedWells_ = EWOMS_GET_PARAM(TypeTag, bool, AllowDistributedWells);
 
         // Make proper case name.
         {
@@ -443,6 +465,45 @@ public:
             parallelWells_.emplace_back(well.name(), true);
         }
         std::sort(parallelWells_.begin(), parallelWells_.end());
+
+        // Check whether allowing distribute wells makes sense
+        if (enableDistributedWells() )
+        {
+            int hasMsWell = false;
+
+            if (EWOMS_GET_PARAM(TypeTag, bool, UseMultisegmentWell))
+            {
+                if (myRank == 0)
+                {
+                    const auto& wells = this->schedule().getWellsatEnd();
+                    for ( const auto& well: wells)
+                    {
+                        hasMsWell = hasMsWell || well.isMultiSegment();
+                    }
+                }
+            }
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+            const auto& comm = Dune::MPIHelper::getCommunication();
+#else
+            const auto& comm = Dune::MPIHelper::getCollectiveCommunication();
+#endif
+            hasMsWell = comm.max(hasMsWell);
+
+            if (hasMsWell)
+            {
+                if (myRank == 0)
+                {
+                    std::string message =
+                        std::string("Option --allow-distributed-wells=true is only allowed if model\n")
+                        + "only has only standard wells. You need to provide option \n"
+                        + " with --enable-multisegement-wells=false to treat existing \n"
+                        + "multisegment wells as standard wells.";
+                    OpmLog::error(message);
+                }
+                comm.barrier();
+                OPM_THROW(std::invalid_argument, "All wells need to be standard wells!");
+            }
+        }
     }
 
     /*!
@@ -558,6 +619,12 @@ public:
      */
     Scalar zoltanImbalanceTol() const
     { return zoltanImbalanceTol_; }
+
+    /*!
+     * \brief Whether perforations of a well might be distributed.
+     */
+    bool enableDistributedWells() const
+    { return enableDistributedWells_; }
 
     /*!
      * \brief Returns the name of the case.
@@ -804,6 +871,7 @@ private:
     bool ownersFirst_;
     bool serialPartitioning_;
     Scalar zoltanImbalanceTol_;
+    bool enableDistributedWells_;
 
 protected:
     /*! \brief The cell centroids after loadbalance was called.
