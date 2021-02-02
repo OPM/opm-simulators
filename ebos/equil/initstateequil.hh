@@ -1935,10 +1935,8 @@ private:
         using CellPos = typename PhaseSat::Position;
         using CellID  = std::remove_cv_t<std::remove_reference_t<
             decltype(std::declval<CellPos>().cell)>>;
-        // TODO: might not needed
-        ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
         const auto num_aqu_cells = aquifer.allAquiferCells();
-        this->cellLoop(cells, [this, &eqreg,  &ptable, &elemMapper, &num_aqu_cells, &psat]
+        this->cellLoop(cells, [this, &eqreg,  &ptable, &num_aqu_cells, &psat]
             (const CellID                 cell,
              Details::PhaseQuantityValue& pressures,
              Details::PhaseQuantityValue& saturations,
@@ -1964,7 +1962,6 @@ private:
                     OpmLog::info(msg);
 
                     if (aqu_cell->init_pressure) {
-                        // TODO: NOT totally sure what we should do here to employ the pressure specified by AQUNUM
                         const double pres = *(aqu_cell->init_pressure);
                         pressures = {pres, pres, pres};
                     }

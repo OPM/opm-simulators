@@ -341,7 +341,6 @@ protected:
     void createGrids_()
     {
         grid_.reset(new Dune::CpGrid());
-
         grid_->processEclipseFormat(mpiRank == 0 ? &this->eclState().getInputGrid()
                                                  : nullptr,
                                     /*isPeriodic=*/false,

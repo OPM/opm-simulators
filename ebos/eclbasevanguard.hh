@@ -800,7 +800,7 @@ protected:
             const unsigned int elemIdx = elemMapper.index(element);
             cellCenterDepth_[elemIdx] = cellCenterDepth(element);
 
-            if (this->eclState_->aquifer().hasNumericalAquifer()) {
+            if (!num_aqu_cells.empty()) {
                 const unsigned int global_index = cartesianIndex(elemIdx);
                 const auto search = num_aqu_cells.find(global_index);
                 if (search != num_aqu_cells.end()) {

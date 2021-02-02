@@ -22,8 +22,7 @@
 #define OPM_AQUIFERNUMERICAL_HEADER_INCLUDED
 
 #include <opm/output/data/Aquifer.hpp>
-
-#include <opm/parser/eclipse/EclipseState/Aquifer/NumericalAquifer/NumericalAquifers.hpp>
+#include <opm/parser/eclipse/EclipseState/Aquifer/NumericalAquifer/SingleNumericalAquifer.hpp>
 
 namespace Opm
 {
@@ -53,7 +52,7 @@ public:
                      const std::unordered_map<int, int>& cartesian_to_compressed,
                      const Simulator& ebos_simulator,
                      const int* global_cell)
-    : aquifer_(aquifer)
+    : id_(aquifer.id())
     , ebos_simulator_(ebos_simulator)
     , flux_rate_(0.)
     , cumulative_flux_(0.)
@@ -85,7 +84,7 @@ public:
     Opm::data::AquiferData aquiferData() const
     {
         data::AquiferData data;
-        data.aquiferID = this->aquifer_.id();
+        data.aquiferID = this->id_;
         data.initPressure = this->init_pressure_;
         data.pressure = this->pressure_;
         data.fluxRate = this->flux_rate_;
@@ -103,7 +102,7 @@ public:
     }
 
 private:
-    const Opm::SingleNumericalAquifer& aquifer_;
+    const size_t id_;
     const Simulator& ebos_simulator_;
     double flux_rate_; // aquifer influx rate
     double cumulative_flux_; // cumulative aquifer influx
@@ -144,7 +143,6 @@ private:
             sum_pv += pv;
         }
 
-        assert(sum_pv > 0.);
         return sum_pv_pressure/ sum_pv;
     }
 

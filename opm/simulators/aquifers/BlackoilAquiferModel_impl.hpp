@@ -71,6 +71,11 @@ BlackoilAquiferModel<TypeTag>::initFromRestart(const std::vector<data::AquiferDa
             aquifer.initFromRestart(aquiferSoln);
         }
     }
+    if (aquiferNumericalActive()) {
+        for (auto& aquifer : this->aquifers_numerical) {
+            aquifer.initFromRestart(aquiferSoln);
+        }
+    }
 }
 
 template <typename TypeTag>
@@ -195,24 +200,17 @@ BlackoilAquiferModel<TypeTag>::init()
     }
 
     if (aquifer.hasNumericalAquifer()) {
-        const auto aquifers = aquifer.numericalAquifers().aquifers();
+        const auto& num_aquifers = aquifer.numericalAquifers().aquifers();
         const auto& ugrid = simulator_.vanguard().grid();
         const int number_of_cells = simulator_.gridView().size(0);
         const int* global_cell = Opm::UgGridHelpers::globalCell(ugrid);
         const std::unordered_map<int, int> cartesian_to_compressed = cartesianToCompressed(number_of_cells,
                                                                                            global_cell);
-        // for (const auto& elem : ers().aquifers()) {
-        for (const auto& [id, aqu] : aquifers) {
+        for ([[maybe_unused]]const auto& [id, aqu] : num_aquifers) {
             this->aquifers_numerical.emplace_back(aqu,
                   cartesian_to_compressed, this->simulator_, global_cell);
         }
     }
-}
-template <typename TypeTag>
-bool
-BlackoilAquiferModel<TypeTag>::aquiferActive() const
-{
-    return (aquiferCarterTracyActive() || aquiferFetkovichActive());
 }
 template <typename TypeTag>
 bool
