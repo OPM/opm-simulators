@@ -904,6 +904,14 @@ if(MPI_FOUND)
                                        REL_TOL ${rel_tol_parallel}
                                        TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
+  # A test for distributed standard wells. We load distribute only along the z-axis
+  add_test_compare_parallel_simulation(CASENAME spe9
+                                       FILENAME SPE9_CP_SHORT
+                                       SIMULATOR flow_distribute_z
+                                       ABS_TOL ${abs_tol_parallel}
+                                       REL_TOL ${rel_tol_parallel}
+                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
+
   add_test_compare_parallel_simulation(CASENAME spe9group
                                        FILENAME SPE9_CP_GROUP
                                        SIMULATOR flow

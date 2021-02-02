@@ -42,6 +42,7 @@
 #include <dune/common/version.hh>
 
 #include <sstream>
+#include <functional>
 
 namespace Opm {
 template <class TypeTag>
@@ -183,26 +184,31 @@ public:
             // not work)
             const auto& gridView = grid_->leafGridView();
             unsigned numFaces = grid_->numFaces();
-            std::vector<double> faceTrans(numFaces, 0.0);
-            ElementMapper elemMapper(this->gridView(), Dune::mcmgElementLayout());
-            auto elemIt = gridView.template begin</*codim=*/0>();
-            const auto& elemEndIt = gridView.template end</*codim=*/0>();
-            for (; elemIt != elemEndIt; ++ elemIt) {
-                const auto& elem = *elemIt;
-                auto isIt = gridView.ibegin(elem);
-                const auto& isEndIt = gridView.iend(elem);
-                for (; isIt != isEndIt; ++ isIt) {
-                    const auto& is = *isIt;
-                    if (!is.neighbor())
-                        continue;
+            std::vector<double> faceTrans;
+            int loadBalancerSet = externalLoadBalancer_.has_value();
+            grid_->comm().broadcast(&loadBalancerSet, 1, 0);
+            if (!loadBalancerSet){
+                faceTrans.resize(numFaces, 0.0);
+                ElementMapper elemMapper(this->gridView(), Dune::mcmgElementLayout());
+                auto elemIt = gridView.template begin</*codim=*/0>();
+                const auto& elemEndIt = gridView.template end</*codim=*/0>();
+                for (; elemIt != elemEndIt; ++ elemIt) {
+                    const auto& elem = *elemIt;
+                    auto isIt = gridView.ibegin(elem);
+                    const auto& isEndIt = gridView.iend(elem);
+                    for (; isIt != isEndIt; ++ isIt) {
+                        const auto& is = *isIt;
+                        if (!is.neighbor())
+                            continue;
 
-                    unsigned I = elemMapper.index(is.inside());
-                    unsigned J = elemMapper.index(is.outside());
+                        unsigned I = elemMapper.index(is.inside());
+                        unsigned J = elemMapper.index(is.outside());
 
-                    // FIXME (?): this is not portable!
-                    unsigned faceIdx = is.id();
+                        // FIXME (?): this is not portable!
+                        unsigned faceIdx = is.id();
 
-                    faceTrans[faceIdx] = globalTrans_->transmissibility(I, J);
+                        faceTrans[faceIdx] = globalTrans_->transmissibility(I, J);
+                    }
                 }
             }
 
@@ -222,9 +228,22 @@ public:
 
                     PropsCentroidsDataHandle<Dune::CpGrid> handle(*grid_, eclState, eclGrid, this->centroids_,
                                                                   cartesianIndexMapper());
-                    this->parallelWells_ = std::get<1>(grid_->loadBalance(handle, edgeWeightsMethod, &wells, serialPartitioning,
-                                                                          faceTrans.data(), ownersFirst, false, 1, true, zoltanImbalanceTol,
-                                                                          enableDistributedWells));
+                    if (loadBalancerSet)
+                    {
+                        std::vector<int> parts;
+                        if (grid_->comm().rank() == 0)
+                        {
+                            parts =  (*externalLoadBalancer_)(*grid_);
+                        }
+                        this->parallelWells_ = std::get<1>(grid_->loadBalance(handle, parts, &wells, ownersFirst, false, 1));
+                    }
+                    else
+                    {
+                        this->parallelWells_ =
+                            std::get<1>(grid_->loadBalance(handle, edgeWeightsMethod, &wells, serialPartitioning,
+                                                           faceTrans.data(), ownersFirst, false, 1, true, zoltanImbalanceTol,
+                                                           enableDistributedWells));
+                    }
                 }
                 catch(const std::bad_cast& e)
                 {
@@ -311,6 +330,13 @@ public:
         globalTrans_.reset();
     }
 
+    /// \brief Sets a function that returns external load balancing information when passed the grid
+    ///
+    /// The information is a vector of integers indication the partition index for each cell id.
+    static void setExternalLoadBalancer(const std::function<std::vector<int> (const Grid&)>& loadBalancer)
+    {
+        externalLoadBalancer_ = loadBalancer;
+    }
 protected:
     void createGrids_()
     {
@@ -378,8 +404,17 @@ protected:
     std::unique_ptr<CartesianIndexMapper> equilCartesianIndexMapper_;
 
     std::unique_ptr<EclTransmissibility<TypeTag> > globalTrans_;
+
+    /// \brief optional functor returning external load balancing information
+    ///
+    /// If it is set then this will be used during loadbalance.
+    static std::optional<std::function<std::vector<int> (const Grid&)>> externalLoadBalancer_;
     int mpiRank;
 };
+
+template<class TypeTag>
+std::optional<std::function<std::vector<int>(const typename EclCpGridVanguard<TypeTag>::Grid&)>>
+Opm::EclCpGridVanguard<TypeTag>::externalLoadBalancer_;
 
 } // namespace Opm
 
