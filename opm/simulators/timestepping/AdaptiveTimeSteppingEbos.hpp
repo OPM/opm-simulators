@@ -204,7 +204,7 @@ struct TimeStepControlFileName<TypeTag, TTag::FlowTimeSteppingParameters> {
 template<class TypeTag>
 struct MinTimeStepBeforeShuttingProblematicWellsInDays<TypeTag, TTag::FlowTimeSteppingParameters> {
     using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 0.001;
+    static constexpr type value = 0.01;
 };
 
 } // namespace Opm::Properties
