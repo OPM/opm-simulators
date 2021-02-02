@@ -799,13 +799,13 @@ public:
                 const auto& key = val.first;
                 int cartesianIdxBlock = key.second - 1;
                 if (cartesianIdx == cartesianIdxBlock) {
-                    if (key.first == "BWSAT")
+                    if ((key.first == "BWSAT") || (key.first == "BSWAT"))
                         val.second = Opm::getValue(fs.saturation(waterPhaseIdx));
-                    else if (key.first == "BGSAT")
+                    else if ((key.first == "BGSAT") || (key.first == "BSGAS"))
                         val.second = Opm::getValue(fs.saturation(gasPhaseIdx));
-                    else if (key.first == "BOSAT")
+                    else if ((key.first == "BOSAT") || (key.first == "BSOIL"))
                         val.second = Opm::getValue(fs.saturation(oilPhaseIdx));
-                    else if (key.first == "BPR")
+                    else if ((key.first == "BPR") || (key.first == "BPRESSUR"))
                         val.second = Opm::getValue(fs.pressure(oilPhaseIdx));
                     else if (key.first == "BWKR" || key.first == "BKRW")
                         val.second = Opm::getValue(intQuants.relativePermeability(waterPhaseIdx));
