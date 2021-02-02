@@ -362,7 +362,7 @@ public:
         const Evaluation krg = GasOilMaterialLaw::twoPhaseSatKrn(params.gasOilParams(), 1 - Swco - Sg);
         const Evaluation krog = GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), 1 - Swco - Sg);
 
-        return krocw * ((krow/krocw + krw) * (krog/krocw + krg) - krw - krg);
+        return Opm::max(krocw * ((krow/krocw + krw) * (krog/krocw + krg) - krw - krg), Evaluation{0});
     }
 
     /*!
