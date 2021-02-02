@@ -353,16 +353,44 @@ public:
                           const FluidState& fluidState)
     {
         const Scalar Swco = params.Swl();
+
         const Evaluation Sw = Opm::decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
         const Evaluation Sg = Opm::decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
 
         const Scalar krocw = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Swco);
-        const Evaluation krow = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sw);
+        const Evaluation krow = relpermOilInOilWaterSystem<Evaluation>(params, fluidState);
         const Evaluation krw = OilWaterMaterialLaw::twoPhaseSatKrw(params.oilWaterParams(), Sw);
         const Evaluation krg = GasOilMaterialLaw::twoPhaseSatKrn(params.gasOilParams(), 1 - Swco - Sg);
-        const Evaluation krog = GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), 1 - Swco - Sg);
+        const Evaluation krog = relpermOilInOilGasSystem<Evaluation>(params, fluidState);
 
         return Opm::max(krocw * ((krow/krocw + krw) * (krog/krocw + krg) - krw - krg), Evaluation{0});
+    }
+
+
+    /*!
+     * \brief The relative permeability of oil in oil/gas system.
+     */
+    template <class Evaluation, class FluidState>
+    static Evaluation relpermOilInOilGasSystem(const Params& params,
+                                               const FluidState& fluidState)
+    {
+        const Scalar Swco = params.Swl();
+        const Evaluation Sg = Opm::decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
+
+        return GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), 1 - Swco - Sg);
+    }
+
+
+    /*!
+     * \brief The relative permeability of oil in oil/water system.
+     */
+    template <class Evaluation, class FluidState>
+    static Evaluation relpermOilInOilWaterSystem(const Params& params,
+                                                 const FluidState& fluidState)
+    {
+        const Evaluation Sw = Opm::decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
+
+        return OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sw);
     }
 
     /*!
