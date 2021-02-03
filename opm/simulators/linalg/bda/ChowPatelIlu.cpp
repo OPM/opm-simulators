@@ -22,7 +22,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <dune/common/timer.hh>
 
-#include <opm/simulators/linalg/bda/fgpilu.hpp>
+#include <opm/simulators/linalg/bda/ChowPatelIlu.hpp>
 
 namespace bda
 {
@@ -50,8 +50,7 @@ namespace bda
 #define PARALLEL 0
 
 #if PARALLEL
-
-inline const char* fgpilu_sweep_s  = R"(
+inline const char* chow_patel_ilu_sweep_s  = R"(
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
@@ -137,7 +136,7 @@ void invert(
 // all entries in L and U are updated once
 // output is written to [LU]tmp
 // aij and ujj are local arrays whose size is specified before kernel launch
-__kernel void fgpilu_sweep(
+__kernel void chow_patel_ilu_sweep(
     __global const double * restrict Ut_vals,
     __global const double * restrict L_vals,
     __global const double * restrict LU_vals,
@@ -268,7 +267,7 @@ __kernel void fgpilu_sweep(
 
 #else
 
-inline const char* fgpilu_sweep_s  = R"(
+inline const char* chow_patel_ilu_sweep_s  = R"(
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
@@ -343,7 +342,7 @@ __kernel void inverter(
 // all entries in L and U are updated once
 // output is written to [LU]tmp
 // aij and ujj are local arrays whose size is specified before kernel launch
-__kernel void fgpilu_sweep(
+__kernel void chow_patel_ilu_sweep(
     __global const double * restrict Ut_vals,
     __global const double * restrict L_vals,
     __global const double * restrict LU_vals,
@@ -477,7 +476,7 @@ __kernel void fgpilu_sweep(
 
 
 
-void FGPILU::decomposition(
+void ChowPatelIlu::decomposition(
     cl::CommandQueue *queue, cl::Context *context,
     int *Ut_ptrs, int *Ut_idxs, double *Ut_vals, int Ut_nnzbs,
     int *L_rows, int *L_cols, double *L_vals, int L_nnzbs,
@@ -489,22 +488,22 @@ void FGPILU::decomposition(
     try {
         // just put everything in the capture list
         std::call_once(initialize_flag, [&](){
-            cl::Program::Sources source(1, std::make_pair(fgpilu_sweep_s, strlen(fgpilu_sweep_s)));  // what does this '1' mean? cl::Program::Sources is of type 'std::vector<std::pair<const char*, long unsigned int> >'
+            cl::Program::Sources source(1, std::make_pair(chow_patel_ilu_sweep_s, strlen(chow_patel_ilu_sweep_s)));  // what does this '1' mean? cl::Program::Sources is of type 'std::vector<std::pair<const char*, long unsigned int> >'
             cl::Program program = cl::Program(*context, source, &err);
             if (err != CL_SUCCESS) {
-                OPM_THROW(std::logic_error, "FGPILU OpenCL could not create Program");
+                OPM_THROW(std::logic_error, "ChowPatelIlu OpenCL could not create Program");
             }
 
             std::vector<cl::Device> devices = context->getInfo<CL_CONTEXT_DEVICES>();
             program.build(devices);
 
-            fgpilu_sweep_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&,
+            chow_patel_ilu_sweep_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                                      cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                                      cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                                      cl::Buffer&, cl::Buffer&,
-                                                     const int, cl::LocalSpaceArg, cl::LocalSpaceArg>(cl::Kernel(program, "fgpilu_sweep", &err)));
+                                                     const int, cl::LocalSpaceArg, cl::LocalSpaceArg>(cl::Kernel(program, "chow_patel_ilu_sweep", &err)));
             if (err != CL_SUCCESS) {
-                OPM_THROW(std::logic_error, "FGPILU OpenCL could not create Kernel");
+                OPM_THROW(std::logic_error, "ChowPatelIlu OpenCL could not create Kernel");
             }
 
             // allocate GPU memory
@@ -532,12 +531,12 @@ void FGPILU::decomposition(
             events.clear();
             if (verbosity >= 3){
                 std::ostringstream out;
-                out << "FGPILU copy sparsity pattern time: " << t_copy_pattern.stop() << " s";
+                out << "ChowPatelIlu copy sparsity pattern time: " << t_copy_pattern.stop() << " s";
                 OpmLog::info(out.str());
             }
             if (verbosity >= 2){
                 std::ostringstream out;
-                out << "FGPILU PARALLEL: " << PARALLEL;
+                out << "ChowPatelIlu PARALLEL: " << PARALLEL;
                 OpmLog::info(out.str());
             }
         });
@@ -553,12 +552,12 @@ void FGPILU::decomposition(
         events.clear();
         if (verbosity >= 3){
             std::ostringstream out;
-            out << "FGPILU copy1 time: " << t_copy1.stop() << " s";
+            out << "ChowPatelIlu copy1 time: " << t_copy1.stop() << " s";
             OpmLog::info(out.str());
         }
         if (err != CL_SUCCESS) {
             // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
-            OPM_THROW(std::logic_error, "FGPILU OpenCL enqueueWriteBuffer error");
+            OPM_THROW(std::logic_error, "ChowPatelIlu OpenCL enqueueWriteBuffer error");
         }
 
         // call kernel
@@ -580,7 +579,7 @@ void FGPILU::decomposition(
             int total_work_items = num_work_groups * work_group_size;
             int lmem_per_work_group = work_group_size * block_size * block_size * sizeof(double);
             Dune::Timer t_kernel;
-            event = (*fgpilu_sweep_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
+            event = (*chow_patel_ilu_sweep_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
                 *Uarg1, *Larg1, d_LU_vals,
                 d_Ut_ptrs, d_L_rows, d_LU_rows,
                 d_Ut_idxs, d_L_cols, d_LU_cols,
@@ -588,7 +587,7 @@ void FGPILU::decomposition(
             event.wait();
             if (verbosity >= 3){
                 std::ostringstream out;
-                out << "FGPILU sweep kernel time: " << t_kernel.stop() << " s";
+                out << "ChowPatelIlu sweep kernel time: " << t_kernel.stop() << " s";
                 OpmLog::info(out.str());
             }
         }
@@ -607,12 +606,12 @@ void FGPILU::decomposition(
         events.clear();
         if (verbosity >= 3){
             std::ostringstream out;
-            out << "FGPILU copy2 time: " << t_copy2.stop() << " s";
+            out << "ChowPatelIlu copy2 time: " << t_copy2.stop() << " s";
             OpmLog::info(out.str());
         }
         if (err != CL_SUCCESS) {
             // enqueueReadBuffer is C and does not throw exceptions like C++ OpenCL
-            OPM_THROW(std::logic_error, "FGPILU OpenCL enqueueReadBuffer error");
+            OPM_THROW(std::logic_error, "ChowPatelIlu OpenCL enqueueReadBuffer error");
         }
 
     } catch (const cl::Error& error) {

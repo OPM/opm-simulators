@@ -25,7 +25,7 @@
 
 #include <opm/simulators/linalg/bda/BdaSolver.hpp>
 #include <opm/simulators/linalg/bda/BILU0.hpp>
-#include <opm/simulators/linalg/bda/fgpilu.hpp>
+#include <opm/simulators/linalg/bda/ChowPatelIlu.hpp>
 #include <opm/simulators/linalg/bda/Reorder.hpp>
 
 
@@ -276,7 +276,7 @@ namespace bda
 
         // actual ILU decomposition
 #if CHOW_PATEL_GPU
-        fgpilu.decomposition(queue, context,
+        chowPatelIlu.decomposition(queue, context,
                     Ut->rowPointers, Ut->colIndices, Ut->nnzValues, Ut->nnzbs,
                     Lmat->rowPointers, Lmat->colIndices, Lmat->nnzValues, Lmat->nnzbs,
                     LUmat->rowPointers, LUmat->colIndices, LUmat->nnzValues, LUmat->nnzbs,

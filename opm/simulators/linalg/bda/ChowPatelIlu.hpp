@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef FGPILU_HEADER_INCLUDED
-#define FGPILU_HEADER_INCLUDED
+#ifndef CHOW_PATEL_ILU_HEADER_INCLUDED
+#define CHOW_PATEL_ILU_HEADER_INCLUDED
 
 
 #include <mutex>
@@ -33,7 +33,7 @@ namespace bda
     //     FINE-GRAINED PARALLEL INCOMPLETE LU FACTORIZATION, E. Chow and A. Patel, SIAM 2015, https://doi.org/10.1137/140968896
     // only blocksize == 3 is supported
     // decomposition() allocates the cl::Buffers on the first call, these are C++ objects that deallocate automatically
-    class FGPILU
+    class ChowPatelIlu
     {
     private:
         cl::Buffer d_Ut_vals, d_L_vals, d_LU_vals;
@@ -51,10 +51,10 @@ namespace bda
                                         cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                         cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                         cl::Buffer&, cl::Buffer&,
-                                        const int, cl::LocalSpaceArg, cl::LocalSpaceArg> > fgpilu_sweep_k;
+                                        const int, cl::LocalSpaceArg, cl::LocalSpaceArg> > chow_patel_ilu_sweep_k;
 
     public:
-        /// Executes the FGPILU sweeps
+        /// Executes the ChowPatelIlu sweeps
         /// also copies data from CPU to GPU and GPU to CPU
         /// \param[in] queue         OpenCL commandqueue
         /// \param[in] context       OpenCL context
@@ -84,4 +84,4 @@ namespace bda
 
 } // end namespace bda
 
-#endif // FGPILU_HEADER_INCLUDED
+#endif // CHOW_PATEL_ILU_HEADER_INCLUDED
