@@ -115,8 +115,8 @@ private:
 
     double calculateAquiferPressure() const
     {
-        double sum_pv_pressure = 0.;
-        double sum_pv = 0.;
+        double sum_pressure_watervolume = 0.;
+        double sum_watervolume = 0.;
 
         ElementContext  elem_ctx(this->ebos_simulator_);
         const auto& gridView = this->ebos_simulator_.gridView();
@@ -135,15 +135,20 @@ private:
             const auto& iq0 = elem_ctx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
             const auto& fs = iq0.fluidState();
 
+            // TODO: the porosity of the cells are still wrong for numerical aquifer cells
+            // Because the dofVolume still based on the grid information.
+            // The pore volume is correct. Extra efforts will be done to get sensible porosity value here later.
+            const double water_saturation = fs.saturation(waterPhaseIdx).value();
+            const double porosity = iq0.porosity().value();
+            const double volume = elem_ctx.dofTotalVolume(0, 0);
+            // TODO: not sure we should use water pressure here
             const double water_pressure_reservoir = fs.pressure(waterPhaseIdx).value();
-            const auto& pvs = this->ebos_simulator_.vanguard().eclState().fieldProps().porv(true);
-            // TODO: should get this PV, how to consider the rock compressiblity
-            const double pv = pvs[global_cell_[cell_index]];
-            sum_pv_pressure += pv * water_pressure_reservoir;
-            sum_pv += pv;
+            const double water_volume = volume * porosity * water_saturation;
+            sum_pressure_watervolume += water_volume * water_pressure_reservoir;
+            sum_watervolume += water_volume;
         }
 
-        return sum_pv_pressure/ sum_pv;
+        return sum_pressure_watervolume / sum_watervolume;
     }
 
     double calculateAquiferFluxRate() const
