@@ -307,6 +307,11 @@ namespace Opm
                 threads =  omp_get_max_threads();
             else
                 threads = std::min(2, omp_get_max_threads());
+
+            const int input_threads = EWOMS_GET_PARAM(TypeTag, int, ThreadsPerProcess);
+
+            if (input_threads > 0)
+                threads = std::min(input_threads, omp_get_max_threads());
 #endif
 
 #if HAVE_MPI
