@@ -213,7 +213,6 @@ namespace Opm
                 auto end = prevState->wellMap().end();
                 for (int w = 0; w < nw; ++w) {
                     const Well& well = wells_ecl[w];
-                    const int num_perf_this_well = well_perf_data[w].size();
                     auto it = prevState->wellMap().find(well.name());
                     if ( it != end )
                     {
@@ -258,6 +257,17 @@ namespace Opm
                         // perfPhaseRates
                         const int oldPerf_idx_beg = (*it).second[ 1 ];
                         const int num_perf_old_well = (*it).second[ 2 ];
+                        const auto new_iter = this->wellMap().find(well.name());
+                        if (new_iter == this->wellMap().end()) {
+                            throw std::logic_error {
+                                well.name() + " is not in internal well map - "
+                                "Bug in WellStateFullyImplicitBlackoil"
+                            };
+                        }
+
+                        const int connpos = new_iter->second[1];
+                        const int num_perf_this_well = new_iter->second[2];
+
                         int num_perf_changed = (num_perf_old_well != num_perf_this_well) ? 1 : 0;
                         num_perf_changed = parallel_well_info[w]->communication().sum(num_perf_changed);
                         bool global_num_perf_same = (num_perf_changed == 0);
@@ -265,10 +275,6 @@ namespace Opm
                         // copy perforation rates when the number of perforations is equal,
                         // otherwise initialize perfphaserates to well rates divided by the number of perforations.
 
-                        const auto new_iter = this->wellMap().find(well.name());
-                        if (new_iter == this->wellMap().end())
-                            throw std::logic_error("Fatal error in WellStateFullyImplicitBlackoil - could not find well: " + well.name());
-                        int connpos = new_iter->second[1];
                         if( global_num_perf_same )
                         {
                             int old_perf_phase_idx = oldPerf_idx_beg *np;
