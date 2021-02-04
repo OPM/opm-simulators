@@ -213,6 +213,10 @@ namespace Opm
                 auto end = prevState->wellMap().end();
                 for (int w = 0; w < nw; ++w) {
                     const Well& well = wells_ecl[w];
+                    if (well.getStatus() == Well::Status::SHUT) {
+                        continue;
+                    }
+
                     auto it = prevState->wellMap().find(well.name());
                     if ( it != end )
                     {
