@@ -64,12 +64,16 @@ public:
         for (size_t idx = 0; idx < aquifer.numCells(); ++idx) {
             const auto& cell = *(aquifer.getCellPrt(idx));
             const int global_idx = cell.global_index;
-            const int cell_idx = cartesian_to_compressed.at(global_idx);
-            this->cell_to_aquifer_cell_idx_[cell_idx] = idx;
+            const auto search = cartesian_to_compressed.find(global_idx);
+            // Due to parallelisation, the cell might not exist in the current process
+            if (search != cartesian_to_compressed.end()) {
+                const int cell_idx = cartesian_to_compressed.at(global_idx);
+                this->cell_to_aquifer_cell_idx_[cell_idx] = idx;
+            }
         }
     }
 
-    void initFromRestart(const std::vector<data::AquiferData>& aquiferSoln)
+    void initFromRestart([[maybe_unused]]const std::vector<data::AquiferData>& aquiferSoln)
     {
         // NOT handling Restart for now
     }
@@ -148,6 +152,9 @@ private:
             sum_watervolume += water_volume;
         }
 
+        const auto& comm = this->ebos_simulator_.vanguard().grid().comm();
+        comm.sum(&sum_pressure_watervolume, 1);
+        comm.sum(&sum_watervolume, 1);
         return sum_pressure_watervolume / sum_watervolume;
     }
 
@@ -208,6 +215,8 @@ private:
             break;
         }
 
+        const auto& comm = this->ebos_simulator_.vanguard().grid().comm();
+        comm.sum(&aquifer_flux, 1);
         return aquifer_flux;
     }
 };

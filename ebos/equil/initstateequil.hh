@@ -1713,7 +1713,7 @@ public:
 
         // Compute pressures, saturations, rs and rv factors.
         const auto& comm = gridView.comm();
-        calcPressSatRsRv(eqlmap, rec, materialLawManager, gridView, num_aquifers, comm, grav);
+        calcPressSatRsRv(eqlmap, rec, materialLawManager, num_aquifers, comm, grav);
 
         // Modify oil pressure in no-oil regions so that the pressures of present phases can
         // be recovered from the oil pressure and capillary relations.
@@ -1824,9 +1824,8 @@ private:
 
     template <class RMap, class MaterialLawManager, class Comm>
     void calcPressSatRsRv(const RMap& reg,
-                          const std::vector< Opm::EquilRecord >& rec,
+                          const std::vector<Opm::EquilRecord>& rec,
                           MaterialLawManager& materialLawManager,
-                          const GridView& gridView,
                           const NumericalAquifers& aquifer,
                           const Comm& comm,
                           const double grav)
@@ -1864,7 +1863,7 @@ private:
             const auto acc = eqreg.equilibrationAccuracy();
             if (acc == 0) {
                 // Centre-point method
-                this->equilibrateCellCentres(cells, eqreg, ptable, gridView, aquifer, psat);
+                this->equilibrateCellCentres(cells, eqreg, ptable, aquifer, psat);
             }
             else if (acc < 0) {
                 // Horizontal subdivision
@@ -1925,12 +1924,11 @@ private:
     }
 
     template <class CellRange, class PressTable, class PhaseSat>
-    void equilibrateCellCentres(const CellRange&  cells,
-                                const EquilReg&   eqreg,
-                                const PressTable& ptable,
-                                const GridView& gridView,
+    void equilibrateCellCentres(const CellRange&         cells,
+                                const EquilReg&          eqreg,
+                                const PressTable&        ptable,
                                 const NumericalAquifers& aquifer,
-                                PhaseSat&         psat)
+                                PhaseSat&                psat)
     {
         using CellPos = typename PhaseSat::Position;
         using CellID  = std::remove_cv_t<std::remove_reference_t<
