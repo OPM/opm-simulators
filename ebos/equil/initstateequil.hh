@@ -1953,6 +1953,7 @@ private:
             if (!num_aqu_cells.empty()) {
                 const auto search = num_aqu_cells.find(global_index);
                 if (search != num_aqu_cells.end()) {
+                    saturations = {0.0, 0.0, 1.0};
                     const auto* aqu_cell = num_aqu_cells.at(global_index);
                     const auto msg = fmt::format("FOR AQUIFER CELL AT ({}, {}, {}) OF NUMERICAL "
                                                  "AQUIFER {}, WATER SATURATION IS SET TO BE UNITY",
