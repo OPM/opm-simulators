@@ -1329,7 +1329,7 @@ public:
                 }
                 std::string msg = "The action: " + action->name() + " evaluated to true at " + ts + " wells: " + wells_string;
                 Opm::OpmLog::info(msg);
-                schedule.applyAction(reportStep, *action, actionResult);
+                schedule.applyAction(reportStep, std::chrono::system_clock::from_time_t(simTime), *action, actionResult);
                 actionState.add_run(*action, simTime);
             } else {
                 std::string msg = "The action: " + action->name() + " evaluated to false at " + ts;
