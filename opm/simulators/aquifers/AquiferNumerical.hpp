@@ -222,8 +222,6 @@ private:
             break;
         }
 
-        const auto& comm = this->ebos_simulator_.vanguard().grid().comm();
-        comm.sum(&aquifer_flux, 1);
         return aquifer_flux;
     }
 };
