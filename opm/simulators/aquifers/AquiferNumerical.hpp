@@ -128,6 +128,9 @@ private:
         const auto& elemEndIt = gridView.template end</*codim=*/0>();
         for (; elemIt != elemEndIt; ++elemIt) {
             const auto& elem = *elemIt;
+            if (elem.partitionType() != Dune::InteriorEntity) {
+                continue;
+            }
             elem_ctx.updatePrimaryStencil(elem);
 
             const size_t cell_index = elem_ctx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
@@ -135,6 +138,7 @@ private:
             if (idx < 0) {
                 continue;
             }
+
             elem_ctx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
             const auto& iq0 = elem_ctx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
             const auto& fs = iq0.fluidState();
@@ -168,6 +172,9 @@ private:
         const auto& elemEndIt = gridView.template end</*codim=*/0>();
         for (; elemIt != elemEndIt; ++elemIt) {
             const auto &elem = *elemIt;
+            if (elem.partitionType() != Dune::InteriorEntity) {
+                continue;
+            }
             // elem_ctx.updatePrimaryStencil(elem);
             elem_ctx.updateStencil(elem);
 
