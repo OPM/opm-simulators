@@ -2600,21 +2600,15 @@ namespace Opm {
             }
         };
 
-        auto getWellPIScalingFactor = [this](const int    well_index,
-                                             const double newWellPI) -> double
-        {
-            return this->wells_ecl_[well_index].getWellPIScalingFactor(newWellPI);
-        };
-
         auto rescaleWellPI =
             [this, timeStepIdx](const int    well_index,
-                                const double scalingFactor) -> void
+                                const double newWellPI) -> void
         {
             {
                 const auto& wname = this->wells_ecl_[well_index].name();
                 auto& schedule = this->ebosSimulator_.vanguard().schedule(); // Mutable
 
-                schedule.applyWellProdIndexScaling(wname, timeStepIdx, scalingFactor);
+                schedule.applyWellProdIndexScaling(wname, timeStepIdx, newWellPI);
                 this->wells_ecl_[well_index] = schedule.getWell(wname, timeStepIdx);
             }
 
@@ -2659,8 +2653,7 @@ namespace Opm {
         for (auto wellID = 0*nw; wellID < nw; ++wellID) {
             if (hasWellPIEvent(wellID)) {
                 const auto newWellPI = getWellPI(wellID);
-                const auto scalingFactor = getWellPIScalingFactor(wellID, newWellPI);
-                rescaleWellPI(wellID, scalingFactor);
+                rescaleWellPI(wellID, newWellPI);
             }
         }
 
