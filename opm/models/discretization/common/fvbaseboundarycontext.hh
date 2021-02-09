@@ -83,7 +83,7 @@ public:
 
         ++intersectionIt_;
         // iterate to the next boundary intersection
-        while (intersectionIt_ != iend && !intersectionIt_->boundary()) {
+        while (intersectionIt_ != iend && intersectionIt_->neighbor()) {
             ++intersectionIt_;
         }
     }
