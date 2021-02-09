@@ -56,11 +56,6 @@ WellContributions::~WellContributions()
 
     if(num_std_wells > 0){
         delete[] val_pointers;
-#if HAVE_OPENCL
-        if(opencl_gpu){
-            delete[] h_toOrder;
-        }
-#endif
     }
 
 #if HAVE_OPENCL
@@ -79,8 +74,15 @@ void WellContributions::setOpenCLEnv(cl::Context *context_, cl::CommandQueue *qu
     this->queue = queue_;
 }
 
-void WellContributions::setKernel(kernel_type *kernel_){
+void WellContributions::setKernel(kernel_type *kernel_, kernel_type_no_reorder *kernel_no_reorder_){
     this->kernel = kernel_;
+    this->kernel_no_reorder = kernel_no_reorder_;
+}
+
+void WellContributions::setReordering(int *h_toOrder_, bool reorder_)
+{
+    this->h_toOrder = h_toOrder_;
+    this->reorder = reorder_;
 }
 
 void WellContributions::apply_stdwells(cl::Buffer d_x, cl::Buffer d_y, cl::Buffer d_toOrder){
@@ -90,27 +92,22 @@ void WellContributions::apply_stdwells(cl::Buffer d_x, cl::Buffer d_y, cl::Buffe
     const unsigned int lmem2 = sizeof(double) * dim_wells;
 
     cl::Event event;
-    event = (*kernel)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
-                      *d_Cnnzs_ocl, *d_Dnnzs_ocl, *d_Bnnzs_ocl, *d_Ccols_ocl, *d_Bcols_ocl, d_x, d_y, d_toOrder, dim, dim_wells, *d_val_pointers_ocl,
-                      cl::Local(lmem1), cl::Local(lmem2), cl::Local(lmem2));
+    if (reorder) {
+        event = (*kernel)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
+                          *d_Cnnzs_ocl, *d_Dnnzs_ocl, *d_Bnnzs_ocl, *d_Ccols_ocl, *d_Bcols_ocl, d_x, d_y, d_toOrder, dim, dim_wells, *d_val_pointers_ocl,
+                          cl::Local(lmem1), cl::Local(lmem2), cl::Local(lmem2));
+    } else {
+        event = (*kernel_no_reorder)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
+                          *d_Cnnzs_ocl, *d_Dnnzs_ocl, *d_Bnnzs_ocl, *d_Ccols_ocl, *d_Bcols_ocl, d_x, d_y, dim, dim_wells, *d_val_pointers_ocl,
+                          cl::Local(lmem1), cl::Local(lmem2), cl::Local(lmem2));
+    }
+    event.wait();
 }
 
-void WellContributions::apply_mswells(cl::Buffer d_x, cl::Buffer d_y, cl::Buffer d_toOrder){
+void WellContributions::apply_mswells(cl::Buffer d_x, cl::Buffer d_y){
     if(h_x == nullptr){
         h_x = new double[N];
         h_y = new double[N];
-    }
-
-    if(h_toOrder == nullptr){
-        h_toOrder = new int[Nb];
-    }
-
-    if(!read_toOrder){
-        events.resize(1);
-        queue->enqueueReadBuffer(d_toOrder, CL_FALSE, 0, sizeof(int) * Nb, h_toOrder, nullptr, &events[0]);
-        events[0].wait();
-        events.clear();
-        read_toOrder = true;
     }
 
     events.resize(2);
@@ -121,7 +118,7 @@ void WellContributions::apply_mswells(cl::Buffer d_x, cl::Buffer d_y, cl::Buffer
 
     // actually apply MultisegmentWells
     for(Opm::MultisegmentWellContribution *well: multisegments){
-        well->setReordering(h_toOrder, true);
+        well->setReordering(h_toOrder, reorder);
         well->apply(h_x, h_y);
     }
 
@@ -138,7 +135,7 @@ void WellContributions::apply(cl::Buffer d_x, cl::Buffer d_y, cl::Buffer d_toOrd
     }
 
     if(num_ms_wells > 0){
-        apply_mswells(d_x, d_y, d_toOrder);
+        apply_mswells(d_x, d_y);
     }
 }
 #endif

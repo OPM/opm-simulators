@@ -126,6 +126,7 @@ public:
     /// Since the rows of the matrix are reordered, the columnindices of the matrixdata is incorrect
     /// Those indices need to be mapped via toOrder
     /// \param[in] toOrder    array with mappings
+    /// \param[in] reorder    whether reordering is actually used or not
     void setReordering(int *toOrder, bool reorder);
 };
 

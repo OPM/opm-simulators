@@ -109,6 +109,14 @@ void blockMultSub(double *a, double *b, double *c);
 template <unsigned int block_size>
 void blockMult(double *mat1, double *mat2, double *resMat);
 
+/// Subtract blocks
+/// a = b - c
+/// \param[out] a                result block
+/// \param[in] b                 input block
+/// \param[in] c                 input block
+template <unsigned int block_size>
+void blockSub(double *a, double *b, double *c);
+
 } // end namespace bda
 
 #endif

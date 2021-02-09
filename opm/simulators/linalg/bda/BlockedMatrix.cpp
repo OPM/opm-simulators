@@ -93,11 +93,23 @@ void blockMult(double *mat1, double *mat2, double *resMat) {
     }
 }
 
+// subtract c from b and store in a
+// a = b - c
+template <unsigned int block_size>
+void blockSub(double *a, double *b, double *c)
+{
+    for (unsigned int row = 0; row < block_size; row++) {
+        for (unsigned int col = 0; col < block_size; col++) {
+            a[block_size * row + col] = b[block_size * row + col] - c[block_size * row + col];
+        }
+    }
+}
 
 #define INSTANTIATE_BDA_FUNCTIONS(n)                                 \
 template void sortBlockedRow<n>(int *, double *, int, int);          \
 template void blockMultSub<n>(double *, double *, double *);         \
 template void blockMult<n>(double *, double *, double *);            \
+template void blockSub<n>(double *, double *, double *);             \
 
 INSTANTIATE_BDA_FUNCTIONS(1);
 INSTANTIATE_BDA_FUNCTIONS(2);

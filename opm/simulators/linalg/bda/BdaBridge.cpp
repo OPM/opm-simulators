@@ -58,6 +58,8 @@ BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string gpu_mod
             ilu_reorder = bda::ILUReorder::LEVEL_SCHEDULING;
         } else if (opencl_ilu_reorder == "graph_coloring") {
             ilu_reorder = bda::ILUReorder::GRAPH_COLORING;
+        } else if (opencl_ilu_reorder == "none") {
+            ilu_reorder = bda::ILUReorder::NONE;
         } else {
             OPM_THROW(std::logic_error, "Error invalid argument for --opencl-ilu-reorder, usage: '--opencl-ilu-reorder=[level_scheduling|graph_coloring]'");
         }

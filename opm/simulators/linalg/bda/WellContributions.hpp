@@ -95,17 +95,21 @@ private:
     typedef cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
                             cl::Buffer&, const unsigned int, const unsigned int, cl::Buffer&,
                             cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg> kernel_type;
+    typedef cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
+                            const unsigned int, const unsigned int, cl::Buffer&,
+                            cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg> kernel_type_no_reorder;
 
     cl::Context *context;
     cl::CommandQueue *queue;
     kernel_type *kernel;
+    kernel_type_no_reorder *kernel_no_reorder;
     std::vector<cl::Event> events;
 
     std::unique_ptr<cl::Buffer> d_Cnnzs_ocl, d_Dnnzs_ocl, d_Bnnzs_ocl;
     std::unique_ptr<cl::Buffer> d_Ccols_ocl, d_Bcols_ocl;
     std::unique_ptr<cl::Buffer> d_val_pointers_ocl;
 
-    bool read_toOrder = false;
+    bool reorder = false;
     int *h_toOrder = nullptr;
 #endif
 
@@ -150,10 +154,16 @@ public:
 #endif
 
 #if HAVE_OPENCL
-    void setKernel(kernel_type *kernel_);
+    void setKernel(kernel_type *kernel_, kernel_type_no_reorder *kernel_no_reorder_);
     void setOpenCLEnv(cl::Context *context_, cl::CommandQueue *queue_);
+
+    /// Since the rows of the matrix are reordered, the columnindices of the matrixdata is incorrect
+    /// Those indices need to be mapped via toOrder
+    /// \param[in] toOrder    array with mappings
+    /// \param[in] reorder    whether reordering is actually used or not
+    void setReordering(int *toOrder, bool reorder);
     void apply_stdwells(cl::Buffer d_x, cl::Buffer d_y, cl::Buffer d_toOrder);
-    void apply_mswells(cl::Buffer d_x, cl::Buffer d_y, cl::Buffer d_toOrder);
+    void apply_mswells(cl::Buffer d_x, cl::Buffer d_y);
     void apply(cl::Buffer d_x, cl::Buffer d_y, cl::Buffer d_toOrder);
 #endif
 

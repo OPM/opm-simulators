@@ -88,6 +88,9 @@ std::string getErrorString(cl_int error)
         case -67: return "CL_INVALID_LINKER_OPTIONS";
         case -68: return "CL_INVALID_DEVICE_PARTITION_COUNT";
 
+        // vendor specific errors
+        case -9999: return "NVIDIA_OPENCL_ILLEGAL_READ_OR_WRITE_TO_BUFFER";
+
         default: return "UNKNOWN_CL_CODE";
     }
 }

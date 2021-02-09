@@ -51,7 +51,7 @@ class openclSolverBackend : public BdaSolver<block_size>
     using Base::initialized;
 
 private:
-    double *rb = nullptr;                 // reordered b vector, the matrix is reordered, so b must also be
+    double *rb = nullptr;                 // reordered b vector, if the matrix is reordered, rb is newly allocated, otherwise it just points to b
     double *vals_contiguous = nullptr;    // only used if COPY_ROW_BY_ROW is true in openclSolverBackend.cpp
 
     // OpenCL variables must be reusable, they are initialized in initialize()
@@ -59,7 +59,7 @@ private:
     cl::Buffer d_x, d_b, d_rb, d_r, d_rw, d_p;   // vectors, used during linear solve
     cl::Buffer d_pw, d_s, d_t, d_v;              // vectors, used during linear solve
     cl::Buffer d_tmp;                            // used as tmp GPU buffer for dot() and norm()
-    cl::Buffer d_toOrder;
+    cl::Buffer d_toOrder;                        // only used when reordering is used
     double *tmp = nullptr;                       // used as tmp CPU buffer for dot() and norm()
 
     // shared pointers are also passed to other objects
@@ -76,12 +76,17 @@ private:
                                     cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                     const unsigned int, const unsigned int, cl::Buffer&,
                                     cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg> > stdwell_apply_k;
+    std::shared_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
+                                    cl::Buffer&, cl::Buffer&, cl::Buffer&,
+                                    const unsigned int, const unsigned int, cl::Buffer&,
+                                    cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg> > stdwell_apply_no_reorder_k;
 
     Preconditioner *prec = nullptr;                               // only supported preconditioner is BILU0
     int *toOrder = nullptr, *fromOrder = nullptr;                 // BILU0 reorders rows of the matrix via these mappings
     bool analysis_done = false;
     std::unique_ptr<BlockedMatrix<block_size> > mat = nullptr;    // original matrix 
-    BlockedMatrix<block_size> *rmat = nullptr;                    // reordered matrix, used for spmv
+    BlockedMatrix<block_size> *rmat = nullptr;                    // reordered matrix (or original if no reordering), used for spmv
+    ILUReorder opencl_ilu_reorder;                                // reordering strategy
 
     /// Divide A by B, and round up: return (int)ceil(A/B)
     /// \param[in] A    dividend
@@ -151,7 +156,8 @@ private:
     /// Reorder the linear system so it corresponds with the coloring
     /// \param[in] vals           array of nonzeroes, each block is stored row-wise and contiguous, contains nnz values
     /// \param[in] b              input vectors, contains N values
-    void update_system(double *vals, double *b);
+    /// \param[out] wellContribs  WellContributions, to set reordering
+    void update_system(double *vals, double *b, WellContributions &wellContribs);
 
     /// Update linear system on GPU, don't copy rowpointers and colindices, they stay the same
     void update_system_on_gpu();

@@ -25,11 +25,20 @@
 
 #include <opm/simulators/linalg/bda/BdaSolver.hpp>
 #include <opm/simulators/linalg/bda/BILU0.hpp>
+#include <opm/simulators/linalg/bda/ChowPatelIlu.hpp>
 #include <opm/simulators/linalg/bda/Reorder.hpp>
 
 
 namespace bda
 {
+
+// if CHOW_PATEL is 0, exact ILU decomposition is performed on CPU
+// if CHOW_PATEL is 1, iterative ILU decomposition (FGPILU) is done, as described in:
+//    FINE-GRAINED PARALLEL INCOMPLETE LU FACTORIZATION, E. Chow and A. Patel, SIAM 2015, https://doi.org/10.1137/140968896
+// if CHOW_PATEL_GPU is 0, the decomposition is done on CPU
+// if CHOW_PATEL_GPU is 1, the decomposition is done by bda::FGPILU::decomposition() on GPU
+#define CHOW_PATEL     0
+#define CHOW_PATEL_GPU 1
 
     using Opm::OpmLog;
     using Dune::Timer;
@@ -44,8 +53,10 @@ namespace bda
     {
         delete[] invDiagVals;
         delete[] diagIndex;
-        delete[] toOrder;
-        delete[] fromOrder;
+        if (opencl_ilu_reorder != ILUReorder::NONE) {
+            delete[] toOrder;
+            delete[] fromOrder;
+        }
     }
 
     template <unsigned int block_size>
@@ -58,23 +69,29 @@ namespace bda
         this->nnz = mat->nnzbs * block_size * block_size;
         this->nnzbs = mat->nnzbs;
 
-        toOrder = new int[Nb];
-        fromOrder = new int[Nb];
+        int *CSCRowIndices = nullptr;
+        int *CSCColPointers = nullptr;
 
-        int *CSCRowIndices = new int[nnzbs];
-        int *CSCColPointers = new int[Nb + 1];
+        if (opencl_ilu_reorder == ILUReorder::NONE) {
+            LUmat = std::make_unique<BlockedMatrix<block_size> >(*mat);
+        } else {
+            toOrder = new int[Nb];
+            fromOrder = new int[Nb];
+            CSCRowIndices = new int[nnzbs];
+            CSCColPointers = new int[Nb + 1];
+            rmat = std::make_shared<BlockedMatrix<block_size> >(mat->Nb, mat->nnzbs);
+            LUmat = std::make_unique<BlockedMatrix<block_size> >(*rmat);
 
-        Timer t_convert;
-        csrPatternToCsc(mat->colIndices, mat->rowPointers, CSCRowIndices, CSCColPointers, mat->Nb);
-        if(verbosity >= 3){
-            std::ostringstream out;
-            out << "BILU0 convert CSR to CSC: " << t_convert.stop() << " s";
-            OpmLog::info(out.str());
+            Timer t_convert;
+            csrPatternToCsc(mat->colIndices, mat->rowPointers, CSCRowIndices, CSCColPointers, mat->Nb);
+            if(verbosity >= 3){
+                std::ostringstream out;
+                out << "BILU0 convert CSR to CSC: " << t_convert.stop() << " s";
+                OpmLog::info(out.str());
+            }
         }
 
         Timer t_analysis;
-        rmat = std::make_shared<BlockedMatrix<block_size> >(mat->Nb, mat->nnzbs);
-        LUmat = std::make_unique<BlockedMatrix<block_size> >(*rmat);
         std::ostringstream out;
         if (opencl_ilu_reorder == ILUReorder::LEVEL_SCHEDULING) {
             out << "BILU0 reordering strategy: " << "level_scheduling\n";
@@ -82,24 +99,35 @@ namespace bda
         } else if (opencl_ilu_reorder == ILUReorder::GRAPH_COLORING) {
             out << "BILU0 reordering strategy: " << "graph_coloring\n";
             findGraphColoring<block_size>(mat->colIndices, mat->rowPointers, CSCRowIndices, CSCColPointers, mat->Nb, mat->Nb, mat->Nb, &numColors, toOrder, fromOrder, rowsPerColor);
+        } else if (opencl_ilu_reorder == ILUReorder::NONE) {
+            out << "BILU0 reordering strategy: none\n";
+            // numColors = 1;
+            // rowsPerColor.emplace_back(Nb);
+            numColors = Nb;
+            for(int i = 0; i < Nb; ++i){
+                rowsPerColor.emplace_back(1);
+            }
         } else {
             OPM_THROW(std::logic_error, "Error ilu reordering strategy not set correctly\n");
         }
         if(verbosity >= 3){
-            out << "BILU0 analysis took: " << t_analysis.stop() << " s, " << numColors << " colors";
+            out << "BILU0 analysis took: " << t_analysis.stop() << " s, " << numColors << " colors\n";
+        }
+        if(verbosity >= 2){
+            out << "BILU0 CHOW_PATEL: " << CHOW_PATEL << ", CHOW_PATEL_GPU: " << CHOW_PATEL_GPU;
         }
         OpmLog::info(out.str());
 
-        delete[] CSCRowIndices;
-        delete[] CSCColPointers;
+        if (opencl_ilu_reorder != ILUReorder::NONE) {
+            delete[] CSCRowIndices;
+            delete[] CSCColPointers;
+        }
 
         diagIndex = new int[mat->Nb];
         invDiagVals = new double[mat->Nb * bs * bs];
 
         Lmat = std::make_unique<BlockedMatrix<block_size> >(mat->Nb, (mat->nnzbs - mat->Nb) / 2);
         Umat = std::make_unique<BlockedMatrix<block_size> >(mat->Nb, (mat->nnzbs - mat->Nb) / 2);
-
-        LUmat->nnzValues = new double[mat->nnzbs * bs * bs];
 
         s.Lvals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * bs * bs * Lmat->nnzbs);
         s.Uvals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * bs * bs * Umat->nnzbs);
@@ -129,23 +157,321 @@ namespace bda
         return true;
     } // end init()
 
+    // implements Fine-Grained Parallel ILU algorithm (FGPILU), Chow and Patel 2015
+    template <unsigned int block_size>
+    void BILU0<block_size>::chow_patel_decomposition()
+    {
+        const unsigned int bs = block_size;
+        int num_sweeps = 6;
+
+        // split matrix into L and U
+        // also convert U into BSC format (Ut)
+        // Ut stores diagonal for now
+        // original matrix LUmat is assumed to be symmetric
+
+#ifndef NDEBUG
+        // verify that matrix is symmetric
+        for (int i = 0; i < Nb; ++i){
+            int iRowStart = LUmat->rowPointers[i];
+            int iRowEnd = LUmat->rowPointers[i + 1];
+            // for every block (i, j) in this row, check if (j, i) also exists
+            for (int ij = iRowStart; ij < iRowEnd; ij++) {
+                int j = LUmat->colIndices[ij];
+                int jRowStart = LUmat->rowPointers[j];
+                int jRowEnd = LUmat->rowPointers[j + 1];
+                bool blockFound = false;
+                // check all blocks on row j
+                // binary search is possible
+                for (int ji = jRowStart; ji < jRowEnd; ji++) {
+                    int row = LUmat->colIndices[ji];
+                    if (i == row) {
+                        blockFound = true;
+                        break;
+                    }
+                }
+                if (false == blockFound) {
+                    OPM_THROW(std::logic_error, "Error sparsity pattern must be symmetric when using chow_patel_decomposition()");
+                }
+            }
+        }
+#endif
+
+        // Ut is actually BSC format
+        std::unique_ptr<BlockedMatrix<bs> > Ut = std::make_unique<BlockedMatrix<bs> >(Nb, (nnzbs + Nb) / 2);
+
+        Lmat->rowPointers[0] = 0;
+        for (int i = 0; i < Nb+1; i++) {
+            Ut->rowPointers[i] = 0;
+        }
+
+        Opm::Detail::Inverter<bs> inverter;
+
+        // store inverted diagonal
+        for (int i = 0; i < Nb; i++) {
+            int iRowStart = LUmat->rowPointers[i];
+            int iRowEnd = LUmat->rowPointers[i + 1];
+            // for every block in this row
+            for (int ij = iRowStart; ij < iRowEnd; ij++) {
+                int j = LUmat->colIndices[ij];
+                if (i == j) {
+                    inverter(LUmat->nnzValues + ij * bs * bs, invDiagVals + i * bs * bs);
+                }
+            }
+        }
+
+        // initialize initial guess for L: L_A * D
+        // L_A is strictly lower triangular part of A
+        // D is inv(diag(A))
+        int num_blocks_L = 0;
+        for (int i = 0; i < Nb; i++) {
+            int iRowStart = LUmat->rowPointers[i];
+            int iRowEnd = LUmat->rowPointers[i + 1];
+            // for every block in this row
+            for (int ij = iRowStart; ij < iRowEnd; ij++) {
+                int j = LUmat->colIndices[ij];
+                if (i <= j) {
+                    Ut->rowPointers[j+1]++;   // actually colPointers, now simply indicates how many blocks this col holds
+                } else {
+                    Lmat->colIndices[num_blocks_L] = j;
+                    // multiply block of L with corresponding diag block
+                    blockMult<bs>(LUmat->nnzValues + ij * bs * bs, invDiagVals + i * bs * bs, Lmat->nnzValues + num_blocks_L * bs * bs);
+                    num_blocks_L++;
+                }
+            }
+            // TODO: copy all blocks for L at once, instead of copying each block individually
+            Lmat->rowPointers[i+1] = num_blocks_L;
+        }
+
+        // prefix sum to sum rowsizes into colpointers
+        std::partial_sum(Ut->rowPointers, Ut->rowPointers+Nb+1, Ut->rowPointers);
+
+        // initialize initial guess for U
+        for (int i = 0; i < Nb; i++) {
+            int iRowStart = LUmat->rowPointers[i];
+            int iRowEnd = LUmat->rowPointers[i + 1];
+            // for every block in this row
+            for (int ij = iRowStart; ij < iRowEnd; ij++) {
+                int j = LUmat->colIndices[ij];
+                if (i <= j){
+                    int idx = Ut->rowPointers[j]++; // rowPointers[i] is (mis)used as the write offset of the current row i
+                    Ut->colIndices[idx] = i;     // actually rowIndices
+                    memcpy(Ut->nnzValues + idx * bs * bs, LUmat->nnzValues + ij * bs * bs, sizeof(double) * bs * bs);
+                }
+            }
+        }
+
+        // rotate
+        // the Ut->rowPointers were increased in the last loop
+        // now Ut->rowPointers[i+1] is at the same position as Ut->rowPointers[i] should have for a crs matrix. reset to correct expected value
+        for (int i = Nb; i > 0; --i) {
+            Ut->rowPointers[i] = Ut->rowPointers[i-1];
+        }
+        Ut->rowPointers[0] = 0;
+
+
+        // Utmp is needed for CPU and GPU decomposition, because U is transposed, and reversed after decomposition
+        // U will be reversed because it is used with backwards substitution, the last row is used first
+        // Ltmp is only needed for CPU decomposition, GPU creates GPU buffer for Ltmp
+        double *Utmp = new double[Ut->nnzbs * block_size * block_size];
+
+        // actual ILU decomposition
+#if CHOW_PATEL_GPU
+        chowPatelIlu.decomposition(queue, context,
+                    Ut->rowPointers, Ut->colIndices, Ut->nnzValues, Ut->nnzbs,
+                    Lmat->rowPointers, Lmat->colIndices, Lmat->nnzValues, Lmat->nnzbs,
+                    LUmat->rowPointers, LUmat->colIndices, LUmat->nnzValues, LUmat->nnzbs,
+                    Nb, num_sweeps, verbosity);
+#else
+        double *Ltmp = new double[Lmat->nnzbs * block_size * block_size];
+        for (int sweep = 0; sweep < num_sweeps; ++sweep) {
+
+            // algorithm
+            // for every block in A (LUmat):
+            //     if i > j:
+            //         Lij = (Aij - sum k=1 to j-1 {Lik*Ukj}) / Ujj
+            //     else:
+            //         Uij = (Aij - sum k=1 to i-1 {Lik*Ukj})
+
+            // for every row
+            for (int row = 0; row < Nb; row++) {
+                // update U
+                // Uij = (Aij - sum k=1 to i-1 {Lik*Ukj})
+                int jColStart = Ut->rowPointers[row];
+                int jColEnd = Ut->rowPointers[row + 1];
+                int colU = row; // rename for clarity, next row in Ut means next col in U
+                // for every block in this row
+                for (int ij = jColStart; ij < jColEnd; ij++) {
+                    int rowU1 = Ut->colIndices[ij]; // actually rowIndices for U
+                    // refine Uij element (or diagonal)
+                    int i1 = LUmat->rowPointers[rowU1];
+                    int i2 = LUmat->rowPointers[rowU1+1];
+
+                    // search on row rowU1, find blockIndex in LUmat of block with same col (colU) as Uij
+                    // LUmat->nnzValues[kk] is block Aij
+                    auto candidate = std::find(LUmat->colIndices + i1, LUmat->colIndices + i2, colU);
+                    assert(candidate != LUmat->colIndices + i2);
+                    auto kk = candidate - LUmat->colIndices;
+
+                    double aij[bs*bs];
+                    // copy block to Aij so operations can be done on it without affecting LUmat
+                    memcpy(&aij[0], LUmat->nnzValues + kk * bs * bs, sizeof(double) * bs * bs);
+
+                    int jk = Lmat->rowPointers[rowU1]; // points to row rowU1 in L
+                    // if row rowU1 is empty, skip row
+                    if (jk < Lmat->rowPointers[rowU1+1]) {
+                        int colL = Lmat->colIndices[jk];
+                        // only check until block U(i,j) is reached
+                        for (int k = jColStart; k < ij; ++k) {
+                            int rowU2 = Ut->colIndices[k];
+                            while (colL < rowU2) {
+                                ++jk; // check next block on row rowU1 of L
+                                colL = Lmat->colIndices[jk];
+                            }
+                            if (colL == rowU2) {
+                                // Aij -= (Lik * Ukj)
+                                blockMultSub<bs>(&aij[0], Lmat->nnzValues + jk * bs * bs, Ut->nnzValues + k * bs * bs);
+                            }
+                        }
+                    }
+
+                    // Uij_new = Aij - sum
+                    memcpy(Utmp + ij * bs * bs, &aij[0], sizeof(double) * bs * bs);
+                }
+
+                // update L
+                // Lij = (Aij - sum k=1 to j-1 {Lik*Ukj}) / Ujj
+                int iRowStart = Lmat->rowPointers[row];
+                int iRowEnd = Lmat->rowPointers[row + 1];
+
+                for (int ij = iRowStart; ij < iRowEnd; ij++) {
+                    int j = Lmat->colIndices[ij];
+                    // refine Lij element
+                    // search on row 'row', find blockIndex in LUmat of block with same col (j) as Lij
+                    // LUmat->nnzValues[kk] is block Aij
+                    int i1 = LUmat->rowPointers[row];
+                    int i2 = LUmat->rowPointers[row+1];
+
+                    auto candidate = std::find(LUmat->colIndices + i1, LUmat->colIndices + i2, j);
+                    assert(candidate != LUmat->colIndices + i2);
+                    auto kk = candidate - LUmat->colIndices;
+
+                    double aij[bs*bs];
+                    // copy block to Aij so operations can be done on it without affecting LUmat
+                    memcpy(&aij[0], LUmat->nnzValues + kk * bs * bs, sizeof(double) * bs * bs);
+
+                    int jk = Ut->rowPointers[j];  // actually colPointers, jk points to col j in U
+                    int rowU = Ut->colIndices[jk];  // actually rowIndices, rowU is the row of block jk
+                    // only check until block L(i,j) is reached
+                    for (int k = iRowStart; k < ij; ++k) {
+                        int colL = Lmat->colIndices[k];
+                        while (rowU < colL) {
+                            ++jk; // check next block on col j of U
+                            rowU = Ut->colIndices[jk];
+                        }
+
+                        if (rowU == colL) {
+                            // Aij -= (Lik * Ukj)
+                            blockMultSub<bs>(&aij[0], Lmat->nnzValues + k * bs * bs , Ut->nnzValues + jk * bs * bs);
+                        }
+                    }
+
+                    // calculate (Aij - sum) / Ujj
+                    double ujj[bs*bs];
+                    inverter(Ut->nnzValues + (Ut->rowPointers[j+1] - 1) * bs * bs, &ujj[0]);
+                    // Lij_new = (Aij - sum) / Ujj
+                    blockMult<bs>(&aij[0], &ujj[0], Ltmp + ij * bs * bs);
+                }
+            }
+            // 1st sweep writes to Ltmp
+            // 2nd sweep writes to Lmat->nnzValues
+            std::swap(Lmat->nnzValues, Ltmp);
+            std::swap(Ut->nnzValues, Utmp);
+        } // end sweep
+
+        // if number of sweeps is even, swap again so data is in Lmat->nnzValues
+        if (num_sweeps % 2 == 0) {
+            std::swap(Lmat->nnzValues, Ltmp);
+            std::swap(Ut->nnzValues, Utmp);
+        }
+        delete[] Ltmp;
+#endif
+
+        // convert Ut to BSR
+        // diagonal stored separately
+        std::vector<int> ptr(Nb+1, 0);
+        std::vector<int> col(Ut->rowPointers[Nb]);
+
+        // count blocks per row for U (BSR)
+        // store diagonal in invDiagVals
+        for(int i = 0; i < Nb; ++i) {
+            for(int k = Ut->rowPointers[i]; k < Ut->rowPointers[i+1]; ++k) {
+                int j = Ut->colIndices[k];
+                if (j == i) {
+                    inverter(Ut->nnzValues + k * bs * bs, invDiagVals + i * bs * bs);
+                } else {
+                    ++ptr[j+1];
+                }
+            }
+        }
+
+        // prefix sum
+        std::partial_sum(ptr.begin(), ptr.end(), ptr.begin());
+
+        // actually copy nonzero values for U
+        for(int i = 0; i < Nb; ++i) {
+            for(int k = Ut->rowPointers[i]; k < Ut->rowPointers[i+1]; ++k) {
+                int j = Ut->colIndices[k];
+                if (j != i) {
+                    int head = ptr[j]++;
+                    col[head]  = i;
+                    memcpy(Utmp + head * bs * bs, Ut->nnzValues + k * bs * bs, sizeof(double) * bs * bs);
+                }
+            }
+        }
+
+        // the ptr[] were increased in the last loop
+        std::rotate(ptr.begin(), ptr.end() - 1, ptr.end());
+        ptr.front() = 0;
+
+        // reversing the rows of U, because that is the order they are used in during ILU apply
+        int URowIndex = 0;
+        int offsetU = 0;   // number of nnz blocks that are already copied to Umat
+        Umat->rowPointers[0] = 0;
+        for (int i = LUmat->Nb - 1; i >= 0; i--) {
+            int rowSize = ptr[i + 1] - ptr[i];   // number of blocks in this row
+            memcpy(Umat->nnzValues + offsetU * bs * bs, Utmp + ptr[i] * bs * bs, sizeof(double) * bs * bs * rowSize);
+            memcpy(Umat->colIndices + offsetU, col.data() + ptr[i], sizeof(int) * rowSize);
+            offsetU += rowSize;
+            Umat->rowPointers[URowIndex + 1] = offsetU;
+            URowIndex++;
+        }
+
+        delete[] Utmp;
+
+    }
 
     template <unsigned int block_size>
     bool BILU0<block_size>::create_preconditioner(BlockedMatrix<block_size> *mat)
     {
         const unsigned int bs = block_size;
-        Timer t_reorder;
-        reorderBlockedMatrixByPattern<block_size>(mat, toOrder, fromOrder, rmat.get());
+        auto *m = mat;
 
-        if (verbosity >= 3){
-            std::ostringstream out;
-            out << "BILU0 reorder matrix: " << t_reorder.stop() << " s";
-            OpmLog::info(out.str());
+        if (opencl_ilu_reorder != ILUReorder::NONE) {
+            m = rmat.get();
+            Timer t_reorder;
+            reorderBlockedMatrixByPattern<block_size>(mat, toOrder, fromOrder, rmat.get());
+
+            if (verbosity >= 3){
+                std::ostringstream out;
+                out << "BILU0 reorder matrix: " << t_reorder.stop() << " s";
+                OpmLog::info(out.str());
+            }
         }
 
         // TODO: remove this copy by replacing inplace ilu decomp by out-of-place ilu decomp
+        // this copy can have mat or rmat ->nnzValues as origin, depending on the reorder strategy
         Timer t_copy;
-        memcpy(LUmat->nnzValues, rmat->nnzValues, sizeof(double) * bs * bs * rmat->nnzbs);
+        memcpy(LUmat->nnzValues, m->nnzValues, sizeof(double) * bs * bs * m->nnzbs);
 
         if (verbosity >= 3){
             std::ostringstream out;
@@ -153,14 +479,16 @@ namespace bda
             OpmLog::info(out.str());
         }
 
+        Timer t_decomposition;
+#if CHOW_PATEL
+        chow_patel_decomposition();
+#else
         int i, j, ij, ik, jk;
         int iRowStart, iRowEnd, jRowEnd;
         double pivot[bs * bs];
 
         int LSize = 0;
         Opm::Detail::Inverter<bs> inverter;   // reuse inverter to invert blocks
-
-        Timer t_decomposition;
 
         // go through all rows
         for (i = 0; i < LUmat->Nb; i++) {
@@ -239,6 +567,7 @@ namespace bda
             Umat->rowPointers[URowIndex + 1] = offsetU;
             URowIndex++;
         }
+#endif
         if (verbosity >= 3) {
             std::ostringstream out;
             out << "BILU0 decomposition: " << t_decomposition.stop() << " s";
@@ -278,6 +607,7 @@ namespace bda
             event = (*ILU_apply1)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), s.Lvals, s.Lcols, s.Lrows, (unsigned int)Nb, x, y, s.rowsPerColor, color, block_size, cl::Local(lmem_per_work_group));
             // event.wait();
         }
+
         for(int color = numColors-1; color >= 0; --color){
             event = (*ILU_apply2)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), s.Uvals, s.Ucols, s.Urows, (unsigned int)Nb, s.invDiagVals, y, s.rowsPerColor, color, block_size, cl::Local(lmem_per_work_group));
             // event.wait();
@@ -320,6 +650,7 @@ namespace bda
 template BILU0<n>::BILU0(ILUReorder, int);                                               \
 template BILU0<n>::~BILU0();                                                             \
 template bool BILU0<n>::init(BlockedMatrix<n>*);                                         \
+template void BILU0<n>::chow_patel_decomposition();                                      \
 template bool BILU0<n>::create_preconditioner(BlockedMatrix<n>*);                        \
 template void BILU0<n>::apply(cl::Buffer& x, cl::Buffer& y);                             \
 template void BILU0<n>::setOpenCLContext(cl::Context*);                                  \

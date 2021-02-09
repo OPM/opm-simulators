@@ -27,7 +27,8 @@ namespace bda
         
     enum class ILUReorder {
         LEVEL_SCHEDULING,
-        GRAPH_COLORING
+        GRAPH_COLORING,
+        NONE
     };
 
 }
