@@ -426,7 +426,7 @@ protected:
 
         BoundaryContext boundaryCtx(elemCtx);
         // move the iterator to the first boundary
-        if(!boundaryCtx.intersection(0).boundary())
+        if(boundaryCtx.intersection(0).neighbor())
             boundaryCtx.increment();
 
         // evaluate the boundary for all boundary faces of the current context
@@ -434,6 +434,9 @@ protected:
         for (unsigned faceIdx = 0; faceIdx < numBoundaryFaces; ++faceIdx, boundaryCtx.increment()) {
             // add the residual of all vertices of the boundary
             // segment
+            if(!boundaryCtx.intersection(faceIdx).boundary())
+                continue;
+
             evalBoundarySegment_(residual,
                                  boundaryCtx,
                                  faceIdx,
