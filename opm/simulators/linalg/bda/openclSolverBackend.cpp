@@ -89,10 +89,8 @@ openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_,
             out.clear();
         }
 
-        cl_context_properties properties[] = {CL_CONTEXT_PLATFORM, (cl_context_properties)(platforms[platformID])(), 0};
-        context.reset(new cl::Context(CL_DEVICE_TYPE_GPU, properties));
+        platforms[platformID].getDevices(CL_DEVICE_TYPE_ALL, &devices);
 
-        devices = context->getInfo<CL_CONTEXT_DEVICES>();
         if (devices.size() == 0){
             OPM_THROW(std::logic_error, "Error openclSolver is selected but no OpenCL devices are found");
         }
@@ -168,8 +166,15 @@ openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_,
             out.clear();
         }
 
-        cl::Event event;
-        queue.reset(new cl::CommandQueue(*context, devices[deviceID], 0, &err));
+        // removed all unused devices
+        if (deviceID != 0)
+        {
+            devices[0] = devices[deviceID];
+        }
+        devices.resize(1);
+
+        context = std::make_shared<cl::Context>(devices[0]);
+        queue.reset(new cl::CommandQueue(*context, devices[0], 0, &err));
        
     } catch (const cl::Error& error) {
         std::ostringstream oss;
