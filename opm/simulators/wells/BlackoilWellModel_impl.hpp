@@ -2554,6 +2554,32 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
+    updateEclWell(int timeStepIdx, int well_index)
+    {
+        const auto& schedule = this->ebosSimulator_.vanguard().schedule();
+        const auto& wname = this->wells_ecl_[well_index].name();
+        this->wells_ecl_[well_index] = schedule.getWell(wname, timeStepIdx);
+
+        const auto& well = this->wells_ecl_[well_index];
+        auto& pd     = this->well_perf_data_[well_index];
+        auto  pdIter = pd.begin();
+        for (const auto& conn : well.getConnections()) {
+            if (conn.state() != Connection::State::SHUT) {
+                pdIter->connection_transmissibility_factor = conn.CF();
+                ++pdIter;
+            }
+        }
+
+        this->well_state_.resetConnectionTransFactors(well_index, pd);
+        this->prod_index_calc_[well_index].reInit(well);
+    }
+
+
+
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
     runWellPIScaling(const int timeStepIdx, DeferredLogger& local_deferredLogger)
     {
         if (this->last_run_wellpi_.has_value() && (*this->last_run_wellpi_ == timeStepIdx)) {
@@ -2607,23 +2633,9 @@ namespace Opm {
             {
                 const auto& wname = this->wells_ecl_[well_index].name();
                 auto& schedule = this->ebosSimulator_.vanguard().schedule(); // Mutable
-
                 schedule.applyWellProdIndexScaling(wname, timeStepIdx, newWellPI);
-                this->wells_ecl_[well_index] = schedule.getWell(wname, timeStepIdx);
             }
-
-            const auto& well = this->wells_ecl_[well_index];
-            auto& pd     = this->well_perf_data_[well_index];
-            auto  pdIter = pd.begin();
-            for (const auto& conn : well.getConnections()) {
-                if (conn.state() != Connection::State::SHUT) {
-                    pdIter->connection_transmissibility_factor = conn.CF();
-                    ++pdIter;
-                }
-            }
-
-            this->well_state_.resetConnectionTransFactors(well_index, pd);
-            this->prod_index_calc_[well_index].reInit(well);
+            this->updateEclWell(timeStepIdx, well_index);
         };
 
         // Minimal well setup to compute PI/II values
@@ -2645,7 +2657,6 @@ namespace Opm {
             }
 
             this->calculateProductivityIndexValues(local_deferredLogger);
-
             this->previous_well_state_ = std::move(saved_previous_well_state);
         }
 

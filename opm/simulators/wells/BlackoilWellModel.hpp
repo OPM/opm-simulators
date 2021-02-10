@@ -480,6 +480,7 @@ namespace Opm {
 
             void setWsolvent(const Group& group, const Schedule& schedule, const int reportStepIdx, double wsolvent);
 
+            void updateEclWell(int timeStepIdx, int well_index);
             void runWellPIScaling(const int timeStepIdx, DeferredLogger& local_deferredLogger);
 
             void assignWellGuideRates(data::Wells& wsrpt) const;
