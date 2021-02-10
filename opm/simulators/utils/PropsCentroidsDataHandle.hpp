@@ -74,7 +74,7 @@ public:
         {
             const auto& globalProps = eclState.globalFieldProps();
             m_intKeys = globalProps.keys<int>();
-            m_doubleKeys = globalProps.keys<double>();
+            m_doubleKeys = globalProps.keys<double>(true);
             std::size_t packSize = Mpi::packSize(m_intKeys, comm) +
                 Mpi::packSize(m_doubleKeys,comm);
             std::vector<char> buffer(packSize);
