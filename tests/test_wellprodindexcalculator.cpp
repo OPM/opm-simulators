@@ -584,8 +584,8 @@ BOOST_AUTO_TEST_CASE(allDefaulted_SameCF)
     auto well = createWell(drainRadDefaulted(), noSkinFactor_SameCF());
     auto wpiCalc = Opm::WellProdIndexCalculator { well };
 
-    well.updateWellProductivityIndex(2.0);
-    const auto scalingFactor = well.getWellPIScalingFactor(1.0*liquid_PI_unit());
+    well.updateWellProductivityIndex( );
+    const auto scalingFactor = well.convertDeckPI(2.0) / (1.0*liquid_PI_unit());
 
     BOOST_CHECK_CLOSE(scalingFactor, 2.0, 1.0e-10);
 
@@ -607,8 +607,8 @@ BOOST_AUTO_TEST_CASE(allDefaulted_DifferentCF)
     auto well = createWell(drainRadDefaulted(), noSkinFactor_DifferentCF());
     auto wpiCalc = Opm::WellProdIndexCalculator { well };
 
-    well.updateWellProductivityIndex(2.0);
-    const auto scalingFactor = well.getWellPIScalingFactor(1.0*liquid_PI_unit());
+    well.updateWellProductivityIndex( );
+    const auto scalingFactor = well.convertDeckPI(2.0) / (1.0*liquid_PI_unit());
 
     BOOST_CHECK_CLOSE(scalingFactor, 2.0, 1.0e-10);
 
@@ -630,8 +630,8 @@ BOOST_AUTO_TEST_CASE(defaultedDRad_Skin2_SameCF)
     auto well = createWell(drainRadDefaulted(), skin2_SameCF());
     auto wpiCalc = Opm::WellProdIndexCalculator { well };
 
-    well.updateWellProductivityIndex(2.0);
-    const auto scalingFactor = well.getWellPIScalingFactor(1.0*liquid_PI_unit());
+    well.updateWellProductivityIndex( );
+    const auto scalingFactor = well.convertDeckPI(2.0) / (1.0*liquid_PI_unit());
 
     BOOST_CHECK_CLOSE(scalingFactor, 2.0, 1.0e-10);
 
@@ -653,8 +653,8 @@ BOOST_AUTO_TEST_CASE(defaultedDRad_skin421_DifferentCF)
     auto well = createWell(drainRadDefaulted(), skin421_DifferentCF());
     auto wpiCalc = Opm::WellProdIndexCalculator { well };
 
-    well.updateWellProductivityIndex(2.0);
-    const auto scalingFactor = well.getWellPIScalingFactor(1.0*liquid_PI_unit());
+    well.updateWellProductivityIndex( );
+    const auto scalingFactor = well.convertDeckPI(2.0) / (1.0*liquid_PI_unit());
 
     BOOST_CHECK_CLOSE(scalingFactor, 2.0, 1.0e-10);
 
@@ -676,8 +676,8 @@ BOOST_AUTO_TEST_CASE(logarithmic_SameCF)
     auto well = createWell(explicitDrainRad(), noSkinFactor_SameCF());
     auto wpiCalc = Opm::WellProdIndexCalculator { well };
 
-    well.updateWellProductivityIndex(2.0);
-    const auto scalingFactor = well.getWellPIScalingFactor(1.0*liquid_PI_unit());
+    well.updateWellProductivityIndex( );
+    const auto scalingFactor = well.convertDeckPI(2.0) / (1.0*liquid_PI_unit());
 
     BOOST_CHECK_CLOSE(scalingFactor, 2.0, 1.0e-10);
 
@@ -699,8 +699,8 @@ BOOST_AUTO_TEST_CASE(logarithmic_DifferentCF)
     auto well = createWell(explicitDrainRad(), noSkinFactor_DifferentCF());
     auto wpiCalc = Opm::WellProdIndexCalculator { well };
 
-    well.updateWellProductivityIndex(2.0);
-    const auto scalingFactor = well.getWellPIScalingFactor(1.0*liquid_PI_unit());
+    well.updateWellProductivityIndex( );
+    const auto scalingFactor = well.convertDeckPI(2.0) / (1.0*liquid_PI_unit());
 
     BOOST_CHECK_CLOSE(scalingFactor, 2.0, 1.0e-10);
 
@@ -722,8 +722,8 @@ BOOST_AUTO_TEST_CASE(logarithmic_Skin2_SameCF)
     auto well = createWell(explicitDrainRad(), skin2_SameCF());
     auto wpiCalc = Opm::WellProdIndexCalculator { well };
 
-    well.updateWellProductivityIndex(2.0);
-    const auto scalingFactor = well.getWellPIScalingFactor(1.0*liquid_PI_unit());
+    well.updateWellProductivityIndex( );
+    const auto scalingFactor = well.convertDeckPI(2.0) / (1.0*liquid_PI_unit());
 
     BOOST_CHECK_CLOSE(scalingFactor, 2.0, 1.0e-10);
 
@@ -745,8 +745,8 @@ BOOST_AUTO_TEST_CASE(logarithmic_skin421_DifferentCF)
     auto well = createWell(explicitDrainRad(), skin421_DifferentCF());
     auto wpiCalc = Opm::WellProdIndexCalculator { well };
 
-    well.updateWellProductivityIndex(2.0);
-    const auto scalingFactor = well.getWellPIScalingFactor(1.0*liquid_PI_unit());
+    well.updateWellProductivityIndex( );
+    const auto scalingFactor = well.convertDeckPI(2.0) / (1.0*liquid_PI_unit());
 
     BOOST_CHECK_CLOSE(scalingFactor, 2.0, 1.0e-10);
 
