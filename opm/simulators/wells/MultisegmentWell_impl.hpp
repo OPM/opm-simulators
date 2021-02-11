@@ -3185,7 +3185,7 @@ namespace Opm
 
             const EvalWell d = 1.0 - rs * rv;
             if (d <= 0.0 || d > 1.0) {
-                OPM_THROW(Opm::NumericalIssue, "Problematic d value " << d << " obtained for well " << name()
+                OPM_THROW_NOLOG(Opm::NumericalIssue, "Problematic d value " << d << " obtained for well " << name()
                                                << " during convertion to surface volume with rs " << rs
                                                << ", rv " << rv << " and pressure " << seg_pressure
                                                << " obtaining d " << d);
