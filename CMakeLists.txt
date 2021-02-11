@@ -161,8 +161,18 @@ macro (config_hook)
   endif()
   opm_need_version_of ("opm-models")
 
-  add_definitions(-DFMT_HEADER_ONLY)
-  list(APPEND EXTRA_INCLUDES SYSTEM ${PROJECT_SOURCE_DIR}/external/fmtlib/include)
+  find_package(fmt 7.1.3)
+  if(NOT TARGET fmt::fmt-header-only)
+    add_library(fmt::fmt-header-only INTERFACE IMPORTED)
+    set_target_properties(fmt::fmt-header-only PROPERTIES
+      INTERFACE_COMPILE_DEFINITIONS "FMT_HEADER_ONLY=1"
+      INTERFACE_COMPILE_FEATURES "cxx_variadic_templates"
+      INTERFACE_INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/external/fmtlib/include)
+  endif()
+
+  # We use generator expression with BUILD_INTERFACE to hide the library/properties
+  # for downstream
+  set(opm-simulators_PRIVATE_LIBRARIES $<BUILD_INTERFACE:fmt::fmt-header-only>)
   include_directories(${EXTRA_INCLUDES})
 endmacro (config_hook)
 
