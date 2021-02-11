@@ -250,10 +250,12 @@ public:
                     continue;
                 }
 
-                if (!intersection.neighbor())
+                if (!intersection.neighbor()) {
                     // elements can be on process boundaries, i.e. they are not on the
                     // domain boundary yet they don't have neighbors.
+                    ++ boundaryIsIdx;
                     continue;
+                }
 
                 const auto& outsideElem = intersection.outside();
                 unsigned outsideElemIdx = elemMapper.index(outsideElem);
