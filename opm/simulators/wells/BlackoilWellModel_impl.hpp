@@ -2583,6 +2583,17 @@ namespace Opm {
         this->prod_index_calc_[well_index].reInit(well);
     }
 
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    updateEclWell(int timeStepIdx, const std::string& wname) {
+        auto well_iter = std::find_if( this->wells_ecl_.begin(), this->wells_ecl_.end(), [wname] (const auto& well) -> bool { return well.name() == wname;});
+        if (well_iter == this->wells_ecl_.end())
+            throw std::logic_error("Could not find well: " + wname);
+
+        auto well_index = std::distance( this->wells_ecl_.begin(), well_iter );
+        this->updateEclWell(timeStepIdx, well_index);
+    }
 
 
     template<typename TypeTag>
@@ -2617,6 +2628,19 @@ namespace Opm {
                     std::to_string(static_cast<int>(preferred))
                     };
         }
+    }
+
+    template<typename TypeTag>
+    double
+    BlackoilWellModel<TypeTag>::
+    wellPI(const std::string& well_name) const
+    {
+        auto well_iter = std::find_if(this->wells_ecl_.begin(), this->wells_ecl_.end(), [&well_name](const Well& well) { return well.name() == well_name; });
+        if (well_iter == this->wells_ecl_.end())
+            throw std::logic_error("Could not find well: " + well_name);
+
+        auto well_index = std::distance( this->wells_ecl_.begin(), well_iter );
+        return this->wellPI(well_index);
     }
 
 

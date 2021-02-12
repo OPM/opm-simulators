@@ -267,8 +267,11 @@ namespace Opm {
             /// Returns true if the well was actually found and shut.
             bool forceShutWellByNameIfPredictionMode(const std::string& wellname, const double simulation_time);
 
-            double wellPI(int well_index) const;
+            void updateEclWell(int timeStepIdx, int well_index);
+            void updateEclWell(int timeStepIdx, const std::string& wname);
             bool hasWell(const std::string& wname);
+            double wellPI(int well_index) const;
+            double wellPI(const std::string& well_name) const;
         protected:
             Simulator& ebosSimulator_;
 
@@ -482,7 +485,6 @@ namespace Opm {
 
             void setWsolvent(const Group& group, const Schedule& schedule, const int reportStepIdx, double wsolvent);
 
-            void updateEclWell(int timeStepIdx, int well_index);
             void runWellPIScaling(const int timeStepIdx, DeferredLogger& local_deferredLogger);
 
             void assignWellGuideRates(data::Wells& wsrpt) const;

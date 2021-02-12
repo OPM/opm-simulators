@@ -94,6 +94,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/Eqldims.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionContext.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionX.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/RockwnodTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/OverburdTable.hpp>
@@ -1290,6 +1291,53 @@ public:
     }
 
 
+    std::unordered_map<std::string, double> fetchWellPI(int reportStep,
+                                                        const Opm::Action::ActionX& action,
+                                                        const Opm::Schedule& schedule,
+                                                        const std::vector<std::string>& matching_wells) {
+
+        auto wellpi_wells = action.wellpi_wells(WellMatcher(schedule[reportStep].well_order(),
+                                                            schedule[reportStep].wlist_manager()),
+                                                matching_wells);
+
+        if (wellpi_wells.empty())
+            return {};
+
+        const auto num_wells = schedule[reportStep].well_order().size();
+        std::vector<double> wellpi_vector(num_wells);
+        for (const auto& wname : wellpi_wells) {
+            if (this->wellModel_.hasWell(wname)) {
+                const auto& well = schedule.getWell( wname, reportStep );
+                wellpi_vector[well.seqIndex()] = this->wellModel_.wellPI(wname);
+            }
+        }
+
+        const auto& comm = this->simulator().vanguard().grid().comm();
+        if (comm.size() > 1) {
+            std::vector<double> wellpi_buffer(num_wells * comm.size());
+            comm.gather( wellpi_vector.data(), wellpi_buffer.data(), num_wells, 0 );
+            if (comm.rank() == 0) {
+                for (int rank=1; rank < comm.size(); rank++) {
+                    for (std::size_t well_index=0; well_index < num_wells; well_index++) {
+                        const auto global_index = rank*num_wells + well_index;
+                        const auto value = wellpi_buffer[global_index];
+                        if (value != 0)
+                            wellpi_vector[well_index] = value;
+                    }
+                }
+            }
+            comm.broadcast(wellpi_vector.data(), wellpi_vector.size(), 0);
+        }
+
+        std::unordered_map<std::string, double> wellpi;
+        for (const auto& wname : wellpi_wells) {
+            const auto& well = schedule.getWell( wname, reportStep );
+            wellpi[wname] = wellpi_vector[ well.seqIndex() ];
+        }
+        return wellpi;
+    }
+
+
     void applyActions(int reportStep,
                       double sim_time,
                       Opm::EclipseState& ecl_state,
@@ -1329,8 +1377,17 @@ public:
                 }
                 std::string msg = "The action: " + action->name() + " evaluated to true at " + ts + " wells: " + wells_string;
                 Opm::OpmLog::info(msg);
-                schedule.applyAction(reportStep, std::chrono::system_clock::from_time_t(simTime), *action, actionResult, {});
+
+                const auto& wellpi = this->fetchWellPI(reportStep, *action, schedule, matching_wells);
+
+                schedule.applyAction(reportStep, std::chrono::system_clock::from_time_t(simTime), *action, actionResult, wellpi);
                 actionState.add_run(*action, simTime);
+
+                for ( const auto& [wname, _] : wellpi) {
+                    (void)_;
+                    if (this->wellModel_.hasWell(wname))
+                        this->wellModel_.updateEclWell(reportStep, wname);
+                }
             } else {
                 std::string msg = "The action: " + action->name() + " evaluated to false at " + ts;
                 Opm::OpmLog::info(msg);
