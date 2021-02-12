@@ -282,7 +282,15 @@ public:
                                     const Evaluation& pressure,
                                     unsigned /*compIdx*/) const
     {
-        return BinaryCoeffBrineCO2::liquidDiffCoeff(temperature, pressure);
+        //Diffusion coefficient of CO2 in pure water according to (McLachlan and Danckwerts, 1972)
+        const Evaluation log_D_H20 = -4.1764 + 712.52 / temperature - 2.5907e5 / (temperature*temperature);
+
+        //Diffusion coefficient of CO2 in the brine phase modified following (Ratcliff and Holdcroft,1963 and Al-Rawajfeh, 2004)
+        const Evaluation& mu_H20 = H2O::liquidViscosity(temperature, pressure); // Water viscosity
+        const Evaluation& mu_Brine = Brine::liquidViscosity(temperature, pressure); // Brine viscosity
+        const Evaluation log_D_Brine = log_D_H20 - 0.87*Opm::log10(mu_Brine / mu_H20);
+
+        return Opm::pow(Evaluation(10), log_D_Brine) * 1e-4; // convert from cm2/s to m2/s
     }
 
 private:
