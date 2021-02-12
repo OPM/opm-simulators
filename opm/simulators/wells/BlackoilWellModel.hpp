@@ -267,6 +267,7 @@ namespace Opm {
             /// Returns true if the well was actually found and shut.
             bool forceShutWellByNameIfPredictionMode(const std::string& wellname, const double simulation_time);
 
+            double wellPI(int well_index) const;
         protected:
             Simulator& ebosSimulator_;
 
