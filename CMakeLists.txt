@@ -161,7 +161,7 @@ macro (config_hook)
   endif()
   opm_need_version_of ("opm-models")
 
-  find_package(fmt 7.1.3)
+  find_package(fmt 7.0.3)
   if(NOT TARGET fmt::fmt-header-only)
     add_library(fmt::fmt-header-only INTERFACE IMPORTED)
     set_target_properties(fmt::fmt-header-only PROPERTIES
