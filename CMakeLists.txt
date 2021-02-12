@@ -170,6 +170,12 @@ macro (config_hook)
       INTERFACE_INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/external/fmtlib/include)
   endif()
 
+  # Unfortunately CMake <= 3.12 has problems with IMPORTED libraries
+  # when used together with OBJECT libraries. Hence we need to extract
+  # compile definitions and includes to use them there
+  get_target_property(_FMT_DEFS fmt::fmt-header-only INTERFACE_COMPILE_DEFINITIONS)
+  get_target_property(_FMT_INCL fmt::fmt-header-only INTERFACE_INCLUDE_DIRECTORIES)
+
   # We use generator expression with BUILD_INTERFACE to hide the library/properties
   # for downstream
   set(opm-simulators_PRIVATE_LIBRARIES $<BUILD_INTERFACE:fmt::fmt-header-only>)
@@ -255,6 +261,13 @@ set(FLOW_TGTS)
 foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS})
   add_library(flow_lib${OBJ} OBJECT flow/flow_ebos_${OBJ}.cpp)
   list(APPEND FLOW_TGTS $<TARGET_OBJECTS:flow_lib${OBJ}>)
+
+  # target_link_libraries (next commented line) does not work for CMake < 3.12
+  # (CMake error: "Object library target flow_libbrine may not link to anything)
+  # Therefore we use target properties directly
+  #target_link_libraries(flow_lib${OBJ} PRIVATE <BUILD_INTERFACE:fmt::fmt-header-only>)
+  set_property(TARGET flow_lib${OBJ} APPEND PROPERTY INCLUDE_DIRECTORIES ${_FMT_INCL})
+  set_property(TARGET flow_lib${OBJ} APPEND PROPERTY COMPILE_DEFINITIONS ${_FMT_DEFS}})
 endforeach()
 set_property(TARGET flow_libblackoil PROPERTY POSITION_INDEPENDENT_CODE ON)
 
@@ -264,7 +277,7 @@ opm_add_test(flow
   ALWAYS_ENABLE
   DEFAULT_ENABLE_IF ${FLOW_DEFAULT_ENABLE_IF}
   DEPENDS opmsimulators
-  LIBRARIES opmsimulators
+  LIBRARIES opmsimulators fmt::fmt-header-only
   SOURCES
   flow/flow.cpp
   ${FLOW_TGTS}
@@ -284,7 +297,7 @@ opm_add_test(flow_blackoil
   ALWAYS_ENABLE
   DEFAULT_ENABLE_IF ${FLOW_BLACKOIL_ONLY_DEFAULT_ENABLE_IF}
   DEPENDS opmsimulators
-  LIBRARIES opmsimulators
+  LIBRARIES opmsimulators fmt::fmt-header-only
   SOURCES
   flow/flow.cpp
   $<TARGET_OBJECTS:flow_libblackoil>
@@ -303,7 +316,7 @@ opm_add_test(flow_poly
   ALWAYS_ENABLE
   DEFAULT_ENABLE_IF ${FLOW_POLY_ONLY_DEFAULT_ENABLE_IF}
   DEPENDS opmsimulators
-  LIBRARIES opmsimulators
+  LIBRARIES opmsimulators fmt::fmt-header-only
   SOURCES
   flow/flow_blackoil_poly.cpp
   $<TARGET_OBJECTS:moduleVersion>)
@@ -315,7 +328,7 @@ opm_add_test(flow_distribute_z
   ALWAYS_ENABLE
   DEFAULT_ENABLE_IF ${FLOW_DEFAULT_ENABLE_IF}
   DEPENDS opmsimulators
-  LIBRARIES opmsimulators
+  LIBRARIES opmsimulators fmt::fmt-header-only
   SOURCES
   flow/flow_distribute_z.cpp
   ${FLOW_TGTS}
@@ -337,7 +350,7 @@ opm_add_test(flow_blackoil_dunecpr
   $<TARGET_OBJECTS:moduleVersion>
   EXE_NAME flow_blackoil_dunecpr
   DEPENDS opmsimulators
-  LIBRARIES opmsimulators)
+  LIBRARIES opmsimulators fmt::fmt-header-only)
 
 opm_add_test(flow_onephase
   ONLY_COMPILE
@@ -347,7 +360,7 @@ opm_add_test(flow_onephase
   $<TARGET_OBJECTS:moduleVersion>
   EXE_NAME flow_onephase
   DEPENDS opmsimulators
-  LIBRARIES opmsimulators)
+  LIBRARIES opmsimulators fmt::fmt-header-only)
 
 opm_add_test(flow_co2_diffusion
   ONLY_COMPILE
@@ -377,7 +390,7 @@ opm_add_test(flow_onephase_energy
   $<TARGET_OBJECTS:moduleVersion>
   EXE_NAME flow_onephase_energy
   DEPENDS opmsimulators
-  LIBRARIES opmsimulators)
+  LIBRARIES opmsimulators fmt::fmt-header-only)
 
 if (BUILD_FLOW)
   install(TARGETS flow DESTINATION bin)
@@ -401,6 +414,13 @@ set(MEBOS_TARGETS "")
 foreach(OBJ ${COMMON_MODELS} blackoil)
   add_library(ebos_lib${OBJ} OBJECT EXCLUDE_FROM_ALL ebos/ebos_${OBJ}.cc)
   list(APPEND MEBOS_TARGETS $<TARGET_OBJECTS:ebos_lib${OBJ}>)
+
+  # target_link_libraries (next commented line) does not work for CMake < 3.12
+  # Therefore we use target properties directly
+  #target_link_libraries(ebos_lib${OBJ} PRIVATE <BUILD_INTERFACE:fmt::fmt-header-only>)
+  set_property(TARGET ebos_lib${OBJ} APPEND PROPERTY INCLUDE_DIRECTORIES ${_FMT_INCL})
+  set_property(TARGET ebos_lib${OBJ} APPEND PROPERTY COMPILE_DEFINITIONS ${_FMT_DEFS}})
+
 endforeach()
 
 opm_add_test(ebos
@@ -408,7 +428,7 @@ opm_add_test(ebos
   DEFAULT_ENABLE_IF ${EBOS_DEFAULT_ENABLE_IF}
   ALWAYS_ENABLE
   EXE_NAME ebos
-  LIBRARIES opmsimulators
+  LIBRARIES opmsimulators fmt::fmt-header-only
   SOURCES ebos/ebos_main.cc $<TARGET_OBJECTS:ebos_libblackoil>)
 
 if (BUILD_EBOS)
@@ -428,7 +448,7 @@ foreach(OBJ ${COMMON_MODELS})
     DEFAULT_ENABLE_IF ${EBOS_EXTENSIONS_DEFAULT_ENABLE_IF}
     SOURCES ebos/ebos_${OBJ}_main.cc $<TARGET_OBJECTS:ebos_lib${OBJ}>
     EXE_NAME ebos_${OBJ}
-    LIBRARIES opmsimulators)
+    LIBRARIES opmsimulators fmt::fmt-header-only)
 endforeach()
 
 opm_add_test(mebos
@@ -437,7 +457,7 @@ opm_add_test(mebos
   SOURCES ebos/mebos_main.cc
           ${MEBOS_TARGETS}
   EXE_NAME mebos
-  LIBRARIES opmsimulators)
+  LIBRARIES opmsimulators fmt::fmt-header-only)
 
 if (NOT BUILD_EBOS_DEBUG_EXTENSIONS)
   set(EBOS_DEBUG_EXTENSIONS_DEFAULT_ENABLE_IF "FALSE")
@@ -451,7 +471,7 @@ opm_add_test(ebos_altidx
   SOURCES ebos/ebos_altidx.cc
   EXE_NAME ebos_altidx
   DEPENDS opmsimulators
-  LIBRARIES opmsimulators)
+  LIBRARIES opmsimulators fmt::fmt-header-only)
 
 opm_add_test(ebos_plain
   ONLY_COMPILE
@@ -459,7 +479,7 @@ opm_add_test(ebos_plain
   SOURCES ebos/ebos_plain.cc
   EXE_NAME ebos_plain
   DEPENDS opmsimulators
-  LIBRARIES opmsimulators)
+  LIBRARIES opmsimulators fmt::fmt-header-only)
 
 if (BUILD_EBOS_EXTENSIONS)
   foreach(TGT ${COMMON_MODELS})
