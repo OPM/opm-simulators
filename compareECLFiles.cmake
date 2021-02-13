@@ -490,6 +490,14 @@ add_test_compareECLFiles(CASENAME udq_wconprod
                          REL_TOL ${rel_tol}
                          DIR udq_actionx)
 
+add_test_compareECLFiles(CASENAME actionx_m1
+                         FILENAME ACTIONX_M1
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR udq_actionx
+                         TEST_ARGS --solver-max-time-step-in-days=1)
+
 add_test_compareECLFiles(CASENAME pinch_multz_all
                          FILENAME PINCH_MULTZ_ALL
                          SIMULATOR flow
