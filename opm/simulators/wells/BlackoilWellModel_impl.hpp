@@ -2576,6 +2576,40 @@ namespace Opm {
 
 
 
+    template<typename TypeTag>
+    double
+    BlackoilWellModel<TypeTag>::
+    wellPI(int well_index) const
+    {
+        const auto& pu = this->phase_usage_;
+        const auto  np = this->numPhases();
+        const auto* pi = &this->well_state_.productivityIndex()[np*well_index + 0];
+
+        const auto preferred = this->wells_ecl_[well_index].getPreferredPhase();
+        switch (preferred) { // Should really have LIQUID = OIL + WATER here too...
+        case Phase::WATER:
+            return pu.phase_used[BlackoilPhases::PhaseIndex::Aqua]
+                ? pi[pu.phase_pos[BlackoilPhases::PhaseIndex::Aqua]]
+                : 0.0;
+
+        case Phase::OIL:
+            return pu.phase_used[BlackoilPhases::PhaseIndex::Liquid]
+                ? pi[pu.phase_pos[BlackoilPhases::PhaseIndex::Liquid]]
+                : 0.0;
+
+        case Phase::GAS:
+            return pu.phase_used[BlackoilPhases::PhaseIndex::Vapour]
+                ? pi[pu.phase_pos[BlackoilPhases::PhaseIndex::Vapour]]
+                : 0.0;
+
+        default:
+            throw std::invalid_argument {
+                "Unsupported preferred phase " +
+                    std::to_string(static_cast<int>(preferred))
+                    };
+        }
+    }
+
 
     template<typename TypeTag>
     void
@@ -2593,37 +2627,6 @@ namespace Opm {
             return this->schedule()[timeStepIdx]
                 .wellgroup_events().hasEvent(this->wells_ecl_[well_index].name(),
                                              ScheduleEvents::Events::WELL_PRODUCTIVITY_INDEX);
-        };
-
-        auto getWellPI = [this](const int well_index) -> double
-        {
-            const auto& pu = this->phase_usage_;
-            const auto  np = this->numPhases();
-            const auto* pi = &this->well_state_.productivityIndex()[np*well_index + 0];
-
-            const auto preferred = this->wells_ecl_[well_index].getPreferredPhase();
-            switch (preferred) { // Should really have LIQUID = OIL + WATER here too...
-            case Phase::WATER:
-                return pu.phase_used[BlackoilPhases::PhaseIndex::Aqua]
-                    ? pi[pu.phase_pos[BlackoilPhases::PhaseIndex::Aqua]]
-                    : 0.0;
-
-            case Phase::OIL:
-                return pu.phase_used[BlackoilPhases::PhaseIndex::Liquid]
-                    ? pi[pu.phase_pos[BlackoilPhases::PhaseIndex::Liquid]]
-                    : 0.0;
-
-            case Phase::GAS:
-                return pu.phase_used[BlackoilPhases::PhaseIndex::Vapour]
-                    ? pi[pu.phase_pos[BlackoilPhases::PhaseIndex::Vapour]]
-                    : 0.0;
-
-            default:
-                throw std::invalid_argument {
-                    "Unsupported preferred phase " +
-                    std::to_string(static_cast<int>(preferred))
-                };
-            }
         };
 
         auto rescaleWellPI =
@@ -2663,7 +2666,7 @@ namespace Opm {
         const auto nw = this->numLocalWells();
         for (auto wellID = 0*nw; wellID < nw; ++wellID) {
             if (hasWellPIEvent(wellID)) {
-                const auto newWellPI = getWellPI(wellID);
+                const auto newWellPI = this->wellPI(wellID);
                 rescaleWellPI(wellID, newWellPI);
             }
         }
