@@ -1410,6 +1410,33 @@ protected:
                 / rhoWaterSurface;
     }
 
+    void
+    updateEclWell(int, int)
+    {
+        throw std::logic_error("updateEclWell() method not implemented for class eclpeacemanwell");
+    }
+
+
+    void
+    updateEclWell(int, const std::string&) {
+        throw std::logic_error("updateEclWell() method not implemented for class eclpeacemanwell");
+    }
+
+
+    double
+    wellPI(int) const
+    {
+        throw std::logic_error("wellPI() method not implemented for class eclpeacemanwell");
+    }
+
+    double
+    wellPI(const std::string& ) const
+    {
+        throw std::logic_error("wellPI() method not implemented for class eclpeacemanwell");
+    }
+
+
+
     /*!
      * \brief Compute the volumetric phase rate of the complete well given a bottom hole
      *        pressure.

@@ -620,6 +620,35 @@ public:
     }
 
 
+    void
+    updateEclWell(int, int)
+    {
+        throw std::logic_error("wellPI() method not implemented for class eclwellmanager");
+    }
+
+
+    void
+    updateEclWell(int, const std::string&) {
+        throw std::logic_error("wellPI() method not implemented for class eclwellmanager");
+    }
+
+
+    double
+    wellPI(int ) const
+    {
+        throw std::logic_error("wellPI() method not implemented for class eclwellmanager");
+    }
+
+    double
+    wellPI(const std::string& ) const
+    {
+        throw std::logic_error("wellPI() method not implemented for class eclwellmanager");
+    }
+
+
+
+
+
 protected:
     bool wellTopologyChanged_(const Opm::EclipseState& eclState OPM_UNUSED,
                               const Opm::Schedule& schedule,
@@ -750,6 +779,7 @@ protected:
             }
         }
     }
+
 
     void updateWellParameters_(unsigned reportStepIdx, const WellConnectionsMap& wellConnections)
     {
