@@ -200,14 +200,6 @@ protected:
         rhow_.at(idx) = fs.density(waterPhaseIdx);
     }
 
-    template <class Intersection>
-    inline double getFaceArea(const Intersection& intersection,
-                              unsigned idx) const
-    {
-        const auto& geometry = intersection.geometry();
-        const auto defaultFaceArea = geometry.volume();
-        return (!this->connections_[idx].influx_coeff.first) ? defaultFaceArea : this->connections_[idx].influx_coeff.second;
-    }
 
     virtual void endTimeStep() = 0;
 
@@ -310,7 +302,7 @@ protected:
 
 
                 if (faceDirection == this->connections_[idx].face_dir) {
-                    this->faceArea_connected_[idx] = this->getFaceArea(intersection, idx);
+                    this->faceArea_connected_[idx] = this->connections_[idx].influx_coeff;
                     break;
                 }
             }
