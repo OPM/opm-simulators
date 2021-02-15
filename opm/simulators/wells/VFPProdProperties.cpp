@@ -53,7 +53,7 @@ double VFPProdProperties::thp(int table_id,
     } else {
         // The usual case.
         // Recall that production rate is negative in Opm, so switch the sign.
-        flo = -detail::getFlo(aqua, liquid, vapour, table.getFloType());
+        flo = -detail::getFlo(table, aqua, liquid, vapour);
         wfr = detail::getWFR(aqua, liquid, vapour, table.getWFRType());
         gfr = detail::getGFR(aqua, liquid, vapour, table.getGFRType());
     }
@@ -181,12 +181,12 @@ calculateBhpWithTHPTarget(const std::vector<double>& ipr_a,
     const double aqua_bhp_limit = rates_bhp_limit[Water];
     const double liquid_bhp_limit = rates_bhp_limit[Oil];
     const double vapour_bhp_limit = rates_bhp_limit[Gas];
-    const double flo_bhp_limit = detail::getFlo(aqua_bhp_limit, liquid_bhp_limit, vapour_bhp_limit, table.getFloType() );
+    const double flo_bhp_limit = detail::getFlo(table, aqua_bhp_limit, liquid_bhp_limit, vapour_bhp_limit );
 
     const double aqua_bhp_middle = rates_bhp_middle[Water];
     const double liquid_bhp_middle = rates_bhp_middle[Oil];
     const double vapour_bhp_middle = rates_bhp_middle[Gas];
-    const double flo_bhp_middle = detail::getFlo(aqua_bhp_middle, liquid_bhp_middle, vapour_bhp_middle, table.getFloType() );
+    const double flo_bhp_middle = detail::getFlo(table, aqua_bhp_middle, liquid_bhp_middle, vapour_bhp_middle );
 
     // we use the ratios based on the middle value of bhp_limit and bhp_safe_limit
     const double wfr = detail::getWFR(aqua_bhp_middle, liquid_bhp_middle, vapour_bhp_middle, table.getWFRType());

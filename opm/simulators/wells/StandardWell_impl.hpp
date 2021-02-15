@@ -3726,9 +3726,8 @@ namespace Opm
         };
 
         // Make the flo() function.
-        auto flo_type = table.getFloType();
-        auto flo = [flo_type](const std::vector<double>& rates) {
-            return detail::getFlo(rates[Water], rates[Oil], rates[Gas], flo_type);
+        auto flo = [&table](const std::vector<double>& rates) {
+            return detail::getFlo(table, rates[Water], rates[Oil], rates[Gas]);
         };
 
         // Make the frates() function.
@@ -3932,9 +3931,8 @@ namespace Opm
         };
 
         // Make the flo() function.
-        auto flo_type = table.getFloType();
-        auto flo = [flo_type](const std::vector<double>& rates) {
-            return detail::getFlo(rates[Water], rates[Oil], rates[Gas], flo_type);
+        auto flo = [&table](const std::vector<double>& rates) {
+            return detail::getFlo(table, rates[Water], rates[Oil], rates[Gas]);
         };
 
         // Make the frates() function.

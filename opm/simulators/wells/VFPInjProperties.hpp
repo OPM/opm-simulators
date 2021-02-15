@@ -68,7 +68,7 @@ public:
         EvalWell bhp = 0.0 * aqua;
 
         //Find interpolation variables
-        EvalWell flo = detail::getFlo(aqua, liquid, vapour, table.getFloType());
+        EvalWell flo = detail::getFlo(table, aqua, liquid, vapour);
 
         //First, find the values to interpolate between
         //Value of FLO is negative in OPM for producers, but positive in VFP table

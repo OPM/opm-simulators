@@ -74,7 +74,7 @@ public:
         EvalWell bhp = 0.0 * aqua;
 
         //Find interpolation variables
-        EvalWell flo = detail::getFlo(aqua, liquid, vapour, table.getFloType());
+        EvalWell flo = detail::getFlo(table, aqua, liquid, vapour);
         EvalWell wfr = detail::getWFR(aqua, liquid, vapour, table.getWFRType());
         EvalWell gfr = detail::getGFR(aqua, liquid, vapour, table.getGFRType());
 
