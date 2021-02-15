@@ -268,6 +268,7 @@ namespace Opm {
             bool forceShutWellByNameIfPredictionMode(const std::string& wellname, const double simulation_time);
 
             double wellPI(int well_index) const;
+            bool hasWell(const std::string& wname);
         protected:
             Simulator& ebosSimulator_;
 

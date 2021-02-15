@@ -1726,6 +1726,15 @@ namespace Opm {
     }
 
 
+    template<typename TypeTag>
+    bool
+    BlackoilWellModel<TypeTag>::
+    hasWell(const std::string& wname) {
+        auto iter = std::find_if( this->wells_ecl_.begin(), this->wells_ecl_.end(), [&wname](const Well& well) { return well.name() == wname; });
+        return (iter != this->wells_ecl_.end());
+    }
+
+
     // convert well data from opm-common to well state from opm-core
     template<typename TypeTag>
     void
