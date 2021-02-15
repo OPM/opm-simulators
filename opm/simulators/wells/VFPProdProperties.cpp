@@ -54,8 +54,8 @@ double VFPProdProperties::thp(int table_id,
         // The usual case.
         // Recall that production rate is negative in Opm, so switch the sign.
         flo = -detail::getFlo(table, aqua, liquid, vapour);
-        wfr = detail::getWFR(aqua, liquid, vapour, table.getWFRType());
-        gfr = detail::getGFR(aqua, liquid, vapour, table.getGFRType());
+        wfr = detail::getWFR(table, aqua, liquid, vapour);
+        gfr = detail::getGFR(table, aqua, liquid, vapour);
     }
 
     const std::vector<double> thp_array = table.getTHPAxis();
@@ -189,8 +189,8 @@ calculateBhpWithTHPTarget(const std::vector<double>& ipr_a,
     const double flo_bhp_middle = detail::getFlo(table, aqua_bhp_middle, liquid_bhp_middle, vapour_bhp_middle );
 
     // we use the ratios based on the middle value of bhp_limit and bhp_safe_limit
-    const double wfr = detail::getWFR(aqua_bhp_middle, liquid_bhp_middle, vapour_bhp_middle, table.getWFRType());
-    const double gfr = detail::getGFR(aqua_bhp_middle, liquid_bhp_middle, vapour_bhp_middle, table.getGFRType());
+    const double wfr = detail::getWFR(table, aqua_bhp_middle, liquid_bhp_middle, vapour_bhp_middle);
+    const double gfr = detail::getGFR(table, aqua_bhp_middle, liquid_bhp_middle, vapour_bhp_middle);
 
     // we get the flo sampling points from the table,
     // then extend it with zero and rate under bhp_limit for extrapolation

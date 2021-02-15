@@ -127,7 +127,8 @@ static T getFlo(const VFPInjTable& table, const T& aqua, const T& liquid, const 
  * @return Production rate of oil, gas or liquid.
  */
 template <typename T>
-static T getWFR(const T& aqua, const T& liquid, const T& vapour, VFPProdTable::WFR_TYPE type) {
+static T getWFR(const VFPProdTable& table, const T& aqua, const T& liquid, const T& vapour) {
+    auto type = table.getWFRType();
     switch(type) {
     case VFPProdTable::WFR_TYPE::WFR_WOR:
         //Water-oil ratio = water / oil
@@ -156,7 +157,8 @@ static T getWFR(const T& aqua, const T& liquid, const T& vapour, VFPProdTable::W
  * @return Production rate of oil, gas or liquid.
  */
 template <typename T>
-static T getGFR(const T& aqua, const T& liquid, const T& vapour, VFPProdTable::GFR_TYPE type) {
+static T getGFR(const VFPProdTable& table, const T& aqua, const T& liquid, const T& vapour) {
+    auto type = table.getGFRType();
     switch(type) {
     case VFPProdTable::GFR_TYPE::GFR_GOR:
         // Gas-oil ratio = gas / oil
@@ -506,8 +508,8 @@ inline VFPEvaluation bhp(const VFPProdTable& table,
         const double& alq) {
     //Find interpolation variables
     double flo = detail::getFlo(table, aqua, liquid, vapour);
-    double wfr = detail::getWFR(aqua, liquid, vapour, table.getWFRType());
-    double gfr = detail::getGFR(aqua, liquid, vapour, table.getGFRType());
+    double wfr = detail::getWFR(table, aqua, liquid, vapour);
+    double gfr = detail::getGFR(table, aqua, liquid, vapour);
 
     //First, find the values to interpolate between
     //Recall that flo is negative in Opm, so switch sign.

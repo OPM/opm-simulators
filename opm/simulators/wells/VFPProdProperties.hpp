@@ -75,8 +75,8 @@ public:
 
         //Find interpolation variables
         EvalWell flo = detail::getFlo(table, aqua, liquid, vapour);
-        EvalWell wfr = detail::getWFR(aqua, liquid, vapour, table.getWFRType());
-        EvalWell gfr = detail::getGFR(aqua, liquid, vapour, table.getGFRType());
+        EvalWell wfr = detail::getWFR(table, aqua, liquid, vapour);
+        EvalWell gfr = detail::getGFR(table, aqua, liquid, vapour);
 
         //First, find the values to interpolate between
         //Value of FLO is negative in OPM for producers, but positive in VFP table
