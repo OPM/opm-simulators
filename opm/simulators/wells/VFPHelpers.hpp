@@ -27,6 +27,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
+#include <opm/common/OpmLog/KeywordLocation.hpp>
 #include <opm/material/densead/Math.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 
@@ -40,11 +41,14 @@ namespace detail {
 /**
  * Returns zero if input value is NaN of INF
  */
-inline double zeroIfNanInf(const double& value) {
+inline double zeroIfNanInf(const double& value, const std::string& rate, const VFPProdTable& table) {
     const bool nan_or_inf = std::isnan(value) || std::isinf(value);
 
     if (nan_or_inf) {
-        OpmLog::warning("NAN_OR_INF_VFP", "NAN or INF value encountered during VFP calculation, the value is set to zero");
+        std::string msg = "Problem with VFPPROD keyword table " + std::to_string(table.getTableNum()) + "\n" +
+                          "In " + table.location().filename + " line " + std::to_string(table.location().lineno) + "\n"
+                          "Nan or inf encountered while calculating " + rate + " - using zero";
+        OpmLog::warning("NAN_OR_INF_VFP", msg);
     }
 
     return nan_or_inf ? 0.0 : value;
@@ -55,11 +59,14 @@ inline double zeroIfNanInf(const double& value) {
  * Returns zero if input value is NaN or INF
  */
 template <class EvalWell>
-inline EvalWell zeroIfNanInf(const EvalWell& value) {
+inline EvalWell zeroIfNanInf(const EvalWell& value, const std::string& rate, const VFPProdTable& table) {
     const bool nan_or_inf = std::isnan(value.value()) || std::isinf(value.value());
 
     if (nan_or_inf) {
-        OpmLog::warning("NAN_OR_INF_VFP_EVAL", "NAN or INF Evalution encountered during VFP calculation, the Evalution is set to zero");
+        std::string msg = "Problem with VFPPROD keyword table " + std::to_string(table.getTableNum()) + "\n" +
+            "In " + table.location().filename + " line " + std::to_string(table.location().lineno) + "\n"
+            "Nan or inf encountered while calculating " + rate + " - using zero";
+        OpmLog::warning("NAN_OR_INF_VFP_EVAL", msg);
     }
 
     using Toolbox = MathToolbox<EvalWell>;
@@ -132,15 +139,15 @@ static T getWFR(const VFPProdTable& table, const T& aqua, const T& liquid, const
     switch(type) {
     case VFPProdTable::WFR_TYPE::WFR_WOR:
         //Water-oil ratio = water / oil
-        return zeroIfNanInf(aqua/liquid);
+        return zeroIfNanInf(aqua/liquid, "WOR", table);
 
     case VFPProdTable::WFR_TYPE::WFR_WCT:
         //Water cut = water / (water + oil)
-        return zeroIfNanInf(aqua / (aqua + liquid));
+        return zeroIfNanInf(aqua / (aqua + liquid), "WCT", table);
 
     case VFPProdTable::WFR_TYPE::WFR_WGR:
         //Water-gas ratio = water / gas
-        return zeroIfNanInf(aqua / vapour);
+        return zeroIfNanInf(aqua / vapour, "WGR", table);
 
     default:
         throw std::logic_error("Invalid WFR_TYPE");
@@ -162,13 +169,13 @@ static T getGFR(const VFPProdTable& table, const T& aqua, const T& liquid, const
     switch(type) {
     case VFPProdTable::GFR_TYPE::GFR_GOR:
         // Gas-oil ratio = gas / oil
-        return zeroIfNanInf(vapour / liquid);
+        return zeroIfNanInf(vapour / liquid, "GOR", table);
     case VFPProdTable::GFR_TYPE::GFR_GLR:
         // Gas-liquid ratio = gas / (oil + water)
-        return zeroIfNanInf(vapour / (liquid + aqua));
+        return zeroIfNanInf(vapour / (liquid + aqua), "GLR", table);
     case VFPProdTable::GFR_TYPE::GFR_OGR:
         // Oil-gas ratio = oil / gas
-        return zeroIfNanInf(liquid / vapour);
+        return zeroIfNanInf(liquid / vapour, "OGR", table);
     default:
         throw std::logic_error("Invalid GFR_TYPE");
     }
