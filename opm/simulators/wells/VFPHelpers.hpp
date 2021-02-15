@@ -74,21 +74,19 @@ inline EvalWell zeroIfNanInf(const EvalWell& value) {
  * @return Production rate of oil, gas or liquid.
  */
 template <typename T>
-static T getFlo(const T& aqua, const T& liquid, const T& vapour,
-                  const VFPProdTable::FLO_TYPE& type) {
+static T getFlo(const T& aqua, const T& liquid, const T& vapour, VFPProdTable::FLO_TYPE type) {
     switch (type) {
-        case VFPProdTable::FLO_OIL:
-            //Oil = liquid phase
-            return liquid;
-        case VFPProdTable::FLO_LIQ:
-            //Liquid = aqua + liquid phases
-            return aqua + liquid;
-        case VFPProdTable::FLO_GAS:
-            //Gas = vapor phase
-            return vapour;
-        case VFPProdTable::FLO_INVALID: //Intentional fall-through
-        default:
-            OPM_THROW(std::logic_error, "Invalid FLO_TYPE: '" << type << "'");
+    case VFPProdTable::FLO_TYPE::FLO_OIL:
+        //Oil = liquid phase
+        return liquid;
+    case VFPProdTable::FLO_TYPE::FLO_LIQ:
+        //Liquid = aqua + liquid phases
+        return aqua + liquid;
+    case VFPProdTable::FLO_TYPE::FLO_GAS:
+        //Gas = vapor phase
+        return vapour;
+    default:
+        throw std::logic_error("Invalid FLO_TYPE");
     }
 }
 
@@ -100,21 +98,19 @@ static T getFlo(const T& aqua, const T& liquid, const T& vapour,
  * @return Production rate of oil, gas or liquid.
  */
 template <typename T>
-static T getFlo(const T& aqua, const T& liquid, const T& vapour,
-                  const VFPInjTable::FLO_TYPE& type) {
+static T getFlo(const T& aqua, const T& liquid, const T& vapour, VFPInjTable::FLO_TYPE type) {
     switch (type) {
-        case VFPInjTable::FLO_OIL:
-            //Oil = liquid phase
-            return liquid;
-        case VFPInjTable::FLO_WAT:
-            //Liquid = aqua phase
-            return aqua;
-        case VFPInjTable::FLO_GAS:
-            //Gas = vapor phase
-            return vapour;
-        case VFPInjTable::FLO_INVALID: //Intentional fall-through
-        default:
-            OPM_THROW(std::logic_error, "Invalid FLO_TYPE: '" << type << "'");
+    case VFPInjTable::FLO_TYPE::FLO_OIL:
+        //Oil = liquid phase
+        return liquid;
+    case VFPInjTable::FLO_TYPE::FLO_WAT:
+        //Liquid = aqua phase
+        return aqua;
+    case VFPInjTable::FLO_TYPE::FLO_GAS:
+        //Gas = vapor phase
+        return vapour;
+    default:
+        throw std::logic_error("Invalid FLO_TYPE");
     }
 }
 
@@ -129,23 +125,22 @@ static T getFlo(const T& aqua, const T& liquid, const T& vapour,
  * @return Production rate of oil, gas or liquid.
  */
 template <typename T>
-static T getWFR(const T& aqua, const T& liquid, const T& vapour,
-                  const VFPProdTable::WFR_TYPE& type) {
+static T getWFR(const T& aqua, const T& liquid, const T& vapour, VFPProdTable::WFR_TYPE type) {
     switch(type) {
-        case VFPProdTable::WFR_WOR: {
-            //Water-oil ratio = water / oil
-            T wor = aqua / liquid;
-            return zeroIfNanInf(wor);
-        }
-        case VFPProdTable::WFR_WCT:
-            //Water cut = water / (water + oil)
-            return zeroIfNanInf(aqua / (aqua + liquid));
-        case VFPProdTable::WFR_WGR:
-            //Water-gas ratio = water / gas
-            return zeroIfNanInf(aqua / vapour);
-        case VFPProdTable::WFR_INVALID: //Intentional fall-through
-        default:
-            OPM_THROW(std::logic_error, "Invalid WFR_TYPE: '" << type << "'");
+    case VFPProdTable::WFR_TYPE::WFR_WOR:
+        //Water-oil ratio = water / oil
+        return zeroIfNanInf(aqua/liquid);
+
+    case VFPProdTable::WFR_TYPE::WFR_WCT:
+        //Water cut = water / (water + oil)
+        return zeroIfNanInf(aqua / (aqua + liquid));
+
+    case VFPProdTable::WFR_TYPE::WFR_WGR:
+        //Water-gas ratio = water / gas
+        return zeroIfNanInf(aqua / vapour);
+
+    default:
+        throw std::logic_error("Invalid WFR_TYPE");
     }
 }
 
@@ -159,21 +154,19 @@ static T getWFR(const T& aqua, const T& liquid, const T& vapour,
  * @return Production rate of oil, gas or liquid.
  */
 template <typename T>
-static T getGFR(const T& aqua, const T& liquid, const T& vapour,
-                  const VFPProdTable::GFR_TYPE& type) {
+static T getGFR(const T& aqua, const T& liquid, const T& vapour, VFPProdTable::GFR_TYPE type) {
     switch(type) {
-        case VFPProdTable::GFR_GOR:
-            // Gas-oil ratio = gas / oil
-            return zeroIfNanInf(vapour / liquid);
-        case VFPProdTable::GFR_GLR:
-            // Gas-liquid ratio = gas / (oil + water)
-            return zeroIfNanInf(vapour / (liquid + aqua));
-        case VFPProdTable::GFR_OGR:
-            // Oil-gas ratio = oil / gas
-            return zeroIfNanInf(liquid / vapour);
-        case VFPProdTable::GFR_INVALID: //Intentional fall-through
-        default:
-            OPM_THROW(std::logic_error, "Invalid GFR_TYPE: '" << type << "'");
+    case VFPProdTable::GFR_TYPE::GFR_GOR:
+        // Gas-oil ratio = gas / oil
+        return zeroIfNanInf(vapour / liquid);
+    case VFPProdTable::GFR_TYPE::GFR_GLR:
+        // Gas-liquid ratio = gas / (oil + water)
+        return zeroIfNanInf(vapour / (liquid + aqua));
+    case VFPProdTable::GFR_TYPE::GFR_OGR:
+        // Oil-gas ratio = oil / gas
+        return zeroIfNanInf(liquid / vapour);
+    default:
+        throw std::logic_error("Invalid GFR_TYPE");
     }
 }
 
