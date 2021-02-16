@@ -274,16 +274,15 @@ protected:
             if (FluidSystem::waterPhaseIdx == phaseIdx) {
                 continue;
             }
-            // TODO: let the problem do this (this is a constitutive
-            // relation of which the model should be free of from the
-            // abstraction POV!)
+
+            // Based on Millington, R. J., & Quirk, J. P. (1961).
             const Evaluation& base =
                 Toolbox::max(0.0001,
                              intQuants.porosity()
                              * intQuants.fluidState().saturation(phaseIdx));
             tortuosity_[phaseIdx] =
                 1.0 / (intQuants.porosity() * intQuants.porosity())
-                * Toolbox::pow(base, 7.0/3.0);
+                * Toolbox::pow(base, 10.0/3.0);
 
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 diffusionCoefficient_[phaseIdx][compIdx] =
