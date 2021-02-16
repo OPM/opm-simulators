@@ -13,7 +13,7 @@ target_sources(simulators
   $<TARGET_OBJECTS:moduleVersion>
   $<TARGET_OBJECTS:flow_libblackoil>)
 
-target_link_libraries( simulators PRIVATE opmsimulators )
+target_link_libraries( simulators PRIVATE opmsimulators ${opm-simulators_PRIVATE_LIBRARIES})
 
 set(PYTHON_PACKAGE_PATH "site-packages")
 set(PYTHON_INSTALL_PREFIX "lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/${PYTHON_PACKAGE_PATH}" CACHE STRING "Subdirectory to install Python modules in")
