@@ -54,7 +54,7 @@ double VFPInjProperties::thp(int table_id,
     const VFPInjTable& table = detail::getTable(m_tables, table_id);
 
     //Find interpolation variables
-    double flo = detail::getFlo(aqua, liquid, vapour, table.getFloType());
+    double flo = detail::getFlo(table, aqua, liquid, vapour);
 
     const std::vector<double> thp_array = table.getTHPAxis();
     int nthp = thp_array.size();

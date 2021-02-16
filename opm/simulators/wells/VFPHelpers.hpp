@@ -27,6 +27,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
+#include <opm/common/OpmLog/KeywordLocation.hpp>
 #include <opm/material/densead/Math.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 
@@ -40,11 +41,14 @@ namespace detail {
 /**
  * Returns zero if input value is NaN of INF
  */
-inline double zeroIfNanInf(const double& value) {
+inline double zeroIfNanInf(const double& value, const std::string& rate, const VFPProdTable& table) {
     const bool nan_or_inf = std::isnan(value) || std::isinf(value);
 
     if (nan_or_inf) {
-        OpmLog::warning("NAN_OR_INF_VFP", "NAN or INF value encountered during VFP calculation, the value is set to zero");
+        std::string msg = "Problem with VFPPROD keyword table " + std::to_string(table.getTableNum()) + "\n" +
+                          "In " + table.location().filename + " line " + std::to_string(table.location().lineno) + "\n"
+                          "Nan or inf encountered while calculating " + rate + " - using zero";
+        OpmLog::warning("NAN_OR_INF_VFP", msg);
     }
 
     return nan_or_inf ? 0.0 : value;
@@ -55,11 +59,14 @@ inline double zeroIfNanInf(const double& value) {
  * Returns zero if input value is NaN or INF
  */
 template <class EvalWell>
-inline EvalWell zeroIfNanInf(const EvalWell& value) {
+inline EvalWell zeroIfNanInf(const EvalWell& value, const std::string& rate, const VFPProdTable& table) {
     const bool nan_or_inf = std::isnan(value.value()) || std::isinf(value.value());
 
     if (nan_or_inf) {
-        OpmLog::warning("NAN_OR_INF_VFP_EVAL", "NAN or INF Evalution encountered during VFP calculation, the Evalution is set to zero");
+        std::string msg = "Problem with VFPPROD keyword table " + std::to_string(table.getTableNum()) + "\n" +
+            "In " + table.location().filename + " line " + std::to_string(table.location().lineno) + "\n"
+            "Nan or inf encountered while calculating " + rate + " - using zero";
+        OpmLog::warning("NAN_OR_INF_VFP_EVAL", msg);
     }
 
     using Toolbox = MathToolbox<EvalWell>;
@@ -74,21 +81,20 @@ inline EvalWell zeroIfNanInf(const EvalWell& value) {
  * @return Production rate of oil, gas or liquid.
  */
 template <typename T>
-static T getFlo(const T& aqua, const T& liquid, const T& vapour,
-                  const VFPProdTable::FLO_TYPE& type) {
+static T getFlo(const VFPProdTable& table, const T& aqua, const T& liquid, const T& vapour) {
+    auto type = table.getFloType();
     switch (type) {
-        case VFPProdTable::FLO_OIL:
-            //Oil = liquid phase
-            return liquid;
-        case VFPProdTable::FLO_LIQ:
-            //Liquid = aqua + liquid phases
-            return aqua + liquid;
-        case VFPProdTable::FLO_GAS:
-            //Gas = vapor phase
-            return vapour;
-        case VFPProdTable::FLO_INVALID: //Intentional fall-through
-        default:
-            OPM_THROW(std::logic_error, "Invalid FLO_TYPE: '" << type << "'");
+    case VFPProdTable::FLO_TYPE::FLO_OIL:
+        //Oil = liquid phase
+        return liquid;
+    case VFPProdTable::FLO_TYPE::FLO_LIQ:
+        //Liquid = aqua + liquid phases
+        return aqua + liquid;
+    case VFPProdTable::FLO_TYPE::FLO_GAS:
+        //Gas = vapor phase
+        return vapour;
+    default:
+        throw std::logic_error("Invalid FLO_TYPE");
     }
 }
 
@@ -100,21 +106,20 @@ static T getFlo(const T& aqua, const T& liquid, const T& vapour,
  * @return Production rate of oil, gas or liquid.
  */
 template <typename T>
-static T getFlo(const T& aqua, const T& liquid, const T& vapour,
-                  const VFPInjTable::FLO_TYPE& type) {
+static T getFlo(const VFPInjTable& table, const T& aqua, const T& liquid, const T& vapour) {
+    auto type = table.getFloType();
     switch (type) {
-        case VFPInjTable::FLO_OIL:
-            //Oil = liquid phase
-            return liquid;
-        case VFPInjTable::FLO_WAT:
-            //Liquid = aqua phase
-            return aqua;
-        case VFPInjTable::FLO_GAS:
-            //Gas = vapor phase
-            return vapour;
-        case VFPInjTable::FLO_INVALID: //Intentional fall-through
-        default:
-            OPM_THROW(std::logic_error, "Invalid FLO_TYPE: '" << type << "'");
+    case VFPInjTable::FLO_TYPE::FLO_OIL:
+        //Oil = liquid phase
+        return liquid;
+    case VFPInjTable::FLO_TYPE::FLO_WAT:
+        //Liquid = aqua phase
+        return aqua;
+    case VFPInjTable::FLO_TYPE::FLO_GAS:
+        //Gas = vapor phase
+        return vapour;
+    default:
+        throw std::logic_error("Invalid FLO_TYPE");
     }
 }
 
@@ -129,23 +134,23 @@ static T getFlo(const T& aqua, const T& liquid, const T& vapour,
  * @return Production rate of oil, gas or liquid.
  */
 template <typename T>
-static T getWFR(const T& aqua, const T& liquid, const T& vapour,
-                  const VFPProdTable::WFR_TYPE& type) {
+static T getWFR(const VFPProdTable& table, const T& aqua, const T& liquid, const T& vapour) {
+    auto type = table.getWFRType();
     switch(type) {
-        case VFPProdTable::WFR_WOR: {
-            //Water-oil ratio = water / oil
-            T wor = aqua / liquid;
-            return zeroIfNanInf(wor);
-        }
-        case VFPProdTable::WFR_WCT:
-            //Water cut = water / (water + oil)
-            return zeroIfNanInf(aqua / (aqua + liquid));
-        case VFPProdTable::WFR_WGR:
-            //Water-gas ratio = water / gas
-            return zeroIfNanInf(aqua / vapour);
-        case VFPProdTable::WFR_INVALID: //Intentional fall-through
-        default:
-            OPM_THROW(std::logic_error, "Invalid WFR_TYPE: '" << type << "'");
+    case VFPProdTable::WFR_TYPE::WFR_WOR:
+        //Water-oil ratio = water / oil
+        return zeroIfNanInf(aqua/liquid, "WOR", table);
+
+    case VFPProdTable::WFR_TYPE::WFR_WCT:
+        //Water cut = water / (water + oil)
+        return zeroIfNanInf(aqua / (aqua + liquid), "WCT", table);
+
+    case VFPProdTable::WFR_TYPE::WFR_WGR:
+        //Water-gas ratio = water / gas
+        return zeroIfNanInf(aqua / vapour, "WGR", table);
+
+    default:
+        throw std::logic_error("Invalid WFR_TYPE");
     }
 }
 
@@ -159,21 +164,20 @@ static T getWFR(const T& aqua, const T& liquid, const T& vapour,
  * @return Production rate of oil, gas or liquid.
  */
 template <typename T>
-static T getGFR(const T& aqua, const T& liquid, const T& vapour,
-                  const VFPProdTable::GFR_TYPE& type) {
+static T getGFR(const VFPProdTable& table, const T& aqua, const T& liquid, const T& vapour) {
+    auto type = table.getGFRType();
     switch(type) {
-        case VFPProdTable::GFR_GOR:
-            // Gas-oil ratio = gas / oil
-            return zeroIfNanInf(vapour / liquid);
-        case VFPProdTable::GFR_GLR:
-            // Gas-liquid ratio = gas / (oil + water)
-            return zeroIfNanInf(vapour / (liquid + aqua));
-        case VFPProdTable::GFR_OGR:
-            // Oil-gas ratio = oil / gas
-            return zeroIfNanInf(liquid / vapour);
-        case VFPProdTable::GFR_INVALID: //Intentional fall-through
-        default:
-            OPM_THROW(std::logic_error, "Invalid GFR_TYPE: '" << type << "'");
+    case VFPProdTable::GFR_TYPE::GFR_GOR:
+        // Gas-oil ratio = gas / oil
+        return zeroIfNanInf(vapour / liquid, "GOR", table);
+    case VFPProdTable::GFR_TYPE::GFR_GLR:
+        // Gas-liquid ratio = gas / (oil + water)
+        return zeroIfNanInf(vapour / (liquid + aqua), "GLR", table);
+    case VFPProdTable::GFR_TYPE::GFR_OGR:
+        // Oil-gas ratio = oil / gas
+        return zeroIfNanInf(liquid / vapour, "OGR", table);
+    default:
+        throw std::logic_error("Invalid GFR_TYPE");
     }
 }
 
@@ -510,9 +514,9 @@ inline VFPEvaluation bhp(const VFPProdTable& table,
         const double& thp,
         const double& alq) {
     //Find interpolation variables
-    double flo = detail::getFlo(aqua, liquid, vapour, table.getFloType());
-    double wfr = detail::getWFR(aqua, liquid, vapour, table.getWFRType());
-    double gfr = detail::getGFR(aqua, liquid, vapour, table.getGFRType());
+    double flo = detail::getFlo(table, aqua, liquid, vapour);
+    double wfr = detail::getWFR(table, aqua, liquid, vapour);
+    double gfr = detail::getGFR(table, aqua, liquid, vapour);
 
     //First, find the values to interpolate between
     //Recall that flo is negative in Opm, so switch sign.
@@ -537,7 +541,7 @@ inline VFPEvaluation bhp(const VFPInjTable& table,
         const double& vapour,
         const double& thp) {
     //Find interpolation variables
-    double flo = detail::getFlo(aqua, liquid, vapour, table.getFloType());
+    double flo = detail::getFlo(table, aqua, liquid, vapour);
 
     //First, find the values to interpolate between
     auto flo_i = detail::findInterpData(flo, table.getFloAxis());

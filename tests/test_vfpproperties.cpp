@@ -194,10 +194,10 @@ struct TrivialFixture {
     inline void initProperties() {
         table.reset(new Opm::VFPProdTable(1,
                                           1000.0,
-                                          Opm::VFPProdTable::FLO_OIL,
-                                          Opm::VFPProdTable::WFR_WOR,
-                                          Opm::VFPProdTable::GFR_GOR,
-                                          Opm::VFPProdTable::ALQ_UNDEF,
+                                          Opm::VFPProdTable::FLO_TYPE::FLO_OIL,
+                                          Opm::VFPProdTable::WFR_TYPE::WFR_WOR,
+                                          Opm::VFPProdTable::GFR_TYPE::GFR_GOR,
+                                          Opm::VFPProdTable::ALQ_TYPE::ALQ_UNDEF,
                                           flo_axis,
                                           thp_axis,
                                           wfr_axis,
@@ -231,7 +231,7 @@ private:
     int nz;
     int nu;
     int nv;
-    Opm::VFPProdTable::array_type data;
+    std::vector<double> data;
 };
 
 
