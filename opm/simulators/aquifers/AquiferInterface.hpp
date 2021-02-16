@@ -306,7 +306,7 @@ protected:
                     break;
                 }
             }
-            denom_face_areas += (this->connections_[idx].influx_mult * this->faceArea_connected_.at(idx));
+            denom_face_areas += this->faceArea_connected_.at(idx);
         }
 
         const auto& comm = this->ebos_simulator_.vanguard().grid().comm();
@@ -316,7 +316,7 @@ protected:
             this->alphai_.at(idx) = (denom_face_areas < eps_sqrt)
                 ? // Prevent no connection NaNs due to division by zero
                 0.
-                : (this->connections_[idx].influx_mult * this->faceArea_connected_.at(idx)) / denom_face_areas;
+                : this->faceArea_connected_.at(idx) / denom_face_areas;
         }
     }
 
