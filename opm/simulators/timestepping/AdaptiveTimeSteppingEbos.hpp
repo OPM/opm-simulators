@@ -108,6 +108,10 @@ template<class TypeTag, class MyTypeTag>
 struct MinTimeStepBeforeShuttingProblematicWellsInDays {
     using type = UndefinedProperty;
 };
+template<class TypeTag, class MyTypeTag>
+struct MinTimeStepBasedOnNewtonIterations {
+    using type = UndefinedProperty;
+};
 
 template<class TypeTag>
 struct SolverRestartFactor<TypeTag, TTag::FlowTimeSteppingParameters> {
@@ -207,6 +211,12 @@ struct MinTimeStepBeforeShuttingProblematicWellsInDays<TypeTag, TTag::FlowTimeSt
     static constexpr type value = 0.001;
 };
 
+template<class TypeTag>
+struct MinTimeStepBasedOnNewtonIterations<TypeTag, TTag::FlowTimeSteppingParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.0;
+};
+
 } // namespace Opm::Properties
 
 namespace Opm {
@@ -243,7 +253,8 @@ namespace Opm {
 
     public:
         //! \brief contructor taking parameter object
-        AdaptiveTimeSteppingEbos(const bool terminalOutput = true)
+        AdaptiveTimeSteppingEbos(const UnitSystem& unitSystem,
+                                 const bool terminalOutput = true)
             : timeStepControl_()
             , restartFactor_(EWOMS_GET_PARAM(TypeTag, double, SolverRestartFactor)) // 0.33
             , growthFactor_(EWOMS_GET_PARAM(TypeTag, double, SolverGrowthFactor)) // 2.0
@@ -260,7 +271,7 @@ namespace Opm {
             , minTimeStepBeforeShuttingProblematicWells_(EWOMS_GET_PARAM(TypeTag, double, MinTimeStepBeforeShuttingProblematicWellsInDays)*unit::day)
 
         {
-            init_();
+            init_(unitSystem);
         }
 
 
@@ -269,6 +280,7 @@ namespace Opm {
         //! \param tuning Pointer to ecl TUNING keyword
         //! \param timeStep current report step
         AdaptiveTimeSteppingEbos(const Tuning& tuning,
+                                 const UnitSystem& unitSystem,
                                  const bool terminalOutput = true)
             : timeStepControl_()
             , restartFactor_(tuning.TSFCNV)
@@ -285,7 +297,7 @@ namespace Opm {
             , useNewtonIteration_(false)
             , minTimeStepBeforeShuttingProblematicWells_(EWOMS_GET_PARAM(TypeTag, double, MinTimeStepBeforeShuttingProblematicWellsInDays)*unit::day)
         {
-            init_();
+            init_(unitSystem);
         }
 
         static void registerParameters()
@@ -333,6 +345,8 @@ namespace Opm {
                                  "The name of the file which contains the hardcoded time steps sizes");
             EWOMS_REGISTER_PARAM(TypeTag, double, MinTimeStepBeforeShuttingProblematicWellsInDays,
                                  "The minimum time step size in days for which problematic wells are not shut");
+            EWOMS_REGISTER_PARAM(TypeTag, double, MinTimeStepBasedOnNewtonIterations,
+                                 "The minimum time step size (in days for field and metric unit and hours for lab unit) can be reduced to based on newton iteration counts");
         }
 
         /** \brief  step method that acts like the solver::step method
@@ -617,7 +631,7 @@ namespace Opm {
 
 
     protected:
-        void init_()
+        void init_(const UnitSystem& unitSystem)
         {
             // valid are "pid" and "pid+iteration"
             std::string control = EWOMS_GET_PARAM(TypeTag, std::string, TimeStepControl); // "pid"
@@ -636,7 +650,22 @@ namespace Opm {
                 const int iterations =  EWOMS_GET_PARAM(TypeTag, int, TimeStepControlTargetNewtonIterations); // 8
                 const double decayDampingFactor = EWOMS_GET_PARAM(TypeTag, double, TimeStepControlDecayDampingFactor); // 1.0
                 const double growthDampingFactor = EWOMS_GET_PARAM(TypeTag, double, TimeStepControlGrowthDampingFactor); // 3.2
-                timeStepControl_ = TimeStepControlType(new PIDAndIterationCountTimeStepControl(iterations, decayDampingFactor, growthDampingFactor, tol));
+                const double nonDimensionalMinTimeStepIterations = EWOMS_GET_PARAM(TypeTag, double, MinTimeStepBasedOnNewtonIterations); // 0.0 by default
+                // the min time step can be reduced by the newton iteration numbers
+                double minTimeStepReducedByIterations;
+                switch (unitSystem.getType()) {
+                    case UnitSystem::UnitType::UNIT_TYPE_FIELD:
+                    case UnitSystem::UnitType::UNIT_TYPE_METRIC:
+                        minTimeStepReducedByIterations = nonDimensionalMinTimeStepIterations * unit::day;
+                        break;
+                    case UnitSystem::UnitType::UNIT_TYPE_LAB:
+                        minTimeStepReducedByIterations = nonDimensionalMinTimeStepIterations * unit::hour;
+                        break;
+                    default:
+                        throw std::runtime_error("Unsupported unit type when creating time step control");
+                }
+                timeStepControl_ = TimeStepControlType(new PIDAndIterationCountTimeStepControl(iterations, decayDampingFactor,
+                                                                      growthDampingFactor, tol, minTimeStepReducedByIterations));
                 useNewtonIteration_ = true;
             }
             else if (control == "iterationcount") {
