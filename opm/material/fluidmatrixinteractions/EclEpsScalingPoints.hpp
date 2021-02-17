@@ -344,7 +344,7 @@ public:
             maxKrn_ = epsInfo.maxKrow;
         }
         else {
-            assert(epsSystemType == EclGasOilSystem);
+            assert((epsSystemType == EclGasOilSystem) ||(epsSystemType == EclGasWaterSystem) );
 
             // saturation scaling for capillary pressure
             saturationPcPoints_[0] = 1.0 - epsInfo.Swl - epsInfo.Sgu;

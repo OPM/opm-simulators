@@ -49,19 +49,22 @@ namespace Opm {
 template <class TraitsT,
           class GasOilMaterialLawT,
           class OilWaterMaterialLawT,
+          class GasWaterMaterialLawT,
           class ParamsT = EclMultiplexerMaterialParams<TraitsT,
                                                        GasOilMaterialLawT,
-                                                       OilWaterMaterialLawT> >
+                                                       OilWaterMaterialLawT,
+                                                       GasWaterMaterialLawT> >
 class EclMultiplexerMaterial : public TraitsT
 {
 public:
     typedef GasOilMaterialLawT GasOilMaterialLaw;
     typedef OilWaterMaterialLawT OilWaterMaterialLaw;
+    typedef GasWaterMaterialLawT GasWaterMaterialLaw;
 
     typedef Opm::EclStone1Material<TraitsT, GasOilMaterialLaw, OilWaterMaterialLaw> Stone1Material;
     typedef Opm::EclStone2Material<TraitsT, GasOilMaterialLaw, OilWaterMaterialLaw> Stone2Material;
     typedef Opm::EclDefaultMaterial<TraitsT, GasOilMaterialLaw, OilWaterMaterialLaw> DefaultMaterial;
-    typedef Opm::EclTwoPhaseMaterial<TraitsT, GasOilMaterialLaw, OilWaterMaterialLaw> TwoPhaseMaterial;
+    typedef Opm::EclTwoPhaseMaterial<TraitsT, GasOilMaterialLaw, OilWaterMaterialLaw, GasWaterMaterialLaw> TwoPhaseMaterial;
 
     // some safety checks
     static_assert(TraitsT::numPhases == 3,
@@ -72,6 +75,9 @@ public:
                   "pressure law must be two!");
     static_assert(OilWaterMaterialLaw::numPhases == 2,
                   "The number of phases considered by the oil-water capillary "
+                  "pressure law must be two!");
+    static_assert(GasWaterMaterialLaw::numPhases == 2,
+                  "The number of phases considered by the gas-water capillary "
                   "pressure law must be two!");
     static_assert(std::is_same<typename GasOilMaterialLaw::Scalar,
                                typename OilWaterMaterialLaw::Scalar>::value,

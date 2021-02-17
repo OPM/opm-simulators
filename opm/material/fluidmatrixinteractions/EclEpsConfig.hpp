@@ -49,6 +49,7 @@ namespace Opm {
 enum EclTwoPhaseSystemType {
     EclGasOilSystem,
     EclOilWaterSystem,
+    EclGasWaterSystem
 };
 
 /*!
