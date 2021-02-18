@@ -1066,4 +1066,12 @@ if(MPI_FOUND)
                                        REL_TOL ${coarse_rel_tol_parallel}
                                        DIR aquifer-num
                                        TEST_ARGS --relaxed-max-pv-fraction=0 --tolerance-cnv=0.00003 --time-step-control=pid --linsolver=cpr)
+
+  add_test_compare_parallel_simulation(CASENAME actionx_m1
+                                       FILENAME ACTIONX_M1
+                                       SIMULATOR flow
+                                       ABS_TOL ${abs_tol_parallel}
+                                       REL_TOL ${rel_tol_parallel}
+                                       DIR udq_actionx
+                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
 endif()
