@@ -3086,7 +3086,6 @@ private:
     {
         Opm::ConditionalStorage<enableEnergy, Scalar> thermalHalfTrans;
         Opm::ConditionalStorage<enableDiffusion, Scalar> diffusivity;
-        //Scalar diffusivity;
         Scalar transmissibility;
     };
 
