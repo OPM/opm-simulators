@@ -273,6 +273,17 @@ public:
     { OPM_GAS_PVT_MULTIPLEXER_CALL(return pvtImpl.saturationPressure(regionIdx, temperature, Rv)); return 0; }
 
     /*!
+     * \copydoc BaseFluidSystem::diffusionCoefficient
+     */
+    template <class Evaluation>
+    Evaluation diffusionCoefficient(const Evaluation& temperature,
+                                    const Evaluation& pressure,
+                                    unsigned compIdx) const
+    {
+      OPM_GAS_PVT_MULTIPLEXER_CALL(return pvtImpl.diffusionCoefficient(temperature, pressure, compIdx)); return 0;
+    }
+
+    /*!
      * \brief Returns the concrete approach for calculating the PVT relations.
      *
      * (This is only determined at runtime.)

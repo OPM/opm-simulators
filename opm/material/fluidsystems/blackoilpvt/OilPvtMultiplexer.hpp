@@ -266,6 +266,17 @@ public:
                                   const Evaluation& Rs) const
     { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.saturationPressure(regionIdx, temperature, Rs)); return 0; }
 
+    /*!
+     * \copydoc BaseFluidSystem::diffusionCoefficient
+     */
+    template <class Evaluation>
+    Evaluation diffusionCoefficient(const Evaluation& temperature,
+                                    const Evaluation& pressure,
+                                    unsigned compIdx) const
+    {
+      OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.diffusionCoefficient(temperature, pressure, compIdx)); return 0;
+    }
+
     void setApproach(OilPvtApproach appr)
     {
         switch (appr) {
