@@ -51,6 +51,8 @@
 #include <opm/models/common/multiphasebasemodel.hh>
 #include <opm/models/io/vtkcompositionmodule.hh>
 #include <opm/models/io/vtkblackoilmodule.hh>
+#include "blackoildiffusionmodule.hh"
+#include <opm/models/io/vtkdiffusionmodule.hh>
 
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/common/Unused.hpp>
@@ -72,6 +74,7 @@ namespace TTag {
 //! The type tag for the black-oil problems
 struct BlackOilModel { using InheritsFrom = std::tuple<VtkComposition,
                                                        VtkBlackOilEnergy,
+                                                       VtkDiffusion,
                                                        VtkBlackOilPolymer,
                                                        VtkBlackOilSolvent,
                                                        VtkBlackOil,
@@ -161,6 +164,10 @@ template<class TypeTag>
 struct EnableTemperature<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
 template<class TypeTag>
 struct EnableEnergy<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
+
+//! disable diffusion by default
+template<class TypeTag>
+struct EnableDiffusion<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
 
 //! by default, scale the energy equation by the inverse of the energy required to heat
 //! up one kg of water by 30 Kelvin. If we conserve surface volumes, this must be divided
@@ -270,6 +277,7 @@ class BlackOilModel
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = FluidSystem::numComponents };
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
+    enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
 
     static const bool compositionSwitchEnabled = Indices::gasEnabled;
     static const bool waterEnabled = Indices::waterEnabled;
@@ -278,6 +286,8 @@ class BlackOilModel
     using ExtboModule = BlackOilExtboModule<TypeTag>;
     using PolymerModule = BlackOilPolymerModule<TypeTag>;
     using EnergyModule = BlackOilEnergyModule<TypeTag>;
+    using DiffusionModule = Opm::BlackOilDiffusionModule<TypeTag, enableDiffusion>;
+
 public:
     BlackOilModel(Simulator& simulator)
         : ParentType(simulator)
@@ -294,10 +304,14 @@ public:
         ExtboModule::registerParameters();
         PolymerModule::registerParameters();
         EnergyModule::registerParameters();
+        DiffusionModule::registerParameters();
 
         // register runtime parameters of the VTK output modules
         Opm::VtkBlackOilModule<TypeTag>::registerParameters();
         Opm::VtkCompositionModule<TypeTag>::registerParameters();
+
+        if (enableDiffusion)
+            Opm::VtkDiffusionModule<TypeTag>::registerParameters();
     }
 
     /*!
@@ -584,6 +598,9 @@ protected:
 
         this->addOutputModule(new Opm::VtkBlackOilModule<TypeTag>(this->simulator_));
         this->addOutputModule(new Opm::VtkCompositionModule<TypeTag>(this->simulator_));
+
+        if (enableDiffusion)
+            this->addOutputModule(new Opm::VtkDiffusionModule<TypeTag>(this->simulator_));
     }
 
 private:

@@ -35,7 +35,7 @@
 #include "blackoilenergymodules.hh"
 #include "blackoilfoammodules.hh"
 #include "blackoilbrinemodules.hh"
-
+#include "blackoildiffusionmodule.hh"
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 
 namespace Opm {
@@ -78,6 +78,7 @@ class BlackOilLocalResidual : public GetPropType<TypeTag, Properties::DiscLocalR
 
     static constexpr bool blackoilConserveSurfaceVolume = getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>();
     static constexpr bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
+    static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
 
     using Toolbox = Opm::MathToolbox<Evaluation>;
     using SolventModule = BlackOilSolventModule<TypeTag>;
@@ -86,6 +87,7 @@ class BlackOilLocalResidual : public GetPropType<TypeTag, Properties::DiscLocalR
     using EnergyModule = BlackOilEnergyModule<TypeTag>;
     using FoamModule = BlackOilFoamModule<TypeTag>;
     using BrineModule = BlackOilBrineModule<TypeTag>;
+    using DiffusionModule = Opm::BlackOilDiffusionModule<TypeTag, enableDiffusion>;
 
 public:
     /*!
@@ -205,6 +207,8 @@ public:
 
         // deal with salt (if present)
         BrineModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+
+        DiffusionModule::addDiffusiveFlux(flux, elemCtx, scvfIdx, timeIdx);
     }
 
     /*!

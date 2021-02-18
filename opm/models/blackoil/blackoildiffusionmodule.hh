@@ -29,29 +29,29 @@
 #define EWOMS_DIFFUSION_MODULE_HH
 
 #include <opm/models/discretization/common/fvbaseproperties.hh>
-#include <opm/models/common/quantitycallbacks.hh>
 
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/common/Unused.hpp>
 
 #include <dune/common/fvector.hh>
 
+#include <stdexcept>
 namespace Opm {
 
 /*!
  * \ingroup Diffusion
- * \class Opm::DiffusionModule
+ * \class Opm::BlackOilDiffusionModule
  * \brief Provides the auxiliary methods required for consideration of the
  * diffusion equation.
  */
 template <class TypeTag, bool enableDiffusion>
-class DiffusionModule;
+class BlackOilDiffusionModule;
 
 /*!
- * \copydoc Opm::DiffusionModule
+ * \copydoc Opm::BlackOilDiffusionModule
  */
 template <class TypeTag>
-class DiffusionModule<TypeTag, /*enableDiffusion=*/false>
+class BlackOilDiffusionModule<TypeTag, /*enableDiffusion=*/false>
 {
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
@@ -77,10 +77,10 @@ public:
 };
 
 /*!
- * \copydoc Opm::DiffusionModule
+ * \copydoc Opm::BlackOilDiffusionModule
  */
 template <class TypeTag>
-class DiffusionModule<TypeTag, /*enableDiffusion=*/true>
+class BlackOilDiffusionModule<TypeTag, /*enableDiffusion=*/true>
 {
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
@@ -113,38 +113,58 @@ public:
 
         const auto& fluidStateI = context.intensiveQuantities(extQuants.interiorIndex(), timeIdx).fluidState();
         const auto& fluidStateJ = context.intensiveQuantities(extQuants.exteriorIndex(), timeIdx).fluidState();
-
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            // arithmetic mean of the phase's molar density
-            Evaluation rhoMolar = fluidStateI.molarDensity(phaseIdx);
-            rhoMolar += Toolbox::value(fluidStateJ.molarDensity(phaseIdx));
-            rhoMolar /= 2;
+            if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                continue;
+            }
 
-            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
-                // mass flux due to molecular diffusion
-                flux[conti0EqIdx + compIdx] +=
-                    -rhoMolar
-                    * extQuants.moleFractionGradientNormal(phaseIdx, compIdx)
-                    * extQuants.effectiveDiffusionCoefficient(phaseIdx, compIdx);
+            // no diffusion in water for blackoil models
+            if (FluidSystem::waterPhaseIdx == phaseIdx) {
+                continue;
+            }
+
+            // arithmetic mean of the phase's b factor weighed by saturation
+            Evaluation bSAvg = fluidStateI.saturation(phaseIdx) * fluidStateI.invB(phaseIdx);
+            bSAvg += Toolbox::value(fluidStateJ.saturation(phaseIdx)) * Toolbox::value(fluidStateJ.invB(phaseIdx));
+            bSAvg /= 2;
+
+            // phase not present, skip
+            if(bSAvg < 1.0e-6)
+                continue;
+
+            // mass flux of solvent component (oil in oil or gas in gas)
+            unsigned solventCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
+            unsigned activeSolventCompIdx = Indices::canonicalToActiveComponentIndex(solventCompIdx);
+            flux[conti0EqIdx + activeSolventCompIdx] +=
+                    -bSAvg
+                    * extQuants.moleFractionGradientNormal(phaseIdx, solventCompIdx)
+                    * extQuants.effectiveDiffusionCoefficient(phaseIdx, solventCompIdx);
+            // mass flux of solute component (gas in oil or oil in gas)
+            unsigned soluteCompIdx = FluidSystem::soluteComponentIndex(phaseIdx);
+            unsigned activeSoluteCompIdx = Indices::canonicalToActiveComponentIndex(soluteCompIdx);
+            flux[conti0EqIdx + activeSoluteCompIdx] +=
+                    -bSAvg
+                    * extQuants.moleFractionGradientNormal(phaseIdx, soluteCompIdx)
+                    * extQuants.effectiveDiffusionCoefficient(phaseIdx, soluteCompIdx);
         }
     }
 };
 
 /*!
  * \ingroup Diffusion
- * \class Opm::DiffusionIntensiveQuantities
+ * \class Opm::BlackOilDiffusionIntensiveQuantities
  *
  * \brief Provides the volumetric quantities required for the
  *        calculation of molecular diffusive fluxes.
  */
 template <class TypeTag, bool enableDiffusion>
-class DiffusionIntensiveQuantities;
+class BlackOilDiffusionIntensiveQuantities;
 
 /*!
  * \copydoc Opm::DiffusionIntensiveQuantities
  */
 template <class TypeTag>
-class DiffusionIntensiveQuantities<TypeTag, /*enableDiffusion=*/false>
+class BlackOilDiffusionIntensiveQuantities<TypeTag, /*enableDiffusion=*/false>
 {
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
@@ -199,7 +219,7 @@ protected:
  * \copydoc Opm::DiffusionIntensiveQuantities
  */
 template <class TypeTag>
-class DiffusionIntensiveQuantities<TypeTag, /*enableDiffusion=*/true>
+class BlackOilDiffusionIntensiveQuantities<TypeTag, /*enableDiffusion=*/true>
 {
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
@@ -247,12 +267,15 @@ protected:
 
         const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, timeIdx);
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!elemCtx.model().phaseIsConsidered(phaseIdx))
+            if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
+            }
 
-            // TODO: let the problem do this (this is a constitutive
-            // relation of which the model should be free of from the
-            // abstraction POV!)
+            // no diffusion in water for blackoil models
+            if (FluidSystem::waterPhaseIdx == phaseIdx) {
+                continue;
+            }
+
             // Based on Millington, R. J., & Quirk, J. P. (1961).
             const Evaluation& base =
                 Toolbox::max(0.0001,
@@ -279,18 +302,18 @@ private:
 
 /*!
  * \ingroup Diffusion
- * \class Opm::DiffusionExtensiveQuantities
+ * \class Opm::BlackOilDiffusionExtensiveQuantities
  *
  * \brief Provides the quantities required to calculate diffusive mass fluxes.
  */
 template <class TypeTag, bool enableDiffusion>
-class DiffusionExtensiveQuantities;
+class BlackOilDiffusionExtensiveQuantities;
 
 /*!
  * \copydoc Opm::DiffusionExtensiveQuantities
  */
 template <class TypeTag>
-class DiffusionExtensiveQuantities<TypeTag, /*enableDiffusion=*/false>
+class BlackOilDiffusionExtensiveQuantities<TypeTag, /*enableDiffusion=*/false>
 {
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
@@ -343,15 +366,16 @@ public:
 };
 
 /*!
- * \copydoc Opm::DiffusionExtensiveQuantities
+ * \copydoc Opm::BlackOilDiffusionExtensiveQuantities
  */
 template <class TypeTag>
-class DiffusionExtensiveQuantities<TypeTag, /*enableDiffusion=*/true>
+class BlackOilDiffusionExtensiveQuantities<TypeTag, /*enableDiffusion=*/true>
 {
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
     enum { dimWorld = GridView::dimensionworld };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
@@ -367,34 +391,29 @@ protected:
      */
     void update_(const ElementContext& elemCtx, unsigned faceIdx, unsigned timeIdx)
     {
-        const auto& gradCalc = elemCtx.gradientCalculator();
-        Opm::MoleFractionCallback<TypeTag> moleFractionCallback(elemCtx);
-
-        const auto& face = elemCtx.stencil(timeIdx).interiorFace(faceIdx);
-        const auto& normal = face.normal();
+        const auto& stencil = elemCtx.stencil(timeIdx);
+        const auto& face = stencil.interiorFace(faceIdx);
         const auto& extQuants = elemCtx.extensiveQuantities(faceIdx, timeIdx);
-
         const auto& intQuantsInside = elemCtx.intensiveQuantities(extQuants.interiorIndex(), timeIdx);
         const auto& intQuantsOutside = elemCtx.intensiveQuantities(extQuants.exteriorIndex(), timeIdx);
 
+        const Scalar diffusivity = elemCtx.problem().diffusivity(elemCtx, face.interiorIndex(), face.exteriorIndex());
+        const Scalar faceArea = face.area();
+
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!elemCtx.model().phaseIsConsidered(phaseIdx))
+            if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
-
-            moleFractionCallback.setPhaseIndex(phaseIdx);
+            }
+            // no diffusion in water for blackoil models
+            if (FluidSystem::waterPhaseIdx == phaseIdx) {
+                continue;
+            }
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                moleFractionCallback.setComponentIndex(compIdx);
-
-                DimEvalVector moleFractionGradient(0.0);
-                gradCalc.calculateGradient(moleFractionGradient,
-                                           elemCtx,
-                                           faceIdx,
-                                           moleFractionCallback);
-
-                moleFractionGradientNormal_[phaseIdx][compIdx] = 0.0;
-                for (unsigned i = 0; i < normal.size(); ++i)
-                    moleFractionGradientNormal_[phaseIdx][compIdx] +=
-                        normal[i]*moleFractionGradient[i];
+                moleFractionGradientNormal_[phaseIdx][compIdx] =
+                    (intQuantsOutside.fluidState().moleFraction(phaseIdx, compIdx)
+                     -
+                     intQuantsInside.fluidState().moleFraction(phaseIdx, compIdx))
+                    * diffusivity / faceArea; //opm-models expects pr area flux
                 Opm::Valgrind::CheckDefined(moleFractionGradientNormal_[phaseIdx][compIdx]);
 
                 // use the arithmetic average for the effective
@@ -411,53 +430,12 @@ protected:
     }
 
     template <class Context, class FluidState>
-    void updateBoundary_(const Context& context,
-                         unsigned bfIdx,
-                         unsigned timeIdx,
-                         const FluidState& fluidState)
+    void updateBoundary_(const Context& context OPM_UNUSED,
+                         unsigned bfIdx OPM_UNUSED,
+                         unsigned timeIdx OPM_UNUSED,
+                         const FluidState& fluidState OPM_UNUSED)
     {
-        const auto& stencil = context.stencil(timeIdx);
-        const auto& face = stencil.boundaryFace(bfIdx);
-
-        const auto& elemCtx = context.elementContext();
-        unsigned insideScvIdx = face.interiorIndex();
-        const auto& insideScv = stencil.subControlVolume(insideScvIdx);
-
-        const auto& intQuantsInside = elemCtx.intensiveQuantities(insideScvIdx, timeIdx);
-        const auto& fluidStateInside = intQuantsInside.fluidState();
-
-        // distance between the center of the SCV and center of the boundary face
-        DimVector distVec = face.integrationPos();
-        distVec -= context.element().geometry().global(insideScv.localGeometry().center());
-
-        Scalar dist = distVec * face.normal();
-
-        // if the following assertation triggers, the center of the
-        // center of the interior SCV was not inside the element!
-        assert(dist > 0);
-
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!elemCtx.model().phaseIsConsidered(phaseIdx))
-                continue;
-
-            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                // calculate mole fraction gradient using two-point
-                // gradients
-                moleFractionGradientNormal_[phaseIdx][compIdx] =
-                    (fluidState.moleFraction(phaseIdx, compIdx)
-                     -
-                     fluidStateInside.moleFraction(phaseIdx, compIdx))
-                    / dist;
-                Opm::Valgrind::CheckDefined(moleFractionGradientNormal_[phaseIdx][compIdx]);
-
-                // use effective diffusion coefficients of the interior finite
-                // volume.
-                effectiveDiffusionCoefficient_[phaseIdx][compIdx] =
-                    intQuantsInside.effectiveDiffusionCoefficient(phaseIdx, compIdx);
-
-                Opm::Valgrind::CheckDefined(effectiveDiffusionCoefficient_[phaseIdx][compIdx]);
-            }
-        }
+        throw std::runtime_error("Not implemented: Diffusion across boundary not implemented for blackoil");
     }
 
 public:

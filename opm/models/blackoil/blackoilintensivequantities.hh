@@ -35,9 +35,9 @@
 #include "blackoilfoammodules.hh"
 #include "blackoilbrinemodules.hh"
 #include "blackoilenergymodules.hh"
+#include "blackoildiffusionmodule.hh"
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 #include <opm/material/common/Valgrind.hpp>
-
 #include <dune/common/fmatrix.hh>
 
 #include <cstring>
@@ -55,6 +55,7 @@ template <class TypeTag>
 class BlackOilIntensiveQuantities
     : public GetPropType<TypeTag, Properties::DiscIntensiveQuantities>
     , public GetPropType<TypeTag, Properties::FluxModule>::FluxIntensiveQuantities
+    , public BlackOilDiffusionIntensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableDiffusion>() >
     , public BlackOilSolventIntensiveQuantities<TypeTag>
     , public BlackOilExtboIntensiveQuantities<TypeTag>
     , public BlackOilPolymerIntensiveQuantities<TypeTag>
@@ -83,6 +84,7 @@ class BlackOilIntensiveQuantities
     enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
     enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
     enum { waterCompIdx = FluidSystem::waterCompIdx };
@@ -101,6 +103,7 @@ class BlackOilIntensiveQuantities
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
     using FluxIntensiveQuantities = typename FluxModule::FluxIntensiveQuantities;
     using FluidState = Opm::BlackOilFluidState<Evaluation, FluidSystem, enableTemperature, enableEnergy, compositionSwitchEnabled,  enableBrine, Indices::numPhases >;
+    using DiffusionIntensiveQuantities = Opm::BlackOilDiffusionIntensiveQuantities<TypeTag, enableDiffusion>;
 
 public:
     BlackOilIntensiveQuantities()
@@ -385,6 +388,9 @@ public:
         // update the quantities which are required by the chosen
         // velocity model
         FluxIntensiveQuantities::update_(elemCtx, dofIdx, timeIdx);
+
+        // update the diffusion specific quantities of the intensive quantities
+        DiffusionIntensiveQuantities::update_(fluidState_, paramCache, elemCtx, dofIdx, timeIdx);
 
 #ifndef NDEBUG
         // some safety checks in debug mode
