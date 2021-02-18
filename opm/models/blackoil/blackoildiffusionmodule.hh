@@ -35,6 +35,7 @@
 
 #include <dune/common/fvector.hh>
 
+#include <stdexcept>
 namespace Opm {
 
 /*!
