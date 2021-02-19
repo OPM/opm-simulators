@@ -301,7 +301,7 @@ public:
         // Well RFT data
         if (!substep) {
             const auto& schedule = simulator_.vanguard().schedule();
-            const auto& rft_config = schedule.rftConfig();
+            const auto& rft_config = schedule[reportStepNum].rft_config();
             for (const auto& well: schedule.getWells(reportStepNum)) {
 
                 // don't bother with wells not on this process
@@ -309,7 +309,7 @@ public:
                     continue;
                 }
 
-                if (!rft_config.active(reportStepNum))
+                if (!rft_config.active())
                     continue;
 
                 for (const auto& connection: well.getConnections()) {
@@ -927,7 +927,7 @@ public:
     void addRftDataToWells(Opm::data::Wells& wellDatas, size_t reportStepNum)
     {
         const auto& schedule = simulator_.vanguard().schedule();
-        const auto& rft_config = schedule.rftConfig();
+        const auto& rft_config = schedule[reportStepNum].rft_config();
         for (const auto& well: schedule.getWells(reportStepNum)) {
 
             // don't bother with wells not on this process
@@ -939,7 +939,7 @@ public:
             if (!wellDatas.count(well.name())) {
                 Opm::data::Well wellData;
 
-                if (!rft_config.active(reportStepNum))
+                if (!rft_config.active())
                     continue;
 
                 wellData.connections.resize(well.getConnections().size());
