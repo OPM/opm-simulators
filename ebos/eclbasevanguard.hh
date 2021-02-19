@@ -127,6 +127,11 @@ struct AllowDistributedWells {
     using type = UndefinedProperty;
 };
 
+template<class TypeTag, class MyTypeTag>
+struct Restart {
+    using type = UndefinedProperty;
+};
+
 template<class TypeTag>
 struct IgnoreKeywords<TypeTag, TTag::EclBaseVanguard> {
     static constexpr auto value = "";
@@ -173,6 +178,11 @@ struct ZoltanImbalanceTol<TypeTag, TTag::EclBaseVanguard> {
 template<class TypeTag>
 struct AllowDistributedWells<TypeTag, TTag::EclBaseVanguard> {
     static constexpr bool value = false;
+};
+
+template<class TypeTag>
+struct Restart<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr auto value = "none";
 };
 
 template<class T1, class T2>
@@ -241,6 +251,9 @@ public:
                              "Tolerable imbalance of the loadbalancing provided by Zoltan (default: 1.1).");
         EWOMS_REGISTER_PARAM(TypeTag, bool, AllowDistributedWells,
                              "Allow the perforations of a well to be distributed to interior of multiple processes");
+        EWOMS_REGISTER_PARAM(TypeTag, std::string, Restart,
+                             "Restarting specification with the following syntax: "
+                             "<full path to base case name>:<report step to restart from>");
         // register here for the use in the tests without BlackoildModelParametersEbos
         EWOMS_REGISTER_PARAM(TypeTag, bool, UseMultisegmentWell, "Use the well model for multi-segment wells instead of the one for single-segment wells");
 
@@ -453,7 +466,8 @@ public:
         readDeck(myRank, fileName, deck_, eclState_, eclSchedule_,
                  eclSummaryConfig_, std::move(errorGuard), python,
                  std::move(parseContext_), /* initFromRestart = */ false,
-                 /* checkDeck = */ enableExperiments, outputInterval);
+                 /* checkDeck = */ enableExperiments, outputInterval,
+                 EWOMS_GET_PARAM(TypeTag, std::string, Restart));
 
         this->summaryState_ = std::make_unique<Opm::SummaryState>( Opm::TimeService::from_time_t(this->eclSchedule_->getStartTime() ));
         this->udqState_ = std::make_unique<Opm::UDQState>( this->eclSchedule_->getUDQConfig(0).params().undefinedValue() );

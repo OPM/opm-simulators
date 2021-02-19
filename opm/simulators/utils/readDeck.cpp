@@ -167,10 +167,20 @@ void setupMessageLimiter(const Opm::MessageLimits msgLimits,  const std::string&
 }
 
 
-void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& deck, std::unique_ptr<Opm::EclipseState>& eclipseState,
-              std::unique_ptr<Opm::Schedule>& schedule, std::unique_ptr<Opm::SummaryConfig>& summaryConfig,
-              std::unique_ptr<ErrorGuard> errorGuard, std::shared_ptr<Opm::Python>& python, std::unique_ptr<ParseContext> parseContext,
-              bool initFromRestart, bool checkDeck, const std::optional<int>& outputInterval)
+void
+readDeck(int rank,
+         std::string& deckFilename,
+         std::unique_ptr<Opm::Deck>& deck,
+         std::unique_ptr<Opm::EclipseState>& eclipseState,
+         std::unique_ptr<Opm::Schedule>& schedule,
+         std::unique_ptr<Opm::SummaryConfig>& summaryConfig,
+         std::unique_ptr<ErrorGuard> errorGuard,
+         std::shared_ptr<Opm::Python>& python,
+         std::unique_ptr<ParseContext> parseContext,
+         bool initFromRestart,
+         bool checkDeck,
+         const std::optional<int>& outputInterval,
+         const std::string& restartCommandLine)
 {
     if (!errorGuard)
     {
@@ -209,7 +219,17 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
               restart file is not possible, but work is underways and it is
               included here as a switch.
             */
-            const auto& init_config = eclipseState->getInitConfig();
+            auto& init_config = eclipseState->getInitConfig();
+            if (restartCommandLine != "none") {
+                // User has requested a restart run from the command line.
+                // Syntax is "full/path/to/CASENAME:reportStep".
+                const size_t colon_pos = restartCommandLine.find(':');
+                const std::string case_name = restartCommandLine.substr(0, colon_pos);
+                const int report_step = std::stoi(restartCommandLine.substr(colon_pos + 1));
+                auto& io_config = eclipseState->getIOConfig();
+                io_config.consistentFileFlags(); // make consistence between output and input names
+                init_config.setRestart(case_name, report_step);
+            }
             if (init_config.restartRequested() && initFromRestart) {
                 int report_step = init_config.getRestartStep();
                 const auto& rst_filename = eclipseState->getIOConfig().getRestartFileName( init_config.getRestartRootName(), report_step, false );
