@@ -378,10 +378,11 @@ namespace Opm
                 wellrates_[np*w + p] = 0.0;
             }
 
-            const int num_perf_this_well = well_perf_data_[w].size();
             if ( well.isInjector() ) { 
                 temperature_[w] = well.injectionControls(summary_state).temperature;
             }
+
+            const int num_perf_this_well = well_info.communication().sum(well_perf_data_[w].size());
             if ( well.isProducer() ) { 
                 int sz = perforationRates.size();
                 int connpos = 0;
@@ -408,7 +409,6 @@ namespace Opm
                 }
             }
 
-            const int num_perf_this_well = well_info.communication().sum(well_perf_data_[w].size());
             if ( num_perf_this_well == 0 ) {
                 // No perforations of the well. Initialize to zero.
                 bhp_[w] = 0.;
