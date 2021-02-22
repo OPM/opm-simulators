@@ -23,7 +23,6 @@
 
 #include <opm/simulators/wells/WellState.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
-#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
@@ -85,7 +84,6 @@ namespace Opm
                   const SummaryState& summary_state,
                   const int globalNumberOfWells)
         {
-            //Todo: make it reservoir perforation rates
             std::vector<double> perforationRates;
             perforationRates = prevState->perfphaserates_;
             // call init on base class
@@ -187,6 +185,7 @@ namespace Opm
 
             perfRateBrine_.clear();
             perfRateBrine_.resize(nperf, 0.0);
+
             // intialize wells that have been there before
             // order may change so the mapping is based on the well name
             if (prevState && !prevState->wellMap().empty()) {
