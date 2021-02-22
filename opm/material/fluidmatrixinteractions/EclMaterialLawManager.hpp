@@ -960,6 +960,9 @@ private:
 
         auto& effParams = *dest[satRegionIdx];
 
+        const auto tolcrit = eclState.runspec().saturationFunctionControls()
+            .minimumRelpermMobilityThreshold();
+
         const auto& tableManager = eclState.getTableManager();
 
         switch (eclState.runspec().saturationFunctionControls().family()) {
@@ -977,10 +980,10 @@ private:
 
             std::vector<double> SwColumn = swfnTable.getColumn("SW").vectorCopy();
             
-            effParams.setKrwSamples(SwColumn, swfnTable.getColumn("KRW").vectorCopy());
-            effParams.setKrnSamples(SwColumn, sgfnTable.getColumn("KRG").vectorCopy());
+            effParams.setKrwSamples(SwColumn, normalizeKrValues_(tolcrit, swfnTable.getColumn("KRW")));
+            effParams.setKrnSamples(SwColumn, normalizeKrValues_(tolcrit, sgfnTable.getColumn("KRG")));
             //Capillary pressure is read from SWFN. 
-            //For gas-water system the capillary pressure column valeas are set to 0 in SGFN
+            //For gas-water system the capillary pressure column values are set to 0 in SGFN
             effParams.setPcnwSamples(SwColumn, swfnTable.getColumn("PCOW").vectorCopy());
             effParams.finalize();
                        
