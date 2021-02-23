@@ -449,8 +449,33 @@ namespace Opm {
                 ElementContext elemCtx( simulator );
                 const auto& gridView = simulator.gridView();
                 const auto& comm = gridView.comm();
-
                 const auto& elemEndIt = gridView.template end</*codim=*/0>();
+
+                // First loop: see if there is any hydrocarbon at all.
+                bool has_hc = false;
+                for (auto elemIt = gridView.template begin</*codim=*/0>();
+                     elemIt != elemEndIt;
+                     ++elemIt)
+               {
+                    const auto& elem = *elemIt;
+                    if (elem.partitionType() != Dune::InteriorEntity)
+                        continue;
+                    elemCtx.updatePrimaryStencil(elem);
+                    elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                    const unsigned cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+                    const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+                    const auto& fs = intQuants.fluidState();
+                    double hydrocarbon = 1.0;
+                    const auto& pu = phaseUsage_;
+                    if (Details::PhaseUsed::water(pu)) {
+                        hydrocarbon -= fs.saturation(FluidSystem::waterPhaseIdx).value();
+                    }
+                    if (hydrocarbon > 0.0) {
+                        has_hc = true;
+                        break;
+                    }
+                }
+
                 for (auto elemIt = gridView.template begin</*codim=*/0>();
                      elemIt != elemEndIt;
                      ++elemIt)
@@ -476,6 +501,9 @@ namespace Opm {
                     if (Details::PhaseUsed::water(pu)) {
                         hydrocarbon -= fs.saturation(FluidSystem::waterPhaseIdx).value();
                     }
+                    const unsigned int phaseForProps = Details::PhaseUsed::oil(pu)
+                        ? FluidSystem::oilPhaseIdx
+                        : Details::PhaseUsed::gas(pu) ? FluidSystem::gasPhaseIdx : FluidSystem::waterPhaseIdx;
 
                     int reg = rmap_.region(cellIdx);
                     assert(reg >= 0);
@@ -488,14 +516,23 @@ namespace Opm {
                     auto& saltConcentration = ra.saltConcentration;
 
                     // sum p, rs, rv, and T.
-                    double hydrocarbonPV = pv_cell*hydrocarbon;
-                    if (hydrocarbonPV > 0) {
-                        pv += hydrocarbonPV;
-                        p += fs.pressure(FluidSystem::oilPhaseIdx).value()*hydrocarbonPV;
-                        rs += fs.Rs().value()*hydrocarbonPV;
-                        rv += fs.Rv().value()*hydrocarbonPV;
-                        T += fs.temperature(FluidSystem::oilPhaseIdx).value()*hydrocarbonPV;
-                        saltConcentration += fs.saltConcentration().value()*hydrocarbonPV;
+                    if (has_hc) {
+                        double hydrocarbonPV = pv_cell*hydrocarbon;
+                        if (hydrocarbonPV > 0) {
+                            pv += hydrocarbonPV;
+                            p += fs.pressure(phaseForProps).value()*hydrocarbonPV;
+                            rs += fs.Rs().value()*hydrocarbonPV;
+                            rv += fs.Rv().value()*hydrocarbonPV;
+                            T += fs.temperature(phaseForProps).value()*hydrocarbonPV;
+                            saltConcentration += fs.saltConcentration().value()*hydrocarbonPV;
+                        }
+                    } else {
+                        pv += pv_cell;
+                        p += fs.pressure(phaseForProps).value()*pv;
+                        rs += fs.Rs().value()*pv;
+                        rv += fs.Rv().value()*pv;
+                        T += fs.temperature(phaseForProps).value()*pv;
+                        saltConcentration += fs.saltConcentration().value()*pv;
                     }
                 }
 
@@ -515,6 +552,9 @@ namespace Opm {
                       pv = comm.sum(pv);
                       saltConcentration = comm.sum(saltConcentration);
                       // compute average
+                      if (pv == 0.0) {
+                          pv = 1.0;
+                      }
                       p /= pv;
                       T /= pv;
                       rs /= pv;
