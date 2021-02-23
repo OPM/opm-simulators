@@ -22,7 +22,9 @@
 #include <opm/simulators/wells/MSWellHelpers.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 
+#include <string>
 #include <algorithm>
 
 namespace Opm
@@ -3185,10 +3187,13 @@ namespace Opm
 
             const EvalWell d = 1.0 - rs * rv;
             if (d <= 0.0 || d > 1.0) {
-                OPM_THROW_NOLOG(Opm::NumericalIssue, "Problematic d value " << d << " obtained for well " << name()
-                                               << " during convertion to surface volume with rs " << rs
-                                               << ", rv " << rv << " and pressure " << seg_pressure
-                                               << " obtaining d " << d);
+                std::ostringstream sstr;
+                sstr << "Problematic d value " << d << " obtained for well " << name()
+                     << " during conversion to surface volume with rs " << rs
+                     << ", rv " << rv << " and pressure " << seg_pressure
+                     << " obtaining d " << d;
+                OpmLog::debug(sstr.str());
+                OPM_THROW_NOLOG(Opm::NumericalIssue, sstr.str());
             }
 
             if (rs > 0.0) { // rs > 0.0?

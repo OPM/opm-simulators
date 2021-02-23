@@ -27,6 +27,8 @@
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/SICD.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
+#include <string>
 #include <dune/istl/solvers.hh>
 #if HAVE_UMFPACK
 #include <dune/istl/umfpack.hh>
@@ -64,7 +66,9 @@ namespace mswellhelpers
         for (size_t i_block = 0; i_block < y.size(); ++i_block) {
             for (size_t i_elem = 0; i_elem < y[i_block].size(); ++i_elem) {
                 if (std::isinf(y[i_block][i_elem]) || std::isnan(y[i_block][i_elem]) ) {
-                    OPM_THROW_NOLOG(Opm::NumericalIssue, "nan or inf value found after UMFPack solve due to singular matrix");
+                    const std::string msg{"nan or inf value found after UMFPack solve due to singular matrix"};
+                    OpmLog::debug(msg);
+                    OPM_THROW_NOLOG(Opm::NumericalIssue, msg);
                 }
             }
         }
