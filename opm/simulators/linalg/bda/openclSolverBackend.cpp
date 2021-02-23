@@ -484,6 +484,7 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
         source.emplace_back(std::make_pair(ILU_apply2_s, strlen(ILU_apply2_s)));
         source.emplace_back(std::make_pair(stdwell_apply_s, strlen(stdwell_apply_s)));
         source.emplace_back(std::make_pair(stdwell_apply_no_reorder_s, strlen(stdwell_apply_no_reorder_s)));
+        source.emplace_back(std::make_pair(ilu_decomp_s, strlen(ilu_decomp_s)));
         program = cl::Program(*context, source);
         program.build(devices);
 
@@ -527,8 +528,8 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
         axpy_k.reset(new cl::make_kernel<cl::Buffer&, const double, cl::Buffer&, const unsigned int>(cl::Kernel(program, "axpy")));
         custom_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const double, const double, const unsigned int>(cl::Kernel(program, "custom")));
         spmv_blocked_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "spmv_blocked")));
-        ILU_apply1_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "ILU_apply1")));
-        ILU_apply2_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "ILU_apply2")));
+        ILU_apply1_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "ILU_apply1")));
+        ILU_apply2_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "ILU_apply2")));
         stdwell_apply_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                                   cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                                   const unsigned int, const unsigned int, cl::Buffer&,
@@ -537,8 +538,10 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
                                                   cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                                   const unsigned int, const unsigned int, cl::Buffer&,
                                                   cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg>(cl::Kernel(program, "stdwell_apply_no_reorder")));
+        ilu_decomp_k.reset(new cl::make_kernel<const unsigned int, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
+                                               const int, cl::LocalSpaceArg>(cl::Kernel(program, "ilu_decomp")));
 
-        prec->setKernels(ILU_apply1_k.get(), ILU_apply2_k.get());
+        prec->setKernels(ILU_apply1_k.get(), ILU_apply2_k.get(), ilu_decomp_k.get());
 
     } catch (const cl::Error& error) {
         std::ostringstream oss;

@@ -70,8 +70,8 @@ private:
     std::unique_ptr<cl::make_kernel<cl::Buffer&, const double, cl::Buffer&, const unsigned int> > axpy_k;
     std::unique_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const double, const double, const unsigned int> > custom_k;
     std::unique_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > spmv_blocked_k;
-    std::shared_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> > ILU_apply1_k;
-    std::shared_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> > ILU_apply2_k;
+    std::shared_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> > ILU_apply1_k;
+    std::shared_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> > ILU_apply2_k;
     std::shared_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                     cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                     const unsigned int, const unsigned int, cl::Buffer&,
@@ -80,6 +80,8 @@ private:
                                     cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                     const unsigned int, const unsigned int, cl::Buffer&,
                                     cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg> > stdwell_apply_no_reorder_k;
+    std::shared_ptr<cl::make_kernel<const unsigned int, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
+                                    const int, cl::LocalSpaceArg> > ilu_decomp_k;
 
     Preconditioner *prec = nullptr;                               // only supported preconditioner is BILU0
     int *toOrder = nullptr, *fromOrder = nullptr;                 // BILU0 reorders rows of the matrix via these mappings

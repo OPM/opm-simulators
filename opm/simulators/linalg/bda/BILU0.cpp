@@ -18,6 +18,7 @@
 */
 
 #include <config.h>
+
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/simulators/linalg/MatrixBlock.hpp>
@@ -31,14 +32,6 @@
 
 namespace bda
 {
-
-// if CHOW_PATEL is 0, exact ILU decomposition is performed on CPU
-// if CHOW_PATEL is 1, iterative ILU decomposition (FGPILU) is done, as described in:
-//    FINE-GRAINED PARALLEL INCOMPLETE LU FACTORIZATION, E. Chow and A. Patel, SIAM 2015, https://doi.org/10.1137/140968896
-// if CHOW_PATEL_GPU is 0, the decomposition is done on CPU
-// if CHOW_PATEL_GPU is 1, the decomposition is done by bda::FGPILU::decomposition() on GPU
-#define CHOW_PATEL     0
-#define CHOW_PATEL_GPU 1
 
     using Opm::OpmLog;
     using Dune::Timer;
@@ -126,41 +119,46 @@ namespace bda
         diagIndex = new int[mat->Nb];
         invDiagVals = new double[mat->Nb * bs * bs];
 
+#if CHOW_PATEL
         Lmat = std::make_unique<BlockedMatrix<block_size> >(mat->Nb, (mat->nnzbs - mat->Nb) / 2);
         Umat = std::make_unique<BlockedMatrix<block_size> >(mat->Nb, (mat->nnzbs - mat->Nb) / 2);
+#endif
 
-        s.Lvals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * bs * bs * Lmat->nnzbs);
-        s.Uvals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * bs * bs * Umat->nnzbs);
-        s.Lcols = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * Lmat->nnzbs);
-        s.Ucols = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * Umat->nnzbs);
-        s.Lrows = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (Lmat->Nb + 1));
-        s.Urows = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (Umat->Nb + 1));
+        LUmat->nnzValues = new double[mat->nnzbs * bs * bs];
+
         s.invDiagVals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * bs * bs * mat->Nb);
         s.rowsPerColor = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (numColors + 1));
+        s.diagIndex = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * LUmat->Nb);
+#if CHOW_PATEL
+        s.Lvals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * bs * bs * Lmat->nnzbs);
+        s.Lcols = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * Lmat->nnzbs);
+        s.Lrows = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (Lmat->Nb + 1));
+        s.Uvals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * bs * bs * Lmat->nnzbs);
+        s.Ucols = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * Lmat->nnzbs);
+        s.Urows = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (Lmat->Nb + 1));
+#else
+        s.LUvals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * bs * bs * LUmat->nnzbs);
+        s.LUcols = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * LUmat->nnzbs);
+        s.LUrows = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (LUmat->Nb + 1));
+#endif
 
-        queue->enqueueWriteBuffer(s.Lvals, CL_TRUE, 0, Lmat->nnzbs * sizeof(double) * bs * bs, Lmat->nnzValues);
-        queue->enqueueWriteBuffer(s.Uvals, CL_TRUE, 0, Umat->nnzbs * sizeof(double) * bs * bs, Umat->nnzValues);
-        queue->enqueueWriteBuffer(s.Lcols, CL_TRUE, 0, Lmat->nnzbs * sizeof(int), Lmat->colIndices);
-        queue->enqueueWriteBuffer(s.Ucols, CL_TRUE, 0, Umat->nnzbs * sizeof(int), Umat->colIndices);
-        queue->enqueueWriteBuffer(s.Lrows, CL_TRUE, 0, (Lmat->Nb + 1) * sizeof(int), Lmat->rowPointers);
-        queue->enqueueWriteBuffer(s.Urows, CL_TRUE, 0, (Umat->Nb + 1) * sizeof(int), Umat->rowPointers);
         queue->enqueueWriteBuffer(s.invDiagVals, CL_TRUE, 0, mat->Nb * sizeof(double) * bs * bs, invDiagVals);
 
-        int *rowsPerColorPrefix = new int[numColors + 1];
-        rowsPerColorPrefix[0] = 0;
+        rowsPerColorPrefix.resize(numColors + 1); // resize initializes value 0.0
         for (int i = 0; i < numColors; ++i) {
             rowsPerColorPrefix[i+1] = rowsPerColorPrefix[i] + rowsPerColor[i];
         }
-        queue->enqueueWriteBuffer(s.rowsPerColor, CL_TRUE, 0, (numColors + 1) * sizeof(int), rowsPerColorPrefix);
-        delete[] rowsPerColorPrefix;
+        queue->enqueueWriteBuffer(s.rowsPerColor, CL_TRUE, 0, (numColors + 1) * sizeof(int), rowsPerColorPrefix.data());
 
         return true;
     } // end init()
+
 
     // implements Fine-Grained Parallel ILU algorithm (FGPILU), Chow and Patel 2015
     template <unsigned int block_size>
     void BILU0<block_size>::chow_patel_decomposition()
     {
+#if CHOW_PATEL
         const unsigned int bs = block_size;
         int num_sweeps = 6;
 
@@ -399,7 +397,7 @@ namespace bda
         // convert Ut to BSR
         // diagonal stored separately
         std::vector<int> ptr(Nb+1, 0);
-        std::vector<int> col(Ut->rowPointers[Nb]);
+        std::vector<int> cols(Ut->rowPointers[Nb]);
 
         // count blocks per row for U (BSR)
         // store diagonal in invDiagVals
@@ -423,7 +421,7 @@ namespace bda
                 int j = Ut->colIndices[k];
                 if (j != i) {
                     int head = ptr[j]++;
-                    col[head]  = i;
+                    cols[head]  = i;
                     memcpy(Utmp + head * bs * bs, Ut->nnzValues + k * bs * bs, sizeof(double) * bs * bs);
                 }
             }
@@ -433,21 +431,39 @@ namespace bda
         std::rotate(ptr.begin(), ptr.end() - 1, ptr.end());
         ptr.front() = 0;
 
-        // reversing the rows of U, because that is the order they are used in during ILU apply
-        int URowIndex = 0;
-        int offsetU = 0;   // number of nnz blocks that are already copied to Umat
-        Umat->rowPointers[0] = 0;
-        for (int i = LUmat->Nb - 1; i >= 0; i--) {
-            int rowSize = ptr[i + 1] - ptr[i];   // number of blocks in this row
-            memcpy(Umat->nnzValues + offsetU * bs * bs, Utmp + ptr[i] * bs * bs, sizeof(double) * bs * bs * rowSize);
-            memcpy(Umat->colIndices + offsetU, col.data() + ptr[i], sizeof(int) * rowSize);
-            offsetU += rowSize;
-            Umat->rowPointers[URowIndex + 1] = offsetU;
-            URowIndex++;
-        }
+        std::call_once(pattern_uploaded, [&](){
+            // find the positions of each diagonal block
+            // must be done after reordering
+            for (int row = 0; row < Nb; ++row) {
+                int rowStart = LUmat->rowPointers[row];
+                int rowEnd = LUmat->rowPointers[row+1];
+                bool diagFound = false;
+                for (int ij = rowStart; ij < rowEnd; ++ij) {
+                    int col = LUmat->colIndices[ij];
+                    if (row == col) {
+                        diagIndex[row] = ij;
+                        diagFound = true;
+                        break;
+                    }
+                }
+                if (!diagFound) {
+                    OPM_THROW(std::logic_error, "Error did not find diagonal block in reordered matrix");
+                }
+            }
+            queue->enqueueWriteBuffer(s.diagIndex, CL_TRUE, 0, Nb * sizeof(int), diagIndex);
+            queue->enqueueWriteBuffer(s.Lcols, CL_TRUE, 0, Lmat->nnzbs * sizeof(int), Lmat->colIndices);
+            queue->enqueueWriteBuffer(s.Lrows, CL_TRUE, 0, (Lmat->Nb + 1) * sizeof(int), Lmat->rowPointers);
+            queue->enqueueWriteBuffer(s.Ucols, CL_TRUE, 0, Umat->nnzbs * sizeof(int), cols.data());
+            queue->enqueueWriteBuffer(s.Urows, CL_TRUE, 0, (Umat->Nb + 1) * sizeof(int), ptr.data());
+        });
+
+
+        queue->enqueueWriteBuffer(s.Lvals, CL_TRUE, 0, Lmat->nnzbs * bs * bs * sizeof(double), Lmat->nnzValues);
+        queue->enqueueWriteBuffer(s.Uvals, CL_TRUE, 0, Umat->nnzbs * bs * bs * sizeof(double), Utmp);
+        queue->enqueueWriteBuffer(s.invDiagVals, CL_TRUE, 0, LUmat->Nb * bs * bs * sizeof(double), invDiagVals);
 
         delete[] Utmp;
-
+#endif // CHOW_PATEL
     }
 
     template <unsigned int block_size>
@@ -479,117 +495,65 @@ namespace bda
             OpmLog::info(out.str());
         }
 
-        Timer t_decomposition;
 #if CHOW_PATEL
         chow_patel_decomposition();
 #else
-        int i, j, ij, ik, jk;
-        int iRowStart, iRowEnd, jRowEnd;
-        double pivot[bs * bs];
+        Timer t_copyToGpu;
 
-        int LSize = 0;
-        Opm::Detail::Inverter<bs> inverter;   // reuse inverter to invert blocks
+        queue->enqueueWriteBuffer(s.LUvals, CL_TRUE, 0, LUmat->nnzbs * bs * bs * sizeof(double), LUmat->nnzValues);
 
-        // go through all rows
-        for (i = 0; i < LUmat->Nb; i++) {
-            iRowStart = LUmat->rowPointers[i];
-            iRowEnd = LUmat->rowPointers[i + 1];
-
-            // go through all elements of the row
-            for (ij = iRowStart; ij < iRowEnd; ij++) {
-                j = LUmat->colIndices[ij];
-                // if the element is the diagonal, store the index and go to next row
-                if (j == i) {
-                    diagIndex[i] = ij;
-                    break;
-                }
-                // if an element beyond the diagonal is reach, no diagonal was found
-                // throw an error now. TODO: perform reordering earlier to prevent this
-                if (j > i) {
-                    std::ostringstream out;
-                    out << "BILU0 Error could not find diagonal value in row: " << i;
-                    OpmLog::error(out.str());
-                    return false;
-                }
-
-                LSize++;
-                // calculate the pivot of this row
-                blockMult<bs>(LUmat->nnzValues + ij * bs * bs, invDiagVals + j * bs * bs, &pivot[0]);
-
-                memcpy(LUmat->nnzValues + ij * bs * bs, &pivot[0], sizeof(double) * block_size * block_size);
-
-                jRowEnd = LUmat->rowPointers[j + 1];
-                jk = diagIndex[j] + 1;
-                ik = ij + 1;
-                // substract that row scaled by the pivot from this row.
-                while (ik < iRowEnd && jk < jRowEnd) {
-                    if (LUmat->colIndices[ik] == LUmat->colIndices[jk]) {
-                        blockMultSub<bs>(LUmat->nnzValues + ik * bs * bs, pivot, LUmat->nnzValues + jk * bs * bs);
-                        ik++;
-                        jk++;
-                    } else {
-                        if (LUmat->colIndices[ik] < LUmat->colIndices[jk])
-                        { ik++; }
-                        else
-                        { jk++; }
+        std::call_once(pattern_uploaded, [&](){
+            // find the positions of each diagonal block
+            // must be done after reordering
+            for (int row = 0; row < Nb; ++row) {
+                int rowStart = LUmat->rowPointers[row];
+                int rowEnd = LUmat->rowPointers[row+1];
+                bool diagFound = false;
+                for (int ij = rowStart; ij < rowEnd; ++ij) {
+                    int col = LUmat->colIndices[ij];
+                    if (row == col) {
+                        diagIndex[row] = ij;
+                        diagFound = true;
+                        break;
                     }
                 }
+                if (!diagFound) {
+                    OPM_THROW(std::logic_error, "Error did not find diagonal block in reordered matrix");
+                }
             }
-            // store the inverse in the diagonal!
-            inverter(LUmat->nnzValues + ij * bs * bs, invDiagVals + i * bs * bs);
+            queue->enqueueWriteBuffer(s.diagIndex, CL_TRUE, 0, Nb * sizeof(int), diagIndex);
+            queue->enqueueWriteBuffer(s.LUcols, CL_TRUE, 0, LUmat->nnzbs * sizeof(int), LUmat->colIndices);
+            queue->enqueueWriteBuffer(s.LUrows, CL_TRUE, 0, (LUmat->Nb + 1) * sizeof(int), LUmat->rowPointers);
+        });
 
-            memcpy(LUmat->nnzValues + ij * bs * bs, invDiagVals + i * bs * bs, sizeof(double) * bs * bs);
-        }
-
-        Lmat->rowPointers[0] = 0;
-        Umat->rowPointers[0] = 0;
-
-        // Split the LU matrix into two by comparing column indices to diagonal indices
-        for (i = 0; i < LUmat->Nb; i++) {
-            int offsetL = Lmat->rowPointers[i];
-            int rowSize = diagIndex[i] - LUmat->rowPointers[i];
-            int offsetLU = LUmat->rowPointers[i];
-            memcpy(Lmat->nnzValues + offsetL * bs * bs, LUmat->nnzValues + offsetLU * bs * bs, sizeof(double) * bs * bs * rowSize);
-            memcpy(Lmat->colIndices + offsetL, LUmat->colIndices + offsetLU, sizeof(int) * rowSize);
-            offsetL += rowSize;
-            Lmat->rowPointers[i + 1] = offsetL;
-        }
-        // Reverse the order or the (blocked) rows for the U matrix,
-        // because the rows are accessed in reverse order when applying the ILU0
-        int URowIndex = 0;
-        for (i = LUmat->Nb - 1; i >= 0; i--) {
-            int offsetU = Umat->rowPointers[URowIndex];
-            int rowSize = LUmat->rowPointers[i + 1] - diagIndex[i] - 1;
-            int offsetLU = diagIndex[i] + 1;
-            memcpy(Umat->nnzValues + offsetU * bs * bs, LUmat->nnzValues + offsetLU * bs * bs, sizeof(double) * bs * bs * rowSize);
-            memcpy(Umat->colIndices + offsetU, LUmat->colIndices + offsetLU, sizeof(int) * rowSize);
-            offsetU += rowSize;
-            Umat->rowPointers[URowIndex + 1] = offsetU;
-            URowIndex++;
-        }
-#endif
-        if (verbosity >= 3) {
-            std::ostringstream out;
-            out << "BILU0 decomposition: " << t_decomposition.stop() << " s";
-            OpmLog::info(out.str());
-        }
-
-        Timer t_copyToGpu;
-        if (pattern_uploaded == false) {
-            queue->enqueueWriteBuffer(s.Lcols, CL_TRUE, 0, Lmat->nnzbs * sizeof(int), Lmat->colIndices);
-            queue->enqueueWriteBuffer(s.Ucols, CL_TRUE, 0, Umat->nnzbs * sizeof(int), Umat->colIndices);
-            queue->enqueueWriteBuffer(s.Lrows, CL_TRUE, 0, (Lmat->Nb + 1) * sizeof(int), Lmat->rowPointers);
-            queue->enqueueWriteBuffer(s.Urows, CL_TRUE, 0, (Umat->Nb + 1) * sizeof(int), Umat->rowPointers);
-            pattern_uploaded = true;
-        }
-        queue->enqueueWriteBuffer(s.Lvals, CL_TRUE, 0, Lmat->nnzbs * sizeof(double) * bs * bs, Lmat->nnzValues);
-        queue->enqueueWriteBuffer(s.Uvals, CL_TRUE, 0, Umat->nnzbs * sizeof(double) * bs * bs, Umat->nnzValues);
-        queue->enqueueWriteBuffer(s.invDiagVals, CL_TRUE, 0, Nb * sizeof(double) * bs * bs, invDiagVals);
         if (verbosity >= 3) {
             std::ostringstream out;
             out << "BILU0 copy to GPU: " << t_copyToGpu.stop() << " s";
             OpmLog::info(out.str());
         }
+
+        Timer t_decomposition;
+        std::ostringstream out;
+        for (int color = 0; color < numColors; ++color) {
+            const unsigned int firstRow = rowsPerColorPrefix[color];
+            const unsigned int lastRow = rowsPerColorPrefix[color+1];
+            const unsigned int work_group_size2 = 128;
+            const unsigned int num_work_groups2 = 1024;
+            const unsigned int total_work_items2 = num_work_groups2 * work_group_size2;
+            const unsigned int num_hwarps_per_group = work_group_size2 / 16;
+            const unsigned int lmem_per_work_group2 = num_hwarps_per_group * bs * bs * sizeof(double);           // each block needs a pivot
+            if (verbosity >= 4) {
+                out << "color " << color << ": " << firstRow << " - " << lastRow << " = " << lastRow - firstRow << "\n";
+            }
+            cl::Event event = (*ilu_decomp_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items2), cl::NDRange(work_group_size2)), firstRow, lastRow, s.LUvals, s.LUcols, s.LUrows, s.invDiagVals, s.diagIndex, LUmat->Nb, cl::Local(lmem_per_work_group2));
+            event.wait();
+        }
+
+        if (verbosity >= 3) {
+            out << "BILU0 decomposition: " << t_decomposition.stop() << " s";
+            OpmLog::info(out.str());
+        }
+#endif // CHOW_PATEL
 
         return true;
     } // end create_preconditioner()
@@ -604,16 +568,24 @@ namespace bda
         Timer t_apply;
 
         for(int color = 0; color < numColors; ++color){
-            event = (*ILU_apply1)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), s.Lvals, s.Lcols, s.Lrows, (unsigned int)Nb, x, y, s.rowsPerColor, color, block_size, cl::Local(lmem_per_work_group));
+#if CHOW_PATEL
+            event = (*ILU_apply1)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), s.Lvals, s.Lcols, s.Lrows, s.diagIndex, x, y, s.rowsPerColor, color, block_size, cl::Local(lmem_per_work_group));
+#else
+            event = (*ILU_apply1)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), s.LUvals, s.LUcols, s.LUrows, s.diagIndex, x, y, s.rowsPerColor, color, block_size, cl::Local(lmem_per_work_group));
+#endif
             // event.wait();
         }
 
         for(int color = numColors-1; color >= 0; --color){
-            event = (*ILU_apply2)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), s.Uvals, s.Ucols, s.Urows, (unsigned int)Nb, s.invDiagVals, y, s.rowsPerColor, color, block_size, cl::Local(lmem_per_work_group));
+#if CHOW_PATEL
+            event = (*ILU_apply2)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), s.Uvals, s.Ucols, s.Urows, s.diagIndex, s.invDiagVals, y, s.rowsPerColor, color, block_size, cl::Local(lmem_per_work_group));
+#else
+            event = (*ILU_apply2)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), s.LUvals, s.LUcols, s.LUrows, s.diagIndex, s.invDiagVals, y, s.rowsPerColor, color, block_size, cl::Local(lmem_per_work_group));
+#endif
             // event.wait();
         }
 
-        if (verbosity >= 3) {
+        if (verbosity >= 4) {
             event.wait();
             std::ostringstream out;
             out << "BILU0 apply: " << t_apply.stop() << " s";
@@ -638,11 +610,13 @@ namespace bda
     }
     template <unsigned int block_size>
     void BILU0<block_size>::setKernels(
-        cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *ILU_apply1_,
-        cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *ILU_apply2_
+        cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *ILU_apply1_,
+        cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *ILU_apply2_,
+        cl::make_kernel<const unsigned int, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const int, cl::LocalSpaceArg> *ilu_decomp_k_
     ){
         this->ILU_apply1 = ILU_apply1_;
         this->ILU_apply2 = ILU_apply2_;
+        this->ilu_decomp_k = ilu_decomp_k_;
     }
 
 
@@ -657,8 +631,9 @@ template void BILU0<n>::setOpenCLContext(cl::Context*);                         
 template void BILU0<n>::setOpenCLQueue(cl::CommandQueue*);                               \
 template void BILU0<n>::setKernelParameters(unsigned int, unsigned int, unsigned int);   \
 template void BILU0<n>::setKernels(                                                      \
-    cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *, \
-    cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *  \
+    cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *, \
+    cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *, \
+    cl::make_kernel<const unsigned int, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const int, cl::LocalSpaceArg> *                 \
     );
 
 INSTANTIATE_BDA_FUNCTIONS(1);

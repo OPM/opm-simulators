@@ -22,7 +22,7 @@
 #include <cstring>
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/simulators/linalg/bda/openclKernels.hpp>
+
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 
 namespace Opm
