@@ -250,12 +250,9 @@ namespace Opm
             if (use_gpu) {
                 const std::string gpu_mode = EWOMS_GET_PARAM(TypeTag, std::string, GpuMode);
                 WellContributions wellContribs(gpu_mode);
-#if HAVE_OPENCL
-                if(gpu_mode.compare("opencl") == 0){
-                    const auto openclBackend = static_cast<const bda::openclSolverBackend<block_size>*>(&bdaBridge->getBackend());
-                    wellContribs.setOpenCLEnv(openclBackend->context.get(), openclBackend->queue.get());
-                }
-#endif
+
+                bdaBridge->initWellContributions(wellContribs);
+
                 if (!useWellConn_) {
                     simulator_.problem().wellModel().getWellContributions(wellContribs);
                 }
