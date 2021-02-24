@@ -2720,7 +2720,7 @@ namespace Opm
 
         const int max_iter_number = param_.max_inner_iter_ms_wells_;
         const WellState well_state0 = well_state;
-        const std::vector<Scalar> residuals0 = getWellResiduals(B_avg);
+        const std::vector<Scalar> residuals0 = getWellResiduals(B_avg, deferred_logger);
         std::vector<std::vector<Scalar> > residual_history;
         std::vector<double> measure_history;
         int it = 0;
@@ -2745,7 +2745,7 @@ namespace Opm
                 break;
             }
 
-            residual_history.push_back(getWellResiduals(B_avg));
+            residual_history.push_back(getWellResiduals(B_avg, deferred_logger));
             measure_history.push_back(getResidualMeasureValue(well_state, residual_history[it], deferred_logger) );
 
             bool is_oscillate = false;
@@ -3222,7 +3222,8 @@ namespace Opm
     template<typename TypeTag>
     std::vector<typename MultisegmentWell<TypeTag>::Scalar>
     MultisegmentWell<TypeTag>::
-    getWellResiduals(const std::vector<Scalar>& B_avg) const
+    getWellResiduals(const std::vector<Scalar>& B_avg,
+                     DeferredLogger& deferred_logger) const
     {
         assert(int(B_avg.size() ) == num_components_);
         std::vector<Scalar> residuals(numWellEq + 1, 0.0);
@@ -3238,8 +3239,8 @@ namespace Opm
                     }
                 }
                 if (std::isnan(residual) || std::isinf(residual)) {
-                    OPM_THROW(Opm::NumericalIssue, "nan or inf value for residal get for well " << name()
-                                                    << " segment " << seg << " eq_idx " << eq_idx);
+                    OPM_DEFLOG_THROW(Opm::NumericalIssue, "nan or inf value for residal get for well " << name()
+                                                    << " segment " << seg << " eq_idx " << eq_idx, deferred_logger);
                 }
 
                 if (residual > residuals[eq_idx]) {
@@ -3252,7 +3253,7 @@ namespace Opm
         {
             const double control_residual = std::abs(resWell_[0][numWellEq - 1]);
             if (std::isnan(control_residual) || std::isinf(control_residual)) {
-               OPM_THROW(Opm::NumericalIssue, "nan or inf value for control residal get for well " << name());
+               OPM_DEFLOG_THROW(Opm::NumericalIssue, "nan or inf value for control residal get for well " << name(), deferred_logger);
             }
             residuals[numWellEq] = control_residual;
         }

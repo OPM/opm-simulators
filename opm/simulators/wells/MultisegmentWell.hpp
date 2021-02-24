@@ -465,7 +465,8 @@ namespace Opm
 
         EvalWell getSegmentSurfaceVolume(const Simulator& ebos_simulator, const int seg_idx) const;
 
-        std::vector<Scalar> getWellResiduals(const std::vector<Scalar>& B_avg) const;
+        std::vector<Scalar> getWellResiduals(const std::vector<Scalar>& B_avg,
+                                             DeferredLogger& deferred_logger) const;
 
         void detectOscillations(const std::vector<double>& measure_history,
                                 const int it, bool& oscillate, bool& stagnate) const;
