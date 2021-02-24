@@ -323,6 +323,12 @@ struct EnableGravity<TypeTag, TTag::EclBaseProblem> {
     static constexpr bool value = true;
 };
 
+// Enable diffusion
+template<class TypeTag>
+struct EnableDiffusion<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = true;
+};
+
 // only write the solutions for the report steps to disk
 template<class TypeTag>
 struct EnableWriteAllSolutions<TypeTag, TTag::EclBaseProblem> {
