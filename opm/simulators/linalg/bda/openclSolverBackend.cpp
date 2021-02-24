@@ -475,19 +475,6 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
     out.clear();
 
     try {
-        cl::Program::Sources source(1, std::make_pair(axpy_s, strlen(axpy_s)));  // what does this '1' mean? cl::Program::Sources is of type 'std::vector<std::pair<const char*, long unsigned int> >'
-        source.emplace_back(std::make_pair(dot_1_s, strlen(dot_1_s)));
-        source.emplace_back(std::make_pair(norm_s, strlen(norm_s)));
-        source.emplace_back(std::make_pair(custom_s, strlen(custom_s)));
-        source.emplace_back(std::make_pair(spmv_blocked_s, strlen(spmv_blocked_s)));
-        source.emplace_back(std::make_pair(ILU_apply1_s, strlen(ILU_apply1_s)));
-        source.emplace_back(std::make_pair(ILU_apply2_s, strlen(ILU_apply2_s)));
-        source.emplace_back(std::make_pair(stdwell_apply_s, strlen(stdwell_apply_s)));
-        source.emplace_back(std::make_pair(stdwell_apply_no_reorder_s, strlen(stdwell_apply_no_reorder_s)));
-        source.emplace_back(std::make_pair(ilu_decomp_s, strlen(ilu_decomp_s)));
-        program = cl::Program(*context, source);
-        program.build(devices);
-
         prec->setOpenCLContext(context.get());
         prec->setOpenCLQueue(queue.get());
 
@@ -519,6 +506,49 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
             d_toOrder = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * Nb);
         }
 
+        get_opencl_kernels();
+
+        prec->setKernels(ILU_apply1_k.get(), ILU_apply2_k.get(), ilu_decomp_k.get());
+
+    } catch (const cl::Error& error) {
+        std::ostringstream oss;
+        oss << "OpenCL Error: " << error.what() << "(" << error.err() << ")\n";
+        oss << getErrorString(error.err());
+        // rethrow exception
+        OPM_THROW(std::logic_error, oss.str());
+    } catch (const std::logic_error& error) {
+        // rethrow exception by OPM_THROW in the try{}, without this, a segfault occurs
+        throw error;
+    }
+
+    initialized = true;
+} // end initialize()
+
+template <unsigned int block_size>
+void openclSolverBackend<block_size>::get_opencl_kernels() {
+
+        cl::Program::Sources source(1, std::make_pair(axpy_s, strlen(axpy_s)));  // what does this '1' mean? cl::Program::Sources is of type 'std::vector<std::pair<const char*, long unsigned int> >'
+        source.emplace_back(std::make_pair(dot_1_s, strlen(dot_1_s)));
+        source.emplace_back(std::make_pair(norm_s, strlen(norm_s)));
+        source.emplace_back(std::make_pair(custom_s, strlen(custom_s)));
+        source.emplace_back(std::make_pair(spmv_blocked_s, strlen(spmv_blocked_s)));
+#if CHOW_PATEL
+        bool full_matrix = false;
+#else
+        bool full_matrix = true;
+#endif
+        std::string ILU_apply1_s = get_ILU_apply1_string(full_matrix);
+        source.emplace_back(std::make_pair(ILU_apply1_s.c_str(), strlen(ILU_apply1_s.c_str())));
+        std::string ILU_apply2_s = get_ILU_apply2_string(full_matrix);
+        source.emplace_back(std::make_pair(ILU_apply2_s.c_str(), strlen(ILU_apply2_s.c_str())));
+        std::string stdwell_apply_s = get_stdwell_apply_string(true);
+        std::string stdwell_apply_no_reorder_s = get_stdwell_apply_string(false);
+        source.emplace_back(std::make_pair(stdwell_apply_s.c_str(), strlen(stdwell_apply_s.c_str())));
+        source.emplace_back(std::make_pair(stdwell_apply_no_reorder_s.c_str(), strlen(stdwell_apply_no_reorder_s.c_str())));
+        source.emplace_back(std::make_pair(ilu_decomp_s, strlen(ilu_decomp_s)));
+        cl::Program program = cl::Program(*context, source);
+        program.build(devices);
+
         // queue.enqueueNDRangeKernel() is a blocking/synchronous call, at least for NVIDIA
         // cl::make_kernel<> myKernel(); myKernel(args, arg1, arg2); is also blocking
 
@@ -540,22 +570,7 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
                                                   cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg>(cl::Kernel(program, "stdwell_apply_no_reorder")));
         ilu_decomp_k.reset(new cl::make_kernel<const unsigned int, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                                const int, cl::LocalSpaceArg>(cl::Kernel(program, "ilu_decomp")));
-
-        prec->setKernels(ILU_apply1_k.get(), ILU_apply2_k.get(), ilu_decomp_k.get());
-
-    } catch (const cl::Error& error) {
-        std::ostringstream oss;
-        oss << "OpenCL Error: " << error.what() << "(" << error.err() << ")\n";
-        oss << getErrorString(error.err());
-        // rethrow exception
-        OPM_THROW(std::logic_error, oss.str());
-    } catch (const std::logic_error& error) {
-        // rethrow exception by OPM_THROW in the try{}, without this, a segfault occurs
-        throw error;
-    }
-
-    initialized = true;
-} // end initialize()
+} // end get_opencl_kernels()
 
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::finalize() {

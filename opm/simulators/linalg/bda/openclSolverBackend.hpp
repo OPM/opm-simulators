@@ -64,7 +64,6 @@ private:
 
     // shared pointers are also passed to other objects
     std::vector<cl::Device> devices;
-    cl::Program program;
     std::unique_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > dot_k;
     std::unique_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > norm_k;
     std::unique_ptr<cl::make_kernel<cl::Buffer&, const double, cl::Buffer&, const unsigned int> > axpy_k;
@@ -148,6 +147,9 @@ private:
     /// \param[in] rows           array of rowPointers, contains N/dim+1 values
     /// \param[in] cols           array of columnIndices, contains nnz values
     void initialize(int N, int nnz, int dim, double *vals, int *rows, int *cols);
+
+    /// Generate and compile opencl kernels
+    void get_opencl_kernels();
 
     /// Clean memory
     void finalize();
