@@ -28,6 +28,7 @@
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
+#include <opm/common/utility/TimeService.hpp>
 
 #include <iostream>
 #include <iomanip>
@@ -52,7 +53,7 @@ struct Setup
           const Runspec runspec(deck);
           python = std::make_shared<Python>();
           schedule.reset( new Schedule(deck, *ecl_state, python));
-          summary_state.reset( new SummaryState(std::chrono::system_clock::from_time_t(schedule->getStartTime())));
+          summary_state.reset( new SummaryState(TimeService::from_time_t(schedule->getStartTime())));
         }
         const int step = 0;
         const auto& sched_state = schedule->operator[](step);

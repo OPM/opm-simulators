@@ -49,6 +49,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/State.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQConfig.hpp>
+#include <opm/common/utility/TimeService.hpp>
 
 
 #include <opm/simulators/utils/readDeck.hpp>
@@ -448,7 +449,7 @@ public:
                  std::move(parseContext_), /* initFromRestart = */ false,
                  /* checkDeck = */ enableExperiments);
 
-        this->summaryState_ = std::make_unique<Opm::SummaryState>( std::chrono::system_clock::from_time_t(this->eclSchedule_->getStartTime() ));
+        this->summaryState_ = std::make_unique<Opm::SummaryState>( Opm::TimeService::from_time_t(this->eclSchedule_->getStartTime() ));
         this->udqState_ = std::make_unique<Opm::UDQState>( this->eclSchedule_->getUDQConfig(0).params().undefinedValue() );
         this->actionState_ = std::make_unique<Opm::Action::State>() ;
 

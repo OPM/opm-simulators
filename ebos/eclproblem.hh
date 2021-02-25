@@ -99,6 +99,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/RockwnodTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/OverburdTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/RocktabTable.hpp>
+#include <opm/common/utility/TimeService.hpp>
 #include <opm/material/common/ConditionalStorage.hpp>
 
 #include <dune/common/version.hh>
@@ -1378,7 +1379,7 @@ public:
 
                 const auto& wellpi = this->fetchWellPI(reportStep, *action, schedule, matching_wells);
 
-                schedule.applyAction(reportStep, std::chrono::system_clock::from_time_t(simTime), *action, actionResult, wellpi);
+                schedule.applyAction(reportStep, Opm::TimeService::from_time_t(simTime), *action, actionResult, wellpi);
                 actionState.add_run(*action, simTime);
 
                 for ( const auto& [wname, _] : wellpi) {
