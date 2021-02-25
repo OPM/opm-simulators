@@ -498,7 +498,13 @@ public:
      * \brief Return the diffusivity for the intersection between two elements.
      */
     Scalar diffusivity(unsigned elemIdx1, unsigned elemIdx2) const
-    { return diffusivity_->at(isId_(elemIdx1, elemIdx2)); }
+    {
+        if(diffusivity_->empty())
+            return 0.0;
+
+        return diffusivity_->at(isId_(elemIdx1, elemIdx2));
+
+    }
 
 private:
 
