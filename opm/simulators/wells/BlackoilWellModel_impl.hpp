@@ -326,9 +326,9 @@ namespace Opm {
 
         well_state_ = previous_well_state_;
         well_state_.disableGliftOptimization();
+        updateAndCommunicateGroupData();
         const int reportStepIdx = ebosSimulator_.episodeIndex();
         const double simulationTime = ebosSimulator_.time();
-
         int exception_thrown = 0;
         try {
             // test wells
@@ -403,7 +403,6 @@ namespace Opm {
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
         WellGroupHelpers::updateGuideRatesForWells(schedule(), phase_usage_, reportStepIdx, simulationTime, well_state_, comm, guideRate_.get());
         try {
-            updateAndCommunicateGroupData();
             // Compute initial well solution for new wells
             for (auto& well : well_container_) {
                 const uint64_t effective_events_mask = ScheduleEvents::WELL_STATUS_CHANGE
