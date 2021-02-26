@@ -167,6 +167,16 @@ namespace Opm
 
             current_injection_controls_.resize(nw);
             current_production_controls_.resize(nw);
+            for (int w = 0; w < nw; ++w) {
+                if (wells_ecl[w].isProducer()) {
+                    const auto controls = wells_ecl[w].productionControls(summary_state);
+                    currentProductionControls()[w] = controls.cmode;
+                }
+                else {
+                    const auto controls = wells_ecl[w].injectionControls(summary_state);
+                    currentInjectionControls()[w] = controls.cmode;
+                }
+            }
 
             perfRateSolvent_.clear();
             perfRateSolvent_.resize(nperf, 0.0);
@@ -207,12 +217,8 @@ namespace Opm
                          //   continue;
                          //}
 
-                        // if there is no effective control event happens to the well, we use the current_injection/production_controls_ from prevState
-                        // otherwise, we use the control specified in the deck
-                        if (!effective_events_occurred_[w]) {
-                            current_injection_controls_[ newIndex ] = prevState->currentInjectionControls()[ oldIndex ];
-                            current_production_controls_[ newIndex ] = prevState->currentProductionControls()[ oldIndex ];
-                        }
+                        current_injection_controls_[ newIndex ] = prevState->currentInjectionControls()[ oldIndex ];
+                        current_production_controls_[ newIndex ] = prevState->currentProductionControls()[ oldIndex ];
 
                         // wellrates
                         for( int i=0, idx=newIndex*np, oldidx=oldIndex*np; i<np; ++i, ++idx, ++oldidx )

@@ -271,26 +271,6 @@ namespace Opm {
             well_state_.initWellStateMSWell(wells_ecl_, phase_usage_, &previous_well_state_);
         }
 
-        const int nw = wells_ecl_.size();
-        for (int w = 0; w <nw; ++w) {
-            const auto& well = wells_ecl_[w];
-            const uint64_t effective_events_mask = ScheduleEvents::WELL_STATUS_CHANGE
-                                                 + ScheduleEvents::PRODUCTION_UPDATE
-                                                 + ScheduleEvents::INJECTION_UPDATE
-                                                 + ScheduleEvents::NEW_WELL;
-
-            if(!schedule()[timeStepIdx].wellgroup_events().hasEvent(well.name(), effective_events_mask))
-                continue;
-
-            if (well.isProducer()) {
-                const auto controls = well.productionControls(summaryState);
-                well_state_.currentProductionControls()[w] = controls.cmode;
-            }
-            else {
-                const auto controls = well.injectionControls(summaryState);
-                well_state_.currentInjectionControls()[w] = controls.cmode;
-            }
-        }
         const Group& fieldGroup = schedule().getGroup("FIELD", timeStepIdx);
         WellGroupHelpers::setCmodeGroup(fieldGroup, schedule(), summaryState, timeStepIdx, well_state_);
 
