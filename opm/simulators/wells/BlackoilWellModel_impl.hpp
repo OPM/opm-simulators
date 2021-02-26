@@ -279,16 +279,19 @@ namespace Opm {
                                                  + ScheduleEvents::INJECTION_UPDATE
                                                  + ScheduleEvents::NEW_WELL;
 
-            if(!schedule()[timeStepIdx].wellgroup_events().hasEvent(well.name(), effective_events_mask))
-                continue;
-
             if (well.isProducer()) {
                 const auto controls = well.productionControls(summaryState);
-                well_state_.currentProductionControls()[w] = controls.cmode;
+
+                if (well_state_.currentProductionControls()[w] == Well::ProducerCMode::NONE ||
+                        schedule()[timeStepIdx].wellgroup_events().hasEvent(well.name(), effective_events_mask)) {
+                    well_state_.currentProductionControls()[w] = controls.cmode;
+                }
             }
             else {
-                const auto controls = well.injectionControls(summaryState);
-                well_state_.currentInjectionControls()[w] = controls.cmode;
+                if (schedule()[timeStepIdx].wellgroup_events().hasEvent(well.name(), effective_events_mask)) {
+                    const auto controls = well.injectionControls(summaryState);
+                    well_state_.currentInjectionControls()[w] = controls.cmode;
+                }
             }
         }
         const Group& fieldGroup = schedule().getGroup("FIELD", timeStepIdx);

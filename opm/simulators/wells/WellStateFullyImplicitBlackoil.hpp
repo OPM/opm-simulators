@@ -207,12 +207,8 @@ namespace Opm
                          //   continue;
                          //}
 
-                        // if there is no effective control event happens to the well, we use the current_injection/production_controls_ from prevState
-                        // otherwise, we use the control specified in the deck
-                        if (!effective_events_occurred_[w]) {
-                            current_injection_controls_[ newIndex ] = prevState->currentInjectionControls()[ oldIndex ];
-                            current_production_controls_[ newIndex ] = prevState->currentProductionControls()[ oldIndex ];
-                        }
+                        current_injection_controls_[ newIndex ] = prevState->currentInjectionControls()[ oldIndex ];
+                        current_production_controls_[ newIndex ] = prevState->currentProductionControls()[ oldIndex ];
 
                         // wellrates
                         for( int i=0, idx=newIndex*np, oldidx=oldIndex*np; i<np; ++i, ++idx, ++oldidx )
