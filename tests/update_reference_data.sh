@@ -141,6 +141,7 @@ tests[model6_msw]="flow model6 1_MSW_MODEL6"
 tests[norne_reperf]="flow norne NORNE_ATW2013_B1H_RE-PERF"
 tests[compl_smry]="flow compl_smry COMPL_SMRY"
 tests[3d_tran_operator]="flow parallel_fieldprops 3D_TRAN_OPERATOR"
+tests[3d_porv_operator]="flow parallel_fieldprops 3D_PORV_OPERATOR"
 tests[co2store]="flow co2store CO2STORE"
 
 changed_tests=""

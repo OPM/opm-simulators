@@ -831,6 +831,13 @@ add_test_compareECLFiles(CASENAME 3d_tran_operator
                          REL_TOL ${rel_tol}
                          DIR parallel_fieldprops)
 
+add_test_compareECLFiles(CASENAME 3d_porv_operator
+                         FILENAME 3D_PORV_OPERATOR
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR parallel_fieldprops)
+
 # Restart tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
 
@@ -993,6 +1000,14 @@ if(MPI_FOUND)
 
   add_test_compare_parallel_simulation(CASENAME 3d_tran_operator
                                        FILENAME 3D_TRAN_OPERATOR
+                                       SIMULATOR flow
+                                       ABS_TOL ${abs_tol_parallel}
+                                       REL_TOL ${rel_tol_parallel}
+                                       DIR parallel_fieldprops
+                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
+
+  add_test_compare_parallel_simulation(CASENAME 3d_porv_operator
+                                       FILENAME 3D_PORV_OPERATOR
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${rel_tol_parallel}
