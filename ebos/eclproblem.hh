@@ -2669,11 +2669,10 @@ private:
         referencePorosity_[/*timeIdx=*/0].resize(numDof);
 
         const auto& fp = eclState.fieldProps();
-        const std::vector<double> porvData = fp.porv(true);
+        const std::vector<double> porvData = fp.porv(false);
         const std::vector<int> actnumData = fp.actnum();
         for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
-            unsigned cartElemIdx = vanguard.cartesianIndex(dofIdx);
-            Scalar poreVolume = porvData[cartElemIdx];
+            Scalar poreVolume = porvData[dofIdx];
 
             // we define the porosity as the accumulated pore volume divided by the
             // geometric volume of the element. Note that -- in pathetic cases -- it can
