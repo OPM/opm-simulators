@@ -49,14 +49,23 @@ void ParallelFieldPropsManager::reset_actnum(const std::vector<int>& actnum)
 
 std::vector<double> ParallelFieldPropsManager::porv(bool global) const
 {
-    std::vector<double> result;
+    std::vector<double> global_porv;
     if (m_comm.rank() == 0)
-        result = m_manager.porv(global);
-    size_t size = result.size();
+        global_porv = m_manager.porv(true);
+
+    size_t size = global_porv.size();
     m_comm.broadcast(&size, 1, 0);
-    result.resize(size);
-    m_comm.broadcast(result.data(), size, 0);
-    return result;
+    global_porv.resize(size);
+    m_comm.broadcast(global_porv.data(), size, 0);
+    if (global)
+        return global_porv;
+
+    std::vector<double> local_porv(this->m_activeSize());
+    for (int i = 0; i < m_activeSize(); ++i)
+    {
+        local_porv[i] = global_porv[this->m_local2Global(i)];
+    }
+    return local_porv;
 }
 
 
