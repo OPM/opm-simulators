@@ -268,11 +268,12 @@ namespace Opm {
             /// Returns true if the well was actually found and shut.
             bool forceShutWellByNameIfPredictionMode(const std::string& wellname, const double simulation_time);
 
-            void updateEclWell(int timeStepIdx, int well_index);
-            void updateEclWell(int timeStepIdx, const std::string& wname);
+            void updateEclWell(const int timeStepIdx, const int well_index);
+            void updateEclWell(const int timeStepIdx, const std::string& wname);
             bool hasWell(const std::string& wname);
-            double wellPI(int well_index) const;
+            double wellPI(const int well_index) const;
             double wellPI(const std::string& well_name) const;
+
         protected:
             Simulator& ebosSimulator_;
 
@@ -345,7 +346,7 @@ namespace Opm {
             WellTestState wellTestState_;
             std::unique_ptr<GuideRate> guideRate_;
 
-            std::map<std::string, double> node_pressures_; // Storing network pressures for output.
+            std::map<std::string, double> node_pressures_{}; // Storing network pressures for output.
 
             // used to better efficiency of calcuation
             mutable BVector scaleAddRes_;
