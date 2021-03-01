@@ -194,8 +194,7 @@ namespace WellGroupHelpers
         double rate = 0.0;
         for (const std::string& groupName : group.groups()) {
             const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
-            rate += groupTmp.getGroupEfficiencyFactor()
-                * sumSolventRates(groupTmp, schedule, wellState, reportStepIdx, injector);
+            rate += sumSolventRates(groupTmp, schedule, wellState, reportStepIdx, injector);
         }
         const auto& end = wellState.wellMap().end();
         for (const std::string& wellName : group.wells()) {
@@ -224,7 +223,8 @@ namespace WellGroupHelpers
             else
                 rate -= factor * wellState.solventWellRate(well_index);
         }
-        return rate;
+        const auto& gefac = group.getGroupEfficiencyFactor();
+        return gefac * rate;
     }
 
     void updateGroupTargetReduction(const Group& group,
