@@ -32,6 +32,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <functional>
 #include <iostream>
 #include <map>
 #include <numeric>
@@ -546,11 +547,13 @@ namespace Opm
             return it->second;
         }
 
-
-
-        data::Wells report(const PhaseUsage &pu, const int* globalCellIdxMap) const override
+        data::Wells
+        report(const PhaseUsage &pu,
+               const int* globalCellIdxMap,
+               const std::function<bool(const int)>& wasDynamicallyClosed) const override
         {
-            data::Wells res = WellState::report(pu, globalCellIdxMap);
+            data::Wells res =
+                WellState::report(pu, globalCellIdxMap, wasDynamicallyClosed);
 
             const int nw = this->numWells();
             if (nw == 0) {
@@ -581,8 +584,9 @@ namespace Opm
 
             for (const auto& wt : this->wellMap()) {
                 const auto w = wt.second[ 0 ];
-                const auto& pwinfo = *parallel_well_info_[w];
-                if ((this->status_[w] == Well::Status::SHUT) || !pwinfo.isOwner())
+                if (((this->status_[w] == Well::Status::SHUT) &&
+                     ! wasDynamicallyClosed(w)) ||
+                    ! this->parallel_well_info_[w]->isOwner())
                 {
                     continue;
                 }

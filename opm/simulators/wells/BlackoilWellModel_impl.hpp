@@ -504,6 +504,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     timeStepSucceeded(const double& simulationTime, const double dt)
     {
+        this->closed_this_step_.clear();
 
         // time step is finished and we are not any more at the beginning of an report step
         report_step_starts_ = false;
@@ -761,6 +762,20 @@ namespace Opm {
             for (int w = 0; w < nw; ++w) {
                 const Well& well_ecl = wells_ecl_[w];
                 const std::string& well_name = well_ecl.name();
+                const auto well_status = this->schedule()
+                    .getWell(well_name, time_step).getStatus();
+
+                if ((well_ecl.getStatus() == Well::Status::SHUT) ||
+                    (well_status          == Well::Status::SHUT))
+                {
+                    // Due to ACTIONX the well might have been closed behind our back.
+                    if (well_ecl.getStatus() != Well::Status::SHUT) {
+                        this->closed_this_step_.insert(well_name);
+                        well_state_.shutWell(w);
+                    }
+
+                    continue;
+                }
 
                 // A new WCON keywords can re-open a well that was closed/shut due to Physical limit
                 if (this->wellTestState_.hasWellClosed(well_name)) {
@@ -794,13 +809,6 @@ namespace Opm {
                         well_state_.stopWell(w);
                         wellIsStopped = true;
                     }
-                }
-
-                // Due to ACTIONX the well might have been closed 'behind our back'.
-                const auto well_status = schedule().getWell(well_name, time_step).getStatus();
-                if (well_status == Well::Status::SHUT) {
-                    well_state_.shutWell(w);
-                    continue;
                 }
 
                 // If a production well disallows crossflow and its
@@ -1410,8 +1418,15 @@ namespace Opm {
     {
         Opm::DeferredLogger local_deferredLogger;
         for (const auto& well : well_container_) {
+            const auto wasClosed = wellTestState.hasWellClosed(well->name());
+
             well->updateWellTestState(well_state_, simulationTime, /*writeMessageToOPMLog=*/ true, wellTestState, local_deferredLogger);
+
+            if (!wasClosed && wellTestState.hasWellClosed(well->name())) {
+                this->closed_this_step_.insert(well->name());
+            }
         }
+
         Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
         if (terminal_output_) {
             global_deferredLogger.logMessages();
@@ -2680,6 +2695,21 @@ namespace Opm {
     }
 
 
+
+
+
+    template <typename TypeTag>
+    int
+    BlackoilWellModel<TypeTag>::
+    reportStepIndex() const
+    {
+        return std::max(this->ebosSimulator_.episodeIndex(), 0);
+    }
+
+
+
+
+
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
@@ -2740,6 +2770,19 @@ namespace Opm {
         }
 
         this->last_run_wellpi_ = timeStepIdx;
+    }
+
+
+
+
+
+    template <typename TypeTag>
+    bool
+    BlackoilWellModel<TypeTag>::
+    wasDynamicallyShutThisTimeStep(const int well_index) const
+    {
+        return this->closed_this_step_.find(this->wells_ecl_[well_index].name())
+            != this->closed_this_step_.end();
     }
 
 
@@ -2826,15 +2869,30 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     assignShutConnections(data::Wells& wsrpt) const
     {
+        auto wellID = 0;
+
         for (const auto& well : this->wells_ecl_) {
-            auto xwPos = wsrpt.find(well.name());
-            if (xwPos == wsrpt.end()) { // No well results.  Unexpected.
-                continue;
+            auto& xwel = wsrpt[well.name()]; // data::Wells is a std::map<>
+
+            xwel.dynamicStatus = this->schedule()
+                .getWell(well.name(), this->reportStepIndex()).getStatus();
+
+            const auto wellIsOpen = xwel.dynamicStatus == Well::Status::OPEN;
+            auto skip = [wellIsOpen](const Connection& conn)
+            {
+                return wellIsOpen && (conn.state() != Connection::State::SHUT);
+            };
+
+            if (this->wellTestState_.hasWellClosed(well.name()) &&
+                !this->wasDynamicallyShutThisTimeStep(wellID))
+            {
+                xwel.dynamicStatus = well.getAutomaticShutIn()
+                    ? Well::Status::SHUT : Well::Status::STOP;
             }
 
-            auto& xcon = xwPos->second.connections;
+            auto& xcon = xwel.connections;
             for (const auto& conn : well.getConnections()) {
-                if (conn.state() != Connection::State::SHUT) {
+                if (skip(conn)) {
                     continue;
                 }
 
@@ -2845,6 +2903,8 @@ namespace Opm {
                 xc.effective_Kh = conn.Kh();
                 xc.trans_factor = conn.CF();
             }
+
+            ++wellID;
         }
     }
 
