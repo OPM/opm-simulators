@@ -340,14 +340,22 @@ public:
 protected:
     void createGrids_()
     {
+        const EclipseGrid * input_grid = nullptr;
+        std::vector<double> porv;
+        // At this stage the ParallelEclipseState instance is still in global
+        // view; on rank 0 we have undistributed data for the entire grid, on
+        // the other ranks the EclipseState is empty.
+        if (mpiRank == 0) {
+            input_grid = &this->eclState().getInputGrid();
+            porv = this->eclState().fieldProps().porv(true);
+        }
+
         grid_.reset(new Dune::CpGrid());
-        grid_->processEclipseFormat(mpiRank == 0 ? &this->eclState().getInputGrid()
-                                                 : nullptr,
+        grid_->processEclipseFormat(input_grid,
                                     /*isPeriodic=*/false,
                                     /*flipNormals=*/false,
                                     /*clipZ=*/false,
-                                    mpiRank == 0 ? this->eclState().fieldProps().porv(true)
-                                                 : std::vector<double>(),
+                                    porv,
                                     this->eclState().getInputNNC());
 
         // we use separate grid objects: one for the calculation of the initial condition
