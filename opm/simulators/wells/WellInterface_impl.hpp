@@ -271,7 +271,7 @@ namespace Opm
     WellInterface<TypeTag>::
     phaseUsage() const
     {
-        assert(phase_usage_);
+        assert(phase_usage_ != nullptr);
 
         return *phase_usage_;
     }

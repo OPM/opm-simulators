@@ -1,23 +1,23 @@
 /*
- Copyright 2016 - 2019 SINTEF Digital, Mathematics & Cybernetics.
- Copyright 2016 - 2018 Equinor ASA.
- Copyright 2017 Dr. Blatt - HPC-Simulation-Software & Services
- Copyright 2016 - 2018 Norce AS
+  Copyright 2016 - 2019 SINTEF Digital, Mathematics & Cybernetics.
+  Copyright 2016 - 2018 Equinor ASA.
+  Copyright 2017 Dr. Blatt - HPC-Simulation-Software & Services
+  Copyright 2016 - 2018 Norce AS
 
- This file is part of the Open Porous Media project (OPM).
+  This file is part of the Open Porous Media project (OPM).
 
- OPM is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
+  OPM is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
 
- OPM is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
+  OPM is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
 
- You should have received a copy of the GNU General Public License
- along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+  You should have received a copy of the GNU General Public License
+  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
@@ -27,51 +27,62 @@
 
 #include <algorithm>
 #include <utility>
+
 #include <fmt/format.h>
 
 namespace Opm {
     template<typename TypeTag>
     BlackoilWellModel<TypeTag>::
     BlackoilWellModel(Simulator& ebosSimulator, const PhaseUsage& phase_usage)
-        : ebosSimulator_(ebosSimulator),
-          phase_usage_(phase_usage),
-          active_wgstate_(phase_usage),
-          last_valid_wgstate_(phase_usage),
-          nupcol_wgstate_(phase_usage)
+        : ebosSimulator_(ebosSimulator)
+        , terminal_output_((ebosSimulator.gridView().comm().rank() == 0) &&
+                           EWOMS_GET_PARAM(TypeTag, bool, EnableTerminalOutput))
+        , phase_usage_(phase_usage)
+        , active_wgstate_(phase_usage)
+        , last_valid_wgstate_(phase_usage)
+        , nupcol_wgstate_(phase_usage)
     {
-        terminal_output_ = false;
-        if (ebosSimulator.gridView().comm().rank() == 0)
-            terminal_output_ = EWOMS_GET_PARAM(TypeTag, bool, EnableTerminalOutput);
-
         // Create the guide rate container.
-        guideRate_.reset(new GuideRate (ebosSimulator_.vanguard().schedule()));
+        this->guideRate_ =
+            std::make_unique<GuideRate>(ebosSimulator_.vanguard().schedule());
 
         local_num_cells_ = ebosSimulator_.gridView().size(0);
+
         // Number of cells the global grid view
         global_num_cells_ = ebosSimulator_.vanguard().globalNumCells();
 
         // Set up cartesian mapping.
-        const auto& grid = ebosSimulator_.vanguard().grid();
-        const auto& cartDims = Opm::UgGridHelpers::cartDims(grid);
-        setupCartesianToCompressed_(Opm::UgGridHelpers::globalCell(grid),
-                                    cartDims[0]*cartDims[1]*cartDims[2]);
-        auto& parallel_wells = ebosSimulator.vanguard().parallelWells();
-        parallel_well_info_.assign(parallel_wells.begin(), parallel_wells.end());
-        const auto& pwell_info = parallel_well_info_;
-        std::size_t numProcs = ebosSimulator.gridView().comm().size();
-        not_on_process_ = [&pwell_info, numProcs](const Well& well) {
-                if (well.getStatus() == Well::Status::SHUT)
-                    return true;
-                if (numProcs == 1u)
-                    return false;
-                std::pair<std::string, bool> value{well.name(), true}; // false indicate not active!
-                auto candidate = std::lower_bound(pwell_info.begin(),
-                                                  pwell_info.end(),
-                                                  value);
-                return candidate == pwell_info.end() || *candidate != value;
-            };
+        {
+            const auto& grid = this->ebosSimulator_.vanguard().grid();
+            const auto& cartDims = Opm::UgGridHelpers::cartDims(grid);
+            setupCartesianToCompressed_(Opm::UgGridHelpers::globalCell(grid),
+                                        cartDims[0] * cartDims[1] * cartDims[2]);
 
-        alternative_well_rate_init_ = EWOMS_GET_PARAM(TypeTag, bool, AlternativeWellRateInit);
+            auto& parallel_wells = ebosSimulator.vanguard().parallelWells();
+            this->parallel_well_info_.assign(parallel_wells.begin(),
+                                             parallel_wells.end());
+        }
+
+        const auto numProcs = ebosSimulator.gridView().comm().size();
+        this->not_on_process_ = [this, numProcs](const Well& well) {
+            if (well.getStatus() == Well::Status::SHUT)
+                return true;
+
+            if (numProcs == decltype(numProcs){1})
+                return false;
+
+            // Recall: false indicates NOT active!
+            const auto value = std::make_pair(well.name(), true);
+            auto candidate = std::lower_bound(this->parallel_well_info_.begin(),
+                                              this->parallel_well_info_.end(),
+                                              value);
+
+            return (candidate == this->parallel_well_info_.end())
+                || (*candidate != value);
+        };
+
+        this->alternative_well_rate_init_ =
+            EWOMS_GET_PARAM(TypeTag, bool, AlternativeWellRateInit);
     }
 
     template<typename TypeTag>
