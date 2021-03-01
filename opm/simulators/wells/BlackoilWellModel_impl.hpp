@@ -2333,10 +2333,7 @@ namespace Opm {
         }
 
         auto cc = Dune::MPIHelper::getCollectiveCommunication();
-        if (cc.size() > 1) {
-            ss << " on rank " << cc.rank();
-        }
-        if (!ss.str().empty())
+        if (!ss.str().empty() && cc.rank() == 0)
             deferred_logger.info(ss.str());
 
     }
@@ -2389,10 +2386,7 @@ namespace Opm {
         }
 
         auto cc = Dune::MPIHelper::getCollectiveCommunication();
-        if (cc.size() > 1) {
-            ss << " on rank " << cc.rank();
-        }
-        if (!ss.str().empty())
+        if (!ss.str().empty() && cc.rank() == 0)
             deferred_logger.info(ss.str());
 
 
@@ -2412,14 +2406,10 @@ namespace Opm {
             ss << "Switching injection control mode for group "<< group.name()
                << " from " << Group::InjectionCMode2String(oldControl)
                << " to " << Group::InjectionCMode2String(newControl);
-            auto cc = Dune::MPIHelper::getCollectiveCommunication();
-            if (cc.size() > 1) {
-                ss << " on rank " << cc.rank();
-            }
             well_state.setCurrentInjectionGroupControl(controlPhase, group.name(), newControl);
         }
-
-        if (!ss.str().empty())
+        auto cc = Dune::MPIHelper::getCollectiveCommunication();
+        if (!ss.str().empty() && cc.rank() == 0)
             deferred_logger.info(ss.str());
 
     }
