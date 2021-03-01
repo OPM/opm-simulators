@@ -1376,7 +1376,7 @@ public:
                         wells_string += matching_wells[iw] + ", ";
                     wells_string += matching_wells.back();
                 }
-                std::string msg = fmt::format("The action: {} evaluated to true at {} wells: {}", action->name(), ts, wells_string);
+                std::string msg = "The action: " + action->name() + " evaluated to true at " + ts + " wells: " + wells_string;
                 Opm::OpmLog::info(msg);
 
                 const auto& wellpi = this->fetchWellPI(reportStep, *action, schedule, matching_wells);
@@ -1390,7 +1390,7 @@ public:
                         this->wellModel_.updateEclWell(reportStep, wname);
                 }
             } else {
-                std::string msg = fmt::format("The action: {} evaluated to false at {}", action->name(), ts);
+                std::string msg = "The action: " + action->name() + " evaluated to false at " + ts;
                 Opm::OpmLog::info(msg);
             }
         }
