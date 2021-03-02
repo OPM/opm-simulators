@@ -1017,6 +1017,9 @@ namespace WellGroupHelpers
         // will be the name of 'group'. But if we recurse, 'name' and
         // 'parent' will stay fixed while 'group' will be higher up
         // in the group tree.
+        // efficiency factor is the well efficiency factor for the first group the well is
+        // part of. Later it is the accumulated factor including the group efficiency factor
+        // of the child of group.
 
         const Group::InjectionCMode& currentGroupControl
             = wellState.currentInjectionGroupControl(injectionPhase, group.name());
@@ -1237,6 +1240,9 @@ namespace WellGroupHelpers
         // will be the name of 'group'. But if we recurse, 'name' and
         // 'parent' will stay fixed while 'group' will be higher up
         // in the group tree.
+        // efficiencyfactor is the well efficiency factor for the first group the well is
+        // part of. Later it is the accumulated factor including the group efficiency factor
+        // of the child of group.
 
         const Group::ProductionCMode& currentGroupControl = wellState.currentProductionGroupControl(group.name());
 
