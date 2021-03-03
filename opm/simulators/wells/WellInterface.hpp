@@ -41,6 +41,15 @@
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
 #include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
+// NOTE: GasLiftSingleWell.hpp includes StandardWell.hpp which includes ourself
+//   (WellInterface.hpp), so we need to forward declare GasLiftSingleWell
+//   for it to be defined in this file. Similar for BlackoilWellModel
+namespace Opm {
+    template<typename TypeTag> class GasLiftSingleWell;
+    template<typename TypeTag> class BlackoilWellModel;
+}
+#include <opm/simulators/wells/GasLiftSingleWell.hpp>
+#include <opm/simulators/wells/BlackoilWellModel.hpp>
 #include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
 
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
@@ -83,6 +92,11 @@ namespace Opm
         using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
         using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
         using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+        using GasLiftSingleWell = Opm::GasLiftSingleWell<TypeTag>;
+        using GLiftOptWells = typename Opm::BlackoilWellModel<TypeTag>::GLiftOptWells;
+        using GLiftProdWells = typename Opm::BlackoilWellModel<TypeTag>::GLiftProdWells;
+        using GLiftWellStateMap =
+            typename Opm::BlackoilWellModel<TypeTag>::GLiftWellStateMap;
 
         static const int numEq = Indices::numEq;
         static const int numPhases = Indices::numPhases;
@@ -174,10 +188,13 @@ namespace Opm
                                     Opm::DeferredLogger& deferred_logger
                                     ) = 0;
 
-        virtual void maybeDoGasLiftOptimization (
+        virtual void gasLiftOptimizationStage1 (
             WellState& well_state,
             const Simulator& ebosSimulator,
-            DeferredLogger& deferred_logger
+            DeferredLogger& deferred_logger,
+            GLiftProdWells& prod_wells,
+            GLiftOptWells& glift_wells,
+            GLiftWellStateMap& state_map
         ) const = 0;
 
         void updateWellTestState(const WellState& well_state,
@@ -324,6 +341,7 @@ namespace Opm
                                WellState& well_state,
                                Opm::DeferredLogger& deferred_logger);
 
+        const PhaseUsage& phaseUsage() const;
 
     protected:
 
@@ -434,8 +452,6 @@ namespace Opm
         mutable std::vector<double> ipr_b_;
 
         bool changed_to_stopped_this_step_ = false;
-
-        const PhaseUsage& phaseUsage() const;
 
         int flowPhaseToEbosCompIdx( const int phaseIdx ) const;
 

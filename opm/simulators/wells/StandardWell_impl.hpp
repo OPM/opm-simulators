@@ -275,7 +275,7 @@ namespace Opm
                 return primary_variables_evaluation_[SFrac];
             }
         }
-        else if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {             
+        else if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx)) {
                 return primary_variables_evaluation_[GFrac];
             }
@@ -300,7 +300,7 @@ namespace Opm
 
                 well_fraction -= primary_variables_evaluation_[GFrac];
         }
-        
+
         return well_fraction;
     }
 
@@ -1115,7 +1115,7 @@ namespace Opm
 
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
             F[pu.phase_pos[Oil]] = 1.0;
-              
+
             if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                 F[pu.phase_pos[Water]] = primary_variables_[WFrac];
                 F[pu.phase_pos[Oil]] -= F[pu.phase_pos[Water]];
@@ -1213,7 +1213,7 @@ namespace Opm
         std::vector<double> F(number_of_phases_, 0.0);
         double F_solvent = 0.0;
         if ( FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) ) {
-            const int oil_pos = pu.phase_pos[Oil];            
+            const int oil_pos = pu.phase_pos[Oil];
             F[oil_pos] = 1.0;
 
             if ( FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) ) {
@@ -1234,7 +1234,7 @@ namespace Opm
             }
         }
         else if ( FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) ) {
-            const int water_pos = pu.phase_pos[Water];            
+            const int water_pos = pu.phase_pos[Water];
             F[water_pos] = 1.0;
 
             if ( FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) ) {
@@ -1244,7 +1244,7 @@ namespace Opm
             }
         }
         else if ( FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) ) {
-            const int gas_pos = pu.phase_pos[Gas];            
+            const int gas_pos = pu.phase_pos[Gas];
             F[gas_pos] = 1.0;
         }
 
@@ -2696,12 +2696,19 @@ namespace Opm
             gliftDebug("Optimization disabled in WellState", deferred_logger);
             return false;
         }
-        const int well_index = index_of_well_;
-        const Well::ProducerCMode& control_mode
-            = well_state.currentProductionControls()[well_index];
-        if (control_mode != Well::ProducerCMode::THP ) {
-            gliftDebug("Not THP control", deferred_logger);
+        if (well_state.gliftCheckAlqOscillation(name())) {
+            gliftDebug("further optimization skipped due to oscillation in ALQ",
+                deferred_logger);
             return false;
+        }
+        if (this->glift_optimize_only_thp_wells) {
+            const int well_index = index_of_well_;
+            const Well::ProducerCMode& control_mode
+                = well_state.currentProductionControls()[well_index];
+            if (control_mode != Well::ProducerCMode::THP ) {
+                gliftDebug("Not THP control", deferred_logger);
+                return false;
+            }
         }
         if (!checkGliftNewtonIterationIdxOk(ebos_simulator, deferred_logger)) {
             return false;
@@ -2709,6 +2716,11 @@ namespace Opm
         const int report_step_idx = ebos_simulator.episodeIndex();
         const Opm::Schedule& schedule = ebos_simulator.vanguard().schedule();
         const GasLiftOpt& glo = schedule.glo(report_step_idx);
+        if (!glo.has_well(name())) {
+            gliftDebug("Gas Lift not activated: WLIFTOPT is probably missing",
+                deferred_logger);
+            return false;
+        }
         auto increment = glo.gaslift_increment();
         // NOTE: According to the manual: LIFTOPT, item 1, :
         //   "Increment size for lift gas injection rate. Lift gas is
@@ -2771,7 +2783,7 @@ namespace Opm
     {
         if (this->glift_debug) {
             const std::string message = fmt::format(
-                "  GLIFT (DEBUG) : Well {} : {}", this->name(), msg);
+                "  GLIFT (DEBUG) : SW : Well {} : {}", this->name(), msg);
             deferred_logger.info(message);
         }
     }
@@ -2819,30 +2831,37 @@ namespace Opm
                 );
     }
 
-
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    maybeDoGasLiftOptimization(
-                          WellState& well_state,
-                          const Simulator& ebos_simulator,
-                          Opm::DeferredLogger& deferred_logger) const
+    gasLiftOptimizationStage1(
+                       WellState& well_state,
+                       const Simulator& ebos_simulator,
+                       Opm::DeferredLogger& deferred_logger,
+                       GLiftProdWells &prod_wells,
+                       GLiftOptWells &glift_wells,
+                       GLiftWellStateMap &glift_state_map
+                       //std::map<std::string, WellInterface *> &prod_wells
+    ) const
     {
         const auto& well = well_ecl_;
         if (well.isProducer()) {
             const auto& summary_state = ebos_simulator.vanguard().summaryState();
-            const Well::ProducerCMode& current_control
-                = well_state.currentProductionControls()[this->index_of_well_];
-            if ( this->Base::wellHasTHPConstraints(summary_state)
-                && current_control != Well::ProducerCMode::BHP ) {
+            if ( this->Base::wellHasTHPConstraints(summary_state) ) {
                 if (doGasLiftOptimize(well_state, ebos_simulator, deferred_logger)) {
-                    const auto& controls = well.productionControls(summary_state);
-                    GasLiftHandler glift {
-                        *this, ebos_simulator, summary_state,
-                        deferred_logger, well_state, controls };
-                    glift.runOptimize();
+                    std::unique_ptr<GasLiftSingleWell> glift
+                        = std::make_unique<GasLiftSingleWell>(
+                             *this, ebos_simulator, summary_state,
+                             deferred_logger, well_state);
+                    auto state = glift->runOptimize();
+                    if (state) {
+                        glift_state_map.insert({this->name(), std::move(state)});
+                        glift_wells.insert({this->name(), std::move(glift)});
+                        return;
+                    }
                 }
             }
+            prod_wells.insert({this->name(), this});
         }
     }
 
