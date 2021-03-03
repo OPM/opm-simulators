@@ -283,7 +283,7 @@ std::size_t packSize(const RestartValue& data, Dune::MPIHelper::MPICommunicator 
         +  packSize(data.extra, comm);
 }
 
-std::size_t packSize(const std::chrono::system_clock::time_point&, Dune::MPIHelper::MPICommunicator comm)
+std::size_t packSize(const Opm::time_point&, Dune::MPIHelper::MPICommunicator comm)
 {
     std::time_t tp;
     return packSize(tp, comm);
@@ -576,10 +576,10 @@ void pack(const RestartValue& data, std::vector<char>& buffer, int& position,
     pack(data.extra, buffer, position, comm);
 }
 
-void pack(const std::chrono::system_clock::time_point& data, std::vector<char>& buffer, int& position,
+void pack(const Opm::time_point& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
-    pack(std::chrono::system_clock::to_time_t(data), buffer, position, comm);
+    pack(Opm::TimeService::to_time_t(data), buffer, position, comm);
 }
 
 
@@ -887,12 +887,12 @@ void unpack(RestartValue& data, std::vector<char>& buffer, int& position,
     unpack(data.extra, buffer, position, comm);
 }
 
-void unpack(std::chrono::system_clock::time_point& data, std::vector<char>& buffer, int& position,
+void unpack(Opm::time_point& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
     std::time_t tp;
     unpack(tp, buffer, position, comm);
-    data = std::chrono::system_clock::from_time_t(tp);
+    data = Opm::TimeService::from_time_t(tp);
 }
 
 

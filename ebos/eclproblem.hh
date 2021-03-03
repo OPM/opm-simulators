@@ -99,6 +99,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/RockwnodTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/OverburdTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/RocktabTable.hpp>
+#include <opm/common/utility/TimeService.hpp>
 #include <opm/material/common/ConditionalStorage.hpp>
 
 #include <dune/common/version.hh>
@@ -858,11 +859,10 @@ public:
         auto& simulator = this->simulator();
         const auto& eclState = simulator.vanguard().eclState();
         const auto& schedule = simulator.vanguard().schedule();
-        const auto& timeMap = schedule.getTimeMap();
 
         // Set the start time of the simulation
-        simulator.setStartTime(timeMap.getStartTime(/*reportStepIdx=*/0));
-        simulator.setEndTime(timeMap.getTotalTime());
+        simulator.setStartTime(schedule.getStartTime());
+        simulator.setEndTime(schedule.simTime(schedule.size() - 1));
 
         // We want the episode index to be the same as the report step index to make
         // things simpler, so we have to set the episode index to -1 because it is
@@ -968,7 +968,7 @@ public:
         // to the first "real" episode/report step
         // for restart the episode index and start is already set
         if (!initconfig.restartRequested()) {
-            simulator.startNextEpisode(timeMap.getTimeStepLength(0));
+            simulator.startNextEpisode(schedule.seconds(0));
             simulator.setEpisodeIndex(0);
         }
     }
@@ -1027,7 +1027,6 @@ public:
         auto& eclState = simulator.vanguard().eclState();
         const auto& schedule = simulator.vanguard().schedule();
         const auto& events = schedule[episodeIdx].events();
-        const auto& timeMap = schedule.getTimeMap();
 
         if (episodeIdx >= 0 && events.hasEvent(Opm::ScheduleEvents::GEO_MODIFIER)) {
             // bring the contents of the keywords to the current state of the SCHEDULE
@@ -1052,12 +1051,12 @@ public:
             std::ostringstream ss;
             boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
             boost::posix_time::ptime curDateTime =
-                boost::posix_time::from_time_t(timeMap.getStartTime(episodeIdx));
+                boost::posix_time::from_time_t(schedule.simTime(episodeIdx));
             ss.imbue(std::locale(std::locale::classic(), facet));
             ss << "Report step " << episodeIdx + 1
-                      << "/" << timeMap.numTimesteps()
-                      << " at day " << timeMap.getTimePassedUntil(episodeIdx)/(24*3600)
-                      << "/" << timeMap.getTotalTime()/(24*3600)
+                      << "/" << schedule.size() - 1
+                      << " at day " << schedule.seconds(episodeIdx)/(24*3600)
+                      << "/" << schedule.seconds(schedule.size() - 1)/(24*3600)
                       << ", date = " << curDateTime.date()
                       << "\n ";
             OpmLog::info(ss.str());
@@ -1241,18 +1240,17 @@ public:
     {
         auto& simulator = this->simulator();
         auto& schedule = simulator.vanguard().schedule();
-        const auto& timeMap = schedule.getTimeMap();
 
         int episodeIdx = simulator.episodeIndex();
 
         // check if we're finished ...
-        if (episodeIdx + 1 >= static_cast<int>(timeMap.numTimesteps())) {
+        if (episodeIdx + 1 >= static_cast<int>(schedule.size() - 1)) {
             simulator.setFinished(true);
             return;
         }
 
         // .. if we're not yet done, start the next episode (report step)
-        simulator.startNextEpisode(timeMap.getTimeStepLength(episodeIdx + 1));
+        simulator.startNextEpisode(schedule.stepLength(episodeIdx + 1));
     }
 
     /*!
@@ -1381,7 +1379,7 @@ public:
 
                 const auto& wellpi = this->fetchWellPI(reportStep, *action, schedule, matching_wells);
 
-                schedule.applyAction(reportStep, std::chrono::system_clock::from_time_t(simTime), *action, actionResult, wellpi);
+                schedule.applyAction(reportStep, Opm::TimeService::from_time_t(simTime), *action, actionResult, wellpi);
                 actionState.add_run(*action, simTime);
 
                 for ( const auto& [wname, _] : wellpi) {
@@ -2742,16 +2740,15 @@ private:
         auto& simulator = this->simulator();
         const auto& schedule = simulator.vanguard().schedule();
         const auto& eclState = simulator.vanguard().eclState();
-        const auto& timeMap = schedule.getTimeMap();
         const auto& initconfig = eclState.getInitConfig();
         {
             int restart_step = initconfig.getRestartStep();
 
-            simulator.setStartTime(timeMap.getStartTime(/*timeStepIdx=*/0));
-            simulator.setTime(timeMap.getTimePassedUntil(restart_step));
+            simulator.setStartTime(schedule.simTime(0));
+            simulator.setTime(schedule.seconds(restart_step));
 
             simulator.startNextEpisode(simulator.startTime() + simulator.time(),
-                                       timeMap.getTimeStepLength(restart_step));
+                                       schedule.stepLength(restart_step));
             simulator.setEpisodeIndex(restart_step);
         }
         eclWriter_->beginRestart();
