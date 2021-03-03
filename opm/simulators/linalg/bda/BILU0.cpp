@@ -142,13 +142,21 @@ namespace bda
         s.LUrows = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (LUmat->Nb + 1));
 #endif
 
-        queue->enqueueWriteBuffer(s.invDiagVals, CL_TRUE, 0, mat->Nb * sizeof(double) * bs * bs, invDiagVals);
+        events.resize(2);
+        err = queue->enqueueWriteBuffer(s.invDiagVals, CL_FALSE, 0, mat->Nb * sizeof(double) * bs * bs, invDiagVals, nullptr, &events[0]);
 
         rowsPerColorPrefix.resize(numColors + 1); // resize initializes value 0.0
         for (int i = 0; i < numColors; ++i) {
             rowsPerColorPrefix[i+1] = rowsPerColorPrefix[i] + rowsPerColor[i];
         }
-        queue->enqueueWriteBuffer(s.rowsPerColor, CL_TRUE, 0, (numColors + 1) * sizeof(int), rowsPerColorPrefix.data());
+        err |= queue->enqueueWriteBuffer(s.rowsPerColor, CL_FALSE, 0, (numColors + 1) * sizeof(int), rowsPerColorPrefix.data(), nullptr, &events[1]);
+
+        cl::WaitForEvents(events);
+        events.clear();
+        if (err != CL_SUCCESS) {
+            // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
+            OPM_THROW(std::logic_error, "BILU0 OpenCL enqueueWriteBuffer error");
+        }
 
         return true;
     } // end init()
@@ -431,6 +439,11 @@ namespace bda
         std::rotate(ptr.begin(), ptr.end() - 1, ptr.end());
         ptr.front() = 0;
 
+        events.resize(3);
+        queue->enqueueWriteBuffer(s.Lvals, CL_FALSE, 0, Lmat->nnzbs * bs * bs * sizeof(double), Lmat->nnzValues, nullptr, &events[0]);
+        queue->enqueueWriteBuffer(s.Uvals, CL_FALSE, 0, Umat->nnzbs * bs * bs * sizeof(double), Utmp, nullptr, &events[1]);
+        queue->enqueueWriteBuffer(s.invDiagVals, CL_FALSE, 0, LUmat->Nb * bs * bs * sizeof(double), invDiagVals, nullptr, &events[2]);
+
         std::call_once(pattern_uploaded, [&](){
             // find the positions of each diagonal block
             // must be done after reordering
@@ -442,17 +455,20 @@ namespace bda
                 assert(candidate != LUmat->colIndices + rowEnd);
                 diagIndex[row] = candidate - LUmat->colIndices;
             }
-            queue->enqueueWriteBuffer(s.diagIndex, CL_TRUE, 0, Nb * sizeof(int), diagIndex);
-            queue->enqueueWriteBuffer(s.Lcols, CL_TRUE, 0, Lmat->nnzbs * sizeof(int), Lmat->colIndices);
-            queue->enqueueWriteBuffer(s.Lrows, CL_TRUE, 0, (Lmat->Nb + 1) * sizeof(int), Lmat->rowPointers);
-            queue->enqueueWriteBuffer(s.Ucols, CL_TRUE, 0, Umat->nnzbs * sizeof(int), cols.data());
-            queue->enqueueWriteBuffer(s.Urows, CL_TRUE, 0, (Umat->Nb + 1) * sizeof(int), ptr.data());
+            events.resize(8);
+            queue->enqueueWriteBuffer(s.diagIndex, CL_FALSE, 0, Nb * sizeof(int), diagIndex, nullptr, &events[3]);
+            queue->enqueueWriteBuffer(s.Lcols, CL_FALSE, 0, Lmat->nnzbs * sizeof(int), Lmat->colIndices, nullptr, &events[4]);
+            queue->enqueueWriteBuffer(s.Lrows, CL_FALSE, 0, (Lmat->Nb + 1) * sizeof(int), Lmat->rowPointers, nullptr, &events[5]);
+            queue->enqueueWriteBuffer(s.Ucols, CL_FALSE, 0, Umat->nnzbs * sizeof(int), cols.data(), nullptr, &events[6]);
+            queue->enqueueWriteBuffer(s.Urows, CL_FALSE, 0, (Umat->Nb + 1) * sizeof(int), ptr.data(), nullptr, &events[7]);
         });
 
-
-        queue->enqueueWriteBuffer(s.Lvals, CL_TRUE, 0, Lmat->nnzbs * bs * bs * sizeof(double), Lmat->nnzValues);
-        queue->enqueueWriteBuffer(s.Uvals, CL_TRUE, 0, Umat->nnzbs * bs * bs * sizeof(double), Utmp);
-        queue->enqueueWriteBuffer(s.invDiagVals, CL_TRUE, 0, LUmat->Nb * bs * bs * sizeof(double), invDiagVals);
+        cl::WaitForEvents(events);
+        events.clear();
+        if (err != CL_SUCCESS) {
+            // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
+            OPM_THROW(std::logic_error, "BILU0 OpenCL enqueueWriteBuffer error");
+        }
 
         delete[] Utmp;
 #endif // CHOW_PATEL
@@ -492,7 +508,8 @@ namespace bda
 #else
         Timer t_copyToGpu;
 
-        queue->enqueueWriteBuffer(s.LUvals, CL_TRUE, 0, LUmat->nnzbs * bs * bs * sizeof(double), LUmat->nnzValues);
+        events.resize(1);
+        queue->enqueueWriteBuffer(s.LUvals, CL_FALSE, 0, LUmat->nnzbs * bs * bs * sizeof(double), LUmat->nnzValues, nullptr, &events[0]);
 
         std::call_once(pattern_uploaded, [&](){
             // find the positions of each diagonal block
@@ -505,10 +522,18 @@ namespace bda
                 assert(candidate != LUmat->colIndices + rowEnd);
                 diagIndex[row] = candidate - LUmat->colIndices;
             }
-            queue->enqueueWriteBuffer(s.diagIndex, CL_TRUE, 0, Nb * sizeof(int), diagIndex);
-            queue->enqueueWriteBuffer(s.LUcols, CL_TRUE, 0, LUmat->nnzbs * sizeof(int), LUmat->colIndices);
-            queue->enqueueWriteBuffer(s.LUrows, CL_TRUE, 0, (LUmat->Nb + 1) * sizeof(int), LUmat->rowPointers);
+            events.resize(4);
+            queue->enqueueWriteBuffer(s.diagIndex, CL_FALSE, 0, Nb * sizeof(int), diagIndex, nullptr, &events[1]);
+            queue->enqueueWriteBuffer(s.LUcols, CL_FALSE, 0, LUmat->nnzbs * sizeof(int), LUmat->colIndices, nullptr, &events[2]);
+            queue->enqueueWriteBuffer(s.LUrows, CL_FALSE, 0, (LUmat->Nb + 1) * sizeof(int), LUmat->rowPointers, nullptr, &events[3]);
         });
+
+        cl::WaitForEvents(events);
+        events.clear();
+        if (err != CL_SUCCESS) {
+            // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
+            OPM_THROW(std::logic_error, "BILU0 OpenCL enqueueWriteBuffer error");
+        }
 
         if (verbosity >= 3) {
             std::ostringstream out;
@@ -518,6 +543,7 @@ namespace bda
 
         Timer t_decomposition;
         std::ostringstream out;
+        cl::Event event;
         for (int color = 0; color < numColors; ++color) {
             const unsigned int firstRow = rowsPerColorPrefix[color];
             const unsigned int lastRow = rowsPerColorPrefix[color+1];
@@ -529,7 +555,7 @@ namespace bda
             if (verbosity >= 4) {
                 out << "color " << color << ": " << firstRow << " - " << lastRow << " = " << lastRow - firstRow << "\n";
             }
-            cl::Event event = (*ilu_decomp_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items2), cl::NDRange(work_group_size2)), firstRow, lastRow, s.LUvals, s.LUcols, s.LUrows, s.invDiagVals, s.diagIndex, LUmat->Nb, cl::Local(lmem_per_work_group2));
+            event = (*ilu_decomp_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items2), cl::NDRange(work_group_size2)), firstRow, lastRow, s.LUvals, s.LUcols, s.LUrows, s.invDiagVals, s.diagIndex, LUmat->Nb, cl::Local(lmem_per_work_group2));
             event.wait();
         }
 

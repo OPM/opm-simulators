@@ -91,6 +91,8 @@ namespace bda
         GPU_storage s;
         cl::Context *context;
         cl::CommandQueue *queue;
+        std::vector<cl::Event> events;
+        cl_int err;
         int work_group_size = 0;
         int total_work_items = 0;
         int lmem_per_work_group = 0;
