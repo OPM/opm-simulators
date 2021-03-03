@@ -152,11 +152,6 @@ namespace bda
         )";
     }
 
-
-    // b = mat * x
-    // algorithm based on:
-    // Optimization of Block Sparse Matrix-Vector Multiplication on Shared-MemoryParallel Architectures,
-    // Ryan Eberhardt, Mark Hoemmen, 2016, https://doi.org/10.1109/IPDPSW.2016.42
     std::string get_spmv_blocked_string() {
         return R"(
         __kernel void spmv_blocked(
@@ -227,8 +222,6 @@ namespace bda
 
 
 
-    // ILU apply part 1: forward substitution
-    // solves L*x=y where L is a lower triangular sparse blocked matrix
     std::string get_ILU_apply1_string(bool full_matrix) {
         std::string s = R"(
             __kernel void ILU_apply1(
@@ -305,8 +298,6 @@ namespace bda
     }
 
 
-    // ILU apply part 2: backward substitution
-    // solves U*x=y where L is a lower triangular sparse blocked matrix
     std::string get_ILU_apply2_string(bool full_matrix) {
         std::string s = R"(
             __kernel void ILU_apply2(
@@ -391,10 +382,6 @@ namespace bda
         return s;
     }
 
-    /// Generate string with the stdwell_apply kernels
-    /// If reorder is true, the B/Ccols do not correspond with the x/y vector
-    /// the x/y vector is reordered, use toOrder to address that
-    /// \param[in] reorder   whether the matrix is reordered or not
     std::string get_stdwell_apply_string(bool reorder) {
         std::string kernel_name = reorder ? "stdwell_apply" : "stdwell_apply_no_reorder";
         std::string s = "__kernel void " + kernel_name + R"((
