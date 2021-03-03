@@ -202,6 +202,8 @@ namespace bda
         }
 #endif
 
+        Timer t_total, t_preprocessing;
+
         // Ut is actually BSC format
         std::unique_ptr<BlockedMatrix<bs> > Ut = std::make_unique<BlockedMatrix<bs> >(Nb, (nnzbs + Nb) / 2);
 
@@ -280,7 +282,14 @@ namespace bda
         // Ltmp is only needed for CPU decomposition, GPU creates GPU buffer for Ltmp
         double *Utmp = new double[Ut->nnzbs * block_size * block_size];
 
+        if (verbosity >= 3) {
+            std::ostringstream out;
+            out << "BILU0 ChowPatel preprocessing: " << t_preprocessing.stop() << " s";
+            OpmLog::info(out.str());
+        }
+
         // actual ILU decomposition
+        Timer t_decomposition;
 #if CHOW_PATEL_GPU
         chowPatelIlu.decomposition(queue, context,
                     Ut->rowPointers, Ut->colIndices, Ut->nnzValues, Ut->nnzbs,
@@ -402,6 +411,14 @@ namespace bda
         delete[] Ltmp;
 #endif
 
+        if (verbosity >= 3){
+            std::ostringstream out;
+            out << "BILU0 ChowPatel decomposition: " << t_decomposition.stop() << " s";
+            OpmLog::info(out.str());
+        }
+
+        Timer t_postprocessing;
+
         // convert Ut to BSR
         // diagonal stored separately
         std::vector<int> ptr(Nb+1, 0);
@@ -439,6 +456,15 @@ namespace bda
         std::rotate(ptr.begin(), ptr.end() - 1, ptr.end());
         ptr.front() = 0;
 
+
+        if (verbosity >= 3){
+            std::ostringstream out;
+            out << "BILU0 ChowPatel postprocessing: " << t_postprocessing.stop() << " s";
+            OpmLog::info(out.str());
+        }
+
+        Timer t_copyToGpu;
+
         events.resize(3);
         queue->enqueueWriteBuffer(s.Lvals, CL_FALSE, 0, Lmat->nnzbs * bs * bs * sizeof(double), Lmat->nnzValues, nullptr, &events[0]);
         queue->enqueueWriteBuffer(s.Uvals, CL_FALSE, 0, Umat->nnzbs * bs * bs * sizeof(double), Utmp, nullptr, &events[1]);
@@ -468,6 +494,13 @@ namespace bda
         if (err != CL_SUCCESS) {
             // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
             OPM_THROW(std::logic_error, "BILU0 OpenCL enqueueWriteBuffer error");
+        }
+
+        if (verbosity >= 3){
+            std::ostringstream out;
+            out << "BILU0 ChowPatel copy to GPU: " << t_copyToGpu.stop() << " s\n";
+            out << "BILU0 ChowPatel total: " << t_total.stop() << " s";
+            OpmLog::info(out.str());
         }
 
         delete[] Utmp;

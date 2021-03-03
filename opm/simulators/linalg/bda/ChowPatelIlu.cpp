@@ -529,7 +529,7 @@ void ChowPatelIlu::decomposition(
             err |= queue->enqueueWriteBuffer(d_LU_cols, CL_FALSE, 0, sizeof(int) * LU_nnzbs, LU_cols, nullptr, &events[5]);
             cl::WaitForEvents(events);
             events.clear();
-            if (verbosity >= 3){
+            if (verbosity >= 4){
                 std::ostringstream out;
                 out << "ChowPatelIlu copy sparsity pattern time: " << t_copy_pattern.stop() << " s";
                 OpmLog::info(out.str());
@@ -550,7 +550,7 @@ void ChowPatelIlu::decomposition(
         err |= queue->enqueueWriteBuffer(d_LU_vals, CL_FALSE, 0, sizeof(double) * LU_nnzbs * block_size * block_size, LU_vals, nullptr, &events[2]);
         cl::WaitForEvents(events);
         events.clear();
-        if (verbosity >= 3){
+        if (verbosity >= 4){
             std::ostringstream out;
             out << "ChowPatelIlu copy1 time: " << t_copy1.stop() << " s";
             OpmLog::info(out.str());
@@ -585,7 +585,7 @@ void ChowPatelIlu::decomposition(
                 d_Ut_idxs, d_L_cols, d_LU_cols,
                 *Larg2, *Uarg2, Nb, cl::Local(lmem_per_work_group), cl::Local(lmem_per_work_group));
             event.wait();
-            if (verbosity >= 3){
+            if (verbosity >= 4){
                 std::ostringstream out;
                 out << "ChowPatelIlu sweep kernel time: " << t_kernel.stop() << " s";
                 OpmLog::info(out.str());
@@ -604,7 +604,7 @@ void ChowPatelIlu::decomposition(
         }
         cl::WaitForEvents(events);
         events.clear();
-        if (verbosity >= 3){
+        if (verbosity >= 4){
             std::ostringstream out;
             out << "ChowPatelIlu copy2 time: " << t_copy2.stop() << " s";
             OpmLog::info(out.str());
