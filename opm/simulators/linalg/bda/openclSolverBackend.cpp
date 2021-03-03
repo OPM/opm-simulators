@@ -45,7 +45,6 @@ template <unsigned int block_size>
 openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_, double tolerance_, unsigned int platformID_, unsigned int deviceID_, ILUReorder opencl_ilu_reorder_) : BdaSolver<block_size>(verbosity_, maxit_, tolerance_, platformID_, deviceID_), opencl_ilu_reorder(opencl_ilu_reorder_) {
     prec = new Preconditioner(opencl_ilu_reorder, verbosity_);
 
-    cl_int err = CL_SUCCESS;
     std::ostringstream out;
     try {
         std::vector<cl::Platform> platforms;
@@ -331,20 +330,23 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
     //applyblockedscaleadd(-1.0, mat, x, r);
 
     // set initial values
-    cl::Event event;
-    queue->enqueueFillBuffer(d_p, 0, 0, sizeof(double) * N);
-    queue->enqueueFillBuffer(d_v, 0, 0, sizeof(double) * N, nullptr, &event);
-    event.wait();
+    events.resize(5);
+    queue->enqueueFillBuffer(d_p, 0, 0, sizeof(double) * N, nullptr, &events[0]);
+    queue->enqueueFillBuffer(d_v, 0, 0, sizeof(double) * N, nullptr, &events[1]);
     rho = 1.0;
     alpha = 1.0;
     omega = 1.0;
 
-    queue->enqueueCopyBuffer(d_b, d_r, 0, 0, sizeof(double) * N, nullptr, &event);
-    event.wait();
-    queue->enqueueCopyBuffer(d_r, d_rw, 0, 0, sizeof(double) * N, nullptr, &event);
-    event.wait();
-    queue->enqueueCopyBuffer(d_r, d_p, 0, 0, sizeof(double) * N, nullptr, &event);
-    event.wait();
+    queue->enqueueCopyBuffer(d_b, d_r, 0, 0, sizeof(double) * N, nullptr, &events[2]);
+    queue->enqueueCopyBuffer(d_r, d_rw, 0, 0, sizeof(double) * N, nullptr, &events[3]);
+    queue->enqueueCopyBuffer(d_r, d_p, 0, 0, sizeof(double) * N, nullptr, &events[4]);
+
+    cl::WaitForEvents(events);
+    events.clear();
+    if (err != CL_SUCCESS) {
+        // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
+        OPM_THROW(std::logic_error, "openclSolverBackend OpenCL enqueue[Fill|Copy]Buffer error");
+    }
 
     norm = norm_w(d_r, d_tmp);
     norm_0 = norm;
@@ -591,7 +593,7 @@ void openclSolverBackend<block_size>::finalize() {
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::copy_system_to_gpu() {
     Timer t;
-    cl::Event event;
+    events.resize(5);
 
 #if COPY_ROW_BY_ROW
     int sum = 0;
@@ -600,19 +602,25 @@ void openclSolverBackend<block_size>::copy_system_to_gpu() {
         memcpy(vals_contiguous + sum, reinterpret_cast<double*>(rmat->nnzValues) + sum, size_row * sizeof(double) * block_size * block_size);
         sum += size_row * block_size * block_size;
     }
-    queue->enqueueWriteBuffer(d_Avals, CL_TRUE, 0, sizeof(double) * nnz, vals_contiguous);
+    err = queue->enqueueWriteBuffer(d_Avals, CL_TRUE, 0, sizeof(double) * nnz, vals_contiguous, nullptr, &events[0]);
 #else
-    queue->enqueueWriteBuffer(d_Avals, CL_TRUE, 0, sizeof(double) * nnz, rmat->nnzValues);
+    err = queue->enqueueWriteBuffer(d_Avals, CL_TRUE, 0, sizeof(double) * nnz, rmat->nnzValues, nullptr, &events[0]);
 #endif
 
-    queue->enqueueWriteBuffer(d_Acols, CL_TRUE, 0, sizeof(int) * nnzb, rmat->colIndices);
-    queue->enqueueWriteBuffer(d_Arows, CL_TRUE, 0, sizeof(int) * (Nb + 1), rmat->rowPointers);
-    queue->enqueueWriteBuffer(d_b, CL_TRUE, 0, sizeof(double) * N, rb);
+    err |= queue->enqueueWriteBuffer(d_Acols, CL_TRUE, 0, sizeof(int) * nnzb, rmat->colIndices, nullptr, &events[1]);
+    err |= queue->enqueueWriteBuffer(d_Arows, CL_TRUE, 0, sizeof(int) * (Nb + 1), rmat->rowPointers, nullptr, &events[2]);
+    err |= queue->enqueueWriteBuffer(d_b, CL_TRUE, 0, sizeof(double) * N, rb, nullptr, &events[3]);
+    err |= queue->enqueueFillBuffer(d_x, 0, 0, sizeof(double) * N, nullptr, &events[4]);
     if (opencl_ilu_reorder != ILUReorder::NONE) {
-        queue->enqueueWriteBuffer(d_toOrder, CL_TRUE, 0, sizeof(int) * Nb, toOrder);
+        events.resize(6);
+        queue->enqueueWriteBuffer(d_toOrder, CL_TRUE, 0, sizeof(int) * Nb, toOrder, nullptr, &events[5]);
     }
-    queue->enqueueFillBuffer(d_x, 0, 0, sizeof(double) * N, nullptr, &event);
-    event.wait();
+    cl::WaitForEvents(events);
+    events.clear();
+    if (err != CL_SUCCESS) {
+        // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
+        OPM_THROW(std::logic_error, "openclSolverBackend OpenCL enqueueWriteBuffer error");
+    }
 
     if (verbosity > 2) {
         std::ostringstream out;
@@ -625,7 +633,7 @@ void openclSolverBackend<block_size>::copy_system_to_gpu() {
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::update_system_on_gpu() {
     Timer t;
-    cl::Event event;
+    events.resize(3);
 
 #if COPY_ROW_BY_ROW
     int sum = 0;
@@ -634,14 +642,19 @@ void openclSolverBackend<block_size>::update_system_on_gpu() {
         memcpy(vals_contiguous + sum, reinterpret_cast<double*>(rmat->nnzValues) + sum, size_row * sizeof(double) * block_size * block_size);
         sum += size_row * block_size * block_size;
     }
-    queue->enqueueWriteBuffer(d_Avals, CL_TRUE, 0, sizeof(double) * nnz, vals_contiguous);
+    err = queue->enqueueWriteBuffer(d_Avals, CL_TRUE, 0, sizeof(double) * nnz, vals_contiguous, nullptr, &events[0]);
 #else
-    queue->enqueueWriteBuffer(d_Avals, CL_TRUE, 0, sizeof(double) * nnz, rmat->nnzValues);
+    err = queue->enqueueWriteBuffer(d_Avals, CL_TRUE, 0, sizeof(double) * nnz, rmat->nnzValues, nullptr, &events[0]);
 #endif
 
-    queue->enqueueWriteBuffer(d_b, CL_TRUE, 0, sizeof(double) * N, rb);
-    queue->enqueueFillBuffer(d_x, 0, 0, sizeof(double) * N, nullptr, &event);
-    event.wait();
+    err |= queue->enqueueWriteBuffer(d_b, CL_TRUE, 0, sizeof(double) * N, rb, nullptr, &events[1]);
+    err |= queue->enqueueFillBuffer(d_x, 0, 0, sizeof(double) * N, nullptr, &events[2]);
+    cl::WaitForEvents(events);
+    events.clear();
+    if (err != CL_SUCCESS) {
+        // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
+        OPM_THROW(std::logic_error, "openclSolverBackend OpenCL enqueueWriteBuffer error");
+    }
 
     if (verbosity > 2) {
         std::ostringstream out;

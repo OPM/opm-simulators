@@ -82,6 +82,8 @@ private:
     std::unique_ptr<BlockedMatrix<block_size> > mat = nullptr;    // original matrix 
     BlockedMatrix<block_size> *rmat = nullptr;                    // reordered matrix (or original if no reordering), used for spmv
     ILUReorder opencl_ilu_reorder;                                // reordering strategy
+    std::vector<cl::Event> events;
+    cl_int err;
 
     /// Divide A by B, and round up: return (int)ceil(A/B)
     /// \param[in] A    dividend

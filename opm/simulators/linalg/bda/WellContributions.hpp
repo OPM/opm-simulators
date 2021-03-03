@@ -26,6 +26,7 @@
 
 #if HAVE_OPENCL
 #include <opm/simulators/linalg/bda/opencl.hpp>
+#include <opm/simulators/linalg/bda/openclKernels.hpp>
 #endif
 
 #include <vector>
@@ -38,6 +39,9 @@
 
 namespace Opm
 {
+
+using bda::stdwell_apply_kernel_type;
+using bda::stdwell_apply_no_reorder_kernel_type;
 
 /// This class serves to eliminate the need to include the WellContributions into the matrix (with --matrix-add-well-contributions=true) for the cusparseSolver
 /// If the --matrix-add-well-contributions commandline parameter is true, this class should not be used
@@ -92,17 +96,10 @@ private:
     std::vector<MultisegmentWellContribution*> multisegments;
 
 #if HAVE_OPENCL
-    typedef cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
-                            cl::Buffer&, const unsigned int, const unsigned int, cl::Buffer&,
-                            cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg> kernel_type;
-    typedef cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
-                            const unsigned int, const unsigned int, cl::Buffer&,
-                            cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg> kernel_type_no_reorder;
-
     cl::Context *context;
     cl::CommandQueue *queue;
-    kernel_type *kernel;
-    kernel_type_no_reorder *kernel_no_reorder;
+    stdwell_apply_kernel_type *kernel;
+    stdwell_apply_no_reorder_kernel_type *kernel_no_reorder;
     std::vector<cl::Event> events;
 
     std::unique_ptr<cl::Buffer> d_Cnnzs_ocl, d_Dnnzs_ocl, d_Bnnzs_ocl;
@@ -154,7 +151,7 @@ public:
 #endif
 
 #if HAVE_OPENCL
-    void setKernel(kernel_type *kernel_, kernel_type_no_reorder *kernel_no_reorder_);
+    void setKernel(stdwell_apply_kernel_type *kernel_, stdwell_apply_no_reorder_kernel_type *kernel_no_reorder_);
     void setOpenCLEnv(cl::Context *context_, cl::CommandQueue *queue_);
 
     /// Since the rows of the matrix are reordered, the columnindices of the matrixdata is incorrect
