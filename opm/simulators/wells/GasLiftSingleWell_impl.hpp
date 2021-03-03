@@ -1131,7 +1131,7 @@ calcEcoGradient(
 template<typename TypeTag>
 bool
 GasLiftSingleWell<TypeTag>::OptimizeState::
-checkAlqOutsideLimits(double alq, double oil_rate)
+checkAlqOutsideLimits(double alq, [[maybe_unused]] double oil_rate)
 {
     std::ostringstream ss;
     bool result = false;

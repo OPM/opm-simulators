@@ -702,8 +702,8 @@ GasLiftStage2<TypeTag>::
 saveGrad_(GradMap &map, const std::string &name, GradInfo &grad)
 {
     if (auto it = map.find(name); it == map.end()) {
-        auto [map_it, success] = map.emplace(name, grad);
-        assert(success);
+        auto result = map.emplace(name, grad);
+        assert(result.second); // the insert was successful
     }
     else {
         it->second = grad;
