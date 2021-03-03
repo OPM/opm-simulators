@@ -26,7 +26,6 @@
 #include <dune/common/timer.hh>
 
 #include <opm/simulators/linalg/bda/openclSolverBackend.hpp>
-#include <opm/simulators/linalg/bda/openclKernels.hpp>
 
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 #include <opm/simulators/linalg/bda/Reorder.hpp>
@@ -524,29 +523,41 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
     initialized = true;
 } // end initialize()
 
+void add_kernel_string(cl::Program::Sources &sources, std::string &source) {
+        sources.emplace_back(std::make_pair(source.c_str(), source.size()));
+}
+
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::get_opencl_kernels() {
 
-        cl::Program::Sources source(1, std::make_pair(axpy_s, strlen(axpy_s)));  // what does this '1' mean? cl::Program::Sources is of type 'std::vector<std::pair<const char*, long unsigned int> >'
-        source.emplace_back(std::make_pair(dot_1_s, strlen(dot_1_s)));
-        source.emplace_back(std::make_pair(norm_s, strlen(norm_s)));
-        source.emplace_back(std::make_pair(custom_s, strlen(custom_s)));
-        source.emplace_back(std::make_pair(spmv_blocked_s, strlen(spmv_blocked_s)));
+        cl::Program::Sources sources;
+        std::string axpy_s = get_axpy_string();
+        add_kernel_string(sources, axpy_s);
+        std::string dot_1_s = get_dot_1_string();
+        add_kernel_string(sources, dot_1_s);
+        std::string norm_s = get_norm_string();
+        add_kernel_string(sources, norm_s);
+        std::string custom_s = get_custom_string();
+        add_kernel_string(sources, custom_s);
+        std::string spmv_blocked_s = get_spmv_blocked_string();
+        add_kernel_string(sources, spmv_blocked_s);
 #if CHOW_PATEL
-        bool full_matrix = false;
+        bool ilu_operate_on_full_matrix = false;
 #else
-        bool full_matrix = true;
+        bool ilu_operate_on_full_matrix = true;
 #endif
-        std::string ILU_apply1_s = get_ILU_apply1_string(full_matrix);
-        source.emplace_back(std::make_pair(ILU_apply1_s.c_str(), strlen(ILU_apply1_s.c_str())));
-        std::string ILU_apply2_s = get_ILU_apply2_string(full_matrix);
-        source.emplace_back(std::make_pair(ILU_apply2_s.c_str(), strlen(ILU_apply2_s.c_str())));
+        std::string ILU_apply1_s = get_ILU_apply1_string(ilu_operate_on_full_matrix);
+        add_kernel_string(sources, ILU_apply1_s);
+        std::string ILU_apply2_s = get_ILU_apply2_string(ilu_operate_on_full_matrix);
+        add_kernel_string(sources, ILU_apply2_s);
         std::string stdwell_apply_s = get_stdwell_apply_string(true);
+        add_kernel_string(sources, stdwell_apply_s);
         std::string stdwell_apply_no_reorder_s = get_stdwell_apply_string(false);
-        source.emplace_back(std::make_pair(stdwell_apply_s.c_str(), strlen(stdwell_apply_s.c_str())));
-        source.emplace_back(std::make_pair(stdwell_apply_no_reorder_s.c_str(), strlen(stdwell_apply_no_reorder_s.c_str())));
-        source.emplace_back(std::make_pair(ilu_decomp_s, strlen(ilu_decomp_s)));
-        cl::Program program = cl::Program(*context, source);
+        add_kernel_string(sources, stdwell_apply_no_reorder_s);
+        std::string ilu_decomp_s = get_ilu_decomp_string();
+        add_kernel_string(sources, ilu_decomp_s);
+
+        cl::Program program = cl::Program(*context, sources);
         program.build(devices);
 
         // queue.enqueueNDRangeKernel() is a blocking/synchronous call, at least for NVIDIA
@@ -557,19 +568,12 @@ void openclSolverBackend<block_size>::get_opencl_kernels() {
         norm_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "norm")));
         axpy_k.reset(new cl::make_kernel<cl::Buffer&, const double, cl::Buffer&, const unsigned int>(cl::Kernel(program, "axpy")));
         custom_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const double, const double, const unsigned int>(cl::Kernel(program, "custom")));
-        spmv_blocked_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "spmv_blocked")));
-        ILU_apply1_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "ILU_apply1")));
-        ILU_apply2_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "ILU_apply2")));
-        stdwell_apply_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
-                                                  cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
-                                                  const unsigned int, const unsigned int, cl::Buffer&,
-                                                  cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg>(cl::Kernel(program, "stdwell_apply")));
-        stdwell_apply_no_reorder_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
-                                                  cl::Buffer&, cl::Buffer&, cl::Buffer&,
-                                                  const unsigned int, const unsigned int, cl::Buffer&,
-                                                  cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg>(cl::Kernel(program, "stdwell_apply_no_reorder")));
-        ilu_decomp_k.reset(new cl::make_kernel<const unsigned int, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
-                                               const int, cl::LocalSpaceArg>(cl::Kernel(program, "ilu_decomp")));
+        spmv_blocked_k.reset(new spmv_kernel_type(cl::Kernel(program, "spmv_blocked")));
+        ILU_apply1_k.reset(new ilu_apply1_kernel_type(cl::Kernel(program, "ILU_apply1")));
+        ILU_apply2_k.reset(new ilu_apply2_kernel_type(cl::Kernel(program, "ILU_apply2")));
+        stdwell_apply_k.reset(new stdwell_apply_kernel_type(cl::Kernel(program, "stdwell_apply")));
+        stdwell_apply_no_reorder_k.reset(new stdwell_apply_no_reorder_kernel_type(cl::Kernel(program, "stdwell_apply_no_reorder")));
+        ilu_decomp_k.reset(new ilu_decomp_kernel_type(cl::Kernel(program, "ilu_decomp")));
 } // end get_opencl_kernels()
 
 template <unsigned int block_size>

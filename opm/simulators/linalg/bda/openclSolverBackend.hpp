@@ -21,6 +21,7 @@
 #define OPM_OPENCLSOLVER_BACKEND_HEADER_INCLUDED
 
 #include <opm/simulators/linalg/bda/opencl.hpp>
+#include <opm/simulators/linalg/bda/openclKernels.hpp>
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 #include <opm/simulators/linalg/bda/BdaSolver.hpp>
 #include <opm/simulators/linalg/bda/ILUReorder.hpp>
@@ -68,19 +69,12 @@ private:
     std::unique_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > norm_k;
     std::unique_ptr<cl::make_kernel<cl::Buffer&, const double, cl::Buffer&, const unsigned int> > axpy_k;
     std::unique_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const double, const double, const unsigned int> > custom_k;
-    std::unique_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > spmv_blocked_k;
-    std::shared_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> > ILU_apply1_k;
-    std::shared_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> > ILU_apply2_k;
-    std::shared_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
-                                    cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
-                                    const unsigned int, const unsigned int, cl::Buffer&,
-                                    cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg> > stdwell_apply_k;
-    std::shared_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
-                                    cl::Buffer&, cl::Buffer&, cl::Buffer&,
-                                    const unsigned int, const unsigned int, cl::Buffer&,
-                                    cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg> > stdwell_apply_no_reorder_k;
-    std::shared_ptr<cl::make_kernel<const unsigned int, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
-                                    const int, cl::LocalSpaceArg> > ilu_decomp_k;
+    std::unique_ptr<spmv_kernel_type> spmv_blocked_k;
+    std::shared_ptr<ilu_apply1_kernel_type> ILU_apply1_k;
+    std::shared_ptr<ilu_apply2_kernel_type> ILU_apply2_k;
+    std::shared_ptr<stdwell_apply_kernel_type> stdwell_apply_k;
+    std::shared_ptr<stdwell_apply_no_reorder_kernel_type> stdwell_apply_no_reorder_k;
+    std::shared_ptr<ilu_decomp_kernel_type> ilu_decomp_k;
 
     Preconditioner *prec = nullptr;                               // only supported preconditioner is BILU0
     int *toOrder = nullptr, *fromOrder = nullptr;                 // BILU0 reorders rows of the matrix via these mappings

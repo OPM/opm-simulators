@@ -26,6 +26,7 @@
 #include <opm/simulators/linalg/bda/ILUReorder.hpp>
 
 #include <opm/simulators/linalg/bda/opencl.hpp>
+#include <opm/simulators/linalg/bda/openclKernels.hpp>
 #include <opm/simulators/linalg/bda/ChowPatelIlu.hpp>
 
 // if CHOW_PATEL is 0, exact ILU decomposition is performed on CPU
@@ -82,8 +83,8 @@ namespace bda
 #endif
         } GPU_storage;
 
-        cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *ILU_apply1;
-        cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *ILU_apply2;
+        ilu_apply1_kernel_type *ILU_apply1;
+        ilu_apply2_kernel_type *ILU_apply2;
         cl::make_kernel<const unsigned int, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                         cl::Buffer&, cl::Buffer&,
                                         const int, cl::LocalSpaceArg> *ilu_decomp_k;
