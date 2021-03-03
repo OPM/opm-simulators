@@ -110,10 +110,10 @@ namespace WellGroupHelpers
         for (const std::string& groupName : group.groups()) {
             std::vector<double> thisPot(np, 0.0);
             const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
+
+            // Note that group effiency factors for groupTmp are applied in updateGuideRateForGroups
             updateGuideRateForGroups(
                 groupTmp, schedule, pu, reportStepIdx, simTime, isInjector, wellState, comm, guideRate, thisPot);
-
-            const auto gefac = groupTmp.getGroupEfficiencyFactor();
 
             // accumulate group contribution from sub group unconditionally
             if (isInjector) {
@@ -129,7 +129,7 @@ namespace WellGroupHelpers
                     else
                         continue;
 
-                    pot[phasePos] += gefac * thisPot[phasePos];
+                    pot[phasePos] += thisPot[phasePos];
                 }
             } else {
                 const Group::ProductionCMode& currentGroupControl = wellState.currentProductionGroupControl(groupName);
@@ -138,7 +138,7 @@ namespace WellGroupHelpers
                     continue;
                 }
                 for (int phase = 0; phase < np; phase++) {
-                    pot[phase] += gefac * thisPot[phase];
+                    pot[phase] += thisPot[phase];
                 }
             }
         }
@@ -171,6 +171,13 @@ namespace WellGroupHelpers
             for (int phase = 0; phase < np; phase++) {
                 pot[phase] += wefac * wellState.wellPotentials()[wellrate_index + phase];
             }
+        }
+
+        // Apply group efficiency factor for this goup
+        auto gefac = group.getGroupEfficiencyFactor();
+
+        for (int phase = 0; phase < np; phase++) {
+            pot[phase] *= gefac;
         }
 
         double oilPot = 0.0;
