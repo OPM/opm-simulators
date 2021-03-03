@@ -437,18 +437,10 @@ namespace bda
             for (int row = 0; row < Nb; ++row) {
                 int rowStart = LUmat->rowPointers[row];
                 int rowEnd = LUmat->rowPointers[row+1];
-                bool diagFound = false;
-                for (int ij = rowStart; ij < rowEnd; ++ij) {
-                    int col = LUmat->colIndices[ij];
-                    if (row == col) {
-                        diagIndex[row] = ij;
-                        diagFound = true;
-                        break;
-                    }
-                }
-                if (!diagFound) {
-                    OPM_THROW(std::logic_error, "Error did not find diagonal block in reordered matrix");
-                }
+
+                auto candidate = std::find(LUmat->colIndices + rowStart, LUmat->colIndices + rowEnd, row);
+                assert(candidate != LUmat->colIndices + rowEnd);
+                diagIndex[row] = candidate - LUmat->colIndices;
             }
             queue->enqueueWriteBuffer(s.diagIndex, CL_TRUE, 0, Nb * sizeof(int), diagIndex);
             queue->enqueueWriteBuffer(s.Lcols, CL_TRUE, 0, Lmat->nnzbs * sizeof(int), Lmat->colIndices);
@@ -508,18 +500,10 @@ namespace bda
             for (int row = 0; row < Nb; ++row) {
                 int rowStart = LUmat->rowPointers[row];
                 int rowEnd = LUmat->rowPointers[row+1];
-                bool diagFound = false;
-                for (int ij = rowStart; ij < rowEnd; ++ij) {
-                    int col = LUmat->colIndices[ij];
-                    if (row == col) {
-                        diagIndex[row] = ij;
-                        diagFound = true;
-                        break;
-                    }
-                }
-                if (!diagFound) {
-                    OPM_THROW(std::logic_error, "Error did not find diagonal block in reordered matrix");
-                }
+
+                auto candidate = std::find(LUmat->colIndices + rowStart, LUmat->colIndices + rowEnd, row);
+                assert(candidate != LUmat->colIndices + rowEnd);
+                diagIndex[row] = candidate - LUmat->colIndices;
             }
             queue->enqueueWriteBuffer(s.diagIndex, CL_TRUE, 0, Nb * sizeof(int), diagIndex);
             queue->enqueueWriteBuffer(s.LUcols, CL_TRUE, 0, LUmat->nnzbs * sizeof(int), LUmat->colIndices);
