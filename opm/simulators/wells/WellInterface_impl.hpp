@@ -944,8 +944,7 @@ namespace Opm
                                 Opm::DeferredLogger& deferred_logger) const
     {
         if (!isOperable()) {
-            if (well_test_state.hasWellClosed(name(), WellTestConfig::Reason::ECONOMIC) ||
-                well_test_state.hasWellClosed(name(), WellTestConfig::Reason::PHYSICAL) ) {
+            if (well_test_state.hasWellClosed(name())) {
                 // Already closed, do nothing.
             } else {
                 well_test_state.closeWell(name(), WellTestConfig::Reason::PHYSICAL, simulation_time);

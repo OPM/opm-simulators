@@ -776,8 +776,7 @@ namespace Opm {
                 // TODO: should we do this for all kinds of closing reasons?
                 // something like wellTestState_.hasWell(well_name)?
                 bool wellIsStopped = false;
-                if ( wellTestState_.hasWellClosed(well_name, WellTestConfig::Reason::ECONOMIC) ||
-                    wellTestState_.hasWellClosed(well_name, WellTestConfig::Reason::PHYSICAL) ) {
+                if ( wellTestState_.hasWellClosed(well_name)) {
                     if( well_ecl.getAutomaticShutIn() ) {
                         // shut wells are not added to the well container
                         well_state_.shutWell(w);
