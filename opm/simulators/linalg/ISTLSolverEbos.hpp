@@ -272,19 +272,12 @@ namespace Opm
                     bdaBridge->get_result(x);
                     accelerator_was_used = true;
                 } else {
-                    // CPU fallback
-                    use_gpu = bdaBridge->getUseGpu();  // update value, BdaBridge might have disabled cusparseSolver
-                    use_fpga = bdaBridge->getUseFpga();
+                    // warn about CPU fallback
+                    // BdaBridge might have disabled its BdaSolver for this simulation due to some error
+                    // in that case the BdaBridge is disabled and flexibleSolver is always used
+                    // or maybe the BdaSolver did not converge in time, then it will be used next linear solve
                     if (simulator_.gridView().comm().rank() == 0) {
-                        if (use_gpu && accelerator_mode.compare("cusparse") == 0) {
-                            OpmLog::warning("cusparseSolver did not converge, now trying Dune to solve current linear system...");
-                        }
-                        if (use_gpu && accelerator_mode.compare("opencl") == 0) {
-                            OpmLog::warning("openclSolver did not converge, now trying Dune to solve current linear system...");
-                        }
-                        if (use_fpga && accelerator_mode.compare("fpga") == 0) {
-                            OpmLog::warning("fpgaSolver did not converge, now trying Dune to solve current linear system...");
-                        }
+                        OpmLog::warning(bdaBridge->getAccleratorName() + " did not converge, now trying Dune to solve current linear system...");
                     }
                 }
             }

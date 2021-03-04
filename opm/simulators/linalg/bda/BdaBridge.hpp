@@ -92,6 +92,11 @@ public:
         return use_fpga;
     }
 
+    /// Return the selected accelerator mode, this is input via the command-line
+    std::string getAccleratorName(){
+        return accelerator_mode;
+    }
+
 }; // end class BdaBridge
 
 }
