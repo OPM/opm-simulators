@@ -231,7 +231,7 @@ public:
 
         ebosSimulator_.startNextEpisode(
             ebosSimulator_.startTime()
-               + schedule().getTimeMap().getTimePassedUntil(timer.currentStepNum()),
+               + schedule().seconds(timer.currentStepNum()),
             timer.currentStepLength());
         ebosSimulator_.setEpisodeIndex(timer.currentStepNum());
         solver->model().beginReportStep();

@@ -605,7 +605,7 @@ public:
         if (wellTopologyChanged_(eclState, reportStepIdx))
             return true;
 
-        if (schedule.getTimeMap().numTimesteps() <= (unsigned) reportStepIdx)
+        if ((schedule.size() - 1) <= (unsigned) reportStepIdx)
             // for the "until the universe dies" episode, the wells don't change
             return false;
 
@@ -660,7 +660,7 @@ protected:
             return true;
         }
 
-        if (schedule.getTimeMap().numTimesteps() <= (unsigned) reportStepIdx)
+        if ((schedule.size() - 1) <= (unsigned) reportStepIdx)
             // for the "until the universe dies" episode, the wells don't change
             return false;
 

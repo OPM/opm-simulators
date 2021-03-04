@@ -2220,6 +2220,7 @@ namespace Opm
             }
         }
 
+        efficiencyFactor *= group.getGroupEfficiencyFactor();
         assert(group.hasInjectionControl(injectionPhase));
         const auto& groupcontrols = group.injectionControls(injectionPhase, summaryState);
 
@@ -2353,6 +2354,7 @@ namespace Opm
             }
         }
 
+        efficiencyFactor *= group.getGroupEfficiencyFactor();
         const auto& well = well_ecl_;
         const auto pu = phaseUsage();
 

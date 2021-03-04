@@ -608,13 +608,12 @@ namespace Opm
         {
 
             const auto& schedule = this->schedule();
-            const auto& timeMap = schedule.getTimeMap();
             auto& ioConfig = eclState().getIOConfig();
             simtimer_ = std::make_unique<SimulatorTimer>();
 
             // initialize variables
             const auto& initConfig = eclState().getInitConfig();
-            simtimer_->init(timeMap, (size_t)initConfig.getRestartStep());
+            simtimer_->init(schedule, (size_t)initConfig.getRestartStep());
 
             if (this->output_cout_) {
                 std::ostringstream oss;

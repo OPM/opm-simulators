@@ -20,7 +20,7 @@
 #ifndef OPM_SIMULATORTIMER_HEADER_INCLUDED
 #define OPM_SIMULATORTIMER_HEADER_INCLUDED
 
-#include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
 
 #include <iosfwd>
@@ -46,8 +46,8 @@ namespace Opm
         ///    stepsize_days (default 1)
         void init(const ParameterGroup& param);
 
-        /// Use the SimulatorTimer as a shim around opm-parser's Opm::TimeMap
-        void init(const TimeMap& timeMap, size_t report_step = 0);
+        /// Use the SimulatorTimer as a shim around opm-commons Schedule class
+        void init(const Schedule& schedule, size_t report_step = 0);
 
         /// Whether the current step is the first step.
         bool initialStep() const;

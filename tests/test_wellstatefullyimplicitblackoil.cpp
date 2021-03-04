@@ -31,6 +31,7 @@
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
+#include <opm/common/utility/TimeService.hpp>
 
 #include <opm/grid/GridHelpers.hpp>
 
@@ -57,7 +58,7 @@ struct Setup
         , grid (es.getInputGrid())
         , python( std::make_shared<Opm::Python>() )
         , sched(deck, es, python)
-        , st(std::chrono::system_clock::from_time_t(sched.getStartTime()))
+        , st(Opm::TimeService::from_time_t(sched.getStartTime()))
     {
         initWellPerfData();
     }

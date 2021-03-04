@@ -29,6 +29,10 @@
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
+#include <opm/parser/eclipse/Python/Python.hpp>
+#include <opm/parser/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
+#include <opm/parser/eclipse/EclipseState/Grid/EclipseGrid.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 
 #include <string>
 #include <iostream>
@@ -40,14 +44,17 @@ BOOST_AUTO_TEST_CASE(CreateTimer)
     const std::string filename1 = "TESTTIMER.DATA";
     Opm::Parser parser;
     Opm::Deck parserDeck = parser.parseFile( filename1);
-
-    Opm::TimeMap timeMap( parserDeck );
+    auto python = std::make_shared<Opm::Python>();
+    Opm::EclipseGrid grid(10,10,10);
+    Opm::FieldPropsManager fp(parserDeck, Opm::Phases{true, true, true}, grid, Opm::TableManager());
+    Opm::Runspec runspec(parserDeck);
+    Opm::Schedule schedule( parserDeck, grid, fp, runspec, python );
     Opm::SimulatorTimer simtimer;
 
     boost::gregorian::date defaultStartDate( 2012, 1, 1);
     BOOST_CHECK_EQUAL(  boost::posix_time::ptime(defaultStartDate), simtimer.currentDateTime() );
 
-    simtimer.init(timeMap);
+    simtimer.init(schedule);
     boost::gregorian::date startDate( 2014, 3, 26);
     BOOST_CHECK_EQUAL(  boost::posix_time::ptime(startDate), simtimer.currentDateTime() );
 

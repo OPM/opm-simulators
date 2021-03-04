@@ -128,10 +128,10 @@ namespace WellGroupHelpers
         double rate = 0.0;
         for (const std::string& groupName : group.groups()) {
             const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
-            rate += groupTmp.getGroupEfficiencyFactor()
-                * sumWellPhaseRates(rates, groupTmp, schedule, wellState, reportStepIdx, phasePos, injector);
+            rate += sumWellPhaseRates(rates, groupTmp, schedule, wellState, reportStepIdx, phasePos, injector);
         }
         const auto& end = wellState.wellMap().end();
+
         for (const std::string& wellName : group.wells()) {
             const auto& it = wellState.wellMap().find(wellName);
             if (it == end) // the well is not found
@@ -159,7 +159,8 @@ namespace WellGroupHelpers
             else
                 rate -= factor * rates[wellrate_index + phasePos];
         }
-        return rate;
+        const auto& gefac = group.getGroupEfficiencyFactor();
+        return gefac * rate;
     }
 
     double sumWellRates(const Group& group,
@@ -193,8 +194,7 @@ namespace WellGroupHelpers
         double rate = 0.0;
         for (const std::string& groupName : group.groups()) {
             const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
-            rate += groupTmp.getGroupEfficiencyFactor()
-                * sumSolventRates(groupTmp, schedule, wellState, reportStepIdx, injector);
+            rate += sumSolventRates(groupTmp, schedule, wellState, reportStepIdx, injector);
         }
         const auto& end = wellState.wellMap().end();
         for (const std::string& wellName : group.wells()) {
@@ -223,7 +223,8 @@ namespace WellGroupHelpers
             else
                 rate -= factor * wellState.solventWellRate(well_index);
         }
-        return rate;
+        const auto& gefac = group.getGroupEfficiencyFactor();
+        return gefac * rate;
     }
 
     void updateGroupTargetReduction(const Group& group,
@@ -1016,6 +1017,9 @@ namespace WellGroupHelpers
         // will be the name of 'group'. But if we recurse, 'name' and
         // 'parent' will stay fixed while 'group' will be higher up
         // in the group tree.
+        // efficiency factor is the well efficiency factor for the first group the well is
+        // part of. Later it is the accumulated factor including the group efficiency factor
+        // of the child of group.
 
         const Group::InjectionCMode& currentGroupControl
             = wellState.currentInjectionGroupControl(injectionPhase, group.name());
@@ -1085,13 +1089,15 @@ namespace WellGroupHelpers
             name, group.name(), schedule, wellState, reportStepIdx, guideRate, target, pu, injectionPhase, true);
         double target_fraction = 1.0;
         bool constraint_broken = false;
+        double efficiencyFactorInclGroup = efficiencyFactor * group.getGroupEfficiencyFactor();
+
         switch (currentGroupControl) {
         case Group::InjectionCMode::RATE: {
             const double current_rate = rates[phasePos];
             const double target_rate = fraction
                 * std::max(0.0,
-                           (groupcontrols.surface_max_rate - groupTargetReduction + current_rate * efficiencyFactor))
-                / efficiencyFactor;
+                           (groupcontrols.surface_max_rate - groupTargetReduction + current_rate * efficiencyFactorInclGroup))
+                / efficiencyFactorInclGroup;
             if (current_rate > target_rate) {
                 constraint_broken = true;
                 target_fraction = target_rate / current_rate;
@@ -1104,8 +1110,8 @@ namespace WellGroupHelpers
             const double target_rate = fraction
                 * std::max(0.0,
                            (groupcontrols.resv_max_rate / coeff - groupTargetReduction
-                            + current_rate * efficiencyFactor))
-                / efficiencyFactor;
+                            + current_rate * efficiencyFactorInclGroup))
+                / efficiencyFactorInclGroup;
             if (current_rate > target_rate) {
                 constraint_broken = true;
                 target_fraction = target_rate / current_rate;
@@ -1118,8 +1124,8 @@ namespace WellGroupHelpers
             const double target_rate = fraction
                 * std::max(0.0,
                            (groupcontrols.target_reinj_fraction * productionRate - groupTargetReduction
-                            + current_rate * efficiencyFactor))
-                / efficiencyFactor;
+                            + current_rate * efficiencyFactorInclGroup))
+                / efficiencyFactorInclGroup;
             if (current_rate > target_rate) {
                 constraint_broken = true;
                 target_fraction = target_rate / current_rate;
@@ -1145,8 +1151,8 @@ namespace WellGroupHelpers
 
             const double current_rate = rates[phasePos];
             const double target_rate = fraction
-                * std::max(0.0, (voidageRate / coeff - groupTargetReduction + current_rate * efficiencyFactor))
-                / efficiencyFactor;
+                * std::max(0.0, (voidageRate / coeff - groupTargetReduction + current_rate * efficiencyFactorInclGroup))
+                / efficiencyFactorInclGroup;
             if (current_rate > target_rate) {
                 constraint_broken = true;
                 target_fraction = target_rate / current_rate;
@@ -1165,7 +1171,7 @@ namespace WellGroupHelpers
 
             const double current_rate = rates[phasePos];
             const double target_rate = fraction
-                * std::max(0.0, (inj_rate - groupTargetReduction + current_rate * efficiencyFactor)) / efficiencyFactor;
+                * std::max(0.0, (inj_rate - groupTargetReduction + current_rate * efficiencyFactorInclGroup)) / efficiencyFactorInclGroup;
             if (current_rate > target_rate) {
                 constraint_broken = true;
                 target_fraction = target_rate / current_rate;
@@ -1236,6 +1242,9 @@ namespace WellGroupHelpers
         // will be the name of 'group'. But if we recurse, 'name' and
         // 'parent' will stay fixed while 'group' will be higher up
         // in the group tree.
+        // efficiencyfactor is the well efficiency factor for the first group the well is
+        // part of. Later it is the accumulated factor including the group efficiency factor
+        // of the child of group.
 
         const Group::ProductionCMode& currentGroupControl = wellState.currentProductionGroupControl(group.name());
 
@@ -1304,6 +1313,7 @@ namespace WellGroupHelpers
             }
         }
 
+        double efficiencyFactorInclGroup = efficiencyFactor * group.getGroupEfficiencyFactor();
         double target = orig_target;
         for (size_t ii = 0; ii < num_ancestors; ++ii) {
             if ((ii == 0) || guideRate->has(chain[ii])) {
@@ -1314,7 +1324,7 @@ namespace WellGroupHelpers
 
                 // Add my reduction back at the level where it is included in the local reduction
                 if (local_reduction_level == ii )
-                    target += current_rate * efficiencyFactor;
+                    target += current_rate * efficiencyFactorInclGroup;
             }
             if (ii < num_ancestors - 1) {
                 // Not final level. Add sub-level reduction back, if
@@ -1333,7 +1343,7 @@ namespace WellGroupHelpers
             target *= localFraction(chain[ii + 1]);
         }
         // Avoid negative target rates comming from too large local reductions.
-        const double target_rate = std::max(1e-12, target / efficiencyFactor);
+        const double target_rate = std::max(1e-12, target / efficiencyFactorInclGroup);
         return std::make_pair(current_rate > target_rate, target_rate / current_rate);
     }
 

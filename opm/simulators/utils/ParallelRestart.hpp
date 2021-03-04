@@ -27,6 +27,7 @@
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/output/eclipse/Summary.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/State.hpp>
+#include <opm/common/utility/TimeService.hpp>
 
 #include <dune/common/parallel/mpihelper.hh>
 
@@ -321,7 +322,7 @@ ADD_PACK_PROTOTYPES(data::WellRates)
 ADD_PACK_PROTOTYPES(RestartKey)
 ADD_PACK_PROTOTYPES(RestartValue)
 ADD_PACK_PROTOTYPES(std::string)
-ADD_PACK_PROTOTYPES(std::chrono::system_clock::time_point)
+ADD_PACK_PROTOTYPES(Opm::time_point)
 
 } // end namespace Mpi
 

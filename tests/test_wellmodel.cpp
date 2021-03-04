@@ -37,6 +37,7 @@
 
 #include <opm/grid/GridManager.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
+#include <opm/common/utility/TimeService.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/grid/GridHelpers.hpp>
@@ -73,7 +74,7 @@ struct SetupTest {
           const Opm::Runspec runspec (deck);
           python = std::make_shared<Opm::Python>();
           schedule.reset( new Opm::Schedule(deck, *ecl_state, python));
-          summaryState.reset( new Opm::SummaryState(std::chrono::system_clock::from_time_t(schedule->getStartTime())));
+          summaryState.reset( new Opm::SummaryState(Opm::TimeService::from_time_t(schedule->getStartTime())));
         }
         current_timestep = 0;
     };
