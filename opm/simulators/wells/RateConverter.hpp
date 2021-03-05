@@ -528,11 +528,11 @@ namespace Opm {
                         }
                     } else {
                         pv += pv_cell;
-                        p += fs.pressure(phaseForProps).value()*pv;
-                        rs += fs.Rs().value()*pv;
-                        rv += fs.Rv().value()*pv;
-                        T += fs.temperature(phaseForProps).value()*pv;
-                        saltConcentration += fs.saltConcentration().value()*pv;
+                        p += fs.pressure(phaseForProps).value()*pv_cell;
+                        rs += fs.Rs().value()*pv_cell;
+                        rv += fs.Rv().value()*pv_cell;
+                        T += fs.temperature(phaseForProps).value()*pv_cell;
+                        saltConcentration += fs.saltConcentration().value()*pv_cell;
                     }
                 }
 
