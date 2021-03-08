@@ -25,16 +25,10 @@
 #include "dune/istl/bcrsmatrix.hh"
 #include <opm/simulators/linalg/matrixblock.hh>
 
+#include <opm/simulators/linalg/bda/BdaSolver.hpp>
 #include <opm/simulators/linalg/bda/ILUReorder.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 
-#if HAVE_CUDA
-#include <opm/simulators/linalg/bda/cusparseSolverBackend.hpp>
-#endif
-
-#if HAVE_OPENCL
-#include <opm/simulators/linalg/bda/openclSolverBackend.hpp>
-#endif
 
 namespace Opm
 {
@@ -48,6 +42,7 @@ class BdaBridge
 {
 private:
     bool use_gpu = false;
+    std::string gpu_mode;
     std::unique_ptr<bda::BdaSolver<block_size> > backend;
 
 public:
@@ -79,9 +74,11 @@ public:
         return use_gpu;
     }
 
-    const bda::BdaSolver<block_size>& getBackend() const {
-        return *backend;
-    }
+    /// Initialize the WellContributions object with opencl context and queue
+    /// those must be set before calling BlackOilWellModel::getWellContributions() in ISTL
+    /// \param[in] wellContribs   container to hold all WellContributions
+    void initWellContributions(WellContributions& wellContribs);
+
 
 }; // end class BdaBridge
 

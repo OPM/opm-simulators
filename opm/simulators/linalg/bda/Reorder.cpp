@@ -201,11 +201,10 @@ void reorderBlockedMatrixByPattern(BlockedMatrix<block_size> *mat, int *toOrder,
 
 void colorsToReordering(int Nb, std::vector<int>& colors, int numColors, int *toOrder, int *fromOrder, std::vector<int>& rowsPerColor) {
     int reordered = 0;
-    int i, c;
 
     // Find reordering patterns
-    for (c = 0; c < numColors; c++) {
-        for (i = 0; i < Nb; i++) {
+    for (int c = 0; c < numColors; c++) {
+        for (int i = 0; i < Nb; i++) {
             if (colors[i] == c) {
                 rowsPerColor[c]++;
                 toOrder[i] = reordered;
@@ -259,9 +258,10 @@ void findLevelScheduling(int *CSRColIndices, int *CSRRowPointers, int *CSCRowInd
     int activeRowIndex = 0, colorEnd, nextActiveRowIndex = 0;
     int thisRow;
     std::vector<bool> doneRows(Nb, false);
-    rowsPerColor.reserve(Nb);
-
     std::vector <int> rowsToStart;
+
+    // since emplace_back() is used to fill, the vector must be empty
+    assert(rowsPerColor.size() == 0);
 
     // find starting rows: rows that are independent from all rows that come before them.
     for (thisRow = 0; thisRow < Nb; thisRow++) {
@@ -312,8 +312,7 @@ void findLevelScheduling(int *CSRColIndices, int *CSRRowPointers, int *CSCRowInd
 
 template <unsigned int block_size>
 void findGraphColoring(const int *CSRColIndices, const int *CSRRowPointers, const int *CSCRowIndices, const int *CSCColPointers, int Nb, int maxRowsPerColor, int maxColsPerColor, int *numColors, int *toOrder, int *fromOrder, std::vector<int>& rowsPerColor) {
-    std::vector<int> rowColor;
-    rowColor.resize(Nb);
+    std::vector<int> rowColor(Nb);
 
     *numColors = colorBlockedNodes<block_size>(Nb, CSRRowPointers, CSRColIndices, CSCColPointers, CSCRowIndices, rowColor, maxRowsPerColor, maxColsPerColor);
 

@@ -26,7 +26,6 @@
 #include <dune/common/timer.hh>
 
 #include <opm/simulators/linalg/bda/openclSolverBackend.hpp>
-#include <opm/simulators/linalg/bda/openclKernels.hpp>
 
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 #include <opm/simulators/linalg/bda/Reorder.hpp>
@@ -46,7 +45,6 @@ template <unsigned int block_size>
 openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_, double tolerance_, unsigned int platformID_, unsigned int deviceID_, ILUReorder opencl_ilu_reorder_) : BdaSolver<block_size>(verbosity_, maxit_, tolerance_, platformID_, deviceID_), opencl_ilu_reorder(opencl_ilu_reorder_) {
     prec = new Preconditioner(opencl_ilu_reorder, verbosity_);
 
-    cl_int err = CL_SUCCESS;
     std::ostringstream out;
     try {
         std::vector<cl::Platform> platforms;
@@ -332,20 +330,23 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
     //applyblockedscaleadd(-1.0, mat, x, r);
 
     // set initial values
-    cl::Event event;
-    queue->enqueueFillBuffer(d_p, 0, 0, sizeof(double) * N);
-    queue->enqueueFillBuffer(d_v, 0, 0, sizeof(double) * N, nullptr, &event);
-    event.wait();
+    events.resize(5);
+    queue->enqueueFillBuffer(d_p, 0, 0, sizeof(double) * N, nullptr, &events[0]);
+    queue->enqueueFillBuffer(d_v, 0, 0, sizeof(double) * N, nullptr, &events[1]);
     rho = 1.0;
     alpha = 1.0;
     omega = 1.0;
 
-    queue->enqueueCopyBuffer(d_b, d_r, 0, 0, sizeof(double) * N, nullptr, &event);
-    event.wait();
-    queue->enqueueCopyBuffer(d_r, d_rw, 0, 0, sizeof(double) * N, nullptr, &event);
-    event.wait();
-    queue->enqueueCopyBuffer(d_r, d_p, 0, 0, sizeof(double) * N, nullptr, &event);
-    event.wait();
+    queue->enqueueCopyBuffer(d_b, d_r, 0, 0, sizeof(double) * N, nullptr, &events[2]);
+    queue->enqueueCopyBuffer(d_r, d_rw, 0, 0, sizeof(double) * N, nullptr, &events[3]);
+    queue->enqueueCopyBuffer(d_r, d_p, 0, 0, sizeof(double) * N, nullptr, &events[4]);
+
+    cl::WaitForEvents(events);
+    events.clear();
+    if (err != CL_SUCCESS) {
+        // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
+        OPM_THROW(std::logic_error, "openclSolverBackend OpenCL enqueue[Fill|Copy]Buffer error");
+    }
 
     norm = norm_w(d_r, d_tmp);
     norm_0 = norm;
@@ -475,18 +476,6 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
     out.clear();
 
     try {
-        cl::Program::Sources source(1, std::make_pair(axpy_s, strlen(axpy_s)));  // what does this '1' mean? cl::Program::Sources is of type 'std::vector<std::pair<const char*, long unsigned int> >'
-        source.emplace_back(std::make_pair(dot_1_s, strlen(dot_1_s)));
-        source.emplace_back(std::make_pair(norm_s, strlen(norm_s)));
-        source.emplace_back(std::make_pair(custom_s, strlen(custom_s)));
-        source.emplace_back(std::make_pair(spmv_blocked_s, strlen(spmv_blocked_s)));
-        source.emplace_back(std::make_pair(ILU_apply1_s, strlen(ILU_apply1_s)));
-        source.emplace_back(std::make_pair(ILU_apply2_s, strlen(ILU_apply2_s)));
-        source.emplace_back(std::make_pair(stdwell_apply_s, strlen(stdwell_apply_s)));
-        source.emplace_back(std::make_pair(stdwell_apply_no_reorder_s, strlen(stdwell_apply_no_reorder_s)));
-        program = cl::Program(*context, source);
-        program.build(devices);
-
         prec->setOpenCLContext(context.get());
         prec->setOpenCLQueue(queue.get());
 
@@ -518,27 +507,9 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
             d_toOrder = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * Nb);
         }
 
-        // queue.enqueueNDRangeKernel() is a blocking/synchronous call, at least for NVIDIA
-        // cl::make_kernel<> myKernel(); myKernel(args, arg1, arg2); is also blocking
+        get_opencl_kernels();
 
-        // actually creating the kernels
-        dot_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "dot_1")));
-        norm_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "norm")));
-        axpy_k.reset(new cl::make_kernel<cl::Buffer&, const double, cl::Buffer&, const unsigned int>(cl::Kernel(program, "axpy")));
-        custom_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const double, const double, const unsigned int>(cl::Kernel(program, "custom")));
-        spmv_blocked_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "spmv_blocked")));
-        ILU_apply1_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "ILU_apply1")));
-        ILU_apply2_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "ILU_apply2")));
-        stdwell_apply_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
-                                                  cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
-                                                  const unsigned int, const unsigned int, cl::Buffer&,
-                                                  cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg>(cl::Kernel(program, "stdwell_apply")));
-        stdwell_apply_no_reorder_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
-                                                  cl::Buffer&, cl::Buffer&, cl::Buffer&,
-                                                  const unsigned int, const unsigned int, cl::Buffer&,
-                                                  cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg>(cl::Kernel(program, "stdwell_apply_no_reorder")));
-
-        prec->setKernels(ILU_apply1_k.get(), ILU_apply2_k.get());
+        prec->setKernels(ILU_apply1_k.get(), ILU_apply2_k.get(), ilu_decomp_k.get());
 
     } catch (const cl::Error& error) {
         std::ostringstream oss;
@@ -553,6 +524,59 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
 
     initialized = true;
 } // end initialize()
+
+void add_kernel_string(cl::Program::Sources &sources, std::string &source) {
+        sources.emplace_back(std::make_pair(source.c_str(), source.size()));
+}
+
+template <unsigned int block_size>
+void openclSolverBackend<block_size>::get_opencl_kernels() {
+
+        cl::Program::Sources sources;
+        std::string axpy_s = get_axpy_string();
+        add_kernel_string(sources, axpy_s);
+        std::string dot_1_s = get_dot_1_string();
+        add_kernel_string(sources, dot_1_s);
+        std::string norm_s = get_norm_string();
+        add_kernel_string(sources, norm_s);
+        std::string custom_s = get_custom_string();
+        add_kernel_string(sources, custom_s);
+        std::string spmv_blocked_s = get_spmv_blocked_string();
+        add_kernel_string(sources, spmv_blocked_s);
+#if CHOW_PATEL
+        bool ilu_operate_on_full_matrix = false;
+#else
+        bool ilu_operate_on_full_matrix = true;
+#endif
+        std::string ILU_apply1_s = get_ILU_apply1_string(ilu_operate_on_full_matrix);
+        add_kernel_string(sources, ILU_apply1_s);
+        std::string ILU_apply2_s = get_ILU_apply2_string(ilu_operate_on_full_matrix);
+        add_kernel_string(sources, ILU_apply2_s);
+        std::string stdwell_apply_s = get_stdwell_apply_string(true);
+        add_kernel_string(sources, stdwell_apply_s);
+        std::string stdwell_apply_no_reorder_s = get_stdwell_apply_string(false);
+        add_kernel_string(sources, stdwell_apply_no_reorder_s);
+        std::string ilu_decomp_s = get_ilu_decomp_string();
+        add_kernel_string(sources, ilu_decomp_s);
+
+        cl::Program program = cl::Program(*context, sources);
+        program.build(devices);
+
+        // queue.enqueueNDRangeKernel() is a blocking/synchronous call, at least for NVIDIA
+        // cl::make_kernel<> myKernel(); myKernel(args, arg1, arg2); is also blocking
+
+        // actually creating the kernels
+        dot_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "dot_1")));
+        norm_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "norm")));
+        axpy_k.reset(new cl::make_kernel<cl::Buffer&, const double, cl::Buffer&, const unsigned int>(cl::Kernel(program, "axpy")));
+        custom_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const double, const double, const unsigned int>(cl::Kernel(program, "custom")));
+        spmv_blocked_k.reset(new spmv_kernel_type(cl::Kernel(program, "spmv_blocked")));
+        ILU_apply1_k.reset(new ilu_apply1_kernel_type(cl::Kernel(program, "ILU_apply1")));
+        ILU_apply2_k.reset(new ilu_apply2_kernel_type(cl::Kernel(program, "ILU_apply2")));
+        stdwell_apply_k.reset(new stdwell_apply_kernel_type(cl::Kernel(program, "stdwell_apply")));
+        stdwell_apply_no_reorder_k.reset(new stdwell_apply_no_reorder_kernel_type(cl::Kernel(program, "stdwell_apply_no_reorder")));
+        ilu_decomp_k.reset(new ilu_decomp_kernel_type(cl::Kernel(program, "ilu_decomp")));
+} // end get_opencl_kernels()
 
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::finalize() {
@@ -569,7 +593,7 @@ void openclSolverBackend<block_size>::finalize() {
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::copy_system_to_gpu() {
     Timer t;
-    cl::Event event;
+    events.resize(5);
 
 #if COPY_ROW_BY_ROW
     int sum = 0;
@@ -578,19 +602,25 @@ void openclSolverBackend<block_size>::copy_system_to_gpu() {
         memcpy(vals_contiguous + sum, reinterpret_cast<double*>(rmat->nnzValues) + sum, size_row * sizeof(double) * block_size * block_size);
         sum += size_row * block_size * block_size;
     }
-    queue->enqueueWriteBuffer(d_Avals, CL_TRUE, 0, sizeof(double) * nnz, vals_contiguous);
+    err = queue->enqueueWriteBuffer(d_Avals, CL_TRUE, 0, sizeof(double) * nnz, vals_contiguous, nullptr, &events[0]);
 #else
-    queue->enqueueWriteBuffer(d_Avals, CL_TRUE, 0, sizeof(double) * nnz, rmat->nnzValues);
+    err = queue->enqueueWriteBuffer(d_Avals, CL_TRUE, 0, sizeof(double) * nnz, rmat->nnzValues, nullptr, &events[0]);
 #endif
 
-    queue->enqueueWriteBuffer(d_Acols, CL_TRUE, 0, sizeof(int) * nnzb, rmat->colIndices);
-    queue->enqueueWriteBuffer(d_Arows, CL_TRUE, 0, sizeof(int) * (Nb + 1), rmat->rowPointers);
-    queue->enqueueWriteBuffer(d_b, CL_TRUE, 0, sizeof(double) * N, rb);
+    err |= queue->enqueueWriteBuffer(d_Acols, CL_TRUE, 0, sizeof(int) * nnzb, rmat->colIndices, nullptr, &events[1]);
+    err |= queue->enqueueWriteBuffer(d_Arows, CL_TRUE, 0, sizeof(int) * (Nb + 1), rmat->rowPointers, nullptr, &events[2]);
+    err |= queue->enqueueWriteBuffer(d_b, CL_TRUE, 0, sizeof(double) * N, rb, nullptr, &events[3]);
+    err |= queue->enqueueFillBuffer(d_x, 0, 0, sizeof(double) * N, nullptr, &events[4]);
     if (opencl_ilu_reorder != ILUReorder::NONE) {
-        queue->enqueueWriteBuffer(d_toOrder, CL_TRUE, 0, sizeof(int) * Nb, toOrder);
+        events.resize(6);
+        queue->enqueueWriteBuffer(d_toOrder, CL_TRUE, 0, sizeof(int) * Nb, toOrder, nullptr, &events[5]);
     }
-    queue->enqueueFillBuffer(d_x, 0, 0, sizeof(double) * N, nullptr, &event);
-    event.wait();
+    cl::WaitForEvents(events);
+    events.clear();
+    if (err != CL_SUCCESS) {
+        // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
+        OPM_THROW(std::logic_error, "openclSolverBackend OpenCL enqueueWriteBuffer error");
+    }
 
     if (verbosity > 2) {
         std::ostringstream out;
@@ -603,7 +633,7 @@ void openclSolverBackend<block_size>::copy_system_to_gpu() {
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::update_system_on_gpu() {
     Timer t;
-    cl::Event event;
+    events.resize(3);
 
 #if COPY_ROW_BY_ROW
     int sum = 0;
@@ -612,14 +642,19 @@ void openclSolverBackend<block_size>::update_system_on_gpu() {
         memcpy(vals_contiguous + sum, reinterpret_cast<double*>(rmat->nnzValues) + sum, size_row * sizeof(double) * block_size * block_size);
         sum += size_row * block_size * block_size;
     }
-    queue->enqueueWriteBuffer(d_Avals, CL_TRUE, 0, sizeof(double) * nnz, vals_contiguous);
+    err = queue->enqueueWriteBuffer(d_Avals, CL_TRUE, 0, sizeof(double) * nnz, vals_contiguous, nullptr, &events[0]);
 #else
-    queue->enqueueWriteBuffer(d_Avals, CL_TRUE, 0, sizeof(double) * nnz, rmat->nnzValues);
+    err = queue->enqueueWriteBuffer(d_Avals, CL_TRUE, 0, sizeof(double) * nnz, rmat->nnzValues, nullptr, &events[0]);
 #endif
 
-    queue->enqueueWriteBuffer(d_b, CL_TRUE, 0, sizeof(double) * N, rb);
-    queue->enqueueFillBuffer(d_x, 0, 0, sizeof(double) * N, nullptr, &event);
-    event.wait();
+    err |= queue->enqueueWriteBuffer(d_b, CL_TRUE, 0, sizeof(double) * N, rb, nullptr, &events[1]);
+    err |= queue->enqueueFillBuffer(d_x, 0, 0, sizeof(double) * N, nullptr, &events[2]);
+    cl::WaitForEvents(events);
+    events.clear();
+    if (err != CL_SUCCESS) {
+        // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
+        OPM_THROW(std::logic_error, "openclSolverBackend OpenCL enqueueWriteBuffer error");
+    }
 
     if (verbosity > 2) {
         std::ostringstream out;
