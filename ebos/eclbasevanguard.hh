@@ -457,7 +457,7 @@ public:
         // written to disk (every N report step)
         int outputInterval = EWOMS_GET_PARAM(TypeTag, int, EclOutputInterval);
         if (outputInterval >= 0)
-            schedule().restart().overrideRestartWriteInterval(outputInterval);
+            schedule().rst_override_interval(outputInterval);
 
         // Initialize parallelWells with all local wells
         const auto& schedule_wells = schedule().getWellsatEnd();
