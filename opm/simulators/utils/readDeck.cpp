@@ -227,7 +227,7 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
                 setupMessageLimiter(schedule->operator[](0).message_limits(), "STDOUT_LOGGER");
             }
             if (!summaryConfig)
-                summaryConfig = std::make_unique<Opm::SummaryConfig>(*deck, *schedule, eclipseState->fieldProps(), eclipseState->getTableManager(),
+                summaryConfig = std::make_unique<Opm::SummaryConfig>(*deck, *schedule, eclipseState->fieldProps(), 
                                                                      eclipseState->aquifer(), *parseContext, *errorGuard);
 
             Opm::checkConsistentArrayDimensions(*eclipseState, *schedule, *parseContext, *errorGuard);
