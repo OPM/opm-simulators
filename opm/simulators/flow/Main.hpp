@@ -455,9 +455,14 @@ namespace Opm
                     OpmLog::info("Reading deck file '" + deckFilename + "'");
                 }
 
+                std::optional<int> outputInterval;
+                int output_param = EWOMS_GET_PARAM(PreTypeTag, int, EclOutputInterval);
+                if (output_param >= 0)
+                    outputInterval = output_param;
+
                 readDeck(mpiRank, deckFilename, deck_, eclipseState_, schedule_,
                          summaryConfig_, nullptr, python, std::move(parseContext),
-                         init_from_restart_file, outputCout_);
+                         init_from_restart_file, outputCout_, outputInterval);
 
                 setupTime_ = externalSetupTimer.elapsed();
                 outputFiles_ = (outputMode != FileOutputMode::OUTPUT_NONE);
