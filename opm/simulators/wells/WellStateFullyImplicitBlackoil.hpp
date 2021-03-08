@@ -206,6 +206,11 @@ namespace Opm
                             continue;
                         }
 
+                        if (is_producer_[newIndex] != prevState->is_producer_[oldIndex]) {
+                            // Well changed from injector from/to producer, do not use its privious values.
+                            continue;
+                        }
+
                         // bhp
                         bhp()[ newIndex ] = prevState->bhp()[ oldIndex ];
 
