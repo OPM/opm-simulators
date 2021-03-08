@@ -70,10 +70,6 @@ namespace Opm
         /// to give useful initial values to the bhp(), wellRates()
         /// and perfPhaseRates() fields, depending on controls
         void init(const std::vector<double>& cellPressures,
-                  const std::vector<double>& cellTemperatures,
-                  const std::vector<std::vector<double>>& cellInternalEnergy,
-                  const std::vector<std::vector<double>>& cellBinv,
-                  const std::vector<std::vector<double>>& cellDensity,
                   const Schedule& schedule,
                   const std::vector<Well>& wells_ecl,
                   const std::vector<ParallelWellInfo*>& parallel_well_info,
@@ -84,10 +80,8 @@ namespace Opm
                   const SummaryState& summary_state,
                   const int globalNumberOfWells)
         {
-            std::vector<double> perforationRates;
-            perforationRates = prevState->perfphaserates_;
             // call init on base class
-            BaseType :: init(cellPressures, cellTemperatures, cellInternalEnergy, cellBinv, cellDensity, perforationRates, wells_ecl, parallel_well_info, pu, well_perf_data, summary_state);
+            BaseType :: init(cellPressures, wells_ecl, parallel_well_info, pu, well_perf_data, summary_state);
 
             for (const auto& winfo: parallel_well_info)
             {
@@ -185,7 +179,6 @@ namespace Opm
 
             perfRateBrine_.clear();
             perfRateBrine_.resize(nperf, 0.0);
-
             // intialize wells that have been there before
             // order may change so the mapping is based on the well name
             if (prevState && !prevState->wellMap().empty()) {
@@ -355,8 +348,7 @@ namespace Opm
                     const int globalNumWells)
         {
             const std::vector<double> tmp(numCells, 0.0); // <- UGLY HACK to pass the size
-            std::vector<std::vector<double>> tmp1(numCells, std::vector<double>( numPhases()));// <- UGLY HACK to pass the size
-            init(tmp, tmp, tmp1, tmp1, tmp1, schedule, wells_ecl, parallel_well_info, 0, nullptr, pu, well_perf_data, summary_state, globalNumWells);
+            init(tmp, schedule, wells_ecl, parallel_well_info, 0, nullptr, pu, well_perf_data, summary_state, globalNumWells);
 
             if (handle_ms_well) {
                 initWellStateMSWell(wells_ecl, pu, nullptr);
