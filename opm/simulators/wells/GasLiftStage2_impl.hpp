@@ -113,7 +113,6 @@ addOrRemoveALQincrement_(GradMap &grad_map, const std::string well_name, bool ad
     state.update(gi.new_oil_rate, gi.oil_is_limited,
         gi.new_gas_rate, gi.gas_is_limited,
         gi.alq, gi.alq_is_limited, add);
-    //gs_well.updateStage2State(gi, add);
     this->well_state_.setALQ(well_name, gi.alq);
 }
 
@@ -702,7 +701,7 @@ GasLiftStage2<TypeTag>::
 saveGrad_(GradMap &map, const std::string &name, GradInfo &grad)
 {
     if (auto it = map.find(name); it == map.end()) {
-        auto result = map.emplace(name, grad);
+        [[maybe_unused]] auto result = map.emplace(name, grad);
         assert(result.second); // the insert was successful
     }
     else {

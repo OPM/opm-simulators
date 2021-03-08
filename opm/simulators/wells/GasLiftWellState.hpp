@@ -31,7 +31,7 @@ namespace Opm
     class GasLiftWellState
     {
     public:
-        GasLiftWellState() { }
+        //GasLiftWellState() { }
         GasLiftWellState(double oil_rate, bool oil_is_limited,
                      double gas_rate, bool gas_is_limited,
             double alq, bool alq_is_limited, std::optional<bool> increase) :
