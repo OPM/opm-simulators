@@ -434,9 +434,6 @@ protected:
         for (unsigned faceIdx = 0; faceIdx < numBoundaryFaces; ++faceIdx, boundaryCtx.increment()) {
             // add the residual of all vertices of the boundary
             // segment
-            if(!boundaryCtx.intersection(faceIdx).boundary())
-                continue;
-
             evalBoundarySegment_(residual,
                                  boundaryCtx,
                                  faceIdx,
