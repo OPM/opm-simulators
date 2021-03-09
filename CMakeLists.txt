@@ -370,7 +370,7 @@ opm_add_test(flow_co2_diffusion
   $<TARGET_OBJECTS:moduleVersion>
   EXE_NAME flow_co2_diffusion
   DEPENDS opmsimulators
-  LIBRARIES opmsimulators)
+  LIBRARIES opmsimulators fmt::fmt-header-only)
 
 opm_add_test(flow_bo_diffusion
   ONLY_COMPILE
@@ -380,7 +380,7 @@ opm_add_test(flow_bo_diffusion
   $<TARGET_OBJECTS:moduleVersion>
   EXE_NAME flow_bo_diffusion
   DEPENDS opmsimulators
-  LIBRARIES opmsimulators)
+  LIBRARIES opmsimulators fmt::fmt-header-only)
 
 opm_add_test(flow_onephase_energy
   ONLY_COMPILE
