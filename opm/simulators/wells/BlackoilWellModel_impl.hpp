@@ -383,10 +383,11 @@ namespace Opm {
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
         WellGroupHelpers::updateGuideRatesForWells(schedule(), phase_usage_, reportStepIdx, simulationTime, well_state_, comm, guideRate_.get());
         try {
-            // Compute initial well solution for new wells
+            // Compute initial well solution for new wells and injectors that change injection type i.e. WAG.
             for (auto& well : well_container_) {
                 const uint64_t effective_events_mask = ScheduleEvents::WELL_STATUS_CHANGE
-                                                    + ScheduleEvents::NEW_WELL;
+                        + ScheduleEvents::INJECTION_TYPE_CHANGED
+                        + ScheduleEvents::NEW_WELL;
 
                 const auto& events = schedule()[reportStepIdx].wellgroup_events();
                 const bool event = report_step_starts_ && events.hasEvent(well->name(), effective_events_mask);
