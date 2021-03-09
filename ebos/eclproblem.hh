@@ -1791,6 +1791,9 @@ public:
                   unsigned spaceIdx,
                   unsigned timeIdx) const
     {
+        if(!context.intersection(spaceIdx).boundary())
+            return;
+
         if (!enableEnergy || !enableThermalFluxBoundaries)
             values.setNoFlow();
         else {
