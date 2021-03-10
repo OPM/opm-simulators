@@ -165,11 +165,13 @@ public:
         bool enableAdaptive = EWOMS_GET_PARAM(TypeTag, bool, EnableAdaptiveTimeStepping);
         bool enableTUNING = EWOMS_GET_PARAM(TypeTag, bool, EnableTuning);
         if (enableAdaptive) {
+            const Opm::UnitSystem& unitSystem = this->ebosSimulator_.vanguard().eclState().getUnits();
             if (enableTUNING) {
-                adaptiveTimeStepping_ = std::make_unique<TimeStepper>(schedule()[timer.currentStepNum()].tuning(), terminalOutput_);
+                adaptiveTimeStepping_ = std::make_unique<TimeStepper>(schedule()[timer.currentStepNum()].tuning(),
+                                                                      unitSystem, terminalOutput_);
             }
             else {
-                adaptiveTimeStepping_ = std::make_unique<TimeStepper>(terminalOutput_);
+                adaptiveTimeStepping_ = std::make_unique<TimeStepper>(unitSystem, terminalOutput_);
             }
 
             if (isRestart()) {

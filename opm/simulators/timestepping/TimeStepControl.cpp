@@ -175,11 +175,13 @@ namespace Opm
                                          const double decayDampingFactor,
                                          const double growthDampingFactor,
                                          const double tol,
+                                         const double minTimeStepBasedOnIterations,
                                          const bool verbose)
         : PIDTimeStepControl( tol, verbose )
         , target_iterations_( target_iterations )
         , decayDampingFactor_( decayDampingFactor )
         , growthDampingFactor_( growthDampingFactor )
+        , minTimeStepBasedOnIterations_(minTimeStepBasedOnIterations)
     {}
 
     double PIDAndIterationCountTimeStepControl::
@@ -192,6 +194,9 @@ namespace Opm
         if (iterations > target_iterations_) {
             double off_target_fraction = double(iterations - target_iterations_) / target_iterations_;
             dtEstimateIter = dt / (1.0 + off_target_fraction * decayDampingFactor_);
+            if (dtEstimateIter < minTimeStepBasedOnIterations_) {
+                dtEstimateIter = minTimeStepBasedOnIterations_;
+            }
         } else {
             double off_target_fraction = double(target_iterations_ - iterations) / target_iterations_;
             // Be a bit more careful when increasing.

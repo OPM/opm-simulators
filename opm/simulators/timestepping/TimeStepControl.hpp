@@ -109,6 +109,7 @@ namespace Opm
                                              const double decayDampingFactor = 1.0,
                                              const double growthDampingFactor = 1.0/1.2,
                                              const double tol = 1e-3,
+                                             const double minTimeStepBasedOnIterations = 0.,
                                              const bool verbose = false);
 
         /// \brief \copydoc TimeStepControlInterface::computeTimeStepSize
@@ -118,6 +119,7 @@ namespace Opm
         const int     target_iterations_;
         const double  decayDampingFactor_;
         const double  growthDampingFactor_;
+        const double  minTimeStepBasedOnIterations_;
     };
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
