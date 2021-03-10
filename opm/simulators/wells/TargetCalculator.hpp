@@ -163,6 +163,126 @@ namespace WellGroupHelpers
         const double group_grat_target_from_sales_;
     };
 
+
+    /// Based on a group control mode, extract or calculate rates, and
+    /// provide other conveniences.
+    class InjectionTargetCalculator
+    {
+    public:
+        InjectionTargetCalculator(const Group::InjectionCMode cmode,
+                                  const PhaseUsage& pu,
+                                  const std::vector<double>& resv_coeff,
+                                  const std::string& group_name,
+                                  const double sales_target,
+                                  const WellStateFullyImplicitBlackoil& well_state,
+                                  const Phase& injection_phase)
+            : cmode_(cmode)
+            , pu_(pu)
+            , resv_coeff_(resv_coeff)
+            , group_name_(group_name)
+            , sales_target_(sales_target)
+            , well_state_(well_state)
+        {
+            // initialize to avoid warning
+            pos_ = pu.phase_pos[BlackoilPhases::Aqua];
+            target_ = GuideRateModel::Target::WAT;
+
+            switch (injection_phase) {
+            case Phase::WATER: {
+                pos_ = pu.phase_pos[BlackoilPhases::Aqua];
+                target_ = GuideRateModel::Target::WAT;
+                break;
+            }
+            case Phase::OIL: {
+                pos_ = pu.phase_pos[BlackoilPhases::Liquid];
+                target_ = GuideRateModel::Target::OIL;
+                break;
+            }
+            case Phase::GAS: {
+                pos_ = pu.phase_pos[BlackoilPhases::Vapour];
+                target_ = GuideRateModel::Target::GAS;
+                break;
+            }
+            default:
+                assert(false);
+            }
+        }
+
+
+        template <typename RateVec>
+        auto calcModeRateFromRates(const RateVec& rates) const
+        {
+            return rates[pos_];
+        }
+
+        double groupTarget(const Group::InjectionControls ctrl) const
+        {
+            switch (cmode_) {
+            case Group::InjectionCMode::RATE:
+                return ctrl.surface_max_rate;
+            case Group::InjectionCMode::RESV:
+                return ctrl.resv_max_rate;
+            case Group::InjectionCMode::REIN: {
+                double production_rate = well_state_.currentInjectionREINRates(ctrl.reinj_group)[pos_];
+                return ctrl.target_reinj_fraction * production_rate;
+            }
+            case Group::InjectionCMode::VREP: {
+                const std::vector<double>& group_injection_reductions
+                    = well_state_.currentInjectionGroupReductionRates(group_name_);
+                double voidage_rate
+                        = well_state_.currentInjectionVREPRates(ctrl.voidage_group) * ctrl.target_void_fraction;
+                double inj_reduction = 0.0;
+                if (ctrl.phase != Phase::WATER)
+                    inj_reduction += group_injection_reductions[pu_.phase_pos[BlackoilPhases::Aqua]]
+                            * resv_coeff_[pu_.phase_pos[BlackoilPhases::Aqua]];
+                if (ctrl.phase != Phase::OIL)
+                    inj_reduction += group_injection_reductions[pu_.phase_pos[BlackoilPhases::Liquid]]
+                            * resv_coeff_[pu_.phase_pos[BlackoilPhases::Liquid]];
+                if (ctrl.phase != Phase::GAS)
+                    inj_reduction += group_injection_reductions[pu_.phase_pos[BlackoilPhases::Vapour]]
+                            * resv_coeff_[pu_.phase_pos[BlackoilPhases::Vapour]];
+                voidage_rate -= inj_reduction;
+                return voidage_rate / resv_coeff_[pos_];
+            }
+            case Group::InjectionCMode::SALE: {
+                assert(pos_ == pu_.phase_pos[BlackoilPhases::Vapour]);
+                // Gas injection rate = Total gas production rate + gas import rate - gas consumption rate - sales rate;
+                // Gas import and consumption is already included in the REIN rates
+                double inj_rate = well_state_.currentInjectionREINRates(group_name_)[pos_];
+                inj_rate -= sales_target_;
+                return inj_rate;
+            }
+            default:
+                // Should never be here.
+                assert(false);
+                return 0.0;
+            }
+        }
+
+        GuideRateModel::Target guideTargetMode() const
+        {
+            return target_;
+        }
+
+    private:
+        template <typename ElemType>
+        static ElemType zero()
+        {
+            // This is for Evaluation types.
+            ElemType x;
+            x = 0.0;
+            return x;
+        }
+        Group::InjectionCMode cmode_;
+        const PhaseUsage& pu_;
+        const std::vector<double>& resv_coeff_;
+        const std::string& group_name_;
+        double sales_target_;
+        const WellStateFullyImplicitBlackoil& well_state_;
+        int pos_;
+        GuideRateModel::Target target_;
+
+    };
 } // namespace WellGroupHelpers
 
 } // namespace Opm

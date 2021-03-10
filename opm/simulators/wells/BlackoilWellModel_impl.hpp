@@ -1319,6 +1319,7 @@ namespace Opm {
             well_state_nupcol_ = well_state_;
         }
 
+        const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         // the group target reduction rates needs to be update since wells may have swicthed to/from GRUP control
         // Currently the group target reduction does not honor NUPCOL. TODO: is that true?
         std::vector<double> groupTargetReduction(numPhases(), 0.0);
@@ -1326,13 +1327,13 @@ namespace Opm {
         std::vector<double> groupTargetReductionInj(numPhases(), 0.0);
         WellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ true, phase_usage_, *guideRate_, well_state_nupcol_, well_state_, groupTargetReductionInj);
 
+        // the guiderate update should not be part of this function
+        // remove in seperate PR since it affects existing functionality
         const double simulationTime = ebosSimulator_.time();
         std::vector<double> pot(numPhases(), 0.0);
-        WellGroupHelpers::updateGuideRateForGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, /*isInjector*/ false, well_state_, comm, guideRate_.get(), pot);
-        std::vector<double> potInj(numPhases(), 0.0);
-        WellGroupHelpers::updateGuideRateForGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, /*isInjector*/ true, well_state_, comm, guideRate_.get(), potInj);
+        WellGroupHelpers::updateGuideRateForProductionGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, well_state_, comm, guideRate_.get(), pot);
+        WellGroupHelpers::updateGuideRatesForInjectionGroups(fieldGroup, schedule(), summaryState, phase_usage_, reportStepIdx, well_state_, guideRate_.get());
 
-        const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         WellGroupHelpers::updateREINForGroups(fieldGroup, schedule(), reportStepIdx, phase_usage_, summaryState, well_state_nupcol_, well_state_);
         WellGroupHelpers::updateVREPForGroups(fieldGroup, schedule(), reportStepIdx, well_state_nupcol_, well_state_);
 
@@ -2830,7 +2831,7 @@ namespace Opm {
 
         for (const auto& wname : sched.wellNames(reportStepIdx)) {
             if (! (this->well_state_.hasWellRates(wname) &&
-                   this->guideRate_->has(wname)))
+                   this->guideRate_->hasProductionGroupOrWell(wname)))
             {
                 continue;
             }
@@ -2867,8 +2868,13 @@ namespace Opm {
                 const auto& gname = up[start + gi];
                 const auto& group = sched.getGroup(gname, reportStepIdx);
 
-                if (this->guideRate_->has(gname)) {
+                if (this->guideRate_->hasProductionGroupOrWell(gname)) {
                     gr[gname].production = this->getGuideRateValues(group);
+                }
+
+                if (this->guideRate_->hasInjectionGroup(::Opm::Phase::WATER, gname)
+                        || this->guideRate_->hasInjectionGroup(::Opm::Phase::GAS, gname)) {
+                    gr[gname].injection = this->getGuideRateInjectionGroupValues(group);
                 }
 
                 const auto parent = group.parent();
@@ -2943,16 +2949,38 @@ namespace Opm {
             return grval;
         }
 
-        if (! this->guideRate_->has(wname)) {
+        if (! this->guideRate_->hasProductionGroupOrWell(wname)) {
             // No guiderates exist for 'wname'.
             return grval;
         }
 
         const auto qs = WellGroupHelpers::
-            getRateVector(this->well_state_, this->phase_usage_, wname);
+            getWellRateVector(this->well_state_, this->phase_usage_, wname);
 
         this->getGuideRateValues(qs, well.isInjector(), wname, grval);
 
+        return grval;
+    }
+    template <typename TypeTag>
+    data::GuideRateValue
+    BlackoilWellModel<TypeTag>::
+    getGuideRateInjectionGroupValues(const Group& group) const
+    {
+        auto grval = data::GuideRateValue{};
+
+        assert (this->guideRate_ != nullptr);
+
+        const auto& gname = group.name();
+        if (this->guideRate_->hasInjectionGroup(Opm::Phase::GAS, gname)) {
+            // No guiderates exist for 'gname'.
+            grval.set(data::GuideRateValue::Item::Gas,
+                      this->guideRate_->getInjectionGroup(Opm::Phase::GAS, gname));
+        }
+        if (this->guideRate_->hasInjectionGroup(Opm::Phase::WATER, gname)) {
+            // No guiderates exist for 'gname'.
+            grval.set(data::GuideRateValue::Item::Water,
+                      this->guideRate_->getInjectionGroup(Opm::Phase::WATER, gname));
+        }
         return grval;
     }
 
@@ -2966,20 +2994,21 @@ namespace Opm {
         assert (this->guideRate_ != nullptr);
 
         const auto& gname = group.name();
-        if (! this->well_state_.hasProductionGroupRates(gname)) {
-            // No flow rates for 'gname' -- might be before group comes
+
+        if ( ! this->well_state_.hasProductionGroupRates(gname)) {
+            // No flow rates for production group 'gname' -- might be before group comes
             // online (e.g., for the initial condition before simulation
             // starts).
             return grval;
         }
 
-        if (! this->guideRate_->has(gname)) {
+        if (! this->guideRate_->hasProductionGroupOrWell(gname)) {
             // No guiderates exist for 'gname'.
             return grval;
         }
 
         const auto qs = WellGroupHelpers::
-            getProductionGroupRateVector(this->well_state_, this->phase_usage_, gname);
+                getProductionGroupRateVector(this->well_state_, this->phase_usage_, gname);
 
         const auto is_inj = false; // This procedure only applies to G*PGR.
         this->getGuideRateValues(qs, is_inj, gname, grval);
@@ -2997,7 +3026,7 @@ namespace Opm {
     {
         auto getGR = [this, &wgname, &qs](const GuideRateModel::Target t)
         {
-            return this->guideRate_->get(wgname, t, qs);
+            return this->guideRate_->getProductionGroupOrWell(wgname, t, qs);
         };
 
         // Note: GuideRate does currently (2020-07-20) not support Target::RES.
@@ -3026,7 +3055,7 @@ namespace Opm {
 
         auto xgrPos = groupGuideRates.find(group.name());
         if ((xgrPos == groupGuideRates.end()) ||
-            !this->guideRate_->has(group.name()))
+            !this->guideRate_->hasProductionGroupOrWell(group.name()))
         {
             // No guiderates defined for this group.
             return;
