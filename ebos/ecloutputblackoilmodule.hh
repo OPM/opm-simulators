@@ -264,9 +264,6 @@ public:
                 // not being able to create such cell-based result vectors.
                 should_write = 0;
             }
-            else {
-                should_write = schedule.rst_keyword(reportStepNum, keyword);
-            }
         }
 
         outputFipRestart_ = false;
