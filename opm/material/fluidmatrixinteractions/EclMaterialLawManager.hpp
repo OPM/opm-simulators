@@ -367,7 +367,7 @@ public:
                                                            EclOilWaterSystem);
             }
 
-            if (hasGas && hasWater) {
+            if (hasGas && hasWater && !hasOil) {
                 auto gasWaterDrainParams = std::make_shared<GasWaterEpsTwoPhaseParams>();
                 gasWaterDrainParams->setConfig(gasWaterConfig);
                 gasWaterDrainParams->setUnscaledPoints(gasWaterUnscaledPointsVector_[satRegionIdx]);
@@ -410,7 +410,7 @@ public:
                                                                  EclGasOilSystem);
                 }
 
-                if (hasGas && hasWater) {
+                if (hasGas && hasWater && !hasOil) {
                     auto gasWaterImbParamsHyst = std::make_shared<GasWaterEpsTwoPhaseParams>();
                     gasWaterImbParamsHyst->setConfig(gasWaterConfig);
                     gasWaterImbParamsHyst->setUnscaledPoints(gasWaterUnscaledPointsVector_[imbRegionIdx]);
@@ -430,7 +430,7 @@ public:
             if (hasOil && hasWater)
                 oilWaterParams[elemIdx]->finalize();
 
-            if (hasGas && hasWater)
+            if (hasGas && hasWater && !hasOil)
                 gasWaterParams[elemIdx]->finalize();
         }
 
@@ -952,8 +952,9 @@ private:
                                         const Opm::EclipseState& eclState,
                                         unsigned satRegionIdx)
     {
-        if (!hasGas || !hasWater)
-            // we don't read anything if either the gas or the water phase is not active
+        //if (!hasGas || !hasWater)
+        if (hasOil)
+            // we don't read anything if oil is present
             return;
 
         dest[satRegionIdx] = std::make_shared<GasWaterEffectiveTwoPhaseParams>();
@@ -1029,8 +1030,9 @@ private:
                                      const Opm::EclipseState& /* eclState */,
                                      unsigned satRegionIdx)
     {
-        if (!hasGas || !hasWater)
-            // we don't read anything if either the water or the oil phase is not active
+        //if (!hasGas || !hasWater)
+        if (hasOil)
+            // we don't read anything if oil phase is active
             return;
 
         dest[satRegionIdx] = std::make_shared<EclEpsScalingPoints<Scalar> >();

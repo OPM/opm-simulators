@@ -241,15 +241,17 @@ public:
             this->enableKrwScaling_ = hasKR("W") || this->enableThreePointKrwScaling();
             this->enablePcScaling_  = hasPC("W") || fp.has_double("SWATINIT");
         }
-        else {
-            assert(twoPhaseSystemType == EclGasOilSystem);
-
+        else if (twoPhaseSystemType == EclGasOilSystem) {
             this->setEnableThreePointKrwScaling(hasKR("ORG"));
             this->setEnableThreePointKrnScaling(hasKR("GR"));
 
             this->enableKrnScaling_ = hasKR("G") || this->enableThreePointKrnScaling();
             this->enableKrwScaling_ = hasKR("O") || this->enableThreePointKrwScaling();
             this->enablePcScaling_  = hasPC("G");
+        }
+        else {
+            assert(twoPhaseSystemType == EclGasWaterSystem);
+            //TODO enable endpoint scaling for gaswater system
         }
 
         if (enablePcScaling_ && enableLeverettScaling_) {
