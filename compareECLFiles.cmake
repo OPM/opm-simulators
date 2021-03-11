@@ -289,7 +289,7 @@ add_test_compareECLFiles(CASENAME numerical_aquifer_3d_2aqu
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR aquifer-num
-                         TEST_ARGS --enable-tuning=true --relaxed-max-pv-fraction=0 --tolerance-cnv=0.0001)
+                         TEST_ARGS --enable-tuning=true --relaxed-max-pv-fraction=0 --tolerance-cnv=0.0001 --time-step-control=pid)
 
 add_test_compareECLFiles(CASENAME numerical_aquifer_3d_1aqu
                          FILENAME 3D_1AQU_3CELLS
@@ -1021,13 +1021,13 @@ if(MPI_FOUND)
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${coarse_rel_tol_parallel}
                                        DIR aquifer-num
-                                       TEST_ARGS --enable-tuning=true --relaxed-max-pv-fraction=0 --tolerance-cnv=0.0001)
+                                       TEST_ARGS --enable-tuning=true --relaxed-max-pv-fraction=0 --tolerance-cnv=0.0001 --time-step-control=pid)
 
   add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_1aqu
                                        FILENAME 3D_1AQU_3CELLS
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol_parallel}
-                                       REL_TOL ${coarse_rel_tol_parallel}
+                                       REL_TOL 0.025}
                                        DIR aquifer-num
                                        TEST_ARGS --enable-tuning=true --relaxed-max-pv-fraction=0 --tolerance-cnv=0.0001)
 endif()
