@@ -887,12 +887,14 @@ void unpack(RestartValue& data, std::vector<char>& buffer, int& position,
     unpack(data.extra, buffer, position, comm);
 }
 
-void unpack(Opm::time_point& data, std::vector<char>& buffer, int& position,
+void unpack([[maybe_unused]] Opm::time_point& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
     std::time_t tp;
     unpack(tp, buffer, position, comm);
+#if HAVE_MPI
     data = Opm::TimeService::from_time_t(tp);
+#endif
 }
 
 

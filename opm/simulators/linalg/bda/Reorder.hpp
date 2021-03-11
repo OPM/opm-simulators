@@ -90,7 +90,7 @@ bool canBeStarted(const int rowIndex, const  int *rowPointers, const  int *colIn
 /// \param[out] numColors       a pointer to the number of colors needed for the level scheduling
 /// \param[inout] toOrder       the reorder pattern that was found, which lists for each index in the original order, to which index in the new order it should be moved
 /// \param[inout] fromOrder     the reorder pattern that was found, which lists for each index in the new order, from which index in the original order it was moved
-/// \param[inout] rowsPerColor  for each used color, the number of rows assigned to that color
+/// \param[inout] rowsPerColor  for each used color, the number of rows assigned to that color, this function uses emplace_back() to fill
 void findLevelScheduling(int *CSRColIndices, int *CSRRowPointers, int *CSCRowIndices, int *CSCColPointers, int Nb, int *numColors, int *toOrder, int* fromOrder, std::vector<int>& rowsPerColor);
 
 /// Find a graph coloring reordering for an input matrix
@@ -105,7 +105,7 @@ void findLevelScheduling(int *CSRColIndices, int *CSRRowPointers, int *CSCRowInd
 /// \param[out] numColors       the number of colors used in the found graph coloring
 /// \param[inout] toOrder       the reorder pattern that was found, which lists for each index in the original order, to which index in the new order it should be moved
 /// \param[inout] fromOrder     the reorder pattern that was found, which lists for each index in the new order, from which index in the original order it was moved
-/// \param[inout] rowsPerColor  for each used color, the number of rows assigned to that color
+/// \param[inout] rowsPerColor  for each used color, the number of rows assigned to that color, this function will resize()
 template <unsigned int block_size>
 void findGraphColoring(const int *CSRColIndices, const int *CSRRowPointers, const int *CSCRowIndices, const int *CSCColPointers, int Nb, int maxRowsPerColor, int maxColsPerColor, int *numColors, int *toOrder, int *fromOrder, std::vector<int>& rowsPerColor);
 

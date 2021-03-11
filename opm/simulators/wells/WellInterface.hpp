@@ -453,7 +453,7 @@ namespace Opm
         double wsalt() const;
 
         bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
-                                 const WellState& well_state,
+                                 const std::vector<double>& well_rates,
                                  Opm::DeferredLogger& deferred_logger) const;
 
         double getTHPConstraint(const SummaryState& summaryState) const;

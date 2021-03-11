@@ -253,19 +253,16 @@ public:
 
         // Summary output is for all steps
         const Opm::SummaryConfig summaryConfig = simulator_.vanguard().summaryConfig();
+        const auto& schedule = simulator_.vanguard().schedule();
 
         // Only output RESTART_AUXILIARY asked for by the user.
-        const Opm::RestartConfig& restartConfig = simulator_.vanguard().schedule().restart();
-        std::map<std::string, int> rstKeywords = restartConfig.getRestartKeywords(reportStepNum);
+        std::map<std::string, int> rstKeywords = schedule.rst_keywords(reportStepNum);
         for (auto& [keyword, should_write] : rstKeywords) {
             if (this->isOutputCreationDirective_(keyword)) {
                 // 'BASIC', 'FREQ' and similar.  Don't attempt to create
                 // cell-based output for these keywords and don't warn about
                 // not being able to create such cell-based result vectors.
                 should_write = 0;
-            }
-            else {
-                should_write = restartConfig.getKeyword(keyword, reportStepNum);
             }
         }
 
@@ -300,7 +297,6 @@ public:
 
         // Well RFT data
         if (!substep) {
-            const auto& schedule = simulator_.vanguard().schedule();
             const auto& rft_config = schedule[reportStepNum].rft_config();
             for (const auto& well: schedule.getWells(reportStepNum)) {
 
@@ -334,7 +330,7 @@ public:
         // 1) when we want to restart
         // 2) when it is ask for by the user via restartConfig
         // 3) when it is not a substep
-        if (!isRestart && (!restartConfig.getWriteRestartFile(reportStepNum, log) || substep))
+        if (!isRestart && (!schedule.write_rst_file(reportStepNum, log) || substep))
             return;
 
         // always output saturation of active phases
