@@ -161,8 +161,10 @@ macro (config_hook)
   endif()
   opm_need_version_of ("opm-models")
 
-  add_definitions(-DFMT_HEADER_ONLY)
-  list(APPEND EXTRA_INCLUDES SYSTEM ${PROJECT_SOURCE_DIR}/external/fmtlib/include)
+  if(NOT fmt_FOUND)
+    add_definitions(-DFMT_HEADER_ONLY)
+    list(APPEND EXTRA_INCLUDES SYSTEM ${PROJECT_SOURCE_DIR}/external/fmtlib/include)
+  endif()
   include_directories(${EXTRA_INCLUDES})
 endmacro (config_hook)
 
