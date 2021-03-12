@@ -149,6 +149,7 @@ BlackoilAquiferModel<TypeTag>::endTimeStep()
     if (aquiferNumericalActive()) {
         for (auto& aquifer : this->aquifers_numerical) {
             aquifer.endTimeStep();
+            this->simulator_.vanguard().grid().comm().barrier();
         }
     }
 }
