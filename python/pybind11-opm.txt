@@ -1,0 +1,4 @@
+The directory pybind11 is an inline dump of version 2.6.2 of the pybind11
+source.
+
+pybind11 is distributed from: https://github.com/pybind/pybind11
