@@ -638,7 +638,6 @@ public:
     const std::string& caseName() const
     { return caseName_; }
 
-    // TODO: revising this function later
     const CartesianIndexMapper& cartesianMapper() const
     {  return asImp_().cartesianIndexMapper(); }
 

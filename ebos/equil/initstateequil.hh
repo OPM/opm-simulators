@@ -1595,8 +1595,8 @@ public:
             }
         }
 
-        //Querry cell depth, cell top-bottom.
-        // aquifer should enter here
+        // Querry cell depth, cell top-bottom.
+        // numerical aquifer cells might be specified with different depths.
         const auto& num_aquifers = eclipseState.aquifer().numericalAquifers();
         updateCellProps_(gridView, num_aquifers);
 
