@@ -60,7 +60,6 @@ public:
     {
         this->cell_to_aquifer_cell_idx_.resize(this->ebos_simulator_.gridView().size(/*codim=*/0), -1);
 
-        // TODO: here, the parallelisation is obviously ignored
         for (size_t idx = 0; idx < aquifer.numCells(); ++idx) {
             const auto& cell = *(aquifer.getCellPrt(idx));
             const int global_idx = cell.global_index;

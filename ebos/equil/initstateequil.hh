@@ -1713,7 +1713,10 @@ public:
 
         // Compute pressures, saturations, rs and rv factors.
         const auto& comm = gridView.comm();
-        calcPressSatRsRv(eqlmap, rec, materialLawManager, num_aquifers, comm, grav);
+        calcPressSatRsRv(eqlmap, rec, materialLawManager, comm, grav);
+
+        // modify the pressure and saturation for numerical aquifer cells
+        applyNumericalAquifers_(gridView, num_aquifers);
 
         // Modify oil pressure in no-oil regions so that the pressures of present phases can
         // be recovered from the oil pressure and capillary relations.
@@ -1811,6 +1814,59 @@ private:
         }
     }
 
+    void applyNumericalAquifers_(const GridView& gridView,
+                                 const NumericalAquifers& aquifer)
+    {
+        const auto num_aqu_cells = aquifer.allAquiferCells();
+        if (num_aqu_cells.empty()) return;
+
+        ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
+        auto elemIt = gridView.template begin</*codim=*/0>();
+        const auto& elemEndIt = gridView.template end</*codim=*/0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            const Element& element = *elemIt;
+            const unsigned int elemIdx = elemMapper.index(element);
+            const auto cartIx = cartesianIndexMapper_.cartesianIndex(elemIdx);
+            const auto search = num_aqu_cells.find(cartIx);
+            if (search != num_aqu_cells.end()) {
+                // numerical aquifer cells are filled with water initially
+                const auto watPos = FluidSystem::waterPhaseIdx;
+                if (FluidSystem::phaseIsActive(watPos)) {
+                    this->sat_[watPos][elemIdx] = 1.;
+                } else {
+                    throw std::logic_error  { "Water phase has to be active for numerical aquifer case" };
+                }
+
+                const auto oilPos = FluidSystem::oilPhaseIdx;
+                if (FluidSystem::phaseIsActive(oilPos)) {
+                    this->sat_[oilPos][elemIdx] = 0.;
+                }
+
+                const auto gasPos = FluidSystem::gasPhaseIdx;
+                if (FluidSystem::phaseIsActive(gasPos)) {
+                    this->sat_[gasPos][elemIdx] = 0.;
+                }
+                const auto* aqu_cell = num_aqu_cells.at(cartIx);
+                const auto msg = fmt::format("FOR AQUIFER CELL AT ({}, {}, {}) OF NUMERICAL "
+                                             "AQUIFER {}, WATER SATURATION IS SET TO BE UNITY",
+                                             aqu_cell->I+1, aqu_cell->J+1, aqu_cell->K+1, aqu_cell->aquifer_id);
+                OpmLog::info(msg);
+
+                // if pressure is specified for numerical aquifers, we use these pressure values
+                // for numerical aquifer cells
+                if (aqu_cell->init_pressure) {
+                    const double pres = *(aqu_cell->init_pressure);
+                    this->pp_[watPos][elemIdx] = pres;
+                    if (FluidSystem::phaseIsActive(gasPos)) {
+                        this->pp_[gasPos][elemIdx] = pres;
+                    }
+                    if (FluidSystem::phaseIsActive(oilPos)) {
+                        this->pp_[oilPos][elemIdx] = pres;
+                    }
+                }
+            }
+        }
+    }
     template<class RMap>
     void setRegionPvtIdx(const Opm::EclipseState& eclState, const RMap& reg)
     {
@@ -1826,7 +1882,6 @@ private:
     void calcPressSatRsRv(const RMap& reg,
                           const std::vector<Opm::EquilRecord>& rec,
                           MaterialLawManager& materialLawManager,
-                          const NumericalAquifers& aquifer,
                           const Comm& comm,
                           const double grav)
     {
@@ -1863,7 +1918,7 @@ private:
             const auto acc = eqreg.equilibrationAccuracy();
             if (acc == 0) {
                 // Centre-point method
-                this->equilibrateCellCentres(cells, eqreg, ptable, aquifer, psat);
+                this->equilibrateCellCentres(cells, eqreg, ptable, psat);
             }
             else if (acc < 0) {
                 // Horizontal subdivision
@@ -1927,14 +1982,12 @@ private:
     void equilibrateCellCentres(const CellRange&         cells,
                                 const EquilReg&          eqreg,
                                 const PressTable&        ptable,
-                                const NumericalAquifers& aquifer,
                                 PhaseSat&                psat)
     {
         using CellPos = typename PhaseSat::Position;
         using CellID  = std::remove_cv_t<std::remove_reference_t<
             decltype(std::declval<CellPos>().cell)>>;
-        const auto num_aqu_cells = aquifer.allAquiferCells();
-        this->cellLoop(cells, [this, &eqreg,  &ptable, &num_aqu_cells, &psat]
+        this->cellLoop(cells, [this, &eqreg,  &ptable, &psat]
             (const CellID                 cell,
              Details::PhaseQuantityValue& pressures,
              Details::PhaseQuantityValue& saturations,
@@ -1947,26 +2000,6 @@ private:
 
             saturations = psat.deriveSaturations(pos, eqreg, ptable);
             pressures   = psat.correctedPhasePressures();
-
-            // TODO: not totally sure this is the cartesian Index
-            const auto global_index = cartesianIndexMapper_.cartesianIndex(cell);
-            if (!num_aqu_cells.empty()) {
-                const auto search = num_aqu_cells.find(global_index);
-                if (search != num_aqu_cells.end()) {
-                    saturations = {0.0, 0.0, 1.0};
-                    const auto* aqu_cell = num_aqu_cells.at(global_index);
-                    const auto msg = fmt::format("FOR AQUIFER CELL AT ({}, {}, {}) OF NUMERICAL "
-                                                 "AQUIFER {}, WATER SATURATION IS SET TO BE UNITY",
-                                                 aqu_cell->I+1, aqu_cell->J+1, aqu_cell->K+1, aqu_cell->aquifer_id);
-                    OpmLog::info(msg);
-
-                    if (aqu_cell->init_pressure) {
-                        const double pres = *(aqu_cell->init_pressure);
-                        pressures = {pres, pres, pres};
-                    }
-                }
-
-            }
 
             const auto temp = this->temperature_[cell];
 
