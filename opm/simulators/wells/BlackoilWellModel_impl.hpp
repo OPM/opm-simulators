@@ -520,6 +520,9 @@ namespace Opm {
         if (terminal_output_) {
             global_deferredLogger.logMessages();
         }
+
+        //reporting output temperatures
+        this->computeWellTemperature();
     }
 
 
@@ -699,7 +702,6 @@ namespace Opm {
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
             const auto& fs = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0).fluidState();
-
             // copy of get perfpressure in Standard well except for value
             double& perf_pressure = cellPressures[elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0)];
             if (Indices::oilEnabled) {
@@ -3035,5 +3037,58 @@ namespace Opm {
         const auto& xgr = xgrPos->second;
         prod = xgr.production;
         inj  = xgr.injection;
+    }
+
+    template <typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    computeWellTemperature()
+    {
+        if (!has_energy_)
+            return;
+
+        int np = numPhases();
+        double cellInternalEnergy;
+        double cellBinv;
+        double cellDensity;
+        double perfPhaseRate;
+        const int nw = numLocalWells();
+        for (auto wellID = 0*nw; wellID < nw; ++wellID) {
+            const Well& well = wells_ecl_[wellID];
+            if (well.isInjector())
+                continue;
+
+            int connpos = 0;
+            for (int i = 0; i < wellID; ++i) {
+                connpos += well_perf_data_[i].size();
+            }
+            connpos *= np;
+            double weighted_temperature = 0.0;
+            double total_weight = 0.0;
+
+            auto& well_info = *local_parallel_well_info_[wellID];
+            const int num_perf_this_well = well_info.communication().sum(well_perf_data_[wellID].size());
+
+            for (int perf = 0; perf < num_perf_this_well; ++perf) {
+                const int cell_idx = well_perf_data_[wellID][perf].cell_index;
+                const auto& intQuants = *(ebosSimulator_.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
+                const auto& fs = intQuants.fluidState();
+
+                double cellTemperatures = fs.temperature(/*phaseIdx*/0).value();
+                double weight_factor = 0.0;
+                for (int phaseIdx = 0; phaseIdx  < np; ++phaseIdx) {
+                    cellInternalEnergy = fs.enthalpy(phaseIdx).value() - fs.pressure(phaseIdx).value() / fs.density(phaseIdx).value();
+                    cellBinv = fs.invB(phaseIdx).value();
+                    cellDensity = fs.density(phaseIdx).value();
+                    perfPhaseRate = well_state_.perfPhaseRates()[connpos + perf*np + phaseIdx ];
+                    weight_factor += cellDensity  * perfPhaseRate/cellBinv * cellInternalEnergy/cellTemperatures;
+                }
+                total_weight += weight_factor;
+                weighted_temperature += weight_factor * cellTemperatures;
+            }
+            weighted_temperature = well_info.communication().sum(weighted_temperature);
+            total_weight = well_info.communication().sum(total_weight);
+            well_state_.temperature()[wellID] =  weighted_temperature/total_weight;
+        }
     }
 } // namespace Opm

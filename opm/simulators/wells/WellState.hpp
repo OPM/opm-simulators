@@ -491,7 +491,7 @@ namespace Opm
         std::vector<std::vector<PerforationData>> well_perf_data_;
         std::vector<ParallelWellInfo*> parallel_well_info_;
     };
-
+    
 } // namespace Opm
 
 #endif // OPM_WELLSTATE_HEADER_INCLUDED
