@@ -4,7 +4,8 @@
 #       find_package(PYTHON) to define variables like
 #       ${PYTHON_EXECUTABLE}
 #
-pybind11_add_module(simulators simulators.cpp SYSTEM)
+
+pybind11_add_module(simulators simulators.cpp ${PYBIND11_SYSTEM})
 
 set_target_properties( simulators PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/python/opm2 )
 
@@ -26,6 +27,9 @@ file( COPY ${PROJECT_SOURCE_DIR}/python/test_data
       DESTINATION ${PROJECT_BINARY_DIR}/python)
 
 if(OPM_ENABLE_PYTHON_TESTS)
+  if(Python3_EXECUTABLE AND NOT PYTHON_EXECUTABLE)
+    set(PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
+  endif()
   add_test(NAME python_tests
       WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/python
       COMMAND ${CMAKE_COMMAND}
