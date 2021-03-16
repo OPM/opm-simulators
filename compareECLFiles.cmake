@@ -283,6 +283,22 @@ add_test_compareECLFiles(CASENAME fetkovich_2d
                          REL_TOL ${rel_tol}
                          DIR aquifer-fetkovich)
 
+add_test_compareECLFiles(CASENAME numerical_aquifer_3d_2aqu
+                         FILENAME 3D_2AQU_NUM
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR aquifer-num
+                         TEST_ARGS --relaxed-max-pv-fraction=0 --tolerance-cnv=0.00003 --time-step-control=pid --linsolver=cpr)
+
+add_test_compareECLFiles(CASENAME numerical_aquifer_3d_1aqu
+                         FILENAME 3D_1AQU_3CELLS
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR aquifer-num
+                         TEST_ARGS --relaxed-max-pv-fraction=0 --tolerance-cnv=0.00003 --time-step-control=pid --linsolver=cpr)
+
 add_test_compareECLFiles(CASENAME spe3
                          FILENAME SPE3CASE1
                          SIMULATOR flow
@@ -998,4 +1014,20 @@ if(MPI_FOUND)
                                        REL_TOL ${rel_tol_parallel}
                                        DIR parallel_fieldprops
                                        TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
+
+  add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_2aqu
+                                       FILENAME 3D_2AQU_NUM
+                                       SIMULATOR flow
+                                       ABS_TOL 0.12
+                                       REL_TOL ${coarse_rel_tol_parallel}
+                                       DIR aquifer-num
+                                       TEST_ARGS --relaxed-max-pv-fraction=0 --tolerance-cnv=0.00003 --time-step-control=pid --linsolver=cpr)
+
+  add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_1aqu
+                                       FILENAME 3D_1AQU_3CELLS
+                                       SIMULATOR flow
+                                       ABS_TOL ${abs_tol_parallel}
+                                       REL_TOL ${coarse_rel_tol_parallel}
+                                       DIR aquifer-num
+                                       TEST_ARGS --relaxed-max-pv-fraction=0 --tolerance-cnv=0.00003 --time-step-control=pid --linsolver=cpr)
 endif()

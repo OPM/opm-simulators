@@ -48,6 +48,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/PdvdTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SaltvdTable.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <fmt/format.h>
 
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/fluidstates/SimpleModularFluidState.hpp>
@@ -62,6 +63,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include <string>
 
 namespace Opm {
 
@@ -1566,12 +1568,14 @@ class InitialStateComputer
     using Element = typename GridView::template Codim<0>::Entity;
     using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
     using Grid = GetPropType<TypeTag, Properties::Grid>;
+    using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
 
 public:
     template<class MaterialLawManager>
     InitialStateComputer(MaterialLawManager& materialLawManager,
                          const Opm::EclipseState& eclipseState,
                          const GridView& gridView,
+                         const CartesianIndexMapper& cartMapper,
                          const double grav = Opm::unit::gravity,
                          const bool applySwatInit = true)
         : temperature_(gridView.size(/*codim=*/0)),
@@ -1581,7 +1585,8 @@ public:
           sat_(FluidSystem::numPhases,
           std::vector<double>(gridView.size(/*codim=*/0))),
           rs_(gridView.size(/*codim=*/0)),
-          rv_(gridView.size(/*codim=*/0))
+          rv_(gridView.size(/*codim=*/0)),
+          cartesianIndexMapper_(cartMapper)
     {
         //Check for presence of kw SWATINIT
         if (applySwatInit) {
@@ -1590,8 +1595,10 @@ public:
             }
         }
 
-        //Querry cell depth, cell top-bottom.
-        updateCellProps_(gridView);
+        // Querry cell depth, cell top-bottom.
+        // numerical aquifer cells might be specified with different depths.
+        const auto& num_aquifers = eclipseState.aquifer().numericalAquifers();
+        updateCellProps_(gridView, num_aquifers);
 
         // Get the equilibration records.
         const std::vector<Opm::EquilRecord> rec = getEquil(eclipseState);
@@ -1708,6 +1715,9 @@ public:
         const auto& comm = gridView.comm();
         calcPressSatRsRv(eqlmap, rec, materialLawManager, comm, grav);
 
+        // modify the pressure and saturation for numerical aquifer cells
+        applyNumericalAquifers_(gridView, num_aquifers);
+
         // Modify oil pressure in no-oil regions so that the pressures of present phases can
         // be recovered from the oil pressure and capillary relations.
     }
@@ -1769,12 +1779,14 @@ private:
     PVec sat_;
     Vec rs_;
     Vec rv_;
+    const CartesianIndexMapper& cartesianIndexMapper_;
     Vec swatInit_;
     Vec cellCenterDepth_;
     std::vector<std::pair<double,double>> cellZSpan_;
     std::vector<std::pair<double,double>> cellZMinMax_;
 
-    void updateCellProps_(const GridView& gridView)
+    void updateCellProps_(const GridView& gridView,
+                          const NumericalAquifers& aquifer)
     {
         ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
         int numElements = gridView.size(/*codim=*/0);
@@ -1784,15 +1796,77 @@ private:
 
         auto elemIt = gridView.template begin</*codim=*/0>();
         const auto& elemEndIt = gridView.template end</*codim=*/0>();
+        const auto num_aqu_cells = aquifer.allAquiferCells();
         for (; elemIt != elemEndIt; ++elemIt) {
             const Element& element = *elemIt;
             const unsigned int elemIdx = elemMapper.index(element);
             cellCenterDepth_[elemIdx] = Details::cellCenterDepth(element);
+            const auto cartIx = cartesianIndexMapper_.cartesianIndex(elemIdx);
+            if (!num_aqu_cells.empty()) {
+                const auto search = num_aqu_cells.find(cartIx);
+                if (search != num_aqu_cells.end()) {
+                    const auto* aqu_cell = num_aqu_cells.at(cartIx);
+                    cellCenterDepth_[elemIdx] = aqu_cell->depth;
+                }
+            }
             cellZSpan_[elemIdx] = Details::cellZSpan(element);
             cellZMinMax_[elemIdx] = Details::cellZMinMax(element);
         }
     }
 
+    void applyNumericalAquifers_(const GridView& gridView,
+                                 const NumericalAquifers& aquifer)
+    {
+        const auto num_aqu_cells = aquifer.allAquiferCells();
+        if (num_aqu_cells.empty()) return;
+
+        ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
+        auto elemIt = gridView.template begin</*codim=*/0>();
+        const auto& elemEndIt = gridView.template end</*codim=*/0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            const Element& element = *elemIt;
+            const unsigned int elemIdx = elemMapper.index(element);
+            const auto cartIx = cartesianIndexMapper_.cartesianIndex(elemIdx);
+            const auto search = num_aqu_cells.find(cartIx);
+            if (search != num_aqu_cells.end()) {
+                // numerical aquifer cells are filled with water initially
+                const auto watPos = FluidSystem::waterPhaseIdx;
+                if (FluidSystem::phaseIsActive(watPos)) {
+                    this->sat_[watPos][elemIdx] = 1.;
+                } else {
+                    throw std::logic_error  { "Water phase has to be active for numerical aquifer case" };
+                }
+
+                const auto oilPos = FluidSystem::oilPhaseIdx;
+                if (FluidSystem::phaseIsActive(oilPos)) {
+                    this->sat_[oilPos][elemIdx] = 0.;
+                }
+
+                const auto gasPos = FluidSystem::gasPhaseIdx;
+                if (FluidSystem::phaseIsActive(gasPos)) {
+                    this->sat_[gasPos][elemIdx] = 0.;
+                }
+                const auto* aqu_cell = num_aqu_cells.at(cartIx);
+                const auto msg = fmt::format("FOR AQUIFER CELL AT ({}, {}, {}) OF NUMERICAL "
+                                             "AQUIFER {}, WATER SATURATION IS SET TO BE UNITY",
+                                             aqu_cell->I+1, aqu_cell->J+1, aqu_cell->K+1, aqu_cell->aquifer_id);
+                OpmLog::info(msg);
+
+                // if pressure is specified for numerical aquifers, we use these pressure values
+                // for numerical aquifer cells
+                if (aqu_cell->init_pressure) {
+                    const double pres = *(aqu_cell->init_pressure);
+                    this->pp_[watPos][elemIdx] = pres;
+                    if (FluidSystem::phaseIsActive(gasPos)) {
+                        this->pp_[gasPos][elemIdx] = pres;
+                    }
+                    if (FluidSystem::phaseIsActive(oilPos)) {
+                        this->pp_[oilPos][elemIdx] = pres;
+                    }
+                }
+            }
+        }
+    }
     template<class RMap>
     void setRegionPvtIdx(const Opm::EclipseState& eclState, const RMap& reg)
     {
@@ -1806,7 +1880,7 @@ private:
 
     template <class RMap, class MaterialLawManager, class Comm>
     void calcPressSatRsRv(const RMap& reg,
-                          const std::vector< Opm::EquilRecord >& rec,
+                          const std::vector<Opm::EquilRecord>& rec,
                           MaterialLawManager& materialLawManager,
                           const Comm& comm,
                           const double grav)
@@ -1905,16 +1979,15 @@ private:
     }
 
     template <class CellRange, class PressTable, class PhaseSat>
-    void equilibrateCellCentres(const CellRange&  cells,
-                                const EquilReg&   eqreg,
-                                const PressTable& ptable,
-                                PhaseSat&         psat)
+    void equilibrateCellCentres(const CellRange&         cells,
+                                const EquilReg&          eqreg,
+                                const PressTable&        ptable,
+                                PhaseSat&                psat)
     {
         using CellPos = typename PhaseSat::Position;
         using CellID  = std::remove_cv_t<std::remove_reference_t<
             decltype(std::declval<CellPos>().cell)>>;
-
-        this->cellLoop(cells, [this, &eqreg, &ptable, &psat]
+        this->cellLoop(cells, [this, &eqreg,  &ptable, &psat]
             (const CellID                 cell,
              Details::PhaseQuantityValue& pressures,
              Details::PhaseQuantityValue& saturations,
