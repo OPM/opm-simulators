@@ -952,7 +952,6 @@ private:
                                         const Opm::EclipseState& eclState,
                                         unsigned satRegionIdx)
     {
-        //if (!hasGas || !hasWater)
         if (hasOil)
             // we don't read anything if oil is present
             return;
@@ -1030,7 +1029,6 @@ private:
                                      const Opm::EclipseState& /* eclState */,
                                      unsigned satRegionIdx)
     {
-        //if (!hasGas || !hasWater)
         if (hasOil)
             // we don't read anything if oil phase is active
             return;
