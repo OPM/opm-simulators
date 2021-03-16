@@ -2244,7 +2244,7 @@ namespace Opm
         const size_t num_ancestors = chain.size() - 1;
         double target = orig_target;
         for (size_t ii = 0; ii < num_ancestors; ++ii) {
-            if ((ii == 0) || guide_rate_->hasInjectionGroup(injectionPhase, chain[ii])) {
+            if ((ii == 0) || guide_rate_->has(chain[ii], injectionPhase)) {
                 // Apply local reductions only at the control level
                 // (top) and for levels where we have a specified
                 // group guide rate.
@@ -2338,7 +2338,7 @@ namespace Opm
         const size_t num_ancestors = chain.size() - 1;
         double target = orig_target;
         for (size_t ii = 0; ii < num_ancestors; ++ii) {
-            if ((ii == 0) || guide_rate_->hasProductionGroupOrWell(chain[ii])) {
+            if ((ii == 0) || guide_rate_->has(chain[ii])) {
                 // Apply local reductions only at the control level
                 // (top) and for levels where we have a specified
                 // group guide rate.

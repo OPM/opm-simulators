@@ -175,7 +175,7 @@ namespace WellGroupHelpers
         oilPot = comm.sum(oilPot);
         gasPot = comm.sum(gasPot);
         waterPot = comm.sum(waterPot);
-        guideRate->productionGroupCompute(group.name(), reportStepIdx, simTime, oilPot, gasPot, waterPot);
+        guideRate->compute(group.name(), reportStepIdx, simTime, oilPot, gasPot, waterPot);
     }
 
     template <class Comm>
@@ -213,7 +213,7 @@ namespace WellGroupHelpers
             oilpot = comm.sum(oilpot);
             gaspot = comm.sum(gaspot);
             waterpot = comm.sum(waterpot);
-            guideRate->wellCompute(well.name(), reportStepIdx, simTime, oilpot, gaspot, waterpot);
+            guideRate->compute(well.name(), reportStepIdx, simTime, oilpot, gaspot, waterpot);
         }
     }
 

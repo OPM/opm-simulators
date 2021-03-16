@@ -2831,7 +2831,7 @@ namespace Opm {
 
         for (const auto& wname : sched.wellNames(reportStepIdx)) {
             if (! (this->well_state_.hasWellRates(wname) &&
-                   this->guideRate_->hasProductionGroupOrWell(wname)))
+                   this->guideRate_->has(wname)))
             {
                 continue;
             }
@@ -2868,12 +2868,12 @@ namespace Opm {
                 const auto& gname = up[start + gi];
                 const auto& group = sched.getGroup(gname, reportStepIdx);
 
-                if (this->guideRate_->hasProductionGroupOrWell(gname)) {
+                if (this->guideRate_->has(gname)) {
                     gr[gname].production = this->getGuideRateValues(group);
                 }
 
-                if (this->guideRate_->hasInjectionGroup(::Opm::Phase::WATER, gname)
-                        || this->guideRate_->hasInjectionGroup(::Opm::Phase::GAS, gname)) {
+                if (this->guideRate_->has(gname, Opm::Phase::WATER)
+                        || this->guideRate_->has(gname, Opm::Phase::GAS)) {
                     gr[gname].injection = this->getGuideRateInjectionGroupValues(group);
                 }
 
@@ -2949,7 +2949,7 @@ namespace Opm {
             return grval;
         }
 
-        if (! this->guideRate_->hasProductionGroupOrWell(wname)) {
+        if (! this->guideRate_->has(wname)) {
             // No guiderates exist for 'wname'.
             return grval;
         }
@@ -2971,15 +2971,15 @@ namespace Opm {
         assert (this->guideRate_ != nullptr);
 
         const auto& gname = group.name();
-        if (this->guideRate_->hasInjectionGroup(Opm::Phase::GAS, gname)) {
+        if (this->guideRate_->has(gname, Opm::Phase::GAS)) {
             // No guiderates exist for 'gname'.
             grval.set(data::GuideRateValue::Item::Gas,
-                      this->guideRate_->getInjectionGroup(Opm::Phase::GAS, gname));
+                      this->guideRate_->get(gname, Opm::Phase::GAS));
         }
-        if (this->guideRate_->hasInjectionGroup(Opm::Phase::WATER, gname)) {
+        if (this->guideRate_->has(gname, Opm::Phase::WATER)) {
             // No guiderates exist for 'gname'.
             grval.set(data::GuideRateValue::Item::Water,
-                      this->guideRate_->getInjectionGroup(Opm::Phase::WATER, gname));
+                      this->guideRate_->get(gname, Opm::Phase::WATER));
         }
         return grval;
     }
@@ -3002,7 +3002,7 @@ namespace Opm {
             return grval;
         }
 
-        if (! this->guideRate_->hasProductionGroupOrWell(gname)) {
+        if (! this->guideRate_->has(gname)) {
             // No guiderates exist for 'gname'.
             return grval;
         }
@@ -3026,7 +3026,7 @@ namespace Opm {
     {
         auto getGR = [this, &wgname, &qs](const GuideRateModel::Target t)
         {
-            return this->guideRate_->getProductionGroupOrWell(wgname, t, qs);
+            return this->guideRate_->get(wgname, t, qs);
         };
 
         // Note: GuideRate does currently (2020-07-20) not support Target::RES.
@@ -3055,7 +3055,7 @@ namespace Opm {
 
         auto xgrPos = groupGuideRates.find(group.name());
         if ((xgrPos == groupGuideRates.end()) ||
-            !this->guideRate_->hasProductionGroupOrWell(group.name()))
+            !this->guideRate_->has(group.name()))
         {
             // No guiderates defined for this group.
             return;
