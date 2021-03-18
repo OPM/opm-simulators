@@ -338,7 +338,7 @@ namespace WellGroupHelpers
                 const bool individual_control = (currentGroupControl != Group::ProductionCMode::FLD
                                                  && currentGroupControl != Group::ProductionCMode::NONE);
                 const int num_group_controlled_wells
-                    = groupControlledWells(schedule, wellStateNupcol, reportStepIdx, subGroupName, "", !isInjector, Phase::OIL);
+                    = groupControlledWells(schedule, wellStateNupcol, reportStepIdx, subGroupName, "", !isInjector, /*injectionPhaseNotUsed*/Phase::OIL);
                 if (individual_control || num_group_controlled_wells == 0) {
                     for (int phase = 0; phase < np; phase++) {
                         groupTargetReduction[phase]
@@ -1063,7 +1063,7 @@ namespace WellGroupHelpers
                 // the current well to be always included, because we
                 // want to know the situation that applied to the
                 // calculation of reductions.
-                const int num_gr_ctrl = groupControlledWells(schedule, wellState, reportStepIdx, chain[ii + 1], "", true, Phase::OIL);
+                const int num_gr_ctrl = groupControlledWells(schedule, wellState, reportStepIdx, chain[ii + 1], "", /*is_producer*/true, /*injectionPhaseNotUsed*/Phase::OIL);
                 if (num_gr_ctrl == 0) {
                     if (guideRate->has(chain[ii + 1])) {
                         target += localReduction(chain[ii + 1]);
@@ -1186,7 +1186,7 @@ namespace WellGroupHelpers
                 // the current well to be always included, because we
                 // want to know the situation that applied to the
                 // calculation of reductions.
-                const int num_gr_ctrl = groupControlledWells(schedule, wellState, reportStepIdx, chain[ii + 1], "", false, injectionPhase);
+                const int num_gr_ctrl = groupControlledWells(schedule, wellState, reportStepIdx, chain[ii + 1], "", /*is_producer*/false, injectionPhase);
                 if (num_gr_ctrl == 0) {
                     if (guideRate->has(chain[ii + 1], injectionPhase)) {
                         target += localReduction(chain[ii + 1]);

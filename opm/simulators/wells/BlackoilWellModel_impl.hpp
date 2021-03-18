@@ -2972,12 +2972,10 @@ namespace Opm {
 
         const auto& gname = group.name();
         if (this->guideRate_->has(gname, Opm::Phase::GAS)) {
-            // No guiderates exist for 'gname'.
             grval.set(data::GuideRateValue::Item::Gas,
                       this->guideRate_->get(gname, Opm::Phase::GAS));
         }
         if (this->guideRate_->has(gname, Opm::Phase::WATER)) {
-            // No guiderates exist for 'gname'.
             grval.set(data::GuideRateValue::Item::Water,
                       this->guideRate_->get(gname, Opm::Phase::WATER));
         }
