@@ -33,6 +33,25 @@ namespace Opm
      * 2) a call to logMessages adds the messages to OpmLog backends
      * */
 
+namespace ExceptionType
+{
+
+
+/*
+  If an exception has been raised on more than processor simultaneously the
+  highest number type will be thrown in the subsequent global rethrow.
+*/
+
+enum ExcEnum {
+    NONE = 0,
+    RUNTIME_ERROR = 1,
+    INVALID_ARGUMENT = 2,
+    LOGIC_ERROR = 3,
+    DEFAULT = 4,   // will throw std::logic_error()
+};
+}
+
+
     class DeferredLogger
     {
     public:
