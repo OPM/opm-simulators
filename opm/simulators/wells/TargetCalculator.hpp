@@ -169,13 +169,14 @@ namespace WellGroupHelpers
     class InjectionTargetCalculator
     {
     public:
-        InjectionTargetCalculator(const Group::InjectionCMode cmode,
+        InjectionTargetCalculator(const Group::InjectionCMode& cmode,
                                   const PhaseUsage& pu,
                                   const std::vector<double>& resv_coeff,
                                   const std::string& group_name,
                                   const double sales_target,
                                   const WellStateFullyImplicitBlackoil& well_state,
-                                  const Phase& injection_phase)
+                                  const Phase& injection_phase,
+                                  DeferredLogger& deferred_logger)
             : cmode_(cmode)
             , pu_(pu)
             , resv_coeff_(resv_coeff)
@@ -204,7 +205,9 @@ namespace WellGroupHelpers
                 break;
             }
             default:
-                assert(false);
+                OPM_DEFLOG_THROW(std::logic_error,
+                                 "Invalid injection phase in InjectionTargetCalculator",
+                                 deferred_logger);
             }
         }
 
@@ -215,7 +218,7 @@ namespace WellGroupHelpers
             return rates[pos_];
         }
 
-        double groupTarget(const Group::InjectionControls ctrl) const
+        double groupTarget(const Group::InjectionControls& ctrl, Opm::DeferredLogger& deferred_logger) const
         {
             switch (cmode_) {
             case Group::InjectionCMode::RATE:
@@ -253,8 +256,9 @@ namespace WellGroupHelpers
                 return inj_rate;
             }
             default:
-                // Should never be here.
-                assert(false);
+                OPM_DEFLOG_THROW(std::logic_error,
+                                 "Invalid Group::InjectionCMode in InjectionTargetCalculator",
+                                 deferred_logger);
                 return 0.0;
             }
         }

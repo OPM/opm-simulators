@@ -2016,7 +2016,8 @@ namespace Opm
                                      bhp,
                                      injection_rate,
                                      control_eq,
-                                     efficiencyFactor);
+                                     efficiencyFactor,
+                                     deferred_logger);
             break;
         }
         case Well::InjectorCMode::CMODE_UNDEFINED: {
@@ -2153,7 +2154,8 @@ namespace Opm
                                                       const EvalWell& bhp,
                                                       const EvalWell& injection_rate,
                                                       EvalWell& control_eq,
-                                                      double efficiencyFactor)
+                                                      double efficiencyFactor,
+                                                      Opm::DeferredLogger& deferred_logger)
     {
         // Setting some defaults to silence warnings below.
         // Will be overwritten in the switch statement.
@@ -2198,7 +2200,7 @@ namespace Opm
                 // Inject share of parents control
                 const auto& parent = schedule.getGroup( group.parent(), current_step_ );
                 efficiencyFactor *= group.getGroupEfficiencyFactor();
-                getGroupInjectionControl(parent, well_state, schedule, summaryState, injectorType, bhp, injection_rate, control_eq, efficiencyFactor);
+                getGroupInjectionControl(parent, well_state, schedule, summaryState, injectorType, bhp, injection_rate, control_eq, efficiencyFactor, deferred_logger);
                 return;
             }
         }
@@ -2226,7 +2228,7 @@ namespace Opm
             const auto& gconsale = schedule[current_step_].gconsale().get(group.name(), summaryState);
             sales_target = gconsale.sales_target;
         }
-        WellGroupHelpers::InjectionTargetCalculator tcalc(currentGroupControl, pu, resv_coeff, group.name(), sales_target, well_state, injectionPhase);
+        WellGroupHelpers::InjectionTargetCalculator tcalc(currentGroupControl, pu, resv_coeff, group.name(), sales_target, well_state, injectionPhase, deferred_logger);
         WellGroupHelpers::FractionCalculator fcalc(schedule, summaryState, well_state, current_step_, guide_rate_, tcalc.guideTargetMode(), pu, false, injectionPhase);
 
         auto localFraction = [&](const std::string& child) {
@@ -2238,7 +2240,7 @@ namespace Opm
             return tcalc.calcModeRateFromRates(groupTargetReductions);
         };
 
-        const double orig_target = tcalc.groupTarget(group.injectionControls(injectionPhase, summaryState));
+        const double orig_target = tcalc.groupTarget(group.injectionControls(injectionPhase, summaryState), deferred_logger);
         const auto chain = WellGroupHelpers::groupChainTopBot(name(), group.name(), schedule, current_step_);
         // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
         const size_t num_ancestors = chain.size() - 1;

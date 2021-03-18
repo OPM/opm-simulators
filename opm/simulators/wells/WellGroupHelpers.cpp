@@ -23,7 +23,6 @@
 #include <opm/simulators/wells/TargetCalculator.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GConSump.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GConSale.hpp>
-
 #include <algorithm>
 #include <stack>
 #include <vector>
@@ -233,12 +232,13 @@ namespace WellGroupHelpers
                                             const Opm::PhaseUsage& pu,
                                             const int reportStepIdx,
                                             const WellStateFullyImplicitBlackoil& wellState,
-                                            GuideRate* guideRate)
+                                            GuideRate* guideRate,
+                                            Opm::DeferredLogger& deferred_logger)
     {
         for (const std::string& groupName : group.groups()) {
             const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
             updateGuideRatesForInjectionGroups(
-                        groupTmp, schedule, summaryState, pu, reportStepIdx, wellState, guideRate);
+                        groupTmp, schedule, summaryState, pu, reportStepIdx, wellState, guideRate, deferred_logger);
         }
         const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
         for (Phase phase : all) {
@@ -269,13 +269,15 @@ namespace WellGroupHelpers
                 break;
             }
             case Group::GuideRateInjTarget::RESV:
-                OPM_THROW(std::runtime_error, "GUIDE PHASE RESV not implemented. Group " + group.name());
+                OPM_DEFLOG_THROW(std::runtime_error, "GUIDE PHASE RESV not implemented. Group " + group.name(), deferred_logger);
             case Group::GuideRateInjTarget::POTN:
                 break;
             case Group::GuideRateInjTarget::NO_GUIDE_RATE:
                 break;
             default:
-                assert(false);
+                OPM_DEFLOG_THROW(std::logic_error,
+                                 "Invalid GuideRateInjTarget in updateGuideRatesForInjectionGroups",
+                                 deferred_logger);
             }
             guideRate->compute(group.name(), phase, reportStepIdx, guideRateValue);
         }
@@ -1136,7 +1138,7 @@ namespace WellGroupHelpers
             const auto& gconsale = schedule[reportStepIdx].gconsale().get(group.name(), summaryState);
             sales_target = gconsale.sales_target;
         }
-        InjectionTargetCalculator tcalc(currentGroupControl, pu, resv_coeff, group.name(), sales_target, wellState, injectionPhase);
+        InjectionTargetCalculator tcalc(currentGroupControl, pu, resv_coeff, group.name(), sales_target, wellState, injectionPhase, deferred_logger);
         FractionCalculator fcalc(schedule, summaryState, wellState, reportStepIdx, guideRate, tcalc.guideTargetMode(), pu, false, injectionPhase);
 
         auto localFraction = [&](const std::string& child) { return fcalc.localFraction(child, name); };
@@ -1147,7 +1149,7 @@ namespace WellGroupHelpers
             return tcalc.calcModeRateFromRates(groupTargetReductions);
         };
 
-        const double orig_target = tcalc.groupTarget(group.injectionControls(injectionPhase, summaryState));
+        const double orig_target = tcalc.groupTarget(group.injectionControls(injectionPhase, summaryState), deferred_logger);
         // Assume we have a chain of groups as follows: BOTTOM -> MIDDLE -> TOP.
         // Then ...
         // TODO finish explanation.

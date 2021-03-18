@@ -223,7 +223,8 @@ namespace WellGroupHelpers
                                             const Opm::PhaseUsage& pu,
                                             const int reportStepIdx,
                                             const WellStateFullyImplicitBlackoil& wellState,
-                                            GuideRate* guideRate);
+                                            GuideRate* guideRate,
+                                            Opm::DeferredLogger& deferred_logger);
 
     void updateVREPForGroups(const Group& group,
                              const Schedule& schedule,

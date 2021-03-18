@@ -306,7 +306,7 @@ namespace Opm {
 
         well_state_ = previous_well_state_;
         well_state_.disableGliftOptimization();
-        updateAndCommunicateGroupData();
+        updateAndCommunicateGroupData(local_deferredLogger);
         const int reportStepIdx = ebosSimulator_.episodeIndex();
         const double simulationTime = ebosSimulator_.time();
         int exception_thrown = 0;
@@ -1225,7 +1225,7 @@ namespace Opm {
         // For no well active globally we simply return.
         if( !wellsActive() ) return ;
 
-        updateAndCommunicateGroupData();
+        updateAndCommunicateGroupData(deferred_logger);
 
         updateNetworkPressures();
 
@@ -1239,7 +1239,7 @@ namespace Opm {
             // Check group's constraints from higher levels.
             updateGroupHigherControls(deferred_logger, switched_groups);
 
-            updateAndCommunicateGroupData();
+            updateAndCommunicateGroupData(deferred_logger);
 
             // Check wells' group constraints and communicate.
             for (const auto& well : well_container_) {
@@ -1249,7 +1249,7 @@ namespace Opm {
                     switched_wells.insert(well->name());
                 }
             }
-            updateAndCommunicateGroupData();
+            updateAndCommunicateGroupData(deferred_logger);
         }
 
         // Check individual well constraints and communicate.
@@ -1260,7 +1260,7 @@ namespace Opm {
             const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Individual;
             well->updateWellControl(ebosSimulator_, mode, well_state_, deferred_logger);
         }
-        updateAndCommunicateGroupData();
+        updateAndCommunicateGroupData(deferred_logger);
 
     }
 
@@ -1303,7 +1303,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    updateAndCommunicateGroupData()
+    updateAndCommunicateGroupData(Opm::DeferredLogger& deferred_logger)
     {
         const int reportStepIdx = ebosSimulator_.episodeIndex();
         const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
@@ -1332,7 +1332,7 @@ namespace Opm {
         const double simulationTime = ebosSimulator_.time();
         std::vector<double> pot(numPhases(), 0.0);
         WellGroupHelpers::updateGuideRateForProductionGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, well_state_, comm, guideRate_.get(), pot);
-        WellGroupHelpers::updateGuideRatesForInjectionGroups(fieldGroup, schedule(), summaryState, phase_usage_, reportStepIdx, well_state_, guideRate_.get());
+        WellGroupHelpers::updateGuideRatesForInjectionGroups(fieldGroup, schedule(), summaryState, phase_usage_, reportStepIdx, well_state_, guideRate_.get(), deferred_logger);
 
         WellGroupHelpers::updateREINForGroups(fieldGroup, schedule(), reportStepIdx, phase_usage_, summaryState, well_state_nupcol_, well_state_);
         WellGroupHelpers::updateVREPForGroups(fieldGroup, schedule(), reportStepIdx, well_state_nupcol_, well_state_);

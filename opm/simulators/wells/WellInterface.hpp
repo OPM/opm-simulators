@@ -597,7 +597,8 @@ namespace Opm
                                       const EvalWell& bhp,
                                       const EvalWell& injection_rate,
                                       EvalWell& control_eq,
-                                      double efficiencyFactor);
+                                      double efficiencyFactor,
+                                      Opm::DeferredLogger& deferred_logger);
 
         template <class EvalWell>
         void getGroupProductionControl(const Group& group,
