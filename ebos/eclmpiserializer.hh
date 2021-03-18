@@ -260,16 +260,24 @@ public:
                 (*this)(d);
         };
 
+        auto keyHandle = [&](auto& d)
+        {
+              if constexpr (is_pair<Key>::value)
+                  pair(d);
+              else
+                  (*this)(d);
+        };
+
         if (m_op == Operation::PACKSIZE) {
             m_packSize += Mpi::packSize(data.size(), m_comm);
             for (auto& it : data) {
-                m_packSize += Mpi::packSize(it.first, m_comm);
+                keyHandle(it.first);
                 handle(it.second);
             }
         } else if (m_op == Operation::PACK) {
             Mpi::pack(data.size(), m_buffer, m_position, m_comm);
             for (auto& it : data) {
-                Mpi::pack(it.first, m_buffer, m_position, m_comm);
+                keyHandle(it.first);
                 handle(it.second);
             }
         } else if (m_op == Operation::UNPACK) {
@@ -277,7 +285,7 @@ public:
             Mpi::unpack(size, m_buffer, m_position, m_comm);
             for (size_t i = 0; i < size; ++i) {
                 Key key;
-                Mpi::unpack(key, m_buffer, m_position, m_comm);
+                keyHandle(key);
                 Data entry;
                 handle(entry);
                 data.insert(std::make_pair(key, entry));

@@ -306,7 +306,7 @@ namespace Opm {
 
         well_state_ = previous_well_state_;
         well_state_.disableGliftOptimization();
-        updateAndCommunicateGroupData();
+        updateAndCommunicateGroupData(local_deferredLogger);
         const int reportStepIdx = ebosSimulator_.episodeIndex();
         const double simulationTime = ebosSimulator_.time();
         int exception_thrown = 0;
@@ -1227,7 +1227,7 @@ namespace Opm {
         // For no well active globally we simply return.
         if( !wellsActive() ) return ;
 
-        updateAndCommunicateGroupData();
+        updateAndCommunicateGroupData(deferred_logger);
 
         updateNetworkPressures();
 
@@ -1241,7 +1241,7 @@ namespace Opm {
             // Check group's constraints from higher levels.
             updateGroupHigherControls(deferred_logger, switched_groups);
 
-            updateAndCommunicateGroupData();
+            updateAndCommunicateGroupData(deferred_logger);
 
             // Check wells' group constraints and communicate.
             for (const auto& well : well_container_) {
@@ -1251,7 +1251,7 @@ namespace Opm {
                     switched_wells.insert(well->name());
                 }
             }
-            updateAndCommunicateGroupData();
+            updateAndCommunicateGroupData(deferred_logger);
         }
 
         // Check individual well constraints and communicate.
@@ -1262,7 +1262,7 @@ namespace Opm {
             const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Individual;
             well->updateWellControl(ebosSimulator_, mode, well_state_, deferred_logger);
         }
-        updateAndCommunicateGroupData();
+        updateAndCommunicateGroupData(deferred_logger);
 
     }
 
@@ -1305,7 +1305,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    updateAndCommunicateGroupData()
+    updateAndCommunicateGroupData(Opm::DeferredLogger& deferred_logger)
     {
         const int reportStepIdx = ebosSimulator_.episodeIndex();
         const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
@@ -1321,6 +1321,7 @@ namespace Opm {
             well_state_nupcol_ = well_state_;
         }
 
+        const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         // the group target reduction rates needs to be update since wells may have swicthed to/from GRUP control
         // Currently the group target reduction does not honor NUPCOL. TODO: is that true?
         std::vector<double> groupTargetReduction(numPhases(), 0.0);
@@ -1328,13 +1329,13 @@ namespace Opm {
         std::vector<double> groupTargetReductionInj(numPhases(), 0.0);
         WellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ true, phase_usage_, *guideRate_, well_state_nupcol_, well_state_, groupTargetReductionInj);
 
+        // the guiderate update should not be part of this function
+        // remove in seperate PR since it affects existing functionality
         const double simulationTime = ebosSimulator_.time();
         std::vector<double> pot(numPhases(), 0.0);
-        WellGroupHelpers::updateGuideRateForGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, /*isInjector*/ false, well_state_, comm, guideRate_.get(), pot);
-        std::vector<double> potInj(numPhases(), 0.0);
-        WellGroupHelpers::updateGuideRateForGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, /*isInjector*/ true, well_state_, comm, guideRate_.get(), potInj);
+        WellGroupHelpers::updateGuideRateForProductionGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, well_state_, comm, guideRate_.get(), pot);
+        WellGroupHelpers::updateGuideRatesForInjectionGroups(fieldGroup, schedule(), summaryState, phase_usage_, reportStepIdx, well_state_, guideRate_.get(), deferred_logger);
 
-        const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         WellGroupHelpers::updateREINForGroups(fieldGroup, schedule(), reportStepIdx, phase_usage_, summaryState, well_state_nupcol_, well_state_);
         WellGroupHelpers::updateVREPForGroups(fieldGroup, schedule(), reportStepIdx, well_state_nupcol_, well_state_);
 
@@ -2873,6 +2874,11 @@ namespace Opm {
                     gr[gname].production = this->getGuideRateValues(group);
                 }
 
+                if (this->guideRate_->has(gname, Opm::Phase::WATER)
+                        || this->guideRate_->has(gname, Opm::Phase::GAS)) {
+                    gr[gname].injection = this->getGuideRateInjectionGroupValues(group);
+                }
+
                 const auto parent = group.parent();
                 if (parent == "FIELD") { continue; }
 
@@ -2951,10 +2957,30 @@ namespace Opm {
         }
 
         const auto qs = WellGroupHelpers::
-            getRateVector(this->well_state_, this->phase_usage_, wname);
+            getWellRateVector(this->well_state_, this->phase_usage_, wname);
 
         this->getGuideRateValues(qs, well.isInjector(), wname, grval);
 
+        return grval;
+    }
+    template <typename TypeTag>
+    data::GuideRateValue
+    BlackoilWellModel<TypeTag>::
+    getGuideRateInjectionGroupValues(const Group& group) const
+    {
+        auto grval = data::GuideRateValue{};
+
+        assert (this->guideRate_ != nullptr);
+
+        const auto& gname = group.name();
+        if (this->guideRate_->has(gname, Opm::Phase::GAS)) {
+            grval.set(data::GuideRateValue::Item::Gas,
+                      this->guideRate_->get(gname, Opm::Phase::GAS));
+        }
+        if (this->guideRate_->has(gname, Opm::Phase::WATER)) {
+            grval.set(data::GuideRateValue::Item::Water,
+                      this->guideRate_->get(gname, Opm::Phase::WATER));
+        }
         return grval;
     }
 
@@ -2968,8 +2994,9 @@ namespace Opm {
         assert (this->guideRate_ != nullptr);
 
         const auto& gname = group.name();
-        if (! this->well_state_.hasProductionGroupRates(gname)) {
-            // No flow rates for 'gname' -- might be before group comes
+
+        if ( ! this->well_state_.hasProductionGroupRates(gname)) {
+            // No flow rates for production group 'gname' -- might be before group comes
             // online (e.g., for the initial condition before simulation
             // starts).
             return grval;
@@ -2981,7 +3008,7 @@ namespace Opm {
         }
 
         const auto qs = WellGroupHelpers::
-            getProductionGroupRateVector(this->well_state_, this->phase_usage_, gname);
+                getProductionGroupRateVector(this->well_state_, this->phase_usage_, gname);
 
         const auto is_inj = false; // This procedure only applies to G*PGR.
         this->getGuideRateValues(qs, is_inj, gname, grval);

@@ -391,7 +391,7 @@ namespace Opm {
 
             void updateWellControls(Opm::DeferredLogger& deferred_logger, const bool checkGroupControls);
 
-            void updateAndCommunicateGroupData();
+            void updateAndCommunicateGroupData(Opm::DeferredLogger& deferred_logger);
             void updateNetworkPressures();
 
             // setting the well_solutions_ based on well_state.
@@ -502,6 +502,7 @@ namespace Opm {
             void assignGroupControl(const Group& group, data::GroupData& gdata) const;
             data::GuideRateValue getGuideRateValues(const Well& well) const;
             data::GuideRateValue getGuideRateValues(const Group& group) const;
+            data::GuideRateValue getGuideRateInjectionGroupValues(const Group& group) const;
             void getGuideRateValues(const GuideRate::RateVector& qs,
                                     const bool                   is_inj,
                                     const std::string&           wgname,

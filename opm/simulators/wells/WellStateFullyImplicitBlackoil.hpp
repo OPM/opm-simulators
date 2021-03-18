@@ -449,6 +449,7 @@ namespace Opm
             return this->production_group_rates.find(groupName) != this->production_group_rates.end();
         }
 
+
         void setCurrentProductionGroupReductionRates(const std::string& groupName, const std::vector<double>& target ) {
             production_group_reduction_rates[groupName] = target;
         }
