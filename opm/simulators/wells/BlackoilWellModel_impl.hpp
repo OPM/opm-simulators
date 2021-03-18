@@ -301,6 +301,7 @@ namespace Opm {
     beginTimeStep()
     {
         updatePerforationIntensiveQuantities();
+        updateAverageFormationFactor();
 
         Opm::DeferredLogger local_deferredLogger;
 
@@ -321,11 +322,8 @@ namespace Opm {
             // do the initialization for all the wells
             // TODO: to see whether we can postpone of the intialization of the well containers to
             // optimize the usage of the following several member variables
-            std::vector< Scalar > B_avg(numComponents(), Scalar() );
-            computeAverageFormationFactor(B_avg);
-
             for (auto& well : well_container_) {
-                well->init(&phase_usage_, depth_, gravity_, local_num_cells_, B_avg);
+                well->init(&phase_usage_, depth_, gravity_, local_num_cells_, B_avg_);
             }
 
             // update the updated cell flag
@@ -462,13 +460,6 @@ namespace Opm {
     {
         const auto& wtest_config = schedule()[timeStepIdx].wtest_config();
         if (wtest_config.size() != 0) { // there is a WTEST request
-
-            // average B factors are required for the convergence checking of well equations
-            // Note: this must be done on all processes, even those with
-            // no wells needing testing, otherwise we will have locking.
-            std::vector< Scalar > B_avg(numComponents(), Scalar());
-            computeAverageFormationFactor(B_avg);
-
             const auto wellsForTesting = wellTestState_
                 .updateWells(wtest_config, wells_ecl_, simulationTime);
 
@@ -479,8 +470,7 @@ namespace Opm {
                 WellInterfacePtr well = createWellForWellTest(well_name, timeStepIdx, deferred_logger);
 
                 // some preparation before the well can be used
-                well->init(&phase_usage_, depth_, gravity_, local_num_cells_, B_avg);
-
+                well->init(&phase_usage_, depth_, gravity_, local_num_cells_, B_avg_);
                 const Well& wellEcl = schedule().getWell(well_name, timeStepIdx);
                 double well_efficiency_factor = wellEcl.getEfficiencyFactor();
                 WellGroupHelpers::accumulateGroupEfficiencyFactor(schedule().getGroup(wellEcl.groupName(), timeStepIdx),
@@ -492,7 +482,7 @@ namespace Opm {
 
                 const WellTestConfig::Reason testing_reason = testWell.second;
 
-                well->wellTesting(ebosSimulator_, B_avg, simulationTime, timeStepIdx,
+                well->wellTesting(ebosSimulator_, simulationTime, timeStepIdx,
                                   testing_reason, well_state_, wellTestState_, deferred_logger);
             }
         }
@@ -1029,9 +1019,6 @@ namespace Opm {
             // Set the well primary variables based on the value of well solutions
             initPrimaryVariablesEvaluation();
 
-            std::vector< Scalar > B_avg(numComponents(), Scalar() );
-            computeAverageFormationFactor(B_avg);
-
             if (param_.solve_welleq_initially_ && iterationIdx == 0) {
                 for (auto& well : well_container_) {
                     well->solveWellEquation(ebosSimulator_, well_state_, local_deferredLogger);
@@ -1041,7 +1028,7 @@ namespace Opm {
 
             gliftDebug("assemble() : running assembleWellEq()..", local_deferredLogger);
             well_state_.enableGliftOptimization();
-            assembleWellEq(B_avg, dt, local_deferredLogger);
+            assembleWellEq(dt, local_deferredLogger);
             well_state_.disableGliftOptimization();
         } catch (const std::runtime_error& e) {
             exc_type = ExceptionType::RUNTIME_ERROR;
@@ -1056,7 +1043,6 @@ namespace Opm {
             exc_type = ExceptionType::DEFAULT;
             exc_msg = e.what();
         }
-
         logAndCheckForExceptionsAndThrow(local_deferredLogger, exc_type, "assemble() failed: " + exc_msg, terminal_output_);
         last_report_.converged = true;
         last_report_.assemble_time_well += perfTimer.stop();
@@ -1065,12 +1051,12 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    assembleWellEq(const std::vector<Scalar>& B_avg, const double dt, Opm::DeferredLogger& deferred_logger)
+    assembleWellEq(const double dt, Opm::DeferredLogger& deferred_logger)
     {
         for (auto& well : well_container_) {
             well->maybeDoGasLiftOptimization(
                  well_state_, ebosSimulator_, deferred_logger);
-            well->assembleWellEq(ebosSimulator_, B_avg, dt, well_state_, deferred_logger);
+            well->assembleWellEq(ebosSimulator_, dt, well_state_, deferred_logger);
         }
     }
 
@@ -1491,12 +1477,6 @@ namespace Opm {
 
         auto well_state_copy = well_state_;
 
-        // average B factors are required for the convergence checking of well equations
-        // Note: this must be done on all processes, even those with
-        // no wells needing testing, otherwise we will have locking.
-        std::vector< Scalar > B_avg(numComponents(), Scalar() );
-        computeAverageFormationFactor(B_avg);
-
         const Opm::SummaryConfig& summaryConfig = ebosSimulator_.vanguard().summaryConfig();
         const bool write_restart_file = ebosSimulator_.vanguard().schedule().write_rst_file(reportStepIdx);
         auto exc_type = ExceptionType::NONE;
@@ -1514,7 +1494,7 @@ namespace Opm {
             {
                 try {
                     std::vector<double> potentials;
-                    well->computeWellPotentials(ebosSimulator_, B_avg, well_state_copy, potentials, deferred_logger);
+                    well->computeWellPotentials(ebosSimulator_, well_state_copy, potentials, deferred_logger);
                     // putting the sucessfully calculated potentials to the well_potentials
                     for (int p = 0; p < np; ++p) {
                         well_potentials[well->indexOfWell() * np + p] = std::abs(potentials[p]);
@@ -1693,8 +1673,9 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    computeAverageFormationFactor(std::vector<Scalar>& B_avg) const
+    updateAverageFormationFactor()
     {
+        std::vector< Scalar > B_avg(numComponents(), Scalar() );
         const auto& grid = ebosSimulator_.vanguard().grid();
         const auto& gridView = grid.leafGridView();
         ElementContext elemCtx(ebosSimulator_);
@@ -1732,6 +1713,7 @@ namespace Opm {
         {
             bval/=global_num_cells_;
         }
+        B_avg_ = B_avg;
     }
 
 
@@ -2811,11 +2793,8 @@ namespace Opm {
             this->previous_well_state_ = this->well_state_;
 
             well_container_ = createWellContainer(timeStepIdx);
-            std::vector< Scalar > B_avg(numComponents(), Scalar() );
-            // we don't plan to iterate so just passing trivial B_avg
-            // for now
             for (auto& well : well_container_) {
-                well->init(&phase_usage_, depth_, gravity_, local_num_cells_, B_avg);
+                well->init(&phase_usage_, depth_, gravity_, local_num_cells_, B_avg_);
             }
 
             std::fill(is_cell_perforated_.begin(), is_cell_perforated_.end(), false);

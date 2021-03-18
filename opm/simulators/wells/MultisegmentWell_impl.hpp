@@ -261,7 +261,6 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     assembleWellEq(const Simulator& ebosSimulator,
-                   const std::vector<Scalar>& B_avg,
                    const double dt,
                    WellState& well_state,
                    Opm::DeferredLogger& deferred_logger)
@@ -271,7 +270,7 @@ namespace Opm
 
         const bool use_inner_iterations = param_.use_inner_iterations_ms_wells_;
         if (use_inner_iterations) {
-            this->iterateWellEquations(ebosSimulator, B_avg, dt, well_state, deferred_logger);
+            this->iterateWellEquations(ebosSimulator, dt, well_state, deferred_logger);
         }
 
         const auto& summary_state = ebosSimulator.vanguard().summaryState();
@@ -779,7 +778,6 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     computeWellPotentials(const Simulator& ebosSimulator,
-                          const std::vector<Scalar>& B_avg,
                           const WellState& well_state,
                           std::vector<double>& well_potentials,
                           Opm::DeferredLogger& deferred_logger)
@@ -819,9 +817,9 @@ namespace Opm
         const auto& summaryState = ebosSimulator.vanguard().summaryState();
         const Well::ProducerCMode& current_control = well_state.currentProductionControls()[this->index_of_well_];
         if ( !Base::wellHasTHPConstraints(summaryState) || current_control == Well::ProducerCMode::BHP) {
-            computeWellRatesAtBhpLimit(ebosSimulator, B_avg, well_potentials, deferred_logger);
+            computeWellRatesAtBhpLimit(ebosSimulator, well_potentials, deferred_logger);
         } else {
-            well_potentials = computeWellPotentialWithTHP(ebosSimulator, B_avg, deferred_logger);
+            well_potentials = computeWellPotentialWithTHP(ebosSimulator, deferred_logger);
         }
         deferred_logger.debug("Cost in iterations of finding well potential for well "
                               + name() + ": " + std::to_string(debug_cost_counter_));
@@ -834,16 +832,15 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     computeWellRatesAtBhpLimit(const Simulator& ebosSimulator,
-                               const std::vector<Scalar>& B_avg,
                                std::vector<double>& well_flux,
                                Opm::DeferredLogger& deferred_logger) const
     {
         if (well_ecl_.isInjector()) {
             const auto controls = well_ecl_.injectionControls(ebosSimulator.vanguard().summaryState());
-            computeWellRatesWithBhp(ebosSimulator, B_avg, controls.bhp_limit, well_flux, deferred_logger);
+            computeWellRatesWithBhp(ebosSimulator, controls.bhp_limit, well_flux, deferred_logger);
         } else {
             const auto controls = well_ecl_.productionControls(ebosSimulator.vanguard().summaryState());
-            computeWellRatesWithBhp(ebosSimulator, B_avg, controls.bhp_limit, well_flux, deferred_logger);
+            computeWellRatesWithBhp(ebosSimulator, controls.bhp_limit, well_flux, deferred_logger);
         }
     }
 
@@ -853,7 +850,6 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     computeWellRatesWithBhp(const Simulator& ebosSimulator,
-                            const std::vector<Scalar>& B_avg,
                             const Scalar bhp,
                             std::vector<double>& well_flux,
                             Opm::DeferredLogger& deferred_logger) const
@@ -898,7 +894,7 @@ namespace Opm
         well_copy.calculateExplicitQuantities(ebosSimulator, well_state_copy, deferred_logger);
         const double dt = ebosSimulator.timeStepSize();
         // iterate to get a solution at the given bhp.
-        well_copy.iterateWellEqWithControl(ebosSimulator, B_avg, dt, inj_controls, prod_controls, well_state_copy,
+        well_copy.iterateWellEqWithControl(ebosSimulator, dt, inj_controls, prod_controls, well_state_copy,
                                            deferred_logger);
 
         // compute the potential and store in the flux vector.
@@ -917,7 +913,6 @@ namespace Opm
     std::vector<double>
     MultisegmentWell<TypeTag>::
     computeWellPotentialWithTHP(const Simulator& ebos_simulator,
-                                const std::vector<Scalar>& B_avg,
                                 Opm::DeferredLogger& deferred_logger) const
     {
         std::vector<double> potentials(number_of_phases_, 0.0);
@@ -925,11 +920,11 @@ namespace Opm
 
         const auto& well = well_ecl_;
         if (well.isInjector()){
-            auto bhp_at_thp_limit = computeBhpAtThpLimitInj(ebos_simulator, B_avg, summary_state, deferred_logger);
+            auto bhp_at_thp_limit = computeBhpAtThpLimitInj(ebos_simulator, summary_state, deferred_logger);
             if (bhp_at_thp_limit) {
                 const auto& controls = well_ecl_.injectionControls(summary_state);
                 const double bhp = std::min(*bhp_at_thp_limit, controls.bhp_limit);
-                computeWellRatesWithBhp(ebos_simulator, B_avg, bhp, potentials, deferred_logger);
+                computeWellRatesWithBhp(ebos_simulator, bhp, potentials, deferred_logger);
                 deferred_logger.debug("Converged thp based potential calculation for well "
                                       + name() + ", at bhp = " + std::to_string(bhp));
             } else {
@@ -938,14 +933,14 @@ namespace Opm
                                         + name() + ". Instead the bhp based value is used");
                 const auto& controls = well_ecl_.injectionControls(summary_state);
                 const double bhp = controls.bhp_limit;
-                computeWellRatesWithBhp(ebos_simulator, B_avg, bhp, potentials, deferred_logger);
+                computeWellRatesWithBhp(ebos_simulator, bhp, potentials, deferred_logger);
             }
         } else {
-            auto bhp_at_thp_limit = computeBhpAtThpLimitProd(ebos_simulator, B_avg, summary_state, deferred_logger);
+            auto bhp_at_thp_limit = computeBhpAtThpLimitProd(ebos_simulator, summary_state, deferred_logger);
             if (bhp_at_thp_limit) {
                 const auto& controls = well_ecl_.productionControls(summary_state);
                 const double bhp = std::max(*bhp_at_thp_limit, controls.bhp_limit);
-                computeWellRatesWithBhp(ebos_simulator, B_avg, bhp, potentials, deferred_logger);
+                computeWellRatesWithBhp(ebos_simulator, bhp, potentials, deferred_logger);
                 deferred_logger.debug("Converged thp based potential calculation for well "
                                       + name() + ", at bhp = " + std::to_string(bhp));
             } else {
@@ -954,7 +949,7 @@ namespace Opm
                                         + name() + ". Instead the bhp based value is used");
                 const auto& controls = well_ecl_.productionControls(summary_state);
                 const double bhp = controls.bhp_limit;
-                computeWellRatesWithBhp(ebos_simulator, B_avg, bhp, potentials, deferred_logger);
+                computeWellRatesWithBhp(ebos_simulator, bhp, potentials, deferred_logger);
             }
         }
 
@@ -2447,7 +2442,7 @@ namespace Opm
                 // option 2: stick with the above IPR curve
                 // we use IPR here
                 std::vector<double> well_rates_bhp_limit;
-                computeWellRatesWithBhp(ebos_simulator, Base::B_avg_, bhp_limit, well_rates_bhp_limit, deferred_logger);
+                computeWellRatesWithBhp(ebos_simulator, bhp_limit, well_rates_bhp_limit, deferred_logger);
 
                 const double thp = calculateThpFromBhp(well_rates_bhp_limit, bhp_limit, deferred_logger);
 
@@ -2586,7 +2581,7 @@ namespace Opm
     checkOperabilityUnderTHPLimitProducer(const Simulator& ebos_simulator, const WellState& /*well_state*/, Opm::DeferredLogger& deferred_logger)
     {
         const auto& summaryState = ebos_simulator.vanguard().summaryState();
-        const auto obtain_bhp = computeBhpAtThpLimitProd(ebos_simulator, Base::B_avg_, summaryState, deferred_logger);
+        const auto obtain_bhp = computeBhpAtThpLimitProd(ebos_simulator, summaryState, deferred_logger);
 
         if (obtain_bhp) {
             this->operability_status_.can_obtain_bhp_with_thp_limit = true;
@@ -2709,7 +2704,6 @@ namespace Opm
     bool
     MultisegmentWell<TypeTag>::
     iterateWellEqWithControl(const Simulator& ebosSimulator,
-                             const std::vector<Scalar>& B_avg,
                              const double dt,
                              const Well::InjectionControls& inj_controls,
                              const Well::ProductionControls& prod_controls,
@@ -2720,7 +2714,7 @@ namespace Opm
 
         const int max_iter_number = param_.max_inner_iter_ms_wells_;
         const WellState well_state0 = well_state;
-        const std::vector<Scalar> residuals0 = getWellResiduals(B_avg, deferred_logger);
+        const std::vector<Scalar> residuals0 = getWellResiduals(Base::B_avg_, deferred_logger);
         std::vector<std::vector<Scalar> > residual_history;
         std::vector<double> measure_history;
         int it = 0;
@@ -2739,13 +2733,13 @@ namespace Opm
             if (it > param_.strict_inner_iter_ms_wells_)
                 relax_convergence = true;
 
-            const auto report = getWellConvergence(well_state, B_avg, deferred_logger, relax_convergence);
+            const auto report = getWellConvergence(well_state, Base::B_avg_, deferred_logger, relax_convergence);
             if (report.converged()) {
                 converged = true;
                 break;
             }
 
-            residual_history.push_back(getWellResiduals(B_avg, deferred_logger));
+            residual_history.push_back(getWellResiduals(Base::B_avg_, deferred_logger));
             measure_history.push_back(getResidualMeasureValue(well_state, residual_history[it], deferred_logger) );
 
             bool is_oscillate = false;
@@ -2763,7 +2757,7 @@ namespace Opm
                     ++stagnate_count;
                     if (stagnate_count == 6) {
                         sstr << " well " << name() << " observes severe stagnation and/or oscillation. We relax the tolerance and check for convergence. \n";
-                        const auto reportStag = getWellConvergence(well_state, B_avg, deferred_logger, true);
+                        const auto reportStag = getWellConvergence(well_state, Base::B_avg_, deferred_logger, true);
                         if (reportStag.converged()) {
                             converged = true;
                             sstr << " well " << name() << " manages to get converged with relaxed tolerances in " << it << " inner iterations";
@@ -3578,7 +3572,6 @@ namespace Opm
     std::optional<double>
     MultisegmentWell<TypeTag>::
     computeBhpAtThpLimitProd(const Simulator& ebos_simulator,
-                             const std::vector<Scalar>& B_avg,
                              const SummaryState& summary_state,
                              DeferredLogger& deferred_logger) const
     {
@@ -3617,14 +3610,14 @@ namespace Opm
         };
 
         // Make the frates() function.
-        auto frates = [this, &ebos_simulator, &B_avg, &deferred_logger](const double bhp) {
+        auto frates = [this, &ebos_simulator, &deferred_logger](const double bhp) {
             // Not solving the well equations here, which means we are
             // calculating at the current Fg/Fw values of the
             // well. This does not matter unless the well is
             // crossflowing, and then it is likely still a good
             // approximation.
             std::vector<double> rates(3);
-            computeWellRatesWithBhp(ebos_simulator, B_avg, bhp, rates, deferred_logger);
+            computeWellRatesWithBhp(ebos_simulator, bhp, rates, deferred_logger);
             return rates;
         };
 
@@ -3778,7 +3771,6 @@ namespace Opm
     std::optional<double>
     MultisegmentWell<TypeTag>::
     computeBhpAtThpLimitInj(const Simulator& ebos_simulator,
-                            const std::vector<Scalar>& B_avg,
                             const SummaryState& summary_state,
                             DeferredLogger& deferred_logger) const
     {
@@ -3840,14 +3832,14 @@ namespace Opm
         };
 
         // Make the frates() function.
-        auto frates = [this, &ebos_simulator, &B_avg, &deferred_logger](const double bhp) {
+        auto frates = [this, &ebos_simulator, &deferred_logger](const double bhp) {
             // Not solving the well equations here, which means we are
             // calculating at the current Fg/Fw values of the
             // well. This does not matter unless the well is
             // crossflowing, and then it is likely still a good
             // approximation.
             std::vector<double> rates(3);
-            computeWellRatesWithBhp(ebos_simulator, B_avg, bhp, rates, deferred_logger);
+            computeWellRatesWithBhp(ebos_simulator, bhp, rates, deferred_logger);
             return rates;
         };
 

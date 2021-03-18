@@ -169,7 +169,6 @@ namespace Opm
         virtual void solveEqAndUpdateWellState(WellState& well_state, Opm::DeferredLogger& deferred_logger) = 0;
 
         virtual void assembleWellEq(const Simulator& ebosSimulator,
-                                    const std::vector<Scalar>& B_avg,
                                     const double dt,
                                     WellState& well_state,
                                     Opm::DeferredLogger& deferred_logger
@@ -205,7 +204,6 @@ namespace Opm
 
         // TODO: before we decide to put more information under mutable, this function is not const
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
-                                           const std::vector<Scalar>& B_avg,
                                            const WellState& well_state,
                                            std::vector<double>& well_potentials,
                                            Opm::DeferredLogger& deferred_logger) = 0;
@@ -265,7 +263,7 @@ namespace Opm
 
         // TODO: theoretically, it should be a const function
         // Simulator is not const is because that assembleWellEq is non-const Simulator
-        void wellTesting(const Simulator& simulator, const std::vector<double>& B_avg,
+        void wellTesting(const Simulator& simulator,
                          const double simulation_time, const int report_step,
                          const WellTestConfig::Reason testing_reason,
                          /* const */ WellState& well_state, WellTestState& welltest_state,
@@ -513,11 +511,11 @@ namespace Opm
         virtual void updateIPR(const Simulator& ebos_simulator, Opm::DeferredLogger& deferred_logger) const=0;
 
 
-        void wellTestingEconomic(const Simulator& simulator, const std::vector<double>& B_avg,
+        void wellTestingEconomic(const Simulator& simulator,
                                  const double simulation_time, const WellState& well_state,
                                  WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger);
 
-        void wellTestingPhysical(const Simulator& simulator, const std::vector<double>& B_avg,
+        void wellTestingPhysical(const Simulator& simulator,
                                  const double simulation_time, const int report_step,
                                  WellState& well_state, WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger);
 
@@ -531,7 +529,6 @@ namespace Opm
 
         // iterate well equations with the specified control until converged
         virtual bool iterateWellEqWithControl(const Simulator& ebosSimulator,
-                                              const std::vector<double>& B_avg,
                                               const double dt,
                                               const Well::InjectionControls& inj_controls,
                                               const Well::ProductionControls& prod_controls,
@@ -539,7 +536,6 @@ namespace Opm
                                               Opm::DeferredLogger& deferred_logger) = 0;
 
         bool iterateWellEquations(const Simulator& ebosSimulator,
-                                  const std::vector<double>& B_avg,
                                   const double dt,
                                   WellState& well_state,
                                   Opm::DeferredLogger& deferred_logger);
@@ -557,7 +553,6 @@ namespace Opm
                                          Opm::DeferredLogger& deferred_logger) const;
 
         void solveWellForTesting(const Simulator& ebosSimulator, WellState& well_state,
-                                 const std::vector<double>& B_avg,
                                  Opm::DeferredLogger& deferred_logger);
 
         void initCompletions();

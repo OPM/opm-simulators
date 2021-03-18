@@ -357,6 +357,8 @@ namespace Opm {
             // used to better efficiency of calcuation
             mutable BVector scaleAddRes_;
 
+            std::vector< Scalar > B_avg_;
+
             const Grid& grid() const
             { return ebosSimulator_.vanguard().grid(); }
 
@@ -409,7 +411,7 @@ namespace Opm {
             void setRepRadiusPerfLength();
 
 
-            void computeAverageFormationFactor(std::vector<Scalar>& B_avg) const;
+            void updateAverageFormationFactor();
 
             // Calculating well potentials for each well
             void computeWellPotentials(std::vector<double>& well_potentials, const int reportStepIdx, Opm::DeferredLogger& deferred_logger);
@@ -438,7 +440,7 @@ namespace Opm {
 
             int reportStepIndex() const;
 
-            void assembleWellEq(const std::vector<Scalar>& B_avg, const double dt, Opm::DeferredLogger& deferred_logger);
+            void assembleWellEq(const double dt, Opm::DeferredLogger& deferred_logger);
 
             // some preparation work, mostly related to group control and RESV,
             // at the beginning of each time step (Not report step)

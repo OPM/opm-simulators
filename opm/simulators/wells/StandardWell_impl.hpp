@@ -542,7 +542,6 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     assembleWellEq(const Simulator& ebosSimulator,
-                   const std::vector<Scalar>& B_avg,
                    const double dt,
                    WellState& well_state,
                    Opm::DeferredLogger& deferred_logger)
@@ -551,7 +550,7 @@ namespace Opm
 
         const bool use_inner_iterations = param_.use_inner_iterations_wells_;
         if (use_inner_iterations) {
-            this->iterateWellEquations(ebosSimulator, B_avg, dt, well_state, deferred_logger);
+            this->iterateWellEquations(ebosSimulator, dt, well_state, deferred_logger);
         }
 
         // TODO: inj_controls and prod_controls are not used in the following function for now
@@ -2598,7 +2597,6 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     computeWellRatesWithBhpPotential(const Simulator& ebosSimulator,
-                            const std::vector<Scalar>& B_avg,
                             const double& bhp,
                             std::vector<double>& well_flux,
                             Opm::DeferredLogger& deferred_logger)
@@ -2618,7 +2616,7 @@ namespace Opm
         well_state_copy.bhp()[index_of_well_] = bhp;
 
         const double dt = ebosSimulator.timeStepSize();
-        bool converged = this->iterateWellEquations(ebosSimulator, B_avg, dt, well_state_copy, deferred_logger);
+        bool converged = this->iterateWellEquations(ebosSimulator, dt, well_state_copy, deferred_logger);
         if (!converged) {
             const std::string msg = " well " + name() + " did not get converged during well potential calculations "
                                                         "returning zero values for the potential";
@@ -2852,7 +2850,6 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     computeWellPotentials(const Simulator& ebosSimulator,
-                          const std::vector<Scalar>& B_avg,
                           const WellState& well_state,
                           std::vector<double>& well_potentials,
                           Opm::DeferredLogger& deferred_logger) // const
@@ -2876,7 +2873,7 @@ namespace Opm
             // get the bhp value based on the bhp constraints
             const double bhp = well.mostStrictBhpFromBhpLimits(summaryState);
             assert(std::abs(bhp) != std::numeric_limits<double>::max());
-            well.computeWellRatesWithBhpPotential(ebosSimulator, B_avg, bhp, well_potentials, deferred_logger);
+            well.computeWellRatesWithBhpPotential(ebosSimulator, bhp, well_potentials, deferred_logger);
         } else {
             // the well has a THP related constraint
             well_potentials = well.computeWellPotentialWithTHP(ebosSimulator, deferred_logger, well_state);
@@ -4077,7 +4074,6 @@ namespace Opm
     bool
     StandardWell<TypeTag>::
     iterateWellEqWithControl(const Simulator& ebosSimulator,
-                             const std::vector<double>& B_avg,
                              const double dt,
                              const Well::InjectionControls& inj_controls,
                              const Well::ProductionControls& prod_controls,
@@ -4090,7 +4086,7 @@ namespace Opm
         do {
             assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, deferred_logger);
 
-            auto report = getWellConvergence(well_state, B_avg, deferred_logger);
+            auto report = getWellConvergence(well_state, Base::B_avg_, deferred_logger);
 
             converged = report.converged();
             if (converged) {
