@@ -99,6 +99,7 @@ public:
 
 private:
     typedef Dune::CartesianIndexMapper<Grid> CartesianIndexMapper;
+    using Element = typename GridView::template Codim<0>::Entity;
 
 public:
     EclCpGridVanguard(Simulator& simulator)
@@ -269,7 +270,7 @@ public:
         this->updateGridView_();
         this->updateCartesianToCompressedMapping_();
         this->updateCellDepths_();
-
+        this->updateCellThickness_();
 
 #if HAVE_MPI
         if (mpiSize > 1) {
@@ -404,6 +405,30 @@ protected:
             std::exit(EXIT_FAILURE);
         }
 #endif
+    }
+
+    Scalar computeCellThickness(const Element& element) const
+    {
+        typedef typename Element::Geometry Geometry;
+        static constexpr int zCoord = Element::dimension - 1;
+        Scalar zz1 = 0.0;
+        Scalar zz2 = 0.0;
+
+        const Geometry geometry = element.geometry();
+        const int corners = geometry.corners();
+        // This code only works with CP-grid where the
+        // number of corners are 8 and
+        // also assumes that the first
+        // 4 corners are the top surface and
+        // the 4 next are the bottomn.
+        assert(corners == 8);
+        for (int i=0; i < 4; ++i){
+            zz1 += geometry.corner(i)[zCoord];
+            zz2 += geometry.corner(i+4)[zCoord];
+        }
+        zz1 /=4;
+        zz2 /=4;
+        return zz2-zz1;
     }
 
     std::unique_ptr<Grid> grid_;
