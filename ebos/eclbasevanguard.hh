@@ -892,7 +892,7 @@ private:
         static constexpr int zCoord = Element::dimension - 1;
         Scalar zz = 0.0;
 
-        const Geometry geometry = element.geometry();
+        const Geometry& geometry = element.geometry();
         const int corners = geometry.corners();
         for (int i=0; i < corners; ++i)
             zz += geometry.corner(i)[zCoord];

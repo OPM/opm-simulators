@@ -414,14 +414,13 @@ protected:
         Scalar zz1 = 0.0;
         Scalar zz2 = 0.0;
 
-        const Geometry geometry = element.geometry();
-        const int corners = geometry.corners();
+        const Geometry& geometry = element.geometry();
         // This code only works with CP-grid where the
         // number of corners are 8 and
         // also assumes that the first
         // 4 corners are the top surface and
         // the 4 next are the bottomn.
-        assert(corners == 8);
+        assert(geometry.corners() == 8);
         for (int i=0; i < 4; ++i){
             zz1 += geometry.corner(i)[zCoord];
             zz2 += geometry.corner(i+4)[zCoord];
