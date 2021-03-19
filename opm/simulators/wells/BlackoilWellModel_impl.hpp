@@ -306,7 +306,7 @@ namespace Opm {
 
         well_state_ = previous_well_state_;
         well_state_.disableGliftOptimization();
-        updateAndCommunicateGroupData(local_deferredLogger);
+        updateAndCommunicateGroupData();
         const int reportStepIdx = ebosSimulator_.episodeIndex();
         const double simulationTime = ebosSimulator_.time();
         int exception_thrown = 0;
@@ -379,9 +379,15 @@ namespace Opm {
             }
         }
 
-        //compute well guideRates
+        //update guide rates
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
+        const auto& summaryState = ebosSimulator_.vanguard().summaryState();
+        std::vector<double> pot(numPhases(), 0.0);
+        const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
+        WellGroupHelpers::updateGuideRateForProductionGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, well_state_, comm, guideRate_.get(), pot);
+        WellGroupHelpers::updateGuideRatesForInjectionGroups(fieldGroup, schedule(), summaryState, phase_usage_, reportStepIdx, well_state_, guideRate_.get(), local_deferredLogger);
         WellGroupHelpers::updateGuideRatesForWells(schedule(), phase_usage_, reportStepIdx, simulationTime, well_state_, comm, guideRate_.get());
+
         try {
             // Compute initial well solution for new wells and injectors that change injection type i.e. WAG.
             for (auto& well : well_container_) {
@@ -1227,7 +1233,7 @@ namespace Opm {
         // For no well active globally we simply return.
         if( !wellsActive() ) return ;
 
-        updateAndCommunicateGroupData(deferred_logger);
+        updateAndCommunicateGroupData();
 
         updateNetworkPressures();
 
@@ -1241,7 +1247,7 @@ namespace Opm {
             // Check group's constraints from higher levels.
             updateGroupHigherControls(deferred_logger, switched_groups);
 
-            updateAndCommunicateGroupData(deferred_logger);
+            updateAndCommunicateGroupData();
 
             // Check wells' group constraints and communicate.
             for (const auto& well : well_container_) {
@@ -1251,7 +1257,7 @@ namespace Opm {
                     switched_wells.insert(well->name());
                 }
             }
-            updateAndCommunicateGroupData(deferred_logger);
+            updateAndCommunicateGroupData();
         }
 
         // Check individual well constraints and communicate.
@@ -1262,7 +1268,7 @@ namespace Opm {
             const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Individual;
             well->updateWellControl(ebosSimulator_, mode, well_state_, deferred_logger);
         }
-        updateAndCommunicateGroupData(deferred_logger);
+        updateAndCommunicateGroupData();
 
     }
 
@@ -1305,7 +1311,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    updateAndCommunicateGroupData(Opm::DeferredLogger& deferred_logger)
+    updateAndCommunicateGroupData()
     {
         const int reportStepIdx = ebosSimulator_.episodeIndex();
         const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
@@ -1328,13 +1334,6 @@ namespace Opm {
         WellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ false, phase_usage_, *guideRate_, well_state_nupcol_, well_state_, groupTargetReduction);
         std::vector<double> groupTargetReductionInj(numPhases(), 0.0);
         WellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ true, phase_usage_, *guideRate_, well_state_nupcol_, well_state_, groupTargetReductionInj);
-
-        // the guiderate update should not be part of this function
-        // remove in seperate PR since it affects existing functionality
-        const double simulationTime = ebosSimulator_.time();
-        std::vector<double> pot(numPhases(), 0.0);
-        WellGroupHelpers::updateGuideRateForProductionGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, well_state_, comm, guideRate_.get(), pot);
-        WellGroupHelpers::updateGuideRatesForInjectionGroups(fieldGroup, schedule(), summaryState, phase_usage_, reportStepIdx, well_state_, guideRate_.get(), deferred_logger);
 
         WellGroupHelpers::updateREINForGroups(fieldGroup, schedule(), reportStepIdx, phase_usage_, summaryState, well_state_nupcol_, well_state_);
         WellGroupHelpers::updateVREPForGroups(fieldGroup, schedule(), reportStepIdx, well_state_nupcol_, well_state_);

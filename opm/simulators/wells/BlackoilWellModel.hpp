@@ -391,7 +391,7 @@ namespace Opm {
 
             void updateWellControls(Opm::DeferredLogger& deferred_logger, const bool checkGroupControls);
 
-            void updateAndCommunicateGroupData(Opm::DeferredLogger& deferred_logger);
+            void updateAndCommunicateGroupData();
             void updateNetworkPressures();
 
             // setting the well_solutions_ based on well_state.
