@@ -109,8 +109,11 @@ public:
     static void addDiffusiveFlux(RateVector& flux, const Context& context,
                                  unsigned spaceIdx, unsigned timeIdx)
     {
-        const auto& extQuants = context.extensiveQuantities(spaceIdx, timeIdx);
+        // Only work if diffusion is enabled run-time by DIFFUSE in the deck
+        if(!FluidSystem::enableDiffusion())
+            return;
 
+        const auto& extQuants = context.extensiveQuantities(spaceIdx, timeIdx);
         const auto& fluidStateI = context.intensiveQuantities(extQuants.interiorIndex(), timeIdx).fluidState();
         const auto& fluidStateJ = context.intensiveQuantities(extQuants.exteriorIndex(), timeIdx).fluidState();
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
@@ -263,8 +266,11 @@ protected:
                  unsigned dofIdx,
                  unsigned timeIdx)
     {
-        using Toolbox = Opm::MathToolbox<Evaluation>;
+        // Only work if diffusion is enabled run-time by DIFFUSE in the deck
+        if(!FluidSystem::enableDiffusion())
+            return;
 
+        using Toolbox = Opm::MathToolbox<Evaluation>;
         const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, timeIdx);
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
@@ -391,6 +397,10 @@ protected:
      */
     void update_(const ElementContext& elemCtx, unsigned faceIdx, unsigned timeIdx)
     {
+        // Only work if diffusion is enabled run-time by DIFFUSE in the deck
+        if(!FluidSystem::enableDiffusion())
+            return;
+
         const auto& stencil = elemCtx.stencil(timeIdx);
         const auto& face = stencil.interiorFace(faceIdx);
         const auto& extQuants = elemCtx.extensiveQuantities(faceIdx, timeIdx);
