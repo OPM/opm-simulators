@@ -952,8 +952,8 @@ private:
                                         const Opm::EclipseState& eclState,
                                         unsigned satRegionIdx)
     {
-        if (hasOil)
-            // we don't read anything if oil is present
+        if (!hasGas || !hasWater || hasOil)
+            // we don't read anything if either the gas or the water phase is not active or if oil is present
             return;
 
         dest[satRegionIdx] = std::make_shared<GasWaterEffectiveTwoPhaseParams>();
