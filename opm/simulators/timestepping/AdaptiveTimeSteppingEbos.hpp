@@ -136,7 +136,7 @@ struct SolverMaxTimeStepInDays<TypeTag, TTag::FlowTimeSteppingParameters> {
 template<class TypeTag>
 struct SolverMinTimeStep<TypeTag, TTag::FlowTimeSteppingParameters> {
     using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 0.0;
+    static constexpr type value = 1.0e-12;
 };
 template<class TypeTag>
 struct SolverMaxRestarts<TypeTag, TTag::FlowTimeSteppingParameters> {
@@ -260,7 +260,7 @@ namespace Opm {
             , growthFactor_(EWOMS_GET_PARAM(TypeTag, double, SolverGrowthFactor)) // 2.0
             , maxGrowth_(EWOMS_GET_PARAM(TypeTag, double, SolverMaxGrowth)) // 3.0
             , maxTimeStep_(EWOMS_GET_PARAM(TypeTag, double, SolverMaxTimeStepInDays)*24*60*60) // 365.25
-            , minTimeStep_(EWOMS_GET_PARAM(TypeTag, double, SolverMinTimeStep)) // 0.0
+            , minTimeStep_(unitSystem.to_si(UnitSystem::measure::time, EWOMS_GET_PARAM(TypeTag, double, SolverMinTimeStep))) // 1e-12;
             , solverRestartMax_(EWOMS_GET_PARAM(TypeTag, int, SolverMaxRestarts)) // 10
             , solverVerbose_(EWOMS_GET_PARAM(TypeTag, int, SolverVerbosity) > 0 && terminalOutput) // 2
             , timestepVerbose_(EWOMS_GET_PARAM(TypeTag, int, TimeStepVerbosity) > 0 && terminalOutput) // 2
@@ -287,7 +287,7 @@ namespace Opm {
             , growthFactor_(tuning.TFDIFF)
             , maxGrowth_(tuning.TSFMAX)
             , maxTimeStep_(tuning.TSMAXZ) // 365.25
-            , minTimeStep_(EWOMS_GET_PARAM(TypeTag, double, SolverMinTimeStep)) // 0.0
+            , minTimeStep_(unitSystem.to_si(UnitSystem::measure::time, EWOMS_GET_PARAM(TypeTag, double, SolverMinTimeStep))) // 1e-12;
             , solverRestartMax_(EWOMS_GET_PARAM(TypeTag, int, SolverMaxRestarts)) // 10
             , solverVerbose_(EWOMS_GET_PARAM(TypeTag, int, SolverVerbosity) > 0 && terminalOutput) // 2
             , timestepVerbose_(EWOMS_GET_PARAM(TypeTag, int, TimeStepVerbosity) > 0 && terminalOutput) // 2
@@ -312,7 +312,7 @@ namespace Opm {
             EWOMS_REGISTER_PARAM(TypeTag, double, SolverMaxTimeStepInDays,
                                  "The maximum size of a time step in days");
             EWOMS_REGISTER_PARAM(TypeTag, double, SolverMinTimeStep,
-                                 "The minimum size of a time step in seconds. If a step cannot converge without getting cut below this step size the simulator will stop");
+                                 "The minimum size of a time step in days for field and metric and hours for lab. If a step cannot converge without getting cut below this step size the simulator will stop");
             EWOMS_REGISTER_PARAM(TypeTag, int, SolverMaxRestarts,
                                  "The maximum number of breakdowns before a substep is given up and the simulator is terminated");
             EWOMS_REGISTER_PARAM(TypeTag, int, SolverVerbosity,
@@ -652,18 +652,7 @@ namespace Opm {
                 const double growthDampingFactor = EWOMS_GET_PARAM(TypeTag, double, TimeStepControlGrowthDampingFactor); // 3.2
                 const double nonDimensionalMinTimeStepIterations = EWOMS_GET_PARAM(TypeTag, double, MinTimeStepBasedOnNewtonIterations); // 0.0 by default
                 // the min time step can be reduced by the newton iteration numbers
-                double minTimeStepReducedByIterations;
-                switch (unitSystem.getType()) {
-                    case UnitSystem::UnitType::UNIT_TYPE_FIELD:
-                    case UnitSystem::UnitType::UNIT_TYPE_METRIC:
-                        minTimeStepReducedByIterations = nonDimensionalMinTimeStepIterations * unit::day;
-                        break;
-                    case UnitSystem::UnitType::UNIT_TYPE_LAB:
-                        minTimeStepReducedByIterations = nonDimensionalMinTimeStepIterations * unit::hour;
-                        break;
-                    default:
-                        throw std::runtime_error("Unsupported unit type when creating time step control");
-                }
+                double minTimeStepReducedByIterations = unitSystem.to_si(UnitSystem::measure::time, nonDimensionalMinTimeStepIterations);
                 timeStepControl_ = TimeStepControlType(new PIDAndIterationCountTimeStepControl(iterations, decayDampingFactor,
                                                                       growthDampingFactor, tol, minTimeStepReducedByIterations));
                 useNewtonIteration_ = true;
