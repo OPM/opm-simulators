@@ -30,6 +30,7 @@
 #include <array>
 #include <cassert>
 #include <cstddef>
+#include <functional>
 #include <map>
 #include <memory>
 #include <stdexcept>
@@ -207,6 +208,7 @@ namespace Opm
 
             return well_info.isOwner();
         }
+
         /// The number of wells present.
         int numWells() const
         {
@@ -237,15 +239,21 @@ namespace Opm
             this->thp_[well_index] = 0;
         }
 
-        virtual data::Wells report(const PhaseUsage& pu, const int* globalCellIdxMap) const
+        virtual data::Wells
+        report(const PhaseUsage& pu,
+               const int* globalCellIdxMap,
+               const std::function<bool(const int)>& wasDynamicallyClosed) const
         {
             using rt = data::Rates::opt;
 
             data::Wells dw;
             for( const auto& itr : this->wellMap_ ) {
                 const auto well_index = itr.second[ 0 ];
-                if (this->status_[well_index] == Well::Status::SHUT)
+                if ((this->status_[well_index] == Well::Status::SHUT) &&
+                    ! wasDynamicallyClosed(well_index))
+                {
                     continue;
+                }
 
                 const auto& pwinfo = *parallel_well_info_[well_index];
                 using WellT = std::remove_reference_t<decltype(dw[ itr.first ])>;

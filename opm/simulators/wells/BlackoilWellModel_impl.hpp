@@ -298,8 +298,8 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    beginTimeStep() {
-
+    beginTimeStep()
+    {
         updatePerforationIntensiveQuantities();
 
         Opm::DeferredLogger local_deferredLogger;
@@ -425,17 +425,22 @@ namespace Opm {
 
     template<typename TypeTag>
     void
-    BlackoilWellModel<TypeTag>::wellTesting(const int timeStepIdx, const double simulationTime, Opm::DeferredLogger& deferred_logger) {
+    BlackoilWellModel<TypeTag>::wellTesting(const int timeStepIdx,
+                                            const double simulationTime,
+                                            Opm::DeferredLogger& deferred_logger)
+    {
         const auto& wtest_config = schedule()[timeStepIdx].wtest_config();
         if (wtest_config.size() != 0) { // there is a WTEST request
 
             // average B factors are required for the convergence checking of well equations
             // Note: this must be done on all processes, even those with
             // no wells needing testing, otherwise we will have locking.
-            std::vector< Scalar > B_avg(numComponents(), Scalar() );
+            std::vector< Scalar > B_avg(numComponents(), Scalar());
             computeAverageFormationFactor(B_avg);
 
-            const auto& wellsForTesting = wellTestState_.updateWells(wtest_config, wells_ecl_, simulationTime);
+            const auto wellsForTesting = wellTestState_
+                .updateWells(wtest_config, wells_ecl_, simulationTime);
+
             for (const auto& testWell : wellsForTesting) {
                 const std::string& well_name = testWell.first;
 
@@ -444,9 +449,12 @@ namespace Opm {
 
                 // some preparation before the well can be used
                 well->init(&phase_usage_, depth_, gravity_, local_num_cells_, B_avg);
+
                 const Well& wellEcl = schedule().getWell(well_name, timeStepIdx);
                 double well_efficiency_factor = wellEcl.getEfficiencyFactor();
-                WellGroupHelpers::accumulateGroupEfficiencyFactor(schedule().getGroup(wellEcl.groupName(), timeStepIdx), schedule(), timeStepIdx, well_efficiency_factor);
+                WellGroupHelpers::accumulateGroupEfficiencyFactor(schedule().getGroup(wellEcl.groupName(), timeStepIdx),
+                                                                  schedule(), timeStepIdx, well_efficiency_factor);
+
                 well->setWellEfficiencyFactor(well_efficiency_factor);
                 well->setVFPProperties(vfp_properties_.get());
                 well->setGuideRate(guideRate_.get());
@@ -459,17 +467,26 @@ namespace Opm {
         }
     }
 
+
+
+
+
     // called at the end of a report step
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    endReportStep() {
+    endReportStep()
+    {
         // Clear the communication data structures for above values.
-        for(auto&& pinfo : local_parallel_well_info_)
+        for (auto&& pinfo : local_parallel_well_info_)
         {
             pinfo->clear();
         }
     }
+
+
+
+
 
     // called at the end of a report step
     template<typename TypeTag>
@@ -477,11 +494,17 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     lastReport() const {return last_report_; }
 
+
+
+
+
     // called at the end of a time step
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    timeStepSucceeded(const double& simulationTime, const double dt) {
+    timeStepSucceeded(const double& simulationTime, const double dt)
+    {
+        this->closed_this_step_.clear();
 
         // time step is finished and we are not any more at the beginning of an report step
         report_step_starts_ = false;
@@ -735,12 +758,27 @@ namespace Opm {
 
         if (nw > 0) {
             well_container.reserve(nw);
+
             for (int w = 0; w < nw; ++w) {
                 const Well& well_ecl = wells_ecl_[w];
                 const std::string& well_name = well_ecl.name();
+                const auto well_status = this->schedule()
+                    .getWell(well_name, time_step).getStatus();
+
+                if ((well_ecl.getStatus() == Well::Status::SHUT) ||
+                    (well_status          == Well::Status::SHUT))
+                {
+                    // Due to ACTIONX the well might have been closed behind our back.
+                    if (well_ecl.getStatus() != Well::Status::SHUT) {
+                        this->closed_this_step_.insert(well_name);
+                        well_state_.shutWell(w);
+                    }
+
+                    continue;
+                }
 
                 // A new WCON keywords can re-open a well that was closed/shut due to Physical limit
-                if ( wellTestState_.hasWellClosed(well_name)) {
+                if (this->wellTestState_.hasWellClosed(well_name)) {
                     // TODO: more checking here, to make sure this standard more specific and complete
                     // maybe there is some WCON keywords will not open the well
                     if (well_state_.effectiveEventsOccurred(w)) {
@@ -759,9 +797,10 @@ namespace Opm {
                 // TODO: should we do this for all kinds of closing reasons?
                 // something like wellTestState_.hasWell(well_name)?
                 bool wellIsStopped = false;
-                if ( wellTestState_.hasWellClosed(well_name, WellTestConfig::Reason::ECONOMIC) ||
-                    wellTestState_.hasWellClosed(well_name, WellTestConfig::Reason::PHYSICAL) ) {
-                    if( well_ecl.getAutomaticShutIn() ) {
+                if (wellTestState_.hasWellClosed(well_name, WellTestConfig::Reason::ECONOMIC) ||
+                    wellTestState_.hasWellClosed(well_name, WellTestConfig::Reason::PHYSICAL))
+                {
+                    if (well_ecl.getAutomaticShutIn()) {
                         // shut wells are not added to the well container
                         well_state_.shutWell(w);
                         continue;
@@ -772,39 +811,45 @@ namespace Opm {
                     }
                 }
 
-                // Due to ACTIONX the well might have been closed 'behind our back'.
-                const auto well_status = schedule().getWell(well_name, time_step).getStatus();
-                if (well_status == Well::Status::SHUT) {
-                    well_state_.shutWell(w);
-                    continue;
-                }
-
                 // If a production well disallows crossflow and its
                 // (prediction type) rate control is zero, then it is effectively shut.
                 if (!well_ecl.getAllowCrossFlow() && well_ecl.isProducer() && well_ecl.predictionMode()) {
                     const auto& summaryState = ebosSimulator_.vanguard().summaryState();
-                    auto prod_controls = well_ecl.productionControls(summaryState);
+                    const auto prod_controls = well_ecl.productionControls(summaryState);
+
+                    auto is_zero = [](const double x)
+                    {
+                        return std::isfinite(x) && !std::isnormal(x);
+                    };
+
                     bool zero_rate_control = false;
                     switch (prod_controls.cmode) {
                     case Well::ProducerCMode::ORAT:
-                        zero_rate_control = (prod_controls.oil_rate == 0.0);
+                        zero_rate_control = is_zero(prod_controls.oil_rate);
                         break;
+
                     case Well::ProducerCMode::WRAT:
-                        zero_rate_control = (prod_controls.water_rate == 0.0);
+                        zero_rate_control = is_zero(prod_controls.water_rate);
                         break;
+
                     case Well::ProducerCMode::GRAT:
-                        zero_rate_control = (prod_controls.gas_rate == 0.0);
+                        zero_rate_control = is_zero(prod_controls.gas_rate);
                         break;
+
                     case Well::ProducerCMode::LRAT:
-                        zero_rate_control = (prod_controls.liquid_rate == 0.0);
+                        zero_rate_control = is_zero(prod_controls.liquid_rate);
                         break;
+
                     case Well::ProducerCMode::RESV:
-                        zero_rate_control = (prod_controls.resv_rate == 0.0);
+                        zero_rate_control = is_zero(prod_controls.resv_rate);
                         break;
+
                     default:
                         // Might still have zero rate controls, but is pressure controlled.
                         zero_rate_control = false;
+                        break;
                     }
+
                     if (zero_rate_control) {
                         // Treat as shut, do not add to container.
                         local_deferredLogger.info("  Well shut due to zero rate control and disallowing crossflow: " + well_ecl.name());
@@ -867,10 +912,11 @@ namespace Opm {
         const auto& perf_data = this->well_perf_data_[wellID];
 
         // Cater for case where local part might have no perforations.
-        const int pvtreg = perf_data.empty() ?
-            0 : pvt_region_idx_[perf_data.front().cell_index];
+        const auto pvtreg = perf_data.empty()
+            ? 0 : pvt_region_idx_[perf_data.front().cell_index];
+
         const auto& parallel_well_info = *local_parallel_well_info_[wellID];
-        auto global_pvtreg = parallel_well_info.broadcastFirstPerforationValue(pvtreg);
+        const auto global_pvtreg = parallel_well_info.broadcastFirstPerforationValue(pvtreg);
 
         return std::make_unique<WellType>(this->wells_ecl_[wellID],
                                           parallel_well_info,
@@ -1372,8 +1418,15 @@ namespace Opm {
     {
         Opm::DeferredLogger local_deferredLogger;
         for (const auto& well : well_container_) {
+            const auto wasClosed = wellTestState.hasWellClosed(well->name());
+
             well->updateWellTestState(well_state_, simulationTime, /*writeMessageToOPMLog=*/ true, wellTestState, local_deferredLogger);
+
+            if (!wasClosed && wellTestState.hasWellClosed(well->name())) {
+                this->closed_this_step_.insert(well->name());
+            }
         }
+
         Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
         if (terminal_output_) {
             global_deferredLogger.logMessages();
@@ -1426,11 +1479,13 @@ namespace Opm {
                 }
             }
         }
-        logAndCheckForExceptionsAndThrow(deferred_logger, exception_thrown, "computeWellPotentials() failed.", terminal_output_);
+
+        logAndCheckForExceptionsAndThrow(deferred_logger, exception_thrown,
+                                         "computeWellPotentials() failed.",
+                                         terminal_output_);
 
         // Store it in the well state
         well_state_.wellPotentials() = well_potentials;
-
     }
 
 
@@ -2536,7 +2591,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    updateEclWell(int timeStepIdx, int well_index)
+    updateEclWell(const int timeStepIdx, const int well_index)
     {
         const auto& schedule = this->ebosSimulator_.vanguard().schedule();
         const auto& wname = this->wells_ecl_[well_index].name();
@@ -2556,23 +2611,36 @@ namespace Opm {
         this->prod_index_calc_[well_index].reInit(well);
     }
 
+
+
+
+
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    updateEclWell(int timeStepIdx, const std::string& wname) {
-        auto well_iter = std::find_if( this->wells_ecl_.begin(), this->wells_ecl_.end(), [wname] (const auto& well) -> bool { return well.name() == wname;});
-        if (well_iter == this->wells_ecl_.end())
-            throw std::logic_error("Could not find well: " + wname);
+    updateEclWell(const int timeStepIdx, const std::string& wname)
+    {
+        auto well_iter = std::find_if(this->wells_ecl_.begin(), this->wells_ecl_.end(),
+            [&wname](const auto& well) -> bool
+        {
+            return well.name() == wname;
+        });
 
-        auto well_index = std::distance( this->wells_ecl_.begin(), well_iter );
+        if (well_iter == this->wells_ecl_.end()) {
+            throw std::logic_error { "Could not find well: " + wname };
+        }
+
+        auto well_index = std::distance(this->wells_ecl_.begin(), well_iter);
         this->updateEclWell(timeStepIdx, well_index);
     }
+
+
 
 
     template<typename TypeTag>
     double
     BlackoilWellModel<TypeTag>::
-    wellPI(int well_index) const
+    wellPI(const int well_index) const
     {
         const auto& pu = this->phase_usage_;
         const auto  np = this->numPhases();
@@ -2598,23 +2666,48 @@ namespace Opm {
         default:
             throw std::invalid_argument {
                 "Unsupported preferred phase " +
-                    std::to_string(static_cast<int>(preferred))
-                    };
+                std::to_string(static_cast<int>(preferred))
+            };
         }
     }
+
+
+
+
 
     template<typename TypeTag>
     double
     BlackoilWellModel<TypeTag>::
     wellPI(const std::string& well_name) const
     {
-        auto well_iter = std::find_if(this->wells_ecl_.begin(), this->wells_ecl_.end(), [&well_name](const Well& well) { return well.name() == well_name; });
-        if (well_iter == this->wells_ecl_.end())
-            throw std::logic_error("Could not find well: " + well_name);
+        auto well_iter = std::find_if(this->wells_ecl_.begin(), this->wells_ecl_.end(),
+            [&well_name](const Well& well)
+        {
+            return well.name() == well_name;
+        });
 
-        auto well_index = std::distance( this->wells_ecl_.begin(), well_iter );
+        if (well_iter == this->wells_ecl_.end()) {
+            throw std::logic_error { "Could not find well: " + well_name };
+        }
+
+        auto well_index = std::distance(this->wells_ecl_.begin(), well_iter);
         return this->wellPI(well_index);
     }
+
+
+
+
+
+    template <typename TypeTag>
+    int
+    BlackoilWellModel<TypeTag>::
+    reportStepIndex() const
+    {
+        return std::max(this->ebosSimulator_.episodeIndex(), 0);
+    }
+
+
+
 
 
     template<typename TypeTag>
@@ -2630,20 +2723,20 @@ namespace Opm {
 
         auto hasWellPIEvent = [this, timeStepIdx](const int well_index) -> bool
         {
-            return this->schedule()[timeStepIdx]
-                .wellgroup_events().hasEvent(this->wells_ecl_[well_index].name(),
-                                             ScheduleEvents::Events::WELL_PRODUCTIVITY_INDEX);
+            return this->schedule()[timeStepIdx].wellgroup_events()
+                .hasEvent(this->wells_ecl_[well_index].name(),
+                          ScheduleEvents::Events::WELL_PRODUCTIVITY_INDEX);
         };
 
         auto rescaleWellPI =
             [this, timeStepIdx](const int    well_index,
                                 const double newWellPI) -> void
         {
-            {
-                const auto& wname = this->wells_ecl_[well_index].name();
-                auto& schedule = this->ebosSimulator_.vanguard().schedule(); // Mutable
-                schedule.applyWellProdIndexScaling(wname, timeStepIdx, newWellPI);
-            }
+            const auto& wname = this->wells_ecl_[well_index].name();
+
+            auto& schedule = this->ebosSimulator_.vanguard().schedule(); // Mutable
+            schedule.applyWellProdIndexScaling(wname, timeStepIdx, newWellPI);
+
             this->updateEclWell(timeStepIdx, well_index);
         };
 
@@ -2672,12 +2765,24 @@ namespace Opm {
         const auto nw = this->numLocalWells();
         for (auto wellID = 0*nw; wellID < nw; ++wellID) {
             if (hasWellPIEvent(wellID)) {
-                const auto newWellPI = this->wellPI(wellID);
-                rescaleWellPI(wellID, newWellPI);
+                rescaleWellPI(wellID, this->wellPI(wellID));
             }
         }
 
         this->last_run_wellpi_ = timeStepIdx;
+    }
+
+
+
+
+
+    template <typename TypeTag>
+    bool
+    BlackoilWellModel<TypeTag>::
+    wasDynamicallyShutThisTimeStep(const int well_index) const
+    {
+        return this->closed_this_step_.find(this->wells_ecl_[well_index].name())
+            != this->closed_this_step_.end();
     }
 
 
@@ -2764,15 +2869,30 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     assignShutConnections(data::Wells& wsrpt) const
     {
+        auto wellID = 0;
+
         for (const auto& well : this->wells_ecl_) {
-            auto xwPos = wsrpt.find(well.name());
-            if (xwPos == wsrpt.end()) { // No well results.  Unexpected.
-                continue;
+            auto& xwel = wsrpt[well.name()]; // data::Wells is a std::map<>
+
+            xwel.dynamicStatus = this->schedule()
+                .getWell(well.name(), this->reportStepIndex()).getStatus();
+
+            const auto wellIsOpen = xwel.dynamicStatus == Well::Status::OPEN;
+            auto skip = [wellIsOpen](const Connection& conn)
+            {
+                return wellIsOpen && (conn.state() != Connection::State::SHUT);
+            };
+
+            if (this->wellTestState_.hasWellClosed(well.name()) &&
+                !this->wasDynamicallyShutThisTimeStep(wellID))
+            {
+                xwel.dynamicStatus = well.getAutomaticShutIn()
+                    ? Well::Status::SHUT : Well::Status::STOP;
             }
 
-            auto& xcon = xwPos->second.connections;
+            auto& xcon = xwel.connections;
             for (const auto& conn : well.getConnections()) {
-                if (conn.state() != Connection::State::SHUT) {
+                if (skip(conn)) {
                     continue;
                 }
 
@@ -2783,6 +2903,8 @@ namespace Opm {
                 xc.effective_Kh = conn.Kh();
                 xc.trans_factor = conn.CF();
             }
+
+            ++wellID;
         }
     }
 

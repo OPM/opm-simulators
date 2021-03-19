@@ -274,7 +274,7 @@ BOOST_AUTO_TEST_CASE(Pressure)
 
     setSegPress(wells, wstate);
 
-    const auto rpt = wstate.report(setup.pu, setup.grid.c_grid()->global_cell);
+    const auto rpt = wstate.report(setup.pu, setup.grid.c_grid()->global_cell, [](const int){return false;});
 
     {
         const auto& xw = rpt.at("INJE01");
@@ -323,7 +323,7 @@ BOOST_AUTO_TEST_CASE(Rates)
 
     setSegRates(wells, pu, wstate);
 
-    const auto rpt = wstate.report(pu, setup.grid.c_grid()->global_cell);
+    const auto rpt = wstate.report(pu, setup.grid.c_grid()->global_cell, [](const int){return false;});
 
     const auto wat = pu.phase_used[Opm::BlackoilPhases::Aqua];
     const auto oil = pu.phase_used[Opm::BlackoilPhases::Liquid];

@@ -217,7 +217,12 @@ namespace Opm {
 
             Opm::data::Wells wellData() const
             {
-                auto wsrpt = well_state_.report(phase_usage_, Opm::UgGridHelpers::globalCell(grid()));
+                auto wsrpt = well_state_
+                    .report(phase_usage_, Opm::UgGridHelpers::globalCell(grid()),
+                            [this](const int well_ndex) -> bool
+                    {
+                        return this->wasDynamicallyShutThisTimeStep(well_ndex);
+                    });
 
                 this->assignWellGuideRates(wsrpt);
                 this->assignShutConnections(wsrpt);
@@ -268,11 +273,12 @@ namespace Opm {
             /// Returns true if the well was actually found and shut.
             bool forceShutWellByNameIfPredictionMode(const std::string& wellname, const double simulation_time);
 
-            void updateEclWell(int timeStepIdx, int well_index);
-            void updateEclWell(int timeStepIdx, const std::string& wname);
+            void updateEclWell(const int timeStepIdx, const int well_index);
+            void updateEclWell(const int timeStepIdx, const std::string& wname);
             bool hasWell(const std::string& wname);
-            double wellPI(int well_index) const;
+            double wellPI(const int well_index) const;
             double wellPI(const std::string& well_name) const;
+
         protected:
             Simulator& ebosSimulator_;
 
@@ -345,7 +351,8 @@ namespace Opm {
             WellTestState wellTestState_;
             std::unique_ptr<GuideRate> guideRate_;
 
-            std::map<std::string, double> node_pressures_; // Storing network pressures for output.
+            std::map<std::string, double> node_pressures_{}; // Storing network pressures for output.
+            mutable std::unordered_set<std::string> closed_this_step_{};
 
             // used to better efficiency of calcuation
             mutable BVector scaleAddRes_;
@@ -429,6 +436,8 @@ namespace Opm {
 
             int numPhases() const;
 
+            int reportStepIndex() const;
+
             void assembleWellEq(const std::vector<Scalar>& B_avg, const double dt, Opm::DeferredLogger& deferred_logger);
 
             // some preparation work, mostly related to group control and RESV,
@@ -487,6 +496,8 @@ namespace Opm {
             void setWsolvent(const Group& group, const Schedule& schedule, const int reportStepIdx, double wsolvent);
 
             void runWellPIScaling(const int timeStepIdx, DeferredLogger& local_deferredLogger);
+
+            bool wasDynamicallyShutThisTimeStep(const int well_index) const;
 
             void assignWellGuideRates(data::Wells& wsrpt) const;
             void assignShutConnections(data::Wells& wsrpt) const;

@@ -32,6 +32,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <functional>
 #include <iostream>
 #include <map>
 #include <numeric>
@@ -546,106 +547,95 @@ namespace Opm
             return it->second;
         }
 
-
-
-        data::Wells report(const PhaseUsage &pu, const int* globalCellIdxMap) const override
+        data::Wells
+        report(const PhaseUsage &pu,
+               const int* globalCellIdxMap,
+               const std::function<bool(const int)>& wasDynamicallyClosed) const override
         {
-            data::Wells res = WellState::report(pu, globalCellIdxMap);
+            data::Wells res =
+                WellState::report(pu, globalCellIdxMap, wasDynamicallyClosed);
 
             const int nw = this->numWells();
-            if( nw == 0 ) return res;
+            if (nw == 0) {
+                return res;
+            }
+
             const int np = pu.num_phases;
 
-
             using rt = data::Rates::opt;
-            std::vector< rt > phs( np );
-            if( pu.phase_used[Water] ) {
+            std::vector<rt> phs(np);
+            if (pu.phase_used[Water]) {
                 phs.at( pu.phase_pos[Water] ) = rt::wat;
             }
 
-            if( pu.phase_used[Oil] ) {
+            if (pu.phase_used[Oil]) {
                 phs.at( pu.phase_pos[Oil] ) = rt::oil;
             }
 
-            if( pu.phase_used[Gas] ) {
+            if (pu.phase_used[Gas]) {
                 phs.at( pu.phase_pos[Gas] ) = rt::gas;
             }
 
-            /* this is a reference or example on **how** to convert from
-             * WellState to something understood by opm-output. it is intended
-             * to be properly implemented and maintained as a part of
-             * simulators, as it relies on simulator internals, details and
-             * representations.
-             */
+            // This is a reference or example on **how** to convert from
+            // WellState to something understood by opm-common's output
+            // layer.  It is intended to be properly implemented and
+            // maintained as a part of simulators, as it relies on simulator
+            // internals, details and representations.
 
-            for( const auto& wt : this->wellMap() ) {
+            for (const auto& wt : this->wellMap()) {
                 const auto w = wt.second[ 0 ];
-                const auto& pwinfo = *parallel_well_info_[w];
-                if ((this->status_[w] == Well::Status::SHUT) || !pwinfo.isOwner())
+                if (((this->status_[w] == Well::Status::SHUT) &&
+                     ! wasDynamicallyClosed(w)) ||
+                    ! this->parallel_well_info_[w]->isOwner())
+                {
                     continue;
+                }
 
-                auto& well = res.at( wt.first );
-                //well.injectionControl = static_cast<int>(this->currentInjectionControls()[ w ]);
-                //well.productionControl = static_cast<int>(this->currentProductionControls()[ w ]);
+                auto& well = res.at(wt.first);
                 const int well_rate_index = w * pu.num_phases;
 
-                if ( pu.phase_used[Water] ) {
-                    well.rates.set( rt::reservoir_water, this->well_reservoir_rates_[well_rate_index + pu.phase_pos[Water]] );
+                if (pu.phase_used[Water]) {
+                    const auto i = well_rate_index + pu.phase_pos[Water];
+                    well.rates.set(rt::reservoir_water, this->well_reservoir_rates_[i]);
+                    well.rates.set(rt::productivity_index_water, this->productivity_index_[i]);
+                    well.rates.set(rt::well_potential_water, this->well_potentials_[i]);
                 }
 
-                if ( pu.phase_used[Oil] ) {
-                    well.rates.set( rt::reservoir_oil, this->well_reservoir_rates_[well_rate_index + pu.phase_pos[Oil]] );
+                if (pu.phase_used[Oil]) {
+                    const auto i = well_rate_index + pu.phase_pos[Oil];
+                    well.rates.set(rt::reservoir_oil, this->well_reservoir_rates_[i]);
+                    well.rates.set(rt::productivity_index_oil, this->productivity_index_[i]);
+                    well.rates.set(rt::well_potential_oil, this->well_potentials_[i]);
                 }
 
-                if ( pu.phase_used[Gas] ) {
-                    well.rates.set( rt::reservoir_gas, this->well_reservoir_rates_[well_rate_index + pu.phase_pos[Gas]] );
+                if (pu.phase_used[Gas]) {
+                    const auto i = well_rate_index + pu.phase_pos[Gas];
+                    well.rates.set(rt::reservoir_gas, this->well_reservoir_rates_[i]);
+                    well.rates.set(rt::productivity_index_gas, this->productivity_index_[i]);
+                    well.rates.set(rt::well_potential_gas, this->well_potentials_[i]);
                 }
 
-                if ( pu.phase_used[Water] ) {
-                    well.rates.set( rt::productivity_index_water, this->productivity_index_[well_rate_index + pu.phase_pos[Water]] );
+                if (pu.has_solvent || pu.has_zFraction) {
+                    well.rates.set(rt::solvent, solventWellRate(w));
                 }
 
-                if ( pu.phase_used[Oil] ) {
-                    well.rates.set( rt::productivity_index_oil, this->productivity_index_[well_rate_index + pu.phase_pos[Oil]] );
+                if (pu.has_polymer) {
+                    well.rates.set(rt::polymer, polymerWellRate(w));
                 }
 
-                if ( pu.phase_used[Gas] ) {
-                    well.rates.set( rt::productivity_index_gas, this->productivity_index_[well_rate_index + pu.phase_pos[Gas]] );
+                if (pu.has_brine) {
+                    well.rates.set(rt::brine, brineWellRate(w));
                 }
 
-                if ( pu.phase_used[Water] ) {
-                    well.rates.set( rt::well_potential_water, this->well_potentials_[well_rate_index + pu.phase_pos[Water]] );
-                }
-
-                if ( pu.phase_used[Oil] ) {
-                    well.rates.set( rt::well_potential_oil, this->well_potentials_[well_rate_index + pu.phase_pos[Oil]] );
-                }
-
-                if ( pu.phase_used[Gas] ) {
-                    well.rates.set( rt::well_potential_gas, this->well_potentials_[well_rate_index + pu.phase_pos[Gas]] );
-                }
-
-                if ( pu.has_solvent || pu.has_zFraction) {
-                    well.rates.set( rt::solvent, solventWellRate(w) );
-                }
-
-                if ( pu.has_polymer ) {
-                    well.rates.set( rt::polymer, polymerWellRate(w) );
-                }
-
-                if ( pu.has_brine ) {
-                    well.rates.set( rt::brine, brineWellRate(w) );
-                }
-
-                if ( is_producer_[w] ) {
-                    well.rates.set( rt::alq, getALQ(/*wellName=*/wt.first) );
+                if (is_producer_[w]) {
+                    well.rates.set(rt::alq, getALQ(/*wellName=*/wt.first));
                 }
                 else {
-                    well.rates.set( rt::alq, 0.0 );
+                    well.rates.set(rt::alq, 0.0);
                 }
 
-                well.rates.set( rt::dissolved_gas, this->well_dissolved_gas_rates_[w] );
-                well.rates.set( rt::vaporized_oil, this->well_vaporized_oil_rates_[w] );
+                well.rates.set(rt::dissolved_gas, this->well_dissolved_gas_rates_[w]);
+                well.rates.set(rt::vaporized_oil, this->well_vaporized_oil_rates_[w]);
 
                 {
                     auto& curr = well.current_control;

@@ -2263,9 +2263,9 @@ namespace Opm
         setToZero(wellPI);
 
         const auto preferred_phase = this->well_ecl_.getPreferredPhase();
-        auto subsetPerfID   = 0;
+        auto subsetPerfID = 0;
 
-        for ( const auto& perf : *this->perf_data_){
+        for (const auto& perf : *this->perf_data_) {
             auto allPerfID = perf.ecl_index;
 
             auto connPICalc = [&wellPICalc, allPerfID](const double mobility) -> double
@@ -2293,13 +2293,13 @@ namespace Opm
             connPI += np;
         }
 
-        //  Sum with communication in case of distributed well.
+        // Sum with communication in case of distributed well.
         const auto& comm = this->parallel_well_info_.communication();
-        if (comm.size() > 1)
-        {
+        if (comm.size() > 1) {
             comm.sum(wellPI, np);
         }
-        assert (static_cast<int>(subsetPerfID) == this->number_of_perforations_ &&
+
+        assert ((static_cast<int>(subsetPerfID) == this->number_of_perforations_) &&
                 "Internal logic error in processing connections for PI/II");
     }
 
