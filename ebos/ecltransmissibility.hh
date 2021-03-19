@@ -127,7 +127,7 @@ public:
 
         // get the ntg values, the ntg values are modified for the cells merged with minpv
         const std::vector<double>& ntg = eclState.fieldProps().get_double("NTG");
-
+        const bool updateDiffusivity = eclState.getSimulationConfig().isDiffusive() && enableDiffusion;
         unsigned numElements = elemMapper.size();
 
         extractPermeability_();
@@ -183,7 +183,7 @@ public:
         }
 
         // if diffusion is enabled, let's do the same for the "diffusivity"
-        if (enableDiffusion) {
+        if (updateDiffusivity) {
             diffusivity_->clear();
             diffusivity_->reserve(numElements*3*1.05);
             extractPorosity_();
@@ -396,7 +396,7 @@ public:
                 trans_[isId_(elemIdx, outsideElemIdx)] = trans;
 
                 // update the "thermal half transmissibility" for the intersection
-                if (enableDiffusion) {
+                if (updateDiffusivity) {
 
                     Scalar halfDiffusivity1;
                     Scalar halfDiffusivity2;
@@ -498,7 +498,13 @@ public:
      * \brief Return the diffusivity for the intersection between two elements.
      */
     Scalar diffusivity(unsigned elemIdx1, unsigned elemIdx2) const
-    { return diffusivity_->at(isId_(elemIdx1, elemIdx2)); }
+    {
+        if(diffusivity_->empty())
+            return 0.0;
+
+        return diffusivity_->at(isId_(elemIdx1, elemIdx2));
+
+    }
 
 private:
 
