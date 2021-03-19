@@ -49,15 +49,40 @@
         throw Exception(oss__.str());                                   \
     } while (false)
 
-inline void checkForExceptionsAndThrow(int exception_thrown, const std::string& message)
-{
+namespace {
+
+void _throw(Opm::ExceptionType::ExcEnum exc_type, const std::string& message) {
     const auto& cc = Dune::MPIHelper::getCollectiveCommunication();
-    if (cc.max(exception_thrown) == 1) {
+    auto global_exc = cc.max(exc_type);
+
+    switch (global_exc) {
+    case Opm::ExceptionType::NONE:
+        break;
+    case Opm::ExceptionType::RUNTIME_ERROR:
         throw std::runtime_error(message);
+        break;
+    case Opm::ExceptionType::INVALID_ARGUMENT:
+        throw std::invalid_argument(message);
+        break;
+    case Opm::ExceptionType::DEFAULT:
+    case Opm::ExceptionType::LOGIC_ERROR:
+        throw std::logic_error(message);
+        break;
+    default:
+        throw std::logic_error(message);
     }
 }
 
-inline void logAndCheckForExceptionsAndThrow(Opm::DeferredLogger& deferred_logger, int exception_thrown, const std::string& message, const bool terminal_output)
+}
+
+
+
+inline void checkForExceptionsAndThrow(Opm::ExceptionType::ExcEnum exc_type, const std::string& message)
+{
+    _throw(exc_type, message);
+}
+
+inline void logAndCheckForExceptionsAndThrow(Opm::DeferredLogger& deferred_logger, Opm::ExceptionType::ExcEnum exc_type , const std::string& message, const bool terminal_output)
 {
     Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(deferred_logger);
     if (terminal_output) {
@@ -67,10 +92,7 @@ inline void logAndCheckForExceptionsAndThrow(Opm::DeferredLogger& deferred_logge
     // cleared from the global logger, but we must also clear them
     // from the local logger.
     deferred_logger.clearMessages();
-    const auto& cc = Dune::MPIHelper::getCollectiveCommunication();
-    if (cc.max(exception_thrown) == 1) {
-        throw std::runtime_error(message);
-    }
+    _throw(exc_type, message);
 }
 
 #endif // OPM_DEFERREDLOGGINGERRORHELPERS_HPP

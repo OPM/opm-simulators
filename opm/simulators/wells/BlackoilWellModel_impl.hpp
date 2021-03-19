@@ -309,7 +309,8 @@ namespace Opm {
         updateAndCommunicateGroupData(local_deferredLogger);
         const int reportStepIdx = ebosSimulator_.episodeIndex();
         const double simulationTime = ebosSimulator_.time();
-        int exception_thrown = 0;
+        std::string exc_msg;
+        auto exc_type = ExceptionType::NONE;
         try {
             // test wells
             wellTesting(reportStepIdx, simulationTime, local_deferredLogger);
@@ -342,11 +343,21 @@ namespace Opm {
                     setRepRadiusPerfLength();
                 }
             }
-        } catch (std::exception& e) {
-            exception_thrown = 1;
+        } catch (const std::runtime_error& e) {
+            exc_type = ExceptionType::RUNTIME_ERROR;
+            exc_msg = e.what();
+        } catch (const std::invalid_argument& e) {
+            exc_type = ExceptionType::INVALID_ARGUMENT;
+            exc_msg = e.what();
+        } catch (const std::logic_error& e) {
+            exc_type = ExceptionType::LOGIC_ERROR;
+            exc_msg = e.what();
+        } catch (const std::exception& e) {
+            exc_type = ExceptionType::DEFAULT;
+            exc_msg = e.what();
         }
 
-        logAndCheckForExceptionsAndThrow(local_deferredLogger, exception_thrown, "beginTimeStep() failed.", terminal_output_);
+        logAndCheckForExceptionsAndThrow(local_deferredLogger, exc_type, "beginTimeStep() failed: " + exc_msg, terminal_output_);
 
         for (auto& well : well_container_) {
             well->setVFPProperties(vfp_properties_.get());
@@ -395,19 +406,33 @@ namespace Opm {
                     try {
                         well->calculateExplicitQuantities(ebosSimulator_, well_state_, local_deferredLogger);
                         well->solveWellEquation(ebosSimulator_, well_state_, local_deferredLogger);
-                    } catch (std::exception& e) {
+                    } catch (const std::exception& e) {
                         const std::string msg = "Compute initial well solution for new well " + well->name() + " failed. Continue with zero initial rates";
                         local_deferredLogger.warning("WELL_INITIAL_SOLVE_FAILED", msg);
                     }
                 }
             }
-        } catch (std::exception& e) {
+        } catch (const std::runtime_error& e) {
+            exc_type = ExceptionType::RUNTIME_ERROR;
+            exc_msg = e.what();
+        } catch (const std::invalid_argument& e) {
+            exc_type = ExceptionType::INVALID_ARGUMENT;
+            exc_msg = e.what();
+        } catch (const std::logic_error& e) {
+            exc_type = ExceptionType::LOGIC_ERROR;
+            exc_msg = e.what();
+        } catch (const std::exception& e) {
+            exc_type = ExceptionType::DEFAULT;
+            exc_msg = e.what();
+        }
+
+        if (exc_type != ExceptionType::NONE) {
             const std::string msg = "Compute initial well solution for new wells failed. Continue with zero initial rates";
             local_deferredLogger.warning("WELL_INITIAL_SOLVE_FAILED", msg);
         }
 
         logAndCheckForExceptionsAndThrow(local_deferredLogger,
-            exception_thrown, "beginTimeStep() failed.", terminal_output_);
+            exc_type, "beginTimeStep() failed: " + exc_msg, terminal_output_);
 
     }
 
@@ -986,7 +1011,8 @@ namespace Opm {
 
         updatePerforationIntensiveQuantities();
 
-        int exception_thrown = 0;
+        auto exc_type = ExceptionType::NONE;
+        std::string exc_msg;
         try {
             if (iterationIdx == 0) {
                 calculateExplicitQuantities(local_deferredLogger);
@@ -1011,12 +1037,21 @@ namespace Opm {
             well_state_.enableGliftOptimization();
             assembleWellEq(B_avg, dt, local_deferredLogger);
             well_state_.disableGliftOptimization();
-
-        } catch (std::exception& e) {
-            exception_thrown = 1;
+        } catch (const std::runtime_error& e) {
+            exc_type = ExceptionType::RUNTIME_ERROR;
+            exc_msg = e.what();
+        } catch (const std::invalid_argument& e) {
+            exc_type = ExceptionType::INVALID_ARGUMENT;
+            exc_msg = e.what();
+        } catch (const std::logic_error& e) {
+            exc_type = ExceptionType::LOGIC_ERROR;
+            exc_msg = e.what();
+        } catch (const std::exception& e) {
+            exc_type = ExceptionType::DEFAULT;
+            exc_msg = e.what();
         }
-        logAndCheckForExceptionsAndThrow(local_deferredLogger, exception_thrown, "assemble() failed.", terminal_output_);
 
+        logAndCheckForExceptionsAndThrow(local_deferredLogger, exc_type, "assemble() failed: " + exc_msg, terminal_output_);
         last_report_.converged = true;
         last_report_.assemble_time_well += perfTimer.stop();
     }
@@ -1135,18 +1170,28 @@ namespace Opm {
     recoverWellSolutionAndUpdateWellState(const BVector& x)
     {
         Opm::DeferredLogger local_deferredLogger;
-
-        int exception_thrown = 0;
+        auto exc_type = ExceptionType::NONE;
+        std::string exc_msg;
         try {
             if (localWellsActive()) {
                 for (auto& well : well_container_) {
                     well->recoverWellSolutionAndUpdateWellState(x, well_state_, local_deferredLogger);
                 }
             }
-        } catch (std::exception& e) {
-            exception_thrown = 1;
+        } catch (const std::runtime_error& e) {
+            exc_type = ExceptionType::RUNTIME_ERROR;
+            exc_msg = e.what();
+        } catch (const std::invalid_argument& e) {
+            exc_type = ExceptionType::INVALID_ARGUMENT;
+            exc_msg = e.what();
+        } catch (const std::logic_error& e) {
+            exc_type = ExceptionType::LOGIC_ERROR;
+            exc_msg = e.what();
+        } catch (const std::exception& e) {
+            exc_type = ExceptionType::DEFAULT;
+            exc_msg = e.what();
         }
-        logAndCheckForExceptionsAndThrow(local_deferredLogger, exception_thrown, "recoverWellSolutionAndUpdateWellState() failed.", terminal_output_);
+        logAndCheckForExceptionsAndThrow(local_deferredLogger, exc_type, "recoverWellSolutionAndUpdateWellState() failed: " + exc_msg, terminal_output_);
     }
 
 
@@ -1455,7 +1500,8 @@ namespace Opm {
 
         const Opm::SummaryConfig& summaryConfig = ebosSimulator_.vanguard().summaryConfig();
         const bool write_restart_file = ebosSimulator_.vanguard().schedule().write_rst_file(reportStepIdx);
-        int exception_thrown = 0;
+        auto exc_type = ExceptionType::NONE;
+        std::string exc_msg;
         for (const auto& well : well_container_) {
             const bool needed_for_summary = ((summaryConfig.hasSummaryKey( "WWPI:" + well->name()) ||
                                               summaryConfig.hasSummaryKey( "WOPI:" + well->name()) ||
@@ -1474,14 +1520,23 @@ namespace Opm {
                     for (int p = 0; p < np; ++p) {
                         well_potentials[well->indexOfWell() * np + p] = std::abs(potentials[p]);
                     }
-                } catch (std::exception& e) {
-                    exception_thrown = 1;
+                } catch (const std::runtime_error& e) {
+                    exc_type = ExceptionType::RUNTIME_ERROR;
+                    exc_msg = e.what();
+                } catch (const std::invalid_argument& e) {
+                    exc_type = ExceptionType::INVALID_ARGUMENT;
+                    exc_msg = e.what();
+                } catch (const std::logic_error& e) {
+                    exc_type = ExceptionType::LOGIC_ERROR;
+                    exc_msg = e.what();
+                } catch (const std::exception& e) {
+                    exc_type = ExceptionType::DEFAULT;
+                    exc_msg = e.what();
                 }
             }
         }
-
-        logAndCheckForExceptionsAndThrow(deferred_logger, exception_thrown,
-                                         "computeWellPotentials() failed.",
+        logAndCheckForExceptionsAndThrow(deferred_logger, exc_type,
+                                         "computeWellPotentials() failed: " + exc_msg,
                                          terminal_output_);
 
         // Store it in the well state
@@ -1520,7 +1575,8 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     prepareTimeStep(Opm::DeferredLogger& deferred_logger)
     {
-        int exception_thrown = 0;
+        auto exc_type = ExceptionType::NONE;
+        std::string exc_msg;
         try {
             for (const auto& well : well_container_) {
                 well->checkWellOperability(ebosSimulator_, well_state_, deferred_logger);
@@ -1545,10 +1601,20 @@ namespace Opm {
                 }
             }  // end of for (const auto& well : well_container_)
             updatePrimaryVariables(deferred_logger);
-        } catch (std::exception& e) {
-            exception_thrown = 1;
+        } catch (const std::runtime_error& e) {
+            exc_type = ExceptionType::RUNTIME_ERROR;
+            exc_msg = e.what();
+        } catch (const std::invalid_argument& e) {
+            exc_type = ExceptionType::INVALID_ARGUMENT;
+            exc_msg = e.what();
+        } catch (const std::logic_error& e) {
+            exc_type = ExceptionType::LOGIC_ERROR;
+            exc_msg = e.what();
+        } catch (const std::exception& e) {
+            exc_type = ExceptionType::DEFAULT;
+            exc_msg = e.what();
         }
-        logAndCheckForExceptionsAndThrow(deferred_logger, exception_thrown, "prepareTimestep() failed.", terminal_output_);
+        logAndCheckForExceptionsAndThrow(deferred_logger, exc_type, "prepareTimestep() failed: " + exc_msg, terminal_output_);
     }
 
 
