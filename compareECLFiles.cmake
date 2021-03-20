@@ -269,6 +269,13 @@ if(BUILD_FLOW_VARIANTS)
                            DIR spe1)
 endif()
 
+add_test_compareECLFiles(CASENAME spe1_spider
+                           FILENAME SPIDER_CAKESLICE
+                           SIMULATOR flow
+                           ABS_TOL ${abs_tol}
+                           REL_TOL ${rel_tol}
+                           DIR radial_grid)
+
 add_test_compareECLFiles(CASENAME ctaquifer_2d_oilwater
                          FILENAME 2D_OW_CTAQUIFER
                          SIMULATOR flow
@@ -979,6 +986,13 @@ if(MPI_FOUND)
   add_test_compare_parallel_simulation(CASENAME spe1_thermal
                                        FILENAME SPE1CASE2_THERMAL
                                        SIMULATOR flow
+                                       ABS_TOL ${abs_tol}
+                                       REL_TOL ${rel_tol}
+                                       DIR spe1
+                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
+  add_test_compare_parallel_simulation(CASENAME spe1_thermal
+                                       FILENAME SPE1CASE2_THERMAL_ONEPHASE
+                                       SIMULATOR flow_onephase_energy
                                        ABS_TOL ${abs_tol}
                                        REL_TOL ${rel_tol}
                                        DIR spe1
