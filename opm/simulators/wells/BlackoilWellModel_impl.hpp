@@ -3,6 +3,7 @@
  Copyright 2016 - 2018 Equinor ASA.
  Copyright 2017 Dr. Blatt - HPC-Simulation-Software & Services
  Copyright 2016 - 2018 Norce AS
+ Copyrigth 2020 OPM-OP AS
 
  This file is part of the Open Porous Media project (OPM).
 
@@ -177,37 +178,89 @@ namespace Opm {
 
 
 
-    /// Return true if the well was found and shut.
+    /// Return true if a well was found and shut.
     template<typename TypeTag>
     bool
     BlackoilWellModel<TypeTag>::
-    forceShutWellByNameIfPredictionMode(const std::string& wellname,
+    forceShutWellByNameIfPredictionMode(const std::set<std::string>& wellnames,
                                         const double simulation_time)
     {
+#ifndef NDEBUG
+        // wellnames needs to be the same on all processes!
+        auto max = ebosSimulator_.vanguard().grid().comm().max(wellnames.size());
+        assert(max == wellnames.size());
+#endif
         // Only add the well to the closed list on the
         // process that owns it.
-        int well_was_shut = 0;
-        for (const auto& well : well_container_) {
-            if (well->name() == wellname && !well->wellIsStopped()) {
-                if (well->underPredictionMode()) {
-                    wellTestState_.closeWell(wellname, WellTestConfig::Reason::PHYSICAL, simulation_time);
-                    well_was_shut = 1;
-                }
-                break;
+        // wellnames is the same on all ranks. Hence only
+        // store the postions of the shut wells.
+        std::vector<std::size_t> shut_wells;
+        std::size_t index = 0; // index in set
+
+        for (const auto& wellname: wellnames)
+        {
+            // We could use binary search here or not search the whole container,
+            // if it would be sorted. Currently, it is not.
+            auto well = well_container_.begin();
+            while (well != well_container_.end() && (*well)->name() != wellname)
+            {
+                ++well;
             }
+
+            if (well != well_container_.end() && (*well)->name() == wellname && !(*well)->wellIsStopped()) {
+                if ((*well)->underPredictionMode()) {
+                    wellTestState_.closeWell(wellname, WellTestConfig::Reason::PHYSICAL, simulation_time);
+                    shut_wells.push_back(index);
+                }
+            }
+            ++index;
         }
 
         // Communicate across processes if a well was shut.
-        well_was_shut = ebosSimulator_.vanguard().grid().comm().max(well_was_shut);
+        const auto& comm = ebosSimulator_.vanguard().grid().comm();
+        auto num_wells_shut = shut_wells.size();
+        num_wells_shut = comm.sum(num_wells_shut);
 
-        // Only log a message on the output rank.
-        if (terminal_output_ && well_was_shut) {
-            const std::string msg = "Well " + wellname
-                + " will be shut because it cannot get converged.";
-            OpmLog::info(msg);
+        if ( num_wells_shut > 0)
+        {
+            // Communicate shut well indices and print on master
+            int array_size = (comm.rank() == 0) ? comm.size() : 0;
+            std::vector<int> vec_sizes(array_size);
+            std::vector<int> offsets(array_size + 1, 0);
+
+            int vec_size = shut_wells.size();
+            comm.gather(&vec_size, vec_sizes.data(), vec_sizes.size(), 0);
+            std::partial_sum(vec_sizes.begin(), vec_sizes.end(), offsets.begin() + 1);
+            std::vector<std::size_t> global_shut_wells(offsets[array_size]);
+            comm.gatherv(shut_wells.data(), shut_wells.size(),
+                         global_shut_wells.data(), vec_sizes.data(),
+                         offsets.data(), 0);
+
+            // Only log a message on the output rank.
+            if (comm.rank() == 0 && terminal_output_)
+            {
+                std::sort(global_shut_wells.begin(), global_shut_wells.end());
+                auto wellname = wellnames.begin();
+                std::size_t wellname_index = 0;
+                for (auto shut_index: global_shut_wells)
+                {
+                    while ( wellname_index < shut_index)
+                    {
+                        ++wellname_index;
+                        ++wellname;
+                    }
+                    assert(wellname_index == shut_index);
+                    const std::string msg = "Well " + *wellname
+                        + " will be shut because it cannot get converged.";
+                    OpmLog::info(msg);
+                }
+            }
+            return true;
         }
-
-        return (well_was_shut == 1);
+        else
+        {
+            return false;
+        }
     }
 
 
@@ -219,6 +272,7 @@ namespace Opm {
         auto w = schedule().getWells(timeStepIdx);
         globalNumWells = w.size();
         w.erase(std::remove_if(w.begin(), w.end(), is_shut_or_defunct_), w.end());
+
         return w;
     }
 
