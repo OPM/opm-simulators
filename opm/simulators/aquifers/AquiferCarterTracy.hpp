@@ -26,6 +26,7 @@
 #include <opm/output/data/Aquifer.hpp>
 
 #include <exception>
+#include <memory>
 #include <stdexcept>
 
 namespace Opm
@@ -80,7 +81,12 @@ public:
         }
         data.volume = this->W_flux_.value();
         data.initPressure = this->pa0_;
-        data.type = Opm::data::AquiferType::CarterTracey;
+        data.type = Opm::data::AquiferType::CarterTracy;
+
+        data.aquCT = std::make_shared<data::CarterTracyData>();
+        data.aquCT->dimensionless_time = this->dimensionless_time_;
+        data.aquCT->dimensionless_pressure = this->dimensionless_pressure_;
+
         return data;
     }
 
@@ -92,17 +98,27 @@ protected:
     Scalar mu_w_{1}; // water viscosity
     Scalar fluxValue_{0}; // value of flux
 
+    Scalar dimensionless_time_{0};
+    Scalar dimensionless_pressure_{0};
+
     void assignRestartData(const data::AquiferData& /* xaq */) override
     {
         throw std::runtime_error {"Restart-based initialization not currently supported "
                                   "for Carter-Tracey analytic aquifers"};
     }
 
-    inline void getInfluenceTableValues(Scalar& pitd, Scalar& pitd_prime, const Scalar& td)
+    inline void getInfluenceTableValues(const Scalar td_plus_dt,
+                                        Scalar&      PItd,
+                                        Scalar&      PItdprime)
     {
         // We use the opm-common numeric linear interpolator
-        pitd = Opm::linearInterpolation(aquct_data_.td, aquct_data_.pi, td);
-        pitd_prime = Opm::linearInterpolationDerivative(aquct_data_.td, aquct_data_.pi, td);
+        this->dimensionless_pressure_ =
+            Opm::linearInterpolation(this->aquct_data_.td,
+                                     this->aquct_data_.pi,
+                                     this->dimensionless_time_);
+
+        PItd = Opm::linearInterpolation(aquct_data_.td, aquct_data_.pi, td_plus_dt);
+        PItdprime = Opm::linearInterpolationDerivative(aquct_data_.td, aquct_data_.pi, td_plus_dt);
     }
 
     inline Scalar dpai(int idx)
@@ -117,12 +133,16 @@ protected:
     inline void calculateEqnConstants(Scalar& a, Scalar& b, const int idx, const Simulator& simulator)
     {
         const Scalar td_plus_dt = (simulator.timeStepSize() + simulator.time()) / this->Tc_;
-        const Scalar td = simulator.time() / this->Tc_;
-        Scalar PItdprime = 0.;
-        Scalar PItd = 0.;
-        getInfluenceTableValues(PItd, PItdprime, td_plus_dt);
-        a = 1.0 / this->Tc_ * ((beta_ * dpai(idx)) - (this->fluxValue_ * PItdprime)) / (PItd - td * PItdprime);
-        b = beta_ / (this->Tc_ * (PItd - td * PItdprime));
+        this->dimensionless_time_ = simulator.time() / this->Tc_;
+
+        auto PItd = Scalar{0};
+        auto PItdprime = Scalar{0};
+        this->getInfluenceTableValues(td_plus_dt, PItd, PItdprime);
+
+        const auto denom = this->Tc_ * (PItd - this->dimensionless_time_*PItdprime);
+
+        a = (this->beta_*dpai(idx) - this->fluxValue_*PItdprime) / denom;
+        b = this->beta_ / denom;
     }
 
     // This function implements Eq 5.7 of the EclipseTechnicalDescription
