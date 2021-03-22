@@ -47,7 +47,7 @@ enum class EclTwoPhaseApproach {
  * Essentially, this class just stores the two parameter objects for
  * the twophase capillary pressure laws.
  */
-template<class Traits, class GasOilParamsT, class OilWaterParamsT>
+template<class Traits, class GasOilParamsT, class OilWaterParamsT, class GasWaterParamsT>
 class EclTwoPhaseMaterialParams : public EnsureFinalized
 {
     typedef typename Traits::Scalar Scalar;
@@ -58,6 +58,7 @@ public:
 
     typedef GasOilParamsT GasOilParams;
     typedef OilWaterParamsT OilWaterParams;
+    typedef GasWaterParamsT GasWaterParams;
 
     /*!
      * \brief The default constructor.
@@ -108,11 +109,30 @@ public:
     void setOilWaterParams(std::shared_ptr<OilWaterParams> val)
     { oilWaterParams_ = val; }
 
+  /*!
+     * \brief The parameter object for the gas-water twophase law.
+     */
+    const GasWaterParams& gasWaterParams() const
+    { EnsureFinalized::check(); return *gasWaterParams_; }
+
+    /*!
+     * \brief The parameter object for the gas-water twophase law.
+     */
+    GasWaterParams& gasWaterParams()
+    { EnsureFinalized::check(); return *gasWaterParams_; }
+
+    /*!
+     * \brief Set the parameter object for the gas-water twophase law.
+     */
+    void setGasWaterParams(std::shared_ptr<GasWaterParams> val)
+    { gasWaterParams_ = val; }
+    
 private:
     EclTwoPhaseApproach approach_;
 
     std::shared_ptr<GasOilParams> gasOilParams_;
     std::shared_ptr<OilWaterParams> oilWaterParams_;
+    std::shared_ptr<GasWaterParams> gasWaterParams_;
 };
 } // namespace Opm
 

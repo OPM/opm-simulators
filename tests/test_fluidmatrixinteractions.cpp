@@ -341,7 +341,8 @@ inline void testAll()
         typedef Opm::BrooksCorey<TwoPhaseTraits> TwoPhaseMaterial;
         typedef Opm::EclTwoPhaseMaterial<ThreePhaseTraits,
                                          /*GasOilMaterial=*/TwoPhaseMaterial,
-                                         /*OilWaterMaterial=*/TwoPhaseMaterial> MaterialLaw;
+                                         /*OilWaterMaterial=*/TwoPhaseMaterial,
+                                         /*GasWaterMaterial=*/TwoPhaseMaterial> MaterialLaw;
         testGenericApi<MaterialLaw, ThreePhaseFluidState>();
         testThreePhaseApi<MaterialLaw, ThreePhaseFluidState>();
         //testThreePhaseSatApi<MaterialLaw, ThreePhaseFluidState>();
@@ -350,7 +351,8 @@ inline void testAll()
         typedef Opm::BrooksCorey<TwoPhaseTraits> TwoPhaseMaterial;
         typedef Opm::EclMultiplexerMaterial<ThreePhaseTraits,
                                             /*GasOilMaterial=*/TwoPhaseMaterial,
-                                            /*OilWaterMaterial=*/TwoPhaseMaterial> MaterialLaw;
+                                            /*OilWaterMaterial=*/TwoPhaseMaterial,
+                                            /*GasWaterMaterial=*/TwoPhaseMaterial> MaterialLaw;
         testGenericApi<MaterialLaw, ThreePhaseFluidState>();
         testThreePhaseApi<MaterialLaw, ThreePhaseFluidState>();
         //testThreePhaseSatApi<MaterialLaw, ThreePhaseFluidState>();
