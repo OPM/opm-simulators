@@ -968,8 +968,7 @@ private:
         switch (eclState.runspec().saturationFunctionControls().family()) {
         case SatFuncControls::KeywordFamily::Family_I:
         {
-            // No Family I applicable in this case
-            break;
+            throw std::domain_error("Saturation keyword family I is not applicable for a gas-water system");
         }
 
         case SatFuncControls::KeywordFamily::Family_II:
