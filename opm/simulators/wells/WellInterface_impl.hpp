@@ -90,9 +90,9 @@ namespace Opm
 
         connectionRates_.resize(number_of_perforations_);
 
-        wellIsStopped_ = false;
+        this->wellStatus_ = Well::Status::OPEN;
         if (well.getStatus() == Well::Status::STOP) {
-            wellIsStopped_ = true;
+            this->wellStatus_ = Well::Status::STOP;
         }
 
         wsolvent_ = 0.0;
@@ -973,7 +973,7 @@ namespace Opm
                                 WellTestState& well_test_state,
                                 Opm::DeferredLogger& deferred_logger) const
     {
-        if (wellIsStopped_)
+        if (this->wellIsStopped())
             return;
 
         const WellEconProductionLimits& econ_production_limits = well_ecl_.getEconLimits();

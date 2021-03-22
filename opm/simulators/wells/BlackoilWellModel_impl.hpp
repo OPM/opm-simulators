@@ -55,7 +55,7 @@ namespace Opm {
         parallel_well_info_.assign(parallel_wells.begin(), parallel_wells.end());
         const auto& pwell_info = parallel_well_info_;
         std::size_t numProcs = ebosSimulator.gridView().comm().size();
-        is_shut_or_defunct_ = [&pwell_info, numProcs](const Well& well) {
+        not_on_process_ = [&pwell_info, numProcs](const Well& well) {
                 if (well.getStatus() == Well::Status::SHUT)
                     return true;
                 if (numProcs == 1u)
@@ -214,11 +214,11 @@ namespace Opm {
     template<typename TypeTag>
     std::vector< Well >
     BlackoilWellModel<TypeTag>::
-    getLocalNonshutWells(const int timeStepIdx, int& globalNumWells) const
+    getLocalWells(const int timeStepIdx, int& globalNumWells) const
     {
         auto w = schedule().getWells(timeStepIdx);
         globalNumWells = w.size();
-        w.erase(std::remove_if(w.begin(), w.end(), is_shut_or_defunct_), w.end());
+        w.erase(std::remove_if(w.begin(), w.end(), not_on_process_), w.end());
         return w;
     }
 
@@ -252,8 +252,8 @@ namespace Opm {
         const Grid& grid = ebosSimulator_.vanguard().grid();
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         int globalNumWells = 0;
-        // Make wells_ecl_ contain only this partition's non-shut wells.
-        wells_ecl_ = getLocalNonshutWells(timeStepIdx, globalNumWells);
+        // Make wells_ecl_ contain only this partition's wells.
+        wells_ecl_ = getLocalWells(timeStepIdx, globalNumWells);
         local_parallel_well_info_ = createLocalParallelWellInfo(wells_ecl_);
 
         // The well state initialize bhp with the cell pressure in the top cell.
@@ -621,8 +621,8 @@ namespace Opm {
         const int report_step = std::max(eclState().getInitConfig().getRestartStep() - 1, 0);
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         int globalNumWells = 0;
-        // Make wells_ecl_ contain only this partition's non-shut wells.
-        wells_ecl_ = getLocalNonshutWells(report_step, globalNumWells);
+        // wells_ecl_ should only contain wells on this processor.
+        wells_ecl_ = getLocalWells(report_step, globalNumWells);
         local_parallel_well_info_ = createLocalParallelWellInfo(wells_ecl_);
 
         this->initializeWellProdIndCalculators();
