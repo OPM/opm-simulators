@@ -144,6 +144,8 @@ tests[norne_reperf]="flow norne NORNE_ATW2013_B1H_RE-PERF"
 tests[compl_smry]="flow compl_smry COMPL_SMRY"
 tests[3d_tran_operator]="flow parallel_fieldprops 3D_TRAN_OPERATOR"
 tests[co2store]="flow co2store CO2STORE"
+tests[co2store_diffusive]="flow co2store CO2STORE_DIFFUSIVE"
+tests[co2store_drsdtcon]="flow co2store CO2STORE_DRSDTCON"
 
 changed_tests=""
 
