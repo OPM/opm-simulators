@@ -532,6 +532,20 @@ add_test_compareECLFiles(CASENAME co2store
                          REL_TOL ${rel_tol}
                          DIR co2store)
 
+add_test_compareECLFiles(CASENAME co2store_diffusive
+                         FILENAME CO2STORE_DIFFUSIVE
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR co2store)
+
+add_test_compareECLFiles(CASENAME co2store_drsdtcon
+                         FILENAME CO2STORE_DRSDTCON
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR co2store)
+
 if (opm-common_EMBEDDED_PYTHON)
   add_test_compareECLFiles(CASENAME udq_pyaction
                            FILENAME PYACTION_WCONPROD
