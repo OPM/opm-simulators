@@ -341,26 +341,6 @@ opm_add_test(flow_onephase
   DEPENDS opmsimulators
   LIBRARIES opmsimulators)
 
-opm_add_test(flow_co2_diffusion
-  ONLY_COMPILE
-  DEFAULT_ENABLE_IF ${FLOW_VARIANTS_DEFAULT_ENABLE_IF}
-  SOURCES
-  flow/flow_co2_diffusion.cpp
-  $<TARGET_OBJECTS:moduleVersion>
-  EXE_NAME flow_co2_diffusion
-  DEPENDS opmsimulators
-  LIBRARIES opmsimulators)
-
-opm_add_test(flow_bo_diffusion
-  ONLY_COMPILE
-  DEFAULT_ENABLE_IF ${FLOW_VARIANTS_DEFAULT_ENABLE_IF}
-  SOURCES
-  flow/flow_bo_diffusion.cpp
-  $<TARGET_OBJECTS:moduleVersion>
-  EXE_NAME flow_bo_diffusion
-  DEPENDS opmsimulators
-  LIBRARIES opmsimulators)
-
 opm_add_test(flow_onephase_energy
   ONLY_COMPILE
   DEFAULT_ENABLE_IF ${FLOW_VARIANTS_DEFAULT_ENABLE_IF}
