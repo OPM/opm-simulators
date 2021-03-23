@@ -223,6 +223,13 @@ public:
                     blockData_[key] = 0.0;
                 }
             }
+
+            if (node.category() == SummaryConfigNode::Category::Connection && node.keyword() == "COPR") {
+                if (collectToIORank.isCartIdxOnThisRank(node.number() - 1)) {
+                    std::pair<std::string, int> key = std::make_pair(node.keyword(), node.number());
+                    blockData_[key] = 0.0;
+                }
+            }
         }
 
         for (const auto& global_index : wbp_index_list) {
