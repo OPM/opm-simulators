@@ -70,7 +70,10 @@ namespace Opm
         total_linearizations += sr.total_linearizations;
         total_newton_iterations += sr.total_newton_iterations;
         total_linear_iterations += sr.total_linear_iterations;
-        global_time = sr.global_time; // It makes no sense adding time points, so = not += here.
+        // It makes no sense adding time points. Therefore, do not 
+        // overwrite the value of global_time which gets set in 
+        // NonlinearSolverEbos.hpp by the line:
+        //     report.global_time = timer.simulationTimeElapsed();
     }
 
 
