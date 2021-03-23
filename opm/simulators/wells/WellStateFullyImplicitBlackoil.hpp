@@ -218,13 +218,11 @@ namespace Opm
                         // thp
                         thp()[ newIndex ] = prevState->thp()[ oldIndex ];
 
-                         // Currently this is taken care of by updateWellStateFromTarge. Maybe we should just remove the initialization and just use updateWellStateFromTarget
-                         //if (effective_events_occurred_[w]) {
-                         //   continue;
-                         //}
-
-                        current_injection_controls_[ newIndex ] = prevState->currentInjectionControls()[ oldIndex ];
-                        current_production_controls_[ newIndex ] = prevState->currentProductionControls()[ oldIndex ];
+                        // If new target is set using WCONPROD, WCONINJE etc. we change to the new control.
+                        if (!effective_events_occurred_[w]) {
+                            current_injection_controls_[ newIndex ] = prevState->currentInjectionControls()[ oldIndex ];
+                            current_production_controls_[ newIndex ] = prevState->currentProductionControls()[ oldIndex ];
+                        }
 
                         // wellrates
                         for( int i=0, idx=newIndex*np, oldidx=oldIndex*np; i<np; ++i, ++idx, ++oldidx )
