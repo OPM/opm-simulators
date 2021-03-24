@@ -343,12 +343,14 @@ protected:
     {
         const EclipseGrid * input_grid = nullptr;
         std::vector<double> porv;
+        std::unordered_map<size_t, double> aquifer_cell_volumes;
         // At this stage the ParallelEclipseState instance is still in global
         // view; on rank 0 we have undistributed data for the entire grid, on
         // the other ranks the EclipseState is empty.
         if (mpiRank == 0) {
             input_grid = &this->eclState().getInputGrid();
             porv = this->eclState().fieldProps().porv(true);
+            aquifer_cell_volumes = this->eclState().aquifer().numericalAquifers().aquiferCellVolumes();
         }
 
         grid_.reset(new Dune::CpGrid());
@@ -357,7 +359,8 @@ protected:
                                     /*flipNormals=*/false,
                                     /*clipZ=*/false,
                                     porv,
-                                    this->eclState().getInputNNC());
+                                    this->eclState().getInputNNC(),
+                                    aquifer_cell_volumes);
 
         // we use separate grid objects: one for the calculation of the initial condition
         // via EQUIL and one for the actual simulation. The reason is that the EQUIL code
