@@ -28,6 +28,7 @@
 #include <exception>
 #include <memory>
 #include <stdexcept>
+#include <utility>
 
 namespace Opm
 {
@@ -107,9 +108,8 @@ protected:
                                   "for Carter-Tracey analytic aquifers"};
     }
 
-    inline void getInfluenceTableValues(const Scalar td_plus_dt,
-                                        Scalar&      PItd,
-                                        Scalar&      PItdprime)
+    std::pair<Scalar, Scalar>
+    getInfluenceTableValues(const Scalar td_plus_dt)
     {
         // We use the opm-common numeric linear interpolator
         this->dimensionless_pressure_ =
@@ -117,11 +117,18 @@ protected:
                                      this->aquct_data_.pi,
                                      this->dimensionless_time_);
 
-        PItd = Opm::linearInterpolation(aquct_data_.td, aquct_data_.pi, td_plus_dt);
-        PItdprime = Opm::linearInterpolationDerivative(aquct_data_.td, aquct_data_.pi, td_plus_dt);
+        const auto PItd =
+            Opm::linearInterpolation(this->aquct_data_.td,
+                                     this->aquct_data_.pi, td_plus_dt);
+
+        const auto PItdprime =
+            Opm::linearInterpolationDerivative(this->aquct_data_.td,
+                                               this->aquct_data_.pi, td_plus_dt);
+
+        return std::make_pair(PItd, PItdprime);
     }
 
-    inline Scalar dpai(int idx)
+    Scalar dpai(const int idx) const
     {
         Scalar dp = this->pa0_
             + this->rhow_.at(idx).value() * this->gravity_() * (this->cell_depth_.at(idx) - this->aquiferDepth())
@@ -130,28 +137,28 @@ protected:
     }
 
     // This function implements Eqs 5.8 and 5.9 of the EclipseTechnicalDescription
-    inline void calculateEqnConstants(Scalar& a, Scalar& b, const int idx, const Simulator& simulator)
+    std::pair<Scalar, Scalar>
+    calculateEqnConstants(const int idx, const Simulator& simulator)
     {
         const Scalar td_plus_dt = (simulator.timeStepSize() + simulator.time()) / this->Tc_;
         this->dimensionless_time_ = simulator.time() / this->Tc_;
 
-        auto PItd = Scalar{0};
-        auto PItdprime = Scalar{0};
-        this->getInfluenceTableValues(td_plus_dt, PItd, PItdprime);
+        const auto [PItd, PItdprime] = this->getInfluenceTableValues(td_plus_dt);
 
         const auto denom = this->Tc_ * (PItd - this->dimensionless_time_*PItdprime);
+        const auto a = (this->beta_*dpai(idx) - this->fluxValue_*PItdprime) / denom;
+        const auto b = this->beta_ / denom;
 
-        a = (this->beta_*dpai(idx) - this->fluxValue_*PItdprime) / denom;
-        b = this->beta_ / denom;
+        return std::make_pair(a, b);
     }
 
     // This function implements Eq 5.7 of the EclipseTechnicalDescription
     inline void calculateInflowRate(int idx, const Simulator& simulator) override
     {
-        Scalar a, b;
-        calculateEqnConstants(a, b, idx, simulator);
-        this->Qai_.at(idx)
-            = this->alphai_.at(idx) * (a - b * (this->pressure_current_.at(idx) - this->pressure_previous_.at(idx)));
+        const auto [a, b] = this->calculateEqnConstants(idx, simulator);
+
+        this->Qai_.at(idx) = this->alphai_.at(idx) *
+            (a - b*(this->pressure_current_.at(idx) - this->pressure_previous_.at(idx)));
     }
 
     inline void calculateAquiferConstants() override
