@@ -176,7 +176,6 @@ namespace Opm
         virtual void initPrimaryVariablesEvaluation() const override;
 
         virtual void assembleWellEq(const Simulator& ebosSimulator,
-                                    const std::vector<Scalar>& B_avg,
                                     const double dt,
                                     WellState& well_state,
                                     Opm::DeferredLogger& deferred_logger) override;
@@ -212,7 +211,6 @@ namespace Opm
 
         /// computing the well potentials for group control
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
-                                           const std::vector<Scalar>& B_avg,
                                            const WellState& well_state,
                                            std::vector<double>& well_potentials,
                                            Opm::DeferredLogger& deferred_logger) /* const */ override;
@@ -234,7 +232,6 @@ namespace Opm
 
         // iterate well equations with the specified control until converged
         bool iterateWellEqWithControl(const Simulator& ebosSimulator,
-                                      const std::vector<double>& B_avg,
                                       const double dt,
                                       const Well::InjectionControls& inj_controls,
                                       const Well::ProductionControls& prod_controls,
@@ -469,7 +466,6 @@ namespace Opm
                              Opm::DeferredLogger& deferred_logger) const;
 
         void computeWellRatesWithBhpPotential(const Simulator& ebosSimulator,
-                                              const std::vector<Scalar>& B_avg,
                                               const double& bhp,
                                               std::vector<double>& well_flux,
                                               Opm::DeferredLogger& deferred_logger);

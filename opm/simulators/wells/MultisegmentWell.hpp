@@ -129,7 +129,6 @@ namespace Opm
         }
 
         virtual void assembleWellEq(const Simulator& ebosSimulator,
-                                    const std::vector<Scalar>& B_avg,
                                     const double dt,
                                     WellState& well_state,
                                     Opm::DeferredLogger& deferred_logger) override;
@@ -160,7 +159,6 @@ namespace Opm
 
         /// computing the well potentials for group control
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
-                                           const std::vector<Scalar>& B_avg,
                                            const WellState& well_state,
                                            std::vector<double>& well_potentials,
                                            Opm::DeferredLogger& deferred_logger) override;
@@ -402,19 +400,16 @@ namespace Opm
                          std::vector<EvalWell>& mob) const;
 
         void computeWellRatesAtBhpLimit(const Simulator& ebosSimulator,
-                                        const std::vector<Scalar>& B_avg,
                                         std::vector<double>& well_flux,
                                         Opm::DeferredLogger& deferred_logger) const;
 
         void computeWellRatesWithBhp(const Simulator& ebosSimulator,
-                                     const std::vector<Scalar>& B_avg,
                                      const Scalar bhp,
                                      std::vector<double>& well_flux,
                                      Opm::DeferredLogger& deferred_logger) const;
 
         std::vector<double>
         computeWellPotentialWithTHP(const Simulator& ebos_simulator,
-                                    const std::vector<Scalar>& B_avg,
                                     Opm::DeferredLogger& deferred_logger) const;
 
         void assembleControlEq(const WellState& well_state,
@@ -447,7 +442,6 @@ namespace Opm
         bool accelerationalPressureLossConsidered() const;
 
         virtual bool iterateWellEqWithControl(const Simulator& ebosSimulator,
-                                              const std::vector<Scalar>& B_avg,
                                               const double dt,
                                               const Well::InjectionControls& inj_controls,
                                               const Well::ProductionControls& prod_controls,
@@ -496,12 +490,10 @@ namespace Opm
 
 
         std::optional<double> computeBhpAtThpLimitProd(const Simulator& ebos_simulator,
-                                                       const std::vector<Scalar>& B_avg,
                                                        const SummaryState& summary_state,
                                                        DeferredLogger& deferred_logger) const;
 
         std::optional<double> computeBhpAtThpLimitInj(const Simulator& ebos_simulator,
-                                                      const std::vector<Scalar>& B_avg,
                                                       const SummaryState& summary_state,
                                                       DeferredLogger& deferred_logger) const;
 

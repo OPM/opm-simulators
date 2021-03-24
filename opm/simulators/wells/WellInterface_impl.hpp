@@ -1109,7 +1109,7 @@ namespace Opm
     template<typename TypeTag>
     void
     WellInterface<TypeTag>::
-    wellTesting(const Simulator& simulator, const std::vector<double>& B_avg,
+    wellTesting(const Simulator& simulator,
                 const double simulation_time, const int report_step,
                 const WellTestConfig::Reason testing_reason,
                 /* const */ WellState& well_state,
@@ -1117,12 +1117,12 @@ namespace Opm
                 Opm::DeferredLogger& deferred_logger)
     {
         if (testing_reason == WellTestConfig::Reason::PHYSICAL) {
-            wellTestingPhysical(simulator, B_avg, simulation_time, report_step,
+            wellTestingPhysical(simulator, simulation_time, report_step,
                                 well_state, well_test_state, deferred_logger);
         }
 
         if (testing_reason == WellTestConfig::Reason::ECONOMIC) {
-            wellTestingEconomic(simulator, B_avg, simulation_time,
+            wellTestingEconomic(simulator, simulation_time,
                                 well_state, well_test_state, deferred_logger);
         }
     }
@@ -1134,7 +1134,7 @@ namespace Opm
     template<typename TypeTag>
     void
     WellInterface<TypeTag>::
-    wellTestingEconomic(const Simulator& simulator, const std::vector<double>& B_avg,
+    wellTestingEconomic(const Simulator& simulator,
                         const double simulation_time, const WellState& well_state,
                         WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger)
     {
@@ -1155,7 +1155,7 @@ namespace Opm
         // untill the number of closed completions do not increase anymore.
         while (testWell) {
             const size_t original_number_closed_completions = welltest_state_temp.sizeCompletions();
-            solveWellForTesting(simulator, well_state_copy, B_avg, deferred_logger);
+            solveWellForTesting(simulator, well_state_copy, deferred_logger);
             updateWellTestState(well_state_copy, simulation_time, /*writeMessageToOPMLog=*/ false, welltest_state_temp, deferred_logger);
             closeCompletions(welltest_state_temp);
 
@@ -1297,7 +1297,6 @@ namespace Opm
     bool
     WellInterface<TypeTag>::
     iterateWellEquations(const Simulator& ebosSimulator,
-                         const std::vector<double>& B_avg,
                          const double dt,
                          WellState& well_state,
                          Opm::DeferredLogger& deferred_logger)
@@ -1306,7 +1305,7 @@ namespace Opm
         const auto inj_controls = well_ecl_.isInjector() ? well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
         const auto prod_controls = well_ecl_.isProducer() ? well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
 
-        return this->iterateWellEqWithControl(ebosSimulator, B_avg, dt, inj_controls, prod_controls, well_state, deferred_logger);
+        return this->iterateWellEqWithControl(ebosSimulator, dt, inj_controls, prod_controls, well_state, deferred_logger);
     }
 
 
@@ -1354,13 +1353,12 @@ namespace Opm
     void
     WellInterface<TypeTag>::
     solveWellForTesting(const Simulator& ebosSimulator, WellState& well_state,
-                        const std::vector<double>& B_avg,
                         Opm::DeferredLogger& deferred_logger)
     {
         // keep a copy of the original well state
         const WellState well_state0 = well_state;
         const double dt = ebosSimulator.timeStepSize();
-        const bool converged = iterateWellEquations(ebosSimulator, B_avg, dt, well_state, deferred_logger);
+        const bool converged = iterateWellEquations(ebosSimulator, dt, well_state, deferred_logger);
         if (converged) {
             deferred_logger.debug("WellTest: Well equation for well " + name() +  " converged");
         } else {
@@ -1384,7 +1382,7 @@ namespace Opm
         // keep a copy of the original well state
         const WellState well_state0 = well_state;
         const double dt = ebosSimulator.timeStepSize();
-        const bool converged = iterateWellEquations(ebosSimulator, B_avg_, dt, well_state, deferred_logger);
+        const bool converged = iterateWellEquations(ebosSimulator, dt, well_state, deferred_logger);
         if (converged) {
             deferred_logger.debug("Compute initial well solution for well " + name() +  ". Converged");
         } else {
@@ -1427,7 +1425,7 @@ namespace Opm
     template<typename TypeTag>
     void
     WellInterface<TypeTag>::
-    wellTestingPhysical(const Simulator& ebos_simulator, const std::vector<double>& B_avg,
+    wellTestingPhysical(const Simulator& ebos_simulator,
                         const double /* simulation_time */, const int /* report_step */,
                         WellState& well_state, WellTestState& welltest_state,
                         Opm::DeferredLogger& deferred_logger)
@@ -1464,7 +1462,7 @@ namespace Opm
         calculateExplicitQuantities(ebos_simulator, well_state_copy, deferred_logger);
 
         const double dt = ebos_simulator.timeStepSize();
-        const bool converged = this->iterateWellEquations(ebos_simulator, B_avg, dt, well_state_copy, deferred_logger);
+        const bool converged = this->iterateWellEquations(ebos_simulator, dt, well_state_copy, deferred_logger);
 
         if (!converged) {
             const std::string msg = " well " + name() + " did not get converged during well testing for physical reason";
