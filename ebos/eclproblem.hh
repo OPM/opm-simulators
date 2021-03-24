@@ -2324,7 +2324,8 @@ private:
         const auto& simulator = this->simulator();
         int episodeIdx = std::max(simulator.episodeIndex(), 0);
         const auto& oilVaporizationControl = simulator.vanguard().schedule()[episodeIdx].oilvap();
-        return (oilVaporizationControl.drsdtActive());
+        const bool bothOilGasActive = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
+        return (oilVaporizationControl.drsdtActive() && bothOilGasActive);
     }
 
     bool drvdtActive_() const
@@ -2332,7 +2333,8 @@ private:
         const auto& simulator = this->simulator();
         int episodeIdx = std::max(simulator.episodeIndex(), 0);
         const auto& oilVaporizationControl = simulator.vanguard().schedule()[episodeIdx].oilvap();
-        return (oilVaporizationControl.drvdtActive());
+        const bool bothOilGasActive = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
+        return (oilVaporizationControl.drvdtActive() && bothOilGasActive);
 
     }
 
@@ -2341,7 +2343,8 @@ private:
         const auto& simulator = this->simulator();
         int episodeIdx = std::max(simulator.episodeIndex(), 0);
         const auto& oilVaporizationControl = simulator.vanguard().schedule()[episodeIdx].oilvap();
-        return (oilVaporizationControl.drsdtConvective());
+        const bool bothOilGasActive = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
+        return (oilVaporizationControl.drsdtConvective() && bothOilGasActive);
     }
 
 
@@ -2351,8 +2354,6 @@ private:
         // update the "last Rs" values for all elements, including the ones in the ghost
         // and overlap regions
         const auto& simulator = this->simulator();
-        int episodeIdx = std::max(simulator.episodeIndex(), 0);
-        const auto& oilVaporizationControl = simulator.vanguard().schedule()[episodeIdx].oilvap();
 
         if (drsdtConvective_()) {
             // This implements the convective DRSDT as described in
@@ -2391,7 +2392,7 @@ private:
             }
         }
 
-        if (oilVaporizationControl.drsdtActive()) {
+        if (this->drsdtActive_()) {
             ElementContext elemCtx(simulator);
             const auto& vanguard = simulator.vanguard();
             auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
@@ -2409,6 +2410,8 @@ private:
                 typedef typename std::decay<decltype(fs)>::type FluidState;
 
                 int pvtRegionIdx = pvtRegionIndex(compressedDofIdx);
+                int episodeIdx = std::max(simulator.episodeIndex(), 0);
+                const auto& oilVaporizationControl = simulator.vanguard().schedule()[episodeIdx].oilvap();
                 if (oilVaporizationControl.getOption(pvtRegionIdx) || fs.saturation(gasPhaseIdx) > freeGasMinSaturation_)
                     lastRs_[compressedDofIdx] =
                         Opm::BlackOil::template getRs_<FluidSystem,
