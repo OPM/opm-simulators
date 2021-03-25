@@ -241,17 +241,16 @@ public:
                     // for boundary intersections we also need to compute the thermal
                     // half transmissibilities
                     if (enableEnergy) {
-                        const auto& n = intersection.centerUnitOuterNormal();
-                        const auto& inPos = elem.geometry().center();
-                        const auto& outPos = intersection.geometry().center();
-                        const auto& d = outPos - inPos;
-
-                        // eWoms expects fluxes to be area specific, i.e. we must *not*
-                        // the transmissibility with the face area here
-                        Scalar thermalHalfTrans = std::abs(n*d)/(d*d);
-
+                        Scalar transBoundaryEnergyIs;
+                        computeHalfDiffusivity_(transBoundaryEnergyIs,
+                                                faceAreaNormal,
+                                                distanceVector_(faceCenterInside,
+                                                                intersection.indexInInside(),
+                                                                elemIdx,
+                                                                axisCentroids),
+                                                1.0);
                         thermalHalfTransBoundary_[std::make_pair(elemIdx, boundaryIsIdx)] =
-                            thermalHalfTrans;
+                            transBoundaryEnergyIs;
                     }
 
                     ++ boundaryIsIdx;
@@ -267,19 +266,6 @@ public:
 
                 const auto& outsideElem = intersection.outside();
                 unsigned outsideElemIdx = elemMapper.index(outsideElem);
-
-                // update the "thermal half transmissibility" for the intersection
-                if (enableEnergy) {
-                    const auto& n = intersection.centerUnitOuterNormal();
-                    Scalar A = intersection.geometry().volume();
-
-                    const auto& inPos = elem.geometry().center();
-                    const auto& outPos = intersection.geometry().center();
-                    const auto& d = outPos - inPos;
-
-                    (*thermalHalfTrans_)[directionalIsId_(elemIdx, outsideElemIdx)] =
-                        A * (n*d)/(d*d);
-                }
 
                 unsigned insideCartElemIdx = cartMapper.cartesianIndex(elemIdx);
                 unsigned outsideCartElemIdx = cartMapper.cartesianIndex(outsideElemIdx);
@@ -396,6 +382,31 @@ public:
                 trans_[isId_(elemIdx, outsideElemIdx)] = trans;
 
                 // update the "thermal half transmissibility" for the intersection
+                if (enableEnergy) {
+
+                    Scalar halfDiffusivity1;
+                    Scalar halfDiffusivity2;
+
+                    computeHalfDiffusivity_(halfDiffusivity1,
+                                            faceAreaNormal,
+                                            distanceVector_(faceCenterInside,
+                                                            intersection.indexInInside(),
+                                                            elemIdx,
+                                                            axisCentroids),
+                                            1.0);
+                    computeHalfDiffusivity_(halfDiffusivity2,
+                                            faceAreaNormal,
+                                            distanceVector_(faceCenterOutside,
+                                                            intersection.indexInOutside(),
+                                                            outsideElemIdx,
+                                                            axisCentroids),
+                                            1.0);
+                    //TODO Add support for multipliers
+                    (*thermalHalfTrans_)[directionalIsId_(elemIdx, outsideElemIdx)] = halfDiffusivity1;
+                    (*thermalHalfTrans_)[directionalIsId_(outsideElemIdx, elemIdx)] = halfDiffusivity2;
+               }
+
+                // update the "diffusive half transmissibility" for the intersection
                 if (updateDiffusivity) {
 
                     Scalar halfDiffusivity1;
