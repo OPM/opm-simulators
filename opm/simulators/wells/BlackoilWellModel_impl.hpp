@@ -2622,30 +2622,6 @@ namespace Opm {
 
 
 
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    updateEclWell(const int timeStepIdx, const int well_index)
-    {
-        const auto& schedule = this->ebosSimulator_.vanguard().schedule();
-        const auto& wname = this->wells_ecl_[well_index].name();
-        this->wells_ecl_[well_index] = schedule.getWell(wname, timeStepIdx);
-
-        const auto& well = this->wells_ecl_[well_index];
-        auto& pd     = this->well_perf_data_[well_index];
-        auto  pdIter = pd.begin();
-        for (const auto& conn : well.getConnections()) {
-            if (conn.state() != Connection::State::SHUT) {
-                pdIter->connection_transmissibility_factor = conn.CF();
-                ++pdIter;
-            }
-        }
-
-        this->wellState().resetConnectionTransFactors(well_index, pd);
-        this->prod_index_calc_[well_index].reInit(well);
-    }
-
-
 
 
 
@@ -2762,6 +2738,26 @@ namespace Opm {
                           ScheduleEvents::Events::WELL_PRODUCTIVITY_INDEX);
         };
 
+        auto updateEclWell = [this, timeStepIdx](const int well_index) -> void
+        {
+            const auto& schedule = this->schedule();
+            const auto& wname = this->wells_ecl_[well_index].name();
+            this->wells_ecl_[well_index] = schedule.getWell(wname, timeStepIdx);
+
+            const auto& well = this->wells_ecl_[well_index];
+            auto& pd     = this->well_perf_data_[well_index];
+            auto  pdIter = pd.begin();
+            for (const auto& conn : well.getConnections()) {
+                if (conn.state() != Connection::State::SHUT) {
+                    pdIter->connection_transmissibility_factor = conn.CF();
+                    ++pdIter;
+                }
+            }
+            this->well_state_.resetConnectionTransFactors(well_index, pd);
+            this->prod_index_calc_[well_index].reInit(well);
+        };
+
+
         auto rescaleWellPI =
             [this, timeStepIdx](const int    well_index,
                                 const double newWellPI) -> void
@@ -2770,8 +2766,6 @@ namespace Opm {
 
             auto& schedule = this->ebosSimulator_.vanguard().schedule(); // Mutable
             schedule.applyWellProdIndexScaling(wname, timeStepIdx, newWellPI);
-
-            this->updateEclWell(timeStepIdx, well_index);
         };
 
         // Minimal well setup to compute PI/II values
@@ -2797,6 +2791,7 @@ namespace Opm {
         for (auto wellID = 0*nw; wellID < nw; ++wellID) {
             if (hasWellPIEvent(wellID)) {
                 rescaleWellPI(wellID, this->wellPI(wellID));
+                updateEclWell(wellID);
             }
         }
 
