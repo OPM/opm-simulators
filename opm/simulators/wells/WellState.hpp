@@ -239,6 +239,22 @@ namespace Opm
             this->thp_[well_index] = 0;
         }
 
+        void updateStatus(int well_index, Well::Status status) {
+            switch (status) {
+            case Well::Status::OPEN:
+                this->openWell(well_index);
+                break;
+            case Well::Status::SHUT:
+                this->shutWell(well_index);
+                break;
+            case Well::Status::STOP:
+                this->stopWell(well_index);
+                break;
+            default:
+                throw std::logic_error("Invalid well status");
+            }
+        }
+
         virtual data::Wells
         report(const PhaseUsage& pu,
                const int* globalCellIdxMap,
