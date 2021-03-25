@@ -2692,6 +2692,13 @@ namespace Opm
     {
 
         gliftDebug("checking if GLIFT should be done..", deferred_logger);
+        std::size_t num_procs = ebos_simulator.gridView().comm().size();
+        if (num_procs > 1u) {
+            const std::string msg = fmt::format("  GLIFT: skipping optimization. "
+                "Parallel run not supported yet: num procs = {}", num_procs);
+            deferred_logger.warning(msg);
+            return false;
+        }
         if (!well_state.gliftOptimizationEnabled()) {
             gliftDebug("Optimization disabled in WellState", deferred_logger);
             return false;
