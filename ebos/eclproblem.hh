@@ -1393,14 +1393,10 @@ public:
 
                 const auto& wellpi = this->fetchWellPI(reportStep, *action, schedule, matching_wells);
 
-                schedule.applyAction(reportStep, Opm::TimeService::from_time_t(simTime), *action, actionResult, wellpi);
+                auto affected_wells = schedule.applyAction(reportStep, Opm::TimeService::from_time_t(simTime), *action, actionResult, wellpi);
                 actionState.add_run(*action, simTime);
+                this->wellModel_.updateEclWells(reportStep, affected_wells);
 
-                for ( const auto& [wname, _] : wellpi) {
-                    (void)_;
-                    if (this->wellModel_.hasWell(wname))
-                        this->wellModel_.updateEclWell(reportStep, wname);
-                }
             } else {
                 std::string msg = "The action: " + action->name() + " evaluated to false at " + ts;
                 Opm::OpmLog::info(msg);

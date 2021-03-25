@@ -2628,22 +2628,29 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    updateEclWell(const int timeStepIdx, const std::string& wname)
-    {
-        auto well_iter = std::find_if(this->wells_ecl_.begin(), this->wells_ecl_.end(),
-            [&wname](const auto& well) -> bool
-        {
-            return well.name() == wname;
-        });
+    updateEclWells(const int timeStepIdx, const std::unordered_set<std::string>& wells) {
+        const auto& schedule = this->ebosSimulator_.vanguard().schedule();
+        for (const auto& wname : wells) {
+            auto well_iter = std::find_if( this->wells_ecl_.begin(), this->wells_ecl_.end(), [wname] (const auto& well) -> bool { return well.name() == wname;});
+            if (well_iter != this->wells_ecl_.end()) {
+                auto well_index = std::distance( this->wells_ecl_.begin(), well_iter );
+                this->wells_ecl_[well_index] = schedule.getWell(wname, timeStepIdx);
 
-        if (well_iter == this->wells_ecl_.end()) {
-            throw std::logic_error { "Could not find well: " + wname };
+                const auto& well = this->wells_ecl_[well_index];
+                auto& pd     = this->well_perf_data_[well_index];
+                auto  pdIter = pd.begin();
+                for (const auto& conn : well.getConnections()) {
+                    if (conn.state() != Connection::State::SHUT) {
+                        pdIter->connection_transmissibility_factor = conn.CF();
+                        ++pdIter;
+                    }
+                }
+                this->wellState().updateStatus(well_index, well.getStatus());
+                this->wellState().resetConnectionTransFactors(well_index, pd);
+                this->prod_index_calc_[well_index].reInit(well);
+            }
         }
-
-        auto well_index = std::distance(this->wells_ecl_.begin(), well_iter);
-        this->updateEclWell(timeStepIdx, well_index);
     }
-
 
 
 
@@ -2753,7 +2760,7 @@ namespace Opm {
                     ++pdIter;
                 }
             }
-            this->well_state_.resetConnectionTransFactors(well_index, pd);
+            this->wellState().resetConnectionTransFactors(well_index, pd);
             this->prod_index_calc_[well_index].reInit(well);
         };
 
