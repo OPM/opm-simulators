@@ -26,7 +26,9 @@
 #include <opm/output/data/Aquifer.hpp>
 
 #include <exception>
+#include <memory>
 #include <stdexcept>
+#include <utility>
 
 namespace Opm
 {
@@ -80,7 +82,12 @@ public:
         }
         data.volume = this->W_flux_.value();
         data.initPressure = this->pa0_;
-        data.type = Opm::data::AquiferType::CarterTracey;
+        data.type = Opm::data::AquiferType::CarterTracy;
+
+        data.aquCT = std::make_shared<data::CarterTracyData>();
+        data.aquCT->dimensionless_time = this->dimensionless_time_;
+        data.aquCT->dimensionless_pressure = this->dimensionless_pressure_;
+
         return data;
     }
 
@@ -92,20 +99,36 @@ protected:
     Scalar mu_w_{1}; // water viscosity
     Scalar fluxValue_{0}; // value of flux
 
+    Scalar dimensionless_time_{0};
+    Scalar dimensionless_pressure_{0};
+
     void assignRestartData(const data::AquiferData& /* xaq */) override
     {
         throw std::runtime_error {"Restart-based initialization not currently supported "
                                   "for Carter-Tracey analytic aquifers"};
     }
 
-    inline void getInfluenceTableValues(Scalar& pitd, Scalar& pitd_prime, const Scalar& td)
+    std::pair<Scalar, Scalar>
+    getInfluenceTableValues(const Scalar td_plus_dt)
     {
         // We use the opm-common numeric linear interpolator
-        pitd = Opm::linearInterpolation(aquct_data_.td, aquct_data_.pi, td);
-        pitd_prime = Opm::linearInterpolationDerivative(aquct_data_.td, aquct_data_.pi, td);
+        this->dimensionless_pressure_ =
+            Opm::linearInterpolation(this->aquct_data_.td,
+                                     this->aquct_data_.pi,
+                                     this->dimensionless_time_);
+
+        const auto PItd =
+            Opm::linearInterpolation(this->aquct_data_.td,
+                                     this->aquct_data_.pi, td_plus_dt);
+
+        const auto PItdprime =
+            Opm::linearInterpolationDerivative(this->aquct_data_.td,
+                                               this->aquct_data_.pi, td_plus_dt);
+
+        return std::make_pair(PItd, PItdprime);
     }
 
-    inline Scalar dpai(int idx)
+    Scalar dpai(const int idx) const
     {
         Scalar dp = this->pa0_
             + this->rhow_.at(idx).value() * this->gravity_() * (this->cell_depth_.at(idx) - this->aquiferDepth())
@@ -114,24 +137,28 @@ protected:
     }
 
     // This function implements Eqs 5.8 and 5.9 of the EclipseTechnicalDescription
-    inline void calculateEqnConstants(Scalar& a, Scalar& b, const int idx, const Simulator& simulator)
+    std::pair<Scalar, Scalar>
+    calculateEqnConstants(const int idx, const Simulator& simulator)
     {
         const Scalar td_plus_dt = (simulator.timeStepSize() + simulator.time()) / this->Tc_;
-        const Scalar td = simulator.time() / this->Tc_;
-        Scalar PItdprime = 0.;
-        Scalar PItd = 0.;
-        getInfluenceTableValues(PItd, PItdprime, td_plus_dt);
-        a = 1.0 / this->Tc_ * ((beta_ * dpai(idx)) - (this->fluxValue_ * PItdprime)) / (PItd - td * PItdprime);
-        b = beta_ / (this->Tc_ * (PItd - td * PItdprime));
+        this->dimensionless_time_ = simulator.time() / this->Tc_;
+
+        const auto [PItd, PItdprime] = this->getInfluenceTableValues(td_plus_dt);
+
+        const auto denom = this->Tc_ * (PItd - this->dimensionless_time_*PItdprime);
+        const auto a = (this->beta_*dpai(idx) - this->fluxValue_*PItdprime) / denom;
+        const auto b = this->beta_ / denom;
+
+        return std::make_pair(a, b);
     }
 
     // This function implements Eq 5.7 of the EclipseTechnicalDescription
     inline void calculateInflowRate(int idx, const Simulator& simulator) override
     {
-        Scalar a, b;
-        calculateEqnConstants(a, b, idx, simulator);
-        this->Qai_.at(idx)
-            = this->alphai_.at(idx) * (a - b * (this->pressure_current_.at(idx) - this->pressure_previous_.at(idx)));
+        const auto [a, b] = this->calculateEqnConstants(idx, simulator);
+
+        this->Qai_.at(idx) = this->alphai_.at(idx) *
+            (a - b*(this->pressure_current_.at(idx) - this->pressure_previous_.at(idx)));
     }
 
     inline void calculateAquiferConstants() override
