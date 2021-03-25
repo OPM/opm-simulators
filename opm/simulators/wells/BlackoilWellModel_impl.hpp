@@ -1045,6 +1045,9 @@ namespace Opm {
         last_report_.assemble_time_well += perfTimer.stop();
     }
 
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
     maybeDoGasLiftOptimize(Opm::DeferredLogger& deferred_logger)
     {
         well_state_.enableGliftOptimization();
