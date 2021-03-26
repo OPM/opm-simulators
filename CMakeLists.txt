@@ -17,7 +17,7 @@
 # Mandatory call to project
 project(opm-material C CXX)
 
-cmake_minimum_required (VERSION 2.8)
+cmake_minimum_required (VERSION 3.10)
 
 option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
 option(ENABLE_3DPROPS_TESTING "Enable the testing of 3D properties" OFF)
