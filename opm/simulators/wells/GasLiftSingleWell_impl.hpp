@@ -823,9 +823,20 @@ reduceALQtoOilTarget_(double alq, double oil_rate, double gas_rate,
     std::tie(oil_rate, oil_is_limited) = getOilRateWithLimit_(potentials);
     std::tie(gas_rate, gas_is_limited) = getGasRateWithLimit_(potentials);
     if (this->debug) {
-        const std::string msg = fmt::format("Reduced oil rate from {} to {} and ALQ ",
-            "from {} to {}", orig_oil_rate, oil_rate, orig_alq, alq);
-        displayDebugMessage_(msg);
+        assert( alq <= orig_alq );
+        if (alq < orig_alq) {
+            // NOTE: ALQ may drop below zero before we are able to meet the target
+            const std::string msg = fmt::format(
+                "Reduced (oil_rate, alq) from ({}, {}) to ({}, {}) to meet target "
+                "at {}. ", orig_oil_rate, orig_alq, oil_rate, alq, target);
+            displayDebugMessage_(msg);
+        }
+        else if (alq == orig_alq) {
+            // We might not be able to reduce ALQ, for example if ALQ starts out at zero.
+            const std::string msg = fmt::format("Not able to reduce ALQ {} further. "
+                "Oil rate is {} and oil target is {}", orig_alq, oil_rate, target);
+            displayDebugMessage_(msg);
+        }
     }
     return std::make_tuple(oil_rate, gas_rate, oil_is_limited, gas_is_limited, alq);
 }
@@ -847,7 +858,9 @@ runOptimizeLoop_(bool increase)
     std::vector<double> potentials(this->num_phases_, 0.0);
     std::unique_ptr<GLiftWellState> ret_value; // nullptr initially
     if (!computeInitialWellRates_(potentials)) return ret_value;
-    bool alq_is_limited, oil_is_limited, gas_is_limited;
+    bool alq_is_limited = false;
+    bool oil_is_limited = false;
+    bool gas_is_limited = false;
     double oil_rate, gas_rate;
     std::tie(oil_rate, gas_rate, oil_is_limited, gas_is_limited) =
         getInitialRatesWithLimit_(potentials);
