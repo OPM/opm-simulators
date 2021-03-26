@@ -33,6 +33,7 @@
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/alignedallocator.hh>
 
+#include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
@@ -1408,6 +1409,36 @@ protected:
                 reservoirRate[waterPhaseIdx]
                 * Toolbox::value(dofVars.density[waterPhaseIdx])
                 / rhoWaterSurface;
+    }
+
+    const WellStateFullyImplicitBlackoil& wellState() const
+    {
+        throw std::logic_error("wellState() method not implemented for class eclpeacemanwell");
+    }
+
+    WellStateFullyImplicitBlackoil& wellState()
+    {
+        throw std::logic_error("wellState() method not implemented for class eclpeacemanwell");
+    }
+
+    void commitWellState()
+    {
+        throw std::logic_error("commitWellState() method not implemented for class eclpeacemanwell");
+    }
+
+    void commitWellState(WellStateFullyImplicitBlackoil well_state)
+    {
+        throw std::logic_error("commitWellState() method not implemented for class eclpeacemanwell");
+    }
+
+    void resetWellState()
+    {
+        throw std::logic_error("resetWellState() method not implemented for class eclpeacemanwell");
+    }
+
+    void updateNupcolWellState()
+    {
+        throw std::logic_error("updateNupcolWellState() method not implemented for class eclpeacemanwell");
     }
 
     void

@@ -215,14 +215,113 @@ namespace Opm {
                 return grp_nwrk_values;
             }
 
+
+            /*
+              The dynamic state of the well model is maintained with an instance
+              of the WellStateFullyImplicitBlackoil class. Currently we have
+              three different wellstate instances:
+
+               1. The currently active wellstate is in the active_well_state_
+                  member. That is the state which is mutated by the simulator.
+
+               2. In the case timestep fails to converge and we must go back and
+                  try again with a smaller timestep we need to recover the last
+                  valid wellstate. This is maintained with the
+                  last_valid_well_state_ member and the functions
+                  commitWellState() and resetWellState().
+
+                3. For the NUPCOL functionality we should either use the
+                   currently active wellstate or a wellstate frozen at max
+                   nupcol iterations. This is handled with the member
+                   nupcol_well_state_ and the initNupcolWellState() function.
+            */
+
+
+            /*
+              Immutable version of the currently active wellstate.
+            */
+            const WellStateFullyImplicitBlackoil& wellState() const
+            {
+                return this->active_well_state_;
+            }
+
+            /*
+              Mutable version of the currently active wellstate.
+            */
+            WellStateFullyImplicitBlackoil& wellState()
+            {
+                return this->active_well_state_;
+            }
+
+            /*
+              Will return the last good wellstate. This is typcially used when
+              initializing a new report step where the Schedule object might
+              have introduced new wells. The wellstate returned by
+              prevWellState() must have been stored with the commitWellState()
+              function first.
+            */
+            const WellStateFullyImplicitBlackoil& prevWellState() const
+            {
+                return this->last_valid_well_state_;
+            }
+
+            /*
+              Will return the currently active nupcolWellState; must initialize
+              the internal nupcol wellstate with initNupcolWellState() first.
+            */
+            const WellStateFullyImplicitBlackoil& nupcolWellState() const
+            {
+                return this->nupcol_well_state_;
+            }
+
+            /*
+              Will assign the internal member last_valid_well_state_ to the
+              current value of the this->active_well_state_. The state stored
+              with storeWellState() can then subsequently be recovered with the
+              resetWellState() method.
+            */
+            void commitWellState()
+            {
+                this->last_valid_well_state_ = this->active_well_state_;
+            }
+
+            /*
+              Will store a copy of the input argument well_state in the
+              last_valid_well_state_ member, that state can then be recovered
+              with a subsequent call to resetWellState().
+            */
+            void commitWellState(WellStateFullyImplicitBlackoil well_state)
+            {
+                this->last_valid_well_state_ = std::move(well_state);
+            }
+
+            /*
+              Will update the internal variable active_well_state_ to whatever
+              was stored in the last_valid_well_state_ member. This function
+              works in pair with commitWellState() which should be called first.
+            */
+            void resetWellState()
+            {
+                this->active_well_state_ = this->last_valid_well_state_;
+            }
+
+            /*
+              Will store the current active wellstate in the nupcol_well_state_
+              member. This can then be subsequently retrieved with accessor
+              nupcolWellState().
+            */
+            void updateNupcolWellState()
+            {
+                this->nupcol_well_state_ = this->active_well_state_;
+            }
+
             Opm::data::Wells wellData() const
             {
-                auto wsrpt = well_state_
-                    .report(phase_usage_, Opm::UgGridHelpers::globalCell(grid()),
-                            [this](const int well_ndex) -> bool
-                    {
-                        return this->wasDynamicallyShutThisTimeStep(well_ndex);
-                    });
+                auto wsrpt = this->wellState().report(phase_usage_, Opm::UgGridHelpers::globalCell(grid()),
+                                                      [this](const int well_ndex) -> bool
+                                                      {
+                                                          return this->wasDynamicallyShutThisTimeStep(well_ndex);
+                                                      });
 
                 this->assignWellGuideRates(wsrpt);
                 this->assignShutConnections(wsrpt);
@@ -246,13 +345,6 @@ namespace Opm {
 
             // Check if well equations is converged.
             ConvergenceReport getWellConvergence(const std::vector<Scalar>& B_avg, const bool checkGroupConvergence = false) const;
-
-            // return the internal well state, ignore the passed one.
-            // Used by the legacy code to make it compatible with the legacy well models.
-            const WellState& wellState(const WellState& well_state OPM_UNUSED) const;
-
-            // return the internal well state
-            const WellState& wellState() const;
 
             const SimulatorReportSingle& lastReport() const;
 
@@ -278,6 +370,8 @@ namespace Opm {
             bool hasWell(const std::string& wname);
             double wellPI(const int well_index) const;
             double wellPI(const std::string& well_name) const;
+
+
 
         protected:
             Simulator& ebosSimulator_;
@@ -323,9 +417,6 @@ namespace Opm {
 
             WellInterfacePtr createWellForWellTest(const std::string& well_name, const int report_step, Opm::DeferredLogger& deferred_logger) const;
 
-            WellState well_state_;
-            WellState previous_well_state_;
-            WellState well_state_nupcol_;
 
             const ModelParameters param_;
             bool terminal_output_;
@@ -526,6 +617,16 @@ namespace Opm {
                                        data::GroupData& gdata) const;
 
              void computeWellTemperature();                       
+        private:
+            /*
+              The various wellState members should be accessed and modified
+              through the accessor functions wellState(), prevWellState(),
+              commitWellState(), resetWellState(), nupcolWellState() and
+              updateNupcolWellState().
+            */
+            WellState active_well_state_;
+            WellState last_valid_well_state_;
+            WellState nupcol_well_state_;
         };
 
 

@@ -36,6 +36,7 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
+#include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellConnections.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
@@ -619,6 +620,35 @@ public:
         // not implemented
     }
 
+    const WellStateFullyImplicitBlackoil& wellState() const
+    {
+        throw std::logic_error("wellState() method not implemented for class eclwellmanager");
+    }
+
+    WellStateFullyImplicitBlackoil& wellState()
+    {
+        throw std::logic_error("wellState() method not implemented for class eclwellmanager");
+    }
+
+    void commitWellState()
+    {
+        throw std::logic_error("commitWellState() method not implemented for class eclwellmanager");
+    }
+
+    void commitWellState(WellStateFullyImplicitBlackoil well_state)
+    {
+        throw std::logic_error("commitWellState() method not implemented for class eclwellmanager");
+    }
+
+    void resetWellState()
+    {
+        throw std::logic_error("resetWellState() method not implemented for class eclwellmanager");
+    }
+
+    void updateNupcolWellState()
+    {
+        throw std::logic_error("updateNupcolWellState() method not implemented for class eclwellmanager");
+    }
 
     void
     updateEclWell(int, int)
