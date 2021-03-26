@@ -1469,13 +1469,26 @@ public:
      * \copydoc EclTransmissiblity::thermalHalfTransmissibility
      */
     template <class Context>
-    Scalar thermalHalfTransmissibility(const Context& context,
-                                       unsigned faceIdx,
-                                       unsigned timeIdx) const
+    Scalar thermalHalfTransmissibilityIn(const Context& context,
+                                         unsigned faceIdx,
+                                         unsigned timeIdx) const
     {
         const auto& face = context.stencil(timeIdx).interiorFace(faceIdx);
         unsigned toDofLocalIdx = face.exteriorIndex();
-        return *pffDofData_.get(context.element(), toDofLocalIdx).thermalHalfTrans;
+        return *pffDofData_.get(context.element(), toDofLocalIdx).thermalHalfTransIn;
+    }
+
+    /*!
+     * \copydoc EclTransmissiblity::thermalHalfTransmissibility
+     */
+    template <class Context>
+    Scalar thermalHalfTransmissibilityOut(const Context& context,
+                                          unsigned faceIdx,
+                                          unsigned timeIdx) const
+    {
+        const auto& face = context.stencil(timeIdx).interiorFace(faceIdx);
+        unsigned toDofLocalIdx = face.exteriorIndex();
+        return *pffDofData_.get(context.element(), toDofLocalIdx).thermalHalfTransOut;
     }
 
     /*!
@@ -3208,7 +3221,8 @@ private:
 
     struct PffDofData_
     {
-        Opm::ConditionalStorage<enableEnergy, Scalar> thermalHalfTrans;
+        Opm::ConditionalStorage<enableEnergy, Scalar> thermalHalfTransIn;
+        Opm::ConditionalStorage<enableEnergy, Scalar> thermalHalfTransOut;
         Opm::ConditionalStorage<enableDiffusion, Scalar> diffusivity;
         Scalar transmissibility;
     };
@@ -3229,8 +3243,10 @@ private:
                 unsigned globalCenterElemIdx = elementMapper.index(stencil.entity(/*dofIdx=*/0));
                 dofData.transmissibility = transmissibilities_.transmissibility(globalCenterElemIdx, globalElemIdx);
 
-                if (enableEnergy)
-                    *dofData.thermalHalfTrans = transmissibilities_.thermalHalfTrans(globalCenterElemIdx, globalElemIdx);
+                if (enableEnergy) {
+                    *dofData.thermalHalfTransIn = transmissibilities_.thermalHalfTrans(globalCenterElemIdx, globalElemIdx);
+                    *dofData.thermalHalfTransOut = transmissibilities_.thermalHalfTrans(globalElemIdx, globalCenterElemIdx);
+                }
                 if (enableDiffusion)
                     *dofData.diffusivity = transmissibilities_.diffusivity(globalCenterElemIdx, globalElemIdx);
             }
