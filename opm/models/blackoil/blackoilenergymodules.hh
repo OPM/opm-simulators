@@ -528,9 +528,10 @@ public:
             // transmissibility this cannot be done as a preprocessing step because the
             // average thermal thermal conductivity is analogous to the permeability but
             // depends on the solution.
-            Scalar alpha = elemCtx.problem().thermalHalfTransmissibility(elemCtx, scvfIdx, timeIdx);
-            const Evaluation& inH = inLambda*alpha;
-            const Evaluation& exH = exLambda*alpha;
+            Scalar inAlpha = elemCtx.problem().thermalHalfTransmissibilityIn(elemCtx, scvfIdx, timeIdx);
+            Scalar outAlpha = elemCtx.problem().thermalHalfTransmissibilityOut(elemCtx, scvfIdx, timeIdx);
+            const Evaluation& inH = inLambda*inAlpha;
+            const Evaluation& exH = exLambda*outAlpha;
             H = 1.0/(1.0/inH + 1.0/exH);
         }
         else
