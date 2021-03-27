@@ -252,8 +252,6 @@ public:
                 this->template vector<typename Data::value_type,complexType>(d);
             else if constexpr (is_ptr<Data>::value)
                 ptr(d);
-            else if constexpr (is_dynamic_state<Data>::value)
-                d.template serializeOp<EclMpiSerializer, complexType>(*this);
             else if constexpr (complexType)
                 d.serializeOp(*this);
             else
@@ -416,17 +414,6 @@ protected:
 
     template<class T1, class Deleter>
     struct is_ptr<std::unique_ptr<T1, Deleter>> {
-        constexpr static bool value = true;
-    };
-
-    //! \brief Predicate for DynamicState.
-    template<class T>
-    struct is_dynamic_state {
-        constexpr static bool value = false;
-    };
-
-    template<class T1>
-    struct is_dynamic_state<DynamicState<T1>> {
         constexpr static bool value = true;
     };
 

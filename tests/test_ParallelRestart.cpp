@@ -48,7 +48,7 @@
 #include <opm/parser/eclipse/EclipseState/InitConfig/FoamConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/RSTConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionAST.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/PyAction.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/Actions.hpp>
@@ -522,8 +522,7 @@ TEST_FOR_TYPE(PvtoTable)
 TEST_FOR_TYPE(PvtwsaltTable)
 TEST_FOR_TYPE(PvtwTable)
 TEST_FOR_TYPE(Regdims)
-TEST_FOR_TYPE(RestartConfig)
-TEST_FOR_TYPE(RestartSchedule)
+TEST_FOR_TYPE(RSTConfig)
 TEST_FOR_TYPE(RFTConfig)
 TEST_FOR_TYPE(RockConfig)
 TEST_FOR_TYPE(RockTable)
