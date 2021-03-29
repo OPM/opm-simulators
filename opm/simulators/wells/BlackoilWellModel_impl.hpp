@@ -268,11 +268,11 @@ namespace Opm {
 
         // handling MS well related
         if (param_.use_multisegment_well_&& anyMSWellOpenLocal()) { // if we use MultisegmentWell model
-            well_state_.initWellStateMSWell(wells_ecl_, phase_usage_, &previous_well_state_);
+            this->wellState().initWellStateMSWell(wells_ecl_, phase_usage_, &this->prevWellState());
         }
 
         const Group& fieldGroup = schedule().getGroup("FIELD", timeStepIdx);
-        WellGroupHelpers::setCmodeGroup(fieldGroup, schedule(), summaryState, timeStepIdx, well_state_);
+        WellGroupHelpers::setCmodeGroup(fieldGroup, schedule(), summaryState, timeStepIdx, this->wellState());
 
         // Compute reservoir volumes for RESV controls.
         rateConverter_.reset(new RateConverterType (phase_usage_,
@@ -289,8 +289,8 @@ namespace Opm {
             }
         }
 
-        // update the previous well state. This is used to restart failed steps.
-        previous_well_state_ = well_state_;
+        // Store the current well state, to be able to recover in the case of failed iterations
+        this->commitWellState();
     }
 
 
@@ -305,8 +305,8 @@ namespace Opm {
 
         Opm::DeferredLogger local_deferredLogger;
 
-        well_state_ = previous_well_state_;
-        well_state_.disableGliftOptimization();
+        this->resetWellState();
+        this->wellState().disableGliftOptimization();
         updateAndCommunicateGroupData();
         const int reportStepIdx = ebosSimulator_.episodeIndex();
         const double simulationTime = ebosSimulator_.time();
@@ -383,7 +383,7 @@ namespace Opm {
             // nonzero phase anyway.
             for (auto& well : well_container_) {
                 if (well->isProducer()) {
-                    well->updateWellStateRates(ebosSimulator_, well_state_, local_deferredLogger);
+                    well->updateWellStateRates(ebosSimulator_, this->wellState(), local_deferredLogger);
                 }
             }
         }
@@ -393,9 +393,9 @@ namespace Opm {
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         std::vector<double> pot(numPhases(), 0.0);
         const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
-        WellGroupHelpers::updateGuideRateForProductionGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, well_state_, comm, guideRate_.get(), pot);
-        WellGroupHelpers::updateGuideRatesForInjectionGroups(fieldGroup, schedule(), summaryState, phase_usage_, reportStepIdx, well_state_, guideRate_.get(), local_deferredLogger);
-        WellGroupHelpers::updateGuideRatesForWells(schedule(), phase_usage_, reportStepIdx, simulationTime, well_state_, comm, guideRate_.get());
+        WellGroupHelpers::updateGuideRateForProductionGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, this->wellState(), comm, guideRate_.get(), pot);
+        WellGroupHelpers::updateGuideRatesForInjectionGroups(fieldGroup, schedule(), summaryState, phase_usage_, reportStepIdx, this->wellState(), guideRate_.get(), local_deferredLogger);
+        WellGroupHelpers::updateGuideRatesForWells(schedule(), phase_usage_, reportStepIdx, simulationTime, this->wellState(), comm, guideRate_.get());
 
         try {
             // Compute initial well solution for new wells and injectors that change injection type i.e. WAG.
@@ -408,8 +408,8 @@ namespace Opm {
                 const bool event = report_step_starts_ && events.hasEvent(well->name(), effective_events_mask);
                 if (event) {
                     try {
-                        well->calculateExplicitQuantities(ebosSimulator_, well_state_, local_deferredLogger);
-                        well->solveWellEquation(ebosSimulator_, well_state_, local_deferredLogger);
+                        well->calculateExplicitQuantities(ebosSimulator_, this->wellState(), local_deferredLogger);
+                        well->solveWellEquation(ebosSimulator_, this->wellState(), local_deferredLogger);
                     } catch (const std::exception& e) {
                         const std::string msg = "Compute initial well solution for new well " + well->name() + " failed. Continue with zero initial rates";
                         local_deferredLogger.warning("WELL_INITIAL_SOLVE_FAILED", msg);
@@ -483,7 +483,7 @@ namespace Opm {
                 const WellTestConfig::Reason testing_reason = testWell.second;
 
                 well->wellTesting(ebosSimulator_, simulationTime, timeStepIdx,
-                                  testing_reason, well_state_, wellTestState_, deferred_logger);
+                                  testing_reason, this->wellState(), wellTestState_, deferred_logger);
             }
         }
     }
@@ -534,7 +534,7 @@ namespace Opm {
         Opm::DeferredLogger local_deferredLogger;
         for (const auto& well : well_container_) {
             if (getPropValue<TypeTag, Properties::EnablePolymerMW>() && well->isInjector()) {
-                well->updateWaterThroughput(dt, well_state_);
+                well->updateWaterThroughput(dt, this->wellState());
             }
         }
         updateWellTestState(simulationTime, wellTestState_);
@@ -554,11 +554,11 @@ namespace Opm {
 
         // check group sales limits at the end of the timestep
         const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
-        checkGconsaleLimits(fieldGroup, well_state_, local_deferredLogger);
+        checkGconsaleLimits(fieldGroup, this->wellState(), local_deferredLogger);
 
         this->calculateProductivityIndexValues(local_deferredLogger);
 
-        previous_well_state_ = well_state_;
+        this->commitWellState();
 
         Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
         if (terminal_output_) {
@@ -629,12 +629,11 @@ namespace Opm {
             const auto phaseUsage = phaseUsageFromDeck(eclState());
             const size_t numCells = Opm::UgGridHelpers::numCells(grid());
             const bool handle_ms_well = (param_.use_multisegment_well_ && anyMSWellOpenLocal());
-            well_state_.resize(wells_ecl_, local_parallel_well_info_, schedule(), handle_ms_well, numCells, phaseUsage, well_perf_data_, summaryState, globalNumWells); // Resize for restart step
-            wellsToState(restartValues.wells, restartValues.grp_nwrk, phaseUsage, handle_ms_well, well_state_);
+            this->wellState().resize(wells_ecl_, local_parallel_well_info_, schedule(), handle_ms_well, numCells, phaseUsage, well_perf_data_, summaryState, globalNumWells); // Resize for restart step
+            wellsToState(restartValues.wells, restartValues.grp_nwrk, phaseUsage, handle_ms_well, this->wellState());
         }
 
-        previous_well_state_ = well_state_;
-
+        this->commitWellState();
         initial_step_ = false;
     }
 
@@ -757,9 +756,9 @@ namespace Opm {
             }
         }
 
-        well_state_.init(cellPressures, schedule(), wells_ecl_, local_parallel_well_info_, timeStepIdx,
-                         &previous_well_state_, phase_usage_, well_perf_data_,
-                         summaryState, globalNumWells);
+        this->wellState().init(cellPressures, schedule(), wells_ecl_, local_parallel_well_info_, timeStepIdx,
+                               &this->prevWellState(), phase_usage_, well_perf_data_,
+                               summaryState, globalNumWells);
     }
 
 
@@ -792,7 +791,7 @@ namespace Opm {
                     // Due to ACTIONX the well might have been closed behind our back.
                     if (well_ecl.getStatus() != Well::Status::SHUT) {
                         this->closed_this_step_.insert(well_name);
-                        well_state_.shutWell(w);
+                        this->wellState().shutWell(w);
                     }
 
                     continue;
@@ -802,13 +801,13 @@ namespace Opm {
                 if (this->wellTestState_.hasWellClosed(well_name)) {
                     // TODO: more checking here, to make sure this standard more specific and complete
                     // maybe there is some WCON keywords will not open the well
-                    if (well_state_.effectiveEventsOccurred(w)) {
+                    if (this->wellState().effectiveEventsOccurred(w)) {
                         if (wellTestState_.lastTestTime(well_name) == ebosSimulator_.time()) {
                             // The well was shut this timestep, we are most likely retrying
                             // a timestep without the well in question, after it caused
                             // repeated timestep cuts. It should therefore not be opened,
                             // even if it was new or received new targets this report step.
-                            well_state_.setEffectiveEventsOccurred(w, false);
+                            this->wellState().setEffectiveEventsOccurred(w, false);
                         } else {
                             wellTestState_.openWell(well_name);
                         }
@@ -823,11 +822,11 @@ namespace Opm {
                 {
                     if (well_ecl.getAutomaticShutIn()) {
                         // shut wells are not added to the well container
-                        well_state_.shutWell(w);
+                        this->wellState().shutWell(w);
                         continue;
                     } else {
                         // stopped wells are added to the container but marked as stopped
-                        well_state_.stopWell(w);
+                        this->wellState().stopWell(w);
                         wellIsStopped = true;
                     }
                 }
@@ -874,13 +873,13 @@ namespace Opm {
                     if (zero_rate_control) {
                         // Treat as shut, do not add to container.
                         local_deferredLogger.info("  Well shut due to zero rate control and disallowing crossflow: " + well_ecl.name());
-                        well_state_.shutWell(w);
+                        this->wellState().shutWell(w);
                         continue;
                     }
                 }
 
                 if (well_status == Well::Status::STOP) {
-                    well_state_.stopWell(w);
+                    this->wellState().stopWell(w);
                     wellIsStopped = true;
                 }
 
@@ -948,7 +947,7 @@ namespace Opm {
                                           this->numComponents(),
                                           this->numPhases(),
                                           wellID,
-                                          this->well_state_.firstPerfIndex()[wellID],
+                                          this->wellState().firstPerfIndex()[wellID],
                                           perf_data);
     }
 
@@ -1021,15 +1020,15 @@ namespace Opm {
 
             if (param_.solve_welleq_initially_ && iterationIdx == 0) {
                 for (auto& well : well_container_) {
-                    well->solveWellEquation(ebosSimulator_, well_state_, local_deferredLogger);
+                    well->solveWellEquation(ebosSimulator_, this->wellState(), local_deferredLogger);
                 }
                 updateWellControls(local_deferredLogger, /* check group controls */ false);
             }
 
             gliftDebug("assemble() : running assembleWellEq()..", local_deferredLogger);
-            well_state_.enableGliftOptimization();
+            this->wellState().enableGliftOptimization();
             assembleWellEq(dt, local_deferredLogger);
-            well_state_.disableGliftOptimization();
+            this->wellState().disableGliftOptimization();
         } catch (const std::runtime_error& e) {
             exc_type = ExceptionType::RUNTIME_ERROR;
             exc_msg = e.what();
@@ -1054,9 +1053,8 @@ namespace Opm {
     assembleWellEq(const double dt, Opm::DeferredLogger& deferred_logger)
     {
         for (auto& well : well_container_) {
-            well->maybeDoGasLiftOptimization(
-                 well_state_, ebosSimulator_, deferred_logger);
-            well->assembleWellEq(ebosSimulator_, dt, well_state_, deferred_logger);
+            well->maybeDoGasLiftOptimization(this->wellState(), ebosSimulator_, deferred_logger);
+            well->assembleWellEq(ebosSimulator_, dt, this->wellState(), deferred_logger);
         }
     }
 
@@ -1167,7 +1165,7 @@ namespace Opm {
         try {
             if (localWellsActive()) {
                 for (auto& well : well_container_) {
-                    well->recoverWellSolutionAndUpdateWellState(x, well_state_, local_deferredLogger);
+                    well->recoverWellSolutionAndUpdateWellState(x, this->wellState(), local_deferredLogger);
                 }
             }
         } catch (const std::runtime_error& e) {
@@ -1251,7 +1249,7 @@ namespace Opm {
         ConvergenceReport local_report;
         for (const auto& well : well_container_) {
             if (well->isOperable() ) {
-                local_report += well->getWellConvergence(well_state_, B_avg, local_deferredLogger);
+                local_report += well->getWellConvergence(this->wellState(), B_avg, local_deferredLogger);
             }
         }
         Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
@@ -1292,7 +1290,7 @@ namespace Opm {
     {
         // TODO: checking isOperable() ?
         for (auto& well : well_container_) {
-            well->calculateExplicitQuantities(ebosSimulator_, well_state_, deferred_logger);
+            well->calculateExplicitQuantities(ebosSimulator_, this->wellState(), deferred_logger);
         }
     }
 
@@ -1329,7 +1327,7 @@ namespace Opm {
             // Check wells' group constraints and communicate.
             for (const auto& well : well_container_) {
                 const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Group;
-                const bool changed = well->updateWellControl(ebosSimulator_, mode, well_state_, deferred_logger);
+                const bool changed = well->updateWellControl(ebosSimulator_, mode, this->wellState(), deferred_logger);
                 if (changed) {
                     switched_wells.insert(well->name());
                 }
@@ -1343,7 +1341,7 @@ namespace Opm {
                 continue;
             }
             const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Individual;
-            well->updateWellControl(ebosSimulator_, mode, well_state_, deferred_logger);
+            well->updateWellControl(ebosSimulator_, mode, this->wellState(), deferred_logger);
         }
         updateAndCommunicateGroupData();
 
@@ -1364,7 +1362,7 @@ namespace Opm {
             return;
         }
         node_pressures_ = WellGroupHelpers::computeNetworkPressures(
-            network, well_state_, *(vfp_properties_->getProd()), schedule(), reportStepIdx);
+                                                                    network, this->wellState(), *(vfp_properties_->getProd()), schedule(), reportStepIdx);
 
         // Set the thp limits of wells
         for (auto& well : well_container_) {
@@ -1398,42 +1396,44 @@ namespace Opm {
         // This builds some necessary lookup structures, so it must be called
         // before we copy to well_state_nupcol_.
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
-        well_state_.updateGlobalIsGrup(schedule(), reportStepIdx, comm);
+        this->wellState().updateGlobalIsGrup(schedule(), reportStepIdx, comm);
 
         if (iterationIdx < nupcol) {
-            well_state_nupcol_ = well_state_;
+            this->updateNupcolWellState();
         }
 
+        auto& well_state = this->wellState();
+        const auto& well_state_nupcol = this->nupcolWellState();
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         // the group target reduction rates needs to be update since wells may have swicthed to/from GRUP control
         // Currently the group target reduction does not honor NUPCOL. TODO: is that true?
         std::vector<double> groupTargetReduction(numPhases(), 0.0);
-        WellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ false, phase_usage_, *guideRate_, well_state_nupcol_, well_state_, groupTargetReduction);
+        WellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ false, phase_usage_, *guideRate_, well_state_nupcol, well_state, groupTargetReduction);
         std::vector<double> groupTargetReductionInj(numPhases(), 0.0);
-        WellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ true, phase_usage_, *guideRate_, well_state_nupcol_, well_state_, groupTargetReductionInj);
+        WellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ true, phase_usage_, *guideRate_, well_state_nupcol, well_state, groupTargetReductionInj);
 
-        WellGroupHelpers::updateREINForGroups(fieldGroup, schedule(), reportStepIdx, phase_usage_, summaryState, well_state_nupcol_, well_state_);
-        WellGroupHelpers::updateVREPForGroups(fieldGroup, schedule(), reportStepIdx, well_state_nupcol_, well_state_);
+        WellGroupHelpers::updateREINForGroups(fieldGroup, schedule(), reportStepIdx, phase_usage_, summaryState, well_state_nupcol, well_state);
+        WellGroupHelpers::updateVREPForGroups(fieldGroup, schedule(), reportStepIdx, well_state_nupcol, well_state);
 
-        WellGroupHelpers::updateReservoirRatesInjectionGroups(fieldGroup, schedule(), reportStepIdx, well_state_nupcol_, well_state_);
-        WellGroupHelpers::updateGroupProductionRates(fieldGroup, schedule(), reportStepIdx, well_state_nupcol_, well_state_);
+        WellGroupHelpers::updateReservoirRatesInjectionGroups(fieldGroup, schedule(), reportStepIdx, well_state_nupcol, well_state);
+        WellGroupHelpers::updateGroupProductionRates(fieldGroup, schedule(), reportStepIdx, well_state_nupcol, well_state);
 
         // We use the rates from the privious time-step to reduce oscilations
-        WellGroupHelpers::updateWellRates(fieldGroup, schedule(), reportStepIdx, previous_well_state_, well_state_);
+        WellGroupHelpers::updateWellRates(fieldGroup, schedule(), reportStepIdx, this->prevWellState(), well_state);
 
         // Set ALQ for off-process wells to zero
         for (const auto& wname : schedule().wellNames(reportStepIdx)) {
             const bool is_producer = schedule().getWell(wname, reportStepIdx).isProducer();
-            const bool not_on_this_process = well_state_.wellMap().count(wname) == 0;
+            const bool not_on_this_process = well_state.wellMap().count(wname) == 0;
             if (is_producer && not_on_this_process) {
-                well_state_.setALQ(wname, 0.0);
+                well_state.setALQ(wname, 0.0);
             }
         }
 
-        well_state_.communicateGroupRates(comm);
+        well_state.communicateGroupRates(comm);
 
         // compute wsolvent fraction for REIN wells
-        updateWsolvent(fieldGroup, schedule(), reportStepIdx,  well_state_nupcol_);
+        updateWsolvent(fieldGroup, schedule(), reportStepIdx,  well_state_nupcol);
 
     }
 
@@ -1450,7 +1450,7 @@ namespace Opm {
         for (const auto& well : well_container_) {
             const auto wasClosed = wellTestState.hasWellClosed(well->name());
 
-            well->updateWellTestState(well_state_, simulationTime, /*writeMessageToOPMLog=*/ true, wellTestState, local_deferredLogger);
+            well->updateWellTestState(this->wellState(), simulationTime, /*writeMessageToOPMLog=*/ true, wellTestState, local_deferredLogger);
 
             if (!wasClosed && wellTestState.hasWellClosed(well->name())) {
                 this->closed_this_step_.insert(well->name());
@@ -1475,7 +1475,7 @@ namespace Opm {
         const int np = numPhases();
         well_potentials.resize(nw * np, 0.0);
 
-        auto well_state_copy = well_state_;
+        auto well_state = this->wellState();
 
         const Opm::SummaryConfig& summaryConfig = ebosSimulator_.vanguard().summaryConfig();
         const bool write_restart_file = ebosSimulator_.vanguard().schedule().write_rst_file(reportStepIdx);
@@ -1494,7 +1494,7 @@ namespace Opm {
             {
                 try {
                     std::vector<double> potentials;
-                    well->computeWellPotentials(ebosSimulator_, well_state_copy, potentials, deferred_logger);
+                    well->computeWellPotentials(ebosSimulator_, well_state, potentials, deferred_logger);
                     // putting the sucessfully calculated potentials to the well_potentials
                     for (int p = 0; p < np; ++p) {
                         well_potentials[well->indexOfWell() * np + p] = std::abs(potentials[p]);
@@ -1519,7 +1519,7 @@ namespace Opm {
                                          terminal_output_);
 
         // Store it in the well state
-        well_state_.wellPotentials() = well_potentials;
+        this->wellState().wellPotentials() = well_potentials;
     }
 
 
@@ -1540,7 +1540,7 @@ namespace Opm {
         for (const auto& wellPtr : this->well_container_) {
             wellPtr->updateProductivityIndex(this->ebosSimulator_,
                                              this->prod_index_calc_[wellPtr->indexOfWell()],
-                                             this->well_state_,
+                                             this->wellState(),
                                              deferred_logger);
         }
     }
@@ -1558,15 +1558,15 @@ namespace Opm {
         std::string exc_msg;
         try {
             for (const auto& well : well_container_) {
-                well->checkWellOperability(ebosSimulator_, well_state_, deferred_logger);
+                well->checkWellOperability(ebosSimulator_, this->wellState(), deferred_logger);
             }
             // since the controls are all updated, we should update well_state accordingly
             for (const auto& well : well_container_) {
                 const int w = well->indexOfWell();
                 if (!well->isOperable() ) continue;
 
-                if (well_state_.effectiveEventsOccurred(w) ) {
-                    well->updateWellStateWithTarget(ebosSimulator_, well_state_, deferred_logger);
+                if (this->wellState().effectiveEventsOccurred(w) ) {
+                    well->updateWellStateWithTarget(ebosSimulator_, this->wellState(), deferred_logger);
                 }
 
                 // there is no new well control change input within a report step,
@@ -1575,8 +1575,8 @@ namespace Opm {
                 // we do not need to set it to false
                 // TODO: we should do this at the end of the time step in case we will need it within
                 // this time step somewhere
-                if (well_state_.effectiveEventsOccurred(w) ) {
-                    well_state_.setEffectiveEventsOccurred(w, false);
+                if (this->wellState().effectiveEventsOccurred(w) ) {
+                    this->wellState().setEffectiveEventsOccurred(w, false);
                 }
             }  // end of for (const auto& well : well_container_)
             updatePrimaryVariables(deferred_logger);
@@ -1598,17 +1598,6 @@ namespace Opm {
 
 
 
-
-
-    template<typename TypeTag>
-    const typename BlackoilWellModel<TypeTag>::WellState&
-    BlackoilWellModel<TypeTag>::
-    wellState() const { return well_state_; }
-
-    template<typename TypeTag>
-    const typename BlackoilWellModel<TypeTag>::WellState&
-    BlackoilWellModel<TypeTag>::
-    wellState(const WellState& well_state OPM_UNUSED) const { return wellState(); }
 
 
     template<typename TypeTag>
@@ -1726,7 +1715,7 @@ namespace Opm {
     updatePrimaryVariables(Opm::DeferredLogger& deferred_logger)
     {
         for (const auto& well : well_container_) {
-            well->updatePrimaryVariables(well_state_, deferred_logger);
+            well->updatePrimaryVariables(this->wellState(), deferred_logger);
         }
     }
 
@@ -2103,7 +2092,7 @@ namespace Opm {
         const int reportStepIdx = ebosSimulator_.episodeIndex();
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
-        const auto& well_state = well_state_;
+        const auto& well_state = this->wellState();
 
         const auto controls = group.productionControls(summaryState);
         const Group::ProductionCMode& currentControl = well_state.currentProductionGroupControl(group.name());
@@ -2209,7 +2198,7 @@ namespace Opm {
         const int reportStepIdx = ebosSimulator_.episodeIndex();
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
-        const auto& well_state = well_state_;
+        const auto& well_state = this->wellState();
 
         int phasePos;
         if (phase == Phase::GAS && phase_usage_.phase_used[BlackoilPhases::Vapour] )
@@ -2429,7 +2418,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     actionOnBrokenConstraints(const Group& group, const Group::ExceedAction& exceed_action, const Group::ProductionCMode& newControl, Opm::DeferredLogger& deferred_logger) {
 
-        auto& well_state = well_state_;
+        auto& well_state = this->wellState();
         const Group::ProductionCMode oldControl = well_state.currentProductionGroupControl(group.name());
 
         std::ostringstream ss;
@@ -2482,7 +2471,7 @@ namespace Opm {
     void
     BlackoilWellModel<TypeTag>::
     actionOnBrokenConstraints(const Group& group, const Group::InjectionCMode& newControl, const Phase& controlPhase, Opm::DeferredLogger& deferred_logger) {
-        auto& well_state = well_state_;
+        auto& well_state = this->wellState();
         const Group::InjectionCMode oldControl = well_state.currentInjectionGroupControl(controlPhase, group.name());
 
         std::ostringstream ss;
@@ -2557,22 +2546,21 @@ namespace Opm {
         if (!skip && group.isInjectionGroup()) {
             // Obtain rates for group.
             for (int phasePos = 0; phasePos < phase_usage_.num_phases; ++phasePos) {
-                const double local_current_rate = WellGroupHelpers::sumWellRates(
-                    group, schedule(), well_state_, reportStepIdx, phasePos, /* isInjector */ true);
+                const double local_current_rate = WellGroupHelpers::sumWellRates(group, schedule(), this->wellState(), reportStepIdx, phasePos, /* isInjector */ true);
                 // Sum over all processes
                 rates[phasePos] = comm.sum(local_current_rate);
             }
             const Phase all[] = { Phase::WATER, Phase::OIL, Phase::GAS };
             for (Phase phase : all) {
                 // Check higher up only if under individual (not FLD) control.
-                const Group::InjectionCMode& currentControl = well_state_.currentInjectionGroupControl(phase, group.name());
+                const Group::InjectionCMode& currentControl = this->wellState().currentInjectionGroupControl(phase, group.name());
                 if (currentControl != Group::InjectionCMode::FLD) {
                     const Group& parentGroup = schedule().getGroup(group.parent(), reportStepIdx);
                     const std::pair<bool, double> changed = WellGroupHelpers::checkGroupConstraintsInj(
                         group.name(),
                         group.parent(),
                         parentGroup,
-                        well_state_,
+                        this->wellState(),
                         reportStepIdx,
                         guideRate_.get(),
                         rates.data(),
@@ -2594,20 +2582,19 @@ namespace Opm {
         if (!skip && group.isProductionGroup()) {
             // Obtain rates for group.
             for (int phasePos = 0; phasePos < phase_usage_.num_phases; ++phasePos) {
-                const double local_current_rate = WellGroupHelpers::sumWellRates(
-                    group, schedule(), well_state_, reportStepIdx, phasePos, /* isInjector */ false);
+                const double local_current_rate = WellGroupHelpers::sumWellRates(group, schedule(), this->wellState(), reportStepIdx, phasePos, /* isInjector */ false);
                 // Sum over all processes
                 rates[phasePos] = -comm.sum(local_current_rate);
             }
             // Check higher up only if under individual (not FLD) control.
-            const Group::ProductionCMode& currentControl = well_state_.currentProductionGroupControl(group.name());
+            const Group::ProductionCMode& currentControl = this->wellState().currentProductionGroupControl(group.name());
                 if (currentControl != Group::ProductionCMode::FLD) {
                     const Group& parentGroup = schedule().getGroup(group.parent(), reportStepIdx);
                     const std::pair<bool, double> changed = WellGroupHelpers::checkGroupConstraintsProd(
                         group.name(),
                         group.parent(),
                         parentGroup,
-                        well_state_,
+                        this->wellState(),
                         reportStepIdx,
                         guideRate_.get(),
                         rates.data(),
@@ -2654,7 +2641,7 @@ namespace Opm {
             }
         }
 
-        this->well_state_.resetConnectionTransFactors(well_index, pd);
+        this->wellState().resetConnectionTransFactors(well_index, pd);
         this->prod_index_calc_[well_index].reInit(well);
     }
 
@@ -2691,7 +2678,7 @@ namespace Opm {
     {
         const auto& pu = this->phase_usage_;
         const auto  np = this->numPhases();
-        const auto* pi = &this->well_state_.productivityIndex()[np*well_index + 0];
+        const auto* pi = &this->wellState().productivityIndex()[np*well_index + 0];
 
         const auto preferred = this->wells_ecl_[well_index].getPreferredPhase();
         switch (preferred) { // Should really have LIQUID = OIL + WATER here too...
@@ -2789,8 +2776,8 @@ namespace Opm {
 
         // Minimal well setup to compute PI/II values
         {
-            auto saved_previous_well_state = this->previous_well_state_;
-            this->previous_well_state_ = this->well_state_;
+            auto saved_previous_well_state = this->prevWellState();
+            this->commitWellState();
 
             well_container_ = createWellContainer(timeStepIdx);
             for (auto& well : well_container_) {
@@ -2803,7 +2790,7 @@ namespace Opm {
             }
 
             this->calculateProductivityIndexValues(local_deferredLogger);
-            this->previous_well_state_ = std::move(saved_previous_well_state);
+            this->commitWellState(std::move(saved_previous_well_state));
         }
 
         const auto nw = this->numLocalWells();
@@ -2998,7 +2985,7 @@ namespace Opm {
         // group tree (FIELD group).
 
         for (const auto& wname : sched.wellNames(reportStepIdx)) {
-            if (! (this->well_state_.hasWellRates(wname) &&
+            if (! (this->wellState().hasWellRates(wname) &&
                    this->guideRate_->has(wname)))
             {
                 continue;
@@ -3080,22 +3067,19 @@ namespace Opm {
         cgc.currentWaterInjectionConstraint =
             ::Opm::Group::InjectionCMode::NONE;
 
-        if (this->well_state_.hasProductionGroupControl(gname)) {
-            cgc.currentProdConstraint = this->well_state_
-                .currentProductionGroupControl(gname);
+        if (this->wellState().hasProductionGroupControl(gname)) {
+            cgc.currentProdConstraint = this->wellState().currentProductionGroupControl(gname);
         }
 
         if ((grup_type == ::Opm::Group::GroupType::INJECTION) ||
             (grup_type == ::Opm::Group::GroupType::MIXED))
         {
-            if (this->well_state_.hasInjectionGroupControl(::Opm::Phase::WATER, gname)) {
-                cgc.currentWaterInjectionConstraint = this->well_state_
-                    .currentInjectionGroupControl(::Opm::Phase::WATER, gname);
+            if (this->wellState().hasInjectionGroupControl(::Opm::Phase::WATER, gname)) {
+                cgc.currentWaterInjectionConstraint = this->wellState().currentInjectionGroupControl(::Opm::Phase::WATER, gname);
             }
 
-            if (this->well_state_.hasInjectionGroupControl(::Opm::Phase::GAS, gname)) {
-                cgc.currentGasInjectionConstraint = this->well_state_
-                    .currentInjectionGroupControl(::Opm::Phase::GAS, gname);
+            if (this->wellState().hasInjectionGroupControl(::Opm::Phase::GAS, gname)) {
+                cgc.currentGasInjectionConstraint = this->wellState().currentInjectionGroupControl(::Opm::Phase::GAS, gname);
             }
         }
     }
@@ -3110,7 +3094,7 @@ namespace Opm {
         assert (this->guideRate_ != nullptr);
 
         const auto& wname = well.name();
-        if (! this->well_state_.hasWellRates(wname)) {
+        if (! this->wellState().hasWellRates(wname)) {
             // No flow rates for 'wname' -- might be before well comes
             // online (e.g., for the initial condition before simulation
             // starts).
@@ -3123,7 +3107,7 @@ namespace Opm {
         }
 
         const auto qs = WellGroupHelpers::
-            getWellRateVector(this->well_state_, this->phase_usage_, wname);
+            getWellRateVector(this->wellState(), this->phase_usage_, wname);
 
         this->getGuideRateValues(qs, well.isInjector(), wname, grval);
 
@@ -3161,7 +3145,7 @@ namespace Opm {
 
         const auto& gname = group.name();
 
-        if ( ! this->well_state_.hasProductionGroupRates(gname)) {
+        if ( ! this->wellState().hasProductionGroupRates(gname)) {
             // No flow rates for production group 'gname' -- might be before group comes
             // online (e.g., for the initial condition before simulation
             // starts).
@@ -3173,8 +3157,7 @@ namespace Opm {
             return grval;
         }
 
-        const auto qs = WellGroupHelpers::
-                getProductionGroupRateVector(this->well_state_, this->phase_usage_, gname);
+        const auto qs = WellGroupHelpers::getProductionGroupRateVector(this->wellState(), this->phase_usage_, gname);
 
         const auto is_inj = false; // This procedure only applies to G*PGR.
         this->getGuideRateValues(qs, is_inj, gname, grval);
@@ -3273,7 +3256,7 @@ namespace Opm {
                     cellInternalEnergy = fs.enthalpy(phaseIdx).value() - fs.pressure(phaseIdx).value() / fs.density(phaseIdx).value();
                     cellBinv = fs.invB(phaseIdx).value();
                     cellDensity = fs.density(phaseIdx).value();
-                    perfPhaseRate = well_state_.perfPhaseRates()[connpos + perf*np + phaseIdx ];
+                    perfPhaseRate = this->wellState().perfPhaseRates()[connpos + perf*np + phaseIdx ];
                     weight_factor += cellDensity  * perfPhaseRate/cellBinv * cellInternalEnergy/cellTemperatures;
                 }
                 total_weight += weight_factor;
@@ -3281,7 +3264,7 @@ namespace Opm {
             }
             weighted_temperature = well_info.communication().sum(weighted_temperature);
             total_weight = well_info.communication().sum(total_weight);
-            well_state_.temperature()[wellID] =  weighted_temperature/total_weight;
+            this->wellState().temperature()[wellID] =  weighted_temperature/total_weight;
         }
     }
 } // namespace Opm
