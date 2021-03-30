@@ -307,7 +307,7 @@ namespace Opm {
 
         this->resetWellState();
         updateAndCommunicateGroupData();
-        well_state_.gliftTimeStepInit();
+        this->wellState().gliftTimeStepInit();
         const int reportStepIdx = ebosSimulator_.episodeIndex();
         const double simulationTime = ebosSimulator_.time();
         std::string exc_msg;
@@ -1050,19 +1050,19 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     maybeDoGasLiftOptimize(Opm::DeferredLogger& deferred_logger)
     {
-        well_state_.enableGliftOptimization();
+        this->wellState().enableGliftOptimization();
         GLiftOptWells glift_wells;
         GLiftProdWells prod_wells;
         GLiftWellStateMap state_map;
         // Stage1: Optimize single wells not checking any group limits
         for (auto& well : well_container_) {
             well->gasLiftOptimizationStage1(
-                well_state_, ebosSimulator_, deferred_logger,
+                this->wellState(), ebosSimulator_, deferred_logger,
                 prod_wells, glift_wells, state_map);
         }
         gasLiftOptimizationStage2(deferred_logger, prod_wells, glift_wells, state_map);
         if (this->glift_debug) gliftDebugShowALQ(deferred_logger);
-        well_state_.disableGliftOptimization();
+        this->wellState().disableGliftOptimization();
     }
 
     // If a group has any production rate constraints, and/or a limit
@@ -1080,7 +1080,7 @@ namespace Opm {
         GLiftWellStateMap &glift_well_state_map)
     {
 
-        GasLiftStage2 glift {*this, ebosSimulator_, deferred_logger, well_state_,
+        GasLiftStage2 glift {*this, ebosSimulator_, deferred_logger, this->wellState(),
                              prod_wells, glift_wells, glift_well_state_map};
         glift.runOptimize();
     }
@@ -1092,7 +1092,7 @@ namespace Opm {
     {
         for (auto& well : this->well_container_) {
             if (well->isProducer()) {
-                auto alq = this->well_state_.getALQ(well->name());
+                auto alq = this->wellState().getALQ(well->name());
                 const std::string msg = fmt::format("ALQ_REPORT : {} : {}",
                     well->name(), alq);
                 gliftDebug(msg, deferred_logger);
