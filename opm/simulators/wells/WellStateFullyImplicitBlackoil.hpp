@@ -66,6 +66,7 @@ namespace Opm
         using BaseType :: numWells;
         using BaseType :: numPhases;
         using BaseType :: resetConnectionTransFactors;
+        using BaseType :: updateStatus;
 
         /// Allocate and initialize if wells is non-null.  Also tries
         /// to give useful initial values to the bhp(), wellRates()
@@ -166,8 +167,8 @@ namespace Opm
                 is_producer_[w] = wells_ecl[w].isProducer();
             }
 
-            current_injection_controls_.resize(nw);
-            current_production_controls_.resize(nw);
+            current_injection_controls_.resize(nw, Well::InjectorCMode::CMODE_UNDEFINED);
+            current_production_controls_.resize(nw, Well::ProducerCMode::CMODE_UNDEFINED);
             for (int w = 0; w < nw; ++w) {
                 if (wells_ecl[w].isProducer()) {
                     const auto controls = wells_ecl[w].productionControls(summary_state);

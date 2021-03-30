@@ -1377,6 +1377,7 @@ public:
             pyaction->run(ecl_state, schedule, reportStep, summaryState);
         }
 
+        bool commit_wellstate = false;
         auto simTime = schedule.simTime(reportStep);
         for (const auto& action : actions.pending(actionState, simTime)) {
             auto actionResult = action->eval(context);
@@ -1393,19 +1394,24 @@ public:
 
                 const auto& wellpi = this->fetchWellPI(reportStep, *action, schedule, matching_wells);
 
-                schedule.applyAction(reportStep, Opm::TimeService::from_time_t(simTime), *action, actionResult, wellpi);
+                auto affected_wells = schedule.applyAction(reportStep, Opm::TimeService::from_time_t(simTime), *action, actionResult, wellpi);
                 actionState.add_run(*action, simTime);
-
-                for ( const auto& [wname, _] : wellpi) {
-                    (void)_;
-                    if (this->wellModel_.hasWell(wname))
-                        this->wellModel_.updateEclWell(reportStep, wname);
-                }
+                this->wellModel_.updateEclWells(reportStep, affected_wells);
+                if (!affected_wells.empty())
+                    commit_wellstate = true;
             } else {
                 std::string msg = "The action: " + action->name() + " evaluated to false at " + ts;
                 Opm::OpmLog::info(msg);
             }
         }
+        /*
+          The well state has been stored in a previous object when the time step
+          has completed successfully, the action process might have modified the
+          well state, and to be certain that is not overwritten when starting
+          the next timestep we must commit it.
+        */
+        if (commit_wellstate)
+            this->wellModel_.commitWellState();
     }
 
 

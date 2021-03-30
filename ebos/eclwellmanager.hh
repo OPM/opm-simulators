@@ -51,6 +51,7 @@
 #include <dune/grid/common/gridenums.hh>
 
 #include <map>
+#include <unordered_set>
 #include <string>
 #include <vector>
 
@@ -658,7 +659,7 @@ public:
 
 
     void
-    updateEclWell(int, const std::string&) {
+    updateEclWells(int, const std::unordered_set<std::string>&) {
         throw std::logic_error("wellPI() method not implemented for class eclwellmanager");
     }
 

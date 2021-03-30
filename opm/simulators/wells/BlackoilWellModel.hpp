@@ -365,8 +365,7 @@ namespace Opm {
             /// Returns true if the well was actually found and shut.
             bool forceShutWellByNameIfPredictionMode(const std::string& wellname, const double simulation_time);
 
-            void updateEclWell(const int timeStepIdx, const int well_index);
-            void updateEclWell(const int timeStepIdx, const std::string& wname);
+            void updateEclWells(const int timeStepIdx, const std::unordered_set<std::string>& wells);
             bool hasWell(const std::string& wname);
             double wellPI(const int well_index) const;
             double wellPI(const std::string& well_name) const;

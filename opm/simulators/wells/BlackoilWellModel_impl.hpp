@@ -2622,52 +2622,35 @@ namespace Opm {
 
 
 
+
+
+
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    updateEclWell(const int timeStepIdx, const int well_index)
-    {
+    updateEclWells(const int timeStepIdx, const std::unordered_set<std::string>& wells) {
         const auto& schedule = this->ebosSimulator_.vanguard().schedule();
-        const auto& wname = this->wells_ecl_[well_index].name();
-        this->wells_ecl_[well_index] = schedule.getWell(wname, timeStepIdx);
+        for (const auto& wname : wells) {
+            auto well_iter = std::find_if( this->wells_ecl_.begin(), this->wells_ecl_.end(), [wname] (const auto& well) -> bool { return well.name() == wname;});
+            if (well_iter != this->wells_ecl_.end()) {
+                auto well_index = std::distance( this->wells_ecl_.begin(), well_iter );
+                this->wells_ecl_[well_index] = schedule.getWell(wname, timeStepIdx);
 
-        const auto& well = this->wells_ecl_[well_index];
-        auto& pd     = this->well_perf_data_[well_index];
-        auto  pdIter = pd.begin();
-        for (const auto& conn : well.getConnections()) {
-            if (conn.state() != Connection::State::SHUT) {
-                pdIter->connection_transmissibility_factor = conn.CF();
-                ++pdIter;
+                const auto& well = this->wells_ecl_[well_index];
+                auto& pd     = this->well_perf_data_[well_index];
+                auto  pdIter = pd.begin();
+                for (const auto& conn : well.getConnections()) {
+                    if (conn.state() != Connection::State::SHUT) {
+                        pdIter->connection_transmissibility_factor = conn.CF();
+                        ++pdIter;
+                    }
+                }
+                this->wellState().updateStatus(well_index, well.getStatus());
+                this->wellState().resetConnectionTransFactors(well_index, pd);
+                this->prod_index_calc_[well_index].reInit(well);
             }
         }
-
-        this->wellState().resetConnectionTransFactors(well_index, pd);
-        this->prod_index_calc_[well_index].reInit(well);
     }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    updateEclWell(const int timeStepIdx, const std::string& wname)
-    {
-        auto well_iter = std::find_if(this->wells_ecl_.begin(), this->wells_ecl_.end(),
-            [&wname](const auto& well) -> bool
-        {
-            return well.name() == wname;
-        });
-
-        if (well_iter == this->wells_ecl_.end()) {
-            throw std::logic_error { "Could not find well: " + wname };
-        }
-
-        auto well_index = std::distance(this->wells_ecl_.begin(), well_iter);
-        this->updateEclWell(timeStepIdx, well_index);
-    }
-
 
 
 
@@ -2762,6 +2745,26 @@ namespace Opm {
                           ScheduleEvents::Events::WELL_PRODUCTIVITY_INDEX);
         };
 
+        auto updateEclWell = [this, timeStepIdx](const int well_index) -> void
+        {
+            const auto& schedule = this->schedule();
+            const auto& wname = this->wells_ecl_[well_index].name();
+            this->wells_ecl_[well_index] = schedule.getWell(wname, timeStepIdx);
+
+            const auto& well = this->wells_ecl_[well_index];
+            auto& pd     = this->well_perf_data_[well_index];
+            auto  pdIter = pd.begin();
+            for (const auto& conn : well.getConnections()) {
+                if (conn.state() != Connection::State::SHUT) {
+                    pdIter->connection_transmissibility_factor = conn.CF();
+                    ++pdIter;
+                }
+            }
+            this->wellState().resetConnectionTransFactors(well_index, pd);
+            this->prod_index_calc_[well_index].reInit(well);
+        };
+
+
         auto rescaleWellPI =
             [this, timeStepIdx](const int    well_index,
                                 const double newWellPI) -> void
@@ -2770,8 +2773,6 @@ namespace Opm {
 
             auto& schedule = this->ebosSimulator_.vanguard().schedule(); // Mutable
             schedule.applyWellProdIndexScaling(wname, timeStepIdx, newWellPI);
-
-            this->updateEclWell(timeStepIdx, well_index);
         };
 
         // Minimal well setup to compute PI/II values
@@ -2797,6 +2798,7 @@ namespace Opm {
         for (auto wellID = 0*nw; wellID < nw; ++wellID) {
             if (hasWellPIEvent(wellID)) {
                 rescaleWellPI(wellID, this->wellPI(wellID));
+                updateEclWell(wellID);
             }
         }
 

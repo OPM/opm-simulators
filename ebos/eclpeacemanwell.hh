@@ -45,6 +45,7 @@
 #include <dune/geometry/referenceelements.hh>
 
 #include <map>
+#include <unordered_set>
 
 namespace Opm {
 
@@ -1449,8 +1450,8 @@ protected:
 
 
     void
-    updateEclWell(int, const std::string&) {
-        throw std::logic_error("updateEclWell() method not implemented for class eclpeacemanwell");
+    updateEclWells(int, const std::unordered_set<std::string>&) {
+        throw std::logic_error("updateEclWells() method not implemented for class eclpeacemanwell");
     }
 
 
