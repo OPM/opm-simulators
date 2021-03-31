@@ -51,10 +51,13 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GConSale.hpp>
 
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
+#include <opm/simulators/flow/countGlobalCells.hpp>
+#include <opm/simulators/wells/GasLiftSingleWell.hpp>
+#include <opm/simulators/wells/GasLiftStage2.hpp>
+#include <opm/simulators/wells/GasLiftWellState.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
-#include <opm/simulators/flow/countGlobalCells.hpp>
 #include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/simulators/wells/RateConverter.hpp>
 #include <opm/simulators/wells/WellInterface.hpp>
@@ -103,6 +106,15 @@ namespace Opm {
             using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
 
             typedef typename Opm::BaseAuxiliaryModule<TypeTag>::NeighborSet NeighborSet;
+            using GasLiftSingleWell = Opm::GasLiftSingleWell<TypeTag>;
+            using GasLiftStage2 = Opm::GasLiftStage2<TypeTag>;
+            using GLiftWellState = Opm::GasLiftWellState<TypeTag>;
+            using GLiftWellStateMap =
+                std::map<std::string,std::unique_ptr<GLiftWellState>>;
+            using GLiftOptWells =
+                std::map<std::string,std::unique_ptr<GasLiftSingleWell>>;
+            using GLiftProdWells =
+                std::map<std::string,const WellInterface<TypeTag> *>;
 
             static const int numEq = Indices::numEq;
             static const int solventSaturationIdx = Indices::solventSaturationIdx;
@@ -346,6 +358,8 @@ namespace Opm {
             // Check if well equations is converged.
             ConvergenceReport getWellConvergence(const std::vector<Scalar>& B_avg, const bool checkGroupConvergence = false) const;
 
+            const PhaseUsage& phaseUsage() const { return phase_usage_; }
+
             const SimulatorReportSingle& lastReport() const;
 
             void addWellContributions(SparseMatrixAdapter& jacobian) const
@@ -531,6 +545,14 @@ namespace Opm {
             int reportStepIndex() const;
 
             void assembleWellEq(const double dt, Opm::DeferredLogger& deferred_logger);
+
+            void maybeDoGasLiftOptimize(Opm::DeferredLogger& deferred_logger);
+
+            void gliftDebugShowALQ(Opm::DeferredLogger& deferred_logger);
+
+            void gasLiftOptimizationStage2(Opm::DeferredLogger& deferred_logger,
+                GLiftProdWells &prod_wells, GLiftOptWells &glift_wells,
+                GLiftWellStateMap &map);
 
             // some preparation work, mostly related to group control and RESV,
             // at the beginning of each time step (Not report step)

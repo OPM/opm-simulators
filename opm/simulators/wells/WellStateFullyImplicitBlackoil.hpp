@@ -1283,8 +1283,64 @@ namespace Opm
             this->current_alq_[name] = value;
         }
 
+        bool gliftCheckAlqOscillation(const std::string &name) const {
+            if ((this->alq_increase_count_.count(name) == 1) &&
+                        (this->alq_decrease_count_.count(name) == 1))
+            {
+                if ((this->alq_increase_count_.at(name) >= 1) &&
+                         (this->alq_decrease_count_.at(name) >= 1))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        int gliftGetAlqDecreaseCount(const std::string &name) {
+            if (this->alq_decrease_count_.count(name) == 0) {
+                return 0;
+            }
+            else {
+                return this->alq_decrease_count_[name];
+            }
+        }
+
+        int gliftGetAlqIncreaseCount(const std::string &name) {
+            if (this->alq_increase_count_.count(name) == 0) {
+                return 0;
+            }
+            else {
+                return this->alq_increase_count_[name];
+            }
+        }
+
+        void gliftUpdateAlqIncreaseCount(const std::string &name, bool increase) {
+            if (increase) {
+                if (this->alq_increase_count_.count(name) == 0) {
+                    this->alq_increase_count_[name] = 1;
+                }
+                else {
+                    this->alq_increase_count_[name]++;
+                }
+            }
+            else {
+                if (this->alq_decrease_count_.count(name) == 0) {
+                    this->alq_decrease_count_[name] = 1;
+                }
+                else {
+                    this->alq_decrease_count_[name]++;
+                }
+            }
+        }
+
         bool gliftOptimizationEnabled() const {
             return do_glift_optimization_;
+        }
+
+        void gliftTimeStepInit() {
+            this->alq_increase_count_.clear();
+            this->alq_decrease_count_.clear();
+            disableGliftOptimization();
         }
 
         void disableGliftOptimization() {
@@ -1325,6 +1381,8 @@ namespace Opm
         std::map<std::string, double> group_grat_target_from_sales;
         std::map<std::string, double> current_alq_;
         std::map<std::string, double> default_alq_;
+        std::map<std::string, int> alq_increase_count_;
+        std::map<std::string, int> alq_decrease_count_;
         bool do_glift_optimization_;
 
         std::vector<double> perfRateSolvent_;

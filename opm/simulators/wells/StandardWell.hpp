@@ -27,11 +27,13 @@
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 #endif
 
-#include <opm/simulators/wells/GasLiftRuntime.hpp>
 #include <opm/simulators/wells/RateConverter.hpp>
+#include <opm/simulators/wells/VFPInjProperties.hpp>
+#include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <opm/simulators/wells/WellInterface.hpp>
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
+#include <opm/simulators/wells/GasLiftSingleWell.hpp>
 
 #include <opm/models/blackoil/blackoilpolymermodules.hh>
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
@@ -46,6 +48,7 @@
 #include <dune/common/dynvector.hh>
 #include <dune/common/dynmatrix.hh>
 
+#include <memory>
 #include <optional>
 #include <fmt/format.h>
 
@@ -73,7 +76,10 @@ namespace Opm
         using typename Base::SparseMatrixAdapter;
         using typename Base::FluidState;
         using typename Base::RateVector;
-        using GasLiftHandler = Opm::GasLiftRuntime<TypeTag>;
+        using typename Base::GasLiftSingleWell;
+        using typename Base::GLiftOptWells;
+        using typename Base::GLiftProdWells;
+        using typename Base::GLiftWellStateMap;
 
         using Base::numEq;
         using Base::numPhases;
@@ -250,10 +256,13 @@ namespace Opm
             DeferredLogger& deferred_logger
         ) const;
 
-        virtual void maybeDoGasLiftOptimization (
+        virtual void gasLiftOptimizationStage1 (
             WellState& well_state,
             const Simulator& ebosSimulator,
-            DeferredLogger& deferred_logger
+            DeferredLogger& deferred_logger,
+            GLiftProdWells &prod_wells,
+            GLiftOptWells &glift_wells,
+            GLiftWellStateMap &state_map
         ) const override;
 
         bool checkGliftNewtonIterationIdxOk(
@@ -398,6 +407,9 @@ namespace Opm
 
         // Enable GLIFT debug mode. This will enable output of logging messages.
         bool glift_debug = false;
+
+        // Optimize only wells under THP control
+        bool glift_optimize_only_thp_wells = true;
 
         const EvalWell& getBhp() const;
 
