@@ -455,5 +455,5 @@ if(CUDA_FOUND)
 endif()
 
 if(OpenCL_FOUND)
-  target_link_libraries( opmsimulators ${OpenCL_LIBRARIES} )
+  target_link_libraries( opmsimulators PUBLIC ${OpenCL_LIBRARIES} )
 endif()
