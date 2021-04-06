@@ -444,6 +444,66 @@ public:
     }
 
     /*!
+     * \brief The relative permeability of oil in oil/gas system.
+     */
+    template <class Evaluation, class FluidState>
+    static Evaluation relpermOilInOilGasSystem(const Params& params,
+                                               const FluidState& fluidState)
+    {
+        switch (params.approach()) {
+        case EclMultiplexerApproach::EclStone1Approach:
+            return Stone1Material::template relpermOilInOilGasSystem<Evaluation>
+                (params.template getRealParams<EclMultiplexerApproach::EclStone1Approach>(),
+                 fluidState);
+
+        case EclMultiplexerApproach::EclStone2Approach:
+            return Stone2Material::template relpermOilInOilGasSystem<Evaluation>
+                (params.template getRealParams<EclMultiplexerApproach::EclStone2Approach>(),
+                 fluidState);
+
+        case EclMultiplexerApproach::EclDefaultApproach:
+            return DefaultMaterial::template relpermOilInOilGasSystem<Evaluation>
+                (params.template getRealParams<EclMultiplexerApproach::EclDefaultApproach>(),
+                 fluidState);
+
+        default:
+            throw std::logic_error {
+                "relpermOilInOilGasSystem() is specific to three phases"
+            };
+        }
+    }
+
+    /*!
+     * \brief The relative permeability of oil in oil/water system.
+     */
+    template <class Evaluation, class FluidState>
+    static Evaluation relpermOilInOilWaterSystem(const Params& params,
+                                                 const FluidState& fluidState)
+    {
+        switch (params.approach()) {
+        case EclMultiplexerApproach::EclStone1Approach:
+            return Stone1Material::template relpermOilInOilWaterSystem<Evaluation>
+                (params.template getRealParams<EclMultiplexerApproach::EclStone1Approach>(),
+                 fluidState);
+
+        case EclMultiplexerApproach::EclStone2Approach:
+            return Stone2Material::template relpermOilInOilWaterSystem<Evaluation>
+                (params.template getRealParams<EclMultiplexerApproach::EclStone2Approach>(),
+                 fluidState);
+
+        case EclMultiplexerApproach::EclDefaultApproach:
+            return DefaultMaterial::template relpermOilInOilWaterSystem<Evaluation>
+                (params.template getRealParams<EclMultiplexerApproach::EclDefaultApproach>(),
+                 fluidState);
+
+        default:
+            throw std::logic_error {
+                "relpermOilInOilWaterSystem() is specific to three phases"
+            };
+        }
+    }
+
+    /*!
      * \brief The relative permeability of the gas phase.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>

@@ -355,26 +355,60 @@ public:
         const Evaluation Sg = Opm::decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
 
         const Evaluation Sw_ow = Sg + Sw;
-        const Evaluation So_go = 1.0 - Sw_ow;
-        const Evaluation kro_ow = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sw_ow);
-        const Evaluation kro_go = GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), So_go);
+        const Evaluation kro_ow = relpermOilInOilWaterSystem<Evaluation>(params, fluidState);
+        const Evaluation kro_go = relpermOilInOilGasSystem<Evaluation>(params, fluidState);
 
         // avoid the division by zero: chose a regularized kro which is used if Sw - Swco
         // < epsilon/2 and interpolate between the oridinary and the regularized kro between
         // epsilon and epsilon/2
         const Scalar epsilon = 1e-5;
         if (Opm::scalarValue(Sw_ow) - Swco < epsilon) {
-            const Evaluation kro2 = (kro_ow + kro_go)/2;;
+            const Evaluation kro2 = (kro_ow + kro_go)/2;
             if (Opm::scalarValue(Sw_ow) - Swco > epsilon/2) {
                 const Evaluation kro1 = (Sg*kro_go + (Sw - Swco)*kro_ow)/(Sw_ow - Swco);
                 const Evaluation alpha = (epsilon - (Sw_ow - Swco))/(epsilon/2);
+
                 return kro2*alpha + kro1*(1 - alpha);
             }
 
             return kro2;
         }
-        else
-            return (Sg*kro_go + (Sw - Swco)*kro_ow)/(Sw_ow - Swco);
+
+        return (Sg*kro_go + (Sw - Swco)*kro_ow) / (Sw_ow - Swco);
+    }
+
+    /*!
+     * \brief The relative permeability of oil in oil/gas system.
+     */
+    template <class Evaluation, class FluidState>
+    static Evaluation relpermOilInOilGasSystem(const Params& params,
+                                               const FluidState& fluidState)
+    {
+        const Evaluation Sw =
+            Opm::max(Evaluation{ params.Swl() },
+                     Opm::decay<Evaluation>(fluidState.saturation(waterPhaseIdx)));
+
+        const Evaluation Sg = Opm::decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
+        const Evaluation So_go = 1.0 - (Sg + Sw);
+
+        return GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), So_go);
+    }
+
+    /*!
+     * \brief The relative permeability of oil in oil/water system.
+     */
+    template <class Evaluation, class FluidState>
+    static Evaluation relpermOilInOilWaterSystem(const Params& params,
+                                                 const FluidState& fluidState)
+    {
+        const Evaluation Sw =
+            Opm::max(Evaluation{ params.Swl() },
+                     Opm::decay<Evaluation>(fluidState.saturation(waterPhaseIdx)));
+
+        const Evaluation Sg = Opm::decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
+        const Evaluation Sw_ow = Sg + Sw;
+
+        return OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sw_ow);
     }
 
     /*!

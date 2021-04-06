@@ -359,11 +359,11 @@ public:
         // oil relperm at connate water saturations (with Sg=0)
         const Scalar krocw = params.krocw();
 
-        const Evaluation& Sw = Opm::decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
-        const Evaluation& Sg = Opm::decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
+        const Evaluation Sw = Opm::decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
+        const Evaluation Sg = Opm::decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
 
-        const Evaluation kro_ow = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sw);
-        const Evaluation kro_go = GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), 1 - Sg - Swco);
+        const Evaluation kro_ow = relpermOilInOilWaterSystem<Evaluation>(params, fluidState);
+        const Evaluation kro_go = relpermOilInOilGasSystem<Evaluation>(params, fluidState);
 
         Evaluation beta;
         if (Sw <= Swco)
@@ -383,6 +383,30 @@ public:
         }
 
         return Opm::max(0.0, Opm::min(1.0, beta*kro_ow*kro_go/krocw));
+    }
+
+    /*!
+     * \brief The relative permeability of oil in oil/gas system.
+     */
+    template <class Evaluation, class FluidState>
+    static Evaluation relpermOilInOilGasSystem(const Params& params,
+                                               const FluidState& fluidState)
+    {
+        const Evaluation Sg = Opm::decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
+
+        return GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), 1 - Sg - params.Swl());
+    }
+
+    /*!
+     * \brief The relative permeability of oil in oil/water system.
+     */
+    template <class Evaluation, class FluidState>
+    static Evaluation relpermOilInOilWaterSystem(const Params& params,
+                                                 const FluidState& fluidState)
+    {
+        const Evaluation Sw = Opm::decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
+
+        return OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sw);
     }
 
     /*!
