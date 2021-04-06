@@ -384,7 +384,19 @@ namespace Opm {
             double wellPI(const int well_index) const;
             double wellPI(const std::string& well_name) const;
 
-
+            void updatePerforationIntensiveQuantities();
+            // it should be able to go to prepareTimeStep(), however, the updateWellControls() and initPrimaryVariablesEvaluation()
+            // makes it a little more difficult. unless we introduce if (iterationIdx != 0) to avoid doing the above functions
+            // twice at the beginning of the time step
+            /// Calculating the explict quantities used in the well calculation. By explicit, we mean they are cacluated
+            /// at the beginning of the time step and no derivatives are included in these quantities
+            void calculateExplicitQuantities(Opm::DeferredLogger& deferred_logger) const;
+            // some preparation work, mostly related to group control and RESV,
+            // at the beginning of each time step (Not report step)
+            void prepareTimeStep(Opm::DeferredLogger& deferred_logger);
+            void initPrimaryVariablesEvaluation() const;
+            void updateWellControls(Opm::DeferredLogger& deferred_logger, const bool checkGroupControls);
+            WellInterfacePtr getWell(const std::string& well_name) const;
 
         protected:
             Simulator& ebosSimulator_;
@@ -502,8 +514,6 @@ namespace Opm {
             // xw to update Well State
             void recoverWellSolutionAndUpdateWellState(const BVector& x);
 
-            void updateWellControls(Opm::DeferredLogger& deferred_logger, const bool checkGroupControls);
-
             void updateAndCommunicateGroupData();
             void updateNetworkPressures();
 
@@ -526,15 +536,6 @@ namespace Opm {
 
             void calculateProductivityIndexValues(DeferredLogger& deferred_logger);
 
-            // it should be able to go to prepareTimeStep(), however, the updateWellControls() and initPrimaryVariablesEvaluation()
-            // makes it a little more difficult. unless we introduce if (iterationIdx != 0) to avoid doing the above functions
-            // twice at the beginning of the time step
-            /// Calculating the explict quantities used in the well calculation. By explicit, we mean they are cacluated
-            /// at the beginning of the time step and no derivatives are included in these quantities
-            void calculateExplicitQuantities(Opm::DeferredLogger& deferred_logger) const;
-
-            void initPrimaryVariablesEvaluation() const;
-
             // The number of components in the model.
             int numComponents() const;
 
@@ -554,10 +555,6 @@ namespace Opm {
                 GLiftProdWells &prod_wells, GLiftOptWells &glift_wells,
                 GLiftWellStateMap &map);
 
-            // some preparation work, mostly related to group control and RESV,
-            // at the beginning of each time step (Not report step)
-            void prepareTimeStep(Opm::DeferredLogger& deferred_logger);
-
             void extractLegacyCellPvtRegionIndex_();
 
             void extractLegacyDepth_();
@@ -572,8 +569,6 @@ namespace Opm {
 
             /// upate the wellTestState related to economic limits
             void updateWellTestState(const double& simulationTime, WellTestState& wellTestState) const;
-
-            void updatePerforationIntensiveQuantities();
 
             void wellTesting(const int timeStepIdx, const double simulationTime, Opm::DeferredLogger& deferred_logger);
 
@@ -602,8 +597,6 @@ namespace Opm {
             void actionOnBrokenConstraints(const Group& group, const Group::ExceedAction& exceed_action, const Group::ProductionCMode& newControl, Opm::DeferredLogger& deferred_logger);
 
             void actionOnBrokenConstraints(const Group& group, const Group::InjectionCMode& newControl, const Phase& topUpPhase, Opm::DeferredLogger& deferred_logger);
-
-            WellInterfacePtr getWell(const std::string& well_name) const;
 
             void updateWsolvent(const Group& group, const Schedule& schedule, const int reportStepIdx, const WellStateFullyImplicitBlackoil& wellState);
 

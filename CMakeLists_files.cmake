@@ -94,6 +94,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_wellprodindexcalculator.cpp
   tests/test_wellstatefullyimplicitblackoil.cpp
   tests/test_parallelwellinfo.cpp
+  tests/test_glift1.cpp
   )
 
 if(MPI_FOUND)
@@ -138,6 +139,16 @@ list (APPEND TEST_DATA_FILES
   tests/rhs3rep.txt
   tests/options_flexiblesolver.json
   tests/options_flexiblesolver_simple.json
+  tests/GLIFT1.DATA
+  tests/include/flowl_b_vfp.ecl
+  tests/include/flowl_c_vfp.ecl
+  tests/include/permx_model5.grdecl
+  tests/include/pvt_live_oil_dgas.ecl
+  tests/include/relperm.inc
+  tests/include/rock.inc
+  tests/include/summary.inc
+  tests/include/test1_20x30x10.grdecl
+  tests/include/well_vfp.ecl
   )
 
 
