@@ -180,12 +180,12 @@ public:
         const auto tolcrit = runspec.saturationFunctionControls()
             .minimumRelpermMobilityThreshold();
 
-        const auto rtepPtr  = satfunc::getRawTableEndpoints(tables, ph, tolcrit);
-        const auto rfuncPtr = satfunc::getRawFunctionValues(tables, ph, *rtepPtr);
+        const auto rtep  = satfunc::getRawTableEndpoints(tables, ph, tolcrit);
+        const auto rfunc = satfunc::getRawFunctionValues(tables, ph, rtep);
 
         for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++satRegionIdx) {
             this->unscaledEpsInfo_[satRegionIdx]
-                .extractUnscaled(*rtepPtr, *rfuncPtr, satRegionIdx);
+                .extractUnscaled(rtep, rfunc, satRegionIdx);
         }
     }
 
