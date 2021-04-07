@@ -37,6 +37,8 @@
 #include <opm/simulators/utils/PropsCentroidsDataHandle.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
 
+#include <ebos/eclmpiserializer.hh>
+
 #include <dune/grid/common/mcmgmapper.hh>
 
 #include <dune/common/version.hh>
@@ -385,6 +387,23 @@ protected:
             }
 
         }
+#if HAVE_MPI
+        {
+            const bool has_numerical_aquifer = this->eclState().aquifer().hasNumericalAquifer();
+            int mpiSize = 1;
+            MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
+            // when there is numerical aquifers, new NNC are generated during grid processing
+            // we need to pass the NNC from root process to other processes
+            if (has_numerical_aquifer && mpiSize > 1) {
+                auto nnc_input = this->eclState().getInputNNC();
+                Opm::EclMpiSerializer ser(Dune::MPIHelper::getCollectiveCommunication());
+                ser.template broadcast(nnc_input);
+                if (mpiRank > 0) {
+                    this->eclState().setInputNNC(nnc_input);
+                }
+            }
+        }
+#endif
 
         // we use separate grid objects: one for the calculation of the initial condition
         // via EQUIL and one for the actual simulation. The reason is that the EQUIL code
