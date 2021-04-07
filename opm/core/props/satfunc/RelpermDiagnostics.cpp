@@ -653,11 +653,11 @@ namespace Opm{
         const auto tolcrit = runspec.saturationFunctionControls()
             .minimumRelpermMobilityThreshold();
 
-        const auto rtepPtr =
+        const auto rtep =
             satfunc::getRawTableEndpoints(tables, phases, tolcrit);
 
-        const auto rfuncPtr =
-            satfunc::getRawFunctionValues(tables, phases, *rtepPtr);
+        const auto rfunc =
+            satfunc::getRawFunctionValues(tables, phases, rtep);
 
         const TableContainer&  swofTables = tables.getSwofTables();
         const TableContainer&  sgofTables = tables.getSgofTables();
@@ -667,7 +667,7 @@ namespace Opm{
         // std::cout << "***************\nEnd-Points In all the Tables\n";
         for (int satnumIdx = 0; satnumIdx < numSatRegions; ++satnumIdx) {
              this->unscaledEpsInfo_[satnumIdx]
-                 .extractUnscaled(*rtepPtr, *rfuncPtr, satnumIdx);
+                 .extractUnscaled(rtep, rfunc, satnumIdx);
 
              const std::string regionIdx = std::to_string(satnumIdx + 1);
              ///Consistency check.
