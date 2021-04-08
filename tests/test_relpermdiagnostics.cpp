@@ -71,12 +71,11 @@ BOOST_AUTO_TEST_CASE(diagnosis)
     EclipseState eclState(deck);
     typedef Dune::CpGrid Grid;
     Grid grid = Grid();
-    grid.processEclipseFormat(&eclState.getInputGrid(),
-                                /*isPeriodic=*/false,
-                                /*flipNormals=*/false,
-                                /*clipZ=*/false,
-                                eclState.fieldProps().porv(true),
-                                eclState.getInputNNC());
+    grid.processEclipseFormat(&eclState,
+                              &deck,
+                               /*isPeriodic=*/false,
+                               /*flipNormals=*/false,
+                               /*clipZ=*/false);
 
     typedef Dune::CartesianIndexMapper<Grid> CartesianIndexMapper;
     CartesianIndexMapper cartesianIndexMapper = CartesianIndexMapper(grid);
