@@ -294,7 +294,7 @@ public:
     template <class Evaluation>
     static typename std::enable_if<implementsTwoPhaseSatApi, Evaluation>::type
     twoPhaseSatKrw(const Params& params, const Evaluation& Sw)
-    { return EffLaw::twoPhaseSatKrw(params, effectiveSaturation(params, Sw, Traits::nonWettingPhaseIdx)); }
+    { return EffLaw::twoPhaseSatKrw(params, effectiveSaturation(params, Sw, Traits::wettingPhaseIdx)); }
 
     /*!
      * \brief The relative permeability of the non-wetting phase.
@@ -322,7 +322,7 @@ public:
     template <class Evaluation>
     static typename std::enable_if<implementsTwoPhaseSatApi, Evaluation>::type
     twoPhaseSatKrn(const Params& params, const Evaluation& Sw)
-    { return EffLaw::twoPhaseSatKrn(params, effectiveSaturation(params, Sw, Traits::nonWettingPhaseIdx)); }
+    { return EffLaw::twoPhaseSatKrn(params, effectiveSaturation(params, Sw, Traits::wettingPhaseIdx)); }
 
     /*!
      * \brief The relative permability of the gas phase
