@@ -103,12 +103,12 @@ namespace bda
         } else {
             OPM_THROW(std::logic_error, "Error ilu reordering strategy not set correctly\n");
         }
-        if(verbosity >= 3){
+        if(verbosity >= 1){
             out << "BILU0 analysis took: " << t_analysis.stop() << " s, " << numColors << " colors\n";
         }
-        if(verbosity >= 2){
-            out << "BILU0 CHOW_PATEL: " << CHOW_PATEL << ", CHOW_PATEL_GPU: " << CHOW_PATEL_GPU;
-        }
+#if CHOW_PATEL
+        out << "BILU0 CHOW_PATEL: " << CHOW_PATEL << ", CHOW_PATEL_GPU: " << CHOW_PATEL_GPU;
+#endif
         OpmLog::info(out.str());
 
         if (opencl_ilu_reorder != ILUReorder::NONE) {

@@ -534,11 +534,9 @@ void ChowPatelIlu::decomposition(
                 out << "ChowPatelIlu copy sparsity pattern time: " << t_copy_pattern.stop() << " s";
                 OpmLog::info(out.str());
             }
-            if (verbosity >= 2){
-                std::ostringstream out;
-                out << "ChowPatelIlu PARALLEL: " << PARALLEL;
-                OpmLog::info(out.str());
-            }
+            std::ostringstream out;
+            out << "ChowPatelIlu PARALLEL: " << PARALLEL;
+            OpmLog::info(out.str());
         });
 
 
