@@ -100,8 +100,13 @@ void
 GasLiftStage2<TypeTag>::
 addOrRemoveALQincrement_(GradMap &grad_map, const std::string well_name, bool add)
 {
+    // only applies to wells in the well_state_map (i.e. wells on this rank)
+    auto it = this->well_state_map_.find(well_name);
+    if (it == this->well_state_map_.end())
+        return;
+
+    GLiftWellState &state = *(it->second.get());
     const GradInfo &gi = grad_map.at(well_name);
-    GLiftWellState &state = *(this->well_state_map_.at(well_name).get());
     if (this->debug_) {
         auto new_alq = gi.alq;
         auto old_alq = state.alq();
@@ -122,6 +127,11 @@ GasLiftStage2<TypeTag>::
 calcIncOrDecGrad_(
     const std::string well_name, const GasLiftSingleWell &gs_well, bool increase)
 {
+
+    // only applies to wells in the well_state_map (i.e. wells on this rank)
+    if(this->well_state_map_.count(well_name) == 0)
+        return std::nullopt;
+
     GLiftWellState &state = *(this->well_state_map_.at(well_name).get());
     if (checkRateAlreadyLimited_(state, increase)) {
         /*
@@ -273,23 +283,23 @@ std::tuple<double, double, double>
 GasLiftStage2<TypeTag>::
 getCurrentGroupRates_(const Opm::Group &group)
 {
+    auto rates = getCurrentGroupRatesRecursive_(group);
+    const auto& comm = ebos_simulator_.vanguard().grid().comm();
+    comm.sum(rates.data(), rates.size());
+    auto [oil_rate, gas_rate, alq] = rates;
     if (this->debug_) {
-        auto [oil_rate, gas_rate, alq] = getCurrentGroupRatesRecursive_(group);
         const std::string msg = fmt::format(
             "Current group rates for {} : oil: {}, gas: {}, alq: {}",
             group.name(), oil_rate, gas_rate, alq);
         displayDebugMessage2B_(msg);
-        return {oil_rate, gas_rate, alq};
     }
-    else {
-        return getCurrentGroupRatesRecursive_(group);
-    }
+
+    return {oil_rate, gas_rate, alq};
 }
 
 
 template<typename TypeTag>
-std::tuple<double, double, double>
-GasLiftStage2<TypeTag>::
+std::array <double, 3> GasLiftStage2<TypeTag>::
 getCurrentGroupRatesRecursive_(const Opm::Group &group)
 {
     double oil_rate = 0.0;
@@ -304,6 +314,7 @@ getCurrentGroupRatesRecursive_(const Opm::Group &group)
             gas_rate += sw_gas_rate;
             alq += sw_alq;
         }
+
     }
     else {
         for (const std::string& group_name : group.groups()) {
@@ -317,8 +328,8 @@ getCurrentGroupRatesRecursive_(const Opm::Group &group)
                 // they are added to the lift gas supply rate of the
                 // parent group.
                 const auto gefac = sub_group.getGroupEfficiencyFactor();
-                auto [sg_oil_rate, sg_gas_rate, sg_alq] =
-                    getCurrentGroupRatesRecursive_(sub_group);
+                auto rates = getCurrentGroupRatesRecursive_(sub_group);
+                auto [sg_oil_rate, sg_gas_rate, sg_alq] = rates;
                 oil_rate += (gefac * sg_oil_rate);
                 gas_rate += (gefac * sg_gas_rate);
                 alq += (gefac * sg_alq);
@@ -504,17 +515,23 @@ recalculateGradientAndUpdateData_(
     // NOTE: We make a copy of the name string instead of taking a reference
     //   since we may have to erase grad_itr (in the "else" condition below)
     const std::string name = grad_itr->first;
-    GasLiftSingleWell &gs_well = *(this->stage1_wells_.at(name).get());
-    auto grad = calcIncOrDecGrad_(name, gs_well, increase);
     std::optional<GradInfo> old_grad = std::nullopt;
-    if (grad) {
-        grad_itr->second = grad->grad;
-        old_grad = updateGrad_(name, *grad, increase);
+
+    // only applies to wells in the well_state_map (i.e. wells on this rank)
+    // the grads and other grads are synchronized later
+    if(this->stage1_wells_.count(name) > 0) {
+        GasLiftSingleWell &gs_well = *(this->stage1_wells_.at(name).get());
+        auto grad = calcIncOrDecGrad_(name, gs_well, increase);
+        if (grad) {
+            grad_itr->second = grad->grad;
+            old_grad = updateGrad_(name, *grad, increase);
+        }
+        else {
+            grads.erase(grad_itr); // NOTE: this invalidates grad_itr
+            old_grad = deleteGrad_(name, increase);
+        }
     }
-    else {
-        grads.erase(grad_itr); // NOTE: this invalidates grad_itr
-        old_grad = deleteGrad_(name, increase);
-    }
+
     if (old_grad) {
         // NOTE: Either creates a new item or reassigns
         // The old incremental gradient becomes the new decremental gradient
@@ -574,9 +591,16 @@ redistributeALQ_(std::vector<GasLiftSingleWell *> &wells,  const Opm::Group &gro
     std::vector<GradPair> &inc_grads, std::vector<GradPair> &dec_grads)
 {
     OptimizeState state {*this, group};
-    inc_grads.reserve(wells.size());
-    dec_grads.reserve(wells.size());
-    state.calculateEcoGradients(wells, inc_grads, dec_grads);
+    std::vector<GradPair> inc_grads_local;
+    std::vector<GradPair> dec_grads_local;
+    inc_grads_local.reserve(wells.size());
+    dec_grads_local.reserve(wells.size());
+    state.calculateEcoGradients(wells, inc_grads_local, dec_grads_local);
+
+    // the gradients needs to be communicated to all ranks
+    dec_grads = localToGlobalGradVector_(dec_grads_local);
+    inc_grads = localToGlobalGradVector_(inc_grads_local);
+
     if (!state.checkAtLeastTwoWells(wells)) {
         // NOTE: Even though we here in redistributeALQ_() do not use the
         //   economic gradient if there is only a single well, we still
@@ -584,7 +608,6 @@ redistributeALQ_(std::vector<GasLiftSingleWell *> &wells,  const Opm::Group &gro
         //   and will be used by removeSurplusALQ_() later.
         return;
     }
-    assert(wells.size() >= 2);
     bool stop_iteration = false;
     while (!stop_iteration && (state.it++ <= this->max_iterations_)) {
         state.debugShowIterationInfo();
@@ -645,12 +668,13 @@ removeSurplusALQ_(const Opm::Group &group,
     }
     SurplusState state {*this, group, oil_rate, gas_rate, alq,
             min_eco_grad, controls.oil_target, controls.gas_target, max_glift };
+
     while (!stop_iteration) {
         if (dec_grads.size() >= 2) {
             sortGradients_(dec_grads);
         }
         auto dec_grad_itr = dec_grads.begin();
-        const auto &well_name = dec_grad_itr->first;
+        const auto well_name = dec_grad_itr->first;
         auto eco_grad = dec_grad_itr->second;
         bool remove = false;
         if (state.checkOilTarget() || state.checkGasTarget() || state.checkALQlimit()) {
@@ -665,11 +689,14 @@ removeSurplusALQ_(const Opm::Group &group,
             if (state.checkEcoGradient(well_name, eco_grad)) remove = true;
         }
         if (remove) {
-            const GradInfo &gi = this->dec_grads_.at(well_name);
-            state.updateRates(well_name, gi);
+            state.updateRates(well_name);
             state.addOrRemoveALQincrement( this->dec_grads_, well_name, /*add=*/false);
             recalculateGradientAndUpdateData_(
-                dec_grad_itr, /*increase=*/false, dec_grads, inc_grads);
+                        dec_grad_itr, /*increase=*/false, dec_grads, inc_grads);
+
+            // The dec_grads and inc_grads needs to be syncronized across ranks
+            dec_grads = updateGlobalGradVector_(dec_grads);
+            inc_grads = updateGlobalGradVector_(inc_grads);
             // NOTE: recalculateGradientAndUpdateData_() will remove the current gradient
             //   from dec_grads if it cannot calculate a new decremental gradient.
             //   This will invalidate dec_grad_itr and well_name
@@ -766,6 +793,51 @@ updateGradVector_(const std::string &name, std::vector<GradPair> &grads, double 
     //   later in getEcoGradients()
 }
 
+template<typename TypeTag>
+std::vector<typename GasLiftStage2<TypeTag>::GradPair>
+GasLiftStage2<TypeTag>::
+localToGlobalGradVector_(const std::vector<GradPair> &grads_local) const
+{
+    const auto& comm = ebos_simulator_.vanguard().grid().comm();
+    if (comm.size() == 1)
+        return grads_local;
+
+    std::vector<int> sizes_(comm.size());
+    std::vector<int> displ_(comm.size() + 1, 0);
+    int mySize = grads_local.size();
+    comm.allgather(&mySize, 1, sizes_.data());
+    std::partial_sum(sizes_.begin(), sizes_.end(), displ_.begin()+1);
+    using Pair = std::pair<int,double>;
+    std::vector<Pair> grads_global(displ_.back());
+    std::vector<Pair> grads_local_tmp(grads_local.size());
+    for (size_t i = 0; i < grads_local.size(); ++i) {
+        grads_local_tmp[i] = std::make_pair(well_state_.wellNameToGlobalIdx(grads_local[i].first), grads_local[i].second);
+    }
+    comm.allgatherv(grads_local_tmp.data(), grads_local_tmp.size(), grads_global.data(), sizes_.data(), displ_.data());
+    std::vector<GradPair> grads(grads_global.size());
+    for (size_t i = 0; i < grads_global.size(); ++i) {
+        grads[i] = std::make_pair(well_state_.globalIdxToWellName(grads_global[i].first), grads_global[i].second);
+    }
+    return grads;
+}
+
+template<typename TypeTag>
+std::vector<typename GasLiftStage2<TypeTag>::GradPair>
+GasLiftStage2<TypeTag>::
+updateGlobalGradVector_(const std::vector<GradPair> &grads_global) const
+{
+    const auto& comm = ebos_simulator_.vanguard().grid().comm();
+    if (comm.size() == 1)
+        return grads_global;
+
+    std::vector<GradPair> grads_local;
+    for (auto itr = grads_global.begin(); itr != grads_global.end(); itr++) {
+        if (well_state_map_.count(itr->first) > 0) {
+            grads_local.push_back(*itr);
+        }
+    }
+    return localToGlobalGradVector_(grads_local);
+}
 
 /***********************************************
  * Public methods declared in OptimizeState
@@ -799,9 +871,12 @@ bool
 GasLiftStage2<TypeTag>::OptimizeState::
 checkAtLeastTwoWells(std::vector<GasLiftSingleWell *> &wells)
 {
-    if (wells.size() < 2) {
+    int numberOfwells = wells.size();
+    const auto& comm = this->parent.ebos_simulator_.vanguard().grid().comm();
+    numberOfwells = comm.sum(numberOfwells);
+    if (numberOfwells < 2) {
         const std::string msg = fmt::format(
-            "skipping: too few wells ({}) to optimize.", wells.size());
+            "skipping: too few wells ({}) to optimize.", numberOfwells);
         displayDebugMessage_(msg);
         return false;
     }
@@ -871,6 +946,10 @@ recalculateGradients(
         max_inc_grad_itr, /*increase=*/true, inc_grads, dec_grads);
     this->parent.recalculateGradientAndUpdateData_(
         min_dec_grad_itr, /*increase=*/false, dec_grads, inc_grads);
+
+    // The dec_grads and inc_grads needs to be syncronized across ranks
+    dec_grads = this->parent.updateGlobalGradVector_(dec_grads);
+    inc_grads = this->parent.updateGlobalGradVector_(inc_grads);
 }
 
 // Take one ALQ increment from well1, and give it to well2
@@ -1010,17 +1089,33 @@ checkOilTarget()
 template<typename TypeTag>
 void
 GasLiftStage2<TypeTag>::SurplusState::
-updateRates(const std::string &well_name, const GradInfo &gi)
+updateRates(const std::string &well_name)
 {
-    GLiftWellState &state = *(this->parent.well_state_map_.at(well_name).get());
-    GasLiftSingleWell &gs_well = *(this->parent.stage1_wells_.at(well_name).get());
-    const WellInterface<TypeTag> &well = gs_well.getStdWell();
-    const auto &well_ecl = well.wellEcl();
-    double factor = well_ecl.getEfficiencyFactor();
-    auto delta_oil = gi.new_oil_rate - state.oilRate();
-    this->oil_rate += factor * delta_oil;
-    auto delta_gas = gi.new_gas_rate - state.gasRate();
-    this->gas_rate += factor * delta_gas;
-    auto delta_alq = gi.alq - state.alq();
-    this->alq += factor * delta_alq;
+    std::array<double, 3> delta = {0.0,0.0,0.0};
+
+    // compute the delta on wells on own rank
+    if(this->parent.well_state_map_.count(well_name) > 0 ) {
+        const GradInfo &gi = this->parent.dec_grads_.at(well_name);
+        GLiftWellState &state = *(this->parent.well_state_map_.at(well_name).get());
+        GasLiftSingleWell &gs_well = *(this->parent.stage1_wells_.at(well_name).get());
+        const WellInterface<TypeTag> &well = gs_well.getStdWell();
+        const auto &well_ecl = well.wellEcl();
+        double factor = well_ecl.getEfficiencyFactor();
+        auto& [delta_oil, delta_gas, delta_alq] = delta;
+        delta_oil = factor * (gi.new_oil_rate - state.oilRate());
+        delta_gas = factor * (gi.new_gas_rate - state.gasRate());
+        delta_alq = factor * (gi.alq - state.alq());
+    }
+
+    // and communicate the results
+    const auto& comm = this->parent.ebos_simulator_.vanguard().grid().comm();
+    comm.sum(delta.data(), delta.size());
+
+    // and update
+    const auto& [delta_oil, delta_gas, delta_alq] = delta;
+    this->oil_rate += delta_oil;
+    this->gas_rate += delta_gas;
+    this->alq += delta_alq;
 }
+
+
