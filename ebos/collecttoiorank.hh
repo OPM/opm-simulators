@@ -40,6 +40,7 @@
 #include <dune/grid/common/mcmgmapper.hh>
 
 #include <stdexcept>
+#include <utility>
 
 namespace Opm {
 
@@ -596,7 +597,6 @@ public:
         { this->globalGroupAndNetworkData_.read(buffer); }
     };
 
-
     class PackUnPackBlockData : public P2PCommunicatorType::DataHandleInterface
     {
         const std::map<std::pair<std::string, int>, double>& localBlockData_;
@@ -652,7 +652,6 @@ public:
                 globalBlockValues_[std::make_pair(name, idx)] = data;
             }
         }
-
     };
 
     class PackUnPackWBPData : public P2PCommunicatorType::DataHandleInterface
@@ -742,8 +741,8 @@ public:
             int size = localAquiferData_.size();
             buffer.write(size);
             for (const auto& [key, data] : localAquiferData_) {
-              buffer.write(key);
-              data.write(buffer);
+                buffer.write(key);
+                data.write(buffer);
             }
         }
 
@@ -753,21 +752,66 @@ public:
             int size;
             buffer.read(size);
             for (int i = 0; i < size; ++i) {
-              int key;
-              buffer.read(key);
-              data::AquiferData data;
-              data.read(buffer);
-              auto& aq = globalAquiferData_[key];
-              aq.aquiferID = std::max(aq.aquiferID, data.aquiferID);
-              aq.pressure = std::max(aq.pressure, data.pressure);
-              aq.initPressure = std::max(aq.initPressure, data.initPressure);
-              aq.datumDepth = std::max(aq.datumDepth, data.datumDepth);
-              aq.fluxRate += data.fluxRate;
-              aq.volume += data.volume;
+                int key;
+                buffer.read(key);
+                data::AquiferData data;
+                data.read(buffer);
+
+                auto& aq = this->globalAquiferData_[key];
+
+                this->unpackCommon(data, aq);
+
+                if (data.aquFet != nullptr) {
+                    this->unpackAquFet(std::move(data.aquFet), aq);
+                }
+
+                if (data.aquCT != nullptr) {
+                    this->unpackCarterTracy(std::move(data.aquCT), aq);
+                }
             }
         }
 
+    private:
+        void unpackCommon(const data::AquiferData& data, data::AquiferData& aq)
+        {
+            aq.aquiferID = std::max(aq.aquiferID, data.aquiferID);
+            aq.pressure = std::max(aq.pressure, data.pressure);
+            aq.initPressure = std::max(aq.initPressure, data.initPressure);
+            aq.datumDepth = std::max(aq.datumDepth, data.datumDepth);
+            aq.fluxRate += data.fluxRate;
+            aq.volume += data.volume;
+        }
+
+        void unpackAquFet(std::shared_ptr<data::FetkovichData> aquFet, data::AquiferData& aq)
+        {
+            if (aq.aquFet == nullptr) {
+                aq.aquFet = std::move(aquFet);
+            }
+            else {
+                const auto& src = *aquFet;
+                auto&       dst = *aq.aquFet;
+
+                dst.initVolume   = std::max(dst.initVolume  , src.initVolume);
+                dst.prodIndex    = std::max(dst.prodIndex   , src.prodIndex);
+                dst.timeConstant = std::max(dst.timeConstant, src.timeConstant);
+            }
+        }
+
+        void unpackCarterTracy(std::shared_ptr<data::CarterTracyData> aquCT, data::AquiferData& aq)
+        {
+            if (aq.aquCT == nullptr) {
+                aq.aquCT = std::move(aquCT);
+            }
+            else {
+                const auto& src = *aquCT;
+                auto&       dst = *aq.aquCT;
+
+                dst.dimensionless_time     = std::max(dst.dimensionless_time    , src.dimensionless_time);
+                dst.dimensionless_pressure = std::max(dst.dimensionless_pressure, src.dimensionless_pressure);
+            }
+        }
     };
+
     // gather solution to rank 0 for EclipseWriter
     void collect(const Opm::data::Solution& localCellData,
                  const std::map<std::pair<std::string, int>, double>& localBlockData,
