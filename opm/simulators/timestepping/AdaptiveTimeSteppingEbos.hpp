@@ -392,7 +392,7 @@ namespace Opm {
                     std::ostringstream ss;
                     boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
                     ss.imbue(std::locale(std::locale::classic(), facet));
-                    ss <<"\nTime step " << substepTimer.currentStepNum() << ", stepsize "
+                    ss <<"\nStarting time step " << substepTimer.currentStepNum() << ", stepsize "
                        << unit::convert::to(substepTimer.currentStepLength(), unit::day) << " days,"
                        << " at day " << (double)unit::convert::to(substepTimer.simulationTimeElapsed(), unit::day)
                        << "/" << (double)unit::convert::to(substepTimer.totalTime(), unit::day)
