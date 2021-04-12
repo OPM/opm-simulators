@@ -25,7 +25,7 @@
 list (APPEND MAIN_SOURCE_FILES
   opm/core/props/satfunc/RelpermDiagnostics.cpp
   opm/simulators/timestepping/SimulatorReport.cpp
-  opm/simulators/flow/MissingFeatures.cpp
+  opm/simulators/flow/KeywordValidation.cpp
   opm/simulators/linalg/ExtractParallelGridInformationToISTL.cpp
   opm/simulators/linalg/FlexibleSolver1.cpp
   opm/simulators/linalg/FlexibleSolver2.cpp
@@ -95,6 +95,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_wellstatefullyimplicitblackoil.cpp
   tests/test_parallelwellinfo.cpp
   tests/test_glift1.cpp
+  tests/test_keyword_validator.cpp
   )
 
 if(MPI_FOUND)
@@ -162,7 +163,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/Main.hpp
   opm/simulators/flow/NonlinearSolverEbos.hpp
   opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp
-  opm/simulators/flow/MissingFeatures.hpp
+  opm/simulators/flow/KeywordValidation.hpp
   opm/core/props/BlackoilPhases.hpp
   opm/core/props/phaseUsageFromDeck.hpp
   opm/core/props/satfunc/RelpermDiagnostics.hpp

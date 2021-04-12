@@ -39,7 +39,10 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
 
-#include <opm/simulators/flow/MissingFeatures.hpp>
+#include "UnsupportedFlowKeywords.hpp"
+#include "PartiallySupportedFlowKeywords.hpp"
+#include <opm/simulators/flow/KeywordValidation.hpp>
+
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
 
@@ -192,7 +195,13 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
             {
                 Opm::Parser parser;
                 deck = std::make_unique<Opm::Deck>( parser.parseFile(deckFilename , *parseContext, *errorGuard));
-                Opm::MissingFeatures::checkKeywords(*deck, *parseContext, *errorGuard);
+
+                Opm::KeywordValidation::KeywordValidator keyword_validator(
+                    Opm::FlowKeywordValidation::unsupported_keywords,
+                    Opm::FlowKeywordValidation::partially_supported_keywords_strings,
+                    Opm::FlowKeywordValidation::partially_supported_keywords_int);
+                keyword_validator.validateDeck(*deck, *parseContext, *errorGuard);
+
                 if ( checkDeck )
                     Opm::checkDeck(*deck, parser, *parseContext, *errorGuard);
             }

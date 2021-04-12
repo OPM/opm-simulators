@@ -1,0 +1,129 @@
+/*
+  Copyright 2021 Equinor.
+
+  This file is part of the Open Porous Media project (OPM).
+
+  OPM is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OPM is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+#ifndef OPM_KEYWORDVALIDATION_HEADER_INCLUDED
+#define OPM_KEYWORDVALIDATION_HEADER_INCLUDED
+
+#include <opm/common/OpmLog/KeywordLocation.hpp>
+#include <opm/parser/eclipse/Deck/Deck.hpp>
+
+#include <optional>
+#include <string>
+#include <vector>
+
+namespace Opm
+{
+
+class ErrorGuard;
+class ParseContext;
+
+namespace KeywordValidation
+{
+    // Describe an unsupported keyword:
+    struct UnsupportedKeywordProperties {
+        bool critical; // Set to true if presence of the keyword should be an error
+        std::optional<std::string> message; // An optional message to show if the keyword is present
+    };
+
+    // Describe a partially supported keyword item, by listing legal values:
+    template <typename T>
+    struct PartiallySupportedKeywordProperties {
+        bool critical; // Set to true if the unsupported item value should be an error
+        std::vector<T> permitted_values; // The list of permitted values
+        std::optional<std::string> message; // An optional message to show if an illegal item is encountered
+    };
+
+    // This is used to list unsupported kewyords.
+    using UnsupportedKeywords = std::map<std::string, UnsupportedKeywordProperties>;
+
+    // This is used to list the partially supported items of a keyword:
+    template <typename T>
+    using PartiallySupportedKeywordItems = std::map<size_t, PartiallySupportedKeywordProperties<T>>;
+
+    // This is used to list the keywords that have partially supported items:
+    template <typename T>
+    using PartiallySupportedKeywords = std::map<std::string, PartiallySupportedKeywordItems<T>>;
+
+    // This contains the information needed to report a single error occurence.
+    // The validator will construct a vector of these, copying the relevant
+    // information from the properties of the offending keywords and items.
+    struct ValidationError {
+        bool critical; // Determines if the encountered problem should be an error or a warning
+        KeywordLocation location; // Location information (keyword name, file and line number)
+        size_t record_number; // Number of the offending record.
+        std::optional<size_t> item_number; // Number of the offending item, -1 if the kewyord is not supported at all.
+        std::optional<std::string> item_value; // The offending value of a problematic item
+        std::optional<std::string> user_message; // An optional message to show if a problem is encountered
+    };
+
+    // Get a formatted error report from a vector of validation errors. Set
+    // critical to true if the report should contain only critical errors. If
+    // critical is false, only non-critical errors are reported. If not
+    // critical/non-critical errors are present, but the critical flag to reset
+    // them, the result will be an empty string.
+    std::string get_error_report(const std::vector<ValidationError>& errors, const bool critical);
+
+    class KeywordValidator
+    {
+    public:
+        KeywordValidator(const UnsupportedKeywords& keywords,
+                         const PartiallySupportedKeywords<std::string>& string_items,
+                         const PartiallySupportedKeywords<int>& int_items)
+            : m_keywords(keywords)
+            , m_string_items(string_items)
+            , m_int_items(int_items)
+        {
+        }
+
+        // Validate a deck, reporting warnings and errors. If there are only
+        // warnings, these will be reported. If there are errors, these are
+        // reported, and execution of the program is halted.
+        void validateDeck(const Deck& deck, const ParseContext& parse_context, ErrorGuard& error_guard) const;
+
+        // Validate a single deck keyword. If a problem is encountered, add the
+        // relevant information to the errors vector.
+        void validateDeckKeyword(const DeckKeyword& keyword, std::vector<ValidationError>& errors) const;
+
+    private:
+        template <typename T>
+        void validateKeywordItem(const DeckKeyword& keyword,
+                                 const PartiallySupportedKeywordProperties<T>& properties,
+                                 const size_t record_number,
+                                 const size_t item_number,
+                                 const T& item_value,
+                                 std::vector<ValidationError>& errors) const;
+
+
+        template <typename T>
+        void validateKeywordItems(const DeckKeyword& keyword,
+                                  const PartiallySupportedKeywords<T>& partially_supported_options,
+                                  std::vector<ValidationError>& errors) const;
+
+        const UnsupportedKeywords m_keywords;
+        const PartiallySupportedKeywords<std::string> m_string_items;
+        const PartiallySupportedKeywords<int> m_int_items;
+    };
+
+
+} // namespace KeywordValidation
+
+} // namespace Opm
+
+
+#endif
