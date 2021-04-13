@@ -938,6 +938,13 @@ add_test_compareECLFiles(CASENAME norne
                          PREFIX compareECLInitFiles
                          DIR_PREFIX /init)
 
+# This is not a proper regression test; the test will load a norne case prepared
+# for restart and run one single timestep - of length one day. The results are not
+# verified in any way.
+add_test(NAME NORNE_RESTART
+         COMMAND flow --output-dir=${BASE_RESULT_PATH}/norne-restart ${OPM_TESTS_ROOT}/norne/NORNE_ATW2013_RESTART.DATA)
+
+
 # Parallel tests
 if(MPI_FOUND)
   opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-parallel-restart-regressionTest.sh "")
