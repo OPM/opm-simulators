@@ -630,7 +630,7 @@ namespace Opm {
             const size_t numCells = Opm::UgGridHelpers::numCells(grid());
             const bool handle_ms_well = (param_.use_multisegment_well_ && anyMSWellOpenLocal());
             this->wellState().resize(wells_ecl_, local_parallel_well_info_, schedule(), handle_ms_well, numCells, phaseUsage, well_perf_data_, summaryState, globalNumWells); // Resize for restart step
-            wellsToState(restartValues.wells, restartValues.grp_nwrk, phaseUsage, handle_ms_well, this->wellState());
+            loadRestartData(restartValues.wells, restartValues.grp_nwrk, phaseUsage, handle_ms_well, this->wellState());
         }
 
         this->commitWellState();
@@ -1865,11 +1865,11 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    wellsToState( const data::Wells& wells,
-                  const data::GroupAndNetworkValues& grpNwrkValues,
-                  const PhaseUsage& phases,
-                  const bool handle_ms_well,
-                  WellStateFullyImplicitBlackoil& state) const
+    loadRestartData( const data::Wells& wells,
+                     const data::GroupAndNetworkValues& grpNwrkValues,
+                     const PhaseUsage& phases,
+                     const bool handle_ms_well,
+                     WellStateFullyImplicitBlackoil& state) const
     {
         using GPMode = Group::ProductionCMode;
         using GIMode = Group::InjectionCMode;
