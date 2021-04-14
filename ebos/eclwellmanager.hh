@@ -618,7 +618,7 @@ public:
     }
 
     void initFromRestartFile(const RestartValue& restartValues OPM_UNUSED){
-        // not implemented
+        throw std::logic_error("initFromRestartFile() method not implemented for class eclwellmanager");
     }
 
     const WellStateFullyImplicitBlackoil& wellState() const

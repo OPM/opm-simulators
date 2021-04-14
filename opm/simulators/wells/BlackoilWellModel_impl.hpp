@@ -630,7 +630,7 @@ namespace Opm {
             const size_t numCells = Opm::UgGridHelpers::numCells(grid());
             const bool handle_ms_well = (param_.use_multisegment_well_ && anyMSWellOpenLocal());
             this->wellState().resize(wells_ecl_, local_parallel_well_info_, schedule(), handle_ms_well, numCells, phaseUsage, well_perf_data_, summaryState, globalNumWells); // Resize for restart step
-            wellsToState(restartValues.wells, restartValues.grp_nwrk, phaseUsage, handle_ms_well, this->wellState());
+            loadRestartData(restartValues.wells, restartValues.grp_nwrk, phaseUsage, handle_ms_well, this->wellState());
         }
 
         this->commitWellState();
@@ -1865,11 +1865,11 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    wellsToState( const data::Wells& wells,
-                  const data::GroupAndNetworkValues& grpNwrkValues,
-                  const PhaseUsage& phases,
-                  const bool handle_ms_well,
-                  WellStateFullyImplicitBlackoil& state) const
+    loadRestartData( const data::Wells& rst_wells,
+                     const data::GroupAndNetworkValues& grpNwrkValues,
+                     const PhaseUsage& phases,
+                     const bool handle_ms_well,
+                     WellStateFullyImplicitBlackoil& state) const
     {
         using GPMode = Group::ProductionCMode;
         using GIMode = Group::InjectionCMode;
@@ -1892,50 +1892,38 @@ namespace Opm {
 
         for( const auto& wm : state.wellMap() ) {
             const auto well_index = wm.second[ 0 ];
-            const auto& well = wells.at( wm.first );
-            state.bhp()[ well_index ] = well.bhp;
-            state.temperature()[ well_index ] = well.temperature;
+            const auto& rst_well = rst_wells.at( wm.first );
+            state.bhp()[ well_index ] = rst_well.bhp;
+            state.temperature()[ well_index ] = rst_well.temperature;
 
-            if (well.current_control.isProducer) {
-                state.currentProductionControls()[ well_index ] = well.current_control.prod;
+            if (rst_well.current_control.isProducer) {
+                state.currentProductionControls()[ well_index ] = rst_well.current_control.prod;
             }
             else {
-                state.currentInjectionControls()[ well_index ] = well.current_control.inj;
+                state.currentInjectionControls()[ well_index ] = rst_well.current_control.inj;
             }
 
             const auto wellrate_index = well_index * np;
             for( size_t i = 0; i < phs.size(); ++i ) {
-                assert( well.rates.has( phs[ i ] ) );
-                state.wellRates()[ wellrate_index + i ] = well.rates.get( phs[ i ] );
+                assert( rst_well.rates.has( phs[ i ] ) );
+                state.wellRates()[ wellrate_index + i ] = rst_well.rates.get( phs[ i ] );
             }
 
-            const auto perforation_pressure = []( const data::Connection& comp ) {
-                return comp.pressure;
-            };
+            auto * perf_pressure = state.perfPress().data() + wm.second[1];
+            auto * perf_rates = state.perfRates().data() + wm.second[1];
+            auto * perf_phase_rates = state.perfPhaseRates().data() + wm.second[1]*np;
+            const auto& perf_data = this->well_perf_data_[well_index];
 
-            const auto perforation_reservoir_rate = []( const data::Connection& comp ) {
-                return comp.reservoir_rate;
-            };
-            std::transform( well.connections.begin(),
-                            well.connections.end(),
-                            state.perfPress().begin() + wm.second[ 1 ],
-                    perforation_pressure );
-
-            std::transform( well.connections.begin(),
-                            well.connections.end(),
-                            state.perfRates().begin() + wm.second[ 1 ],
-                    perforation_reservoir_rate );
-
-            int local_comp_index = 0;
-            for (const data::Connection& comp : well.connections) {
-                const int global_comp_index = wm.second[1] + local_comp_index;
-                for (int phase_index = 0; phase_index < np; ++phase_index) {
-                    state.perfPhaseRates()[global_comp_index*np + phase_index] = comp.rates.get(phs[phase_index]);
-                }
-                ++local_comp_index;
+            for (std::size_t perf_index = 0; perf_index < perf_data.size(); perf_index++) {
+                const auto& pd = perf_data[perf_index];
+                const auto& rst_connection = rst_well.connections[pd.ecl_index];
+                perf_pressure[perf_index] = rst_connection.pressure;
+                perf_rates[perf_index] = rst_connection.reservoir_rate;
+                for (int phase_index = 0; phase_index < np; ++phase_index)
+                    perf_phase_rates[perf_index*np + phase_index] = rst_connection.rates.get(phs[phase_index]);
             }
 
-            if (handle_ms_well && !well.segments.empty()) {
+            if (handle_ms_well && !rst_well.segments.empty()) {
                 // we need the well_ecl_ information
                 const std::string& well_name = wm.first;
                 const Well& well_ecl = getWellEcl(well_name);
@@ -1943,7 +1931,7 @@ namespace Opm {
                 const WellSegments& segment_set = well_ecl.getSegments();
 
                 const int top_segment_index = state.topSegmentIndex(well_index);
-                const auto& segments = well.segments;
+                const auto& segments = rst_well.segments;
 
                 // \Note: eventually we need to hanlde the situations that some segments are shut
                 assert(0u + segment_set.size() == segments.size());

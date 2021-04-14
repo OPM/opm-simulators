@@ -573,7 +573,7 @@ namespace Opm {
             void wellTesting(const int timeStepIdx, const double simulationTime, Opm::DeferredLogger& deferred_logger);
 
             // convert well data from opm-common to well state from opm-core
-            void wellsToState( const data::Wells& wells,
+            void loadRestartData( const data::Wells& wells,
                                const data::GroupAndNetworkValues& grpNwrkValues,
                                const PhaseUsage& phases,
                                const bool handle_ms_well,
