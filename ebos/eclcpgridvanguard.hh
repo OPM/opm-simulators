@@ -344,27 +344,21 @@ public:
 protected:
     void createGrids_()
     {
-        const EclipseGrid * input_grid = nullptr;
         std::vector<double> global_porv;
-        std::unordered_map<size_t, double> aquifer_cell_volumes;
         // At this stage the ParallelEclipseState instance is still in global
         // view; on rank 0 we have undistributed data for the entire grid, on
         // the other ranks the EclipseState is empty.
         if (mpiRank == 0) {
-            input_grid = &this->eclState().getInputGrid();
             global_porv = this->eclState().fieldProps().porv(true);
-            aquifer_cell_volumes = this->eclState().aquifer().numericalAquifers().aquiferCellVolumes();
             OpmLog::info("\nProcessing grid");
         }
 
         grid_.reset(new Dune::CpGrid());
-        const auto& removed_cells = grid_->processEclipseFormat(input_grid,
+        const auto& removed_cells = grid_->processEclipseFormat(&this->eclState(),
+                                                                &this->deck(),
                                                                 /*isPeriodic=*/false,
                                                                 /*flipNormals=*/false,
-                                                                /*clipZ=*/false,
-                                                                global_porv,
-                                                                this->eclState().getInputNNC(),
-                                                                aquifer_cell_volumes);
+                                                                /*clipZ=*/false);
 
         if (mpiRank == 0) {
             const auto& active_porv = this->eclState().fieldProps().porv(false);
@@ -375,7 +369,7 @@ protected:
 
             double removed_pore_volume = 0;
             for (const auto& global_index : removed_cells)
-                removed_pore_volume += active_porv[ input_grid->activeIndex(global_index) ];
+                removed_pore_volume += active_porv[ this->eclState().getInputGrid().activeIndex(global_index) ];
 
             if (removed_pore_volume > 0) {
                 removed_pore_volume = unit_system.from_si( UnitSystem::measure::volume, removed_pore_volume );
