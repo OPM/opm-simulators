@@ -48,7 +48,12 @@ template<class TypeTag, class MyTypeTag>
 struct PriVarOscilationThreshold { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct ProjectSaturations { using type = UndefinedProperty; };
-
+template<class TypeTag, class MyTypeTag>
+struct MaxTemperatureChange { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct TemperatureMax { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct TemperatureMin { using type = UndefinedProperty; };
 template<class TypeTag>
 struct DpMaxRel<TypeTag, TTag::NewtonMethod>
 {
@@ -69,7 +74,24 @@ struct PriVarOscilationThreshold<TypeTag, TTag::NewtonMethod>
 };
 template<class TypeTag>
 struct ProjectSaturations<TypeTag, TTag::NewtonMethod> { static constexpr bool value = false; };
-
+template<class TypeTag>
+struct MaxTemperatureChange<TypeTag, TTag::NewtonMethod>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 5; //Kelvin
+};
+template<class TypeTag>
+struct TemperatureMax<TypeTag, TTag::NewtonMethod>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 400; //Kelvin
+};
+template<class TypeTag>
+struct TemperatureMin<TypeTag, TTag::NewtonMethod>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 280; //Kelvin
+};
 } // namespace Opm::Properties
 
 namespace Opm {
@@ -101,6 +123,10 @@ public:
         dpMaxRel_ = EWOMS_GET_PARAM(TypeTag, Scalar, DpMaxRel);
         dsMax_ = EWOMS_GET_PARAM(TypeTag, Scalar, DsMax);
         projectSaturations_ = EWOMS_GET_PARAM(TypeTag, bool, ProjectSaturations);
+        maxTempChange_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxTemperatureChange);
+        tempMax_ = EWOMS_GET_PARAM(TypeTag, Scalar, TemperatureMax);
+        tempMin_ = EWOMS_GET_PARAM(TypeTag, Scalar, TemperatureMin);
+
     }
 
     /*!
@@ -126,6 +152,9 @@ public:
         EWOMS_REGISTER_PARAM(TypeTag, Scalar, PriVarOscilationThreshold,
                              "The threshold value for the primary variable switching conditions after its meaning has switched to hinder oscilations");
         EWOMS_REGISTER_PARAM(TypeTag,bool, ProjectSaturations, "Option for doing saturation projection");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaxTemperatureChange, "Maximum absolute change of temperature in a single iteration");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, TemperatureMax, "Maximum absolute temperature");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, TemperatureMin, "Minimum absolute temperature");
     }
 
     /*!
@@ -303,6 +332,10 @@ protected:
                 delta = sign * std::min(std::abs(delta), maxMolarWeightChange);
                 delta *= satAlpha;
             }
+            else if (enableEnergy && pvIdx == Indices::temperatureIdx) {
+                const double sign = delta >= 0. ? 1. : -1.;
+                delta = sign * std::min(std::abs(delta), maxTempChange_);
+            }
 
             // do the actual update
             nextValue[pvIdx] = currentValue[pvIdx] - delta;
@@ -334,9 +367,9 @@ protected:
             if (enableBrine && pvIdx == Indices::saltConcentrationIdx)
                 nextValue[pvIdx] = std::max(nextValue[pvIdx], 0.0);
 
-            // keep the temperature above 100 and below 1000 Kelvin
+            // keep the temperature within given values
             if (enableEnergy && pvIdx == Indices::temperatureIdx)
-                nextValue[pvIdx] = std::max(std::min(nextValue[pvIdx], 1000.0), 100.0);
+                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], tempMin_, tempMax_);
         }
 
         // switch the new primary variables to something which is physically meaningful.
@@ -363,6 +396,9 @@ private:
     Scalar dpMaxRel_;
     Scalar dsMax_;
     bool projectSaturations_;
+    Scalar maxTempChange_;
+    Scalar tempMax_;
+    Scalar tempMin_;
 
     // keep track of cells where the primary variable meaning has changed
     // to detect and hinder oscillations
