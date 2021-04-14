@@ -7,7 +7,7 @@ Build-Depends: build-essential, debhelper (>= 9),
                libdune-common-dev, libdune-istl-dev, cmake, bc,
                git, zlib1g-dev, libtool, doxygen,
                texlive-latex-extra, texlive-latex-recommended, ghostscript,
-               mpi-default-dev, mpi-default-bin
+               mpi-default-dev, mpi-default-bin, libpython3-dev
 Standards-Version: 3.9.2
 Section: libs
 Homepage: http://opm-project.org
