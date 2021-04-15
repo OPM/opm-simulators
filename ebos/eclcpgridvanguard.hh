@@ -344,18 +344,20 @@ public:
 protected:
     void createGrids_()
     {
+        const EclipseGrid* input_grid = nullptr;
         std::vector<double> global_porv;
         // At this stage the ParallelEclipseState instance is still in global
         // view; on rank 0 we have undistributed data for the entire grid, on
         // the other ranks the EclipseState is empty.
         if (mpiRank == 0) {
+            input_grid = &this->eclState().getInputGrid();
             global_porv = this->eclState().fieldProps().porv(true);
             OpmLog::info("\nProcessing grid");
         }
 
         grid_.reset(new Dune::CpGrid());
-        const auto& removed_cells = grid_->processEclipseFormat(&this->eclState(),
-                                                                &this->deck(),
+        const auto& removed_cells = grid_->processEclipseFormat(input_grid,
+                                                                &this->eclState(),
                                                                 /*isPeriodic=*/false,
                                                                 /*flipNormals=*/false,
                                                                 /*clipZ=*/false);
@@ -391,7 +393,7 @@ protected:
             if (has_numerical_aquifer && mpiSize > 1) {
                 auto nnc_input = this->eclState().getInputNNC();
                 Opm::EclMpiSerializer ser(Dune::MPIHelper::getCollectiveCommunication());
-                ser.template broadcast(nnc_input);
+                ser.broadcast(nnc_input);
                 if (mpiRank > 0) {
                     this->eclState().setInputNNC(nnc_input);
                 }

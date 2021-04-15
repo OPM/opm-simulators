@@ -71,8 +71,8 @@ BOOST_AUTO_TEST_CASE(diagnosis)
     EclipseState eclState(deck);
     typedef Dune::CpGrid Grid;
     Grid grid = Grid();
-    grid.processEclipseFormat(&eclState,
-                              &deck,
+    grid.processEclipseFormat(&eclState.getInputGrid(),
+                              &eclState,
                                /*isPeriodic=*/false,
                                /*flipNormals=*/false,
                                /*clipZ=*/false);
