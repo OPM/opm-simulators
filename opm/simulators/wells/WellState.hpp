@@ -209,6 +209,16 @@ namespace Opm
             return well_info.isOwner();
         }
 
+        bool wellIsOwned(const std::string& wellName) const
+        {
+            const auto& it = wellMap().find( wellName );
+            if (it == wellMap().end()) {
+                OPM_THROW(std::logic_error, "Could not find well " << wellName << " in well map");
+            }
+            const int well_index = it->second[0];
+            return wellIsOwned(well_index, wellName);
+        }
+
         /// The number of wells present.
         int numWells() const
         {

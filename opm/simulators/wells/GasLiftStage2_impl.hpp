@@ -363,6 +363,14 @@ getCurrentWellRates_(const std::string &well_name, const std::string &group_name
         success = true;
         if ( this->debug_) debug_info = "(B)";
     }
+
+    if (well_ptr) {
+        // we only want rates from wells owned by the rank
+        if (!well_state_.wellIsOwned(well_ptr->indexOfWell(), well_name)) {
+            success = false;
+        }
+    }
+
     if (success) {
         assert(well_ptr);
         assert(well_ptr->isProducer());
@@ -802,17 +810,23 @@ localToGlobalGradVector_(const std::vector<GradPair> &grads_local) const
     if (comm.size() == 1)
         return grads_local;
 
+    using Pair = std::pair<int, double>;
+    std::vector<Pair> grads_local_tmp;
+    grads_local_tmp.reserve(grads_local.size());
+    for (size_t i = 0; i < grads_local.size(); ++i) {
+        if(!well_state_.wellIsOwned(grads_local[i].first))
+            continue;
+
+        grads_local_tmp.push_back(std::make_pair(well_state_.wellNameToGlobalIdx(grads_local[i].first), grads_local[i].second));
+    }
+
     std::vector<int> sizes_(comm.size());
     std::vector<int> displ_(comm.size() + 1, 0);
-    int mySize = grads_local.size();
+    int mySize = grads_local_tmp.size();
     comm.allgather(&mySize, 1, sizes_.data());
     std::partial_sum(sizes_.begin(), sizes_.end(), displ_.begin()+1);
-    using Pair = std::pair<int,double>;
     std::vector<Pair> grads_global(displ_.back());
-    std::vector<Pair> grads_local_tmp(grads_local.size());
-    for (size_t i = 0; i < grads_local.size(); ++i) {
-        grads_local_tmp[i] = std::make_pair(well_state_.wellNameToGlobalIdx(grads_local[i].first), grads_local[i].second);
-    }
+
     comm.allgatherv(grads_local_tmp.data(), grads_local_tmp.size(), grads_global.data(), sizes_.data(), displ_.data());
     std::vector<GradPair> grads(grads_global.size());
     for (size_t i = 0; i < grads_global.size(); ++i) {
@@ -871,7 +885,13 @@ bool
 GasLiftStage2<TypeTag>::OptimizeState::
 checkAtLeastTwoWells(std::vector<GasLiftSingleWell *> &wells)
 {
-    int numberOfwells = wells.size();
+    int numberOfwells = 0;
+    for (auto well : wells){
+        int index_of_wells = well->getStdWell().indexOfWell();
+        if (!this->parent.well_state_.wellIsOwned(index_of_wells, well->name()))
+            continue;
+        numberOfwells++;
+    }
     const auto& comm = this->parent.ebos_simulator_.vanguard().grid().comm();
     numberOfwells = comm.sum(numberOfwells);
     if (numberOfwells < 2) {
@@ -1092,19 +1112,21 @@ GasLiftStage2<TypeTag>::SurplusState::
 updateRates(const std::string &well_name)
 {
     std::array<double, 3> delta = {0.0,0.0,0.0};
-
     // compute the delta on wells on own rank
-    if(this->parent.well_state_map_.count(well_name) > 0 ) {
+    if (this->parent.well_state_map_.count(well_name) > 0) {
         const GradInfo &gi = this->parent.dec_grads_.at(well_name);
         GLiftWellState &state = *(this->parent.well_state_map_.at(well_name).get());
         GasLiftSingleWell &gs_well = *(this->parent.stage1_wells_.at(well_name).get());
         const WellInterface<TypeTag> &well = gs_well.getStdWell();
-        const auto &well_ecl = well.wellEcl();
-        double factor = well_ecl.getEfficiencyFactor();
-        auto& [delta_oil, delta_gas, delta_alq] = delta;
-        delta_oil = factor * (gi.new_oil_rate - state.oilRate());
-        delta_gas = factor * (gi.new_gas_rate - state.gasRate());
-        delta_alq = factor * (gi.alq - state.alq());
+        // only get deltas for wells owned by this rank
+        if (this->parent.well_state_.wellIsOwned(well.indexOfWell(), well_name)) {
+            const auto &well_ecl = well.wellEcl();
+            double factor = well_ecl.getEfficiencyFactor();
+            auto& [delta_oil, delta_gas, delta_alq] = delta;
+                    delta_oil = factor * (gi.new_oil_rate - state.oilRate());
+                    delta_gas = factor * (gi.new_gas_rate - state.gasRate());
+                    delta_alq = factor * (gi.alq - state.alq());
+        }
     }
 
     // and communicate the results
