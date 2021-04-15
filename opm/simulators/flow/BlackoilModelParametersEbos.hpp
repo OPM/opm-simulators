@@ -160,6 +160,10 @@ template<class TypeTag, class MyTypeTag>
 struct AlternativeWellRateInit {
     using type = UndefinedProperty;
 };
+template<class TypeTag, class MyTypeTag>
+struct MaximumNumberOfWellSwitches {
+    using type = UndefinedProperty;
+};
 
 template<class TypeTag>
 struct DbhpMaxRel<TypeTag, TTag::FlowModelParameters> {
@@ -300,6 +304,10 @@ struct RelaxedPressureTolMsw<TypeTag, TTag::FlowModelParameters> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 0.5e5;
 };
+template<class TypeTag>
+struct MaximumNumberOfWellSwitches<TypeTag, TTag::FlowModelParameters> {
+    static constexpr int value = 3;
+};
 
 // if openMP is available, determine the number threads per process automatically.
 #if _OPENMP
@@ -402,13 +410,17 @@ namespace Opm
         /// The file name of the deck
         std::string deck_file_name_;
 
-        // Whether to add influences of wells between cells to the matrix and preconditioner matrix
+        /// Whether to add influences of wells between cells to the matrix and preconditioner matrix
         bool matrix_add_well_contributions_;
 
-        // Whether to check well operability
+        /// Whether to check well operability
         bool check_well_operability_;
-        // Whether to check well operability during iterations
+        /// Whether to check well operability during iterations
         bool check_well_operability_iter_;
+
+        /// Maximum number of times a well can switch to the same controt
+        int max_number_of_well_switches_;
+
 
 
         /// Construct from user parameters or defaults.
@@ -444,7 +456,7 @@ namespace Opm
             matrix_add_well_contributions_ = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
             check_well_operability_ = EWOMS_GET_PARAM(TypeTag, bool, EnableWellOperabilityCheck);
             check_well_operability_iter_ = EWOMS_GET_PARAM(TypeTag, bool, EnableWellOperabilityCheckIter);
-
+            max_number_of_well_switches_ = EWOMS_GET_PARAM(TypeTag, int, MaximumNumberOfWellSwitches);
             deck_file_name_ = EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName);
         }
 
@@ -482,6 +494,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, bool, MatrixAddWellContributions, "Explicitly specify the influences of wells between cells in the Jacobian and preconditioner matrices");
             EWOMS_REGISTER_PARAM(TypeTag, bool, EnableWellOperabilityCheck, "Enable the well operability checking");
             EWOMS_REGISTER_PARAM(TypeTag, bool, EnableWellOperabilityCheckIter, "Enable the well operability checking during iterations");
+            EWOMS_REGISTER_PARAM(TypeTag, int, MaximumNumberOfWellSwitches, "Maximum number of times a well can switch to the same control");
         }
     };
 } // namespace Opm
