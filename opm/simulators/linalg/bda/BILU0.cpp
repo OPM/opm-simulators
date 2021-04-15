@@ -33,24 +33,19 @@
 namespace bda
 {
 
-    using Opm::OpmLog;
-    using Dune::Timer;
+using Opm::OpmLog;
+using Dune::Timer;
 
-    template <unsigned int block_size>
-    BILU0<block_size>::BILU0(ILUReorder opencl_ilu_reorder_, int verbosity_) :
-        verbosity(verbosity_), opencl_ilu_reorder(opencl_ilu_reorder_)
-    {}
+template <unsigned int block_size>
+BILU0<block_size>::BILU0(ILUReorder opencl_ilu_reorder_, int verbosity_) :
+    verbosity(verbosity_), opencl_ilu_reorder(opencl_ilu_reorder_)
+{}
 
-    template <unsigned int block_size>
-    BILU0<block_size>::~BILU0()
-    {
-        delete[] invDiagVals;
-        delete[] diagIndex;
-        if (opencl_ilu_reorder != ILUReorder::NONE) {
-            delete[] toOrder;
-            delete[] fromOrder;
-        }
-    }
+template <unsigned int block_size>
+BILU0<block_size>::~BILU0()
+{
+    delete[] invDiagVals;
+}
 
     template <unsigned int block_size>
     bool BILU0<block_size>::init(BlockedMatrix<block_size> *mat)
@@ -68,8 +63,8 @@ namespace bda
         if (opencl_ilu_reorder == ILUReorder::NONE) {
             LUmat = std::make_unique<BlockedMatrix<block_size> >(*mat);
         } else {
-            toOrder = new int[Nb];
-            fromOrder = new int[Nb];
+            toOrder.resize(Nb);
+            fromOrder.resize(Nb);
             CSCRowIndices = new int[nnzbs];
             CSCColPointers = new int[Nb + 1];
             rmat = std::make_shared<BlockedMatrix<block_size> >(mat->Nb, mat->nnzbs);
@@ -88,10 +83,10 @@ namespace bda
         std::ostringstream out;
         if (opencl_ilu_reorder == ILUReorder::LEVEL_SCHEDULING) {
             out << "BILU0 reordering strategy: " << "level_scheduling\n";
-            findLevelScheduling(mat->colIndices, mat->rowPointers, CSCRowIndices, CSCColPointers, mat->Nb, &numColors, toOrder, fromOrder, rowsPerColor);
+            findLevelScheduling(mat->colIndices, mat->rowPointers, CSCRowIndices, CSCColPointers, mat->Nb, &numColors, toOrder.data(), fromOrder.data(), rowsPerColor);
         } else if (opencl_ilu_reorder == ILUReorder::GRAPH_COLORING) {
             out << "BILU0 reordering strategy: " << "graph_coloring\n";
-            findGraphColoring<block_size>(mat->colIndices, mat->rowPointers, CSCRowIndices, CSCColPointers, mat->Nb, mat->Nb, mat->Nb, &numColors, toOrder, fromOrder, rowsPerColor);
+            findGraphColoring<block_size>(mat->colIndices, mat->rowPointers, CSCRowIndices, CSCColPointers, mat->Nb, mat->Nb, mat->Nb, &numColors, toOrder.data(), fromOrder.data(), rowsPerColor);
         } else if (opencl_ilu_reorder == ILUReorder::NONE) {
             out << "BILU0 reordering strategy: none\n";
             // numColors = 1;
@@ -111,12 +106,13 @@ namespace bda
         }
         OpmLog::info(out.str());
 
+
         if (opencl_ilu_reorder != ILUReorder::NONE) {
             delete[] CSCRowIndices;
             delete[] CSCColPointers;
         }
 
-        diagIndex = new int[mat->Nb];
+        diagIndex.resize(mat->Nb);
         invDiagVals = new double[mat->Nb * bs * bs];
 
 #if CHOW_PATEL
@@ -158,8 +154,8 @@ namespace bda
             OPM_THROW(std::logic_error, "BILU0 OpenCL enqueueWriteBuffer error");
         }
 
-        return true;
-    } // end init()
+    return true;
+} // end init()
 
 
     // implements Fine-Grained Parallel ILU algorithm (FGPILU), Chow and Patel 2015
@@ -482,7 +478,7 @@ namespace bda
                 diagIndex[row] = candidate - LUmat->colIndices;
             }
             events.resize(8);
-            queue->enqueueWriteBuffer(s.diagIndex, CL_FALSE, 0, Nb * sizeof(int), diagIndex, nullptr, &events[3]);
+            queue->enqueueWriteBuffer(s.diagIndex, CL_FALSE, 0, Nb * sizeof(int), diagIndex.data(), nullptr, &events[3]);
             queue->enqueueWriteBuffer(s.Lcols, CL_FALSE, 0, Lmat->nnzbs * sizeof(int), Lmat->colIndices, nullptr, &events[4]);
             queue->enqueueWriteBuffer(s.Lrows, CL_FALSE, 0, (Lmat->Nb + 1) * sizeof(int), Lmat->rowPointers, nullptr, &events[5]);
             queue->enqueueWriteBuffer(s.Ucols, CL_FALSE, 0, Umat->nnzbs * sizeof(int), cols.data(), nullptr, &events[6]);
@@ -516,7 +512,7 @@ namespace bda
         if (opencl_ilu_reorder != ILUReorder::NONE) {
             m = rmat.get();
             Timer t_reorder;
-            reorderBlockedMatrixByPattern<block_size>(mat, toOrder, fromOrder, rmat.get());
+            reorderBlockedMatrixByPattern<block_size>(mat, toOrder.data(), fromOrder.data(), rmat.get());
 
             if (verbosity >= 3){
                 std::ostringstream out;
@@ -556,7 +552,7 @@ namespace bda
                 diagIndex[row] = candidate - LUmat->colIndices;
             }
             events.resize(4);
-            queue->enqueueWriteBuffer(s.diagIndex, CL_FALSE, 0, Nb * sizeof(int), diagIndex, nullptr, &events[1]);
+            queue->enqueueWriteBuffer(s.diagIndex, CL_FALSE, 0, Nb * sizeof(int), diagIndex.data(), nullptr, &events[1]);
             queue->enqueueWriteBuffer(s.LUcols, CL_FALSE, 0, LUmat->nnzbs * sizeof(int), LUmat->colIndices, nullptr, &events[2]);
             queue->enqueueWriteBuffer(s.LUrows, CL_FALSE, 0, (LUmat->Nb + 1) * sizeof(int), LUmat->rowPointers, nullptr, &events[3]);
         });
@@ -637,30 +633,30 @@ namespace bda
     }
 
 
-    template <unsigned int block_size>
-    void BILU0<block_size>::setOpenCLContext(cl::Context *context_){
-        this->context = context_;
-    }
-    template <unsigned int block_size>
-    void BILU0<block_size>::setOpenCLQueue(cl::CommandQueue *queue_){
-        this->queue = queue_;
-    }
-    template <unsigned int block_size>
-    void BILU0<block_size>::setKernelParameters(const unsigned int work_group_size_, const unsigned int total_work_items_, const unsigned int lmem_per_work_group_){
-        this->work_group_size = work_group_size_;
-        this->total_work_items = total_work_items_;
-        this->lmem_per_work_group = lmem_per_work_group_;
-    }
-    template <unsigned int block_size>
-    void BILU0<block_size>::setKernels(
-        cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *ILU_apply1_,
-        cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *ILU_apply2_,
-        cl::make_kernel<const unsigned int, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const int, cl::LocalSpaceArg> *ilu_decomp_k_
-    ){
-        this->ILU_apply1 = ILU_apply1_;
-        this->ILU_apply2 = ILU_apply2_;
-        this->ilu_decomp_k = ilu_decomp_k_;
-    }
+template <unsigned int block_size>
+void BILU0<block_size>::setOpenCLContext(cl::Context *context_) {
+    this->context = context_;
+}
+template <unsigned int block_size>
+void BILU0<block_size>::setOpenCLQueue(cl::CommandQueue *queue_) {
+    this->queue = queue_;
+}
+template <unsigned int block_size>
+void BILU0<block_size>::setKernelParameters(const unsigned int work_group_size_, const unsigned int total_work_items_, const unsigned int lmem_per_work_group_) {
+    this->work_group_size = work_group_size_;
+    this->total_work_items = total_work_items_;
+    this->lmem_per_work_group = lmem_per_work_group_;
+}
+template <unsigned int block_size>
+void BILU0<block_size>::setKernels(
+    cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *ILU_apply1_,
+    cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *ILU_apply2_,
+    cl::make_kernel<const unsigned int, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const int, cl::LocalSpaceArg> *ilu_decomp_k_
+){
+    this->ILU_apply1 = ILU_apply1_;
+    this->ILU_apply2 = ILU_apply2_;
+    this->ilu_decomp_k = ilu_decomp_k_;
+}
 
 
 #define INSTANTIATE_BDA_FUNCTIONS(n)                                                     \

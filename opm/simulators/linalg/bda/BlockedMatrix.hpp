@@ -20,29 +20,40 @@
 #ifndef BLOCKED_MATRIX_HPP
 #define BLOCKED_MATRIX_HPP
 
+#if HAVE_FPGA
+#include <vector>
+#endif
+
+#include <opm/simulators/linalg/bda/FPGAMatrix.hpp>
+
 namespace bda
 {
 
 /// This struct resembles a blocked csr matrix, like Dune::BCRSMatrix.
 /// The data is stored in contiguous memory, such that they can be copied to a device in one transfer.
-template<int BS>
-struct BlockedMatrix{
+template<unsigned int block_size>
+class BlockedMatrix
+{
+
+public:
+
     /// Allocate BlockedMatrix and data arrays with given sizes
     /// \param[in] Nb               number of blockrows
     /// \param[in] nnzbs            number of nonzero blocks
     BlockedMatrix(int Nb_, int nnzbs_)
-    : nnzValues(new double[nnzbs_*BS*BS]),
-      colIndices(new int[nnzbs_*BS*BS]),
+    : nnzValues(new double[nnzbs_*block_size*block_size]),
+      colIndices(new int[nnzbs_*block_size*block_size]),
       rowPointers(new int[Nb_+1]),
       Nb(Nb_),
       nnzbs(nnzbs_),
       deleteNnzs(true),
       deleteSparsity(true)
     {}
+
     /// Allocate BlockedMatrix, but copy sparsity pattern instead of allocating new memory
     /// \param[in] M              matrix to be copied
     BlockedMatrix(const BlockedMatrix& M)
-    : nnzValues(new double[M.nnzbs*BS*BS]),
+    : nnzValues(new double[M.nnzbs*block_size*block_size]),
       colIndices(M.colIndices),
       rowPointers(M.rowPointers),
       Nb(M.Nb),
@@ -50,10 +61,11 @@ struct BlockedMatrix{
       deleteNnzs(true),
       deleteSparsity(false)
     {}
+
     /// Allocate BlockedMatrix, but let data arrays point to existing arrays
     /// \param[in] Nb             number of blockrows
     /// \param[in] nnzbs          number of nonzero blocks
-    /// \param[in] nnzValues      array of nonzero values, contains nnzb*BS*BS scalars
+    /// \param[in] nnzValues      array of nonzero values, contains nnzb*block_size*block_size scalars
     /// \param[in] colIndices     array of column indices, contains nnzb entries
     /// \param[in] rowPointers    array of row pointers, contains Nb+1 entries
     BlockedMatrix(int Nb_, int nnzbs_, double *nnzValues_, int *colIndices_, int *rowPointers_)
@@ -75,6 +87,28 @@ struct BlockedMatrix{
             delete[] rowPointers;
         }
     }
+
+#if HAVE_FPGA
+    constexpr static double nnzThreshold = 1e-80;  // for unblocking, a nonzero must be bigger than this threshold to be considered a nonzero
+
+    int countUnblockedNnzs();
+
+    void unblock(Matrix *mat, bool isUMatrix);
+
+    /// Converts this matrix to the dataformat used by the FPGA
+    /// Is done every linear solve. The exact sparsity pattern can change every time since the zeros are removed during unblocking
+    int toRDF(int numColors, int *nodesPerColor, bool isUMatrix,
+        std::vector<std::vector<int> >& colIndicesInColor, int nnzsPerRowLimit, int *nnzValsSizes,
+        std::vector<std::vector<double> >& nnzValues, short int *colIndices, unsigned char *NROffsets, int *colorSizes, int *valSize);
+
+    /// Analyses the sparsity pattern and prepares for toRDF()
+    /// Is only called once
+    int findPartitionColumns(int numColors, int *nodesPerColor,
+        int rowsPerColorLimit, int columnsPerColorLimit,
+        std::vector<std::vector<int> >& colIndicesInColor, int *PIndicesAddr, int *colorSizes,
+        std::vector<std::vector<int> >& LColIndicesInColor, int *LPIndicesAddr, int *LColorSizes,
+        std::vector<std::vector<int> >& UColIndicesInColor, int *UPIndicesAddr, int *UColorSizes);
+#endif
 
     double *nnzValues;
     int *colIndices;
@@ -109,13 +143,26 @@ void blockMultSub(double *a, double *b, double *c);
 template <unsigned int block_size>
 void blockMult(double *mat1, double *mat2, double *resMat);
 
-/// Subtract blocks
-/// a = b - c
-/// \param[out] a                result block
-/// \param[in] b                 input block
-/// \param[in] c                 input block
+
+#if HAVE_FPGA
 template <unsigned int block_size>
-void blockSub(double *a, double *b, double *c);
+void blockSub(double *mat1, double *mat2, double *resMat);
+
+template <unsigned int block_size>
+void blockVectMult(double *mat, double *vect, double scale, double *resVect, bool resetRes);
+
+/// Convert a blocked inverse diagonal to the FPGA format.
+/// This is the only blocked structure on the FPGA, since it needs blocked matrix-vector multiplication after the backwards substitution of U.
+/// Since the rows of U are reversed, the rows of the diag are also reversed.
+/// The cachelines can hold 8 doubles, a block has 9 doubles.
+/// The format converts 3x3 blocks to 3x4 blocks, so 1 cacheline holds 2 unblocked rows.
+/// Then 2 blocks (24 doubles) fit on 3 cachelines.
+/// Example:
+/// [1 2 3]    [1 2 3 0]              [1 2 3 0 4 5 6 0]
+/// [4 5 6] -> [4 5 6 0] -> hardware: [7 8 9 0 block2 row1]
+/// [7 8 9]    [7 8 9 0]              [block2 row2 block2 row3]
+void blockedDiagtoRDF(double *blockedDiagVals, int rowSize, int numColors, std::vector<int>& rowsPerColor, double *RDFDiag);
+#endif
 
 } // end namespace bda
 

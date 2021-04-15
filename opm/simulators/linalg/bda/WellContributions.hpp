@@ -176,7 +176,7 @@ public:
     void alloc();
 
     /// Create a new WellContributions
-    WellContributions(std::string gpu_mode);
+    WellContributions(std::string accelerator_mode);
 
     /// Destroy a WellContributions, and free memory
     ~WellContributions();

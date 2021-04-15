@@ -20,6 +20,8 @@
 #ifndef REORDER_HPP
 #define REORDER_HPP
 
+#include <vector>
+
 #include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
 
 namespace bda

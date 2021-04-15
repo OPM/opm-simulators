@@ -61,10 +61,10 @@ namespace bda
         std::unique_ptr<BlockedMatrix<block_size> > Lmat = nullptr, Umat = nullptr;
 #endif
         double *invDiagVals = nullptr;
-        int *diagIndex = nullptr;
-        std::vector<int> rowsPerColor;        // color i contains rowsPerColor[i] rows, which are processed in parallel
+        std::vector<int> diagIndex;
+        std::vector<int> rowsPerColor;  // color i contains rowsPerColor[i] rows, which are processed in parallel
         std::vector<int> rowsPerColorPrefix;  // the prefix sum of rowsPerColor
-        int *toOrder = nullptr, *fromOrder = nullptr;
+        std::vector<int> toOrder, fromOrder;
         int numColors;
         int verbosity;
         std::once_flag pattern_uploaded;
@@ -128,12 +128,12 @@ namespace bda
 
         int* getToOrder()
         {
-            return toOrder;
+            return toOrder.data();
         }
 
         int* getFromOrder()
         {
-            return fromOrder;
+            return fromOrder.data();
         }
 
         BlockedMatrix<block_size>* getRMat()

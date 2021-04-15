@@ -17,12 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <vector>
-#include <cstring>
-#include <algorithm> // for fill()
 #include <random>
-#include <limits>
-#include <sstream>
 
 #include <opm/common/ErrorMacros.hpp>
 
@@ -35,7 +30,7 @@ namespace bda
 
 /* Give every node in the matrix (of which only the sparsity pattern in the
  * form of row pointers and column indices arrays are in the input), a color
- * in the colors array. Also return the amount of colors in the return integer. 
+ * in the colors array. Also return the amount of colors in the return integer.
  * This graph-coloring algorithm is based on the Jones-Plassmann algorithm, proposed in:
  * "A Parallel Graph Coloring Heuristic" by M.T. Jones and P.E. Plassmann in SIAM Journal of Scientific Computing 14 (1993) */
 
@@ -60,7 +55,7 @@ int colorBlockedNodes(int rows, const int *CSRRowPointers, const int *CSRColIndi
         std::mt19937 gen(rd());
         std::uniform_int_distribution<> uniform(0, std::numeric_limits<int>::max());
         {
-            for(int i = 0; i < rows; ++i){
+            for (int i = 0; i < rows; ++i) {
                 randoms[i] = uniform(gen);
             }
         }
@@ -88,12 +83,12 @@ int colorBlockedNodes(int rows, const int *CSRRowPointers, const int *CSRColIndi
                     if (((jc != -1) && (jc != c)) || (i == j)) {
                         continue;
                     }
-                    // node i is not in the current color if one of its neighbours shares this color, 
+                    // node i is not in the current color if one of its neighbours shares this color,
                     if (jc == c) {
                         iMax = false;
                         break;
                     }
-                    // or if one of its uncolored neighbours has a higher random value 
+                    // or if one of its uncolored neighbours has a higher random value
                     int jr = randoms[j];
                     if (ir <= jr) {
                         iMax = false;
@@ -108,12 +103,12 @@ int colorBlockedNodes(int rows, const int *CSRRowPointers, const int *CSRColIndi
                     if (((jc != -1) && (jc != c)) || (i == j)) {
                         continue;
                     }
-                    // node i is not in the current color if one of its neighbours shares this color, 
+                    // node i is not in the current color if one of its neighbours shares this color,
                     if (jc == c) {
                         iMax = false;
                         break;
                     }
-                    // or if one of its uncolored neighbours has a higher random value 
+                    // or if one of its uncolored neighbours has a higher random value
                     int jr = randoms[j];
                     if (ir <= jr) {
                         iMax = false;
@@ -180,7 +175,7 @@ void reorderBlockedMatrixByPattern(BlockedMatrix<block_size> *mat, int *toOrder,
         // put thisRow from the old matrix into row i of the new matrix
         rmat->rowPointers[i + 1] = rmat->rowPointers[i] + mat->rowPointers[thisRow + 1] - mat->rowPointers[thisRow];
         for (k = mat->rowPointers[thisRow]; k < mat->rowPointers[thisRow + 1]; k++) {
-            for (j = 0; j < bs * bs; j++){
+            for (j = 0; j < bs * bs; j++) {
                 rmat->nnzValues[rIndex * bs * bs + j] = mat->nnzValues[k * bs * bs + j];
             }
             rmat->colIndices[rIndex] = mat->colIndices[k];
@@ -251,7 +246,7 @@ bool canBeStarted(const int rowIndex, const int *rowPointers, const int *colIndi
 /*
  * The level scheduling of a non-symmetric, blocked matrix requires access to a CSC encoding and a CSR encoding of the sparsity pattern of the input matrix.
  * This function is based on a standard level scheduling algorithm, like the one described in:
- * "Iterative methods for Sparse Linear Systems" by Yousef Saad in section 11.6.3 
+ * "Iterative methods for Sparse Linear Systems" by Yousef Saad in section 11.6.3
  */
 
 void findLevelScheduling(int *CSRColIndices, int *CSRRowPointers, int *CSCRowIndices, int *CSCColPointers, int Nb, int *numColors, int *toOrder, int* fromOrder, std::vector<int>& rowsPerColor) {

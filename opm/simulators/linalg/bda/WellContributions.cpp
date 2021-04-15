@@ -28,15 +28,18 @@
 namespace Opm
 {
 
-WellContributions::WellContributions(std::string gpu_mode){
-    if(gpu_mode.compare("cusparse") == 0){
+WellContributions::WellContributions(std::string accelerator_mode){
+    if(accelerator_mode.compare("cusparse") == 0){
         cuda_gpu = true;
     }
-    else if(gpu_mode.compare("opencl") == 0){
+    else if(accelerator_mode.compare("opencl") == 0){
         opencl_gpu = true;
     }
+    else if(accelerator_mode.compare("fpga") == 0){
+        // unused for FPGA, but must be defined to avoid error
+    }
     else{
-        OPM_THROW(std::logic_error, "Error: invalid GPU mode");
+        OPM_THROW(std::logic_error, "Invalid accelerator mode");
     }
 }
 
