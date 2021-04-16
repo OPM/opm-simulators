@@ -177,7 +177,7 @@ protected:
     // definition of the struct OperabilityStatus
     struct OperabilityStatus {
         bool isOperable() const {
-            if (!operable_under_only_bhp_limit) {
+            if (!operable_under_only_bhp_limit || !solvable) {
                 return false;
             } else {
                 return ( (isOperableUnderBHPLimit() || isOperableUnderTHPLimit()) );
@@ -197,6 +197,7 @@ protected:
             obey_thp_limit_under_bhp_limit = true;
             can_obtain_bhp_with_thp_limit = true;
             obey_bhp_limit_with_thp_limit = true;
+            solvable = true;
         }
 
         // whether the well can be operated under bhp limit
@@ -210,6 +211,8 @@ protected:
         bool can_obtain_bhp_with_thp_limit = true;
         // whether the well obey bhp limit when operated under thp limit
         bool obey_bhp_limit_with_thp_limit = true;
+        // the well is solveable
+        bool solvable = true;
     };
 
     OperabilityStatus operability_status_;

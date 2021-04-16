@@ -1262,6 +1262,7 @@ namespace Opm {
         std::string exc_msg;
         try {
             for (const auto& well : well_container_) {
+                const bool old_well_operable = well->isOperable();
                 well->checkWellOperability(ebosSimulator_, this->wellState(), deferred_logger);
 
                 if (!well->isOperable() ) continue;
@@ -1277,6 +1278,22 @@ namespace Opm {
                 // solve the well equation initially to improve the initial solution of the well model
                 if (param_.solve_welleq_initially_) {
                     well->solveWellEquation(ebosSimulator_, this->wellState(), this->groupState(), deferred_logger);
+                }
+
+                const bool well_operable = well->isOperable();
+                if (!well_operable && old_well_operable) {
+                    const Well& well_ecl = getWellEcl(well->name());
+                    if (well_ecl.getAutomaticShutIn()) {
+                        deferred_logger.info(" well " + well->name() + " gets SHUT at the beginning of the time step ");
+                    } else {
+                        if (!well->wellIsStopped()) {
+                            deferred_logger.info(" well " + well->name() + " gets STOPPED at the beginning of the time step ");
+                            well->stopWell();
+                        }
+                    }
+                } else if (well_operable && !old_well_operable) {
+                    deferred_logger.info(" well " + well->name() + " gets REVIVED at the beginning of the time step ");
+                    well->openWell();
                 }
 
              }  // end of for (const auto& well : well_container_)
