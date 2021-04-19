@@ -1351,6 +1351,26 @@ namespace Opm
             do_glift_optimization_ = true;
         }
 
+        int wellNameToGlobalIdx(const std::string &name) {
+            auto it = wellNameToGlobalIdx_.find(name);
+            if (it == wellNameToGlobalIdx_.end())
+                OPM_THROW(std::logic_error, "Could not find global well idx for well " << name);
+
+            return it->second;
+        }
+
+        std::string globalIdxToWellName(const int index) {
+            using Pair = std::pair<std::string, int>;
+            auto it = find_if(wellNameToGlobalIdx_.begin(), wellNameToGlobalIdx_.end(), [index](const Pair & p) {
+                return p.second == index;
+            });
+            if (it == wellNameToGlobalIdx_.end() )
+            {
+                OPM_THROW(std::logic_error, "Could not find well name for global idx " << index);
+            }
+            return it->first;
+        }
+
     private:
         std::vector<double> perfphaserates_;
         std::vector<bool> is_producer_; // Size equal to number of local wells.

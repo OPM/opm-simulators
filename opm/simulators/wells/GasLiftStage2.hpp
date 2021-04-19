@@ -99,7 +99,7 @@ namespace Opm
         void displayWarning_(const std::string &msg);
         std::tuple<double, double, double> getCurrentGroupRates_(
             const Opm::Group &group);
-        std::tuple<double, double, double> getCurrentGroupRatesRecursive_(
+        std::array<double,3> getCurrentGroupRatesRecursive_(
             const Opm::Group &group);
         std::tuple<double, double, double> getCurrentWellRates_(
             const std::string &well_name, const std::string &group_name);
@@ -127,6 +127,9 @@ namespace Opm
             const std::string &name, GradInfo &grad, bool increase);
         void updateGradVector_(
             const std::string &name, std::vector<GradPair> &grads, double grad);
+        std::vector<GradPair> updateGlobalGradVector_(const std::vector<GradPair> &grads_global) const;
+        std::vector<GradPair> localToGlobalGradVector_(const std::vector<GradPair> &grads_local) const;
+
 
         DeferredLogger &deferred_logger_;
         const Simulator &ebos_simulator_;
@@ -213,7 +216,7 @@ namespace Opm
             bool checkEcoGradient(const std::string &well_name, double eco_grad);
             bool checkGasTarget();
             bool checkOilTarget();
-            void updateRates(const std::string &name, const GradInfo &gi);
+            void updateRates(const std::string &name);
         private:
         };
     };
