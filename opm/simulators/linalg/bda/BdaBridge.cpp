@@ -52,7 +52,12 @@ namespace Opm
     using bda::ILUReorder;
 
 template <class BridgeMatrix, class BridgeVector, int block_size>
-BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string accelerator_mode_, std::string fpga_bitstream, int linear_solver_verbosity, int maxit, double tolerance, unsigned int platformID, unsigned int deviceID, std::string opencl_ilu_reorder OPM_UNUSED)
+BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string accelerator_mode_,
+                                                             [[maybe_unused]] std::string fpga_bitstream,
+                                                             int linear_solver_verbosity, int maxit,
+                                                             double tolerance, unsigned int platformID,
+                                                             unsigned int deviceID,
+                                                             [[maybe_unused]] std::string opencl_ilu_reorder)
 : accelerator_mode(accelerator_mode_)
 {
     if (accelerator_mode.compare("cusparse") == 0) {
