@@ -68,6 +68,11 @@ namespace Opm
         using BaseType :: resetConnectionTransFactors;
         using BaseType :: updateStatus;
 
+        explicit WellStateFullyImplicitBlackoil(int num_phases) :
+            WellState(num_phases)
+        {}
+
+
         /// Allocate and initialize if wells is non-null.  Also tries
         /// to give useful initial values to the bhp(), wellRates()
         /// and perfPhaseRates() fields, depending on controls
@@ -105,7 +110,7 @@ namespace Opm
                 nperf += wpd.size();
             }
 
-            well_reservoir_rates_.resize(nw * np, 0.0);
+            well_reservoir_rates_.resize(nw * this->numPhases(), 0.0);
             well_dissolved_gas_rates_.resize(nw, 0.0);
             well_vaporized_oil_rates_.resize(nw, 0.0);
 
@@ -129,7 +134,7 @@ namespace Opm
 
             // Ensure that we start out with zero rates by default.
             perfphaserates_.clear();
-            perfphaserates_.resize(nperf * np, 0.0);
+            perfphaserates_.resize(nperf * this->numPhases(), 0.0);
 
             // these are only used to monitor the injectivity
             perf_water_throughput_.clear();
@@ -152,8 +157,8 @@ namespace Opm
 
                 for (int perf = connpos; perf < connpos + num_perf_this_well; ++perf) {
                     if (wells_ecl[w].getStatus() == Well::Status::OPEN) {
-                        for (int p = 0; p < np; ++p) {
-                            perfphaserates_[np*perf + p] = wellRates()[np*w + p] / double(global_num_perf_this_well);
+                        for (int p = 0; p < this->numPhases(); ++p) {
+                            perfphaserates_[this->numPhases()*perf + p] = wellRates()[this->numPhases()*w + p] / double(global_num_perf_this_well);
                         }
                     }
                     perfPress()[perf] = cellPressures[well_perf_data[w][perf-connpos].cell_index];
@@ -182,9 +187,9 @@ namespace Opm
 
             perfRateSolvent_.clear();
             perfRateSolvent_.resize(nperf, 0.0);
-            productivity_index_.resize(nw * np, 0.0);
-            conn_productivity_index_.resize(nperf * np, 0.0);
-            well_potentials_.resize(nw * np, 0.0);
+            productivity_index_.resize(nw * this->numPhases(), 0.0);
+            conn_productivity_index_.resize(nperf * this->numPhases(), 0.0);
+            well_potentials_.resize(nw * this->numPhases(), 0.0);
 
             perfRatePolymer_.clear();
             perfRatePolymer_.resize(nperf, 0.0);

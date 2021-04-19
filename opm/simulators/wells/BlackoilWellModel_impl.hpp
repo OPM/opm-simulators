@@ -33,7 +33,11 @@ namespace Opm {
     template<typename TypeTag>
     BlackoilWellModel<TypeTag>::
     BlackoilWellModel(Simulator& ebosSimulator)
-        : ebosSimulator_(ebosSimulator)
+        : ebosSimulator_(ebosSimulator),
+          phase_usage_(phaseUsageFromDeck(ebosSimulator_.vanguard().eclState())),
+          active_well_state_(phase_usage_.num_phases),
+          last_valid_well_state_(phase_usage_.num_phases),
+          nupcol_well_state_(phase_usage_.num_phases)
     {
         terminal_output_ = false;
         if (ebosSimulator.gridView().comm().rank() == 0)
@@ -75,12 +79,8 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     init()
     {
-        const Opm::EclipseState& eclState = ebosSimulator_.vanguard().eclState();
-
         extractLegacyCellPvtRegionIndex_();
         extractLegacyDepth_();
-
-        phase_usage_ = phaseUsageFromDeck(eclState);
 
         gravity_ = ebosSimulator_.problem().gravity()[2];
 
