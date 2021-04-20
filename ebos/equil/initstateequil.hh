@@ -1762,7 +1762,7 @@ private:
                 const auto& cells = reg.cells(i);
                 for (const auto& cell : cells) {
                     const double depth = cellCenterDepth_[cell];
-                    this->saltConcentration_[cell] = saltVdTable_[i].eval(depth);
+                    this->saltConcentration_[cell] = saltVdTable_[i].eval(depth, /*extrapolate=*/true);
                 }
             }
         }
