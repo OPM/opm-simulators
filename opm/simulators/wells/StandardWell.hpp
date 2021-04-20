@@ -458,7 +458,8 @@ namespace Opm
 
         void computeConnectionPressureDelta();
 
-        void computeWellConnectionDensitesPressures(const WellState& well_state,
+        void computeWellConnectionDensitesPressures(const Simulator& ebosSimulator,
+                                                    const WellState& well_state,
                                                     const std::vector<double>& b_perf,
                                                     const std::vector<double>& rsmax_perf,
                                                     const std::vector<double>& rvmax_perf,
@@ -468,7 +469,7 @@ namespace Opm
         void computeAccumWell();
 
         void computeWellConnectionPressures(const Simulator& ebosSimulator,
-                                                    const WellState& well_state);
+                                            const WellState& well_state);
 
         void computePerfRate(const IntensiveQuantities& intQuants,
                              const std::vector<EvalWell>& mob,
