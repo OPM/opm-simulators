@@ -2594,7 +2594,7 @@ namespace Opm {
             for (Phase phase : all) {
                 // Check higher up only if under individual (not FLD) control.
                 const Group::InjectionCMode& currentControl = this->wellState().currentInjectionGroupControl(phase, group.name());
-                if (currentControl != Group::InjectionCMode::FLD) {
+                if (currentControl != Group::InjectionCMode::FLD && group.injectionGroupControlAvailable(phase)) {
                     const Group& parentGroup = schedule().getGroup(group.parent(), reportStepIdx);
                     const std::pair<bool, double> changed = WellGroupHelpers::checkGroupConstraintsInj(
                         group.name(),
@@ -2628,7 +2628,7 @@ namespace Opm {
             }
             // Check higher up only if under individual (not FLD) control.
             const Group::ProductionCMode& currentControl = this->wellState().currentProductionGroupControl(group.name());
-                if (currentControl != Group::ProductionCMode::FLD) {
+                if (currentControl != Group::ProductionCMode::FLD && group.productionGroupControlAvailable()) {
                     const Group& parentGroup = schedule().getGroup(group.parent(), reportStepIdx);
                     const std::pair<bool, double> changed = WellGroupHelpers::checkGroupConstraintsProd(
                         group.name(),
