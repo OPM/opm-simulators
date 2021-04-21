@@ -199,7 +199,8 @@ The maximum relaxation factor of a Newton iteration used by flow. Default: 0.5
 The type of relaxation used by flow's Newton method. Default: "dampen"
 .TP
 \fB\-\-opencl\-ilu\-reorder\fR=\fI\,STRING\/\fR
-Choose the reordering strategy for ILU for openclSolver, usage: '\-\-opencl\-ilu\-reorder=[level_scheduling|graph_coloring], level_scheduling behaves like Dune and cusparse, graph_coloring is more aggressive and likely to be faster, but is random\-based and generally increases the number of linear solves and linear iterations significantly. Default: "graph_coloring"
+Choose the reordering strategy for ILU for openclSolver, possible
+values are level_scheduling or graph_coloring, where level_scheduling behaves like Dune and cusparse, graph_coloring is more aggressive and likely to be faster, but is random\-based and generally increases the number of linear solves and linear iterations significantly. Default: "graph_coloring"
 .TP
 \fB\-\-opencl\-platform\-id\fR=\fI\,INTEGER\/\fR
 Choose platform ID for openclSolver, use 'clinfo' to determine valid platform IDs. Default: 0
