@@ -181,9 +181,6 @@ public:
 protected:
     void createGrids_()
     {
-        const auto& gridProps = this->eclState().get3DProperties();
-        const std::vector<double>& porv = gridProps.getDoubleGridProperty("PORV").getData();
-
         // we use separate grid objects: one for the calculation of the initial condition
         // via EQUIL and one for the actual simulation. The reason is that the EQUIL code
         // cannot cope with arbitrary Dune grids and is also allergic to distributed
@@ -194,10 +191,10 @@ protected:
         /////
         equilGrid_ = new EquilGrid();
         equilGrid_->processEclipseFormat(&(this->eclState().getInputGrid()),
+                                         &(this->eclState()),
                                          /*isPeriodic=*/false,
                                          /*flipNormals=*/false,
-                                         /*clipZ=*/false,
-                                         porv);
+                                         /*clipZ=*/false);
 
         cartesianCellId_ = equilGrid_->globalCell();
 

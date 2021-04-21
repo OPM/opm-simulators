@@ -37,6 +37,8 @@
 #include <opm/simulators/utils/PropsCentroidsDataHandle.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
 
+#include <ebos/eclmpiserializer.hh>
+
 #include <dune/grid/common/mcmgmapper.hh>
 
 #include <dune/common/version.hh>
@@ -342,27 +344,23 @@ public:
 protected:
     void createGrids_()
     {
-        const EclipseGrid * input_grid = nullptr;
+        const EclipseGrid* input_grid = nullptr;
         std::vector<double> global_porv;
-        std::unordered_map<size_t, double> aquifer_cell_volumes;
         // At this stage the ParallelEclipseState instance is still in global
         // view; on rank 0 we have undistributed data for the entire grid, on
         // the other ranks the EclipseState is empty.
         if (mpiRank == 0) {
             input_grid = &this->eclState().getInputGrid();
             global_porv = this->eclState().fieldProps().porv(true);
-            aquifer_cell_volumes = this->eclState().aquifer().numericalAquifers().aquiferCellVolumes();
             OpmLog::info("\nProcessing grid");
         }
 
         grid_.reset(new Dune::CpGrid());
         const auto& removed_cells = grid_->processEclipseFormat(input_grid,
+                                                                &this->eclState(),
                                                                 /*isPeriodic=*/false,
                                                                 /*flipNormals=*/false,
-                                                                /*clipZ=*/false,
-                                                                global_porv,
-                                                                this->eclState().getInputNNC(),
-                                                                aquifer_cell_volumes);
+                                                                /*clipZ=*/false);
 
         if (mpiRank == 0) {
             const auto& active_porv = this->eclState().fieldProps().porv(false);
@@ -373,7 +371,7 @@ protected:
 
             double removed_pore_volume = 0;
             for (const auto& global_index : removed_cells)
-                removed_pore_volume += active_porv[ input_grid->activeIndex(global_index) ];
+                removed_pore_volume += active_porv[ this->eclState().getInputGrid().activeIndex(global_index) ];
 
             if (removed_pore_volume > 0) {
                 removed_pore_volume = unit_system.from_si( UnitSystem::measure::volume, removed_pore_volume );
@@ -385,6 +383,23 @@ protected:
             }
 
         }
+#if HAVE_MPI
+        {
+            const bool has_numerical_aquifer = this->eclState().aquifer().hasNumericalAquifer();
+            int mpiSize = 1;
+            MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
+            // when there is numerical aquifers, new NNC are generated during grid processing
+            // we need to pass the NNC from root process to other processes
+            if (has_numerical_aquifer && mpiSize > 1) {
+                auto nnc_input = this->eclState().getInputNNC();
+                Opm::EclMpiSerializer ser(Dune::MPIHelper::getCollectiveCommunication());
+                ser.broadcast(nnc_input);
+                if (mpiRank > 0) {
+                    this->eclState().setInputNNC(nnc_input);
+                }
+            }
+        }
+#endif
 
         // we use separate grid objects: one for the calculation of the initial condition
         // via EQUIL and one for the actual simulation. The reason is that the EQUIL code
