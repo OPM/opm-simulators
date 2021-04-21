@@ -28,6 +28,7 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/simulators/wells/GroupState.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -49,7 +50,7 @@ namespace WellGroupHelpers
                        const Schedule& schedule,
                        const SummaryState& summaryState,
                        const int reportStepIdx,
-                       WellStateFullyImplicitBlackoil& wellState);
+                       GroupState& groupState);
 
     void accumulateGroupEfficiencyFactor(const Group& group,
                                          const Schedule& schedule,
@@ -91,8 +92,8 @@ namespace WellGroupHelpers
                                     const PhaseUsage& pu,
                                     const GuideRate& guide_rate,
                                     const WellStateFullyImplicitBlackoil& wellStateNupcol,
-                                    WellStateFullyImplicitBlackoil& wellState,
-                                    std::vector<double>& groupTargetReduction);
+                                    const WellStateFullyImplicitBlackoil& wellState,
+                                    GroupState& group_state);
 
     template <class Comm>
     void updateGuideRateForProductionGroups(const Group& group,
@@ -230,13 +231,15 @@ namespace WellGroupHelpers
                              const Schedule& schedule,
                              const int reportStepIdx,
                              const WellStateFullyImplicitBlackoil& wellStateNupcol,
-                             WellStateFullyImplicitBlackoil& wellState);
+                             const WellStateFullyImplicitBlackoil& wellState,
+                             GroupState& group_state);
 
     void updateReservoirRatesInjectionGroups(const Group& group,
                                              const Schedule& schedule,
                                              const int reportStepIdx,
                                              const WellStateFullyImplicitBlackoil& wellStateNupcol,
-                                             WellStateFullyImplicitBlackoil& wellState);
+                                             const WellStateFullyImplicitBlackoil& wellState,
+                                             GroupState& group_state);
 
     void updateWellRates(const Group& group,
                          const Schedule& schedule,
@@ -248,7 +251,8 @@ namespace WellGroupHelpers
                                     const Schedule& schedule,
                                     const int reportStepIdx,
                                     const WellStateFullyImplicitBlackoil& wellStateNupcol,
-                                    WellStateFullyImplicitBlackoil& wellState);
+                                    const WellStateFullyImplicitBlackoil& wellState,
+                                    GroupState& group_state);
 
     void updateREINForGroups(const Group& group,
                              const Schedule& schedule,
@@ -256,7 +260,8 @@ namespace WellGroupHelpers
                              const PhaseUsage& pu,
                              const SummaryState& st,
                              const WellStateFullyImplicitBlackoil& wellStateNupcol,
-                             WellStateFullyImplicitBlackoil& wellState);
+                             const WellStateFullyImplicitBlackoil& wellState,
+                             GroupState& group_state);
 
     std::map<std::string, double>
     computeNetworkPressures(const Opm::Network::ExtNetwork& network,

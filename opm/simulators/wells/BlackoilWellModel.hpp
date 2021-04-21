@@ -574,10 +574,11 @@ namespace Opm {
 
             // convert well data from opm-common to well state from opm-core
             void loadRestartData( const data::Wells& wells,
-                               const data::GroupAndNetworkValues& grpNwrkValues,
-                               const PhaseUsage& phases,
-                               const bool handle_ms_well,
-                               WellStateFullyImplicitBlackoil& state ) const;
+                                  const data::GroupAndNetworkValues& grpNwrkValues,
+                                  const PhaseUsage& phases,
+                                  const bool handle_ms_well,
+                                  WellStateFullyImplicitBlackoil& well_state,
+                                  GroupState& group_state) const;
 
             // whether there exists any multisegment well open on this process
             bool anyMSWellOpenLocal() const;
@@ -589,7 +590,7 @@ namespace Opm {
             bool checkGroupConstraints(const Group& group, Opm::DeferredLogger& deferred_logger) const;
             Group::ProductionCMode checkGroupProductionConstraints(const Group& group, Opm::DeferredLogger& deferred_logger) const;
             Group::InjectionCMode checkGroupInjectionConstraints(const Group& group, const Phase& phase) const;
-            void checkGconsaleLimits(const Group& group, WellState& well_state, Opm::DeferredLogger& deferred_logger ) const;
+            void checkGconsaleLimits(const Group& group, const WellState& well_state, GroupState& group_state, Opm::DeferredLogger& deferred_logger ) const;
 
             void updateGroupHigherControls(Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
             void checkGroupHigherConstraints(const Group& group, Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
