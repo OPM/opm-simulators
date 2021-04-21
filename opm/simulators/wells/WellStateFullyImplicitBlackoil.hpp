@@ -22,6 +22,7 @@
 #define OPM_WELLSTATEFULLYIMPLICITBLACKOIL_HEADER_INCLUDED
 
 #include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/GroupState.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
@@ -69,7 +70,8 @@ namespace Opm
         using BaseType :: updateStatus;
 
         explicit WellStateFullyImplicitBlackoil(int num_phases) :
-            WellState(num_phases)
+            WellState(num_phases),
+            group_state(num_phases)
         {}
 
 
@@ -412,39 +414,29 @@ namespace Opm
         const std::vector<Well::ProducerCMode>& currentProductionControls() const { return current_production_controls_; }
 
         bool hasProductionGroupControl(const std::string& groupName) const {
-            return current_production_group_controls_.count(groupName) > 0;
+            return this->group_state.has_production_control(groupName);
         }
 
         bool hasInjectionGroupControl(const Opm::Phase& phase, const std::string& groupName) const {
-            return current_injection_group_controls_.count(std::make_pair(phase, groupName)) > 0;
+            return this->group_state.has_injection_control(groupName, phase);
         }
 
         /// One current control per group.
         void setCurrentProductionGroupControl(const std::string& groupName, const Group::ProductionCMode& groupControl ) {
-            current_production_group_controls_[groupName] = groupControl;
+            this->group_state.production_control(groupName, groupControl);
         }
 
-        const Group::ProductionCMode& currentProductionGroupControl(const std::string& groupName) const {
-            auto it = current_production_group_controls_.find(groupName);
-
-            if (it == current_production_group_controls_.end())
-                OPM_THROW(std::logic_error, "Could not find any control for production group " << groupName);
-
-            return it->second;
+        Group::ProductionCMode currentProductionGroupControl(const std::string& groupName) const {
+            return this->group_state.production_control(groupName);
         }
 
         /// One current control per group.
         void setCurrentInjectionGroupControl(const Opm::Phase& phase, const std::string& groupName, const Group::InjectionCMode& groupControl ) {
-            current_injection_group_controls_[std::make_pair(phase, groupName)] = groupControl;
+            this->group_state.injection_control(groupName, phase, groupControl);
         }
 
-        const Group::InjectionCMode& currentInjectionGroupControl(const Opm::Phase& phase, const std::string& groupName) const {
-            auto it = current_injection_group_controls_.find(std::make_pair(phase, groupName));
-
-            if (it == current_injection_group_controls_.end())
-                OPM_THROW(std::logic_error, "Could not find any control for " << phase << " injection group " << groupName);
-
-            return it->second;
+        Group::InjectionCMode currentInjectionGroupControl(const Opm::Phase& phase, const std::string& groupName) const {
+            return this->group_state.injection_control(groupName, phase);
         }
 
         void setCurrentWellRates(const std::string& wellName, const std::vector<double>& rates ) {
@@ -465,117 +457,76 @@ namespace Opm
         }
 
         void setCurrentProductionGroupRates(const std::string& groupName, const std::vector<double>& rates ) {
-            production_group_rates[groupName] = rates;
+            this->group_state.update_production_rates(groupName, rates);
         }
 
         const std::vector<double>& currentProductionGroupRates(const std::string& groupName) const {
-            auto it = production_group_rates.find(groupName);
-
-            if (it == production_group_rates.end())
-                OPM_THROW(std::logic_error, "Could not find any rates for productino group  " << groupName);
-
-            return it->second;
+            return this->group_state.production_rates(groupName);
         }
 
         bool hasProductionGroupRates(const std::string& groupName) const {
-            return this->production_group_rates.find(groupName) != this->production_group_rates.end();
+            return this->group_state.has_production_rates(groupName);
         }
 
 
         void setCurrentProductionGroupReductionRates(const std::string& groupName, const std::vector<double>& target ) {
-            production_group_reduction_rates[groupName] = target;
+            this->group_state.update_production_reduction_rates(groupName, target);
         }
 
         const std::vector<double>& currentProductionGroupReductionRates(const std::string& groupName) const {
-            auto it = production_group_reduction_rates.find(groupName);
-
-            if (it == production_group_reduction_rates.end())
-                OPM_THROW(std::logic_error, "Could not find any reduction rates for production group  " << groupName);
-
-            return it->second;
+            return this->group_state.production_reduction_rates(groupName);
         }
 
         void setCurrentInjectionGroupReductionRates(const std::string& groupName, const std::vector<double>& target ) {
-            injection_group_reduction_rates[groupName] = target;
+            this->group_state.update_injection_reduction_rates(groupName, target);
         }
 
         const std::vector<double>& currentInjectionGroupReductionRates(const std::string& groupName) const {
-            auto it = injection_group_reduction_rates.find(groupName);
-
-            if (it == injection_group_reduction_rates.end())
-                OPM_THROW(std::logic_error, "Could not find any reduction rates for injection group " << groupName);
-
-            return it->second;
+            return this->group_state.injection_reduction_rates(groupName);
         }
 
         void setCurrentInjectionGroupReservoirRates(const std::string& groupName, const std::vector<double>& target ) {
-            injection_group_reservoir_rates[groupName] = target;
+            this->group_state.update_injection_reservoir_rates(groupName, target);
         }
 
         const std::vector<double>& currentInjectionGroupReservoirRates(const std::string& groupName) const {
-            auto it = injection_group_reservoir_rates.find(groupName);
-
-            if (it == injection_group_reservoir_rates.end())
-                OPM_THROW(std::logic_error, "Could not find any reservoir rates for injection group " << groupName);
-
-            return it->second;
+            return this->group_state.injection_reservoir_rates(groupName);
         }
 
         void setCurrentInjectionVREPRates(const std::string& groupName, const double& target ) {
-            injection_group_vrep_rates[groupName] = target;
+            this->group_state.update_injection_vrep_rate(groupName, target);
         }
 
-        const double& currentInjectionVREPRates(const std::string& groupName) const {
-            auto it = injection_group_vrep_rates.find(groupName);
-
-            if (it == injection_group_vrep_rates.end())
-                OPM_THROW(std::logic_error, "Could not find any VREP rates for group " << groupName);
-
-            return it->second;
+        double currentInjectionVREPRates(const std::string& groupName) const {
+            return this->group_state.injection_vrep_rate(groupName);
         }
 
         void setCurrentInjectionREINRates(const std::string& groupName, const std::vector<double>& target ) {
-            injection_group_rein_rates[groupName] = target;
+            this->group_state.update_injection_rein_rates(groupName, target);
         }
 
         const std::vector<double>& currentInjectionREINRates(const std::string& groupName) const {
-            auto it = injection_group_rein_rates.find(groupName);
-
-            if (it == injection_group_rein_rates.end())
-                OPM_THROW(std::logic_error, "Could not find any REIN rates for group " << groupName);
-
-            return it->second;
+            return this->group_state.injection_rein_rates(groupName);
         }
 
         void setCurrentGroupGratTargetFromSales(const std::string& groupName, const double& target ) {
-            group_grat_target_from_sales[groupName] = target;
+            this->group_state.update_grat_sales_target(groupName, target);
         }
 
         bool hasGroupGratTargetFromSales(const std::string& groupName) const {
-            auto it = group_grat_target_from_sales.find(groupName);
-            return it != group_grat_target_from_sales.end();
+            return this->group_state.has_grat_sales_target(groupName);
         }
 
-        const double& currentGroupGratTargetFromSales(const std::string& groupName) const {
-            auto it = group_grat_target_from_sales.find(groupName);
-
-            if (it == group_grat_target_from_sales.end())
-                OPM_THROW(std::logic_error, "Could not find any grat target from sales for group " << groupName);
-
-            return it->second;
+        double currentGroupGratTargetFromSales(const std::string& groupName) const {
+            return this->group_state.grat_sales_target(groupName);
         }
 
         void setCurrentGroupInjectionPotentials(const std::string& groupName, const std::vector<double>& pot ) {
-            injection_group_potentials[groupName] = pot;
+            this->group_state.update_injection_potentials(groupName, pot);
         }
 
         const std::vector<double>& currentGroupInjectionPotentials(const std::string& groupName) const {
-            auto it = injection_group_potentials.find(groupName);
-
-            if (it == injection_group_potentials.end())
-                OPM_THROW(std::logic_error, "Could not find any potentials for group " << groupName);
-
-            return it->second;
+            return this->group_state.injection_potentials(groupName);
         }
 
         data::Wells
@@ -1141,11 +1092,6 @@ namespace Opm
             // Create a function that calls some function
             // for all the individual data items to simplify
             // the further code.
-            auto iterateContainer = [](auto& container, auto& func) {
-                for (auto& x : container) {
-                    func(x.second);
-                }
-            };
             auto iterateRatesContainer = [](auto& container, auto& func) {
                 for (auto& x : container) {
                     if (x.second.first)
@@ -1163,22 +1109,13 @@ namespace Opm
                 }
             };
 
-            auto forAllGroupData = [&](auto& func) {
-                iterateContainer(injection_group_rein_rates, func);
-                iterateContainer(production_group_reduction_rates, func);
-                iterateContainer(injection_group_reduction_rates, func);
-                iterateContainer(injection_group_reservoir_rates, func);
-                iterateContainer(production_group_rates, func);
-                iterateRatesContainer(well_rates, func);
-            };
 
             // Compute the size of the data.
             std::size_t sz = 0;
             auto computeSize = [&sz](const auto& v) {
                 sz += v.size();
             };
-            forAllGroupData(computeSize);
-            sz += injection_group_vrep_rates.size();
+            iterateRatesContainer(this->well_rates, computeSize);
             sz += current_alq_.size();
 
             // Make a vector and collect all data into it.
@@ -1189,10 +1126,7 @@ namespace Opm
                     data[pos++] = x;
                 }
             };
-            forAllGroupData(collect);
-            for (const auto& x : injection_group_vrep_rates) {
-                data[pos++] = x.second;
-            }
+            iterateRatesContainer(this->well_rates, collect);
             for (const auto& x : current_alq_) {
                 data[pos++] = x.second;
             }
@@ -1208,14 +1142,13 @@ namespace Opm
                     x = data[pos++];
                 }
             };
-            forAllGroupData(distribute);
-            for (auto& x : injection_group_vrep_rates) {
-                x.second = data[pos++];
-            }
+            iterateRatesContainer(this->well_rates, distribute);
             for (auto& x : current_alq_) {
                 x.second = data[pos++];
             }
             assert(pos == sz);
+
+            this->group_state.communicate_rates(comm);
         }
 
         template<class Comm>
@@ -1391,19 +1324,10 @@ namespace Opm
         std::vector<int> globalIsInjectionGrup_;
         std::vector<int> globalIsProductionGrup_;
         std::map<std::string, int> wellNameToGlobalIdx_;
-
-        std::map<std::string, Group::ProductionCMode> current_production_group_controls_;
-        std::map<std::pair<Opm::Phase, std::string>, Group::InjectionCMode> current_injection_group_controls_;
-
         std::map<std::string, std::pair<bool, std::vector<double>>> well_rates;
-        std::map<std::string, std::vector<double>> production_group_rates;
-        std::map<std::string, std::vector<double>> production_group_reduction_rates;
-        std::map<std::string, std::vector<double>> injection_group_reduction_rates;
-        std::map<std::string, std::vector<double>> injection_group_reservoir_rates;
-        std::map<std::string, std::vector<double>> injection_group_potentials;
-        std::map<std::string, double> injection_group_vrep_rates;
-        std::map<std::string, std::vector<double>> injection_group_rein_rates;
-        std::map<std::string, double> group_grat_target_from_sales;
+
+        GroupState group_state;
+
         std::map<std::string, double> current_alq_;
         std::map<std::string, double> default_alq_;
         std::map<std::string, int> alq_increase_count_;
