@@ -1229,14 +1229,7 @@ namespace Opm
                 if (it != end) {
                     // ... set the GRUP/not GRUP states.
                     const int well_index = it->second[0];
-                    if (this->status_[well_index] != Well::Status::OPEN) {
-                        // Well is shut.
-                        if (well.isInjector()) {
-                            globalIsInjectionGrup_[global_well_index] = 0;
-                        } else {
-                            globalIsProductionGrup_[global_well_index] = 0;
-                        }
-                    } else {
+                    if (this->status_[well_index] == Well::Status::OPEN) {
                         if (well.isInjector()) {
                             globalIsInjectionGrup_[global_well_index] = (currentInjectionControls()[well_index] == Well::InjectorCMode::GRUP);
                         } else {
