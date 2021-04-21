@@ -1218,10 +1218,10 @@ namespace Opm
         {
             std::fill(globalIsInjectionGrup_.begin(), globalIsInjectionGrup_.end(), 0);
             std::fill(globalIsProductionGrup_.begin(), globalIsProductionGrup_.end(), 0);
-            int global_well_index = 0;
             const auto& end = wellMap().end();
             for (const auto& well : schedule.getWells(reportStepIdx)) {
                 // Build global name->index map.
+                auto global_well_index = well.seqIndex();
                 wellNameToGlobalIdx_[well.name()] = global_well_index;
 
                 // For wells on this process...
@@ -1237,7 +1237,6 @@ namespace Opm
                         }
                     }
                 }
-                ++global_well_index;
             }
             comm.sum(globalIsInjectionGrup_.data(), globalIsInjectionGrup_.size());
             comm.sum(globalIsProductionGrup_.data(), globalIsProductionGrup_.size());
