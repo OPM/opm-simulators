@@ -37,7 +37,9 @@
 #include <opm/simulators/utils/PropsCentroidsDataHandle.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
 
+#if HAVE_MPI
 #include <ebos/eclmpiserializer.hh>
+#endif
 
 #include <dune/grid/common/mcmgmapper.hh>
 
