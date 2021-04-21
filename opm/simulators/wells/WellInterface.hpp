@@ -41,6 +41,7 @@
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
 #include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/simulators/wells/GroupState.hpp>
 // NOTE: GasLiftSingleWell.hpp includes StandardWell.hpp which includes ourself
 //   (WellInterface.hpp), so we need to forward declare GasLiftSingleWell
 //   for it to be defined in this file. Similar for BlackoilWellModel
@@ -185,6 +186,7 @@ namespace Opm
         virtual void assembleWellEq(const Simulator& ebosSimulator,
                                     const double dt,
                                     WellState& well_state,
+                                    const GroupState& group_state,
                                     Opm::DeferredLogger& deferred_logger
                                     ) = 0;
 
@@ -233,6 +235,7 @@ namespace Opm
         bool updateWellControl(const Simulator& ebos_simulator,
                                const IndividualOrGroup iog,
                                WellState& well_state,
+                               const GroupState& group_state,
                                Opm::DeferredLogger& deferred_logger) /* const */;
 
         virtual void updatePrimaryVariables(const WellState& well_state, Opm::DeferredLogger& deferred_logger) const = 0;
@@ -283,7 +286,9 @@ namespace Opm
         void wellTesting(const Simulator& simulator,
                          const double simulation_time, const int report_step,
                          const WellTestConfig::Reason testing_reason,
-                         /* const */ WellState& well_state, WellTestState& welltest_state,
+                         /* const */ WellState& well_state,
+                         const GroupState& group_state,
+                         WellTestState& welltest_state,
                          Opm::DeferredLogger& deferred_logger);
 
         void updatePerforatedCell(std::vector<bool>& is_cell_perforated);
@@ -339,6 +344,7 @@ namespace Opm
 
         void solveWellEquation(const Simulator& ebosSimulator,
                                WellState& well_state,
+                               const GroupState& group_state,
                                Opm::DeferredLogger& deferred_logger);
 
         const PhaseUsage& phaseUsage() const;
@@ -528,12 +534,15 @@ namespace Opm
 
 
         void wellTestingEconomic(const Simulator& simulator,
-                                 const double simulation_time, const WellState& well_state,
+                                 const double simulation_time, const WellState& well_state, const GroupState& group_state,
                                  WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger);
 
         void wellTestingPhysical(const Simulator& simulator,
                                  const double simulation_time, const int report_step,
-                                 WellState& well_state, WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger);
+                                 WellState& well_state,
+                                 const GroupState& group_state,
+                                 WellTestState& welltest_state,
+                                 Opm::DeferredLogger& deferred_logger);
 
 
         virtual void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
@@ -541,6 +550,7 @@ namespace Opm
                                                     const Well::InjectionControls& inj_controls,
                                                     const Well::ProductionControls& prod_controls,
                                                     WellState& well_state,
+                                                    const GroupState& group_state,
                                                     Opm::DeferredLogger& deferred_logger) = 0;
 
         // iterate well equations with the specified control until converged
@@ -549,11 +559,13 @@ namespace Opm
                                               const Well::InjectionControls& inj_controls,
                                               const Well::ProductionControls& prod_controls,
                                               WellState& well_state,
+                                              const GroupState& group_state,
                                               Opm::DeferredLogger& deferred_logger) = 0;
 
         bool iterateWellEquations(const Simulator& ebosSimulator,
                                   const double dt,
                                   WellState& well_state,
+                                  const GroupState& group_state,
                                   Opm::DeferredLogger& deferred_logger);
 
         void updateWellTestStateEconomic(const WellState& well_state,
@@ -568,12 +580,13 @@ namespace Opm
                                          WellTestState& well_test_state,
                                          Opm::DeferredLogger& deferred_logger) const;
 
-        void solveWellForTesting(const Simulator& ebosSimulator, WellState& well_state,
+        void solveWellForTesting(const Simulator& ebosSimulator, WellState& well_state, const GroupState& group_state,
                                  Opm::DeferredLogger& deferred_logger);
 
         void initCompletions();
 
         bool checkConstraints(WellState& well_state,
+                              const GroupState& group_state,
                               const Schedule& schedule,
                               const SummaryState& summaryState,
                               DeferredLogger& deferred_logger) const;
@@ -582,27 +595,31 @@ namespace Opm
                                         const SummaryState& summaryState) const;
 
         bool checkGroupConstraints(WellState& well_state,
+                                   const GroupState& group_state,
                                    const Schedule& schedule,
                                    const SummaryState& summaryState,
                                    DeferredLogger& deferred_logger) const;
 
         std::pair<bool, double> checkGroupConstraintsProd(const Group& group,
-                                       const WellState& well_state,
-                                       const double efficiencyFactor,
-                                       const Schedule& schedule,
-                                       const SummaryState& summaryState,
-                                       DeferredLogger& deferred_logger) const;
+                                                          const WellState& well_state,
+                                                          const GroupState& group_state,
+                                                          const double efficiencyFactor,
+                                                          const Schedule& schedule,
+                                                          const SummaryState& summaryState,
+                                                          DeferredLogger& deferred_logger) const;
 
         std::pair<bool, double> checkGroupConstraintsInj(const Group& group,
-                                      const WellState& well_state,
-                                      const double efficiencyFactor,
-                                      const Schedule& schedule,
-                                      const SummaryState& summaryState,
-                                      DeferredLogger& deferred_logger) const;
+                                                         const WellState& well_state,
+                                                         const GroupState& group_state,
+                                                         const double efficiencyFactor,
+                                                         const Schedule& schedule,
+                                                         const SummaryState& summaryState,
+                                                         DeferredLogger& deferred_logger) const;
 
         template <class EvalWell>
         void getGroupInjectionControl(const Group& group,
                                       const WellState& well_state,
+                                      const GroupState& group_state,
                                       const Opm::Schedule& schedule,
                                       const SummaryState& summaryState,
                                       const InjectorType& injectorType,
@@ -615,6 +632,7 @@ namespace Opm
         template <class EvalWell>
         void getGroupProductionControl(const Group& group,
                                        const WellState& well_state,
+                                       const GroupState& group_state,
                                        const Opm::Schedule& schedule,
                                        const SummaryState& summaryState,
                                        const EvalWell& bhp,
@@ -624,6 +642,7 @@ namespace Opm
 
         template <class EvalWell, class BhpFromThpFunc>
         void assembleControlEqInj(const WellState& well_state,
+                                  const GroupState& group_state,
                                   const Opm::Schedule& schedule,
                                   const SummaryState& summaryState,
                                   const Well::InjectionControls& controls,
@@ -635,6 +654,7 @@ namespace Opm
 
         template <class EvalWell, class BhpFromThpFunc>
         void assembleControlEqProd(const WellState& well_state,
+                                   const GroupState& group_state,
                                    const Opm::Schedule& schedule,
                                    const SummaryState& summaryState,
                                    const Well::ProductionControls& controls,

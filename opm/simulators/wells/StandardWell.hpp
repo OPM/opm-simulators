@@ -184,6 +184,7 @@ namespace Opm
         virtual void assembleWellEq(const Simulator& ebosSimulator,
                                     const double dt,
                                     WellState& well_state,
+                                    const GroupState& group_state,
                                     Opm::DeferredLogger& deferred_logger) override;
 
         virtual void updateWellStateWithTarget(const Simulator& ebos_simulator,
@@ -242,6 +243,7 @@ namespace Opm
                                       const Well::InjectionControls& inj_controls,
                                       const Well::ProductionControls& prod_controls,
                                       WellState& well_state,
+                                      const GroupState& group_state,
                                       Opm::DeferredLogger& deferred_logger) override;
 
         /// \brief Wether the Jacobian will also have well contributions in it.
@@ -518,6 +520,7 @@ namespace Opm
         double getALQ(const WellState& well_state) const;
 
         void assembleControlEq(const WellState& well_state,
+                               const GroupState& group_state,
                                const Opm::Schedule& schedule,
                                const SummaryState& summaryState,
                                Opm::DeferredLogger& deferred_logger);
@@ -531,11 +534,13 @@ namespace Opm
                                                     const Well::InjectionControls& inj_controls,
                                                     const Well::ProductionControls& prod_controls,
                                                     WellState& well_state,
+                                                    const GroupState& group_state,
                                                     Opm::DeferredLogger& deferred_logger) override;
 
         void assembleWellEqWithoutIterationImpl(const Simulator& ebosSimulator,
                                                 const double dt,
                                                 WellState& well_state,
+                                                const GroupState& group_state,
                                                 Opm::DeferredLogger& deferred_logger);
 
         void calculateSinglePerf(const Simulator& ebosSimulator,

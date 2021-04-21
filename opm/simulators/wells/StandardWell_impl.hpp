@@ -544,20 +544,21 @@ namespace Opm
     assembleWellEq(const Simulator& ebosSimulator,
                    const double dt,
                    WellState& well_state,
+                   const GroupState& group_state,
                    Opm::DeferredLogger& deferred_logger)
     {
         checkWellOperability(ebosSimulator, well_state, deferred_logger);
 
         const bool use_inner_iterations = param_.use_inner_iterations_wells_;
         if (use_inner_iterations) {
-            this->iterateWellEquations(ebosSimulator, dt, well_state, deferred_logger);
+            this->iterateWellEquations(ebosSimulator, dt, well_state, group_state, deferred_logger);
         }
 
         // TODO: inj_controls and prod_controls are not used in the following function for now
         const auto& summary_state = ebosSimulator.vanguard().summaryState();
         const auto inj_controls = well_ecl_.isInjector() ? well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
         const auto prod_controls = well_ecl_.isProducer() ? well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
-        assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, deferred_logger);
+        assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
     }
 
 
@@ -571,6 +572,7 @@ namespace Opm
                                    const Well::InjectionControls& /*inj_controls*/,
                                    const Well::ProductionControls& /*prod_controls*/,
                                    WellState& well_state,
+                                   const GroupState& group_state,
                                    Opm::DeferredLogger& deferred_logger)
     {
         // TODO: only_wells should be put back to save some computation
@@ -583,7 +585,7 @@ namespace Opm
         invDuneD_ = 0.0;
         resWell_ = 0.0;
 
-        assembleWellEqWithoutIterationImpl(ebosSimulator, dt, well_state, deferred_logger);
+        assembleWellEqWithoutIterationImpl(ebosSimulator, dt, well_state, group_state, deferred_logger);
     }
 
 
@@ -595,6 +597,7 @@ namespace Opm
     assembleWellEqWithoutIterationImpl(const Simulator& ebosSimulator,
                                        const double dt,
                                        WellState& well_state,
+                                       const GroupState& group_state,
                                        Opm::DeferredLogger& deferred_logger)
     {
 
@@ -678,7 +681,7 @@ namespace Opm
 
         const auto& summaryState = ebosSimulator.vanguard().summaryState();
         const Opm::Schedule& schedule = ebosSimulator.vanguard().schedule();
-        assembleControlEq(well_state, schedule, summaryState, deferred_logger);
+        assembleControlEq(well_state, group_state, schedule, summaryState, deferred_logger);
 
 
         // do the local inversion of D.
@@ -869,6 +872,7 @@ namespace Opm
     template <typename TypeTag>
     void
     StandardWell<TypeTag>::assembleControlEq(const WellState& well_state,
+                                             const GroupState& group_state,
                                              const Opm::Schedule& schedule,
                                              const SummaryState& summaryState,
                                              Opm::DeferredLogger& deferred_logger)
@@ -903,7 +907,7 @@ namespace Opm
             };
             // Call generic implementation.
             const auto& inj_controls = well.injectionControls(summaryState);
-            Base::assembleControlEqInj(well_state, schedule, summaryState, inj_controls, getBhp(), injection_rate, bhp_from_thp, control_eq, deferred_logger);
+            Base::assembleControlEqInj(well_state, group_state, schedule, summaryState, inj_controls, getBhp(), injection_rate, bhp_from_thp, control_eq, deferred_logger);
         } else {
             // Find rates.
             const auto rates = getRates();
@@ -913,7 +917,7 @@ namespace Opm
             };
             // Call generic implementation.
             const auto& prod_controls = well.productionControls(summaryState);
-            Base::assembleControlEqProd(well_state, schedule, summaryState, prod_controls, getBhp(), rates, bhp_from_thp, control_eq, deferred_logger);
+            Base::assembleControlEqProd(well_state, group_state, schedule, summaryState, prod_controls, getBhp(), rates, bhp_from_thp, control_eq, deferred_logger);
         }
 
         // using control_eq to update the matrix and residuals
@@ -2606,6 +2610,7 @@ namespace Opm
         // create a copy of the well_state to use. If the operability checking is sucessful, we use this one
         // to replace the original one
         WellState well_state_copy = ebosSimulator.problem().wellModel().wellState();
+        const auto& group_state = ebosSimulator.problem().wellModel().wellState().groupState();
 
         //  Set current control to bhp, and bhp value in state, modify bhp limit in control object.
         if (well_ecl_.isInjector()) {
@@ -2616,7 +2621,7 @@ namespace Opm
         well_state_copy.bhp()[index_of_well_] = bhp;
 
         const double dt = ebosSimulator.timeStepSize();
-        bool converged = this->iterateWellEquations(ebosSimulator, dt, well_state_copy, deferred_logger);
+        bool converged = this->iterateWellEquations(ebosSimulator, dt, well_state_copy, group_state, deferred_logger);
         if (!converged) {
             const std::string msg = " well " + name() + " did not get converged during well potential calculations "
                                                         "returning zero values for the potential";
@@ -4097,13 +4102,14 @@ namespace Opm
                              const Well::InjectionControls& inj_controls,
                              const Well::ProductionControls& prod_controls,
                              WellState& well_state,
+                             const GroupState& group_state,
                              Opm::DeferredLogger& deferred_logger)
     {
         const int max_iter = param_.max_inner_iter_wells_;
         int it = 0;
         bool converged;
         do {
-            assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, deferred_logger);
+            assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
 
             auto report = getWellConvergence(well_state, Base::B_avg_, deferred_logger);
 

@@ -26,6 +26,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
 
 #include <algorithm>
@@ -175,6 +176,7 @@ namespace WellGroupHelpers
                                   const std::string& group_name,
                                   const double sales_target,
                                   const WellStateFullyImplicitBlackoil& well_state,
+                                  const GroupState& group_state,
                                   const Phase& injection_phase,
                                   DeferredLogger& deferred_logger)
             : cmode_(cmode)
@@ -183,6 +185,8 @@ namespace WellGroupHelpers
             , group_name_(group_name)
             , sales_target_(sales_target)
             , well_state_(well_state)
+            , group_state_(group_state)
+
         {
             // initialize to avoid warning
             pos_ = pu.phase_pos[BlackoilPhases::Aqua];
@@ -226,14 +230,15 @@ namespace WellGroupHelpers
             case Group::InjectionCMode::RESV:
                 return ctrl.resv_max_rate;
             case Group::InjectionCMode::REIN: {
-                double production_rate = well_state_.currentInjectionREINRates(ctrl.reinj_group)[pos_];
+                double production_rate = this->group_state_.production_rates(ctrl.reinj_group)[pos_];
                 return ctrl.target_reinj_fraction * production_rate;
             }
+
             case Group::InjectionCMode::VREP: {
                 const std::vector<double>& group_injection_reductions
-                    = well_state_.currentInjectionGroupReductionRates(group_name_);
+                    = this->group_state_.injection_reduction_rates(group_name_);
                 double voidage_rate
-                        = well_state_.currentInjectionVREPRates(ctrl.voidage_group) * ctrl.target_void_fraction;
+                    = this->group_state_.injection_vrep_rate(ctrl.voidage_group) * ctrl.target_void_fraction;
                 double inj_reduction = 0.0;
                 if (ctrl.phase != Phase::WATER)
                     inj_reduction += group_injection_reductions[pu_.phase_pos[BlackoilPhases::Aqua]]
@@ -251,7 +256,7 @@ namespace WellGroupHelpers
                 assert(pos_ == pu_.phase_pos[BlackoilPhases::Vapour]);
                 // Gas injection rate = Total gas production rate + gas import rate - gas consumption rate - sales rate;
                 // Gas import and consumption is already included in the REIN rates
-                double inj_rate = well_state_.currentInjectionREINRates(group_name_)[pos_];
+                double inj_rate = group_state_.injection_rein_rates(group_name_)[pos_];
                 inj_rate -= sales_target_;
                 return inj_rate;
             }
@@ -283,6 +288,7 @@ namespace WellGroupHelpers
         const std::string& group_name_;
         double sales_target_;
         const WellStateFullyImplicitBlackoil& well_state_;
+        const GroupState& group_state_;
         int pos_;
         GuideRateModel::Target target_;
 

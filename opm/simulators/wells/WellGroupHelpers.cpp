@@ -232,13 +232,14 @@ namespace WellGroupHelpers
                                             const Opm::PhaseUsage& pu,
                                             const int reportStepIdx,
                                             const WellStateFullyImplicitBlackoil& wellState,
+                                            const GroupState& group_state,
                                             GuideRate* guideRate,
                                             Opm::DeferredLogger& deferred_logger)
     {
         for (const std::string& groupName : group.groups()) {
             const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
             updateGuideRatesForInjectionGroups(
-                        groupTmp, schedule, summaryState, pu, reportStepIdx, wellState, guideRate, deferred_logger);
+                                               groupTmp, schedule, summaryState, pu, reportStepIdx, wellState, group_state, guideRate, deferred_logger);
         }
         const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
         for (Phase phase : all) {
@@ -253,13 +254,13 @@ namespace WellGroupHelpers
                 break;
             case Group::GuideRateInjTarget::VOID:
             {
-                guideRateValue = wellState.currentInjectionVREPRates(group.name());
+                guideRateValue = group_state.injection_vrep_rate(group.name());
                 break;
             }
             case Group::GuideRateInjTarget::NETV:
             {
-                guideRateValue = wellState.currentInjectionVREPRates(group.name());
-                const std::vector<double>& injRES = wellState.currentInjectionGroupReservoirRates(group.name());
+                guideRateValue = group_state.injection_vrep_rate(group.name());
+                const std::vector<double>& injRES = group_state.injection_reservoir_rates(group.name());
                 if (phase != Phase::OIL && pu.phase_used[BlackoilPhases::Liquid])
                     guideRateValue -= injRES[pu.phase_pos[BlackoilPhases::Liquid]];
                 if (phase != Phase::GAS && pu.phase_used[BlackoilPhases::Vapour])
@@ -284,15 +285,15 @@ namespace WellGroupHelpers
     }
 
     static void updateGroupTargetReduction(const Group& group,
-                                    const Schedule& schedule,
-                                    const int reportStepIdx,
-                                    const bool isInjector,
-                                    const PhaseUsage& pu,
-                                    const GuideRate& guide_rate,
-                                    const WellStateFullyImplicitBlackoil& wellStateNupcol,
-                                    const WellStateFullyImplicitBlackoil& wellState,
-                                    GroupState& group_state,
-                                    std::vector<double>& groupTargetReduction)
+                                           const Schedule& schedule,
+                                           const int reportStepIdx,
+                                           const bool isInjector,
+                                           const PhaseUsage& pu,
+                                           const GuideRate& guide_rate,
+                                           const WellStateFullyImplicitBlackoil& wellStateNupcol,
+                                           const WellStateFullyImplicitBlackoil& wellState,
+                                           GroupState& group_state,
+                                           std::vector<double>& groupTargetReduction)
     {
         const int np = wellState.numPhases();
         for (const std::string& subGroupName : group.groups()) {
@@ -338,7 +339,7 @@ namespace WellGroupHelpers
                 const bool individual_control = (currentGroupControl != Group::ProductionCMode::FLD
                                                  && currentGroupControl != Group::ProductionCMode::NONE);
                 const int num_group_controlled_wells
-                    = groupControlledWells(schedule, wellStateNupcol, reportStepIdx, subGroupName, "", !isInjector, /*injectionPhaseNotUsed*/Phase::OIL);
+                    = groupControlledWells(schedule, wellStateNupcol, group_state, reportStepIdx, subGroupName, "", !isInjector, /*injectionPhaseNotUsed*/Phase::OIL);
                 if (individual_control || num_group_controlled_wells == 0) {
                     for (int phase = 0; phase < np; phase++) {
                         groupTargetReduction[phase]
@@ -569,6 +570,7 @@ namespace WellGroupHelpers
     std::map<std::string, double>
     computeNetworkPressures(const Opm::Network::ExtNetwork& network,
                             const WellStateFullyImplicitBlackoil& well_state,
+                            const GroupState& group_state,
                             const VFPProdProperties& vfp_prod_props,
                             const Schedule& schedule,
                             const int report_time_step)
@@ -606,7 +608,7 @@ namespace WellGroupHelpers
         // from the corresponding groups.
         std::map<std::string, std::vector<double>> node_inflows;
         for (const auto& node : leaf_nodes) {
-            node_inflows[node] = well_state.currentProductionGroupRates(node);
+            node_inflows[node] = group_state.production_rates(node);
             // Add the ALQ amounts to the gas rates if requested.
             if (network.node(node).add_gas_lift_gas()) {
                 const auto& group = schedule.getGroup(node, report_time_step);
@@ -693,14 +695,15 @@ namespace WellGroupHelpers
     }
 
     GuideRate::RateVector
-    getProductionGroupRateVector(const WellStateFullyImplicitBlackoil& well_state, const PhaseUsage& pu, const std::string& group_name)
+    getProductionGroupRateVector(const GroupState& group_state, const PhaseUsage& pu, const std::string& group_name)
     {
-        return getGuideRateVector(well_state.currentProductionGroupRates(group_name), pu);
+        return getGuideRateVector(group_state.production_rates(group_name), pu);
     }
 
     double getGuideRate(const std::string& name,
                         const Schedule& schedule,
                         const WellStateFullyImplicitBlackoil& wellState,
+                        const GroupState& group_state,
                         const int reportStepIdx,
                         const GuideRate* guideRate,
                         const GuideRateModel::Target target,
@@ -711,18 +714,18 @@ namespace WellGroupHelpers
         }
 
         if (guideRate->has(name)) {
-            return guideRate->get(name, target, getProductionGroupRateVector(wellState, pu, name));
+            return guideRate->get(name, target, getProductionGroupRateVector(group_state, pu, name));
         }
 
         double totalGuideRate = 0.0;
         const Group& group = schedule.getGroup(name, reportStepIdx);
 
         for (const std::string& groupName : group.groups()) {
-            const Group::ProductionCMode& currentGroupControl = wellState.currentProductionGroupControl(groupName);
+            const Group::ProductionCMode& currentGroupControl = group_state.production_control(groupName);
             if (currentGroupControl == Group::ProductionCMode::FLD
                 || currentGroupControl == Group::ProductionCMode::NONE) {
                 // accumulate from sub wells/groups
-                totalGuideRate += getGuideRate(groupName, schedule, wellState, reportStepIdx, guideRate, target, pu);
+                totalGuideRate += getGuideRate(groupName, schedule, wellState, group_state, reportStepIdx, guideRate, target, pu);
             }
         }
 
@@ -748,6 +751,7 @@ namespace WellGroupHelpers
     double getGuideRateInj(const std::string& name,
                            const Schedule& schedule,
                            const WellStateFullyImplicitBlackoil& wellState,
+                           const GroupState& group_state,
                            const int reportStepIdx,
                            const GuideRate* guideRate,
                            const GuideRateModel::Target target,
@@ -767,12 +771,12 @@ namespace WellGroupHelpers
 
         for (const std::string& groupName : group.groups()) {
             const Group::InjectionCMode& currentGroupControl
-                = wellState.currentInjectionGroupControl(injectionPhase, groupName);
+                = group_state.injection_control(groupName, injectionPhase);
             if (currentGroupControl == Group::InjectionCMode::FLD
                 || currentGroupControl == Group::InjectionCMode::NONE) {
                 // accumulate from sub wells/groups
                 totalGuideRate += getGuideRateInj(
-                    groupName, schedule, wellState, reportStepIdx, guideRate, target, injectionPhase, pu);
+                                                  groupName, schedule, wellState, group_state, reportStepIdx, guideRate, target, injectionPhase, pu);
             }
         }
 
@@ -798,6 +802,7 @@ namespace WellGroupHelpers
 
     int groupControlledWells(const Schedule& schedule,
                              const WellStateFullyImplicitBlackoil& well_state,
+                             const GroupState& group_state,
                              const int report_step,
                              const std::string& group_name,
                              const std::string& always_included_child,
@@ -810,16 +815,16 @@ namespace WellGroupHelpers
 
             bool included = (child_group == always_included_child);
             if (is_production_group) {
-                const auto ctrl = well_state.currentProductionGroupControl(child_group);
+                const auto ctrl = group_state.production_control(child_group);
                 included = included || (ctrl == Group::ProductionCMode::FLD) || (ctrl == Group::ProductionCMode::NONE);
             } else {
-                const auto ctrl = well_state.currentInjectionGroupControl(injection_phase, child_group);
+                const auto ctrl = group_state.injection_control(child_group, injection_phase);
                 included = included || (ctrl == Group::InjectionCMode::FLD) || (ctrl == Group::InjectionCMode::NONE);
             }
 
             if (included) {
                 num_wells
-                    += groupControlledWells(schedule, well_state, report_step, child_group, always_included_child, is_production_group, injection_phase);
+                    += groupControlledWells(schedule, well_state, group_state, report_step, child_group, always_included_child, is_production_group, injection_phase);
             }
         }
         for (const std::string& child_well : group.wells()) {
@@ -839,6 +844,7 @@ namespace WellGroupHelpers
     FractionCalculator::FractionCalculator(const Schedule& schedule,
                                            const SummaryState& summary_state,
                                            const WellStateFullyImplicitBlackoil& well_state,
+                                           const GroupState& group_state,
                                            const int report_step,
                                            const GuideRate* guide_rate,
                                            const GuideRateModel::Target target,
@@ -848,6 +854,7 @@ namespace WellGroupHelpers
         : schedule_(schedule)
         , summary_state_(summary_state)
         , well_state_(well_state)
+        , group_state_(group_state)
         , report_step_(report_step)
         , guide_rate_(guide_rate)
         , target_(target)
@@ -887,14 +894,15 @@ namespace WellGroupHelpers
     }
     double FractionCalculator::guideRateSum(const Group& group, const std::string& always_included_child)
     {
+        const auto& group_state = this->well_state_.groupState();
         double total_guide_rate = 0.0;
         for (const std::string& child_group : group.groups()) {
             bool included = (child_group == always_included_child);
             if (is_producer_) {
-                const auto ctrl = well_state_.currentProductionGroupControl(child_group);
+                const auto ctrl = group_state.production_control(child_group);
                 included = included || (ctrl == Group::ProductionCMode::FLD) || (ctrl == Group::ProductionCMode::NONE);
             } else {
-                const auto ctrl = well_state_.currentInjectionGroupControl(injection_phase_, child_group);
+                const auto ctrl = group_state.injection_control(child_group, injection_phase_);
                 included = included || (ctrl == Group::InjectionCMode::FLD) || (ctrl == Group::InjectionCMode::NONE);
             }
             if (included) {
@@ -940,14 +948,14 @@ namespace WellGroupHelpers
     int FractionCalculator::groupControlledWells(const std::string& group_name,
                                                  const std::string& always_included_child)
     {
-        return ::Opm::WellGroupHelpers::groupControlledWells(
-            schedule_, well_state_, report_step_, group_name, always_included_child, is_producer_, injection_phase_);
+        const auto& group_state = well_state_.groupState();
+        return ::Opm::WellGroupHelpers::groupControlledWells(schedule_, well_state_, group_state, report_step_, group_name, always_included_child, is_producer_, injection_phase_);
     }
 
     GuideRate::RateVector FractionCalculator::getGroupRateVector(const std::string& group_name)
     {
         assert(is_producer_);
-        return getProductionGroupRateVector(this->well_state_, this->pu_, group_name);
+        return getProductionGroupRateVector(this->group_state_, this->pu_, group_name);
     }
 
 
@@ -984,6 +992,7 @@ namespace WellGroupHelpers
                                                       const std::string& parent,
                                                       const Group& group,
                                                       const WellStateFullyImplicitBlackoil& wellState,
+                                                      const GroupState& group_state,
                                                       const int reportStepIdx,
                                                       const GuideRate* guideRate,
                                                       const double* rates,
@@ -1002,7 +1011,7 @@ namespace WellGroupHelpers
         // part of. Later it is the accumulated factor including the group efficiency factor
         // of the child of group.
 
-        const Group::ProductionCMode& currentGroupControl = wellState.currentProductionGroupControl(group.name());
+        const Group::ProductionCMode& currentGroupControl = group_state.production_control(group.name());
 
         if (currentGroupControl == Group::ProductionCMode::FLD || currentGroupControl == Group::ProductionCMode::NONE) {
             // Return if we are not available for parent group.
@@ -1015,6 +1024,7 @@ namespace WellGroupHelpers
                                              parent,
                                              parentGroup,
                                              wellState,
+                                             group_state,
                                              reportStepIdx,
                                              guideRate,
                                              rates,
@@ -1038,17 +1048,17 @@ namespace WellGroupHelpers
         // gconsale may adjust the grat target.
         // the adjusted rates is send to the targetCalculator
         double gratTargetFromSales = 0.0;
-        if (wellState.hasGroupGratTargetFromSales(group.name()))
-            gratTargetFromSales = wellState.currentGroupGratTargetFromSales(group.name());
+        if (group_state.has_grat_sales_target(group.name()))
+            gratTargetFromSales = group_state.grat_sales_target(group.name());
 
         TargetCalculator tcalc(currentGroupControl, pu, resv_coeff, gratTargetFromSales);
-        FractionCalculator fcalc(schedule, summaryState, wellState, reportStepIdx, guideRate, tcalc.guideTargetMode(), pu, true, Phase::OIL);
+        FractionCalculator fcalc(schedule, summaryState, wellState, group_state, reportStepIdx, guideRate, tcalc.guideTargetMode(), pu, true, Phase::OIL);
 
         auto localFraction = [&](const std::string& child) { return fcalc.localFraction(child, name); };
 
         auto localReduction = [&](const std::string& group_name) {
             const std::vector<double>& groupTargetReductions
-                = wellState.currentProductionGroupReductionRates(group_name);
+                = group_state.production_reduction_rates(group_name);
             return tcalc.calcModeRateFromRates(groupTargetReductions);
         };
 
@@ -1089,7 +1099,7 @@ namespace WellGroupHelpers
                 // the current well to be always included, because we
                 // want to know the situation that applied to the
                 // calculation of reductions.
-                const int num_gr_ctrl = groupControlledWells(schedule, wellState, reportStepIdx, chain[ii + 1], "", /*is_producer*/true, /*injectionPhaseNotUsed*/Phase::OIL);
+                const int num_gr_ctrl = groupControlledWells(schedule, wellState, group_state, reportStepIdx, chain[ii + 1], "", /*is_producer*/true, /*injectionPhaseNotUsed*/Phase::OIL);
                 if (num_gr_ctrl == 0) {
                     if (guideRate->has(chain[ii + 1])) {
                         target += localReduction(chain[ii + 1]);
@@ -1107,6 +1117,7 @@ namespace WellGroupHelpers
                                                      const std::string& parent,
                                                      const Group& group,
                                                      const WellStateFullyImplicitBlackoil& wellState,
+                                                     const GroupState& group_state, 
                                                      const int reportStepIdx,
                                                      const GuideRate* guideRate,
                                                      const double* rates,
@@ -1126,7 +1137,7 @@ namespace WellGroupHelpers
         // part of. Later it is the accumulated factor including the group efficiency factor
         // of the child of group.
 
-        const Group::InjectionCMode& currentGroupControl = wellState.currentInjectionGroupControl(injectionPhase, group.name());
+        const Group::InjectionCMode& currentGroupControl = group_state.injection_control(group.name(), injectionPhase);
 
         if (currentGroupControl == Group::InjectionCMode::FLD || currentGroupControl == Group::InjectionCMode::NONE) {
             // Return if we are not available for parent group.
@@ -1136,19 +1147,20 @@ namespace WellGroupHelpers
             // Otherwise: check production share of parent's control.
             const auto& parentGroup = schedule.getGroup(group.parent(), reportStepIdx);
             return checkGroupConstraintsInj(name,
-                                             parent,
-                                             parentGroup,
-                                             wellState,
-                                             reportStepIdx,
-                                             guideRate,
-                                             rates,
-                                             injectionPhase,
-                                             pu,
-                                             efficiencyFactor * group.getGroupEfficiencyFactor(),
-                                             schedule,
-                                             summaryState,
-                                             resv_coeff,
-                                             deferred_logger);
+                                            parent,
+                                            parentGroup,
+                                            wellState,
+                                            group_state,
+                                            reportStepIdx,
+                                            guideRate,
+                                            rates,
+                                            injectionPhase,
+                                            pu,
+                                            efficiencyFactor * group.getGroupEfficiencyFactor(),
+                                            schedule,
+                                            summaryState,
+                                            resv_coeff,
+                                            deferred_logger);
         }
 
         // This can be false for FLD-controlled groups, we must therefore
@@ -1164,14 +1176,14 @@ namespace WellGroupHelpers
             const auto& gconsale = schedule[reportStepIdx].gconsale().get(group.name(), summaryState);
             sales_target = gconsale.sales_target;
         }
-        InjectionTargetCalculator tcalc(currentGroupControl, pu, resv_coeff, group.name(), sales_target, wellState, injectionPhase, deferred_logger);
-        FractionCalculator fcalc(schedule, summaryState, wellState, reportStepIdx, guideRate, tcalc.guideTargetMode(), pu, false, injectionPhase);
+        InjectionTargetCalculator tcalc(currentGroupControl, pu, resv_coeff, group.name(), sales_target, wellState, group_state, injectionPhase, deferred_logger);
+        FractionCalculator fcalc(schedule, summaryState, wellState, group_state, reportStepIdx, guideRate, tcalc.guideTargetMode(), pu, false, injectionPhase);
 
         auto localFraction = [&](const std::string& child) { return fcalc.localFraction(child, name); };
 
         auto localReduction = [&](const std::string& group_name) {
             const std::vector<double>& groupTargetReductions
-                = wellState.currentInjectionGroupReductionRates(group_name);
+                = group_state.injection_reduction_rates(group_name);
             return tcalc.calcModeRateFromRates(groupTargetReductions);
         };
 
@@ -1212,7 +1224,7 @@ namespace WellGroupHelpers
                 // the current well to be always included, because we
                 // want to know the situation that applied to the
                 // calculation of reductions.
-                const int num_gr_ctrl = groupControlledWells(schedule, wellState, reportStepIdx, chain[ii + 1], "", /*is_producer*/false, injectionPhase);
+                const int num_gr_ctrl = groupControlledWells(schedule, wellState, group_state, reportStepIdx, chain[ii + 1], "", /*is_producer*/false, injectionPhase);
                 if (num_gr_ctrl == 0) {
                     if (guideRate->has(chain[ii + 1], injectionPhase)) {
                         target += localReduction(chain[ii + 1]);

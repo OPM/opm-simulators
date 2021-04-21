@@ -514,6 +514,7 @@ namespace Opm
     updateWellControl(const Simulator& ebos_simulator,
                       const IndividualOrGroup iog,
                       WellState& well_state,
+                      const GroupState& group_state,
                       Opm::DeferredLogger& deferred_logger) /* const */
     {
         if (this->wellIsStopped()) {
@@ -534,10 +535,10 @@ namespace Opm
         if (iog == IndividualOrGroup::Individual) {
             changed = checkIndividualConstraints(well_state, summaryState);
         } else if (iog == IndividualOrGroup::Group) {
-            changed = checkGroupConstraints(well_state, schedule, summaryState, deferred_logger);
+            changed = checkGroupConstraints(well_state, group_state, schedule, summaryState, deferred_logger);
         } else {
             assert(iog == IndividualOrGroup::Both);
-            changed = checkConstraints(well_state, schedule, summaryState, deferred_logger);
+            changed = checkConstraints(well_state, group_state, schedule, summaryState, deferred_logger);
         }
 
         auto cc = Dune::MPIHelper::getCollectiveCommunication();
@@ -1113,17 +1114,18 @@ namespace Opm
                 const double simulation_time, const int report_step,
                 const WellTestConfig::Reason testing_reason,
                 /* const */ WellState& well_state,
+                const GroupState& group_state,
                 WellTestState& well_test_state,
                 Opm::DeferredLogger& deferred_logger)
     {
         if (testing_reason == WellTestConfig::Reason::PHYSICAL) {
             wellTestingPhysical(simulator, simulation_time, report_step,
-                                well_state, well_test_state, deferred_logger);
+                                well_state, group_state, well_test_state, deferred_logger);
         }
 
         if (testing_reason == WellTestConfig::Reason::ECONOMIC) {
             wellTestingEconomic(simulator, simulation_time,
-                                well_state, well_test_state, deferred_logger);
+                                well_state, group_state, well_test_state, deferred_logger);
         }
     }
 
@@ -1135,7 +1137,7 @@ namespace Opm
     void
     WellInterface<TypeTag>::
     wellTestingEconomic(const Simulator& simulator,
-                        const double simulation_time, const WellState& well_state,
+                        const double simulation_time, const WellState& well_state, const GroupState& group_state,
                         WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger)
     {
         deferred_logger.info(" well " + name() + " is being tested for economic limits");
@@ -1155,7 +1157,7 @@ namespace Opm
         // untill the number of closed completions do not increase anymore.
         while (testWell) {
             const size_t original_number_closed_completions = welltest_state_temp.sizeCompletions();
-            solveWellForTesting(simulator, well_state_copy, deferred_logger);
+            solveWellForTesting(simulator, well_state_copy, group_state, deferred_logger);
             updateWellTestState(well_state_copy, simulation_time, /*writeMessageToOPMLog=*/ false, welltest_state_temp, deferred_logger);
             closeCompletions(welltest_state_temp);
 
@@ -1299,13 +1301,14 @@ namespace Opm
     iterateWellEquations(const Simulator& ebosSimulator,
                          const double dt,
                          WellState& well_state,
+                         const GroupState& group_state,
                          Opm::DeferredLogger& deferred_logger)
     {
         const auto& summary_state = ebosSimulator.vanguard().summaryState();
         const auto inj_controls = well_ecl_.isInjector() ? well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
         const auto prod_controls = well_ecl_.isProducer() ? well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
 
-        return this->iterateWellEqWithControl(ebosSimulator, dt, inj_controls, prod_controls, well_state, deferred_logger);
+        return this->iterateWellEqWithControl(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
     }
 
 
@@ -1352,13 +1355,15 @@ namespace Opm
     template<typename TypeTag>
     void
     WellInterface<TypeTag>::
-    solveWellForTesting(const Simulator& ebosSimulator, WellState& well_state,
+    solveWellForTesting(const Simulator& ebosSimulator,
+                        WellState& well_state,
+                        const GroupState& group_state,
                         Opm::DeferredLogger& deferred_logger)
     {
         // keep a copy of the original well state
         const WellState well_state0 = well_state;
         const double dt = ebosSimulator.timeStepSize();
-        const bool converged = iterateWellEquations(ebosSimulator, dt, well_state, deferred_logger);
+        const bool converged = iterateWellEquations(ebosSimulator, dt, well_state, group_state, deferred_logger);
         if (converged) {
             deferred_logger.debug("WellTest: Well equation for well " + name() +  " converged");
         } else {
@@ -1374,6 +1379,7 @@ namespace Opm
     WellInterface<TypeTag>::
     solveWellEquation(const Simulator& ebosSimulator,
                       WellState& well_state,
+                      const GroupState& group_state,
                       Opm::DeferredLogger& deferred_logger)
     {
         if (!this->isOperable())
@@ -1382,7 +1388,7 @@ namespace Opm
         // keep a copy of the original well state
         const WellState well_state0 = well_state;
         const double dt = ebosSimulator.timeStepSize();
-        const bool converged = iterateWellEquations(ebosSimulator, dt, well_state, deferred_logger);
+        const bool converged = iterateWellEquations(ebosSimulator, dt, well_state, group_state, deferred_logger);
         if (converged) {
             deferred_logger.debug("Compute initial well solution for well " + name() +  ". Converged");
         } else {
@@ -1427,7 +1433,9 @@ namespace Opm
     WellInterface<TypeTag>::
     wellTestingPhysical(const Simulator& ebos_simulator,
                         const double /* simulation_time */, const int /* report_step */,
-                        WellState& well_state, WellTestState& welltest_state,
+                        WellState& well_state,
+                        const GroupState& group_state,
+                        WellTestState& welltest_state,
                         Opm::DeferredLogger& deferred_logger)
     {
         deferred_logger.info(" well " + name() + " is being tested for physical limits");
@@ -1462,7 +1470,7 @@ namespace Opm
         calculateExplicitQuantities(ebos_simulator, well_state_copy, deferred_logger);
 
         const double dt = ebos_simulator.timeStepSize();
-        const bool converged = this->iterateWellEquations(ebos_simulator, dt, well_state_copy, deferred_logger);
+        const bool converged = this->iterateWellEquations(ebos_simulator, dt, well_state_copy, group_state, deferred_logger);
 
         if (!converged) {
             const std::string msg = " well " + name() + " did not get converged during well testing for physical reason";
@@ -1574,6 +1582,7 @@ namespace Opm
     template <typename TypeTag>
     bool
     WellInterface<TypeTag>::checkConstraints(WellState& well_state,
+                                             const GroupState& group_state,
                                              const Schedule& schedule,
                                              const SummaryState& summaryState,
                                              DeferredLogger& deferred_logger) const
@@ -1582,7 +1591,7 @@ namespace Opm
         if (ind_broken) {
             return true;
         } else {
-            return checkGroupConstraints(well_state, schedule, summaryState, deferred_logger);
+            return checkGroupConstraints(well_state, group_state, schedule, summaryState, deferred_logger);
         }
     }
 
@@ -1788,6 +1797,7 @@ namespace Opm
     template <typename TypeTag>
     bool
     WellInterface<TypeTag>::checkGroupConstraints(WellState& well_state,
+                                                  const GroupState& group_state,
                                                   const Schedule& schedule,
                                                   const SummaryState& summaryState,
                                                   DeferredLogger& deferred_logger) const
@@ -1807,8 +1817,7 @@ namespace Opm
                 // control is the active one for the well (if any).
                 const auto& group = schedule.getGroup( well.groupName(), current_step_ );
                 const double efficiencyFactor = well.getEfficiencyFactor();
-                const std::pair<bool, double> group_constraint = checkGroupConstraintsInj(
-                    group, well_state, efficiencyFactor, schedule, summaryState, deferred_logger);
+                const std::pair<bool, double> group_constraint = checkGroupConstraintsInj(group, well_state, group_state, efficiencyFactor, schedule, summaryState, deferred_logger);
                 // If a group constraint was broken, we set the current well control to
                 // be GRUP.
                 if (group_constraint.first) {
@@ -1834,8 +1843,7 @@ namespace Opm
                 // control is the active one for the well (if any).
                 const auto& group = schedule.getGroup( well.groupName(), current_step_ );
                 const double efficiencyFactor = well.getEfficiencyFactor();
-                const std::pair<bool, double> group_constraint = checkGroupConstraintsProd(
-                    group, well_state, efficiencyFactor, schedule, summaryState, deferred_logger);
+                const std::pair<bool, double> group_constraint = checkGroupConstraintsProd(group, well_state, group_state, efficiencyFactor, schedule, summaryState, deferred_logger);
                 // If a group constraint was broken, we set the current well control to
                 // be GRUP.
                 if (group_constraint.first) {
@@ -1860,6 +1868,7 @@ namespace Opm
     std::pair<bool, double>
     WellInterface<TypeTag>::checkGroupConstraintsInj(const Group& group,
                                                      const WellState& well_state,
+                                                     const GroupState& group_state,
                                                      const double efficiencyFactor,
                                                      const Schedule& schedule,
                                                      const SummaryState& summaryState,
@@ -1898,6 +1907,7 @@ namespace Opm
                                                           well_ecl_.groupName(),
                                                           group,
                                                           well_state,
+                                                          group_state,
                                                           current_step_,
                                                           guide_rate_,
                                                           well_state.wellRates().data() + index_of_well_ * phaseUsage().num_phases,
@@ -1918,6 +1928,7 @@ namespace Opm
     std::pair<bool, double>
     WellInterface<TypeTag>::checkGroupConstraintsProd(const Group& group,
                                                       const WellState& well_state,
+                                                      const GroupState& group_state,
                                                       const double efficiencyFactor,
                                                       const Schedule& schedule,
                                                       const SummaryState& summaryState,
@@ -1931,6 +1942,7 @@ namespace Opm
                                                            well_ecl_.groupName(),
                                                            group,
                                                            well_state,
+                                                           group_state,
                                                            current_step_,
                                                            guide_rate_,
                                                            well_state.wellRates().data() + index_of_well_ * phaseUsage().num_phases,
@@ -1950,6 +1962,7 @@ namespace Opm
     template <class EvalWell, class BhpFromThpFunc>
     void
     WellInterface<TypeTag>::assembleControlEqInj(const WellState& well_state,
+                                                 const GroupState& group_state,
                                                  const Opm::Schedule& schedule,
                                                  const SummaryState& summaryState,
                                                  const Well::InjectionControls& controls,
@@ -2008,6 +2021,7 @@ namespace Opm
             const auto& group = schedule.getGroup(well_ecl_.groupName(), current_step_);
             getGroupInjectionControl(group,
                                      well_state,
+                                     group_state,
                                      schedule,
                                      summaryState,
                                      injectorType,
@@ -2031,6 +2045,7 @@ namespace Opm
     template <class EvalWell, class BhpFromThpFunc>
     void
     WellInterface<TypeTag>::assembleControlEqProd(const WellState& well_state,
+                                                  const GroupState& group_state,
                                                   const Opm::Schedule& schedule,
                                                   const SummaryState& summaryState,
                                                   const Well::ProductionControls& controls,
@@ -2127,7 +2142,7 @@ namespace Opm
                     active_rates[pu.phase_pos[canonical_phase]] = rates[canonical_phase];
                 }
             }
-            getGroupProductionControl(group, well_state, schedule, summaryState, bhp, active_rates, control_eq, efficiencyFactor);
+            getGroupProductionControl(group, well_state, group_state, schedule, summaryState, bhp, active_rates, control_eq, efficiencyFactor);
             break;
         }
         case Well::ProducerCMode::CMODE_UNDEFINED: {
@@ -2145,15 +2160,16 @@ namespace Opm
     template <class EvalWell>
     void
     WellInterface<TypeTag>::getGroupInjectionControl(const Group& group,
-                                                      const WellState& well_state,
-                                                      const Opm::Schedule& schedule,
-                                                      const SummaryState& summaryState,
-                                                      const InjectorType& injectorType,
-                                                      const EvalWell& bhp,
-                                                      const EvalWell& injection_rate,
-                                                      EvalWell& control_eq,
-                                                      double efficiencyFactor,
-                                                      Opm::DeferredLogger& deferred_logger)
+                                                     const WellState& well_state,
+                                                     const GroupState& group_state,
+                                                     const Opm::Schedule& schedule,
+                                                     const SummaryState& summaryState,
+                                                     const InjectorType& injectorType,
+                                                     const EvalWell& bhp,
+                                                     const EvalWell& injection_rate,
+                                                     EvalWell& control_eq,
+                                                     double efficiencyFactor,
+                                                     Opm::DeferredLogger& deferred_logger)
     {
         // Setting some defaults to silence warnings below.
         // Will be overwritten in the switch statement.
@@ -2179,7 +2195,7 @@ namespace Opm
             assert(false);
         }
 
-        const Group::InjectionCMode& currentGroupControl = well_state.currentInjectionGroupControl(injectionPhase, group.name());
+        const Group::InjectionCMode& currentGroupControl = group_state.injection_control(group.name(), injectionPhase);
         if (currentGroupControl == Group::InjectionCMode::FLD ||
             currentGroupControl == Group::InjectionCMode::NONE) {
             if (!group.injectionGroupControlAvailable(injectionPhase)) {
@@ -2198,7 +2214,7 @@ namespace Opm
                 // Inject share of parents control
                 const auto& parent = schedule.getGroup( group.parent(), current_step_ );
                 efficiencyFactor *= group.getGroupEfficiencyFactor();
-                getGroupInjectionControl(parent, well_state, schedule, summaryState, injectorType, bhp, injection_rate, control_eq, efficiencyFactor, deferred_logger);
+                getGroupInjectionControl(parent, well_state, group_state, schedule, summaryState, injectorType, bhp, injection_rate, control_eq, efficiencyFactor, deferred_logger);
                 return;
             }
         }
@@ -2226,15 +2242,15 @@ namespace Opm
             const auto& gconsale = schedule[current_step_].gconsale().get(group.name(), summaryState);
             sales_target = gconsale.sales_target;
         }
-        WellGroupHelpers::InjectionTargetCalculator tcalc(currentGroupControl, pu, resv_coeff, group.name(), sales_target, well_state, injectionPhase, deferred_logger);
-        WellGroupHelpers::FractionCalculator fcalc(schedule, summaryState, well_state, current_step_, guide_rate_, tcalc.guideTargetMode(), pu, false, injectionPhase);
+        WellGroupHelpers::InjectionTargetCalculator tcalc(currentGroupControl, pu, resv_coeff, group.name(), sales_target, well_state, group_state, injectionPhase, deferred_logger);
+        WellGroupHelpers::FractionCalculator fcalc(schedule, summaryState, well_state, group_state, current_step_, guide_rate_, tcalc.guideTargetMode(), pu, false, injectionPhase);
 
         auto localFraction = [&](const std::string& child) {
             return fcalc.localFraction(child, "");
         };
 
         auto localReduction = [&](const std::string& group_name) {
-            const std::vector<double>& groupTargetReductions = well_state.currentInjectionGroupReductionRates(group_name);
+            const std::vector<double>& groupTargetReductions = group_state.injection_reduction_rates(group_name);
             return tcalc.calcModeRateFromRates(groupTargetReductions);
         };
 
@@ -2265,6 +2281,7 @@ namespace Opm
     void
     WellInterface<TypeTag>::getGroupProductionControl(const Group& group,
                                                       const WellState& well_state,
+                                                      const GroupState& group_state,
                                                       const Opm::Schedule& schedule,
                                                       const SummaryState& summaryState,
                                                       const EvalWell& bhp,
@@ -2272,7 +2289,7 @@ namespace Opm
                                                       EvalWell& control_eq,
                                                       double efficiencyFactor)
     {
-        const Group::ProductionCMode& currentGroupControl = well_state.currentProductionGroupControl(group.name());
+        const Group::ProductionCMode& currentGroupControl = group_state.production_control(group.name());
         if (currentGroupControl == Group::ProductionCMode::FLD ||
             currentGroupControl == Group::ProductionCMode::NONE) {
             if (!group.productionGroupControlAvailable()) {
@@ -2291,7 +2308,7 @@ namespace Opm
                 // Produce share of parents control
                 const auto& parent = schedule.getGroup( group.parent(), current_step_ );
                 efficiencyFactor *= group.getGroupEfficiencyFactor();
-                getGroupProductionControl(parent, well_state, schedule, summaryState, bhp, rates, control_eq, efficiencyFactor);
+                getGroupProductionControl(parent, well_state, group_state, schedule, summaryState, bhp, rates, control_eq, efficiencyFactor);
                 return;
             }
         }
@@ -2317,18 +2334,18 @@ namespace Opm
         // gconsale may adjust the grat target.
         // the adjusted rates is send to the targetCalculator
         double gratTargetFromSales = 0.0;
-        if (well_state.hasGroupGratTargetFromSales(group.name()))
-            gratTargetFromSales = well_state.currentGroupGratTargetFromSales(group.name());
+        if (group_state.has_grat_sales_target(group.name()))
+            gratTargetFromSales = group_state.grat_sales_target(group.name());
 
         WellGroupHelpers::TargetCalculator tcalc(currentGroupControl, pu, resv_coeff, gratTargetFromSales);
-        WellGroupHelpers::FractionCalculator fcalc(schedule, summaryState, well_state, current_step_, guide_rate_, tcalc.guideTargetMode(), pu, true, Phase::OIL);
+        WellGroupHelpers::FractionCalculator fcalc(schedule, summaryState, well_state, group_state, current_step_, guide_rate_, tcalc.guideTargetMode(), pu, true, Phase::OIL);
 
         auto localFraction = [&](const std::string& child) {
             return fcalc.localFraction(child, "");
         };
 
         auto localReduction = [&](const std::string& group_name) {
-            const std::vector<double>& groupTargetReductions = well_state.currentProductionGroupReductionRates(group_name);
+            const std::vector<double>& groupTargetReductions = group_state.production_reduction_rates(group_name);
             return tcalc.calcModeRateFromRates(groupTargetReductions);
         };
 

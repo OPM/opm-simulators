@@ -413,22 +413,6 @@ namespace Opm
         std::vector<Well::ProducerCMode>& currentProductionControls() { return current_production_controls_; }
         const std::vector<Well::ProducerCMode>& currentProductionControls() const { return current_production_controls_; }
 
-        bool hasProductionGroupControl(const std::string& groupName) const {
-            return this->group_state.has_production_control(groupName);
-        }
-
-        bool hasInjectionGroupControl(const Opm::Phase& phase, const std::string& groupName) const {
-            return this->group_state.has_injection_control(groupName, phase);
-        }
-
-        Group::ProductionCMode currentProductionGroupControl(const std::string& groupName) const {
-            return this->group_state.production_control(groupName);
-        }
-
-        Group::InjectionCMode currentInjectionGroupControl(const Opm::Phase& phase, const std::string& groupName) const {
-            return this->group_state.injection_control(groupName, phase);
-        }
-
         void setCurrentWellRates(const std::string& wellName, const std::vector<double>& rates ) {
             well_rates[wellName].second = rates;
         }
@@ -444,46 +428,6 @@ namespace Opm
 
         bool hasWellRates(const std::string& wellName) const {
             return this->well_rates.find(wellName) != this->well_rates.end();
-        }
-
-        const std::vector<double>& currentProductionGroupRates(const std::string& groupName) const {
-            return this->group_state.production_rates(groupName);
-        }
-
-        bool hasProductionGroupRates(const std::string& groupName) const {
-            return this->group_state.has_production_rates(groupName);
-        }
-
-        const std::vector<double>& currentProductionGroupReductionRates(const std::string& groupName) const {
-            return this->group_state.production_reduction_rates(groupName);
-        }
-
-        const std::vector<double>& currentInjectionGroupReductionRates(const std::string& groupName) const {
-            return this->group_state.injection_reduction_rates(groupName);
-        }
-
-        const std::vector<double>& currentInjectionGroupReservoirRates(const std::string& groupName) const {
-            return this->group_state.injection_reservoir_rates(groupName);
-        }
-
-        double currentInjectionVREPRates(const std::string& groupName) const {
-            return this->group_state.injection_vrep_rate(groupName);
-        }
-
-        const std::vector<double>& currentInjectionREINRates(const std::string& groupName) const {
-            return this->group_state.injection_rein_rates(groupName);
-        }
-
-        bool hasGroupGratTargetFromSales(const std::string& groupName) const {
-            return this->group_state.has_grat_sales_target(groupName);
-        }
-
-        double currentGroupGratTargetFromSales(const std::string& groupName) const {
-            return this->group_state.grat_sales_target(groupName);
-        }
-
-        const std::vector<double>& currentGroupInjectionPotentials(const std::string& groupName) const {
-            return this->group_state.injection_potentials(groupName);
         }
 
         data::Wells
@@ -1260,6 +1204,10 @@ namespace Opm
 
 
         GroupState& groupState() {
+            return this->group_state;
+        }
+
+        const GroupState& groupState() const {
             return this->group_state;
         }
 
