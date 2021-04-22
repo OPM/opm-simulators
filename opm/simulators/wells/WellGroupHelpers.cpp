@@ -988,7 +988,7 @@ namespace WellGroupHelpers
 
 
 
-    std::pair<bool, double> checkGroupConstraintsProd(const std::string& name,
+    std::pair<bool, double> checkGroupConstraintsProd(const std::string& wgname,
                                                       const std::string& parent,
                                                       const Group& group,
                                                       const WellStateFullyImplicitBlackoil& wellState,
@@ -1003,7 +1003,7 @@ namespace WellGroupHelpers
                                                       const std::vector<double>& resv_coeff,
                                                       DeferredLogger& deferred_logger)
     {
-        // When called for a well ('name' is a well name), 'parent'
+        // When called for a well ('wgname' is a well name), 'parent'
         // will be the name of 'group'. But if we recurse, 'name' and
         // 'parent' will stay fixed while 'group' will be higher up
         // in the group tree.
@@ -1020,7 +1020,7 @@ namespace WellGroupHelpers
             }
             // Otherwise: check production share of parent's control.
             const auto& parentGroup = schedule.getGroup(group.parent(), reportStepIdx);
-            return checkGroupConstraintsProd(name,
+            return checkGroupConstraintsProd(wgname,
                                              parent,
                                              parentGroup,
                                              wellState,
@@ -1054,7 +1054,7 @@ namespace WellGroupHelpers
         TargetCalculator tcalc(currentGroupControl, pu, resv_coeff, gratTargetFromSales);
         FractionCalculator fcalc(schedule, summaryState, wellState, group_state, reportStepIdx, guideRate, tcalc.guideTargetMode(), pu, true, Phase::OIL);
 
-        auto localFraction = [&](const std::string& child) { return fcalc.localFraction(child, name); };
+        auto localFraction = [&](const std::string& child) { return fcalc.localFraction(child, wgname); };
 
         auto localReduction = [&](const std::string& group_name) {
             const std::vector<double>& groupTargetReductions
@@ -1068,7 +1068,7 @@ namespace WellGroupHelpers
         // TODO finish explanation.
         const double current_rate
             = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
-        const auto chain = groupChainTopBot(name, group.name(), schedule, reportStepIdx);
+        const auto chain = groupChainTopBot(wgname, group.name(), schedule, reportStepIdx);
         // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
         const size_t num_ancestors = chain.size() - 1;
         // we need to find out the level where the current well is applied to the local reduction 
@@ -1113,7 +1113,7 @@ namespace WellGroupHelpers
         return std::make_pair(current_rate > target_rate, target_rate / current_rate);
     }
 
-    std::pair<bool, double> checkGroupConstraintsInj(const std::string& name,
+    std::pair<bool, double> checkGroupConstraintsInj(const std::string& wgname,
                                                      const std::string& parent,
                                                      const Group& group,
                                                      const WellStateFullyImplicitBlackoil& wellState,
@@ -1129,7 +1129,7 @@ namespace WellGroupHelpers
                                                      const std::vector<double>& resv_coeff,
                                                      DeferredLogger& deferred_logger)
     {
-        // When called for a well ('name' is a well name), 'parent'
+        // When called for a well ('wgname' is a well name), 'parent'
         // will be the name of 'group'. But if we recurse, 'name' and
         // 'parent' will stay fixed while 'group' will be higher up
         // in the group tree.
@@ -1146,7 +1146,7 @@ namespace WellGroupHelpers
             }
             // Otherwise: check production share of parent's control.
             const auto& parentGroup = schedule.getGroup(group.parent(), reportStepIdx);
-            return checkGroupConstraintsInj(name,
+            return checkGroupConstraintsInj(wgname,
                                             parent,
                                             parentGroup,
                                             wellState,
@@ -1179,7 +1179,7 @@ namespace WellGroupHelpers
         InjectionTargetCalculator tcalc(currentGroupControl, pu, resv_coeff, group.name(), sales_target, wellState, group_state, injectionPhase, deferred_logger);
         FractionCalculator fcalc(schedule, summaryState, wellState, group_state, reportStepIdx, guideRate, tcalc.guideTargetMode(), pu, false, injectionPhase);
 
-        auto localFraction = [&](const std::string& child) { return fcalc.localFraction(child, name); };
+        auto localFraction = [&](const std::string& child) { return fcalc.localFraction(child, wgname); };
 
         auto localReduction = [&](const std::string& group_name) {
             const std::vector<double>& groupTargetReductions
@@ -1193,8 +1193,8 @@ namespace WellGroupHelpers
         // TODO finish explanation.
         const double current_rate
             = tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
-        const auto chain = groupChainTopBot(name, group.name(), schedule, reportStepIdx);
-        // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
+        const auto chain = groupChainTopBot(wgname, group.name(), schedule, reportStepIdx);
+        // Because 'wgname' is the last of the elements, and not an ancestor, we subtract one below.
         const size_t num_ancestors = chain.size() - 1;
         // we need to find out the level where the current well is applied to the local reduction
         size_t local_reduction_level = 0;
