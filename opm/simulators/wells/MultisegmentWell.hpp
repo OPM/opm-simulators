@@ -138,6 +138,7 @@ namespace Opm
         virtual void assembleWellEq(const Simulator& ebosSimulator,
                                     const double dt,
                                     WellState& well_state,
+                                    const GroupState& group_state,
                                     Opm::DeferredLogger& deferred_logger) override;
 
         /// updating the well state based the current control mode
@@ -420,6 +421,7 @@ namespace Opm
                                     Opm::DeferredLogger& deferred_logger) const;
 
         void assembleControlEq(const WellState& well_state,
+                               const GroupState& group_state,
                                const Opm::Schedule& schedule,
                                const SummaryState& summaryState,
                                const Well::InjectionControls& inj_controls,
@@ -453,14 +455,16 @@ namespace Opm
                                               const Well::InjectionControls& inj_controls,
                                               const Well::ProductionControls& prod_controls,
                                               WellState& well_state,
+                                              const GroupState& group_state,
                                               Opm::DeferredLogger& deferred_logger) override;
 
         virtual void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
-                                    const double dt,
-                                    const Well::InjectionControls& inj_controls,
-                                    const Well::ProductionControls& prod_controls,
-                                    WellState& well_state,
-                                    Opm::DeferredLogger& deferred_logger) override;
+                                                    const double dt,
+                                                    const Well::InjectionControls& inj_controls,
+                                                    const Well::ProductionControls& prod_controls,
+                                                    WellState& well_state,
+                                                    const GroupState& group_state,
+                                                    Opm::DeferredLogger& deferred_logger) override;
 
         virtual void updateWaterThroughput(const double dt, WellState& well_state) const override;
 

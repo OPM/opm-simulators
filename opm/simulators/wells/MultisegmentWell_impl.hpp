@@ -263,6 +263,7 @@ namespace Opm
     assembleWellEq(const Simulator& ebosSimulator,
                    const double dt,
                    WellState& well_state,
+                   const GroupState& group_state,
                    Opm::DeferredLogger& deferred_logger)
     {
 
@@ -270,13 +271,13 @@ namespace Opm
 
         const bool use_inner_iterations = param_.use_inner_iterations_ms_wells_;
         if (use_inner_iterations) {
-            this->iterateWellEquations(ebosSimulator, dt, well_state, deferred_logger);
+            this->iterateWellEquations(ebosSimulator, dt, well_state, group_state, deferred_logger);
         }
 
         const auto& summary_state = ebosSimulator.vanguard().summaryState();
         const auto inj_controls = well_ecl_.isInjector() ? well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
         const auto prod_controls = well_ecl_.isProducer() ? well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
-        assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, deferred_logger);
+        assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
     }
 
 
@@ -861,6 +862,7 @@ namespace Opm
 
         // store a copy of the well state, we don't want to update the real well state
         WellState well_state_copy = ebosSimulator.problem().wellModel().wellState();
+        const auto& group_state = ebosSimulator.problem().wellModel().groupState();
 
         // Get the current controls.
         const auto& summary_state = ebosSimulator.vanguard().summaryState();
@@ -894,7 +896,7 @@ namespace Opm
         well_copy.calculateExplicitQuantities(ebosSimulator, well_state_copy, deferred_logger);
         const double dt = ebosSimulator.timeStepSize();
         // iterate to get a solution at the given bhp.
-        well_copy.iterateWellEqWithControl(ebosSimulator, dt, inj_controls, prod_controls, well_state_copy,
+        well_copy.iterateWellEqWithControl(ebosSimulator, dt, inj_controls, prod_controls, well_state_copy, group_state,
                                            deferred_logger);
 
         // compute the potential and store in the flux vector.
@@ -2000,6 +2002,7 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     assembleControlEq(const WellState& well_state,
+                      const GroupState& group_state,
                       const Opm::Schedule& schedule,
                       const SummaryState& summaryState,
                       const Well::InjectionControls& inj_controls,
@@ -2058,7 +2061,7 @@ namespace Opm
                 return calculateBhpFromThp(rates, well, summaryState, deferred_logger);
             };
             // Call generic implementation.
-            Base::assembleControlEqInj(well_state, schedule, summaryState, inj_controls, getBhp(), injection_rate, bhp_from_thp, control_eq, deferred_logger);
+            Base::assembleControlEqInj(well_state, group_state, schedule, summaryState, inj_controls, getBhp(), injection_rate, bhp_from_thp, control_eq, deferred_logger);
         } else {
             // Find rates.
             const auto rates = getRates();
@@ -2067,7 +2070,7 @@ namespace Opm
                 return calculateBhpFromThp(rates, well, summaryState, deferred_logger);
             };
             // Call generic implementation.
-            Base::assembleControlEqProd(well_state, schedule, summaryState, prod_controls, getBhp(), rates, bhp_from_thp, control_eq, deferred_logger);
+            Base::assembleControlEqProd(well_state, group_state, schedule, summaryState, prod_controls, getBhp(), rates, bhp_from_thp, control_eq, deferred_logger);
         }
 
         // using control_eq to update the matrix and residuals
@@ -2708,6 +2711,7 @@ namespace Opm
                              const Well::InjectionControls& inj_controls,
                              const Well::ProductionControls& prod_controls,
                              WellState& well_state,
+                             const GroupState& group_state,
                              Opm::DeferredLogger& deferred_logger)
     {
         if (!this->isOperable() && !this->wellIsStopped()) return true;
@@ -2726,7 +2730,7 @@ namespace Opm
         bool relax_convergence = false;
         for (; it < max_iter_number; ++it, ++debug_cost_counter_) {
 
-            assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, deferred_logger);
+            assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
 
             const BVectorWell dx_well = mswellhelpers::applyUMFPack(duneD_, duneDSolver_, resWell_);
 
@@ -2826,6 +2830,7 @@ namespace Opm
                                    const Well::InjectionControls& inj_controls,
                                    const Well::ProductionControls& prod_controls,
                                    WellState& well_state,
+                                   const GroupState& group_state,
                                    Opm::DeferredLogger& deferred_logger)
     {
 
@@ -2979,7 +2984,7 @@ namespace Opm
             if (seg == 0) { // top segment, pressure equation is the control equation
                 const auto& summaryState = ebosSimulator.vanguard().summaryState();
                 const Opm::Schedule& schedule = ebosSimulator.vanguard().schedule();
-                assembleControlEq(well_state, schedule, summaryState, inj_controls, prod_controls, deferred_logger);
+                assembleControlEq(well_state, group_state, schedule, summaryState, inj_controls, prod_controls, deferred_logger);
             } else {
                 const UnitSystem& unit_system = ebosSimulator.vanguard().eclState().getDeckUnitSystem();
                 assemblePressureEq(seg, unit_system, well_state, deferred_logger);
