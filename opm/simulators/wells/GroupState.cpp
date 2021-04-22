@@ -230,7 +230,7 @@ Group::InjectionCMode GroupState::injection_control(const std::string& gname, Ph
     auto key = std::make_pair(phase, gname);
     auto group_iter = this->injection_controls.find( key );
     if (group_iter == this->injection_controls.end())
-        throw std::logic_error("Could not find ontrol for injection group: " + gname);
+        throw std::logic_error("Could not find control for injection group: " + gname);
 
     return group_iter->second;
 }
