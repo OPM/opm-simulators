@@ -894,15 +894,14 @@ namespace WellGroupHelpers
     }
     double FractionCalculator::guideRateSum(const Group& group, const std::string& always_included_child)
     {
-        const auto& group_state = this->well_state_.groupState();
         double total_guide_rate = 0.0;
         for (const std::string& child_group : group.groups()) {
             bool included = (child_group == always_included_child);
             if (is_producer_) {
-                const auto ctrl = group_state.production_control(child_group);
+                const auto ctrl = this->group_state_.production_control(child_group);
                 included = included || (ctrl == Group::ProductionCMode::FLD) || (ctrl == Group::ProductionCMode::NONE);
             } else {
-                const auto ctrl = group_state.injection_control(child_group, injection_phase_);
+                const auto ctrl = this->group_state_.injection_control(child_group, injection_phase_);
                 included = included || (ctrl == Group::InjectionCMode::FLD) || (ctrl == Group::InjectionCMode::NONE);
             }
             if (included) {
@@ -948,8 +947,7 @@ namespace WellGroupHelpers
     int FractionCalculator::groupControlledWells(const std::string& group_name,
                                                  const std::string& always_included_child)
     {
-        const auto& group_state = well_state_.groupState();
-        return ::Opm::WellGroupHelpers::groupControlledWells(schedule_, well_state_, group_state, report_step_, group_name, always_included_child, is_producer_, injection_phase_);
+        return ::Opm::WellGroupHelpers::groupControlledWells(schedule_, well_state_, this->group_state_, report_step_, group_name, always_included_child, is_producer_, injection_phase_);
     }
 
     GuideRate::RateVector FractionCalculator::getGroupRateVector(const std::string& group_name)

@@ -327,6 +327,10 @@ namespace Opm {
                 this->nupcol_well_state_ = this->active_well_state_;
             }
 
+            const GroupState& groupState() const {
+                return this->group_state;
+            }
+
             Opm::data::Wells wellData() const
             {
                 auto wsrpt = this->wellState().report(phase_usage_, Opm::UgGridHelpers::globalCell(grid()),
@@ -577,8 +581,7 @@ namespace Opm {
                                   const data::GroupAndNetworkValues& grpNwrkValues,
                                   const PhaseUsage& phases,
                                   const bool handle_ms_well,
-                                  WellStateFullyImplicitBlackoil& well_state,
-                                  GroupState& group_state) const;
+                                  WellStateFullyImplicitBlackoil& well_state);
 
             // whether there exists any multisegment well open on this process
             bool anyMSWellOpenLocal() const;
@@ -590,7 +593,7 @@ namespace Opm {
             bool checkGroupConstraints(const Group& group, Opm::DeferredLogger& deferred_logger) const;
             Group::ProductionCMode checkGroupProductionConstraints(const Group& group, Opm::DeferredLogger& deferred_logger) const;
             Group::InjectionCMode checkGroupInjectionConstraints(const Group& group, const Phase& phase) const;
-            void checkGconsaleLimits(const Group& group, const WellState& well_state, GroupState& group_state, Opm::DeferredLogger& deferred_logger ) const;
+            void checkGconsaleLimits(const Group& group, const WellState& well_state, Opm::DeferredLogger& deferred_logger );
 
             void updateGroupHigherControls(Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
             void checkGroupHigherConstraints(const Group& group, Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
@@ -599,7 +602,7 @@ namespace Opm {
 
             void actionOnBrokenConstraints(const Group& group, const Group::InjectionCMode& newControl, const Phase& topUpPhase, Opm::DeferredLogger& deferred_logger);
 
-            void updateWsolvent(const Group& group, const Schedule& schedule, const int reportStepIdx, const WellStateFullyImplicitBlackoil& wellState, const GroupState& group_state);
+            void updateWsolvent(const Group& group, const Schedule& schedule, const int reportStepIdx, const WellStateFullyImplicitBlackoil& wellState);
 
             void setWsolvent(const Group& group, const Schedule& schedule, const int reportStepIdx, double wsolvent);
 
@@ -642,6 +645,8 @@ namespace Opm {
             WellState active_well_state_;
             WellState last_valid_well_state_;
             WellState nupcol_well_state_;
+
+            GroupState group_state;
         };
 
 

@@ -862,7 +862,7 @@ namespace Opm
 
         // store a copy of the well state, we don't want to update the real well state
         WellState well_state_copy = ebosSimulator.problem().wellModel().wellState();
-        const auto& group_state = ebosSimulator.problem().wellModel().wellState().groupState();
+        const auto& group_state = ebosSimulator.problem().wellModel().groupState();
 
         // Get the current controls.
         const auto& summary_state = ebosSimulator.vanguard().summaryState();

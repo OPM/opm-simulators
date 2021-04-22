@@ -2610,7 +2610,7 @@ namespace Opm
         // create a copy of the well_state to use. If the operability checking is sucessful, we use this one
         // to replace the original one
         WellState well_state_copy = ebosSimulator.problem().wellModel().wellState();
-        const auto& group_state = ebosSimulator.problem().wellModel().wellState().groupState();
+        const auto& group_state = ebosSimulator.problem().wellModel().groupState();
 
         //  Set current control to bhp, and bhp value in state, modify bhp limit in control object.
         if (well_ecl_.isInjector()) {

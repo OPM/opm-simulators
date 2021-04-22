@@ -37,7 +37,8 @@ namespace Opm {
           phase_usage_(phaseUsageFromDeck(ebosSimulator_.vanguard().eclState())),
           active_well_state_(phase_usage_.num_phases),
           last_valid_well_state_(phase_usage_.num_phases),
-          nupcol_well_state_(phase_usage_.num_phases)
+          nupcol_well_state_(phase_usage_.num_phases),
+          group_state(phase_usage_.num_phases)
     {
         terminal_output_ = false;
         if (ebosSimulator.gridView().comm().rank() == 0)
@@ -272,7 +273,7 @@ namespace Opm {
         }
 
         const Group& fieldGroup = schedule().getGroup("FIELD", timeStepIdx);
-        WellGroupHelpers::setCmodeGroup(fieldGroup, schedule(), summaryState, timeStepIdx, this->wellState().groupState());
+        WellGroupHelpers::setCmodeGroup(fieldGroup, schedule(), summaryState, timeStepIdx, this->group_state);
 
         // Compute reservoir volumes for RESV controls.
         rateConverter_.reset(new RateConverterType (phase_usage_,
@@ -393,8 +394,8 @@ namespace Opm {
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         std::vector<double> pot(numPhases(), 0.0);
         const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
-        WellGroupHelpers::updateGuideRateForProductionGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, this->wellState(), this->wellState().groupState(), comm, guideRate_.get(), pot);
-        WellGroupHelpers::updateGuideRatesForInjectionGroups(fieldGroup, schedule(), summaryState, phase_usage_, reportStepIdx, this->wellState(), this->wellState().groupState(), guideRate_.get(), local_deferredLogger);
+        WellGroupHelpers::updateGuideRateForProductionGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, this->wellState(), this->group_state, comm, guideRate_.get(), pot);
+        WellGroupHelpers::updateGuideRatesForInjectionGroups(fieldGroup, schedule(), summaryState, phase_usage_, reportStepIdx, this->wellState(), this->group_state, guideRate_.get(), local_deferredLogger);
         WellGroupHelpers::updateGuideRatesForWells(schedule(), phase_usage_, reportStepIdx, simulationTime, this->wellState(), comm, guideRate_.get());
 
         try {
@@ -409,7 +410,7 @@ namespace Opm {
                 if (event) {
                     try {
                         well->calculateExplicitQuantities(ebosSimulator_, this->wellState(), local_deferredLogger);
-                        well->solveWellEquation(ebosSimulator_, this->wellState(), this->wellState().groupState(), local_deferredLogger);
+                        well->solveWellEquation(ebosSimulator_, this->wellState(), this->group_state, local_deferredLogger);
                     } catch (const std::exception& e) {
                         const std::string msg = "Compute initial well solution for new well " + well->name() + " failed. Continue with zero initial rates";
                         local_deferredLogger.warning("WELL_INITIAL_SOLVE_FAILED", msg);
@@ -483,7 +484,7 @@ namespace Opm {
                 const WellTestConfig::Reason testing_reason = testWell.second;
 
                 well->wellTesting(ebosSimulator_, simulationTime, timeStepIdx,
-                                  testing_reason, this->wellState(), this->wellState().groupState(), wellTestState_, deferred_logger);
+                                  testing_reason, this->wellState(), this->group_state, wellTestState_, deferred_logger);
             }
         }
     }
@@ -554,7 +555,7 @@ namespace Opm {
 
         // check group sales limits at the end of the timestep
         const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
-        checkGconsaleLimits(fieldGroup, this->wellState(), this->wellState().groupState(), local_deferredLogger);
+        checkGconsaleLimits(fieldGroup, this->wellState(), local_deferredLogger);
 
         this->calculateProductivityIndexValues(local_deferredLogger);
 
@@ -630,7 +631,7 @@ namespace Opm {
             const size_t numCells = Opm::UgGridHelpers::numCells(grid());
             const bool handle_ms_well = (param_.use_multisegment_well_ && anyMSWellOpenLocal());
             this->wellState().resize(wells_ecl_, local_parallel_well_info_, schedule(), handle_ms_well, numCells, phaseUsage, well_perf_data_, summaryState, globalNumWells); // Resize for restart step
-            loadRestartData(restartValues.wells, restartValues.grp_nwrk, phaseUsage, handle_ms_well, this->wellState(), this->wellState().groupState());
+            loadRestartData(restartValues.wells, restartValues.grp_nwrk, phaseUsage, handle_ms_well, this->wellState());
         }
 
         this->commitWellState();
@@ -1020,7 +1021,7 @@ namespace Opm {
 
             if (param_.solve_welleq_initially_ && iterationIdx == 0) {
                 for (auto& well : well_container_) {
-                    well->solveWellEquation(ebosSimulator_, this->wellState(), this->wellState().groupState(), local_deferredLogger);
+                    well->solveWellEquation(ebosSimulator_, this->wellState(), this->group_state, local_deferredLogger);
                 }
                 updateWellControls(local_deferredLogger, /* check group controls */ false);
             }
@@ -1106,7 +1107,7 @@ namespace Opm {
     assembleWellEq(const double dt, Opm::DeferredLogger& deferred_logger)
     {
         for (auto& well : well_container_) {
-            well->assembleWellEq(ebosSimulator_, dt, this->wellState(), this->wellState().groupState(), deferred_logger);
+            well->assembleWellEq(ebosSimulator_, dt, this->wellState(), this->group_state, deferred_logger);
         }
     }
 
@@ -1379,7 +1380,7 @@ namespace Opm {
             // Check wells' group constraints and communicate.
             for (const auto& well : well_container_) {
                 const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Group;
-                const bool changed = well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->wellState().groupState(), deferred_logger);
+                const bool changed = well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->group_state, deferred_logger);
                 if (changed) {
                     switched_wells.insert(well->name());
                 }
@@ -1393,7 +1394,7 @@ namespace Opm {
                 continue;
             }
             const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Individual;
-            well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->wellState().groupState(), deferred_logger);
+            well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->group_state, deferred_logger);
         }
         updateAndCommunicateGroupData();
 
@@ -1413,7 +1414,7 @@ namespace Opm {
         if (!network.active()) {
             return;
         }
-        node_pressures_ = WellGroupHelpers::computeNetworkPressures(network, this->wellState(), this->wellState().groupState(), *(vfp_properties_->getProd()), schedule(), reportStepIdx);
+        node_pressures_ = WellGroupHelpers::computeNetworkPressures(network, this->wellState(), this->group_state, *(vfp_properties_->getProd()), schedule(), reportStepIdx);
 
         // Set the thp limits of wells
         for (auto& well : well_container_) {
@@ -1458,14 +1459,14 @@ namespace Opm {
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         // the group target reduction rates needs to be update since wells may have swicthed to/from GRUP control
         // Currently the group target reduction does not honor NUPCOL. TODO: is that true?
-        WellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ false, phase_usage_, *guideRate_, well_state_nupcol, well_state, well_state.groupState());
-        WellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ true, phase_usage_, *guideRate_, well_state_nupcol, well_state, well_state.groupState());
+        WellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ false, phase_usage_, *guideRate_, well_state_nupcol, well_state, this->group_state);
+        WellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ true, phase_usage_, *guideRate_, well_state_nupcol, well_state, this->group_state);
 
-        WellGroupHelpers::updateREINForGroups(fieldGroup, schedule(), reportStepIdx, phase_usage_, summaryState, well_state_nupcol, well_state, well_state.groupState());
-        WellGroupHelpers::updateVREPForGroups(fieldGroup, schedule(), reportStepIdx, well_state_nupcol, well_state, well_state.groupState());
+        WellGroupHelpers::updateREINForGroups(fieldGroup, schedule(), reportStepIdx, phase_usage_, summaryState, well_state_nupcol, well_state, this->group_state);
+        WellGroupHelpers::updateVREPForGroups(fieldGroup, schedule(), reportStepIdx, well_state_nupcol, well_state, this->group_state);
 
-        WellGroupHelpers::updateReservoirRatesInjectionGroups(fieldGroup, schedule(), reportStepIdx, well_state_nupcol, well_state, well_state.groupState());
-        WellGroupHelpers::updateGroupProductionRates(fieldGroup, schedule(), reportStepIdx, well_state_nupcol, well_state, well_state.groupState());
+        WellGroupHelpers::updateReservoirRatesInjectionGroups(fieldGroup, schedule(), reportStepIdx, well_state_nupcol, well_state, this->group_state);
+        WellGroupHelpers::updateGroupProductionRates(fieldGroup, schedule(), reportStepIdx, well_state_nupcol, well_state, this->group_state);
 
         // We use the rates from the privious time-step to reduce oscilations
         WellGroupHelpers::updateWellRates(fieldGroup, schedule(), reportStepIdx, this->prevWellState(), well_state);
@@ -1480,9 +1481,10 @@ namespace Opm {
         }
 
         well_state.communicateGroupRates(comm);
+        this->group_state.communicate_rates(comm);
 
         // compute wsolvent fraction for REIN wells
-        updateWsolvent(fieldGroup, schedule(), reportStepIdx,  well_state_nupcol, well_state.groupState());
+        updateWsolvent(fieldGroup, schedule(), reportStepIdx,  well_state_nupcol);
     }
 
 
@@ -1865,8 +1867,7 @@ namespace Opm {
                      const data::GroupAndNetworkValues& grpNwrkValues,
                      const PhaseUsage& phases,
                      const bool handle_ms_well,
-                     WellStateFullyImplicitBlackoil& well_state,
-                     GroupState& group_state) const
+                     WellStateFullyImplicitBlackoil& well_state)
     {
         using GPMode = Group::ProductionCMode;
         using GIMode = Group::InjectionCMode;
@@ -1954,15 +1955,15 @@ namespace Opm {
             const auto cwi = value.currentControl.currentWaterInjectionConstraint;
 
             if (cpc != GPMode::NONE) {
-                group_state.production_control(group, cpc);
+                this->group_state.production_control(group, cpc);
             }
 
             if (cgi != GIMode::NONE) {
-                group_state.injection_control(group, Phase::GAS, cgi);
+                this->group_state.injection_control(group, Phase::GAS, cgi);
             }
 
             if (cwi != GIMode::NONE) {
-                group_state.injection_control(group, Phase::WATER, cwi);
+                this->group_state.injection_control(group, Phase::WATER, cwi);
             }
         }
     }
@@ -2130,10 +2131,9 @@ namespace Opm {
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
         const auto& well_state = this->wellState();
-        const auto& group_state = well_state.groupState();
 
         const auto controls = group.productionControls(summaryState);
-        const Group::ProductionCMode& currentControl = group_state.production_control(group.name());
+        const Group::ProductionCMode& currentControl = this->group_state.production_control(group.name());
 
         if (group.has_control(Group::ProductionCMode::ORAT))
         {
@@ -2237,7 +2237,6 @@ namespace Opm {
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
         const auto& well_state = this->wellState();
-        const auto& group_state = well_state.groupState();
 
         int phasePos;
         if (phase == Phase::GAS && phase_usage_.phase_used[BlackoilPhases::Vapour] )
@@ -2250,7 +2249,7 @@ namespace Opm {
             OPM_THROW(std::runtime_error, "Unknown phase" );
 
         const auto& controls = group.injectionControls(phase, summaryState);
-        const Group::InjectionCMode& currentControl = group_state.injection_control(group.name(), phase);
+        const Group::InjectionCMode& currentControl = this->group_state.injection_control(group.name(), phase);
 
         if (controls.has_control(Group::InjectionCMode::RATE))
         {
@@ -2335,12 +2334,12 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    checkGconsaleLimits(const Group& group, const WellState& well_state, GroupState& group_state, Opm::DeferredLogger& deferred_logger) const
+    checkGconsaleLimits(const Group& group, const WellState& well_state, Opm::DeferredLogger& deferred_logger) 
     {
         const int reportStepIdx = ebosSimulator_.episodeIndex();
          // call recursively down the group hiearchy
         for (const std::string& groupName : group.groups()) {
-            checkGconsaleLimits( schedule().getGroup(groupName, reportStepIdx), well_state, group_state, deferred_logger);
+            checkGconsaleLimits( schedule().getGroup(groupName, reportStepIdx), well_state, deferred_logger);
         }
 
         // only for groups with gas injection controls
@@ -2358,7 +2357,7 @@ namespace Opm {
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
 
         const auto& gconsale = schedule()[reportStepIdx].gconsale().get(group.name(), summaryState);
-        const Group::ProductionCMode& oldProductionControl = group_state.production_control(group.name());
+        const Group::ProductionCMode& oldProductionControl = this->group_state.production_control(group.name());
 
         int gasPos = phase_usage_.phase_pos[BlackoilPhases::Vapour];
         double production_rate = WellGroupHelpers::sumWellRates(group, schedule(), well_state, reportStepIdx, gasPos, /*isInjector*/false);
@@ -2415,11 +2414,11 @@ namespace Opm {
                 break;
             }
             case GConSale::MaxProcedure::RATE: {
-                    group_state.production_control(group.name(), Group::ProductionCMode::GRAT);
+                    this->group_state.production_control(group.name(), Group::ProductionCMode::GRAT);
                     ss << "Maximum GCONSALE limit violated for " << group.name() << ". The group is switched from ";
                     ss << Group::ProductionCMode2String(oldProductionControl) << " to " << Group::ProductionCMode2String(Group::ProductionCMode::GRAT);
                     ss << " and limited by the maximum sales rate after consumption and import are considered" ;
-                    group_state.update_grat_sales_target(group.name(), production_target);
+                    this->group_state.update_grat_sales_target(group.name(), production_target);
                 break;
             }
             default:
@@ -2427,11 +2426,11 @@ namespace Opm {
             }
         }
         if (sales_rate < gconsale.min_sales_rate) {
-            const Group::ProductionCMode& currentProductionControl = group_state.production_control(group.name());
+            const Group::ProductionCMode& currentProductionControl = this->group_state.production_control(group.name());
             if ( currentProductionControl == Group::ProductionCMode::GRAT ) {
                 ss << "Group " + group.name() + " has sale rate less then minimum permitted value and is under GRAT control. \n";
                 ss << "The GRAT is increased to meet the sales minimum rate. \n";
-                group_state.update_grat_sales_target(group.name(), production_target);
+                this->group_state.update_grat_sales_target(group.name(), production_target);
             //} else if () {//TODO add action for WGASPROD
             //} else if () {//TODO add action for drilling queue
             } else {
@@ -2456,8 +2455,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     actionOnBrokenConstraints(const Group& group, const Group::ExceedAction& exceed_action, const Group::ProductionCMode& newControl, Opm::DeferredLogger& deferred_logger) {
 
-        auto& group_state = this->wellState().groupState();
-        const Group::ProductionCMode oldControl = group_state.production_control(group.name());
+        const Group::ProductionCMode oldControl = this->group_state.production_control(group.name());
 
         std::ostringstream ss;
 
@@ -2486,7 +2484,7 @@ namespace Opm {
         }
         case Group::ExceedAction::RATE: {
             if (oldControl != newControl) {
-                group_state.production_control(group.name(), newControl);
+                this->group_state.production_control(group.name(), newControl);
                 ss << "Switching production control mode for group "<< group.name()
                    << " from " << Group::ProductionCMode2String(oldControl)
                    << " to " << Group::ProductionCMode2String(newControl);
@@ -2509,9 +2507,7 @@ namespace Opm {
     void
     BlackoilWellModel<TypeTag>::
     actionOnBrokenConstraints(const Group& group, const Group::InjectionCMode& newControl, const Phase& controlPhase, Opm::DeferredLogger& deferred_logger) {
-        auto& well_state = this->wellState();
-        auto& group_state = well_state.groupState();
-        const Group::InjectionCMode oldControl = group_state.injection_control(group.name(), controlPhase);
+        const Group::InjectionCMode oldControl = this->group_state.injection_control(group.name(), controlPhase);
 
         std::ostringstream ss;
         if (oldControl != newControl) {
@@ -2581,7 +2577,6 @@ namespace Opm {
         std::vector<double> rates(phase_usage_.num_phases, 0.0);
 
         const bool skip = switched_groups.count(group.name()) || group.name() == "FIELD";
-        const auto& group_state = this->wellState().groupState();
         if (!skip && group.isInjectionGroup()) {
             // Obtain rates for group.
             for (int phasePos = 0; phasePos < phase_usage_.num_phases; ++phasePos) {
@@ -2592,7 +2587,7 @@ namespace Opm {
             const Phase all[] = { Phase::WATER, Phase::OIL, Phase::GAS };
             for (Phase phase : all) {
                 // Check higher up only if under individual (not FLD) control.
-                const Group::InjectionCMode& currentControl = group_state.injection_control(group.name(), phase);
+                const Group::InjectionCMode& currentControl = this->group_state.injection_control(group.name(), phase);
                 if (currentControl != Group::InjectionCMode::FLD && group.injectionGroupControlAvailable(phase)) {
                     const Group& parentGroup = schedule().getGroup(group.parent(), reportStepIdx);
                     const std::pair<bool, double> changed = WellGroupHelpers::checkGroupConstraintsInj(
@@ -2600,7 +2595,7 @@ namespace Opm {
                         group.parent(),
                         parentGroup,
                         this->wellState(),
-                        this->wellState().groupState(),
+                        this->group_state,
                         reportStepIdx,
                         guideRate_.get(),
                         rates.data(),
@@ -2636,7 +2631,7 @@ namespace Opm {
                         group.parent(),
                         parentGroup,
                         this->wellState(),
-                        this->wellState().groupState(),
+                        this->group_state,
                         reportStepIdx,
                         guideRate_.get(),
                         rates.data(),
@@ -2868,16 +2863,16 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    updateWsolvent(const Group& group, const Schedule& schedule, const int reportStepIdx, const WellStateFullyImplicitBlackoil& wellState, const GroupState& group_state) {
+    updateWsolvent(const Group& group, const Schedule& schedule, const int reportStepIdx, const WellStateFullyImplicitBlackoil& wellState) {
         for (const std::string& groupName : group.groups()) {
             const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
-            updateWsolvent(groupTmp, schedule, reportStepIdx, wellState, group_state);
+            updateWsolvent(groupTmp, schedule, reportStepIdx, wellState);
         }
 
         if (group.isProductionGroup())
             return;
 
-        const Group::InjectionCMode& currentGroupControl = group_state.injection_control(group.name(), Phase::GAS);
+        const Group::InjectionCMode& currentGroupControl = this->group_state.injection_control(group.name(), Phase::GAS);
         if( currentGroupControl == Group::InjectionCMode::REIN ) {
             int gasPos = phase_usage_.phase_pos[BlackoilPhases::Vapour];
             const auto& summaryState = ebosSimulator_.vanguard().summaryState();
@@ -3104,7 +3099,6 @@ namespace Opm {
         const auto& gname     = group.name();
         const auto  grup_type = group.getGroupType();
         auto&       cgc       = gdata.currentControl;
-        const auto& group_state = this->wellState().groupState();
 
         cgc.currentProdConstraint =
             ::Opm::Group::ProductionCMode::NONE;
@@ -3113,8 +3107,8 @@ namespace Opm {
         cgc.currentWaterInjectionConstraint =
             ::Opm::Group::InjectionCMode::NONE;
 
-        if (group_state.has_production_control(gname)) {
-            cgc.currentProdConstraint = group_state.production_control(gname);
+        if (this->group_state.has_production_control(gname)) {
+            cgc.currentProdConstraint = this->group_state.production_control(gname);
         }
 
         if ((grup_type == ::Opm::Group::GroupType::INJECTION) ||
@@ -3186,12 +3180,11 @@ namespace Opm {
     getGuideRateValues(const Group& group) const
     {
         auto grval = data::GuideRateValue{};
-        const auto& group_state = this->wellState().groupState();
         assert (this->guideRate_ != nullptr);
 
         const auto& gname = group.name();
 
-        if ( ! group_state.has_production_control(gname)) {
+        if ( ! this->group_state.has_production_control(gname)) {
             // No flow rates for production group 'gname' -- might be before group comes
             // online (e.g., for the initial condition before simulation
             // starts).
