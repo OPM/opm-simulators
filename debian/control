@@ -26,8 +26,21 @@ Depends: libopm-simulators1 (= ${binary:Version})
 Provides: libopm-simulators-dev
 Suggests: libopm-simulators1-doc
 Replaces: libopm-autodiff1-dev
-Description: OPM simulators library -- development files
- Utilities for automatic differentiation and simulators based on AD. 
+Description: Parallel porous media / reservoir simulators -- development files
+ The Open Porous Media (OPM) software suite provides libraries and
+ tools for modeling and simulation of porous media processes, especially
+ for simulating CO2 sequestration and improved and enhanced oil recovery.
+ .
+ opm-simulators provides a research (ebos) and a production (flow) fully
+ implicit black-oil simulators, supporting one to three phases and
+ supporting solvent and polymer options. It uses cell centered finite
+ volume schemes with two point flux approximation and automatic
+ differentiation for the discretization and uses state of the art linear
+ and nonlinear solvers. It supports standard and multi segment well
+ models and reading and writing file in Eclipse format, a very common
+ format used in the oil reservoir simulation community.
+ .
+ Package provides the development files (headers and shared library links).
 
 Package: libopm-simulators1
 Section: libs
@@ -36,8 +49,22 @@ Architecture: any
 Multi-Arch: same
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Provides: libopm-simulators
-Description: OPM simulators library
- Utilities for automatic differentiation and simulators based on AD. 
+Description: Open porous media / reservoir simulators -- library
+ The Open Porous Media (OPM) software suite provides libraries and
+ tools for modeling and simulation of porous media processes, especially
+ for simulating CO2 sequestration and improved and enhanced oil recovery.
+ .
+ opm-simulators provides a research (ebos) and a production (flow) fully
+ implicit black-oil simulators, supporting one to three phases and
+ supporting solvent and polymer options. It uses cell centered finite
+ volume schemes with two point flux approximation and automatic
+ differentiation for the discretization and uses state of the art linear
+ and nonlinear solvers. It supports standard and multi segment well
+ models and reading and writing file in Eclipse format, a very common
+ format used in the the oil reservoir simulation community.
+ .
+ Package provides the library used by the research (ebos) and production
+ (flow) fully implicit  black-oil simulators.
 
 Package: libopm-simulators1-bin
 Section: science
@@ -47,8 +74,21 @@ Multi-Arch: same
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Provides: libopm-simulators-bin
 Replaces: libopm-autodiff1-bin
-Description: OPM auto differentation library -- applications
- OPM Simulators.
+Description: Parallel porous media / reservoir simulators -- applications
+ The Open Porous Media (OPM) software suite provides libraries and
+ tools for modeling and simulation of porous media processes, especially
+ for simulating CO2 sequestration and improved and enhanced oil recovery.
+ .
+ opm-simulators provides a research (ebos) and a production (flow) fully
+ implicit black-oil simulators, supporting one to three phases and
+ supporting solvent and polymer options. It uses cell centered finite
+ volume schemes with two point flux approximation and automatic
+ differentiation for the discretization and uses state of the art linear
+ and nonlinear solvers. It supports standard and multi segment well
+ models and reading and writing file in Eclipse format, a defacto
+ industry standard in the oil reservoir simulation community.
+ .
+ Package provides the simulation programs.
 
 Package: libopm-simulators1-doc
 Section: doc
@@ -56,8 +96,21 @@ Architecture: all
 Multi-Arch: foreign
 Provides: libopm-simulators-doc
 Replaces: libopm-autodiff1-doc
-Description: OPM auto differentation library -- documentation
- Utilities for automatic differentiation and simulators based on AD. 
+Description: Open porous media / reservoir simulators -- documentation
+ The Open Porous Media (OPM) software suite provides libraries and
+ tools for modeling and simulation of porous media processes, especially
+ for simulating CO2 sequestration and improved and enhanced oil recovery.
+ .
+ opm-simulators provides a research (ebos) and a production (flow) fully
+ implicit black-oil simulators, supporting one to three phases and
+ supporting solvent and polymer options. It uses cell centered finite
+ volume schemes with two point flux approximation and automatic
+ differentiation for the discretization and uses state of the art linear
+ and nonlinear solvers. It supports standard and multi segment well
+ models and reading and writing file in Eclipse format, a very common
+ format used in the oil reservoir simulation community.
+ .
+ Package provides documentation of the source code of the simulators.
 
 Package: python3-opm-simulators
 Section: libs
@@ -65,5 +118,18 @@ Pre-Depends: ${misc:Pre-Depends}
 Architecture: any
 Multi-Arch: same
 Depends: ${shlibs:Depends}, ${misc:Depends}, libopm-simulators1
-Description: OPM simulators python bindings
-  Python package for opm-simulators
+Description: Python wrappers for the Open porous media / reservoir simulators
+ The Open Porous Media (OPM) software suite provides libraries and
+ tools for modeling and simulation of porous media processes, especially
+ for simulating CO2 sequestration and improved and enhanced oil recovery.
+ .
+ opm-simulators provides a research (ebos) and a production (flow) fully
+ implicit black-oil simulators, supporting one to three phases and
+ supporting solvent and polymer options. It uses cell centered finite
+ volume schemes with two point flux approximation and automatic
+ differentiation for the discretization and uses state of the art linear
+ and nonlinear solvers. It supports standard and multi segment well
+ models and reading and writing file in Eclipse format, a very common
+ format used in the oil reservoir simulation community.
+ .
+ Package provides python wrappers for the simulators.
