@@ -121,7 +121,7 @@ namespace {
     buildWellState(const Setup& setup, const std::size_t timeStep,
                    std::vector<Opm::ParallelWellInfo>& pinfos)
     {
-        auto state  = Opm::WellStateFullyImplicitBlackoil{};
+        auto state  = Opm::WellStateFullyImplicitBlackoil{setup.pu.num_phases};
 
         const auto cpress =
             std::vector<double>(setup.grid.c_grid()->number_of_cells,

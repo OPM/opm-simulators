@@ -46,6 +46,13 @@ namespace Opm
         typedef std::array< int, 3 >  mapentry_t;
         typedef std::map< std::string, mapentry_t > WellMapType;
 
+
+
+        explicit WellState(int num_phases) :
+            np_(num_phases)
+        {}
+
+
         /// Allocate and initialize if wells is non-null.
         /// Also tries to give useful initial values to the bhp() and
         /// wellRates() fields, depending on controls.  The
@@ -397,9 +404,8 @@ namespace Opm
 
             // Set default zero initial well rates.
             // May be overwritten below.
-            const int np = pu.num_phases;
-            for (int p = 0; p < np; ++p) {
-                wellrates_[np*w + p] = 0.0;
+            for (int p = 0; p < this->np_; ++p) {
+                wellrates_[this->np_*w + p] = 0.0;
             }
 
             if ( well.isInjector() ) { 
@@ -465,15 +471,15 @@ namespace Opm
                         switch (inj_controls.injector_type) {
                         case InjectorType::WATER:
                             assert(pu.phase_used[BlackoilPhases::Aqua]);
-                            wellrates_[np*w + pu.phase_pos[BlackoilPhases::Aqua]] = inj_surf_rate;
+                            wellrates_[this->np_*w + pu.phase_pos[BlackoilPhases::Aqua]] = inj_surf_rate;
                             break;
                         case InjectorType::GAS:
                             assert(pu.phase_used[BlackoilPhases::Vapour]);
-                            wellrates_[np*w + pu.phase_pos[BlackoilPhases::Vapour]] = inj_surf_rate;
+                            wellrates_[this->np_*w + pu.phase_pos[BlackoilPhases::Vapour]] = inj_surf_rate;
                             break;
                         case InjectorType::OIL:
                             assert(pu.phase_used[BlackoilPhases::Liquid]);
-                            wellrates_[np*w + pu.phase_pos[BlackoilPhases::Liquid]] = inj_surf_rate;
+                            wellrates_[this->np_*w + pu.phase_pos[BlackoilPhases::Liquid]] = inj_surf_rate;
                             break;
                         case InjectorType::MULTI:
                             // Not currently handled, keep zero init.
@@ -488,15 +494,15 @@ namespace Opm
                     switch (prod_controls.cmode) {
                     case Well::ProducerCMode::ORAT:
                         assert(pu.phase_used[BlackoilPhases::Liquid]);
-                        wellrates_[np*w + pu.phase_pos[BlackoilPhases::Liquid]] = -prod_controls.oil_rate;
+                        wellrates_[this->np_*w + pu.phase_pos[BlackoilPhases::Liquid]] = -prod_controls.oil_rate;
                         break;
                     case Well::ProducerCMode::WRAT:
                         assert(pu.phase_used[BlackoilPhases::Aqua]);
-                        wellrates_[np*w + pu.phase_pos[BlackoilPhases::Aqua]] = -prod_controls.water_rate;
+                        wellrates_[this->np_*w + pu.phase_pos[BlackoilPhases::Aqua]] = -prod_controls.water_rate;
                         break;
                     case Well::ProducerCMode::GRAT:
                         assert(pu.phase_used[BlackoilPhases::Vapour]);
-                        wellrates_[np*w + pu.phase_pos[BlackoilPhases::Vapour]] = -prod_controls.gas_rate;
+                        wellrates_[this->np_*w + pu.phase_pos[BlackoilPhases::Vapour]] = -prod_controls.gas_rate;
                         break;
                     default:
                         // Keep zero init.
