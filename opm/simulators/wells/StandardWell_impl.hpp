@@ -1512,12 +1512,14 @@ namespace Opm
                 for (int p = 0; p<np; ++p) {
                     total_res_rate -= well_state.wellRates()[well_index*np + p] * convert_coeff[p];
                 }
-                if (total_res_rate == 0.0)
-                    break;
 
                 if (controls.prediction_mode) {
                     for (int p = 0; p<np; ++p) {
-                        well_state.wellRates()[well_index*np + p] *= controls.resv_rate/total_res_rate;
+                        if (total_res_rate == 0.0) {
+                            well_state.wellRates()[well_index*np + p] = controls.resv_rate/np;
+                        } else {
+                            well_state.wellRates()[well_index*np + p] *= controls.resv_rate/total_res_rate;
+                        }
                     }
                 } else {
                     std::vector<double> hrates(number_of_phases_,0.);
@@ -1534,9 +1536,12 @@ namespace Opm
                     Base::rateConverter_.calcReservoirVoidageRates(/*fipreg*/ 0, Base::pvtRegionIdx_, hrates, hrates_resv);
                     double target = std::accumulate(hrates_resv.begin(), hrates_resv.end(), 0.0);
                     for (int p = 0; p<np; ++p) {
-                        well_state.wellRates()[well_index*np + p] *= target/total_res_rate;
+                        if (total_res_rate == 0.0) {
+                            well_state.wellRates()[well_index*np + p] = hrates_resv[p];
+                        } else {
+                            well_state.wellRates()[well_index*np + p] *= target/total_res_rate;
+                        }
                     }
-
                 }
                 break;
             }
