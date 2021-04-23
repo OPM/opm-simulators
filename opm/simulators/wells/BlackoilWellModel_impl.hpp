@@ -402,6 +402,7 @@ namespace Opm {
             for (auto& well : well_container_) {
                 const uint64_t effective_events_mask = ScheduleEvents::WELL_STATUS_CHANGE
                         + ScheduleEvents::INJECTION_TYPE_CHANGED
+                        + ScheduleEvents::WELL_SWITCHED_INJECTOR_PRODUCER
                         + ScheduleEvents::NEW_WELL;
 
                 const auto& events = schedule()[reportStepIdx].wellgroup_events();
