@@ -48,8 +48,8 @@ namespace Opm
 
 
 
-        explicit WellState(int num_phases) :
-            np_(num_phases)
+        explicit WellState(const PhaseUsage& pu) :
+            phase_usage_(pu)
         {}
 
 
@@ -61,7 +61,6 @@ namespace Opm
         void init(const std::vector<double>& cellPressures,
                   const std::vector<Well>& wells_ecl,
                   const std::vector<ParallelWellInfo*>& parallel_well_info,
-                  const PhaseUsage& pu,
                   const std::vector<std::vector<PerforationData>>& well_perf_data,
                   const SummaryState& summary_state)
         {
@@ -74,9 +73,8 @@ namespace Opm
             {
                 // const int nw = wells->number_of_wells;
                 const int nw = wells_ecl.size();
+                const int np = this->phase_usage_.num_phases;
                 // const int np = wells->number_of_phases;
-                const int np = pu.num_phases;
-                np_ = np;
                 status_.assign(nw, Well::Status::OPEN);
                 bhp_.resize(nw, 0.0);
                 thp_.resize(nw, 0.0);
@@ -87,7 +85,7 @@ namespace Opm
                     const Well& well = wells_ecl[w];
               
                     // Initialize bhp(), thp(), wellRates(), temperature().
-                    initSingleWell(cellPressures, w, well, *parallel_well_info[w], pu, summary_state);
+                    initSingleWell(cellPressures, w, well, *parallel_well_info[w], summary_state);
 
                     // Setup wellname -> well index mapping.
                     const int num_perf_this_well = well_perf_data[w].size();
@@ -235,8 +233,14 @@ namespace Opm
         /// The number of phases present.
         int numPhases() const
         {
-            return np_;
+            return this->phase_usage_.num_phases;
         }
+
+        const PhaseUsage& phaseUsage() const {
+            return this->phase_usage_;
+        }
+
+
 
         void openWell(int well_index) {
             this->status_[well_index] = Well::Status::OPEN;
@@ -273,12 +277,12 @@ namespace Opm
         }
 
         virtual data::Wells
-        report(const PhaseUsage& pu,
-               const int* globalCellIdxMap,
+        report(const int* globalCellIdxMap,
                const std::function<bool(const int)>& wasDynamicallyClosed) const
         {
             using rt = data::Rates::opt;
 
+            const auto& pu = this->phaseUsage();
             data::Wells dw;
             for( const auto& itr : this->wellMap_ ) {
                 const auto well_index = itr.second[ 0 ];
@@ -354,13 +358,13 @@ namespace Opm
         WellState& operator=(const WellState& rhs) = default;
 
     private:
+        PhaseUsage phase_usage_;
         std::vector<double> bhp_;
         std::vector<double> thp_;
         std::vector<double> temperature_;
         std::vector<double> wellrates_;
         std::vector<double> perfrates_;
         std::vector<double> perfpress_;
-        int np_;
     protected:
         std::vector<Well::Status> status_;
     private:
@@ -397,15 +401,16 @@ namespace Opm
                             const int w,
                             const Well& well,
                             const ParallelWellInfo& well_info,
-                            const PhaseUsage& pu,
                             const SummaryState& summary_state)
         {
             assert(well.isInjector() || well.isProducer());
 
             // Set default zero initial well rates.
             // May be overwritten below.
-            for (int p = 0; p < this->np_; ++p) {
-                wellrates_[this->np_*w + p] = 0.0;
+            const auto& pu = this->phase_usage_;
+            const int np = pu.num_phases;
+            for (int p = 0; p < np; ++p) {
+                wellrates_[np*w + p] = 0.0;
             }
 
             if ( well.isInjector() ) { 
@@ -471,15 +476,15 @@ namespace Opm
                         switch (inj_controls.injector_type) {
                         case InjectorType::WATER:
                             assert(pu.phase_used[BlackoilPhases::Aqua]);
-                            wellrates_[this->np_*w + pu.phase_pos[BlackoilPhases::Aqua]] = inj_surf_rate;
+                            wellrates_[np*w + pu.phase_pos[BlackoilPhases::Aqua]] = inj_surf_rate;
                             break;
                         case InjectorType::GAS:
                             assert(pu.phase_used[BlackoilPhases::Vapour]);
-                            wellrates_[this->np_*w + pu.phase_pos[BlackoilPhases::Vapour]] = inj_surf_rate;
+                            wellrates_[np*w + pu.phase_pos[BlackoilPhases::Vapour]] = inj_surf_rate;
                             break;
                         case InjectorType::OIL:
                             assert(pu.phase_used[BlackoilPhases::Liquid]);
-                            wellrates_[this->np_*w + pu.phase_pos[BlackoilPhases::Liquid]] = inj_surf_rate;
+                            wellrates_[np*w + pu.phase_pos[BlackoilPhases::Liquid]] = inj_surf_rate;
                             break;
                         case InjectorType::MULTI:
                             // Not currently handled, keep zero init.
@@ -494,15 +499,15 @@ namespace Opm
                     switch (prod_controls.cmode) {
                     case Well::ProducerCMode::ORAT:
                         assert(pu.phase_used[BlackoilPhases::Liquid]);
-                        wellrates_[this->np_*w + pu.phase_pos[BlackoilPhases::Liquid]] = -prod_controls.oil_rate;
+                        wellrates_[np*w + pu.phase_pos[BlackoilPhases::Liquid]] = -prod_controls.oil_rate;
                         break;
                     case Well::ProducerCMode::WRAT:
                         assert(pu.phase_used[BlackoilPhases::Aqua]);
-                        wellrates_[this->np_*w + pu.phase_pos[BlackoilPhases::Aqua]] = -prod_controls.water_rate;
+                        wellrates_[np*w + pu.phase_pos[BlackoilPhases::Aqua]] = -prod_controls.water_rate;
                         break;
                     case Well::ProducerCMode::GRAT:
                         assert(pu.phase_used[BlackoilPhases::Vapour]);
-                        wellrates_[this->np_*w + pu.phase_pos[BlackoilPhases::Vapour]] = -prod_controls.gas_rate;
+                        wellrates_[np*w + pu.phase_pos[BlackoilPhases::Vapour]] = -prod_controls.gas_rate;
                         break;
                     default:
                         // Keep zero init.

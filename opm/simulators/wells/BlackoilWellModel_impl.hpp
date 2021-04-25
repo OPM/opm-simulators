@@ -32,12 +32,12 @@
 namespace Opm {
     template<typename TypeTag>
     BlackoilWellModel<TypeTag>::
-    BlackoilWellModel(Simulator& ebosSimulator)
+    BlackoilWellModel(Simulator& ebosSimulator, const PhaseUsage& phase_usage)
         : ebosSimulator_(ebosSimulator),
-          phase_usage_(phaseUsageFromDeck(ebosSimulator_.vanguard().eclState())),
-          active_well_state_(phase_usage_.num_phases),
-          last_valid_well_state_(phase_usage_.num_phases),
-          nupcol_well_state_(phase_usage_.num_phases)
+          phase_usage_(phase_usage),
+          active_well_state_(phase_usage),
+          last_valid_well_state_(phase_usage),
+          nupcol_well_state_(phase_usage)
     {
         terminal_output_ = false;
         if (ebosSimulator.gridView().comm().rank() == 0)
@@ -73,6 +73,13 @@ namespace Opm {
 
         alternative_well_rate_init_ = EWOMS_GET_PARAM(TypeTag, bool, AlternativeWellRateInit);
     }
+
+    template<typename TypeTag>
+    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel(Simulator& ebosSimulator) :
+        BlackoilWellModel(ebosSimulator, phaseUsageFromDeck(ebosSimulator.vanguard().eclState()))
+    {}
+
 
     template<typename TypeTag>
     void
@@ -268,7 +275,7 @@ namespace Opm {
 
         // handling MS well related
         if (param_.use_multisegment_well_&& anyMSWellOpenLocal()) { // if we use MultisegmentWell model
-            this->wellState().initWellStateMSWell(wells_ecl_, phase_usage_, &this->prevWellState());
+            this->wellState().initWellStateMSWell(wells_ecl_, &this->prevWellState());
         }
 
         const Group& fieldGroup = schedule().getGroup("FIELD", timeStepIdx);
@@ -630,7 +637,7 @@ namespace Opm {
             const auto phaseUsage = phaseUsageFromDeck(eclState());
             const size_t numCells = Opm::UgGridHelpers::numCells(grid());
             const bool handle_ms_well = (param_.use_multisegment_well_ && anyMSWellOpenLocal());
-            this->wellState().resize(wells_ecl_, local_parallel_well_info_, schedule(), handle_ms_well, numCells, phaseUsage, well_perf_data_, summaryState, globalNumWells); // Resize for restart step
+            this->wellState().resize(wells_ecl_, local_parallel_well_info_, schedule(), handle_ms_well, numCells, well_perf_data_, summaryState, globalNumWells); // Resize for restart step
             loadRestartData(restartValues.wells, restartValues.grp_nwrk, phaseUsage, handle_ms_well, this->wellState());
         }
 
@@ -758,7 +765,7 @@ namespace Opm {
         }
 
         this->wellState().init(cellPressures, schedule(), wells_ecl_, local_parallel_well_info_, timeStepIdx,
-                               &this->prevWellState(), phase_usage_, well_perf_data_,
+                               &this->prevWellState(), well_perf_data_,
                                summaryState, globalNumWells);
     }
 

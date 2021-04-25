@@ -69,9 +69,9 @@ namespace Opm
         using BaseType :: resetConnectionTransFactors;
         using BaseType :: updateStatus;
 
-        explicit WellStateFullyImplicitBlackoil(int num_phases) :
-            WellState(num_phases),
-            group_state(num_phases)
+        explicit WellStateFullyImplicitBlackoil(const PhaseUsage& pu) :
+            WellState(pu),
+            group_state(pu.num_phases)
         {}
 
 
@@ -84,13 +84,12 @@ namespace Opm
                   const std::vector<ParallelWellInfo*>& parallel_well_info,
                   const int report_step,
                   const WellStateFullyImplicitBlackoil* prevState,
-                  const PhaseUsage& pu,
                   const std::vector<std::vector<PerforationData>>& well_perf_data,
                   const SummaryState& summary_state,
                   const int globalNumberOfWells)
         {
             // call init on base class
-            BaseType :: init(cellPressures, wells_ecl, parallel_well_info, pu, well_perf_data, summary_state);
+            BaseType :: init(cellPressures, wells_ecl, parallel_well_info, well_perf_data, summary_state);
 
             for (const auto& winfo: parallel_well_info)
             {
@@ -105,6 +104,7 @@ namespace Opm
             if( nw == 0 ) return ;
 
             // Initialize perfphaserates_, which must be done here.
+            const auto& pu = this->phaseUsage();
             const int np = pu.num_phases;
 
             int nperf = 0;
@@ -387,16 +387,15 @@ namespace Opm
                     const Schedule& schedule,
                     const bool handle_ms_well,
                     const size_t numCells,
-                    const PhaseUsage& pu,
                     const std::vector<std::vector<PerforationData>>& well_perf_data,
                     const SummaryState& summary_state,
                     const int globalNumWells)
         {
             const std::vector<double> tmp(numCells, 0.0); // <- UGLY HACK to pass the size
-            init(tmp, schedule, wells_ecl, parallel_well_info, 0, nullptr, pu, well_perf_data, summary_state, globalNumWells);
+            init(tmp, schedule, wells_ecl, parallel_well_info, 0, nullptr, well_perf_data, summary_state, globalNumWells);
 
             if (handle_ms_well) {
-                initWellStateMSWell(wells_ecl, pu, nullptr);
+                initWellStateMSWell(wells_ecl, nullptr);
             }
         }
 
@@ -530,18 +529,18 @@ namespace Opm
         }
 
         data::Wells
-        report(const PhaseUsage &pu,
-               const int* globalCellIdxMap,
+        report(const int* globalCellIdxMap,
                const std::function<bool(const int)>& wasDynamicallyClosed) const override
         {
             data::Wells res =
-                WellState::report(pu, globalCellIdxMap, wasDynamicallyClosed);
+                WellState::report(globalCellIdxMap, wasDynamicallyClosed);
 
             const int nw = this->numWells();
             if (nw == 0) {
                 return res;
             }
 
+            const auto& pu = this->phaseUsage();
             const int np = pu.num_phases;
 
             using rt = data::Rates::opt;
@@ -689,10 +688,12 @@ namespace Opm
 
         /// init the MS well related.
         void initWellStateMSWell(const std::vector<Well>& wells_ecl,
-                                 const PhaseUsage& pu, const WellStateFullyImplicitBlackoil* prev_well_state)
+                                 const WellStateFullyImplicitBlackoil* prev_well_state)
         {
             // still using the order in wells
             const int nw = wells_ecl.size();
+            const auto& pu = this->phaseUsage();
+            const int np = pu.num_phases;
             if (nw == 0) {
                 return;
             }
@@ -720,7 +721,6 @@ namespace Opm
                     nseg_ += 1;
                     seg_number_.push_back(1); // Assign single segment (top) as number 1.
                     seg_press_.push_back(bhp()[w]);
-                    const int np = numPhases();
                     for (int p = 0; p < np; ++p) {
                         seg_rates_.push_back(wellRates()[np * w + p]);
                     }
@@ -763,7 +763,6 @@ namespace Opm
 
                     // for the seg_rates_, now it becomes a recursive solution procedure.
                     {
-                        const int np = numPhases();
                         const int start_perf = connpos;
                         const int start_perf_next_well = connpos + num_perf_this_well;
 
@@ -825,7 +824,6 @@ namespace Opm
 
             if (prev_well_state && !prev_well_state->wellMap().empty()) {
                 const auto& end = prev_well_state->wellMap().end();
-                const int np = numPhases();
                 for (int w = 0; w < nw; ++w) {
                     const Well& well = wells_ecl[w];
                     if (well.getStatus() == Well::Status::SHUT)

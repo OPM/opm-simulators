@@ -121,7 +121,7 @@ namespace {
     buildWellState(const Setup& setup, const std::size_t timeStep,
                    std::vector<Opm::ParallelWellInfo>& pinfos)
     {
-        auto state  = Opm::WellStateFullyImplicitBlackoil{setup.pu.num_phases};
+        auto state  = Opm::WellStateFullyImplicitBlackoil{setup.pu};
 
         const auto cpress =
             std::vector<double>(setup.grid.c_grid()->number_of_cells,
@@ -144,11 +144,11 @@ namespace {
 
         state.init(cpress, setup.sched,
                    wells, ppinfos,
-                   timeStep, nullptr, setup.pu, setup.well_perf_data, setup.st,
+                   timeStep, nullptr, setup.well_perf_data, setup.st,
                    wells.size());
 
         state.initWellStateMSWell(setup.sched.getWells(timeStep),
-                                  setup.pu, nullptr);
+                                  nullptr);
 
         return state;
     }
@@ -274,7 +274,7 @@ BOOST_AUTO_TEST_CASE(Pressure)
 
     setSegPress(wells, wstate);
 
-    const auto rpt = wstate.report(setup.pu, setup.grid.c_grid()->global_cell, [](const int){return false;});
+    const auto rpt = wstate.report(setup.grid.c_grid()->global_cell, [](const int){return false;});
 
     {
         const auto& xw = rpt.at("INJE01");
@@ -321,9 +321,9 @@ BOOST_AUTO_TEST_CASE(Rates)
 
     const auto& pu = setup.pu;
 
-    setSegRates(wells, pu, wstate);
+    setSegRates(wells, pu,  wstate);
 
-    const auto rpt = wstate.report(pu, setup.grid.c_grid()->global_cell, [](const int){return false;});
+    const auto rpt = wstate.report(setup.grid.c_grid()->global_cell, [](const int){return false;});
 
     const auto wat = pu.phase_used[Opm::BlackoilPhases::Aqua];
     const auto oil = pu.phase_used[Opm::BlackoilPhases::Liquid];

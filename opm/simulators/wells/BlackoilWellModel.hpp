@@ -329,7 +329,7 @@ namespace Opm {
 
             Opm::data::Wells wellData() const
             {
-                auto wsrpt = this->wellState().report(phase_usage_, Opm::UgGridHelpers::globalCell(grid()),
+                auto wsrpt = this->wellState().report(Opm::UgGridHelpers::globalCell(grid()),
                                                       [this](const int well_ndex) -> bool
                                                       {
                                                           return this->wasDynamicallyShutThisTimeStep(well_ndex);
@@ -632,6 +632,7 @@ namespace Opm {
 
              void computeWellTemperature();                       
         private:
+            BlackoilWellModel(Simulator& ebosSimulator, const PhaseUsage& pu);
             /*
               The various wellState members should be accessed and modified
               through the accessor functions wellState(), prevWellState(),
