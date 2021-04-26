@@ -199,11 +199,6 @@ namespace Opm {
                 timeStepSucceeded(ebosSimulator_.time(), ebosSimulator_.timeStepSize());
             }
 
-            void endEpisode()
-            {
-                endReportStep();
-            }
-
             template <class Context>
             void computeTotalRatesForDof(RateVector& rate,
                                          const Context& context,

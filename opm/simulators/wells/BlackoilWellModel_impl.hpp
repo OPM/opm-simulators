@@ -493,21 +493,6 @@ namespace Opm {
 
 
 
-    // called at the end of a report step
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    endReportStep()
-    {
-        // Clear the communication data structures for above values.
-        for (auto&& pinfo : local_parallel_well_info_)
-        {
-            pinfo->clear();
-        }
-    }
-
-
-
 
 
     // called at the end of a report step
@@ -515,8 +500,6 @@ namespace Opm {
     const SimulatorReportSingle&
     BlackoilWellModel<TypeTag>::
     lastReport() const {return last_report_; }
-
-
 
 
 
