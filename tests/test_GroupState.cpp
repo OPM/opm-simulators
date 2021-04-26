@@ -20,6 +20,8 @@
 #include <stdexcept>
 
 #include <opm/simulators/wells/GroupState.hpp>
+#include <opm/json/JsonObject.hpp>
+
 
 #define BOOST_TEST_MODULE GroupStateTest
 #include <boost/test/unit_test.hpp>
@@ -67,3 +69,16 @@ BOOST_AUTO_TEST_CASE(GroupStateCreate) {
     BOOST_CHECK(gs2 == gs);
 }
 
+
+BOOST_AUTO_TEST_CASE(GroupStateDump) {
+    std::size_t num_phases{3};
+    GroupState gs(num_phases);
+    std::vector<double> rates{0,1,2};
+    gs.update_production_rates("AGROUP", rates);
+    gs.update_injection_rein_rates("CGROUP", rates);
+    gs.injection_control("AGROUP", Phase::WATER, Group::InjectionCMode::RATE);
+    gs.injection_control("AGROUP", Phase::GAS, Group::InjectionCMode::RATE);
+
+    auto json_string = gs.dump();
+    Json::JsonObject json_gs(json_string);
+}
