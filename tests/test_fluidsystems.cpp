@@ -59,6 +59,9 @@
 #include <opm/material/common/UniformTabulated2DFunction.hpp>
 
 #include <opm/parser/eclipse/Python/Python.hpp>
+#if HAVE_ECL_INPUT
+#include <opm/parser/eclipse/Deck/Deck.hpp>
+#endif
 
 #include <dune/common/parallel/mpihelper.hh>
 
