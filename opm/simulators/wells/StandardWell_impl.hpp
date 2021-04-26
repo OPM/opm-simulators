@@ -1547,17 +1547,12 @@ namespace Opm
             }
             case Well::ProducerCMode::THP:
             {
-                well_state.thp()[well_index] = this->getTHPConstraint(summaryState);
-                gliftDebug(
-                    "computing BHP from THP to update well state",
-                    deferred_logger);
-                auto bhp = computeBhpAtThpLimitProd(well_state, ebos_simulator, summaryState, deferred_logger);
-                if (bhp) {
-                    well_state.bhp()[well_index] = *bhp;
-                } else {
-                    deferred_logger.warning("FAILURE_GETTING_CONVERGED_BHP",
-                                            "Failed to find BHP when switching to THP control for well " + name());
+                std::vector<double> rates(3, 0.0);
+                for (int p = 0; p<np; ++p) {
+                    rates[p] = well_state.wellRates()[well_index*np + p];
                 }
+                double bhp = calculateBhpFromThp(well_state, rates, well, summaryState, deferred_logger);
+                well_state.bhp()[well_index] = bhp;
                 break;
             }
             case Well::ProducerCMode::GRUP:
