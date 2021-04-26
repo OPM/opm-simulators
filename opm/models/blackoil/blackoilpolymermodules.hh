@@ -35,6 +35,8 @@
 #include <opm/material/common/Tabulated1DFunction.hpp>
 #include <opm/material/common/IntervalTabulated2DFunction.hpp>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
+
 #if HAVE_ECL_INPUT
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PlyadsTable.hpp>
