@@ -34,7 +34,7 @@ namespace Opm
     /// Determine the active phases
     inline PhaseUsage phaseUsage(const Phases& phases) {
         PhaseUsage pu;
-        std::fill(pu.phase_used, pu.phase_used + BlackoilPhases::MaxNumPhases + BlackoilPhases::NumCryptoPhases, 0);
+        pu.phase_used.fill(0);
 
         // Discover phase usage.
         pu.phase_used[BlackoilPhases::Aqua] = phases.active(Phase::WATER);
