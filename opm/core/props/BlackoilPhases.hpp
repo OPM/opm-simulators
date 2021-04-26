@@ -20,6 +20,7 @@
 #ifndef OPM_BLACKOILPHASES_HEADER_INCLUDED
 #define OPM_BLACKOILPHASES_HEADER_INCLUDED
 
+#include <array>
 
 namespace Opm
 {
@@ -42,9 +43,10 @@ namespace Opm
 
     struct PhaseUsage : public BlackoilPhases
     {
+        std::array<int, MaxNumPhases + NumCryptoPhases> phase_used;
+        std::array<int, MaxNumPhases + NumCryptoPhases> phase_pos;
+
         int num_phases;
-        int phase_used[MaxNumPhases + NumCryptoPhases];
-        int phase_pos[MaxNumPhases + NumCryptoPhases];
         bool has_solvent;
         bool has_polymer;
         bool has_energy;
