@@ -1255,8 +1255,11 @@ public:
         auto& simulator = this->simulator();
         auto& schedule = simulator.vanguard().schedule();
 
-        int episodeIdx = simulator.episodeIndex();
+        wellModel_.endEpisode();
+        if (enableAquifers_)
+            aquiferModel_.endEpisode();
 
+        int episodeIdx = simulator.episodeIndex();
         // check if we're finished ...
         if (episodeIdx + 1 >= static_cast<int>(schedule.size() - 1)) {
             simulator.setFinished(true);
