@@ -424,6 +424,7 @@ namespace Opm {
                 const bool event = report_step_starts_ && events.hasEvent(well->name(), effective_events_mask);
                 if (event) {
                     try {
+                        well->updateWellStateWithTarget(ebosSimulator_, this->wellState(), local_deferredLogger);
                         well->calculateExplicitQuantities(ebosSimulator_, this->wellState(), local_deferredLogger);
                         well->solveWellEquation(ebosSimulator_, this->wellState(), this->groupState(), local_deferredLogger);
                     } catch (const std::exception& e) {
