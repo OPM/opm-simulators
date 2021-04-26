@@ -142,9 +142,9 @@ namespace Opm
                                     Opm::DeferredLogger& deferred_logger) override;
 
         /// updating the well state based the current control mode
-        virtual void updateWellStateWithTarget(const Simulator& ebos_simulator,
-                                               WellState& well_state,
-                                               Opm::DeferredLogger& deferred_logger) const override;
+        void updateWellStateWithTarget(const Simulator& ebos_simulator,
+                                       WellState& well_state,
+                                       Opm::DeferredLogger& deferred_logger) const;
 
         /// check whether the well equations get converged for this well
         virtual ConvergenceReport getWellConvergence(const WellState& well_state, const std::vector<double>& B_avg, Opm::DeferredLogger& deferred_logger, const bool relax_tolerance = false) const override;
@@ -253,6 +253,8 @@ namespace Opm
         using Base::wellIsStopped;
         using Base::updateWellOperability;
         using Base::checkWellOperability;
+        using Base::calculateBhpFromThp;
+        using Base::getALQ;
 
         // TODO: trying to use the information from the Well opm-parser as much
         // as possible, it will possibly be re-implemented later for efficiency reason.
@@ -383,10 +385,6 @@ namespace Opm
         // convert a Eval from reservoir to contain the derivative related to wells
         EvalWell extendEval(const Eval& in) const;
 
-
-        template <class ValueType>
-        ValueType calculateBhpFromThp(const std::vector<ValueType>& rates, const Well& well, const SummaryState& summaryState, Opm::DeferredLogger& deferred_logger) const;
-
         double calculateThpFromBhp(const std::vector<double>& rates, const double bhp, Opm::DeferredLogger& deferred_logger) const;
         void updateThp(WellState& well_state, Opm::DeferredLogger& deferred_logger) const;
 
@@ -445,6 +443,8 @@ namespace Opm
         void processFractions(const int seg) const;
 
         void updateWellStateFromPrimaryVariables(WellState& well_state, Opm::DeferredLogger& deferred_logger) const;
+
+        virtual double getRefDensity() const override;
 
         bool frictionalPressureLossConsidered() const;
 
