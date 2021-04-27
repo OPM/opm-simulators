@@ -25,6 +25,7 @@
 
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
+#include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 
 namespace Opm {
 
@@ -163,7 +164,7 @@ private:
     std::map<std::string, double> m_grat_sales_target;
 
 
-    std::map<std::pair<Opm::Phase, std::string>, Group::InjectionCMode> injection_controls;
+    std::map<std::pair<Phase, std::string>, Group::InjectionCMode> injection_controls;
 };
 
 }

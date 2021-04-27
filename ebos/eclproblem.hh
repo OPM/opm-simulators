@@ -1414,7 +1414,7 @@ public:
           the next timestep we must commit it.
         */
         if (commit_wellstate)
-            this->wellModel_.commitWellState();
+            this->wellModel_.commitWGState();
     }
 
 

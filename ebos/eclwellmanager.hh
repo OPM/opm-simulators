@@ -37,6 +37,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 #include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/simulators/wells/WGState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellConnections.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
@@ -631,24 +632,24 @@ public:
         throw std::logic_error("wellState() method not implemented for class eclwellmanager");
     }
 
-    void commitWellState()
+    void commitWGState()
     {
         throw std::logic_error("commitWellState() method not implemented for class eclwellmanager");
     }
 
-    void commitWellState(WellStateFullyImplicitBlackoil well_state)
+    void commitWGState(WGState)
     {
-        throw std::logic_error("commitWellState() method not implemented for class eclwellmanager");
+        throw std::logic_error("commitWGState() method not implemented for class eclwellmanager");
     }
 
-    void resetWellState()
+    void resetWGState()
     {
-        throw std::logic_error("resetWellState() method not implemented for class eclwellmanager");
+        throw std::logic_error("resetWGState() method not implemented for class eclwellmanager");
     }
 
-    void updateNupcolWellState()
+    void updateNupcolWGState()
     {
-        throw std::logic_error("updateNupcolWellState() method not implemented for class eclwellmanager");
+        throw std::logic_error("updateNupcolWGState() method not implemented for class eclwellmanager");
     }
 
     void

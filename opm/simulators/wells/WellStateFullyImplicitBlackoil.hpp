@@ -22,7 +22,6 @@
 #define OPM_WELLSTATEFULLYIMPLICITBLACKOIL_HEADER_INCLUDED
 
 #include <opm/simulators/wells/WellState.hpp>
-#include <opm/simulators/wells/GroupState.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
@@ -70,9 +69,9 @@ namespace Opm
         using BaseType :: updateStatus;
 
         explicit WellStateFullyImplicitBlackoil(const PhaseUsage& pu) :
-            WellState(pu),
-            group_state(pu.num_phases)
-        {}
+            WellState(pu)
+        {
+        }
 
 
         /// Allocate and initialize if wells is non-null.  Also tries
@@ -418,32 +417,6 @@ namespace Opm
         std::vector<Well::ProducerCMode>& currentProductionControls() { return current_production_controls_; }
         const std::vector<Well::ProducerCMode>& currentProductionControls() const { return current_production_controls_; }
 
-        bool hasProductionGroupControl(const std::string& groupName) const {
-            return this->group_state.has_production_control(groupName);
-        }
-
-        bool hasInjectionGroupControl(const Opm::Phase& phase, const std::string& groupName) const {
-            return this->group_state.has_injection_control(groupName, phase);
-        }
-
-        /// One current control per group.
-        void setCurrentProductionGroupControl(const std::string& groupName, const Group::ProductionCMode& groupControl ) {
-            this->group_state.production_control(groupName, groupControl);
-        }
-
-        Group::ProductionCMode currentProductionGroupControl(const std::string& groupName) const {
-            return this->group_state.production_control(groupName);
-        }
-
-        /// One current control per group.
-        void setCurrentInjectionGroupControl(const Opm::Phase& phase, const std::string& groupName, const Group::InjectionCMode& groupControl ) {
-            this->group_state.injection_control(groupName, phase, groupControl);
-        }
-
-        Group::InjectionCMode currentInjectionGroupControl(const Opm::Phase& phase, const std::string& groupName) const {
-            return this->group_state.injection_control(groupName, phase);
-        }
-
         void setCurrentWellRates(const std::string& wellName, const std::vector<double>& rates ) {
             well_rates[wellName].second = rates;
         }
@@ -461,78 +434,7 @@ namespace Opm
             return this->well_rates.find(wellName) != this->well_rates.end();
         }
 
-        void setCurrentProductionGroupRates(const std::string& groupName, const std::vector<double>& rates ) {
-            this->group_state.update_production_rates(groupName, rates);
-        }
 
-        const std::vector<double>& currentProductionGroupRates(const std::string& groupName) const {
-            return this->group_state.production_rates(groupName);
-        }
-
-        bool hasProductionGroupRates(const std::string& groupName) const {
-            return this->group_state.has_production_rates(groupName);
-        }
-
-
-        void setCurrentProductionGroupReductionRates(const std::string& groupName, const std::vector<double>& target ) {
-            this->group_state.update_production_reduction_rates(groupName, target);
-        }
-
-        const std::vector<double>& currentProductionGroupReductionRates(const std::string& groupName) const {
-            return this->group_state.production_reduction_rates(groupName);
-        }
-
-        void setCurrentInjectionGroupReductionRates(const std::string& groupName, const std::vector<double>& target ) {
-            this->group_state.update_injection_reduction_rates(groupName, target);
-        }
-
-        const std::vector<double>& currentInjectionGroupReductionRates(const std::string& groupName) const {
-            return this->group_state.injection_reduction_rates(groupName);
-        }
-
-        void setCurrentInjectionGroupReservoirRates(const std::string& groupName, const std::vector<double>& target ) {
-            this->group_state.update_injection_reservoir_rates(groupName, target);
-        }
-
-        const std::vector<double>& currentInjectionGroupReservoirRates(const std::string& groupName) const {
-            return this->group_state.injection_reservoir_rates(groupName);
-        }
-
-        void setCurrentInjectionVREPRates(const std::string& groupName, const double& target ) {
-            this->group_state.update_injection_vrep_rate(groupName, target);
-        }
-
-        double currentInjectionVREPRates(const std::string& groupName) const {
-            return this->group_state.injection_vrep_rate(groupName);
-        }
-
-        void setCurrentInjectionREINRates(const std::string& groupName, const std::vector<double>& target ) {
-            this->group_state.update_injection_rein_rates(groupName, target);
-        }
-
-        const std::vector<double>& currentInjectionREINRates(const std::string& groupName) const {
-            return this->group_state.injection_rein_rates(groupName);
-        }
-
-        void setCurrentGroupGratTargetFromSales(const std::string& groupName, const double& target ) {
-            this->group_state.update_grat_sales_target(groupName, target);
-        }
-
-        bool hasGroupGratTargetFromSales(const std::string& groupName) const {
-            return this->group_state.has_grat_sales_target(groupName);
-        }
-
-        double currentGroupGratTargetFromSales(const std::string& groupName) const {
-            return this->group_state.grat_sales_target(groupName);
-        }
-
-        void setCurrentGroupInjectionPotentials(const std::string& groupName, const std::vector<double>& pot ) {
-            this->group_state.update_injection_potentials(groupName, pot);
-        }
-
-        const std::vector<double>& currentGroupInjectionPotentials(const std::string& groupName) const {
-            return this->group_state.injection_potentials(groupName);
-        }
 
         data::Wells
         report(const int* globalCellIdxMap,
@@ -1151,8 +1053,6 @@ namespace Opm
                 x.second = data[pos++];
             }
             assert(pos == sz);
-
-            this->group_state.communicate_rates(comm);
         }
 
         template<class Comm>
@@ -1305,6 +1205,7 @@ namespace Opm
             return it->first;
         }
 
+
     private:
         std::vector<double> perfphaserates_;
         std::vector<bool> is_producer_; // Size equal to number of local wells.
@@ -1321,8 +1222,6 @@ namespace Opm
         std::vector<int> globalIsProductionGrup_;
         std::map<std::string, int> wellNameToGlobalIdx_;
         std::map<std::string, std::pair<bool, std::vector<double>>> well_rates;
-
-        GroupState group_state;
 
         std::map<std::string, double> current_alq_;
         std::map<std::string, double> default_alq_;

@@ -59,6 +59,7 @@
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/simulators/wells/WGState.hpp>
 #include <opm/simulators/wells/RateConverter.hpp>
 #include <opm/simulators/wells/WellInterface.hpp>
 #include <opm/simulators/wells/StandardWell.hpp>
@@ -254,7 +255,7 @@ namespace Opm {
             */
             const WellStateFullyImplicitBlackoil& wellState() const
             {
-                return this->active_well_state_;
+                return this->active_wgstate_.well_state;
             }
 
             /*
@@ -262,7 +263,7 @@ namespace Opm {
             */
             WellStateFullyImplicitBlackoil& wellState()
             {
-                return this->active_well_state_;
+                return this->active_wgstate_.well_state;
             }
 
             /*
@@ -274,16 +275,20 @@ namespace Opm {
             */
             const WellStateFullyImplicitBlackoil& prevWellState() const
             {
-                return this->last_valid_well_state_;
+                return this->last_valid_wgstate_.well_state;
             }
 
+            const WGState& prevWGState() const
+            {
+                return this->last_valid_wgstate_;
+            }
             /*
               Will return the currently active nupcolWellState; must initialize
               the internal nupcol wellstate with initNupcolWellState() first.
             */
             const WellStateFullyImplicitBlackoil& nupcolWellState() const
             {
-                return this->nupcol_well_state_;
+                return this->nupcol_wgstate_.well_state;
             }
 
             /*
@@ -292,9 +297,9 @@ namespace Opm {
               with storeWellState() can then subsequently be recovered with the
               resetWellState() method.
             */
-            void commitWellState()
+            void commitWGState()
             {
-                this->last_valid_well_state_ = this->active_well_state_;
+                this->last_valid_wgstate_ = this->active_wgstate_;
             }
 
             /*
@@ -302,9 +307,9 @@ namespace Opm {
               last_valid_well_state_ member, that state can then be recovered
               with a subsequent call to resetWellState().
             */
-            void commitWellState(WellStateFullyImplicitBlackoil well_state)
+            void commitWGState(WGState wgstate)
             {
-                this->last_valid_well_state_ = std::move(well_state);
+                this->last_valid_wgstate_ = std::move(wgstate);
             }
 
             /*
@@ -312,9 +317,9 @@ namespace Opm {
               was stored in the last_valid_well_state_ member. This function
               works in pair with commitWellState() which should be called first.
             */
-            void resetWellState()
+            void resetWGState()
             {
-                this->active_well_state_ = this->last_valid_well_state_;
+                this->active_wgstate_ = this->last_valid_wgstate_;
             }
 
             /*
@@ -322,9 +327,14 @@ namespace Opm {
               member. This can then be subsequently retrieved with accessor
               nupcolWellState().
             */
-            void updateNupcolWellState()
+            void updateNupcolWGState()
             {
-                this->nupcol_well_state_ = this->active_well_state_;
+                this->nupcol_wgstate_ = this->active_wgstate_;
+            }
+
+            const GroupState& groupState() const
+            {
+                return this->active_wgstate_.group_state;
             }
 
             Opm::data::Wells wellData() const
@@ -397,7 +407,6 @@ namespace Opm {
             void initPrimaryVariablesEvaluation() const;
             void updateWellControls(Opm::DeferredLogger& deferred_logger, const bool checkGroupControls);
             WellInterfacePtr getWell(const std::string& well_name) const;
-
         protected:
             Simulator& ebosSimulator_;
 
@@ -577,7 +586,7 @@ namespace Opm {
                                const data::GroupAndNetworkValues& grpNwrkValues,
                                const PhaseUsage& phases,
                                const bool handle_ms_well,
-                               WellStateFullyImplicitBlackoil& state ) const;
+                               WellStateFullyImplicitBlackoil& state );
 
             // whether there exists any multisegment well open on this process
             bool anyMSWellOpenLocal() const;
@@ -589,7 +598,7 @@ namespace Opm {
             bool checkGroupConstraints(const Group& group, Opm::DeferredLogger& deferred_logger) const;
             Group::ProductionCMode checkGroupProductionConstraints(const Group& group, Opm::DeferredLogger& deferred_logger) const;
             Group::InjectionCMode checkGroupInjectionConstraints(const Group& group, const Phase& phase) const;
-            void checkGconsaleLimits(const Group& group, WellState& well_state, Opm::DeferredLogger& deferred_logger ) const;
+            void checkGconsaleLimits(const Group& group, WellState& well_state, Opm::DeferredLogger& deferred_logger );
 
             void updateGroupHigherControls(Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
             void checkGroupHigherConstraints(const Group& group, Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
@@ -632,6 +641,7 @@ namespace Opm {
 
              void computeWellTemperature();                       
         private:
+            GroupState& groupState() { return this->active_wgstate_.group_state; }
             BlackoilWellModel(Simulator& ebosSimulator, const PhaseUsage& pu);
             /*
               The various wellState members should be accessed and modified
@@ -639,9 +649,10 @@ namespace Opm {
               commitWellState(), resetWellState(), nupcolWellState() and
               updateNupcolWellState().
             */
-            WellState active_well_state_;
-            WellState last_valid_well_state_;
-            WellState nupcol_well_state_;
+            WGState active_wgstate_;
+            WGState last_valid_wgstate_;
+            WGState nupcol_wgstate_;
+
         };
 
 

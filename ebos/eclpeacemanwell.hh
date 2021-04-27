@@ -34,6 +34,7 @@
 #include <opm/models/utils/alignedallocator.hh>
 
 #include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/simulators/wells/WGState.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
@@ -1422,22 +1423,22 @@ protected:
         throw std::logic_error("wellState() method not implemented for class eclpeacemanwell");
     }
 
-    void commitWellState()
+    void commitWGState()
     {
         throw std::logic_error("commitWellState() method not implemented for class eclpeacemanwell");
     }
 
-    void commitWellState(WellStateFullyImplicitBlackoil well_state)
+    void commitWGState(WGState wgstate)
     {
         throw std::logic_error("commitWellState() method not implemented for class eclpeacemanwell");
     }
 
-    void resetWellState()
+    void resetWGState()
     {
         throw std::logic_error("resetWellState() method not implemented for class eclpeacemanwell");
     }
 
-    void updateNupcolWellState()
+    void updateNupcolWGState()
     {
         throw std::logic_error("updateNupcolWellState() method not implemented for class eclpeacemanwell");
     }
