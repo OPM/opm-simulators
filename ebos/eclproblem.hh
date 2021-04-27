@@ -1381,7 +1381,7 @@ public:
         }
 
         bool commit_wellstate = false;
-        auto simTime = schedule.simTime(reportStep);
+        auto simTime = Opm::asTimeT(now);
         for (const auto& action : actions.pending(actionState, simTime)) {
             auto actionResult = action->eval(context);
             if (actionResult) {
