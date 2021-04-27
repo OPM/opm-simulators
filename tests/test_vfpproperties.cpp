@@ -34,6 +34,7 @@
 #include <opm/common/utility/FileSystem.hpp>
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
+#include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Units/UnitSystem.hpp>
 #include <opm/simulators/wells/VFPHelpers.hpp>

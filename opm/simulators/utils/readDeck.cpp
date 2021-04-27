@@ -28,6 +28,7 @@
 
 #include <opm/common/utility/String.hpp>
 #include <opm/common/utility/OpmInputError.hpp>
+#include <opm/common/ErrorMacros.hpp>
 
 #include <opm/io/eclipse/EclIOdata.hpp>
 

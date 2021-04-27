@@ -24,6 +24,7 @@
 #include "ParallelRestart.hpp"
 #include <ctime>
 #include <dune/common/parallel/mpitraits.hh>
+#include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
 
 #define HANDLE_AS_POD(T) \
   std::size_t packSize(const T& data, Dune::MPIHelper::MPICommunicator comm) \

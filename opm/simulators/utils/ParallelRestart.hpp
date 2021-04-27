@@ -23,6 +23,7 @@
 #include <mpi.h>
 #endif
 
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/output/eclipse/Summary.hpp>

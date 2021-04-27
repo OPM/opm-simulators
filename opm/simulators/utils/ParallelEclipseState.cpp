@@ -20,6 +20,8 @@
 
 #include "ParallelEclipseState.hpp"
 
+#include <opm/common/ErrorMacros.hpp>
+
 namespace Opm {
 
 
