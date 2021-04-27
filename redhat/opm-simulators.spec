@@ -2,10 +2,10 @@
 # spec file for package opm-simulators
 #
 
-%define tag final
+%define tag rc2
 
 Name:           opm-simulators
-Version:        2018.10
+Version:        2021.04
 Release:        0
 Summary:        Open Porous Media - core library
 License:        GPL-3.0
