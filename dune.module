@@ -5,8 +5,8 @@
 
 Module: opm-material
 Description: This module contains the thermodynamic framework used by OPM
-Version: 2021.04-pre
-Label: 2021.04-pre
+Version: 2021.10-pre
+Label: 2021.10-pre
 Maintainer: opm@opm-project.org
 MaintainerName: The Open Porous Media Project
 Url: http://opm-project.org
