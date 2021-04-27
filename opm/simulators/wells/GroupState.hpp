@@ -147,6 +147,9 @@ public:
             throw std::logic_error("Internal size mismatch when distributing groupData");
     }
 
+    std::string dump() const;
+
+
 private:
     std::size_t num_phases;
     std::map<std::string, std::vector<double>> m_production_rates;
