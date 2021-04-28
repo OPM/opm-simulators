@@ -23,6 +23,7 @@
 
 #include "ParallelRestart.hpp"
 #include <ctime>
+#include <cstring>
 #include <dune/common/parallel/mpitraits.hh>
 #include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
 
