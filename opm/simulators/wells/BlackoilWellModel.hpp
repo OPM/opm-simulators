@@ -410,26 +410,27 @@ namespace Opm {
         protected:
             Simulator& ebosSimulator_;
 
-            std::vector< Well > wells_ecl_;
-            std::vector< std::vector<PerforationData> > well_perf_data_;
-            std::vector< WellProdIndexCalculator > prod_index_calc_;
+            std::vector< Well > wells_ecl_{};
+            std::vector< std::vector<PerforationData> > well_perf_data_{};
+            std::vector< WellProdIndexCalculator > prod_index_calc_{};
+            std::vector<int> local_shut_wells_{};
 
             std::vector< ParallelWellInfo > parallel_well_info_;
             std::vector< ParallelWellInfo* > local_parallel_well_info_;
 
-            bool wells_active_;
+            bool wells_active_{false};
 
             // a vector of all the wells.
-            std::vector<WellInterfacePtr > well_container_;
+            std::vector<WellInterfacePtr > well_container_{};
 
-            // map from logically cartesian cell indices to compressed ones
-            // cells not in the interior are not mapped. This deactivates
-            // these for distributed wells and make the distribution non-overlapping.
-            std::vector<int> cartesian_to_compressed_;
+            // Map from logically cartesian cell indices to compressed ones.
+            // Cells not in the interior are not mapped. This deactivates
+            // these for distributed wells and makes the distribution non-overlapping.
+            std::vector<int> cartesian_to_compressed_{};
 
-            std::vector<bool> is_cell_perforated_;
+            std::vector<bool> is_cell_perforated_{};
 
-            std::function<bool(const Well&)> not_on_process_;
+            std::function<bool(const Well&)> not_on_process_{};
 
             void initializeWellProdIndCalculators();
             void initializeWellPerfData();
@@ -439,6 +440,8 @@ namespace Opm {
 
             // create the well container
             std::vector<WellInterfacePtr > createWellContainer(const int time_step);
+
+            void inferLocalShutWells();
 
             WellInterfacePtr
             createWellPointer(const int wellID,
@@ -453,36 +456,36 @@ namespace Opm {
 
 
             const ModelParameters param_;
-            bool terminal_output_;
-            std::vector<int> pvt_region_idx_;
+            bool terminal_output_{false};
+            std::vector<int> pvt_region_idx_{};
             PhaseUsage phase_usage_;
-            size_t global_num_cells_;
+            size_t global_num_cells_{};
             // the number of the cells in the local grid
-            size_t local_num_cells_;
-            double gravity_;
-            std::vector<double> depth_;
-            bool initial_step_;
-            bool report_step_starts_;
+            size_t local_num_cells_{};
+            double gravity_{};
+            std::vector<double> depth_{};
+            bool initial_step_{};
+            bool report_step_starts_{};
             bool glift_debug = false;
-            bool alternative_well_rate_init_;
+            bool alternative_well_rate_init_{};
 
             std::optional<int> last_run_wellpi_{};
 
-            std::unique_ptr<RateConverterType> rateConverter_;
-            std::unique_ptr<VFPProperties> vfp_properties_;
+            std::unique_ptr<RateConverterType> rateConverter_{};
+            std::unique_ptr<VFPProperties> vfp_properties_{};
 
-            SimulatorReportSingle last_report_;
+            SimulatorReportSingle last_report_{};
 
-            WellTestState wellTestState_;
-            std::unique_ptr<GuideRate> guideRate_;
+            WellTestState wellTestState_{};
+            std::unique_ptr<GuideRate> guideRate_{};
 
             std::map<std::string, double> node_pressures_{}; // Storing network pressures for output.
             mutable std::unordered_set<std::string> closed_this_step_{};
 
             // used to better efficiency of calcuation
-            mutable BVector scaleAddRes_;
+            mutable BVector scaleAddRes_{};
 
-            std::vector< Scalar > B_avg_;
+            std::vector<Scalar> B_avg_{};
 
             const Grid& grid() const
             { return ebosSimulator_.vanguard().grid(); }
@@ -543,7 +546,10 @@ namespace Opm {
 
             void calculateEfficiencyFactors(const int reportStepIdx);
 
+            void calculateProductivityIndexValuesShutWells(const int reportStepIdx, DeferredLogger& deferred_logger);
             void calculateProductivityIndexValues(DeferredLogger& deferred_logger);
+            void calculateProductivityIndexValues(const WellInterface<TypeTag>* wellPtr,
+                                                  DeferredLogger& deferred_logger);
 
             // The number of components in the model.
             int numComponents() const;

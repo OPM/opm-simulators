@@ -154,7 +154,7 @@ namespace Opm
                 const auto& well_info = this->wellMap().at(wname);
                 const int connpos = well_info[1];
                 const int num_perf_this_well = well_info[2];
-                int global_num_perf_this_well = parallel_well_info[w]->communication().sum(num_perf_this_well);
+                const int global_num_perf_this_well = parallel_well_info[w]->communication().sum(num_perf_this_well);
 
                 for (int perf = connpos; perf < connpos + num_perf_this_well; ++perf) {
                     if (wells_ecl[w].getStatus() == Well::Status::OPEN) {
@@ -225,7 +225,7 @@ namespace Opm
                     }
 
                     auto it = prevState->wellMap().find(well.name());
-                    if ( it != end )
+                    if (it != end)
                     {
                         const int newIndex = w;
                         const int oldIndex = it->second[ 0 ];
@@ -283,14 +283,16 @@ namespace Opm
                         const int connpos = new_iter->second[1];
                         const int num_perf_this_well = new_iter->second[2];
 
-                        int num_perf_changed = (num_perf_old_well != num_perf_this_well) ? 1 : 0;
-                        num_perf_changed = parallel_well_info[w]->communication().sum(num_perf_changed);
-                        bool global_num_perf_same = (num_perf_changed == 0);
+                        const int num_perf_changed = parallel_well_info[w]->communication()
+                            .sum(static_cast<int>(num_perf_old_well != num_perf_this_well));
+                        const bool global_num_perf_same = num_perf_changed == 0;
 
-                        // copy perforation rates when the number of perforations is equal,
-                        // otherwise initialize perfphaserates to well rates divided by the number of perforations.
 
-                        if( global_num_perf_same )
+                        // copy perforation rates when the number of
+                        // perforations is equal, otherwise initialize
+                        // perfphaserates to well rates divided by the
+                        // number of perforations.
+                        if (global_num_perf_same)
                         {
                             int old_perf_phase_idx = oldPerf_idx_beg *np;
                             for (int perf_phase_idx = connpos*np;
@@ -299,15 +301,16 @@ namespace Opm
                                 perfPhaseRates()[ perf_phase_idx ] = prevState->perfPhaseRates()[ old_perf_phase_idx ];
                             }
                         } else {
-                            int global_num_perf_this_well = parallel_well_info[w]->communication().sum(num_perf_this_well);
+                            const int global_num_perf_this_well = parallel_well_info[w]->communication().sum(num_perf_this_well);
                             for (int perf = connpos; perf < connpos + num_perf_this_well; ++perf) {
                                 for (int p = 0; p < np; ++p) {
                                     perfPhaseRates()[np*perf + p] = wellRates()[np*newIndex + p] / double(global_num_perf_this_well);
                                 }
                             }
                         }
+
                         // perfPressures
-                        if( global_num_perf_same )
+                        if (global_num_perf_same)
                         {
                             int oldPerf_idx = oldPerf_idx_beg;
                             for (int perf = connpos; perf < connpos + num_perf_this_well; ++perf, ++oldPerf_idx )
@@ -315,9 +318,10 @@ namespace Opm
                                 perfPress()[ perf ] = prevState->perfPress()[ oldPerf_idx ];
                             }
                         }
+
                         // perfSolventRates
                         if (pu.has_solvent) {
-                            if( global_num_perf_same )
+                            if (global_num_perf_same)
                             {
                                 int oldPerf_idx = oldPerf_idx_beg;
                                 for (int perf = connpos; perf < connpos + num_perf_this_well; ++perf, ++oldPerf_idx )
@@ -328,10 +332,12 @@ namespace Opm
                         }
 
                         // polymer injectivity related
-                        // here we did not consider the case that we close some perforation during the running
-                        // and also, wells can be shut and re-opened
+                        //
+                        // here we did not consider the case that we close
+                        // some perforation during the running and also,
+                        // wells can be shut and re-opened
                         if (pu.has_polymermw) {
-                            if( num_perf_old_well == num_perf_this_well )
+                            if (global_num_perf_same)
                             {
                                 int oldPerf_idx = oldPerf_idx_beg;
                                 for (int perf = connpos; perf < connpos + num_perf_this_well; ++perf, ++oldPerf_idx )
@@ -354,10 +360,13 @@ namespace Opm
                         }
                     }
 
-                    // If in the new step, there is no THP related target/limit anymore, its thp value should be
-                    // set to zero.
-                    const bool has_thp = well.isInjector() ? well.injectionControls(summary_state).hasControl(Well::InjectorCMode::THP)
+                    // If in the new step, there is no THP related
+                    // target/limit anymore, its thp value should be set to
+                    // zero.
+                    const bool has_thp = well.isInjector()
+                        ? well.injectionControls (summary_state).hasControl(Well::InjectorCMode::THP)
                         : well.productionControls(summary_state).hasControl(Well::ProducerCMode::THP);
+
                     if (!has_thp) {
                         thp()[w] = 0.0;
                     }
@@ -382,6 +391,7 @@ namespace Opm
                 seg_pressdrop_friction_.assign(nw, 0.);
                 seg_pressdrop_acceleration_.assign(nw, 0.);
             }
+
             updateWellsDefaultALQ(wells_ecl);
             do_glift_optimization_ = true;
         }
@@ -816,7 +826,8 @@ namespace Opm
 
         /// One rate pr well
         double solventWellRate(const int w) const {
-            return parallel_well_info_[w]->sumPerfValues(&perfRateSolvent_[0] + first_perf_index_[w], &perfRateSolvent_[0] + first_perf_index_[w+1]);
+            return parallel_well_info_[w]->sumPerfValues(&perfRateSolvent_[0] + first_perf_index_[w + 0],
+                                                         &perfRateSolvent_[0] + first_perf_index_[w + 1]);
         }
 
         /// One rate pr well connection.
@@ -825,7 +836,8 @@ namespace Opm
 
         /// One rate pr well
         double polymerWellRate(const int w) const {
-            return parallel_well_info_[w]->sumPerfValues(&perfRatePolymer_[0] + first_perf_index_[w], &perfRatePolymer_[0] + first_perf_index_[w+1]);
+            return parallel_well_info_[w]->sumPerfValues(&perfRatePolymer_[0] + first_perf_index_[w + 0],
+                                                         &perfRatePolymer_[0] + first_perf_index_[w + 1]);
         }
 
         /// One rate pr well connection.
@@ -834,7 +846,8 @@ namespace Opm
 
         /// One rate pr well
         double brineWellRate(const int w) const {
-            return parallel_well_info_[w]->sumPerfValues(&perfRateBrine_[0] + first_perf_index_[w], &perfRateBrine_[0] + first_perf_index_[w+1]);
+            return parallel_well_info_[w]->sumPerfValues(&perfRateBrine_[0] + first_perf_index_[w + 0],
+                                                         &perfRateBrine_[0] + first_perf_index_[w + 1]);
         }
 
         std::vector<double>& wellReservoirRates()
@@ -980,8 +993,19 @@ namespace Opm
         virtual void shutWell(int well_index) override {
             WellState::shutWell(well_index);
             const int np = numPhases();
-            for (int p = 0; p < np; ++p)
-                this->well_reservoir_rates_[np * well_index + p] = 0;
+
+            auto* resv = &this->well_reservoir_rates_[np*well_index + 0];
+            auto* wpi  = &this->productivity_index_[np*well_index + 0];
+
+            for (int p = 0; p < np; ++p) {
+                resv[p] = 0.0;
+                wpi[p]  = 0.0;
+            }
+
+            const auto first = this->first_perf_index_[well_index + 0]*np;
+            const auto last  = this->first_perf_index_[well_index + 1]*np;
+            std::fill(this->conn_productivity_index_.begin() + first,
+                      this->conn_productivity_index_.begin() + last, 0.0);
         }
 
         virtual void stopWell(int well_index) override {

@@ -1,23 +1,23 @@
 /*
- Copyright 2016 - 2019 SINTEF Digital, Mathematics & Cybernetics.
- Copyright 2016 - 2018 Equinor ASA.
- Copyright 2017 Dr. Blatt - HPC-Simulation-Software & Services
- Copyright 2016 - 2018 Norce AS
+  Copyright 2016 - 2019 SINTEF Digital, Mathematics & Cybernetics.
+  Copyright 2016 - 2018 Equinor ASA.
+  Copyright 2017 Dr. Blatt - HPC-Simulation-Software & Services
+  Copyright 2016 - 2018 Norce AS
 
- This file is part of the Open Porous Media project (OPM).
+  This file is part of the Open Porous Media project (OPM).
 
- OPM is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
+  OPM is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
 
- OPM is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
+  OPM is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
 
- You should have received a copy of the GNU General Public License
- along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+  You should have received a copy of the GNU General Public License
+  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
@@ -27,51 +27,59 @@
 
 #include <algorithm>
 #include <utility>
+
 #include <fmt/format.h>
 
 namespace Opm {
     template<typename TypeTag>
     BlackoilWellModel<TypeTag>::
     BlackoilWellModel(Simulator& ebosSimulator, const PhaseUsage& phase_usage)
-        : ebosSimulator_(ebosSimulator),
-          phase_usage_(phase_usage),
-          active_wgstate_(phase_usage),
-          last_valid_wgstate_(phase_usage),
-          nupcol_wgstate_(phase_usage)
+        : ebosSimulator_(ebosSimulator)
+        , terminal_output_((ebosSimulator.gridView().comm().rank() == 0) &&
+                           EWOMS_GET_PARAM(TypeTag, bool, EnableTerminalOutput))
+        , phase_usage_(phase_usage)
+        , active_wgstate_(phase_usage)
+        , last_valid_wgstate_(phase_usage)
+        , nupcol_wgstate_(phase_usage)
     {
-        terminal_output_ = false;
-        if (ebosSimulator.gridView().comm().rank() == 0)
-            terminal_output_ = EWOMS_GET_PARAM(TypeTag, bool, EnableTerminalOutput);
-
         // Create the guide rate container.
-        guideRate_.reset(new GuideRate (ebosSimulator_.vanguard().schedule()));
+        this->guideRate_ =
+            std::make_unique<GuideRate>(ebosSimulator_.vanguard().schedule());
 
         local_num_cells_ = ebosSimulator_.gridView().size(0);
+
         // Number of cells the global grid view
         global_num_cells_ = ebosSimulator_.vanguard().globalNumCells();
 
         // Set up cartesian mapping.
-        const auto& grid = ebosSimulator_.vanguard().grid();
-        const auto& cartDims = Opm::UgGridHelpers::cartDims(grid);
-        setupCartesianToCompressed_(Opm::UgGridHelpers::globalCell(grid),
-                                    cartDims[0]*cartDims[1]*cartDims[2]);
-        auto& parallel_wells = ebosSimulator.vanguard().parallelWells();
-        parallel_well_info_.assign(parallel_wells.begin(), parallel_wells.end());
-        const auto& pwell_info = parallel_well_info_;
-        std::size_t numProcs = ebosSimulator.gridView().comm().size();
-        not_on_process_ = [&pwell_info, numProcs](const Well& well) {
-                if (well.getStatus() == Well::Status::SHUT)
-                    return true;
-                if (numProcs == 1u)
-                    return false;
-                std::pair<std::string, bool> value{well.name(), true}; // false indicate not active!
-                auto candidate = std::lower_bound(pwell_info.begin(),
-                                                  pwell_info.end(),
-                                                  value);
-                return candidate == pwell_info.end() || *candidate != value;
-            };
+        {
+            const auto& grid = this->ebosSimulator_.vanguard().grid();
+            const auto& cartDims = Opm::UgGridHelpers::cartDims(grid);
+            setupCartesianToCompressed_(Opm::UgGridHelpers::globalCell(grid),
+                                        cartDims[0] * cartDims[1] * cartDims[2]);
 
-        alternative_well_rate_init_ = EWOMS_GET_PARAM(TypeTag, bool, AlternativeWellRateInit);
+            auto& parallel_wells = ebosSimulator.vanguard().parallelWells();
+            this->parallel_well_info_.assign(parallel_wells.begin(),
+                                             parallel_wells.end());
+        }
+
+        const auto numProcs = ebosSimulator.gridView().comm().size();
+        this->not_on_process_ = [this, numProcs](const Well& well) {
+            if (numProcs == decltype(numProcs){1})
+                return false;
+
+            // Recall: false indicates NOT active!
+            const auto value = std::make_pair(well.name(), true);
+            auto candidate = std::lower_bound(this->parallel_well_info_.begin(),
+                                              this->parallel_well_info_.end(),
+                                              value);
+
+            return (candidate == this->parallel_well_info_.end())
+                || (*candidate != value);
+        };
+
+        this->alternative_well_rate_init_ =
+            EWOMS_GET_PARAM(TypeTag, bool, AlternativeWellRateInit);
     }
 
     template<typename TypeTag>
@@ -912,6 +920,30 @@ namespace Opm {
 
 
     template <typename TypeTag>
+    void BlackoilWellModel<TypeTag>::
+    inferLocalShutWells()
+    {
+        this->local_shut_wells_.clear();
+
+        const auto nw = this->numLocalWells();
+
+        auto used = std::vector<bool>(nw, false);
+        for (const auto& wellPtr : this->well_container_) {
+            used[wellPtr->indexOfWell()] = true;
+        }
+
+        for (auto wellID = 0; wellID < nw; ++wellID) {
+            if (! used[wellID]) {
+                this->local_shut_wells_.push_back(wellID);
+            }
+        }
+    }
+
+
+
+
+
+    template <typename TypeTag>
     typename BlackoilWellModel<TypeTag>::WellInterfacePtr
     BlackoilWellModel<TypeTag>::
     createWellPointer(const int wellID, const int time_step) const
@@ -1586,22 +1618,56 @@ namespace Opm {
 
 
 
-
-    template<typename TypeTag>
+    template <typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
     calculateProductivityIndexValues(DeferredLogger& deferred_logger)
     {
-        if (! this->localWellsActive()) {
-            return;
-        }
-
         for (const auto& wellPtr : this->well_container_) {
-            wellPtr->updateProductivityIndex(this->ebosSimulator_,
-                                             this->prod_index_calc_[wellPtr->indexOfWell()],
-                                             this->wellState(),
-                                             deferred_logger);
+            this->calculateProductivityIndexValues(wellPtr.get(), deferred_logger);
         }
+    }
+
+
+
+
+
+    template <typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    calculateProductivityIndexValuesShutWells(const int reportStepIdx,
+                                              DeferredLogger& deferred_logger)
+    {
+        // For the purpose of computing PI/II values, it is sufficient to
+        // construct StandardWell instances only.  We don't need to form
+        // well objects that honour the 'isMultisegment()' flag of the
+        // corresponding "this->wells_ecl_[shutWell]".
+
+        for (const auto& shutWell : this->local_shut_wells_) {
+            auto wellPtr = this->template createTypedWellPointer
+                <StandardWell<TypeTag>>(shutWell, reportStepIdx);
+
+            wellPtr->init(&this->phase_usage_, this->depth_, this->gravity_,
+                          this->local_num_cells_, this->B_avg_);
+
+            this->calculateProductivityIndexValues(wellPtr.get(), deferred_logger);
+        }
+    }
+
+
+
+
+
+    template <typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    calculateProductivityIndexValues(const WellInterface<TypeTag>* wellPtr,
+                                     DeferredLogger& deferred_logger)
+    {
+        wellPtr->updateProductivityIndex(this->ebosSimulator_,
+                                         this->prod_index_calc_[wellPtr->indexOfWell()],
+                                         this->wellState(),
+                                         deferred_logger);
     }
 
 
@@ -2827,17 +2893,17 @@ namespace Opm {
             auto saved_previous_wgstate = this->prevWGState();
             this->commitWGState();
 
-            well_container_ = createWellContainer(timeStepIdx);
-            for (auto& well : well_container_) {
-                well->init(&phase_usage_, depth_, gravity_, local_num_cells_, B_avg_);
-            }
+            this->well_container_ = this->createWellContainer(timeStepIdx);
+            this->inferLocalShutWells();
 
-            std::fill(is_cell_perforated_.begin(), is_cell_perforated_.end(), false);
-            for (auto& well : well_container_) {
-                well->updatePerforatedCell(is_cell_perforated_);
+            for (auto& wellPtr : this->well_container_) {
+                wellPtr->init(&this->phase_usage_, this->depth_, this->gravity_,
+                              this->local_num_cells_, this->B_avg_);
             }
 
             this->calculateProductivityIndexValues(local_deferredLogger);
+            this->calculateProductivityIndexValuesShutWells(timeStepIdx, local_deferredLogger);
+
             this->commitWGState(std::move(saved_previous_wgstate));
         }
 
