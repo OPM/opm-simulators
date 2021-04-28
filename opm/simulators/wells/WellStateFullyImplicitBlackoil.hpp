@@ -23,6 +23,7 @@
 
 #include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/wells/ALQState.hpp>
+#include <opm/simulators/wells/GlobalWellInfo.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
@@ -37,6 +38,7 @@
 #include <iostream>
 #include <map>
 #include <numeric>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -85,19 +87,15 @@ namespace Opm
                   const int report_step,
                   const WellStateFullyImplicitBlackoil* prevState,
                   const std::vector<std::vector<PerforationData>>& well_perf_data,
-                  const SummaryState& summary_state,
-                  const int globalNumberOfWells)
+                  const SummaryState& summary_state)
         {
             // call init on base class
             BaseType :: init(cellPressures, wells_ecl, parallel_well_info, well_perf_data, summary_state);
-
+            this->global_well_info = std::make_optional<GlobalWellInfo>( schedule, report_step, wells_ecl );
             for (const auto& winfo: parallel_well_info)
             {
                 well_rates.insert({winfo->name(), std::make_pair(winfo->isOwner(), std::vector<double>())});
             }
-            globalIsInjectionGrup_.assign(globalNumberOfWells,0);
-            globalIsProductionGrup_.assign(globalNumberOfWells,0);
-            wellNameToGlobalIdx_.clear();
 
             const int nw = wells_ecl.size();
 
@@ -404,11 +402,10 @@ namespace Opm
                     const bool handle_ms_well,
                     const size_t numCells,
                     const std::vector<std::vector<PerforationData>>& well_perf_data,
-                    const SummaryState& summary_state,
-                    const int globalNumWells)
+                    const SummaryState& summary_state)
         {
             const std::vector<double> tmp(numCells, 0.0); // <- UGLY HACK to pass the size
-            init(tmp, schedule, wells_ecl, parallel_well_info, 0, nullptr, well_perf_data, summary_state, globalNumWells);
+            init(tmp, schedule, wells_ecl, parallel_well_info, 0, nullptr, well_perf_data, summary_state);
 
             if (handle_ms_well) {
                 initWellStateMSWell(wells_ecl, nullptr);
@@ -1077,52 +1074,18 @@ namespace Opm
         }
 
         template<class Comm>
-        void updateGlobalIsGrup(const Schedule& schedule, const int reportStepIdx, const Comm& comm)
+        void updateGlobalIsGrup(const Comm& comm)
         {
-            std::fill(globalIsInjectionGrup_.begin(), globalIsInjectionGrup_.end(), 0);
-            std::fill(globalIsProductionGrup_.begin(), globalIsProductionGrup_.end(), 0);
-            const auto& end = wellMap().end();
-            for (const auto& well : schedule.getWells(reportStepIdx)) {
-                // Build global name->index map.
-                auto global_well_index = well.seqIndex();
-                wellNameToGlobalIdx_[well.name()] = global_well_index;
-
-                // For wells on this process...
-                const auto& it = wellMap().find( well.name());
-                if (it != end) {
-                    // ... set the GRUP/not GRUP states.
-                    const int well_index = it->second[0];
-                    if (this->status_[well_index] == Well::Status::OPEN) {
-                        if (well.isInjector()) {
-                            globalIsInjectionGrup_[global_well_index] = (currentInjectionControls()[well_index] == Well::InjectorCMode::GRUP);
-                        } else {
-                            globalIsProductionGrup_[global_well_index] = (currentProductionControls()[well_index] == Well::ProducerCMode::GRUP);
-                        }
-                    }
-                }
-            }
-            comm.sum(globalIsInjectionGrup_.data(), globalIsInjectionGrup_.size());
-            comm.sum(globalIsProductionGrup_.data(), globalIsProductionGrup_.size());
+            this->global_well_info.value().update_group(this->status_, this->currentInjectionControls(), this->currentProductionControls());
+            this->global_well_info.value().communicate(comm);
         }
 
         bool isInjectionGrup(const std::string& name) const {
-
-            auto it = wellNameToGlobalIdx_.find(name);
-
-            if (it == wellNameToGlobalIdx_.end())
-                OPM_THROW(std::logic_error, "Could not find global injection group for well " << name);
-
-            return globalIsInjectionGrup_[it->second] != 0;
+            return this->global_well_info.value().in_injecting_group(name);
         }
 
         bool isProductionGrup(const std::string& name) const {
-
-            auto it = wellNameToGlobalIdx_.find(name);
-
-            if (it == wellNameToGlobalIdx_.end())
-                OPM_THROW(std::logic_error, "Could not find global production group for well " << name);
-
-            return globalIsProductionGrup_[it->second] != 0;
+            return this->global_well_info.value().in_producing_group(name);
         }
 
         double getALQ( const std::string& name) const
@@ -1169,23 +1132,11 @@ namespace Opm
         }
 
         int wellNameToGlobalIdx(const std::string &name) {
-            auto it = wellNameToGlobalIdx_.find(name);
-            if (it == wellNameToGlobalIdx_.end())
-                OPM_THROW(std::logic_error, "Could not find global well idx for well " << name);
-
-            return it->second;
+            return this->global_well_info.value().well_index(name);
         }
 
         std::string globalIdxToWellName(const int index) {
-            using Pair = std::pair<std::string, int>;
-            auto it = find_if(wellNameToGlobalIdx_.begin(), wellNameToGlobalIdx_.end(), [index](const Pair & p) {
-                return p.second == index;
-            });
-            if (it == wellNameToGlobalIdx_.end() )
-            {
-                OPM_THROW(std::logic_error, "Could not find well name for global idx " << index);
-            }
-            return it->first;
+            return this->global_well_info.value().well_name(index);
         }
 
 
@@ -1200,10 +1151,10 @@ namespace Opm
         std::vector<Opm::Well::InjectorCMode> current_injection_controls_;
         std::vector<Well::ProducerCMode> current_production_controls_;
 
-        // size of global number of wells
-        std::vector<int> globalIsInjectionGrup_;
-        std::vector<int> globalIsProductionGrup_;
-        std::map<std::string, int> wellNameToGlobalIdx_;
+        // Use of std::optional<> here is a technical crutch, the
+        // WellStateFullyImplicitBlackoil class should be default constructible,
+        // whereas the GlobalWellInfo is not.
+        std::optional<GlobalWellInfo> global_well_info;
         std::map<std::string, std::pair<bool, std::vector<double>>> well_rates;
 
         ALQState alq_state;
