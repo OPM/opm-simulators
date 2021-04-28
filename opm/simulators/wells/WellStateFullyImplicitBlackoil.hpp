@@ -22,6 +22,7 @@
 #define OPM_WELLSTATEFULLYIMPLICITBLACKOIL_HEADER_INCLUDED
 
 #include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/ALQState.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
@@ -1046,7 +1047,7 @@ namespace Opm
                 sz += v.size();
             };
             iterateRatesContainer(this->well_rates, computeSize);
-            sz += current_alq_.size();
+            sz += this->alq_state.pack_size();
 
             // Make a vector and collect all data into it.
             std::vector<double> data(sz);
@@ -1057,9 +1058,7 @@ namespace Opm
                 }
             };
             iterateRatesContainer(this->well_rates, collect);
-            for (const auto& x : current_alq_) {
-                data[pos++] = x.second;
-            }
+            pos += this->alq_state.pack_data(&data[pos]);
             assert(pos == sz);
 
             // Communicate it with a single sum() call.
@@ -1073,9 +1072,7 @@ namespace Opm
                 }
             };
             iterateRatesContainer(this->well_rates, distribute);
-            for (auto& x : current_alq_) {
-                x.second = data[pos++];
-            }
+            pos += this->alq_state.unpack_data(&data[pos]);
             assert(pos == sz);
         }
 
@@ -1130,65 +1127,28 @@ namespace Opm
 
         double getALQ( const std::string& name) const
         {
-            if (this->current_alq_.count(name) == 0) {
-                return this->default_alq_.at(name);
-            }
-            return this->current_alq_.at(name);
+            return this->alq_state.get(name);
         }
 
         void setALQ( const std::string& name, double value)
         {
-            this->current_alq_[name] = value;
+            this->alq_state.set(name, value);
         }
 
         bool gliftCheckAlqOscillation(const std::string &name) const {
-            if ((this->alq_increase_count_.count(name) == 1) &&
-                        (this->alq_decrease_count_.count(name) == 1))
-            {
-                if ((this->alq_increase_count_.at(name) >= 1) &&
-                         (this->alq_decrease_count_.at(name) >= 1))
-                {
-                    return true;
-                }
-            }
-            return false;
+            return this->alq_state.oscillation(name);
         }
 
         int gliftGetAlqDecreaseCount(const std::string &name) {
-            if (this->alq_decrease_count_.count(name) == 0) {
-                return 0;
-            }
-            else {
-                return this->alq_decrease_count_[name];
-            }
+            return this->alq_state.get_decrement_count(name);
         }
 
         int gliftGetAlqIncreaseCount(const std::string &name) {
-            if (this->alq_increase_count_.count(name) == 0) {
-                return 0;
-            }
-            else {
-                return this->alq_increase_count_[name];
-            }
+            return this->alq_state.get_increment_count(name);
         }
 
         void gliftUpdateAlqIncreaseCount(const std::string &name, bool increase) {
-            if (increase) {
-                if (this->alq_increase_count_.count(name) == 0) {
-                    this->alq_increase_count_[name] = 1;
-                }
-                else {
-                    this->alq_increase_count_[name]++;
-                }
-            }
-            else {
-                if (this->alq_decrease_count_.count(name) == 0) {
-                    this->alq_decrease_count_[name] = 1;
-                }
-                else {
-                    this->alq_decrease_count_[name]++;
-                }
-            }
+            this->alq_state.update_count(name, increase);
         }
 
         bool gliftOptimizationEnabled() const {
@@ -1196,8 +1156,7 @@ namespace Opm
         }
 
         void gliftTimeStepInit() {
-            this->alq_increase_count_.clear();
-            this->alq_decrease_count_.clear();
+            this->alq_state.reset_count();
             disableGliftOptimization();
         }
 
@@ -1247,10 +1206,7 @@ namespace Opm
         std::map<std::string, int> wellNameToGlobalIdx_;
         std::map<std::string, std::pair<bool, std::vector<double>>> well_rates;
 
-        std::map<std::string, double> current_alq_;
-        std::map<std::string, double> default_alq_;
-        std::map<std::string, int> alq_increase_count_;
-        std::map<std::string, int> alq_decrease_count_;
+        ALQState alq_state;
         bool do_glift_optimization_;
 
         std::vector<double> perfRateSolvent_;
@@ -1401,19 +1357,9 @@ namespace Opm
             for (int i = 0; i<nw; i++) {
                 const Well &well = wells_ecl[i];
                 if (well.isProducer()) {
-                    const std::string &name = well.name();
                     // NOTE: This is the value set in item 12 of WCONPROD, or with WELTARG
                     auto alq = well.alq_value();
-                    if (this->default_alq_.count(name) != 0) {
-                        if (this->default_alq_[name] == alq) {
-                            // If the previous value was the same, we leave current_alq_
-                            // as it is.
-                            continue;
-                        }
-                    }
-                    this->default_alq_[name] = alq;
-                    // Reset current ALQ if a new value was given in WCONPROD
-                    this->current_alq_[name] = alq;
+                    this->alq_state.update_default(well.name(), alq);
                 }
             }
         }

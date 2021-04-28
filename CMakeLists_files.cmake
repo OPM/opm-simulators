@@ -42,6 +42,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/utils/ParallelRestart.cpp
   opm/simulators/wells/GroupState.cpp
   opm/simulators/wells/WGState.cpp
+  opm/simulators/wells/ALQState.cpp
   opm/simulators/wells/ParallelWellInfo.cpp
   opm/simulators/wells/VFPProdProperties.cpp
   opm/simulators/wells/VFPInjProperties.cpp
@@ -109,6 +110,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_glift1.cpp
   tests/test_keyword_validator.cpp
   tests/test_GroupState.cpp
+  tests/test_ALQState.cpp
   )
 
 if(MPI_FOUND)
@@ -257,6 +259,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/WellConnectionAuxiliaryModule.hpp
   opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp
   opm/simulators/wells/GroupState.hpp
+  opm/simulators/wells/ALQState.hpp
   opm/simulators/wells/WGState.hpp
   opm/simulators/wells/VFPProperties.hpp
   opm/simulators/wells/VFPHelpers.hpp
