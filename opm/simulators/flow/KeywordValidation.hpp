@@ -21,7 +21,6 @@
 #define OPM_KEYWORDVALIDATION_HEADER_INCLUDED
 
 #include <opm/common/OpmLog/KeywordLocation.hpp>
-#include <opm/parser/eclipse/Deck/Deck.hpp>
 
 #include <optional>
 #include <string>
@@ -30,6 +29,8 @@
 namespace Opm
 {
 
+class Deck;
+class DeckKeyword;
 class ErrorGuard;
 class ParseContext;
 

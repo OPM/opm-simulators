@@ -24,6 +24,8 @@
 #include <fmt/format.h>
 
 #include <opm/common/utility/OpmInputError.hpp>
+#include <opm/parser/eclipse/Deck/Deck.hpp>
+#include <opm/parser/eclipse/Deck/DeckKeyword.hpp>
 #include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/simulators/flow/KeywordValidation.hpp>

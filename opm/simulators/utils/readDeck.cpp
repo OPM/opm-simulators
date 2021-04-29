@@ -37,6 +37,7 @@
 #include <opm/output/eclipse/RestartIO.hpp>
 #include <opm/io/eclipse/rst/state.hpp>
 
+#include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/ArrayDimChecker.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
