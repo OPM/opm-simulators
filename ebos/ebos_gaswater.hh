@@ -28,15 +28,18 @@
 #ifndef EBOS_GAS_WATER_HH
 #define EBOS_GAS_WATER_HH
 
-#include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/parser/eclipse/Parser/ParseContext.hpp>
-#include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
+#include <memory>
 
 namespace Opm {
+
+class Deck;
+class ErrorGuard;
+class ParseContext;
+
 void ebosGasWaterSetDeck(std::unique_ptr<Opm::Deck> deck,
-                       std::unique_ptr<Opm::ParseContext> parseContext,
-                       std::unique_ptr<Opm::ErrorGuard> errorGuard,
-                       double externalSetupTime);
+                         std::unique_ptr<Opm::ParseContext> parseContext,
+                         std::unique_ptr<Opm::ErrorGuard> errorGuard,
+                         double externalSetupTime);
 
 int ebosGasWaterMain(int argc, char** argv);
 }

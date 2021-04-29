@@ -28,11 +28,14 @@
 #ifndef EBOS_ENERGY_HH
 #define EBOS_ENERGY_HH
 
-#include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/parser/eclipse/Parser/ParseContext.hpp>
-#include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
+#include <memory>
 
 namespace Opm {
+
+class Deck;
+class ErrorGuard;
+class ParseContext;
+
 void ebosEnergySetDeck(std::unique_ptr<Opm::Deck> deck,
                        std::unique_ptr<Opm::ParseContext> parseContext,
                        std::unique_ptr<Opm::ErrorGuard> errorGuard,

@@ -28,15 +28,16 @@
 #ifndef EBOS_EXTBO_HH
 #define EBOS_EXTBO_HH
 
-#include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/parser/eclipse/Parser/ParseContext.hpp>
-#include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
-
 namespace Opm {
+
+class Deck;
+class ErrorGuard;
+class ParseContext;
+
 void ebosExtboSetDeck(Opm::Deck* deck,
-                        Opm::ParseContext* parseContext,
-                        Opm::ErrorGuard* errorGuard,
-                        double externalSetupTime);
+                      Opm::ParseContext* parseContext,
+                      Opm::ErrorGuard* errorGuard,
+                      double externalSetupTime);
 
 int ebosExtboMain(int argc, char** argv);
 }
