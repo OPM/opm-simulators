@@ -48,6 +48,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/WGState.cpp
   opm/simulators/wells/ALQState.cpp
   opm/simulators/wells/ParallelWellInfo.cpp
+  opm/simulators/wells/TargetCalculator.cpp
   opm/simulators/wells/VFPProdProperties.cpp
   opm/simulators/wells/VFPInjProperties.cpp
   opm/simulators/wells/WellGroupHelpers.cpp
