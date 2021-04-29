@@ -17,17 +17,21 @@
 #ifndef FLOW_EBOS_POLYMER_HPP
 #define FLOW_EBOS_POLYMER_HPP
 
-#include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
-#include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+#include <memory>
 
 namespace Opm {
+
+class Deck;
+class EclipseState;
+class Schedule;
+class SummaryConfig;
+
 void flowEbosPolymerSetDeck(double setupTime, std::unique_ptr<Deck> deck,
                             std::unique_ptr<EclipseState> eclState,
                             std::unique_ptr<Schedule> schedule,
                             std::unique_ptr<SummaryConfig> summaryConfig);
 int flowEbosPolymerMain(int argc, char** argv, bool outputCout, bool outputFiles);
+
 }
 
 #endif // FLOW_EBOS_POLYMER_HPP
