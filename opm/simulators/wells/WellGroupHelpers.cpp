@@ -20,9 +20,13 @@
 
 #include <config.h>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
-#include <opm/simulators/wells/TargetCalculator.hpp>
+
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GConSump.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GConSale.hpp>
+#include <opm/simulators/utils/DeferredLogger.hpp>
+#include <opm/simulators/wells/GroupState.hpp>
+#include <opm/simulators/wells/TargetCalculator.hpp>
+#include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <algorithm>
 #include <stack>
 #include <vector>
