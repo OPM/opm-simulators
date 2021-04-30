@@ -187,9 +187,9 @@ namespace Opm
                                     const GroupState& group_state,
                                     Opm::DeferredLogger& deferred_logger) override;
 
-        virtual void updateWellStateWithTarget(const Simulator& ebos_simulator,
-                                               WellState& well_state,
-                                               Opm::DeferredLogger& deferred_logger) const override;
+        void updateWellStateWithTarget(const Simulator& ebos_simulator,
+                                       WellState& well_state,
+                                       Opm::DeferredLogger& deferred_logger) const;
 
         /// check whether the well equations get converged for this well
         virtual ConvergenceReport getWellConvergence(const WellState& well_state,
@@ -345,6 +345,8 @@ namespace Opm
         using Base::updateWellOperability;
         using Base::checkWellOperability;
         using Base::wellIsStopped;
+        using Base::calculateBhpFromThp;
+        using Base::getALQ;
 
         // protected member variables from the Base class
         using Base::current_step_;
@@ -489,11 +491,10 @@ namespace Opm
             Opm::DeferredLogger& deferred_logger,
             const WellState &well_state) const;
 
-        template <class ValueType>
-        ValueType calculateBhpFromThp(const WellState& well_state, const std::vector<ValueType>& rates, const Well& well, const SummaryState& summaryState, Opm::DeferredLogger& deferred_logger) const;
-
 
         double calculateThpFromBhp(const WellState &well_state, const std::vector<double>& rates, const double bhp, Opm::DeferredLogger& deferred_logger) const;
+
+        virtual double getRefDensity() const override;
 
         // get the mobility for specific perforation
         void getMobility(const Simulator& ebosSimulator,
@@ -517,7 +518,6 @@ namespace Opm
 
         void updateThp(WellState& well_state, Opm::DeferredLogger& deferred_logger) const;
 
-        double getALQ(const WellState& well_state) const;
 
         void assembleControlEq(const WellState& well_state,
                                const GroupState& group_state,

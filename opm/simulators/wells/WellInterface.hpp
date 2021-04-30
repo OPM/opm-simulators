@@ -226,9 +226,9 @@ namespace Opm
                                            std::vector<double>& well_potentials,
                                            Opm::DeferredLogger& deferred_logger) = 0;
 
-        virtual void updateWellStateWithTarget(const Simulator& ebos_simulator,
-                                               WellState& well_state,
-                                               Opm::DeferredLogger& deferred_logger) const = 0;
+        void updateWellStateWithTarget(const Simulator& ebos_simulator,
+                                       WellState& well_state,
+                                       Opm::DeferredLogger& deferred_logger) const;
 
         enum class IndividualOrGroup { Individual, Group, Both };
         bool updateWellControl(const Simulator& ebos_simulator,
@@ -475,6 +475,13 @@ namespace Opm
                                  Opm::DeferredLogger& deferred_logger) const;
 
         double getTHPConstraint(const SummaryState& summaryState) const;
+
+        template <class ValueType>
+        ValueType calculateBhpFromThp(const WellState& well_state, const std::vector<ValueType>& rates, const Well& well, const SummaryState& summaryState, Opm::DeferredLogger& deferred_logger) const;
+
+        double getALQ(const WellState& well_state) const;
+
+        virtual double getRefDensity() const = 0;
 
         // Component fractions for each phase for the well
         const std::vector<double>& compFrac() const;
