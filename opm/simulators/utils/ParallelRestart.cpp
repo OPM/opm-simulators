@@ -25,6 +25,13 @@
 #include <ctime>
 #include <cstring>
 #include <dune/common/parallel/mpitraits.hh>
+#include <opm/output/data/Cells.hpp>
+#include <opm/output/data/Groups.hpp>
+#include <opm/output/data/GuideRateValue.hpp>
+#include <opm/output/data/Solution.hpp>
+#include <opm/output/data/Wells.hpp>
+#include <opm/output/eclipse/EclipseIO.hpp>
+#include <opm/output/eclipse/RestartValue.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
 
 #define HANDLE_AS_POD(T) \
