@@ -314,7 +314,6 @@ namespace WellGroupHelpers
     {
     public:
         FractionCalculator(const Schedule& schedule,
-                           const SummaryState& summary_state,
                            const WellStateFullyImplicitBlackoil& well_state,
                            const GroupState& group_state,
                            const int report_step,
@@ -333,7 +332,6 @@ namespace WellGroupHelpers
         int groupControlledWells(const std::string& group_name, const std::string& always_included_child);
         GuideRate::RateVector getGroupRateVector(const std::string& group_name);
         const Schedule& schedule_;
-        const SummaryState& summary_state_;
         const WellStateFullyImplicitBlackoil& well_state_;
         const GroupState& group_state_;
         int report_step_;

@@ -2243,7 +2243,7 @@ namespace Opm
             sales_target = gconsale.sales_target;
         }
         WellGroupHelpers::InjectionTargetCalculator tcalc(currentGroupControl, pu, resv_coeff, group.name(), sales_target, group_state, injectionPhase, deferred_logger);
-        WellGroupHelpers::FractionCalculator fcalc(schedule, summaryState, well_state, group_state, current_step_, guide_rate_, tcalc.guideTargetMode(), pu, false, injectionPhase);
+        WellGroupHelpers::FractionCalculator fcalc(schedule, well_state, group_state, current_step_, guide_rate_, tcalc.guideTargetMode(), pu, false, injectionPhase);
 
         auto localFraction = [&](const std::string& child) {
             return fcalc.localFraction(child, "");
@@ -2338,7 +2338,7 @@ namespace Opm
             gratTargetFromSales = group_state.grat_sales_target(group.name());
 
         WellGroupHelpers::TargetCalculator tcalc(currentGroupControl, pu, resv_coeff, gratTargetFromSales);
-        WellGroupHelpers::FractionCalculator fcalc(schedule, summaryState, well_state, group_state, current_step_, guide_rate_, tcalc.guideTargetMode(), pu, true, Phase::OIL);
+        WellGroupHelpers::FractionCalculator fcalc(schedule, well_state, group_state, current_step_, guide_rate_, tcalc.guideTargetMode(), pu, true, Phase::OIL);
 
         auto localFraction = [&](const std::string& child) {
             return fcalc.localFraction(child, "");
