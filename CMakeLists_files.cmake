@@ -23,8 +23,10 @@
 # originally generated with the command:
 # find opm -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND MAIN_SOURCE_FILES
+  opm/core/props/phaseUsageFromDeck.cpp
   opm/core/props/satfunc/RelpermDiagnostics.cpp
   opm/simulators/timestepping/SimulatorReport.cpp
+  opm/simulators/flow/countGlobalCells.cpp
   opm/simulators/flow/KeywordValidation.cpp
   opm/simulators/linalg/ExtractParallelGridInformationToISTL.cpp
   opm/simulators/linalg/FlexibleSolver1.cpp
@@ -39,6 +41,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/timestepping/gatherConvergenceReport.cpp
   opm/simulators/utils/DeferredLogger.cpp
   opm/simulators/utils/gatherDeferredLogger.cpp
+  opm/simulators/utils/ParallelFileMerger.cpp
   opm/simulators/utils/ParallelRestart.cpp
   opm/simulators/wells/GroupState.cpp
   opm/simulators/wells/WGState.cpp

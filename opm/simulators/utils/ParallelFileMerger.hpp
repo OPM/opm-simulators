@@ -21,11 +21,13 @@
 #ifndef OPM_PARALLELFILEMERGER_HEADER_INCLUDED
 #define OPM_PARALLELFILEMERGER_HEADER_INCLUDED
 
+#include <fstream>
 #include <memory>
-#include <iostream>
+#include <regex>
+#include <string>
 
 #include <opm/common/utility/FileSystem.hpp>
-#include <regex>
+
 
 namespace Opm
 {
@@ -45,93 +47,19 @@ class ParallelFileMerger
 public:
     /// \brief Constructor
     /// \param output_dir The output directory to use for reading/Writing.
-    /// \param deckanme The name of the deck.
+    /// \param deckname The name of the deck.
     ParallelFileMerger(const fs::path& output_dir,
                        const std::string& deckname,
-                       bool show_fallout = false)
-        : debugFileRegex_(deckname+"\\.\\d+\\.DBG"),
-          logFileRegex_(deckname+"\\.\\d+\\.PRT"),
-          fileWarningRegex_(deckname+"\\.(\\d+)\\.[^.]+"),
-          show_fallout_(show_fallout)
-    {
-        if ( show_fallout_ )
-        {
-            auto debugPath = output_dir;
-            debugPath /= (deckname + ".DBG");
-            debugStream_.reset(new std::ofstream(debugPath,
-                                                std::ofstream::app));
-            auto logPath = output_dir;
-            logPath /= ( deckname + ".PRT");
-            logStream_.reset(new std::ofstream(logPath,
-                                              std::ofstream::app));
-        }
-    }
+                       bool show_fallout = false);
 
-    void operator()(const fs::path& file)
-    {
-        std::smatch matches;
-        std::string filename = file.filename().native();
+    void operator()(const fs::path& file);
 
-        if ( std::regex_match(filename, matches, fileWarningRegex_) )
-        {
-            std::string rank = std::regex_replace(filename, fileWarningRegex_, "\\1");
-
-            if( std::regex_match(filename, logFileRegex_) )
-            {
-                if ( show_fallout_ ){
-                    appendFile(*logStream_, file, rank);
-                }else{
-                    fs::remove(file);
-                }
-            }
-            else
-            {
-                if (std::regex_match(filename, debugFileRegex_)  )
-                {
-                    if ( show_fallout_ ){
-                        appendFile(*debugStream_, file, rank);
-                    }else{
-                        fs::remove(file);
-                    }
-                }
-                else
-                {
-                    if ( show_fallout_ ){
-                        std::cerr << "WARNING: Unrecognized file with name "
-                                  << filename
-                                  << " that might stem from a  parallel run."
-                                  << std::endl;
-                    }
-                }
-            }
-        }
-    }
 private:
     /// \brief Append contents of a file to a stream
     /// \brief of The output stream to use.
     /// \brief file The file whose content to append.
     /// \brief rank The rank that wrote the file.
-    void appendFile(std::ofstream& of, const fs::path& file, const std::string& rank)
-    {
-        if( fs::file_size(file) )
-        {
-            std::cerr << "WARNING: There has been logging to file "
-                      << file.string() <<" by process "
-                      << rank << std::endl;
-
-            std::ifstream in(file);
-            of<<std::endl<< std::endl;
-            of<<"=======================================================";
-            of<<std::endl<<std::endl;
-            of << " Output written by rank " << rank << " to file " << file.string();
-            of << ":" << std::endl << std::endl;
-            of << in.rdbuf() << std::endl << std::endl;
-            of << "======================== end output =====================";
-            of << std::endl;
-            in.close();
-        }
-        fs::remove(file);
-    }
+    void appendFile(std::ofstream& of, const fs::path& file, const std::string& rank);
 
     /// \brief Regex to capture *.DBG
     std::regex debugFileRegex_;
@@ -147,5 +75,5 @@ private:
     bool show_fallout_;
 };
 } // end namespace detail
-} // end namespace OPM
+} // end namespace Opm
 #endif // end header guard

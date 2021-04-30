@@ -21,28 +21,24 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_BLACKOILDETAILS_HEADER_INCLUDED
-#define OPM_BLACKOILDETAILS_HEADER_INCLUDED
+#ifndef OPM_COUNTGLOBALCELLS_HEADER_INCLUDED
+#define OPM_COUNTGLOBALCELLS_HEADER_INCLUDED
 
 #include <opm/simulators/linalg/ParallelIstlInformation.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 
+#include <dune/grid/common/gridview.hh>
+
+#include <boost/range/iterator_range.hpp>
+
 #include <any>
+#include <vector>
 
 namespace Opm {
 namespace detail {
 
 
-    inline
-    std::vector<int>
-    buildAllCells(const int nc)
-    {
-        std::vector<int> all_cells(nc);
-
-        for (int c = 0; c < nc; ++c) { all_cells[c] = c; }
-
-        return all_cells;
-    }
+    std::vector<int> buildAllCells(const int nc);
 
 
 
@@ -80,18 +76,7 @@ namespace detail {
 
 
 
-    inline
-    double getGravity(const double* g, const int dim) {
-        double grav = 0.0;
-        if (g) {
-            // Guard against gravity in anything but last dimension.
-            for (int dd = 0; dd < dim - 1; ++dd) {
-                assert(g[dd] == 0.0);
-            }
-            grav = g[dim - 1];
-        }
-        return grav;
-    }
+    double getGravity(const double* g, const int dim);
 
 
         /// \brief Compute the Euclidian norm of a vector
