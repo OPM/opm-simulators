@@ -26,18 +26,25 @@
 #endif
 #include "readDeck.hpp"
 
+#include <opm/common/OpmLog/EclipsePRTLog.hpp>
 #include <opm/common/utility/String.hpp>
 #include <opm/common/utility/OpmInputError.hpp>
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/utility/FileSystem.hpp>
 
 #include <opm/io/eclipse/EclIOdata.hpp>
 
 #include <opm/output/eclipse/RestartIO.hpp>
 #include <opm/io/eclipse/rst/state.hpp>
 
+#include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/ArrayDimChecker.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
+#include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+
+#include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
 
 #include "UnsupportedFlowKeywords.hpp"

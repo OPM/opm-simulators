@@ -28,11 +28,14 @@
 #ifndef EBOS_POLYMER_HH
 #define EBOS_POLYMER_HH
 
-#include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/parser/eclipse/Parser/ParseContext.hpp>
-#include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
+#include <memory>
 
 namespace Opm {
+
+class Deck;
+class ParseContext;
+class ErrorGuard;
+
 void ebosPolymerSetDeck(std::unique_ptr<Opm::Deck> deck,
                         std::unique_ptr<Opm::ParseContext> parseContext,
                         std::unique_ptr<Opm::ErrorGuard> errorGuard,

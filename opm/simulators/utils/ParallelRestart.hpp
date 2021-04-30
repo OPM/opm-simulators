@@ -24,10 +24,6 @@
 #endif
 
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/output/eclipse/RestartValue.hpp>
-#include <opm/output/eclipse/EclipseIO.hpp>
-#include <opm/output/eclipse/Summary.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Action/State.hpp>
 #include <opm/common/utility/TimeService.hpp>
 
 #include <dune/common/parallel/mpihelper.hh>
@@ -40,10 +36,39 @@
 #include <tuple>
 #include <typeinfo>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace Opm
 {
+
+class EclipseIO;
+class SummaryState;
+class RestartKey;
+class RestartValue;
+
+namespace data
+{
+class CellData;
+class Connection;
+class CurrentControl;
+class GroupAndNetworkValues;
+class GroupConstraints;
+class GroupData;
+class GroupGuideRates;
+class GuideRateValue;
+class NodeData;
+class Rates;
+class Segment;
+class Solution;
+class Well;
+class WellRates;
+}
+
+namespace Action
+{
+class State;
+}
 
 namespace Mpi
 {

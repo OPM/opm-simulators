@@ -22,6 +22,8 @@
 #include <opm/simulators/linalg/ParallelIstlInformation.hpp>
 #include <dune/common/version.hh>
 #include <dune/common/shared_ptr.hh>
+#include <opm/grid/CpGrid.hpp>
+
  namespace Opm
 {
 #if defined(HAVE_OPM_GRID)

@@ -22,23 +22,21 @@
 #ifndef OPM_READDECK_HEADER_INCLUDED
 #define OPM_READDECK_HEADER_INCLUDED
 
-#include <opm/common/OpmLog/OpmLog.hpp>
-#include <opm/common/OpmLog/EclipsePRTLog.hpp>
-#include <opm/common/OpmLog/LogUtil.hpp>
-
-#include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/Python/Python.hpp>
-#include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/MessageLimits.hpp>
-
 #include <memory>
 #include <optional>
 #include <string>
 
 namespace Opm 
 {
+
+class Deck;
+class EclipseState;
+class ErrorGuard;
+class ParseContext;
+class Python;
+class Schedule;
+class SummaryConfig;
+
 enum class FileOutputMode {
     //! \brief No output to files.
     OUTPUT_NONE = 0,

@@ -25,22 +25,14 @@
 
 #include <sys/utsname.h>
 
-#include <opm/simulators/flow/BlackoilModelEbos.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/simulators/utils/ParallelFileMerger.hpp>
 #include <opm/simulators/utils/moduleVersion.hpp>
-#include <opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp>
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 
-#include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
-
-#include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 #include <opm/common/utility/String.hpp>
 
 #include <fmt/format.h>
@@ -85,6 +77,9 @@ struct OutputInterval<TypeTag, TTag::EclFlowProblem> {
 
 namespace Opm
 {
+
+    class Deck;
+
     // The FlowMain class is the ebos based black-oil simulator.
     template <class TypeTag>
     class FlowMainEbos

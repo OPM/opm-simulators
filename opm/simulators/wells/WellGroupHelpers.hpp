@@ -24,9 +24,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRate.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
-#include <opm/simulators/utils/DeferredLogger.hpp>
-#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
-#include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 
@@ -39,6 +36,9 @@
 
 namespace Opm
 {
+
+class DeferredLogger;
+class VFPProdProperties;
 
 
 namespace WellGroupHelpers
