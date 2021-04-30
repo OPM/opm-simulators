@@ -337,7 +337,7 @@ namespace WellGroupHelpers
         int report_step_;
         const GuideRate* guide_rate_;
         GuideRateModel::Target target_;
-        PhaseUsage pu_;
+        const PhaseUsage& pu_;
         bool is_producer_;
         Phase injection_phase_;
     };
