@@ -25,7 +25,6 @@
 #include <dune/istl/owneroverlapcopy.hh>
 
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 
 #include <memory>
 #include <iterator>
@@ -33,6 +32,8 @@
 
 namespace Opm
 {
+
+class Well;
 
 /// \brief Class to facilitate getting values associated with the above/below perforation
 ///
