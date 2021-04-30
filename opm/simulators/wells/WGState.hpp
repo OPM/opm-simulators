@@ -29,7 +29,7 @@ namespace Opm {
   Microscopic class to handle a pair of well and group state.
 */
 
-class PhaseUsage;
+struct PhaseUsage;
 
 struct WGState {
     WGState(const PhaseUsage& pu);
