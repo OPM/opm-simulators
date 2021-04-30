@@ -30,19 +30,16 @@ namespace Opm
 {
 
 MultisegmentWellContribution::MultisegmentWellContribution(unsigned int dim_, unsigned int dim_wells_,
-        unsigned int Nb_, unsigned int Mb_,
-        unsigned int BnumBlocks_, std::vector<double> &Bvalues, std::vector<unsigned int> &BcolIndices, std::vector<unsigned int> &BrowPointers,
+        unsigned int Mb_,
+        std::vector<double> &Bvalues, std::vector<unsigned int> &BcolIndices, std::vector<unsigned int> &BrowPointers,
         unsigned int DnumBlocks_, double *Dvalues, UMFPackIndex *DcolPointers, UMFPackIndex *DrowIndices,
         std::vector<double> &Cvalues)
     :
     dim(dim_),                // size of blockvectors in vectors x and y, equal to MultisegmentWell::numEq
     dim_wells(dim_wells_),    // size of blocks in C, B and D, equal to MultisegmentWell::numWellEq
-    N(Nb_ * dim),             // number of rows in vectors x and y, N == dim*Nb
-    Nb(Nb_),                  // number of blockrows in x and y
     M(Mb_ * dim_wells),       // number of rows, M == dim_wells*Mb
     Mb(Mb_),                  // number of blockrows in C, D and B
     DnumBlocks(DnumBlocks_),  // number of blocks in D
-    BnumBlocks(BnumBlocks_),  // number of blocks in C and B
     // copy data for matrix D into vectors to prevent it going out of scope
     Dvals(Dvalues, Dvalues + DnumBlocks * dim_wells * dim_wells),
     Dcols(DcolPointers, DcolPointers + M + 1),
