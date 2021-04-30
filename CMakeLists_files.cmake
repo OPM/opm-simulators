@@ -185,7 +185,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/core/props/BlackoilPhases.hpp
   opm/core/props/phaseUsageFromDeck.hpp
   opm/core/props/satfunc/RelpermDiagnostics.hpp
-  opm/core/props/satfunc/RelpermDiagnostics_impl.hpp
   opm/simulators/timestepping/SimulatorReport.hpp
   opm/simulators/wells/WellState.hpp
   opm/simulators/aquifers/AquiferInterface.hpp

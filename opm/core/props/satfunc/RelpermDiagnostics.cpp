@@ -32,8 +32,12 @@
 #include <opm/parser/eclipse/EclipseState/Tables/SlgofTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Sof2Table.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Sof3Table.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SsfnTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SwfnTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SwofTable.hpp>
+
+#include <opm/grid/CpGrid.hpp>
+#include <opm/grid/polyhedralgrid.hh>
 
 namespace Opm{
 
@@ -725,9 +729,74 @@ namespace Opm{
         }
     }
 
+    template <class CartesianIndexMapper>
+    void RelpermDiagnostics::diagnosis(const Opm::EclipseState& eclState,
+                                       const CartesianIndexMapper& cartesianIndexMapper)
+    {
+        OpmLog::info("\n===============Saturation Functions Diagnostics===============\n");
+        bool doDiagnostics = phaseCheck_(eclState);
+        if (!doDiagnostics) // no diagnostics needed for single phase problems
+            return;
+        satFamilyCheck_(eclState);
+        tableCheck_(eclState);
+        unscaledEndPointsCheck_(eclState);
+        scaledEndPointsCheck_(eclState, cartesianIndexMapper);
+    }
 
+    template <class CartesianIndexMapper>
+    void RelpermDiagnostics::scaledEndPointsCheck_(const EclipseState& eclState,
+                                                   const CartesianIndexMapper& cartesianIndexMapper)
+    {
+        // All end points are subject to round-off errors, checks should account for it
+        const float tolerance = 1e-6;
+        const int nc = cartesianIndexMapper.compressedSize();
+        const bool threepoint = eclState.runspec().endpointScaling().threepoint();
+        scaledEpsInfo_.resize(nc);
+        EclEpsGridProperties epsGridProperties(eclState, false);
+        const std::string tag = "Scaled endpoints";
+        for (int c = 0; c < nc; ++c) {
+            const std::string satnumIdx = std::to_string(epsGridProperties.satRegion(c));
+            std::string cellIdx;
+            {
+                std::array<int, 3> ijk;
+                cartesianIndexMapper.cartesianCoordinate(c, ijk);
+                cellIdx = "(" + std::to_string(ijk[0]) + ", " +
+                    std::to_string(ijk[1]) + ", " +
+                    std::to_string(ijk[2]) + ")";
+            }
+            scaledEpsInfo_[c].extractScaled(eclState, epsGridProperties, c);
 
+            // SGU <= 1.0 - SWL
+            if (scaledEpsInfo_[c].Sgu > (1.0 - scaledEpsInfo_[c].Swl + tolerance)) {
+                const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SGU exceed 1.0 - SWL";
+                OpmLog::warning(tag, msg);
+            }
 
+            // SGL <= 1.0 - SWU
+            if (scaledEpsInfo_[c].Sgl > (1.0 - scaledEpsInfo_[c].Swu + tolerance)) {
+                const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SGL exceed 1.0 - SWU";
+                OpmLog::warning(tag, msg);
+            }
 
+            if (threepoint && fluidSystem_ == FluidSystem::BlackOil) {
+                // Mobilility check.
+                if ((scaledEpsInfo_[c].Sowcr + scaledEpsInfo_[c].Swcr) >= (1.0 + tolerance)) {
+                    const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SOWCR + SWCR exceed 1.0";
+                    OpmLog::warning(tag, msg);
+                }
 
+            if ((scaledEpsInfo_[c].Sogcr + scaledEpsInfo_[c].Sgcr + scaledEpsInfo_[c].Swl) >= (1.0 + tolerance)) {
+                    const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SOGCR + SGCR + SWL exceed 1.0";
+                    OpmLog::warning(tag, msg);
+                }
+            }
+        }
+    }
+
+#define INSTANCE_DIAGNOSIS(...) \
+    template void RelpermDiagnostics::diagnosis<Dune::CartesianIndexMapper<__VA_ARGS__>>(const EclipseState&, const Dune::CartesianIndexMapper<__VA_ARGS__>&); \
+    template void RelpermDiagnostics::scaledEndPointsCheck_<Dune::CartesianIndexMapper<__VA_ARGS__>>(const EclipseState&, const Dune::CartesianIndexMapper<__VA_ARGS__>&);
+
+    INSTANCE_DIAGNOSIS(Dune::CpGrid)
+    INSTANCE_DIAGNOSIS(Dune::PolyhedralGrid<3,3>)
 } //namespace Opm
