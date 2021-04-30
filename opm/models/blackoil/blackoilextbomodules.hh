@@ -273,8 +273,8 @@ public:
     /*!
      * \brief Register all solvent specific VTK and ECL output modules.
      */
-    static void registerOutputModules(Model& model,
-                                      Simulator& simulator)
+    static void registerOutputModules(Model&,
+                                      Simulator&)
     {
         if (!enableExtbo)
             // extBO have disabled at compile time
