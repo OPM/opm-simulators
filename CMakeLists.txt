@@ -279,14 +279,13 @@ opm_add_test(test_gatherdeferredlogger
 )
 
 opm_add_test(test_parallelwellinfo_mpi
-  DEPENDS "opmsimulators"
-  LIBRARIES opmsimulators ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
-  SOURCES
-    tests/test_parallelwellinfo.cpp
+  EXE_NAME
+    test_parallelwellinfo
   CONDITION
     MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
   DRIVER_ARGS
     4 ${PROJECT_BINARY_DIR}
+  NO_COMPILE
     )
 
 include(OpmBashCompletion)
