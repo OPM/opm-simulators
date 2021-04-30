@@ -1428,7 +1428,7 @@ protected:
         throw std::logic_error("commitWellState() method not implemented for class eclpeacemanwell");
     }
 
-    void commitWGState(WGState wgstate)
+    void commitWGState(WGState)
     {
         throw std::logic_error("commitWellState() method not implemented for class eclpeacemanwell");
     }

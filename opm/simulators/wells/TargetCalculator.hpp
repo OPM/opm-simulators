@@ -174,7 +174,6 @@ namespace WellGroupHelpers
                                   const std::vector<double>& resv_coeff,
                                   const std::string& group_name,
                                   const double sales_target,
-                                  const WellStateFullyImplicitBlackoil& well_state,
                                   const GroupState& group_state,
                                   const Phase& injection_phase,
                                   DeferredLogger& deferred_logger)
@@ -183,7 +182,6 @@ namespace WellGroupHelpers
             , resv_coeff_(resv_coeff)
             , group_name_(group_name)
             , sales_target_(sales_target)
-            , well_state_(well_state)
             , group_state_(group_state)
         {
             // initialize to avoid warning
@@ -282,7 +280,6 @@ namespace WellGroupHelpers
         const std::vector<double>& resv_coeff_;
         const std::string& group_name_;
         double sales_target_;
-        const WellStateFullyImplicitBlackoil& well_state_;
         const GroupState& group_state_;
         int pos_;
         GuideRateModel::Target target_;

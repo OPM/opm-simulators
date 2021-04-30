@@ -81,7 +81,6 @@ private:
     bool allocated = false;
 
     unsigned int N;                          // number of rows (not blockrows) in vectors x and y
-    unsigned int Nb;                         // number of blockrows in vectors x and y
     unsigned int dim;                        // number of columns in blocks in B and C, equal to StandardWell::numEq
     unsigned int dim_wells;                  // number of rows in blocks in B and C, equal to StandardWell::numStaticWellEq
     unsigned int num_blocks = 0;             // total number of blocks in all wells
@@ -197,9 +196,7 @@ public:
     /// Matrices C and B are passed in Blocked CSR, matrix D in CSC
     /// \param[in] dim              size of blocks in vectors x and y, equal to MultisegmentWell::numEq
     /// \param[in] dim_wells        size of blocks of C, B and D, equal to MultisegmentWell::numWellEq
-    /// \param[in] Nb               number of blocks in vectors x and y
     /// \param[in] Mb               number of blockrows in C, B and D
-    /// \param[in] BnumBlocks       number of blocks in C and B
     /// \param[in] Bvalues          nonzero values of matrix B
     /// \param[in] BcolIndices      columnindices of blocks of matrix B
     /// \param[in] BrowPointers     rowpointers of matrix B
@@ -209,8 +206,8 @@ public:
     /// \param[in] DrowIndices      rowindices of matrix D
     /// \param[in] Cvalues          nonzero values of matrix C
     void addMultisegmentWellContribution(unsigned int dim, unsigned int dim_wells,
-                                         unsigned int Nb, unsigned int Mb,
-                                         unsigned int BnumBlocks, std::vector<double> &Bvalues, std::vector<unsigned int> &BcolIndices, std::vector<unsigned int> &BrowPointers,
+                                         unsigned int Mb,
+                                         std::vector<double> &Bvalues, std::vector<unsigned int> &BcolIndices, std::vector<unsigned int> &BrowPointers,
                                          unsigned int DnumBlocks, double *Dvalues,
                                          UMFPackIndex *DcolPointers, UMFPackIndex *DrowIndices,
                                          std::vector<double> &Cvalues);

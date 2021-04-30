@@ -482,7 +482,6 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     addWellContribution(WellContributions& wellContribs) const
     {
-        unsigned int Nb = duneB_.M();       // number of blockrows in matrix A
         unsigned int Mb = duneB_.N();       // number of blockrows in duneB_, duneC_ and duneD_
         unsigned int BnumBlocks = duneB_.nonzeroes();
         unsigned int DnumBlocks = duneD_.nonzeroes();
@@ -533,7 +532,7 @@ namespace Opm
             Brows.emplace_back(sumBlocks);
         }
 
-        wellContribs.addMultisegmentWellContribution(numEq, numWellEq, Nb, Mb, BnumBlocks, Bvals, Bcols, Brows, DnumBlocks, Dvals, Dcols, Drows, Cvals);
+        wellContribs.addMultisegmentWellContribution(numEq, numWellEq, Mb, Bvals, Bcols, Brows, DnumBlocks, Dvals, Dcols, Drows, Cvals);
     }
 #endif
 

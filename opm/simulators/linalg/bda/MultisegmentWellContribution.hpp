@@ -47,8 +47,6 @@ class MultisegmentWellContribution
 private:
     unsigned int dim;                        // size of blockvectors in vectors x and y, equal to MultisegmentWell::numEq
     unsigned int dim_wells;                  // size of blocks in C, B and D, equal to MultisegmentWell::numWellEq
-    unsigned int N;                          // number of rows in vectors x and y, N == dim*Nb
-    unsigned int Nb;                         // number of blockrows in x and y
     unsigned int M;                          // number of rows, M == dim_wells*Mb
     unsigned int Mb;                         // number of blockrows in C, D and B
 
@@ -59,7 +57,6 @@ private:
     // C and B are stored in BCRS format, D is stored in CSC format (Dune::UMFPack)
     // Sparsity pattern for C is not stored, since it is the same as B
     unsigned int DnumBlocks;             // number of blocks in D
-    unsigned int BnumBlocks;             // number of blocks in C and B
     std::vector<double> Cvals;
     std::vector<double> Dvals;
     std::vector<double> Bvals;
@@ -97,9 +94,7 @@ public:
     /// The variables representing C, B and D will go out of scope when MultisegmentWell::addWellContribution() ends
     /// \param[in] dim              size of blocks in blockvectors x and y, equal to MultisegmentWell::numEq
     /// \param[in] dim_wells        size of blocks of C, B and D, equal to MultisegmentWell::numWellEq
-    /// \param[in] Nb               number of blocks in vectors x and y
     /// \param[in] Mb               number of blockrows in C, B and D
-    /// \param[in] BnumBlocks       number of blocks in C and B
     /// \param[in] Bvalues          nonzero values of matrix B
     /// \param[in] BcolIndices      columnindices of blocks of matrix B
     /// \param[in] BrowPointers     rowpointers of matrix B
@@ -109,8 +104,8 @@ public:
     /// \param[in] DrowIndices      rowindices of matrix D
     /// \param[in] Cvalues          nonzero values of matrix C
     MultisegmentWellContribution(unsigned int dim, unsigned int dim_wells,
-                                 unsigned int Nb, unsigned int Mb,
-                                 unsigned int BnumBlocks, std::vector<double> &Bvalues, std::vector<unsigned int> &BcolIndices, std::vector<unsigned int> &BrowPointers,
+                                 unsigned int Mb,
+                                 std::vector<double> &Bvalues, std::vector<unsigned int> &BcolIndices, std::vector<unsigned int> &BrowPointers,
                                  unsigned int DnumBlocks, double *Dvalues, UMFPackIndex *DcolPointers,
                                  UMFPackIndex *DrowIndices, std::vector<double> &Cvalues);
 
