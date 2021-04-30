@@ -850,7 +850,7 @@ protected:
             cellThickness_[elemIdx] = asImp_().computeCellThickness(element);
         }
     }
-    Scalar computeCellThickness(const Element& element) const {
+    Scalar computeCellThickness(const Element&) const {
         OPM_THROW(std::runtime_error, "cellThickness not implemented for this grid!");
     }
 
