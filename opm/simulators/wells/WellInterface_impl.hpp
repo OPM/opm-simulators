@@ -2242,7 +2242,7 @@ namespace Opm
             const auto& gconsale = schedule[current_step_].gconsale().get(group.name(), summaryState);
             sales_target = gconsale.sales_target;
         }
-        WellGroupHelpers::InjectionTargetCalculator tcalc(currentGroupControl, pu, resv_coeff, group.name(), sales_target, well_state, group_state, injectionPhase, deferred_logger);
+        WellGroupHelpers::InjectionTargetCalculator tcalc(currentGroupControl, pu, resv_coeff, group.name(), sales_target, group_state, injectionPhase, deferred_logger);
         WellGroupHelpers::FractionCalculator fcalc(schedule, summaryState, well_state, group_state, current_step_, guide_rate_, tcalc.guideTargetMode(), pu, false, injectionPhase);
 
         auto localFraction = [&](const std::string& child) {
