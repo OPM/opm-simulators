@@ -196,7 +196,7 @@ add_test_compareECLFiles(CASENAME spe12
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol}
                          DIR spe1
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME spe1_2p
                          FILENAME SPE1CASE2_2P
@@ -204,7 +204,7 @@ add_test_compareECLFiles(CASENAME spe1_2p
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR spe1
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME spe1_oilgas
                          FILENAME SPE1CASE2_OILGAS
@@ -212,14 +212,14 @@ add_test_compareECLFiles(CASENAME spe1_oilgas
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol}
                          DIR spe1
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME spe1
                          FILENAME SPE1CASE1
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME spe1_import
                          FILENAME SPE1CASE1_IMPORT
@@ -227,7 +227,7 @@ add_test_compareECLFiles(CASENAME spe1_import
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR spe1
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 
 add_test_compareECLFiles(CASENAME spe1_nowells
@@ -236,7 +236,7 @@ add_test_compareECLFiles(CASENAME spe1_nowells
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR spe1
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME spe1_thermal
                          FILENAME SPE1CASE2_THERMAL
@@ -244,7 +244,7 @@ add_test_compareECLFiles(CASENAME spe1_thermal
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR spe1
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME spe1_thermal_watvisc
                          FILENAME SPE1CASE2_THERMAL_WATVISC
@@ -252,7 +252,7 @@ add_test_compareECLFiles(CASENAME spe1_thermal_watvisc
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR spe1
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME spe1_rockcomp
                          FILENAME SPE1CASE2_ROCK2DTR
@@ -260,7 +260,7 @@ add_test_compareECLFiles(CASENAME spe1_rockcomp
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR spe1
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME spe1_brine
                          FILENAME SPE1CASE1_BRINE
@@ -268,7 +268,7 @@ add_test_compareECLFiles(CASENAME spe1_brine
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR spe1_brine
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME spe1_metric_vfp1
                          FILENAME SPE1CASE1_METRIC_VFP1
@@ -276,7 +276,7 @@ add_test_compareECLFiles(CASENAME spe1_metric_vfp1
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR vfpprod_spe1
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 if(BUILD_FLOW_VARIANTS)
   add_test_compareECLFiles(CASENAME spe1_water
@@ -285,7 +285,7 @@ if(BUILD_FLOW_VARIANTS)
                            ABS_TOL ${abs_tol}
                            REL_TOL ${rel_tol}
                            DIR spe1
-                           TEST_ARGS --linear-solver-reduction=1e-6)
+                           TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 endif()
 
 add_test_compareECLFiles(CASENAME spe1_spider
@@ -294,7 +294,7 @@ add_test_compareECLFiles(CASENAME spe1_spider
                            ABS_TOL ${abs_tol}
                            REL_TOL ${rel_tol}
                            DIR radial_grid
-                           TEST_ARGS --linear-solver-reduction=1e-6)
+                           TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME ctaquifer_2d_oilwater
                          FILENAME 2D_OW_CTAQUIFER
@@ -302,7 +302,7 @@ add_test_compareECLFiles(CASENAME ctaquifer_2d_oilwater
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR aquifer-oilwater
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME fetkovich_2d
                          FILENAME 2D_FETKOVICHAQUIFER
@@ -310,7 +310,7 @@ add_test_compareECLFiles(CASENAME fetkovich_2d
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR aquifer-fetkovich
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME numerical_aquifer_3d_2aqu
                          FILENAME 3D_2AQU_NUM
@@ -318,7 +318,7 @@ add_test_compareECLFiles(CASENAME numerical_aquifer_3d_2aqu
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR aquifer-num
-                         TEST_ARGS --linear-solver-reduction=1e-6 --relaxed-max-pv-fraction=0 --tolerance-cnv=0.00003 --time-step-control=pid --linsolver=cpr)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100 --relaxed-max-pv-fraction=0 --tolerance-cnv=0.00003 --time-step-control=pid --linsolver=cpr)
 
 add_test_compareECLFiles(CASENAME numerical_aquifer_3d_1aqu
                          FILENAME 3D_1AQU_3CELLS
@@ -326,84 +326,84 @@ add_test_compareECLFiles(CASENAME numerical_aquifer_3d_1aqu
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR aquifer-num
-                         TEST_ARGS --linear-solver-reduction=1e-6 --relaxed-max-pv-fraction=0 --tolerance-cnv=0.00003 --time-step-control=pid --linsolver=cpr)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100 --relaxed-max-pv-fraction=0 --tolerance-cnv=0.00003 --time-step-control=pid --linsolver=cpr)
 
 add_test_compareECLFiles(CASENAME spe3
                          FILENAME SPE3CASE1
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol}
-                         TEST_ARGS --linear-solver-reduction=1e-6 --tolerance-wells=1e-6 --flow-newton-max-iterations=20)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100 --tolerance-wells=1e-6 --flow-newton-max-iterations=20)
 
 add_test_compareECLFiles(CASENAME spe9
                          FILENAME SPE9_CP_SHORT
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME spe9group
                          FILENAME SPE9_CP_GROUP
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME msw_2d_h
                          FILENAME 2D_H__
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol}
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME msw_3d_hfa
                          FILENAME 3D_MSW
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         TEST_ARGS --linear-solver-reduction=1e-6 --tolerance-pressure-ms-wells=10)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100 --tolerance-pressure-ms-wells=10)
 
 add_test_compareECLFiles(CASENAME polymer_oilwater
                          FILENAME 2D_OILWATER_POLYMER
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         TEST_ARGS --linear-solver-reduction=1e-6 --tolerance-mb=1.e-7)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100 --tolerance-mb=1.e-7)
 
 add_test_compareECLFiles(CASENAME polymer_injectivity
                          FILENAME 2D_POLYMER_INJECTIVITY
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         TEST_ARGS --linear-solver-reduction=1e-6 --tolerance-mb=1.e-7 --tolerance-wells=1.e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100 --tolerance-mb=1.e-7 --tolerance-wells=1.e-6)
 
 add_test_compareECLFiles(CASENAME polymer_simple2D
                          FILENAME 2D_THREEPHASE_POLY_HETER
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol}
-                         TEST_ARGS --linear-solver-reduction=1e-6 --tolerance-mb=1.e-7)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100 --tolerance-mb=1.e-7)
 
 add_test_compareECLFiles(CASENAME spe5
                          FILENAME SPE5CASE1
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol}
-                         TEST_ARGS --linear-solver-reduction=1e-6 --flow-newton-max-iterations=20)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100 --flow-newton-max-iterations=20)
 
 add_test_compareECLFiles(CASENAME spe5_co2eor
                          FILENAME SPE5CASE1_DYN
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol}
-                         TEST_ARGS --linear-solver-reduction=1e-6 --flow-newton-max-iterations=20)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100 --flow-newton-max-iterations=20)
 
 add_test_compareECLFiles(CASENAME wecon_wtest
                          FILENAME 3D_WECON
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol}
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME msw_model_1
                          FILENAME MSW_MODEL_1
@@ -411,7 +411,7 @@ add_test_compareECLFiles(CASENAME msw_model_1
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model1
-                         TEST_ARGS --linear-solver-reduction=1e-6 --solver-max-time-step-in-days=5.0)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100 --solver-max-time-step-in-days=5.0)
 
 add_test_compareECLFiles(CASENAME base_model_1
                          FILENAME BASE_MODEL_1
@@ -419,7 +419,7 @@ add_test_compareECLFiles(CASENAME base_model_1
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model1
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME faults_model_1
                          FILENAME FAULTS_MODEL_1
@@ -427,7 +427,7 @@ add_test_compareECLFiles(CASENAME faults_model_1
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model1
-                         TEST_ARGS --linear-solver-reduction=1e-6 --solver-max-time-step-in-days=5.0)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100 --solver-max-time-step-in-days=5.0)
 
 add_test_compareECLFiles(CASENAME base_model2
                          FILENAME 0_BASE_MODEL2
@@ -435,7 +435,7 @@ add_test_compareECLFiles(CASENAME base_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 0a1_grpctl_stw_model2
                          FILENAME 0A1_GRCTRL_LRAT_ORAT_BASE_MODEL2_STW
@@ -443,7 +443,7 @@ add_test_compareECLFiles(CASENAME 0a1_grpctl_stw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 0a1_grpctl_msw_model2
                          FILENAME 0A1_GRCTRL_LRAT_ORAT_BASE_MODEL2_MSW
@@ -451,7 +451,7 @@ add_test_compareECLFiles(CASENAME 0a1_grpctl_msw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6 --solver-max-time-step-in-days=3)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100 --solver-max-time-step-in-days=3)
 
 add_test_compareECLFiles(CASENAME 0a2_grpctl_stw_model2
                          FILENAME 0A2_GRCTRL_LRAT_ORAT_GGR_BASE_MODEL2_STW
@@ -459,7 +459,7 @@ add_test_compareECLFiles(CASENAME 0a2_grpctl_stw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 0a2_grpctl_msw_model2
                          FILENAME 0A2_GRCTRL_LRAT_ORAT_GGR_BASE_MODEL2_MSW
@@ -467,7 +467,7 @@ add_test_compareECLFiles(CASENAME 0a2_grpctl_msw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6 --solver-max-time-step-in-days=3)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100 --solver-max-time-step-in-days=3)
 
 add_test_compareECLFiles(CASENAME 0a3_grpctl_stw_model2
                          FILENAME 0A3_GRCTRL_LRAT_LRAT_BASE_MODEL2_STW
@@ -475,7 +475,7 @@ add_test_compareECLFiles(CASENAME 0a3_grpctl_stw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 0a3_grpctl_msw_model2
                          FILENAME 0A3_GRCTRL_LRAT_LRAT_BASE_MODEL2_MSW
@@ -483,7 +483,7 @@ add_test_compareECLFiles(CASENAME 0a3_grpctl_msw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6 --solver-max-time-step-in-days=3)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100 --solver-max-time-step-in-days=3)
 
 add_test_compareECLFiles(CASENAME 0a4_grpctl_stw_model2
                          FILENAME 0A4_GRCTRL_LRAT_LRAT_GGR_BASE_MODEL2_STW
@@ -491,7 +491,7 @@ add_test_compareECLFiles(CASENAME 0a4_grpctl_stw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 0a4_grpctl_msw_model2
                          FILENAME 0A4_GRCTRL_LRAT_LRAT_GGR_BASE_MODEL2_MSW
@@ -499,7 +499,7 @@ add_test_compareECLFiles(CASENAME 0a4_grpctl_msw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6 --solver-max-time-step-in-days=3)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100 --solver-max-time-step-in-days=3)
 
 add_test_compareECLFiles(CASENAME multregt_model2
                          FILENAME 1_MULTREGT_MODEL2
@@ -507,7 +507,7 @@ add_test_compareECLFiles(CASENAME multregt_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME udq_actionx
                          FILENAME UDQ_ACTIONX
@@ -515,7 +515,7 @@ add_test_compareECLFiles(CASENAME udq_actionx
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR udq_actionx
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME udq_wconprod
                          FILENAME UDQ_WCONPROD
@@ -523,7 +523,7 @@ add_test_compareECLFiles(CASENAME udq_wconprod
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR udq_actionx
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME actionx_m1
                          FILENAME ACTIONX_M1
@@ -531,7 +531,7 @@ add_test_compareECLFiles(CASENAME actionx_m1
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR udq_actionx
-                         TEST_ARGS --linear-solver-reduction=1e-6 --solver-max-time-step-in-days=1)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100 --solver-max-time-step-in-days=1)
 
 add_test_compareECLFiles(CASENAME pinch_multz_all
                          FILENAME PINCH_MULTZ_ALL
@@ -539,7 +539,7 @@ add_test_compareECLFiles(CASENAME pinch_multz_all
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR pinch
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME pinch_multz_all_barrier
                          FILENAME PINCH_MULTZ_ALL_BARRIER
@@ -547,7 +547,7 @@ add_test_compareECLFiles(CASENAME pinch_multz_all_barrier
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR pinch
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME udq_uadd
                          FILENAME UDQ_M1
@@ -555,7 +555,7 @@ add_test_compareECLFiles(CASENAME udq_uadd
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR udq_actionx
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME udq_undefined
                          FILENAME UDQ_M2
@@ -563,7 +563,7 @@ add_test_compareECLFiles(CASENAME udq_undefined
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR udq_actionx
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME udq_in_actionx
                          FILENAME UDQ_M3
@@ -571,7 +571,7 @@ add_test_compareECLFiles(CASENAME udq_in_actionx
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR udq_actionx
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME co2store
                          FILENAME CO2STORE
@@ -579,7 +579,7 @@ add_test_compareECLFiles(CASENAME co2store
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR co2store
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME co2store_diffusive
                          FILENAME CO2STORE_DIFFUSIVE
@@ -587,7 +587,7 @@ add_test_compareECLFiles(CASENAME co2store_diffusive
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR co2store
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME co2store_drsdtcon
                          FILENAME CO2STORE_DRSDTCON
@@ -595,7 +595,7 @@ add_test_compareECLFiles(CASENAME co2store_drsdtcon
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR co2store
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 if (opm-common_EMBEDDED_PYTHON)
   add_test_compareECLFiles(CASENAME udq_pyaction
@@ -604,7 +604,7 @@ if (opm-common_EMBEDDED_PYTHON)
                            ABS_TOL ${abs_tol}
                            REL_TOL ${rel_tol}
                            DIR udq_actionx
-                           TEST_ARGS --linear-solver-reduction=1e-6)
+                           TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 endif()
 
 add_test_compareECLFiles(CASENAME multxyz_model2
@@ -613,7 +613,7 @@ add_test_compareECLFiles(CASENAME multxyz_model2
 			  ABS_TOL ${abs_tol}
 			  REL_TOL ${rel_tol}
 			  DIR model2
-			  TEST_ARGS --linear-solver-reduction=1e-6)
+			  TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME multflt_model2
 			  FILENAME 3_MULTFLT_MODEL2
@@ -621,7 +621,7 @@ add_test_compareECLFiles(CASENAME multflt_model2
 			  ABS_TOL ${abs_tol}
 			  REL_TOL ${rel_tol}
 			  DIR model2
-			  TEST_ARGS --linear-solver-reduction=1e-6)
+			  TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME multpvv_model2
 			  FILENAME 4_MINPVV_MODEL2
@@ -629,7 +629,7 @@ add_test_compareECLFiles(CASENAME multpvv_model2
 			  ABS_TOL ${abs_tol}
 			  REL_TOL ${rel_tol}
 			  DIR model2
-			  TEST_ARGS --linear-solver-reduction=1e-6)
+			  TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME swatinit_model2
 			  FILENAME 5_SWATINIT_MODEL2
@@ -637,7 +637,7 @@ add_test_compareECLFiles(CASENAME swatinit_model2
 			  ABS_TOL ${abs_tol}
 			  REL_TOL ${rel_tol}
 			  DIR model2
-			  TEST_ARGS --linear-solver-reduction=1e-6)
+			  TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME endscale_model2
 			  FILENAME 6_ENDSCALE_MODEL2
@@ -645,7 +645,7 @@ add_test_compareECLFiles(CASENAME endscale_model2
 			  ABS_TOL ${abs_tol}
 			  REL_TOL ${rel_tol}
 			  DIR model2
-			  TEST_ARGS --linear-solver-reduction=1e-6)
+			  TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME hysteresis_model2
 			  FILENAME 7_HYSTERESIS_MODEL2
@@ -653,7 +653,7 @@ add_test_compareECLFiles(CASENAME hysteresis_model2
 			  ABS_TOL ${abs_tol}
 			  REL_TOL ${rel_tol}
 			  DIR model2
-			  TEST_ARGS --linear-solver-reduction=1e-6)
+			  TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME multiply_tranxyz_model2
 			  FILENAME 8_MULTIPLY_TRANXYZ_MODEL2
@@ -661,7 +661,7 @@ add_test_compareECLFiles(CASENAME multiply_tranxyz_model2
 			  ABS_TOL ${abs_tol}
 			  REL_TOL ${rel_tol}
 			  DIR model2
-			  TEST_ARGS --linear-solver-reduction=1e-6)
+			  TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME editnnc_model2
 			  FILENAME 9_EDITNNC_MODEL2
@@ -669,7 +669,7 @@ add_test_compareECLFiles(CASENAME editnnc_model2
 			  ABS_TOL ${abs_tol}
 			  REL_TOL ${rel_tol}
 			  DIR model2
-			  TEST_ARGS --linear-solver-reduction=1e-6)
+			  TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 9_1a_grpctl_stw_model2
                          FILENAME 9_1A_DEPL_MAX_RATE_MIN_BHP_STW
@@ -677,7 +677,7 @@ add_test_compareECLFiles(CASENAME 9_1a_grpctl_stw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 9_1a_grpctl_msw_model2
                          FILENAME 9_1A_DEPL_MAX_RATE_MIN_BHP_MSW
@@ -685,7 +685,7 @@ add_test_compareECLFiles(CASENAME 9_1a_grpctl_msw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 9_1b_grpctl_stw_model2
                          FILENAME 9_1B_DEPL_MAX_RATE_MIN_THP_STW
@@ -693,7 +693,7 @@ add_test_compareECLFiles(CASENAME 9_1b_grpctl_stw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 9_1b_grpctl_msw_model2
                          FILENAME 9_1B_DEPL_MAX_RATE_MIN_THP_MSW
@@ -701,7 +701,7 @@ add_test_compareECLFiles(CASENAME 9_1b_grpctl_msw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 9_2a_grpctl_stw_model2
                          FILENAME 9_2A_DEPL_GCONPROD_1L_STW
@@ -709,7 +709,7 @@ add_test_compareECLFiles(CASENAME 9_2a_grpctl_stw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 9_2a_grpctl_msw_model2
                          FILENAME 9_2A_DEPL_GCONPROD_1L_MSW
@@ -717,7 +717,7 @@ add_test_compareECLFiles(CASENAME 9_2a_grpctl_msw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 9_2b_grpctl_stw_model2
                          FILENAME 9_2B_DEPL_GCONPROD_2L_STW
@@ -725,7 +725,7 @@ add_test_compareECLFiles(CASENAME 9_2b_grpctl_stw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 9_2b_grpctl_msw_model2
                          FILENAME 9_2B_DEPL_GCONPROD_2L_MSW
@@ -733,7 +733,7 @@ add_test_compareECLFiles(CASENAME 9_2b_grpctl_msw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 9_3a_grpctl_stw_model2
                          FILENAME 9_3A_GINJ_REIN-G_STW
@@ -741,7 +741,7 @@ add_test_compareECLFiles(CASENAME 9_3a_grpctl_stw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 9_3a_grpctl_msw_model2
                          FILENAME 9_3A_GINJ_REIN-G_MSW
@@ -749,7 +749,7 @@ add_test_compareECLFiles(CASENAME 9_3a_grpctl_msw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 9_3b_grpctl_stw_model2
                          FILENAME 9_3B_GINJ_GAS_EXPORT_STW
@@ -757,7 +757,7 @@ add_test_compareECLFiles(CASENAME 9_3b_grpctl_stw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 9_3b_grpctl_msw_model2
                          FILENAME 9_3B_GINJ_GAS_EXPORT_MSW
@@ -765,7 +765,7 @@ add_test_compareECLFiles(CASENAME 9_3b_grpctl_msw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 9_3c_grpctl_stw_model2
                          FILENAME 9_3C_GINJ_GAS_GCONSUMP_STW
@@ -773,7 +773,7 @@ add_test_compareECLFiles(CASENAME 9_3c_grpctl_stw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 9_3c_grpctl_msw_model2
                          FILENAME 9_3C_GINJ_GAS_GCONSUMP_MSW
@@ -781,7 +781,7 @@ add_test_compareECLFiles(CASENAME 9_3c_grpctl_msw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 9_3d_grpctl_stw_model2
                          FILENAME 9_3D_GINJ_GAS_MAX_EXPORT_STW
@@ -789,7 +789,7 @@ add_test_compareECLFiles(CASENAME 9_3d_grpctl_stw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 9_3d_grpctl_msw_model2
                          FILENAME 9_3D_GINJ_GAS_MAX_EXPORT_MSW
@@ -797,7 +797,7 @@ add_test_compareECLFiles(CASENAME 9_3d_grpctl_msw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 9_3e_grpctl_stw_model2
                          FILENAME 9_3E_GAS_MIN_EXPORT_STW
@@ -805,7 +805,7 @@ add_test_compareECLFiles(CASENAME 9_3e_grpctl_stw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 9_3e_grpctl_msw_model2
                          FILENAME 9_3E_GAS_MIN_EXPORT_MSW
@@ -813,7 +813,7 @@ add_test_compareECLFiles(CASENAME 9_3e_grpctl_msw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 9_4a_grpctl_stw_model2
                          FILENAME 9_4A_WINJ_MAXWRATES_MAXBHP_GCONPROD_1L_STW
@@ -821,7 +821,7 @@ add_test_compareECLFiles(CASENAME 9_4a_grpctl_stw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 9_4a_grpctl_msw_model2
                          FILENAME 9_4A_WINJ_MAXWRATES_MAXBHP_GCONPROD_1L_MSW
@@ -829,7 +829,7 @@ add_test_compareECLFiles(CASENAME 9_4a_grpctl_msw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 9_4b_grpctl_stw_model2
                          FILENAME 9_4B_WINJ_VREP-W_STW
@@ -837,7 +837,7 @@ add_test_compareECLFiles(CASENAME 9_4b_grpctl_stw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 9_4b_grpctl_msw_model2
                          FILENAME 9_4B_WINJ_VREP-W_MSW
@@ -845,7 +845,7 @@ add_test_compareECLFiles(CASENAME 9_4b_grpctl_msw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 9_4c_grpctl_stw_model2
                          FILENAME 9_4C_WINJ_GINJ_VREP-W_REIN-G_STW
@@ -853,7 +853,7 @@ add_test_compareECLFiles(CASENAME 9_4c_grpctl_stw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 9_4c_grpctl_msw_model2
                          FILENAME 9_4C_WINJ_GINJ_VREP-W_REIN-G_MSW
@@ -861,7 +861,7 @@ add_test_compareECLFiles(CASENAME 9_4c_grpctl_msw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 9_4d_grpctl_stw_model2
                          FILENAME 9_4D_WINJ_GINJ_GAS_EXPORT_STW
@@ -869,7 +869,7 @@ add_test_compareECLFiles(CASENAME 9_4d_grpctl_stw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 9_4d_grpctl_msw_model2
                          FILENAME 9_4D_WINJ_GINJ_GAS_EXPORT_MSW
@@ -877,7 +877,7 @@ add_test_compareECLFiles(CASENAME 9_4d_grpctl_msw_model2
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model2
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME model4_group
                          FILENAME MOD4_GRP
@@ -885,7 +885,7 @@ add_test_compareECLFiles(CASENAME model4_group
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model4
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME model4_udq_group
                          FILENAME MOD4_UDQ_ACTIONX
@@ -893,7 +893,7 @@ add_test_compareECLFiles(CASENAME model4_udq_group
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model4
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME model6_msw
                          FILENAME 1_MSW_MODEL6
@@ -901,21 +901,21 @@ add_test_compareECLFiles(CASENAME model6_msw
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model6
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME wsegsicd
 			  FILENAME TEST_WSEGSICD
 			  SIMULATOR flow
 			  ABS_TOL ${abs_tol}
 			  REL_TOL ${rel_tol}
-			  TEST_ARGS --linear-solver-reduction=1e-6)
+			  TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME wsegaicd
 			  FILENAME BASE_MSW_WSEGAICD
 			  SIMULATOR flow
 			  ABS_TOL ${abs_tol}
 			  REL_TOL ${rel_tol}
-			  TEST_ARGS --linear-solver-reduction=1e-6)
+			  TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME nnc
                          FILENAME NNC_AND_EDITNNC
@@ -923,7 +923,7 @@ add_test_compareECLFiles(CASENAME nnc
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR editnnc
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME spe1_foam
                          FILENAME SPE1FOAM
@@ -931,7 +931,7 @@ add_test_compareECLFiles(CASENAME spe1_foam
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR spe1_foam
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME bc_lab
                          FILENAME BC_LAB
@@ -939,7 +939,7 @@ add_test_compareECLFiles(CASENAME bc_lab
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR bc_lab
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME norne_reperf
                          FILENAME NORNE_ATW2013_B1H_RE-PERF
@@ -947,7 +947,7 @@ add_test_compareECLFiles(CASENAME norne_reperf
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR norne
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME compl_smry
                          FILENAME COMPL_SMRY
@@ -955,7 +955,7 @@ add_test_compareECLFiles(CASENAME compl_smry
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR compl_smry
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 add_test_compareECLFiles(CASENAME 3d_tran_operator
                          FILENAME 3D_TRAN_OPERATOR
@@ -963,7 +963,7 @@ add_test_compareECLFiles(CASENAME 3d_tran_operator
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR parallel_fieldprops
-                         TEST_ARGS --linear-solver-reduction=1e-6)
+                         TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100)
 
 # Restart tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
@@ -1050,14 +1050,14 @@ if(MPI_FOUND)
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${rel_tol_parallel}
-                                       TEST_ARGS --linear-solver-reduction=1e-6 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
+                                       TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
   add_test_compare_parallel_simulation(CASENAME spe9
                                        FILENAME SPE9_CP_SHORT
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${rel_tol_parallel}
-                                       TEST_ARGS --linear-solver-reduction=1e-6 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
+                                       TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
   # A test for distributed standard wells. We load distribute only along the z-axis
   add_test_compare_parallel_simulation(CASENAME spe9
@@ -1065,35 +1065,35 @@ if(MPI_FOUND)
                                        SIMULATOR flow_distribute_z
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${rel_tol_parallel}
-                                       TEST_ARGS --linear-solver-reduction=1e-6 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
+                                       TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
   add_test_compare_parallel_simulation(CASENAME spe9group
                                        FILENAME SPE9_CP_GROUP
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${coarse_rel_tol_parallel}
-                                       TEST_ARGS --linear-solver-reduction=1e-6 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
+                                       TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
   add_test_compare_parallel_simulation(CASENAME spe3
                                        FILENAME SPE3CASE1
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${coarse_rel_tol_parallel}
-                                       TEST_ARGS --linear-solver-reduction=1e-6 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
+                                       TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
   add_test_compare_parallel_simulation(CASENAME spe1_solvent
                                        FILENAME SPE1CASE2_SOLVENT
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${coarse_rel_tol_parallel}
-                                       TEST_ARGS --linear-solver-reduction=1e-6 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
+                                       TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
   add_test_compare_parallel_simulation(CASENAME polymer_simple2D
                                        FILENAME 2D_THREEPHASE_POLY_HETER
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol}
                                        REL_TOL ${coarse_rel_tol}
-                                       TEST_ARGS --linear-solver-reduction=1e-6 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
+                                       TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
   add_test_compare_parallel_simulation(CASENAME spe1_foam
                                        FILENAME SPE1FOAM
@@ -1107,21 +1107,21 @@ if(MPI_FOUND)
                                        ABS_TOL ${abs_tol}
                                        REL_TOL ${rel_tol}
                                        DIR spe1
-                                       TEST_ARGS --linear-solver-reduction=1e-6 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
+                                       TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
   add_test_compare_parallel_simulation(CASENAME spe1_thermal
                                        FILENAME SPE1CASE2_THERMAL_ONEPHASE
                                        SIMULATOR flow_onephase_energy
                                        ABS_TOL ${abs_tol}
                                        REL_TOL ${rel_tol}
                                        DIR spe1
-                                       TEST_ARGS --linear-solver-reduction=1e-6 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
+                                       TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
   add_test_compare_parallel_simulation(CASENAME spe1_brine
                                        FILENAME SPE1CASE1_BRINE
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${coarse_rel_tol_parallel}
-                                       TEST_ARGS --linear-solver-reduction=1e-6 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
+                                       TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
 
   add_test_compare_parallel_simulation(CASENAME fetkovich_2d
                                        FILENAME 2D_FETKOVICHAQUIFER
@@ -1129,7 +1129,7 @@ if(MPI_FOUND)
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${rel_tol_parallel}
                                        DIR aquifer-fetkovich
-                                       TEST_ARGS --linear-solver-reduction=1e-6 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
+                                       TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
 
   add_test_compare_parallel_simulation(CASENAME ctaquifer_2d_oilwater
                                        FILENAME 2D_OW_CTAQUIFER
@@ -1137,7 +1137,7 @@ if(MPI_FOUND)
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${rel_tol_parallel}
                                        DIR aquifer-oilwater
-                                       TEST_ARGS --linear-solver-reduction=1e-6 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
+                                       TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
 
   add_test_compare_parallel_simulation(CASENAME 3d_tran_operator
                                        FILENAME 3D_TRAN_OPERATOR
@@ -1145,7 +1145,7 @@ if(MPI_FOUND)
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${rel_tol_parallel}
                                        DIR parallel_fieldprops
-                                       TEST_ARGS --linear-solver-reduction=1e-6 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
+                                       TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
 
   add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_2aqu
                                        FILENAME 3D_2AQU_NUM
@@ -1169,5 +1169,5 @@ if(MPI_FOUND)
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${rel_tol_parallel}
                                        DIR udq_actionx
-                                       TEST_ARGS --linear-solver-reduction=1e-6 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
+                                       TEST_ARGS --linear-solver-reduction=1e-6 --regularization-factor-msw=100 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
 endif()
