@@ -229,10 +229,9 @@ namespace Opm {
     template<typename TypeTag>
     std::vector< Well >
     BlackoilWellModel<TypeTag>::
-    getLocalWells(const int timeStepIdx, int& globalNumWells) const
+    getLocalWells(const int timeStepIdx) const
     {
         auto w = schedule().getWells(timeStepIdx);
-        globalNumWells = w.size();
         w.erase(std::remove_if(w.begin(), w.end(), not_on_process_), w.end());
         return w;
     }
@@ -266,15 +265,14 @@ namespace Opm {
 
         const Grid& grid = ebosSimulator_.vanguard().grid();
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
-        int globalNumWells = 0;
         // Make wells_ecl_ contain only this partition's wells.
-        wells_ecl_ = getLocalWells(timeStepIdx, globalNumWells);
+        wells_ecl_ = getLocalWells(timeStepIdx);
         local_parallel_well_info_ = createLocalParallelWellInfo(wells_ecl_);
 
         // The well state initialize bhp with the cell pressure in the top cell.
         // We must therefore provide it with updated cell pressures
         this->initializeWellPerfData();
-        this->initializeWellState(timeStepIdx, globalNumWells, summaryState);
+        this->initializeWellState(timeStepIdx, summaryState);
 
         // Wells are active if they are active wells on at least
         // one process.
@@ -632,9 +630,8 @@ namespace Opm {
         // wells that have information written to the restart file.
         const int report_step = std::max(eclState().getInitConfig().getRestartStep() - 1, 0);
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
-        int globalNumWells = 0;
         // wells_ecl_ should only contain wells on this processor.
-        wells_ecl_ = getLocalWells(report_step, globalNumWells);
+        wells_ecl_ = getLocalWells(report_step);
         local_parallel_well_info_ = createLocalParallelWellInfo(wells_ecl_);
 
         this->initializeWellProdIndCalculators();
@@ -645,7 +642,7 @@ namespace Opm {
             const auto phaseUsage = phaseUsageFromDeck(eclState());
             const size_t numCells = Opm::UgGridHelpers::numCells(grid());
             const bool handle_ms_well = (param_.use_multisegment_well_ && anyMSWellOpenLocal());
-            this->wellState().resize(wells_ecl_, local_parallel_well_info_, schedule(), handle_ms_well, numCells, well_perf_data_, summaryState, globalNumWells); // Resize for restart step
+            this->wellState().resize(wells_ecl_, local_parallel_well_info_, schedule(), handle_ms_well, numCells, well_perf_data_, summaryState); // Resize for restart step
             loadRestartData(restartValues.wells, restartValues.grp_nwrk, phaseUsage, handle_ms_well, this->wellState());
         }
 
@@ -741,7 +738,6 @@ namespace Opm {
     void
     BlackoilWellModel<TypeTag>::
     initializeWellState(const int           timeStepIdx,
-                        const int           globalNumWells,
                         const SummaryState& summaryState)
     {
         std::vector<double> cellPressures(this->local_num_cells_, 0.0);
@@ -774,7 +770,7 @@ namespace Opm {
 
         this->wellState().init(cellPressures, schedule(), wells_ecl_, local_parallel_well_info_, timeStepIdx,
                                &this->prevWellState(), well_perf_data_,
-                               summaryState, globalNumWells);
+                               summaryState);
     }
 
 
@@ -1487,7 +1483,7 @@ namespace Opm {
         // This builds some necessary lookup structures, so it must be called
         // before we copy to well_state_nupcol_.
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
-        this->wellState().updateGlobalIsGrup(schedule(), reportStepIdx, comm);
+        this->wellState().updateGlobalIsGrup(comm);
 
         if (iterationIdx < nupcol) {
             this->updateNupcolWGState();

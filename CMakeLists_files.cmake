@@ -43,6 +43,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/utils/gatherDeferredLogger.cpp
   opm/simulators/utils/ParallelFileMerger.cpp
   opm/simulators/utils/ParallelRestart.cpp
+  opm/simulators/wells/GlobalWellInfo.cpp
   opm/simulators/wells/GroupState.cpp
   opm/simulators/wells/WGState.cpp
   opm/simulators/wells/ALQState.cpp
@@ -261,6 +262,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/TargetCalculator.hpp
   opm/simulators/wells/WellConnectionAuxiliaryModule.hpp
   opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp
+  opm/simulators/wells/GlobalWellInfo.hpp
   opm/simulators/wells/GroupState.hpp
   opm/simulators/wells/ALQState.hpp
   opm/simulators/wells/WGState.hpp

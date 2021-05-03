@@ -435,7 +435,6 @@ namespace Opm {
             void initializeWellProdIndCalculators();
             void initializeWellPerfData();
             void initializeWellState(const int           timeStepIdx,
-                                     const int           globalNumWells,
                                      const SummaryState& summaryState);
 
             // create the well container
@@ -503,8 +502,7 @@ namespace Opm {
             /// \brief Get the wells of our partition that are not shut.
             /// \param timeStepIdx The index of the time step.
             /// \param[out] globalNumWells the number of wells globally.
-            std::vector< Well > getLocalWells(const int timeStepIdx,
-                                              int& globalNumWells) const;
+            std::vector< Well > getLocalWells(const int timeStepId) const;
 
             /// \brief Create the parallel well information
             /// \param localWells The local wells from ECL schedule
