@@ -27,22 +27,20 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include <opm/common/utility/numeric/linearInterpolation.hpp>
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/common/OpmLog/OpmLog.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/SsfnTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/MiscTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/MsfnTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/SgcwmisTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/SorwmisTable.hpp>
 #include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
 
 namespace Opm {
 
+    class EclipseState;
+    class MiscTable;
+    class MsfnTable;
+    class SgcwimTable;
     class Sof2Table;
+    class SorwmisTable;
+    class SsfnTable;
     class SgwfnTable;
 
-    ///This class is intend to be a relpmer diganostics, to detect
+    ///This class is intend to be a relperm diagnostics, to detect
     ///wrong input of relperm table and endpoints.
     class RelpermDiagnostics
     {
@@ -127,7 +125,5 @@ namespace Opm {
     };
 
 } //namespace Opm
-
-#include <opm/core/props/satfunc/RelpermDiagnostics_impl.hpp>
 
 #endif // OPM_RELPERMDIAGNOSTICS_HEADER_INCLUDED
