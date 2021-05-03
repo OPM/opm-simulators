@@ -168,7 +168,7 @@ class EclWriter
     using Element = typename GridView::template Codim<0>::Entity;
     using ElementIterator = typename GridView::template Codim<0>::Iterator;
 
-    typedef CollectDataToIORank<Vanguard> CollectDataToIORankType;
+    using CollectDataToIORankType = CollectDataToIORank<Grid,EquilGrid,GridView>;
 
     typedef std::vector<Scalar> ScalarBuffer;
 
@@ -190,7 +190,12 @@ public:
     // object owned deep down by the vanguard.
     EclWriter(Simulator& simulator)
         : simulator_(simulator)
-        , collectToIORank_(simulator_.vanguard())
+        , collectToIORank_(simulator_.vanguard().grid(),
+                           simulator_.vanguard().equilGrid(),
+                           simulator_.vanguard().gridView(),
+                           simulator_.vanguard().cartesianIndexMapper(),
+                           simulator_.vanguard().equilCartesianIndexMapper())
+
     {
         std::vector<std::size_t> wbp_index_list;
         if (collectToIORank_.isIORank()) {
