@@ -1899,6 +1899,14 @@ private:
 
             Details::verticalExtent(cells, cellZMinMax_, comm, vspan);
 
+            const auto acc = rec[r].initializationTargetAccuracy();
+            if (acc > 0) {
+                throw std::runtime_error {
+                    "Cannot initialise model: Positive item 9 is not supported "
+                    "in EQUIL keyword, record " + std::to_string(r + 1)
+                };
+            }
+
             if (cells.empty()) {
                 regionIsEmpty[r] = 1;
                 continue;
@@ -1915,7 +1923,6 @@ private:
 
             ptable.equilibrate(eqreg, vspan);
 
-            const auto acc = eqreg.equilibrationAccuracy();
             if (acc == 0) {
                 // Centre-point method
                 this->equilibrateCellCentres(cells, eqreg, ptable, psat);
@@ -1924,6 +1931,11 @@ private:
                 // Horizontal subdivision
                 this->equilibrateHorizontal(cells, eqreg, -acc,
                                             ptable, psat);
+            } else {
+                // Horizontal subdivision with titled fault blocks
+                // the simulator throw a few line above for the acc > 0 case
+                // i.e. we should not reach here.
+                assert(false);
             }
         }
         comm.min(regionIsEmpty.data(),regionIsEmpty.size());
