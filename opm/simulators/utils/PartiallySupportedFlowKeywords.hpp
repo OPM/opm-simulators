@@ -62,6 +62,12 @@ const Opm::KeywordValidation::PartiallySupportedKeywords<std::string> partially_
         },
     },
     {
+        "EQUIL",
+        {
+            {9, {true, {0}, "Please set item 9 to 0 to ensure convergence."}}, // ORDER_TYPE
+        },
+    },
+    {
         "PINCH",
         {
             {2, {false, {"GAP"}, std::nullopt}}, // GAP
