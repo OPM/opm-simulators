@@ -221,8 +221,8 @@ namespace Opm
         };
     };
 
-#include "GasLiftStage2_impl.hpp"
-
 } // namespace Opm
+
+#include "GasLiftStage2_impl.hpp"
 
 #endif // OPM_GASLIFT_STAGE2_HEADER_INCLUDED
