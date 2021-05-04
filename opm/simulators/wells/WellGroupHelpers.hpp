@@ -21,25 +21,25 @@
 #ifndef OPM_WELLGROUPHELPERS_HEADER_INCLUDED
 #define OPM_WELLGROUPHELPERS_HEADER_INCLUDED
 
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRate.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
-#include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
-#include <opm/simulators/wells/GroupState.hpp>
 
-#include <algorithm>
-#include <cassert>
 #include <map>
 #include <string>
-#include <type_traits>
 #include <vector>
 
 namespace Opm
 {
 
 class DeferredLogger;
+class Group;
+class GroupState;
+namespace Network { class ExtNetwork; }
+class PhaseUsage;
+class Schedule;
 class VFPProdProperties;
+class WellStateFullyImplicitBlackoil;
 
+namespace Network { class ExtNetwork; }
 
 namespace WellGroupHelpers
 {
@@ -107,79 +107,7 @@ namespace WellGroupHelpers
                                             const GroupState& group_state,
                                             const Comm& comm,
                                             GuideRate* guideRate,
-                                            std::vector<double>& pot)
-    {
-        const int np = pu.num_phases;
-        for (const std::string& groupName : group.groups()) {
-            std::vector<double> thisPot(np, 0.0);
-            const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
-
-            // Note that group effiency factors for groupTmp are applied in updateGuideRateForGroups
-            updateGuideRateForProductionGroups(groupTmp, schedule, pu, reportStepIdx, simTime, wellState, group_state, comm, guideRate, thisPot);
-
-            // accumulate group contribution from sub group unconditionally
-            const auto currentGroupControl = group_state.production_control(groupName);
-            if (currentGroupControl != Group::ProductionCMode::FLD
-                    && currentGroupControl != Group::ProductionCMode::NONE) {
-                continue;
-            }
-            for (int phase = 0; phase < np; phase++) {
-                pot[phase] += thisPot[phase];
-            }
-
-        }
-        for (const std::string& wellName : group.wells()) {
-            const auto& wellTmp = schedule.getWell(wellName, reportStepIdx);
-            const auto wefac = wellTmp.getEfficiencyFactor();
-
-            if (wellTmp.isInjector())
-                continue;
-
-            if (wellTmp.getStatus() == Well::Status::SHUT)
-                continue;
-            const auto& end = wellState.wellMap().end();
-            const auto& it = wellState.wellMap().find(wellName);
-            if (it == end) // the well is not found
-                continue;
-
-            int well_index = it->second[0];
-
-            if (! wellState.wellIsOwned(well_index, wellName) ) // Only sum once
-            {
-                continue;
-            }
-
-            const auto wellrate_index = well_index * wellState.numPhases();
-            // add contribution from wells unconditionally
-            for (int phase = 0; phase < np; phase++) {
-                pot[phase] += wefac * wellState.wellPotentials()[wellrate_index + phase];
-            }
-        }
-
-        // Apply group efficiency factor for this goup
-        auto gefac = group.getGroupEfficiencyFactor();
-
-        for (int phase = 0; phase < np; phase++) {
-            pot[phase] *= gefac;
-        }
-
-        double oilPot = 0.0;
-        if (pu.phase_used[BlackoilPhases::Liquid])
-            oilPot = pot[pu.phase_pos[BlackoilPhases::Liquid]];
-
-        double gasPot = 0.0;
-        if (pu.phase_used[BlackoilPhases::Vapour])
-            gasPot = pot[pu.phase_pos[BlackoilPhases::Vapour]];
-
-        double waterPot = 0.0;
-        if (pu.phase_used[BlackoilPhases::Aqua])
-            waterPot = pot[pu.phase_pos[BlackoilPhases::Aqua]];
-
-        oilPot = comm.sum(oilPot);
-        gasPot = comm.sum(gasPot);
-        waterPot = comm.sum(waterPot);
-        guideRate->compute(group.name(), reportStepIdx, simTime, oilPot, gasPot, waterPot);
-    }
+                                            std::vector<double>& pot);
 
     template <class Comm>
     void updateGuideRatesForWells(const Schedule& schedule,
@@ -188,37 +116,7 @@ namespace WellGroupHelpers
                                   const double& simTime,
                                   const WellStateFullyImplicitBlackoil& wellState,
                                   const Comm& comm,
-                                  GuideRate* guideRate)
-    {
-
-        const auto& end = wellState.wellMap().end();
-        for (const auto& well : schedule.getWells(reportStepIdx)) {
-            double oilpot = 0.0;
-            double gaspot = 0.0;
-            double waterpot = 0.0;
-
-            const auto& it = wellState.wellMap().find(well.name());
-            if (it != end && wellState.wellIsOwned(it->second[0], well.name()))
-            {
-                // the well is found and owned
-                int well_index = it->second[0];
-
-                const auto wpot = wellState.wellPotentials().data() + well_index * wellState.numPhases();
-                if (pu.phase_used[BlackoilPhases::Liquid] > 0)
-                    oilpot = wpot[pu.phase_pos[BlackoilPhases::Liquid]];
-
-                if (pu.phase_used[BlackoilPhases::Vapour] > 0)
-                    gaspot = wpot[pu.phase_pos[BlackoilPhases::Vapour]];
-
-                if (pu.phase_used[BlackoilPhases::Aqua] > 0)
-                    waterpot = wpot[pu.phase_pos[BlackoilPhases::Aqua]];
-            }
-            oilpot = comm.sum(oilpot);
-            gaspot = comm.sum(gaspot);
-            waterpot = comm.sum(waterpot);
-            guideRate->compute(well.name(), reportStepIdx, simTime, oilpot, gaspot, waterpot);
-        }
-    }
+                                  GuideRate* guideRate);
 
     void updateGuideRatesForInjectionGroups(const Group& group,
                                             const Schedule& schedule,
@@ -337,7 +235,7 @@ namespace WellGroupHelpers
         int report_step_;
         const GuideRate* guide_rate_;
         GuideRateModel::Target target_;
-        PhaseUsage pu_;
+        const PhaseUsage& pu_;
         bool is_producer_;
         Phase injection_phase_;
     };
