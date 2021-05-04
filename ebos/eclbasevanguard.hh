@@ -784,7 +784,9 @@ protected:
     {
         asImp_().createGrids_();
         asImp_().filterConnections_();
-        asImp_().updateOutputDir_();
+        std::string outputDir = EWOMS_GET_PARAM(TypeTag, std::string, OutputDir);
+        bool enableEclCompatFile = !EWOMS_GET_PARAM(TypeTag, bool, EnableOpmRstFile);
+        asImp_().updateOutputDir_(outputDir, enableEclCompatFile);
         asImp_().finalizeInit_();
     }
     void updateCartesianToCompressedMapping_()
@@ -857,10 +859,10 @@ protected:
 
 
 private:
-    void updateOutputDir_()
+    void updateOutputDir_(std::string outputDir,
+                          bool enableEclCompatFile)
     {
         // update the location for output
-        std::string outputDir = EWOMS_GET_PARAM(TypeTag, std::string, OutputDir);
         auto& ioConfig = eclState_->getIOConfig();
         if (outputDir == "")
             // If no output directory parameter is specified, use the output directory
@@ -882,7 +884,7 @@ private:
         // the eclState is supposed to be immutable here, IMO.
         ioConfig.setOutputDir(outputDir);
 
-        ioConfig.setEclCompatibleRST(!EWOMS_GET_PARAM(TypeTag, bool, EnableOpmRstFile));
+        ioConfig.setEclCompatibleRST(enableEclCompatFile);
     }
 
 
