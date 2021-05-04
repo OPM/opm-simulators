@@ -280,7 +280,8 @@ public:
     /*!
      * \brief Creates an Opm::parseContext object assuming that the parameters are ready.
      */
-    static std::unique_ptr<ParseContext> createParseContext()
+    static std::unique_ptr<ParseContext> createParseContext(const std::string& ignoredKeywords,
+                                                            bool eclStrictParsing)
     {
         typedef std::pair<std::string, InputError::Action> ParseModePair;
         typedef std::vector<ParseModePair> ParseModePairs;
@@ -293,7 +294,6 @@ public:
 
         auto parseContext = std::make_unique<ParseContext>(tmp);
 
-        const std::string ignoredKeywords = EWOMS_GET_PARAM(TypeTag, std::string, IgnoreKeywords);
         if (ignoredKeywords.size() > 0) {
             size_t pos;
             size_t offset = 0;
@@ -308,7 +308,7 @@ public:
             }
         }
 
-        if (EWOMS_GET_PARAM(TypeTag, bool, EclStrictParsing))
+        if (eclStrictParsing)
             parseContext->update(InputError::DELAYED_EXIT1);
 
         return parseContext;
@@ -442,7 +442,9 @@ public:
         }
         else
         {
-            parseContext_ = createParseContext();
+            const std::string ignoredKeywords = EWOMS_GET_PARAM(TypeTag, std::string, IgnoreKeywords);
+            bool eclStrictParsing = EWOMS_GET_PARAM(TypeTag, bool, EclStrictParsing);
+            parseContext_ = createParseContext(ignoredKeywords, eclStrictParsing);
         }
 
         std::optional<int> outputInterval;
