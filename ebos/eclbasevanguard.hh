@@ -910,7 +910,7 @@ private:
 
     std::string caseName_;
 
-    static Scalar externalSetupTime_;
+    static double externalSetupTime_;
 
     static std::unique_ptr<ParseContext> externalParseContext_;
     static std::unique_ptr<ErrorGuard> externalErrorGuard_;
@@ -970,7 +970,7 @@ protected:
 };
 
 template <class TypeTag>
-typename EclBaseVanguard<TypeTag>::Scalar EclBaseVanguard<TypeTag>::externalSetupTime_ = 0.0;
+double EclBaseVanguard<TypeTag>::externalSetupTime_ = 0.0;
 
 template <class TypeTag>
 std::unique_ptr<ParseContext> EclBaseVanguard<TypeTag>::externalParseContext_ = nullptr;
