@@ -166,8 +166,7 @@ struct SerialPartitioning<TypeTag, TTag::EclBaseVanguard> {
 
 template<class TypeTag>
 struct ZoltanImbalanceTol<TypeTag, TTag::EclBaseVanguard> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1.1;
+    static constexpr double value = 1.1;
 };
 
 template<class TypeTag>
@@ -237,7 +236,7 @@ public:
                              "Order cells owned by rank before ghost/overlap cells.");
         EWOMS_REGISTER_PARAM(TypeTag, bool, SerialPartitioning,
                              "Perform partitioning for parallel runs on a single process.");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, ZoltanImbalanceTol,
+        EWOMS_REGISTER_PARAM(TypeTag, double, ZoltanImbalanceTol,
                              "Tolerable imbalance of the loadbalancing provided by Zoltan (default: 1.1).");
         EWOMS_REGISTER_PARAM(TypeTag, bool, AllowDistributedWells,
                              "Allow the perforations of a well to be distributed to interior of multiple processes");
@@ -377,7 +376,7 @@ public:
         edgeWeightsMethod_   = Dune::EdgeWeightMethod(EWOMS_GET_PARAM(TypeTag, int, EdgeWeightsMethod));
         ownersFirst_ = EWOMS_GET_PARAM(TypeTag, bool, OwnerCellsFirst);
         serialPartitioning_ = EWOMS_GET_PARAM(TypeTag, bool, SerialPartitioning);
-        zoltanImbalanceTol_ = EWOMS_GET_PARAM(TypeTag, Scalar, ZoltanImbalanceTol);
+        zoltanImbalanceTol_ = EWOMS_GET_PARAM(TypeTag, double, ZoltanImbalanceTol);
         enableDistributedWells_ = EWOMS_GET_PARAM(TypeTag, bool, AllowDistributedWells);
 
         // Make proper case name.
@@ -622,7 +621,7 @@ public:
     /*!
      * \brief Parameter that sets the zoltan imbalance tolarance.
      */
-    Scalar zoltanImbalanceTol() const
+    double zoltanImbalanceTol() const
     { return zoltanImbalanceTol_; }
 
     /*!
@@ -937,7 +936,7 @@ private:
     Dune::EdgeWeightMethod edgeWeightsMethod_;
     bool ownersFirst_;
     bool serialPartitioning_;
-    Scalar zoltanImbalanceTol_;
+    double zoltanImbalanceTol_;
     bool enableDistributedWells_;
 
 protected:
