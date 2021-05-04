@@ -252,7 +252,7 @@ public:
      * The input can either be the canonical deck file name or the name of the case
      * (i.e., without the .DATA extension)
      */
-    static filesystem::path canonicalDeckPath(const std::string& caseName)
+    static std::string canonicalDeckPath(const std::string& caseName)
     {
         const auto fileExists = [](const filesystem::path& f) -> bool
             {
@@ -267,11 +267,11 @@ public:
 
         auto simcase = filesystem::path(caseName);
         if (fileExists(simcase))
-            return simcase;
+            return simcase.string();
 
         for (const auto& ext : { std::string("data"), std::string("DATA") }) {
             if (fileExists(simcase.replace_extension(ext)))
-                return simcase;
+                return simcase.string();
         }
 
         throw std::invalid_argument("Cannot find input case '"+caseName+"'");
@@ -386,7 +386,7 @@ public:
                 throw std::runtime_error("No input deck file has been specified as a command line argument,"
                                         " or via '--ecl-deck-file-name=CASE.DATA'");
 
-            fileName = canonicalDeckPath(fileName).string();
+            fileName = canonicalDeckPath(fileName);
 
             // compute the base name of the input file name
             const char directorySeparator = '/';

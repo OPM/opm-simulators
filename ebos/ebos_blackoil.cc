@@ -64,7 +64,7 @@ std::string ebosBlackOilGetDeckFileName(int argc, char** argv)
                                      /*allowUnused=*/true,
                                      /*handleHelp=*/false);
     std::string rawDeckFileName = EWOMS_GET_PARAM(ProblemTypeTag, std::string, EclDeckFileName);
-    std::string result = Vanguard::canonicalDeckPath(rawDeckFileName).string();
+    std::string result = Vanguard::canonicalDeckPath(rawDeckFileName);
     Parameters::reset<ProblemTypeTag>();
 
     return result;

@@ -414,7 +414,7 @@ namespace Opm
 
             using PreVanguard = GetPropType<PreTypeTag, Properties::Vanguard>;
             try {
-                deckFilename = PreVanguard::canonicalDeckPath(deckFilename).string();
+                deckFilename = PreVanguard::canonicalDeckPath(deckFilename);
             }
             catch (const std::exception& e) {
                 if ( mpiRank == 0 ) {
