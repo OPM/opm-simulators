@@ -31,6 +31,8 @@
 
 #include <fmt/format.h>
 
+namespace Opm {
+
 template<typename TypeTag>
 GasLiftStage2<TypeTag>::
 GasLiftStage2(
@@ -1140,4 +1142,4 @@ updateRates(const std::string &well_name)
     this->alq += delta_alq;
 }
 
-
+} // namespace Opm
