@@ -29,6 +29,7 @@ list (APPEND MAIN_SOURCE_FILES
   ebos/eclgenericthresholdpressure.cc
   ebos/eclgenerictracermodel.cc
   ebos/eclgenericvanguard.cc
+  ebos/eclgenericwriter.cc
   ebos/ecltransmissibility.cc
   opm/core/props/phaseUsageFromDeck.cpp
   opm/core/props/satfunc/RelpermDiagnostics.cpp

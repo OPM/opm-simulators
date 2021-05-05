@@ -159,7 +159,7 @@ BOOST_AUTO_TEST_CASE(Summary)
 
     typedef Opm::EclWriter<TypeTag> EclWriterType;
     // create the actual ECL writer
-    std::unique_ptr<EclWriterType> eclWriter = std::unique_ptr<EclWriterType>(new EclWriterType(*simulator));
+    std::unique_ptr<EclWriterType> eclWriter = std::unique_ptr<EclWriterType>(new EclWriterType(*simulator, simulator->problem()));
 
     simulator->model().applyInitialSolution();
     Opm::data::Wells dw;
