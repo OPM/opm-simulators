@@ -296,7 +296,7 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
         signal(SIGTERM, resetTerminal_);
     }
 
-    Opm::resetLocale();
+    resetLocale();
 
     int myRank = 0;
     try
@@ -362,20 +362,20 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
             if (printParams) {
                 bool printSeparator = false;
                 if (printParams == 1 || !isatty(fileno(stdout))) {
-                    Opm::Parameters::printValues<TypeTag>();
+                    Parameters::printValues<TypeTag>();
                     printSeparator = true;
                 }
                 else
                     // always print the list of specified but unused parameters
                     printSeparator =
                         printSeparator ||
-                        Opm::Parameters::printUnused<TypeTag>();
+                        Parameters::printUnused<TypeTag>();
                 if (printSeparator)
                     std::cout << endParametersSeparator;
             }
             else
                 // always print the list of specified but unused parameters
-                if (Opm::Parameters::printUnused<TypeTag>())
+                if (Parameters::printUnused<TypeTag>())
                     std::cout << endParametersSeparator;
         }
 
@@ -383,7 +383,7 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
         int printProps = EWOMS_GET_PARAM(TypeTag, int, PrintProperties);
         if (printProps && myRank == 0) {
             if (printProps == 1 || !isatty(fileno(stdout)))
-                Opm::Properties::printValues<TypeTag>();
+                Properties::printValues<TypeTag>();
         }
 
         // instantiate and run the concrete problem. make sure to

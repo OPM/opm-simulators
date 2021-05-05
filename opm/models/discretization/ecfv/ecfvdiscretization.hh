@@ -59,7 +59,7 @@ private:
     using GridView = GetPropType<TypeTag, Properties::GridView>;
 
 public:
-    using type = Opm::EcfvStencil<Scalar, GridView>;
+    using type = EcfvStencil<Scalar, GridView>;
 };
 
 //! Mapper for the degrees of freedoms.
@@ -68,18 +68,18 @@ struct DofMapper<TypeTag, TTag::EcfvDiscretization> { using type = GetPropType<T
 
 //! The concrete class which manages the spatial discretization
 template<class TypeTag>
-struct Discretization<TypeTag, TTag::EcfvDiscretization> { using type = Opm::EcfvDiscretization<TypeTag>; };
+struct Discretization<TypeTag, TTag::EcfvDiscretization> { using type = EcfvDiscretization<TypeTag>; };
 
 //! The base class for the output modules (decides whether to write
 //! element or vertex based fields)
 template<class TypeTag>
 struct DiscBaseOutputModule<TypeTag, TTag::EcfvDiscretization>
-{ using type = Opm::EcfvBaseOutputModule<TypeTag>; };
+{ using type = EcfvBaseOutputModule<TypeTag>; };
 
 //! The class to create grid communication handles
 template<class TypeTag>
 struct GridCommHandleFactory<TypeTag, TTag::EcfvDiscretization>
-{ using type = Opm::EcfvGridCommHandleFactory<TypeTag>; };
+{ using type = EcfvGridCommHandleFactory<TypeTag>; };
 
 #if HAVE_DUNE_FEM
 //! Set the DiscreteFunctionSpace
@@ -107,7 +107,7 @@ struct BorderListCreator<TypeTag, TTag::EcfvDiscretization>
     using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
 public:
-    using type = Opm::Linear::ElementBorderListFromGrid<GridView, ElementMapper>;
+    using type = Linear::ElementBorderListFromGrid<GridView, ElementMapper>;
 };
 
 //! For the element centered finite volume method, ghost and overlap elements must be
