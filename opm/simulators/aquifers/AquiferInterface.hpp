@@ -61,13 +61,13 @@ public:
 
     typedef DenseAd::Evaluation<double, /*size=*/numEq> Eval;
 
-    typedef Opm::BlackOilFluidState<Eval,
-                                    FluidSystem,
-                                    enableTemperature,
-                                    enableEnergy,
-                                    BlackoilIndices::gasEnabled,
-                                    enableBrine,
-                                    BlackoilIndices::numPhases>
+    typedef BlackOilFluidState<Eval,
+                               FluidSystem,
+                               enableTemperature,
+                               enableEnergy,
+                               BlackoilIndices::gasEnabled,
+                               enableBrine,
+                               BlackoilIndices::numPhases>
         FluidState;
 
     static const auto waterCompIdx = FluidSystem::waterCompIdx;
@@ -126,7 +126,7 @@ public:
 
             elemCtx.updateIntensiveQuantities(0);
             const auto& iq = elemCtx.intensiveQuantities(0, 0);
-            pressure_previous_[idx] = Opm::getValue(iq.fluidState().pressure(waterPhaseIdx));
+            pressure_previous_[idx] = getValue(iq.fluidState().pressure(waterPhaseIdx));
         }
     }
 
@@ -232,7 +232,7 @@ protected:
         this->faceArea_connected_.resize(this->size(), 0.0);
 
         // Translate the C face tag into the enum used by opm-parser's TransMult class
-        Opm::FaceDir::DirEnum faceDirection;
+        FaceDir::DirEnum faceDirection;
 
         // denom_face_areas is the sum of the areas connected to an aquifer
         Scalar denom_face_areas = 0.;
@@ -278,22 +278,22 @@ protected:
                 int insideFaceIdx  = intersection.indexInInside();
                 switch (insideFaceIdx) {
                 case 0:
-                    faceDirection = Opm::FaceDir::XMinus;
+                    faceDirection = FaceDir::XMinus;
                     break;
                 case 1:
-                    faceDirection = Opm::FaceDir::XPlus;
+                    faceDirection = FaceDir::XPlus;
                     break;
                 case 2:
-                    faceDirection = Opm::FaceDir::YMinus;
+                    faceDirection = FaceDir::YMinus;
                     break;
                 case 3:
-                    faceDirection = Opm::FaceDir::YPlus;
+                    faceDirection = FaceDir::YPlus;
                     break;
                 case 4:
-                    faceDirection = Opm::FaceDir::ZMinus;
+                    faceDirection = FaceDir::ZMinus;
                     break;
                 case 5:
-                    faceDirection = Opm::FaceDir::ZPlus;
+                    faceDirection = FaceDir::ZPlus;
                     break;
                 default:
                     OPM_THROW(std::logic_error,

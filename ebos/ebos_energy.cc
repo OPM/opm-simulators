@@ -48,9 +48,9 @@ struct EnableEnergy<TypeTag, TTag::EbosEnergyTypeTag> {
 
 namespace Opm {
 
-void ebosEnergySetDeck(std::unique_ptr<Opm::Deck> deck,
-                       std::unique_ptr<Opm::ParseContext> parseContext,
-                       std::unique_ptr<Opm::ErrorGuard> errorGuard,
+void ebosEnergySetDeck(std::unique_ptr<Deck> deck,
+                       std::unique_ptr<ParseContext> parseContext,
+                       std::unique_ptr<ErrorGuard> errorGuard,
                        double externalSetupTime)
 {
     using ProblemTypeTag = Properties::TTag::EbosEnergyTypeTag;
@@ -65,7 +65,7 @@ void ebosEnergySetDeck(std::unique_ptr<Opm::Deck> deck,
 int ebosEnergyMain(int argc, char **argv)
 {
     using ProblemTypeTag = Properties::TTag::EbosEnergyTypeTag;
-    return Opm::startEbos<ProblemTypeTag>(argc, argv);
+    return startEbos<ProblemTypeTag>(argc, argv);
 }
 
 }

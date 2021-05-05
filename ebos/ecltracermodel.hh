@@ -74,7 +74,7 @@ class EclTracerModel
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
 
-    typedef Opm::DenseAd::Evaluation<Scalar,1> TracerEvaluation;
+    typedef DenseAd::Evaluation<Scalar,1> TracerEvaluation;
 
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { numPhases = FluidSystem::numPhases };
@@ -332,19 +332,19 @@ protected:
         const auto& intQuants = elemCtx.intensiveQuantities(scvIdx, timeIdx);
         const auto& fs = intQuants.fluidState();
         Scalar phaseVolume =
-            Opm::decay<Scalar>(fs.saturation(tracerPhaseIdx_[tracerIdx]))
-            *Opm::decay<Scalar>(fs.invB(tracerPhaseIdx_[tracerIdx]))
-            *Opm::decay<Scalar>(intQuants.porosity());
+            decay<Scalar>(fs.saturation(tracerPhaseIdx_[tracerIdx]))
+            *decay<Scalar>(fs.invB(tracerPhaseIdx_[tracerIdx]))
+            *decay<Scalar>(intQuants.porosity());
 
         // avoid singular matrix if no water is present.
-        phaseVolume = Opm::max(phaseVolume, 1e-10);
+        phaseVolume = max(phaseVolume, 1e-10);
 
         if (std::is_same<LhsEval, Scalar>::value)
             tracerStorage = phaseVolume * tracerConcentrationInitial_[tracerIdx][globalDofIdx];
         else
             tracerStorage =
                     phaseVolume
-                    * Opm::variable<LhsEval>(tracerConcentration_[tracerIdx][globalDofIdx][0], 0);
+                    * variable<LhsEval>(tracerConcentration_[tracerIdx][globalDofIdx][0], 0);
     }
 
     // evaluate the tracerflux over one face
@@ -370,12 +370,12 @@ protected:
         const auto& fs = intQuants.fluidState();
 
         Scalar A = scvf.area();
-        Scalar v = Opm::decay<Scalar>(extQuants.volumeFlux(tracerPhaseIdx));
-        Scalar b = Opm::decay<Scalar>(fs.invB(tracerPhaseIdx_[tracerIdx]));
+        Scalar v = decay<Scalar>(extQuants.volumeFlux(tracerPhaseIdx));
+        Scalar b = decay<Scalar>(fs.invB(tracerPhaseIdx_[tracerIdx]));
         Scalar c = tracerConcentration_[tracerIdx][globalUpIdx];
 
         if (inIdx == upIdx)
-            tracerFlux = A*v*b*Opm::variable<TracerEvaluation>(c, 0);
+            tracerFlux = A*v*b*variable<TracerEvaluation>(c, 0);
         else
             tracerFlux = A*v*b*c;
 
@@ -427,8 +427,8 @@ protected:
 
             Scalar extrusionFactor =
                     elemCtx.intensiveQuantities(/*dofIdx=*/ 0, /*timeIdx=*/0).extrusionFactor();
-            Opm::Valgrind::CheckDefined(extrusionFactor);
-            assert(Opm::isfinite(extrusionFactor));
+            Valgrind::CheckDefined(extrusionFactor);
+            assert(isfinite(extrusionFactor));
             assert(extrusionFactor > 0.0);
             Scalar scvVolume =
                     elemCtx.stencil(/*timeIdx=*/0).subControlVolume(/*dofIdx=*/ 0).volume()
@@ -468,14 +468,14 @@ protected:
         const auto& wells = simulator_.vanguard().schedule().getWells(episodeIdx);
         for (const auto& well : wells) {
 
-            if (well.getStatus() == Opm::Well::Status::SHUT)
+            if (well.getStatus() == Well::Status::SHUT)
                 continue;
 
             const double wtracer = well.getTracerProperties().getConcentration(tracerNames_[tracerIdx]);
             std::array<int, 3> cartesianCoordinate;
             for (auto& connection : well.getConnections()) {
 
-                if (connection.state() == Opm::Connection::State::SHUT)
+                if (connection.state() == Connection::State::SHUT)
                     continue;
 
                 cartesianCoordinate[0] = connection.getI();

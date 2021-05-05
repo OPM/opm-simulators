@@ -59,9 +59,9 @@ namespace Opm
     class GasLiftStage2 {
         using Simulator = GetPropType<TypeTag, Properties::Simulator>;
         using WellState = WellStateFullyImplicitBlackoil;
-        using BlackoilWellModel = Opm::BlackoilWellModel<TypeTag>;
-        using GasLiftSingleWell = Opm::GasLiftSingleWell<TypeTag>;
-        using GLiftWellState = Opm::GasLiftWellState<TypeTag>;
+        using BlackoilWellModel = ::Opm::BlackoilWellModel<TypeTag>;
+        using GasLiftSingleWell = ::Opm::GasLiftSingleWell<TypeTag>;
+        using GLiftWellState = ::Opm::GasLiftWellState<TypeTag>;
         using GLiftOptWells = typename BlackoilWellModel::GLiftOptWells;
         using GLiftProdWells = typename BlackoilWellModel::GLiftProdWells;
         using GLiftWellStateMap = typename BlackoilWellModel::GLiftWellStateMap;
@@ -98,26 +98,26 @@ namespace Opm
         void displayWarning_(const std::string &msg, const std::string &group_name);
         void displayWarning_(const std::string &msg);
         std::tuple<double, double, double> getCurrentGroupRates_(
-            const Opm::Group &group);
+            const Group &group);
         std::array<double,3> getCurrentGroupRatesRecursive_(
-            const Opm::Group &group);
+            const Group &group);
         std::tuple<double, double, double> getCurrentWellRates_(
             const std::string &well_name, const std::string &group_name);
         std::vector<GasLiftSingleWell *> getGroupGliftWells_(
-            const Opm::Group &group);
+            const Group &group);
         void getGroupGliftWellsRecursive_(
-            const Opm::Group &group, std::vector<GasLiftSingleWell *> &wells);
+            const Group &group, std::vector<GasLiftSingleWell *> &wells);
         std::pair<double, double> getStdWellRates_(const WellInterface<TypeTag> &well);
-        void optimizeGroup_(const Opm::Group &group);
-        void optimizeGroupsRecursive_(const Opm::Group &group);
+        void optimizeGroup_(const Group &group);
+        void optimizeGroupsRecursive_(const Group &group);
         void recalculateGradientAndUpdateData_(
             GradPairItr &grad_itr, bool increase,
             std::vector<GradPair> &grads, std::vector<GradPair> &other_grads);
         void redistributeALQ_(
-            std::vector<GasLiftSingleWell *> &wells,  const Opm::Group &group,
+            std::vector<GasLiftSingleWell *> &wells,  const Group &group,
             std::vector<GradPair> &inc_grads, std::vector<GradPair> &dec_grads);
         void removeSurplusALQ_(
-            const Opm::Group &group,
+            const Group &group,
             std::vector<GradPair> &inc_grads, std::vector<GradPair> &dec_grads);
         void saveGrad_(GradMap &map, const std::string &name, GradInfo &grad);
         void saveDecGrad_(const std::string &name, GradInfo &grad);
@@ -152,13 +152,13 @@ namespace Opm
         int nonlinear_iteration_idx_;
 
         struct OptimizeState {
-            OptimizeState( GasLiftStage2 &parent_, const Opm::Group &group_ ) :
+            OptimizeState( GasLiftStage2 &parent_, const Group &group_ ) :
                 parent{parent_},
                 group{group_},
                 it{0}
             {}
             GasLiftStage2 &parent;
-            const Opm::Group &group;
+            const Group &group;
             int it;
 
             using GradInfo = typename GasLiftStage2::GradInfo;
@@ -184,7 +184,7 @@ namespace Opm
         };
 
         struct SurplusState {
-            SurplusState( GasLiftStage2 &parent_, const Opm::Group &group_,
+            SurplusState( GasLiftStage2 &parent_, const Group &group_,
                 double oil_rate_, double gas_rate_, double alq_, double min_eco_grad_,
                 double oil_target_, double gas_target_,
                 std::optional<double> max_glift_) :
@@ -200,7 +200,7 @@ namespace Opm
                 it{0}
             {}
             GasLiftStage2 &parent;
-            const Opm::Group &group;
+            const Group &group;
             double oil_rate;
             double gas_rate;
             double alq;

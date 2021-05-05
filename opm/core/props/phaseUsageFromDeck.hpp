@@ -34,11 +34,11 @@ namespace Opm
 
     /// Looks at presence of WATER, OIL and GAS keywords in state object
     /// to determine active phases.
-    PhaseUsage phaseUsageFromDeck(const Opm::EclipseState& eclipseState);
+    PhaseUsage phaseUsageFromDeck(const EclipseState& eclipseState);
 
     /// Looks at presence of WATER, OIL and GAS keywords in deck
     /// to determine active phases.
-    PhaseUsage phaseUsageFromDeck(const Opm::Deck& deck);
+    PhaseUsage phaseUsageFromDeck(const Deck& deck);
 }
 
 #endif // OPM_PHASEUSAGEFROMDECK_HEADER_INCLUDED

@@ -58,10 +58,10 @@ struct SparseMatrixAdapter<TypeTag, TTag::FlowIstlSolver>
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
-    typedef Opm::MatrixBlock<Scalar, numEq, numEq> Block;
+    typedef MatrixBlock<Scalar, numEq, numEq> Block;
 
 public:
-    typedef typename Opm::Linear::IstlSparseMatrixAdapter<Block> type;
+    typedef typename Linear::IstlSparseMatrixAdapter<Block> type;
 };
 
 } // namespace Opm::Properties
@@ -241,10 +241,10 @@ namespace Opm
             const int verbosity = prm_.get<int>("verbosity", 0);
             const bool write_matrix = verbosity > 10;
             if (write_matrix) {
-                Opm::Helper::writeSystem(simulator_, //simulator is only used to get names
-                                         getMatrix(),
-                                         *rhs_,
-                                         comm_.get());
+                Helper::writeSystem(simulator_, //simulator is only used to get names
+                                    getMatrix(),
+                                    *rhs_,
+                                    comm_.get());
             }
 
             // Solve system.
@@ -428,7 +428,7 @@ namespace Opm
                 if (weightsType == "quasiimpes") {
                     // weighs will be created as default in the solver
                     weightsCalculator = [this, transpose, pressureIndex]() {
-                        return Opm::Amg::getQuasiImpesWeights<Matrix, Vector>(this->getMatrix(), pressureIndex, transpose);
+                        return Amg::getQuasiImpesWeights<Matrix, Vector>(this->getMatrix(), pressureIndex, transpose);
                     };
                 } else if (weightsType == "trueimpes") {
                     weightsCalculator = [this, pressureIndex]() {
@@ -451,9 +451,9 @@ namespace Opm
         {
             Vector weights(rhs_->size());
             ElementContext elemCtx(simulator_);
-            Opm::Amg::getTrueImpesWeights(pressureVarIndex, weights, simulator_.vanguard().gridView(),
-                                          elemCtx, simulator_.model(),
-                                          ThreadManager::threadId());
+            Amg::getTrueImpesWeights(pressureVarIndex, weights, simulator_.vanguard().gridView(),
+                                     elemCtx, simulator_.model(),
+                                     ThreadManager::threadId());
             return weights;
         }
 

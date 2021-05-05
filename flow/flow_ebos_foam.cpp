@@ -64,7 +64,7 @@ int flowEbosFoamMain(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
-    Opm::resetLocale();
+    resetLocale();
 
     // initialize MPI, finalize is done automatically on exit
 #if HAVE_DUNE_FEM
@@ -73,7 +73,7 @@ int flowEbosFoamMain(int argc, char** argv, bool outputCout, bool outputFiles)
     Dune::MPIHelper::instance(argc, argv).rank();
 #endif
 
-    Opm::FlowMainEbos<Properties::TTag::EclFlowFoamProblem>
+    FlowMainEbos<Properties::TTag::EclFlowFoamProblem>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }

@@ -35,7 +35,7 @@ void flowEbosBlackoilSetDeck(double setupTime, std::unique_ptr<Deck> deck,
 
 int flowEbosBlackoilMain(int argc, char** argv, bool outputCout, bool outputFiles);
 
-std::unique_ptr<Opm::FlowMainEbos<Properties::TTag::EclFlowProblem>>
+std::unique_ptr<FlowMainEbos<Properties::TTag::EclFlowProblem>>
     flowEbosBlackoilMainInit(int argc, char** argv, bool outputCout, bool outputFiles);
 }
 

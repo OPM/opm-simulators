@@ -195,10 +195,10 @@ public:
         std::vector<std::size_t> wbp_index_list;
         if (collectToIORank_.isIORank()) {
             const auto& schedule = simulator_.vanguard().schedule();
-            eclIO_.reset(new Opm::EclipseIO(simulator_.vanguard().eclState(),
-                                            Opm::UgGridHelpers::createEclipseGrid(globalGrid(), simulator_.vanguard().eclState().getInputGrid()),
-                                            schedule,
-                                            simulator_.vanguard().summaryConfig()));
+            eclIO_.reset(new EclipseIO(simulator_.vanguard().eclState(),
+                                       UgGridHelpers::createEclipseGrid(globalGrid(), simulator_.vanguard().eclState().getInputGrid()),
+                                       schedule,
+                                       simulator_.vanguard().summaryConfig()));
 
             const auto& wbp_calculators = eclIO_->summary().wbp_calculators( schedule.size() - 1 );
             wbp_index_list = wbp_calculators.index_list();
@@ -225,7 +225,7 @@ public:
     ~EclWriter()
     { }
 
-    const Opm::EclipseIO& eclIO() const
+    const EclipseIO& eclIO() const
     {
         assert(eclIO_);
         return *eclIO_;
@@ -242,8 +242,8 @@ public:
             std::map<std::string, std::vector<int> > integerVectors;
             if (collectToIORank_.isParallel())
                 integerVectors.emplace("MPI_RANK", collectToIORank_.globalRanks());
-            auto cartMap = Opm::cartesianToCompressed(globalGrid().size(0),
-                                                      Opm::UgGridHelpers::globalCell(globalGrid()));
+            auto cartMap = cartesianToCompressed(globalGrid().size(0),
+                                                 UgGridHelpers::globalCell(globalGrid()));
             eclIO_->writeInitial(computeTrans_(cartMap), integerVectors, exportNncStructure_(cartMap));
         }
     }
@@ -380,7 +380,7 @@ public:
 
             MPI_Bcast(buffer.data(), buffer_size, MPI_CHAR, collectToIORank_.ioRank, MPI_COMM_WORLD);
             if (!collectToIORank_.isIORank()) {
-                Opm::SummaryState& st = summaryState();
+                SummaryState& st = summaryState();
                 st.deserialize(buffer);
             }
 #endif
@@ -400,7 +400,7 @@ public:
         auto localGroupAndNetworkData = simulator_.problem().wellModel()
             .groupAndNetworkData(reportStepNum, simulator_.vanguard().schedule());
 
-        Opm::data::Solution localCellData = {};
+        data::Solution localCellData = {};
         if (! isSubStep) {
             this->eclOutputModule_->assignToSolution(localCellData);
 
@@ -429,25 +429,25 @@ public:
     {
         bool enableHysteresis = simulator_.problem().materialLawManager()->enableHysteresis();
         bool enableSwatinit = simulator_.vanguard().eclState().fieldProps().has_double("SWATINIT");
-        std::vector<Opm::RestartKey> solutionKeys{
-            {"PRESSURE", Opm::UnitSystem::measure::pressure},
-            {"SWAT", Opm::UnitSystem::measure::identity, static_cast<bool>(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))},
-            {"SGAS", Opm::UnitSystem::measure::identity, static_cast<bool>(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))},
-            {"TEMP" , Opm::UnitSystem::measure::temperature, enableEnergy},
-            {"SSOLVENT" , Opm::UnitSystem::measure::identity, enableSolvent},
-            {"RS", Opm::UnitSystem::measure::gas_oil_ratio, FluidSystem::enableDissolvedGas()},
-            {"RV", Opm::UnitSystem::measure::oil_gas_ratio, FluidSystem::enableVaporizedOil()},
-            {"SOMAX", Opm::UnitSystem::measure::identity, simulator_.problem().vapparsActive()},
-            {"PCSWM_OW", Opm::UnitSystem::measure::identity, enableHysteresis},
-            {"KRNSW_OW", Opm::UnitSystem::measure::identity, enableHysteresis},
-            {"PCSWM_GO", Opm::UnitSystem::measure::identity, enableHysteresis},
-            {"KRNSW_GO", Opm::UnitSystem::measure::identity, enableHysteresis},
-            {"PPCW", Opm::UnitSystem::measure::pressure, enableSwatinit}
+        std::vector<RestartKey> solutionKeys{
+            {"PRESSURE", UnitSystem::measure::pressure},
+            {"SWAT", UnitSystem::measure::identity, static_cast<bool>(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))},
+            {"SGAS", UnitSystem::measure::identity, static_cast<bool>(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))},
+            {"TEMP" , UnitSystem::measure::temperature, enableEnergy},
+            {"SSOLVENT" , UnitSystem::measure::identity, enableSolvent},
+            {"RS", UnitSystem::measure::gas_oil_ratio, FluidSystem::enableDissolvedGas()},
+            {"RV", UnitSystem::measure::oil_gas_ratio, FluidSystem::enableVaporizedOil()},
+            {"SOMAX", UnitSystem::measure::identity, simulator_.problem().vapparsActive()},
+            {"PCSWM_OW", UnitSystem::measure::identity, enableHysteresis},
+            {"KRNSW_OW", UnitSystem::measure::identity, enableHysteresis},
+            {"PCSWM_GO", UnitSystem::measure::identity, enableHysteresis},
+            {"KRNSW_GO", UnitSystem::measure::identity, enableHysteresis},
+            {"PPCW", UnitSystem::measure::pressure, enableSwatinit}
         };
 
         const auto& inputThpres = eclState().getSimulationConfig().getThresholdPressure();
-        std::vector<Opm::RestartKey> extraKeys = {{"OPMEXTRA", Opm::UnitSystem::measure::identity, false},
-                                                  {"THRESHPR", Opm::UnitSystem::measure::pressure, inputThpres.active()}};
+        std::vector<RestartKey> extraKeys = {{"OPMEXTRA", UnitSystem::measure::identity, false},
+                                             {"THRESHPR", UnitSystem::measure::pressure, inputThpres.active()}};
 
         // The episodeIndex is rewined one back before beginRestart is called
         // and can not be used here.
@@ -461,8 +461,8 @@ public:
         eclOutputModule_->allocBuffers(numElements, restartStepIdx, /*isSubStep=*/false, /*log=*/false, /*isRestart*/ true);
 
         {
-            Opm::SummaryState& summaryState = simulator_.vanguard().summaryState();
-            Opm::Action::State& actionState = simulator_.vanguard().actionState();
+            SummaryState& summaryState = simulator_.vanguard().summaryState();
+            Action::State& actionState = simulator_.vanguard().actionState();
             auto restartValues = loadParallelRestart(eclIO_.get(), actionState, summaryState, solutionKeys, extraKeys,
                                                      gridView.grid().comm());
             for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
@@ -500,15 +500,15 @@ private:
     static bool enableEclOutput_()
     { return EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput); }
 
-    Opm::data::Solution computeTrans_(const std::unordered_map<int,int>& cartesianToActive) const
+    data::Solution computeTrans_(const std::unordered_map<int,int>& cartesianToActive) const
     {
         const auto& cartMapper = simulator_.vanguard().equilCartesianIndexMapper();
         const auto& cartDims = cartMapper.cartesianDimensions();
         const int globalSize = cartDims[0]*cartDims[1]*cartDims[2];
 
-        Opm::data::CellData tranx = {Opm::UnitSystem::measure::transmissibility, std::vector<double>(globalSize), Opm::data::TargetType::INIT};
-        Opm::data::CellData trany = {Opm::UnitSystem::measure::transmissibility, std::vector<double>(globalSize), Opm::data::TargetType::INIT};
-        Opm::data::CellData tranz = {Opm::UnitSystem::measure::transmissibility, std::vector<double>(globalSize), Opm::data::TargetType::INIT};
+        data::CellData tranx = {UnitSystem::measure::transmissibility, std::vector<double>(globalSize), data::TargetType::INIT};
+        data::CellData trany = {UnitSystem::measure::transmissibility, std::vector<double>(globalSize), data::TargetType::INIT};
+        data::CellData tranz = {UnitSystem::measure::transmissibility, std::vector<double>(globalSize), data::TargetType::INIT};
 
         for (size_t i = 0; i < tranx.data.size(); ++i) {
             tranx.data[0] = 0.0;
@@ -592,7 +592,7 @@ private:
         std::size_t ny = eclState().getInputGrid().getNY();
         auto nncData = eclState().getInputNNC().input();
         const auto& unitSystem = simulator_.vanguard().eclState().getDeckUnitSystem();
-        std::vector<Opm::NNCdata> outputNnc;
+        std::vector<NNCdata> outputNnc;
         std::size_t index = 0;
 
         for( const auto& entry : nncData ) {
@@ -602,7 +602,7 @@ private:
             auto cellDiff = entry.cell2 - entry.cell1;
 
             if (cellDiff != 1 && cellDiff != nx && cellDiff != nx*ny) {
-                auto tt = unitSystem.from_si(Opm::UnitSystem::measure::transmissibility, entry.trans);
+                auto tt = unitSystem.from_si(UnitSystem::measure::transmissibility, entry.trans);
                 // Eclipse ignores NNCs (with EDITNNC applied) that are small. Seems like the threshold is 1.0e-6
                 if ( tt >= 1.0e-6 )
                     outputNnc.emplace_back(entry.cell1, entry.cell2, entry.trans);
@@ -667,7 +667,7 @@ private:
                     // We need to check whether an NNC for this face was also specified
                     // via the NNC keyword in the deck (i.e. in the first origNncSize entries.
                     auto t = globalTrans->transmissibility(c1, c2);
-                    auto candidate = std::lower_bound(nncData.begin(), nncData.end(), Opm::NNCdata(cc1, cc2, 0.0));
+                    auto candidate = std::lower_bound(nncData.begin(), nncData.end(), NNCdata(cc1, cc2, 0.0));
 
                     while ( candidate != nncData.end() && candidate->cell1 == cc1
                          && candidate->cell2 == cc2) {
@@ -677,7 +677,7 @@ private:
                     // eclipse ignores NNCs with zero transmissibility (different threshold than for NNC
                     // with corresponding EDITNNC above). In addition we do set small transmissibilties
                     // to zero when setting up the simulator. These will be ignored here, too.
-                    auto tt = unitSystem.from_si(Opm::UnitSystem::measure::transmissibility, std::abs(t));
+                    auto tt = unitSystem.from_si(UnitSystem::measure::transmissibility, std::abs(t));
                     if ( tt > 1e-12 )
                         outputNnc.push_back({cc1, cc2, t});
                 }
@@ -689,24 +689,24 @@ private:
     struct EclWriteTasklet
         : public TaskletInterface
     {
-        Opm::Action::State actionState_;
-        Opm::SummaryState summaryState_;
-        Opm::UDQState udqState_;
-        Opm::EclipseIO& eclIO_;
+        Action::State actionState_;
+        SummaryState summaryState_;
+        UDQState udqState_;
+        EclipseIO& eclIO_;
         int reportStepNum_;
         bool isSubStep_;
         double secondsElapsed_;
-        Opm::RestartValue restartValue_;
+        RestartValue restartValue_;
         bool writeDoublePrecision_;
 
-        explicit EclWriteTasklet(const Opm::Action::State& actionState,
-                                 const Opm::SummaryState& summaryState,
-                                 const Opm::UDQState& udqState,
-                                 Opm::EclipseIO& eclIO,
+        explicit EclWriteTasklet(const Action::State& actionState,
+                                 const SummaryState& summaryState,
+                                 const UDQState& udqState,
+                                 EclipseIO& eclIO,
                                  int reportStepNum,
                                  bool isSubStep,
                                  double secondsElapsed,
-                                 Opm::RestartValue restartValue,
+                                 RestartValue restartValue,
                                  bool writeDoublePrecision)
             : actionState_(actionState)
             , summaryState_(summaryState)
@@ -733,19 +733,19 @@ private:
         }
     };
 
-    const Opm::EclipseState& eclState() const
+    const EclipseState& eclState() const
     { return simulator_.vanguard().eclState(); }
 
-    Opm::SummaryState& summaryState()
+    SummaryState& summaryState()
     { return simulator_.vanguard().summaryState(); }
 
-    Opm::Action::State& actionState()
+    Action::State& actionState()
     { return simulator_.vanguard().actionState(); }
 
-    Opm::UDQState& udqState()
+    UDQState& udqState()
     { return simulator_.vanguard().udqState(); }
 
-    const Opm::Schedule& schedule() const
+    const Schedule& schedule() const
     { return simulator_.vanguard().schedule(); }
 
     void prepareLocalCellData(const bool isSubStep,
@@ -782,7 +782,7 @@ private:
         const Scalar nextStepSize = simulator_.problem().nextTimeStepSize();
         const auto isParallel = this->collectToIORank_.isParallel();
 
-        Opm::RestartValue restartValue {
+        RestartValue restartValue {
             isParallel ? this->collectToIORank_.globalCellData()
                        : std::move(localCellData),
 
@@ -794,7 +794,7 @@ private:
         };
 
         if (simulator_.vanguard().eclState().getSimulationConfig().useThresholdPressure()) {
-            restartValue.addExtra("THRESHPR", Opm::UnitSystem::measure::pressure,
+            restartValue.addExtra("THRESHPR", UnitSystem::measure::pressure,
                                   simulator_.problem().thresholdPressure().data());
         }
 
@@ -823,7 +823,7 @@ private:
     Simulator& simulator_;
     CollectDataToIORankType collectToIORank_;
     std::unique_ptr<EclOutputBlackOilModule<TypeTag>> eclOutputModule_;
-    std::unique_ptr<Opm::EclipseIO> eclIO_;
+    std::unique_ptr<EclipseIO> eclIO_;
     std::unique_ptr<TaskletRunner> taskletRunner_;
     Scalar restartTimeStepSize_;
 };

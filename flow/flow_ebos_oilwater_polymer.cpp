@@ -54,14 +54,14 @@ private:
     using FluidSystem = GetPropType<BaseTypeTag, Properties::FluidSystem>;
 
 public:
-    typedef Opm::BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
-                                         getPropValue<TypeTag, Properties::EnableExtbo>(),
-                                         getPropValue<TypeTag, Properties::EnablePolymer>(),
-                                         getPropValue<TypeTag, Properties::EnableEnergy>(),
-                                         getPropValue<TypeTag, Properties::EnableFoam>(),
-                                         getPropValue<TypeTag, Properties::EnableBrine>(),
-                                         /*PVOffset=*/0,
-                                         /*disabledCompIdx=*/FluidSystem::gasCompIdx> type;
+    typedef BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
+                                    getPropValue<TypeTag, Properties::EnableExtbo>(),
+                                    getPropValue<TypeTag, Properties::EnablePolymer>(),
+                                    getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                    getPropValue<TypeTag, Properties::EnableFoam>(),
+                                    getPropValue<TypeTag, Properties::EnableBrine>(),
+                                    /*PVOffset=*/0,
+                                    /*disabledCompIdx=*/FluidSystem::gasCompIdx> type;
 };
 }}
 
@@ -86,7 +86,7 @@ int flowEbosOilWaterPolymerMain(int argc, char** argv, bool outputCout, bool out
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
-    Opm::resetLocale();
+    resetLocale();
 
 #if HAVE_DUNE_FEM
     Dune::Fem::MPIManager::initialize(argc, argv);
@@ -94,7 +94,7 @@ int flowEbosOilWaterPolymerMain(int argc, char** argv, bool outputCout, bool out
     Dune::MPIHelper::instance(argc, argv);
 #endif
 
-    Opm::FlowMainEbos<Properties::TTag::EclFlowOilWaterPolymerProblem>
+    FlowMainEbos<Properties::TTag::EclFlowOilWaterPolymerProblem>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }

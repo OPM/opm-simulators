@@ -70,7 +70,7 @@ public:
         comm.sum(&this->fluxValue_, 1);
     }
 
-    Opm::data::AquiferData aquiferData() const
+    data::AquiferData aquiferData() const
     {
         data::AquiferData data;
         data.aquiferID = this->aquiferID;
@@ -82,7 +82,7 @@ public:
         }
         data.volume = this->W_flux_.value();
         data.initPressure = this->pa0_;
-        data.type = Opm::data::AquiferType::CarterTracy;
+        data.type = data::AquiferType::CarterTracy;
 
         data.aquCT = std::make_shared<data::CarterTracyData>();
         data.aquCT->dimensionless_time = this->dimensionless_time_;
@@ -113,17 +113,17 @@ protected:
     {
         // We use the opm-common numeric linear interpolator
         this->dimensionless_pressure_ =
-            Opm::linearInterpolation(this->aquct_data_.td,
-                                     this->aquct_data_.pi,
-                                     this->dimensionless_time_);
+            linearInterpolation(this->aquct_data_.td,
+                                this->aquct_data_.pi,
+                                this->dimensionless_time_);
 
         const auto PItd =
-            Opm::linearInterpolation(this->aquct_data_.td,
-                                     this->aquct_data_.pi, td_plus_dt);
+            linearInterpolation(this->aquct_data_.td,
+                                this->aquct_data_.pi, td_plus_dt);
 
         const auto PItdprime =
-            Opm::linearInterpolationDerivative(this->aquct_data_.td,
-                                               this->aquct_data_.pi, td_plus_dt);
+            linearInterpolationDerivative(this->aquct_data_.td,
+                                          this->aquct_data_.pi, td_plus_dt);
 
         return std::make_pair(PItd, PItdprime);
     }

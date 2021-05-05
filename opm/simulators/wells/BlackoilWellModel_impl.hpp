@@ -54,8 +54,8 @@ namespace Opm {
         // Set up cartesian mapping.
         {
             const auto& grid = this->ebosSimulator_.vanguard().grid();
-            const auto& cartDims = Opm::UgGridHelpers::cartDims(grid);
-            setupCartesianToCompressed_(Opm::UgGridHelpers::globalCell(grid),
+            const auto& cartDims = UgGridHelpers::cartDims(grid);
+            setupCartesianToCompressed_(UgGridHelpers::globalCell(grid),
                                         cartDims[0] * cartDims[1] * cartDims[2]);
 
             auto& parallel_wells = ebosSimulator.vanguard().parallelWells();
@@ -260,7 +260,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     beginReportStep(const int timeStepIdx)
     {
-        Opm::DeferredLogger local_deferredLogger;
+        DeferredLogger local_deferredLogger;
         report_step_starts_ = true;
 
         const Grid& grid = ebosSimulator_.vanguard().grid();
@@ -316,7 +316,7 @@ namespace Opm {
         updatePerforationIntensiveQuantities();
         updateAverageFormationFactor();
 
-        Opm::DeferredLogger local_deferredLogger;
+        DeferredLogger local_deferredLogger;
 
         this->resetWGState();
         updateAndCommunicateGroupData();
@@ -457,7 +457,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::gliftDebug(
-        const std::string &msg, Opm::DeferredLogger &deferred_logger) const
+        const std::string &msg, DeferredLogger &deferred_logger) const
     {
         if (this->glift_debug) {
             const std::string message = fmt::format(
@@ -470,7 +470,7 @@ namespace Opm {
     void
     BlackoilWellModel<TypeTag>::wellTesting(const int timeStepIdx,
                                             const double simulationTime,
-                                            Opm::DeferredLogger& deferred_logger)
+                                            DeferredLogger& deferred_logger)
     {
         const auto& wtest_config = schedule()[timeStepIdx].wtest_config();
         if (wtest_config.size() != 0) { // there is a WTEST request
@@ -545,7 +545,7 @@ namespace Opm {
         report_step_starts_ = false;
         const int reportStepIdx = ebosSimulator_.episodeIndex();
 
-        Opm::DeferredLogger local_deferredLogger;
+        DeferredLogger local_deferredLogger;
         for (const auto& well : well_container_) {
             if (getPropValue<TypeTag, Properties::EnablePolymerMW>() && well->isInjector()) {
                 well->updateWaterThroughput(dt, this->wellState());
@@ -574,7 +574,7 @@ namespace Opm {
 
         this->commitWGState();
 
-        Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
+        DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
         if (terminal_output_) {
             global_deferredLogger.logMessages();
         }
@@ -640,7 +640,7 @@ namespace Opm {
         const int nw = wells_ecl_.size();
         if (nw > 0) {
             const auto phaseUsage = phaseUsageFromDeck(eclState());
-            const size_t numCells = Opm::UgGridHelpers::numCells(grid());
+            const size_t numCells = UgGridHelpers::numCells(grid());
             const bool handle_ms_well = (param_.use_multisegment_well_ && anyMSWellOpenLocal());
             this->wellState().resize(wells_ecl_, local_parallel_well_info_, schedule(), handle_ms_well, numCells, well_perf_data_, summaryState); // Resize for restart step
             loadRestartData(restartValues.wells, restartValues.grp_nwrk, phaseUsage, handle_ms_well, this->wellState());
@@ -784,7 +784,7 @@ namespace Opm {
     {
         std::vector<WellInterfacePtr> well_container;
 
-        Opm::DeferredLogger local_deferredLogger;
+        DeferredLogger local_deferredLogger;
 
         const int nw = numLocalWells();
 
@@ -903,7 +903,7 @@ namespace Opm {
         }
 
         // Collect log messages and print.
-        Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
+        DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
         if (terminal_output_) {
             global_deferredLogger.logMessages();
         }
@@ -996,7 +996,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     createWellForWellTest(const std::string& well_name,
                           const int report_step,
-                          Opm::DeferredLogger& deferred_logger) const
+                          DeferredLogger& deferred_logger) const
     {
         // Finding the location of the well in wells_ecl
         const int nw_wells_ecl = wells_ecl_.size();
@@ -1025,7 +1025,7 @@ namespace Opm {
              const double dt)
     {
 
-        Opm::DeferredLogger local_deferredLogger;
+        DeferredLogger local_deferredLogger;
         if (this->glift_debug) {
             const std::string msg = fmt::format(
                 "assemble() : iteration {}" , iterationIdx);
@@ -1084,7 +1084,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    maybeDoGasLiftOptimize(Opm::DeferredLogger& deferred_logger)
+    maybeDoGasLiftOptimize(DeferredLogger& deferred_logger)
     {
         this->wellState().enableGliftOptimization();
         GLiftOptWells glift_wells;
@@ -1111,7 +1111,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    gasLiftOptimizationStage2(Opm::DeferredLogger& deferred_logger,
+    gasLiftOptimizationStage2(DeferredLogger& deferred_logger,
         GLiftProdWells &prod_wells, GLiftOptWells &glift_wells,
         GLiftWellStateMap &glift_well_state_map)
     {
@@ -1124,7 +1124,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    gliftDebugShowALQ(Opm::DeferredLogger& deferred_logger)
+    gliftDebugShowALQ(DeferredLogger& deferred_logger)
     {
         for (auto& well : this->well_container_) {
             if (well->isProducer()) {
@@ -1139,7 +1139,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    assembleWellEq(const double dt, Opm::DeferredLogger& deferred_logger)
+    assembleWellEq(const double dt, DeferredLogger& deferred_logger)
     {
         for (auto& well : well_container_) {
             well->assembleWellEq(ebosSimulator_, dt, this->wellState(), this->groupState(), deferred_logger);
@@ -1247,7 +1247,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     recoverWellSolutionAndUpdateWellState(const BVector& x)
     {
-        Opm::DeferredLogger local_deferredLogger;
+        DeferredLogger local_deferredLogger;
         auto exc_type = ExceptionType::NONE;
         std::string exc_msg;
         try {
@@ -1332,7 +1332,7 @@ namespace Opm {
     getWellConvergence(const std::vector<Scalar>& B_avg, bool checkGroupConvergence) const
     {
 
-        Opm::DeferredLogger local_deferredLogger;
+        DeferredLogger local_deferredLogger;
         // Get global (from all processes) convergence report.
         ConvergenceReport local_report;
         for (const auto& well : well_container_) {
@@ -1340,7 +1340,7 @@ namespace Opm {
                 local_report += well->getWellConvergence(this->wellState(), B_avg, local_deferredLogger);
             }
         }
-        Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
+        DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
         if (terminal_output_) {
             global_deferredLogger.logMessages();
         }
@@ -1374,7 +1374,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    calculateExplicitQuantities(Opm::DeferredLogger& deferred_logger) const
+    calculateExplicitQuantities(DeferredLogger& deferred_logger) const
     {
         // TODO: checking isOperable() ?
         for (auto& well : well_container_) {
@@ -1389,7 +1389,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    updateWellControls(Opm::DeferredLogger& deferred_logger, const bool checkGroupControls)
+    updateWellControls(DeferredLogger& deferred_logger, const bool checkGroupControls)
     {
         // Even if there are no wells active locally, we cannot
         // return as the DeferredLogger uses global communication.
@@ -1533,7 +1533,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     updateWellTestState(const double& simulationTime, WellTestState& wellTestState) const
     {
-        Opm::DeferredLogger local_deferredLogger;
+        DeferredLogger local_deferredLogger;
         for (const auto& well : well_container_) {
             const auto wasClosed = wellTestState.hasWellClosed(well->name());
 
@@ -1544,7 +1544,7 @@ namespace Opm {
             }
         }
 
-        Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
+        DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
         if (terminal_output_) {
             global_deferredLogger.logMessages();
         }
@@ -1555,7 +1555,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    computeWellPotentials(std::vector<double>& well_potentials, const int reportStepIdx, Opm::DeferredLogger& deferred_logger)
+    computeWellPotentials(std::vector<double>& well_potentials, const int reportStepIdx, DeferredLogger& deferred_logger)
     {
         // number of wells and phases
         const int nw = numLocalWells();
@@ -1564,7 +1564,7 @@ namespace Opm {
 
         auto well_state = this->wellState();
 
-        const Opm::SummaryConfig& summaryConfig = ebosSimulator_.vanguard().summaryConfig();
+        const SummaryConfig& summaryConfig = ebosSimulator_.vanguard().summaryConfig();
         const bool write_restart_file = ebosSimulator_.vanguard().schedule().write_rst_file(reportStepIdx);
         auto exc_type = ExceptionType::NONE;
         std::string exc_msg;
@@ -1673,7 +1673,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    prepareTimeStep(Opm::DeferredLogger& deferred_logger)
+    prepareTimeStep(DeferredLogger& deferred_logger)
     {
         auto exc_type = ExceptionType::NONE;
         std::string exc_msg;
@@ -1833,7 +1833,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    updatePrimaryVariables(Opm::DeferredLogger& deferred_logger)
+    updatePrimaryVariables(DeferredLogger& deferred_logger)
     {
         for (const auto& well : well_container_) {
             well->updatePrimaryVariables(this->wellState(), deferred_logger);
@@ -1894,7 +1894,7 @@ namespace Opm {
 
         depth_.resize(numCells);
         for (unsigned cellIdx = 0; cellIdx < numCells; ++cellIdx) {
-            depth_[cellIdx] = Opm::UgGridHelpers::cellCenterDepth( grid, cellIdx );
+            depth_[cellIdx] = UgGridHelpers::cellCenterDepth( grid, cellIdx );
         }
     }
 
@@ -2009,7 +2009,7 @@ namespace Opm {
                     const int segment_index = segment_set.segmentNumberToIndex(segment.first);
 
                     // recovering segment rates and pressure from the restart values
-                    const auto pres_idx = Opm::data::SegmentPressures::Value::Pressure;
+                    const auto pres_idx = data::SegmentPressures::Value::Pressure;
                     well_state.segPress()[top_segment_index + segment_index] = segment.second.pressures[pres_idx];
 
                     const auto& segment_rates = segment.second.rates;
@@ -2101,7 +2101,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    updateGroupIndividualControls(Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups)
+    updateGroupIndividualControls(DeferredLogger& deferred_logger, std::set<std::string>& switched_groups)
     {
         const int reportStepIdx = ebosSimulator_.episodeIndex();
 
@@ -2121,7 +2121,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    updateGroupIndividualControl(const Group& group, Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups) {
+    updateGroupIndividualControl(const Group& group, DeferredLogger& deferred_logger, std::set<std::string>& switched_groups) {
 
         const int reportStepIdx = ebosSimulator_.episodeIndex();
         const bool skip = switched_groups.count(group.name());
@@ -2160,7 +2160,7 @@ namespace Opm {
     template<typename TypeTag>
     bool
     BlackoilWellModel<TypeTag>::
-    checkGroupConstraints(const Group& group, Opm::DeferredLogger& deferred_logger) const {
+    checkGroupConstraints(const Group& group, DeferredLogger& deferred_logger) const {
 
         const int reportStepIdx = ebosSimulator_.episodeIndex();
         if (group.isInjectionGroup()) {
@@ -2196,7 +2196,7 @@ namespace Opm {
     template<typename TypeTag>
     Group::ProductionCMode
     BlackoilWellModel<TypeTag>::
-    checkGroupProductionConstraints(const Group& group, Opm::DeferredLogger& deferred_logger) const {
+    checkGroupProductionConstraints(const Group& group, DeferredLogger& deferred_logger) const {
 
         const int reportStepIdx = ebosSimulator_.episodeIndex();
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
@@ -2405,7 +2405,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    checkGconsaleLimits(const Group& group, WellState& well_state, Opm::DeferredLogger& deferred_logger)
+    checkGconsaleLimits(const Group& group, WellState& well_state, DeferredLogger& deferred_logger)
     {
         const int reportStepIdx = ebosSimulator_.episodeIndex();
          // call recursively down the group hiearchy
@@ -2525,7 +2525,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    actionOnBrokenConstraints(const Group& group, const Group::ExceedAction& exceed_action, const Group::ProductionCMode& newControl, Opm::DeferredLogger& deferred_logger) {
+    actionOnBrokenConstraints(const Group& group, const Group::ExceedAction& exceed_action, const Group::ProductionCMode& newControl, DeferredLogger& deferred_logger) {
 
         const Group::ProductionCMode oldControl = this->groupState().production_control(group.name());
 
@@ -2578,7 +2578,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    actionOnBrokenConstraints(const Group& group, const Group::InjectionCMode& newControl, const Phase& controlPhase, Opm::DeferredLogger& deferred_logger) {
+    actionOnBrokenConstraints(const Group& group, const Group::InjectionCMode& newControl, const Phase& controlPhase, DeferredLogger& deferred_logger) {
         auto oldControl = this->groupState().injection_control(group.name(), controlPhase);
 
         std::ostringstream ss;
@@ -2601,7 +2601,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    updateGroupHigherControls(Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups)
+    updateGroupHigherControls(DeferredLogger& deferred_logger, std::set<std::string>& switched_groups)
     {
         const int reportStepIdx = ebosSimulator_.episodeIndex();
         const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
@@ -2612,7 +2612,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    checkGroupHigherConstraints(const Group& group, Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups)
+    checkGroupHigherConstraints(const Group& group, DeferredLogger& deferred_logger, std::set<std::string>& switched_groups)
     {
         // Set up coefficients for RESV <-> surface rate conversion.
         // Use the pvtRegionIdx from the top cell of the first well.
@@ -3138,8 +3138,8 @@ namespace Opm {
                     gr[gname].production = this->getGuideRateValues(group);
                 }
 
-                if (this->guideRate_->has(gname, Opm::Phase::WATER)
-                        || this->guideRate_->has(gname, Opm::Phase::GAS)) {
+                if (this->guideRate_->has(gname, Phase::WATER)
+                        || this->guideRate_->has(gname, Phase::GAS)) {
                     gr[gname].injection = this->getGuideRateInjectionGroupValues(group);
                 }
 
@@ -3234,13 +3234,13 @@ namespace Opm {
         assert (this->guideRate_ != nullptr);
 
         const auto& gname = group.name();
-        if (this->guideRate_->has(gname, Opm::Phase::GAS)) {
+        if (this->guideRate_->has(gname, Phase::GAS)) {
             grval.set(data::GuideRateValue::Item::Gas,
-                      this->guideRate_->get(gname, Opm::Phase::GAS));
+                      this->guideRate_->get(gname, Phase::GAS));
         }
-        if (this->guideRate_->has(gname, Opm::Phase::WATER)) {
+        if (this->guideRate_->has(gname, Phase::WATER)) {
             grval.set(data::GuideRateValue::Item::Water,
-                      this->guideRate_->get(gname, Opm::Phase::WATER));
+                      this->guideRate_->get(gname, Phase::WATER));
         }
         return grval;
     }

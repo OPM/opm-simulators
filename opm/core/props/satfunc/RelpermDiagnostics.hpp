@@ -73,8 +73,8 @@ namespace Opm {
 
         SaturationFunctionFamily satFamily_;
 
-        std::vector<Opm::EclEpsScalingPointsInfo<double> > unscaledEpsInfo_;
-        std::vector<Opm::EclEpsScalingPointsInfo<double> > scaledEpsInfo_;
+        std::vector<EclEpsScalingPointsInfo<double> > unscaledEpsInfo_;
+        std::vector<EclEpsScalingPointsInfo<double> > scaledEpsInfo_;
 
 
         ///Check the phase that used.
@@ -95,32 +95,32 @@ namespace Opm {
                                    const CartesianIndexMapper& cartesianIndexMapper);
 
         ///For every table, need to deal with case by case.
-        void swofTableCheck_(const Opm::SwofTable& swofTables,
+        void swofTableCheck_(const SwofTable& swofTables,
                              const int satnumIdx);
-        void sgofTableCheck_(const Opm::SgofTable& sgofTables,
+        void sgofTableCheck_(const SgofTable& sgofTables,
                              const int satnumIdx);
-        void slgofTableCheck_(const Opm::SlgofTable& slgofTables,
+        void slgofTableCheck_(const SlgofTable& slgofTables,
                               const int satnumIdx);
-        void swfnTableCheck_(const Opm::SwfnTable& swfnTables,
+        void swfnTableCheck_(const SwfnTable& swfnTables,
                              const int satnumIdx);
-        void sgfnTableCheck_(const Opm::SgfnTable& sgfnTables,
+        void sgfnTableCheck_(const SgfnTable& sgfnTables,
                              const int satnumIdx);
-        void sof3TableCheck_(const Opm::Sof3Table& sof3Tables,
+        void sof3TableCheck_(const Sof3Table& sof3Tables,
                              const int satnumIdx);
-        void sof2TableCheck_(const Opm::Sof2Table& sof2Tables,
+        void sof2TableCheck_(const Sof2Table& sof2Tables,
                              const int satnumIdx);
-        void sgwfnTableCheck_(const Opm::SgwfnTable& sgwfnTables,
+        void sgwfnTableCheck_(const SgwfnTable& sgwfnTables,
                               const int satnumIdx);
         ///Tables for solvent model
-        void sgcwmisTableCheck_(const Opm::SgcwmisTable& sgcwmisTables,
+        void sgcwmisTableCheck_(const SgcwmisTable& sgcwmisTables,
                                 const int satnumIdx);
-        void sorwmisTableCheck_(const Opm::SorwmisTable& sorwmisTables,
+        void sorwmisTableCheck_(const SorwmisTable& sorwmisTables,
                                 const int satnumIdx);
-        void ssfnTableCheck_(const Opm::SsfnTable& ssfnTables,
+        void ssfnTableCheck_(const SsfnTable& ssfnTables,
                              const int satnumIdx);
-        void miscTableCheck_(const Opm::MiscTable& miscTables,
+        void miscTableCheck_(const MiscTable& miscTables,
                              const int miscnumIdx);
-        void msfnTableCheck_(const Opm::MsfnTable& msfnTables,
+        void msfnTableCheck_(const MsfnTable& msfnTables,
                              const int satnumIdx);
     };
 

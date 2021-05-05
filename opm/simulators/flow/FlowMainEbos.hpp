@@ -93,7 +93,7 @@ namespace Opm
         using Scalar = GetPropType<TypeTag, Properties::Scalar>;
         using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
-        typedef Opm::SimulatorFullyImplicitBlackoilEbos<TypeTag> Simulator;
+        typedef SimulatorFullyImplicitBlackoilEbos<TypeTag> Simulator;
 
         FlowMainEbos(int argc, char **argv, bool output_cout, bool output_files )
             : argc_{argc}, argv_{argv},
@@ -127,7 +127,7 @@ namespace Opm
             Simulator::registerParameters();
 
             // register the parameters inherited from ebos
-            Opm::registerAllParameters_<TypeTag>(/*finalizeRegistration=*/false);
+            registerAllParameters_<TypeTag>(/*finalizeRegistration=*/false);
 
             // hide the parameters unused by flow. TODO: this is a pain to maintain
             EWOMS_HIDE_PARAM(TypeTag, EnableGravity);
@@ -219,14 +219,14 @@ namespace Opm
 #endif
 
             // read in the command line parameters
-            int status = Opm::setupParameters_<TypeTag>(argc, const_cast<const char**>(argv), /*doRegistration=*/false, /*allowUnused=*/true, /*handleHelp=*/(mpiRank==0));
+            int status = ::Opm::setupParameters_<TypeTag>(argc, const_cast<const char**>(argv), /*doRegistration=*/false, /*allowUnused=*/true, /*handleHelp=*/(mpiRank==0));
             if (status == 0) {
 
                 // deal with unknown parameters.
 
                 int unknownKeyWords = 0;
                 if (mpiRank == 0) {
-                    unknownKeyWords = Opm::Parameters::printUnused<TypeTag>(std::cerr);
+                    unknownKeyWords = Parameters::printUnused<TypeTag>(std::cerr);
                 }
 #if HAVE_MPI
                 int globalUnknownKeyWords;
@@ -258,13 +258,13 @@ namespace Opm
                 if (EWOMS_GET_PARAM(TypeTag, int, PrintProperties) == 1) {
                     doExit = true;
                     if (mpiRank == 0)
-                        Opm::Properties::printValues<TypeTag>();
+                        Properties::printValues<TypeTag>();
                 }
 
                 if (EWOMS_GET_PARAM(TypeTag, int, PrintParameters) == 1) {
                     doExit = true;
                     if (mpiRank == 0)
-                        Opm::Parameters::printValues<TypeTag>();
+                        Parameters::printValues<TypeTag>();
                 }
 
                 if (doExit)
@@ -384,7 +384,7 @@ namespace Opm
               ss << "Simulation started on " << tmstr << " hrs\n";
 
               ss << "Parameters used by Flow:\n";
-              Opm::Parameters::printValues<TypeTag>(ss);
+              Parameters::printValues<TypeTag>(ss);
 
               OpmLog::note(ss.str());
           }
@@ -475,7 +475,7 @@ namespace Opm
                 return;
             }
 
-            namespace fs = Opm::filesystem;
+            namespace fs = ::Opm::filesystem;
             const std::string& output_dir = eclState().getIOConfig().getOutputDir();
             fs::path output_path(output_dir);
             fs::path deck_filename(EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName));
@@ -587,7 +587,7 @@ namespace Opm
                 report.reportFullyImplicit(ss);
                 OpmLog::info(ss.str());
                 const std::string dir = eclState().getIOConfig().getOutputDir();
-                namespace fs = Opm::filesystem;
+                namespace fs = ::Opm::filesystem;
                 fs::path output_dir(dir);
                 {
                     std::string filename = eclState().getIOConfig().getBaseName() + ".INFOSTEP";
@@ -615,7 +615,7 @@ namespace Opm
 
                 // This allows a user to catch typos and misunderstandings in the
                 // use of simulator parameters.
-                if (Opm::Parameters::printUnused<TypeTag>(oss)) {
+                if (Parameters::printUnused<TypeTag>(oss)) {
                     std::cout << "-----------------   Unrecognized parameters:   -----------------\n";
                     std::cout << oss.str();
                     std::cout << "----------------------------------------------------------------" << std::endl;

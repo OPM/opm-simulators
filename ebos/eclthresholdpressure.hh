@@ -204,7 +204,7 @@ private:
         const auto& vanguard = simulator_.vanguard();
         const auto& gridView = vanguard.gridView();
 
-        typedef Opm::MathToolbox<Evaluation> Toolbox;
+        typedef MathToolbox<Evaluation> Toolbox;
         // loop over the whole grid and compute the maximum gravity adjusted pressure
         // difference between two EQUIL regions.
         auto elemIt = gridView.template begin</*codim=*/ 0>();
@@ -238,7 +238,7 @@ private:
                 // don't include connections with negligible flow
                 const Evaluation& trans = simulator_.problem().transmissibility(elemCtx, i, j);
                 Scalar faceArea = face.area();
-                if (std::abs(faceArea*Opm::getValue(trans)) < 1e-18)
+                if (std::abs(faceArea*getValue(trans)) < 1e-18)
                     continue;
 
                 // determine the maximum difference of the pressure of any phase over the
@@ -277,7 +277,7 @@ private:
         const auto& gridView = vanguard.gridView();
         const auto& elementMapper = simulator_.model().elementMapper();
         const auto& eclState = simulator_.vanguard().eclState();
-        const Opm::SimulationConfig& simConfig = eclState.getSimulationConfig();
+        const SimulationConfig& simConfig = eclState.getSimulationConfig();
         const auto& thpres = simConfig.getThresholdPressure();
 
         // set the threshold pressures for all EQUIL region boundaries which have a
@@ -338,11 +338,11 @@ private:
 
     }
 
-    void extractThpresft_(const Opm::DeckKeyword& thpresftKeyword)
+    void extractThpresft_(const DeckKeyword& thpresftKeyword)
     {
         // retrieve the faults collection.
-        const Opm::EclipseState& eclState = simulator_.vanguard().eclState();
-        const Opm::FaultCollection& faults = eclState.getFaults();
+        const EclipseState& eclState = simulator_.vanguard().eclState();
+        const FaultCollection& faults = eclState.getFaults();
 
         // extract the multipliers from the deck keyword
         int numFaults = faults.size();
@@ -350,7 +350,7 @@ private:
         thpresftValues_.resize(numFaults, -1.0);
         cartElemFaultIdx_.resize(numCartesianElem, -1);
         for (size_t recordIdx = 0; recordIdx < thpresftKeyword.size(); ++ recordIdx) {
-            const Opm::DeckRecord& record = thpresftKeyword.getRecord(recordIdx);
+            const DeckRecord& record = thpresftKeyword.getRecord(recordIdx);
 
             const std::string& faultName = record.getItem("FAULT_NAME").getTrimmedString(0);
             Scalar thpresValue = record.getItem("VALUE").getSIDouble(0);
@@ -361,7 +361,7 @@ private:
                     continue;
 
                 thpresftValues_[faultIdx] = thpresValue;
-                for (const Opm::FaultFace& face: fault)
+                for (const FaultFace& face: fault)
                     // "face" is a misnomer because the object describes a set of cell
                     // indices, but we go with the conventions of the parser here...
                     for (size_t cartElemIdx: face)

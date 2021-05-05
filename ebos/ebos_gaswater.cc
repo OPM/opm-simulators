@@ -53,23 +53,23 @@ private:
     using FluidSystem = GetPropType<TTag::EbosTypeTag, Properties::FluidSystem>;
 
 public:
-    typedef Opm::BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
-                                         getPropValue<TypeTag, Properties::EnableExtbo>(),
-                                         getPropValue<TypeTag, Properties::EnablePolymer>(),
-                                         getPropValue<TypeTag, Properties::EnableEnergy>(),
-                                         getPropValue<TypeTag, Properties::EnableFoam>(),
-                                         getPropValue<TypeTag, Properties::EnableBrine>(),
-                                         /*PVOffset=*/0,
-                                         /*disabledCompIdx=*/FluidSystem::oilCompIdx> type;
+    typedef BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
+                                    getPropValue<TypeTag, Properties::EnableExtbo>(),
+                                    getPropValue<TypeTag, Properties::EnablePolymer>(),
+                                    getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                    getPropValue<TypeTag, Properties::EnableFoam>(),
+                                    getPropValue<TypeTag, Properties::EnableBrine>(),
+                                    /*PVOffset=*/0,
+                                    /*disabledCompIdx=*/FluidSystem::oilCompIdx> type;
 };
 
 } // namespace Opm::Properties
 
 namespace Opm {
 
-void ebosGasWaterSetDeck(std::unique_ptr<Opm::Deck> deck,
-                         std::unique_ptr<Opm::ParseContext> parseContext,
-                         std::unique_ptr<Opm::ErrorGuard> errorGuard,
+void ebosGasWaterSetDeck(std::unique_ptr<Deck> deck,
+                         std::unique_ptr<ParseContext> parseContext,
+                         std::unique_ptr<ErrorGuard> errorGuard,
                          double externalSetupTime)
 {
     using ProblemTypeTag = Properties::TTag::EbosGasWaterTypeTag;
@@ -84,7 +84,7 @@ void ebosGasWaterSetDeck(std::unique_ptr<Opm::Deck> deck,
 int ebosGasWaterMain(int argc, char **argv)
 {
     using ProblemTypeTag = Properties::TTag::EbosGasWaterTypeTag;
-    return Opm::startEbos<ProblemTypeTag>(argc, argv);
+    return startEbos<ProblemTypeTag>(argc, argv);
 }
 
 }

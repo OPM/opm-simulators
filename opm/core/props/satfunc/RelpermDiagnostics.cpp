@@ -98,7 +98,7 @@ namespace Opm{
 
 
 
-    void RelpermDiagnostics::satFamilyCheck_(const Opm::EclipseState& eclState)
+    void RelpermDiagnostics::satFamilyCheck_(const EclipseState& eclState)
     {
         const PhaseUsage pu = phaseUsageFromDeck(eclState);
 
@@ -237,7 +237,7 @@ namespace Opm{
 
 
 
-    void RelpermDiagnostics::swofTableCheck_(const Opm::SwofTable& swofTables,
+    void RelpermDiagnostics::swofTableCheck_(const SwofTable& swofTables,
                                              const int satnumIdx)
     {
         const auto& sw = swofTables.getSwColumn();
@@ -272,7 +272,7 @@ namespace Opm{
 
 
 
-    void RelpermDiagnostics::sgofTableCheck_(const Opm::SgofTable& sgofTables,
+    void RelpermDiagnostics::sgofTableCheck_(const SgofTable& sgofTables,
                                              const int satnumIdx)
     {
         const auto& sg = sgofTables.getSgColumn();
@@ -307,7 +307,7 @@ namespace Opm{
         //TODO check if run with water.
     }
 
-    void RelpermDiagnostics::slgofTableCheck_(const Opm::SlgofTable& slgofTables,
+    void RelpermDiagnostics::slgofTableCheck_(const SlgofTable& slgofTables,
                                               const int satnumIdx)
     {
         const auto& sl = slgofTables.getSlColumn();
@@ -344,7 +344,7 @@ namespace Opm{
 
 
 
-    void RelpermDiagnostics::swfnTableCheck_(const Opm::SwfnTable& swfnTables,
+    void RelpermDiagnostics::swfnTableCheck_(const SwfnTable& swfnTables,
                                              const int satnumIdx)
     {
         const auto& sw = swfnTables.getSwColumn();
@@ -372,7 +372,7 @@ namespace Opm{
 
 
 
-    void RelpermDiagnostics::sgfnTableCheck_(const Opm::SgfnTable& sgfnTables,
+    void RelpermDiagnostics::sgfnTableCheck_(const SgfnTable& sgfnTables,
                                              const int satnumIdx)
     {
         const auto& sg = sgfnTables.getSgColumn();
@@ -399,7 +399,7 @@ namespace Opm{
 
 
 
-    void RelpermDiagnostics::sof3TableCheck_(const Opm::Sof3Table& sof3Tables,
+    void RelpermDiagnostics::sof3TableCheck_(const Sof3Table& sof3Tables,
                                              const int satnumIdx)
     {
         const auto& so = sof3Tables.getSoColumn();
@@ -444,7 +444,7 @@ namespace Opm{
 
 
 
-    void RelpermDiagnostics::sof2TableCheck_(const Opm::Sof2Table& sof2Tables,
+    void RelpermDiagnostics::sof2TableCheck_(const Sof2Table& sof2Tables,
                                              const int satnumIdx)
     {
         const auto& so = sof2Tables.getSoColumn();
@@ -472,7 +472,7 @@ namespace Opm{
 
 
 
-    void RelpermDiagnostics::sgwfnTableCheck_(const Opm::SgwfnTable& sgwfnTables,
+    void RelpermDiagnostics::sgwfnTableCheck_(const SgwfnTable& sgwfnTables,
                                               const int satnumIdx)
     {
         const auto& sg = sgwfnTables.getSgColumn();
@@ -509,7 +509,7 @@ namespace Opm{
 
 
 
-    void RelpermDiagnostics::sgcwmisTableCheck_(const Opm::SgcwmisTable& sgcwmisTables,
+    void RelpermDiagnostics::sgcwmisTableCheck_(const SgcwmisTable& sgcwmisTables,
                                                 const int satnumIdx)
     {
         const auto& sw = sgcwmisTables.getWaterSaturationColumn();
@@ -532,7 +532,7 @@ namespace Opm{
 
 
 
-    void RelpermDiagnostics::sorwmisTableCheck_(const Opm::SorwmisTable& sorwmisTables,
+    void RelpermDiagnostics::sorwmisTableCheck_(const SorwmisTable& sorwmisTables,
                                                 const int satnumIdx)
     {
         const auto& sw = sorwmisTables.getWaterSaturationColumn();
@@ -554,7 +554,7 @@ namespace Opm{
 
 
 
-    void RelpermDiagnostics::ssfnTableCheck_(const Opm::SsfnTable& ssfnTables,
+    void RelpermDiagnostics::ssfnTableCheck_(const SsfnTable& ssfnTables,
                                              const int satnumIdx)
     {
         const auto& frac = ssfnTables.getSolventFractionColumn();
@@ -585,7 +585,7 @@ namespace Opm{
 
 
 
-    void RelpermDiagnostics::miscTableCheck_(const Opm::MiscTable& miscTables,
+    void RelpermDiagnostics::miscTableCheck_(const MiscTable& miscTables,
                                              const int miscnumIdx)
     {
         const auto& frac = miscTables.getSolventFractionColumn();
@@ -609,7 +609,7 @@ namespace Opm{
 
 
 
-    void RelpermDiagnostics::msfnTableCheck_(const Opm::MsfnTable& msfnTables,
+    void RelpermDiagnostics::msfnTableCheck_(const MsfnTable& msfnTables,
                                              const int satnumIdx)
     {
         const auto& frac = msfnTables.getGasPhaseFractionColumn();
@@ -730,7 +730,7 @@ namespace Opm{
     }
 
     template <class CartesianIndexMapper>
-    void RelpermDiagnostics::diagnosis(const Opm::EclipseState& eclState,
+    void RelpermDiagnostics::diagnosis(const EclipseState& eclState,
                                        const CartesianIndexMapper& cartesianIndexMapper)
     {
         OpmLog::info("\n===============Saturation Functions Diagnostics===============\n");

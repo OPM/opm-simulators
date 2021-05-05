@@ -190,7 +190,7 @@ struct LinearSolverIgnoreConvergenceFailure<TypeTag, TTag::FlowIstlSolverParams>
 };
 template<class TypeTag>
 struct LinearSolverBackend<TypeTag, TTag::FlowIstlSolverParams> {
-    using type = Opm::ISTLSolverEbos<TypeTag>;
+    using type = ISTLSolverEbos<TypeTag>;
 };
 template<class TypeTag>
 struct PreconditionerAddWellContributions<TypeTag, TTag::FlowIstlSolverParams> {
@@ -252,7 +252,7 @@ namespace Opm
         int    linear_solver_restart_;
         int    linear_solver_verbosity_;
         int    ilu_fillin_level_;
-        Opm::MILU_VARIANT   ilu_milu_;
+        MILU_VARIANT   ilu_milu_;
         bool   ilu_redblack_;
         bool   ilu_reorder_sphere_;
         bool   newton_use_gmres_;

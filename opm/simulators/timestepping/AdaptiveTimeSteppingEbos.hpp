@@ -409,21 +409,21 @@ namespace Opm {
                         OpmLog::debug("Overall linear iterations used: " + std::to_string(substepReport.total_linear_iterations));
                     }
                 }
-                catch (const Opm::TooManyIterations& e) {
+                catch (const TooManyIterations& e) {
                     substepReport = solver.failureReport();
                     causeOfFailure = "Solver convergence failure - Iteration limit reached";
 
                     logException_(e, solverVerbose_);
                     // since linearIterations is < 0 this will restart the solver
                 }
-                catch (const Opm::LinearSolverProblem& e) {
+                catch (const LinearSolverProblem& e) {
                     substepReport = solver.failureReport();
                     causeOfFailure = "Linear solver convergence failure";
 
                     logException_(e, solverVerbose_);
                     // since linearIterations is < 0 this will restart the solver
                 }
-                catch (const Opm::NumericalIssue& e) {
+                catch (const NumericalIssue& e) {
                     substepReport = solver.failureReport();
                     causeOfFailure = "Solver convergence failure - Numerical problem encountered";
 
@@ -496,7 +496,7 @@ namespace Opm {
                         if (fipnum) {
                             solver.computeFluidInPlace(*fipnum);
                         }
-                        Opm::time::StopWatch perfTimer;
+                        time::StopWatch perfTimer;
                         perfTimer.start();
 
                         ebosProblem.writeOutput();
@@ -522,7 +522,7 @@ namespace Opm {
                         if (solverVerbose_) {
                             OpmLog::error(msg);
                         }
-                        OPM_THROW_NOLOG(Opm::NumericalIssue, msg);
+                        OPM_THROW_NOLOG(NumericalIssue, msg);
                     }
 
                     // The new, chopped timestep.
@@ -538,7 +538,7 @@ namespace Opm {
                         if (solverVerbose_) {
                             OpmLog::error(msg);
                         }
-                        OPM_THROW_NOLOG(Opm::NumericalIssue, msg);
+                        OPM_THROW_NOLOG(NumericalIssue, msg);
                     }
 
                     // Define utility function for chopping timestep.

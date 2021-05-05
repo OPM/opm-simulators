@@ -252,20 +252,20 @@ public:
      * The input can either be the canonical deck file name or the name of the case
      * (i.e., without the .DATA extension)
      */
-    static Opm::filesystem::path canonicalDeckPath(const std::string& caseName)
+    static filesystem::path canonicalDeckPath(const std::string& caseName)
     {
-        const auto fileExists = [](const Opm::filesystem::path& f) -> bool
+        const auto fileExists = [](const filesystem::path& f) -> bool
             {
-                if (!Opm::filesystem::exists(f))
+                if (!filesystem::exists(f))
                     return false;
 
-                if (Opm::filesystem::is_regular_file(f))
+                if (filesystem::is_regular_file(f))
                     return true;
 
-                return Opm::filesystem::is_symlink(f) && Opm::filesystem::is_regular_file(Opm::filesystem::read_symlink(f));
+                return filesystem::is_symlink(f) && filesystem::is_regular_file(filesystem::read_symlink(f));
             };
 
-        auto simcase = Opm::filesystem::path(caseName);
+        auto simcase = filesystem::path(caseName);
         if (fileExists(simcase))
             return simcase;
 
@@ -280,18 +280,18 @@ public:
     /*!
      * \brief Creates an Opm::parseContext object assuming that the parameters are ready.
      */
-    static std::unique_ptr<Opm::ParseContext> createParseContext()
+    static std::unique_ptr<ParseContext> createParseContext()
     {
-        typedef std::pair<std::string, Opm::InputError::Action> ParseModePair;
+        typedef std::pair<std::string, InputError::Action> ParseModePair;
         typedef std::vector<ParseModePair> ParseModePairs;
         ParseModePairs tmp;
-        tmp.emplace_back(Opm::ParseContext::PARSE_RANDOM_SLASH, Opm::InputError::IGNORE);
-        tmp.emplace_back(Opm::ParseContext::PARSE_MISSING_DIMS_KEYWORD, Opm::InputError::WARN);
-        tmp.emplace_back(Opm::ParseContext::SUMMARY_UNKNOWN_WELL, Opm::InputError::WARN);
-        tmp.emplace_back(Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN);
-        tmp.emplace_back(Opm::ParseContext::PARSE_EXTRA_RECORDS, Opm::InputError::WARN);
+        tmp.emplace_back(ParseContext::PARSE_RANDOM_SLASH, InputError::IGNORE);
+        tmp.emplace_back(ParseContext::PARSE_MISSING_DIMS_KEYWORD, InputError::WARN);
+        tmp.emplace_back(ParseContext::SUMMARY_UNKNOWN_WELL, InputError::WARN);
+        tmp.emplace_back(ParseContext::SUMMARY_UNKNOWN_GROUP, InputError::WARN);
+        tmp.emplace_back(ParseContext::PARSE_EXTRA_RECORDS, InputError::WARN);
 
-        auto parseContext = std::make_unique<Opm::ParseContext>(tmp);
+        auto parseContext = std::make_unique<ParseContext>(tmp);
 
         const std::string ignoredKeywords = EWOMS_GET_PARAM(TypeTag, std::string, IgnoreKeywords);
         if (ignoredKeywords.size() > 0) {
@@ -309,7 +309,7 @@ public:
         }
 
         if (EWOMS_GET_PARAM(TypeTag, bool, EclStrictParsing))
-            parseContext->update(Opm::InputError::DELAYED_EXIT1);
+            parseContext->update(InputError::DELAYED_EXIT1);
 
         return parseContext;
     }
@@ -331,13 +331,13 @@ public:
     /*!
      * \brief Set the Opm::ParseContext object which ought to be used for parsing the deck and creating the Opm::EclipseState object.
      */
-    static void setExternalParseContext(std::unique_ptr<Opm::ParseContext> parseContext)
+    static void setExternalParseContext(std::unique_ptr<ParseContext> parseContext)
     { externalParseContext_ = std::move(parseContext); }
 
     /*!
      * \brief Set the Opm::ErrorGuard object which ought to be used for parsing the deck and creating the Opm::EclipseState object.
      */
-    static void setExternalErrorGuard(std::unique_ptr<Opm::ErrorGuard> errorGuard)
+    static void setExternalErrorGuard(std::unique_ptr<ErrorGuard> errorGuard)
     { externalErrorGuard_ = std::move(errorGuard); }
 
     /*!
@@ -350,13 +350,13 @@ public:
      * management of these two objects, i.e., they are not allowed to be deleted as long
      * as the simulator vanguard object is alive.
      */
-    static void setExternalDeck(std::unique_ptr<Opm::Deck> deck)
+    static void setExternalDeck(std::unique_ptr<Deck> deck)
     { externalDeck_ = std::move(deck); externalDeckSet_ = true; }
     /*!
      * \brief Set the Opm::EclipseState object which ought to be used when the simulator
      *        vanguard is instantiated.
      */
-    static void setExternalEclState(std::unique_ptr<Opm::EclipseState> eclState)
+    static void setExternalEclState(std::unique_ptr<EclipseState> eclState)
     { externalEclState_ = std::move(eclState); }
 
     /*!
@@ -455,9 +455,9 @@ public:
                  std::move(parseContext_), /* initFromRestart = */ false,
                  /* checkDeck = */ enableExperiments, outputInterval);
 
-        this->summaryState_ = std::make_unique<Opm::SummaryState>( Opm::TimeService::from_time_t(this->eclSchedule_->getStartTime() ));
-        this->udqState_ = std::make_unique<Opm::UDQState>( this->eclSchedule_->getUDQConfig(0).params().undefinedValue() );
-        this->actionState_ = std::make_unique<Opm::Action::State>() ;
+        this->summaryState_ = std::make_unique<SummaryState>( TimeService::from_time_t(this->eclSchedule_->getStartTime() ));
+        this->udqState_ = std::make_unique<UDQState>( this->eclSchedule_->getUDQConfig(0).params().undefinedValue() );
+        this->actionState_ = std::make_unique<Action::State>() ;
 
         // Initialize parallelWells with all local wells
         const auto& schedule_wells = schedule().getWellsatEnd();
@@ -512,28 +512,28 @@ public:
     /*!
      * \brief Return a reference to the parsed ECL deck.
      */
-    const Opm::Deck& deck() const
+    const Deck& deck() const
     { return *deck_; }
 
-    Opm::Deck& deck()
+    Deck& deck()
     { return *deck_; }
 
     /*!
      * \brief Return a reference to the internalized ECL deck.
      */
-    const Opm::EclipseState& eclState() const
+    const EclipseState& eclState() const
     { return *eclState_; }
 
-    Opm::EclipseState& eclState()
+    EclipseState& eclState()
     { return *eclState_; }
 
     /*!
      * \brief Return a reference to the object that managages the ECL schedule.
      */
-    const Opm::Schedule& schedule() const
+    const Schedule& schedule() const
     { return *eclSchedule_; }
 
-    Opm::Schedule& schedule()
+    Schedule& schedule()
     { return *eclSchedule_; }
 
     /*!
@@ -542,14 +542,14 @@ public:
      * The lifetime of this object is not managed by the vanguard, i.e., the object must
      * stay valid until after the vanguard gets destroyed.
      */
-    static void setExternalSchedule(std::unique_ptr<Opm::Schedule> schedule)
+    static void setExternalSchedule(std::unique_ptr<Schedule> schedule)
     { externalEclSchedule_ = std::move(schedule); }
 
     /*!
      * \brief Return a reference to the object that determines which quantities ought to
      *        be put into the ECL summary output.
      */
-    const Opm::SummaryConfig& summaryConfig() const
+    const SummaryConfig& summaryConfig() const
     { return *eclSummaryConfig_; }
 
     /*!
@@ -558,7 +558,7 @@ public:
      * The lifetime of this object is not managed by the vanguard, i.e., the object must
      * stay valid until after the vanguard gets destroyed.
      */
-    static void setExternalSummaryConfig(std::unique_ptr<Opm::SummaryConfig> summaryConfig)
+    static void setExternalSummaryConfig(std::unique_ptr<SummaryConfig> summaryConfig)
     { externalEclSummaryConfig_ = std::move(summaryConfig); }
 
 
@@ -569,10 +569,10 @@ public:
     * computed, ready to use summary values. The values will typically be used by
     * the UDQ, WTEST and ACTIONX calculations.
     */
-    Opm::SummaryState& summaryState()
+    SummaryState& summaryState()
     { return *summaryState_; }
 
-    const Opm::SummaryState& summaryState() const
+    const SummaryState& summaryState() const
     { return *summaryState_; }
 
 
@@ -581,10 +581,10 @@ public:
      *
      * The ActionState keeps track of how many times the various actions have run.
      */
-    Opm::Action::State& actionState()
+    Action::State& actionState()
     { return *actionState_; }
 
-    const Opm::Action::State& actionState() const
+    const Action::State& actionState() const
     { return *actionState_; }
 
     /*!
@@ -592,10 +592,10 @@ public:
      *
      * The UDQState keeps track of the result of UDQ evaluations.
      */
-    Opm::UDQState& udqState()
+    UDQState& udqState()
     { return *udqState_; }
 
-    const Opm::UDQState& udqState() const
+    const UDQState& udqState() const
     { return *udqState_; }
 
     /*!
@@ -829,7 +829,7 @@ protected:
         const auto& schEndIt = this->schedule().end();
         for(; schIt != schEndIt; ++schIt) {
             const auto& oilVaporizationControl = schIt->oilvap();
-            if(oilVaporizationControl.getType() == Opm::OilVaporizationProperties::OilVaporization::DRSDTCON) {
+            if(oilVaporizationControl.getType() == OilVaporizationProperties::OilVaporization::DRSDTCON) {
                 drsdtcon = true;
                 break;
             }
@@ -868,9 +868,9 @@ private:
             outputDir = ioConfig.getOutputDir();
 
         // ensure that the output directory exists and that it is a directory
-        if (!Opm::filesystem::is_directory(outputDir)) {
+        if (!filesystem::is_directory(outputDir)) {
             try {
-                Opm::filesystem::create_directories(outputDir);
+                filesystem::create_directories(outputDir);
             }
             catch (...) {
                  throw std::runtime_error("Creation of output directory '"+outputDir+"' failed\n");
@@ -910,27 +910,27 @@ private:
 
     static Scalar externalSetupTime_;
 
-    static std::unique_ptr<Opm::ParseContext> externalParseContext_;
-    static std::unique_ptr<Opm::ErrorGuard> externalErrorGuard_;
-    static std::unique_ptr<Opm::Deck> externalDeck_;
+    static std::unique_ptr<ParseContext> externalParseContext_;
+    static std::unique_ptr<ErrorGuard> externalErrorGuard_;
+    static std::unique_ptr<Deck> externalDeck_;
     static bool externalDeckSet_;
-    static std::unique_ptr<Opm::EclipseState> externalEclState_;
-    static std::unique_ptr<Opm::Schedule> externalEclSchedule_;
-    static std::unique_ptr<Opm::SummaryConfig> externalEclSummaryConfig_;
+    static std::unique_ptr<EclipseState> externalEclState_;
+    static std::unique_ptr<Schedule> externalEclSchedule_;
+    static std::unique_ptr<SummaryConfig> externalEclSummaryConfig_;
 
-    std::unique_ptr<Opm::SummaryState> summaryState_;
-    std::unique_ptr<Opm::Action::State> actionState_;
-    std::unique_ptr<Opm::UDQState> udqState_;
+    std::unique_ptr<SummaryState> summaryState_;
+    std::unique_ptr<Action::State> actionState_;
+    std::unique_ptr<UDQState> udqState_;
 
     // these attributes point  either to the internal  or to the external version of the
     // parser objects.
-    std::unique_ptr<Opm::ParseContext> parseContext_;
-    std::unique_ptr<Opm::ErrorGuard> errorGuard_;
-    std::unique_ptr<Opm::Deck> deck_;
-    std::unique_ptr<Opm::EclipseState> eclState_;
-    std::unique_ptr<Opm::Schedule> eclSchedule_;
-    std::unique_ptr<Opm::SummaryConfig> eclSummaryConfig_;
-    std::shared_ptr<Opm::Python> python = std::make_shared<Opm::Python>();
+    std::unique_ptr<ParseContext> parseContext_;
+    std::unique_ptr<ErrorGuard> errorGuard_;
+    std::unique_ptr<Deck> deck_;
+    std::unique_ptr<EclipseState> eclState_;
+    std::unique_ptr<Schedule> eclSchedule_;
+    std::unique_ptr<SummaryConfig> eclSummaryConfig_;
+    std::shared_ptr<Python> python = std::make_shared<Python>();
 
     Dune::EdgeWeightMethod edgeWeightsMethod_;
     bool ownersFirst_;
@@ -971,25 +971,25 @@ template <class TypeTag>
 typename EclBaseVanguard<TypeTag>::Scalar EclBaseVanguard<TypeTag>::externalSetupTime_ = 0.0;
 
 template <class TypeTag>
-std::unique_ptr<Opm::ParseContext> EclBaseVanguard<TypeTag>::externalParseContext_ = nullptr;
+std::unique_ptr<ParseContext> EclBaseVanguard<TypeTag>::externalParseContext_ = nullptr;
 
 template <class TypeTag>
-std::unique_ptr<Opm::ErrorGuard> EclBaseVanguard<TypeTag>::externalErrorGuard_ = nullptr;
+std::unique_ptr<ErrorGuard> EclBaseVanguard<TypeTag>::externalErrorGuard_ = nullptr;
 
 template <class TypeTag>
-std::unique_ptr<Opm::Deck> EclBaseVanguard<TypeTag>::externalDeck_ = nullptr;
+std::unique_ptr<Deck> EclBaseVanguard<TypeTag>::externalDeck_ = nullptr;
 
 template <class TypeTag>
 bool EclBaseVanguard<TypeTag>::externalDeckSet_ = false;
 
 template <class TypeTag>
-std::unique_ptr<Opm::EclipseState> EclBaseVanguard<TypeTag>::externalEclState_;
+std::unique_ptr<EclipseState> EclBaseVanguard<TypeTag>::externalEclState_;
 
 template <class TypeTag>
-std::unique_ptr<Opm::Schedule> EclBaseVanguard<TypeTag>::externalEclSchedule_ = nullptr;
+std::unique_ptr<Schedule> EclBaseVanguard<TypeTag>::externalEclSchedule_ = nullptr;
 
 template <class TypeTag>
-std::unique_ptr<Opm::SummaryConfig> EclBaseVanguard<TypeTag>::externalEclSummaryConfig_ = nullptr;
+std::unique_ptr<SummaryConfig> EclBaseVanguard<TypeTag>::externalEclSummaryConfig_ = nullptr;
 
 } // namespace Opm
 

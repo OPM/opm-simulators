@@ -204,7 +204,7 @@ BlackoilAquiferModel<TypeTag>::init()
         const auto& num_aquifers = aquifer.numericalAquifers().aquifers();
         const auto& ugrid = simulator_.vanguard().grid();
         const int number_of_cells = simulator_.gridView().size(0);
-        const int* global_cell = Opm::UgGridHelpers::globalCell(ugrid);
+        const int* global_cell = UgGridHelpers::globalCell(ugrid);
         const std::unordered_map<int, int> cartesian_to_compressed = cartesianToCompressed(number_of_cells,
                                                                                            global_cell);
         for ([[maybe_unused]]const auto& [id, aqu] : num_aquifers) {
@@ -234,25 +234,25 @@ BlackoilAquiferModel<TypeTag>::aquiferNumericalActive() const
 }
 
 template<typename TypeTag>
-Opm::data::Aquifers BlackoilAquiferModel<TypeTag>::aquiferData() const {
-    Opm::data::Aquifers data;
+data::Aquifers BlackoilAquiferModel<TypeTag>::aquiferData() const {
+    data::Aquifers data;
     if (this->aquiferCarterTracyActive()) {
         for (const auto& aqu : aquifers_CarterTracy) {
-            Opm::data::AquiferData aqu_data = aqu.aquiferData();
+            data::AquiferData aqu_data = aqu.aquiferData();
             data[aqu_data.aquiferID] = aqu_data;
         }
     }
 
     if (this->aquiferFetkovichActive()) {
         for (const auto& aqu : aquifers_Fetkovich) {
-            Opm::data::AquiferData aqu_data = aqu.aquiferData();
+            data::AquiferData aqu_data = aqu.aquiferData();
             data[aqu_data.aquiferID] = aqu_data;
         }
     }
 
     if (this->aquiferNumericalActive()) {
         for (const auto& aqu : this->aquifers_numerical) {
-            Opm::data::AquiferData aqu_data = aqu.aquiferData();
+            data::AquiferData aqu_data = aqu.aquiferData();
             data[aqu_data.aquiferID] = aqu_data;
         }
     }
