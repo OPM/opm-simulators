@@ -107,7 +107,7 @@ class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
     enum { waterCompIdx = FluidSystem::waterCompIdx };
     enum { oilCompIdx = FluidSystem::oilCompIdx };
 
-    using Toolbox = typename Opm::MathToolbox<Evaluation>;
+    using Toolbox = MathToolbox<Evaluation>;
     using ComponentVector = Dune::FieldVector<Scalar, numComponents>;
     using SolventModule = BlackOilSolventModule<TypeTag, enableSolvent>;
     using ExtboModule = BlackOilExtboModule<TypeTag, enableExtbo>;
@@ -130,7 +130,7 @@ public:
     BlackOilPrimaryVariables()
         : ParentType()
     {
-        Opm::Valgrind::SetUndefined(*this);
+        Valgrind::SetUndefined(*this);
         pvtRegionIdx_ = 0;
     }
 
@@ -140,7 +140,7 @@ public:
     BlackOilPrimaryVariables(Scalar value)
         : ParentType(value)
     {
-        Opm::Valgrind::SetUndefined(primaryVarsMeaning_);
+        Valgrind::SetUndefined(primaryVarsMeaning_);
         pvtRegionIdx_ = 0;
     }
 
@@ -190,13 +190,13 @@ public:
     {
         using ConstEvaluation = typename std::remove_reference<typename FluidState::Scalar>::type;
         using FsEvaluation = typename std::remove_const<ConstEvaluation>::type;
-        using FsToolbox = typename Opm::MathToolbox<FsEvaluation>;
+        using FsToolbox = MathToolbox<FsEvaluation>;
 
 #ifndef NDEBUG
         // make sure the temperature is the same in all fluid phases
         for (unsigned phaseIdx = 1; phaseIdx < numPhases; ++phaseIdx) {
-            Opm::Valgrind::CheckDefined(fluidState.temperature(0));
-            Opm::Valgrind::CheckDefined(fluidState.temperature(phaseIdx));
+            Valgrind::CheckDefined(fluidState.temperature(0));
+            Valgrind::CheckDefined(fluidState.temperature(phaseIdx));
 
             assert(fluidState.temperature(0) == fluidState.temperature(phaseIdx));
         }
@@ -216,8 +216,8 @@ public:
         paramCache.setMaxOilSat(FsToolbox::value(fluidState.saturation(oilPhaseIdx)));
 
         // create a mutable fluid state with well defined densities based on the input
-        using NcpFlash = Opm::NcpFlash<Scalar, FluidSystem>;
-        using FlashFluidState = Opm::CompositionalFluidState<Scalar, FluidSystem>;
+        using NcpFlash = NcpFlash<Scalar, FluidSystem>;
+        using FlashFluidState = CompositionalFluidState<Scalar, FluidSystem>;
         FlashFluidState fsFlash;
         fsFlash.setTemperature(FsToolbox::value(fluidState.temperature(/*phaseIdx=*/0)));
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
@@ -266,7 +266,7 @@ public:
     {
         using ConstEvaluation = typename std::remove_reference<typename FluidState::Scalar>::type;
         using FsEvaluation = typename std::remove_const<ConstEvaluation>::type;
-        using FsToolbox = typename Opm::MathToolbox<FsEvaluation>;
+        using FsToolbox = MathToolbox<FsEvaluation>;
 
         bool gasPresent = FluidSystem::phaseIsActive(gasPhaseIdx)?(fluidState.saturation(gasPhaseIdx) > 0.0):false;
         bool oilPresent = FluidSystem::phaseIsActive(oilPhaseIdx)?(fluidState.saturation(oilPhaseIdx) > 0.0):false;
@@ -320,7 +320,7 @@ public:
                 (*this)[compositionSwitchIdx] = FsToolbox::value(fluidState.saturation(gasPhaseIdx));
         }
         else if (primaryVarsMeaning() == Sw_po_Rs) {
-            const auto& Rs = Opm::BlackOil::getRs_<FluidSystem, FluidState, Scalar>(fluidState, pvtRegionIdx_);
+            const auto& Rs = BlackOil::getRs_<FluidSystem, FluidState, Scalar>(fluidState, pvtRegionIdx_);
 
             if (waterEnabled)
                 (*this)[waterSaturationIdx] = FsToolbox::value(fluidState.saturation(waterPhaseIdx));
@@ -331,7 +331,7 @@ public:
         else {
             assert(primaryVarsMeaning() == Sw_pg_Rv);
 
-            const auto& Rv = Opm::BlackOil::getRv_<FluidSystem, FluidState, Scalar>(fluidState, pvtRegionIdx_);
+            const auto& Rv = BlackOil::getRv_<FluidSystem, FluidState, Scalar>(fluidState, pvtRegionIdx_);
             if (waterEnabled)
                 (*this)[waterSaturationIdx] = FsToolbox::value(fluidState.saturation(waterPhaseIdx));
 
@@ -678,11 +678,11 @@ public:
 #ifndef NDEBUG
         // check the "real" primary variables
         for (unsigned i = 0; i < this->size(); ++i)
-            Opm::Valgrind::CheckDefined((*this)[i]);
+            Valgrind::CheckDefined((*this)[i]);
 
         // check the "pseudo" primary variables
-        Opm::Valgrind::CheckDefined(primaryVarsMeaning_);
-        Opm::Valgrind::CheckDefined(pvtRegionIdx_);
+        Valgrind::CheckDefined(primaryVarsMeaning_);
+        Valgrind::CheckDefined(pvtRegionIdx_);
 #endif // NDEBUG
     }
 
@@ -748,18 +748,18 @@ private:
                                     Scalar Sw,
                                     const MaterialLawParams& matParams) const
     {
-        using SatOnlyFluidState = Opm::SimpleModularFluidState<Scalar,
-                                                               numPhases,
-                                                               numComponents,
-                                                               FluidSystem,
-                                                               /*storePressure=*/false,
-                                                               /*storeTemperature=*/false,
-                                                               /*storeComposition=*/false,
-                                                               /*storeFugacity=*/false,
-                                                               /*storeSaturation=*/true,
-                                                               /*storeDensity=*/false,
-                                                               /*storeViscosity=*/false,
-                                                               /*storeEnthalpy=*/false>;
+        using SatOnlyFluidState = SimpleModularFluidState<Scalar,
+                                                          numPhases,
+                                                          numComponents,
+                                                          FluidSystem,
+                                                          /*storePressure=*/false,
+                                                          /*storeTemperature=*/false,
+                                                          /*storeComposition=*/false,
+                                                          /*storeFugacity=*/false,
+                                                          /*storeSaturation=*/true,
+                                                          /*storeDensity=*/false,
+                                                          /*storeViscosity=*/false,
+                                                          /*storeEnthalpy=*/false>;
         SatOnlyFluidState fluidState;
         fluidState.setSaturation(waterPhaseIdx, Sw);
         fluidState.setSaturation(oilPhaseIdx, So);

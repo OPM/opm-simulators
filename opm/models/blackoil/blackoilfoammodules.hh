@@ -72,9 +72,9 @@ class BlackOilFoamModule
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
 
-    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using Toolbox = MathToolbox<Evaluation>;
 
-    using TabulatedFunction = typename Opm::Tabulated1DFunction<Scalar>;
+    using TabulatedFunction = Tabulated1DFunction<Scalar>;
 
     static constexpr unsigned foamConcentrationIdx = Indices::foamConcentrationIdx;
     static constexpr unsigned contiFoamEqIdx = Indices::contiFoamEqIdx;
@@ -114,7 +114,7 @@ public:
     /*!
      * \brief Initialize all internal data structures needed by the foam module
      */
-    static void initFromState(const Opm::EclipseState& eclState)
+    static void initFromState(const EclipseState& eclState)
     {
         // some sanity checks: if foam is enabled, the FOAM keyword must be
         // present, if foam is disabled the keyword must not be present.
@@ -147,7 +147,7 @@ public:
         setNumPvtRegions(numPvtRegions);
 
         // Get and check FOAMROCK data.
-        const Opm::FoamConfig& foamConf = eclState.getInitConfig().getFoamConfig();
+        const FoamConfig& foamConf = eclState.getInitConfig().getFoamConfig();
         if (numSatRegions != foamConf.size()) {
             throw std::runtime_error("Inconsistent sizes, number of saturation regions differ from the number of elements "
                                      "in FoamConfig, which typically corresponds to the number of records in FOAMROCK.");
@@ -172,7 +172,7 @@ public:
             foamCoefficients_[satReg].ep_surf = rec.exponent();
             foamRockDensity_[satReg] = rec.rockDensity();
             foamAllowDesorption_[satReg] = rec.allowDesorption();
-            const auto& foamadsTable = foamadsTables.template getTable<Opm::FoamadsTable>(satReg);
+            const auto& foamadsTable = foamadsTables.template getTable<FoamadsTable>(satReg);
             const auto& conc = foamadsTable.getFoamConcentrationColumn();
             const auto& ads = foamadsTable.getAdsorbedFoamColumn();
             adsorbedFoamTable_[satReg].setXYContainers(conc, ads);
@@ -193,7 +193,7 @@ public:
 
         // Set data that vary with PVT region.
         for (std::size_t pvtReg = 0; pvtReg < numPvtRegions; ++pvtReg) {
-            const auto& foammobTable = foammobTables.template getTable<Opm::FoammobTable>(pvtReg);
+            const auto& foammobTable = foammobTables.template getTable<FoammobTable>(pvtReg);
             const auto& conc = foammobTable.getFoamConcentrationColumn();
             const auto& mobMult = foammobTable.getMobilityMultiplierColumn();
             gasMobilityMultiplierTable_[pvtReg].setXYContainers(conc, mobMult);
@@ -231,7 +231,7 @@ public:
             // foam has been disabled at compile time
             return;
 
-        //Opm::VtkBlackOilFoamModule<TypeTag>::registerParameters();
+        //VtkBlackOilFoamModule<TypeTag>::registerParameters();
     }
 
     /*!
@@ -245,9 +245,9 @@ public:
             return;
 
         if (enableVtkOutput) {
-            Opm::OpmLog::warning("VTK output requested, currently unsupported by the foam module.");
+            OpmLog::warning("VTK output requested, currently unsupported by the foam module.");
         }
-        //model.addOutputModule(new Opm::VtkBlackOilFoamModule<TypeTag>(simulator));
+        //model.addOutputModule(new VtkBlackOilFoamModule<TypeTag>(simulator));
     }
 
     static bool primaryVarApplies(unsigned pvIdx)
@@ -313,7 +313,7 @@ public:
             * Toolbox::template decay<LhsEval>(intQuants.porosity());
 
         // Avoid singular matrix if no gas is present.
-        surfaceVolumeFreeGas = Opm::max(surfaceVolumeFreeGas, 1e-10);
+        surfaceVolumeFreeGas = max(surfaceVolumeFreeGas, 1e-10);
 
         // Foam/surfactant in gas phase.
         const LhsEval gasFoam = surfaceVolumeFreeGas
@@ -355,8 +355,8 @@ public:
         } else {
             flux[contiFoamEqIdx] =
                 extQuants.volumeFlux(gasPhaseIdx)
-                *Opm::decay<Scalar>(up.fluidState().invB(gasPhaseIdx))
-                *Opm::decay<Scalar>(up.foamConcentration());
+                *decay<Scalar>(up.fluidState().invB(gasPhaseIdx))
+                *decay<Scalar>(up.foamConcentration());
         }
 
     }

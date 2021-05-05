@@ -89,8 +89,8 @@ public:
         // normal or in the opposite one
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!elemCtx.model().phaseIsConsidered(phaseIdx)) {
-                Opm::Valgrind::SetUndefined(upstreamScvIdx_[phaseIdx]);
-                Opm::Valgrind::SetUndefined(downstreamScvIdx_[phaseIdx]);
+                Valgrind::SetUndefined(upstreamScvIdx_[phaseIdx]);
+                Valgrind::SetUndefined(downstreamScvIdx_[phaseIdx]);
                 continue;
             }
 

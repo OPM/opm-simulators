@@ -57,7 +57,7 @@ struct AutoDiffLocalLinearizer {};
 // set the properties to be spliced in
 template<class TypeTag>
 struct LocalLinearizer<TypeTag, TTag::AutoDiffLocalLinearizer>
-{ using type = Opm::FvBaseAdLocalLinearizer<TypeTag>; };
+{ using type = FvBaseAdLocalLinearizer<TypeTag>; };
 
 //! Set the function evaluation w.r.t. the primary variables
 template<class TypeTag>
@@ -69,7 +69,7 @@ private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    using type = Opm::DenseAd::Evaluation<Scalar, numEq>;
+    using type = DenseAd::Evaluation<Scalar, numEq>;
 };
 
 } // namespace Opm::Properties
@@ -286,7 +286,7 @@ protected:
                     // with regard to the focus variable 'pvIdx' of the degree of freedom
                     // 'focusDofIdx'
                     jacobian_[dofIdx][focusDofIdx][eqIdx][pvIdx] = resid[dofIdx][eqIdx].derivative(pvIdx);
-                    Opm::Valgrind::CheckDefined(jacobian_[dofIdx][focusDofIdx][eqIdx][pvIdx]);
+                    Valgrind::CheckDefined(jacobian_[dofIdx][focusDofIdx][eqIdx][pvIdx]);
                 }
             }
         }

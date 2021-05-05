@@ -73,7 +73,7 @@ public:
         extrusionFactor_ =
             (elemCtx.intensiveQuantities(interiorScvIdx_, timeIdx).extrusionFactor()
              + elemCtx.intensiveQuantities(exteriorScvIdx_, timeIdx).extrusionFactor()) / 2;
-        Opm::Valgrind::CheckDefined(extrusionFactor_);
+        Valgrind::CheckDefined(extrusionFactor_);
         assert(extrusionFactor_ > 0);
     }
 
@@ -99,7 +99,7 @@ public:
         exteriorScvIdx_ = static_cast<unsigned short>(dofIdx);
 
         extrusionFactor_ = context.intensiveQuantities(bfIdx, timeIdx).extrusionFactor();
-        Opm::Valgrind::CheckDefined(extrusionFactor_);
+        Valgrind::CheckDefined(extrusionFactor_);
         assert(extrusionFactor_ > 0);
     }
 

@@ -69,7 +69,7 @@ private:
     using GridView = GetPropType<TypeTag, Properties::GridView>;
 
     static const int vtkOutputFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
-    using VtkMultiWriter = Opm::VtkMultiWriter<GridView, vtkOutputFormat>;
+    using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkOutputFormat>;
 
     using Model = GetPropType<TypeTag, Properties::Model>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;

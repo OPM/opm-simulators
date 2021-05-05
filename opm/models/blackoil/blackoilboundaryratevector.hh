@@ -65,7 +65,7 @@ class BlackOilBoundaryRateVector : public GetPropType<TypeTag, Properties::RateV
 
     static constexpr bool blackoilConserveSurfaceVolume = getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>();
 
-    using EnergyModule = Opm::BlackOilEnergyModule<TypeTag, enableEnergy>;
+    using EnergyModule = BlackOilEnergyModule<TypeTag, enableEnergy>;
 
 public:
     /*!
@@ -146,8 +146,8 @@ public:
                         specificEnthalpy = fluidState.enthalpy(phaseIdx);
                     }
                     else {
-                        density = Opm::getValue(fluidState.density(phaseIdx));
-                        specificEnthalpy = Opm::getValue(fluidState.enthalpy(phaseIdx));
+                        density = getValue(fluidState.density(phaseIdx));
+                        specificEnthalpy = getValue(fluidState.enthalpy(phaseIdx));
                     }
                 }
                 else if (focusDofIdx == interiorDofIdx) {
@@ -155,8 +155,8 @@ public:
                     specificEnthalpy = insideIntQuants.fluidState().enthalpy(phaseIdx);
                 }
                 else {
-                    density = Opm::getValue(insideIntQuants.fluidState().density(phaseIdx));
-                    specificEnthalpy = Opm::getValue(insideIntQuants.fluidState().enthalpy(phaseIdx));
+                    density = getValue(insideIntQuants.fluidState().density(phaseIdx));
+                    specificEnthalpy = getValue(insideIntQuants.fluidState().enthalpy(phaseIdx));
                 }
 
                 Evaluation enthalpyRate = density*extQuants.volumeFlux(phaseIdx)*specificEnthalpy;
@@ -186,9 +186,9 @@ public:
 
 #ifndef NDEBUG
         for (unsigned i = 0; i < numEq; ++i) {
-            Opm::Valgrind::CheckDefined((*this)[i]);
+            Valgrind::CheckDefined((*this)[i]);
         }
-        Opm::Valgrind::CheckDefined(*this);
+        Valgrind::CheckDefined(*this);
 #endif
     }
 
@@ -263,8 +263,8 @@ public:
 
 #ifndef NDEBUG
         for (unsigned i = 0; i < numEq; ++i)
-            Opm::Valgrind::CheckDefined((*this)[i]);
-        Opm::Valgrind::CheckDefined(*this);
+            Valgrind::CheckDefined((*this)[i]);
+        Valgrind::CheckDefined(*this);
 #endif
     }
 };

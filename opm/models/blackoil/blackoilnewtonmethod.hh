@@ -225,7 +225,7 @@ public:
         succeeded = comm.min(succeeded);
 
         if (!succeeded)
-            throw Opm::NumericalIssue("A process did not succeed in adapting the primary variables");
+            throw NumericalIssue("A process did not succeed in adapting the primary variables");
 
         numPriVarsSwitched_ = comm.sum(numPriVarsSwitched_);
     }
@@ -249,8 +249,8 @@ protected:
         static constexpr bool enableBrine = Indices::saltConcentrationIdx >= 0;
 
         currentValue.checkDefined();
-        Opm::Valgrind::CheckDefined(update);
-        Opm::Valgrind::CheckDefined(currentResidual);
+        Valgrind::CheckDefined(update);
+        Valgrind::CheckDefined(currentResidual);
 
         // saturation delta for each phase
         Scalar deltaSw = 0.0;
@@ -296,7 +296,7 @@ protected:
             // limit pressure delta
             if (pvIdx == Indices::pressureSwitchIdx) {
                 if (std::abs(delta) > dpMaxRel_*currentValue[pvIdx])
-                    delta = Opm::signum(delta)*dpMaxRel_*currentValue[pvIdx];
+                    delta = signum(delta)*dpMaxRel_*currentValue[pvIdx];
             }
             // water saturation delta
             else if (pvIdx == Indices::waterSaturationIdx)

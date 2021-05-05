@@ -66,7 +66,7 @@ struct BaseEpsilon { using type = UndefinedProperty; };
 // set the properties to be spliced in
 template<class TypeTag>
 struct LocalLinearizer<TypeTag, TTag::FiniteDifferenceLocalLinearizer>
-{ using type = Opm::FvBaseFdLocalLinearizer<TypeTag>; };
+{ using type = FvBaseFdLocalLinearizer<TypeTag>; };
 
 template<class TypeTag>
 struct Evaluation<TypeTag, TTag::FiniteDifferenceLocalLinearizer>
@@ -282,7 +282,7 @@ public:
         unsigned globalIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
         Scalar pvWeight = elemCtx.model().primaryVarWeight(globalIdx, pvIdx);
         assert(pvWeight > 0 && std::isfinite(pvWeight));
-        Opm::Valgrind::CheckDefined(pvWeight);
+        Valgrind::CheckDefined(pvWeight);
 
         return baseEpsilon()/pvWeight;
     }
@@ -476,7 +476,7 @@ protected:
 
 #ifndef NDEBUG
         for (unsigned i = 0; i < derivResidual_.size(); ++i)
-            Opm::Valgrind::CheckDefined(derivResidual_[i]);
+            Valgrind::CheckDefined(derivResidual_[i]);
 #endif
     }
 
@@ -497,7 +497,7 @@ protected:
                 // regard to the primary variable 'pvIdx' of the degree of freedom
                 // 'focusDofIdx'
                 jacobian_[dofIdx][focusDofIdx][eqIdx][pvIdx] = derivResidual_[dofIdx][eqIdx];
-                Opm::Valgrind::CheckDefined(jacobian_[dofIdx][focusDofIdx][eqIdx][pvIdx]);
+                Valgrind::CheckDefined(jacobian_[dofIdx][focusDofIdx][eqIdx][pvIdx]);
             }
         }
     }

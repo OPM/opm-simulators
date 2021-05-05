@@ -125,7 +125,7 @@ class DarcyExtensiveQuantities
     enum { dimWorld = GridView::dimensionworld };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
 
-    using Toolbox = typename Opm::MathToolbox<Evaluation>;
+    using Toolbox = MathToolbox<Evaluation>;
     using ParameterCache = typename FluidSystem::template ParameterCache<Evaluation>;
     using EvalDimVector = Dune::FieldVector<Evaluation, dimWorld>;
     using DimVector = Dune::FieldVector<Scalar, dimWorld>;
@@ -186,7 +186,7 @@ protected:
                              unsigned timeIdx)
     {
         const auto& gradCalc = elemCtx.gradientCalculator();
-        Opm::PressureCallback<TypeTag> pressureCallback(elemCtx);
+        PressureCallback<TypeTag> pressureCallback(elemCtx);
 
         const auto& scvf = elemCtx.stencil(timeIdx).interiorFace(faceIdx);
         const auto& faceNormal = scvf.normal();
@@ -200,7 +200,7 @@ protected:
         // calculate the "raw" pressure gradient
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!elemCtx.model().phaseIsConsidered(phaseIdx)) {
-                Opm::Valgrind::SetUndefined(potentialGrad_[phaseIdx]);
+                Valgrind::SetUndefined(potentialGrad_[phaseIdx]);
                 continue;
             }
 
@@ -209,7 +209,7 @@ protected:
                                        elemCtx,
                                        faceIdx,
                                        pressureCallback);
-            Opm::Valgrind::CheckDefined(potentialGrad_[phaseIdx]);
+            Valgrind::CheckDefined(potentialGrad_[phaseIdx]);
         }
 
         // correct the pressure gradients by the gravitational acceleration
@@ -280,21 +280,21 @@ protected:
                     potentialGrad_[phaseIdx][dimIdx] += f[dimIdx];
 
                 for (unsigned dimIdx = 0; dimIdx < potentialGrad_[phaseIdx].size(); ++dimIdx) {
-                    if (!Opm::isfinite(potentialGrad_[phaseIdx][dimIdx])) {
-                        throw Opm::NumericalIssue("Non-finite potential gradient for phase '"
-                                                    +std::string(FluidSystem::phaseName(phaseIdx))+"'");
+                    if (!isfinite(potentialGrad_[phaseIdx][dimIdx])) {
+                        throw NumericalIssue("Non-finite potential gradient for phase '"
+                                             +std::string(FluidSystem::phaseName(phaseIdx))+"'");
                     }
                 }
             }
         }
 
-        Opm::Valgrind::SetUndefined(K_);
+        Valgrind::SetUndefined(K_);
         elemCtx.problem().intersectionIntrinsicPermeability(K_, elemCtx, faceIdx, timeIdx);
-        Opm::Valgrind::CheckDefined(K_);
+        Valgrind::CheckDefined(K_);
 
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!elemCtx.model().phaseIsConsidered(phaseIdx)) {
-                Opm::Valgrind::SetUndefined(potentialGrad_[phaseIdx]);
+                Valgrind::SetUndefined(potentialGrad_[phaseIdx]);
                 continue;
             }
 
@@ -335,12 +335,12 @@ protected:
                                      const FluidState& fluidState)
     {
         const auto& gradCalc = elemCtx.gradientCalculator();
-        Opm::BoundaryPressureCallback<TypeTag, FluidState> pressureCallback(elemCtx, fluidState);
+        BoundaryPressureCallback<TypeTag, FluidState> pressureCallback(elemCtx, fluidState);
 
         // calculate the pressure gradient
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!elemCtx.model().phaseIsConsidered(phaseIdx)) {
-                Opm::Valgrind::SetUndefined(potentialGrad_[phaseIdx]);
+                Valgrind::SetUndefined(potentialGrad_[phaseIdx]);
                 continue;
             }
 
@@ -349,7 +349,7 @@ protected:
                                                elemCtx,
                                                boundaryFaceIdx,
                                                pressureCallback);
-            Opm::Valgrind::CheckDefined(potentialGrad_[phaseIdx]);
+            Valgrind::CheckDefined(potentialGrad_[phaseIdx]);
         }
 
         const auto& scvf = elemCtx.stencil(timeIdx).boundaryFace(boundaryFaceIdx);
@@ -384,7 +384,7 @@ protected:
                 Evaluation rhoIn = intQuantsIn.fluidState().density(phaseIdx);
                 Evaluation pStatIn = - gTimesDist*rhoIn;
 
-                Opm::Valgrind::CheckDefined(pStatIn);
+                Valgrind::CheckDefined(pStatIn);
                 // compute the hydrostatic gradient between the control volume and face integration
                 // point. This gradient exhibitis the same direction as the vector between the
                 // control volume center and face integration point (-distVecIn / absDist) and the
@@ -397,11 +397,11 @@ protected:
                 for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
                     potentialGrad_[phaseIdx][dimIdx] += f[dimIdx];
 
-                Opm::Valgrind::CheckDefined(potentialGrad_[phaseIdx]);
+                Valgrind::CheckDefined(potentialGrad_[phaseIdx]);
                 for (unsigned dimIdx = 0; dimIdx < potentialGrad_[phaseIdx].size(); ++dimIdx) {
-                    if (!Opm::isfinite(potentialGrad_[phaseIdx][dimIdx])) {
-                        throw Opm::NumericalIssue("Non finite potential gradient for phase '"
-                                                    +std::string(FluidSystem::phaseName(phaseIdx))+"'");
+                    if (!isfinite(potentialGrad_[phaseIdx][dimIdx])) {
+                        throw NumericalIssue("Non finite potential gradient for phase '"
+                                             +std::string(FluidSystem::phaseName(phaseIdx))+"'");
                     }
                 }
             }
@@ -414,7 +414,7 @@ protected:
 
         Scalar kr[numPhases];
         MaterialLaw::relativePermeabilities(kr, matParams, fluidState);
-        Opm::Valgrind::CheckDefined(kr);
+        Valgrind::CheckDefined(kr);
 
         for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
             if (!elemCtx.model().phaseIsConsidered(phaseIdx))
@@ -447,7 +447,7 @@ protected:
                 mobility_[phaseIdx] = Toolbox::value(intQuantsIn.mobility(phaseIdx));
             else
                 mobility_[phaseIdx] = intQuantsIn.mobility(phaseIdx);
-            Opm::Valgrind::CheckDefined(mobility_[phaseIdx]);
+            Valgrind::CheckDefined(mobility_[phaseIdx]);
         }
     }
 
@@ -461,7 +461,7 @@ protected:
     {
         const auto& scvf = elemCtx.stencil(timeIdx).interiorFace(scvfIdx);
         const DimVector& normal = scvf.normal();
-        Opm::Valgrind::CheckDefined(normal);
+        Valgrind::CheckDefined(normal);
 
         for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
             filterVelocity_[phaseIdx] = 0.0;
@@ -470,7 +470,7 @@ protected:
                 continue;
 
             asImp_().calculateFilterVelocity_(phaseIdx);
-            Opm::Valgrind::CheckDefined(filterVelocity_[phaseIdx]);
+            Valgrind::CheckDefined(filterVelocity_[phaseIdx]);
 
             volumeFlux_[phaseIdx] = 0.0;
             for (unsigned i = 0; i < normal.size(); ++i)
@@ -490,7 +490,7 @@ protected:
     {
         const auto& scvf = elemCtx.stencil(timeIdx).boundaryFace(boundaryFaceIdx);
         const DimVector& normal = scvf.normal();
-        Opm::Valgrind::CheckDefined(normal);
+        Valgrind::CheckDefined(normal);
 
         for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
             if (!elemCtx.model().phaseIsConsidered(phaseIdx)) {
@@ -500,7 +500,7 @@ protected:
             }
 
             asImp_().calculateFilterVelocity_(phaseIdx);
-            Opm::Valgrind::CheckDefined(filterVelocity_[phaseIdx]);
+            Valgrind::CheckDefined(filterVelocity_[phaseIdx]);
             volumeFlux_[phaseIdx] = 0.0;
             for (unsigned i = 0; i < normal.size(); ++i)
                 volumeFlux_[phaseIdx] += filterVelocity_[phaseIdx][i] * normal[i];
@@ -510,7 +510,7 @@ protected:
     void calculateFilterVelocity_(unsigned phaseIdx)
     {
 #ifndef NDEBUG
-        assert(Opm::isfinite(mobility_[phaseIdx]));
+        assert(isfinite(mobility_[phaseIdx]));
         for (unsigned i = 0; i < K_.M(); ++ i)
             for (unsigned j = 0; j < K_.N(); ++ j)
                 assert(std::isfinite(K_[i][j]));
@@ -521,7 +521,7 @@ protected:
 
 #ifndef NDEBUG
         for (unsigned i = 0; i < filterVelocity_[phaseIdx].size(); ++ i)
-            assert(Opm::isfinite(filterVelocity_[phaseIdx][i]));
+            assert(isfinite(filterVelocity_[phaseIdx][i]));
 #endif
     }
 

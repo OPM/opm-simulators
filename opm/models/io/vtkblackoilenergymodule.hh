@@ -89,7 +89,7 @@ class VtkBlackOilEnergyModule : public BaseOutputModule<TypeTag>
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
     static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
-    using VtkMultiWriter = Opm::VtkMultiWriter<GridView, vtkFormat>;
+    using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
@@ -165,20 +165,20 @@ public:
 
             if (rockInternalEnergyOutput_())
                 rockInternalEnergy_[globalDofIdx] =
-                    Opm::scalarValue(intQuants.rockInternalEnergy());
+                    scalarValue(intQuants.rockInternalEnergy());
 
             if (totalThermalConductivityOutput_())
                 totalThermalConductivity_[globalDofIdx] =
-                    Opm::scalarValue(intQuants.totalThermalConductivity());
+                    scalarValue(intQuants.totalThermalConductivity());
 
             for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
                 if (fluidInternalEnergiesOutput_())
                     fluidInternalEnergies_[phaseIdx][globalDofIdx] =
-                        Opm::scalarValue(intQuants.fluidState().internalEnergy(phaseIdx));
+                        scalarValue(intQuants.fluidState().internalEnergy(phaseIdx));
 
                 if (fluidEnthalpiesOutput_())
                     fluidEnthalpies_[phaseIdx][globalDofIdx] =
-                        Opm::scalarValue(intQuants.fluidState().enthalpy(phaseIdx));
+                        scalarValue(intQuants.fluidState().enthalpy(phaseIdx));
             }
         }
     }

@@ -57,7 +57,7 @@ struct DiscNewtonMethod { using type = UndefinedProperty; };
 // set default values
 template<class TypeTag>
 struct DiscNewtonMethod<TypeTag, TTag::FvBaseNewtonMethod>
-{ using type = Opm::FvBaseNewtonMethod<TypeTag>; };
+{ using type = FvBaseNewtonMethod<TypeTag>; };
 
 template<class TypeTag>
 struct NewtonMethod<TypeTag, TTag::FvBaseNewtonMethod>
@@ -65,7 +65,7 @@ struct NewtonMethod<TypeTag, TTag::FvBaseNewtonMethod>
 
 template<class TypeTag>
 struct NewtonConvergenceWriter<TypeTag, TTag::FvBaseNewtonMethod>
-{ using type = Opm::FvBaseNewtonConvergenceWriter<TypeTag>; };
+{ using type = FvBaseNewtonConvergenceWriter<TypeTag>; };
 
 } // namespace Opm::Properties
 
@@ -82,14 +82,13 @@ namespace Opm {
 template <class TypeTag>
 class FvBaseNewtonMethod : public NewtonMethod<TypeTag>
 {
-    using ParentType = Opm::NewtonMethod<TypeTag>;
+    using ParentType = NewtonMethod<TypeTag>;
     using Implementation = GetPropType<TypeTag, Properties::NewtonMethod>;
 
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Model = GetPropType<TypeTag, Properties::Model>;
     using Linearizer = GetPropType<TypeTag, Properties::Linearizer>;
-    using NewtonMethod = GetPropType<TypeTag, Properties::NewtonMethod>;
     using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
     using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
     using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
@@ -102,7 +101,7 @@ public:
     { }
 
 protected:
-    friend class Opm::NewtonMethod<TypeTag>;
+    friend class NewtonMethod<TypeTag>;
 
     /*!
      * \brief Update the current solution with a delta vector.

@@ -75,10 +75,10 @@ class BlackOilPolymerModule
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
 
-    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using Toolbox = MathToolbox<Evaluation>;
 
-    using TabulatedFunction = typename Opm::Tabulated1DFunction<Scalar>;
-    using TabulatedTwoDFunction = typename Opm::IntervalTabulated2DFunction<Scalar>;
+    using TabulatedFunction = Tabulated1DFunction<Scalar>;
+    using TabulatedTwoDFunction = IntervalTabulated2DFunction<Scalar>;
 
     static constexpr unsigned polymerConcentrationIdx = Indices::polymerConcentrationIdx;
     static constexpr unsigned polymerMoleWeightIdx = Indices::polymerMoleWeightIdx;
@@ -115,7 +115,7 @@ public:
     /*!
      * \brief Initialize all internal data structures needed by the polymer module
      */
-    static void initFromState(const Opm::EclipseState& eclState)
+    static void initFromState(const EclipseState& eclState)
     {
         // some sanity checks: if polymers are enabled, the POLYMER keyword must be
         // present, if polymers are disabled the keyword must not be present.
@@ -155,7 +155,7 @@ public:
         if (!plyrockTables.empty()) {
             assert(numSatRegions == plyrockTables.size());
             for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++ satRegionIdx) {
-                const auto& plyrockTable = plyrockTables.template getTable<Opm::PlyrockTable>(satRegionIdx);
+                const auto& plyrockTable = plyrockTables.template getTable<PlyrockTable>(satRegionIdx);
                 setPlyrock(satRegionIdx,
                            plyrockTable.getDeadPoreVolumeColumn()[0],
                            plyrockTable.getResidualResistanceFactorColumn()[0],
@@ -173,7 +173,7 @@ public:
         if (!plyadsTables.empty()) {
             assert(numSatRegions == plyadsTables.size());
             for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++ satRegionIdx) {
-                const auto& plyadsTable = plyadsTables.template getTable<Opm::PlyadsTable>(satRegionIdx);
+                const auto& plyadsTable = plyadsTables.template getTable<PlyadsTable>(satRegionIdx);
                 // Copy data
                 const auto& c = plyadsTable.getPolymerConcentrationColumn();
                 const auto& ads = plyadsTable.getAdsorbedPolymerColumn();
@@ -193,14 +193,14 @@ public:
         if (!plyviscTables.empty()) {
             // different viscosity model is used for POLYMW
             if (enablePolymerMolarWeight) {
-                Opm::OpmLog::warning("PLYVISC should not be used in POLYMW runs, "
+                OpmLog::warning("PLYVISC should not be used in POLYMW runs, "
                                      "it will have no effect. A viscosity model based on PLYVMH is used instead.\n");
             }
             else {
 
                 assert(numPvtRegions == plyviscTables.size());
                 for (unsigned pvtRegionIdx = 0; pvtRegionIdx < numPvtRegions; ++ pvtRegionIdx) {
-                    const auto& plyadsTable = plyviscTables.template getTable<Opm::PlyviscTable>(pvtRegionIdx);
+                    const auto& plyadsTable = plyviscTables.template getTable<PlyviscTable>(pvtRegionIdx);
                     // Copy data
                     const auto& c = plyadsTable.getPolymerConcentrationColumn();
                     const auto& visc = plyadsTable.getViscosityMultiplierColumn();
@@ -218,7 +218,7 @@ public:
         setNumMixRegions(numMixRegions);
         if (!plymaxTables.empty()) {
             for (unsigned mixRegionIdx = 0; mixRegionIdx < numMixRegions; ++ mixRegionIdx) {
-                const auto& plymaxTable = plymaxTables.template getTable<Opm::PlymaxTable>(mixRegionIdx);
+                const auto& plymaxTable = plymaxTables.template getTable<PlymaxTable>(mixRegionIdx);
                 setPlymax(mixRegionIdx, plymaxTable.getPolymerConcentrationColumn()[0]);
             }
         }
@@ -228,7 +228,7 @@ public:
 
         if (!eclState.getTableManager().getPlmixparTable().empty()) {
             if (enablePolymerMolarWeight) {
-                Opm::OpmLog::warning("PLMIXPAR should not be used in POLYMW runs, it will have no effect.\n");
+                OpmLog::warning("PLMIXPAR should not be used in POLYMW runs, it will have no effect.\n");
             }
             else {
                 const auto& plmixparTable = eclState.getTableManager().getPlmixparTable();
@@ -246,7 +246,7 @@ public:
         hasShrate_ = eclState.getTableManager().useShrate();
 
         if ((hasPlyshlog_ || hasShrate_) && enablePolymerMolarWeight) {
-            Opm::OpmLog::warning("PLYSHLOG and SHRATE should not be used in POLYMW runs, they will have no effect.\n");
+            OpmLog::warning("PLYSHLOG and SHRATE should not be used in POLYMW runs, they will have no effect.\n");
         }
 
         if (hasPlyshlog_ && !enablePolymerMolarWeight) {
@@ -255,14 +255,14 @@ public:
             plyshlogShearEffectRefMultiplier_.resize(numPvtRegions);
             plyshlogShearEffectRefLogVelocity_.resize(numPvtRegions);
             for (unsigned pvtRegionIdx = 0; pvtRegionIdx < numPvtRegions; ++ pvtRegionIdx) {
-                const auto& plyshlogTable = plyshlogTables.template getTable<Opm::PlyshlogTable>(pvtRegionIdx);
+                const auto& plyshlogTable = plyshlogTables.template getTable<PlyshlogTable>(pvtRegionIdx);
 
                 Scalar plyshlogRefPolymerConcentration = plyshlogTable.getRefPolymerConcentration();
                 auto waterVelocity = plyshlogTable.getWaterVelocityColumn().vectorCopy();
                 auto shearMultiplier = plyshlogTable.getShearMultiplierColumn().vectorCopy();
 
                 // do the unit version here for the waterVelocity
-                Opm::UnitSystem unitSystem = eclState.getDeckUnitSystem();
+                UnitSystem unitSystem = eclState.getDeckUnitSystem();
                 double siFactor = hasShrate_? unitSystem.parse("1/Time").getSIScaling() : unitSystem.parse("Length/Time").getSIScaling();
                 for (size_t i = 0; i < waterVelocity.size(); ++i) {
                     waterVelocity[i] *= siFactor;
@@ -507,7 +507,7 @@ public:
             // polymers have been disabled at compile time
             return;
 
-        Opm::VtkBlackOilPolymerModule<TypeTag>::registerParameters();
+        VtkBlackOilPolymerModule<TypeTag>::registerParameters();
     }
 
     /*!
@@ -520,7 +520,7 @@ public:
             // polymers have been disabled at compile time
             return;
 
-        model.addOutputModule(new Opm::VtkBlackOilPolymerModule<TypeTag>(simulator));
+        model.addOutputModule(new VtkBlackOilPolymerModule<TypeTag>(simulator));
     }
 
     static bool primaryVarApplies(unsigned pvIdx)
@@ -602,7 +602,7 @@ public:
                 * Toolbox::template decay<LhsEval>(intQuants.porosity());
 
         // avoid singular matrix if no water is present.
-        surfaceVolumeWater = Opm::max(surfaceVolumeWater, 1e-10);
+        surfaceVolumeWater = max(surfaceVolumeWater, 1e-10);
 
         // polymer in water phase
         const LhsEval massPolymer = surfaceVolumeWater
@@ -621,7 +621,7 @@ public:
 
         // tracking the polymer molecular weight
         if (enablePolymerMolarWeight) {
-            accumulationPolymer = Opm::max(accumulationPolymer, 1e-10);
+            accumulationPolymer = max(accumulationPolymer, 1e-10);
 
             storage[contiPolymerMolarWeightEqIdx]  += accumulationPolymer
                                          * Toolbox::template decay<LhsEval> (intQuants.polymerMoleWeight());
@@ -660,14 +660,14 @@ public:
         else {
             flux[contiPolymerEqIdx] =
                     extQuants.volumeFlux(waterPhaseIdx)
-                    *Opm::decay<Scalar>(up.fluidState().invB(waterPhaseIdx))
-                    *Opm::decay<Scalar>(up.polymerViscosityCorrection())
-                    /Opm::decay<Scalar>(extQuants.polymerShearFactor())
-                    *Opm::decay<Scalar>(up.polymerConcentration());
+                    *decay<Scalar>(up.fluidState().invB(waterPhaseIdx))
+                    *decay<Scalar>(up.polymerViscosityCorrection())
+                    /decay<Scalar>(extQuants.polymerShearFactor())
+                    *decay<Scalar>(up.polymerConcentration());
 
             // modify water
             flux[contiWaterEqIdx] /=
-                    Opm::decay<Scalar>(extQuants.waterShearFactor());
+                    decay<Scalar>(extQuants.waterShearFactor());
         }
 
         // flux related to transport of polymer molecular weight
@@ -677,7 +677,7 @@ public:
                     flux[contiPolymerEqIdx]*up.polymerMoleWeight();
             else
                 flux[contiPolymerMolarWeightEqIdx] =
-                    flux[contiPolymerEqIdx]*Opm::decay<Scalar>(up.polymerMoleWeight());
+                    flux[contiPolymerEqIdx]*decay<Scalar>(up.polymerMoleWeight());
         }
 
     }
@@ -835,10 +835,10 @@ public:
                                          unsigned pvtnumRegionIdx,
                                          const Evaluation& v0)
     {
-        using ToolboxLocal = Opm::MathToolbox<Evaluation>;
+        using ToolboxLocal = MathToolbox<Evaluation>;
 
         const auto& viscosityMultiplierTable = plyviscViscosityMultiplierTable_[pvtnumRegionIdx];
-        Scalar viscosityMultiplier = viscosityMultiplierTable.eval(Opm::scalarValue(polymerConcentration), /*extrapolate=*/true);
+        Scalar viscosityMultiplier = viscosityMultiplierTable.eval(scalarValue(polymerConcentration), /*extrapolate=*/true);
 
         const Scalar eps = 1e-14;
         // return 1.0 if the polymer has no effect on the water.
@@ -846,7 +846,7 @@ public:
             return ToolboxLocal::createConstant(v0, 1.0);
 
         const std::vector<Scalar>& shearEffectRefLogVelocity = plyshlogShearEffectRefLogVelocity_[pvtnumRegionIdx];
-        auto v0AbsLog = Opm::log(Opm::abs(v0));
+        auto v0AbsLog = log(abs(v0));
         // return 1.0 if the velocity /sharte is smaller than the first velocity entry.
         if (v0AbsLog < shearEffectRefLogVelocity[0])
             return ToolboxLocal::createConstant(v0, 1.0);
@@ -862,7 +862,7 @@ public:
         std::vector<Scalar> shearEffectMultiplier(numTableEntries, 1.0);
         for (size_t i = 0; i < numTableEntries; ++i) {
             shearEffectMultiplier[i] = (1.0 + (viscosityMultiplier - 1.0)*shearEffectRefMultiplier[i]) / viscosityMultiplier;
-            shearEffectMultiplier[i] = Opm::log(shearEffectMultiplier[i]);
+            shearEffectMultiplier[i] = log(shearEffectMultiplier[i]);
         }
         // store the logarithmic velocity and logarithmic multipliers in a table for easy look up and
         // linear interpolation in the logarithmic space.
@@ -890,7 +890,7 @@ public:
             auto f = F(u);
             auto df = dF(u);
             u -= f/df;
-            if (std::abs(Opm::scalarValue(f)) < 1e-12) {
+            if (std::abs(scalarValue(f)) < 1e-12) {
                 converged = true;
                 break;
             }
@@ -900,7 +900,7 @@ public:
         }
 
         // return the shear factor
-        return Opm::exp(logShearEffectMultiplier.eval(u, /*extrapolate=*/true));
+        return exp(logShearEffectMultiplier.eval(u, /*extrapolate=*/true));
 
     }
 
@@ -1214,7 +1214,7 @@ class BlackOilPolymerExtensiveQuantities
     static constexpr int dimWorld = GridView::dimensionworld;
     static constexpr unsigned waterPhaseIdx =  FluidSystem::waterPhaseIdx;
 
-    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using Toolbox = MathToolbox<Evaluation>;
     using PolymerModule = BlackOilPolymerModule<TypeTag>;
     using DimVector = Dune::FieldVector<Scalar, dimWorld>;
     using DimEvalVector = Dune::FieldVector<Evaluation, dimWorld>;
@@ -1274,7 +1274,7 @@ public:
         const Scalar& Swcr = scaledDrainageInfo.Swcr;
 
         // guard against zero porosity and no mobile water
-        Evaluation denom = Opm::max(poroAvg * (Sw - Swcr), 1e-12);
+        Evaluation denom = max(poroAvg * (Sw - Swcr), 1e-12);
         Evaluation waterVolumeVelocity = extQuants.volumeFlux(waterPhaseIdx) / denom;
 
         // if shrate is specified. Compute shrate based on the water velocity
@@ -1287,8 +1287,8 @@ public:
                 // compute permeability from transmissibility.
                 Scalar absPerm = trans / faceArea * dist.two_norm();
                 waterVolumeVelocity *=
-                    PolymerModule::shrate(pvtnumRegionIdx)*Opm::sqrt(poroAvg*Sw / (relWater*absPerm));
-                assert(Opm::isfinite(waterVolumeVelocity));
+                    PolymerModule::shrate(pvtnumRegionIdx)*sqrt(poroAvg*Sw / (relWater*absPerm));
+                assert(isfinite(waterVolumeVelocity));
             }
         }
 

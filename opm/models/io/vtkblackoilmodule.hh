@@ -118,7 +118,7 @@ class VtkBlackOilModule : public BaseOutputModule<TypeTag>
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
     static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
-    using VtkMultiWriter = Opm::VtkMultiWriter<GridView, vtkFormat>;
+    using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
@@ -225,14 +225,14 @@ public:
             const auto& primaryVars = elemCtx.primaryVars(dofIdx, /*timeIdx=*/0);
 
             unsigned pvtRegionIdx = elemCtx.primaryVars(dofIdx, /*timeIdx=*/0).pvtRegionIndex();
-            Scalar SoMax = std::max(Opm::getValue(fs.saturation(oilPhaseIdx)),
+            Scalar SoMax = std::max(getValue(fs.saturation(oilPhaseIdx)),
                                     elemCtx.problem().maxOilSaturation(globalDofIdx));
 
             if (FluidSystem::phaseIsActive(gasPhaseIdx) && FluidSystem::phaseIsActive(oilPhaseIdx)) {
-                Scalar x_oG = Opm::getValue(fs.moleFraction(oilPhaseIdx, gasCompIdx));
-                Scalar x_gO = Opm::getValue(fs.moleFraction(gasPhaseIdx, oilCompIdx));
-                Scalar X_oG = Opm::getValue(fs.massFraction(oilPhaseIdx, gasCompIdx));
-                Scalar X_gO = Opm::getValue(fs.massFraction(gasPhaseIdx, oilCompIdx));
+                Scalar x_oG = getValue(fs.moleFraction(oilPhaseIdx, gasCompIdx));
+                Scalar x_gO = getValue(fs.moleFraction(gasPhaseIdx, oilCompIdx));
+                Scalar X_oG = getValue(fs.massFraction(oilPhaseIdx, gasCompIdx));
+                Scalar X_gO = getValue(fs.massFraction(gasPhaseIdx, oilCompIdx));
                 Scalar Rs = FluidSystem::convertXoGToRs(X_oG, pvtRegionIdx);
                 Scalar Rv = FluidSystem::convertXgOToRv(X_gO, pvtRegionIdx);
 

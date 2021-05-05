@@ -99,11 +99,11 @@ class BlackOilIntensiveQuantities
     static const bool compositionSwitchEnabled = Indices::gasEnabled;
     static const bool waterEnabled = Indices::waterEnabled;
 
-    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using Toolbox = MathToolbox<Evaluation>;
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
     using FluxIntensiveQuantities = typename FluxModule::FluxIntensiveQuantities;
-    using FluidState = Opm::BlackOilFluidState<Evaluation, FluidSystem, enableTemperature, enableEnergy, compositionSwitchEnabled,  enableBrine, Indices::numPhases >;
-    using DiffusionIntensiveQuantities = Opm::BlackOilDiffusionIntensiveQuantities<TypeTag, enableDiffusion>;
+    using FluidState = BlackOilFluidState<Evaluation, FluidSystem, enableTemperature, enableEnergy, compositionSwitchEnabled,  enableBrine, Indices::numPhases >;
+    using DiffusionIntensiveQuantities = BlackOilDiffusionIntensiveQuantities<TypeTag, enableDiffusion>;
 
 public:
     BlackOilIntensiveQuantities()
@@ -168,8 +168,8 @@ public:
             }
         }
 
-        Opm::Valgrind::CheckDefined(Sg);
-        Opm::Valgrind::CheckDefined(Sw);
+        Valgrind::CheckDefined(Sg);
+        Valgrind::CheckDefined(Sw);
 
         Evaluation So = 1.0 - Sw - Sg;
 
@@ -211,7 +211,7 @@ public:
         // calculate relative permeabilities. note that we store the result into the
         // mobility_ class attribute. the division by the phase viscosity happens later.
         MaterialLaw::relativePermeabilities(mobility_, materialParams, fluidState_);
-        Opm::Valgrind::CheckDefined(mobility_);
+        Valgrind::CheckDefined(mobility_);
 
         // update the Saturation functions for the blackoil solvent module.
         asImp_().solventPostSatFuncUpdate_(elemCtx, dofIdx, timeIdx);
@@ -221,8 +221,8 @@ public:
 
         Evaluation SoMax = 0.0;
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-            SoMax = Opm::max(fluidState_.saturation(oilPhaseIdx),
-                             elemCtx.problem().maxOilSaturation(globalSpaceIdx));
+            SoMax = max(fluidState_.saturation(oilPhaseIdx),
+                        elemCtx.problem().maxOilSaturation(globalSpaceIdx));
         }
 
         // take the meaning of the switiching primary variable into account for the gas
@@ -237,7 +237,7 @@ public:
                                                             oilPhaseIdx,
                                                             pvtRegionIdx,
                                                             SoMax);
-                fluidState_.setRs(Opm::min(RsMax, RsSat));
+                fluidState_.setRs(min(RsMax, RsSat));
             }
             else if (compositionSwitchEnabled)
                 fluidState_.setRs(0.0);
@@ -249,7 +249,7 @@ public:
                                                             gasPhaseIdx,
                                                             pvtRegionIdx,
                                                             SoMax);
-                fluidState_.setRv(Opm::min(RvMax, RvSat));
+                fluidState_.setRv(min(RvMax, RvSat));
             }
             else if (compositionSwitchEnabled)
                 fluidState_.setRv(0.0);
@@ -260,7 +260,7 @@ public:
 
             // oil phase, we can directly set the composition of the oil phase
             const auto& Rs = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
-            fluidState_.setRs(Opm::min(RsMax, Rs));
+            fluidState_.setRs(min(RsMax, Rs));
 
             if (FluidSystem::enableVaporizedOil()) {
                 // the gas phase is not present, but we need to compute its "composition"
@@ -272,7 +272,7 @@ public:
                                                             pvtRegionIdx,
                                                             SoMax);
 
-                fluidState_.setRv(Opm::min(RvMax, RvSat));
+                fluidState_.setRv(min(RvMax, RvSat));
             }
             else
                 fluidState_.setRv(0.0);
@@ -291,7 +291,7 @@ public:
                                                             pvtRegionIdx,
                                                             SoMax);
 
-                fluidState_.setRs(Opm::min(RsMax, RsSat));
+                fluidState_.setRs(min(RsMax, RsSat));
             } else {
                 fluidState_.setRs(0.0);
             }
@@ -322,7 +322,7 @@ public:
             else
               mobility_[phaseIdx] /= mu;
         }
-        Opm::Valgrind::CheckDefined(mobility_);
+        Valgrind::CheckDefined(mobility_);
 
         // calculate the phase densities
         Evaluation rho;
@@ -398,14 +398,14 @@ public:
             if (!FluidSystem::phaseIsActive(phaseIdx))
                 continue;
 
-            assert(Opm::isfinite(fluidState_.density(phaseIdx)));
-            assert(Opm::isfinite(fluidState_.saturation(phaseIdx)));
-            assert(Opm::isfinite(fluidState_.temperature(phaseIdx)));
-            assert(Opm::isfinite(fluidState_.pressure(phaseIdx)));
-            assert(Opm::isfinite(fluidState_.invB(phaseIdx)));
+            assert(isfinite(fluidState_.density(phaseIdx)));
+            assert(isfinite(fluidState_.saturation(phaseIdx)));
+            assert(isfinite(fluidState_.temperature(phaseIdx)));
+            assert(isfinite(fluidState_.pressure(phaseIdx)));
+            assert(isfinite(fluidState_.invB(phaseIdx)));
         }
-        assert(Opm::isfinite(fluidState_.Rs()));
-        assert(Opm::isfinite(fluidState_.Rv()));
+        assert(isfinite(fluidState_.Rs()));
+        assert(isfinite(fluidState_.Rv()));
 #endif
     }
 
