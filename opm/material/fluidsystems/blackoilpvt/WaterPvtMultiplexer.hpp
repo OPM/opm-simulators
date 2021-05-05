@@ -74,8 +74,6 @@ template <class Scalar, bool enableThermal = true, bool enableBrine = true>
 class WaterPvtMultiplexer
 {
 public:
-    typedef Opm::WaterPvtThermal<Scalar> WaterPvtThermal;
-
     WaterPvtMultiplexer()
     {
         approach_ = WaterPvtApproach::NoWaterPvt;

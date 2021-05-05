@@ -95,8 +95,6 @@ template <class Scalar, bool enableThermal = true>
 class OilPvtMultiplexer
 {
 public:
-    typedef Opm::OilPvtThermal<Scalar> OilPvtThermal;
-
     OilPvtMultiplexer()
     {
         approach_ = OilPvtApproach::NoOilPvt;
