@@ -55,8 +55,8 @@ public:
         nullApproach, // (no keywords)
     };
 
-    typedef Opm::EclThconrLawParams<ScalarT> ThconrLawParams;
-    typedef Opm::EclThcLawParams<ScalarT> ThcLawParams;
+    typedef EclThconrLawParams<ScalarT> ThconrLawParams;
+    typedef EclThcLawParams<ScalarT> ThcLawParams;
 
     EclThermalConductionLawMultiplexerParams(const EclThermalConductionLawMultiplexerParams&) = default;
 

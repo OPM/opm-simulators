@@ -67,7 +67,7 @@ public:
         thermalConductivityApproach_ = ThermalConductionLawParams::undefinedApproach;
     }
 
-    void initParamsForElements(const Opm::EclipseState& eclState, size_t numElems)
+    void initParamsForElements(const EclipseState& eclState, size_t numElems)
     {
         const auto& fp = eclState.fieldProps();
         const auto& tableManager = eclState.getTableManager();
@@ -135,7 +135,7 @@ private:
     /*!
      * \brief Initialize the parameters for the solid energy law using using HEATCR and friends.
      */
-    void initHeatcr_(const Opm::EclipseState& eclState,
+    void initHeatcr_(const EclipseState& eclState,
                      size_t numElems)
     {
         solidEnergyApproach_ = SolidEnergyLawParams::heatcrApproach;
@@ -162,7 +162,7 @@ private:
     /*!
      * \brief Initialize the parameters for the solid energy law using using SPECROCK and friends.
      */
-    void initSpecrock_(const Opm::EclipseState& eclState,
+    void initSpecrock_(const EclipseState& eclState,
                        size_t numElems)
     {
         solidEnergyApproach_ = SolidEnergyLawParams::specrockApproach;
@@ -211,7 +211,7 @@ private:
     /*!
      * \brief Initialize the parameters for the thermal conduction law using THCONR and friends.
      */
-    void initThconr_(const Opm::EclipseState& eclState,
+    void initThconr_(const EclipseState& eclState,
                      size_t numElems)
     {
         thermalConductivityApproach_ = ThermalConductionLawParams::thconrApproach;
@@ -244,7 +244,7 @@ private:
     /*!
      * \brief Initialize the parameters for the thermal conduction law using THCROCK and friends.
      */
-    void initThc_(const Opm::EclipseState& eclState,
+    void initThc_(const EclipseState& eclState,
                   size_t numElems)
     {
         thermalConductivityApproach_ = ThermalConductionLawParams::thcApproach;

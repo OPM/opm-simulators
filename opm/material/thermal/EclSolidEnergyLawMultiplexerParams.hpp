@@ -55,8 +55,8 @@ public:
         nullApproach, // (no keywords)
     };
 
-    typedef Opm::EclHeatcrLawParams<ScalarT> HeatcrLawParams;
-    typedef Opm::EclSpecrockLawParams<ScalarT> SpecrockLawParams;
+    typedef EclHeatcrLawParams<ScalarT> HeatcrLawParams;
+    typedef EclSpecrockLawParams<ScalarT> SpecrockLawParams;
 
     EclSolidEnergyLawMultiplexerParams(const EclSolidEnergyLawMultiplexerParams&) = default;
 
