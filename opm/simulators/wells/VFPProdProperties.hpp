@@ -150,19 +150,6 @@ public:
     }
 
 
-    /**
-     * Calculate the Bhp value from the THP target/constraint value
-     * based on inflow performance relationship and VFP curves
-     */
-     double
-     calculateBhpWithTHPTarget(const std::vector<double>& ipr_a,
-                               const std::vector<double>& ipr_b,
-                               const double bhp_limit,
-                               const double thp_table_id,
-                               const double thp_limit,
-                               const double alq,
-                               const double dp) const;
-
 protected:
     // calculate a group bhp values with a group of flo rate values
     std::vector<double> bhpwithflo(const std::vector<double>& flos,
