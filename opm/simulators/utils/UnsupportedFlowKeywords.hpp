@@ -405,7 +405,6 @@ const Opm::KeywordValidation::UnsupportedKeywords unsupported_keywords = {
     {"LYFIN", {false, std::nullopt}},
     {"LZ", {false, std::nullopt}},
     {"LZFIN", {false, std::nullopt}},
-    {"MAPUNITS", {false, std::nullopt}},
     {"MASSFLOW", {false, std::nullopt}},
     {"MATCORR", {false, std::nullopt}},
     {"MEMORY", {false, std::nullopt}},
