@@ -31,7 +31,7 @@ namespace Opm
 {
 template<class TypeTag>
 class WellConnectionAuxiliaryModule
-    : public Opm::BaseAuxiliaryModule<TypeTag>
+    : public BaseAuxiliaryModule<TypeTag>
 {
     using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
     using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
@@ -39,7 +39,7 @@ class WellConnectionAuxiliaryModule
 public:
 
     using NeighborSet = typename
-        Opm::BaseAuxiliaryModule<TypeTag>::NeighborSet;
+        ::Opm::BaseAuxiliaryModule<TypeTag>::NeighborSet;
 
     WellConnectionAuxiliaryModule(const Schedule& schedule,
                                   const Dune::CpGrid& grid)

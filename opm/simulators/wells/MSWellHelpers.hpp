@@ -68,7 +68,7 @@ namespace mswellhelpers
                 if (std::isinf(y[i_block][i_elem]) || std::isnan(y[i_block][i_elem]) ) {
                     const std::string msg{"nan or inf value found after UMFPack solve due to singular matrix"};
                     OpmLog::debug(msg);
-                    OPM_THROW_NOLOG(Opm::NumericalIssue, msg);
+                    OPM_THROW_NOLOG(NumericalIssue, msg);
                 }
             }
         }
@@ -123,7 +123,7 @@ namespace mswellhelpers
     // obtain y = D^-1 * x with a BICSSTAB iterative solver
     template <typename MatrixType, typename VectorType>
     VectorType
-    invDX(const MatrixType& D, VectorType x, Opm::DeferredLogger& deferred_logger)
+    invDX(const MatrixType& D, VectorType x, DeferredLogger& deferred_logger)
     {
         // the function will change the value of x, so we should not use reference of x here.
 
@@ -160,7 +160,7 @@ namespace mswellhelpers
         linsolver.apply(y, x, res);
 
         if ( !res.converged ) {
-            OPM_DEFLOG_THROW(Opm::NumericalIssue, "the invDX did not converge ", deferred_logger);
+            OPM_DEFLOG_THROW(NumericalIssue, "the invDX did not converge ", deferred_logger);
         }
 
         return y;
@@ -172,7 +172,7 @@ namespace mswellhelpers
     template <typename ValueType>
     inline ValueType haalandFormular(const ValueType& re, const double diameter, const double roughness)
     {
-        const ValueType value = -3.6 * Opm::log10(6.9 / re + std::pow(roughness / (3.7 * diameter), 10. / 9.) );
+        const ValueType value = -3.6 * log10(6.9 / re + std::pow(roughness / (3.7 * diameter), 10. / 9.) );
 
         // sqrt(1/f) should be non-positive
         assert(value >= 0.0);
@@ -190,7 +190,7 @@ namespace mswellhelpers
 
         ValueType f = 0.;
         // Reynolds number
-        const ValueType re = Opm::abs( diameter * w / (area * mu));
+        const ValueType re = abs( diameter * w / (area * mu));
 
         if ( re == 0.0 ) {
             // make sure it is because the mass rate is zero
@@ -265,7 +265,7 @@ namespace mswellhelpers
                                    const double max_visco_ratio)
     {
         const ValueType temp_value = 1. / (1. - (0.8415 / 0.7480 * water_liquid_fraction) );
-        const ValueType viscosity_ratio = Opm::pow(temp_value, 2.5);
+        const ValueType viscosity_ratio = pow(temp_value, 2.5);
 
         if (viscosity_ratio <= max_visco_ratio) {
             return oil_viscosity * viscosity_ratio;
@@ -284,7 +284,7 @@ namespace mswellhelpers
                                    const double max_visco_ratio)
     {
         const ValueType temp_value = 1. / (1. - (0.6019 / 0.6410) * (1. - water_liquid_fraction) );
-        const ValueType viscosity_ratio = Opm::pow(temp_value, 2.5);
+        const ValueType viscosity_ratio = pow(temp_value, 2.5);
 
         if (viscosity_ratio <= max_visco_ratio) {
             return water_viscosity * viscosity_ratio;

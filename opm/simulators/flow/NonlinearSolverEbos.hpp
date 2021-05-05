@@ -220,7 +220,7 @@ namespace Opm {
                 failureReport_ = report;
 
                 std::string msg = "Solver convergence failure - Failed to complete a time step within " + std::to_string(maxIter()) + " iterations.";
-                OPM_THROW_NOLOG(Opm::TooManyIterations, msg);
+                OPM_THROW_NOLOG(TooManyIterations, msg);
             }
 
             // Do model-specific post-step actions.

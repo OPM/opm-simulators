@@ -81,7 +81,7 @@ namespace Opm {
         using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
         static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
-        typedef Opm::VtkMultiWriter<GridView, vtkFormat> VtkMultiWriter;
+        typedef ::Opm::VtkMultiWriter<GridView, vtkFormat> VtkMultiWriter;
 
 
         typedef typename ParentType::ScalarBuffer ScalarBuffer;

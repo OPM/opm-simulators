@@ -60,14 +60,14 @@ private:
     using FluidSystem = GetPropType<BaseTypeTag, Properties::FluidSystem>;
 
 public:
-    typedef Opm::BlackOilTwoPhaseIndices<0,
-                                         0,
-                                         2,
-                                         0,
-                                         getPropValue<TypeTag, Properties::EnableFoam>(),
-                                         getPropValue<TypeTag, Properties::EnableBrine>(),
-                                         /*PVOffset=*/0,
-                                         /*disabledCompIdx=*/FluidSystem::gasCompIdx> type;
+    typedef BlackOilTwoPhaseIndices<0,
+                                    0,
+                                    2,
+                                    0,
+                                    getPropValue<TypeTag, Properties::EnableFoam>(),
+                                    getPropValue<TypeTag, Properties::EnableBrine>(),
+                                    /*PVOffset=*/0,
+                                    /*disabledCompIdx=*/FluidSystem::gasCompIdx> type;
 };
 }}
 
@@ -85,7 +85,7 @@ int flowEbosOilWaterPolymerInjectivityMain(int argc, char** argv, bool outputCou
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
-    Opm::resetLocale();
+    resetLocale();
 
 #if HAVE_DUNE_FEM
     Dune::Fem::MPIManager::initialize(argc, argv);
@@ -93,7 +93,7 @@ int flowEbosOilWaterPolymerInjectivityMain(int argc, char** argv, bool outputCou
     Dune::MPIHelper::instance(argc, argv);
 #endif
 
-    Opm::FlowMainEbos<Properties::TTag::EclFlowOilWaterPolymerInjectivityProblem>
+    FlowMainEbos<Properties::TTag::EclFlowOilWaterPolymerInjectivityProblem>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }

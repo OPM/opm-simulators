@@ -198,7 +198,7 @@ public:
     EclOutputBlackOilModule(const Simulator& simulator, const std::vector<std::size_t>& wbp_index_list, const CollectDataToIORankType& collectToIORank)
         : simulator_(simulator)
     {
-        const Opm::SummaryConfig summaryConfig = simulator_.vanguard().summaryConfig();
+        const SummaryConfig summaryConfig = simulator_.vanguard().summaryConfig();
         const auto& fp = simulator_.vanguard().eclState().fieldProps();
 
         this->regions_["FIPNUM"] = fp.get_int("FIPNUM");
@@ -211,7 +211,7 @@ public:
         this->RPRNodes_  = summaryConfig.keywords("RPR*");
         this->RPRPNodes_ = summaryConfig.keywords("RPRP*");
 
-        for (const auto& phase : Opm::Inplace::phases()) {
+        for (const auto& phase : Inplace::phases()) {
             std::string key_pattern = "R" + EclString(phase) + "*";
             this->regionNodes_[phase] = summaryConfig.keywords(key_pattern);
         }
@@ -248,11 +248,11 @@ public:
      */
     void allocBuffers(unsigned bufferSize, unsigned reportStepNum, const bool substep, const bool log, const bool isRestart)
     {
-        if (!std::is_same<Discretization, Opm::EcfvDiscretization<TypeTag> >::value)
+        if (!std::is_same<Discretization, EcfvDiscretization<TypeTag> >::value)
             return;
 
         // Summary output is for all steps
-        const Opm::SummaryConfig summaryConfig = simulator_.vanguard().summaryConfig();
+        const SummaryConfig summaryConfig = simulator_.vanguard().summaryConfig();
         const auto& schedule = simulator_.vanguard().schedule();
 
         // Only output RESTART_AUXILIARY asked for by the user.
@@ -270,7 +270,7 @@ public:
         computeFip_ = false;
 
         // Fluid in place
-        for (const auto& phase : Opm::Inplace::phases()) {
+        for (const auto& phase : Inplace::phases()) {
             if (!substep || summaryConfig.require3DField(EclString(phase))) {
                 if (rstKeywords["FIP"] > 0) {
                     rstKeywords["FIP"] = 0;
@@ -284,7 +284,7 @@ public:
         }
 
         if (!substep || summaryConfig.hasKeyword("FPR") || summaryConfig.hasKeyword("FPRP") || !this->RPRNodes_.empty()) {
-            fip_[Opm::Inplace::Phase::PoreVolume].resize(bufferSize, 0.0);
+            fip_[Inplace::Phase::PoreVolume].resize(bufferSize, 0.0);
             hydrocarbonPoreVolume_.resize(bufferSize, 0.0);
             pressureTimesPoreVolume_.resize(bufferSize, 0.0);
             pressureTimesHydrocarbonVolume_.resize(bufferSize, 0.0);
@@ -493,7 +493,7 @@ public:
                     std::string logstring = "Keyword '";
                     logstring.append(keyValue.first);
                     logstring.append("' is unhandled for output to file.");
-                    Opm::OpmLog::warning("Unhandled output keyword", logstring);
+                    OpmLog::warning("Unhandled output keyword", logstring);
                 }
             }
         }
@@ -515,7 +515,7 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
-        if (!std::is_same<Discretization, Opm::EcfvDiscretization<TypeTag> >::value)
+        if (!std::is_same<Discretization, EcfvDiscretization<TypeTag> >::value)
             return;
 
         const auto& problem = elemCtx.simulator().problem();
@@ -531,85 +531,85 @@ public:
                 if (saturation_[phaseIdx].size() == 0)
                     continue;
 
-                saturation_[phaseIdx][globalDofIdx] = Opm::getValue(fs.saturation(phaseIdx));
-                Opm::Valgrind::CheckDefined(saturation_[phaseIdx][globalDofIdx]);
+                saturation_[phaseIdx][globalDofIdx] = getValue(fs.saturation(phaseIdx));
+                Valgrind::CheckDefined(saturation_[phaseIdx][globalDofIdx]);
             }
 
             if (oilPressure_.size() > 0) {
                 if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
-                    oilPressure_[globalDofIdx] = Opm::getValue(fs.pressure(oilPhaseIdx));
+                    oilPressure_[globalDofIdx] = getValue(fs.pressure(oilPhaseIdx));
                 }else{
                     // put pressure in oil pressure for output
                     if (FluidSystem::phaseIsActive(waterPhaseIdx)) {
-                        oilPressure_[globalDofIdx] = Opm::getValue(fs.pressure(waterPhaseIdx));
+                        oilPressure_[globalDofIdx] = getValue(fs.pressure(waterPhaseIdx));
                     } else {
-                        oilPressure_[globalDofIdx] = Opm::getValue(fs.pressure(gasPhaseIdx));
+                        oilPressure_[globalDofIdx] = getValue(fs.pressure(gasPhaseIdx));
                     }
                 }
-                Opm::Valgrind::CheckDefined(oilPressure_[globalDofIdx]);
+                Valgrind::CheckDefined(oilPressure_[globalDofIdx]);
             }
 
             if (temperature_.size() > 0) {
-                temperature_[globalDofIdx] = Opm::getValue(fs.temperature(oilPhaseIdx));
-                Opm::Valgrind::CheckDefined(temperature_[globalDofIdx]);
+                temperature_[globalDofIdx] = getValue(fs.temperature(oilPhaseIdx));
+                Valgrind::CheckDefined(temperature_[globalDofIdx]);
             }
             if (gasDissolutionFactor_.size() > 0) {
                 Scalar SoMax = elemCtx.problem().maxOilSaturation(globalDofIdx);
                 gasDissolutionFactor_[globalDofIdx] =
                     FluidSystem::template saturatedDissolutionFactor<FluidState, Scalar>(fs, oilPhaseIdx, pvtRegionIdx, SoMax);
-                Opm::Valgrind::CheckDefined(gasDissolutionFactor_[globalDofIdx]);
+                Valgrind::CheckDefined(gasDissolutionFactor_[globalDofIdx]);
 
             }
             if (oilVaporizationFactor_.size() > 0) {
                 Scalar SoMax = elemCtx.problem().maxOilSaturation(globalDofIdx);
                 oilVaporizationFactor_[globalDofIdx] =
                     FluidSystem::template saturatedDissolutionFactor<FluidState, Scalar>(fs, gasPhaseIdx, pvtRegionIdx, SoMax);
-                Opm::Valgrind::CheckDefined(oilVaporizationFactor_[globalDofIdx]);
+                Valgrind::CheckDefined(oilVaporizationFactor_[globalDofIdx]);
 
             }
             if (gasFormationVolumeFactor_.size() > 0) {
                 gasFormationVolumeFactor_[globalDofIdx] =
                     1.0/FluidSystem::template inverseFormationVolumeFactor<FluidState, Scalar>(fs, gasPhaseIdx, pvtRegionIdx);
-                Opm::Valgrind::CheckDefined(gasFormationVolumeFactor_[globalDofIdx]);
+                Valgrind::CheckDefined(gasFormationVolumeFactor_[globalDofIdx]);
 
             }
             if (saturatedOilFormationVolumeFactor_.size() > 0) {
                 saturatedOilFormationVolumeFactor_[globalDofIdx] =
                     1.0/FluidSystem::template saturatedInverseFormationVolumeFactor<FluidState, Scalar>(fs, oilPhaseIdx, pvtRegionIdx);
-                Opm::Valgrind::CheckDefined(saturatedOilFormationVolumeFactor_[globalDofIdx]);
+                Valgrind::CheckDefined(saturatedOilFormationVolumeFactor_[globalDofIdx]);
 
             }
             if (oilSaturationPressure_.size() > 0) {
                 oilSaturationPressure_[globalDofIdx] =
                     FluidSystem::template saturationPressure<FluidState, Scalar>(fs, oilPhaseIdx, pvtRegionIdx);
-                Opm::Valgrind::CheckDefined(oilSaturationPressure_[globalDofIdx]);
+                Valgrind::CheckDefined(oilSaturationPressure_[globalDofIdx]);
 
             }
 
             if (rs_.size()) {
-                rs_[globalDofIdx] = Opm::getValue(fs.Rs());
-                Opm::Valgrind::CheckDefined(rs_[globalDofIdx]);
+                rs_[globalDofIdx] = getValue(fs.Rs());
+                Valgrind::CheckDefined(rs_[globalDofIdx]);
             }
 
             if (rv_.size()) {
-                rv_[globalDofIdx] = Opm::getValue(fs.Rv());
-                Opm::Valgrind::CheckDefined(rv_[globalDofIdx]);
+                rv_[globalDofIdx] = getValue(fs.Rv());
+                Valgrind::CheckDefined(rv_[globalDofIdx]);
             }
 
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
                 if (invB_[phaseIdx].size() == 0)
                     continue;
 
-                invB_[phaseIdx][globalDofIdx] = Opm::getValue(fs.invB(phaseIdx));
-                Opm::Valgrind::CheckDefined(invB_[phaseIdx][globalDofIdx]);
+                invB_[phaseIdx][globalDofIdx] = getValue(fs.invB(phaseIdx));
+                Valgrind::CheckDefined(invB_[phaseIdx][globalDofIdx]);
             }
 
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
                 if (density_[phaseIdx].size() == 0)
                     continue;
 
-                density_[phaseIdx][globalDofIdx] = Opm::getValue(fs.density(phaseIdx));
-                Opm::Valgrind::CheckDefined(density_[phaseIdx][globalDofIdx]);
+                density_[phaseIdx][globalDofIdx] = getValue(fs.density(phaseIdx));
+                Valgrind::CheckDefined(density_[phaseIdx][globalDofIdx]);
             }
 
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
@@ -617,20 +617,20 @@ public:
                     continue;
 
                 if (extboX_.size() > 0 && phaseIdx==oilPhaseIdx)
-                    viscosity_[phaseIdx][globalDofIdx] = Opm::getValue(intQuants.oilViscosity());
+                    viscosity_[phaseIdx][globalDofIdx] = getValue(intQuants.oilViscosity());
                 else if (extboX_.size() > 0 && phaseIdx==gasPhaseIdx)
-                    viscosity_[phaseIdx][globalDofIdx] = Opm::getValue(intQuants.gasViscosity());
+                    viscosity_[phaseIdx][globalDofIdx] = getValue(intQuants.gasViscosity());
                 else
-                    viscosity_[phaseIdx][globalDofIdx] = Opm::getValue(fs.viscosity(phaseIdx));
-                Opm::Valgrind::CheckDefined(viscosity_[phaseIdx][globalDofIdx]);
+                    viscosity_[phaseIdx][globalDofIdx] = getValue(fs.viscosity(phaseIdx));
+                Valgrind::CheckDefined(viscosity_[phaseIdx][globalDofIdx]);
             }
 
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
                 if (relativePermeability_[phaseIdx].size() == 0)
                     continue;
 
-                relativePermeability_[phaseIdx][globalDofIdx] = Opm::getValue(intQuants.relativePermeability(phaseIdx));
-                Opm::Valgrind::CheckDefined(relativePermeability_[phaseIdx][globalDofIdx]);
+                relativePermeability_[phaseIdx][globalDofIdx] = getValue(intQuants.relativePermeability(phaseIdx));
+                Valgrind::CheckDefined(relativePermeability_[phaseIdx][globalDofIdx]);
             }
 
             if (sSol_.size() > 0) {
@@ -662,12 +662,12 @@ public:
             }
 
             if (mFracCo2_.size() > 0) {
-                const Scalar stdVolOil = Opm::getValue(fs.saturation(oilPhaseIdx))*Opm::getValue(fs.invB(oilPhaseIdx))
-                                       + Opm::getValue(fs.saturation(gasPhaseIdx))*Opm::getValue(fs.invB(gasPhaseIdx))*Opm::getValue(fs.Rv());
-                const Scalar stdVolGas = Opm::getValue(fs.saturation(gasPhaseIdx))*Opm::getValue(fs.invB(gasPhaseIdx))*(1.0-intQuants.yVolume().value())
-                                       + Opm::getValue(fs.saturation(oilPhaseIdx))*Opm::getValue(fs.invB(oilPhaseIdx))*Opm::getValue(fs.Rs())*(1.0-intQuants.xVolume().value());
-                const Scalar stdVolCo2 = Opm::getValue(fs.saturation(gasPhaseIdx))*Opm::getValue(fs.invB(gasPhaseIdx))*intQuants.yVolume().value()
-                                       + Opm::getValue(fs.saturation(oilPhaseIdx))*Opm::getValue(fs.invB(oilPhaseIdx))*Opm::getValue(fs.Rs())*intQuants.xVolume().value();
+                const Scalar stdVolOil = getValue(fs.saturation(oilPhaseIdx))*getValue(fs.invB(oilPhaseIdx))
+                                       + getValue(fs.saturation(gasPhaseIdx))*getValue(fs.invB(gasPhaseIdx))*getValue(fs.Rv());
+                const Scalar stdVolGas = getValue(fs.saturation(gasPhaseIdx))*getValue(fs.invB(gasPhaseIdx))*(1.0-intQuants.yVolume().value())
+                                       + getValue(fs.saturation(oilPhaseIdx))*getValue(fs.invB(oilPhaseIdx))*getValue(fs.Rs())*(1.0-intQuants.xVolume().value());
+                const Scalar stdVolCo2 = getValue(fs.saturation(gasPhaseIdx))*getValue(fs.invB(gasPhaseIdx))*intQuants.yVolume().value()
+                                       + getValue(fs.saturation(oilPhaseIdx))*getValue(fs.invB(oilPhaseIdx))*getValue(fs.Rs())*intQuants.xVolume().value();
                 const Scalar rhoO= FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx);
                 const Scalar rhoG= FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx);
                 const Scalar rhoCO2= intQuants.zRefDensity();
@@ -679,18 +679,18 @@ public:
 
             if (bubblePointPressure_.size() > 0) {
                 try {
-                    bubblePointPressure_[globalDofIdx] = Opm::getValue(FluidSystem::bubblePointPressure(fs, intQuants.pvtRegionIndex()));
+                    bubblePointPressure_[globalDofIdx] = getValue(FluidSystem::bubblePointPressure(fs, intQuants.pvtRegionIndex()));
                 }
-                catch (const Opm::NumericalIssue&) {
+                catch (const NumericalIssue&) {
                     const auto cartesianIdx = elemCtx.simulator().vanguard().grid().globalCell()[globalDofIdx];
                     failedCellsPb_.push_back(cartesianIdx);
                 }
             }
             if (dewPointPressure_.size() > 0) {
                 try {
-                    dewPointPressure_[globalDofIdx] = Opm::getValue(FluidSystem::dewPointPressure(fs, intQuants.pvtRegionIndex()));
+                    dewPointPressure_[globalDofIdx] = getValue(FluidSystem::dewPointPressure(fs, intQuants.pvtRegionIndex()));
                 }
-                catch (const Opm::NumericalIssue&) {
+                catch (const NumericalIssue&) {
                     const auto cartesianIdx = elemCtx.simulator().vanguard().grid().globalCell()[globalDofIdx];
                     failedCellsPd_.push_back(cartesianIdx);
                 }
@@ -698,17 +698,17 @@ public:
 
             if (soMax_.size() > 0)
                 soMax_[globalDofIdx] =
-                    std::max(Opm::getValue(fs.saturation(oilPhaseIdx)),
+                    std::max(getValue(fs.saturation(oilPhaseIdx)),
                              problem.maxOilSaturation(globalDofIdx));
 
             if (swMax_.size() > 0)
                 swMax_[globalDofIdx] =
-                    std::max(Opm::getValue(fs.saturation(waterPhaseIdx)),
+                    std::max(getValue(fs.saturation(waterPhaseIdx)),
                              problem.maxWaterSaturation(globalDofIdx));
 
             if (minimumOilPressure_.size() > 0)
                 minimumOilPressure_[globalDofIdx] =
-                    std::min(Opm::getValue(fs.pressure(oilPhaseIdx)),
+                    std::min(getValue(fs.pressure(oilPhaseIdx)),
                              problem.minOilPressure(globalDofIdx));
 
             if (overburdenPressure_.size() > 0)
@@ -796,60 +796,60 @@ public:
                 int cartesianIdxBlock = key.second - 1;
                 if (cartesianIdx == cartesianIdxBlock) {
                     if ((key.first == "BWSAT") || (key.first == "BSWAT"))
-                        val.second = Opm::getValue(fs.saturation(waterPhaseIdx));
+                        val.second = getValue(fs.saturation(waterPhaseIdx));
                     else if ((key.first == "BGSAT") || (key.first == "BSGAS"))
-                        val.second = Opm::getValue(fs.saturation(gasPhaseIdx));
+                        val.second = getValue(fs.saturation(gasPhaseIdx));
                     else if ((key.first == "BOSAT") || (key.first == "BSOIL"))
-                        val.second = Opm::getValue(fs.saturation(oilPhaseIdx));
+                        val.second = getValue(fs.saturation(oilPhaseIdx));
                     else if ((key.first == "BPR") || (key.first == "BPRESSUR"))
-                        val.second = Opm::getValue(fs.pressure(oilPhaseIdx));
+                        val.second = getValue(fs.pressure(oilPhaseIdx));
                     else if (key.first == "BWKR" || key.first == "BKRW")
-                        val.second = Opm::getValue(intQuants.relativePermeability(waterPhaseIdx));
+                        val.second = getValue(intQuants.relativePermeability(waterPhaseIdx));
                     else if (key.first == "BGKR" || key.first == "BKRG")
-                        val.second = Opm::getValue(intQuants.relativePermeability(gasPhaseIdx));
+                        val.second = getValue(intQuants.relativePermeability(gasPhaseIdx));
                     else if (key.first == "BOKR" || key.first == "BKRO")
-                        val.second = Opm::getValue(intQuants.relativePermeability(oilPhaseIdx));
+                        val.second = getValue(intQuants.relativePermeability(oilPhaseIdx));
                     else if (key.first == "BKROG") {
                         const auto& materialParams = problem.materialLawParams(elemCtx, dofIdx, /* timeIdx = */ 0);
                         const auto krog = MaterialLaw::template relpermOilInOilGasSystem<Evaluation>(materialParams, fs);
-                        val.second = Opm::getValue(krog);
+                        val.second = getValue(krog);
                     }
                     else if (key.first == "BKROW") {
                         const auto& materialParams = problem.materialLawParams(elemCtx, dofIdx, /* timeIdx = */ 0);
                         const auto krow = MaterialLaw::template relpermOilInOilWaterSystem<Evaluation>(materialParams, fs);
-                        val.second = Opm::getValue(krow);
+                        val.second = getValue(krow);
                     }
                     else if (key.first == "BWPC")
-                        val.second = Opm::getValue(fs.pressure(oilPhaseIdx)) - Opm::getValue(fs.pressure(waterPhaseIdx));
+                        val.second = getValue(fs.pressure(oilPhaseIdx)) - getValue(fs.pressure(waterPhaseIdx));
                     else if (key.first == "BGPC")
-                        val.second = Opm::getValue(fs.pressure(gasPhaseIdx)) - Opm::getValue(fs.pressure(oilPhaseIdx));
+                        val.second = getValue(fs.pressure(gasPhaseIdx)) - getValue(fs.pressure(oilPhaseIdx));
                     else if (key.first == "BVWAT" || key.first == "BWVIS")
-                        val.second = Opm::getValue(fs.viscosity(waterPhaseIdx));
+                        val.second = getValue(fs.viscosity(waterPhaseIdx));
                     else if (key.first == "BVGAS" || key.first == "BGVIS")
-                        val.second = Opm::getValue(fs.viscosity(gasPhaseIdx));
+                        val.second = getValue(fs.viscosity(gasPhaseIdx));
                     else if (key.first == "BVOIL" || key.first == "BOVIS")
-                        val.second = Opm::getValue(fs.viscosity(oilPhaseIdx));
+                        val.second = getValue(fs.viscosity(oilPhaseIdx));
                     else {
                         std::string logstring = "Keyword '";
                         logstring.append(key.first);
                         logstring.append("' is unhandled for output to file.");
-                        Opm::OpmLog::warning("Unhandled output keyword", logstring);
+                        OpmLog::warning("Unhandled output keyword", logstring);
                     }
                 }
             }
 
             // Adding Well RFT data
             if (oilConnectionPressures_.count(cartesianIdx) > 0) {
-                oilConnectionPressures_[cartesianIdx] = Opm::getValue(fs.pressure(oilPhaseIdx));
+                oilConnectionPressures_[cartesianIdx] = getValue(fs.pressure(oilPhaseIdx));
             }
             if (waterConnectionSaturations_.count(cartesianIdx) > 0) {
-                waterConnectionSaturations_[cartesianIdx] = Opm::getValue(fs.saturation(waterPhaseIdx));
+                waterConnectionSaturations_[cartesianIdx] = getValue(fs.saturation(waterPhaseIdx));
             }
             if (gasConnectionSaturations_.count(cartesianIdx) > 0) {
-                gasConnectionSaturations_[cartesianIdx] = Opm::getValue(fs.saturation(gasPhaseIdx));
+                gasConnectionSaturations_[cartesianIdx] = getValue(fs.saturation(gasPhaseIdx));
             }
             if (this->wbpData_.count(cartesianIdx) > 0)
-                this->wbpData_[cartesianIdx] = Opm::getValue(fs.pressure(oilPhaseIdx));
+                this->wbpData_[cartesianIdx] = getValue(fs.pressure(oilPhaseIdx));
 
             // tracers
             const auto& tracerModel = simulator_.problem().tracerModel();
@@ -912,7 +912,7 @@ public:
                 errlog << ", ...";
             }
             errlog << "]";
-            Opm::OpmLog::warning("Bubble point numerical problem", errlog.str());
+            OpmLog::warning("Bubble point numerical problem", errlog.str());
         }
         if (globalFailedCellsPd.size() > 0) {
             std::stringstream errlog;
@@ -926,11 +926,11 @@ public:
                 errlog << ", ...";
             }
             errlog << "]";
-            Opm::OpmLog::warning("Dew point numerical problem", errlog.str());
+            OpmLog::warning("Dew point numerical problem", errlog.str());
         }
     }
 
-    void addRftDataToWells(Opm::data::Wells& wellDatas, size_t reportStepNum)
+    void addRftDataToWells(data::Wells& wellDatas, size_t reportStepNum)
     {
         const auto& schedule = simulator_.vanguard().schedule();
         const auto& rft_config = schedule[reportStepNum].rft_config();
@@ -943,7 +943,7 @@ public:
 
             //add data infrastructure for shut wells
             if (!wellDatas.count(well.name())) {
-                Opm::data::Well wellData;
+                data::Well wellData;
 
                 if (!rft_config.active())
                     continue;
@@ -963,7 +963,7 @@ public:
                 wellDatas.emplace(std::make_pair(well.name(), wellData));
             }
 
-            Opm::data::Well& wellData = wellDatas.at(well.name());
+            data::Well& wellData = wellDatas.at(well.name());
             for (auto& connectionData: wellData.connections) {
                 const auto index = connectionData.index;
                 if (oilConnectionPressures_.count(index) > 0)
@@ -982,158 +982,158 @@ public:
     /*!
      * \brief Move all buffers to data::Solution.
      */
-    void assignToSolution(Opm::data::Solution& sol)
+    void assignToSolution(data::Solution& sol)
     {
-        if (!std::is_same<Discretization, Opm::EcfvDiscretization<TypeTag>>::value)
+        if (!std::is_same<Discretization, EcfvDiscretization<TypeTag>>::value)
             return;
 
         if (oilPressure_.size() > 0) {
-            sol.insert("PRESSURE", Opm::UnitSystem::measure::pressure, std::move(oilPressure_), Opm::data::TargetType::RESTART_SOLUTION);
+            sol.insert("PRESSURE", UnitSystem::measure::pressure, std::move(oilPressure_), data::TargetType::RESTART_SOLUTION);
         }
 
         if (temperature_.size() > 0) {
-            sol.insert("TEMP", Opm::UnitSystem::measure::temperature, std::move(temperature_), Opm::data::TargetType::RESTART_SOLUTION);
+            sol.insert("TEMP", UnitSystem::measure::temperature, std::move(temperature_), data::TargetType::RESTART_SOLUTION);
         }
 
         if (FluidSystem::phaseIsActive(waterPhaseIdx) && saturation_[waterPhaseIdx].size() > 0) {
-            sol.insert("SWAT", Opm::UnitSystem::measure::identity, std::move(saturation_[waterPhaseIdx]), Opm::data::TargetType::RESTART_SOLUTION);
+            sol.insert("SWAT", UnitSystem::measure::identity, std::move(saturation_[waterPhaseIdx]), data::TargetType::RESTART_SOLUTION);
         }
         if (FluidSystem::phaseIsActive(gasPhaseIdx) && saturation_[gasPhaseIdx].size() > 0) {
-            sol.insert("SGAS", Opm::UnitSystem::measure::identity, std::move(saturation_[gasPhaseIdx]), Opm::data::TargetType::RESTART_SOLUTION);
+            sol.insert("SGAS", UnitSystem::measure::identity, std::move(saturation_[gasPhaseIdx]), data::TargetType::RESTART_SOLUTION);
         }
         if (ppcw_.size() > 0) {
-            sol.insert ("PPCW", Opm::UnitSystem::measure::pressure, std::move(ppcw_), Opm::data::TargetType::RESTART_SOLUTION);
+            sol.insert ("PPCW", UnitSystem::measure::pressure, std::move(ppcw_), data::TargetType::RESTART_SOLUTION);
         }
 
         if (gasDissolutionFactor_.size() > 0) {
-            sol.insert("RSSAT", Opm::UnitSystem::measure::gas_oil_ratio, std::move(gasDissolutionFactor_), Opm::data::TargetType::RESTART_AUXILIARY);
+            sol.insert("RSSAT", UnitSystem::measure::gas_oil_ratio, std::move(gasDissolutionFactor_), data::TargetType::RESTART_AUXILIARY);
 
         }
         if (oilVaporizationFactor_.size() > 0) {
-            sol.insert("RVSAT", Opm::UnitSystem::measure::oil_gas_ratio, std::move(oilVaporizationFactor_), Opm::data::TargetType::RESTART_AUXILIARY);
+            sol.insert("RVSAT", UnitSystem::measure::oil_gas_ratio, std::move(oilVaporizationFactor_), data::TargetType::RESTART_AUXILIARY);
         }
         if (rs_.size() > 0) {
-            sol.insert("RS", Opm::UnitSystem::measure::gas_oil_ratio, std::move(rs_), Opm::data::TargetType::RESTART_SOLUTION);
+            sol.insert("RS", UnitSystem::measure::gas_oil_ratio, std::move(rs_), data::TargetType::RESTART_SOLUTION);
 
         }
         if (rv_.size() > 0) {
-            sol.insert("RV", Opm::UnitSystem::measure::oil_gas_ratio, std::move(rv_), Opm::data::TargetType::RESTART_SOLUTION);
+            sol.insert("RV", UnitSystem::measure::oil_gas_ratio, std::move(rv_), data::TargetType::RESTART_SOLUTION);
         }
         if (invB_[waterPhaseIdx].size() > 0) {
-            sol.insert("1OVERBW", Opm::UnitSystem::measure::water_inverse_formation_volume_factor, std::move(invB_[waterPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY);
+            sol.insert("1OVERBW", UnitSystem::measure::water_inverse_formation_volume_factor, std::move(invB_[waterPhaseIdx]), data::TargetType::RESTART_AUXILIARY);
         }
         if (invB_[oilPhaseIdx].size() > 0) {
-            sol.insert("1OVERBO", Opm::UnitSystem::measure::oil_inverse_formation_volume_factor, std::move(invB_[oilPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY);
+            sol.insert("1OVERBO", UnitSystem::measure::oil_inverse_formation_volume_factor, std::move(invB_[oilPhaseIdx]), data::TargetType::RESTART_AUXILIARY);
         }
         if (invB_[gasPhaseIdx].size() > 0) {
-            sol.insert("1OVERBG", Opm::UnitSystem::measure::gas_inverse_formation_volume_factor, std::move(invB_[gasPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY);
+            sol.insert("1OVERBG", UnitSystem::measure::gas_inverse_formation_volume_factor, std::move(invB_[gasPhaseIdx]), data::TargetType::RESTART_AUXILIARY);
         }
 
         if (density_[waterPhaseIdx].size() > 0) {
-            sol.insert("WAT_DEN", Opm::UnitSystem::measure::density, std::move(density_[waterPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY);
+            sol.insert("WAT_DEN", UnitSystem::measure::density, std::move(density_[waterPhaseIdx]), data::TargetType::RESTART_AUXILIARY);
         }
         if (density_[oilPhaseIdx].size() > 0) {
-            sol.insert("OIL_DEN", Opm::UnitSystem::measure::density, std::move(density_[oilPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY);
+            sol.insert("OIL_DEN", UnitSystem::measure::density, std::move(density_[oilPhaseIdx]), data::TargetType::RESTART_AUXILIARY);
         }
         if (density_[gasPhaseIdx].size() > 0) {
-            sol.insert("GAS_DEN", Opm::UnitSystem::measure::density, std::move(density_[gasPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY);
+            sol.insert("GAS_DEN", UnitSystem::measure::density, std::move(density_[gasPhaseIdx]), data::TargetType::RESTART_AUXILIARY);
         }
 
         if (viscosity_[waterPhaseIdx].size() > 0) {
-            sol.insert("WAT_VISC", Opm::UnitSystem::measure::viscosity, std::move(viscosity_[waterPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY);
+            sol.insert("WAT_VISC", UnitSystem::measure::viscosity, std::move(viscosity_[waterPhaseIdx]), data::TargetType::RESTART_AUXILIARY);
         }
         if (viscosity_[oilPhaseIdx].size() > 0) {
-            sol.insert("OIL_VISC", Opm::UnitSystem::measure::viscosity, std::move(viscosity_[oilPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY);
+            sol.insert("OIL_VISC", UnitSystem::measure::viscosity, std::move(viscosity_[oilPhaseIdx]), data::TargetType::RESTART_AUXILIARY);
         }
         if (viscosity_[gasPhaseIdx].size() > 0) {
-            sol.insert("GAS_VISC", Opm::UnitSystem::measure::viscosity, std::move(viscosity_[gasPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY);
+            sol.insert("GAS_VISC", UnitSystem::measure::viscosity, std::move(viscosity_[gasPhaseIdx]), data::TargetType::RESTART_AUXILIARY);
         }
 
         if (relativePermeability_[waterPhaseIdx].size() > 0) {
-            sol.insert("WATKR", Opm::UnitSystem::measure::identity, std::move(relativePermeability_[waterPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY);
+            sol.insert("WATKR", UnitSystem::measure::identity, std::move(relativePermeability_[waterPhaseIdx]), data::TargetType::RESTART_AUXILIARY);
         }
         if (relativePermeability_[oilPhaseIdx].size() > 0) {
-            sol.insert("OILKR", Opm::UnitSystem::measure::identity, std::move(relativePermeability_[oilPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY);
+            sol.insert("OILKR", UnitSystem::measure::identity, std::move(relativePermeability_[oilPhaseIdx]), data::TargetType::RESTART_AUXILIARY);
         }
         if (relativePermeability_[gasPhaseIdx].size() > 0) {
-            sol.insert("GASKR", Opm::UnitSystem::measure::identity, std::move(relativePermeability_[gasPhaseIdx]), Opm::data::TargetType::RESTART_AUXILIARY);
+            sol.insert("GASKR", UnitSystem::measure::identity, std::move(relativePermeability_[gasPhaseIdx]), data::TargetType::RESTART_AUXILIARY);
         }
 
         if (pcSwMdcOw_.size() > 0)
-            sol.insert ("PCSWM_OW", Opm::UnitSystem::measure::identity, std::move(pcSwMdcOw_), Opm::data::TargetType::RESTART_AUXILIARY);
+            sol.insert ("PCSWM_OW", UnitSystem::measure::identity, std::move(pcSwMdcOw_), data::TargetType::RESTART_AUXILIARY);
 
         if (krnSwMdcOw_.size() > 0)
-            sol.insert ("KRNSW_OW", Opm::UnitSystem::measure::identity, std::move(krnSwMdcOw_), Opm::data::TargetType::RESTART_AUXILIARY);
+            sol.insert ("KRNSW_OW", UnitSystem::measure::identity, std::move(krnSwMdcOw_), data::TargetType::RESTART_AUXILIARY);
 
         if (pcSwMdcGo_.size() > 0)
-            sol.insert ("PCSWM_GO", Opm::UnitSystem::measure::identity, std::move(pcSwMdcGo_), Opm::data::TargetType::RESTART_AUXILIARY);
+            sol.insert ("PCSWM_GO", UnitSystem::measure::identity, std::move(pcSwMdcGo_), data::TargetType::RESTART_AUXILIARY);
 
         if (krnSwMdcGo_.size() > 0)
-            sol.insert ("KRNSW_GO", Opm::UnitSystem::measure::identity, std::move(krnSwMdcGo_), Opm::data::TargetType::RESTART_AUXILIARY);
+            sol.insert ("KRNSW_GO", UnitSystem::measure::identity, std::move(krnSwMdcGo_), data::TargetType::RESTART_AUXILIARY);
 
         if (soMax_.size() > 0)
-            sol.insert ("SOMAX", Opm::UnitSystem::measure::identity, std::move(soMax_), Opm::data::TargetType::RESTART_SOLUTION);
+            sol.insert ("SOMAX", UnitSystem::measure::identity, std::move(soMax_), data::TargetType::RESTART_SOLUTION);
 
         if (sSol_.size() > 0)
-            sol.insert ("SSOLVENT", Opm::UnitSystem::measure::identity, std::move(sSol_), Opm::data::TargetType::RESTART_SOLUTION);
+            sol.insert ("SSOLVENT", UnitSystem::measure::identity, std::move(sSol_), data::TargetType::RESTART_SOLUTION);
 
         if (extboX_.size() > 0)
-            sol.insert ("SS_X", Opm::UnitSystem::measure::identity, std::move(extboX_), Opm::data::TargetType::RESTART_SOLUTION);
+            sol.insert ("SS_X", UnitSystem::measure::identity, std::move(extboX_), data::TargetType::RESTART_SOLUTION);
 
         if (extboY_.size() > 0)
-            sol.insert ("SS_Y", Opm::UnitSystem::measure::identity, std::move(extboY_), Opm::data::TargetType::RESTART_SOLUTION);
+            sol.insert ("SS_Y", UnitSystem::measure::identity, std::move(extboY_), data::TargetType::RESTART_SOLUTION);
 
         if (extboZ_.size() > 0)
-            sol.insert ("SS_Z", Opm::UnitSystem::measure::identity, std::move(extboZ_), Opm::data::TargetType::RESTART_SOLUTION);
+            sol.insert ("SS_Z", UnitSystem::measure::identity, std::move(extboZ_), data::TargetType::RESTART_SOLUTION);
 
         if (mFracOil_.size() > 0)
-            sol.insert ("STD_OIL", Opm::UnitSystem::measure::identity, std::move(mFracOil_), Opm::data::TargetType::RESTART_SOLUTION);
+            sol.insert ("STD_OIL", UnitSystem::measure::identity, std::move(mFracOil_), data::TargetType::RESTART_SOLUTION);
 
         if (mFracGas_.size() > 0)
-            sol.insert ("STD_GAS", Opm::UnitSystem::measure::identity, std::move(mFracGas_), Opm::data::TargetType::RESTART_SOLUTION);
+            sol.insert ("STD_GAS", UnitSystem::measure::identity, std::move(mFracGas_), data::TargetType::RESTART_SOLUTION);
 
         if (mFracCo2_.size() > 0)
-            sol.insert ("STD_CO2", Opm::UnitSystem::measure::identity, std::move(mFracCo2_), Opm::data::TargetType::RESTART_SOLUTION);
+            sol.insert ("STD_CO2", UnitSystem::measure::identity, std::move(mFracCo2_), data::TargetType::RESTART_SOLUTION);
 
         if (cPolymer_.size() > 0)
-            sol.insert ("POLYMER", Opm::UnitSystem::measure::identity, std::move(cPolymer_), Opm::data::TargetType::RESTART_SOLUTION);
+            sol.insert ("POLYMER", UnitSystem::measure::identity, std::move(cPolymer_), data::TargetType::RESTART_SOLUTION);
 
         if (cFoam_.size() > 0)
-            sol.insert ("FOAM", Opm::UnitSystem::measure::identity, std::move(cFoam_), Opm::data::TargetType::RESTART_SOLUTION);
+            sol.insert ("FOAM", UnitSystem::measure::identity, std::move(cFoam_), data::TargetType::RESTART_SOLUTION);
 
         if (cSalt_.size() > 0)
-            sol.insert ("SALT", Opm::UnitSystem::measure::salinity, std::move(cSalt_), Opm::data::TargetType::RESTART_SOLUTION);
+            sol.insert ("SALT", UnitSystem::measure::salinity, std::move(cSalt_), data::TargetType::RESTART_SOLUTION);
 
         if (dewPointPressure_.size() > 0)
-            sol.insert ("PDEW", Opm::UnitSystem::measure::pressure, std::move(dewPointPressure_), Opm::data::TargetType::RESTART_AUXILIARY);
+            sol.insert ("PDEW", UnitSystem::measure::pressure, std::move(dewPointPressure_), data::TargetType::RESTART_AUXILIARY);
 
         if (bubblePointPressure_.size() > 0)
-            sol.insert ("PBUB", Opm::UnitSystem::measure::pressure, std::move(bubblePointPressure_), Opm::data::TargetType::RESTART_AUXILIARY);
+            sol.insert ("PBUB", UnitSystem::measure::pressure, std::move(bubblePointPressure_), data::TargetType::RESTART_AUXILIARY);
 
 
         if (swMax_.size() > 0)
-            sol.insert ("SWMAX", Opm::UnitSystem::measure::identity, std::move(swMax_), Opm::data::TargetType::RESTART_SOLUTION);
+            sol.insert ("SWMAX", UnitSystem::measure::identity, std::move(swMax_), data::TargetType::RESTART_SOLUTION);
 
         if (minimumOilPressure_.size() > 0)
-            sol.insert ("PRESROCC", Opm::UnitSystem::measure::pressure, std::move(minimumOilPressure_), Opm::data::TargetType::RESTART_SOLUTION);
+            sol.insert ("PRESROCC", UnitSystem::measure::pressure, std::move(minimumOilPressure_), data::TargetType::RESTART_SOLUTION);
 
         if (overburdenPressure_.size() > 0)
-            sol.insert ("PRES_OVB", Opm::UnitSystem::measure::pressure, std::move(overburdenPressure_), Opm::data::TargetType::RESTART_SOLUTION);
+            sol.insert ("PRES_OVB", UnitSystem::measure::pressure, std::move(overburdenPressure_), data::TargetType::RESTART_SOLUTION);
 
         if (rockCompPorvMultiplier_.size() > 0)
-            sol.insert ("PORV_RC", Opm::UnitSystem::measure::identity, std::move(rockCompPorvMultiplier_), Opm::data::TargetType::RESTART_SOLUTION);
+            sol.insert ("PORV_RC", UnitSystem::measure::identity, std::move(rockCompPorvMultiplier_), data::TargetType::RESTART_SOLUTION);
 
         if (rockCompTransMultiplier_.size() > 0)
-            sol.insert ("TMULT_RC", Opm::UnitSystem::measure::identity, std::move(rockCompTransMultiplier_), Opm::data::TargetType::RESTART_SOLUTION);
+            sol.insert ("TMULT_RC", UnitSystem::measure::identity, std::move(rockCompTransMultiplier_), data::TargetType::RESTART_SOLUTION);
 
 
         // Fluid in place
-        for (const auto& phase : Opm::Inplace::phases()) {
+        for (const auto& phase : Inplace::phases()) {
             if (outputFipRestart_ && fip_[phase].size() > 0) {
                 sol.insert(EclString(phase),
-                           Opm::UnitSystem::measure::volume,
+                           UnitSystem::measure::volume,
                            fip_[phase],
-                           Opm::data::TargetType::SUMMARY);
+                           data::TargetType::SUMMARY);
             }
         }
 
@@ -1142,7 +1142,7 @@ public:
         if (tracerConcentrations_.size() > 0) {
             for (int tracerIdx = 0; tracerIdx<tracerModel.numTracers(); tracerIdx++){
                 std::string tmp = tracerModel.tracerName(tracerIdx) + "F";
-                sol.insert(tmp, Opm::UnitSystem::measure::identity, std::move(tracerConcentrations_[tracerIdx]), Opm::data::TargetType::RESTART_SOLUTION);
+                sol.insert(tmp, UnitSystem::measure::identity, std::move(tracerConcentrations_[tracerIdx]), data::TargetType::RESTART_SOLUTION);
             }
         }
     }
@@ -1153,7 +1153,7 @@ public:
     }
 
 
-    void update(Opm::Inplace& inplace, const std::string& region_name, Opm::Inplace::Phase phase, std::size_t ntFip, const std::vector<double>& values) {
+    void update(Inplace& inplace, const std::string& region_name, Inplace::Phase phase, std::size_t ntFip, const std::vector<double>& values) {
         double sum = 0;
         for (std::size_t region_number = 0; region_number < ntFip; region_number++) {
             inplace.add( region_name, phase, region_number + 1, values[region_number] );
@@ -1163,22 +1163,22 @@ public:
     }
 
 
-    void makeRegionSum(Opm::Inplace& inplace, const std::string& region_name) {
+    void makeRegionSum(Inplace& inplace, const std::string& region_name) {
         const auto& region = this->regions_.at(region_name);
         std::size_t ntFip = this->regionMax(region);
 
-        update(inplace, region_name, Opm::Inplace::Phase::PressurePV, ntFip, this->regionSum(this->pressureTimesPoreVolume_, region, ntFip));
-        update(inplace, region_name, Opm::Inplace::Phase::HydroCarbonPV, ntFip, this->regionSum(this->hydrocarbonPoreVolume_, region, ntFip));
-        update(inplace, region_name, Opm::Inplace::Phase::PressureHydroCarbonPV, ntFip, this->regionSum(this->pressureTimesHydrocarbonVolume_, region, ntFip));
+        update(inplace, region_name, Inplace::Phase::PressurePV, ntFip, this->regionSum(this->pressureTimesPoreVolume_, region, ntFip));
+        update(inplace, region_name, Inplace::Phase::HydroCarbonPV, ntFip, this->regionSum(this->hydrocarbonPoreVolume_, region, ntFip));
+        update(inplace, region_name, Inplace::Phase::PressureHydroCarbonPV, ntFip, this->regionSum(this->pressureTimesHydrocarbonVolume_, region, ntFip));
 
-        for (const auto& phase : Opm::Inplace::phases())
+        for (const auto& phase : Inplace::phases())
             update(inplace, region_name, phase, ntFip, this->regionSum(this->fip_[phase], region, ntFip));
     }
 
 
-    Opm::Inplace accumulateRegionSums() {
-        const Opm::SummaryConfig summaryConfig = simulator_.vanguard().summaryConfig();
-        Opm::Inplace inplace;
+    Inplace accumulateRegionSums() {
+        const SummaryConfig summaryConfig = simulator_.vanguard().summaryConfig();
+        Inplace inplace;
 
         for (const auto& [region_name, _] : this->regions_) {
             (void)_;
@@ -1208,58 +1208,58 @@ public:
                                    std::map<std::string, double>& miscSummaryData,
                                    std::map<std::string, std::vector<double>>& regionData) const {
 
-        const Opm::SummaryConfig summaryConfig = simulator_.vanguard().summaryConfig();
+        const SummaryConfig summaryConfig = simulator_.vanguard().summaryConfig();
 
         // The field summary vectors should only use the FIPNUM based region sum.
         {
-            for (const auto& phase : Opm::Inplace::phases()) {
+            for (const auto& phase : Inplace::phases()) {
                 std::string key = "F" + EclString(phase);
                 if (summaryConfig.hasKeyword(key))
                     miscSummaryData[key] = inplace.get(phase);
             }
 
             if (summaryConfig.hasKeyword("FOE") && this->initialInplace_)
-                miscSummaryData["FOE"] = inplace.get(Opm::Inplace::Phase::OIL)
-                    / this->initialInplace_.value().get(Opm::Inplace::Phase::OIL);
+                miscSummaryData["FOE"] = inplace.get(Inplace::Phase::OIL)
+                    / this->initialInplace_.value().get(Inplace::Phase::OIL);
 
             if (summaryConfig.hasKeyword("FPR"))
-                miscSummaryData["FPR"] = pressureAverage_(inplace.get(Opm::Inplace::Phase::PressureHydroCarbonPV),
-                                                          inplace.get(Opm::Inplace::Phase::HydroCarbonPV),
-                                                          inplace.get(Opm::Inplace::Phase::PressurePV),
-                                                          inplace.get(Opm::Inplace::Phase::PoreVolume),
+                miscSummaryData["FPR"] = pressureAverage_(inplace.get(Inplace::Phase::PressureHydroCarbonPV),
+                                                          inplace.get(Inplace::Phase::HydroCarbonPV),
+                                                          inplace.get(Inplace::Phase::PressurePV),
+                                                          inplace.get(Inplace::Phase::PoreVolume),
                                                           true);
 
 
             if (summaryConfig.hasKeyword("FPRP"))
-                miscSummaryData["FPRP"] = pressureAverage_(inplace.get(Opm::Inplace::Phase::PressureHydroCarbonPV),
-                                                           inplace.get(Opm::Inplace::Phase::HydroCarbonPV),
-                                                           inplace.get(Opm::Inplace::Phase::PressurePV),
-                                                           inplace.get(Opm::Inplace::Phase::PoreVolume),
+                miscSummaryData["FPRP"] = pressureAverage_(inplace.get(Inplace::Phase::PressureHydroCarbonPV),
+                                                           inplace.get(Inplace::Phase::HydroCarbonPV),
+                                                           inplace.get(Inplace::Phase::PressurePV),
+                                                           inplace.get(Inplace::Phase::PoreVolume),
                                                            false);
         }
 
         // The region summary vectors should loop through the FIPxxx regions to
         // support the RPR__xxx summary keywords.
         {
-            for (const auto& phase : Opm::Inplace::phases()) {
+            for (const auto& phase : Inplace::phases()) {
                 for (const auto& node : this->regionNodes_.at(phase))
                     regionData[node.keyword()] = inplace.get_vector(node.fip_region(), phase);
             }
 
             // The exact same quantity is calculated for RPR and RPRP - is that correct?
             for (const auto& node : this->RPRNodes_)
-                regionData[node.keyword()] = pressureAverage_(inplace.get_vector(node.fip_region(), Opm::Inplace::Phase::PressureHydroCarbonPV),
-                                                              inplace.get_vector(node.fip_region(), Opm::Inplace::Phase::HydroCarbonPV),
-                                                              inplace.get_vector(node.fip_region(), Opm::Inplace::Phase::PressurePV),
-                                                              inplace.get_vector(node.fip_region(), Opm::Inplace::Phase::PoreVolume),
+                regionData[node.keyword()] = pressureAverage_(inplace.get_vector(node.fip_region(), Inplace::Phase::PressureHydroCarbonPV),
+                                                              inplace.get_vector(node.fip_region(), Inplace::Phase::HydroCarbonPV),
+                                                              inplace.get_vector(node.fip_region(), Inplace::Phase::PressurePV),
+                                                              inplace.get_vector(node.fip_region(), Inplace::Phase::PoreVolume),
                                                               true);
 
 
             for (const auto& node : this->RPRPNodes_)
-                regionData[node.keyword()] = pressureAverage_(inplace.get_vector(node.fip_region(), Opm::Inplace::Phase::PressureHydroCarbonPV),
-                                                              inplace.get_vector(node.fip_region(), Opm::Inplace::Phase::HydroCarbonPV),
-                                                              inplace.get_vector(node.fip_region(), Opm::Inplace::Phase::PressurePV),
-                                                              inplace.get_vector(node.fip_region(), Opm::Inplace::Phase::PoreVolume),
+                regionData[node.keyword()] = pressureAverage_(inplace.get_vector(node.fip_region(), Inplace::Phase::PressureHydroCarbonPV),
+                                                              inplace.get_vector(node.fip_region(), Inplace::Phase::HydroCarbonPV),
+                                                              inplace.get_vector(node.fip_region(), Inplace::Phase::PressurePV),
+                                                              inplace.get_vector(node.fip_region(), Inplace::Phase::PoreVolume),
                                                               false);
 
         }
@@ -1270,16 +1270,16 @@ public:
 
 
         {
-            Scalar fieldHydroCarbonPoreVolumeAveragedPressure = pressureAverage_(inplace.get(Opm::Inplace::Phase::PressureHydroCarbonPV),
-                                                                                 inplace.get(Opm::Inplace::Phase::HydroCarbonPV),
-                                                                                 inplace.get(Opm::Inplace::Phase::PressurePV),
-                                                                                 inplace.get(Opm::Inplace::Phase::PoreVolume),
+            Scalar fieldHydroCarbonPoreVolumeAveragedPressure = pressureAverage_(inplace.get(Inplace::Phase::PressureHydroCarbonPV),
+                                                                                 inplace.get(Inplace::Phase::HydroCarbonPV),
+                                                                                 inplace.get(Inplace::Phase::PressurePV),
+                                                                                 inplace.get(Inplace::Phase::PoreVolume),
                                                                                  true);
 
-            std::unordered_map<Opm::Inplace::Phase, Scalar> initial_values;
-            std::unordered_map<Opm::Inplace::Phase, Scalar> current_values;
+            std::unordered_map<Inplace::Phase, Scalar> initial_values;
+            std::unordered_map<Inplace::Phase, Scalar> current_values;
 
-            for (const auto& phase : Opm::Inplace::phases()) {
+            for (const auto& phase : Inplace::phases()) {
                 initial_values[phase] = this->initialInplace_->get(phase);
                 current_values[phase] = inplace.get(phase);
             }
@@ -1295,10 +1295,10 @@ public:
         }
 
         for (size_t reg = 1; reg <= inplace.max_region("FIPNUM"); ++reg) {
-            std::unordered_map<Opm::Inplace::Phase, Scalar> initial_values;
-            std::unordered_map<Opm::Inplace::Phase, Scalar> current_values;
+            std::unordered_map<Inplace::Phase, Scalar> initial_values;
+            std::unordered_map<Inplace::Phase, Scalar> current_values;
 
-            for (const auto& phase : Opm::Inplace::phases()) {
+            for (const auto& phase : Inplace::phases()) {
                 initial_values[phase] = this->initialInplace_->get("FIPNUM", phase, reg);
                 current_values[phase] = inplace.get("FIPNUM", phase, reg);
             }
@@ -1306,10 +1306,10 @@ public:
             fipUnitConvert_(current_values);
 
             Scalar regHydroCarbonPoreVolumeAveragedPressure
-                               = pressureAverage_(inplace.get("FIPNUM", Opm::Inplace::Phase::PressureHydroCarbonPV, reg),
-                                                  inplace.get("FIPNUM", Opm::Inplace::Phase::HydroCarbonPV, reg),
-                                                  inplace.get("FIPNUM", Opm::Inplace::Phase::PressurePV, reg),
-                                                  inplace.get("FIPNUM", Opm::Inplace::Phase::PoreVolume, reg),
+                               = pressureAverage_(inplace.get("FIPNUM", Inplace::Phase::PressureHydroCarbonPV, reg),
+                                                  inplace.get("FIPNUM", Inplace::Phase::HydroCarbonPV, reg),
+                                                  inplace.get("FIPNUM", Inplace::Phase::PressurePV, reg),
+                                                  inplace.get("FIPNUM", Inplace::Phase::PoreVolume, reg),
                                                   true);
             pressureUnitConvert_(regHydroCarbonPoreVolumeAveragedPressure);
             outputRegionFluidInPlace_(initial_values, current_values, regHydroCarbonPoreVolumeAveragedPressure, reg);
@@ -1320,7 +1320,7 @@ public:
 
 
     // write Fluid In Place to output log
-    Opm::Inplace outputFipLog(std::map<std::string, double>& miscSummaryData,  std::map<std::string, std::vector<double>>& regionData, const bool substep)
+    Inplace outputFipLog(std::map<std::string, double>& miscSummaryData,  std::map<std::string, std::vector<double>>& regionData, const bool substep)
     {
         auto inplace = this->accumulateRegionSums();
         if (!isIORank_())
@@ -1714,7 +1714,7 @@ public:
                 }
     }
 
-    void setRestart(const Opm::data::Solution& sol, unsigned elemIdx, unsigned globalDofIndex)
+    void setRestart(const data::Solution& sol, unsigned elemIdx, unsigned globalDofIndex)
     {
         Scalar so = 1.0;
         if (saturation_[waterPhaseIdx].size() > 0 && sol.has("SWAT")) {
@@ -1785,8 +1785,8 @@ public:
             Dune::FieldVector< Scalar, numPhases > pc(0);
             const MaterialLawParams& matParams = simulator_.problem().materialLawParams(elemIdx);
             MaterialLaw::capillaryPressures(pc, matParams, fs);
-            Opm::Valgrind::CheckDefined(oilPressure_[elemIdx]);
-            Opm::Valgrind::CheckDefined(pc);
+            Valgrind::CheckDefined(oilPressure_[elemIdx]);
+            Valgrind::CheckDefined(pc);
             assert(FluidSystem::phaseIsActive(oilPhaseIdx));
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 if (!FluidSystem::phaseIsActive(phaseIdx))
@@ -1872,7 +1872,7 @@ public:
     const std::map<std::pair<std::string, int>, double>& getBlockData()
     { return blockData_; }
 
-    const Opm::Inplace& initialInplace() const {
+    const Inplace& initialInplace() const {
         return this->initialInplace_.value();
     }
 
@@ -1917,20 +1917,20 @@ private:
 
         if (pressureTimesHydrocarbonVolume_.size() > 0 && pressureTimesPoreVolume_.size() > 0) {
             assert(hydrocarbonPoreVolume_.size() ==  pressureTimesHydrocarbonVolume_.size());
-            assert(fip_[Opm::Inplace::Phase::PoreVolume].size() == pressureTimesPoreVolume_.size());
+            assert(fip_[Inplace::Phase::PoreVolume].size() == pressureTimesPoreVolume_.size());
 
-            fip_[Opm::Inplace::Phase::PoreVolume][globalDofIdx] = pv;
+            fip_[Inplace::Phase::PoreVolume][globalDofIdx] = pv;
 
             Scalar hydrocarbon = 0.0;
             if (FluidSystem::phaseIsActive(oilPhaseIdx))
-                hydrocarbon += Opm::getValue(fs.saturation(oilPhaseIdx));
+                hydrocarbon += getValue(fs.saturation(oilPhaseIdx));
             if (FluidSystem::phaseIsActive(gasPhaseIdx))
-                hydrocarbon += Opm::getValue(fs.saturation(gasPhaseIdx));
+                hydrocarbon += getValue(fs.saturation(gasPhaseIdx));
 
             hydrocarbonPoreVolume_[globalDofIdx] = pv * hydrocarbon;
 
             if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
-                pressureTimesPoreVolume_[globalDofIdx] = Opm::getValue(fs.pressure(oilPhaseIdx)) * pv;
+                pressureTimesPoreVolume_[globalDofIdx] = getValue(fs.pressure(oilPhaseIdx)) * pv;
                 pressureTimesHydrocarbonVolume_[globalDofIdx] = pressureTimesPoreVolume_[globalDofIdx] * hydrocarbon;
             }
         }
@@ -1943,39 +1943,39 @@ private:
                 if (!FluidSystem::phaseIsActive(phaseIdx))
                     continue;
 
-                const double b = Opm::getValue(fs.invB(phaseIdx));
-                const double s = Opm::getValue(fs.saturation(phaseIdx));
+                const double b = getValue(fs.invB(phaseIdx));
+                const double s = getValue(fs.saturation(phaseIdx));
                 fip[phaseIdx] = b * s * pv;
             }
 
-            if (FluidSystem::phaseIsActive(oilPhaseIdx) && fip_[Opm::Inplace::Phase::OIL].size() > 0)
-                fip_[Opm::Inplace::Phase::OIL][globalDofIdx] = fip[oilPhaseIdx];
-            if (FluidSystem::phaseIsActive(gasPhaseIdx) && fip_[Opm::Inplace::Phase::GAS].size() > 0)
-                fip_[Opm::Inplace::Phase::GAS][globalDofIdx] = fip[gasPhaseIdx];
-            if (FluidSystem::phaseIsActive(waterPhaseIdx) && fip_[Opm::Inplace::Phase::WATER].size() > 0)
-                fip_[Opm::Inplace::Phase::WATER][globalDofIdx] = fip[waterPhaseIdx];
+            if (FluidSystem::phaseIsActive(oilPhaseIdx) && fip_[Inplace::Phase::OIL].size() > 0)
+                fip_[Inplace::Phase::OIL][globalDofIdx] = fip[oilPhaseIdx];
+            if (FluidSystem::phaseIsActive(gasPhaseIdx) && fip_[Inplace::Phase::GAS].size() > 0)
+                fip_[Inplace::Phase::GAS][globalDofIdx] = fip[gasPhaseIdx];
+            if (FluidSystem::phaseIsActive(waterPhaseIdx) && fip_[Inplace::Phase::WATER].size() > 0)
+                fip_[Inplace::Phase::WATER][globalDofIdx] = fip[waterPhaseIdx];
 
             // Store the pure oil and gas Fip
-            if (FluidSystem::phaseIsActive(oilPhaseIdx) && fip_[Opm::Inplace::Phase::OilInLiquidPhase].size() > 0)
-                fip_[Opm::Inplace::Phase::OilInLiquidPhase][globalDofIdx] = fip[oilPhaseIdx];
+            if (FluidSystem::phaseIsActive(oilPhaseIdx) && fip_[Inplace::Phase::OilInLiquidPhase].size() > 0)
+                fip_[Inplace::Phase::OilInLiquidPhase][globalDofIdx] = fip[oilPhaseIdx];
 
-            if (FluidSystem::phaseIsActive(gasPhaseIdx) && fip_[Opm::Inplace::Phase::GasInGasPhase].size() > 0)
-                fip_[Opm::Inplace::Phase::GasInGasPhase][globalDofIdx] = fip[gasPhaseIdx];
+            if (FluidSystem::phaseIsActive(gasPhaseIdx) && fip_[Inplace::Phase::GasInGasPhase].size() > 0)
+                fip_[Inplace::Phase::GasInGasPhase][globalDofIdx] = fip[gasPhaseIdx];
 
             if (FluidSystem::phaseIsActive(oilPhaseIdx) && FluidSystem::phaseIsActive(gasPhaseIdx)) {
                 // Gas dissolved in oil and vaporized oil
-                Scalar gasInPlaceLiquid = Opm::getValue(fs.Rs()) * fip[oilPhaseIdx];
-                Scalar oilInPlaceGas = Opm::getValue(fs.Rv()) * fip[gasPhaseIdx];
-                if (fip_[Opm::Inplace::Phase::GasInLiquidPhase].size() > 0)
-                    fip_[Opm::Inplace::Phase::GasInLiquidPhase][globalDofIdx] = gasInPlaceLiquid;
-                if (fip_[Opm::Inplace::Phase::OilInGasPhase].size() > 0)
-                    fip_[Opm::Inplace::Phase::OilInGasPhase][globalDofIdx] = oilInPlaceGas;
+                Scalar gasInPlaceLiquid = getValue(fs.Rs()) * fip[oilPhaseIdx];
+                Scalar oilInPlaceGas = getValue(fs.Rv()) * fip[gasPhaseIdx];
+                if (fip_[Inplace::Phase::GasInLiquidPhase].size() > 0)
+                    fip_[Inplace::Phase::GasInLiquidPhase][globalDofIdx] = gasInPlaceLiquid;
+                if (fip_[Inplace::Phase::OilInGasPhase].size() > 0)
+                    fip_[Inplace::Phase::OilInGasPhase][globalDofIdx] = oilInPlaceGas;
 
                 // Add dissolved gas and vaporized oil to total Fip
-                if (fip_[Opm::Inplace::Phase::OIL].size() > 0)
-                    fip_[Opm::Inplace::Phase::OIL][globalDofIdx] += oilInPlaceGas;
-                if (fip_[Opm::Inplace::Phase::GAS].size() > 0)
-                    fip_[Opm::Inplace::Phase::GAS][globalDofIdx] += gasInPlaceLiquid;
+                if (fip_[Inplace::Phase::OIL].size() > 0)
+                    fip_[Inplace::Phase::OIL][globalDofIdx] += oilInPlaceGas;
+                if (fip_[Inplace::Phase::GAS].size() > 0)
+                    fip_[Inplace::Phase::GAS][globalDofIdx] += gasInPlaceLiquid;
             }
         }
 
@@ -2042,31 +2042,31 @@ private:
         return pressurePv / pv;
     }
 
-    void fipUnitConvert_(std::unordered_map<Opm::Inplace::Phase, Scalar>& fip) const
+    void fipUnitConvert_(std::unordered_map<Inplace::Phase, Scalar>& fip) const
     {
-        const Opm::UnitSystem& units = simulator_.vanguard().eclState().getUnits();
-        if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-            fip[Opm::Inplace::Phase::WATER] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::WATER], Opm::unit::stb);
-            fip[Opm::Inplace::Phase::OIL] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::OIL], Opm::unit::stb);
-            fip[Opm::Inplace::Phase::OilInLiquidPhase] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::OilInLiquidPhase], Opm::unit::stb);
-            fip[Opm::Inplace::Phase::OilInGasPhase] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::OilInGasPhase], Opm::unit::stb);
-            fip[Opm::Inplace::Phase::GAS] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::GAS], 1000*Opm::unit::cubic(Opm::unit::feet));
-            fip[Opm::Inplace::Phase::GasInLiquidPhase] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::GasInLiquidPhase], 1000*Opm::unit::cubic(Opm::unit::feet));
-            fip[Opm::Inplace::Phase::GasInGasPhase] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::GasInGasPhase], 1000*Opm::unit::cubic(Opm::unit::feet));
-            fip[Opm::Inplace::Phase::PoreVolume] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::PoreVolume], Opm::unit::stb);
+        const UnitSystem& units = simulator_.vanguard().eclState().getUnits();
+        if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
+            fip[Inplace::Phase::WATER] = unit::convert::to(fip[Inplace::Phase::WATER], unit::stb);
+            fip[Inplace::Phase::OIL] = unit::convert::to(fip[Inplace::Phase::OIL], unit::stb);
+            fip[Inplace::Phase::OilInLiquidPhase] = unit::convert::to(fip[Inplace::Phase::OilInLiquidPhase], unit::stb);
+            fip[Inplace::Phase::OilInGasPhase] = unit::convert::to(fip[Inplace::Phase::OilInGasPhase], unit::stb);
+            fip[Inplace::Phase::GAS] = unit::convert::to(fip[Inplace::Phase::GAS], 1000*unit::cubic(unit::feet));
+            fip[Inplace::Phase::GasInLiquidPhase] = unit::convert::to(fip[Inplace::Phase::GasInLiquidPhase], 1000*unit::cubic(unit::feet));
+            fip[Inplace::Phase::GasInGasPhase] = unit::convert::to(fip[Inplace::Phase::GasInGasPhase], 1000*unit::cubic(unit::feet));
+            fip[Inplace::Phase::PoreVolume] = unit::convert::to(fip[Inplace::Phase::PoreVolume], unit::stb);
         }
-        else if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_LAB) {
-            Scalar scc = Opm::unit::cubic(Opm::prefix::centi * Opm::unit::meter); //standard cubic cm.
-            fip[Opm::Inplace::Phase::WATER] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::WATER], scc);
-            fip[Opm::Inplace::Phase::OIL] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::OIL], scc);
-            fip[Opm::Inplace::Phase::OilInLiquidPhase] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::OilInLiquidPhase], scc);
-            fip[Opm::Inplace::Phase::OilInGasPhase] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::OilInGasPhase], scc);
-            fip[Opm::Inplace::Phase::GAS] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::GAS], scc);
-            fip[Opm::Inplace::Phase::GasInLiquidPhase] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::GasInLiquidPhase], scc);
-            fip[Opm::Inplace::Phase::GasInGasPhase] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::GasInGasPhase], scc);
-            fip[Opm::Inplace::Phase::PoreVolume] = Opm::unit::convert::to(fip[Opm::Inplace::Phase::PoreVolume], scc);
+        else if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_LAB) {
+            Scalar scc = unit::cubic(prefix::centi * unit::meter); //standard cubic cm.
+            fip[Inplace::Phase::WATER] = unit::convert::to(fip[Inplace::Phase::WATER], scc);
+            fip[Inplace::Phase::OIL] = unit::convert::to(fip[Inplace::Phase::OIL], scc);
+            fip[Inplace::Phase::OilInLiquidPhase] = unit::convert::to(fip[Inplace::Phase::OilInLiquidPhase], scc);
+            fip[Inplace::Phase::OilInGasPhase] = unit::convert::to(fip[Inplace::Phase::OilInGasPhase], scc);
+            fip[Inplace::Phase::GAS] = unit::convert::to(fip[Inplace::Phase::GAS], scc);
+            fip[Inplace::Phase::GasInLiquidPhase] = unit::convert::to(fip[Inplace::Phase::GasInLiquidPhase], scc);
+            fip[Inplace::Phase::GasInGasPhase] = unit::convert::to(fip[Inplace::Phase::GasInGasPhase], scc);
+            fip[Inplace::Phase::PoreVolume] = unit::convert::to(fip[Inplace::Phase::PoreVolume], scc);
         }
-        else if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_METRIC) {
+        else if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
             // nothing to do
         }
         else {
@@ -2076,15 +2076,15 @@ private:
 
     void pressureUnitConvert_(Scalar& pav) const
     {
-        const Opm::UnitSystem& units = simulator_.vanguard().eclState().getUnits();
-        if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-            pav = Opm::unit::convert::to(pav, Opm::unit::psia);
+        const UnitSystem& units = simulator_.vanguard().eclState().getUnits();
+        if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
+            pav = unit::convert::to(pav, unit::psia);
         }
-        else if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-            pav = Opm::unit::convert::to(pav, Opm::unit::barsa);
+        else if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
+            pav = unit::convert::to(pav, unit::barsa);
         }
-        else if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_LAB) {
-            pav = Opm::unit::convert::to(pav, Opm::unit::atm);
+        else if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_LAB) {
+            pav = unit::convert::to(pav, unit::atm);
 
         }
         else {
@@ -2092,18 +2092,18 @@ private:
         }
     }
 
-    void outputRegionFluidInPlace_(std::unordered_map<Opm::Inplace::Phase, Scalar> oip,
-                                   std::unordered_map<Opm::Inplace::Phase, Scalar> cip,
+    void outputRegionFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> oip,
+                                   std::unordered_map<Inplace::Phase, Scalar> cip,
                                    const Scalar& pav, const int reg = 0) const
     {
         if (forceDisableFipOutput_)
             return;
 
         // don't output FIPNUM report if the region has no porv.
-        if (cip[Opm::Inplace::Phase::PoreVolume] == 0)
+        if (cip[Inplace::Phase::PoreVolume] == 0)
             return;
 
-        const Opm::UnitSystem& units = simulator_.vanguard().eclState().getUnits();
+        const UnitSystem& units = simulator_.vanguard().eclState().getUnits();
         std::ostringstream ss;
         if (reg == 0) {
             ss << "                                                  ===================================================\n"
@@ -2114,20 +2114,20 @@ private:
                << "                                                  :        FIPNUM report region  "
                << std::setw(2) << reg << "                 :\n";
         }
-        if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_METRIC) {
+        if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
             ss << "                                                  :      PAV  =" << std::setw(14) << pav << " BARSA                 :\n"
                << std::fixed << std::setprecision(0)
-               << "                                                  :      PORV =" << std::setw(14) << cip[Opm::Inplace::Phase::PoreVolume] << "   RM3                 :\n";
+               << "                                                  :      PORV =" << std::setw(14) << cip[Inplace::Phase::PoreVolume] << "   RM3                 :\n";
             if (!reg) {
                 ss << "                                                  : Pressure is weighted by hydrocarbon pore volume :\n"
                    << "                                                  : Porv volumes are taken at reference conditions  :\n";
             }
             ss << "                         :--------------- Oil    SM3 ---------------:-- Wat    SM3 --:--------------- Gas    SM3 ---------------:\n";
         }
-        if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_FIELD) {
+        if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
             ss << "                                                  :      PAV  =" << std::setw(14) << pav << "  PSIA                 :\n"
                << std::fixed << std::setprecision(0)
-               << "                                                  :      PORV =" << std::setw(14) << cip[Opm::Inplace::Phase::PoreVolume] << "   RB                  :\n";
+               << "                                                  :      PORV =" << std::setw(14) << cip[Inplace::Phase::PoreVolume] << "   RB                  :\n";
             if (!reg) {
                 ss << "                                                  : Pressure is weighted by hydrocarbon pore volume :\n"
                    << "                                                  : Pore volumes are taken at reference conditions  :\n";
@@ -2136,13 +2136,13 @@ private:
         }
         ss << "                         :      Liquid        Vapour        Total   :      Total     :      Free        Dissolved       Total   :" << "\n"
            << ":------------------------:------------------------------------------:----------------:------------------------------------------:" << "\n"
-           << ":Currently   in place    :" << std::setw(14) << cip[Opm::Inplace::Phase::OilInLiquidPhase] << std::setw(14) << cip[Opm::Inplace::Phase::OilInGasPhase] << std::setw(14) << cip[Opm::Inplace::Phase::OIL] << ":"
-           << std::setw(13) << cip[Opm::Inplace::Phase::WATER] << "   :" << std::setw(14) << (cip[Opm::Inplace::Phase::GasInGasPhase]) << std::setw(14) << cip[Opm::Inplace::Phase::GasInLiquidPhase] << std::setw(14) << cip[Opm::Inplace::Phase::GAS] << ":\n"
+           << ":Currently   in place    :" << std::setw(14) << cip[Inplace::Phase::OilInLiquidPhase] << std::setw(14) << cip[Inplace::Phase::OilInGasPhase] << std::setw(14) << cip[Inplace::Phase::OIL] << ":"
+           << std::setw(13) << cip[Inplace::Phase::WATER] << "   :" << std::setw(14) << (cip[Inplace::Phase::GasInGasPhase]) << std::setw(14) << cip[Inplace::Phase::GasInLiquidPhase] << std::setw(14) << cip[Inplace::Phase::GAS] << ":\n"
            << ":------------------------:------------------------------------------:----------------:------------------------------------------:\n"
-           << ":Originally  in place    :" << std::setw(14) << oip[Opm::Inplace::Phase::OilInLiquidPhase] << std::setw(14) << oip[Opm::Inplace::Phase::OilInGasPhase] << std::setw(14) << oip[Opm::Inplace::Phase::OIL] << ":"
-           << std::setw(13) << oip[Opm::Inplace::Phase::WATER] << "   :" << std::setw(14) << oip[Opm::Inplace::Phase::GasInGasPhase] << std::setw(14) << oip[Opm::Inplace::Phase::GasInLiquidPhase] << std::setw(14) << oip[Opm::Inplace::Phase::GAS] << ":\n"
+           << ":Originally  in place    :" << std::setw(14) << oip[Inplace::Phase::OilInLiquidPhase] << std::setw(14) << oip[Inplace::Phase::OilInGasPhase] << std::setw(14) << oip[Inplace::Phase::OIL] << ":"
+           << std::setw(13) << oip[Inplace::Phase::WATER] << "   :" << std::setw(14) << oip[Inplace::Phase::GasInGasPhase] << std::setw(14) << oip[Inplace::Phase::GasInLiquidPhase] << std::setw(14) << oip[Inplace::Phase::GAS] << ":\n"
            << ":========================:==========================================:================:==========================================:\n";
-        Opm::OpmLog::note(ss.str());
+        OpmLog::note(ss.str());
     }
 
     void outputProductionReport_(const ScalarBuffer& wellProd, const StringBuffer& wellProdNames, const bool forceDisableProdOutput)
@@ -2150,19 +2150,19 @@ private:
                 if(forceDisableProdOutput)
                         return;
 
-        const Opm::UnitSystem& units = simulator_.vanguard().eclState().getUnits();
+        const UnitSystem& units = simulator_.vanguard().eclState().getUnits();
         std::ostringstream ss;
         if (wellProdNames[WellProdDataType::WellName].empty()) {
             ss << "======================================================= PRODUCTION REPORT =======================================================\n"//=================== \n"
                << ":  WELL  :  LOCATION :CTRL:    OIL    :   WATER   :    GAS    :   FLUID   :   WATER   : GAS/OIL  :  WAT/GAS   : BHP OR : THP OR :\n"// STEADY-ST PI       :\n"
                << ":  NAME  :  (I,J,K)  :MODE:    RATE   :   RATE    :    RATE   :  RES.VOL. :    CUT    :  RATIO   :   RATIO    : CON.PR.: BLK.PR.:\n";// OR POTN OF PREF. PH:\n";
-            if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_METRIC) {
+            if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
                             ss << ":        :           :    :  SCM/DAY  :  SCM/DAY  :  SCM/DAY  :  RCM/DAY  :  SCM/SCM  :  SCM/SCM :  SCM/SCM   :  BARSA :  BARSA :\n";//                    :\n";
                         }
-                        if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_FIELD) {
+                        if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
                             ss << ":        :           :    :  STB/DAY  :  STB/DAY  :  MSCF/DAY :  RB/DAY   :           : MSCF/STB :  STB/MSCF  :  PSIA  :  PSIA  :\n";//                    :\n";
                         }
-                    if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_LAB) {
+                    if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_LAB) {
                                 ss << ":        :           :    :  SCC/HR   :  SCC/HR   :  SCC/HR   :    RCC    :  SCC/SCC  :  SCC/SCC :  SCC/SCC   :  ATMA  :  ATMA  :\n";//                    :\n";
                         }
                 ss << "=================================================================================================================================\n";//=================== \n";
@@ -2176,7 +2176,7 @@ private:
             }
             ss << ":"<< std::setfill ('-') << std::setw (9) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (5) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (11) << ":" << std::setfill ('-') << std::setw (13) << ":" << std::setfill ('-') << std::setw (9) << ":" << std::setfill ('-') << std::setw (9) << ":" << "\n";
         }
-                Opm::OpmLog::note(ss.str());
+                OpmLog::note(ss.str());
     }
 
     void outputInjectionReport_(const ScalarBuffer& wellInj, const StringBuffer& wellInjNames, const bool forceDisableInjOutput)
@@ -2184,19 +2184,19 @@ private:
                 if(forceDisableInjOutput)
                         return;
 
-        const Opm::UnitSystem& units = simulator_.vanguard().eclState().getUnits();
+        const UnitSystem& units = simulator_.vanguard().eclState().getUnits();
         std::ostringstream ss;
         if (wellInjNames[WellInjDataType::WellName].empty()) {
             ss << "=================================================== INJECTION REPORT ========================================\n"//===================== \n"
                << ":  WELL  :  LOCATION : CTRL : CTRL : CTRL :    OIL    :   WATER   :    GAS    :   FLUID   : BHP OR : THP OR :\n"// STEADY-ST II       :\n"
                << ":  NAME  :  (I,J,K)  : MODE : MODE : MODE :    RATE   :   RATE    :    RATE   :  RES.VOL. : CON.PR.: BLK.PR.:\n";// OR POTENTIAL       :\n";
-            if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_METRIC) {
+            if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
                                 ss << ":        :           : OIL  : WAT  : GAS  :  SCM/DAY  :  SCM/DAY  :  SCM/DAY  :  RCM/DAY  :  BARSA :  BARSA :\n";//                    :\n";
                         }
-                        if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_FIELD) {
+                        if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
                                 ss << ":        :           : OIL  : WAT  : GAS  :  STB/DAY  :  STB/DAY  :  MSCF/DAY :  RB/DAY   :  PSIA  :  PSIA  :\n";//                    :\n";
                         }
-                        if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_LAB) {
+                        if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_LAB) {
                                 ss << ":        :           : OIL  : WAT  : GAS  :   SCC/HR  :  SCC/HR   :  SCC/HR   :  RCC/HR   :  ATMA  :  ATMA  :\n";//                    :\n";
                         }
                 ss << "==============================================================================================================\n";//===================== \n";
@@ -2210,7 +2210,7 @@ private:
             }
             ss << ":--------:-----------:------:------:------:------------:----------:-----------:-----------:--------:--------: \n";//--------------------:\n";
         }
-                Opm::OpmLog::note(ss.str());
+                OpmLog::note(ss.str());
     }
 
         void outputCumulativeReport_(const ScalarBuffer& wellCum, const StringBuffer& wellCumNames, const bool forceDisableCumOutput)
@@ -2218,19 +2218,19 @@ private:
                 if(forceDisableCumOutput)
                         return;
 
-        const Opm::UnitSystem& units = simulator_.vanguard().eclState().getUnits();
+        const UnitSystem& units = simulator_.vanguard().eclState().getUnits();
         std::ostringstream ss;
         if (wellCumNames[WellCumDataType::WellName].empty()) {
             ss << "=================================================== CUMULATIVE PRODUCTION/INJECTION REPORT =========================================\n"
                << ":  WELL  :  LOCATION :  WELL  :CTRL:    OIL    :   WATER   :    GAS    :   Prod    :    OIL    :   WATER   :    GAS    :   INJ     :\n"
                << ":  NAME  :  (I,J,K)  :  TYPE  :MODE:    PROD   :   PROD    :    PROD   :  RES.VOL. :    INJ    :   INJ     :    INJ    :  RES.VOL. :\n";
-            if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_METRIC) {
+            if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
                                 ss << ":        :           :        :    :    MSCM   :   MSCM    :    MMSCM  :   MRCM    :    MSCM   :   MSCM    :    MMSCM  :   MRCM    :\n";
                         }
-                        if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_FIELD) {
+                        if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
                                 ss << ":        :           :        :    :    MSTB   :   MSTB    :    MMSCF  :   MRB     :    MSTB   :   MSTB    :    MMSCF  :   MRB     :\n";
                         }
-                        if (units.getType() == Opm::UnitSystem::UnitType::UNIT_TYPE_LAB) {
+                        if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_LAB) {
                                 ss << ":        :           :        :    :     MSCC  :   MSCC    :    MMSCC  :   MRCC    :    MSCC   :   MSCC    :    MMSCC  :   MRCC    :\n";
                         }
                 ss << "====================================================================================================================================\n";
@@ -2244,7 +2244,7 @@ private:
             }
             ss << ":--------:-----------:--------:----:------------:----------:-----------:-----------:------------:----------:-----------:-----------: \n";
         }
-        Opm::OpmLog::note(ss.str());
+        OpmLog::note(ss.str());
     }
 
     std::string WPEnumToString_(int i)
@@ -2369,13 +2369,13 @@ private:
     std::vector<int> failedCellsPb_;
     std::vector<int> failedCellsPd_;
     std::unordered_map<std::string, std::vector<int>> regions_;
-    std::unordered_map<Opm::Inplace::Phase, ScalarBuffer> fip_;
-    std::optional<Opm::Inplace> initialInplace_;
+    std::unordered_map<Inplace::Phase, ScalarBuffer> fip_;
+    std::optional<Inplace> initialInplace_;
 
 
-    std::vector<Opm::SummaryConfigNode> RPRNodes_;
-    std::vector<Opm::SummaryConfigNode> RPRPNodes_;
-    std::unordered_map<Opm::Inplace::Phase, std::vector<Opm::SummaryConfigNode>> regionNodes_;
+    std::vector<SummaryConfigNode> RPRNodes_;
+    std::vector<SummaryConfigNode> RPRPNodes_;
+    std::unordered_map<Inplace::Phase, std::vector<SummaryConfigNode>> regionNodes_;
 
 
 

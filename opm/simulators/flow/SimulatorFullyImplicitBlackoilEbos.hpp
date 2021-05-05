@@ -78,7 +78,7 @@ public:
     using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
 
     typedef AdaptiveTimeSteppingEbos<TypeTag> TimeStepper;
-    typedef Opm::BlackOilPolymerModule<TypeTag> PolymerModule;
+    typedef BlackOilPolymerModule<TypeTag> PolymerModule;
 
     typedef WellStateFullyImplicitBlackoil WellState;
     typedef BlackoilModelEbos<TypeTag> Model;
@@ -157,15 +157,15 @@ public:
         ebosSimulator_.setEpisodeIndex(-1);
 
         // Create timers and file for writing timing info.
-        solverTimer_ = std::make_unique<Opm::time::StopWatch>();
-        totalTimer_ = std::make_unique<Opm::time::StopWatch>();
+        solverTimer_ = std::make_unique<time::StopWatch>();
+        totalTimer_ = std::make_unique<time::StopWatch>();
         totalTimer_->start();
 
         // adaptive time stepping
         bool enableAdaptive = EWOMS_GET_PARAM(TypeTag, bool, EnableAdaptiveTimeStepping);
         bool enableTUNING = EWOMS_GET_PARAM(TypeTag, bool, EnableTuning);
         if (enableAdaptive) {
-            const Opm::UnitSystem& unitSystem = this->ebosSimulator_.vanguard().eclState().getUnits();
+            const UnitSystem& unitSystem = this->ebosSimulator_.vanguard().eclState().getUnits();
             if (enableTUNING) {
                 adaptiveTimeStepping_ = std::make_unique<TimeStepper>(schedule()[timer.currentStepNum()].tuning(),
                                                                       unitSystem, terminalOutput_);
@@ -383,8 +383,8 @@ protected:
     bool terminalOutput_;
 
     SimulatorReport report_;
-    std::unique_ptr<Opm::time::StopWatch> solverTimer_;
-    std::unique_ptr<Opm::time::StopWatch> totalTimer_;
+    std::unique_ptr<time::StopWatch> solverTimer_;
+    std::unique_ptr<time::StopWatch> totalTimer_;
     std::unique_ptr<TimeStepper> adaptiveTimeStepping_;
 };
 

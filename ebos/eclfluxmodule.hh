@@ -114,7 +114,7 @@ class EclTransExtensiveQuantities
     enum { enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
+    typedef MathToolbox<Evaluation> Toolbox;
     typedef Dune::FieldVector<Scalar, dimWorld> DimVector;
     typedef Dune::FieldVector<Evaluation, dimWorld> EvalDimVector;
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
@@ -211,7 +211,7 @@ protected:
      */
     void calculateGradients_(const ElementContext& elemCtx, unsigned scvfIdx, unsigned timeIdx)
     {
-        Opm::Valgrind::SetUndefined(*this);
+        Valgrind::SetUndefined(*this);
 
         const auto& problem = elemCtx.problem();
         const auto& stencil = elemCtx.stencil(timeIdx);

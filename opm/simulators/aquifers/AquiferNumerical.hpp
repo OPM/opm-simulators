@@ -45,7 +45,7 @@ public:
     static const int numEq = BlackoilIndices::numEq;
 
     using Eval =  DenseAd::Evaluation<double, numEq>;
-    using Toolbox = Opm::MathToolbox<Eval>;
+    using Toolbox = MathToolbox<Eval>;
 
     // Constructor
     AquiferNumerical(const SingleNumericalAquifer& aquifer,
@@ -84,7 +84,7 @@ public:
         this->cumulative_flux_ += this->flux_rate_ * this->ebos_simulator_.timeStepSize();
     }
 
-    Opm::data::AquiferData aquiferData() const
+    data::AquiferData aquiferData() const
     {
         data::AquiferData data;
         data.aquiferID = this->id_;
@@ -92,7 +92,7 @@ public:
         data.pressure = this->pressure_;
         data.fluxRate = this->flux_rate_;
         data.volume = this->cumulative_flux_;
-        data.type = Opm::data::AquiferType::Numerical;
+        data.type = data::AquiferType::Numerical;
         return data;
     }
 

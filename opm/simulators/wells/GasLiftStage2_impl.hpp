@@ -283,7 +283,7 @@ displayDebugMessage_(const std::string &msg, const std::string &group_name)
 template<typename TypeTag>
 std::tuple<double, double, double>
 GasLiftStage2<TypeTag>::
-getCurrentGroupRates_(const Opm::Group &group)
+getCurrentGroupRates_(const Group &group)
 {
     auto rates = getCurrentGroupRatesRecursive_(group);
     const auto& comm = ebos_simulator_.vanguard().grid().comm();
@@ -302,7 +302,7 @@ getCurrentGroupRates_(const Opm::Group &group)
 
 template<typename TypeTag>
 std::array <double, 3> GasLiftStage2<TypeTag>::
-getCurrentGroupRatesRecursive_(const Opm::Group &group)
+getCurrentGroupRatesRecursive_(const Group &group)
 {
     double oil_rate = 0.0;
     double gas_rate = 0.0;
@@ -440,7 +440,7 @@ getStdWellRates_(const WellInterface<TypeTag> &well)
 template<typename TypeTag>
 std::vector<GasLiftSingleWell<TypeTag> *>
 GasLiftStage2<TypeTag>::
-getGroupGliftWells_(const Opm::Group &group)
+getGroupGliftWells_(const Group &group)
 {
     std::vector<GasLiftSingleWell *> wells;
     getGroupGliftWellsRecursive_(group, wells);
@@ -450,7 +450,7 @@ getGroupGliftWells_(const Opm::Group &group)
 template<typename TypeTag>
 void
 GasLiftStage2<TypeTag>::
-getGroupGliftWellsRecursive_(const Opm::Group &group,
+getGroupGliftWellsRecursive_(const Group &group,
          std::vector<GasLiftSingleWell *> &wells)
 {
     for (const std::string& group_name : group.groups()) {
@@ -471,7 +471,7 @@ getGroupGliftWellsRecursive_(const Opm::Group &group,
 template<typename TypeTag>
 void
 GasLiftStage2<TypeTag>::
-optimizeGroup_(const Opm::Group &group)
+optimizeGroup_(const Group &group)
 {
     const auto &gl_group = this->glo_.group(group.name());
     const auto &max_glift = gl_group.max_lift_gas();
@@ -494,7 +494,7 @@ optimizeGroup_(const Opm::Group &group)
 template<typename TypeTag>
 void
 GasLiftStage2<TypeTag>::
-optimizeGroupsRecursive_(const Opm::Group &group)
+optimizeGroupsRecursive_(const Group &group)
 {
     for (const std::string& group_name : group.groups()) {
         if(!this->schedule_.back().groups.has(group_name))
@@ -597,7 +597,7 @@ recalculateGradientAndUpdateData_(
 template<typename TypeTag>
 void
 GasLiftStage2<TypeTag>::
-redistributeALQ_(std::vector<GasLiftSingleWell *> &wells,  const Opm::Group &group,
+redistributeALQ_(std::vector<GasLiftSingleWell *> &wells,  const Group &group,
     std::vector<GradPair> &inc_grads, std::vector<GradPair> &dec_grads)
 {
     OptimizeState state {*this, group};
@@ -652,7 +652,7 @@ redistributeALQ_(std::vector<GasLiftSingleWell *> &wells,  const Opm::Group &gro
 template<typename TypeTag>
 void
 GasLiftStage2<TypeTag>::
-removeSurplusALQ_(const Opm::Group &group,
+removeSurplusALQ_(const Group &group,
     std::vector<GradPair> &inc_grads, std::vector<GradPair> &dec_grads)
 {
     if (dec_grads.size() == 0) {

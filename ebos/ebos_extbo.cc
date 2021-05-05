@@ -48,9 +48,9 @@ struct EnableExtbo<TypeTag, TTag::EbosExtboTypeTag> {
 
 namespace Opm {
 
-void ebosExtboSetDeck(std::unique_ptr<Opm::Deck> deck,
-                        std::unique_ptr<Opm::ParseContext> parseContext,
-                        std::unique_ptr<Opm::ErrorGuard> errorGuard,
+void ebosExtboSetDeck(std::unique_ptr<Deck> deck,
+                        std::unique_ptr<ParseContext> parseContext,
+                        std::unique_ptr<ErrorGuard> errorGuard,
                         double externalSetupTime)
 {
     using ProblemTypeTag = Properties::TTag::EbosExtboTypeTag;
@@ -65,7 +65,7 @@ void ebosExtboSetDeck(std::unique_ptr<Opm::Deck> deck,
 int ebosExtboMain(int argc, char **argv)
 {
     using ProblemTypeTag = Properties::TTag::EbosExtboTypeTag;
-    return Opm::startEbos<ProblemTypeTag>(argc, argv);
+    return startEbos<ProblemTypeTag>(argc, argv);
 }
 
 }

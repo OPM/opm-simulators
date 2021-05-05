@@ -48,9 +48,9 @@ struct EnableFoam<TypeTag, TTag::EbosFoamTypeTag> {
 
 namespace Opm {
 
-void ebosFoamSetDeck(std::unique_ptr<Opm::Deck> deck,
-                     std::unique_ptr<Opm::ParseContext> parseContext,
-                     std::unique_ptr<Opm::ErrorGuard> errorGuard,
+void ebosFoamSetDeck(std::unique_ptr<Deck> deck,
+                     std::unique_ptr<ParseContext> parseContext,
+                     std::unique_ptr<ErrorGuard> errorGuard,
                      double externalSetupTime)
 {
     using ProblemTypeTag = Properties::TTag::EbosFoamTypeTag;
@@ -65,7 +65,7 @@ void ebosFoamSetDeck(std::unique_ptr<Opm::Deck> deck,
 int ebosFoamMain(int argc, char **argv)
 {
     using ProblemTypeTag = Properties::TTag::EbosFoamTypeTag;
-    return Opm::startEbos<ProblemTypeTag>(argc, argv);
+    return startEbos<ProblemTypeTag>(argc, argv);
 }
 
 }

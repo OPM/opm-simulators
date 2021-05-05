@@ -264,7 +264,7 @@ namespace Opm
                    const double dt,
                    WellState& well_state,
                    const GroupState& group_state,
-                   Opm::DeferredLogger& deferred_logger)
+                   DeferredLogger& deferred_logger)
     {
 
         checkWellOperability(ebosSimulator, well_state, deferred_logger);
@@ -289,7 +289,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     updateWellStateWithTarget(const Simulator& ebos_simulator,
                               WellState& well_state,
-                              Opm::DeferredLogger&  deferred_logger) const
+                              DeferredLogger&  deferred_logger) const
     {
         Base::updateWellStateWithTarget(ebos_simulator, well_state, deferred_logger);
         // scale segment rates based on the wellRates
@@ -359,7 +359,7 @@ namespace Opm
     template <typename TypeTag>
     ConvergenceReport
     MultisegmentWell<TypeTag>::
-    getWellConvergence(const WellState& well_state, const std::vector<double>& B_avg, Opm::DeferredLogger& deferred_logger, const bool relax_tolerance) const
+    getWellConvergence(const WellState& well_state, const std::vector<double>& B_avg, DeferredLogger& deferred_logger, const bool relax_tolerance) const
     {
         assert(int(B_avg.size()) == num_components_);
 
@@ -542,7 +542,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     recoverWellSolutionAndUpdateWellState(const BVector& x,
                                           WellState& well_state,
-                                          Opm::DeferredLogger& deferred_logger) const
+                                          DeferredLogger& deferred_logger) const
     {
         if (!this->isOperable() && !this->wellIsStopped()) return;
 
@@ -561,7 +561,7 @@ namespace Opm
     computeWellPotentials(const Simulator& ebosSimulator,
                           const WellState& well_state,
                           std::vector<double>& well_potentials,
-                          Opm::DeferredLogger& deferred_logger)
+                          DeferredLogger& deferred_logger)
     {
         const int np = number_of_phases_;
         well_potentials.resize(np, 0.0);
@@ -575,12 +575,12 @@ namespace Opm
 /*         {
             bool pressure_controlled_well = false;
             if (this->isInjector()) {
-                const Opm::Well::InjectorCMode& current = well_state.currentInjectionControls()[index_of_well_];
+                const Well::InjectorCMode& current = well_state.currentInjectionControls()[index_of_well_];
                 if (current == Well::InjectorCMode::BHP || current == Well::InjectorCMode::THP) {
                     pressure_controlled_well = true;
                 }
             } else {
-                const Opm::Well::ProducerCMode& current = well_state.currentProductionControls()[index_of_well_];
+                const Well::ProducerCMode& current = well_state.currentProductionControls()[index_of_well_];
                 if (current == Well::ProducerCMode::BHP || current == Well::ProducerCMode::THP) {
                     pressure_controlled_well = true;
                 }
@@ -614,7 +614,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     computeWellRatesAtBhpLimit(const Simulator& ebosSimulator,
                                std::vector<double>& well_flux,
-                               Opm::DeferredLogger& deferred_logger) const
+                               DeferredLogger& deferred_logger) const
     {
         if (well_ecl_.isInjector()) {
             const auto controls = well_ecl_.injectionControls(ebosSimulator.vanguard().summaryState());
@@ -633,7 +633,7 @@ namespace Opm
     computeWellRatesWithBhp(const Simulator& ebosSimulator,
                             const Scalar bhp,
                             std::vector<double>& well_flux,
-                            Opm::DeferredLogger& deferred_logger) const
+                            DeferredLogger& deferred_logger) const
     {
         // creating a copy of the well itself, to avoid messing up the explicit informations
         // during this copy, the only information not copied properly is the well controls
@@ -695,7 +695,7 @@ namespace Opm
     std::vector<double>
     MultisegmentWell<TypeTag>::
     computeWellPotentialWithTHP(const Simulator& ebos_simulator,
-                                Opm::DeferredLogger& deferred_logger) const
+                                DeferredLogger& deferred_logger) const
     {
         std::vector<double> potentials(number_of_phases_, 0.0);
         const auto& summary_state = ebos_simulator.vanguard().summaryState();
@@ -743,7 +743,7 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    updatePrimaryVariables(const WellState& well_state, Opm::DeferredLogger& /* deferred_logger */) const
+    updatePrimaryVariables(const WellState& well_state, DeferredLogger& /* deferred_logger */) const
     {
         // TODO: to test using rate conversion coefficients to see if it will be better than
         // this default one
@@ -837,7 +837,7 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    solveEqAndUpdateWellState(WellState& well_state, Opm::DeferredLogger& deferred_logger)
+    solveEqAndUpdateWellState(WellState& well_state, DeferredLogger& deferred_logger)
     {
         if (!this->isOperable() && !this->wellIsStopped()) return;
 
@@ -930,7 +930,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     updateWellState(const BVectorWell& dwells,
                     WellState& well_state,
-                    Opm::DeferredLogger& deferred_logger,
+                    DeferredLogger& deferred_logger,
                     const double relaxation_factor) const
     {
         if (!this->isOperable() && !this->wellIsStopped()) return;
@@ -991,7 +991,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     calculateExplicitQuantities(const Simulator& ebosSimulator,
                                 const WellState& well_state,
-                                Opm::DeferredLogger& deferred_logger)
+                                DeferredLogger& deferred_logger)
     {
         updatePrimaryVariables(well_state, deferred_logger);
         initPrimaryVariablesEvaluation();
@@ -1256,7 +1256,7 @@ namespace Opm
                             EvalWell& perf_press,
                             double& perf_dis_gas_rate,
                             double& perf_vap_oil_rate,
-                            Opm::DeferredLogger& deferred_logger) const
+                            DeferredLogger& deferred_logger) const
 
     {
         std::vector<EvalWell> cmix_s(num_components_, 0.0);
@@ -1347,7 +1347,7 @@ namespace Opm
                 const EvalWell d = 1.0 - rv * rs;
 
                 if (d.value() == 0.0) {
-                    OPM_DEFLOG_THROW(Opm::NumericalIssue, "Zero d value obtained for well " << name() << " during flux calcuation"
+                    OPM_DEFLOG_THROW(NumericalIssue, "Zero d value obtained for well " << name() << " during flux calcuation"
                                                   << " with rs " << rs << " and rv " << rv, deferred_logger);
                 }
 
@@ -1783,11 +1783,11 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     assembleControlEq(const WellState& well_state,
                       const GroupState& group_state,
-                      const Opm::Schedule& schedule,
+                      const Schedule& schedule,
                       const SummaryState& summaryState,
                       const Well::InjectionControls& inj_controls,
                       const Well::ProductionControls& prod_controls,
-                      Opm::DeferredLogger& deferred_logger)
+                      DeferredLogger& deferred_logger)
     {
 
         EvalWell control_eq(0.0);
@@ -1864,7 +1864,7 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    updateThp(WellState& well_state, Opm::DeferredLogger& deferred_logger) const
+    updateThp(WellState& well_state, DeferredLogger& deferred_logger) const
     {
         // When there is no vaild VFP table provided, we set the thp to be zero.
         if (!this->isVFPActive(deferred_logger) || this->wellIsStopped()) {
@@ -1875,7 +1875,7 @@ namespace Opm
         // the well is under other control types, we calculate the thp based on bhp and rates
         std::vector<double> rates(3, 0.0);
 
-        const Opm::PhaseUsage& pu = phaseUsage();
+        const PhaseUsage& pu = phaseUsage();
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
             rates[ Water ] = well_state.wellRates()[index_of_well_ * number_of_phases_ + pu.phase_pos[ Water ] ];
         }
@@ -1899,7 +1899,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     calculateThpFromBhp(const std::vector<double>& rates,
                         const double bhp,
-                        Opm::DeferredLogger& deferred_logger) const
+                        DeferredLogger& deferred_logger) const
     {
         assert(int(rates.size()) == 3); // the vfp related only supports three phases now.
 
@@ -2163,7 +2163,7 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    checkOperabilityUnderBHPLimitProducer(const WellState& /*well_state*/, const Simulator& ebos_simulator, Opm::DeferredLogger& deferred_logger)
+    checkOperabilityUnderBHPLimitProducer(const WellState& /*well_state*/, const Simulator& ebos_simulator, DeferredLogger& deferred_logger)
     {
         const auto& summaryState = ebos_simulator.vanguard().summaryState();
         const double bhp_limit = Base::mostStrictBhpFromBhpLimits(summaryState);
@@ -2216,7 +2216,7 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    updateIPR(const Simulator& ebos_simulator, Opm::DeferredLogger& deferred_logger) const
+    updateIPR(const Simulator& ebos_simulator, DeferredLogger& deferred_logger) const
     {
         // TODO: not handling solvent related here for now
 
@@ -2324,7 +2324,7 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    checkOperabilityUnderTHPLimitProducer(const Simulator& ebos_simulator, const WellState& /*well_state*/, Opm::DeferredLogger& deferred_logger)
+    checkOperabilityUnderTHPLimitProducer(const Simulator& ebos_simulator, const WellState& /*well_state*/, DeferredLogger& deferred_logger)
     {
         const auto& summaryState = ebos_simulator.vanguard().summaryState();
         const auto obtain_bhp = computeBhpAtThpLimitProd(ebos_simulator, summaryState, deferred_logger);
@@ -2364,7 +2364,7 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    updateWellStateFromPrimaryVariables(WellState& well_state, Opm::DeferredLogger& deferred_logger) const
+    updateWellStateFromPrimaryVariables(WellState& well_state, DeferredLogger& deferred_logger) const
     {
         const PhaseUsage& pu = phaseUsage();
         assert( FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) );
@@ -2455,7 +2455,7 @@ namespace Opm
                              const Well::ProductionControls& prod_controls,
                              WellState& well_state,
                              const GroupState& group_state,
-                             Opm::DeferredLogger& deferred_logger)
+                             DeferredLogger& deferred_logger)
     {
         if (!this->isOperable() && !this->wellIsStopped()) return true;
 
@@ -2574,7 +2574,7 @@ namespace Opm
                                    const Well::ProductionControls& prod_controls,
                                    WellState& well_state,
                                    const GroupState& group_state,
-                                   Opm::DeferredLogger& deferred_logger)
+                                   DeferredLogger& deferred_logger)
     {
 
         if (!this->isOperable() && !this->wellIsStopped()) return;
@@ -2726,7 +2726,7 @@ namespace Opm
             // the fourth dequation, the pressure drop equation
             if (seg == 0) { // top segment, pressure equation is the control equation
                 const auto& summaryState = ebosSimulator.vanguard().summaryState();
-                const Opm::Schedule& schedule = ebosSimulator.vanguard().schedule();
+                const Schedule& schedule = ebosSimulator.vanguard().schedule();
                 assembleControlEq(well_state, group_state, schedule, summaryState, inj_controls, prod_controls, deferred_logger);
             } else {
                 const UnitSystem& unit_system = ebosSimulator.vanguard().eclState().getDeckUnitSystem();
@@ -2935,7 +2935,7 @@ namespace Opm
                      << ", rv " << rv << " and pressure " << seg_pressure
                      << " obtaining d " << d;
                 OpmLog::debug(sstr.str());
-                OPM_THROW_NOLOG(Opm::NumericalIssue, sstr.str());
+                OPM_THROW_NOLOG(NumericalIssue, sstr.str());
             }
 
             if (rs > 0.0) { // rs > 0.0?
@@ -2981,7 +2981,7 @@ namespace Opm
                     }
                 }
                 if (std::isnan(residual) || std::isinf(residual)) {
-                    OPM_DEFLOG_THROW(Opm::NumericalIssue, "nan or inf value for residal get for well " << name()
+                    OPM_DEFLOG_THROW(NumericalIssue, "nan or inf value for residal get for well " << name()
                                                     << " segment " << seg << " eq_idx " << eq_idx, deferred_logger);
                 }
 
@@ -2995,7 +2995,7 @@ namespace Opm
         {
             const double control_residual = std::abs(resWell_[0][numWellEq - 1]);
             if (std::isnan(control_residual) || std::isinf(control_residual)) {
-               OPM_DEFLOG_THROW(Opm::NumericalIssue, "nan or inf value for control residal get for well " << name(), deferred_logger);
+               OPM_DEFLOG_THROW(NumericalIssue, "nan or inf value for control residal get for well " << name(), deferred_logger);
             }
             residuals[numWellEq] = control_residual;
         }
@@ -3090,7 +3090,7 @@ namespace Opm
         const int well_index = index_of_well_;
         if (this->isInjector() )
         {
-            const Opm::Well::InjectorCMode& current = well_state.currentInjectionControls()[well_index];
+            const Well::InjectorCMode& current = well_state.currentInjectionControls()[well_index];
             switch(current) {
             case Well::InjectorCMode::THP:
                 control_tolerance = param_.tolerance_pressure_ms_wells_;
@@ -3157,7 +3157,7 @@ namespace Opm
         const int well_index = index_of_well_;
         if (this->isInjector() )
         {
-            const Opm::Well::InjectorCMode& current = well_state.currentInjectionControls()[well_index];
+            const Well::InjectorCMode& current = well_state.currentInjectionControls()[well_index];
             switch(current) {
             case Well::InjectorCMode::THP:
                 ctrltype = CR::WellFailure::Type::ControlTHP;
@@ -3892,7 +3892,7 @@ namespace Opm
         const auto volume_rate_icd = this->segment_mass_rates_[seg] * aicd.scalingFactor() / mixture_density;
         const double sign = volume_rate_icd <= 0. ? 1.0 : -1.0;
         // convert 1 unit volume rate
-        using M  = Opm::UnitSystem::measure;
+        using M  = UnitSystem::measure;
         const double unit_volume_rate = unit_system.to_si(M::geometric_volume_rate, 1.);
 
         // TODO: we did not consider the maximum allowed rate here
@@ -4049,7 +4049,7 @@ namespace Opm
             phase_pos = pu.phase_pos[Water];
         }
         else {
-            OPM_DEFLOG_THROW(Opm::NotImplemented,
+            OPM_DEFLOG_THROW(NotImplemented,
                              "Unsupported Injector Type ("
                              << static_cast<int>(preferred_phase)
                              << ") for well " << this->name()

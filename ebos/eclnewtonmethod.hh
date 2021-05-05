@@ -195,7 +195,7 @@ public:
                     tmpError2 *= dofVolume;
                 }
 
-                this->error_ = Opm::max(std::abs(tmpError), this->error_);
+                this->error_ = max(std::abs(tmpError), this->error_);
 
                 if (std::abs(tmpError) > this->tolerance_)
                     cnvViolated = true;
@@ -232,14 +232,14 @@ public:
         // make sure that the error never grows beyond the maximum
         // allowed one
         if (this->error_ > newtonMaxError)
-            throw Opm::NumericalIssue("Newton: Error "+std::to_string(double(this->error_))
+            throw NumericalIssue("Newton: Error "+std::to_string(double(this->error_))
                                         +" is larger than maximum allowed error of "
                                         +std::to_string(double(newtonMaxError)));
 
         // make sure that the error never grows beyond the maximum
         // allowed one
         if (errorSum_ > newtonMaxError)
-            throw Opm::NumericalIssue("Newton: Sum of the error "+std::to_string(double(errorSum_))
+            throw NumericalIssue("Newton: Sum of the error "+std::to_string(double(errorSum_))
                                         +" is larger than maximum allowed error of "
                                         +std::to_string(double(newtonMaxError)));
     }

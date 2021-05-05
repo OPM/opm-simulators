@@ -144,7 +144,7 @@ PhaseUsage phaseUsage(const Phases& phases)
     return pu;
 }
 
-PhaseUsage phaseUsageFromDeck(const Opm::EclipseState& eclipseState)
+PhaseUsage phaseUsageFromDeck(const EclipseState& eclipseState)
 {
     const auto& phases = eclipseState.runspec().phases();
 
@@ -153,7 +153,7 @@ PhaseUsage phaseUsageFromDeck(const Opm::EclipseState& eclipseState)
 
 /// Looks at presence of WATER, OIL and GAS keywords in deck
 /// to determine active phases.
-PhaseUsage phaseUsageFromDeck(const Opm::Deck& deck)
+PhaseUsage phaseUsageFromDeck(const Deck& deck)
 {
     Runspec runspec( deck );
     const auto& phases = runspec.phases();

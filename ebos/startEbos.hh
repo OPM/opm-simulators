@@ -91,7 +91,7 @@ static inline int startEbos(int argc, char **argv)
 
     // Call the main function. Parameters are already registered
     // They should not be registered again
-    return Opm::start<TypeTag>(argc, argv, /*registerParams=*/false);
+    return start<TypeTag>(argc, argv, /*registerParams=*/false);
 
 }
 

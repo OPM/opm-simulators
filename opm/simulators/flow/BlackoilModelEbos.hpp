@@ -96,7 +96,7 @@ struct UseVolumetricResidual<TypeTag, TTag::EclFlowProblem> {
 
 template<class TypeTag>
 struct EclAquiferModel<TypeTag, TTag::EclFlowProblem> {
-    using type = Opm::BlackoilAquiferModel<TypeTag>;
+    using type = BlackoilAquiferModel<TypeTag>;
 };
 
 // disable all extensions supported by black oil model. this should not really be
@@ -128,7 +128,7 @@ struct EnableBrine<TypeTag, TTag::EclFlowProblem> {
 
 template<class TypeTag>
 struct EclWellModel<TypeTag, TTag::EclFlowProblem> {
-    using type = Opm::BlackoilWellModel<TypeTag>;
+    using type = BlackoilWellModel<TypeTag>;
 };
 template<class TypeTag>
 struct LinearSolverSplice<TypeTag, TTag::EclFlowProblem> {
@@ -316,9 +316,9 @@ namespace Opm {
 
                 // Throw if any NaN or too large residual found.
                 if (severity == ConvergenceReport::Severity::NotANumber) {
-                    OPM_THROW(Opm::NumericalIssue, "NaN residual found!");
+                    OPM_THROW(NumericalIssue, "NaN residual found!");
                 } else if (severity == ConvergenceReport::Severity::TooLarge) {
-                    OPM_THROW(Opm::NumericalIssue, "Too large residual found!");
+                    OPM_THROW(NumericalIssue, "Too large residual found!");
                 }
             }
             report.update_time += perfTimer.stop();

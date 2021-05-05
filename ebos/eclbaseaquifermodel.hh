@@ -150,8 +150,8 @@ public:
     { }
 
 
-    Opm::data::Aquifers aquiferData() const
-    { return Opm::data::Aquifers{}; }
+    data::Aquifers aquiferData() const
+    { return data::Aquifers{}; }
 
 
 protected:

@@ -52,7 +52,7 @@ struct EbosTypeTag {
 // Set the problem class
 template<class TypeTag>
 struct Problem<TypeTag, TTag::EbosTypeTag> {
-    using type = Opm::EbosProblem<TypeTag>;
+    using type = EbosProblem<TypeTag>;
 };
 
 // Enable experimental features for ebos: ebos is the research simulator of the OPM
@@ -66,7 +66,7 @@ struct EnableExperiments<TypeTag, TTag::EbosTypeTag> {
 // use flow's well model for now
 template<class TypeTag>
 struct EclWellModel<TypeTag, TTag::EbosTypeTag> {
-    using type = Opm::BlackoilWellModel<TypeTag>;
+    using type = BlackoilWellModel<TypeTag>;
 };
 
 // currently, ebos uses the non-multisegment well model by default to avoid
@@ -103,7 +103,7 @@ struct UseVolumetricResidual<TypeTag, TTag::EbosTypeTag> {
 // by default use flow's aquifer model for now
 template<class TypeTag>
 struct EclAquiferModel<TypeTag, TTag::EbosTypeTag> {
-    using type = Opm::BlackoilAquiferModel<TypeTag>;
+    using type = BlackoilAquiferModel<TypeTag>;
 };
 
 // use flow's linear solver backend for now
@@ -187,7 +187,7 @@ public:
     {
         ParentType::registerParameters();
 
-        Opm::BlackoilModelParametersEbos<TypeTag>::registerParameters();
+        BlackoilModelParametersEbos<TypeTag>::registerParameters();
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableTerminalOutput, "Do *NOT* use!");
         EWOMS_HIDE_PARAM(TypeTag, DbhpMaxRel);
         EWOMS_HIDE_PARAM(TypeTag, DwellFractionMax);

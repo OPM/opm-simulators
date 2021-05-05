@@ -34,7 +34,7 @@ namespace Opm
 namespace detail
 {
 
-namespace fs = Opm::filesystem;
+namespace fs = ::Opm::filesystem;
 
 /// \brief A functor that merges multiple files of a parallel run to one file.
 ///

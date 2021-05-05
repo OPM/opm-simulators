@@ -89,7 +89,7 @@ namespace Opm {
 
         /// Class for handling the blackoil well model.
         template<typename TypeTag>
-        class BlackoilWellModel : public Opm::BaseAuxiliaryModule<TypeTag>
+        class BlackoilWellModel : public BaseAuxiliaryModule<TypeTag>
         {
         public:
             // ---------      Types      ---------
@@ -106,10 +106,10 @@ namespace Opm {
             using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
             using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
 
-            typedef typename Opm::BaseAuxiliaryModule<TypeTag>::NeighborSet NeighborSet;
-            using GasLiftSingleWell = Opm::GasLiftSingleWell<TypeTag>;
-            using GasLiftStage2 = Opm::GasLiftStage2<TypeTag>;
-            using GLiftWellState = Opm::GasLiftWellState<TypeTag>;
+            typedef typename BaseAuxiliaryModule<TypeTag>::NeighborSet NeighborSet;
+            using GasLiftSingleWell = ::Opm::GasLiftSingleWell<TypeTag>;
+            using GasLiftStage2 = ::Opm::GasLiftStage2<TypeTag>;
+            using GLiftWellState = ::Opm::GasLiftWellState<TypeTag>;
             using GLiftWellStateMap =
                 std::map<std::string,std::unique_ptr<GLiftWellState>>;
             using GLiftOptWells =
@@ -130,7 +130,7 @@ namespace Opm {
 
             typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
 
-            typedef Opm::BlackOilPolymerModule<TypeTag> PolymerModule;
+            typedef BlackOilPolymerModule<TypeTag> PolymerModule;
 
             // For the conversion between the surface volume rate and resrevoir voidage rate
             using RateConverterType = RateConverter::
@@ -217,8 +217,8 @@ namespace Opm {
 
             void initFromRestartFile(const RestartValue& restartValues);
 
-            Opm::data::GroupAndNetworkValues
-            groupAndNetworkData(const int reportStepIdx, const Opm::Schedule& sched) const
+            data::GroupAndNetworkValues
+            groupAndNetworkData(const int reportStepIdx, const Schedule& sched) const
             {
                 auto grp_nwrk_values = ::Opm::data::GroupAndNetworkValues{};
 
@@ -337,9 +337,9 @@ namespace Opm {
                 return this->active_wgstate_.group_state;
             }
 
-            Opm::data::Wells wellData() const
+            data::Wells wellData() const
             {
-                auto wsrpt = this->wellState().report(Opm::UgGridHelpers::globalCell(grid()),
+                auto wsrpt = this->wellState().report(UgGridHelpers::globalCell(grid()),
                                                       [this](const int well_ndex) -> bool
                                                       {
                                                           return this->wasDynamicallyShutThisTimeStep(well_ndex);
@@ -400,12 +400,12 @@ namespace Opm {
             // twice at the beginning of the time step
             /// Calculating the explict quantities used in the well calculation. By explicit, we mean they are cacluated
             /// at the beginning of the time step and no derivatives are included in these quantities
-            void calculateExplicitQuantities(Opm::DeferredLogger& deferred_logger) const;
+            void calculateExplicitQuantities(DeferredLogger& deferred_logger) const;
             // some preparation work, mostly related to group control and RESV,
             // at the beginning of each time step (Not report step)
-            void prepareTimeStep(Opm::DeferredLogger& deferred_logger);
+            void prepareTimeStep(DeferredLogger& deferred_logger);
             void initPrimaryVariablesEvaluation() const;
-            void updateWellControls(Opm::DeferredLogger& deferred_logger, const bool checkGroupControls);
+            void updateWellControls(DeferredLogger& deferred_logger, const bool checkGroupControls);
             WellInterfacePtr getWell(const std::string& well_name) const;
         protected:
             Simulator& ebosSimulator_;
@@ -451,7 +451,7 @@ namespace Opm {
             createTypedWellPointer(const int wellID,
                                    const int time_step) const;
 
-            WellInterfacePtr createWellForWellTest(const std::string& well_name, const int report_step, Opm::DeferredLogger& deferred_logger) const;
+            WellInterfacePtr createWellForWellTest(const std::string& well_name, const int report_step, DeferredLogger& deferred_logger) const;
 
 
             const ModelParameters param_;
@@ -497,7 +497,7 @@ namespace Opm {
 
             void gliftDebug(
                 const std::string &msg,
-                Opm::DeferredLogger& deferred_logger) const;
+                DeferredLogger& deferred_logger) const;
 
             /// \brief Get the wells of our partition that are not shut.
             /// \param timeStepIdx The index of the time step.
@@ -528,7 +528,7 @@ namespace Opm {
             void updateNetworkPressures();
 
             // setting the well_solutions_ based on well_state.
-            void updatePrimaryVariables(Opm::DeferredLogger& deferred_logger);
+            void updatePrimaryVariables(DeferredLogger& deferred_logger);
 
             void setupCartesianToCompressed_(const int* global_cell, int local_num__cells);
 
@@ -538,7 +538,7 @@ namespace Opm {
             void updateAverageFormationFactor();
 
             // Calculating well potentials for each well
-            void computeWellPotentials(std::vector<double>& well_potentials, const int reportStepIdx, Opm::DeferredLogger& deferred_logger);
+            void computeWellPotentials(std::vector<double>& well_potentials, const int reportStepIdx, DeferredLogger& deferred_logger);
 
             const std::vector<double>& wellPerfEfficiencyFactors() const;
 
@@ -558,13 +558,13 @@ namespace Opm {
 
             int reportStepIndex() const;
 
-            void assembleWellEq(const double dt, Opm::DeferredLogger& deferred_logger);
+            void assembleWellEq(const double dt, DeferredLogger& deferred_logger);
 
-            void maybeDoGasLiftOptimize(Opm::DeferredLogger& deferred_logger);
+            void maybeDoGasLiftOptimize(DeferredLogger& deferred_logger);
 
-            void gliftDebugShowALQ(Opm::DeferredLogger& deferred_logger);
+            void gliftDebugShowALQ(DeferredLogger& deferred_logger);
 
-            void gasLiftOptimizationStage2(Opm::DeferredLogger& deferred_logger,
+            void gasLiftOptimizationStage2(DeferredLogger& deferred_logger,
                 GLiftProdWells &prod_wells, GLiftOptWells &glift_wells,
                 GLiftWellStateMap &map);
 
@@ -583,7 +583,7 @@ namespace Opm {
             /// upate the wellTestState related to economic limits
             void updateWellTestState(const double& simulationTime, WellTestState& wellTestState) const;
 
-            void wellTesting(const int timeStepIdx, const double simulationTime, Opm::DeferredLogger& deferred_logger);
+            void wellTesting(const int timeStepIdx, const double simulationTime, DeferredLogger& deferred_logger);
 
             // convert well data from opm-common to well state from opm-core
             void loadRestartData( const data::Wells& wells,
@@ -597,19 +597,19 @@ namespace Opm {
 
             const Well& getWellEcl(const std::string& well_name) const;
 
-            void updateGroupIndividualControls(Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
-            void updateGroupIndividualControl(const Group& group, Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
-            bool checkGroupConstraints(const Group& group, Opm::DeferredLogger& deferred_logger) const;
-            Group::ProductionCMode checkGroupProductionConstraints(const Group& group, Opm::DeferredLogger& deferred_logger) const;
+            void updateGroupIndividualControls(DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
+            void updateGroupIndividualControl(const Group& group, DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
+            bool checkGroupConstraints(const Group& group, DeferredLogger& deferred_logger) const;
+            Group::ProductionCMode checkGroupProductionConstraints(const Group& group, DeferredLogger& deferred_logger) const;
             Group::InjectionCMode checkGroupInjectionConstraints(const Group& group, const Phase& phase) const;
-            void checkGconsaleLimits(const Group& group, WellState& well_state, Opm::DeferredLogger& deferred_logger );
+            void checkGconsaleLimits(const Group& group, WellState& well_state, DeferredLogger& deferred_logger );
 
-            void updateGroupHigherControls(Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
-            void checkGroupHigherConstraints(const Group& group, Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
+            void updateGroupHigherControls(DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
+            void checkGroupHigherConstraints(const Group& group, DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
 
-            void actionOnBrokenConstraints(const Group& group, const Group::ExceedAction& exceed_action, const Group::ProductionCMode& newControl, Opm::DeferredLogger& deferred_logger);
+            void actionOnBrokenConstraints(const Group& group, const Group::ExceedAction& exceed_action, const Group::ProductionCMode& newControl, DeferredLogger& deferred_logger);
 
-            void actionOnBrokenConstraints(const Group& group, const Group::InjectionCMode& newControl, const Phase& topUpPhase, Opm::DeferredLogger& deferred_logger);
+            void actionOnBrokenConstraints(const Group& group, const Group::InjectionCMode& newControl, const Phase& topUpPhase, DeferredLogger& deferred_logger);
 
             void updateWsolvent(const Group& group, const Schedule& schedule, const int reportStepIdx, const WellStateFullyImplicitBlackoil& wellState);
 

@@ -68,7 +68,7 @@ public:
         aquifer_pressure_ = aquiferPressure();
     }
 
-    Opm::data::AquiferData aquiferData() const
+    data::AquiferData aquiferData() const
     {
         // TODO: how to unify the two functions?
         data::AquiferData data;
@@ -80,7 +80,7 @@ public:
         }
         data.volume = this->W_flux_.value();
         data.initPressure = this->pa0_;
-        data.type = Opm::data::AquiferType::Fetkovich;
+        data.type = data::AquiferType::Fetkovich;
         // Not handling std::shared_ptr<FetkovichData> aquFet for now,
         // because we do not need it yet
         return data;

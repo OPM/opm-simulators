@@ -40,7 +40,7 @@ namespace Helper
         } else if (!dir.empty() && dir.back() != '/') {
             dir += "/";
         }
-        namespace fs = Opm::filesystem;
+        namespace fs = ::Opm::filesystem;
         fs::path output_dir(dir);
         fs::path subdir("reports");
         output_dir = output_dir / subdir;

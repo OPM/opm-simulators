@@ -99,7 +99,7 @@ public:
     void endTimeStep();
     void endEpisode();
 
-    Opm::data::Aquifers aquiferData() const;
+    data::Aquifers aquiferData() const;
 
     template <class Restarter>
     void serialize(Restarter& res);
