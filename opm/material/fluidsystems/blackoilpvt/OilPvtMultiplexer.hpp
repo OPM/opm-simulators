@@ -39,36 +39,45 @@
 #endif
 
 namespace Opm {
-#define OPM_OIL_PVT_MULTIPLEXER_CALL(codeToCall)                        \
-    switch (approach_) {                                                \
-    case ConstantCompressibilityOilPvt: {                               \
-        auto& pvtImpl = getRealPvt<ConstantCompressibilityOilPvt>();    \
-        codeToCall;                                                     \
-        break;                                                          \
-    }                                                                   \
-    case DeadOilPvt: {                                                  \
-        auto& pvtImpl = getRealPvt<DeadOilPvt>();                       \
-        codeToCall;                                                     \
-        break;                                                          \
-    }                                                                   \
-    case LiveOilPvt: {                                                  \
-        auto& pvtImpl = getRealPvt<LiveOilPvt>();                       \
-        codeToCall;                                                     \
-        break;                                                          \
-    }                                                                   \
-    case ThermalOilPvt: {                                               \
-        auto& pvtImpl = getRealPvt<ThermalOilPvt>();                    \
-        codeToCall;                                                     \
-        break;                                                          \
-    }                                                                   \
-    case BrineCo2Pvt: {                                                 \
-        auto& pvtImpl = getRealPvt<BrineCo2Pvt>();                      \
-        codeToCall;                                                     \
-        break;                                                          \
-    }                                                                   \
-    case NoOilPvt:                                                      \
-        throw std::logic_error("Not implemented: Oil PVT of this deck!"); \
-    }                                                                     \
+#define OPM_OIL_PVT_MULTIPLEXER_CALL(codeToCall)                                     \
+    switch (approach_) {                                                             \
+    case OilPvtApproach::ConstantCompressibilityOilPvt: {                            \
+        auto& pvtImpl = getRealPvt<OilPvtApproach::ConstantCompressibilityOilPvt>(); \
+        codeToCall;                                                                  \
+        break;                                                                       \
+    }                                                                                \
+    case OilPvtApproach::DeadOilPvt: {                                               \
+        auto& pvtImpl = getRealPvt<OilPvtApproach::DeadOilPvt>();                    \
+        codeToCall;                                                                  \
+        break;                                                                       \
+    }                                                                                \
+    case OilPvtApproach::LiveOilPvt: {                                               \
+        auto& pvtImpl = getRealPvt<OilPvtApproach::LiveOilPvt>();                    \
+        codeToCall;                                                                  \
+        break;                                                                       \
+    }                                                                                \
+    case OilPvtApproach::ThermalOilPvt: {                                            \
+        auto& pvtImpl = getRealPvt<OilPvtApproach::ThermalOilPvt>();                 \
+        codeToCall;                                                                  \
+        break;                                                                       \
+    }                                                                                \
+    case OilPvtApproach::BrineCo2Pvt: {                                              \
+        auto& pvtImpl = getRealPvt<OilPvtApproach::BrineCo2Pvt>();                   \
+        codeToCall;                                                                  \
+        break;                                                                       \
+    }                                                                                \
+    case OilPvtApproach::NoOilPvt:                                                   \
+        throw std::logic_error("Not implemented: Oil PVT of this deck!");            \
+    }                                                                                \
+
+enum class OilPvtApproach {
+    NoOilPvt,
+    LiveOilPvt,
+    DeadOilPvt,
+    ConstantCompressibilityOilPvt,
+    ThermalOilPvt,
+    BrineCo2Pvt
+};
 
 /*!
  * \brief This class represents the Pressure-Volume-Temperature relations of the oil
@@ -88,18 +97,9 @@ class OilPvtMultiplexer
 public:
     typedef Opm::OilPvtThermal<Scalar> OilPvtThermal;
 
-    enum OilPvtApproach {
-        NoOilPvt,
-        LiveOilPvt,
-        DeadOilPvt,
-        ConstantCompressibilityOilPvt,
-        ThermalOilPvt,
-        BrineCo2Pvt
-    };
-
     OilPvtMultiplexer()
     {
-        approach_ = NoOilPvt;
+        approach_ = OilPvtApproach::NoOilPvt;
         realOilPvt_ = nullptr;
     }
 
@@ -116,28 +116,28 @@ public:
     ~OilPvtMultiplexer()
     {
         switch (approach_) {
-        case LiveOilPvt: {
-            delete &getRealPvt<LiveOilPvt>();
+        case OilPvtApproach::LiveOilPvt: {
+            delete &getRealPvt<OilPvtApproach::LiveOilPvt>();
             break;
         }
-        case DeadOilPvt: {
-            delete &getRealPvt<DeadOilPvt>();
+        case OilPvtApproach::DeadOilPvt: {
+            delete &getRealPvt<OilPvtApproach::DeadOilPvt>();
             break;
         }
-        case ConstantCompressibilityOilPvt: {
-            delete &getRealPvt<ConstantCompressibilityOilPvt>();
+        case OilPvtApproach::ConstantCompressibilityOilPvt: {
+            delete &getRealPvt<OilPvtApproach::ConstantCompressibilityOilPvt>();
             break;
         }
-        case ThermalOilPvt: {
-            delete &getRealPvt<ThermalOilPvt>();
+        case OilPvtApproach::ThermalOilPvt: {
+            delete &getRealPvt<OilPvtApproach::ThermalOilPvt>();
             break;
         }
-        case BrineCo2Pvt: {
-            delete &getRealPvt<BrineCo2Pvt>();
+        case OilPvtApproach::BrineCo2Pvt: {
+            delete &getRealPvt<OilPvtApproach::BrineCo2Pvt>();
             break;
         }
 
-        case NoOilPvt:
+        case OilPvtApproach::NoOilPvt:
             break;
         }
     }
@@ -155,15 +155,15 @@ public:
         // TODO move the BrineCo2 approach to the waterPvtMultiplexer
         // when a proper gas-water simulator is supported
         if (eclState.runspec().co2Storage())
-            setApproach(BrineCo2Pvt);
+            setApproach(OilPvtApproach::BrineCo2Pvt);
         else if (enableThermal && eclState.getSimulationConfig().isThermal())
-            setApproach(ThermalOilPvt);
+            setApproach(OilPvtApproach::ThermalOilPvt);
         else if (!eclState.getTableManager().getPvcdoTable().empty())
-            setApproach(ConstantCompressibilityOilPvt);
+            setApproach(OilPvtApproach::ConstantCompressibilityOilPvt);
         else if (eclState.getTableManager().hasTables("PVDO"))
-            setApproach(DeadOilPvt);
+            setApproach(OilPvtApproach::DeadOilPvt);
         else if (!eclState.getTableManager().getPvtoTables().empty())
-            setApproach(LiveOilPvt);
+            setApproach(OilPvtApproach::LiveOilPvt);
 
         OPM_OIL_PVT_MULTIPLEXER_CALL(pvtImpl.initFromState(eclState, schedule));
     }
@@ -280,27 +280,27 @@ public:
     void setApproach(OilPvtApproach appr)
     {
         switch (appr) {
-        case LiveOilPvt:
+        case OilPvtApproach::LiveOilPvt:
             realOilPvt_ = new Opm::LiveOilPvt<Scalar>;
             break;
 
-        case DeadOilPvt:
+        case OilPvtApproach::DeadOilPvt:
             realOilPvt_ = new Opm::DeadOilPvt<Scalar>;
             break;
 
-        case ConstantCompressibilityOilPvt:
+        case OilPvtApproach::ConstantCompressibilityOilPvt:
             realOilPvt_ = new Opm::ConstantCompressibilityOilPvt<Scalar>;
             break;
 
-        case ThermalOilPvt:
+        case OilPvtApproach::ThermalOilPvt:
             realOilPvt_ = new Opm::OilPvtThermal<Scalar>;
             break;
 
-        case BrineCo2Pvt:
+        case OilPvtApproach::BrineCo2Pvt:
             realOilPvt_ = new Opm::BrineCo2Pvt<Scalar>;
             break;
 
-        case NoOilPvt:
+        case OilPvtApproach::NoOilPvt:
             throw std::logic_error("Not implemented: Oil PVT of this deck!");
         }
 
@@ -317,70 +317,70 @@ public:
 
     // get the concrete parameter object for the oil phase
     template <OilPvtApproach approachV>
-    typename std::enable_if<approachV == LiveOilPvt, Opm::LiveOilPvt<Scalar> >::type& getRealPvt()
+    typename std::enable_if<approachV == OilPvtApproach::LiveOilPvt, Opm::LiveOilPvt<Scalar> >::type& getRealPvt()
     {
         assert(approach() == approachV);
         return *static_cast<Opm::LiveOilPvt<Scalar>* >(realOilPvt_);
     }
 
     template <OilPvtApproach approachV>
-    typename std::enable_if<approachV == LiveOilPvt, const Opm::LiveOilPvt<Scalar> >::type& getRealPvt() const
+    typename std::enable_if<approachV == OilPvtApproach::LiveOilPvt, const Opm::LiveOilPvt<Scalar> >::type& getRealPvt() const
     {
         assert(approach() == approachV);
         return *static_cast<Opm::LiveOilPvt<Scalar>* >(realOilPvt_);
     }
 
     template <OilPvtApproach approachV>
-    typename std::enable_if<approachV == DeadOilPvt, Opm::DeadOilPvt<Scalar> >::type& getRealPvt()
+    typename std::enable_if<approachV == OilPvtApproach::DeadOilPvt, Opm::DeadOilPvt<Scalar> >::type& getRealPvt()
     {
         assert(approach() == approachV);
         return *static_cast<Opm::DeadOilPvt<Scalar>* >(realOilPvt_);
     }
 
     template <OilPvtApproach approachV>
-    typename std::enable_if<approachV == DeadOilPvt, const Opm::DeadOilPvt<Scalar> >::type& getRealPvt() const
+    typename std::enable_if<approachV == OilPvtApproach::DeadOilPvt, const Opm::DeadOilPvt<Scalar> >::type& getRealPvt() const
     {
         assert(approach() == approachV);
         return *static_cast<Opm::DeadOilPvt<Scalar>* >(realOilPvt_);
     }
 
     template <OilPvtApproach approachV>
-    typename std::enable_if<approachV == ConstantCompressibilityOilPvt, Opm::ConstantCompressibilityOilPvt<Scalar> >::type& getRealPvt()
+    typename std::enable_if<approachV == OilPvtApproach::ConstantCompressibilityOilPvt, Opm::ConstantCompressibilityOilPvt<Scalar> >::type& getRealPvt()
     {
         assert(approach() == approachV);
         return *static_cast<Opm::ConstantCompressibilityOilPvt<Scalar>* >(realOilPvt_);
     }
 
     template <OilPvtApproach approachV>
-    typename std::enable_if<approachV == ConstantCompressibilityOilPvt, const Opm::ConstantCompressibilityOilPvt<Scalar> >::type& getRealPvt() const
+    typename std::enable_if<approachV == OilPvtApproach::ConstantCompressibilityOilPvt, const Opm::ConstantCompressibilityOilPvt<Scalar> >::type& getRealPvt() const
     {
         assert(approach() == approachV);
         return *static_cast<Opm::ConstantCompressibilityOilPvt<Scalar>* >(realOilPvt_);
     }
 
     template <OilPvtApproach approachV>
-    typename std::enable_if<approachV == ThermalOilPvt, Opm::OilPvtThermal<Scalar> >::type& getRealPvt()
+    typename std::enable_if<approachV == OilPvtApproach::ThermalOilPvt, Opm::OilPvtThermal<Scalar> >::type& getRealPvt()
     {
         assert(approach() == approachV);
         return *static_cast<Opm::OilPvtThermal<Scalar>* >(realOilPvt_);
     }
 
     template <OilPvtApproach approachV>
-    typename std::enable_if<approachV == ThermalOilPvt, const Opm::OilPvtThermal<Scalar> >::type& getRealPvt() const
+    typename std::enable_if<approachV == OilPvtApproach::ThermalOilPvt, const Opm::OilPvtThermal<Scalar> >::type& getRealPvt() const
     {
         assert(approach() == approachV);
         return *static_cast<const Opm::OilPvtThermal<Scalar>* >(realOilPvt_);
     }
 
     template <OilPvtApproach approachV>
-    typename std::enable_if<approachV == BrineCo2Pvt, Opm::BrineCo2Pvt<Scalar> >::type& getRealPvt()
+    typename std::enable_if<approachV == OilPvtApproach::BrineCo2Pvt, Opm::BrineCo2Pvt<Scalar> >::type& getRealPvt()
     {
         assert(approach() == approachV);
         return *static_cast<Opm::BrineCo2Pvt<Scalar>* >(realOilPvt_);
     }
 
     template <OilPvtApproach approachV>
-    typename std::enable_if<approachV == BrineCo2Pvt, const Opm::BrineCo2Pvt<Scalar> >::type& getRealPvt() const
+    typename std::enable_if<approachV == OilPvtApproach::BrineCo2Pvt, const Opm::BrineCo2Pvt<Scalar> >::type& getRealPvt() const
     {
         assert(approach() == approachV);
         return *static_cast<const Opm::BrineCo2Pvt<Scalar>* >(realOilPvt_);
@@ -394,19 +394,19 @@ public:
             return false;
 
         switch (approach_) {
-        case ConstantCompressibilityOilPvt:
+        case OilPvtApproach::ConstantCompressibilityOilPvt:
             return *static_cast<const Opm::ConstantCompressibilityOilPvt<Scalar>*>(realOilPvt_) ==
                    *static_cast<const Opm::ConstantCompressibilityOilPvt<Scalar>*>(data.realOilPvt_);
-        case DeadOilPvt:
+        case OilPvtApproach::DeadOilPvt:
             return *static_cast<const Opm::DeadOilPvt<Scalar>*>(realOilPvt_) ==
                    *static_cast<const Opm::DeadOilPvt<Scalar>*>(data.realOilPvt_);
-        case LiveOilPvt:
+        case OilPvtApproach::LiveOilPvt:
             return *static_cast<const Opm::LiveOilPvt<Scalar>*>(realOilPvt_) ==
                    *static_cast<const Opm::LiveOilPvt<Scalar>*>(data.realOilPvt_);
-        case ThermalOilPvt:
+        case OilPvtApproach::ThermalOilPvt:
             return *static_cast<const Opm::OilPvtThermal<Scalar>*>(realOilPvt_) ==
                    *static_cast<const Opm::OilPvtThermal<Scalar>*>(data.realOilPvt_);
-        case BrineCo2Pvt:
+        case OilPvtApproach::BrineCo2Pvt:
             return *static_cast<const Opm::BrineCo2Pvt<Scalar>*>(realOilPvt_) ==
                     *static_cast<const Opm::BrineCo2Pvt<Scalar>*>(data.realOilPvt_);
         default:
@@ -418,19 +418,19 @@ public:
     {
         approach_ = data.approach_;
         switch (approach_) {
-        case ConstantCompressibilityOilPvt:
+        case OilPvtApproach::ConstantCompressibilityOilPvt:
             realOilPvt_ = new Opm::ConstantCompressibilityOilPvt<Scalar>(*static_cast<const Opm::ConstantCompressibilityOilPvt<Scalar>*>(data.realOilPvt_));
             break;
-        case DeadOilPvt:
+        case OilPvtApproach::DeadOilPvt:
             realOilPvt_ = new Opm::DeadOilPvt<Scalar>(*static_cast<const Opm::DeadOilPvt<Scalar>*>(data.realOilPvt_));
             break;
-        case LiveOilPvt:
+        case OilPvtApproach::LiveOilPvt:
             realOilPvt_ = new Opm::LiveOilPvt<Scalar>(*static_cast<const Opm::LiveOilPvt<Scalar>*>(data.realOilPvt_));
             break;
-        case ThermalOilPvt:
+        case OilPvtApproach::ThermalOilPvt:
             realOilPvt_ = new Opm::OilPvtThermal<Scalar>(*static_cast<const Opm::OilPvtThermal<Scalar>*>(data.realOilPvt_));
             break;
-        case BrineCo2Pvt:
+        case OilPvtApproach::BrineCo2Pvt:
             realOilPvt_ = new Opm::BrineCo2Pvt<Scalar>(*static_cast<const Opm::BrineCo2Pvt<Scalar>*>(data.realOilPvt_));
             break;
         default:
