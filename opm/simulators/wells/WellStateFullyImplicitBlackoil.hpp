@@ -144,7 +144,8 @@ namespace Opm
             perf_skin_pressure_.clear();
             perf_skin_pressure_.resize(nperf, 0.0);
 
-            first_perf_index_.resize(nw+1, 0);
+            num_perf_.resize(nw, 0);
+            first_perf_index_.resize(nw, 0);
             first_perf_index_[0] = 0;
             for (int w = 0; w < nw; ++w) {
                 // Initialize perfphaserates_ to well
@@ -163,8 +164,8 @@ namespace Opm
                     }
                     perfPress()[perf] = cellPressures[well_perf_data[w][perf-connpos].cell_index];
                 }
-
-                first_perf_index_[w+1] = connpos + num_perf_this_well;
+                num_perf_[w] = num_perf_this_well;
+                first_perf_index_[w] = connpos;
             }
 
             is_producer_.resize(nw, false);
@@ -824,8 +825,8 @@ namespace Opm
 
         /// One rate pr well
         double solventWellRate(const int w) const {
-            return parallel_well_info_[w]->sumPerfValues(&perfRateSolvent_[0] + first_perf_index_[w + 0],
-                                                         &perfRateSolvent_[0] + first_perf_index_[w + 1]);
+            return parallel_well_info_[w]->sumPerfValues(&perfRateSolvent_[0] + first_perf_index_[w],
+                                                         &perfRateSolvent_[0] + first_perf_index_[w] + num_perf_[w]);
         }
 
         /// One rate pr well connection.
@@ -834,8 +835,8 @@ namespace Opm
 
         /// One rate pr well
         double polymerWellRate(const int w) const {
-            return parallel_well_info_[w]->sumPerfValues(&perfRatePolymer_[0] + first_perf_index_[w + 0],
-                                                         &perfRatePolymer_[0] + first_perf_index_[w + 1]);
+            return parallel_well_info_[w]->sumPerfValues(&perfRatePolymer_[0] + first_perf_index_[w],
+                                                         &perfRatePolymer_[0] + first_perf_index_[w] + num_perf_[w]);
         }
 
         /// One rate pr well connection.
@@ -844,8 +845,8 @@ namespace Opm
 
         /// One rate pr well
         double brineWellRate(const int w) const {
-            return parallel_well_info_[w]->sumPerfValues(&perfRateBrine_[0] + first_perf_index_[w + 0],
-                                                         &perfRateBrine_[0] + first_perf_index_[w + 1]);
+            return parallel_well_info_[w]->sumPerfValues(&perfRateBrine_[0] + first_perf_index_[w],
+                                                         &perfRateBrine_[0] + first_perf_index_[w] + num_perf_[w]);
         }
 
         std::vector<double>& wellReservoirRates()
@@ -1000,8 +1001,8 @@ namespace Opm
                 wpi[p]  = 0.0;
             }
 
-            const auto first = this->first_perf_index_[well_index + 0]*np;
-            const auto last  = this->first_perf_index_[well_index + 1]*np;
+            const auto first = this->first_perf_index_[well_index]*np;
+            const auto last  = first + this->num_perf_[well_index]*np;
             std::fill(this->conn_productivity_index_.begin() + first,
                       this->conn_productivity_index_.begin() + last, 0.0);
         }
@@ -1146,8 +1147,9 @@ namespace Opm
 
         // vector with size number of wells +1.
         // iterate over all perforations of a given well
-        // for (int perf = first_perf_index_[well_index]; perf < first_perf_index_[well_index+1]; ++perf)
+        // for (int perf = first_perf_index_[well_index]; perf < first_perf_index_[well_index] + num_perf_[well_index]; ++perf)
         std::vector<int> first_perf_index_;
+        std::vector<int> num_perf_;
         std::vector<Opm::Well::InjectorCMode> current_injection_controls_;
         std::vector<Well::ProducerCMode> current_production_controls_;
 
