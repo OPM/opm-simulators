@@ -53,6 +53,7 @@ namespace Opm
     {
         typedef WellState  BaseType;
     public:
+        static const uint64_t event_mask = ScheduleEvents::WELL_STATUS_CHANGE + ScheduleEvents::PRODUCTION_UPDATE + ScheduleEvents::INJECTION_UPDATE;
         typedef BaseType :: WellMapType WellMapType;
 
         virtual ~WellStateFullyImplicitBlackoil() = default;
@@ -114,24 +115,7 @@ namespace Opm
             well_dissolved_gas_rates_.resize(nw, 0.0);
             well_vaporized_oil_rates_.resize(nw, 0.0);
 
-            // checking whether some effective well control happens
-            effective_events_occurred_.resize(nw, true);
-
-            // a hack to make the resize() function used in RESTART related work
-            if (!wells_ecl.empty() ) {
-                // At the moment, the following events are considered to be effective events
-                // more events might join as effective events
-                // PRODUCTION_UPDATE, INJECTION_UPDATE, WELL_STATUS_CHANGE
-                // 16 + 32 + 128
-                const uint64_t effective_events_mask = ScheduleEvents::WELL_STATUS_CHANGE
-                                                     + ScheduleEvents::PRODUCTION_UPDATE
-                                                     + ScheduleEvents::INJECTION_UPDATE;
-                for (int w = 0; w < nw; ++w) {
-                    effective_events_occurred_[w]
-                        = schedule[report_step].wellgroup_events().hasEvent(wells_ecl[w].name(), effective_events_mask);
-                }
-            } // end of if (!well_ecl.empty() )
-
+            this->events_ = schedule[report_step].wellgroup_events();
             // Ensure that we start out with zero rates by default.
             perfphaserates_.clear();
             perfphaserates_.resize(nperf * this->numPhases(), 0.0);
@@ -245,8 +229,8 @@ namespace Opm
                         // thp
                         thp()[ newIndex ] = prevState->thp()[ oldIndex ];
 
-                        // If new target is set using WCONPROD, WCONINJE etc. we change to the new control.
-                        if (!effective_events_occurred_[w]) {
+                        // If new target is set using WCONPROD, WCONINJE etc. we use the new control
+                        if (!this->events_.hasEvent(well.name(), WellStateFullyImplicitBlackoil::event_mask)) {
                             current_injection_controls_[ newIndex ] = prevState->currentInjectionControls()[ oldIndex ];
                             current_production_controls_[ newIndex ] = prevState->currentProductionControls()[ oldIndex ];
                         }
@@ -805,13 +789,8 @@ namespace Opm
         }
 
 
-        bool effectiveEventsOccurred(const int w) const {
-            return effective_events_occurred_[w];
-        }
-
-
-        void setEffectiveEventsOccurred(const int w, const bool effective_events_occurred) {
-            effective_events_occurred_[w] = effective_events_occurred;
+        WellGroupEvents& events() {
+            return this->events_;
         }
 
         const std::vector<int>& firstPerfIndex() const
@@ -1196,7 +1175,7 @@ namespace Opm
         // some events happens to the well, like this well is a new well
         // or new well control keywords happens
         // \Note: for now, only WCON* keywords, and well status change is considered
-        std::vector<bool> effective_events_occurred_;
+        WellGroupEvents events_;
 
         // MS well related
         // for StandardWell, the number of segments will be one
