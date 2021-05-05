@@ -49,9 +49,9 @@ class EclThermalConductionLawMultiplexer
 {
     enum { numPhases = FluidSystem::numPhases };
 
-    typedef Opm::EclThconrLaw<ScalarT, FluidSystem, typename ParamsT::ThconrLawParams> ThconrLaw;
-    typedef Opm::EclThcLaw<ScalarT, typename ParamsT::ThcLawParams> ThcLaw;
-    typedef Opm::NullThermalConductionLaw<ScalarT> NullLaw;
+    typedef EclThconrLaw<ScalarT, FluidSystem, typename ParamsT::ThconrLawParams> ThconrLaw;
+    typedef EclThcLaw<ScalarT, typename ParamsT::ThcLawParams> ThcLaw;
+    typedef NullThermalConductionLaw<ScalarT> NullLaw;
 
 public:
     typedef ParamsT Params;

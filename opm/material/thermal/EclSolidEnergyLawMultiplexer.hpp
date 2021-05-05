@@ -49,9 +49,9 @@ class EclSolidEnergyLawMultiplexer
 {
     enum { numPhases = FluidSystem::numPhases };
 
-    typedef Opm::EclHeatcrLaw<ScalarT, FluidSystem, typename ParamsT::HeatcrLawParams> HeatcrLaw;
-    typedef Opm::EclSpecrockLaw<ScalarT, typename ParamsT::SpecrockLawParams> SpecrockLaw;
-    typedef Opm::NullSolidEnergyLaw<ScalarT> NullLaw;
+    typedef EclHeatcrLaw<ScalarT, FluidSystem, typename ParamsT::HeatcrLawParams> HeatcrLaw;
+    typedef EclSpecrockLaw<ScalarT, typename ParamsT::SpecrockLawParams> SpecrockLaw;
+    typedef NullSolidEnergyLaw<ScalarT> NullLaw;
 
 public:
     typedef ParamsT Params;
