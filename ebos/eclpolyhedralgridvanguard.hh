@@ -27,6 +27,8 @@
 #ifndef EWOMS_ECL_POLYHEDRAL_GRID_VANGUARD_HH
 #define EWOMS_ECL_POLYHEDRAL_GRID_VANGUARD_HH
 
+#include <opm/models/common/multiphasebaseproperties.hh>
+
 #include "eclbasevanguard.hh"
 #include "ecltransmissibility.hh"
 
@@ -76,6 +78,7 @@ class EclPolyhedralGridVanguard : public EclBaseVanguard<TypeTag>
     friend class EclBaseVanguard<TypeTag>;
     typedef EclBaseVanguard<TypeTag> ParentType;
 
+    using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
@@ -83,6 +86,9 @@ public:
     using Grid = GetPropType<TypeTag, Properties::Grid>;
     using EquilGrid = GetPropType<TypeTag, Properties::EquilGrid>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using TransmissibilityType = EclTransmissibility<Grid, GridView, ElementMapper, Scalar,
+                                                     getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                                     getPropValue<TypeTag, Properties::EnableDiffusion>()>;
 
 private:
     typedef Grid* GridPointer;
@@ -175,7 +181,7 @@ public:
     std::unordered_set<std::string> defunctWellNames() const
     { return defunctWellNames_; }
 
-    const EclTransmissibility<TypeTag>& globalTransmissibility() const
+    const TransmissibilityType& globalTransmissibility() const
     {
         return simulator_.problem().eclTransmissibilities();
     }
