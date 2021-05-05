@@ -24,6 +24,7 @@
 #include "MpiFixture.hpp"
 #include <opm/simulators/wells/GlobalWellInfo.hpp>
 #include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/simulators/wells/WellContainer.hpp>
 #include <opm/parser/eclipse/Python/Python.hpp>
 
 #include <boost/test/unit_test.hpp>
@@ -422,7 +423,67 @@ BOOST_AUTO_TEST_CASE(GlobalWellInfo_TEST) {
     BOOST_CHECK(!gwi.in_producing_group("PROD01"));
 }
 
+BOOST_AUTO_TEST_CASE(TESTWellContainer) {
+    Opm::WellContainer<int> wc;
+    BOOST_CHECK_EQUAL(wc.size(), 0);
 
+    wc.add("W1", 1);
+    wc.add("W2", 2);
+
+    BOOST_CHECK_EQUAL(wc.size(), 2);
+
+    BOOST_CHECK_THROW(wc.add("W1", 1), std::exception);
+
+    BOOST_CHECK_THROW(wc[10], std::exception);
+    BOOST_CHECK_EQUAL(wc[0], 1);
+    BOOST_CHECK_EQUAL(wc[1], 2);
+
+    BOOST_CHECK_THROW(wc["INVALID_WELL"], std::exception);
+    BOOST_CHECK_EQUAL(wc["W1"], 1);
+    BOOST_CHECK_EQUAL(wc["W2"], 2);
+
+    Opm::WellContainer<int> wc2;
+    wc2.copy_welldata(wc);
+    BOOST_CHECK_EQUAL(wc2.size() , 0);
+
+    wc2.add("W1", 100);
+    BOOST_CHECK_EQUAL(wc2["W1"], 100);
+    wc2.copy_welldata(wc);
+    BOOST_CHECK_EQUAL(wc2["W1"], 1);
+
+    Opm::WellContainer<int> wc3;
+    wc3.add("W2", 100);
+    wc3.copy_welldata(wc);
+    BOOST_CHECK_EQUAL(wc3["W2"], 2);
+    BOOST_CHECK_EQUAL(wc3[0], 2);
+
+    wc3["W2"] = 200;
+    wc3.add("W3", 300);
+    wc3.copy_welldata(wc);
+    BOOST_CHECK_EQUAL(wc3["W2"], 2);
+    BOOST_CHECK_EQUAL(wc3[0], 2);
+    BOOST_CHECK_EQUAL(wc3["W3"], 300);
+    BOOST_CHECK_EQUAL(wc3[1], 300);
+
+    BOOST_CHECK_THROW(wc3.copy_welldata(wc, "W1"), std::exception);
+    BOOST_CHECK_THROW(wc3.copy_welldata(wc, "W3"), std::exception);
+
+    wc.clear();
+    BOOST_CHECK_EQUAL(wc.size(), 0);
+
+
+    BOOST_CHECK_THROW(wc3.update("NO_SUCH_WELL", -1), std::exception);
+    BOOST_CHECK_THROW(wc3.update(100, -1), std::exception);
+
+    BOOST_CHECK(wc3.has("W2"));
+    BOOST_CHECK(!wc3.has("NO_SUCH_WELL"));
+
+
+    std::vector<int> vec_copy(wc3.begin(), wc3.end());
+    BOOST_CHECK_EQUAL(vec_copy.size(), wc3.size());
+    for (std::size_t i = 0; i < wc3.size(); i++)
+        BOOST_CHECK_EQUAL(vec_copy[i], wc3[i]);
+}
 
 
 BOOST_AUTO_TEST_SUITE_END()
