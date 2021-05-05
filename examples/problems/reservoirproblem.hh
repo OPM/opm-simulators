@@ -334,16 +334,16 @@ public:
         FluidSystem::setReferenceDensities(rhoRefO, rhoRefW, rhoRefG, /*regionIdx=*/0);
 
         Opm::GasPvtMultiplexer<Scalar> *gasPvt = new Opm::GasPvtMultiplexer<Scalar>;
-        gasPvt->setApproach(Opm::GasPvtMultiplexer<Scalar>::DryGasPvt);
-        auto& dryGasPvt = gasPvt->template getRealPvt<Opm::GasPvtMultiplexer<Scalar>::DryGasPvt>();
+        gasPvt->setApproach(GasPvtApproach::DryGasPvt);
+        auto& dryGasPvt = gasPvt->template getRealPvt<GasPvtApproach::DryGasPvt>();
         dryGasPvt.setNumRegions(/*numPvtRegion=*/1);
         dryGasPvt.setReferenceDensities(/*regionIdx=*/0, rhoRefO, rhoRefG, rhoRefW);
         dryGasPvt.setGasFormationVolumeFactor(/*regionIdx=*/0, Bg);
         dryGasPvt.setGasViscosity(/*regionIdx=*/0, mug);
 
         Opm::OilPvtMultiplexer<Scalar> *oilPvt = new Opm::OilPvtMultiplexer<Scalar>;
-        oilPvt->setApproach(Opm::OilPvtMultiplexer<Scalar>::LiveOilPvt);
-        auto& liveOilPvt = oilPvt->template getRealPvt<Opm::OilPvtMultiplexer<Scalar>::LiveOilPvt>();
+        oilPvt->setApproach(OilPvtApproach::LiveOilPvt);
+        auto& liveOilPvt = oilPvt->template getRealPvt<OilPvtApproach::LiveOilPvt>();
         liveOilPvt.setNumRegions(/*numPvtRegion=*/1);
         liveOilPvt.setReferenceDensities(/*regionIdx=*/0, rhoRefO, rhoRefG, rhoRefW);
         liveOilPvt.setSaturatedOilGasDissolutionFactor(/*regionIdx=*/0, Rs);
@@ -351,8 +351,8 @@ public:
         liveOilPvt.setSaturatedOilViscosity(/*regionIdx=*/0, muo);
 
         Opm::WaterPvtMultiplexer<Scalar> *waterPvt = new Opm::WaterPvtMultiplexer<Scalar>;
-        waterPvt->setApproach(Opm::WaterPvtMultiplexer<Scalar>::ConstantCompressibilityWaterPvt);
-        auto& ccWaterPvt = waterPvt->template getRealPvt<Opm::WaterPvtMultiplexer<Scalar>::ConstantCompressibilityWaterPvt>();
+        waterPvt->setApproach(WaterPvtApproach::ConstantCompressibilityWaterPvt);
+        auto& ccWaterPvt = waterPvt->template getRealPvt<WaterPvtApproach::ConstantCompressibilityWaterPvt>();
         ccWaterPvt.setNumRegions(/*numPvtRegions=*/1);
         ccWaterPvt.setReferenceDensities(/*regionIdx=*/0, rhoRefO, rhoRefG, rhoRefW);
         ccWaterPvt.setViscosity(/*regionIdx=*/0, 9.6e-4);
