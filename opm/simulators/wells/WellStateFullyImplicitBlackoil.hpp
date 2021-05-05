@@ -29,6 +29,7 @@
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
+#include <opm/simulators/wells/WellContainer.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
 
@@ -165,9 +166,10 @@ namespace Opm
                 first_perf_index_[w] = connpos;
             }
 
-            is_producer_.resize(nw, false);
+            this->is_producer_.clear();
             for (int w = 0; w < nw; ++w) {
-                is_producer_[w] = wells_ecl[w].isProducer();
+                const auto& ecl_well = wells_ecl[w];
+                this->is_producer_.add( ecl_well.name(), ecl_well.isProducer());
             }
 
             current_injection_controls_.resize(nw, Well::InjectorCMode::CMODE_UNDEFINED);
@@ -1139,7 +1141,7 @@ namespace Opm
 
     private:
         std::vector<double> perfphaserates_;
-        std::vector<bool> is_producer_; // Size equal to number of local wells.
+        WellContainer<int> is_producer_;
 
         // vector with size number of wells +1.
         // iterate over all perforations of a given well
