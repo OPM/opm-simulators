@@ -66,7 +66,7 @@ class FvBaseNewtonConvergenceWriter
     using NewtonMethod = GetPropType<TypeTag, Properties::NewtonMethod>;
 
     static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
-    using VtkMultiWriter = Opm::VtkMultiWriter<GridView, vtkFormat>;
+    using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
 public:
     FvBaseNewtonConvergenceWriter(NewtonMethod& nm)

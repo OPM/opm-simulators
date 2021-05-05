@@ -83,10 +83,10 @@ class BlackOilExtboModule
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
 
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
+    using Toolbox = MathToolbox<Evaluation>;
 
-    typedef typename Opm::Tabulated1DFunction<Scalar> TabulatedFunction;
-    typedef typename Opm::UniformXTabulated2DFunction<Scalar> Tabulated2DFunction;
+    using TabulatedFunction = Tabulated1DFunction<Scalar>;
+    using Tabulated2DFunction = UniformXTabulated2DFunction<Scalar>;
 
     static constexpr unsigned zFractionIdx = Indices::zFractionIdx;
     static constexpr unsigned contiZfracEqIdx = Indices::contiZfracEqIdx;
@@ -103,7 +103,7 @@ public:
     /*!
      * \brief Initialize all internal data structures needed by the solvent module
      */
-    static void initFromState(const Opm::EclipseState& eclState)
+    static void initFromState(const EclipseState& eclState)
     {
         // some sanity checks: if extended BO is enabled, the PVTSOL keyword must be
         // present, if extended BO is disabled the keyword must not be present.
@@ -267,7 +267,7 @@ public:
             // extBO have disabled at compile time
             return;
 
-        //Opm::VtkBlackOilExtboModule<TypeTag>::registerParameters();
+        //VtkBlackOilExtboModule<TypeTag>::registerParameters();
     }
 
     /*!
@@ -280,7 +280,7 @@ public:
             // extBO have disabled at compile time
             return;
 
-        //model.addOutputModule(new Opm::VtkBlackOilExtboModule<TypeTag>(simulator));
+        //model.addOutputModule(new VtkBlackOilExtboModule<TypeTag>(simulator));
     }
 
     static bool primaryVarApplies(unsigned pvIdx)
@@ -393,8 +393,8 @@ public:
             else {
                 flux[contiZfracEqIdx] =
                         extQuants.volumeFlux(gasPhaseIdx)
-                        * (Opm::decay<Scalar>(upGas.yVolume()))
-                        * Opm::decay<Scalar>(fsGas.invB(gasPhaseIdx));
+                        * (decay<Scalar>(upGas.yVolume()))
+                        * decay<Scalar>(fsGas.invB(gasPhaseIdx));
             }
             if (FluidSystem::enableDissolvedGas()) { // account for dissolved z in oil phase
                 unsigned upIdxOil = static_cast<unsigned>(extQuants.upstreamIndex(oilPhaseIdx));
@@ -410,9 +410,9 @@ public:
                 else {
                     flux[contiZfracEqIdx] +=
                         extQuants.volumeFlux(oilPhaseIdx)
-                        * Opm::decay<Scalar>(upOil.xVolume())
-                        * Opm::decay<Scalar>(fsOil.Rs())
-                        * Opm::decay<Scalar>(fsOil.invB(oilPhaseIdx));
+                        * decay<Scalar>(upOil.xVolume())
+                        * decay<Scalar>(fsOil.Rs())
+                        * decay<Scalar>(fsOil.invB(oilPhaseIdx));
                 }
             }
         }
@@ -898,7 +898,7 @@ class BlackOilExtboExtensiveQuantities
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
 
-    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using Toolbox = MathToolbox<Evaluation>;
 
     static constexpr unsigned gasPhaseIdx = FluidSystem::gasPhaseIdx;
     static constexpr int dimWorld = GridView::dimensionworld;

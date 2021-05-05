@@ -78,10 +78,10 @@ class BlackOilSolventModule
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
 
-    using Toolbox = Opm::MathToolbox<Evaluation>;
-    using SolventPvt = Opm::SolventPvt<Scalar>;
+    using Toolbox = MathToolbox<Evaluation>;
+    using SolventPvt = ::Opm::SolventPvt<Scalar>;
 
-    using TabulatedFunction = typename Opm::Tabulated1DFunction<Scalar>;
+    using TabulatedFunction = Tabulated1DFunction<Scalar>;
 
     static constexpr unsigned solventSaturationIdx = Indices::solventSaturationIdx;
     static constexpr unsigned contiSolventEqIdx = Indices::contiSolventEqIdx;
@@ -96,7 +96,7 @@ public:
     /*!
      * \brief Initialize all internal data structures needed by the solvent module
      */
-    static void initFromState(const Opm::EclipseState& eclState, const Schedule& schedule)
+    static void initFromState(const EclipseState& eclState, const Schedule& schedule)
     {
         // some sanity checks: if solvents are enabled, the SOLVENT keyword must be
         // present, if solvents are disabled the keyword must not be present.
@@ -118,7 +118,7 @@ public:
         unsigned numSatRegions = tableManager.getTabdims().getNumSatTables();
         setNumSatRegions(numSatRegions);
         for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++ satRegionIdx) {
-            const auto& ssfnTable = ssfnTables.template getTable<Opm::SsfnTable>(satRegionIdx);
+            const auto& ssfnTable = ssfnTables.template getTable<SsfnTable>(satRegionIdx);
             ssfnKrg_[satRegionIdx].setXYContainers(ssfnTable.getSolventFractionColumn(),
                                                    ssfnTable.getGasRelPermMultiplierColumn(),
                                                    /*sortInput=*/true);
@@ -141,7 +141,7 @@ public:
                 // resize the attributes of the object
                 sof2Krn_.resize(numSatRegions);
                 for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++ satRegionIdx) {
-                    const auto& sof2Table = sof2Tables.template getTable<Opm::Sof2Table>(satRegionIdx);
+                    const auto& sof2Table = sof2Tables.template getTable<Sof2Table>(satRegionIdx);
                     sof2Krn_[satRegionIdx].setXYContainers(sof2Table.getSoColumn(),
                                                        sof2Table.getKroColumn(),
                                                        /*sortInput=*/true);
@@ -159,7 +159,7 @@ public:
                 // resize the attributes of the object
                 misc_.resize(numMiscRegions);
                 for (unsigned miscRegionIdx = 0; miscRegionIdx < numMiscRegions; ++miscRegionIdx) {
-                    const auto& miscTable = miscTables.template getTable<Opm::MiscTable>(miscRegionIdx);
+                    const auto& miscTable = miscTables.template getTable<MiscTable>(miscRegionIdx);
 
                     // solventFraction = Ss / (Ss + Sg);
                     const auto& solventFraction = miscTable.getSolventFractionColumn();
@@ -179,7 +179,7 @@ public:
                 assert(numMiscRegions == pmiscTables.size());
 
                 for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
-                    const auto& pmiscTable = pmiscTables.template getTable<Opm::PmiscTable>(regionIdx);
+                    const auto& pmiscTable = pmiscTables.template getTable<PmiscTable>(regionIdx);
 
                     // Copy data
                     const auto& po = pmiscTable.getOilPhasePressureColumn();
@@ -209,7 +209,7 @@ public:
 
 
                 for (unsigned regionIdx = 0; regionIdx < numSatRegions; ++regionIdx) {
-                    const Opm::MsfnTable& msfnTable = msfnTables.template getTable<Opm::MsfnTable>(regionIdx);
+                    const MsfnTable& msfnTable = msfnTables.template getTable<MsfnTable>(regionIdx);
 
                     // Copy data
                     // Ssg = Ss + Sg;
@@ -239,7 +239,7 @@ public:
                 assert(numMiscRegions == sorwmisTables.size());
 
                 for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
-                    const auto& sorwmisTable = sorwmisTables.template getTable<Opm::SorwmisTable>(regionIdx);
+                    const auto& sorwmisTable = sorwmisTables.template getTable<SorwmisTable>(regionIdx);
 
                     // Copy data
                     const auto& sw = sorwmisTable.getWaterSaturationColumn();
@@ -266,7 +266,7 @@ public:
                 assert(numMiscRegions ==sgcwmisTables.size());
 
                 for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
-                    const auto& sgcwmisTable = sgcwmisTables.template getTable<Opm::SgcwmisTable>(regionIdx);
+                    const auto& sgcwmisTable = sgcwmisTables.template getTable<SgcwmisTable>(regionIdx);
 
                     // Copy data
                     const auto& sw = sgcwmisTable.getWaterSaturationColumn();
@@ -308,7 +308,7 @@ public:
 
                     assert(numMiscRegions == tlpmixparTables.size());
                     for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
-                        const auto& tlpmixparTable = tlpmixparTables.template getTable<Opm::TlpmixpaTable>(regionIdx);
+                        const auto& tlpmixparTable = tlpmixparTables.template getTable<TlpmixpaTable>(regionIdx);
 
                         // Copy data
                         const auto& po = tlpmixparTable.getOilPhasePressureColumn();
@@ -475,7 +475,7 @@ public:
             // solvents have disabled at compile time
             return;
 
-        Opm::VtkBlackOilSolventModule<TypeTag>::registerParameters();
+        VtkBlackOilSolventModule<TypeTag>::registerParameters();
     }
 
     /*!
@@ -488,7 +488,7 @@ public:
             // solvents have disabled at compile time
             return;
 
-        model.addOutputModule(new Opm::VtkBlackOilSolventModule<TypeTag>(simulator));
+        model.addOutputModule(new VtkBlackOilSolventModule<TypeTag>(simulator));
     }
 
     static bool primaryVarApplies(unsigned pvIdx)
@@ -582,7 +582,7 @@ public:
             else
                 flux[contiSolventEqIdx] =
                         extQuants.solventVolumeFlux()
-                        *Opm::decay<Scalar>(up.solventInverseFormationVolumeFactor());
+                        *decay<Scalar>(up.solventInverseFormationVolumeFactor());
         }
         else {
             if (upIdx == inIdx)
@@ -592,7 +592,7 @@ public:
             else
                 flux[contiSolventEqIdx] =
                         extQuants.solventVolumeFlux()
-                        *Opm::decay<Scalar>(up.solventDensity());
+                        *decay<Scalar>(up.solventDensity());
         }
     }
 
@@ -1321,7 +1321,7 @@ class BlackOilSolventExtensiveQuantities
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
 
-    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using Toolbox = MathToolbox<Evaluation>;
 
     static constexpr unsigned gasPhaseIdx = FluidSystem::gasPhaseIdx;
     static constexpr int dimWorld = GridView::dimensionworld;
@@ -1341,7 +1341,7 @@ public:
                               unsigned timeIdx)
     {
         const auto& gradCalc = elemCtx.gradientCalculator();
-        Opm::PressureCallback<TypeTag> pressureCallback(elemCtx);
+        PressureCallback<TypeTag> pressureCallback(elemCtx);
 
         const auto& scvf = elemCtx.stencil(timeIdx).interiorFace(scvfIdx);
         const auto& faceNormal = scvf.normal();
@@ -1356,7 +1356,7 @@ public:
                                    elemCtx,
                                    scvfIdx,
                                    pressureCallback);
-        Opm::Valgrind::CheckDefined(solventPGrad);
+        Valgrind::CheckDefined(solventPGrad);
 
         // correct the pressure gradients by the gravitational acceleration
         if (EWOMS_GET_PARAM(TypeTag, bool, EnableGravity)) {
@@ -1402,8 +1402,8 @@ public:
             for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
                 solventPGrad[dimIdx] += f[dimIdx];
 
-                if (!Opm::isfinite(solventPGrad[dimIdx]))
-                    throw Opm::NumericalIssue("Non-finite potential gradient for solvent 'phase'");
+                if (!isfinite(solventPGrad[dimIdx]))
+                    throw NumericalIssue("Non-finite potential gradient for solvent 'phase'");
             }
         }
 
@@ -1430,7 +1430,7 @@ public:
         if (solventUpstreamDofIdx_ == i)
             solventVolumeFlux_ = solventPGradNormal*up.solventMobility();
         else
-            solventVolumeFlux_ = solventPGradNormal*Opm::scalarValue(up.solventMobility());
+            solventVolumeFlux_ = solventPGradNormal*scalarValue(up.solventMobility());
     }
 
     /*!
@@ -1472,7 +1472,7 @@ public:
         pressureExterior += distZ*g*rhoAvg;
 
         Evaluation pressureDiffSolvent = pressureExterior - pressureInterior;
-        if (std::abs(Opm::scalarValue(pressureDiffSolvent)) > thpres) {
+        if (std::abs(scalarValue(pressureDiffSolvent)) > thpres) {
             if (pressureDiffSolvent < 0.0)
                 pressureDiffSolvent += thpres;
             else
@@ -1508,7 +1508,7 @@ public:
                 *pressureDiffSolvent;
         else
             solventVolumeFlux_ =
-                Opm::scalarValue(up.solventMobility())
+                scalarValue(up.solventMobility())
                 *(-trans/faceArea)
                 *pressureDiffSolvent;
     }

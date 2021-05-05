@@ -97,7 +97,7 @@ class VtkBlackOilPolymerModule : public BaseOutputModule<TypeTag>
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
     static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
-    using VtkMultiWriter = Opm::VtkMultiWriter<GridView, vtkFormat>;
+    using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
     enum { enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>() };
 
@@ -181,27 +181,27 @@ public:
 
             if (polymerConcentrationOutput_())
                 polymerConcentration_[globalDofIdx] =
-                    Opm::scalarValue(intQuants.polymerConcentration());
+                    scalarValue(intQuants.polymerConcentration());
 
             if (polymerDeadPoreVolumeOutput_())
                 polymerDeadPoreVolume_[globalDofIdx] =
-                    Opm::scalarValue(intQuants.polymerDeadPoreVolume());
+                    scalarValue(intQuants.polymerDeadPoreVolume());
 
             if (polymerRockDensityOutput_())
                 polymerRockDensity_[globalDofIdx] =
-                    Opm::scalarValue(intQuants.polymerRockDensity());
+                    scalarValue(intQuants.polymerRockDensity());
 
             if (polymerAdsorptionOutput_())
                 polymerAdsorption_[globalDofIdx] =
-                    Opm::scalarValue(intQuants.polymerAdsorption());
+                    scalarValue(intQuants.polymerAdsorption());
 
             if (polymerViscosityCorrectionOutput_())
                 polymerViscosityCorrection_[globalDofIdx] =
-                    Opm::scalarValue(intQuants.polymerViscosityCorrection());
+                    scalarValue(intQuants.polymerViscosityCorrection());
 
             if (waterViscosityCorrectionOutput_())
                 waterViscosityCorrection_[globalDofIdx] =
-                    Opm::scalarValue(intQuants.waterViscosityCorrection());
+                    scalarValue(intQuants.waterViscosityCorrection());
         }
     }
 

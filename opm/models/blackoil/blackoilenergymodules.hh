@@ -80,7 +80,7 @@ public:
             // energys have been disabled at compile time
             return;
 
-        Opm::VtkBlackOilEnergyModule<TypeTag>::registerParameters();
+        VtkBlackOilEnergyModule<TypeTag>::registerParameters();
     }
 
     /*!
@@ -93,7 +93,7 @@ public:
             // energys have been disabled at compile time
             return;
 
-        model.addOutputModule(new Opm::VtkBlackOilEnergyModule<TypeTag>(simulator));
+        model.addOutputModule(new VtkBlackOilEnergyModule<TypeTag>(simulator));
     }
 
     static bool primaryVarApplies(unsigned pvIdx)
@@ -150,7 +150,7 @@ public:
         if (!enableEnergy)
             return;
 
-        const auto& poro = Opm::decay<LhsEval>(intQuants.porosity());
+        const auto& poro = decay<LhsEval>(intQuants.porosity());
 
         // accumulate the internal energy of the fluids
         const auto& fs = intQuants.fluidState();
@@ -158,16 +158,16 @@ public:
             if (!FluidSystem::phaseIsActive(phaseIdx))
                 continue;
 
-            const auto& u = Opm::decay<LhsEval>(fs.internalEnergy(phaseIdx));
-            const auto& S = Opm::decay<LhsEval>(fs.saturation(phaseIdx));
-            const auto& rho = Opm::decay<LhsEval>(fs.density(phaseIdx));
+            const auto& u = decay<LhsEval>(fs.internalEnergy(phaseIdx));
+            const auto& S = decay<LhsEval>(fs.saturation(phaseIdx));
+            const auto& rho = decay<LhsEval>(fs.density(phaseIdx));
 
             storage[contiEnergyEqIdx] += poro*S*u*rho;
         }
 
         // add the internal energy of the rock
         Scalar refPoro = intQuants.referencePorosity();
-        const auto& uRock = Opm::decay<LhsEval>(intQuants.rockInternalEnergy());
+        const auto& uRock = decay<LhsEval>(intQuants.rockInternalEnergy());
         storage[contiEnergyEqIdx] += (1.0 - refPoro)*uRock;
         storage[contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
     }
@@ -214,8 +214,8 @@ public:
 
         const auto& volFlux = extQuants.volumeFlux(phaseIdx);
         flux[contiEnergyEqIdx] +=
-            Opm::decay<UpstreamEval>(fs.enthalpy(phaseIdx))
-            * Opm::decay<UpstreamEval>(fs.density(phaseIdx))
+            decay<UpstreamEval>(fs.enthalpy(phaseIdx))
+            * decay<UpstreamEval>(fs.density(phaseIdx))
             * volFlux;
     }
 
@@ -285,7 +285,7 @@ public:
     static Scalar computeResidualError(const EqVector& resid)
     {
         // do not weight the residual of energy when it comes to convergence
-        return std::abs(Opm::scalarValue(resid[contiEnergyEqIdx]));
+        return std::abs(scalarValue(resid[contiEnergyEqIdx]));
     }
 
     template <class DofEntity>
@@ -469,7 +469,7 @@ class BlackOilEnergyExtensiveQuantities
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
 
-    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using Toolbox = MathToolbox<Evaluation>;
 
     using EnergyModule = BlackOilEnergyModule<TypeTag>;
 
@@ -496,28 +496,28 @@ public:
         Evaluation deltaT;
         if (elemCtx.focusDofIndex() == inIdx)
             deltaT =
-                Opm::decay<Scalar>(exFs.temperature(/*phaseIdx=*/0))
+                decay<Scalar>(exFs.temperature(/*phaseIdx=*/0))
                 - inFs.temperature(/*phaseIdx=*/0);
         else if (elemCtx.focusDofIndex() == exIdx)
             deltaT =
                 exFs.temperature(/*phaseIdx=*/0)
-                - Opm::decay<Scalar>(inFs.temperature(/*phaseIdx=*/0));
+                - decay<Scalar>(inFs.temperature(/*phaseIdx=*/0));
         else
             deltaT =
-                Opm::decay<Scalar>(exFs.temperature(/*phaseIdx=*/0))
-                - Opm::decay<Scalar>(inFs.temperature(/*phaseIdx=*/0));
+                decay<Scalar>(exFs.temperature(/*phaseIdx=*/0))
+                - decay<Scalar>(inFs.temperature(/*phaseIdx=*/0));
 
         Evaluation inLambda;
         if (elemCtx.focusDofIndex() == inIdx)
             inLambda = inIq.totalThermalConductivity();
         else
-            inLambda = Opm::decay<Scalar>(inIq.totalThermalConductivity());
+            inLambda = decay<Scalar>(inIq.totalThermalConductivity());
 
         Evaluation exLambda;
         if (elemCtx.focusDofIndex() == exIdx)
             exLambda = exIq.totalThermalConductivity();
         else
-            exLambda = Opm::decay<Scalar>(exIq.totalThermalConductivity());
+            exLambda = decay<Scalar>(exIq.totalThermalConductivity());
 
         auto distVec = elemCtx.pos(exIdx, timeIdx);
         distVec -= elemCtx.pos(inIdx, timeIdx);
@@ -560,14 +560,14 @@ public:
                 - inFs.temperature(/*phaseIdx=*/0);
         else
             deltaT =
-                Opm::decay<Scalar>(boundaryFs.temperature(/*phaseIdx=*/0))
-                - Opm::decay<Scalar>(inFs.temperature(/*phaseIdx=*/0));
+                decay<Scalar>(boundaryFs.temperature(/*phaseIdx=*/0))
+                - decay<Scalar>(inFs.temperature(/*phaseIdx=*/0));
 
         Evaluation lambda;
         if (ctx.focusDofIndex() == inIdx)
             lambda = inIq.totalThermalConductivity();
         else
-            lambda = Opm::decay<Scalar>(inIq.totalThermalConductivity());
+            lambda = decay<Scalar>(inIq.totalThermalConductivity());
 
         auto distVec = scvf.integrationPos();
         distVec -= ctx.pos(inIdx, timeIdx);

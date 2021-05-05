@@ -137,7 +137,7 @@ class VtkMultiPhaseModule : public BaseOutputModule<TypeTag>
     using DiscBaseOutputModule = GetPropType<TypeTag, Properties::DiscBaseOutputModule>;
 
     static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
-    using VtkMultiWriter = Opm::VtkMultiWriter<GridView, vtkFormat>;
+    using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
     enum { dimWorld = GridView::dimensionworld };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
@@ -247,7 +247,7 @@ public:
             const auto& fs = intQuants.fluidState();
 
             if (extrusionFactorOutput_()) extrusionFactor_[I] = intQuants.extrusionFactor();
-            if (porosityOutput_()) porosity_[I] = Opm::getValue(intQuants.porosity());
+            if (porosityOutput_()) porosity_[I] = getValue(intQuants.porosity());
 
             if (intrinsicPermeabilityOutput_()) {
                 const auto& K = problem.intrinsicPermeability(elemCtx, i, /*timeIdx=*/0);
@@ -261,19 +261,19 @@ public:
                     continue;
                 }
                 if (pressureOutput_())
-                    pressure_[phaseIdx][I] = Opm::getValue(fs.pressure(phaseIdx));
+                    pressure_[phaseIdx][I] = getValue(fs.pressure(phaseIdx));
                 if (densityOutput_())
-                    density_[phaseIdx][I] = Opm::getValue(fs.density(phaseIdx));
+                    density_[phaseIdx][I] = getValue(fs.density(phaseIdx));
                 if (saturationOutput_())
-                    saturation_[phaseIdx][I] = Opm::getValue(fs.saturation(phaseIdx));
+                    saturation_[phaseIdx][I] = getValue(fs.saturation(phaseIdx));
                 if (mobilityOutput_())
-                    mobility_[phaseIdx][I] = Opm::getValue(intQuants.mobility(phaseIdx));
+                    mobility_[phaseIdx][I] = getValue(intQuants.mobility(phaseIdx));
                 if (relativePermeabilityOutput_())
-                    relativePermeability_[phaseIdx][I] = Opm::getValue(intQuants.relativePermeability(phaseIdx));
+                    relativePermeability_[phaseIdx][I] = getValue(intQuants.relativePermeability(phaseIdx));
                 if (viscosityOutput_())
-                    viscosity_[phaseIdx][I] = Opm::getValue(fs.viscosity(phaseIdx));
+                    viscosity_[phaseIdx][I] = getValue(fs.viscosity(phaseIdx));
                 if (averageMolarMassOutput_())
-                    averageMolarMass_[phaseIdx][I] = Opm::getValue(fs.averageMolarMass(phaseIdx));
+                    averageMolarMass_[phaseIdx][I] = getValue(fs.averageMolarMass(phaseIdx));
             }
         }
 
@@ -293,7 +293,7 @@ public:
                     const auto& inputPGrad = extQuants.potentialGrad(phaseIdx);
                     DimVector pGrad;
                     for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
-                        pGrad[dimIdx] = Opm::getValue(inputPGrad[dimIdx])*weight;
+                        pGrad[dimIdx] = getValue(inputPGrad[dimIdx])*weight;
                     potentialGradient_[phaseIdx][I] += pGrad;
                 } // end for all phases
             } // end for all faces
@@ -312,15 +312,15 @@ public:
 
                 for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                     Scalar weight = std::max<Scalar>(1e-16,
-                                                     std::abs(Opm::getValue(extQuants.volumeFlux(phaseIdx))));
-                    Opm::Valgrind::CheckDefined(extQuants.extrusionFactor());
+                                                     std::abs(getValue(extQuants.volumeFlux(phaseIdx))));
+                    Valgrind::CheckDefined(extQuants.extrusionFactor());
                     assert(extQuants.extrusionFactor() > 0);
                     weight *= extQuants.extrusionFactor();
 
                     const auto& inputV = extQuants.filterVelocity(phaseIdx);
                     DimVector v;
                     for (unsigned k = 0; k < dimWorld; ++k)
-                        v[k] = Opm::getValue(inputV[k]);
+                        v[k] = getValue(inputV[k]);
                     if (v.two_norm() > 1e-20)
                         weight /= v.two_norm();
                     v *= weight;

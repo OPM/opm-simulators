@@ -70,10 +70,10 @@ class BlackOilBrineModule
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
 
-    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using Toolbox = MathToolbox<Evaluation>;
 
-    using TabulatedFunction = typename Opm::Tabulated1DFunction<Scalar>;
-    using TabulatedTwoDFunction = typename Opm::IntervalTabulated2DFunction<Scalar>;
+    using TabulatedFunction = Tabulated1DFunction<Scalar>;
+    using TabulatedTwoDFunction = IntervalTabulated2DFunction<Scalar>;
 
     static constexpr unsigned saltConcentrationIdx = Indices::saltConcentrationIdx;
     static constexpr unsigned contiBrineEqIdx = Indices::contiBrineEqIdx;
@@ -90,7 +90,7 @@ public:
     /*!
      * \brief Initialize all internal data structures needed by the brine module
      */
-    static void initFromState(const Opm::EclipseState& eclState)
+    static void initFromState(const EclipseState& eclState)
     {
         // some sanity checks: if brine are enabled, the BRINE keyword must be
         // present, if brine are disabled the keyword must not be present.
@@ -216,7 +216,7 @@ public:
                 * Toolbox::template decay<LhsEval>(intQuants.porosity());
 
         // avoid singular matrix if no water is present.
-        surfaceVolumeWater = Opm::max(surfaceVolumeWater, 1e-10);
+        surfaceVolumeWater = max(surfaceVolumeWater, 1e-10);
 
         // Brine in water phase
         const LhsEval massBrine = surfaceVolumeWater
@@ -249,8 +249,8 @@ public:
         else {
             flux[contiBrineEqIdx] =
                     extQuants.volumeFlux(waterPhaseIdx)
-                    *Opm::decay<Scalar>(up.fluidState().invB(waterPhaseIdx))
-                    *Opm::decay<Scalar>(up.fluidState().saltConcentration());
+                    *decay<Scalar>(up.fluidState().invB(waterPhaseIdx))
+                    *decay<Scalar>(up.fluidState().saltConcentration());
         }
     }
 

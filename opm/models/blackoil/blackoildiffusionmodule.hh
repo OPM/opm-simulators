@@ -36,6 +36,7 @@
 #include <dune/common/fvector.hh>
 
 #include <stdexcept>
+
 namespace Opm {
 
 /*!
@@ -92,7 +93,7 @@ class BlackOilDiffusionModule<TypeTag, /*enableDiffusion=*/true>
     enum { numComponents = FluidSystem::numComponents };
     enum { conti0EqIdx = Indices::conti0EqIdx };
 
-    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using Toolbox = MathToolbox<Evaluation>;
 
 public:
     /*!
@@ -270,7 +271,7 @@ protected:
         if(!FluidSystem::enableDiffusion())
             return;
 
-        using Toolbox = Opm::MathToolbox<Evaluation>;
+        using Toolbox = MathToolbox<Evaluation>;
         const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, timeIdx);
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
@@ -424,7 +425,7 @@ protected:
                      -
                      intQuantsInside.fluidState().moleFraction(phaseIdx, compIdx))
                     * diffusivity / faceArea; //opm-models expects pr area flux
-                Opm::Valgrind::CheckDefined(moleFractionGradientNormal_[phaseIdx][compIdx]);
+                Valgrind::CheckDefined(moleFractionGradientNormal_[phaseIdx][compIdx]);
 
                 // use the arithmetic average for the effective
                 // diffusion coefficients.
@@ -434,7 +435,7 @@ protected:
                      intQuantsOutside.effectiveDiffusionCoefficient(phaseIdx, compIdx))
                     / 2;
 
-                Opm::Valgrind::CheckDefined(effectiveDiffusionCoefficient_[phaseIdx][compIdx]);
+                Valgrind::CheckDefined(effectiveDiffusionCoefficient_[phaseIdx][compIdx]);
             }
         }
     }

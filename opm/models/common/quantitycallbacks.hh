@@ -54,7 +54,7 @@ class TemperatureCallback
 
 public:
     using ResultType = typename std::remove_const<typename std::remove_reference<ResultRawType>::type>::type;
-    using ResultValueType = typename Opm::MathToolbox<ResultType>::ValueType;
+    using ResultValueType = typename MathToolbox<ResultType>::ValueType;
 
     TemperatureCallback(const ElementContext& elemCtx)
         : elemCtx_(elemCtx)
@@ -90,11 +90,11 @@ class PressureCallback
 
 public:
     using ResultType = typename std::remove_const<typename std::remove_reference<ResultRawType>::type>::type;
-    using ResultValueType = typename Opm::MathToolbox<ResultType>::ValueType;
+    using ResultValueType = typename MathToolbox<ResultType>::ValueType;
 
     PressureCallback(const ElementContext& elemCtx)
         : elemCtx_(elemCtx)
-    { Opm::Valgrind::SetUndefined(phaseIdx_); }
+    { Valgrind::SetUndefined(phaseIdx_); }
 
     PressureCallback(const ElementContext& elemCtx, unsigned phaseIdx)
         : elemCtx_(elemCtx)
@@ -114,7 +114,7 @@ public:
      */
     ResultType operator()(unsigned dofIdx) const
     {
-        Opm::Valgrind::CheckDefined(phaseIdx_);
+        Valgrind::CheckDefined(phaseIdx_);
         return elemCtx_.intensiveQuantities(dofIdx, /*timeIdx=*/0).fluidState().pressure(phaseIdx_);
     }
 
@@ -138,7 +138,7 @@ class BoundaryPressureCallback
     using IQRawFluidState = decltype(std::declval<IntensiveQuantities>().fluidState());
     using IQFluidState = typename std::remove_const<typename std::remove_reference<IQRawFluidState>::type>::type;
     using IQScalar = typename IQFluidState::Scalar;
-    using Toolbox = Opm::MathToolbox<IQScalar>;
+    using Toolbox = MathToolbox<IQScalar>;
 
 public:
     using ResultType = IQScalar;
@@ -146,7 +146,7 @@ public:
     BoundaryPressureCallback(const ElementContext& elemCtx, const FluidState& boundaryFs)
         : elemCtx_(elemCtx)
         , boundaryFs_(boundaryFs)
-    { Opm::Valgrind::SetUndefined(phaseIdx_); }
+    { Valgrind::SetUndefined(phaseIdx_); }
 
     BoundaryPressureCallback(const ElementContext& elemCtx,
                              const FluidState& boundaryFs,
@@ -169,13 +169,13 @@ public:
      */
     ResultType operator()(unsigned dofIdx) const
     {
-        Opm::Valgrind::CheckDefined(phaseIdx_);
+        Valgrind::CheckDefined(phaseIdx_);
         return elemCtx_.intensiveQuantities(dofIdx, /*timeIdx=*/0).fluidState().pressure(phaseIdx_);
     }
 
     IQScalar boundaryValue() const
     {
-        Opm::Valgrind::CheckDefined(phaseIdx_);
+        Valgrind::CheckDefined(phaseIdx_);
         return boundaryFs_.pressure(phaseIdx_);
     }
 
@@ -201,11 +201,11 @@ class DensityCallback
 
 public:
     using ResultType = typename std::remove_const<typename std::remove_reference<ResultRawType>::type>::type;
-    using ResultValueType = typename Opm::MathToolbox<ResultType>::ValueType;
+    using ResultValueType = typename MathToolbox<ResultType>::ValueType;
 
     DensityCallback(const ElementContext& elemCtx)
         : elemCtx_(elemCtx)
-    { Opm::Valgrind::SetUndefined(phaseIdx_); }
+    { Valgrind::SetUndefined(phaseIdx_); }
 
     DensityCallback(const ElementContext& elemCtx, unsigned phaseIdx)
         : elemCtx_(elemCtx)
@@ -225,7 +225,7 @@ public:
      */
     ResultType operator()(unsigned dofIdx) const
     {
-        Opm::Valgrind::CheckDefined(phaseIdx_);
+        Valgrind::CheckDefined(phaseIdx_);
         return elemCtx_.intensiveQuantities(dofIdx, /*timeIdx=*/0).fluidState().density(phaseIdx_);
     }
 
@@ -249,11 +249,11 @@ class MolarDensityCallback
 
 public:
     using ResultType = decltype(std::declval<IQFluidState>().molarDensity(0));
-    using ResultValueType = typename Opm::MathToolbox<ResultType>::ValueType;
+    using ResultValueType = typename MathToolbox<ResultType>::ValueType;
 
     MolarDensityCallback(const ElementContext& elemCtx)
         : elemCtx_(elemCtx)
-    { Opm::Valgrind::SetUndefined(phaseIdx_); }
+    { Valgrind::SetUndefined(phaseIdx_); }
 
     MolarDensityCallback(const ElementContext& elemCtx, unsigned phaseIdx)
         : elemCtx_(elemCtx)
@@ -273,7 +273,7 @@ public:
      */
     ResultType operator()(unsigned dofIdx) const
     {
-        Opm::Valgrind::CheckDefined(phaseIdx_);
+        Valgrind::CheckDefined(phaseIdx_);
         return elemCtx_.intensiveQuantities(dofIdx, /*timeIdx=*/0).fluidState().molarDensity(phaseIdx_);
     }
 
@@ -298,11 +298,11 @@ class ViscosityCallback
 
 public:
     using ResultType = typename std::remove_const<typename std::remove_reference<ResultRawType>::type>::type;
-    using ResultValueType = typename Opm::MathToolbox<ResultType>::ValueType;
+    using ResultValueType = typename MathToolbox<ResultType>::ValueType;
 
     ViscosityCallback(const ElementContext& elemCtx)
         : elemCtx_(elemCtx)
-    { Opm::Valgrind::SetUndefined(phaseIdx_); }
+    { Valgrind::SetUndefined(phaseIdx_); }
 
     ViscosityCallback(const ElementContext& elemCtx, unsigned phaseIdx)
         : elemCtx_(elemCtx)
@@ -322,7 +322,7 @@ public:
      */
     ResultType operator()(unsigned dofIdx) const
     {
-        Opm::Valgrind::CheckDefined(phaseIdx_);
+        Valgrind::CheckDefined(phaseIdx_);
         return elemCtx_.intensiveQuantities(dofIdx, /*timeIdx=*/0).fluidState().viscosity(phaseIdx_);
     }
 
@@ -350,7 +350,7 @@ class VelocityCallback
 public:
     using ResultType = typename std::remove_const<typename std::remove_reference<ResultRawType>::type>::type;
     using ResultFieldType = typename ResultType::field_type;
-    using ResultFieldValueType = typename Opm::MathToolbox<ResultFieldType>::ValueType;
+    using ResultFieldValueType = typename MathToolbox<ResultFieldType>::ValueType;
 
     VelocityCallback(const ElementContext& elemCtx)
         : elemCtx_(elemCtx)
@@ -382,11 +382,11 @@ class VelocityComponentCallback
 
 public:
     using ResultType = typename std::remove_const<typename std::remove_reference<ResultRawType>::type>::type;
-    using ResultValueType = typename Opm::MathToolbox<ResultType>::ValueType;
+    using ResultValueType = typename MathToolbox<ResultType>::ValueType;
 
     VelocityComponentCallback(const ElementContext& elemCtx)
         : elemCtx_(elemCtx)
-    { Opm::Valgrind::SetUndefined(dimIdx_); }
+    { Valgrind::SetUndefined(dimIdx_); }
 
     VelocityComponentCallback(const ElementContext& elemCtx, unsigned dimIdx)
         : elemCtx_(elemCtx)
@@ -406,7 +406,7 @@ public:
      */
     ResultType operator()(unsigned dofIdx) const
     {
-        Opm::Valgrind::CheckDefined(dimIdx_);
+        Valgrind::CheckDefined(dimIdx_);
         return elemCtx_.intensiveQuantities(dofIdx, /*timeIdx=*/0).velocityCenter()[dimIdx_];
     }
 
@@ -431,13 +431,13 @@ class MoleFractionCallback
 
 public:
     using ResultType = typename std::remove_const<typename std::remove_reference<ResultRawType>::type>::type;
-    using ResultValueType = typename Opm::MathToolbox<ResultType>::ValueType;
+    using ResultValueType = typename MathToolbox<ResultType>::ValueType;
 
     MoleFractionCallback(const ElementContext& elemCtx)
         : elemCtx_(elemCtx)
     {
-        Opm::Valgrind::SetUndefined(phaseIdx_);
-        Opm::Valgrind::SetUndefined(compIdx_);
+        Valgrind::SetUndefined(phaseIdx_);
+        Valgrind::SetUndefined(compIdx_);
     }
 
     MoleFractionCallback(const ElementContext& elemCtx, unsigned phaseIdx, unsigned compIdx)
@@ -466,8 +466,8 @@ public:
      */
     ResultType operator()(unsigned dofIdx) const
     {
-        Opm::Valgrind::CheckDefined(phaseIdx_);
-        Opm::Valgrind::CheckDefined(compIdx_);
+        Valgrind::CheckDefined(phaseIdx_);
+        Valgrind::CheckDefined(compIdx_);
         return elemCtx_.intensiveQuantities(dofIdx, /*timeIdx=*/0).fluidState().moleFraction(phaseIdx_, compIdx_);
     }
 

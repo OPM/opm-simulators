@@ -55,13 +55,13 @@ class FvBasePrimaryVariables
 
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
 
-    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using Toolbox = MathToolbox<Evaluation>;
     using ParentType = Dune::FieldVector<Scalar, numEq>;
 
 public:
     FvBasePrimaryVariables()
         : ParentType()
-    { Opm::Valgrind::SetUndefined(*this); }
+    { Valgrind::SetUndefined(*this); }
 
     /*!
      * \brief Construction from a scalar value
@@ -122,7 +122,7 @@ public:
      */
     void checkDefined() const
     {
-        Opm::Valgrind::CheckDefined(*static_cast<const ParentType*>(this));
+        Valgrind::CheckDefined(*static_cast<const ParentType*>(this));
     }
 };
 

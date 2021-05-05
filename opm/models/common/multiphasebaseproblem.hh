@@ -54,7 +54,7 @@ class MultiPhaseBaseProblem
     , public GetPropType<TypeTag, Properties::FluxModule>::FluxBaseProblem
 {
 //! \cond SKIP_THIS
-    using ParentType = Opm::FvBaseProblem<TypeTag>;
+    using ParentType = FvBaseProblem<TypeTag>;
 
     using Implementation = GetPropType<TypeTag, Properties::Problem>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -115,7 +115,7 @@ public:
         // you have off-main diagonal entries in your permeabilities!
         for (unsigned i = 0; i < dimWorld; ++i)
             for (unsigned j = 0; j < dimWorld; ++j)
-                result[i][j] = Opm::harmonicMean(K1[i][j], K2[i][j]);
+                result[i][j] = harmonicMean(K1[i][j], K2[i][j]);
     }
 
     /*!
@@ -305,7 +305,7 @@ public:
      */
     unsigned markForGridAdaptation()
     {
-        using Toolbox = Opm::MathToolbox<Evaluation>;
+        using Toolbox = MathToolbox<Evaluation>;
 
         unsigned numMarked = 0;
         ElementContext elemCtx( this->simulator() );
