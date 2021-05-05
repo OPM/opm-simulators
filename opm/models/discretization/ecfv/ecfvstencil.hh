@@ -206,8 +206,8 @@ public:
         { return area_; }
 
     private:
-        Opm::ConditionalStorage<needIntegrationPos, GlobalPosition> integrationPos_;
-        Opm::ConditionalStorage<needNormal, WorldVector> normal_;
+        ConditionalStorage<needIntegrationPos, GlobalPosition> integrationPos_;
+        ConditionalStorage<needNormal, WorldVector> normal_;
         Scalar area_;
 
         unsigned short exteriorIdx_;
