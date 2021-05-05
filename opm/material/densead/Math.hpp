@@ -422,14 +422,14 @@ Evaluation<ValueType, numVars, staticSize> log10(const Evaluation<ValueType, num
 // a kind of traits class for the automatic differentiation case. (The toolbox for the
 // scalar case is provided by the MathToolbox.hpp header file.)
 template <class ValueT, int numVars, unsigned staticSize>
-struct MathToolbox<Opm::DenseAd::Evaluation<ValueT, numVars, staticSize> >
+struct MathToolbox<DenseAd::Evaluation<ValueT, numVars, staticSize> >
 {
 private:
 public:
     typedef ValueT ValueType;
-    typedef Opm::MathToolbox<ValueType> InnerToolbox;
+    typedef MathToolbox<ValueType> InnerToolbox;
     typedef typename InnerToolbox::Scalar Scalar;
-    typedef Opm::DenseAd::Evaluation<ValueType, numVars, staticSize> Evaluation;
+    typedef DenseAd::Evaluation<ValueType, numVars, staticSize> Evaluation;
 
     static ValueType value(const Evaluation& eval)
     { return eval.value(); }
@@ -496,66 +496,66 @@ public:
     // arithmetic functions
     template <class Arg1Eval, class Arg2Eval>
     static Evaluation max(const Arg1Eval& arg1, const Arg2Eval& arg2)
-    { return Opm::DenseAd::max(arg1, arg2); }
+    { return DenseAd::max(arg1, arg2); }
 
     template <class Arg1Eval, class Arg2Eval>
     static Evaluation min(const Arg1Eval& arg1, const Arg2Eval& arg2)
-    { return Opm::DenseAd::min(arg1, arg2); }
+    { return DenseAd::min(arg1, arg2); }
 
     static Evaluation abs(const Evaluation& arg)
-    { return Opm::DenseAd::abs(arg); }
+    { return DenseAd::abs(arg); }
 
     static Evaluation tan(const Evaluation& arg)
-    { return Opm::DenseAd::tan(arg); }
+    { return DenseAd::tan(arg); }
 
     static Evaluation atan(const Evaluation& arg)
-    { return Opm::DenseAd::atan(arg); }
+    { return DenseAd::atan(arg); }
 
     static Evaluation atan2(const Evaluation& arg1, const Evaluation& arg2)
-    { return Opm::DenseAd::atan2(arg1, arg2); }
+    { return DenseAd::atan2(arg1, arg2); }
 
     template <class Eval2>
     static Evaluation atan2(const Evaluation& arg1, const Eval2& arg2)
-    { return Opm::DenseAd::atan2(arg1, arg2); }
+    { return DenseAd::atan2(arg1, arg2); }
 
     template <class Eval1>
     static Evaluation atan2(const Eval1& arg1, const Evaluation& arg2)
-    { return Opm::DenseAd::atan2(arg1, arg2); }
+    { return DenseAd::atan2(arg1, arg2); }
 
     static Evaluation sin(const Evaluation& arg)
-    { return Opm::DenseAd::sin(arg); }
+    { return DenseAd::sin(arg); }
 
     static Evaluation asin(const Evaluation& arg)
-    { return Opm::DenseAd::asin(arg); }
+    { return DenseAd::asin(arg); }
 
     static Evaluation cos(const Evaluation& arg)
-    { return Opm::DenseAd::cos(arg); }
+    { return DenseAd::cos(arg); }
 
     static Evaluation acos(const Evaluation& arg)
-    { return Opm::DenseAd::acos(arg); }
+    { return DenseAd::acos(arg); }
 
     static Evaluation sqrt(const Evaluation& arg)
-    { return Opm::DenseAd::sqrt(arg); }
+    { return DenseAd::sqrt(arg); }
 
     static Evaluation exp(const Evaluation& arg)
-    { return Opm::DenseAd::exp(arg); }
+    { return DenseAd::exp(arg); }
 
     static Evaluation log(const Evaluation& arg)
-    { return Opm::DenseAd::log(arg); }
+    { return DenseAd::log(arg); }
 
     static Evaluation log10(const Evaluation& arg)
-    { return Opm::DenseAd::log10(arg); }
+    { return DenseAd::log10(arg); }
 
     template <class RhsValueType>
     static Evaluation pow(const Evaluation& arg1, const RhsValueType& arg2)
-    { return Opm::DenseAd::pow(arg1, arg2); }
+    { return DenseAd::pow(arg1, arg2); }
 
     template <class RhsValueType>
     static Evaluation pow(const RhsValueType& arg1, const Evaluation& arg2)
-    { return Opm::DenseAd::pow(arg1, arg2); }
+    { return DenseAd::pow(arg1, arg2); }
 
     static Evaluation pow(const Evaluation& arg1, const Evaluation& arg2)
-    { return Opm::DenseAd::pow(arg1, arg2); }
+    { return DenseAd::pow(arg1, arg2); }
 
     static bool isfinite(const Evaluation& arg)
     {

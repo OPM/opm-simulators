@@ -59,11 +59,11 @@ inline Evaluation fullerMethod(const Scalar* M, // molar masses [g/mol]
                                const Evaluation& pressure) // [Pa]
 {
     // "effective" molar mass in [g/m^3]
-    Scalar Mab = Opm::harmonicMean(M[0], M[1]);
+    Scalar Mab = harmonicMean(M[0], M[1]);
 
     // Fuller's method
     const Evaluation& tmp = std::pow(SigmaNu[0], 1./3) + std::pow(SigmaNu[1], 1./3);
-    return 1e-4 * (143.0*Opm::pow(temperature, 1.75))/(pressure*std::sqrt(Mab)*tmp*tmp);
+    return 1e-4 * (143.0*pow(temperature, 1.75))/(pressure*std::sqrt(Mab)*tmp*tmp);
 }
 
 } // namespace BinaryCoeff

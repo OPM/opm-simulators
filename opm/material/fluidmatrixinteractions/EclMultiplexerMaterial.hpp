@@ -61,10 +61,10 @@ public:
     typedef OilWaterMaterialLawT OilWaterMaterialLaw;
     typedef GasWaterMaterialLawT GasWaterMaterialLaw;
 
-    typedef Opm::EclStone1Material<TraitsT, GasOilMaterialLaw, OilWaterMaterialLaw> Stone1Material;
-    typedef Opm::EclStone2Material<TraitsT, GasOilMaterialLaw, OilWaterMaterialLaw> Stone2Material;
-    typedef Opm::EclDefaultMaterial<TraitsT, GasOilMaterialLaw, OilWaterMaterialLaw> DefaultMaterial;
-    typedef Opm::EclTwoPhaseMaterial<TraitsT, GasOilMaterialLaw, OilWaterMaterialLaw, GasWaterMaterialLaw> TwoPhaseMaterial;
+    typedef EclStone1Material<TraitsT, GasOilMaterialLaw, OilWaterMaterialLaw> Stone1Material;
+    typedef EclStone2Material<TraitsT, GasOilMaterialLaw, OilWaterMaterialLaw> Stone2Material;
+    typedef EclDefaultMaterial<TraitsT, GasOilMaterialLaw, OilWaterMaterialLaw> DefaultMaterial;
+    typedef EclTwoPhaseMaterial<TraitsT, GasOilMaterialLaw, OilWaterMaterialLaw, GasWaterMaterialLaw> TwoPhaseMaterial;
 
     // some safety checks
     static_assert(TraitsT::numPhases == 3,

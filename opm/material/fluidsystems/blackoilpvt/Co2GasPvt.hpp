@@ -53,14 +53,14 @@ template <class Scalar>
 class Co2GasPvt
 {
     typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
-    typedef Opm::CO2<Scalar, CO2Tables> CO2;
-    typedef Opm::SimpleHuDuanH2O<Scalar> H2O;
+    typedef ::Opm::CO2<Scalar, CO2Tables> CO2;
+    typedef SimpleHuDuanH2O<Scalar> H2O;
 
 public:
-    typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
+    typedef Tabulated1DFunction<Scalar> TabulatedOneDFunction;
 
     //! The binary coefficients for brine and CO2 used by this fluid system
-    typedef Opm::BinaryCoeff::Brine_CO2<Scalar, H2O, CO2> BinaryCoeffBrineCO2;
+    typedef BinaryCoeff::Brine_CO2<Scalar, H2O, CO2> BinaryCoeffBrineCO2;
 
     explicit Co2GasPvt() = default;
     Co2GasPvt(const std::vector<Scalar>& gasReferenceDensity)

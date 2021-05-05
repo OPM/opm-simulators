@@ -898,12 +898,12 @@ using DynamicEvaluation = Evaluation<Scalar, DynamicSize, staticSize>;
 {% if numDerivs < 0 %}\
 
 template <class Scalar, unsigned staticSize>
-Opm::DenseAd::Evaluation<Scalar, -1, staticSize> constant(int numDerivatives, const Scalar& value)
-{ return Opm::DenseAd::Evaluation<Scalar, -1, staticSize>::createConstant(numDerivatives, value); }
+DenseAd::Evaluation<Scalar, -1, staticSize> constant(int numDerivatives, const Scalar& value)
+{ return DenseAd::Evaluation<Scalar, -1, staticSize>::createConstant(numDerivatives, value); }
 
 template <class Scalar, unsigned staticSize>
-Opm::DenseAd::Evaluation<Scalar, -1, staticSize> variable(int numDerivatives, const Scalar& value, unsigned idx)
-{ return Opm::DenseAd::Evaluation<Scalar, -1, staticSize>::createVariable(numDerivatives, value, idx); }
+DenseAd::Evaluation<Scalar, -1, staticSize> variable(int numDerivatives, const Scalar& value, unsigned idx)
+{ return DenseAd::Evaluation<Scalar, -1, staticSize>::createVariable(numDerivatives, value, idx); }
 
 {% endif %}\
 } // namespace Opm

@@ -80,7 +80,7 @@ public:
     void assign(const FluidState& fs)
     {
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            density_[phaseIdx] = Opm::decay<Scalar>(fs.density(phaseIdx));
+            density_[phaseIdx] = decay<Scalar>(fs.density(phaseIdx));
         }
     }
 

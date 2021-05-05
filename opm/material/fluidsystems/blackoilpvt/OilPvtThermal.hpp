@@ -54,7 +54,7 @@ template <class Scalar>
 class OilPvtThermal
 {
 public:
-    typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
+    typedef Tabulated1DFunction<Scalar> TabulatedOneDFunction;
     typedef OilPvtMultiplexer<Scalar, /*enableThermal=*/false> IsothermalPvt;
 
     OilPvtThermal()

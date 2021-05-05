@@ -75,7 +75,7 @@ public:
         const Evaluation& B = (n[2]*sigma + n[3])*sigma + n[4];
         const Evaluation& C = (n[5]*sigma + n[6])*sigma + n[7];
 
-        Evaluation tmp = 2*C/(Opm::sqrt(B*B - 4*A*C) - B);
+        Evaluation tmp = 2*C/(sqrt(B*B - 4*A*C) - B);
         tmp *= tmp;
         tmp *= tmp;
 
@@ -105,9 +105,9 @@ public:
         const Evaluation& F = n[0]*beta2 + n[3]*beta + n[6];
         const Evaluation& G = n[1]*beta2 + n[4]*beta + n[7];
 
-        const Evaluation& D = ( 2.*G)/(-F -Opm::sqrt(pow(F,2.) - 4.*E*G));
+        const Evaluation& D = ( 2.*G)/(-F -sqrt(pow(F,2.) - 4.*E*G));
 
-        const Evaluation& temperature = (n[9] + D - Opm::sqrt(pow(n[9]+D , 2.) - 4.* (n[8] + n[9]*D)) ) * 0.5;
+        const Evaluation& temperature = (n[9] + D - sqrt(pow(n[9]+D , 2.) - 4.* (n[8] + n[9]*D)) ) * 0.5;
 
         return temperature;
     }

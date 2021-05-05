@@ -124,10 +124,10 @@ public:
             tmp3 *= 1.0/TBar - 1;
         };
         muBar *= rhoBar;
-        muBar = Opm::exp(muBar);
+        muBar = exp(muBar);
 
         // muBar *= muBar_0
-        muBar  *= 100*Opm::sqrt(TBar);
+        muBar  *= 100*sqrt(TBar);
         const Scalar H[4] = {
             1.67752, 2.20462, 0.6366564, -0.241605
         };
@@ -191,7 +191,7 @@ public:
         Evaluation rhobar = rho / thcond_rhostar;
 
         /* fast implementation... minimised calls to 'pow' routine... */
-        Evaluation Troot = Opm::sqrt(Tbar);
+        Evaluation Troot = sqrt(Tbar);
         Evaluation Tpow = Troot;
         Evaluation lam = 0;
 
@@ -203,10 +203,10 @@ public:
         lam +=
             thcond_b0 + thcond_b1
             * rhobar + thcond_b2
-            * Opm::exp(thcond_B1 * ((rhobar + thcond_B2)*(rhobar + thcond_B2)));
+            * exp(thcond_B1 * ((rhobar + thcond_B2)*(rhobar + thcond_B2)));
 
-        Evaluation DTbar = Opm::abs(Tbar - 1) + thcond_c4;
-        Evaluation DTbarpow = Opm::pow(DTbar, 3./5);
+        Evaluation DTbar = abs(Tbar - 1) + thcond_c4;
+        Evaluation DTbarpow = pow(DTbar, 3./5);
         Evaluation Q = 2. + thcond_c5 / DTbarpow;
 
         Evaluation S;
@@ -215,16 +215,16 @@ public:
         else
             S = thcond_c6 / DTbarpow;
 
-        Evaluation rhobar18 = Opm::pow(rhobar, 1.8);
-        Evaluation rhobarQ = Opm::pow(rhobar, Q);
+        Evaluation rhobar18 = pow(rhobar, 1.8);
+        Evaluation rhobarQ = pow(rhobar, Q);
 
         lam +=
-            (thcond_d1 / Opm::pow(Tbar,10.0) + thcond_d2) * rhobar18 *
-            Opm::exp(thcond_c1 * (1 - rhobar * rhobar18))
+            (thcond_d1 / pow(Tbar,10.0) + thcond_d2) * rhobar18 *
+            exp(thcond_c1 * (1 - rhobar * rhobar18))
             + thcond_d3 * S * rhobarQ *
-            Opm::exp((Q/(1+Q))*(1 - rhobar*rhobarQ))
+            exp((Q/(1+Q))*(1 - rhobar*rhobarQ))
             + thcond_d4 *
-            Opm::exp(thcond_c2 * Opm::pow(Troot,3.0) + thcond_c3 / Opm::pow(rhobar,5.0));
+            exp(thcond_c2 * pow(Troot,3.0) + thcond_c3 / pow(rhobar,5.0));
         return /*thcond_kstar * */ lam;
     }
 };
@@ -232,7 +232,7 @@ public:
 template <class Scalar>
 const Scalar Common<Scalar>::molarMass = 18.01518e-3;
 template <class Scalar>
-const Scalar Common<Scalar>::Rs = Opm::Constants<Scalar>::R/molarMass;
+const Scalar Common<Scalar>::Rs = Constants<Scalar>::R/molarMass;
 template <class Scalar>
 const Scalar Common<Scalar>::criticalTemperature = 647.096;
 template <class Scalar>

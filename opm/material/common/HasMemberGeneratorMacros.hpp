@@ -55,7 +55,7 @@ struct AlwaysVoid
                                                                         \
     template <class T>                                                  \
     struct HasMember_##MEMBER_NAME##_Helper<T,                             \
-      typename Opm::AlwaysVoid<decltype(std::declval<T>().MEMBER_NAME(__VA_ARGS__))>::type> \
+      typename ::Opm::AlwaysVoid<decltype(std::declval<T>().MEMBER_NAME(__VA_ARGS__))>::type> \
     {                                                                   \
         static constexpr bool value = true;                             \
     };                                                                  \

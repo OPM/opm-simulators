@@ -49,7 +49,7 @@ public:
 
 public:
     typedef std::vector<Scalar> SamplePoints;
-    typedef Opm::Spline<Scalar> Spline;
+    typedef ::Opm::Spline<Scalar> Spline;
     typedef typename Spline::SplineType SplineType;
 
     typedef TraitsT Traits;

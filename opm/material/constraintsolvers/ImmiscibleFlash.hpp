@@ -140,9 +140,9 @@ public:
         typedef Dune::FieldMatrix<InputEval, numEq, numEq> Matrix;
         typedef Dune::FieldVector<InputEval, numEq> Vector;
 
-        typedef Opm::DenseAd::Evaluation<InputEval, numEq> FlashEval;
+        typedef DenseAd::Evaluation<InputEval, numEq> FlashEval;
         typedef Dune::FieldVector<FlashEval, numEq> FlashDefectVector;
-        typedef Opm::ImmiscibleFluidState<FlashEval, FluidSystem> FlashFluidState;
+        typedef ImmiscibleFluidState<FlashEval, FluidSystem> FlashFluidState;
 
 #if ! DUNE_VERSION_NEWER(DUNE_COMMON, 2,7)
         Dune::FMatrixPrecision<InputEval>::set_singular_limit(1e-35);
@@ -203,7 +203,7 @@ public:
 
             try { J.solve(deltaX, b); }
             catch (const Dune::FMatrixError& e) {
-                throw Opm::NumericalIssue(e.what());
+                throw NumericalIssue(e.what());
             }
             Valgrind::CheckDefined(deltaX);
 
@@ -220,7 +220,7 @@ public:
         oss << "ImmiscibleFlash solver failed:"
             << " {c_alpha^kappa} = {" << globalMolarities << "},"
             << " T = " << fluidState.temperature(/*phaseIdx=*/0);
-    throw Opm::NumericalIssue(oss.str());
+    throw NumericalIssue(oss.str());
     }
 
 
@@ -358,7 +358,7 @@ protected:
     {
         // note that it is possible that FlashEval::Scalar is an Evaluation itself
         typedef typename FlashFluidState::Scalar FlashEval;
-        typedef Opm::MathToolbox<FlashEval> FlashEvalToolbox;
+        typedef MathToolbox<FlashEval> FlashEvalToolbox;
 
         typedef typename FlashEvalToolbox::ValueType InnerEval;
 
@@ -366,7 +366,7 @@ protected:
         // make sure we don't swallow non-finite update vectors
         assert(deltaX.dimension == numEq);
         for (unsigned i = 0; i < numEq; ++i)
-            assert(std::isfinite(Opm::scalarValue(deltaX[i])));
+            assert(std::isfinite(scalarValue(deltaX[i])));
 #endif
 
         Scalar relError = 0;
@@ -375,19 +375,19 @@ protected:
             InnerEval delta = deltaX[pvIdx];
 
             relError = std::max(relError,
-                                std::abs(Opm::scalarValue(delta))
+                                std::abs(scalarValue(delta))
                                 * quantityWeight_(fluidState, pvIdx));
 
             if (isSaturationIdx_(pvIdx)) {
                 // dampen to at most 20% change in saturation per
                 // iteration
-                delta = Opm::min(0.25, Opm::max(-0.25, delta));
+                delta = min(0.25, max(-0.25, delta));
             }
             else if (isPressureIdx_(pvIdx)) {
                 // dampen to at most 30% change in pressure per
                 // iteration
-                delta = Opm::min(0.5*fluidState.pressure(0).value(),
-                                 Opm::max(-0.50*fluidState.pressure(0).value(), delta));
+                delta = min(0.5*fluidState.pressure(0).value(),
+                                 max(-0.50*fluidState.pressure(0).value(), delta));
             }
 
             tmp -= delta;

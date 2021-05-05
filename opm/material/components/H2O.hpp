@@ -357,7 +357,7 @@ public:
 
 
         // regularization
-        Scalar pv = vaporPressure<Scalar>(Opm::scalarValue(temperature));
+        Scalar pv = vaporPressure<Scalar>(scalarValue(temperature));
         if (pressure < pv) {
             // the pressure is too low, in this case we use the slope
             // of the internal energy at the vapor pressure to
@@ -428,7 +428,7 @@ public:
                 -
                 Rs*temperature; // = p*v   for an ideal gas!
         }
-        Scalar pv = vaporPressure(Opm::scalarValue(temperature));
+        Scalar pv = vaporPressure(scalarValue(temperature));
         if (pressure > pv) {
             // the pressure is too high, in this case we use the slope
             // of the internal energy at the vapor pressure to
@@ -598,7 +598,7 @@ public:
 
             // calculate the partial derivative of the specific volume
             // to the pressure at the vapor pressure.
-            Scalar eps = Opm::scalarValue(pv)*1e-8;
+            Scalar eps = scalarValue(pv)*1e-8;
             Evaluation v0 = volumeRegion2_(temperature, pv);
             Evaluation v1 = volumeRegion2_(temperature, pv + eps);
             Evaluation dv_dp = (v1 - v0)/eps;
@@ -658,7 +658,7 @@ public:
         Evaluation deltaP = pressure*2;
         Valgrind::CheckDefined(pressure);
         Valgrind::CheckDefined(deltaP);
-        for (int i = 0; i < 5 && std::abs(Opm::scalarValue(pressure)*1e-9) < std::abs(Opm::scalarValue(deltaP)); ++i) {
+        for (int i = 0; i < 5 && std::abs(scalarValue(pressure)*1e-9) < std::abs(scalarValue(deltaP)); ++i) {
             Evaluation f = gasDensity(temperature, pressure) - density;
 
             Evaluation df_dp;
@@ -707,7 +707,7 @@ public:
 
             // calculate the partial derivative of the specific volume
             // to the pressure at the vapor pressure.
-            Scalar eps = Opm::scalarValue(pv)*1e-8;
+            Scalar eps = scalarValue(pv)*1e-8;
             Evaluation v0 = volumeRegion1_(temperature, pv);
             Evaluation v1 = volumeRegion1_(temperature, pv + eps);
             Evaluation dv_dp = (v1 - v0)/eps;
@@ -757,10 +757,10 @@ public:
         // assume the pressure to be 10% higher than the vapor
         // pressure
         Evaluation pressure = 1.1*vaporPressure(temperature);
-        Scalar eps = Opm::scalarValue(pressure)*1e-7;
+        Scalar eps = scalarValue(pressure)*1e-7;
 
         Evaluation deltaP = pressure*2;
-        for (int i = 0; i < 5 && std::abs(Opm::scalarValue(pressure)*1e-9) < std::abs(Opm::scalarValue(deltaP)); ++i) {
+        for (int i = 0; i < 5 && std::abs(scalarValue(pressure)*1e-9) < std::abs(scalarValue(deltaP)); ++i) {
             Evaluation f = liquidDensity(temperature, pressure) - density;
 
             Evaluation df_dp;
@@ -887,7 +887,7 @@ private:
     static Evaluation heatCap_p_Region1_(const Evaluation& temperature, const Evaluation& pressure)
     {
         return
-            - Opm::pow(Region1::tau(temperature), 2.0) *
+            - pow(Region1::tau(temperature), 2.0) *
             Region1::ddgamma_ddtau(temperature, pressure) *
             Rs;
     }
@@ -951,7 +951,7 @@ private:
     static Evaluation heatCap_p_Region2_(const Evaluation& temperature, const Evaluation& pressure)
     {
         return
-            - Opm::pow(Region2::tau(temperature), 2 ) *
+            - pow(Region2::tau(temperature), 2 ) *
             Region2::ddgamma_ddtau(temperature, pressure) *
             Rs;
     }

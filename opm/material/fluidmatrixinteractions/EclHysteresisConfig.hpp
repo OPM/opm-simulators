@@ -111,7 +111,7 @@ public:
      *
      * This requires that the opm-parser module is available.
      */
-    void initFromState(const Opm::Runspec& runspec)
+    void initFromState(const Runspec& runspec)
     {
         enableHysteresis_ = false;
 

@@ -116,8 +116,8 @@ public:
 
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             const Evaluation& S =
-                Opm::decay<Evaluation>(fluidState.saturation(phaseIdx));
-            values[phaseIdx] = Opm::max(Opm::min(S, 1.0), 0.0);
+                decay<Evaluation>(fluidState.saturation(phaseIdx));
+            values[phaseIdx] = max(min(S, 1.0), 0.0);
         }
     }
 
@@ -179,15 +179,15 @@ public:
     krw(const Params& /*params*/, const FluidState& fluidState)
     {
         const Evaluation& Sw =
-            Opm::decay<Evaluation>(fluidState.saturation(Traits::wettingPhaseIdx));
+            decay<Evaluation>(fluidState.saturation(Traits::wettingPhaseIdx));
 
-        return Opm::max(0.0, Opm::min(1.0, Sw));
+        return max(0.0, min(1.0, Sw));
     }
 
     template <class Evaluation>
     static typename std::enable_if<numPhases == 2, Evaluation>::type
     twoPhaseSatKrw(const Params& /*params*/, const Evaluation& Sw)
-    { return Opm::max(0.0, Opm::min(1.0, Sw)); }
+    { return max(0.0, min(1.0, Sw)); }
 
     /*!
      * \brief The relative permability of the liquid non-wetting phase
@@ -197,16 +197,16 @@ public:
     krn(const Params& /*params*/, const FluidState& fluidState)
     {
         const Evaluation& Sn =
-            Opm::decay<Evaluation>(fluidState.saturation(Traits::nonWettingPhaseIdx));
+            decay<Evaluation>(fluidState.saturation(Traits::nonWettingPhaseIdx));
 
-        return Opm::max(0.0, Opm::min(1.0, Sn));
+        return max(0.0, min(1.0, Sn));
     }
 
     template <class Evaluation>
     static typename std::enable_if<numPhases == 2, Evaluation>::type
     twoPhaseSatKrn(const Params& /*params*/, const Evaluation& Sw)
     {
-        return Opm::max(0.0, Opm::min(1.0, 1.0 - Opm::decay<Evaluation>(Sw)));
+        return max(0.0, min(1.0, 1.0 - decay<Evaluation>(Sw)));
     }
 
     /*!
@@ -219,9 +219,9 @@ public:
     krg(const Params& /*params*/, const FluidState& fluidState)
     {
         const Evaluation& Sg =
-            Opm::decay<Evaluation>(fluidState.saturation(Traits::gasPhaseIdx));
+            decay<Evaluation>(fluidState.saturation(Traits::gasPhaseIdx));
 
-        return Opm::max(0.0, Opm::min(1.0, Sg));
+        return max(0.0, min(1.0, Sg));
     }
 
     /*!

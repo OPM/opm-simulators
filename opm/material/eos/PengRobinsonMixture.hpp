@@ -42,7 +42,7 @@ template <class Scalar, class StaticParameters>
 class PengRobinsonMixture
 {
     enum { numComponents = StaticParameters::numComponents };
-    typedef Opm::PengRobinson<Scalar> PengRobinson;
+    typedef ::Opm::PengRobinson<Scalar> PengRobinson;
 
     // this class cannot be instantiated!
     PengRobinsonMixture() {}
@@ -114,13 +114,13 @@ public:
         LhsEval sumMoleFractions = 0.0;
         for (unsigned compJIdx = 0; compJIdx < numComponents; ++compJIdx)
             sumMoleFractions += fs.moleFraction(phaseIdx, compJIdx);
-        LhsEval deltai = 2*Opm::sqrt(params.aPure(phaseIdx, compIdx))/params.a(phaseIdx);
+        LhsEval deltai = 2*sqrt(params.aPure(phaseIdx, compIdx))/params.a(phaseIdx);
         LhsEval tmp = 0;
         for (unsigned compJIdx = 0; compJIdx < numComponents; ++compJIdx) {
             tmp +=
                 fs.moleFraction(phaseIdx, compJIdx)
                 / sumMoleFractions
-                * Opm::sqrt(params.aPure(phaseIdx, compJIdx))
+                * sqrt(params.aPure(phaseIdx, compJIdx))
                 * (1.0 - StaticParameters::interactionCoefficient(compIdx, compJIdx));
         };
         deltai *= tmp;
@@ -131,8 +131,8 @@ public:
         LhsEval expo =  Astar/(Bstar*std::sqrt(u*u - 4*w))*(bi_b - deltai);
 
         LhsEval fugCoeff =
-            Opm::exp(bi_b*(Z - 1))/Opm::max(1e-9, Z - Bstar) *
-            Opm::pow(base, expo);
+            exp(bi_b*(Z - 1))/max(1e-9, Z - Bstar) *
+            pow(base, expo);
 
         ////////
         // limit the fugacity coefficient to a reasonable range:
@@ -140,12 +140,12 @@ public:
         // on one side, we want the mole fraction to be at
         // least 10^-3 if the fugacity is at the current pressure
         //
-        fugCoeff = Opm::min(1e10, fugCoeff);
+        fugCoeff = min(1e10, fugCoeff);
         //
         // on the other hand, if the mole fraction of the component is 100%, we want the
         // fugacity to be at least 10^-3 Pa
         //
-        fugCoeff = Opm::max(1e-10, fugCoeff);
+        fugCoeff = max(1e-10, fugCoeff);
         ///////////
 
         return fugCoeff;
@@ -154,7 +154,7 @@ public:
 };
 
 template <class Scalar, class StaticParameters>
-const Scalar PengRobinsonMixture<Scalar, StaticParameters>::R = Opm::Constants<Scalar>::R;
+const Scalar PengRobinsonMixture<Scalar, StaticParameters>::R = Constants<Scalar>::R;
 template<class Scalar, class StaticParameters>
 const Scalar PengRobinsonMixture<Scalar, StaticParameters>::u = 2.0;
 template<class Scalar, class StaticParameters>

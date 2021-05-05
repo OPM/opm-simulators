@@ -228,7 +228,7 @@ public:
                            const FluidState& fs)
     {
         // Maximum attainable oil saturation is 1-SWL.
-        const auto Sw = 1.0 - params.Swl() - Opm::decay<Evaluation>(fs.saturation(gasPhaseIdx));
+        const auto Sw = 1.0 - params.Swl() - decay<Evaluation>(fs.saturation(gasPhaseIdx));
         return GasOilMaterialLaw::twoPhaseSatPcnw(params.gasOilParams(), Sw);
     }
 
@@ -245,7 +245,7 @@ public:
     static Evaluation pcnw(const Params& params,
                            const FluidState& fs)
     {
-        const auto Sw = Opm::decay<Evaluation>(fs.saturation(waterPhaseIdx));
+        const auto Sw = decay<Evaluation>(fs.saturation(waterPhaseIdx));
         Valgrind::CheckDefined(Sw);
 
         const auto result = OilWaterMaterialLaw::twoPhaseSatPcnw(params.oilWaterParams(), Sw);
@@ -330,7 +330,7 @@ public:
                           const FluidState& fluidState)
     {
         // Maximum attainable oil saturation is 1-SWL.
-        const Evaluation Sw = 1 - params.Swl() - Opm::decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
+        const Evaluation Sw = 1 - params.Swl() - decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
         return GasOilMaterialLaw::twoPhaseSatKrn(params.gasOilParams(), Sw);
     }
 
@@ -341,7 +341,7 @@ public:
     static Evaluation krw(const Params& params,
                           const FluidState& fluidState)
     {
-        const Evaluation Sw = Opm::decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
+        const Evaluation Sw = decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
         return OilWaterMaterialLaw::twoPhaseSatKrw(params.oilWaterParams(), Sw);
     }
 
@@ -354,8 +354,8 @@ public:
     {
         const Scalar Swco = params.Swl();
 
-        const Evaluation Sw = Opm::decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
-        const Evaluation Sg = Opm::decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
+        const Evaluation Sw = decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
+        const Evaluation Sg = decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
 
         const Scalar krocw = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Swco);
         const Evaluation krow = relpermOilInOilWaterSystem<Evaluation>(params, fluidState);
@@ -363,7 +363,7 @@ public:
         const Evaluation krg = GasOilMaterialLaw::twoPhaseSatKrn(params.gasOilParams(), 1 - Swco - Sg);
         const Evaluation krog = relpermOilInOilGasSystem<Evaluation>(params, fluidState);
 
-        return Opm::max(krocw * ((krow/krocw + krw) * (krog/krocw + krg) - krw - krg), Evaluation{0});
+        return max(krocw * ((krow/krocw + krw) * (krog/krocw + krg) - krw - krg), Evaluation{0});
     }
 
 
@@ -375,7 +375,7 @@ public:
                                                const FluidState& fluidState)
     {
         const Scalar Swco = params.Swl();
-        const Evaluation Sg = Opm::decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
+        const Evaluation Sg = decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
 
         return GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), 1 - Swco - Sg);
     }
@@ -388,7 +388,7 @@ public:
     static Evaluation relpermOilInOilWaterSystem(const Params& params,
                                                  const FluidState& fluidState)
     {
-        const Evaluation Sw = Opm::decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
+        const Evaluation Sw = decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
 
         return OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sw);
     }
@@ -404,8 +404,8 @@ public:
     static void updateHysteresis(Params& params, const FluidState& fluidState)
     {
         const Scalar Swco = params.Swl();
-        const Scalar Sw = Opm::scalarValue(fluidState.saturation(waterPhaseIdx));
-        const Scalar Sg = Opm::scalarValue(fluidState.saturation(gasPhaseIdx));
+        const Scalar Sw = scalarValue(fluidState.saturation(waterPhaseIdx));
+        const Scalar Sg = scalarValue(fluidState.saturation(gasPhaseIdx));
 
         params.oilWaterParams().update(/*pcSw=*/Sw, /*krwSw=*/Sw, /*krnSw=*/Sw);
         params.gasOilParams().update(/*pcSw=*/  1.0 - Swco - Sg,

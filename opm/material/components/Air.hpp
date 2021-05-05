@@ -46,7 +46,7 @@ namespace Opm {
 template <class Scalar>
 class Air : public Component<Scalar, Air<Scalar> >
 {
-    typedef Opm::IdealGas<Scalar> IdealGas;
+    typedef ::Opm::IdealGas<Scalar> IdealGas;
 
 public:
     /*!
@@ -150,10 +150,10 @@ public:
         Scalar Fc = 1 - 0.2756*omega + 0.059035*mu_r4;
         Evaluation Tstar = 1.2593 * temperature/Tc;
         Evaluation Omega_v =
-            1.16145*Opm::pow(Tstar, -0.14874) +
-            0.52487*Opm::exp(- 0.77320*Tstar) +
-            2.16178*Opm::exp(- 2.43787*Tstar);
-        return 40.7851e-7*Fc*Opm::sqrt(M*temperature)/(std::pow(Vc, 2./3)*Omega_v);
+            1.16145*pow(Tstar, -0.14874) +
+            0.52487*exp(- 0.77320*Tstar) +
+            2.16178*exp(- 2.43787*Tstar);
+        return 40.7851e-7*Fc*sqrt(M*temperature)/(std::pow(Vc, 2./3)*Omega_v);
     }
 
     // simpler method, from old constrelAir.hh
@@ -161,9 +161,9 @@ public:
     static Evaluation simpleGasViscosity(const Evaluation& temperature, const Evaluation& /*pressure*/)
     {
         if(temperature < 273.15 || temperature > 660.) {
-            throw NumericalIssue("Air: Temperature "+std::to_string(Opm::scalarValue(temperature))+"K out of range");
+            throw NumericalIssue("Air: Temperature "+std::to_string(scalarValue(temperature))+"K out of range");
         }
-        return 1.496e-6*Opm::pow(temperature, 1.5)/(temperature + 120);
+        return 1.496e-6*pow(temperature, 1.5)/(temperature + 120);
     }
 
     /*!

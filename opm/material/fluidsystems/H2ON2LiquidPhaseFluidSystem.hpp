@@ -57,14 +57,14 @@ class H2ON2LiquidPhaseFluidSystem
     typedef BaseFluidSystem<Scalar, ThisType> Base;
 
     // convenience typedefs
-    typedef Opm::H2O<Scalar> IapwsH2O;
-    typedef Opm::TabulatedComponent<Scalar, IapwsH2O > TabulatedH2O;
-    typedef Opm::N2<Scalar> SimpleN2;
+    typedef ::Opm::H2O<Scalar> IapwsH2O;
+    typedef ::Opm::TabulatedComponent<Scalar, IapwsH2O > TabulatedH2O;
+    typedef ::Opm::N2<Scalar> SimpleN2;
 
 public:
     //! \copydoc BaseFluidSystem::ParameterCache
     template <class Evaluation>
-    struct ParameterCache : public Opm::NullParameterCache<Evaluation>
+    struct ParameterCache : public NullParameterCache<Evaluation>
     {};
 
     /****************************************
@@ -253,12 +253,12 @@ public:
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         LhsEval sumMoleFrac = 0;
         for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
-            sumMoleFrac += Opm::decay<LhsEval>(fluidState.moleFraction(phaseIdx, compIdx));
+            sumMoleFrac += decay<LhsEval>(fluidState.moleFraction(phaseIdx, compIdx));
 
         assert(phaseIdx == liquidPhaseIdx);
 
@@ -266,8 +266,8 @@ public:
         // of whether it is water or nitrogen.
         const LhsEval& clH2O = H2O::liquidDensity(T, p)/H2O::molarMass();
 
-        const auto& xlH2O = Opm::decay<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, H2OIdx));
-        const auto& xlN2 = Opm::decay<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, N2Idx));
+        const auto& xlH2O = decay<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, H2OIdx));
+        const auto& xlN2 = decay<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, N2Idx));
 
         return clH2O*(H2O::molarMass()*xlH2O + N2::molarMass()*xlN2)/sumMoleFrac;
     }
@@ -280,8 +280,8 @@ public:
     {
         assert(phaseIdx == liquidPhaseIdx);
 
-        const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         // assume pure water for the liquid phase
         return H2O::liquidViscosity(T, p);
@@ -297,12 +297,12 @@ public:
         assert(phaseIdx == liquidPhaseIdx);
         assert(0 <= compIdx && compIdx < numComponents);
 
-        const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         if (compIdx == H2OIdx)
             return H2O::vaporPressure(T)/p;
-        return Opm::BinaryCoeff::H2O_N2::henry(T)/p;
+        return BinaryCoeff::H2O_N2::henry(T)/p;
     }
 
     //! \copydoc BaseFluidSystem::diffusionCoefficient
@@ -315,8 +315,8 @@ public:
     {
         assert(phaseIdx == liquidPhaseIdx);
 
-        const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         return BinaryCoeff::H2O_N2::liquidDiffCoeff(T, p);
     }
@@ -329,8 +329,8 @@ public:
     {
         assert (phaseIdx == liquidPhaseIdx);
 
-        const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = decay<LhsEval>(fluidState.pressure(phaseIdx));
         Valgrind::CheckDefined(T);
         Valgrind::CheckDefined(p);
 
@@ -346,8 +346,8 @@ public:
     {
         assert(phaseIdx == liquidPhaseIdx);
 
-        const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = decay<LhsEval>(fluidState.pressure(phaseIdx));
         return H2O::liquidThermalConductivity(T, p);
     }
 
@@ -359,8 +359,8 @@ public:
     {
         assert (phaseIdx == liquidPhaseIdx);
 
-        const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         return H2O::liquidHeatCapacity(T, p);
     }

@@ -78,7 +78,7 @@ class EclEpsGridProperties
 public:
 #if HAVE_ECL_INPUT
 
-    EclEpsGridProperties(const Opm::EclipseState& eclState,
+    EclEpsGridProperties(const EclipseState& eclState,
                          bool useImbibition)
     {
         const std::string kwPrefix = useImbibition ? "I" : "";

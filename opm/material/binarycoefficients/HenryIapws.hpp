@@ -48,7 +48,7 @@ inline Evaluation henryIAPWS(Scalar E,
                              Scalar H,
                              const Evaluation& temperature)
 {
-    typedef Opm::H2O<Evaluation> H2O;
+    typedef H2O<Evaluation> H2O;
 
     Evaluation Tr = temperature/H2O::criticalTemperature();
     Evaluation tau = 1 - Tr;
@@ -65,20 +65,20 @@ inline Evaluation henryIAPWS(Scalar E,
 
     Evaluation f = 0;
     for (int i = 0; i < 6; ++i) {
-        f += c[i]*Opm::pow(tau, d[i]);
+        f += c[i]*pow(tau, d[i]);
     }
 
     const Evaluation& exponent =
         q*F +
         E/temperature*f +
         (F +
-         G*Opm::pow(tau, 2.0/3) +
+         G*pow(tau, 2.0/3) +
          H*tau)*
-        Opm::exp((H2O::tripleTemperature() - temperature)/100);
+        exp((H2O::tripleTemperature() - temperature)/100);
     // CAUTION: K_D is formulated in mole fractions. We have to
     // multiply it with the vapor pressure of water in order to get
     // derivative of the partial pressure.
-    return Opm::exp(exponent)*H2O::vaporPressure(temperature);
+    return exp(exponent)*H2O::vaporPressure(temperature);
 }
 } // namespace Opm
 

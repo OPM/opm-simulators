@@ -57,7 +57,7 @@ class EclEpsTwoPhaseLawParams : public EnsureFinalized
 
 public:
     typedef typename EffLawParams::Traits Traits;
-    typedef Opm::EclEpsScalingPoints<Scalar> ScalingPoints;
+    typedef EclEpsScalingPoints<Scalar> ScalingPoints;
 
     EclEpsTwoPhaseLawParams()
     {

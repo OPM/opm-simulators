@@ -65,7 +65,7 @@ class ComputeFromReferencePhase
 {
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
-    typedef Opm::CompositionFromFugacities<Scalar, FluidSystem, Evaluation> CompositionFromFugacities;
+    typedef ::Opm::CompositionFromFugacities<Scalar, FluidSystem, Evaluation> CompositionFromFugacities;
     typedef Dune::FieldVector<Evaluation, numComponents> ComponentVector;
 
 public:
@@ -148,7 +148,7 @@ public:
             ComponentVector fugVec;
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 const auto& fug = fluidState.fugacity(refPhaseIdx, compIdx);
-                fugVec[compIdx] = Opm::decay<Evaluation>(fug);
+                fugVec[compIdx] = decay<Evaluation>(fug);
             }
 
             CompositionFromFugacities::solve(fluidState, paramCache, phaseIdx, fugVec);

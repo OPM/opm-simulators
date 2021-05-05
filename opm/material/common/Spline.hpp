@@ -90,7 +90,7 @@ namespace Opm
 template<class Scalar>
 class Spline
 {
-    typedef Opm::TridiagonalMatrix<Scalar> Matrix;
+    typedef TridiagonalMatrix<Scalar> Matrix;
     typedef std::vector<Scalar> Vector;
 
 public:
@@ -798,7 +798,7 @@ public:
     Evaluation eval(const Evaluation& x, bool extrapolate = false) const
     {
         if (!extrapolate && !applies(x))
-            throw Opm::NumericalIssue("Tried to evaluate a spline outside of its range");
+            throw NumericalIssue("Tried to evaluate a spline outside of its range");
 
         // handle extrapolation
         if (extrapolate) {
@@ -815,7 +815,7 @@ public:
             }
         }
 
-        return eval_(x, segmentIdx_(Opm::scalarValue(x)));
+        return eval_(x, segmentIdx_(scalarValue(x)));
     }
 
     /*!
@@ -834,7 +834,7 @@ public:
     Evaluation evalDerivative(const Evaluation& x, bool extrapolate = false) const
     {
         if (!extrapolate && !applies(x))
-            throw Opm::NumericalIssue("Tried to evaluate the derivative of a spline outside of its range");
+            throw NumericalIssue("Tried to evaluate the derivative of a spline outside of its range");
 
         // handle extrapolation
         if (extrapolate) {
@@ -844,7 +844,7 @@ public:
                 return evalDerivative_(xAt(numSamples() - 1), /*segmentIdx=*/numSamples() - 2);
         }
 
-        return evalDerivative_(x, segmentIdx_(Opm::scalarValue(x)));
+        return evalDerivative_(x, segmentIdx_(scalarValue(x)));
     }
 
     /*!
@@ -863,11 +863,11 @@ public:
     Evaluation evalSecondDerivative(const Evaluation& x, bool extrapolate = false) const
     {
         if (!extrapolate && !applies(x))
-            throw Opm::NumericalIssue("Tried to evaluate the second derivative of a spline outside of its range");
+            throw NumericalIssue("Tried to evaluate the second derivative of a spline outside of its range");
         else if (extrapolate)
             return 0.0;
 
-        return evalDerivative2_(x, segmentIdx_(Opm::scalarValue(x)));
+        return evalDerivative2_(x, segmentIdx_(scalarValue(x)));
     }
 
     /*!
@@ -886,11 +886,11 @@ public:
     Evaluation evalThirdDerivative(const Evaluation& x, bool extrapolate = false) const
     {
         if (!extrapolate && !applies(x))
-            throw Opm::NumericalIssue("Tried to evaluate the third derivative of a spline outside of its range");
+            throw NumericalIssue("Tried to evaluate the third derivative of a spline outside of its range");
         else if (extrapolate)
             return 0.0;
 
-        return evalDerivative3_(x, segmentIdx_(Opm::scalarValue(x)));
+        return evalDerivative3_(x, segmentIdx_(scalarValue(x)));
     }
 
     /*!
@@ -1713,7 +1713,7 @@ protected:
                              Scalar x0 = -1e30, Scalar x1 = 1e30) const
     {
         unsigned n =
-            Opm::invertCubicPolynomial(sol,
+            invertCubicPolynomial(sol,
                                        a_(segIdx) - a,
                                        b_(segIdx) - b,
                                        c_(segIdx) - c,

@@ -152,19 +152,19 @@ public:
     {
         switch (gasPvtAppr) {
         case GasPvtApproach::DryGasPvt:
-            realGasPvt_ = new Opm::DryGasPvt<Scalar>;
+            realGasPvt_ = new DryGasPvt<Scalar>;
             break;
 
         case GasPvtApproach::WetGasPvt:
-            realGasPvt_ = new Opm::WetGasPvt<Scalar>;
+            realGasPvt_ = new WetGasPvt<Scalar>;
             break;
 
         case GasPvtApproach::ThermalGasPvt:
-            realGasPvt_ = new Opm::GasPvtThermal<Scalar>;
+            realGasPvt_ = new GasPvtThermal<Scalar>;
             break;
 
         case GasPvtApproach::Co2GasPvt:
-            realGasPvt_ = new Opm::Co2GasPvt<Scalar>;
+            realGasPvt_ = new Co2GasPvt<Scalar>;
             break;
 
         case GasPvtApproach::NoGasPvt:
@@ -290,61 +290,61 @@ public:
 
     // get the parameter object for the dry gas case
     template <GasPvtApproach approachV>
-    typename std::enable_if<approachV == GasPvtApproach::DryGasPvt, Opm::DryGasPvt<Scalar> >::type& getRealPvt()
+    typename std::enable_if<approachV == GasPvtApproach::DryGasPvt, DryGasPvt<Scalar> >::type& getRealPvt()
     {
         assert(gasPvtApproach() == approachV);
-        return *static_cast<Opm::DryGasPvt<Scalar>* >(realGasPvt_);
+        return *static_cast<DryGasPvt<Scalar>* >(realGasPvt_);
     }
 
     template <GasPvtApproach approachV>
-    typename std::enable_if<approachV == GasPvtApproach::DryGasPvt, const Opm::DryGasPvt<Scalar> >::type& getRealPvt() const
+    typename std::enable_if<approachV == GasPvtApproach::DryGasPvt, const DryGasPvt<Scalar> >::type& getRealPvt() const
     {
         assert(gasPvtApproach() == approachV);
-        return *static_cast<const Opm::DryGasPvt<Scalar>* >(realGasPvt_);
+        return *static_cast<const DryGasPvt<Scalar>* >(realGasPvt_);
     }
 
     // get the parameter object for the wet gas case
     template <GasPvtApproach approachV>
-    typename std::enable_if<approachV == GasPvtApproach::WetGasPvt, Opm::WetGasPvt<Scalar> >::type& getRealPvt()
+    typename std::enable_if<approachV == GasPvtApproach::WetGasPvt, WetGasPvt<Scalar> >::type& getRealPvt()
     {
         assert(gasPvtApproach() == approachV);
-        return *static_cast<Opm::WetGasPvt<Scalar>* >(realGasPvt_);
+        return *static_cast<WetGasPvt<Scalar>* >(realGasPvt_);
     }
 
     template <GasPvtApproach approachV>
-    typename std::enable_if<approachV == GasPvtApproach::WetGasPvt, const Opm::WetGasPvt<Scalar> >::type& getRealPvt() const
+    typename std::enable_if<approachV == GasPvtApproach::WetGasPvt, const WetGasPvt<Scalar> >::type& getRealPvt() const
     {
         assert(gasPvtApproach() == approachV);
-        return *static_cast<const Opm::WetGasPvt<Scalar>* >(realGasPvt_);
+        return *static_cast<const WetGasPvt<Scalar>* >(realGasPvt_);
     }
 
     // get the parameter object for the thermal gas case
     template <GasPvtApproach approachV>
-    typename std::enable_if<approachV == GasPvtApproach::ThermalGasPvt, Opm::GasPvtThermal<Scalar> >::type& getRealPvt()
+    typename std::enable_if<approachV == GasPvtApproach::ThermalGasPvt, GasPvtThermal<Scalar> >::type& getRealPvt()
     {
         assert(gasPvtApproach() == approachV);
-        return *static_cast<Opm::GasPvtThermal<Scalar>* >(realGasPvt_);
+        return *static_cast<GasPvtThermal<Scalar>* >(realGasPvt_);
     }
 
     template <GasPvtApproach approachV>
-    typename std::enable_if<approachV == GasPvtApproach::ThermalGasPvt, const Opm::GasPvtThermal<Scalar> >::type& getRealPvt() const
+    typename std::enable_if<approachV == GasPvtApproach::ThermalGasPvt, const GasPvtThermal<Scalar> >::type& getRealPvt() const
     {
         assert(gasPvtApproach() == approachV);
-        return *static_cast<const Opm::GasPvtThermal<Scalar>* >(realGasPvt_);
+        return *static_cast<const GasPvtThermal<Scalar>* >(realGasPvt_);
     }
 
     template <GasPvtApproach approachV>
-    typename std::enable_if<approachV == GasPvtApproach::Co2GasPvt, Opm::Co2GasPvt<Scalar> >::type& getRealPvt()
+    typename std::enable_if<approachV == GasPvtApproach::Co2GasPvt, Co2GasPvt<Scalar> >::type& getRealPvt()
     {
         assert(gasPvtApproach() == approachV);
-        return *static_cast<Opm::Co2GasPvt<Scalar>* >(realGasPvt_);
+        return *static_cast<Co2GasPvt<Scalar>* >(realGasPvt_);
     }
 
     template <GasPvtApproach approachV>
-    typename std::enable_if<approachV == GasPvtApproach::Co2GasPvt, const Opm::Co2GasPvt<Scalar> >::type& getRealPvt() const
+    typename std::enable_if<approachV == GasPvtApproach::Co2GasPvt, const Co2GasPvt<Scalar> >::type& getRealPvt() const
     {
         assert(gasPvtApproach() == approachV);
-        return *static_cast<const Opm::Co2GasPvt<Scalar>* >(realGasPvt_);
+        return *static_cast<const Co2GasPvt<Scalar>* >(realGasPvt_);
     }
 
     const void* realGasPvt() const { return realGasPvt_; }
@@ -356,17 +356,17 @@ public:
 
         switch (gasPvtApproach_) {
         case GasPvtApproach::DryGasPvt:
-            return *static_cast<const Opm::DryGasPvt<Scalar>*>(realGasPvt_) ==
-                   *static_cast<const Opm::DryGasPvt<Scalar>*>(data.realGasPvt_);
+            return *static_cast<const DryGasPvt<Scalar>*>(realGasPvt_) ==
+                   *static_cast<const DryGasPvt<Scalar>*>(data.realGasPvt_);
         case GasPvtApproach::WetGasPvt:
-            return *static_cast<const Opm::WetGasPvt<Scalar>*>(realGasPvt_) ==
-                   *static_cast<const Opm::WetGasPvt<Scalar>*>(data.realGasPvt_);
+            return *static_cast<const WetGasPvt<Scalar>*>(realGasPvt_) ==
+                   *static_cast<const WetGasPvt<Scalar>*>(data.realGasPvt_);
         case GasPvtApproach::ThermalGasPvt:
-            return *static_cast<const Opm::GasPvtThermal<Scalar>*>(realGasPvt_) ==
-                   *static_cast<const Opm::GasPvtThermal<Scalar>*>(data.realGasPvt_);
+            return *static_cast<const GasPvtThermal<Scalar>*>(realGasPvt_) ==
+                   *static_cast<const GasPvtThermal<Scalar>*>(data.realGasPvt_);
         case GasPvtApproach::Co2GasPvt:
-            return *static_cast<const Opm::Co2GasPvt<Scalar>*>(realGasPvt_) ==
-                    *static_cast<const Opm::Co2GasPvt<Scalar>*>(data.realGasPvt_);
+            return *static_cast<const Co2GasPvt<Scalar>*>(realGasPvt_) ==
+                    *static_cast<const Co2GasPvt<Scalar>*>(data.realGasPvt_);
         default:
             return true;
         }
@@ -377,16 +377,16 @@ public:
         gasPvtApproach_ = data.gasPvtApproach_;
         switch (gasPvtApproach_) {
         case GasPvtApproach::DryGasPvt:
-            realGasPvt_ = new Opm::DryGasPvt<Scalar>(*static_cast<const Opm::DryGasPvt<Scalar>*>(data.realGasPvt_));
+            realGasPvt_ = new DryGasPvt<Scalar>(*static_cast<const DryGasPvt<Scalar>*>(data.realGasPvt_));
             break;
         case GasPvtApproach::WetGasPvt:
-            realGasPvt_ = new Opm::WetGasPvt<Scalar>(*static_cast<const Opm::WetGasPvt<Scalar>*>(data.realGasPvt_));
+            realGasPvt_ = new WetGasPvt<Scalar>(*static_cast<const WetGasPvt<Scalar>*>(data.realGasPvt_));
             break;
         case GasPvtApproach::ThermalGasPvt:
-            realGasPvt_ = new Opm::GasPvtThermal<Scalar>(*static_cast<const Opm::GasPvtThermal<Scalar>*>(data.realGasPvt_));
+            realGasPvt_ = new GasPvtThermal<Scalar>(*static_cast<const GasPvtThermal<Scalar>*>(data.realGasPvt_));
             break;
         case GasPvtApproach::Co2GasPvt:
-            realGasPvt_ = new Opm::Co2GasPvt<Scalar>(*static_cast<const Opm::Co2GasPvt<Scalar>*>(data.realGasPvt_));
+            realGasPvt_ = new Co2GasPvt<Scalar>(*static_cast<const Co2GasPvt<Scalar>*>(data.realGasPvt_));
             break;
         default:
             break;

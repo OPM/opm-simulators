@@ -140,7 +140,7 @@ public:
 
         Evaluation result = 0;
         for (int i = 0; i < 34; ++i) {
-            result += n(i)*Opm::pow(7.1 - pi_, I(i))*Opm::pow(tau_ - 1.222, J(i));
+            result += n(i)*pow(7.1 - pi_, I(i))*pow(tau_ - 1.222, J(i));
         }
 
         return result;
@@ -168,8 +168,8 @@ public:
         for (int i = 0; i < 34; i++) {
             result +=
                 n(i) *
-                Opm::pow(7.1 - pi_, static_cast<Scalar>(I(i))) *
-                Opm::pow(tau_ - 1.222,  static_cast<Scalar>(J(i)-1)) *
+                pow(7.1 - pi_, static_cast<Scalar>(I(i))) *
+                pow(tau_ - 1.222,  static_cast<Scalar>(J(i)-1)) *
                 J(i);
         }
 
@@ -198,8 +198,8 @@ public:
             result +=
                 -n(i) *
                 I(i) *
-                Opm::pow(7.1 - pi_, static_cast<Scalar>(I(i) - 1)) *
-                Opm::pow(tau_ - 1.222, static_cast<Scalar>(J(i)));
+                pow(7.1 - pi_, static_cast<Scalar>(I(i) - 1)) *
+                pow(tau_ - 1.222, static_cast<Scalar>(J(i)));
         }
 
         return result;
@@ -229,8 +229,8 @@ public:
                 -n(i) *
                 I(i) *
                 J(i) *
-                Opm::pow(7.1 - pi_, static_cast<Scalar>(I(i) - 1)) *
-                Opm::pow(tau_ - 1.222, static_cast<Scalar>(J(i) - 1));
+                pow(7.1 - pi_, static_cast<Scalar>(I(i) - 1)) *
+                pow(tau_ - 1.222, static_cast<Scalar>(J(i) - 1));
         }
 
         return result;
@@ -260,8 +260,8 @@ public:
                 n(i) *
                 I(i) *
                 (I(i) - 1) *
-                Opm::pow(7.1 - pi_, I(i) - 2) *
-                Opm::pow(tau_ - 1.222, J(i));
+                pow(7.1 - pi_, I(i) - 2) *
+                pow(tau_ - 1.222, J(i));
         }
 
         return result;
@@ -288,10 +288,10 @@ public:
         for (int i = 0; i < 34; i++) {
             result +=
                 n(i) *
-                Opm::pow(7.1 - pi_, I(i)) *
+                pow(7.1 - pi_, I(i)) *
                 J(i) *
                 (J(i) - 1) *
-                Opm::pow(tau_ - 1.222,  J(i) - 2);
+                pow(tau_ - 1.222,  J(i) - 2);
         }
 
         return result;

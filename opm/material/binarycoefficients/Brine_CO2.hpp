@@ -39,7 +39,7 @@ namespace BinaryCoeff {
  */
 template<class Scalar, class H2O, class CO2, bool verbose = true>
 class Brine_CO2 {
-    typedef Opm::IdealGas<Scalar> IdealGas;
+    typedef ::Opm::IdealGas<Scalar> IdealGas;
     static const int liquidPhaseIdx = 0; // index of the liquid phase
     static const int gasPhaseIdx = 1; // index of the gas phase
 
@@ -158,20 +158,20 @@ public:
         Scalar R = IdealGas::R * 10.; // ideal gas constant with unit bar cm^3 /(K mol)
         Evaluation lnPhiCO2;
 
-        lnPhiCO2 = Opm::log(V / (V - b_CO2));
+        lnPhiCO2 = log(V / (V - b_CO2));
         lnPhiCO2 += b_CO2 / (V - b_CO2);
-        lnPhiCO2 -= 2 * a_CO2 / (R * Opm::pow(temperature, 1.5) * b_CO2) * log((V + b_CO2) / V);
+        lnPhiCO2 -= 2 * a_CO2 / (R * pow(temperature, 1.5) * b_CO2) * log((V + b_CO2) / V);
         lnPhiCO2 +=
             a_CO2 * b_CO2
             / (R
-               * Opm::pow(temperature, 1.5)
+               * pow(temperature, 1.5)
                * b_CO2
                * b_CO2)
-            * (Opm::log((V + b_CO2) / V)
+            * (log((V + b_CO2) / V)
                - b_CO2 / (V + b_CO2));
-        lnPhiCO2 -= Opm::log(pg_bar * V / (R * temperature));
+        lnPhiCO2 -= log(pg_bar * V / (R * temperature));
 
-        return Opm::exp(lnPhiCO2); // fugacity coefficient of CO2
+        return exp(lnPhiCO2); // fugacity coefficient of CO2
     }
 
     /*!
@@ -195,13 +195,13 @@ public:
         Evaluation lnPhiH2O;
 
         lnPhiH2O =
-            Opm::log(V/(V - b_CO2))
+            log(V/(V - b_CO2))
             + b_H2O/(V - b_CO2) - 2*a_CO2_H2O
-            / (R*Opm::pow(temperature, 1.5)*b_CO2)*Opm::log((V + b_CO2)/V)
-            + a_CO2*b_H2O/(R*Opm::pow(temperature, 1.5)*b_CO2*b_CO2)
-            *(Opm::log((V + b_CO2)/V) - b_CO2/(V + b_CO2))
-            - Opm::log(pg_bar*V/(R*temperature));
-        return Opm::exp(lnPhiH2O); // fugacity coefficient of H2O
+            / (R*pow(temperature, 1.5)*b_CO2)*log((V + b_CO2)/V)
+            + a_CO2*b_H2O/(R*pow(temperature, 1.5)*b_CO2*b_CO2)
+            *(log((V + b_CO2)/V) - b_CO2/(V + b_CO2))
+            - log(pg_bar*V/(R*temperature));
+        return exp(lnPhiH2O); // fugacity coefficient of H2O
     }
 
 private:
@@ -267,7 +267,7 @@ private:
         const Evaluation& xi = computeXi_(temperature, pg); // Xi_{CO2-Na+-Cl-}
         const Evaluation& lnGammaStar =
             2*molalityNaCl*lambda + xi*molalityNaCl*molalityNaCl;
-        return Opm::exp(lnGammaStar);
+        return exp(lnGammaStar);
     }
 
     /*!
@@ -287,7 +287,7 @@ private:
         const Evaluation& k0_H2O = equilibriumConstantH2O_(temperature); // equilibrium constant for H2O at 1 bar
         const Evaluation& phi_H2O = fugacityCoefficientH2O(temperature, pg); // fugacity coefficient of H2O for the water-CO2 system
         const Evaluation& pg_bar = pg / 1.e5;
-        return k0_H2O/(phi_H2O*pg_bar)*Opm::exp(deltaP*v_av_H2O/(R*temperature));
+        return k0_H2O/(phi_H2O*pg_bar)*exp(deltaP*v_av_H2O/(R*temperature));
     }
 
     /*!
@@ -307,7 +307,7 @@ private:
         const Evaluation& k0_CO2 = equilibriumConstantCO2_(temperature); // equilibrium constant for CO2 at 1 bar
         const Evaluation& phi_CO2 = fugacityCoefficientCO2(temperature, pg); // fugacity coefficient of CO2 for the water-CO2 system
         const Evaluation& pg_bar = pg / 1.e5;
-        return phi_CO2*pg_bar/(55.508*k0_CO2)*Opm::exp(-(deltaP*v_av_CO2)/(R*temperature));
+        return phi_CO2*pg_bar/(55.508*k0_CO2)*exp(-(deltaP*v_av_CO2)/(R*temperature));
     }
 
     /*!
@@ -330,7 +330,7 @@ private:
             + c[2]/temperature
             + c[3]*pg_bar/temperature
             + c[4]*pg_bar/(630.0 - temperature)
-            + c[5]*temperature*Opm::log(pg_bar);
+            + c[5]*temperature*log(pg_bar);
     }
 
     /*!
@@ -362,7 +362,7 @@ private:
         Evaluation temperatureCelcius = temperature - 273.15;
         static const Scalar c[3] = { 1.189, 1.304e-2, -5.446e-5 };
         Evaluation logk0_CO2 = c[0] + temperatureCelcius*(c[1] + temperatureCelcius*c[2]);
-        Evaluation k0_CO2 = Opm::pow(10.0, logk0_CO2);
+        Evaluation k0_CO2 = pow(10.0, logk0_CO2);
         return k0_CO2;
     }
 
@@ -379,7 +379,7 @@ private:
         static const Scalar c[4] = { -2.209, 3.097e-2, -1.098e-4, 2.048e-7 };
         Evaluation logk0_H2O =
             c[0] + temperatureCelcius*(c[1] + temperatureCelcius*(c[2] + temperatureCelcius*c[3]));
-        return Opm::pow(10.0, logk0_H2O);
+        return pow(10.0, logk0_H2O);
     }
 
 };

@@ -141,16 +141,16 @@ public:
         Evaluation result;
 
         // ideal gas part
-        result = Opm::log(pi_);
+        result = log(pi_);
         for (int i = 0; i < 9; ++i)
-            result += n_g(i)*Opm::pow(tau_, J_g(i));
+            result += n_g(i)*pow(tau_, J_g(i));
 
         // residual part
         for (int i = 0; i < 43; ++i)
             result +=
                 n_r(i)*
-                Opm::pow(pi_, I_r(i))*
-                Opm::pow(tau_ - 0.5, J_r(i));
+                pow(pi_, I_r(i))*
+                pow(tau_ - 0.5, J_r(i));
         return result;
     }
 
@@ -178,16 +178,16 @@ public:
             result +=
                 n_g(i) *
                 J_g(i) *
-                Opm::pow(tau_, static_cast<Scalar>(J_g(i) - 1));
+                pow(tau_, static_cast<Scalar>(J_g(i) - 1));
         }
 
         // residual part
         for (int i = 0; i < 43; i++) {
             result +=
                 n_r(i) *
-                Opm::pow(pi_,  static_cast<Scalar>(I_r(i))) *
+                pow(pi_,  static_cast<Scalar>(I_r(i))) *
                 J_r(i) *
-                Opm::pow(tau_ - 0.5, static_cast<Scalar>(J_r(i) - 1));
+                pow(tau_ - 0.5, static_cast<Scalar>(J_r(i) - 1));
         }
 
         return result;
@@ -219,8 +219,8 @@ public:
             result +=
                 n_r(i) *
                 I_r(i) *
-                Opm::pow(pi_, static_cast<Scalar>(I_r(i) - 1)) *
-                Opm::pow(tau_ - 0.5, static_cast<Scalar>(J_r(i)));
+                pow(pi_, static_cast<Scalar>(I_r(i) - 1)) *
+                pow(tau_ - 0.5, static_cast<Scalar>(J_r(i)));
         }
 
         return result;
@@ -253,8 +253,8 @@ public:
                 n_r(i) *
                 I_r(i) *
                 J_r(i) *
-                Opm::pow(pi_, static_cast<Scalar>(I_r(i) - 1)) *
-                Opm::pow(tau_ - 0.5, static_cast<Scalar>(J_r(i) - 1));
+                pow(pi_, static_cast<Scalar>(I_r(i) - 1)) *
+                pow(tau_ - 0.5, static_cast<Scalar>(J_r(i) - 1));
         }
 
         return result;
@@ -287,8 +287,8 @@ public:
                 n_r(i) *
                 I_r(i) *
                 (I_r(i) - 1) *
-                Opm::pow(pi_, static_cast<Scalar>(I_r(i) - 2)) *
-                Opm::pow(tau_ - 0.5, static_cast<Scalar>(J_r(i)));
+                pow(pi_, static_cast<Scalar>(I_r(i) - 2)) *
+                pow(tau_ - 0.5, static_cast<Scalar>(J_r(i)));
         }
 
         return result;
@@ -319,17 +319,17 @@ public:
                 n_g(i) *
                 J_g(i) *
                 (J_g(i) - 1) *
-                Opm::pow(tau_, static_cast<Scalar>(J_g(i) - 2));
+                pow(tau_, static_cast<Scalar>(J_g(i) - 2));
         }
 
         // residual part
         for (int i = 0; i < 43; i++) {
             result +=
                 n_r(i) *
-                Opm::pow(pi_,  I_r(i)) *
+                pow(pi_,  I_r(i)) *
                 J_r(i) *
                 (J_r(i) - 1.) *
-                Opm::pow(tau_ - 0.5, static_cast<Scalar>(J_r(i) - 2));
+                pow(tau_ - 0.5, static_cast<Scalar>(J_r(i) - 2));
         }
 
         return result;

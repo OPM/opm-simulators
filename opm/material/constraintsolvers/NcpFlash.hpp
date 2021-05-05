@@ -156,11 +156,11 @@ public:
         typedef Dune::FieldMatrix<InputEval, numEq, numEq> Matrix;
         typedef Dune::FieldVector<InputEval, numEq> Vector;
 
-        typedef Opm::DenseAd::Evaluation</*Scalar=*/InputEval,
-                                         /*numDerivs=*/numEq> FlashEval;
+        typedef DenseAd::Evaluation</*Scalar=*/InputEval,
+                                    /*numDerivs=*/numEq> FlashEval;
 
         typedef Dune::FieldVector<FlashEval, numEq> FlashDefectVector;
-        typedef Opm::CompositionalFluidState<FlashEval, FluidSystem, /*energy=*/false> FlashFluidState;
+        typedef CompositionalFluidState<FlashEval, FluidSystem, /*energy=*/false> FlashFluidState;
 
 #if ! DUNE_VERSION_NEWER(DUNE_COMMON, 2,7)
         Dune::FMatrixPrecision<InputEval>::set_singular_limit(1e-35);
@@ -220,7 +220,7 @@ public:
             deltaX = 0.0;
             try { J.solve(deltaX, b); }
             catch (const Dune::FMatrixError& e) {
-                throw Opm::NumericalIssue(e.what());
+                throw NumericalIssue(e.what());
             }
             Valgrind::CheckDefined(deltaX);
 
@@ -468,7 +468,7 @@ protected:
         // make sure we don't swallow non-finite update vectors
         assert(deltaX.dimension == numEq);
         for (unsigned i = 0; i < numEq; ++i)
-            assert(std::isfinite(Opm::scalarValue(deltaX[i])));
+            assert(std::isfinite(scalarValue(deltaX[i])));
 #endif
 
         Scalar relError = 0;
@@ -477,21 +477,21 @@ protected:
             InnerEval delta = deltaX[pvIdx];
 
             relError = std::max(relError,
-                                std::abs(Opm::scalarValue(delta))
+                                std::abs(scalarValue(delta))
                                 * quantityWeight_(fluidState, pvIdx));
 
             if (isSaturationIdx_(pvIdx)) {
                 // dampen to at most 25% change in saturation per iteration
-                delta = Opm::min(0.25, Opm::max(-0.25, delta));
+                delta = min(0.25, max(-0.25, delta));
             }
             else if (isMoleFracIdx_(pvIdx)) {
                 // dampen to at most 20% change in mole fraction per iteration
-                delta = Opm::min(0.20, Opm::max(-0.20, delta));
+                delta = min(0.20, max(-0.20, delta));
             }
             else if (isPressureIdx_(pvIdx)) {
                 // dampen to at most 50% change in pressure per iteration
-                delta = Opm::min(0.5*fluidState.pressure(0).value(),
-                                 Opm::max(-0.5*fluidState.pressure(0).value(),
+                delta = min(0.5*fluidState.pressure(0).value(),
+                                 max(-0.5*fluidState.pressure(0).value(),
                                           delta));
             }
 

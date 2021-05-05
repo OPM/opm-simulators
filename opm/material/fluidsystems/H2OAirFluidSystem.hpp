@@ -53,24 +53,24 @@ namespace Opm {
  *  water of the IAPWS-formulation.
  */
 template <class Scalar,
-          //class H2Otype = Opm::SimpleH2O<Scalar>,
-          class H2Otype = Opm::TabulatedComponent<Scalar, Opm::H2O<Scalar> >>
+          //class H2Otype = SimpleH2O<Scalar>,
+          class H2Otype = TabulatedComponent<Scalar, H2O<Scalar> >>
 class H2OAirFluidSystem
     : public BaseFluidSystem<Scalar, H2OAirFluidSystem<Scalar, H2Otype> >
 {
     typedef H2OAirFluidSystem<Scalar,H2Otype> ThisType;
     typedef BaseFluidSystem <Scalar, ThisType> Base;
-    typedef Opm::IdealGas<Scalar> IdealGas;
+    typedef ::Opm::IdealGas<Scalar> IdealGas;
 
 public:
     template <class Evaluation>
-    struct ParameterCache : public Opm::NullParameterCache<Evaluation>
+    struct ParameterCache : public NullParameterCache<Evaluation>
     {};
 
     //! The type of the water component used for this fluid system
     typedef H2Otype H2O;
     //! The type of the air component used for this fluid system
-    typedef Opm::Air<Scalar> Air;
+    typedef ::Opm::Air<Scalar> Air;
 
     //! \copydoc BaseFluidSystem::numPhases
     static const int numPhases = 2;
@@ -257,10 +257,10 @@ public:
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
         LhsEval p;
         if (isCompressible(phaseIdx))
-            p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+            p = decay<LhsEval>(fluidState.pressure(phaseIdx));
         else {
             // random value which will hopefully cause things to blow
             // up if it is used in a calculation!
@@ -271,7 +271,7 @@ public:
 
         LhsEval sumMoleFrac = 0;
         for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
-            sumMoleFrac += Opm::decay<LhsEval>(fluidState.moleFraction(phaseIdx, compIdx));
+            sumMoleFrac += decay<LhsEval>(fluidState.moleFraction(phaseIdx, compIdx));
 
         if (phaseIdx == liquidPhaseIdx)
         {
@@ -279,20 +279,20 @@ public:
             // between their own kind and molecules of the other component.
             const LhsEval& clH2O = H2O::liquidDensity(T, p)/H2O::molarMass();
 
-            const auto& xlH2O = Opm::decay<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, H2OIdx));
-            const auto& xlAir = Opm::decay<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, AirIdx));
+            const auto& xlH2O = decay<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, H2OIdx));
+            const auto& xlAir = decay<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, AirIdx));
 
             return clH2O*(H2O::molarMass()*xlH2O + Air::molarMass()*xlAir)/sumMoleFrac;
         }
         else if (phaseIdx == gasPhaseIdx)
         {
             LhsEval partialPressureH2O =
-                Opm::decay<LhsEval>(fluidState.moleFraction(gasPhaseIdx, H2OIdx))
-                *Opm::decay<LhsEval>(fluidState.pressure(gasPhaseIdx));
+                decay<LhsEval>(fluidState.moleFraction(gasPhaseIdx, H2OIdx))
+                *decay<LhsEval>(fluidState.pressure(gasPhaseIdx));
 
             LhsEval partialPressureAir =
-                Opm::decay<LhsEval>(fluidState.moleFraction(gasPhaseIdx, AirIdx))
-                *Opm::decay<LhsEval>(fluidState.pressure(gasPhaseIdx));
+                decay<LhsEval>(fluidState.moleFraction(gasPhaseIdx, AirIdx))
+                *decay<LhsEval>(fluidState.pressure(gasPhaseIdx));
 
             return H2O::gasDensity(T, partialPressureH2O) + Air::gasDensity(T, partialPressureAir);
         }
@@ -307,8 +307,8 @@ public:
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         if (phaseIdx == liquidPhaseIdx)
         {
@@ -336,14 +336,14 @@ public:
                 for (unsigned j = 0; j < numComponents; ++j) {
                     LhsEval phiIJ =
                         1 +
-                        Opm::sqrt(mu[i]/mu[j]) * // 1 + (mu[i]/mu[j]^1/2
+                        sqrt(mu[i]/mu[j]) * // 1 + (mu[i]/mu[j]^1/2
                         std::pow(molarMass(j)/molarMass(i), 1./4.0);   // (M[i]/M[j])^1/4
 
                     phiIJ *= phiIJ;
                     phiIJ /= std::sqrt(8*(1 + molarMass(i)/molarMass(j)));
-                    divisor += Opm::decay<LhsEval>(fluidState.moleFraction(phaseIdx, j))*phiIJ;
+                    divisor += decay<LhsEval>(fluidState.moleFraction(phaseIdx, j))*phiIJ;
                 }
-                const auto& xAlphaI = Opm::decay<LhsEval>(fluidState.moleFraction(phaseIdx, i));
+                const auto& xAlphaI = decay<LhsEval>(fluidState.moleFraction(phaseIdx, i));
                 muResult += xAlphaI*mu[i]/divisor;
             }
             return muResult;
@@ -361,13 +361,13 @@ public:
         assert(0 <= phaseIdx && phaseIdx < numPhases);
         assert(0 <= compIdx && compIdx < numComponents);
 
-        const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         if (phaseIdx == liquidPhaseIdx) {
             if (compIdx == H2OIdx)
                 return H2O::vaporPressure(T)/p;
-            return Opm::BinaryCoeff::H2O_Air::henry(T)/p;
+            return BinaryCoeff::H2O_Air::henry(T)/p;
         }
 
         // for the gas phase, assume an ideal gas when it comes to
@@ -382,8 +382,8 @@ public:
                                               unsigned phaseIdx,
                                               unsigned /*compIdx*/)
     {
-        const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         if (phaseIdx == liquidPhaseIdx)
             return BinaryCoeff::H2O_Air::liquidDiffCoeff(T, p);
@@ -398,8 +398,8 @@ public:
                             const ParameterCache<ParamCacheEval>& /*paramCache*/,
                             unsigned phaseIdx)
     {
-        const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = decay<LhsEval>(fluidState.pressure(phaseIdx));
         Valgrind::CheckDefined(T);
         Valgrind::CheckDefined(p);
 
@@ -414,11 +414,11 @@ public:
             LhsEval result = 0.0;
             result +=
                 H2O::gasEnthalpy(T, p) *
-                Opm::decay<LhsEval>(fluidState.massFraction(gasPhaseIdx, H2OIdx));
+                decay<LhsEval>(fluidState.massFraction(gasPhaseIdx, H2OIdx));
 
             result +=
                 Air::gasEnthalpy(T, p) *
-                Opm::decay<LhsEval>(fluidState.massFraction(gasPhaseIdx, AirIdx));
+                decay<LhsEval>(fluidState.massFraction(gasPhaseIdx, AirIdx));
             return result;
         }
         throw std::logic_error("Invalid phase index "+std::to_string(phaseIdx));
@@ -433,9 +433,9 @@ public:
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
         const LhsEval& temperature =
-            Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
+            decay<LhsEval>(fluidState.temperature(phaseIdx));
         const LhsEval& pressure =
-            Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+            decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         if (phaseIdx == liquidPhaseIdx)
             return H2O::liquidThermalConductivity(temperature, pressure);
@@ -443,9 +443,9 @@ public:
             const LhsEval& lambdaDryAir = Air::gasThermalConductivity(temperature, pressure);
 
             const LhsEval& xAir =
-                Opm::decay<LhsEval>(fluidState.moleFraction(phaseIdx, AirIdx));
+                decay<LhsEval>(fluidState.moleFraction(phaseIdx, AirIdx));
             const LhsEval& xH2O =
-                Opm::decay<LhsEval>(fluidState.moleFraction(phaseIdx, H2OIdx));
+                decay<LhsEval>(fluidState.moleFraction(phaseIdx, H2OIdx));
             LhsEval lambdaAir = xAir*lambdaDryAir;
 
             // Assuming Raoult's, Daltons law and ideal gas

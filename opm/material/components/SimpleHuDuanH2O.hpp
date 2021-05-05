@@ -62,7 +62,7 @@ namespace Opm {
 template <class Scalar>
 class SimpleHuDuanH2O : public Component<Scalar, SimpleHuDuanH2O<Scalar> >
 {
-    typedef Opm::IdealGas<Scalar> IdealGas;
+    typedef ::Opm::IdealGas<Scalar> IdealGas;
     typedef IAPWS::Common<Scalar> Common;
 
     static const Scalar R;  // specific gas constant of water
@@ -155,7 +155,7 @@ public:
         Evaluation B = (n[2]*sigma + n[3])*sigma + n[4];
         Evaluation C = (n[5]*sigma + n[6])*sigma + n[7];
 
-        Evaluation tmp = 2.0*C/(Opm::sqrt(B*B - 4.0*A*C) - B);
+        Evaluation tmp = 2.0*C/(sqrt(B*B - 4.0*A*C) - B);
         tmp *= tmp;
         tmp *= tmp;
 
@@ -392,7 +392,7 @@ private:
 };
 
 template <class Scalar>
-const Scalar SimpleHuDuanH2O<Scalar>::R = Opm::Constants<Scalar>::R / 18e-3;
+const Scalar SimpleHuDuanH2O<Scalar>::R = Constants<Scalar>::R / 18e-3;
 
 } // namespace Opm
 

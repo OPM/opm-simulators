@@ -291,7 +291,7 @@ public:
             return false;
 
         unsigned i = xSegmentIndex(x, /*extrapolate=*/false);
-        Scalar alpha = xToAlpha(Opm::decay<Scalar>(x), i);
+        Scalar alpha = xToAlpha(decay<Scalar>(x), i);
 
         const auto& col1SamplePoints = samples_.at(i);
         const auto& col2SamplePoints = samples_.at(i + 1);

@@ -279,7 +279,7 @@ public:
 
 private:
     typedef typename ParamsT::VanGenuchten VanGenuchten;
-    typedef Opm::PLScanningCurve<Scalar> ScanningCurve;
+    typedef PLScanningCurve<Scalar> ScanningCurve;
 
 public:
     /*!
@@ -302,7 +302,7 @@ public:
     template <class FluidState>
     static void update(Params& params, const FluidState& fs)
     {
-        Scalar Sw = Opm::scalarValue(fs.saturation(Traits::wettingPhaseIdx));
+        Scalar Sw = scalarValue(fs.saturation(Traits::wettingPhaseIdx));
 
         if (Sw > 1 - 1e-5) {
             // if the absolute saturation is almost 1,
@@ -377,7 +377,7 @@ public:
     static Evaluation pcnw(const Params& params, const FluidState& fs)
     {
         const Evaluation& Sw =
-            Opm::decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+            decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
 
         return twoPhaseSatPcnw(params, Sw);
     }
@@ -386,7 +386,7 @@ public:
     static Evaluation twoPhaseSatPcnw(const Params& params, const Evaluation& Sw)
     {
         // calculate the current apparent saturation
-        ScanningCurve* sc = findScanningCurve_(params, Opm::scalarValue(Sw));
+        ScanningCurve* sc = findScanningCurve_(params, scalarValue(Sw));
 
         // calculate the apparant saturation
         const Evaluation& Sw_app = absoluteToApparentSw_(params, Sw);
@@ -448,7 +448,7 @@ public:
     static Evaluation krw(const Params& params, const FluidState& fs)
     {
         const Evaluation& Sw =
-            Opm::decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+            decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
 
         return twoPhaseSatKrw(params, Sw);
     }
@@ -470,7 +470,7 @@ public:
     static Evaluation krn(const Params& params, const FluidState& fs)
     {
         const Evaluation& Sw =
-            Opm::decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+            decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
 
         return twoPhaseSatKrn(params, Sw);
     }

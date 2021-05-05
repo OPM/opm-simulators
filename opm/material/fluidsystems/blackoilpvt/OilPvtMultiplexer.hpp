@@ -279,23 +279,23 @@ public:
     {
         switch (appr) {
         case OilPvtApproach::LiveOilPvt:
-            realOilPvt_ = new Opm::LiveOilPvt<Scalar>;
+            realOilPvt_ = new LiveOilPvt<Scalar>;
             break;
 
         case OilPvtApproach::DeadOilPvt:
-            realOilPvt_ = new Opm::DeadOilPvt<Scalar>;
+            realOilPvt_ = new DeadOilPvt<Scalar>;
             break;
 
         case OilPvtApproach::ConstantCompressibilityOilPvt:
-            realOilPvt_ = new Opm::ConstantCompressibilityOilPvt<Scalar>;
+            realOilPvt_ = new ConstantCompressibilityOilPvt<Scalar>;
             break;
 
         case OilPvtApproach::ThermalOilPvt:
-            realOilPvt_ = new Opm::OilPvtThermal<Scalar>;
+            realOilPvt_ = new OilPvtThermal<Scalar>;
             break;
 
         case OilPvtApproach::BrineCo2Pvt:
-            realOilPvt_ = new Opm::BrineCo2Pvt<Scalar>;
+            realOilPvt_ = new BrineCo2Pvt<Scalar>;
             break;
 
         case OilPvtApproach::NoOilPvt:
@@ -315,73 +315,73 @@ public:
 
     // get the concrete parameter object for the oil phase
     template <OilPvtApproach approachV>
-    typename std::enable_if<approachV == OilPvtApproach::LiveOilPvt, Opm::LiveOilPvt<Scalar> >::type& getRealPvt()
+    typename std::enable_if<approachV == OilPvtApproach::LiveOilPvt, LiveOilPvt<Scalar> >::type& getRealPvt()
     {
         assert(approach() == approachV);
-        return *static_cast<Opm::LiveOilPvt<Scalar>* >(realOilPvt_);
+        return *static_cast<LiveOilPvt<Scalar>* >(realOilPvt_);
     }
 
     template <OilPvtApproach approachV>
-    typename std::enable_if<approachV == OilPvtApproach::LiveOilPvt, const Opm::LiveOilPvt<Scalar> >::type& getRealPvt() const
+    typename std::enable_if<approachV == OilPvtApproach::LiveOilPvt, const LiveOilPvt<Scalar> >::type& getRealPvt() const
     {
         assert(approach() == approachV);
-        return *static_cast<Opm::LiveOilPvt<Scalar>* >(realOilPvt_);
+        return *static_cast<LiveOilPvt<Scalar>* >(realOilPvt_);
     }
 
     template <OilPvtApproach approachV>
-    typename std::enable_if<approachV == OilPvtApproach::DeadOilPvt, Opm::DeadOilPvt<Scalar> >::type& getRealPvt()
+    typename std::enable_if<approachV == OilPvtApproach::DeadOilPvt, DeadOilPvt<Scalar> >::type& getRealPvt()
     {
         assert(approach() == approachV);
-        return *static_cast<Opm::DeadOilPvt<Scalar>* >(realOilPvt_);
+        return *static_cast<DeadOilPvt<Scalar>* >(realOilPvt_);
     }
 
     template <OilPvtApproach approachV>
-    typename std::enable_if<approachV == OilPvtApproach::DeadOilPvt, const Opm::DeadOilPvt<Scalar> >::type& getRealPvt() const
+    typename std::enable_if<approachV == OilPvtApproach::DeadOilPvt, const DeadOilPvt<Scalar> >::type& getRealPvt() const
     {
         assert(approach() == approachV);
-        return *static_cast<Opm::DeadOilPvt<Scalar>* >(realOilPvt_);
+        return *static_cast<DeadOilPvt<Scalar>* >(realOilPvt_);
     }
 
     template <OilPvtApproach approachV>
-    typename std::enable_if<approachV == OilPvtApproach::ConstantCompressibilityOilPvt, Opm::ConstantCompressibilityOilPvt<Scalar> >::type& getRealPvt()
+    typename std::enable_if<approachV == OilPvtApproach::ConstantCompressibilityOilPvt, ConstantCompressibilityOilPvt<Scalar> >::type& getRealPvt()
     {
         assert(approach() == approachV);
-        return *static_cast<Opm::ConstantCompressibilityOilPvt<Scalar>* >(realOilPvt_);
+        return *static_cast<ConstantCompressibilityOilPvt<Scalar>* >(realOilPvt_);
     }
 
     template <OilPvtApproach approachV>
-    typename std::enable_if<approachV == OilPvtApproach::ConstantCompressibilityOilPvt, const Opm::ConstantCompressibilityOilPvt<Scalar> >::type& getRealPvt() const
+    typename std::enable_if<approachV == OilPvtApproach::ConstantCompressibilityOilPvt, const ConstantCompressibilityOilPvt<Scalar> >::type& getRealPvt() const
     {
         assert(approach() == approachV);
-        return *static_cast<Opm::ConstantCompressibilityOilPvt<Scalar>* >(realOilPvt_);
+        return *static_cast<ConstantCompressibilityOilPvt<Scalar>* >(realOilPvt_);
     }
 
     template <OilPvtApproach approachV>
-    typename std::enable_if<approachV == OilPvtApproach::ThermalOilPvt, Opm::OilPvtThermal<Scalar> >::type& getRealPvt()
+    typename std::enable_if<approachV == OilPvtApproach::ThermalOilPvt, OilPvtThermal<Scalar> >::type& getRealPvt()
     {
         assert(approach() == approachV);
-        return *static_cast<Opm::OilPvtThermal<Scalar>* >(realOilPvt_);
+        return *static_cast<OilPvtThermal<Scalar>* >(realOilPvt_);
     }
 
     template <OilPvtApproach approachV>
-    typename std::enable_if<approachV == OilPvtApproach::ThermalOilPvt, const Opm::OilPvtThermal<Scalar> >::type& getRealPvt() const
+    typename std::enable_if<approachV == OilPvtApproach::ThermalOilPvt, const OilPvtThermal<Scalar> >::type& getRealPvt() const
     {
         assert(approach() == approachV);
-        return *static_cast<const Opm::OilPvtThermal<Scalar>* >(realOilPvt_);
+        return *static_cast<const OilPvtThermal<Scalar>* >(realOilPvt_);
     }
 
     template <OilPvtApproach approachV>
-    typename std::enable_if<approachV == OilPvtApproach::BrineCo2Pvt, Opm::BrineCo2Pvt<Scalar> >::type& getRealPvt()
+    typename std::enable_if<approachV == OilPvtApproach::BrineCo2Pvt, BrineCo2Pvt<Scalar> >::type& getRealPvt()
     {
         assert(approach() == approachV);
-        return *static_cast<Opm::BrineCo2Pvt<Scalar>* >(realOilPvt_);
+        return *static_cast<BrineCo2Pvt<Scalar>* >(realOilPvt_);
     }
 
     template <OilPvtApproach approachV>
-    typename std::enable_if<approachV == OilPvtApproach::BrineCo2Pvt, const Opm::BrineCo2Pvt<Scalar> >::type& getRealPvt() const
+    typename std::enable_if<approachV == OilPvtApproach::BrineCo2Pvt, const BrineCo2Pvt<Scalar> >::type& getRealPvt() const
     {
         assert(approach() == approachV);
-        return *static_cast<const Opm::BrineCo2Pvt<Scalar>* >(realOilPvt_);
+        return *static_cast<const BrineCo2Pvt<Scalar>* >(realOilPvt_);
     }
 
     const void* realOilPvt() const { return realOilPvt_; }
@@ -393,20 +393,20 @@ public:
 
         switch (approach_) {
         case OilPvtApproach::ConstantCompressibilityOilPvt:
-            return *static_cast<const Opm::ConstantCompressibilityOilPvt<Scalar>*>(realOilPvt_) ==
-                   *static_cast<const Opm::ConstantCompressibilityOilPvt<Scalar>*>(data.realOilPvt_);
+            return *static_cast<const ConstantCompressibilityOilPvt<Scalar>*>(realOilPvt_) ==
+                   *static_cast<const ConstantCompressibilityOilPvt<Scalar>*>(data.realOilPvt_);
         case OilPvtApproach::DeadOilPvt:
-            return *static_cast<const Opm::DeadOilPvt<Scalar>*>(realOilPvt_) ==
-                   *static_cast<const Opm::DeadOilPvt<Scalar>*>(data.realOilPvt_);
+            return *static_cast<const DeadOilPvt<Scalar>*>(realOilPvt_) ==
+                   *static_cast<const DeadOilPvt<Scalar>*>(data.realOilPvt_);
         case OilPvtApproach::LiveOilPvt:
-            return *static_cast<const Opm::LiveOilPvt<Scalar>*>(realOilPvt_) ==
-                   *static_cast<const Opm::LiveOilPvt<Scalar>*>(data.realOilPvt_);
+            return *static_cast<const LiveOilPvt<Scalar>*>(realOilPvt_) ==
+                   *static_cast<const LiveOilPvt<Scalar>*>(data.realOilPvt_);
         case OilPvtApproach::ThermalOilPvt:
-            return *static_cast<const Opm::OilPvtThermal<Scalar>*>(realOilPvt_) ==
-                   *static_cast<const Opm::OilPvtThermal<Scalar>*>(data.realOilPvt_);
+            return *static_cast<const OilPvtThermal<Scalar>*>(realOilPvt_) ==
+                   *static_cast<const OilPvtThermal<Scalar>*>(data.realOilPvt_);
         case OilPvtApproach::BrineCo2Pvt:
-            return *static_cast<const Opm::BrineCo2Pvt<Scalar>*>(realOilPvt_) ==
-                    *static_cast<const Opm::BrineCo2Pvt<Scalar>*>(data.realOilPvt_);
+            return *static_cast<const BrineCo2Pvt<Scalar>*>(realOilPvt_) ==
+                    *static_cast<const BrineCo2Pvt<Scalar>*>(data.realOilPvt_);
         default:
             return true;
         }
@@ -417,19 +417,19 @@ public:
         approach_ = data.approach_;
         switch (approach_) {
         case OilPvtApproach::ConstantCompressibilityOilPvt:
-            realOilPvt_ = new Opm::ConstantCompressibilityOilPvt<Scalar>(*static_cast<const Opm::ConstantCompressibilityOilPvt<Scalar>*>(data.realOilPvt_));
+            realOilPvt_ = new ConstantCompressibilityOilPvt<Scalar>(*static_cast<const ConstantCompressibilityOilPvt<Scalar>*>(data.realOilPvt_));
             break;
         case OilPvtApproach::DeadOilPvt:
-            realOilPvt_ = new Opm::DeadOilPvt<Scalar>(*static_cast<const Opm::DeadOilPvt<Scalar>*>(data.realOilPvt_));
+            realOilPvt_ = new DeadOilPvt<Scalar>(*static_cast<const DeadOilPvt<Scalar>*>(data.realOilPvt_));
             break;
         case OilPvtApproach::LiveOilPvt:
-            realOilPvt_ = new Opm::LiveOilPvt<Scalar>(*static_cast<const Opm::LiveOilPvt<Scalar>*>(data.realOilPvt_));
+            realOilPvt_ = new LiveOilPvt<Scalar>(*static_cast<const LiveOilPvt<Scalar>*>(data.realOilPvt_));
             break;
         case OilPvtApproach::ThermalOilPvt:
-            realOilPvt_ = new Opm::OilPvtThermal<Scalar>(*static_cast<const Opm::OilPvtThermal<Scalar>*>(data.realOilPvt_));
+            realOilPvt_ = new OilPvtThermal<Scalar>(*static_cast<const OilPvtThermal<Scalar>*>(data.realOilPvt_));
             break;
         case OilPvtApproach::BrineCo2Pvt:
-            realOilPvt_ = new Opm::BrineCo2Pvt<Scalar>(*static_cast<const Opm::BrineCo2Pvt<Scalar>*>(data.realOilPvt_));
+            realOilPvt_ = new BrineCo2Pvt<Scalar>(*static_cast<const BrineCo2Pvt<Scalar>*>(data.realOilPvt_));
             break;
         default:
             break;

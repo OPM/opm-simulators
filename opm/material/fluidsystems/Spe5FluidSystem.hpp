@@ -55,17 +55,17 @@ template <class Scalar>
 class Spe5FluidSystem
     : public BaseFluidSystem<Scalar, Spe5FluidSystem<Scalar> >
 {
-    typedef Opm::Spe5FluidSystem<Scalar> ThisType;
+    typedef Spe5FluidSystem<Scalar> ThisType;
 
-    typedef typename Opm::PengRobinsonMixture<Scalar, ThisType> PengRobinsonMixture;
-    typedef typename Opm::PengRobinson<Scalar> PengRobinson;
+    typedef typename ::Opm::PengRobinsonMixture<Scalar, ThisType> PengRobinsonMixture;
+    typedef typename ::Opm::PengRobinson<Scalar> PengRobinson;
 
     static const Scalar R;
 
 public:
     //! \copydoc BaseFluidSystem::ParameterCache
     template <class Evaluation>
-    struct ParameterCache : public Opm::Spe5ParameterCache<Evaluation, ThisType>
+    struct ParameterCache : public Spe5ParameterCache<Evaluation, ThisType>
     {};
 
     /****************************************
@@ -83,7 +83,7 @@ public:
     static const int oilPhaseIdx = 2;
 
     //! The component for pure water to be used
-    typedef Opm::H2O<Scalar> H2O;
+    typedef ::Opm::H2O<Scalar> H2O;
 
     //! \copydoc BaseFluidSystem::phaseName
     static const char* phaseName(unsigned phaseIdx)
@@ -310,7 +310,7 @@ public:
                      Scalar minP = 1e4,
                      Scalar maxP = 100e6)
     {
-        Opm::PengRobinsonParamsMixture<Scalar, ThisType, gasPhaseIdx, /*useSpe5=*/true> prParams;
+        PengRobinsonParamsMixture<Scalar, ThisType, gasPhaseIdx, /*useSpe5=*/true> prParams;
 
         // find envelopes of the 'a' and 'b' parameters for the range
         // minT <= T <= maxT and minP <= p <= maxP. For
@@ -438,7 +438,7 @@ protected:
 };
 
 template <class Scalar>
-const Scalar Spe5FluidSystem<Scalar>::R = Opm::Constants<Scalar>::R;
+const Scalar Spe5FluidSystem<Scalar>::R = Constants<Scalar>::R;
 
 } // namespace Opm
 

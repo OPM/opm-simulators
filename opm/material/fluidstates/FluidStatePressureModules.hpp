@@ -69,7 +69,7 @@ public:
     void assign(const FluidState& fs)
     {
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            pressure_[phaseIdx] = Opm::decay<Scalar>(fs.pressure(phaseIdx));
+            pressure_[phaseIdx] = decay<Scalar>(fs.pressure(phaseIdx));
         }
     }
 

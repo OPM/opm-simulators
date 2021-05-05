@@ -64,7 +64,7 @@ namespace Opm {
 template <class TraitsT, class ParamsT = RegularizedBrooksCoreyParams<TraitsT> >
 class RegularizedBrooksCorey : public TraitsT
 {
-    typedef Opm::BrooksCorey<TraitsT, ParamsT> BrooksCorey;
+    typedef ::Opm::BrooksCorey<TraitsT, ParamsT> BrooksCorey;
 
 public:
     typedef TraitsT Traits;
@@ -173,7 +173,7 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation pcnw(const Params& params, const FluidState& fs)
     {
-        const auto& Sw = Opm::decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+        const auto& Sw = decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
         return twoPhaseSatPcnw(params, Sw);
     }
 
@@ -208,8 +208,8 @@ public:
     static Evaluation Sw(const Params& params, const FluidState& fs)
     {
         const Evaluation& pC =
-            Opm::decay<Evaluation>(fs.pressure(Traits::nonWettingPhaseIdx))
-            - Opm::decay<Evaluation>(fs.pressure(Traits::wettingPhaseIdx));
+            decay<Evaluation>(fs.pressure(Traits::nonWettingPhaseIdx))
+            - decay<Evaluation>(fs.pressure(Traits::wettingPhaseIdx));
         return twoPhaseSatSw(params, pC);
     }
 
@@ -277,7 +277,7 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation krw(const Params& params, const FluidState& fs)
     {
-        const auto& Sw = Opm::decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+        const auto& Sw = decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
         return twoPhaseSatKrw(params, Sw);
     }
 
@@ -321,7 +321,7 @@ public:
     static Evaluation krn(const Params& params, const FluidState& fs)
     {
         const Evaluation& Sw =
-            1.0 - Opm::decay<Evaluation>(fs.saturation(Traits::nonWettingPhaseIdx));
+            1.0 - decay<Evaluation>(fs.saturation(Traits::nonWettingPhaseIdx));
         return twoPhaseSatKrn(params, Sw);
     }
 

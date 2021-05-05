@@ -43,12 +43,12 @@ namespace Opm {
  */
 template <class Scalar, class FluidSystem>
 class Spe5ParameterCache
-    : public Opm::ParameterCacheBase<Spe5ParameterCache<Scalar, FluidSystem> >
+    : public ParameterCacheBase<Spe5ParameterCache<Scalar, FluidSystem> >
 {
     typedef Spe5ParameterCache<Scalar, FluidSystem> ThisType;
-    typedef Opm::ParameterCacheBase<ThisType> ParentType;
+    typedef ParameterCacheBase<ThisType> ParentType;
 
-    typedef Opm::PengRobinson<Scalar> PengRobinson;
+    typedef ::Opm::PengRobinson<Scalar> PengRobinson;
 
     enum { numPhases = FluidSystem::numPhases };
 
@@ -58,9 +58,9 @@ class Spe5ParameterCache
 
 public:
     //! The cached parameters for the oil phase
-    typedef Opm::PengRobinsonParamsMixture<Scalar, FluidSystem, oilPhaseIdx, /*useSpe5=*/true> OilPhaseParams;
+    typedef PengRobinsonParamsMixture<Scalar, FluidSystem, oilPhaseIdx, /*useSpe5=*/true> OilPhaseParams;
     //! The cached parameters for the gas phase
-    typedef Opm::PengRobinsonParamsMixture<Scalar, FluidSystem, gasPhaseIdx, /*useSpe5=*/true> GasPhaseParams;
+    typedef PengRobinsonParamsMixture<Scalar, FluidSystem, gasPhaseIdx, /*useSpe5=*/true> GasPhaseParams;
 
     Spe5ParameterCache()
     {

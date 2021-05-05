@@ -139,10 +139,10 @@ public:
         Evaluation exponent = 0;
         Evaluation Tred = T/criticalTemperature();
         for (int i = 0; i < 4; ++i)
-            exponent += a[i]*Opm::pow(1 - Tred, t[i]);
+            exponent += a[i]*pow(1 - Tred, t[i]);
         exponent *= 1.0/Tred;
 
-        return Opm::exp(exponent)*criticalPressure();
+        return exp(exponent)*criticalPressure();
     }
 
 
@@ -218,10 +218,10 @@ public:
         Evaluation TStar = temperature/ESP;
 
         // mu0: viscosity in zero-density limit
-        const Evaluation& logTStar = Opm::log(TStar);
-        Evaluation SigmaStar = Opm::exp(a0 + logTStar*(a1 + logTStar*(a2 + logTStar*(a3 + logTStar*a4))));
+        const Evaluation& logTStar = log(TStar);
+        Evaluation SigmaStar = exp(a0 + logTStar*(a1 + logTStar*(a2 + logTStar*(a3 + logTStar*a4))));
 
-        Evaluation mu0 = 1.00697*Opm::sqrt(temperature) / SigmaStar;
+        Evaluation mu0 = 1.00697*sqrt(temperature) / SigmaStar;
 
         const Evaluation& rho = gasDensity(temperature, pressure); // CO2 mass density [kg/m^3]
 
@@ -229,9 +229,9 @@ public:
         Evaluation dmu =
             d11*rho
             + d21*rho*rho
-            + d64*Opm::pow(rho, 6.0)/(TStar*TStar*TStar)
-            + d81*Opm::pow(rho, 8.0)
-            + d82*Opm::pow(rho, 8.0)/TStar;
+            + d64*pow(rho, 6.0)/(TStar*TStar*TStar)
+            + d81*pow(rho, 8.0)
+            + d82*pow(rho, 8.0)/TStar;
 
         return (mu0 + dmu)/1.0e6; // conversion to [Pa s]
     }

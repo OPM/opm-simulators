@@ -130,7 +130,7 @@ public:
     static Evaluation pcnw(const Params& params, const FluidState& fs)
     {
         const auto& Sw =
-            Opm::decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+            decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
 
         return twoPhaseSatPcnw(params, Sw);
     }
@@ -177,7 +177,7 @@ public:
     static Evaluation krw(const Params& params, const FluidState& fs)
     {
         const auto& Sw =
-            Opm::decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+            decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
 
         return twoPhaseSatKrw(params, Sw);
     }
@@ -198,7 +198,7 @@ public:
     static Evaluation krn(const Params& params, const FluidState& fs)
     {
         const auto& Sw =
-            Opm::decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+            decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
 
         return twoPhaseSatKrn(params, Sw);
     }
@@ -232,7 +232,7 @@ private:
         if (x >= xValues.back())
             return yValues.back();
 
-        size_t segIdx = findSegmentIndex_(xValues, Opm::scalarValue(x));
+        size_t segIdx = findSegmentIndex_(xValues, scalarValue(x));
 
         Scalar x0 = xValues[segIdx];
         Scalar x1 = xValues[segIdx + 1];
@@ -255,7 +255,7 @@ private:
         if (x <= xValues.back())
             return yValues.back();
 
-        size_t segIdx = findSegmentIndexDescending_(xValues, Opm::scalarValue(x));
+        size_t segIdx = findSegmentIndexDescending_(xValues, scalarValue(x));
 
         Scalar x0 = xValues[segIdx];
         Scalar x1 = xValues[segIdx + 1];
@@ -278,7 +278,7 @@ private:
         if (x >= xValues.back())
             return 0.0;
 
-        size_t segIdx = findSegmentIndex_(xValues, Opm::scalarValue(x));
+        size_t segIdx = findSegmentIndex_(xValues, scalarValue(x));
 
         Scalar x0 = xValues[segIdx];
         Scalar x1 = xValues[segIdx + 1];

@@ -169,7 +169,7 @@ public:
     static Evaluation pcnw(const Params& params, const FluidState& fs)
     {
         const Evaluation& Sw =
-            Opm::decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+            decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
 
         assert(0 <= Sw && Sw <= 1);
 
@@ -193,7 +193,7 @@ public:
     template <class Evaluation>
     static Evaluation twoPhaseSatPcnw(const Params& params, const Evaluation& Sw)
     {
-        return Opm::pow(Opm::pow(Sw, -1.0/params.vgM()) - 1, 1.0/params.vgN())/params.vgAlpha();
+        return pow(pow(Sw, -1.0/params.vgM()) - 1, 1.0/params.vgN())/params.vgAlpha();
     }
 
     /*!
@@ -212,8 +212,8 @@ public:
     static Evaluation Sw(const Params& params, const FluidState& fs)
     {
         Evaluation pC =
-            Opm::decay<Evaluation>(fs.pressure(Traits::nonWettingPhaseIdx))
-            - Opm::decay<Evaluation>(fs.pressure(Traits::wettingPhaseIdx));
+            decay<Evaluation>(fs.pressure(Traits::nonWettingPhaseIdx))
+            - decay<Evaluation>(fs.pressure(Traits::wettingPhaseIdx));
         return twoPhaseSatSw(params, pC);
     }
 
@@ -222,7 +222,7 @@ public:
     {
         assert(pC >= 0);
 
-        return Opm::pow(Opm::pow(params.vgAlpha()*pC, params.vgN()) + 1, -params.vgM());
+        return pow(pow(params.vgAlpha()*pC, params.vgN()) + 1, -params.vgM());
     }
 
     /*!
@@ -251,7 +251,7 @@ public:
     static Evaluation krw(const Params& params, const FluidState& fs)
     {
         const Evaluation& Sw =
-            Opm::decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+            decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
 
         return twoPhaseSatKrw(params, Sw);
     }
@@ -261,8 +261,8 @@ public:
     {
         assert(0.0 <= Sw && Sw <= 1.0);
 
-        Evaluation r = 1.0 - Opm::pow(1.0 - Opm::pow(Sw, 1/params.vgM()), params.vgM());
-        return Opm::sqrt(Sw)*r*r;
+        Evaluation r = 1.0 - pow(1.0 - pow(Sw, 1/params.vgM()), params.vgM());
+        return sqrt(Sw)*r*r;
     }
 
     /*!
@@ -278,7 +278,7 @@ public:
     static Evaluation krn(const Params& params, const FluidState& fs)
     {
         const Evaluation& Sw =
-            1.0 - Opm::decay<Evaluation>(fs.saturation(Traits::nonWettingPhaseIdx));
+            1.0 - decay<Evaluation>(fs.saturation(Traits::nonWettingPhaseIdx));
 
         return twoPhaseSatKrn(params, Sw);
     }
@@ -289,8 +289,8 @@ public:
         assert(0 <= Sw && Sw <= 1);
 
         return
-            Opm::pow(1 - Sw, 1.0/3) *
-            Opm::pow(1 - Opm::pow(Sw, 1/params.vgM()), 2*params.vgM());
+            pow(1 - Sw, 1.0/3) *
+            pow(1 - pow(Sw, 1/params.vgM()), 2*params.vgM());
     }
 };
 } // namespace Opm

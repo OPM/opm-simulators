@@ -55,7 +55,7 @@ class GasPvtThermal
 {
 public:
     typedef GasPvtMultiplexer<Scalar, /*enableThermal=*/false> IsothermalPvt;
-    typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
+    typedef Tabulated1DFunction<Scalar> TabulatedOneDFunction;
 
     GasPvtThermal()
     {

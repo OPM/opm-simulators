@@ -51,7 +51,7 @@ class DryGasPvt
     typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
 
 public:
-    typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
+    typedef Tabulated1DFunction<Scalar> TabulatedOneDFunction;
 
     explicit DryGasPvt() = default;
     DryGasPvt(const std::vector<Scalar>& gasReferenceDensity,
@@ -91,7 +91,7 @@ public:
             Scalar p = 1.01325e5; // surface pressure, [Pa]
             Scalar T = 273.15 + 15.56; // surface temperature, [K]
             Scalar MO = 175e-3; // [kg/mol]
-            Scalar MG = Opm::Constants<Scalar>::R*T*rhoRefG / p; // [kg/mol], consequence of the ideal gas law
+            Scalar MG = Constants<Scalar>::R*T*rhoRefG / p; // [kg/mol], consequence of the ideal gas law
             Scalar MW = 18.0e-3; // [kg/mol]
             // TODO (?): the molar mass of the components can possibly specified
             // explicitly in the deck.

@@ -42,10 +42,10 @@ namespace Opm {
  *          the Brooks-Corey capillary pressure model.
  */
 template <class TraitsT>
-class RegularizedBrooksCoreyParams : public Opm::BrooksCoreyParams<TraitsT>
+class RegularizedBrooksCoreyParams : public BrooksCoreyParams<TraitsT>
 {
-    typedef Opm::BrooksCoreyParams<TraitsT> BrooksCoreyParams;
-    typedef Opm::BrooksCorey<TraitsT, RegularizedBrooksCoreyParams> BrooksCorey;
+    typedef ::Opm::BrooksCoreyParams<TraitsT> BrooksCoreyParams;
+    typedef ::Opm::BrooksCorey<TraitsT, RegularizedBrooksCoreyParams> BrooksCorey;
     typedef typename TraitsT::Scalar Scalar;
 
 public:

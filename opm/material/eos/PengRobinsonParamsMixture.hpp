@@ -61,7 +61,7 @@ class PengRobinsonParamsMixture
     enum { numComponents = FluidSystem::numComponents };
 
     // Peng-Robinson parameters for pure substances
-    typedef Opm::PengRobinsonParams<Scalar> PureParams;
+    typedef PengRobinsonParams<Scalar> PureParams;
 
     typedef MathToolbox<Scalar> Toolbox;
 
@@ -111,13 +111,13 @@ public:
 
             Valgrind::CheckDefined(f_omega);
 
-            Scalar tmp = 1 + f_omega*(1 - Opm::sqrt(Tr));
+            Scalar tmp = 1 + f_omega*(1 - sqrt(Tr));
             tmp = tmp*tmp;
 
             Scalar newA = 0.4572355*RTc*RTc/pc * tmp;
             Scalar newB = 0.0777961 * RTc / pc;
-            assert(std::isfinite(Opm::scalarValue(newA)));
-            assert(std::isfinite(Opm::scalarValue(newB)));
+            assert(std::isfinite(scalarValue(newA)));
+            assert(std::isfinite(scalarValue(newB)));
 
             this->pureParams_[i].setA(newA);
             this->pureParams_[i].setB(newB);
@@ -151,23 +151,23 @@ public:
         Scalar newB = 0;
         for (unsigned compIIdx = 0; compIIdx < numComponents; ++compIIdx) {
             const Scalar moleFracI = fs.moleFraction(phaseIdx, compIIdx);
-            Scalar xi = Opm::max(0.0, Opm::min(1.0, moleFracI));
+            Scalar xi = max(0.0, min(1.0, moleFracI));
             Valgrind::CheckDefined(xi);
 
             for (unsigned compJIdx = 0; compJIdx < numComponents; ++compJIdx) {
                 const Scalar moleFracJ = fs.moleFraction(phaseIdx, compJIdx );
-                Scalar xj = Opm::max(0.0, Opm::min(1.0, moleFracJ));
+                Scalar xj = max(0.0, min(1.0, moleFracJ));
                 Valgrind::CheckDefined(xj);
 
                 // mixing rule from Reid, page 82
                 newA +=  xi * xj * aCache_[compIIdx][compJIdx];
 
-                assert(std::isfinite(Opm::scalarValue(newA)));
+                assert(std::isfinite(scalarValue(newA)));
             }
 
             // mixing rule from Reid, page 82
-            newB += Opm::max(0.0, xi) * this->pureParams_[compIIdx].b();
-            assert(std::isfinite(Opm::scalarValue(newB)));
+            newB += max(0.0, xi) * this->pureParams_[compIIdx].b();
+            assert(std::isfinite(scalarValue(newB)));
         }
 
         // assert(newB > 0);
@@ -236,7 +236,7 @@ private:
                 Scalar Psi = FluidSystem::interactionCoefficient(compIIdx, compJIdx);
 
                 aCache_[compIIdx][compJIdx] =
-                    Opm::sqrt(this->pureParams_[compIIdx].a()
+                    sqrt(this->pureParams_[compIIdx].a()
                                   * this->pureParams_[compJIdx].a())
                     * (1 - Psi);
             }
@@ -247,7 +247,7 @@ private:
 };
 
 template <class Scalar, class FluidSystem, unsigned phaseIdx, bool useSpe5Relations>
-const Scalar PengRobinsonParamsMixture<Scalar, FluidSystem, phaseIdx, useSpe5Relations>::R = Opm::Constants<Scalar>::R;
+const Scalar PengRobinsonParamsMixture<Scalar, FluidSystem, phaseIdx, useSpe5Relations>::R = Constants<Scalar>::R;
 
 } // namespace Opm
 

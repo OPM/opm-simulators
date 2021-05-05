@@ -195,7 +195,7 @@ public:
         if (!applies(x,y))
         {
             throw NumericalIssue("Attempt to get tabulated value for ("
-                                   +std::to_string(double(Opm::scalarValue(x)))+", "+std::to_string(double(Opm::scalarValue(y)))
+                                   +std::to_string(double(scalarValue(x)))+", "+std::to_string(double(scalarValue(y)))
                                    +") on a table of extend "
                                    +std::to_string(xMin())+" to "+std::to_string(xMax())+" times "
                                    +std::to_string(yMin())+" to "+std::to_string(yMax()));
@@ -208,11 +208,11 @@ public:
         unsigned i =
             static_cast<unsigned>(
                 std::max(0, std::min(static_cast<int>(numX()) - 2,
-                                     static_cast<int>(Opm::scalarValue(alpha)))));
+                                     static_cast<int>(scalarValue(alpha)))));
         unsigned j =
             static_cast<unsigned>(
                 std::max(0, std::min(static_cast<int>(numY()) - 2,
-                                     static_cast<int>(Opm::scalarValue(beta)))));
+                                     static_cast<int>(scalarValue(beta)))));
 
         alpha -= i;
         beta -= j;
