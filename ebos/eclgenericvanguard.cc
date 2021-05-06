@@ -48,6 +48,8 @@
 #include <mpi.h>
 #endif // HAVE_MPI
 
+#include <stdexcept>
+
 namespace Opm {
 
 double EclGenericVanguard::externalSetupTime_ = 0.0;

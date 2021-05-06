@@ -27,8 +27,6 @@
 #ifndef EWOMS_ECL_BASE_VANGUARD_HH
 #define EWOMS_ECL_BASE_VANGUARD_HH
 
-#include <opm/common/ErrorMacros.hpp>
-
 #include <opm/models/io/basevanguard.hh>
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
@@ -41,7 +39,6 @@
 
 #include <array>
 #include <optional>
-#include <stdexcept>
 #include <unordered_set>
 #include <vector>
 
@@ -451,10 +448,6 @@ protected:
             cellThickness_[elemIdx] = asImp_().computeCellThickness(element);
         }
     }
-    Scalar computeCellThickness(const Element&) const {
-        OPM_THROW(std::runtime_error, "cellThickness not implemented for this grid!");
-    }
-
 
 private:
     // computed from averaging cell corner depths
