@@ -1854,20 +1854,25 @@ namespace Opm
                     }
                 } else {
                     assert(this->isProducer());
-                    // Using the preferred phase to decide the mix initialization.
-                    switch (this->wellEcl().getPreferredPhase()) {
-                    case Phase::OIL:
-                        mix[FluidSystem::oilCompIdx] = 1.0;
-                        break;
-                    case Phase::GAS:
-                        mix[FluidSystem::gasCompIdx] = 1.0;
-                        break;
-                    case Phase::WATER:
-                        mix[FluidSystem::waterCompIdx] = 1.0;
-                        break;
-                    default:
-                        // No others supported.
-                        break;
+                    // For the frist perforation without flow we use the preferred phase to decide the mix initialization.
+                    if (perf == 0) { //
+                        switch (this->wellEcl().getPreferredPhase()) {
+                        case Phase::OIL:
+                            mix[FluidSystem::oilCompIdx] = 1.0;
+                            break;
+                        case Phase::GAS:
+                            mix[FluidSystem::gasCompIdx] = 1.0;
+                            break;
+                        case Phase::WATER:
+                            mix[FluidSystem::waterCompIdx] = 1.0;
+                            break;
+                        default:
+                            // No others supported.
+                            break;
+                        }
+                    // For the rest of the perforation without flow we use mix from the above perforation.
+                    } else {
+                        mix = x;
                     }
 
                 }
@@ -2088,12 +2093,11 @@ namespace Opm
 
 
 
-
-
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    computeWellConnectionDensitesPressures(const WellState& well_state,
+    computeWellConnectionDensitesPressures(const Simulator& ebosSimulator,
+                                           const WellState& well_state,
                                            const std::vector<double>& b_perf,
                                            const std::vector<double>& rsmax_perf,
                                            const std::vector<double>& rvmax_perf,
@@ -2103,13 +2107,44 @@ namespace Opm
         const int nperf = number_of_perforations_;
         const int np = number_of_phases_;
         std::vector<double> perfRates(b_perf.size(),0.0);
-
         for (int perf = 0; perf < nperf; ++perf) {
             for (int comp = 0; comp < np; ++comp) {
                 perfRates[perf * num_components_ + comp] =  well_state.perfPhaseRates()[(first_perf_ + perf) * np + ebosCompIdxToFlowCompIdx(comp)];
             }
             if(has_solvent) {
                 perfRates[perf * num_components_ + contiSolventEqIdx] =  well_state.perfRateSolvent()[first_perf_ + perf];
+            }
+        }
+
+        // for producers where all perforations have zero rate we
+        // approximate the perforation mixture using the mobility ratio
+        // and weight the perforations using the well transmissibility.
+        bool all_zero = std::all_of(perfRates.begin(), perfRates.end(), [](double val) { return val == 0.0; });
+        if ( all_zero && this->isProducer() ) {
+            double total_tw = 0;
+            for (int perf = 0; perf < nperf; ++perf) {
+                total_tw += well_index_[perf];
+            }
+            for (int perf = 0; perf < nperf; ++perf) {
+                const int cell_idx = well_cells_[perf];
+                const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
+                const auto& fs = intQuants.fluidState();
+                const double well_tw_fraction = well_index_[perf] / total_tw;
+                double total_mobility = 0.0;
+                for (int p = 0; p < np; ++p) {
+                    int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(p);
+                    total_mobility += fs.invB(ebosPhaseIdx).value() * intQuants.mobility(ebosPhaseIdx).value();
+                }
+                if(has_solvent) {
+                    total_mobility += intQuants.solventInverseFormationVolumeFactor().value() * intQuants.solventMobility().value();
+                }
+                for (int p = 0; p < np; ++p) {
+                    int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(p);
+                    perfRates[perf * num_components_ + p] = well_tw_fraction * intQuants.mobility(ebosPhaseIdx).value() / total_mobility;
+                }
+                if(has_solvent) {
+                    perfRates[perf * num_components_ + contiSolventEqIdx] = well_tw_fraction * intQuants.solventInverseFormationVolumeFactor().value() / total_mobility;
+                }
             }
         }
 
@@ -2137,7 +2172,7 @@ namespace Opm
          std::vector<double> rvmax_perf;
          std::vector<double> surf_dens_perf;
          computePropertiesForWellConnectionPressures(ebosSimulator, well_state, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
-         computeWellConnectionDensitesPressures(well_state, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
+         computeWellConnectionDensitesPressures(ebosSimulator, well_state, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
     }
 
 
@@ -2176,8 +2211,6 @@ namespace Opm
         computeWellConnectionPressures(ebosSimulator, well_state);
         computeAccumWell();
     }
-
-
 
 
 
