@@ -813,13 +813,14 @@ namespace Opm {
                 if (this->wellTestState_.hasWellClosed(well_name)) {
                     // TODO: more checking here, to make sure this standard more specific and complete
                     // maybe there is some WCON keywords will not open the well
-                    if (this->wellState().effectiveEventsOccurred(w)) {
+                    auto& events = this->wellState().events();
+                    if (events.hasEvent(well_name, WellStateFullyImplicitBlackoil::event_mask)) {
                         if (wellTestState_.lastTestTime(well_name) == ebosSimulator_.time()) {
                             // The well was shut this timestep, we are most likely retrying
                             // a timestep without the well in question, after it caused
                             // repeated timestep cuts. It should therefore not be opened,
                             // even if it was new or received new targets this report step.
-                            this->wellState().setEffectiveEventsOccurred(w, false);
+                            events.clearEvent(well_name, WellStateFullyImplicitBlackoil::event_mask);
                         } else {
                             wellTestState_.openWell(well_name);
                         }
@@ -1686,20 +1687,14 @@ namespace Opm {
                 const int w = well->indexOfWell();
                 if (!well->isOperable() ) continue;
 
-                if (this->wellState().effectiveEventsOccurred(w) ) {
+                auto& events = this->wellState().events();
+                if (events.hasEvent(well->name(), WellStateFullyImplicitBlackoil::event_mask)) {
                     well->updateWellStateWithTarget(ebosSimulator_, this->wellState(), deferred_logger);
+                    // There is no new well control change input within a report step,
+                    // so next time step, the well does not consider to have effective events anymore.
+                    events.clearEvent(well->name(), WellStateFullyImplicitBlackoil::event_mask);
                 }
-
-                // there is no new well control change input within a report step,
-                // so next time step, the well does not consider to have effective events anymore
-                // TODO: if we can know whether this is the first time step within the report step,
-                // we do not need to set it to false
-                // TODO: we should do this at the end of the time step in case we will need it within
-                // this time step somewhere
-                if (this->wellState().effectiveEventsOccurred(w) ) {
-                    this->wellState().setEffectiveEventsOccurred(w, false);
-                }
-            }  // end of for (const auto& well : well_container_)
+            }
             updatePrimaryVariables(deferred_logger);
         } catch (const std::runtime_error& e) {
             exc_type = ExceptionType::RUNTIME_ERROR;
