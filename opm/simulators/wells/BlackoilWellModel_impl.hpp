@@ -1684,7 +1684,6 @@ namespace Opm {
             }
             // since the controls are all updated, we should update well_state accordingly
             for (const auto& well : well_container_) {
-                const int w = well->indexOfWell();
                 if (!well->isOperable() ) continue;
 
                 auto& events = this->wellState().events();
