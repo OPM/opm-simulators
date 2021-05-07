@@ -71,8 +71,8 @@ class EclTransmissibility
     using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
     using Intersection = typename GridView::Intersection;
 
-    static const bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
-    static const bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
+    static constexpr bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
+    static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
 
     // Grid and world dimension
     enum { dimWorld = GridView::dimensionworld };
@@ -175,7 +175,7 @@ public:
         transBoundary_.clear();
 
         // if energy is enabled, let's do the same for the "thermal half transmissibilities"
-        if (enableEnergy) {
+        if constexpr (enableEnergy) {
             thermalHalfTrans_->clear();
             thermalHalfTrans_->reserve(numElements*6*1.05);
 
@@ -240,7 +240,7 @@ public:
 
                     // for boundary intersections we also need to compute the thermal
                     // half transmissibilities
-                    if (enableEnergy) {
+                    if constexpr (enableEnergy) {
                         Scalar transBoundaryEnergyIs;
                         computeHalfDiffusivity_(transBoundaryEnergyIs,
                                                 faceAreaNormal,
@@ -382,7 +382,7 @@ public:
                 trans_[isId_(elemIdx, outsideElemIdx)] = trans;
 
                 // update the "thermal half transmissibility" for the intersection
-                if (enableEnergy) {
+                if constexpr (enableEnergy) {
 
                     Scalar halfDiffusivity1;
                     Scalar halfDiffusivity2;
