@@ -2644,7 +2644,7 @@ namespace Opm
             const EvalWell seg_pressure = getSegmentPressure(seg);
             const int rate_start_offset = first_perf_ * number_of_phases_;
             auto * perf_rates = &well_state.mutable_perfPhaseRates()[rate_start_offset];
-            auto * perf_press_state = &well_state.perfPress()[first_perf_];
+            auto& perf_press_state = well_state.perfPress(this->index_of_well_);
             for (const int perf : segment_perforations_[seg]) {
                 const int cell_idx = well_cells_[perf];
                 const auto& int_quants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));

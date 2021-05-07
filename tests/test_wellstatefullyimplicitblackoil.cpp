@@ -391,8 +391,10 @@ BOOST_AUTO_TEST_CASE(STOP_well)
 
     std::vector<Opm::ParallelWellInfo> pinfos;
     auto wstate = buildWellState(setup, 0, pinfos);
-    for (const auto& p : wstate.perfPress())
-        BOOST_CHECK(p > 0);
+    for (std::size_t well_index = 0; well_index < setup.sched.numWells(0); well_index++) {
+        for (const auto& p : wstate.perfPress(well_index))
+            BOOST_CHECK(p > 0);
+    }
 }
 
 
