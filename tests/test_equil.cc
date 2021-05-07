@@ -141,24 +141,24 @@ static void initDefaultFluidSystem()
     FluidSystem::setReferenceDensities(rhoRefO, rhoRefW, rhoRefG, /*regionIdx=*/0);
 
     auto gasPvt = std::make_shared<Opm::GasPvtMultiplexer<double>>();
-    gasPvt->setApproach(Opm::GasPvtMultiplexer<double>::DryGasPvt);
-    auto& dryGasPvt = gasPvt->getRealPvt<Opm::GasPvtMultiplexer<double>::DryGasPvt>();
+    gasPvt->setApproach(Opm::GasPvtApproach::DryGasPvt);
+    auto& dryGasPvt = gasPvt->getRealPvt<Opm::GasPvtApproach::DryGasPvt>();
     dryGasPvt.setNumRegions(/*numPvtRegion=*/1);
     dryGasPvt.setReferenceDensities(/*regionIdx=*/0, rhoRefO, rhoRefG, rhoRefW);
     dryGasPvt.setGasFormationVolumeFactor(/*regionIdx=*/0, Bg);
     dryGasPvt.setGasViscosity(/*regionIdx=*/0, mug);
 
     auto oilPvt = std::make_shared<Opm::OilPvtMultiplexer<double>>();
-    oilPvt->setApproach(Opm::OilPvtMultiplexer<double>::DeadOilPvt);
-    auto& deadOilPvt = oilPvt->getRealPvt<Opm::OilPvtMultiplexer<double>::DeadOilPvt>();
+    oilPvt->setApproach(Opm::OilPvtApproach::DeadOilPvt);
+    auto& deadOilPvt = oilPvt->getRealPvt<Opm::OilPvtApproach::DeadOilPvt>();
     deadOilPvt.setNumRegions(/*numPvtRegion=*/1);
     deadOilPvt.setReferenceDensities(/*regionIdx=*/0, rhoRefO, rhoRefG, rhoRefW);
     deadOilPvt.setInverseOilFormationVolumeFactor(/*regionIdx=*/0, Bo);
     deadOilPvt.setOilViscosity(/*regionIdx=*/0, muo);
 
     auto waterPvt = std::make_shared<Opm::WaterPvtMultiplexer<double>>();
-    waterPvt->setApproach(Opm::WaterPvtMultiplexer<double>::ConstantCompressibilityWaterPvt);
-    auto& ccWaterPvt = waterPvt->getRealPvt<Opm::WaterPvtMultiplexer<double>::ConstantCompressibilityWaterPvt>();
+    waterPvt->setApproach(Opm::WaterPvtApproach::ConstantCompressibilityWaterPvt);
+    auto& ccWaterPvt = waterPvt->getRealPvt<Opm::WaterPvtApproach::ConstantCompressibilityWaterPvt>();
     ccWaterPvt.setNumRegions(/*numPvtRegions=*/1);
     ccWaterPvt.setReferenceDensities(/*regionIdx=*/0, rhoRefO, rhoRefG, rhoRefW);
     ccWaterPvt.setViscosity(/*regionIdx=*/0, 1);
