@@ -96,7 +96,7 @@ public:
 
         // we use 0 as the temporal locality, because it is reasonable to assume that an
         // entry will only be accessed once.
-        Opm::prefetch</*temporalLocality=*/0>(elemData_[elemIdx]);
+        ::Opm::prefetch</*temporalLocality=*/0>(elemData_[elemIdx]);
     }
 
     const Data& get(const Element& elem, unsigned localDofIdx) const

@@ -88,7 +88,7 @@ class VtkMultiWriter : public BaseOutputWriter
             // determine name to write into the multi-file for the
             // current time step
             // The file names in the pvd file are relative, the path should therefore be stripped.
-            const Opm::filesystem::path fullPath{fileName};
+            const filesystem::path fullPath{fileName};
             const std::string localFileName = fullPath.filename();
             multiWriter_.multiFile_.precision(16);
             multiWriter_.multiFile_ << "   <DataSet timestep=\"" << multiWriter_.curTime_ << "\" file=\""
@@ -239,7 +239,7 @@ public:
     {
         sanitizeScalarBuffer_(buf);
 
-        using VtkFn = Opm::VtkScalarFunction<GridView, VertexMapper>;
+        using VtkFn = VtkScalarFunction<GridView, VertexMapper>;
         FunctionPtr fnPtr(new VtkFn(name,
                                     gridView_,
                                     vertexMapper_,
@@ -267,7 +267,7 @@ public:
     {
         sanitizeScalarBuffer_(buf);
 
-        using VtkFn = Opm::VtkScalarFunction<GridView, ElementMapper>;
+        using VtkFn = VtkScalarFunction<GridView, ElementMapper>;
         FunctionPtr fnPtr(new VtkFn(name,
                                     gridView_,
                                     elementMapper_,
@@ -296,7 +296,7 @@ public:
     {
         sanitizeVectorBuffer_(buf);
 
-        using VtkFn = Opm::VtkVectorFunction<GridView, VertexMapper>;
+        using VtkFn = VtkVectorFunction<GridView, VertexMapper>;
         FunctionPtr fnPtr(new VtkFn(name,
                                     gridView_,
                                     vertexMapper_,
@@ -310,7 +310,7 @@ public:
      */
     void attachTensorVertexData(TensorBuffer& buf, std::string name)
     {
-        using VtkFn = Opm::VtkTensorFunction<GridView, VertexMapper>;
+        using VtkFn = VtkTensorFunction<GridView, VertexMapper>;
 
         for (unsigned colIdx = 0; colIdx < buf[0].N(); ++colIdx) {
             std::ostringstream oss;
@@ -345,7 +345,7 @@ public:
     {
         sanitizeVectorBuffer_(buf);
 
-        using VtkFn = Opm::VtkVectorFunction<GridView, ElementMapper>;
+        using VtkFn = VtkVectorFunction<GridView, ElementMapper>;
         FunctionPtr fnPtr(new VtkFn(name,
                                     gridView_,
                                     elementMapper_,
@@ -359,7 +359,7 @@ public:
      */
     void attachTensorElementData(TensorBuffer& buf, std::string name)
     {
-        using VtkFn = Opm::VtkTensorFunction<GridView, ElementMapper>;
+        using VtkFn = VtkTensorFunction<GridView, ElementMapper>;
 
         for (unsigned colIdx = 0; colIdx < buf[0].N(); ++colIdx) {
             std::ostringstream oss;
