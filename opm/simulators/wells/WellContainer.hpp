@@ -56,6 +56,14 @@ public:
         this->data.push_back(std::forward<T>(value));
     }
 
+    void add(const std::string& name, const T& value) {
+        if (index_map.count(name) != 0)
+            throw std::logic_error("An object with name: " + name + " already exists in container");
+
+        this->index_map.emplace(name, this->data.size());
+        this->data.push_back(value);
+    }
+
     bool has(const std::string& name) const {
         return (index_map.count(name) != 0);
     }
@@ -66,8 +74,17 @@ public:
         this->data[index] = std::forward<T>(value);
     }
 
+    void update(const std::string& name, const T& value) {
+        auto index = this->index_map.at(name);
+        this->data[index] = value;
+    }
+
     void update(std::size_t index, T&& value) {
         this->data.at(index) = std::forward<T>(value);
+    }
+
+    void update(std::size_t index, const T& value) {
+        this->data.at(index) = value;
     }
 
     /*
