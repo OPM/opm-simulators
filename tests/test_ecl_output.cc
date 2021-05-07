@@ -146,9 +146,15 @@ BOOST_AUTO_TEST_CASE(Summary)
     const std::string casename = "SUMMARY_DECK_NON_CONSTANT_POROSITY";
 
     auto simulator = initSimulator<TypeTag>(filename.data());
-    using Vanguard = Opm::GetPropType<TypeTag, Opm::Properties::Vanguard>;
-    typedef Opm::CollectDataToIORank< Vanguard > CollectDataToIORankType;
-    CollectDataToIORankType collectToIORank(simulator->vanguard());
+    using Grid = Opm::GetPropType<TypeTag, Opm::Properties::Grid>;
+    using EquilGrid = Opm::GetPropType<TypeTag, Opm::Properties::EquilGrid>;
+    using GridView = Opm::GetPropType<TypeTag, Opm::Properties::GridView>;
+    using CollectDataToIORankType = Opm::CollectDataToIORank<Grid,EquilGrid,GridView>;
+    CollectDataToIORankType collectToIORank(simulator->vanguard().grid(),
+                                            simulator->vanguard().equilGrid(),
+                                            simulator->vanguard().gridView(),
+                                            simulator->vanguard().cartesianIndexMapper(),
+                                            simulator->vanguard().equilCartesianIndexMapper());
     Opm::EclOutputBlackOilModule<TypeTag> eclOutputModule(*simulator, {}, collectToIORank);
 
     typedef Opm::EclWriter<TypeTag> EclWriterType;
