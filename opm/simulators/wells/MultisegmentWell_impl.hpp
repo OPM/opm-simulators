@@ -2664,7 +2664,7 @@ namespace Opm
                 // store the perf pressure and rates
                 const int rate_start_offset = (first_perf_ + perf) * number_of_phases_;
                 for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
-                    well_state.perfPhaseRates()[rate_start_offset + ebosCompIdxToFlowCompIdx(comp_idx)] = cq_s[comp_idx].value();
+                    well_state.mutable_perfPhaseRates()[rate_start_offset + ebosCompIdxToFlowCompIdx(comp_idx)] = cq_s[comp_idx].value();
                 }
                 well_state.perfPress()[first_perf_ + perf] = perf_press.value();
 

@@ -293,13 +293,13 @@ namespace Opm
                             for (int perf_phase_idx = connpos*np;
                                  perf_phase_idx < (connpos + num_perf_this_well)*np; ++perf_phase_idx, ++old_perf_phase_idx )
                             {
-                                perfPhaseRates()[ perf_phase_idx ] = prevState->perfPhaseRates()[ old_perf_phase_idx ];
+                                mutable_perfPhaseRates()[ perf_phase_idx ] = prevState->perfPhaseRates()[ old_perf_phase_idx ];
                             }
                         } else {
                             const int global_num_perf_this_well = parallel_well_info[w]->communication().sum(num_perf_this_well);
                             for (int perf = connpos; perf < connpos + num_perf_this_well; ++perf) {
                                 for (int p = 0; p < np; ++p) {
-                                    perfPhaseRates()[np*perf + p] = wellRates()[np*newIndex + p] / double(global_num_perf_this_well);
+                                    mutable_perfPhaseRates()[np*perf + p] = wellRates()[np*newIndex + p] / double(global_num_perf_this_well);
                                 }
                             }
                         }
@@ -409,7 +409,7 @@ namespace Opm
         }
 
         /// One rate per phase and well connection.
-        std::vector<double>& perfPhaseRates() { return perfphaserates_; }
+        std::vector<double>& mutable_perfPhaseRates() { return perfphaserates_; }
         const std::vector<double>& perfPhaseRates() const { return perfphaserates_; }
 
         /// One current control per injecting well.
@@ -690,7 +690,7 @@ namespace Opm
                             // maybe the best way is to initialize the fractions first then get the rates
                             for (int perf = 0; perf < n_activeperf; perf++) {
                                 const int perf_pos = start_perf + perf;
-                                perfPhaseRates()[np * perf_pos + gaspos] *= 100.;
+                                mutable_perfPhaseRates()[np * perf_pos + gaspos] *= 100.;
                             }
                         }
 

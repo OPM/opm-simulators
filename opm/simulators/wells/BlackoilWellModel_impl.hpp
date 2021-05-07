@@ -1972,7 +1972,7 @@ namespace Opm {
 
             auto * perf_pressure = well_state.perfPress().data() + wm.second[1];
             auto * perf_rates = well_state.perfRates().data() + wm.second[1];
-            auto * perf_phase_rates = well_state.perfPhaseRates().data() + wm.second[1]*np;
+            auto * perf_phase_rates = well_state.mutable_perfPhaseRates().data() + wm.second[1]*np;
             const auto& perf_data = this->well_perf_data_[well_index];
 
             for (std::size_t perf_index = 0; perf_index < perf_data.size(); perf_index++) {
