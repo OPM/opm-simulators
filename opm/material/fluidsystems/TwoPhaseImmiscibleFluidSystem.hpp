@@ -65,7 +65,7 @@ class TwoPhaseImmiscibleFluidSystem
 
 public:
     template <class Evaluation>
-    struct ParameterCache : public Opm::NullParameterCache<Evaluation>
+    struct ParameterCache : public NullParameterCache<Evaluation>
     {};
 
     /****************************************
@@ -227,8 +227,8 @@ public:
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        const auto& temperature = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& pressure = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& temperature = decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& pressure = decay<LhsEval>(fluidState.pressure(phaseIdx));
         if (phaseIdx == wettingPhaseIdx)
             return WettingPhase::density(temperature, pressure);
         return NonwettingPhase::density(temperature, pressure);
@@ -242,8 +242,8 @@ public:
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        const auto& temperature = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& pressure = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& temperature = decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& pressure = decay<LhsEval>(fluidState.pressure(phaseIdx));
         if (phaseIdx == wettingPhaseIdx)
             return WettingPhase::viscosity(temperature, pressure);
         return NonwettingPhase::viscosity(temperature, pressure);
@@ -276,8 +276,8 @@ public:
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        const auto& temperature = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& pressure = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& temperature = decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& pressure = decay<LhsEval>(fluidState.pressure(phaseIdx));
         if (phaseIdx == wettingPhaseIdx)
             return WettingPhase::enthalpy(temperature, pressure);
         return NonwettingPhase::enthalpy(temperature, pressure);
@@ -291,8 +291,8 @@ public:
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        const auto& temperature = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& pressure = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& temperature = decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& pressure = decay<LhsEval>(fluidState.pressure(phaseIdx));
         if (phaseIdx == wettingPhaseIdx)
             return WettingPhase::thermalConductivity(temperature, pressure);
         return NonwettingPhase::thermalConductivity(temperature, pressure);
@@ -306,8 +306,8 @@ public:
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        const auto& temperature = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& pressure = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& temperature = decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& pressure = decay<LhsEval>(fluidState.pressure(phaseIdx));
         if (phaseIdx == wettingPhaseIdx)
             return WettingPhase::heatCapacity(temperature, pressure);
         return NonwettingPhase::heatCapacity(temperature, pressure);

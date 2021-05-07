@@ -56,8 +56,8 @@ auto getInvB_(typename std::enable_if<HasMember_invB<FluidState>::value,
                                       const FluidState&>::type fluidState,
               unsigned phaseIdx,
               unsigned pvtRegionIdx OPM_UNUSED)
-    -> decltype(Opm::decay<LhsEval>(fluidState.invB(phaseIdx)))
-{ return Opm::decay<LhsEval>(fluidState.invB(phaseIdx)); }
+    -> decltype(decay<LhsEval>(fluidState.invB(phaseIdx)))
+{ return decay<LhsEval>(fluidState.invB(phaseIdx)); }
 
 template <class FluidSystem, class FluidState, class LhsEval>
 LhsEval getInvB_(typename std::enable_if<!HasMember_invB<FluidState>::value,
@@ -70,8 +70,8 @@ LhsEval getInvB_(typename std::enable_if<!HasMember_invB<FluidState>::value,
         fluidState.massFraction(phaseIdx, FluidSystem::solventComponentIndex(phaseIdx));
 
     return
-        Opm::decay<LhsEval>(rho)
-        *Opm::decay<LhsEval>(Xsolvent)
+        decay<LhsEval>(rho)
+        *decay<LhsEval>(Xsolvent)
         /FluidSystem::referenceDensity(phaseIdx, pvtRegionIdx);
 }
 
@@ -127,29 +127,29 @@ public:
     void checkDefined() const
     {
 #ifndef NDEBUG
-        Opm::Valgrind::CheckDefined(pvtRegionIdx_);
+        Valgrind::CheckDefined(pvtRegionIdx_);
 
         for (unsigned storagePhaseIdx = 0; storagePhaseIdx < numStoragePhases; ++ storagePhaseIdx) {
-            Opm::Valgrind::CheckDefined(saturation_[storagePhaseIdx]);
-            Opm::Valgrind::CheckDefined(pressure_[storagePhaseIdx]);
-            Opm::Valgrind::CheckDefined(density_[storagePhaseIdx]);
-            Opm::Valgrind::CheckDefined(invB_[storagePhaseIdx]);
+            Valgrind::CheckDefined(saturation_[storagePhaseIdx]);
+            Valgrind::CheckDefined(pressure_[storagePhaseIdx]);
+            Valgrind::CheckDefined(density_[storagePhaseIdx]);
+            Valgrind::CheckDefined(invB_[storagePhaseIdx]);
 
             if (enableEnergy)
-                Opm::Valgrind::CheckDefined((*enthalpy_)[storagePhaseIdx]);
+                Valgrind::CheckDefined((*enthalpy_)[storagePhaseIdx]);
         }
 
         if (enableDissolution) {
-            Opm::Valgrind::CheckDefined(*Rs_);
-            Opm::Valgrind::CheckDefined(*Rv_);
+            Valgrind::CheckDefined(*Rs_);
+            Valgrind::CheckDefined(*Rv_);
         }
 
         if (enableBrine) {
-            Opm::Valgrind::CheckDefined(*saltConcentration_);
+            Valgrind::CheckDefined(*saltConcentration_);
         }
 
         if (enableTemperature || enableEnergy)
-            Opm::Valgrind::CheckDefined(*temperature_);
+            Valgrind::CheckDefined(*temperature_);
 #endif // NDEBUG
     }
 
@@ -167,12 +167,12 @@ public:
         setPvtRegionIndex(pvtRegionIdx);
 
         if (enableDissolution) {
-            setRs(Opm::BlackOil::getRs_<FluidSystem, FluidState, Scalar>(fs, pvtRegionIdx));
-            setRv(Opm::BlackOil::getRv_<FluidSystem, FluidState, Scalar>(fs, pvtRegionIdx));
+            setRs(BlackOil::getRs_<FluidSystem, FluidState, Scalar>(fs, pvtRegionIdx));
+            setRv(BlackOil::getRv_<FluidSystem, FluidState, Scalar>(fs, pvtRegionIdx));
         }
 
         if (enableBrine){
-            setSaltConcentration(Opm::BlackOil::getSaltConcentration_<FluidSystem, FluidState, Scalar>(fs, pvtRegionIdx));
+            setSaltConcentration(BlackOil::getSaltConcentration_<FluidSystem, FluidState, Scalar>(fs, pvtRegionIdx));
         }
         for (unsigned storagePhaseIdx = 0; storagePhaseIdx < numStoragePhases; ++storagePhaseIdx) {
             unsigned phaseIdx = storageToCanonicalPhaseIndex_(storagePhaseIdx);
@@ -575,17 +575,17 @@ private:
         return FluidSystem::canonicalToActivePhaseIdx(canonicalPhaseIdx);
     }
 
-    Opm::ConditionalStorage<enableTemperature || enableEnergy, Scalar> temperature_;
-    Opm::ConditionalStorage<enableEnergy, std::array<Scalar, numStoragePhases> > enthalpy_;
+    ConditionalStorage<enableTemperature || enableEnergy, Scalar> temperature_;
+    ConditionalStorage<enableEnergy, std::array<Scalar, numStoragePhases> > enthalpy_;
     Scalar totalSaturation_;
     std::array<Scalar, numStoragePhases> pressure_;
     std::array<Scalar, numStoragePhases> pc_;
     std::array<Scalar, numStoragePhases> saturation_;
     std::array<Scalar, numStoragePhases> invB_;
     std::array<Scalar, numStoragePhases> density_;
-    Opm::ConditionalStorage<enableDissolution,Scalar> Rs_;
-    Opm::ConditionalStorage<enableDissolution, Scalar> Rv_;
-    Opm::ConditionalStorage<enableBrine, Scalar> saltConcentration_;
+    ConditionalStorage<enableDissolution,Scalar> Rs_;
+    ConditionalStorage<enableDissolution, Scalar> Rv_;
+    ConditionalStorage<enableBrine, Scalar> saltConcentration_;
     unsigned short pvtRegionIdx_;
 };
 

@@ -155,8 +155,8 @@ public:
         const Evaluation& S_lSAT =
             f[0]
             + f[1]*theta
-            + f[2]*Opm::pow(theta, 2)
-            + f[3]*Opm::pow(theta, 3);
+            + f[2]*pow(theta, 2)
+            + f[3]*pow(theta, 3);
 
         // Regularization
         if (S > S_lSAT)
@@ -169,7 +169,7 @@ public:
             (3.6710e4*temperature
              + (6.2770e1/2)*temperature*temperature
              - (6.6670e-2/3)*temperature*temperature*temperature
-             + (2.8000e-5/4)*Opm::pow(temperature, 4.0))/58.44e3
+             + (2.8000e-5/4)*pow(temperature, 4.0))/58.44e3
             - 2.045698e+02; // [kJ/kg]
 
         const Evaluation& m = S/(1-S)/58.44e-3;
@@ -177,7 +177,7 @@ public:
         Evaluation d_h = 0;
         for (int i = 0; i<=3; ++i) {
             for (int j = 0; j <= 2; ++j) {
-                d_h += a[i][j] * Opm::pow(theta, i) * Opm::pow(m, j);
+                d_h += a[i][j] * pow(theta, i) * pow(m, j);
             }
         }
 
@@ -196,7 +196,7 @@ public:
     static Evaluation liquidHeatCapacity(const Evaluation& temperature,
                                          const Evaluation& pressure)
     {
-        Scalar eps = Opm::scalarValue(temperature)*1e-8;
+        Scalar eps = scalarValue(temperature)*1e-8;
         return (liquidEnthalpy(temperature + eps, pressure) - liquidEnthalpy(temperature, pressure))/eps;
     }
 
@@ -286,12 +286,12 @@ public:
         // assume the pressure to be 10% higher than the vapor
         // pressure
         Evaluation pressure = 1.1*vaporPressure(temperature);
-        Scalar eps = Opm::scalarValue(pressure)*1e-7;
+        Scalar eps = scalarValue(pressure)*1e-7;
 
         Evaluation deltaP = pressure*2;
         for (int i = 0;
              i < 5
-                 && std::abs(Opm::scalarValue(pressure)*1e-9) < std::abs(Opm::scalarValue(deltaP));
+                 && std::abs(scalarValue(pressure)*1e-9) < std::abs(scalarValue(deltaP));
              ++i)
         {
             const Evaluation& f = liquidDensity(temperature, pressure) - density;
@@ -330,8 +330,8 @@ public:
         if(temperature <= 275.) // regularization
             T_C = 275.0;
 
-        Evaluation A = (0.42*std::pow((std::pow(salinity, 0.8)-0.17), 2) + 0.045)*Opm::pow(T_C, 0.8);
-        Evaluation mu_brine = 0.1 + 0.333*salinity + (1.65+91.9*salinity*salinity*salinity)*Opm::exp(-A);
+        Evaluation A = (0.42*std::pow((std::pow(salinity, 0.8)-0.17), 2) + 0.045)*pow(T_C, 0.8);
+        Evaluation mu_brine = 0.1 + 0.333*salinity + (1.65+91.9*salinity*salinity*salinity)*exp(-A);
 
         return mu_brine/1000.0; // convert to [Pa s] (todo: check if correct cP->Pa s is times 10...)
     }

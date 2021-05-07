@@ -73,7 +73,7 @@ public:
     void assign(const FluidState& fs)
     {
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            enthalpy_[phaseIdx] = Opm::decay<Scalar>(fs.enthalpy(phaseIdx));
+            enthalpy_[phaseIdx] = decay<Scalar>(fs.enthalpy(phaseIdx));
         }
     }
 

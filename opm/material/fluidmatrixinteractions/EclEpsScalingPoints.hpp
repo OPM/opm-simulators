@@ -150,8 +150,8 @@ struct EclEpsScalingPointsInfo
      * I.e., the values which are used for the nested Fluid-Matrix interactions and which
      * are produced by them.
      */
-    void extractUnscaled(const Opm::satfunc::RawTableEndPoints& rtep,
-                         const Opm::satfunc::RawFunctionValues& rfunc,
+    void extractUnscaled(const satfunc::RawTableEndPoints& rtep,
+                         const satfunc::RawFunctionValues& rfunc,
                          const std::vector<double>::size_type   satRegionIdx)
     {
         this->Swl = rtep.connate.water[satRegionIdx];
@@ -193,7 +193,7 @@ struct EclEpsScalingPointsInfo
      *
      * I.e., the values which are "seen" by the physical model.
      */
-    void extractScaled(const Opm::EclipseState& eclState,
+    void extractScaled(const EclipseState& eclState,
                        const EclEpsGridProperties& epsProperties,
                        unsigned activeIndex)
     {
@@ -231,13 +231,13 @@ struct EclEpsScalingPointsInfo
             const auto& jfuncDir = jfunc.direction();
 
             Scalar perm;
-            if (jfuncDir == Opm::JFunc::Direction::X)
+            if (jfuncDir == JFunc::Direction::X)
                 perm = epsProperties.permx(activeIndex);
-            else if (jfuncDir == Opm::JFunc::Direction::Y)
+            else if (jfuncDir == JFunc::Direction::Y)
                 perm = epsProperties.permy(activeIndex);
-            else if (jfuncDir == Opm::JFunc::Direction::Z)
+            else if (jfuncDir == JFunc::Direction::Z)
                 perm = epsProperties.permz(activeIndex);
-            else if (jfuncDir == Opm::JFunc::Direction::XY)
+            else if (jfuncDir == JFunc::Direction::XY)
                 // TODO: verify that this really is the arithmetic mean. (the
                 // documentation just says that the "average" should be used, IMO the
                 // harmonic mean would be more appropriate because that's what's usually
@@ -245,7 +245,7 @@ struct EclEpsScalingPointsInfo
             {
                 double permx = epsProperties.permx(activeIndex);
                 double permy = epsProperties.permy(activeIndex);
-                perm = Opm::arithmeticMean(permx, permy);
+                perm = arithmeticMean(permx, permy);
             } else
                 throw std::runtime_error("Illegal direction indicator for the JFUNC "
                                          "keyword ("+std::to_string(int(jfuncDir))+")");
@@ -267,7 +267,7 @@ struct EclEpsScalingPointsInfo
 
             // compute the oil-water Leverett factor.
             const auto& jfuncFlag = jfunc.flag();
-            if (jfuncFlag == Opm::JFunc::Flag::WATER || jfuncFlag == Opm::JFunc::Flag::BOTH) {
+            if (jfuncFlag == JFunc::Flag::WATER || jfuncFlag == JFunc::Flag::BOTH) {
                 // note that we use the surface tension in terms of [dyn/cm]
                 Scalar gamma =
                     jfunc.owSurfaceTension();
@@ -275,7 +275,7 @@ struct EclEpsScalingPointsInfo
             }
 
             // compute the gas-oil Leverett factor.
-            if (jfuncFlag == Opm::JFunc::Flag::GAS || jfuncFlag == Opm::JFunc::Flag::BOTH) {
+            if (jfuncFlag == JFunc::Flag::GAS || jfuncFlag == JFunc::Flag::BOTH) {
                 // note that we use the surface tension in terms of [dyn/cm]
                 Scalar gamma =
                     jfunc.goSurfaceTension();

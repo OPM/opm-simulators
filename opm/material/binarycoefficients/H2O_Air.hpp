@@ -53,7 +53,7 @@ public:
      */
     template <class Evaluation>
     static Evaluation henry(const Evaluation& temperature)
-    { return 1.0/((0.8942+1.47*Opm::exp(-0.04394*(temperature-273.15)))*1e-10); }
+    { return 1.0/((0.8942+1.47*exp(-0.04394*(temperature-273.15)))*1e-10); }
 
     /*!
      * \brief Binary diffusion coefficent \f$\mathrm{[m^2/s]}\f$ for molecular water and air
@@ -74,7 +74,7 @@ public:
         double pg0=1.e5;     /* reference pressure */
         double T0=273.15;    /* reference temperature */
 
-        return Daw*(pg0/pressure)*Opm::pow((temperature/T0),Theta);
+        return Daw*(pg0/pressure)*pow((temperature/T0),Theta);
     }
 
     /*!

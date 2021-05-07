@@ -73,8 +73,8 @@ public:
     template <class Scalar, class Evaluation = Scalar>
     static Evaluation gasDiffCoeff(const Evaluation& temperature, const Evaluation& pressure)
     {
-        typedef Opm::H2O<Scalar> H2O;
-        typedef Opm::SimpleCO2<Scalar> CO2;
+        typedef H2O<Scalar> H2O;
+        typedef SimpleCO2<Scalar> CO2;
 
         // atomic diffusion volumes
         const Scalar SigmaNu[2] = { 13.1 /* H2O */,  26.9 /* CO2 */ };

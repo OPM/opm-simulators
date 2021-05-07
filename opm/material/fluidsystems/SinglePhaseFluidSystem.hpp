@@ -63,7 +63,7 @@ class SinglePhaseFluidSystem
 public:
     //! \copydoc BaseFluidSystem::ParameterCache
     template <class Evaluation>
-    struct ParameterCache : public Opm::NullParameterCache<Evaluation>
+    struct ParameterCache : public NullParameterCache<Evaluation>
     {};
 
     /****************************************
@@ -191,8 +191,8 @@ public:
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = decay<LhsEval>(fluidState.pressure(phaseIdx));
         return Fluid::density(T, p);
     }
 
@@ -204,8 +204,8 @@ public:
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = decay<LhsEval>(fluidState.pressure(phaseIdx));
         return Fluid::viscosity(T, p);
     }
 
@@ -236,8 +236,8 @@ public:
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = decay<LhsEval>(fluidState.pressure(phaseIdx));
         return Fluid::enthalpy(T, p);
     }
 
@@ -249,8 +249,8 @@ public:
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = decay<LhsEval>(fluidState.pressure(phaseIdx));
         return Fluid::thermalConductivity(T, p);
     }
 
@@ -262,8 +262,8 @@ public:
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = decay<LhsEval>(fluidState.pressure(phaseIdx));
         return Fluid::heatCapacity(T, p);
     }
 };

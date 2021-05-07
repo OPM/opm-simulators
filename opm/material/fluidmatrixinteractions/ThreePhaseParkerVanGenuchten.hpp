@@ -126,8 +126,8 @@ public:
 
         // sum of liquid saturations
         const auto& St =
-            Opm::decay<Evaluation>(fluidState.saturation(wettingPhaseIdx))
-            + Opm::decay<Evaluation>(fluidState.saturation(nonWettingPhaseIdx));
+            decay<Evaluation>(fluidState.saturation(wettingPhaseIdx))
+            + decay<Evaluation>(fluidState.saturation(nonWettingPhaseIdx));
 
         Evaluation Se = (St - params.Swrx())/(1. - params.Swrx());
 
@@ -139,8 +139,8 @@ public:
 
         if (Se>PC_VG_REG && Se<1-PC_VG_REG)
         {
-            const Evaluation& x = Opm::pow(Se,-1/params.vgM()) - 1;
-            return Opm::pow(x, 1.0 - params.vgM())/params.vgAlpha();
+            const Evaluation& x = pow(Se,-1/params.vgM()) - 1;
+            return pow(x, 1.0 - params.vgM())/params.vgAlpha();
         }
 
         // value and derivative at regularization point
@@ -150,9 +150,9 @@ public:
         else
             Se_regu = 1-PC_VG_REG;
         const Evaluation& x = std::pow(Se_regu,-1/params.vgM())-1;
-        const Evaluation& pc = Opm::pow(x, 1.0/params.vgN())/params.vgAlpha();
+        const Evaluation& pc = pow(x, 1.0/params.vgN())/params.vgAlpha();
         const Evaluation& pc_prime =
-            Opm::pow(x, 1/params.vgN()-1)
+            pow(x, 1/params.vgN()-1)
             * std::pow(Se_regu,-1/params.vgM()-1)
             / (-params.vgM())
             / params.vgAlpha()
@@ -176,7 +176,7 @@ public:
     static Evaluation pcnw(const Params& params, const FluidState& fluidState)
     {
         const Evaluation& Sw =
-            Opm::decay<Evaluation>(fluidState.saturation(wettingPhaseIdx));
+            decay<Evaluation>(fluidState.saturation(wettingPhaseIdx));
         Evaluation Se = (Sw-params.Swr())/(1.-params.Snr());
 
         Scalar PC_VG_REG = 0.01;
@@ -188,8 +188,8 @@ public:
             Se=1.0;
 
         if (Se>PC_VG_REG && Se<1-PC_VG_REG) {
-            Evaluation x = Opm::pow(Se,-1/params.vgM()) - 1.0;
-            x = Opm::pow(x, 1 - params.vgM());
+            Evaluation x = pow(Se,-1/params.vgM()) - 1.0;
+            x = pow(x, 1 - params.vgM());
             return x/params.vgAlpha();
         }
 
@@ -201,9 +201,9 @@ public:
             Se_regu = 1.0 - PC_VG_REG;
 
         const Evaluation& x = std::pow(Se_regu,-1/params.vgM())-1;
-        const Evaluation& pc = Opm::pow(x, 1/params.vgN())/params.vgAlpha();
+        const Evaluation& pc = pow(x, 1/params.vgN())/params.vgAlpha();
         const Evaluation& pc_prime =
-            Opm::pow(x,1/params.vgN()-1)
+            pow(x,1/params.vgN()-1)
             * std::pow(Se_regu, -1.0/params.vgM() - 1)
             / (-params.vgM())
             / params.vgAlpha()
@@ -272,7 +272,7 @@ public:
     static Evaluation krw(const Params& params, const FluidState& fluidState)
     {
         const Evaluation& Sw =
-            Opm::decay<Evaluation>(fluidState.saturation(wettingPhaseIdx));
+            decay<Evaluation>(fluidState.saturation(wettingPhaseIdx));
         // transformation to effective saturation
         const Evaluation& Se = (Sw - params.Swr()) / (1-params.Swr());
 
@@ -280,8 +280,8 @@ public:
         if(Se > 1.0) return 1.;
         if(Se < 0.0) return 0.;
 
-        const Evaluation& r = 1. - Opm::pow(1 - Opm::pow(Se, 1/params.vgM()), params.vgM());
-        return Opm::sqrt(Se)*r*r;
+        const Evaluation& r = 1. - pow(1 - pow(Se, 1/params.vgM()), params.vgM());
+        return sqrt(Se)*r*r;
     }
 
     /*!
@@ -300,11 +300,11 @@ public:
     static Evaluation krn(const Params& params, const FluidState& fluidState)
     {
         const Evaluation& Sn =
-            Opm::decay<Evaluation>(fluidState.saturation(nonWettingPhaseIdx));
+            decay<Evaluation>(fluidState.saturation(nonWettingPhaseIdx));
         const Evaluation& Sw =
-            Opm::decay<Evaluation>(fluidState.saturation(wettingPhaseIdx));
-        Evaluation Swe = Opm::min((Sw - params.Swr()) / (1 - params.Swr()), 1.);
-        Evaluation Ste = Opm::min((Sw + Sn - params.Swr()) / (1 - params.Swr()), 1.);
+            decay<Evaluation>(fluidState.saturation(wettingPhaseIdx));
+        Evaluation Swe = min((Sw - params.Swr()) / (1 - params.Swr()), 1.);
+        Evaluation Ste = min((Sw + Sn - params.Swr()) / (1 - params.Swr()), 1.);
 
         // regularization
         if(Swe <= 0.0) Swe = 0.;
@@ -312,8 +312,8 @@ public:
         if(Ste - Swe <= 0.0) return 0.;
 
         Evaluation krn_;
-        krn_ = Opm::pow(1 - Opm::pow(Swe, 1/params.vgM()), params.vgM());
-        krn_ -= Opm::pow(1 - Opm::pow(Ste, 1/params.vgM()), params.vgM());
+        krn_ = pow(1 - pow(Swe, 1/params.vgM()), params.vgM());
+        krn_ -= pow(1 - pow(Ste, 1/params.vgM()), params.vgM());
         krn_ *= krn_;
 
         if (params.krRegardsSnr())
@@ -321,11 +321,11 @@ public:
             // regard Snr in the permeability of the non-wetting
             // phase, see Helmig1997
             const Evaluation& resIncluded =
-                Opm::max(Opm::min(Sw - params.Snr() / (1-params.Swr()), 1.0), 0.0);
-            krn_ *= Opm::sqrt(resIncluded );
+                max(min(Sw - params.Snr() / (1-params.Swr()), 1.0), 0.0);
+            krn_ *= sqrt(resIncluded );
         }
         else
-            krn_ *= Opm::sqrt(Sn / (1 - params.Swr()));
+            krn_ *= sqrt(Sn / (1 - params.Swr()));
 
         return krn_;
     }
@@ -345,8 +345,8 @@ public:
     static Evaluation krg(const Params& params, const FluidState& fluidState)
     {
         const Evaluation& Sg =
-            Opm::decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
-        const Evaluation& Se = Opm::min(((1-Sg) - params.Sgr()) / (1 - params.Sgr()), 1.);
+            decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
+        const Evaluation& Se = min(((1-Sg) - params.Sgr()) / (1 - params.Sgr()), 1.);
 
         // regularization
         if(Se > 1.0)
@@ -362,8 +362,8 @@ public:
         }
 
         return scaleFactor
-            * Opm::pow(1 - Se, 1.0/3.)
-            * Opm::pow(1 - Opm::pow(Se, 1/params.vgM()), 2*params.vgM());
+            * pow(1 - Se, 1.0/3.)
+            * pow(1 - pow(Se, 1/params.vgM()), 2*params.vgM());
     }
 };
 } // namespace Opm

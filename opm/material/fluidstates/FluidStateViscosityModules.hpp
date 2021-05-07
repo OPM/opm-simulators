@@ -67,7 +67,7 @@ public:
     void assign(const FluidState& fs)
     {
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            viscosity_[phaseIdx] = Opm::decay<Scalar>(fs.viscosity(phaseIdx));
+            viscosity_[phaseIdx] = decay<Scalar>(fs.viscosity(phaseIdx));
         }
     }
 

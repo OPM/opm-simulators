@@ -47,7 +47,7 @@ class RegularizedVanGenuchtenParams : public VanGenuchtenParams<TraitsT>
 {
     typedef typename TraitsT::Scalar Scalar;
     typedef VanGenuchtenParams<TraitsT> Parent;
-    typedef Opm::VanGenuchten<TraitsT> VanGenuchten;
+    typedef ::Opm::VanGenuchten<TraitsT> VanGenuchten;
 
 public:
     using Parent :: finalize;

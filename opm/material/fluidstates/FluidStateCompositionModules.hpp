@@ -73,10 +73,10 @@ public:
     Scalar massFraction(unsigned phaseIdx, unsigned compIdx) const
     {
         return
-            Opm::abs(sumMoleFractions_[phaseIdx])
+            abs(sumMoleFractions_[phaseIdx])
             *moleFraction_[phaseIdx][compIdx]
             *FluidSystem::molarMass(compIdx)
-            / Opm::max(1e-40, Opm::abs(averageMolarMass_[phaseIdx]));
+            / max(1e-40, abs(averageMolarMass_[phaseIdx]));
     }
 
     /*!
@@ -137,7 +137,7 @@ public:
             sumMoleFractions_[phaseIdx] = 0;
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 moleFraction_[phaseIdx][compIdx] =
-                    Opm::decay<Scalar>(fs.moleFraction(phaseIdx, compIdx));
+                    decay<Scalar>(fs.moleFraction(phaseIdx, compIdx));
 
                 averageMolarMass_[phaseIdx] += moleFraction_[phaseIdx][compIdx]*FluidSystem::molarMass(compIdx);
                 sumMoleFractions_[phaseIdx] += moleFraction_[phaseIdx][compIdx];

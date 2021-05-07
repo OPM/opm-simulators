@@ -58,24 +58,24 @@ class BrineCo2Pvt
 {
     typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
 
-    //typedef Opm::H2O<Scalar> H2O_IAPWS;
-    //typedef Opm::Brine<Scalar, H2O_IAPWS> Brine_IAPWS;
-    //typedef Opm::TabulatedComponent<Scalar, H2O_IAPWS> H2O_Tabulated;
-    //typedef Opm::TabulatedComponent<Scalar, Brine_IAPWS> Brine_Tabulated;
+    //typedef H2O<Scalar> H2O_IAPWS;
+    //typedef Brine<Scalar, H2O_IAPWS> Brine_IAPWS;
+    //typedef TabulatedComponent<Scalar, H2O_IAPWS> H2O_Tabulated;
+    //typedef TabulatedComponent<Scalar, Brine_IAPWS> Brine_Tabulated;
 
     //typedef H2O_Tabulated H2O;
     //typedef Brine_Tabulated Brine;
 
 
 public:
-    typedef Opm::SimpleHuDuanH2O<Scalar> H2O;
-    typedef Opm::Brine<Scalar, H2O> Brine;
-    typedef Opm::CO2<Scalar, CO2Tables> CO2;
+    typedef SimpleHuDuanH2O<Scalar> H2O;
+    typedef ::Opm::Brine<Scalar, H2O> Brine;
+    typedef ::Opm::CO2<Scalar, CO2Tables> CO2;
 
-    typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
+    typedef Tabulated1DFunction<Scalar> TabulatedOneDFunction;
 
     //! The binary coefficients for brine and CO2 used by this fluid system
-    typedef Opm::BinaryCoeff::Brine_CO2<Scalar, H2O, CO2> BinaryCoeffBrineCO2;
+    typedef BinaryCoeff::Brine_CO2<Scalar, H2O, CO2> BinaryCoeffBrineCO2;
 
     explicit BrineCo2Pvt() = default;
     BrineCo2Pvt(const std::vector<Scalar>& brineReferenceDensity,
@@ -288,9 +288,9 @@ public:
         //Diffusion coefficient of CO2 in the brine phase modified following (Ratcliff and Holdcroft,1963 and Al-Rawajfeh, 2004)
         const Evaluation& mu_H20 = H2O::liquidViscosity(temperature, pressure); // Water viscosity
         const Evaluation& mu_Brine = Brine::liquidViscosity(temperature, pressure); // Brine viscosity
-        const Evaluation log_D_Brine = log_D_H20 - 0.87*Opm::log10(mu_Brine / mu_H20);
+        const Evaluation log_D_Brine = log_D_H20 - 0.87*log10(mu_Brine / mu_H20);
 
-        return Opm::pow(Evaluation(10), log_D_Brine) * 1e-4; // convert from cm2/s to m2/s
+        return pow(Evaluation(10), log_D_Brine) * 1e-4; // convert from cm2/s to m2/s
     }
 
 private:
@@ -438,7 +438,7 @@ private:
                                                     xgH2O);
 
         // normalize the phase compositions
-        xlCO2 = Opm::max(0.0, Opm::min(1.0, xlCO2));
+        xlCO2 = max(0.0, min(1.0, xlCO2));
 
         return convertXoGToRs(convertxoGToXoG(xlCO2), regionIdx);
     }
@@ -474,7 +474,7 @@ private:
         theta = T - 273.15;
 
         // Regularization
-        Scalar scalarTheta = Opm::scalarValue(theta);
+        Scalar scalarTheta = scalarValue(theta);
         Scalar S_lSAT = f[0] + scalarTheta*(f[1] + scalarTheta*(f[2] + scalarTheta*f[3]));
         if (S > S_lSAT)
             S = S_lSAT;
@@ -492,7 +492,7 @@ private:
 
         for (i = 0; i<=3; i++) {
             for (j=0; j<=2; j++) {
-                d_h = d_h + a[i][j] * Opm::pow(theta, static_cast<Scalar>(i)) * std::pow(m, j);
+                d_h = d_h + a[i][j] * pow(theta, static_cast<Scalar>(i)) * std::pow(m, j);
             }
         }
         /* heat of dissolution for halite according to Michaelides 1971 */

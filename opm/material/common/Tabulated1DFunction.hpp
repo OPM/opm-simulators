@@ -454,7 +454,7 @@ private:
     size_t findSegmentIndex_(const Evaluation& x, bool extrapolate = false) const
     {
         if (!extrapolate && !applies(x))
-            throw Opm::NumericalIssue("Tried to evaluate a tabulated function outside of its range");
+            throw NumericalIssue("Tried to evaluate a tabulated function outside of its range");
 
         // we need at least two sampling points!
         assert(xValues_.size() >= 2);

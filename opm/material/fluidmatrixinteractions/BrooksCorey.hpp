@@ -152,7 +152,7 @@ public:
     static Evaluation pcnw(const Params& params, const FluidState& fs)
     {
         const Evaluation& Sw =
-            Opm::decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+            decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
 
         assert(0.0 <= Sw && Sw <= 1.0);
 
@@ -164,7 +164,7 @@ public:
     {
         assert(0.0 <= Sw && Sw <= 1.0);
 
-        return params.entryPressure()*Opm::pow(Sw, -1/params.lambda());
+        return params.entryPressure()*pow(Sw, -1/params.lambda());
     }
 
     template <class Evaluation>
@@ -172,7 +172,7 @@ public:
     {
         assert(pcnw > 0.0);
 
-        return Opm::pow(params.entryPressure()/pcnw, -params.lambda());
+        return pow(params.entryPressure()/pcnw, -params.lambda());
     }
 
     /*!
@@ -191,8 +191,8 @@ public:
     static Evaluation Sw(const Params& params, const FluidState& fs)
     {
         Evaluation pC =
-            Opm::decay<Evaluation>(fs.pressure(Traits::nonWettingPhaseIdx))
-            - Opm::decay<Evaluation>(fs.pressure(Traits::wettingPhaseIdx));
+            decay<Evaluation>(fs.pressure(Traits::nonWettingPhaseIdx))
+            - decay<Evaluation>(fs.pressure(Traits::wettingPhaseIdx));
         return twoPhaseSatSw(params, pC);
     }
 
@@ -201,7 +201,7 @@ public:
     {
         assert(pc > 0.0); // if we don't assume that, std::pow will screw up!
 
-        return Opm::pow(pc/params.entryPressure(), -params.lambda());
+        return pow(pc/params.entryPressure(), -params.lambda());
     }
 
     /*!
@@ -227,7 +227,7 @@ public:
     static Evaluation krw(const Params& params, const FluidState& fs)
     {
         const auto& Sw =
-            Opm::decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+            decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
 
         return twoPhaseSatKrw(params, Sw);
     }
@@ -237,13 +237,13 @@ public:
     {
         assert(0.0 <= Sw && Sw <= 1.0);
 
-        return Opm::pow(Sw, 2.0/params.lambda() + 3.0);
+        return pow(Sw, 2.0/params.lambda() + 3.0);
     }
 
     template <class Evaluation>
     static Evaluation twoPhaseSatKrwInv(const Params& params, const Evaluation& krw)
     {
-        return Opm::pow(krw, 1.0/(2.0/params.lambda() + 3.0));
+        return pow(krw, 1.0/(2.0/params.lambda() + 3.0));
     }
 
     /*!
@@ -258,7 +258,7 @@ public:
     static Evaluation krn(const Params& params, const FluidState& fs)
     {
         const Evaluation& Sw =
-            1.0 - Opm::decay<Evaluation>(fs.saturation(Traits::nonWettingPhaseIdx));
+            1.0 - decay<Evaluation>(fs.saturation(Traits::nonWettingPhaseIdx));
 
         return twoPhaseSatKrn(params, Sw);
     }
@@ -270,7 +270,7 @@ public:
 
         Scalar exponent = 2.0/params.lambda() + 1.0;
         const Evaluation Sn = 1.0 - Sw;
-        return Sn*Sn*(1. - Opm::pow(Sw, exponent));
+        return Sn*Sn*(1. - pow(Sw, exponent));
     }
 
     template <class Evaluation>
@@ -289,7 +289,7 @@ public:
             Sw -= delta;
             if (Sw < 0)
                 Sw = 0.0;
-            if (Opm::abs(delta) < 1e-10)
+            if (abs(delta) < 1e-10)
                 return Sw;
         }
 

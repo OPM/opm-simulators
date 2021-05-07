@@ -74,7 +74,7 @@ public:
      * endpoints in the "nesting graph". This typedef makes sense if nested automatic
      * differentiation is used, though...
      */
-    typedef Opm::MathToolbox<Scalar> InnerToolbox;
+    typedef MathToolbox<Scalar> InnerToolbox;
 
     /*!
      * \brief Return the value of the function at a given evaluation point.
@@ -281,118 +281,118 @@ struct ReturnEval_
 // these are convenience functions for not having to type MathToolbox<Scalar>::foo()
 template <class Evaluation>
 Evaluation blank(const Evaluation& x)
-{ return Opm::MathToolbox<Evaluation>::createBlank(x); }
+{ return MathToolbox<Evaluation>::createBlank(x); }
 
 template <class Evaluation, class Scalar>
 Evaluation constant(const Scalar& value)
-{ return Opm::MathToolbox<Evaluation>::createConstant(value); }
+{ return MathToolbox<Evaluation>::createConstant(value); }
 
 template <class Evaluation, class Scalar>
 Evaluation constant(unsigned numDeriv, const Scalar& value)
-{ return Opm::MathToolbox<Evaluation>::createConstant(numDeriv, value); }
+{ return MathToolbox<Evaluation>::createConstant(numDeriv, value); }
 
 template <class Evaluation, class Scalar>
 Evaluation constant(const Evaluation& x, const Scalar& value)
-{ return Opm::MathToolbox<Evaluation>::createConstant(x, value); }
+{ return MathToolbox<Evaluation>::createConstant(x, value); }
 
 template <class Evaluation, class Scalar>
 Evaluation variable(unsigned numDeriv, const Scalar& value, unsigned idx)
-{ return Opm::MathToolbox<Evaluation>::createVariable(numDeriv, value, idx); }
+{ return MathToolbox<Evaluation>::createVariable(numDeriv, value, idx); }
 
 template <class Evaluation, class Scalar>
 Evaluation variable(const Evaluation& x, const Scalar& value, unsigned idx)
-{ return Opm::MathToolbox<Evaluation>::createVariable(x, value, idx); }
+{ return MathToolbox<Evaluation>::createVariable(x, value, idx); }
 
 template <class Evaluation, class Scalar>
 Evaluation variable(const Scalar& value, unsigned idx)
-{ return Opm::MathToolbox<Evaluation>::createVariable(value, idx); }
+{ return MathToolbox<Evaluation>::createVariable(value, idx); }
 
 template <class ResultEval, class Evaluation>
 auto decay(const Evaluation& value)
-    -> decltype(Opm::MathToolbox<Evaluation>::template decay<ResultEval>(value))
-{ return Opm::MathToolbox<Evaluation>::template decay<ResultEval>(value); }
+    -> decltype(MathToolbox<Evaluation>::template decay<ResultEval>(value))
+{ return MathToolbox<Evaluation>::template decay<ResultEval>(value); }
 
 template <class Evaluation>
 auto getValue(const Evaluation& val)
-    -> decltype(Opm::MathToolbox<Evaluation>::value(val))
-{ return Opm::MathToolbox<Evaluation>::value(val); }
+    -> decltype(MathToolbox<Evaluation>::value(val))
+{ return MathToolbox<Evaluation>::value(val); }
 
 template <class Evaluation>
 auto scalarValue(const Evaluation& val)
-    -> decltype(Opm::MathToolbox<Evaluation>::scalarValue(val))
-{ return Opm::MathToolbox<Evaluation>::scalarValue(val); }
+    -> decltype(MathToolbox<Evaluation>::scalarValue(val))
+{ return MathToolbox<Evaluation>::scalarValue(val); }
 
 template <class Evaluation1, class Evaluation2>
 typename ReturnEval_<Evaluation1, Evaluation2>::type
 max(const Evaluation1& arg1, const Evaluation2& arg2)
-{ return Opm::MathToolbox<typename ReturnEval_<Evaluation1, Evaluation2>::type>::max(arg1, arg2); }
+{ return MathToolbox<typename ReturnEval_<Evaluation1, Evaluation2>::type>::max(arg1, arg2); }
 
 template <class Evaluation1, class Evaluation2>
 typename ReturnEval_<Evaluation1, Evaluation2>::type
 min(const Evaluation1& arg1, const Evaluation2& arg2)
-{ return Opm::MathToolbox<typename ReturnEval_<Evaluation1, Evaluation2>::type>::min(arg1, arg2); }
+{ return MathToolbox<typename ReturnEval_<Evaluation1, Evaluation2>::type>::min(arg1, arg2); }
 
 template <class Evaluation>
 Evaluation abs(const Evaluation& value)
-{ return Opm::MathToolbox<Evaluation>::abs(value); }
+{ return MathToolbox<Evaluation>::abs(value); }
 
 template <class Evaluation>
 Evaluation tan(const Evaluation& value)
-{ return Opm::MathToolbox<Evaluation>::tan(value); }
+{ return MathToolbox<Evaluation>::tan(value); }
 
 template <class Evaluation>
 Evaluation atan(const Evaluation& value)
-{ return Opm::MathToolbox<Evaluation>::atan(value); }
+{ return MathToolbox<Evaluation>::atan(value); }
 
 template <class Evaluation1, class Evaluation2>
 typename ReturnEval_<Evaluation1, Evaluation2>::type
 atan2(const Evaluation1& value1, const Evaluation2& value2)
-{ return Opm::MathToolbox<typename ReturnEval_<Evaluation1, Evaluation2>::type>::atan2(value1, value2); }
+{ return MathToolbox<typename ReturnEval_<Evaluation1, Evaluation2>::type>::atan2(value1, value2); }
 
 template <class Evaluation>
 Evaluation sin(const Evaluation& value)
-{ return Opm::MathToolbox<Evaluation>::sin(value); }
+{ return MathToolbox<Evaluation>::sin(value); }
 
 template <class Evaluation>
 Evaluation asin(const Evaluation& value)
-{ return Opm::MathToolbox<Evaluation>::asin(value); }
+{ return MathToolbox<Evaluation>::asin(value); }
 
 template <class Evaluation>
 Evaluation cos(const Evaluation& value)
-{ return Opm::MathToolbox<Evaluation>::cos(value); }
+{ return MathToolbox<Evaluation>::cos(value); }
 
 template <class Evaluation>
 Evaluation acos(const Evaluation& value)
-{ return Opm::MathToolbox<Evaluation>::acos(value); }
+{ return MathToolbox<Evaluation>::acos(value); }
 
 template <class Evaluation>
 Evaluation sqrt(const Evaluation& value)
-{ return Opm::MathToolbox<Evaluation>::sqrt(value); }
+{ return MathToolbox<Evaluation>::sqrt(value); }
 
 template <class Evaluation>
 Evaluation exp(const Evaluation& value)
-{ return Opm::MathToolbox<Evaluation>::exp(value); }
+{ return MathToolbox<Evaluation>::exp(value); }
 
 template <class Evaluation>
 Evaluation log(const Evaluation& value)
-{ return Opm::MathToolbox<Evaluation>::log(value); }
+{ return MathToolbox<Evaluation>::log(value); }
 
 template <class Evaluation>
 Evaluation log10(const Evaluation& value)
-{ return Opm::MathToolbox<Evaluation>::log10(value); }
+{ return MathToolbox<Evaluation>::log10(value); }
 
 template <class Evaluation1, class Evaluation2>
 typename ReturnEval_<Evaluation1, Evaluation2>::type
 pow(const Evaluation1& base, const Evaluation2& exp)
-{ return Opm::MathToolbox<typename ReturnEval_<Evaluation1, Evaluation2>::type>::pow(base, exp); }
+{ return MathToolbox<typename ReturnEval_<Evaluation1, Evaluation2>::type>::pow(base, exp); }
 
 template <class Evaluation>
 bool isfinite(const Evaluation& value)
-{ return Opm::MathToolbox<Evaluation>::isfinite(value); }
+{ return MathToolbox<Evaluation>::isfinite(value); }
 
 template <class Evaluation>
 bool isnan(const Evaluation& value)
-{ return Opm::MathToolbox<Evaluation>::isnan(value); }
+{ return MathToolbox<Evaluation>::isnan(value); }
 
 } // namespace Opm
 

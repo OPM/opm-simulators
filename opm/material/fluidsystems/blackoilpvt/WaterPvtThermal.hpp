@@ -54,7 +54,7 @@ template <class Scalar>
 class WaterPvtThermal
 {
 public:
-    typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
+    typedef Tabulated1DFunction<Scalar> TabulatedOneDFunction;
     typedef WaterPvtMultiplexer<Scalar, /*enableThermal=*/false, false> IsothermalPvt;
 
     WaterPvtThermal()

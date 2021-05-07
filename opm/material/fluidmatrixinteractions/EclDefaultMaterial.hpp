@@ -227,7 +227,7 @@ public:
                            const FluidState& fs)
     {
         // Maximum attainable oil saturation is 1-SWL.
-        const auto Sw = 1.0 - params.Swl() - Opm::decay<Evaluation>(fs.saturation(gasPhaseIdx));
+        const auto Sw = 1.0 - params.Swl() - decay<Evaluation>(fs.saturation(gasPhaseIdx));
         return GasOilMaterialLaw::twoPhaseSatPcnw(params.gasOilParams(), Sw);
     }
 
@@ -244,7 +244,7 @@ public:
     static Evaluation pcnw(const Params& params,
                            const FluidState& fs)
     {
-        const auto Sw = Opm::decay<Evaluation>(fs.saturation(waterPhaseIdx));
+        const auto Sw = decay<Evaluation>(fs.saturation(waterPhaseIdx));
         return OilWaterMaterialLaw::twoPhaseSatPcnw(params.oilWaterParams(), Sw);
     }
 
@@ -324,7 +324,7 @@ public:
                           const FluidState& fluidState)
     {
         // Maximum attainable oil saturation is 1-SWL.
-        const Evaluation Sw = 1.0 - params.Swl() - Opm::decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
+        const Evaluation Sw = 1.0 - params.Swl() - decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
         return GasOilMaterialLaw::twoPhaseSatKrn(params.gasOilParams(), Sw);
     }
 
@@ -335,7 +335,7 @@ public:
     static Evaluation krw(const Params& params,
                           const FluidState& fluidState)
     {
-        const Evaluation Sw = Opm::decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
+        const Evaluation Sw = decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
         return OilWaterMaterialLaw::twoPhaseSatKrw(params.oilWaterParams(), Sw);
     }
 
@@ -349,10 +349,10 @@ public:
         const Scalar Swco = params.Swl();
 
         const Evaluation Sw =
-            Opm::max(Evaluation(Swco),
-                     Opm::decay<Evaluation>(fluidState.saturation(waterPhaseIdx)));
+            max(Evaluation(Swco),
+                     decay<Evaluation>(fluidState.saturation(waterPhaseIdx)));
 
-        const Evaluation Sg = Opm::decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
+        const Evaluation Sg = decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
 
         const Evaluation Sw_ow = Sg + Sw;
         const Evaluation kro_ow = relpermOilInOilWaterSystem<Evaluation>(params, fluidState);
@@ -362,9 +362,9 @@ public:
         // < epsilon/2 and interpolate between the oridinary and the regularized kro between
         // epsilon and epsilon/2
         const Scalar epsilon = 1e-5;
-        if (Opm::scalarValue(Sw_ow) - Swco < epsilon) {
+        if (scalarValue(Sw_ow) - Swco < epsilon) {
             const Evaluation kro2 = (kro_ow + kro_go)/2;
-            if (Opm::scalarValue(Sw_ow) - Swco > epsilon/2) {
+            if (scalarValue(Sw_ow) - Swco > epsilon/2) {
                 const Evaluation kro1 = (Sg*kro_go + (Sw - Swco)*kro_ow)/(Sw_ow - Swco);
                 const Evaluation alpha = (epsilon - (Sw_ow - Swco))/(epsilon/2);
 
@@ -385,10 +385,10 @@ public:
                                                const FluidState& fluidState)
     {
         const Evaluation Sw =
-            Opm::max(Evaluation{ params.Swl() },
-                     Opm::decay<Evaluation>(fluidState.saturation(waterPhaseIdx)));
+            max(Evaluation{ params.Swl() },
+                     decay<Evaluation>(fluidState.saturation(waterPhaseIdx)));
 
-        const Evaluation Sg = Opm::decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
+        const Evaluation Sg = decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
         const Evaluation So_go = 1.0 - (Sg + Sw);
 
         return GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), So_go);
@@ -402,10 +402,10 @@ public:
                                                  const FluidState& fluidState)
     {
         const Evaluation Sw =
-            Opm::max(Evaluation{ params.Swl() },
-                     Opm::decay<Evaluation>(fluidState.saturation(waterPhaseIdx)));
+            max(Evaluation{ params.Swl() },
+                     decay<Evaluation>(fluidState.saturation(waterPhaseIdx)));
 
-        const Evaluation Sg = Opm::decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
+        const Evaluation Sg = decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
         const Evaluation Sw_ow = Sg + Sw;
 
         return OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sw_ow);
@@ -462,7 +462,7 @@ public:
     template <class FluidState>
     static Scalar clampSaturation(const FluidState& fluidState, const int phaseIndex)
     {
-        const auto sat = Opm::scalarValue(fluidState.saturation(phaseIndex));
+        const auto sat = scalarValue(fluidState.saturation(phaseIndex));
         return std::clamp(sat, Scalar{0.0}, Scalar{1.0});
     }
 };

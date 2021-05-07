@@ -123,12 +123,12 @@ public:
     template <class FluidState>
     void assign(const FluidState& fs)
     {
-        temperature_ = Opm::decay<Scalar>(fs.temperature(/*phaseIdx=*/0));
+        temperature_ = decay<Scalar>(fs.temperature(/*phaseIdx=*/0));
 
 #ifndef NDEBUG
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            assert(std::abs(Opm::scalarValue(fs.temperature(phaseIdx))
-                            - Opm::scalarValue(temperature_)) < 1e-30);
+            assert(std::abs(scalarValue(fs.temperature(phaseIdx))
+                            - scalarValue(temperature_)) < 1e-30);
         }
 #endif
     }

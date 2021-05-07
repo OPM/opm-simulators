@@ -48,7 +48,7 @@ class DeadOilPvt
     typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
 
 public:
-    typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
+    typedef Tabulated1DFunction<Scalar> TabulatedOneDFunction;
 
     DeadOilPvt() = default;
     DeadOilPvt(const std::vector<Scalar>& oilReferenceDensity,

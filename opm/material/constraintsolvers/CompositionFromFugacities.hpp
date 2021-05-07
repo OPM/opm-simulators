@@ -131,7 +131,7 @@ public:
             x = 0.0;
             try { J.solve(x, b); }
             catch (const Dune::FMatrixError& e)
-            { throw Opm::NumericalIssue(e.what()); }
+            { throw NumericalIssue(e.what()); }
 
             //std::cout << "original delta: " << x << "\n";
 
@@ -171,7 +171,7 @@ public:
             << xInit
             << "}, {fug_t} = {" << targetFug << "}, p = " << fluidState.pressure(phaseIdx)
             << ", T = " << fluidState.temperature(phaseIdx);
-        throw Opm::NumericalIssue(oss.str());
+        throw NumericalIssue(oss.str());
     }
 
 
@@ -228,7 +228,7 @@ protected:
             fluidState.setFugacityCoefficient(phaseIdx, i, phi);
 
             defect[i] = targetFug[i] - f;
-            absError = std::max(absError, std::abs(Opm::scalarValue(defect[i])));
+            absError = std::max(absError, std::abs(scalarValue(defect[i])));
         }
 
         // assemble jacobian matrix of the constraints for the composition
@@ -292,10 +292,10 @@ protected:
         Evaluation sumx = 0.0;
         for (unsigned i = 0; i < numComponents; ++i) {
             origComp[i] = fluidState.moleFraction(phaseIdx, i);
-            relError = std::max(relError, std::abs(Opm::scalarValue(x[i])));
+            relError = std::max(relError, std::abs(scalarValue(x[i])));
 
-            sumx += Opm::abs(fluidState.moleFraction(phaseIdx, i));
-            sumDelta += Opm::abs(x[i]);
+            sumx += abs(fluidState.moleFraction(phaseIdx, i));
+            sumDelta += abs(x[i]);
         }
 
         // chop update to at most 20% change in composition
@@ -308,10 +308,10 @@ protected:
             Evaluation newx = origComp[i] - x[i];
             // only allow negative mole fractions if the target fugacity is negative
             if (targetFug[i] > 0)
-                newx = Opm::max(0.0, newx);
+                newx = max(0.0, newx);
             // only allow positive mole fractions if the target fugacity is positive
             else if (targetFug[i] < 0)
-                newx = Opm::min(0.0, newx);
+                newx = min(0.0, newx);
             // if the target fugacity is zero, the mole fraction must also be zero
             else
                 newx = 0;

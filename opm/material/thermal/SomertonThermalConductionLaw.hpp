@@ -97,9 +97,9 @@ public:
             Valgrind::CheckDefined(params.fullySaturatedLambda(phaseIdx));
 
             if (FluidSystem::isLiquid(phaseIdx)) {
-                const auto& sat = Opm::decay<Evaluation>(fluidState.saturation(phaseIdx));
+                const auto& sat = decay<Evaluation>(fluidState.saturation(phaseIdx));
                 lambda +=
-                    regularizedSqrt_(Opm::max(0.0, Opm::min(1.0, sat)))
+                    regularizedSqrt_(max(0.0, min(1.0, sat)))
                     * (params.fullySaturatedLambda(phaseIdx) - params.vacuumLambda());
             }
             else { // gas phase
@@ -116,7 +116,7 @@ protected:
     template <class Evaluation>
     static Evaluation regularizedSqrt_(const Evaluation& x)
     {
-        typedef Opm::Spline<Scalar> Spline;
+        typedef Spline<Scalar> Spline;
 
         static const Scalar xMin = 1e-2;
         static const Scalar sqrtXMin = std::sqrt(xMin);
@@ -127,7 +127,7 @@ protected:
                                           fPrime0, fPrimeXMin); // m0, m1
 
         if (x > xMin)
-            return Opm::sqrt(x);
+            return sqrt(x);
         else if (x <= 0)
             return fPrime0 * x;
         else

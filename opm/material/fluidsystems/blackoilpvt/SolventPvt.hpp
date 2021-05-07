@@ -51,7 +51,7 @@ class SolventPvt
     typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
 
 public:
-    typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
+    typedef Tabulated1DFunction<Scalar> TabulatedOneDFunction;
 
     explicit SolventPvt() = default;
     SolventPvt(const std::vector<Scalar>& solventReferenceDensity,

@@ -124,7 +124,7 @@ public:
     static Evaluation pcnw(const Params& params, const FluidState& fluidState)
     {
         const Evaluation& Sw =
-            Opm::decay<Evaluation>(fluidState.saturation(Traits::wettingPhaseIdx));
+            decay<Evaluation>(fluidState.saturation(Traits::wettingPhaseIdx));
 
         return twoPhaseSatPcnw(params, Sw);
     }
@@ -193,7 +193,7 @@ public:
     static Evaluation krw(const Params& params, const FluidState& fluidState)
     {
         const Evaluation& Sw =
-            Opm::decay<Evaluation>(fluidState.saturation(Traits::wettingPhaseIdx));
+            decay<Evaluation>(fluidState.saturation(Traits::wettingPhaseIdx));
 
         return twoPhaseSatKrw(params, Sw);
     }
@@ -232,7 +232,7 @@ public:
     static Evaluation krn(const Params& params, const FluidState& fluidState)
     {
         const Evaluation& Sn =
-            Opm::decay<Evaluation>(fluidState.saturation(Traits::nonWettingPhaseIdx));
+            decay<Evaluation>(fluidState.saturation(Traits::nonWettingPhaseIdx));
 
         return twoPhaseSatKrn(params, 1.0 - Sn);
     }

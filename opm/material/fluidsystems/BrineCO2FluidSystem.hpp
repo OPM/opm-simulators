@@ -60,25 +60,25 @@ template <class Scalar, class CO2Tables>
 class BrineCO2FluidSystem
     : public BaseFluidSystem<Scalar, BrineCO2FluidSystem<Scalar, CO2Tables> >
 {
-    typedef Opm::H2O<Scalar> H2O_IAPWS;
-    typedef Opm::Brine<Scalar, H2O_IAPWS> Brine_IAPWS;
-    typedef Opm::TabulatedComponent<Scalar, H2O_IAPWS> H2O_Tabulated;
-    typedef Opm::TabulatedComponent<Scalar, Brine_IAPWS> Brine_Tabulated;
+    typedef ::Opm::H2O<Scalar> H2O_IAPWS;
+    typedef ::Opm::Brine<Scalar, H2O_IAPWS> Brine_IAPWS;
+    typedef TabulatedComponent<Scalar, H2O_IAPWS> H2O_Tabulated;
+    typedef TabulatedComponent<Scalar, Brine_IAPWS> Brine_Tabulated;
 
     typedef H2O_Tabulated H2O;
 
 public:
     template <class Evaluation>
-    struct ParameterCache : public Opm::NullParameterCache<Evaluation>
+    struct ParameterCache : public NullParameterCache<Evaluation>
     {};
 
     //! The type of the component for brine used by the fluid system
     typedef Brine_Tabulated Brine;
     //! The type of the component for pure CO2 used by the fluid system
-    typedef Opm::CO2<Scalar, CO2Tables> CO2;
+    typedef ::Opm::CO2<Scalar, CO2Tables> CO2;
 
     //! The binary coefficients for brine and CO2 used by this fluid system
-    typedef Opm::BinaryCoeff::Brine_CO2<Scalar, H2O, CO2> BinaryCoeffBrineCO2;
+    typedef BinaryCoeff::Brine_CO2<Scalar, H2O, CO2> BinaryCoeffBrineCO2;
 
     /****************************************
      * Fluid phase related static parameters
@@ -235,15 +235,15 @@ public:
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        const LhsEval& temperature = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const LhsEval& pressure = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const LhsEval& temperature = decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const LhsEval& pressure = decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         if (phaseIdx == liquidPhaseIdx) {
             // use normalized composition for to calculate the density
             // (the relations don't seem to take non-normalized
             // compositions too well...)
-            LhsEval xlBrine = Opm::min(1.0, Opm::max(0.0, Opm::decay<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, BrineIdx))));
-            LhsEval xlCO2 = Opm::min(1.0, Opm::max(0.0,  Opm::decay<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, CO2Idx))));
+            LhsEval xlBrine = min(1.0, max(0.0, decay<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, BrineIdx))));
+            LhsEval xlCO2 = min(1.0, max(0.0,  decay<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, CO2Idx))));
             LhsEval sumx = xlBrine + xlCO2;
             xlBrine /= sumx;
             xlCO2 /= sumx;
@@ -262,8 +262,8 @@ public:
         // use normalized composition for to calculate the density
         // (the relations don't seem to take non-normalized
         // compositions too well...)
-        LhsEval xgBrine = Opm::min(1.0, Opm::max(0.0, Opm::decay<LhsEval>(fluidState.moleFraction(gasPhaseIdx, BrineIdx))));
-        LhsEval xgCO2 = Opm::min(1.0, Opm::max(0.0,  Opm::decay<LhsEval>(fluidState.moleFraction(gasPhaseIdx, CO2Idx))));
+        LhsEval xgBrine = min(1.0, max(0.0, decay<LhsEval>(fluidState.moleFraction(gasPhaseIdx, BrineIdx))));
+        LhsEval xgCO2 = min(1.0, max(0.0,  decay<LhsEval>(fluidState.moleFraction(gasPhaseIdx, CO2Idx))));
         LhsEval sumx = xgBrine + xgCO2;
         xgBrine /= sumx;
         xgCO2 /= sumx;
@@ -286,8 +286,8 @@ public:
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        const LhsEval& temperature = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const LhsEval& pressure = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const LhsEval& temperature = decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const LhsEval& pressure = decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         if (phaseIdx == liquidPhaseIdx) {
             // assume pure brine for the liquid phase. TODO: viscosity
@@ -321,8 +321,8 @@ public:
             // as the relative fluid compositions are observed,
             return 1.0;
 
-        const LhsEval& temperature = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const LhsEval& pressure = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const LhsEval& temperature = decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const LhsEval& pressure = decay<LhsEval>(fluidState.pressure(phaseIdx));
         assert(temperature > 0);
         assert(pressure > 0);
 
@@ -339,8 +339,8 @@ public:
                                                     xgH2O);
 
         // normalize the phase compositions
-        xlCO2 = Opm::max(0.0, Opm::min(1.0, xlCO2));
-        xgH2O = Opm::max(0.0, Opm::min(1.0, xgH2O));
+        xlCO2 = max(0.0, min(1.0, xlCO2));
+        xgH2O = max(0.0, min(1.0, xgH2O));
 
         xlH2O = 1.0 - xlCO2;
         xgCO2 = 1.0 - xgH2O;
@@ -366,8 +366,8 @@ public:
                                         unsigned phaseIdx,
                                         unsigned /*compIdx*/)
     {
-        const LhsEval& temperature = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const LhsEval& pressure = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const LhsEval& temperature = decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const LhsEval& pressure = decay<LhsEval>(fluidState.pressure(phaseIdx));
         if (phaseIdx == liquidPhaseIdx)
             return BinaryCoeffBrineCO2::liquidDiffCoeff(temperature, pressure);
 
@@ -385,11 +385,11 @@ public:
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        const LhsEval& temperature = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const LhsEval& pressure = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const LhsEval& temperature = decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const LhsEval& pressure = decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         if (phaseIdx == liquidPhaseIdx) {
-            const LhsEval& XlCO2 = Opm::decay<LhsEval>(fluidState.massFraction(phaseIdx, CO2Idx));
+            const LhsEval& XlCO2 = decay<LhsEval>(fluidState.massFraction(phaseIdx, CO2Idx));
             const LhsEval& result = liquidEnthalpyBrineCO2_(temperature,
                                                             pressure,
                                                             Brine_IAPWS::salinity,
@@ -398,8 +398,8 @@ public:
             return result;
         }
         else {
-            const LhsEval& XCO2 = Opm::decay<LhsEval>(fluidState.massFraction(gasPhaseIdx, CO2Idx));
-            const LhsEval& XBrine = Opm::decay<LhsEval>(fluidState.massFraction(gasPhaseIdx, BrineIdx));
+            const LhsEval& XCO2 = decay<LhsEval>(fluidState.massFraction(gasPhaseIdx, CO2Idx));
+            const LhsEval& XBrine = decay<LhsEval>(fluidState.massFraction(gasPhaseIdx, BrineIdx));
 
             LhsEval result = 0;
             result += XBrine * Brine::gasEnthalpy(temperature, pressure);
@@ -444,8 +444,8 @@ public:
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        const LhsEval& temperature = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const LhsEval& pressure = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const LhsEval& temperature = decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const LhsEval& pressure = decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         if(phaseIdx == liquidPhaseIdx)
             return H2O::liquidHeatCapacity(temperature, pressure);
@@ -561,7 +561,7 @@ private:
         theta = T - 273.15;
 
         // Regularization
-        Scalar scalarTheta = Opm::scalarValue(theta);
+        Scalar scalarTheta = scalarValue(theta);
         Scalar S_lSAT = f[0] + scalarTheta*(f[1] + scalarTheta*(f[2] + scalarTheta*f[3]));
         if (S > S_lSAT)
             S = S_lSAT;
@@ -579,7 +579,7 @@ private:
 
         for (i = 0; i<=3; i++) {
             for (j=0; j<=2; j++) {
-                d_h = d_h + a[i][j] * Opm::pow(theta, static_cast<Scalar>(i)) * std::pow(m, j);
+                d_h = d_h + a[i][j] * pow(theta, static_cast<Scalar>(i)) * std::pow(m, j);
             }
         }
         /* heat of dissolution for halite according to Michaelides 1971 */

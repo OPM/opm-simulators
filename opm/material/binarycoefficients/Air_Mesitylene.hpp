@@ -58,13 +58,13 @@ public:
     template <class Evaluation>
     static Evaluation gasDiffCoeff(Evaluation temperature, Evaluation pressure)
     {
-        typedef Opm::Air<double> Air;
-        typedef Opm::Mesitylene<double> Mesitylene;
+        typedef Air<double> Air;
+        typedef Mesitylene<double> Mesitylene;
 
-        temperature = Opm::max(temperature, 1e-9); // regularization
-        temperature = Opm::min(temperature, 500.0); // regularization
-        pressure = Opm::max(pressure, 0.0); // regularization
-        pressure = Opm::min(pressure, 1e8); // regularization
+        temperature = max(temperature, 1e-9); // regularization
+        temperature = min(temperature, 500.0); // regularization
+        pressure = max(pressure, 0.0); // regularization
+        pressure = min(pressure, 1e8); // regularization
 
         const double M_m = 1e3*Mesitylene::molarMass(); // [g/mol] molecular weight of mesitylene
         const double M_a = 1e3*Air::molarMass(); // [g/mol] molecular weight of air
@@ -78,13 +78,13 @@ public:
         const double T_scal_am = std::sqrt(T_scal_a*T_scal_m);
 
         Evaluation T_star = temperature/T_scal_am;
-        T_star = Opm::max(T_star, 1e-5); // regularization
+        T_star = max(T_star, 1e-5); // regularization
 
-        const Evaluation Omega = 1.06036/Opm::pow(T_star, 0.1561) + 0.193/Opm::exp(T_star*0.47635)
-            + 1.03587/Opm::exp(T_star*1.52996) + 1.76474/Opm::exp(T_star*3.89411);
+        const Evaluation Omega = 1.06036/pow(T_star, 0.1561) + 0.193/exp(T_star*0.47635)
+            + 1.03587/exp(T_star*1.52996) + 1.76474/exp(T_star*3.89411);
         const double B_ = 0.00217 - 0.0005*std::sqrt(1.0/M_a + 1.0/M_m);
         const double Mr = (M_a + M_m)/(M_a*M_m);
-        const Evaluation D_am = (B_*Opm::pow(temperature, 1.5) * std::sqrt(Mr))
+        const Evaluation D_am = (B_*pow(temperature, 1.5) * std::sqrt(Mr))
                            /(1e-5*pressure*std::pow(sigma_am, 2.0) * Omega); // [cm^2/s]
 
         return 1e-4*D_am; // [m^2/s]

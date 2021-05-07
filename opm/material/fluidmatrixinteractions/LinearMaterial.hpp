@@ -103,7 +103,7 @@ public:
 
         for (unsigned phaseIdx = 0; phaseIdx < Traits::numPhases; ++phaseIdx) {
             const Evaluation& S =
-                Opm::decay<Evaluation>(state.saturation(phaseIdx));
+                decay<Evaluation>(state.saturation(phaseIdx));
             Valgrind::CheckDefined(S);
 
             values[phaseIdx] =
@@ -135,10 +135,10 @@ public:
 
         for (unsigned phaseIdx = 0; phaseIdx < Traits::numPhases; ++phaseIdx) {
             const Evaluation& S =
-                Opm::decay<Evaluation>(state.saturation(phaseIdx));
+                decay<Evaluation>(state.saturation(phaseIdx));
             Valgrind::CheckDefined(S);
 
-            values[phaseIdx] = Opm::max(Opm::min(S,1.0),0.0);
+            values[phaseIdx] = max(min(S,1.0),0.0);
         }
     }
 
@@ -149,7 +149,7 @@ public:
     static Evaluation pcnw(const Params& params, const FluidState& fs)
     {
         const Evaluation& Sw =
-            Opm::decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+            decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
         Valgrind::CheckDefined(Sw);
 
         const Evaluation& wPhasePressure =
@@ -157,7 +157,7 @@ public:
             (1.0 - Sw)*params.pcMinSat(Traits::wettingPhaseIdx);
 
         const Evaluation& Sn =
-            Opm::decay<Evaluation>(fs.saturation(Traits::nonWettingPhaseIdx));
+            decay<Evaluation>(fs.saturation(Traits::nonWettingPhaseIdx));
         Valgrind::CheckDefined(Sn);
 
         const Evaluation& nPhasePressure =
@@ -227,14 +227,14 @@ public:
     static Evaluation krw(const Params& /*params*/, const FluidState& fs)
     {
         const Evaluation& Sw =
-            Opm::decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
-        return Opm::max(0.0, Opm::min(1.0, Sw));
+            decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+        return max(0.0, min(1.0, Sw));
     }
 
     template <class Evaluation = Scalar>
     static typename std::enable_if<Traits::numPhases == 2, Evaluation>::type
     twoPhaseSatKrw(const Params& /*params*/, const Evaluation& Sw)
-    { return Opm::max(0.0, Opm::min(1.0, Sw)); }
+    { return max(0.0, min(1.0, Sw)); }
 
     /*!
      * \brief The relative permability of the liquid non-wetting phase
@@ -243,15 +243,15 @@ public:
     static Evaluation krn(const Params& /*params*/, const FluidState& fs)
     {
         const Evaluation& Sn =
-            Opm::decay<Evaluation>(fs.saturation(Traits::nonWettingPhaseIdx));
-        return Opm::max(0.0, Opm::min(1.0, Sn));
+            decay<Evaluation>(fs.saturation(Traits::nonWettingPhaseIdx));
+        return max(0.0, min(1.0, Sn));
     }
 
     template <class Evaluation = Scalar>
     static typename std::enable_if<Traits::numPhases == 2, Evaluation>::type
     twoPhaseSatKrn(const Params& /*params*/, const Evaluation& Sw)
     {
-        return Opm::max(0.0, Opm::min(1.0, Sw));
+        return max(0.0, min(1.0, Sw));
     }
 
     /*!
@@ -264,8 +264,8 @@ public:
     krg(const Params& /*params*/, const FluidState& fs)
     {
         const Evaluation& Sg =
-            Opm::decay<Evaluation>(fs.saturation(Traits::gasPhaseIdx));
-        return Opm::max(0.0, Opm::min(1.0, Sg));
+            decay<Evaluation>(fs.saturation(Traits::gasPhaseIdx));
+        return max(0.0, min(1.0, Sg));
     }
 
     /*!
@@ -278,7 +278,7 @@ public:
     pcgn(const Params& params, const FluidState& fs)
     {
         const Evaluation& Sn =
-            Opm::decay<Evaluation>(fs.saturation(Traits::nonWettingPhaseIdx));
+            decay<Evaluation>(fs.saturation(Traits::nonWettingPhaseIdx));
         Valgrind::CheckDefined(Sn);
 
         const Evaluation& nPhasePressure =
@@ -286,7 +286,7 @@ public:
             (1.0 - Sn)*params.pcMinSat(Traits::nonWettingPhaseIdx);
 
         const Evaluation& Sg =
-            Opm::decay<Evaluation>(fs.saturation(Traits::gasPhaseIdx));
+            decay<Evaluation>(fs.saturation(Traits::gasPhaseIdx));
         Valgrind::CheckDefined(Sg);
 
         const Evaluation& gPhasePressure =

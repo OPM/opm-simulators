@@ -189,8 +189,8 @@ public:
      *
      * This requires that the opm-parser module is available.
      */
-    void initFromState(const Opm::EclipseState& eclState,
-                       Opm::EclTwoPhaseSystemType twoPhaseSystemType,
+    void initFromState(const EclipseState& eclState,
+                       EclTwoPhaseSystemType twoPhaseSystemType,
                        const std::string& prefix = "",
                        const std::string& suffix = "")
     {
@@ -215,11 +215,11 @@ public:
         if (eclState.getTableManager().useJFunc()) {
             const auto flag = eclState.getTableManager().getJFunc().flag();
 
-            enableLeverettScaling_ = (flag == Opm::JFunc::Flag::BOTH)
+            enableLeverettScaling_ = (flag == JFunc::Flag::BOTH)
                 || ((twoPhaseSystemType == EclOilWaterSystem) &&
-                    (flag == Opm::JFunc::Flag::WATER))
+                    (flag == JFunc::Flag::WATER))
                 || ((twoPhaseSystemType == EclGasOilSystem) &&
-                    (flag == Opm::JFunc::Flag::GAS));
+                    (flag == JFunc::Flag::GAS));
         }
 
         const auto& fp = eclState.fieldProps();

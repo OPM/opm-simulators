@@ -69,8 +69,8 @@ public:
     template <class Evaluation>
     static Evaluation gasDiffCoeff(const Evaluation& temperature, const Evaluation& pressure)
     {
-        typedef Opm::H2O<double> H2O;
-        typedef Opm::N2<double> N2;
+        typedef H2O<double> H2O;
+        typedef N2<double> N2;
 
         // atomic diffusion volumes
         const double SigmaNu[2] = { 13.1 /* H2O */,  18.5 /* N2 */ };

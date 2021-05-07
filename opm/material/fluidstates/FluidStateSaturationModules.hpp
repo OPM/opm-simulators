@@ -68,7 +68,7 @@ public:
     void assign(const FluidState& fs)
     {
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            saturation_[phaseIdx] = Opm::decay<Scalar>(fs.saturation(phaseIdx));
+            saturation_[phaseIdx] = decay<Scalar>(fs.saturation(phaseIdx));
         }
     }
 

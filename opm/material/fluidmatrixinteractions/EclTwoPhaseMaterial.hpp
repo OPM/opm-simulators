@@ -135,7 +135,7 @@ public:
         switch (params.approach()) {
         case EclTwoPhaseApproach::EclTwoPhaseGasOil: {
             const Evaluation& So =
-                Opm::decay<Evaluation>(fluidState.saturation(oilPhaseIdx));
+                decay<Evaluation>(fluidState.saturation(oilPhaseIdx));
 
             values[oilPhaseIdx] = 0.0;
             values[gasPhaseIdx] = GasOilMaterialLaw::twoPhaseSatPcnw(params.gasOilParams(), So);
@@ -144,7 +144,7 @@ public:
 
         case EclTwoPhaseApproach::EclTwoPhaseOilWater: {
             const Evaluation& Sw =
-                Opm::decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
+                decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
 
             values[waterPhaseIdx] = 0.0;
             values[oilPhaseIdx] = OilWaterMaterialLaw::twoPhaseSatPcnw(params.oilWaterParams(), Sw);
@@ -153,7 +153,7 @@ public:
 
         case EclTwoPhaseApproach::EclTwoPhaseGasWater: {
             const Evaluation& Sw =
-                Opm::decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
+                decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
 
             values[waterPhaseIdx] = 0.0;           
             values[gasPhaseIdx] = GasWaterMaterialLaw::twoPhaseSatPcnw(params.gasWaterParams(), Sw);
@@ -323,7 +323,7 @@ public:
         switch (params.approach()) {
         case EclTwoPhaseApproach::EclTwoPhaseGasOil: {
             const Evaluation& So =
-                Opm::decay<Evaluation>(fluidState.saturation(oilPhaseIdx));
+                decay<Evaluation>(fluidState.saturation(oilPhaseIdx));
 
             values[oilPhaseIdx] = GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), So);
             values[gasPhaseIdx] = GasOilMaterialLaw::twoPhaseSatKrn(params.gasOilParams(), So);
@@ -332,7 +332,7 @@ public:
 
         case EclTwoPhaseApproach::EclTwoPhaseOilWater: {
             const Evaluation& Sw =
-                Opm::decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
+                decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
 
             values[waterPhaseIdx] = OilWaterMaterialLaw::twoPhaseSatKrw(params.oilWaterParams(), Sw);
             values[oilPhaseIdx] = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sw);
@@ -341,7 +341,7 @@ public:
 
         case EclTwoPhaseApproach::EclTwoPhaseGasWater: {
             const Evaluation& Sw =
-                Opm::decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
+                decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
             
             values[waterPhaseIdx] = GasWaterMaterialLaw::twoPhaseSatKrw(params.gasWaterParams(), Sw);
             values[gasPhaseIdx] = GasWaterMaterialLaw::twoPhaseSatKrn(params.gasWaterParams(), Sw);
@@ -394,21 +394,21 @@ public:
     {
         switch (params.approach()) {
         case EclTwoPhaseApproach::EclTwoPhaseGasOil: {
-            Scalar So = Opm::scalarValue(fluidState.saturation(oilPhaseIdx));
+            Scalar So = scalarValue(fluidState.saturation(oilPhaseIdx));
 
             params.gasOilParams().update(/*pcSw=*/So, /*krwSw=*/So, /*krnSw=*/So);
             break;
         }
 
         case EclTwoPhaseApproach::EclTwoPhaseOilWater: {
-            Scalar Sw = Opm::scalarValue(fluidState.saturation(waterPhaseIdx));
+            Scalar Sw = scalarValue(fluidState.saturation(waterPhaseIdx));
 
             params.oilWaterParams().update(/*pcSw=*/Sw, /*krwSw=*/Sw, /*krnSw=*/Sw);
             break;
         }
 
         case EclTwoPhaseApproach::EclTwoPhaseGasWater: {
-            Scalar Sw = Opm::scalarValue(fluidState.saturation(waterPhaseIdx));
+            Scalar Sw = scalarValue(fluidState.saturation(waterPhaseIdx));
            
             params.gasWaterParams().update(/*pcSw=*/1.0, /*krwSw=*/0.0, /*krnSw=*/Sw);
             break;

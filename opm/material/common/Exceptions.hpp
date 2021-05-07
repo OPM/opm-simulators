@@ -39,7 +39,7 @@
 namespace Opm {
 class NumericalIssue
 #if HAVE_OPM_COMMON
-    : public Opm::NumericalProblem
+    : public NumericalProblem
 #else
     : public std::runtime_error
 #endif
@@ -47,7 +47,7 @@ class NumericalIssue
 public:
     explicit NumericalIssue(const std::string &message)
 #if HAVE_OPM_COMMON
-      : Opm::NumericalProblem(message)
+      : NumericalProblem(message)
 #else
       : std::runtime_error(message)
 #endif

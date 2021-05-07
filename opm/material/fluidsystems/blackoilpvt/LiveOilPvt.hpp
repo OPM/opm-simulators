@@ -54,8 +54,8 @@ class LiveOilPvt
     typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
 
 public:
-    typedef Opm::UniformXTabulated2DFunction<Scalar> TabulatedTwoDFunction;
-    typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
+    typedef UniformXTabulated2DFunction<Scalar> TabulatedTwoDFunction;
+    typedef Tabulated1DFunction<Scalar> TabulatedOneDFunction;
 
     LiveOilPvt()
     {
@@ -531,11 +531,11 @@ public:
 
         // apply the vaporization parameters for the gas phase (cf. the Eclipse VAPPARS
         // keyword)
-        maxOilSaturation = Opm::min(maxOilSaturation, Scalar(1.0));
+        maxOilSaturation = min(maxOilSaturation, Scalar(1.0));
         if (vapPar2_ > 0.0 && maxOilSaturation > 0.01 && oilSaturation < maxOilSaturation) {
             static const Scalar eps = 0.001;
-            const Evaluation& So = Opm::max(oilSaturation, eps);
-            tmp *= Opm::max(1e-3, Opm::pow(So/maxOilSaturation, vapPar2_));
+            const Evaluation& So = max(oilSaturation, eps);
+            tmp *= max(1e-3, pow(So/maxOilSaturation, vapPar2_));
         }
 
         return tmp;
@@ -552,7 +552,7 @@ public:
                                   const Evaluation& temperature OPM_UNUSED,
                                   const Evaluation& Rs) const
     {
-        typedef Opm::MathToolbox<Evaluation> Toolbox;
+        typedef MathToolbox<Evaluation> Toolbox;
 
         const auto& RsTable = saturatedGasDissolutionFactorTable_[regionIdx];
         const Scalar eps = std::numeric_limits<typename Toolbox::Scalar>::epsilon()*1e6;
@@ -570,7 +570,7 @@ public:
 
             // If the derivative is "zero" Newton will not converge,
             // so simply return our initial guess.
-            if (std::abs(Opm::scalarValue(fPrime)) < 1.0e-30) {
+            if (std::abs(scalarValue(fPrime)) < 1.0e-30) {
                 return pSat;
             }
 
@@ -588,7 +588,7 @@ public:
                 pSat = 0.0;
             }
 
-            if (std::abs(Opm::scalarValue(delta)) < std::abs(Opm::scalarValue(pSat))*eps)
+            if (std::abs(scalarValue(delta)) < std::abs(scalarValue(pSat))*eps)
                 return pSat;
         }
 
