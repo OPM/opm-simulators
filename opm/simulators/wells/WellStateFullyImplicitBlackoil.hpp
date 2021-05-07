@@ -150,7 +150,7 @@ namespace Opm
                 const int connpos = well_info[1];
                 const int num_perf_this_well = well_info[2];
                 const int global_num_perf_this_well = parallel_well_info[w]->communication().sum(num_perf_this_well);
-                auto * perf_press = &this->perfPress()[connpos];
+                auto& perf_press = this->perfPress(w);
                 auto * phase_rates = &this->mutable_perfPhaseRates()[connpos * this->numPhases()];
 
                 for (int perf = 0; perf < num_perf_this_well; ++perf) {
@@ -311,8 +311,8 @@ namespace Opm
                         // perfPressures
                         if (global_num_perf_same)
                         {
-                            auto * target_press = &perfPress()[connpos];
-                            const auto * src_press = &prevState->perfPress()[oldPerf_idx_beg];
+                            auto& target_press = perfPress(w);
+                            const auto& src_press = prevState->perfPress(well.name());
                             for (int perf = 0; perf < num_perf_this_well; ++perf)
                             {
                                 target_press[perf] = src_press[perf];
@@ -714,8 +714,7 @@ namespace Opm
                         // top segment is always the first one, and its pressure is the well bhp
                         seg_press_.push_back(bhp()[w]);
                         const int top_segment = top_segment_index_[w];
-                        const int start_perf = connpos;
-                        const auto * perf_press = &this->perfPress()[start_perf];
+                        const auto& perf_press = this->perfPress(w);
                         for (int seg = 1; seg < well_nseg; ++seg) {
                             if ( !segment_perforations[seg].empty() ) {
                                 const int first_perf = segment_perforations[seg][0];
