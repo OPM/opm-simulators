@@ -188,6 +188,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/core/props/phaseUsageFromDeck.hpp
   opm/core/props/satfunc/RelpermDiagnostics.hpp
   opm/simulators/timestepping/SimulatorReport.hpp
+  opm/simulators/wells/WellContainer.hpp
   opm/simulators/wells/WellState.hpp
   opm/simulators/aquifers/AquiferInterface.hpp
   opm/simulators/aquifers/AquiferCarterTracy.hpp
