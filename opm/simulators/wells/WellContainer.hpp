@@ -27,6 +27,19 @@
 
 namespace Opm {
 
+
+/*
+  The WellContainer<T> class is a small utility class designed to manage the
+  dynamic state of per well quantities, like active control and phase rates. The
+  values are stored continously in a vector, but they are added with a name, and
+  can also be accessed and updated with the name.
+
+  The class is created to facilitate safe and piecewise refactoring of the
+  WellStateFullyImplicitBlackOil class, and might have a short life in the
+  development timeline.
+*/
+
+
 template <class T>
 class WellContainer {
 public:
@@ -57,6 +70,10 @@ public:
         this->data.at(index) = std::forward<T>(value);
     }
 
+    /*
+      Will copy the value from other to this - for all wells which are present
+      in both containers.
+    */
     void copy_welldata(const WellContainer<T>& other) {
         if (this->index_map == other.index_map)
             this->data = other.data;
@@ -66,6 +83,10 @@ public:
         }
     }
 
+    /*
+      Will copy the value for well @name from other to this. The well @name must
+      exist in both containers, otherwise an exception is thrown.
+    */
     void copy_welldata(const WellContainer<T>& other, const std::string& name) {
         auto this_index = this->index_map.at(name);
         auto other_index = other.index_map.at(name);
