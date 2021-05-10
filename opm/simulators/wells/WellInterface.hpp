@@ -182,12 +182,11 @@ namespace Opm
 
         virtual void solveEqAndUpdateWellState(WellState& well_state, Opm::DeferredLogger& deferred_logger) = 0;
 
-        virtual void assembleWellEq(const Simulator& ebosSimulator,
-                                    const double dt,
-                                    WellState& well_state,
-                                    const GroupState& group_state,
-                                    Opm::DeferredLogger& deferred_logger
-                                    ) = 0;
+        void assembleWellEq(const Simulator& ebosSimulator,
+                            const double dt,
+                            WellState& well_state,
+                            const GroupState& group_state,
+                            Opm::DeferredLogger& deferred_logger);
 
         virtual void gasLiftOptimizationStage1 (
             WellState& well_state,
@@ -345,6 +344,8 @@ namespace Opm
                                Opm::DeferredLogger& deferred_logger);
 
         const PhaseUsage& phaseUsage() const;
+
+        virtual bool useInnerIterations() const = 0;
 
     protected:
 

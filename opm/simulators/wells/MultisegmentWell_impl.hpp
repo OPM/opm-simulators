@@ -255,35 +255,6 @@ namespace Opm
 
 
 
-
-
-    template <typename TypeTag>
-    void
-    MultisegmentWell<TypeTag>::
-    assembleWellEq(const Simulator& ebosSimulator,
-                   const double dt,
-                   WellState& well_state,
-                   const GroupState& group_state,
-                   DeferredLogger& deferred_logger)
-    {
-
-        checkWellOperability(ebosSimulator, well_state, deferred_logger);
-
-        const bool use_inner_iterations = param_.use_inner_iterations_ms_wells_;
-        if (use_inner_iterations) {
-            this->iterateWellEquations(ebosSimulator, dt, well_state, group_state, deferred_logger);
-        }
-
-        const auto& summary_state = ebosSimulator.vanguard().summaryState();
-        const auto inj_controls = well_ecl_.isInjector() ? well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
-        const auto prod_controls = well_ecl_.isProducer() ? well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
-        assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
-    }
-
-
-
-
-
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::

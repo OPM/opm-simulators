@@ -136,12 +136,6 @@ namespace Opm
             // Not implemented yet
         }
 
-        virtual void assembleWellEq(const Simulator& ebosSimulator,
-                                    const double dt,
-                                    WellState& well_state,
-                                    const GroupState& group_state,
-                                    DeferredLogger& deferred_logger) override;
-
         /// updating the well state based the current control mode
         void updateWellStateWithTarget(const Simulator& ebos_simulator,
                                        WellState& well_state,
@@ -207,6 +201,10 @@ namespace Opm
                                     const std::vector<EvalWell>& mobility,
                                     double* connII,
                                     DeferredLogger& deferred_logger) const;
+
+        virtual bool useInnerIterations() const override {
+            return param_.use_inner_iterations_ms_wells_;
+        }
     protected:
         int number_segments_;
 

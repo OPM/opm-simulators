@@ -181,12 +181,6 @@ namespace Opm
 
         virtual void initPrimaryVariablesEvaluation() const override;
 
-        virtual void assembleWellEq(const Simulator& ebosSimulator,
-                                    const double dt,
-                                    WellState& well_state,
-                                    const GroupState& group_state,
-                                    Opm::DeferredLogger& deferred_logger) override;
-
         void updateWellStateWithTarget(const Simulator& ebos_simulator,
                                        WellState& well_state,
                                        Opm::DeferredLogger& deferred_logger) const;
@@ -329,6 +323,10 @@ namespace Opm
                                     const std::vector<EvalWell>& mobility,
                                     double* connII,
                                     DeferredLogger& deferred_logger) const;
+
+        virtual bool useInnerIterations() const override {
+            return param_.use_inner_iterations_wells_;
+        }
 
     protected:
         // protected functions from the Base class
