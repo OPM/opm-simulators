@@ -521,6 +521,8 @@ namespace Opm
 
         double scalingFactor(const int comp_idx) const;
 
+        std::vector<double> initialWellRateFrations(const Simulator& ebosSimulator, const std::vector<double>& potentials) const;
+
         // whether a well is specified with a non-zero and valid VFP table number
         bool isVFPActive(Opm::DeferredLogger& deferred_logger) const;
 
