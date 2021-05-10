@@ -1056,13 +1056,6 @@ namespace Opm {
             // Set the well primary variables based on the value of well solutions
             initPrimaryVariablesEvaluation();
 
-            if (param_.solve_welleq_initially_ && iterationIdx == 0) {
-                for (auto& well : well_container_) {
-                    well->solveWellEquation(ebosSimulator_, this->wellState(), this->groupState(), local_deferredLogger);
-                }
-                updateWellControls(local_deferredLogger, /* check group controls */ false);
-            }
-
             maybeDoGasLiftOptimize(local_deferredLogger);
             assembleWellEq(dt, local_deferredLogger);
         } catch (const std::runtime_error& e) {
@@ -1682,10 +1675,7 @@ namespace Opm {
         try {
             for (const auto& well : well_container_) {
                 well->checkWellOperability(ebosSimulator_, this->wellState(), deferred_logger);
-            }
-            // since the controls are all updated, we should update well_state accordingly
-            for (const auto& well : well_container_) {
-                const int w = well->indexOfWell();
+
                 if (!well->isOperable() ) continue;
 
                 auto& events = this->wellState().events();
@@ -1695,7 +1685,13 @@ namespace Opm {
                     // so next time step, the well does not consider to have effective events anymore.
                     events.clearEvent(well->name(), WellStateFullyImplicitBlackoil::event_mask);
                 }
-            }
+
+                // solve the well equation initially to improve the initial solution of the well model
+                if (param_.solve_welleq_initially_) {
+                    well->solveWellEquation(ebosSimulator_, this->wellState(), this->groupState(), deferred_logger);
+                }
+
+             }  // end of for (const auto& well : well_container_)
             updatePrimaryVariables(deferred_logger);
         } catch (const std::runtime_error& e) {
             exc_type = ExceptionType::RUNTIME_ERROR;
