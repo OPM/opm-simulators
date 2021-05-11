@@ -672,10 +672,10 @@ private:
 
 template <class Grid, class EquilGrid, class GridView>
 CollectDataToIORank<Grid,EquilGrid,GridView>::
-CollectDataToIORank(const Grid& grid, const EquilGrid& equilGrid,
+CollectDataToIORank(const Grid& grid, const EquilGrid* equilGrid,
                     const GridView& localGridView,
                     const Dune::CartesianIndexMapper<Grid>& cartMapper,
-                    const Dune::CartesianIndexMapper<EquilGrid>& equilCartMapper)
+                    const Dune::CartesianIndexMapper<EquilGrid>* equilCartMapper)
     : toIORankComm_()
 {
     // index maps only have to be build when reordering is needed
@@ -706,9 +706,9 @@ CollectDataToIORank(const Grid& grid, const EquilGrid& equilGrid,
             // We need a mapping from local to global grid, here we
             // use equilGrid which represents a view on the global grid
             // reserve memory
-            const size_t globalSize = equilGrid.leafGridView().size(0);
+            const size_t globalSize = equilGrid->leafGridView().size(0);
             globalCartesianIndex_.resize(globalSize, -1);
-            const EquilGridView equilGridView = equilGrid.leafGridView();
+            const EquilGridView equilGridView = equilGrid->leafGridView();
 
             using EquilElementMapper = Dune::MultipleCodimMultipleGeomTypeMapper<EquilGridView>;
             EquilElementMapper equilElemMapper(equilGridView, Dune::mcmgElementLayout());
@@ -718,11 +718,11 @@ CollectDataToIORank(const Grid& grid, const EquilGrid& equilGrid,
             grid.scatterData(handle);
 
             // loop over all elements (global grid) and store Cartesian index
-            auto elemIt = equilGrid.leafGridView().template begin<0>();
-            const auto& elemEndIt = equilGrid.leafGridView().template end<0>();
+            auto elemIt = equilGrid->leafGridView().template begin<0>();
+            const auto& elemEndIt = equilGrid->leafGridView().template end<0>();
             for (; elemIt != elemEndIt; ++elemIt) {
                 int elemIdx = equilElemMapper.index(*elemIt);
-                int cartElemIdx = equilCartMapper.cartesianIndex(elemIdx);
+                int cartElemIdx = equilCartMapper->cartesianIndex(elemIdx);
                 globalCartesianIndex_[elemIdx] = cartElemIdx;
             }
 

@@ -58,10 +58,10 @@ public:
         !std::is_same<Grid, EquilGrid>::value;
 
     CollectDataToIORank(const Grid& grid,
-                        const EquilGrid& equilGrid,
+                        const EquilGrid* equilGrid,
                         const GridView& gridView,
                         const Dune::CartesianIndexMapper<Grid>& cartMapper,
-                        const Dune::CartesianIndexMapper<EquilGrid>& equilCartMapper);
+                        const Dune::CartesianIndexMapper<EquilGrid>* equilCartMapper);
 
     // gather solution to rank 0 for EclipseWriter
     void collect(const Opm::data::Solution& localCellData,
