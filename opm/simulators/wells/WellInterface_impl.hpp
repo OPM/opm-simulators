@@ -97,10 +97,12 @@ namespace Opm
 
         wsolvent_ = 0.0;
 
-        if ((has_solvent || has_zFraction) && well.isInjector()) {
-            auto injectorType = well_ecl_.injectorType();
-            if (injectorType == InjectorType::GAS) {
-                wsolvent_ = well_ecl_.getSolventFraction();
+        if constexpr (has_solvent || has_zFraction) {
+            if (well.isInjector()) {
+                auto injectorType = well_ecl_.injectorType();
+                if (injectorType == InjectorType::GAS) {
+                    wsolvent_ = well_ecl_.getSolventFraction();
+                }
             }
         }
     }

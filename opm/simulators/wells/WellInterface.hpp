@@ -107,8 +107,8 @@ namespace Opm
         typedef Dune::BlockVector<VectorBlockType> BVector;
         typedef DenseAd::Evaluation<double, /*size=*/numEq> Eval;
 
-        static const bool has_solvent = getPropValue<TypeTag, Properties::EnableSolvent>();
-        static const bool has_zFraction = getPropValue<TypeTag, Properties::EnableExtbo>();
+        static constexpr bool has_solvent = getPropValue<TypeTag, Properties::EnableSolvent>();
+        static constexpr bool has_zFraction = getPropValue<TypeTag, Properties::EnableExtbo>();
         static const bool has_polymer = getPropValue<TypeTag, Properties::EnablePolymer>();
         static const bool has_energy = getPropValue<TypeTag, Properties::EnableEnergy>();
         static const bool has_temperature = getPropValue<TypeTag, Properties::EnableTemperature>();
