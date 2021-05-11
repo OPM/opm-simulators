@@ -24,6 +24,7 @@
 #include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/wells/ALQState.hpp>
 #include <opm/simulators/wells/GlobalWellInfo.hpp>
+#include <opm/simulators/wells/WellContainer.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
@@ -115,7 +116,17 @@ namespace Opm
             well_dissolved_gas_rates_.resize(nw, 0.0);
             well_vaporized_oil_rates_.resize(nw, 0.0);
 
-            this->events_ = schedule[report_step].wellgroup_events();
+            this->events_.clear();
+            {
+                const auto& wg_events = schedule[report_step].wellgroup_events();
+                for (const auto& ecl_well : wells_ecl) {
+                    const auto& wname = ecl_well.name();
+                    if (wg_events.has(wname))
+                        this->events_.add( wname, wg_events.at(wname) );
+                    else
+                        this->events_.add( wname, Events() );
+                }
+            }
             // Ensure that we start out with zero rates by default.
             perfphaserates_.clear();
             perfphaserates_.resize(nperf * this->numPhases(), 0.0);
@@ -230,7 +241,7 @@ namespace Opm
                         thp()[ newIndex ] = prevState->thp()[ oldIndex ];
 
                         // If new target is set using WCONPROD, WCONINJE etc. we use the new control
-                        if (!this->events_.hasEvent(well.name(), WellStateFullyImplicitBlackoil::event_mask)) {
+                        if (!this->events_[w].hasEvent(WellStateFullyImplicitBlackoil::event_mask)) {
                             current_injection_controls_[ newIndex ] = prevState->currentInjectionControls()[ oldIndex ];
                             current_production_controls_[ newIndex ] = prevState->currentProductionControls()[ oldIndex ];
                         }
@@ -789,8 +800,8 @@ namespace Opm
         }
 
 
-        WellGroupEvents& events() {
-            return this->events_;
+        Events& events(std::size_t well_index) {
+            return this->events_[well_index];
         }
 
         const std::vector<int>& firstPerfIndex() const
@@ -1175,7 +1186,7 @@ namespace Opm
         // some events happens to the well, like this well is a new well
         // or new well control keywords happens
         // \Note: for now, only WCON* keywords, and well status change is considered
-        WellGroupEvents events_;
+        WellContainer<Events> events_;
 
         // MS well related
         // for StandardWell, the number of segments will be one

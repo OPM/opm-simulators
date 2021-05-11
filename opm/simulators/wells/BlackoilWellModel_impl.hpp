@@ -814,14 +814,14 @@ namespace Opm {
                 if (this->wellTestState_.hasWellClosed(well_name)) {
                     // TODO: more checking here, to make sure this standard more specific and complete
                     // maybe there is some WCON keywords will not open the well
-                    auto& events = this->wellState().events();
-                    if (events.hasEvent(well_name, WellStateFullyImplicitBlackoil::event_mask)) {
+                    auto& events = this->wellState().events(w);
+                    if (events.hasEvent(WellStateFullyImplicitBlackoil::event_mask)) {
                         if (wellTestState_.lastTestTime(well_name) == ebosSimulator_.time()) {
                             // The well was shut this timestep, we are most likely retrying
                             // a timestep without the well in question, after it caused
                             // repeated timestep cuts. It should therefore not be opened,
                             // even if it was new or received new targets this report step.
-                            events.clearEvent(well_name, WellStateFullyImplicitBlackoil::event_mask);
+                            events.clearEvent(WellStateFullyImplicitBlackoil::event_mask);
                         } else {
                             wellTestState_.openWell(well_name);
                         }
@@ -1678,12 +1678,12 @@ namespace Opm {
 
                 if (!well->isOperable() ) continue;
 
-                auto& events = this->wellState().events();
-                if (events.hasEvent(well->name(), WellStateFullyImplicitBlackoil::event_mask)) {
+                auto& events = this->wellState().events(w);
+                if (events.hasEvent(WellStateFullyImplicitBlackoil::event_mask)) {
                     well->updateWellStateWithTarget(ebosSimulator_, this->wellState(), deferred_logger);
                     // There is no new well control change input within a report step,
                     // so next time step, the well does not consider to have effective events anymore.
-                    events.clearEvent(well->name(), WellStateFullyImplicitBlackoil::event_mask);
+                    events.clearEvent(WellStateFullyImplicitBlackoil::event_mask);
                 }
 
                 // solve the well equation initially to improve the initial solution of the well model
