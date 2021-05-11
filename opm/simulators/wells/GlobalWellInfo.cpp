@@ -56,7 +56,7 @@ bool GlobalWellInfo::in_producing_group(const std::string& wname) const {
 }
 
 
-void GlobalWellInfo::update_group(const std::vector<Well::Status>& well_status, const std::vector<Well::InjectorCMode>& injection_cmode, const std::vector<Well::ProducerCMode>& production_cmode) {
+void GlobalWellInfo::update_group(const WellContainer<Well::Status>& well_status, const std::vector<Well::InjectorCMode>& injection_cmode, const std::vector<Well::ProducerCMode>& production_cmode) {
     if (well_status.size() != this->local_map.size())
         throw std::logic_error("Size mismatch");
 

@@ -26,6 +26,7 @@
 #include <vector>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
+#include <opm/simulators/wells/WellContainer.hpp>
 
 namespace Opm {
 
@@ -69,7 +70,7 @@ public:
     GlobalWellInfo(const Schedule& sched, std::size_t report_step, const std::vector<Well>& local_wells);
     bool in_producing_group(const std::string& wname) const;
     bool in_injecting_group(const std::string& wname) const;
-    void update_group(const std::vector<Well::Status>& well_status, const std::vector<Well::InjectorCMode>& injection_cmode, const std::vector<Well::ProducerCMode>& production_cmode);
+    void update_group(const WellContainer<Well::Status>& well_status, const std::vector<Well::InjectorCMode>& injection_cmode, const std::vector<Well::ProducerCMode>& production_cmode);
     std::size_t well_index(const std::string& wname) const;
     const std::string& well_name(std::size_t well_index) const;
 
