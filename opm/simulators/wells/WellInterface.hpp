@@ -34,7 +34,6 @@
 
 #include <opm/core/props/BlackoilPhases.hpp>
 
-#include <opm/simulators/wells/RateConverter.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/wells/WellHelpers.hpp>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
@@ -60,27 +59,24 @@ namespace Opm {
 #include <opm/material/densead/Math.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 
-#include <opm/simulators/wells/WellInterfaceGeneric.hpp>
+#include <opm/simulators/wells/WellInterfaceFluidSystem.hpp>
 
-#include <string>
-#include <memory>
-#include <vector>
+#include <array>
 #include <cassert>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace Opm
 {
 
 
     template<typename TypeTag>
-    class WellInterface : public WellInterfaceGeneric
+    class WellInterface : public WellInterfaceFluidSystem<GetPropType<TypeTag, Properties::FluidSystem>>
     {
     public:
 
         using ModelParameters = BlackoilModelParametersEbos<TypeTag>;
-
-        static const int Water = BlackoilPhases::Aqua;
-        static const int Oil = BlackoilPhases::Liquid;
-        static const int Gas = BlackoilPhases::Vapour;
 
         using Grid = GetPropType<TypeTag, Properties::Grid>;
         using Simulator = GetPropType<TypeTag, Properties::Simulator>;
@@ -105,6 +101,14 @@ namespace Opm
         using BVector = Dune::BlockVector<VectorBlockType>;
         using Eval = DenseAd::Evaluation<Scalar, /*size=*/numEq>;
 
+        using RateConverterType =
+        typename WellInterfaceFluidSystem<FluidSystem>::RateConverterType;
+
+        using WellInterfaceFluidSystem<FluidSystem>::Gas;
+        using WellInterfaceFluidSystem<FluidSystem>::Oil;
+        using WellInterfaceFluidSystem<FluidSystem>::Water;
+        using RatioLimitCheckReport = typename WellInterfaceFluidSystem<FluidSystem>::RatioLimitCheckReport;
+
         static constexpr bool has_solvent = getPropValue<TypeTag, Properties::EnableSolvent>();
         static constexpr bool has_zFraction = getPropValue<TypeTag, Properties::EnableExtbo>();
         static constexpr bool has_polymer = getPropValue<TypeTag, Properties::EnablePolymer>();
@@ -123,8 +127,6 @@ namespace Opm
         static const int contiBrineEqIdx = Indices::contiBrineEqIdx;
 
         // For the conversion between the surface volume rate and reservoir voidage rate
-        using RateConverterType = RateConverter::
-        SurfaceToReservoirVoidage<FluidSystem, std::vector<int> >;
         static const bool compositionSwitchEnabled = Indices::gasEnabled;
         using FluidState = BlackOilFluidState<Eval,
                                               FluidSystem,
@@ -176,12 +178,6 @@ namespace Opm
             GLiftWellStateMap& state_map
         ) const = 0;
 
-        void updateWellTestState(const WellState& well_state,
-                                 const double& simulationTime,
-                                 const bool& writeMessageToOPMLog,
-                                 WellTestState& wellTestState,
-                                 DeferredLogger& deferred_logger) const;
-
         /// using the solution x to recover the solution xw for wells and applying
         /// xw to update Well State
         virtual void recoverWellSolutionAndUpdateWellState(const BVector& x,
@@ -227,9 +223,6 @@ namespace Opm
         {
             return false;
         }
-
-        // updating the voidage rates in well_state when requested
-        void calculateReservoirRates(WellState& well_state) const;
 
         // Add well contributions to matrix
         virtual void addWellContributions(SparseMatrixAdapter&) const = 0;
@@ -291,14 +284,8 @@ namespace Opm
 
     protected:
 
-        // to indicate a invalid completion
-        static const int INVALIDCOMPLETION = INT_MAX;
-
         // simulation parameters
         const ModelParameters& param_;
-
-        // For the conversion between the surface volume rate and resrevoir voidage rate
-        const RateConverterType& rateConverter_;
 
         std::vector<RateVector> connectionRates_;
 
@@ -318,10 +305,6 @@ namespace Opm
 
         double wsalt() const;
 
-        bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
-                                 const double * rates_or_potentials,
-                                 DeferredLogger& deferred_logger) const;
-
         template <class ValueType>
         ValueType calculateBhpFromThp(const WellState& well_state, const std::vector<ValueType>& rates, const Well& well, const SummaryState& summaryState, DeferredLogger& deferred_logger) const;
 
@@ -329,37 +312,6 @@ namespace Opm
 
         // Component fractions for each phase for the well
         const std::vector<double>& compFrac() const;
-
-        struct RatioLimitCheckReport;
-
-        void checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
-                              const WellState& well_state,
-                              RatioLimitCheckReport& report) const;
-
-        void checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
-                              const WellState& well_state,
-                              RatioLimitCheckReport& report) const;
-
-        void checkMaxWGRLimit(const WellEconProductionLimits& econ_production_limits,
-                              const WellState& well_state,
-                              RatioLimitCheckReport& report) const;
-
-        void checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
-                                  const WellState& well_state,
-                                  RatioLimitCheckReport& report,
-                                  DeferredLogger& deferred_logger) const;
-
-
-        template <typename RatioFunc>
-        bool checkMaxRatioLimitWell(const WellState& well_state,
-                                    const double max_ratio_limit,
-                                    const RatioFunc& ratioFunc) const;
-
-        template <typename RatioFunc>
-        void checkMaxRatioLimitCompletions(const WellState& well_state,
-                                           const double max_ratio_limit,
-                                           const RatioFunc& ratioFunc,
-                                           RatioLimitCheckReport& report) const;
 
         double scalingFactor(const int comp_idx) const;
 
@@ -408,45 +360,8 @@ namespace Opm
                                   const GroupState& group_state,
                                   DeferredLogger& deferred_logger);
 
-        void updateWellTestStateEconomic(const WellState& well_state,
-                                         const double simulation_time,
-                                         const bool write_message_to_opmlog,
-                                         WellTestState& well_test_state,
-                                         DeferredLogger& deferred_logger) const;
-
         void solveWellForTesting(const Simulator& ebosSimulator, WellState& well_state, const GroupState& group_state,
                                  DeferredLogger& deferred_logger);
-
-        bool checkConstraints(WellState& well_state,
-                              const GroupState& group_state,
-                              const Schedule& schedule,
-                              const SummaryState& summaryState,
-                              DeferredLogger& deferred_logger) const;
-
-        bool checkIndividualConstraints(WellState& well_state,
-                                        const SummaryState& summaryState) const;
-
-        bool checkGroupConstraints(WellState& well_state,
-                                   const GroupState& group_state,
-                                   const Schedule& schedule,
-                                   const SummaryState& summaryState,
-                                   DeferredLogger& deferred_logger) const;
-
-        std::pair<bool, double> checkGroupConstraintsProd(const Group& group,
-                                       const WellState& well_state,
-                                                          const GroupState& group_state,
-                                       const double efficiencyFactor,
-                                       const Schedule& schedule,
-                                       const SummaryState& summaryState,
-                                       DeferredLogger& deferred_logger) const;
-
-        std::pair<bool, double> checkGroupConstraintsInj(const Group& group,
-                                      const WellState& well_state,
-                                                         const GroupState& group_state,
-                                      const double efficiencyFactor,
-                                      const Schedule& schedule,
-                                      const SummaryState& summaryState,
-                                      DeferredLogger& deferred_logger) const;
 
         template <class EvalWell>
         void getGroupInjectionControl(const Group& group,
@@ -495,15 +410,6 @@ namespace Opm
                                    BhpFromThpFunc bhp_from_thp,
                                    EvalWell& control_eq,
                                    DeferredLogger& deferred_logger);
-    };
-
-    template<typename TypeTag>
-    struct
-    WellInterface<TypeTag>::
-    RatioLimitCheckReport{
-        bool ratio_limit_violated = false;
-        int worst_offending_completion = INVALIDCOMPLETION;
-        double violation_extent = 0.0;
     };
 
 }

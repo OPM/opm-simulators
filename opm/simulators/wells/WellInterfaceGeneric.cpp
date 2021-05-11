@@ -382,5 +382,4 @@ double WellInterfaceGeneric::getALQ(const WellState& well_state) const
     return well_state.getALQ(name());
 }
 
-
 } // namespace Opm
