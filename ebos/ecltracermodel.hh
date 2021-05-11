@@ -103,6 +103,28 @@ public:
                      gasPhaseIdx, oilPhaseIdx, waterPhaseIdx);
     }
 
+    /*!
+     * \brief Collect well tracer rates for reporting
+     */
+    void addTracerRatesToWells(Opm::data::WellRates& wellDatas) const
+    {
+
+       if (numTracers()==0)
+          return; // no tracers today
+
+       for (const auto& wTR : wellTracerRate_) {
+          std::string wellName = wTR.first.first;
+          std::string tracerName = tracerNames_[wTR.first.second];
+          double rate = wTR.second;
+          if (!wellDatas.count(wellName)) {
+                Opm::data::Well wellData;
+                wellDatas.emplace(std::make_pair(wellName, wellData));
+          }
+          Opm::data::Well& wellData = wellDatas.at(wellName);
+          wellData.rates.set(Opm::data::Rates::opt::tracer, rate, tracerName);
+       }
+    }
+
     void beginTimeStep()
     {
         if (this->numTracers()==0)
@@ -285,6 +307,8 @@ protected:
         const auto& wells = simulator_.vanguard().schedule().getWells(episodeIdx);
         for (const auto& well : wells) {
 
+            wellTracerRate_[std::make_pair(well.name(),tracerIdx)] = 0.0;
+
             if (well.getStatus() == Well::Status::SHUT)
                 continue;
 
@@ -299,17 +323,34 @@ protected:
                 cartesianCoordinate[1] = connection.getJ();
                 cartesianCoordinate[2] = connection.getK();
                 const size_t cartIdx = simulator_.vanguard().cartesianIndex(cartesianCoordinate);
-                const int I = this->cartToGlobal_[cartIdx];
-                Scalar rate = simulator_.problem().wellModel().well(well.name())->volumetricSurfaceRateForConnection(I, this->tracerPhaseIdx_[tracerIdx]);
-                if (rate > 0)
-                    this->tracerResidual_[I][0] -= rate*wtracer;
-                else if (rate < 0)
-                    this->tracerResidual_[I][0] -= rate*this->tracerConcentration_[tracerIdx][I];
+                const int I = cartToGlobal_[cartIdx];
+                Scalar rate = simulator_.problem().wellModel().well(well.name())->volumetricSurfaceRateForConnection(I, tracerPhaseIdx_[tracerIdx]);
+                if (rate > 0) {
+                    tracerResidual_[I][0] -= rate*wtracer;
+                    wellTracerRate_.at(std::make_pair(well.name(),tracerIdx)) += rate*wtracer;
+                }
+                else if (rate < 0) {
+                    tracerResidual_[I][0] -= rate*tracerConcentration_[tracerIdx][I];
+                    wellTracerRate_.at(std::make_pair(well.name(),tracerIdx)) += rate*tracerConcentration_[tracerIdx][I];
+                }
             }
         }
     }
 
     Simulator& simulator_;
+
+    std::vector<std::string> tracerNames_;
+    std::vector<int> tracerPhaseIdx_;
+    std::vector<Dune::BlockVector<Dune::FieldVector<Scalar, 1>>> tracerConcentration_;
+    std::vector<Dune::BlockVector<Dune::FieldVector<Scalar, 1>>> tracerConcentrationInitial_;
+    TracerMatrix *tracerMatrix_;
+    TracerVector tracerResidual_;
+    std::vector<int> cartToGlobal_;
+    std::vector<Dune::BlockVector<Dune::FieldVector<Scalar, 1>>> storageOfTimeIndex1_;
+
+    // <wellName, tracerIdx> -> wellRate
+    std::map<std::pair<std::string, int>, double> wellTracerRate_;
+
 };
 
 } // namespace Opm

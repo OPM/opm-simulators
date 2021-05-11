@@ -170,6 +170,8 @@ public:
             simulator_.vanguard().externalSetupTime();
 
         const auto localWellData            = simulator_.problem().wellModel().wellData();
+        simulator_.problem().tracerModel().addTracerRatesToWells(const_cast<Opm::data::WellRates&>(localWellData));
+
         const auto localGroupAndNetworkData = simulator_.problem().wellModel()
             .groupAndNetworkData(reportStepNum);
 
