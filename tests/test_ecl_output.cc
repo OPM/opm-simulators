@@ -151,10 +151,10 @@ BOOST_AUTO_TEST_CASE(Summary)
     using GridView = Opm::GetPropType<TypeTag, Opm::Properties::GridView>;
     using CollectDataToIORankType = Opm::CollectDataToIORank<Grid,EquilGrid,GridView>;
     CollectDataToIORankType collectToIORank(simulator->vanguard().grid(),
-                                            simulator->vanguard().equilGrid(),
+                                            &simulator->vanguard().equilGrid(),
                                             simulator->vanguard().gridView(),
                                             simulator->vanguard().cartesianIndexMapper(),
-                                            simulator->vanguard().equilCartesianIndexMapper());
+                                            &simulator->vanguard().equilCartesianIndexMapper());
     Opm::EclOutputBlackOilModule<TypeTag> eclOutputModule(*simulator, {}, collectToIORank);
 
     typedef Opm::EclWriter<TypeTag> EclWriterType;

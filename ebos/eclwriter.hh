@@ -191,10 +191,12 @@ public:
     EclWriter(Simulator& simulator)
         : simulator_(simulator)
         , collectToIORank_(simulator_.vanguard().grid(),
-                           simulator_.vanguard().equilGrid(),
+                           simulator_.vanguard().grid().comm().rank() == 0 ?
+                           &simulator_.vanguard().equilGrid() : nullptr,
                            simulator_.vanguard().gridView(),
                            simulator_.vanguard().cartesianIndexMapper(),
-                           simulator_.vanguard().equilCartesianIndexMapper())
+                           simulator_.vanguard().grid().comm().rank() == 0 ?
+                           &simulator_.vanguard().equilCartesianIndexMapper() : nullptr)
 
     {
         std::vector<std::size_t> wbp_index_list;
