@@ -64,7 +64,7 @@ std::string ebosBlackOilGetDeckFileName(int argc, char** argv)
                                      /*allowUnused=*/true,
                                      /*handleHelp=*/false);
     std::string rawDeckFileName = EWOMS_GET_PARAM(ProblemTypeTag, std::string, EclDeckFileName);
-    std::string result = Vanguard::canonicalDeckPath(rawDeckFileName).string();
+    std::string result = Vanguard::canonicalDeckPath(rawDeckFileName);
     Parameters::reset<ProblemTypeTag>();
 
     return result;
@@ -83,7 +83,9 @@ std::unique_ptr<ParseContext> ebosBlackOilCreateParseContext(int argc, char** ar
                                      /*doRegistration=*/true,
                                      /*allowUnused=*/true,
                                      /*handleHelp=*/false);
-    std::unique_ptr<ParseContext> result = Vanguard::createParseContext();
+    const std::string ignoredKeywords = EWOMS_GET_PARAM(ProblemTypeTag, std::string, IgnoreKeywords);
+    bool eclStrictParsing = EWOMS_GET_PARAM(ProblemTypeTag, bool, EclStrictParsing);
+    std::unique_ptr<ParseContext> result = Vanguard::createParseContext(ignoredKeywords, eclStrictParsing);
     Parameters::reset<ProblemTypeTag>();
 
     return result;

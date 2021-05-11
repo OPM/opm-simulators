@@ -29,6 +29,7 @@
 
 #include "ebos.hh"
 #include "startEbos.hh"
+#include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
 namespace Opm::Properties {
 
