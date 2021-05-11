@@ -584,6 +584,8 @@ namespace Opm
         const int np = number_of_phases_;
 
         std::vector<RateVector> connectionRates = connectionRates_; // Copy to get right size.
+        const int rate_start_offset = first_perf_ * number_of_phases_;
+        auto * perf_rates = &well_state.mutable_perfPhaseRates()[rate_start_offset];
         for (int perf = 0; perf < number_of_perforations_; ++perf) {
             // Calculate perforation quantities.
             std::vector<EvalWell> cq_s(num_components_, {numWellEq_ + numEq, 0.0});
@@ -620,7 +622,7 @@ namespace Opm
                 if (has_solvent && componentIdx == contiSolventEqIdx) {
                     well_state.perfRateSolvent()[first_perf_ + perf] = cq_s[componentIdx].value();
                 } else {
-                    well_state.perfPhaseRates()[(first_perf_ + perf) * np + ebosCompIdxToFlowCompIdx(componentIdx)] = cq_s[componentIdx].value();
+                    perf_rates[perf*np + ebosCompIdxToFlowCompIdx(componentIdx)] = cq_s[componentIdx].value();
                 }
             }
 
@@ -836,7 +838,8 @@ namespace Opm
         }
 
         // Store the perforation pressure for later usage.
-        well_state.perfPress()[first_perf_ + perf] = well_state.bhp()[index_of_well_] + perf_pressure_diffs_[perf];
+        auto * perf_press = &well_state.perfPress()[first_perf_];
+        perf_press[perf] = well_state.bhp()[index_of_well_] + perf_pressure_diffs_[perf];
     }
 
 
@@ -1644,9 +1647,10 @@ namespace Opm
         }
 
         // Compute the average pressure in each well block
+        const auto * perf_press = &well_state.perfPress()[first_perf_];
         auto p_above =  this->parallel_well_info_.communicateAboveValues(well_state.bhp()[w],
-                                                                          well_state.perfPress().data()+first_perf_,
-                                                                          nperf);
+                                                                         perf_press,
+                                                                         nperf);
 
         for (int perf = 0; perf < nperf; ++perf) {
             const int cell_idx = well_cells_[perf];
@@ -1655,7 +1659,7 @@ namespace Opm
 
             // TODO: this is another place to show why WellState need to be a vector of WellState.
             // TODO: to check why should be perf - 1
-            const double p_avg = (well_state.perfPress()[first_perf_ + perf] + p_above[perf])/2;
+            const double p_avg = (perf_press[perf] + p_above[perf])/2;
             const double temperature = fs.temperature(FluidSystem::oilPhaseIdx).value();
             const double saltConcentration = fs.saltConcentration().value();
 
@@ -2080,9 +2084,10 @@ namespace Opm
         const int nperf = number_of_perforations_;
         const int np = number_of_phases_;
         std::vector<double> perfRates(b_perf.size(),0.0);
+        const auto * perf_rates_state = &well_state.perfPhaseRates()[first_perf_ * np];
         for (int perf = 0; perf < nperf; ++perf) {
             for (int comp = 0; comp < np; ++comp) {
-                perfRates[perf * num_components_ + comp] =  well_state.perfPhaseRates()[(first_perf_ + perf) * np + ebosCompIdxToFlowCompIdx(comp)];
+                perfRates[perf * num_components_ + comp] =  perf_rates_state[perf * np + ebosCompIdxToFlowCompIdx(comp)];
             }
             if(has_solvent) {
                 perfRates[perf * num_components_ + contiSolventEqIdx] =  well_state.perfRateSolvent()[first_perf_ + perf];
