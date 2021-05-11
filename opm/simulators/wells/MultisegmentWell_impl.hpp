@@ -2642,6 +2642,9 @@ namespace Opm
 
             // calculating the perforation rate for each perforation that belongs to this segment
             const EvalWell seg_pressure = getSegmentPressure(seg);
+            const int rate_start_offset = first_perf_ * number_of_phases_;
+            auto * perf_rates = &well_state.mutable_perfPhaseRates()[rate_start_offset];
+            auto * perf_press_state = &well_state.perfPress()[first_perf_];
             for (const int perf : segment_perforations_[seg]) {
                 const int cell_idx = well_cells_[perf];
                 const auto& int_quants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
@@ -2662,11 +2665,10 @@ namespace Opm
                 }
 
                 // store the perf pressure and rates
-                const int rate_start_offset = (first_perf_ + perf) * number_of_phases_;
                 for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
-                    well_state.mutable_perfPhaseRates()[rate_start_offset + ebosCompIdxToFlowCompIdx(comp_idx)] = cq_s[comp_idx].value();
+                    perf_rates[perf*number_of_phases_ + ebosCompIdxToFlowCompIdx(comp_idx)] = cq_s[comp_idx].value();
                 }
-                well_state.perfPress()[first_perf_ + perf] = perf_press.value();
+                perf_press_state[perf] = perf_press.value();
 
                 for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
                     // the cq_s entering mass balance equations need to consider the efficiency factors.
