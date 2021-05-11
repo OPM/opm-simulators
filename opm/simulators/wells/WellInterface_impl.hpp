@@ -40,62 +40,13 @@ namespace Opm
                   const int index_of_well,
                   const int first_perf_index,
                   const std::vector<PerforationData>& perf_data)
-      : well_ecl_(well)
-      , parallel_well_info_(pw_info)
-      , current_step_(time_step)
+      : WellInterfaceGeneric(well, pw_info, time_step, pvtRegionIdx,
+                             num_components, num_phases, index_of_well,
+                             first_perf_index, perf_data)
       , param_(param)
       , rateConverter_(rate_converter)
-      , pvtRegionIdx_(pvtRegionIdx)
-      , num_components_(num_components)
-      , number_of_phases_(num_phases)
-      , index_of_well_(index_of_well)
-      , first_perf_(first_perf_index)
-      , perf_data_(&perf_data)
-      , ipr_a_(number_of_phases_)
-      , ipr_b_(number_of_phases_)
     {
-        assert(well.name()==pw_info.name());
-        assert(std::is_sorted(perf_data.begin(), perf_data.end(),
-                              [](const auto& perf1, const auto& perf2){
-                                  return perf1.ecl_index < perf2.ecl_index;
-                              }));
-        if (time_step < 0) {
-            OPM_THROW(std::invalid_argument, "Negtive time step is used to construct WellInterface");
-        }
-
-        ref_depth_ = well.getRefDepth();
-
-        // We do not want to count SHUT perforations here, so
-        // it would be wrong to use wells.getConnections().size().
-        number_of_perforations_ = perf_data.size();
-
-        // perforations related
-        {
-            well_cells_.resize(number_of_perforations_);
-            well_index_.resize(number_of_perforations_);
-            saturation_table_number_.resize(number_of_perforations_);
-            int perf = 0;
-            for (const auto& pd : perf_data) {
-                well_cells_[perf] = pd.cell_index;
-                well_index_[perf] = pd.connection_transmissibility_factor;
-                saturation_table_number_[perf] = pd.satnum_id;
-                ++perf;
-            }
-        }
-
-        // initialization of the completions mapping
-        initCompletions();
-
-        well_efficiency_factor_ = 1.0;
-
         connectionRates_.resize(number_of_perforations_);
-
-        this->wellStatus_ = Well::Status::OPEN;
-        if (well.getStatus() == Well::Status::STOP) {
-            this->wellStatus_ = Well::Status::STOP;
-        }
-
-        wsolvent_ = 0.0;
 
         if constexpr (has_solvent || has_zFraction) {
             if (well.isInjector()) {
@@ -106,18 +57,6 @@ namespace Opm
             }
         }
     }
-
-    template<typename TypeTag>
-    void
-    WellInterface<TypeTag>::
-    updatePerforatedCell(std::vector<bool>& is_cell_perforated)
-    {
-
-        for (int perf_idx = 0; perf_idx<number_of_perforations_; ++perf_idx) {
-            is_cell_perforated[well_cells_[perf_idx]] = true;
-        }
-    }
-
 
 
     template<typename TypeTag>
@@ -133,153 +72,6 @@ namespace Opm
         gravity_ = gravity_arg;
         B_avg_ = B_avg;
     }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    WellInterface<TypeTag>::
-    initCompletions()
-    {
-        assert(completions_.empty() );
-
-        const WellConnections& connections = well_ecl_.getConnections();
-        const std::size_t num_conns = connections.size();
-
-        int num_active_connections = 0;
-        auto my_next_perf = perf_data_->begin();
-        for (std::size_t c = 0; c < num_conns; ++c) {
-            if (my_next_perf == perf_data_->end())
-            {
-                break;
-            }
-            if (my_next_perf->ecl_index > c)
-            {
-                continue;
-            }
-            assert(my_next_perf->ecl_index == c);
-            if (connections[c].state() == Connection::State::OPEN) {
-                completions_[connections[c].complnum()].push_back(num_active_connections++);
-            }
-            ++my_next_perf;
-        }
-        assert(my_next_perf == perf_data_->end());
-    }
-
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    WellInterface<TypeTag>::
-    setVFPProperties(const VFPProperties* vfp_properties_arg)
-    {
-        vfp_properties_ = vfp_properties_arg;
-    }
-
-    template<typename TypeTag>
-    void
-    WellInterface<TypeTag>::
-    setGuideRate(const GuideRate* guide_rate_arg)
-    {
-        guide_rate_ = guide_rate_arg;
-    }
-
-
-    template<typename TypeTag>
-    const std::string&
-    WellInterface<TypeTag>::
-    name() const
-    {
-        return well_ecl_.name();
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    bool
-    WellInterface<TypeTag>::
-    isInjector() const
-    {
-        return well_ecl_.isInjector();
-    }
-
-
-
-
-    template<typename TypeTag>
-    bool
-    WellInterface<TypeTag>::
-    isProducer() const
-    {
-        return well_ecl_.isProducer();
-    }
-
-
-
-
-    template<typename TypeTag>
-    int
-    WellInterface<TypeTag>::
-    indexOfWell() const
-    {
-        return index_of_well_;
-    }
-
-
-
-
-
-
-    template<typename TypeTag>
-    bool
-    WellInterface<TypeTag>::
-    getAllowCrossFlow() const
-    {
-        return well_ecl_.getAllowCrossFlow();
-    }
-
-
-
-
-    template<typename TypeTag>
-    void
-    WellInterface<TypeTag>::
-    setWellEfficiencyFactor(const double efficiency_factor)
-    {
-        well_efficiency_factor_ = efficiency_factor;
-    }
-
-
-
-    template<typename TypeTag>
-    const Well&
-    WellInterface<TypeTag>::
-    wellEcl() const
-    {
-      return well_ecl_;
-    }
-
-
-
-    template<typename TypeTag>
-    const PhaseUsage&
-    WellInterface<TypeTag>::
-    phaseUsage() const
-    {
-        assert(phase_usage_ != nullptr);
-
-        return *phase_usage_;
-    }
-
-
-
 
 
     template<typename TypeTag>
@@ -332,40 +124,6 @@ namespace Opm
         // for other phases return the index
         return compIdx;
     }
-
-
-
-
-    template<typename TypeTag>
-    double
-    WellInterface<TypeTag>::
-    wsolvent() const
-    {
-        return wsolvent_;
-    }
-
-
-
-    template<typename TypeTag>
-    void
-    WellInterface<TypeTag>::
-    setWsolvent(const double wsolvent)
-    {
-       wsolvent_ = wsolvent;
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    WellInterface<TypeTag>::
-    setDynamicThpLimit(const double thp_limit)
-    {
-       dynamic_thp_limit_ = thp_limit;
-    }
-
 
 
 
@@ -438,78 +196,6 @@ namespace Opm
     }
 
 
-
-
-    template<typename TypeTag>
-    bool
-    WellInterface<TypeTag>::
-    wellHasTHPConstraints(const SummaryState& summaryState) const
-    {
-        if (dynamic_thp_limit_) {
-            return true;
-        }
-
-        if (well_ecl_.isInjector()) {
-            const auto controls = well_ecl_.injectionControls(summaryState);
-            if (controls.hasControl(Well::InjectorCMode::THP))
-                return true;
-        }
-
-        if (well_ecl_.isProducer( )) {
-            const auto controls = well_ecl_.productionControls(summaryState);
-            if (controls.hasControl(Well::ProducerCMode::THP))
-                return true;
-        }
-
-        return false;
-
-    }
-
-    template<typename TypeTag>
-    double
-    WellInterface<TypeTag>::
-    mostStrictBhpFromBhpLimits(const SummaryState& summaryState) const
-    {
-        if (well_ecl_.isInjector()) {
-            const auto& controls = well_ecl_.injectionControls(summaryState);
-            return controls.bhp_limit;
-        }
-
-        if (well_ecl_.isProducer( )) {
-            const auto& controls = well_ecl_.productionControls(summaryState);
-            return controls.bhp_limit;
-        }
-
-        return 0.0;
-    }
-
-    template<typename TypeTag>
-    double
-    WellInterface<TypeTag>::
-    getTHPConstraint(const SummaryState& summaryState) const
-    {
-        if (dynamic_thp_limit_) {
-            return *dynamic_thp_limit_;
-        }
-        if (well_ecl_.isInjector()) {
-            const auto& controls = well_ecl_.injectionControls(summaryState);
-            return controls.thp_limit;
-        }
-
-        if (well_ecl_.isProducer( )) {
-            const auto& controls = well_ecl_.productionControls(summaryState);
-            return controls.thp_limit;
-        }
-
-        return 0.0;
-
-    }
-
-
-
-
-
-
     template<typename TypeTag>
     bool
     WellInterface<TypeTag>::
@@ -566,18 +252,6 @@ namespace Opm
         }
 
         return changed;
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    bool
-    WellInterface<TypeTag>::
-    underPredictionMode() const
-    {
-        return well_ecl_.predictionMode();
     }
 
 
@@ -670,7 +344,7 @@ namespace Opm
              const auto& controls = well.productionControls(summaryState);
              const double vfp_ref_depth = vfp_properties_->getProd()->getTable(controls.vfp_table_number).getDatumDepth();
              const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
-             return vfp_properties_->getProd()->bhp(controls.vfp_table_number, aqua, liquid, vapour, this->getTHPConstraint(summaryState), getALQ(well_state)) - dp;
+             return vfp_properties_->getProd()->bhp(controls.vfp_table_number, aqua, liquid, vapour, this->getTHPConstraint(summaryState), this->getALQ(well_state)) - dp;
          }
          else {
              OPM_DEFLOG_THROW(std::logic_error, "Expected INJECTOR or PRODUCER for well " + name(), deferred_logger);
@@ -681,13 +355,6 @@ namespace Opm
     }
 
 
-    template<typename TypeTag>
-    double
-    WellInterface<TypeTag>::
-    getALQ(const WellState &well_state) const
-    {
-        return well_state.getALQ(name());
-    }
 
 
 
@@ -995,36 +662,6 @@ namespace Opm
     template<typename TypeTag>
     void
     WellInterface<TypeTag>::
-    updateWellTestStatePhysical(const WellState& /* well_state */,
-                                const double simulation_time,
-                                const bool write_message_to_opmlog,
-                                WellTestState& well_test_state,
-                                DeferredLogger& deferred_logger) const
-    {
-        if (!isOperable()) {
-            if (well_test_state.hasWellClosed(name(), WellTestConfig::Reason::ECONOMIC) ||
-                well_test_state.hasWellClosed(name(), WellTestConfig::Reason::PHYSICAL) ) {
-                // Already closed, do nothing.
-            } else {
-                well_test_state.closeWell(name(), WellTestConfig::Reason::PHYSICAL, simulation_time);
-                if (write_message_to_opmlog) {
-                    const std::string action = well_ecl_.getAutomaticShutIn() ? "shut" : "stopped";
-                    const std::string msg = "Well " + name()
-                        + " will be " + action + " as it can not operate under current reservoir conditions.";
-                    deferred_logger.info(msg);
-                }
-            }
-        }
-
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    WellInterface<TypeTag>::
     updateWellTestStateEconomic(const WellState& well_state,
                                 const double simulation_time,
                                 const bool write_message_to_opmlog,
@@ -1245,50 +882,6 @@ namespace Opm
 
 
 
-
-
-    template<typename TypeTag>
-    void
-    WellInterface<TypeTag>::
-    setRepRadiusPerfLength(const std::vector<int>& cartesian_to_compressed)
-    {
-        const int nperf = number_of_perforations_;
-
-        perf_rep_radius_.clear();
-        perf_length_.clear();
-        bore_diameters_.clear();
-
-        perf_rep_radius_.reserve(nperf);
-        perf_length_.reserve(nperf);
-        bore_diameters_.reserve(nperf);
-
-        // COMPDAT handling
-        const auto& connectionSet = well_ecl_.getConnections();
-        CheckDistributedWellConnections checker(well_ecl_, parallel_well_info_);
-        for (size_t c=0; c<connectionSet.size(); c++) {
-            const auto& connection = connectionSet.get(c);
-            const int cell =
-                cartesian_to_compressed[connection.global_index()];
-            if (connection.state() != Connection::State::OPEN || cell >= 0)
-            {
-                checker.connectionFound(c);
-            }
-            if (connection.state() == Connection::State::OPEN) {
-
-                if (cell >= 0) {
-                    double radius = connection.rw();
-                    double re = connection.re(); // area equivalent radius of the grid block
-                    double perf_length = connection.connectionLength(); // the length of the well perforation
-                    const double repR = std::sqrt(re * radius);
-                    perf_rep_radius_.push_back(repR);
-                    perf_length_.push_back(perf_length);
-                    bore_diameters_.push_back(2. * radius);
-                }
-            }
-        }
-        checker.checkAllConnectionsFound();
-    }
-
     template<typename TypeTag>
     double
     WellInterface<TypeTag>::scalingFactor(const int phaseIdx) const
@@ -1307,47 +900,6 @@ namespace Opm
         assert(false);
         return 1.0;
     }
-
-
-
-
-
-    template<typename TypeTag>
-    bool
-    WellInterface<TypeTag>::isVFPActive(DeferredLogger& deferred_logger) const
-    {
-        // since the well_controls only handles the VFP number when THP constraint/target is there.
-        // we need to get the table number through the parser, in case THP constraint/target is not there.
-        // When THP control/limit is not active, if available VFP table is provided, we will still need to
-        // update THP value. However, it will only used for output purpose.
-        if (isProducer()) { // producer
-            const int table_id = well_ecl_.vfp_table_number();
-            if (table_id <= 0) {
-                return false;
-            } else {
-                if (vfp_properties_->getProd()->hasTable(table_id)) {
-                    return true;
-                } else {
-                    OPM_DEFLOG_THROW(std::runtime_error, "VFPPROD table " << std::to_string(table_id) << " is specfied,"
-                              << " for well " << name() << ", while we could not access it during simulation", deferred_logger);
-                }
-            }
-
-        } else { // injector
-            const int table_id = well_ecl_.vfp_table_number();
-            if (table_id <= 0) {
-                return false;
-            } else {
-                if (vfp_properties_->getInj()->hasTable(table_id)) {
-                    return true;
-                } else {
-                    OPM_DEFLOG_THROW(std::runtime_error, "VFPINJ table " << std::to_string(table_id) << " is specfied,"
-                              << " for well " << name() << ", while we could not access it during simulation", deferred_logger);
-                }
-            }
-        }
-    }
-
 
 
 
@@ -1390,22 +942,6 @@ namespace Opm
 
         for (int p = 0; p < np; ++p) {
             well_state.wellReservoirRates()[well_rate_index + p] = voidage_rates[p];
-        }
-    }
-
-    template<typename TypeTag>
-    void
-    WellInterface<TypeTag>::closeCompletions(WellTestState& wellTestState)
-    {
-        const auto& connections = well_ecl_.getConnections();
-        int perfIdx = 0;
-        for (const auto& connection : connections) {
-            if (connection.state() == Connection::State::OPEN) {
-                if (wellTestState.hasCompletion(name(), connection.complnum())) {
-                    well_index_[perfIdx] = 0.0;
-                }
-                perfIdx++;
-            }
         }
     }
 
@@ -2003,15 +1539,6 @@ namespace Opm
         }
         return scaling_factor;
     }
-
-    template<typename TypeTag>
-    bool
-    WellInterface<TypeTag>::
-    isOperable() const {
-        return operability_status_.isOperable();
-    }
-
-
 
 
 
