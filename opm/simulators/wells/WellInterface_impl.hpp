@@ -400,19 +400,19 @@ namespace Opm
     WellInterface<TypeTag>::
     wfoam() const
     {
-        if (!has_foam) {
-            return 0.0;
+        if constexpr (has_foam) {
+            auto injectorType = well_ecl_.injectorType();
+
+            if (injectorType == InjectorType::GAS) {
+                WellFoamProperties fprop = well_ecl_.getFoamProperties();
+                return fprop.m_foamConcentration;
+            } else {
+                // Not a gas injection well => no foam.
+                return 0.0;
+            }
         }
 
-        auto injectorType = well_ecl_.injectorType();
-
-        if (injectorType == InjectorType::GAS) {
-            WellFoamProperties fprop = well_ecl_.getFoamProperties();
-            return fprop.m_foamConcentration;
-        } else {
-            // Not a gas injection well => no foam.
-            return 0.0;
-        }
+        return 0.0;
     }
 
 
