@@ -1678,7 +1678,7 @@ namespace Opm {
 
                 if (!well->isOperable() ) continue;
 
-                auto& events = this->wellState().events(w);
+                auto& events = this->wellState().events(well->indexOfWell());
                 if (events.hasEvent(WellStateFullyImplicitBlackoil::event_mask)) {
                     well->updateWellStateWithTarget(ebosSimulator_, this->wellState(), deferred_logger);
                     // There is no new well control change input within a report step,
