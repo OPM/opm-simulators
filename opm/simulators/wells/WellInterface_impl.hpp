@@ -375,20 +375,20 @@ namespace Opm
     WellInterface<TypeTag>::
     wpolymer() const
     {
-        if (!has_polymer) {
-            return 0.0;
+        if constexpr (has_polymer) {
+            auto injectorType = well_ecl_.injectorType();
+
+            if (injectorType == InjectorType::WATER) {
+                WellPolymerProperties polymer = well_ecl_.getPolymerProperties();
+                const double polymer_injection_concentration = polymer.m_polymerConcentration;
+                return polymer_injection_concentration;
+            } else {
+                // Not a water injection well => no polymer.
+                return 0.0;
+            }
         }
 
-        auto injectorType = well_ecl_.injectorType();
-
-        if (injectorType == InjectorType::WATER) {
-            WellPolymerProperties polymer = well_ecl_.getPolymerProperties();
-            const double polymer_injection_concentration = polymer.m_polymerConcentration;
-            return polymer_injection_concentration;
-        } else {
-            // Not a water injection well => no polymer.
-            return 0.0;
-        }
+        return 0.0;
     }
 
 
