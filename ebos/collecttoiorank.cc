@@ -30,6 +30,11 @@
 
 #include <dune/grid/common/gridenums.hh>
 #include <dune/grid/common/mcmgmapper.hh>
+#if HAVE_DUNE_FEM
+#include <dune/fem/gridpart/adaptiveleafgridpart.hh>
+#include <dune/fem/gridpart/common/gridpart2gridview.hh>
+#include <ebos/femcpgridcompat.hh>
+#endif
 
 #include <cassert>
 #include <stdexcept>
@@ -892,9 +897,15 @@ isCartIdxOnThisRank(int cartIdx) const
 
 
 
+#if HAVE_DUNE_FEM
+template class CollectDataToIORank<Dune::CpGrid,
+                                   Dune::CpGrid,
+                                   Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>>;
+#else
 template class CollectDataToIORank<Dune::CpGrid,
                                    Dune::CpGrid,
                                    Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>;
+#endif
 template class CollectDataToIORank<Dune::PolyhedralGrid<3,3,double>,
                                    Dune::PolyhedralGrid<3,3,double>,
                                    Dune::GridView<Dune::PolyhedralGridViewTraits<3,3,double,Dune::PartitionIteratorType(4)>>>;
