@@ -683,7 +683,8 @@ namespace Opm
                         const int start_perf = connpos;
 
                         // make sure the information from wells_ecl consistent with wells
-                        assert(n_activeperf == (start_perf_next_well - start_perf));
+                        assert((n_activeperf == num_perf_this_well) &&
+                               "Inconsistent number of reservoir connections in well");
 
                         if (pu.phase_used[Gas]) {
                             auto * perf_rates = &this->mutable_perfPhaseRates()[np * start_perf];
