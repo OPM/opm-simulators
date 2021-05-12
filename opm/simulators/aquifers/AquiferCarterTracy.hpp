@@ -84,6 +84,10 @@ public:
         data.type = data::AquiferType::CarterTracy;
 
         data.aquCT = std::make_shared<data::CarterTracyData>();
+        data.aquCT->timeConstant = this->aquct_data_.timeConstant();
+        data.aquCT->influxConstant = this->aquct_data_.influxConstant();
+        data.aquCT->waterDensity = this->aquct_data_.waterDensity();
+        data.aquCT->waterViscosity = this->aquct_data_.waterViscosity();
         data.aquCT->dimensionless_time = this->dimensionless_time_;
         data.aquCT->dimensionless_pressure = this->dimensionless_pressure_;
 
@@ -92,10 +96,10 @@ public:
 
 protected:
     // Variables constants
-    const AquiferCT::AQUCT_data aquct_data_;
+    AquiferCT::AQUCT_data aquct_data_;
+
     Scalar beta_; // Influx constant
     // TODO: it is possible it should be a AD variable
-    Scalar mu_w_{1}; // water viscosity
     Scalar fluxValue_{0}; // value of flux
 
     Scalar dimensionless_time_{0};
@@ -112,26 +116,31 @@ protected:
     {
         // We use the opm-common numeric linear interpolator
         this->dimensionless_pressure_ =
-            linearInterpolation(this->aquct_data_.td,
-                                this->aquct_data_.pi,
+            linearInterpolation(this->aquct_data_.dimensionless_time,
+                                this->aquct_data_.dimensionless_pressure,
                                 this->dimensionless_time_);
 
         const auto PItd =
-            linearInterpolation(this->aquct_data_.td,
-                                this->aquct_data_.pi, td_plus_dt);
+            linearInterpolation(this->aquct_data_.dimensionless_time,
+                                this->aquct_data_.dimensionless_pressure,
+                                td_plus_dt);
 
         const auto PItdprime =
-            linearInterpolationDerivative(this->aquct_data_.td,
-                                          this->aquct_data_.pi, td_plus_dt);
+            linearInterpolationDerivative(this->aquct_data_.dimensionless_time,
+                                          this->aquct_data_.dimensionless_pressure,
+                                          td_plus_dt);
 
         return std::make_pair(PItd, PItdprime);
     }
 
     Scalar dpai(const int idx) const
     {
-        Scalar dp = this->pa0_
-            + this->rhow_.at(idx).value() * this->gravity_() * (this->cell_depth_.at(idx) - this->aquiferDepth())
+        const auto gdz =
+            this->gravity_() * (this->cell_depth_.at(idx) - this->aquiferDepth());
+
+        const auto dp = this->pa0_ + this->rhow_*gdz
             - this->pressure_previous_.at(idx);
+
         return dp;
     }
 
@@ -162,48 +171,29 @@ protected:
 
     inline void calculateAquiferConstants() override
     {
-        // We calculate the influx constant
-        beta_ = aquct_data_.c2 * aquct_data_.h * aquct_data_.theta * aquct_data_.phi_aq * aquct_data_.C_t
-            * aquct_data_.r_o * aquct_data_.r_o;
-        // We calculate the time constant
-        this->Tc_ = mu_w_ * aquct_data_.phi_aq * aquct_data_.C_t * aquct_data_.r_o * aquct_data_.r_o
-            / (aquct_data_.k_a * aquct_data_.c1);
+        this->Tc_ = this->aquct_data_.timeConstant();
+        this->beta_ = this->aquct_data_.influxConstant();
     }
 
     inline void calculateAquiferCondition() override
     {
+        if (! this->aquct_data_.initial_pressure.has_value()) {
+            this->aquct_data_.initial_pressure =
+                this->calculateReservoirEquilibrium();
 
-        int pvttableIdx = aquct_data_.pvttableID - 1;
-        this->rhow_.resize(this->size(), 0.);
-        if (!aquct_data_.p0.first) {
-            this->pa0_ = this->calculateReservoirEquilibrium();
-        } else {
-            this->pa0_ = aquct_data_.p0.second;
+            const auto& tables = this->ebos_simulator_.vanguard()
+                .eclState().getTableManager();
+
+            this->aquct_data_.finishInitialisation(tables);
         }
 
-        // use the thermodynamic state of the first active cell as a
-        // reference. there might be better ways to do this...
-        ElementContext elemCtx(this->ebos_simulator_);
-        auto elemIt = this->ebos_simulator_.gridView().template begin</*codim=*/0>();
-        elemCtx.updatePrimaryStencil(*elemIt);
-        elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-        const auto& iq0 = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-        // Initialize a FluidState object first
-        FluidState fs_aquifer;
-        // We use the temperature of the first cell connected to the aquifer
-        // Here we copy the fluidstate of the first cell, so we do not accidentally mess up the reservoir fs
-        fs_aquifer.assign(iq0.fluidState());
-        Eval temperature_aq, pa0_mean, saltConcentration_aq;
-        temperature_aq = fs_aquifer.temperature(0);
-        saltConcentration_aq = fs_aquifer.saltConcentration();
-        pa0_mean = this->pa0_;
-        Eval mu_w_aquifer = FluidSystem::waterPvt().viscosity(pvttableIdx, temperature_aq, pa0_mean, saltConcentration_aq);
-        mu_w_ = mu_w_aquifer.value();
+        this->pa0_ = this->aquct_data_.initial_pressure.value();
+        this->rhow_ = this->aquct_data_.waterDensity();
     }
 
     virtual Scalar aquiferDepth() const override
     {
-        return aquct_data_.d0;
+        return this->aquct_data_.datum_depth;
     }
 }; // class AquiferCarterTracy
 } // namespace Opm

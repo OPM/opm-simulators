@@ -85,14 +85,16 @@ public:
         data.type = data::AquiferType::Fetkovich;
 
         data.aquFet = std::make_shared<data::FetkovichData>();
+        data.aquFet->initVolume = this->aqufetp_data_.initial_watvolume;
+        data.aquFet->prodIndex = this->aqufetp_data_.prod_index;
+        data.aquFet->timeConstant = this->aqufetp_data_.timeConstant();
 
         return data;
     }
 
 protected:
     // Aquifer Fetkovich Specific Variables
-    // TODO: using const reference here will cause segmentation fault, which is very strange
-    const Aquifetp::AQUFETP_data aqufetp_data_;
+    Aquifetp::AQUFETP_data aqufetp_data_;
     Scalar aquifer_pressure_; // aquifer
 
     void assignRestartData(const data::AquiferData& xaq) override
@@ -109,52 +111,66 @@ protected:
 
     inline Eval dpai(int idx)
     {
-        const Eval dp = aquifer_pressure_ - this->pressure_current_.at(idx)
-            + this->rhow_[idx] * this->gravity_() * (this->cell_depth_[idx] - this->aquiferDepth());
-        return dp;
+        const auto gdz =
+            this->gravity_() * (this->cell_depth_[idx] - this->aquiferDepth());
+
+        return this->aquifer_pressure_ + this->rhow_*gdz
+            - this->pressure_current_.at(idx);
     }
 
     // This function implements Eq 5.12 of the EclipseTechnicalDescription
     inline Scalar aquiferPressure()
     {
         Scalar Flux = this->W_flux_.value();
+
         const auto& comm = this->ebos_simulator_.vanguard().grid().comm();
         comm.sum(&Flux, 1);
-        Scalar pa_ = this->pa0_ - Flux / (aqufetp_data_.C_t * aqufetp_data_.V0);
-        return pa_;
+
+        const auto denom =
+            this->aqufetp_data_.total_compr * this->aqufetp_data_.initial_watvolume;
+
+        return this->pa0_ - (Flux / denom);
     }
 
     inline void calculateAquiferConstants() override
     {
-        this->Tc_ = (aqufetp_data_.C_t * aqufetp_data_.V0) / aqufetp_data_.J;
+        this->Tc_ = this->aqufetp_data_.timeConstant();
     }
+
     // This function implements Eq 5.14 of the EclipseTechnicalDescription
     inline void calculateInflowRate(int idx, const Simulator& simulator) override
     {
         const Scalar td_Tc_ = simulator.timeStepSize() / this->Tc_;
         const Scalar coef = (1 - exp(-td_Tc_)) / td_Tc_;
-        this->Qai_.at(idx) = this->alphai_[idx] * aqufetp_data_.J * dpai(idx) * coef;
+
+        this->Qai_.at(idx) = coef * this->alphai_[idx] *
+            this->aqufetp_data_.prod_index * dpai(idx);
     }
 
     inline void calculateAquiferCondition() override
     {
-        this->rhow_.resize(this->size(), 0.);
-
         if (this->solution_set_from_restart_) {
             return;
         }
 
-        if (!aqufetp_data_.p0.first) {
-            this->pa0_ = this->calculateReservoirEquilibrium();
-        } else {
-            this->pa0_ = aqufetp_data_.p0.second;
+        if (! this->aqufetp_data_.initial_pressure.has_value()) {
+            this->aqufetp_data_.initial_pressure =
+                this->calculateReservoirEquilibrium();
+
+            const auto& tables = this->ebos_simulator_.vanguard()
+                .eclState().getTableManager();
+
+            this->aqufetp_data_.finishInitialisation(tables);
         }
-        aquifer_pressure_ = this->pa0_;
+
+        this->rhow_ = this->aqufetp_data_.waterDensity();
+        this->pa0_ = this->aqufetp_data_.initial_pressure.value();
+        this->aquifer_pressure_ = this->pa0_;
     }
 
     virtual Scalar aquiferDepth() const override
     {
-        return aqufetp_data_.d0;
+        return this->aqufetp_data_.datum_depth;
     }
 }; // Class AquiferFetkovich
 } // namespace Opm
