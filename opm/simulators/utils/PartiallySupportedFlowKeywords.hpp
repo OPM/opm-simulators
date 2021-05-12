@@ -21,10 +21,9 @@
 #define OPM_PARTIALLYSUPPORTEDFLOWKEYWORDS_HEADER_INCLUDED
 
 
-#include <map>
-#include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
-#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/simulators/flow/KeywordValidation.hpp>
+
+#include <string>
 
 /*
     Here keywords are defined that are supported by flow, but have items that
@@ -46,39 +45,8 @@
 namespace Opm::FlowKeywordValidation
 {
 
-
-const Opm::KeywordValidation::PartiallySupportedKeywords<std::string> partially_supported_keywords_strings = {
-    {
-        "COMPORD",
-        {
-            {2, {false, {"INPUT"}, std::nullopt}}, // ORDER_TYPE
-        },
-    },
-    {
-        "ENDSCALE",
-        {
-            {1, {false, {"NODIR"}, std::nullopt}}, // DIRECT
-            {2, {false, {"REVERS"}, std::nullopt}}, // IRREVERS
-        },
-    },
-    {
-        "PINCH",
-        {
-            {2, {false, {"GAP"}, std::nullopt}}, // GAP
-            {4, {false, {"TOPBOT"}, std::nullopt}}, // PINCHOUT_OPTION
-        },
-    },
-};
-
-const Opm::KeywordValidation::PartiallySupportedKeywords<int> partially_supported_keywords_int = {
-    {
-        "EHYSTR",
-        {
-            {2, {false, {0}, std::nullopt}}, //relative_perm_hyst
-        },
-    },
-};
-
+template<typename T>
+const KeywordValidation::PartiallySupportedKeywords<T>& partiallySupported();
 
 } // namespace Opm::FlowKeywordValidation
 

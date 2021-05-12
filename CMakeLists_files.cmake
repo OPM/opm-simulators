@@ -37,6 +37,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/linalg/FlexibleSolver3.cpp
   opm/simulators/linalg/FlexibleSolver4.cpp
   opm/simulators/linalg/setupPropertyTree.cpp
+  opm/simulators/utils/PartiallySupportedFlowKeywords.cpp
   opm/simulators/utils/readDeck.cpp
   opm/simulators/utils/UnsupportedFlowKeywords.cpp
   opm/simulators/timestepping/TimeStepControl.cpp

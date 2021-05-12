@@ -206,8 +206,8 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
 
                 Opm::KeywordValidation::KeywordValidator keyword_validator(
                     Opm::FlowKeywordValidation::unsupportedKeywords(),
-                    Opm::FlowKeywordValidation::partially_supported_keywords_strings,
-                    Opm::FlowKeywordValidation::partially_supported_keywords_int);
+                    Opm::FlowKeywordValidation::partiallySupported<std::string>(),
+                    Opm::FlowKeywordValidation::partiallySupported<int>());
                 keyword_validator.validateDeck(*deck, *parseContext, *errorGuard);
 
                 if ( checkDeck )
