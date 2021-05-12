@@ -1074,7 +1074,7 @@ namespace Opm
         template<class Comm>
         void updateGlobalIsGrup(const Comm& comm)
         {
-            this->global_well_info.value().update_group(this->status_, this->currentInjectionControls(), this->currentProductionControls());
+            this->global_well_info.value().update_group(this->status_.data(), this->currentInjectionControls(), this->currentProductionControls());
             this->global_well_info.value().communicate(comm);
         }
 
