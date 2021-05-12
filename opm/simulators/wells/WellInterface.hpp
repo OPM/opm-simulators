@@ -33,7 +33,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRate.hpp>
 
 #include <opm/core/props/BlackoilPhases.hpp>
-#include <opm/simulators/timestepping/SimulatorReport.hpp>
 
 #include <opm/simulators/wells/RateConverter.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
@@ -52,7 +51,6 @@ namespace Opm {
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 #include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
 
-#include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
 #include<dune/common/fmatrix.hh>
