@@ -76,7 +76,7 @@ namespace Opm
 
         using WellState = WellStateFullyImplicitBlackoil;
 
-        typedef BlackoilModelParametersEbos<TypeTag> ModelParameters;
+        using ModelParameters = BlackoilModelParametersEbos<TypeTag>;
 
         static const int Water = BlackoilPhases::Aqua;
         static const int Oil = BlackoilPhases::Liquid;
@@ -100,10 +100,10 @@ namespace Opm
         static const int numPhases = Indices::numPhases;
         using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
-        typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
-        typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
-        typedef Dune::BlockVector<VectorBlockType> BVector;
-        typedef DenseAd::Evaluation<Scalar, /*size=*/numEq> Eval;
+        using VectorBlockType = Dune::FieldVector<Scalar, numEq>;
+        using MatrixBlockType = Dune::FieldMatrix<Scalar, numEq, numEq>;
+        using BVector = Dune::BlockVector<VectorBlockType>;
+        using Eval = DenseAd::Evaluation<Scalar, /*size=*/numEq>;
 
         static constexpr bool has_solvent = getPropValue<TypeTag, Properties::EnableSolvent>();
         static constexpr bool has_zFraction = getPropValue<TypeTag, Properties::EnableExtbo>();
