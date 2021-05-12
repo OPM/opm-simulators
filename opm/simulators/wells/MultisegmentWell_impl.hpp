@@ -546,7 +546,7 @@ namespace Opm
 /*         {
             bool pressure_controlled_well = false;
             if (this->isInjector()) {
-                const Well::InjectorCMode& current = well_state.currentInjectionControls()[index_of_well_];
+                const Well::InjectorCMode& current = well_state.currentInjectionControl()[index_of_well_];
                 if (current == Well::InjectorCMode::BHP || current == Well::InjectorCMode::THP) {
                     pressure_controlled_well = true;
                 }
@@ -567,7 +567,7 @@ namespace Opm
         debug_cost_counter_ = 0;
         // does the well have a THP related constraint?
         const auto& summaryState = ebosSimulator.vanguard().summaryState();
-        const Well::ProducerCMode& current_control = well_state.currentProductionControls()[this->index_of_well_];
+        auto current_control = well_state.currentProductionControl(this->index_of_well_);
         if ( !Base::wellHasTHPConstraints(summaryState) || current_control == Well::ProducerCMode::BHP) {
             computeWellRatesAtBhpLimit(ebosSimulator, well_potentials, deferred_logger);
         } else {
@@ -627,10 +627,10 @@ namespace Opm
         //  Set current control to bhp, and bhp value in state, modify bhp limit in control object.
         if (well_copy.well_ecl_.isInjector()) {
             inj_controls.bhp_limit = bhp;
-            well_state_copy.currentInjectionControls()[index_of_well_] = Well::InjectorCMode::BHP;
+            well_state_copy.currentInjectionControl(index_of_well_, Well::InjectorCMode::BHP);
         } else {
             prod_controls.bhp_limit = bhp;
-            well_state_copy.currentProductionControls()[index_of_well_] = Well::ProducerCMode::BHP;
+            well_state_copy.currentProductionControl(index_of_well_, Well::ProducerCMode::BHP);
         }
         well_state_copy.bhp()[well_copy.index_of_well_] = bhp;
         well_copy.scaleSegmentPressuresWithBhp(well_state_copy);
@@ -3063,7 +3063,7 @@ namespace Opm
         const int well_index = index_of_well_;
         if (this->isInjector() )
         {
-            const Well::InjectorCMode& current = well_state.currentInjectionControls()[well_index];
+            auto current = well_state.currentInjectionControl(well_index);
             switch(current) {
             case Well::InjectorCMode::THP:
                 control_tolerance = param_.tolerance_pressure_ms_wells_;
@@ -3085,7 +3085,7 @@ namespace Opm
 
         if (this->isProducer() )
         {
-            const Well::ProducerCMode& current = well_state.currentProductionControls()[well_index];
+            auto current = well_state.currentProductionControl(well_index);
             switch(current) {
             case Well::ProducerCMode::THP:
                 control_tolerance = param_.tolerance_pressure_ms_wells_; // 0.1 bar
@@ -3130,7 +3130,7 @@ namespace Opm
         const int well_index = index_of_well_;
         if (this->isInjector() )
         {
-            const Well::InjectorCMode& current = well_state.currentInjectionControls()[well_index];
+            auto current = well_state.currentInjectionControl(well_index);
             switch(current) {
             case Well::InjectorCMode::THP:
                 ctrltype = CR::WellFailure::Type::ControlTHP;
@@ -3156,7 +3156,7 @@ namespace Opm
 
         if (this->isProducer() )
         {
-            const Well::ProducerCMode& current = well_state.currentProductionControls()[well_index];
+            auto current = well_state.currentProductionControl(well_index);
             switch(current) {
             case Well::ProducerCMode::THP:
                 ctrltype = CR::WellFailure::Type::ControlTHP;
