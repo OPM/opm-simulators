@@ -483,6 +483,13 @@ BOOST_AUTO_TEST_CASE(TESTWellContainer) {
     BOOST_CHECK_EQUAL(vec_copy.size(), wc3.size());
     for (std::size_t i = 0; i < wc3.size(); i++)
         BOOST_CHECK_EQUAL(vec_copy[i], wc3[i]);
+
+
+    Opm::WellContainer<int> wci({{"W1", 1}, {"W2", 2}, {"W3", 3}});
+    BOOST_CHECK_EQUAL(wci.size(), 3);
+    BOOST_CHECK(wci.has("W1"));
+    BOOST_CHECK_EQUAL(wci[1], 2);
+    BOOST_CHECK_EQUAL(wci["W3"], 3);
 }
 
 
