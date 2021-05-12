@@ -97,10 +97,12 @@ namespace Opm
 
         wsolvent_ = 0.0;
 
-        if ((has_solvent || has_zFraction) && well.isInjector()) {
-            auto injectorType = well_ecl_.injectorType();
-            if (injectorType == InjectorType::GAS) {
-                wsolvent_ = well_ecl_.getSolventFraction();
+        if constexpr (has_solvent || has_zFraction) {
+            if (well.isInjector()) {
+                auto injectorType = well_ecl_.injectorType();
+                if (injectorType == InjectorType::GAS) {
+                    wsolvent_ = well_ecl_.getSolventFraction();
+                }
             }
         }
     }
@@ -373,20 +375,20 @@ namespace Opm
     WellInterface<TypeTag>::
     wpolymer() const
     {
-        if (!has_polymer) {
-            return 0.0;
+        if constexpr (has_polymer) {
+            auto injectorType = well_ecl_.injectorType();
+
+            if (injectorType == InjectorType::WATER) {
+                WellPolymerProperties polymer = well_ecl_.getPolymerProperties();
+                const double polymer_injection_concentration = polymer.m_polymerConcentration;
+                return polymer_injection_concentration;
+            } else {
+                // Not a water injection well => no polymer.
+                return 0.0;
+            }
         }
 
-        auto injectorType = well_ecl_.injectorType();
-
-        if (injectorType == InjectorType::WATER) {
-            WellPolymerProperties polymer = well_ecl_.getPolymerProperties();
-            const double polymer_injection_concentration = polymer.m_polymerConcentration;
-            return polymer_injection_concentration;
-        } else {
-            // Not a water injection well => no polymer.
-            return 0.0;
-        }
+        return 0.0;
     }
 
 
@@ -398,19 +400,19 @@ namespace Opm
     WellInterface<TypeTag>::
     wfoam() const
     {
-        if (!has_foam) {
-            return 0.0;
+        if constexpr (has_foam) {
+            auto injectorType = well_ecl_.injectorType();
+
+            if (injectorType == InjectorType::GAS) {
+                WellFoamProperties fprop = well_ecl_.getFoamProperties();
+                return fprop.m_foamConcentration;
+            } else {
+                // Not a gas injection well => no foam.
+                return 0.0;
+            }
         }
 
-        auto injectorType = well_ecl_.injectorType();
-
-        if (injectorType == InjectorType::GAS) {
-            WellFoamProperties fprop = well_ecl_.getFoamProperties();
-            return fprop.m_foamConcentration;
-        } else {
-            // Not a gas injection well => no foam.
-            return 0.0;
-        }
+        return 0.0;
     }
 
 
@@ -420,19 +422,19 @@ namespace Opm
     WellInterface<TypeTag>::
     wsalt() const
     {
-        if (!has_brine) {
-            return 0.0;
+        if constexpr (has_brine) {
+            auto injectorType = well_ecl_.injectorType();
+
+            if (injectorType == InjectorType::WATER) {
+                WellBrineProperties fprop = well_ecl_.getBrineProperties();
+                return fprop.m_saltConcentration;
+            } else {
+                // Not a water injection well => no salt (?).
+                return 0.0;
+            }
         }
 
-        auto injectorType = well_ecl_.injectorType();
-
-        if (injectorType == InjectorType::WATER) {
-            WellBrineProperties fprop = well_ecl_.getBrineProperties();
-            return fprop.m_saltConcentration;
-        } else {
-            // Not a water injection well => no salt (?).
-            return 0.0;
-        }
+        return 0.0;
     }
 
 
