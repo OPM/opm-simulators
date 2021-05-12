@@ -395,12 +395,12 @@ namespace WellGroupHelpers
             const double efficiency = wellTmp.getEfficiencyFactor();
             // add contributino from wells not under group control
             if (isInjector) {
-                if (wellState.currentInjectionControls()[well_index] != Well::InjectorCMode::GRUP)
+                if (wellState.currentInjectionControl(well_index) != Well::InjectorCMode::GRUP)
                     for (int phase = 0; phase < np; phase++) {
                         groupTargetReduction[phase] += wellStateNupcol.wellRates()[wellrate_index + phase] * efficiency;
                     }
             } else {
-                if (wellState.currentProductionControls()[well_index] != Well::ProducerCMode::GRUP)
+                if (wellState.currentProductionControl(well_index) != Well::ProducerCMode::GRUP)
                     for (int phase = 0; phase < np; phase++) {
                         groupTargetReduction[phase] -= wellStateNupcol.wellRates()[wellrate_index + phase] * efficiency;
                     }
