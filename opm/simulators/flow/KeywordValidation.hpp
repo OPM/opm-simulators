@@ -22,6 +22,7 @@
 
 #include <opm/common/OpmLog/KeywordLocation.hpp>
 
+#include <map>
 #include <optional>
 #include <string>
 #include <vector>
