@@ -517,7 +517,7 @@ namespace Opm
                       const IndividualOrGroup iog,
                       WellState& well_state,
                       const GroupState& group_state,
-                      Opm::DeferredLogger& deferred_logger) /* const */
+                      DeferredLogger& deferred_logger) /* const */
     {
         if (this->wellIsStopped()) {
             return false;
@@ -589,9 +589,9 @@ namespace Opm
     WellInterface<TypeTag>::
     checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
                         const std::vector<double>& well_rates,
-                        Opm::DeferredLogger& deferred_logger) const
+                        DeferredLogger& deferred_logger) const
     {
-        const Opm::PhaseUsage& pu = phaseUsage();
+        const PhaseUsage& pu = phaseUsage();
         const int np = number_of_phases_;
 
         if (econ_production_limits.onMinOilRate()) {
@@ -641,7 +641,7 @@ namespace Opm
                         const std::vector<ValueType>& rates,
                         const Well& well,
                         const SummaryState& summaryState,
-                        Opm::DeferredLogger& deferred_logger) const
+                        DeferredLogger& deferred_logger) const
     {
         // TODO: when well is under THP control, the BHP is dependent on the rates,
         // the well rates is also dependent on the BHP, so it might need to do some iteration.
@@ -843,7 +843,7 @@ namespace Opm
     checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
                          const WellState& well_state,
                          RatioLimitCheckReport& report,
-                         Opm::DeferredLogger& deferred_logger) const
+                         DeferredLogger& deferred_logger) const
     {
         // TODO: not sure how to define the worst-offending completion when more than one
         //       ratio related limit is violated.
@@ -965,7 +965,7 @@ namespace Opm
                         const double& simulationTime,
                         const bool& writeMessageToOPMLog,
                         WellTestState& wellTestState,
-                        Opm::DeferredLogger& deferred_logger) const
+                        DeferredLogger& deferred_logger) const
     {
 
         // currently, we only updateWellTestState for producers
@@ -999,7 +999,7 @@ namespace Opm
                                 const double simulation_time,
                                 const bool write_message_to_opmlog,
                                 WellTestState& well_test_state,
-                                Opm::DeferredLogger& deferred_logger) const
+                                DeferredLogger& deferred_logger) const
     {
         if (!isOperable()) {
             if (well_test_state.hasWellClosed(name(), WellTestConfig::Reason::ECONOMIC) ||
@@ -1029,7 +1029,7 @@ namespace Opm
                                 const double simulation_time,
                                 const bool write_message_to_opmlog,
                                 WellTestState& well_test_state,
-                                Opm::DeferredLogger& deferred_logger) const
+                                DeferredLogger& deferred_logger) const
     {
         if (this->wellIsStopped())
             return;
@@ -1173,7 +1173,7 @@ namespace Opm
                 /* const */ WellState& well_state,
                 const GroupState& group_state,
                 WellTestState& well_test_state,
-                Opm::DeferredLogger& deferred_logger)
+                DeferredLogger& deferred_logger)
     {
         if (testing_reason == WellTestConfig::Reason::PHYSICAL) {
             wellTestingPhysical(simulator, simulation_time, report_step,
@@ -1195,7 +1195,7 @@ namespace Opm
     WellInterface<TypeTag>::
     wellTestingEconomic(const Simulator& simulator,
                         const double simulation_time, const WellState& well_state, const GroupState& group_state,
-                        WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger)
+                        WellTestState& welltest_state, DeferredLogger& deferred_logger)
     {
         deferred_logger.info(" well " + name() + " is being tested for economic limits");
 
@@ -1314,7 +1314,7 @@ namespace Opm
 
     template<typename TypeTag>
     bool
-    WellInterface<TypeTag>::isVFPActive(Opm::DeferredLogger& deferred_logger) const
+    WellInterface<TypeTag>::isVFPActive(DeferredLogger& deferred_logger) const
     {
         // since the well_controls only handles the VFP number when THP constraint/target is there.
         // we need to get the table number through the parser, in case THP constraint/target is not there.
@@ -1359,7 +1359,7 @@ namespace Opm
                          const double dt,
                          WellState& well_state,
                          const GroupState& group_state,
-                         Opm::DeferredLogger& deferred_logger)
+                         DeferredLogger& deferred_logger)
     {
         const auto& summary_state = ebosSimulator.vanguard().summaryState();
         const auto inj_controls = well_ecl_.isInjector() ? well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
@@ -1413,7 +1413,7 @@ namespace Opm
     void
     WellInterface<TypeTag>::
     solveWellForTesting(const Simulator& ebosSimulator, WellState& well_state, const GroupState& group_state,
-                        Opm::DeferredLogger& deferred_logger)
+                        DeferredLogger& deferred_logger)
     {
         // keep a copy of the original well state
         const WellState well_state0 = well_state;
@@ -1435,7 +1435,7 @@ namespace Opm
     solveWellEquation(const Simulator& ebosSimulator,
                       WellState& well_state,
                       const GroupState& group_state,
-                      Opm::DeferredLogger& deferred_logger)
+                      DeferredLogger& deferred_logger)
     {
         if (!this->isOperable())
             return;
@@ -1517,7 +1517,7 @@ namespace Opm
                         WellState& well_state,
                         const GroupState& group_state,
                         WellTestState& welltest_state,
-                        Opm::DeferredLogger& deferred_logger)
+                        DeferredLogger& deferred_logger)
     {
         deferred_logger.info(" well " + name() + " is being tested for physical limits");
 
@@ -1577,7 +1577,7 @@ namespace Opm
     WellInterface<TypeTag>::
     checkWellOperability(const Simulator& ebos_simulator,
                          const WellState& well_state,
-                         Opm::DeferredLogger& deferred_logger)
+                         DeferredLogger& deferred_logger)
     {
 
         const bool checkOperability = EWOMS_GET_PARAM(TypeTag, bool, EnableWellOperabilityCheck);
@@ -1630,7 +1630,7 @@ namespace Opm
     WellInterface<TypeTag>::
     updateWellOperability(const Simulator& ebos_simulator,
                           const WellState& well_state,
-                          Opm::DeferredLogger& deferred_logger)
+                          DeferredLogger& deferred_logger)
     {
         this->operability_status_.reset();
 
@@ -1653,7 +1653,7 @@ namespace Opm
     WellInterface<TypeTag>::
     updateWellStateWithTarget(const Simulator& ebos_simulator,
                               WellState& well_state,
-                              Opm::DeferredLogger& deferred_logger) const
+                              DeferredLogger& deferred_logger) const
     {
 
         // only bhp and wellRates are used to initilize the primaryvariables for standard wells
@@ -1697,7 +1697,7 @@ namespace Opm
                 OPM_DEFLOG_THROW(std::runtime_error, "Expected WATER, OIL or GAS as type for injectors "  + name(), deferred_logger );
             }
 
-            const Opm::Well::InjectorCMode& current = well_state.currentInjectionControls()[well_index];
+            const Well::InjectorCMode& current = well_state.currentInjectionControls()[well_index];
 
             switch(current) {
             case Well::InjectorCMode::RATE:
@@ -2047,7 +2047,7 @@ namespace Opm
 
         if (well.isInjector()) {
             const auto controls = well.injectionControls(summaryState);
-            Opm::Well::InjectorCMode& currentControl = well_state.currentInjectionControls()[well_index];
+            Well::InjectorCMode& currentControl = well_state.currentInjectionControls()[well_index];
 
             if (controls.hasControl(Well::InjectorCMode::BHP) && currentControl != Well::InjectorCMode::BHP)
             {
@@ -2242,7 +2242,7 @@ namespace Opm
         const int well_index = index_of_well_;
 
         if (well.isInjector()) {
-            Opm::Well::InjectorCMode& currentControl = well_state.currentInjectionControls()[well_index];
+            Well::InjectorCMode& currentControl = well_state.currentInjectionControls()[well_index];
 
             if (currentControl != Well::InjectorCMode::GRUP) {
                 // This checks only the first encountered group limit,
@@ -2401,16 +2401,16 @@ namespace Opm
     void
     WellInterface<TypeTag>::assembleControlEqInj(const WellState& well_state,
                                                  const GroupState& group_state,
-                                                 const Opm::Schedule& schedule,
+                                                 const Schedule& schedule,
                                                  const SummaryState& summaryState,
                                                  const Well::InjectionControls& controls,
                                                  const EvalWell& bhp,
                                                  const EvalWell& injection_rate,
                                                  BhpFromThpFunc bhp_from_thp,
                                                  EvalWell& control_eq,
-                                                 Opm::DeferredLogger& deferred_logger)
+                                                 DeferredLogger& deferred_logger)
     {
-        const Opm::Well::InjectorCMode& current = well_state.currentInjectionControls()[index_of_well_];
+        const Well::InjectorCMode& current = well_state.currentInjectionControls()[index_of_well_];
         const InjectorType injectorType = controls.injector_type;
         const auto& pu = phaseUsage();
         const double efficiencyFactor = well_ecl_.getEfficiencyFactor();
@@ -2484,14 +2484,14 @@ namespace Opm
     void
     WellInterface<TypeTag>::assembleControlEqProd(const WellState& well_state,
                                                   const GroupState& group_state,
-                                                  const Opm::Schedule& schedule,
+                                                  const Schedule& schedule,
                                                   const SummaryState& summaryState,
                                                   const Well::ProductionControls& controls,
                                                   const EvalWell& bhp,
                                                   const std::vector<EvalWell>& rates, // Always 3 canonical rates.
                                                   BhpFromThpFunc bhp_from_thp,
                                                   EvalWell& control_eq,
-                                                  Opm::DeferredLogger& deferred_logger)
+                                                  DeferredLogger& deferred_logger)
     {
         const Well::ProducerCMode& current = well_state.currentProductionControls()[index_of_well_];
         const auto& pu = phaseUsage();
@@ -2600,14 +2600,14 @@ namespace Opm
     WellInterface<TypeTag>::getGroupInjectionControl(const Group& group,
                                                       const WellState& well_state,
                                                      const GroupState& group_state,
-                                                      const Opm::Schedule& schedule,
+                                                      const Schedule& schedule,
                                                       const SummaryState& summaryState,
                                                       const InjectorType& injectorType,
                                                       const EvalWell& bhp,
                                                       const EvalWell& injection_rate,
                                                       EvalWell& control_eq,
                                                       double efficiencyFactor,
-                                                      Opm::DeferredLogger& deferred_logger)
+                                                      DeferredLogger& deferred_logger)
     {
         // Setting some defaults to silence warnings below.
         // Will be overwritten in the switch statement.
@@ -2720,7 +2720,7 @@ namespace Opm
     WellInterface<TypeTag>::getGroupProductionControl(const Group& group,
                                                       const WellState& well_state,
                                                       const GroupState& group_state,
-                                                      const Opm::Schedule& schedule,
+                                                      const Schedule& schedule,
                                                       const SummaryState& summaryState,
                                                       const EvalWell& bhp,
                                                       const std::vector<EvalWell>& rates,
