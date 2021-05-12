@@ -34,147 +34,146 @@
 
 namespace Opm
 {
-    class ParallelWellInfo;
-    class SummaryState;
 
-    /// The state of a set of wells.
-    class WellState
+class ParallelWellInfo;
+class SummaryState;
+
+/// The state of a set of wells.
+class WellState
+{
+public:
+    using mapentry_t = std::array<int, 3>;
+    using WellMapType = std::map<std::string, mapentry_t>;
+
+    explicit WellState(const PhaseUsage& pu) :
+        phase_usage_(pu)
+    {}
+
+    WellState() = default;
+    WellState(const WellState& rhs)  = default;
+
+    virtual ~WellState() = default;
+
+    WellState& operator=(const WellState& rhs) = default;
+
+    /// Allocate and initialize if wells is non-null.
+    /// Also tries to give useful initial values to the bhp() and
+    /// wellRates() fields, depending on controls.  The
+    /// perfRates() field is filled with zero, and perfPress()
+    /// with -1e100.
+    void init(const std::vector<double>& cellPressures,
+              const std::vector<Well>& wells_ecl,
+              const std::vector<ParallelWellInfo*>& parallel_well_info,
+              const std::vector<std::vector<PerforationData>>& well_perf_data,
+              const SummaryState& summary_state);
+
+    /// Special purpose method to support dynamically rescaling a well's
+    /// CTFs through WELPI.
+    ///
+    /// \param[in] well_index Process-local linear index of single well.
+    ///    Must be in the range 0..numWells()-1.
+    ///
+    /// \param[in] well_perf_data New perforation data.  Only
+    ///    PerforationData::connection_transmissibility_factor actually
+    ///    used (overwrites existing internal values).
+    void resetConnectionTransFactors(const int well_index,
+                                     const std::vector<PerforationData>& well_perf_data);
+
+    /// One bhp pressure per well.
+    std::vector<double>& bhp() { return bhp_; }
+    const std::vector<double>& bhp() const { return bhp_; }
+
+    /// One thp pressure per well.
+    std::vector<double>& thp() { return thp_; }
+    const std::vector<double>& thp() const { return thp_; }
+
+    /// One temperature per well.
+    std::vector<double>& temperature() { return temperature_; }
+    const std::vector<double>& temperature() const { return temperature_; }
+
+    /// One rate per well and phase.
+    std::vector<double>& wellRates() { return wellrates_; }
+    const std::vector<double>& wellRates() const { return wellrates_; }
+
+    /// One rate per well connection.
+    std::vector<double>& perfRates() { return perfrates_; }
+    const std::vector<double>& perfRates() const { return perfrates_; }
+
+    /// One pressure per well connection.
+    std::vector<double>& perfPress() { return perfpress_; }
+    const std::vector<double>& perfPress() const { return perfpress_; }
+
+    const WellMapType& wellMap() const { return wellMap_; }
+    WellMapType& wellMap() { return wellMap_; }
+
+    const ParallelWellInfo& parallelWellInfo(std::size_t well_index) const;
+
+    bool wellIsOwned(std::size_t well_index,
+                     const std::string& wellName) const;
+
+    bool wellIsOwned(const std::string& wellName) const;
+
+    /// The number of wells present.
+    int numWells() const
     {
-    public:
-        using mapentry_t = std::array<int, 3>;
-        using WellMapType = std::map<std::string, mapentry_t>;
+        return bhp().size();
+    }
 
-        explicit WellState(const PhaseUsage& pu) :
-            phase_usage_(pu)
-        {}
+    /// The number of phases present.
+    int numPhases() const
+    {
+        return this->phase_usage_.num_phases;
+    }
 
+    const PhaseUsage& phaseUsage() const {
+        return this->phase_usage_;
+    }
 
-        /// Allocate and initialize if wells is non-null.
-        /// Also tries to give useful initial values to the bhp() and
-        /// wellRates() fields, depending on controls.  The
-        /// perfRates() field is filled with zero, and perfPress()
-        /// with -1e100.
-        void init(const std::vector<double>& cellPressures,
-                  const std::vector<Well>& wells_ecl,
-                  const std::vector<ParallelWellInfo*>& parallel_well_info,
-                  const std::vector<std::vector<PerforationData>>& well_perf_data,
-                  const SummaryState& summary_state);
+    void openWell(int well_index) {
+        this->status_[well_index] = Well::Status::OPEN;
+    }
 
-        /// Special purpose method to support dynamically rescaling a well's
-        /// CTFs through WELPI.
-        ///
-        /// \param[in] well_index Process-local linear index of single well.
-        ///    Must be in the range 0..numWells()-1.
-        ///
-        /// \param[in] well_perf_data New perforation data.  Only
-        ///    PerforationData::connection_transmissibility_factor actually
-        ///    used (overwrites existing internal values).
-        void resetConnectionTransFactors(const int well_index,
-                                         const std::vector<PerforationData>& well_perf_data);
+    virtual void shutWell(int well_index);
 
-        /// One bhp pressure per well.
-        std::vector<double>& bhp() { return bhp_; }
-        const std::vector<double>& bhp() const { return bhp_; }
+    virtual void stopWell(int well_index);
 
-        /// One thp pressure per well.
-        std::vector<double>& thp() { return thp_; }
-        const std::vector<double>& thp() const { return thp_; }
+    void updateStatus(int well_index, Well::Status status);
 
-        /// One temperature per well.
-        std::vector<double>& temperature() { return temperature_; }
-        const std::vector<double>& temperature() const { return temperature_; }
+    virtual data::Wells
+    report(const int* globalCellIdxMap,
+           const std::function<bool(const int)>& wasDynamicallyClosed) const;
 
-        /// One rate per well and phase.
-        std::vector<double>& wellRates() { return wellrates_; }
-        const std::vector<double>& wellRates() const { return wellrates_; }
+    virtual void reportConnections(data::Well& well, const PhaseUsage&,
+                                   const WellMapType::value_type& itr,
+                                   const int* globalCellIdxMap) const;
 
-        /// One rate per well connection.
-        std::vector<double>& perfRates() { return perfrates_; }
-        const std::vector<double>& perfRates() const { return perfrates_; }
+protected:
+    std::vector<Well::Status> status_;
+    std::vector<std::vector<PerforationData>> well_perf_data_;
+    std::vector<ParallelWellInfo*> parallel_well_info_;
 
-        /// One pressure per well connection.
-        std::vector<double>& perfPress() { return perfpress_; }
-        const std::vector<double>& perfPress() const { return perfpress_; }
+private:
+    PhaseUsage phase_usage_;
+    std::vector<double> bhp_;
+    std::vector<double> thp_;
+    std::vector<double> temperature_;
+    std::vector<double> wellrates_;
+    std::vector<double> perfrates_;
+    std::vector<double> perfpress_;
 
-        const WellMapType& wellMap() const { return wellMap_; }
-        WellMapType& wellMap() { return wellMap_; }
+    WellMapType wellMap_;
 
-        const ParallelWellInfo& parallelWellInfo(std::size_t well_index) const;
+    template<class Communication>
+    void gatherVectorsOnRoot(const std::vector< data::Connection >& from_connections,
+                             std::vector< data::Connection >& to_connections,
+                             const Communication& comm) const;
 
-        bool wellIsOwned(std::size_t well_index,
-                         const std::string& wellName) const;
-
-        bool wellIsOwned(const std::string& wellName) const;
-
-        /// The number of wells present.
-        int numWells() const
-        {
-            return bhp().size();
-        }
-
-        /// The number of phases present.
-        int numPhases() const
-        {
-            return this->phase_usage_.num_phases;
-        }
-
-        const PhaseUsage& phaseUsage() const {
-            return this->phase_usage_;
-        }
-
-
-
-        void openWell(int well_index) {
-            this->status_[well_index] = Well::Status::OPEN;
-        }
-
-        virtual void shutWell(int well_index);
-
-        virtual void stopWell(int well_index);
-
-        void updateStatus(int well_index, Well::Status status);
-
-        virtual data::Wells
-        report(const int* globalCellIdxMap,
-               const std::function<bool(const int)>& wasDynamicallyClosed) const;
-
-        virtual void reportConnections(data::Well& well, const PhaseUsage&,
-                                       const WellMapType::value_type& itr,
-                                       const int* globalCellIdxMap) const;
-        virtual ~WellState() = default;
-        WellState() = default;
-        WellState(const WellState& rhs)  = default;
-        WellState& operator=(const WellState& rhs) = default;
-
-    private:
-        PhaseUsage phase_usage_;
-        std::vector<double> bhp_;
-        std::vector<double> thp_;
-        std::vector<double> temperature_;
-        std::vector<double> wellrates_;
-        std::vector<double> perfrates_;
-        std::vector<double> perfpress_;
-    protected:
-        std::vector<Well::Status> status_;
-    private:
-
-        WellMapType wellMap_;
-
-        template<class Communication>
-        void gatherVectorsOnRoot(const std::vector< data::Connection >& from_connections,
-                                 std::vector< data::Connection >& to_connections,
-                                 const Communication& comm) const;
-
-        void initSingleWell(const std::vector<double>& cellPressures,
-                            const int w,
-                            const Well& well,
-                            const ParallelWellInfo& well_info,
-                            const SummaryState& summary_state);
-
-    protected:
-        std::vector<std::vector<PerforationData>> well_perf_data_;
-        std::vector<ParallelWellInfo*> parallel_well_info_;
-    };
+    void initSingleWell(const std::vector<double>& cellPressures,
+                        const int w,
+                        const Well& well,
+                        const ParallelWellInfo& well_info,
+                        const SummaryState& summary_state);
+};
 
 } // namespace Opm
 
