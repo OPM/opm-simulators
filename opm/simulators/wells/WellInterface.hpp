@@ -725,8 +725,6 @@ namespace Opm
         double violation_extent = 0.0;
     };
 
-    const std::string modestring[4] = { "BHP", "THP", "RESERVOIR_RATE", "SURFACE_RATE" };
-
 }
 
 #include "WellInterface_impl.hpp"
