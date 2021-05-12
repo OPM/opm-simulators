@@ -1885,6 +1885,9 @@ public:
     EclWellModel& wellModel()
     { return wellModel_; }
 
+    const EclAquiferModel& aquiferModel() const
+    { return aquiferModel_; }
+
     EclAquiferModel& mutableAquiferModel()
     { return aquiferModel_; }
 

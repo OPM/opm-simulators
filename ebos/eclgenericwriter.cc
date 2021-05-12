@@ -392,6 +392,7 @@ doWriteOutput(const int                     reportStepNum,
               data::Solution&&              localCellData,
               data::Wells&&                 localWellData,
               data::GroupAndNetworkValues&& localGroupAndNetworkData,
+              data::Aquifers&&              localAquiferData,
               const Action::State& actionState,
               const UDQState& udqState,
               const SummaryState& summaryState,
@@ -410,7 +411,10 @@ doWriteOutput(const int                     reportStepNum,
                    : std::move(localWellData),
 
         isParallel ? this->collectToIORank_.globalGroupAndNetworkData()
-                   : std::move(localGroupAndNetworkData)
+                   : std::move(localGroupAndNetworkData),
+
+        isParallel ? this->collectToIORank_.globalAquiferData()
+                   : std::move(localAquiferData)
     };
 
     if (eclState_.getSimulationConfig().useThresholdPressure()) {

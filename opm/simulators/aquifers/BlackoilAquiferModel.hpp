@@ -87,7 +87,7 @@ public:
     explicit BlackoilAquiferModel(Simulator& simulator);
 
     void initialSolutionApplied();
-    void initFromRestart(const std::vector<data::AquiferData>& aquiferSoln);
+    void initFromRestart(const data::Aquifers& aquiferSoln);
 
     void beginEpisode();
     void beginTimeStep();

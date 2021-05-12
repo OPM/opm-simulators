@@ -22,9 +22,12 @@
 #endif
 
 #include "ParallelRestart.hpp"
-#include <ctime>
+#include <cassert>
 #include <cstring>
+#include <ctime>
+#include <memory>
 #include <dune/common/parallel/mpitraits.hh>
+#include <opm/output/data/Aquifer.hpp>
 #include <opm/output/data/Cells.hpp>
 #include <opm/output/data/Groups.hpp>
 #include <opm/output/data/GuideRateValue.hpp>
@@ -214,12 +217,36 @@ std::size_t packSize(const std::array<T,N>& data, Dune::MPIHelper::MPICommunicat
     return N*packSize(data[0], comm);
 }
 
+HANDLE_AS_POD(data::CarterTracyData)
 HANDLE_AS_POD(data::Connection)
 HANDLE_AS_POD(data::CurrentControl)
+HANDLE_AS_POD(data::FetkovichData)
 HANDLE_AS_POD(data::GroupConstraints)
 HANDLE_AS_POD(data::NodeData)
 HANDLE_AS_POD(data::Rates)
 HANDLE_AS_POD(data::Segment)
+
+std::size_t packSize(const data::AquiferData& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    const auto type = 0ull;
+
+    const auto base = packSize(data.aquiferID, comm)
+        + packSize(data.pressure, comm)
+        + packSize(data.fluxRate, comm)
+        + packSize(data.volume, comm)
+        + packSize(data.initPressure, comm)
+        + packSize(data.datumDepth, comm)
+        + packSize(type, comm);
+
+    if (data.aquFet != nullptr) {
+        return base + packSize(*data.aquFet, comm);
+    }
+    else if (data.aquCT != nullptr) {
+        return base + packSize(*data.aquCT, comm);
+    }
+
+    return base;
+}
 
 std::size_t packSize(const data::GuideRateValue&, Dune::MPIHelper::MPICommunicator comm)
 {
@@ -289,6 +316,7 @@ std::size_t packSize(const RestartValue& data, Dune::MPIHelper::MPICommunicator 
     return packSize(data.solution, comm)
         +  packSize(data.wells, comm)
         +  packSize(data.grp_nwrk, comm)
+        +  packSize(data.aquifer, comm)
         +  packSize(data.extra, comm);
 }
 
@@ -485,6 +513,29 @@ void pack(const std::unordered_map<T1,T2,H,P,A>& data, std::vector<char>& buffer
     }
 }
 
+void pack(const data::AquiferData& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    const auto type =
+          (data.aquFet != nullptr)*(1ull << 0)
+        + (data.aquCT  != nullptr)*(1ull << 1);
+
+    pack(data.aquiferID, buffer, position, comm);
+    pack(data.pressure, buffer, position, comm);
+    pack(data.fluxRate, buffer, position, comm);
+    pack(data.volume, buffer, position, comm);
+    pack(data.initPressure, buffer, position, comm);
+    pack(data.datumDepth, buffer, position, comm);
+    pack(type, buffer, position, comm);
+
+    if (data.aquFet != nullptr) {
+        pack(*data.aquFet, buffer, position, comm);
+    }
+    else if (data.aquCT != nullptr) {
+        pack(*data.aquCT, buffer, position, comm);
+    }
+}
+
 void pack(const data::GuideRateValue& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
@@ -582,6 +633,7 @@ void pack(const RestartValue& data, std::vector<char>& buffer, int& position,
     pack(data.solution, buffer, position, comm);
     pack(data.wells, buffer, position, comm);
     pack(data.grp_nwrk, buffer, position, comm);
+    pack(data.aquifer, buffer, position, comm);
     pack(data.extra, buffer, position, comm);
 }
 
@@ -813,6 +865,31 @@ void unpack(data::Well& data, std::vector<char>& buffer, int& position,
     unpack(data.guide_rates, buffer, position, comm);
 }
 
+void unpack(data::AquiferData& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    auto type = 0ull;
+
+    unpack(data.aquiferID, buffer, position, comm);
+    unpack(data.pressure, buffer, position, comm);
+    unpack(data.fluxRate, buffer, position, comm);
+    unpack(data.volume, buffer, position, comm);
+    unpack(data.initPressure, buffer, position, comm);
+    unpack(data.datumDepth, buffer, position, comm);
+    unpack(type, buffer, position, comm);
+
+    if (type == 1ull) {
+        data.type = data::AquiferType::Fetkovich;
+        data.aquFet = std::make_shared<data::FetkovichData>();
+        unpack(*data.aquFet, buffer, position, comm);
+    }
+    else if (type == 2ull) {
+        data.type = data::AquiferType::CarterTracy;
+        data.aquCT = std::make_shared<data::CarterTracyData>();
+        unpack(*data.aquCT, buffer, position, comm);
+    }
+}
+
 void unpack(data::GuideRateValue& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
@@ -893,6 +970,7 @@ void unpack(RestartValue& data, std::vector<char>& buffer, int& position,
     unpack(data.solution, buffer, position, comm);
     unpack(data.wells, buffer, position, comm);
     unpack(data.grp_nwrk, buffer, position, comm);
+    unpack(data.aquifer, buffer, position, comm);
     unpack(data.extra, buffer, position, comm);
 }
 
@@ -964,6 +1042,7 @@ INSTANTIATE_PACK(std::map<std::string,std::map<std::pair<int,int>,int>>)
 INSTANTIATE_PACK(std::map<std::string,int>)
 INSTANTIATE_PACK(std::map<std::string,double>)
 INSTANTIATE_PACK(std::map<int,int>)
+INSTANTIATE_PACK(std::map<int,data::AquiferData>)
 INSTANTIATE_PACK(std::unordered_map<std::string,size_t>)
 INSTANTIATE_PACK(std::unordered_map<std::string,std::string>)
 INSTANTIATE_PACK(std::unordered_set<std::string>)
@@ -979,10 +1058,7 @@ RestartValue loadParallelRestart(const EclipseIO* eclIO, Action::State& actionSt
                                  Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> comm)
 {
 #if HAVE_MPI
-    data::Solution sol;
-    data::Wells wells;
-    data::GroupAndNetworkValues grp_nwrk;
-    RestartValue restartValues(sol, wells, grp_nwrk);
+    RestartValue restartValues{};
 
     if (eclIO)
     {
