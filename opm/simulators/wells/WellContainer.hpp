@@ -20,6 +20,7 @@
 #ifndef OPM_WELL_CONTAINER_HEADER_INCLUDED
 #define OPM_WELL_CONTAINER_HEADER_INCLUDED
 
+#include <initializer_list>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -43,6 +44,15 @@ namespace Opm {
 template <class T>
 class WellContainer {
 public:
+
+    WellContainer() = default;
+
+
+    WellContainer(std::initializer_list<std::pair<std::string,T>> init_list) {
+        for (const auto& [name, value] : init_list)
+            this->add(name, value);
+    }
+
 
     std::size_t size() const {
         return this->data.size();
