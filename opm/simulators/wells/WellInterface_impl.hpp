@@ -2205,7 +2205,7 @@ namespace Opm
                     }
 
                     if (resv_rate < current_rate) {
-                        currentControl = Well::ProducerCMode::RESV;
+                        well_state.currentProductionControl(well_index, Well::ProducerCMode::RESV);
                         return true;
                     }
                 }
@@ -2269,7 +2269,7 @@ namespace Opm
         }
 
         if (well.isProducer( )) {
-            Well::ProducerCMode& currentControl = well_state.currentProductionControls()[well_index];
+            auto currentControl = well_state.currentProductionControl(well_index);
 
             if (currentControl != Well::ProducerCMode::GRUP) {
                 // This checks only the first encountered group limit,
@@ -2285,7 +2285,7 @@ namespace Opm
                 // If a group constraint was broken, we set the current well control to
                 // be GRUP.
                 if (group_constraint.first) {
-                    well_state.currentProductionControls()[index_of_well_] = Well::ProducerCMode::GRUP;
+                    well_state.currentProductionControl(index_of_well_, Well::ProducerCMode::GRUP);
                     const int np = well_state.numPhases();
                     for (int p = 0; p<np; ++p) {
                         well_state.wellRates()[index_of_well_*np + p] *= group_constraint.second;
@@ -2410,7 +2410,7 @@ namespace Opm
                                                  EvalWell& control_eq,
                                                  Opm::DeferredLogger& deferred_logger)
     {
-        const Opm::Well::InjectorCMode& current = well_state.currentInjectionControls()[index_of_well_];
+        auto current = well_state.currentInjectionControl(index_of_well_);
         const InjectorType injectorType = controls.injector_type;
         const auto& pu = phaseUsage();
         const double efficiencyFactor = well_ecl_.getEfficiencyFactor();
@@ -2493,7 +2493,7 @@ namespace Opm
                                                   EvalWell& control_eq,
                                                   Opm::DeferredLogger& deferred_logger)
     {
-        const Well::ProducerCMode& current = well_state.currentProductionControls()[index_of_well_];
+        auto current = well_state.currentProductionControl(index_of_well_);
         const auto& pu = phaseUsage();
         const double efficiencyFactor = well_ecl_.getEfficiencyFactor();
 

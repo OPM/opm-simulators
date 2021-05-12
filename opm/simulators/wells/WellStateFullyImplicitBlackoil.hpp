@@ -177,11 +177,11 @@ namespace Opm
             for (int w = 0; w < nw; ++w) {
                 if (wells_ecl[w].isProducer()) {
                     const auto controls = wells_ecl[w].productionControls(summary_state);
-                    currentProductionControls()[w] = controls.cmode;
+                    currentProductionControl(w, controls.cmode);
                 }
                 else {
                     const auto controls = wells_ecl[w].injectionControls(summary_state);
-                    currentInjectionControls()[w] = controls.cmode;
+                    currentInjectionControl(w, controls.cmode);
                 }
             }
 
@@ -246,8 +246,8 @@ namespace Opm
 
                         // If new target is set using WCONPROD, WCONINJE etc. we use the new control
                         if (!this->events_[w].hasEvent(WellStateFullyImplicitBlackoil::event_mask)) {
-                            current_injection_controls_[ newIndex ] = prevState->currentInjectionControls()[ oldIndex ];
-                            current_production_controls_[ newIndex ] = prevState->currentProductionControls()[ oldIndex ];
+                            current_injection_controls_[ newIndex ] = prevState->currentInjectionControl( oldIndex );
+                            current_production_controls_[ newIndex ] = prevState->currentProductionControl( oldIndex );
                         }
 
                         // wellrates
@@ -545,8 +545,8 @@ namespace Opm
                     auto& curr = well.current_control;
 
                     curr.isProducer = this->is_producer_[w];
-                    curr.prod = this->currentProductionControls()[w];
-                    curr.inj  = this->currentInjectionControls() [w];
+                    curr.prod = this->currentProductionControl(w);
+                    curr.inj  = this->currentInjectionControl(w);
                 }
 
                 const auto nseg = this->numSegments(w);
@@ -1078,7 +1078,7 @@ namespace Opm
         template<class Comm>
         void updateGlobalIsGrup(const Comm& comm)
         {
-            this->global_well_info.value().update_group(this->status_.data(), this->currentInjectionControls(), this->currentProductionControls());
+            this->global_well_info.value().update_group(this->status_.data(), this->current_injection_controls_, this->current_production_controls_);
             this->global_well_info.value().communicate(comm);
         }
 
