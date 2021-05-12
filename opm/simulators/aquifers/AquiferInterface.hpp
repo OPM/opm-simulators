@@ -77,13 +77,13 @@ public:
     AquiferInterface(int aqID,
                      const std::vector<Aquancon::AquancCell>& connections,
                      const Simulator& ebosSimulator)
-        : aquiferID(aqID)
+        : aquiferID_(aqID)
         , connections_(connections)
         , ebos_simulator_(ebosSimulator)
     {
     }
 
-    // Deconstructor
+    // Destructor
     virtual ~AquiferInterface()
     {
     }
@@ -92,7 +92,7 @@ public:
     {
         auto xaqPos
             = std::find_if(aquiferSoln.begin(), aquiferSoln.end(), [this](const data::AquiferData& xaq) -> bool {
-                   return xaq.aquiferID == this->aquiferID;
+                   return xaq.aquiferID == this->aquiferID();
               });
 
         if (xaqPos == aquiferSoln.end())
@@ -119,8 +119,8 @@ public:
 
             elemCtx.updatePrimaryStencil(elem);
 
-            int cellIdx = elemCtx.globalSpaceIndex(0, 0);
-            int idx = cellToConnectionIdx_[cellIdx];
+            const int cellIdx = elemCtx.globalSpaceIndex(0, 0);
+            const int idx = cellToConnectionIdx_[cellIdx];
             if (idx < 0)
                 continue;
 
@@ -131,30 +131,36 @@ public:
     }
 
     template <class Context>
-    void addToSource(RateVector& rates, const Context& context, unsigned spaceIdx, unsigned timeIdx)
+    void addToSource(RateVector& rates,
+                     const Context& context,
+                     const unsigned spaceIdx,
+                     const unsigned timeIdx)
     {
-        unsigned cellIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        const unsigned cellIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
 
-        int idx = cellToConnectionIdx_[cellIdx];
+        const int idx = this->cellToConnectionIdx_[cellIdx];
         if (idx < 0)
             return;
 
-        // We are dereferencing the value of IntensiveQuantities because cachedIntensiveQuantities return a const
-        // pointer to IntensiveQuantities of that particular cell_id
-        const IntensiveQuantities intQuants = context.intensiveQuantities(spaceIdx, timeIdx);
-        // This is the pressure at td + dt
-        updateCellPressure(pressure_current_, idx, intQuants);
-        updateCellDensity(idx, intQuants);
-        calculateInflowRate(idx, context.simulator());
-        rates[BlackoilIndices::conti0EqIdx + FluidSystem::waterCompIdx]
-            += Qai_[idx] / context.dofVolume(spaceIdx, timeIdx);
-    }
+        // We are dereferencing the value of IntensiveQuantities because
+        // cachedIntensiveQuantities return a const pointer to
+        // IntensiveQuantities of that particular cell_id
+        const auto& intQuants = context.intensiveQuantities(spaceIdx, timeIdx);
 
+        // This is the pressure at td + dt
+        this->updateCellPressure(this->pressure_current_, idx, intQuants);
+        this->updateCellDensity(idx, intQuants);
+        this->calculateInflowRate(idx, context.simulator());
+
+        rates[BlackoilIndices::conti0EqIdx + FluidSystem::waterCompIdx]
+            += this->Qai_[idx] / context.dofVolume(spaceIdx, timeIdx);
+    }
 
     std::size_t size() const {
         return this->connections_.size();
     }
 
+    int aquiferID() const { return this->aquiferID_; }
 
 protected:
     inline Scalar gravity_() const
@@ -203,13 +209,14 @@ protected:
 
     virtual void endTimeStep() = 0;
 
-    const int aquiferID;
+    const int aquiferID_{};
     const std::vector<Aquancon::AquancCell> connections_;
     const Simulator& ebos_simulator_;
 
     // Grid variables
     std::vector<Scalar> faceArea_connected_;
     std::vector<int> cellToConnectionIdx_;
+
     // Quantities at each grid id
     std::vector<Scalar> cell_depth_;
     std::vector<Scalar> pressure_previous_;
@@ -218,8 +225,8 @@ protected:
     std::vector<Eval> rhow_;
     std::vector<Scalar> alphai_;
 
-    Scalar Tc_; // Time constant
-    Scalar pa0_; // initial aquifer pressure
+    Scalar Tc_{}; // Time constant
+    Scalar pa0_{}; // initial aquifer pressure
 
     Eval W_flux_;
 
@@ -345,8 +352,8 @@ protected:
             const auto& elem = *elemIt;
             elemCtx.updatePrimaryStencil(elem);
 
-            size_t cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-            int idx = this->cellToConnectionIdx_[cellIdx];
+            const auto cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto idx = this->cellToConnectionIdx_[cellIdx];
             if (idx < 0)
                 continue;
 
@@ -364,10 +371,13 @@ protected:
 
         // We take the average of the calculated equilibrium pressures.
         const auto& comm = ebos_simulator_.vanguard().grid().comm();
+
         Scalar vals[2];
-        vals[0] = std::accumulate(this->alphai_.begin(), this->alphai_.end(), 0.);
-        vals[1] = std::accumulate(pw_aquifer.begin(), pw_aquifer.end(), 0.);
+        vals[0] = std::accumulate(this->alphai_.begin(), this->alphai_.end(), 0.0);
+        vals[1] = std::accumulate(pw_aquifer.begin(), pw_aquifer.end(), 0.0);
+
         comm.sum(vals, 2);
+
         return vals[1] / vals[0];
     }
 

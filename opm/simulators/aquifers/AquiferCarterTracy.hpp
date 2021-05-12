@@ -57,8 +57,7 @@ public:
                        const AquiferCT::AQUCT_data& aquct_data)
         : Base(aquct_data.aquiferID, connections, ebosSimulator)
         , aquct_data_(aquct_data)
-    {
-    }
+    {}
 
     void endTimeStep() override
     {
@@ -73,7 +72,7 @@ public:
     data::AquiferData aquiferData() const
     {
         data::AquiferData data;
-        data.aquiferID = this->aquiferID;
+        data.aquiferID = this->aquiferID();
         // TODO: not sure how to get this pressure value yet
         data.pressure = this->pa0_;
         data.fluxRate = 0.;

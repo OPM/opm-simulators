@@ -237,23 +237,20 @@ template<typename TypeTag>
 data::Aquifers BlackoilAquiferModel<TypeTag>::aquiferData() const {
     data::Aquifers data;
     if (this->aquiferCarterTracyActive()) {
-        for (const auto& aqu : aquifers_CarterTracy) {
-            data::AquiferData aqu_data = aqu.aquiferData();
-            data[aqu_data.aquiferID] = aqu_data;
+        for (const auto& aqu : this->aquifers_CarterTracy) {
+            data.insert_or_assign(aqu.aquiferID(), aqu.aquiferData());
         }
     }
 
     if (this->aquiferFetkovichActive()) {
-        for (const auto& aqu : aquifers_Fetkovich) {
-            data::AquiferData aqu_data = aqu.aquiferData();
-            data[aqu_data.aquiferID] = aqu_data;
+        for (const auto& aqu : this->aquifers_Fetkovich) {
+            data.insert_or_assign(aqu.aquiferID(), aqu.aquiferData());
         }
     }
 
     if (this->aquiferNumericalActive()) {
         for (const auto& aqu : this->aquifers_numerical) {
-            data::AquiferData aqu_data = aqu.aquiferData();
-            data[aqu_data.aquiferID] = aqu_data;
+            data.insert_or_assign(aqu.aquiferID(), aqu.aquiferData());
         }
     }
 
