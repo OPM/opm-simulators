@@ -53,13 +53,13 @@
 namespace Opm {
 
 double EclGenericVanguard::externalSetupTime_ = 0.0;
-std::unique_ptr<ParseContext> EclGenericVanguard::externalParseContext_ = nullptr;
-std::unique_ptr<ErrorGuard> EclGenericVanguard::externalErrorGuard_ = nullptr;
+std::unique_ptr<ParseContext> EclGenericVanguard::externalParseContext_;
+std::unique_ptr<ErrorGuard> EclGenericVanguard::externalErrorGuard_;
 std::unique_ptr<Deck> EclGenericVanguard::externalDeck_;
 bool EclGenericVanguard::externalDeckSet_ = false;
 std::unique_ptr<EclipseState> EclGenericVanguard::externalEclState_;
-std::unique_ptr<Schedule> EclGenericVanguard::externalEclSchedule_ = nullptr;
-std::unique_ptr<SummaryConfig> EclGenericVanguard::externalEclSummaryConfig_ = nullptr;
+std::unique_ptr<Schedule> EclGenericVanguard::externalEclSchedule_;
+std::unique_ptr<SummaryConfig> EclGenericVanguard::externalEclSummaryConfig_;
 
 EclGenericVanguard::EclGenericVanguard()
     : python(std::make_shared<Python>())
