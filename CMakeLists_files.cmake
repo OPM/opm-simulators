@@ -24,6 +24,7 @@
 # find opm -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND MAIN_SOURCE_FILES
   ebos/collecttoiorank.cc
+  ebos/eclgenericcpgridvanguard.cc
   ebos/eclgenericvanguard.cc
   opm/core/props/phaseUsageFromDeck.cpp
   opm/core/props/satfunc/RelpermDiagnostics.cpp
