@@ -22,7 +22,9 @@
 #define BOOST_TEST_MODULE WellStateFIBOTest
 
 #include "MpiFixture.hpp"
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/simulators/wells/GlobalWellInfo.hpp>
+#include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/simulators/wells/WellContainer.hpp>
 #include <opm/parser/eclipse/Python/Python.hpp>
