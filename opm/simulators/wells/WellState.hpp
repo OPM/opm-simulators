@@ -72,12 +72,12 @@ namespace Opm
             parallel_well_info_ = parallel_well_info;
             perfpress_.clear();
             perfrates_.clear();
+            status_.clear();
             {
                 // const int nw = wells->number_of_wells;
                 const int nw = wells_ecl.size();
                 const int np = this->phase_usage_.num_phases;
                 // const int np = wells->number_of_phases;
-                status_.assign(nw, Well::Status::OPEN);
                 bhp_.resize(nw, 0.0);
                 thp_.resize(nw, 0.0);
                 temperature_.resize(nw, 273.15 + 15.56); // standard condition temperature
@@ -348,7 +348,7 @@ namespace Opm
         WellContainer<std::vector<double>> perfrates_;
         WellContainer<std::vector<double>> perfpress_;
     protected:
-        std::vector<Well::Status> status_;
+        WellContainer<Well::Status> status_;
     private:
 
         WellMapType wellMap_;
@@ -398,6 +398,7 @@ namespace Opm
             if ( well.isInjector() ) { 
                 temperature_[w] = well.injectionControls(summary_state).temperature;
             }
+            this->status_.add(well.name(), Well::Status::OPEN);
 
             const int num_perf_this_well = well_info.communication().sum(well_perf_data_[w].size());
             this->perfpress_.add(well.name(), std::vector<double>(num_perf_this_well, -1e100));
