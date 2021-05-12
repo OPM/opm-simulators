@@ -98,12 +98,12 @@ namespace Opm
 
         static const int numEq = Indices::numEq;
         static const int numPhases = Indices::numPhases;
-        typedef double Scalar;
+        using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
         typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
         typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
         typedef Dune::BlockVector<VectorBlockType> BVector;
-        typedef DenseAd::Evaluation<double, /*size=*/numEq> Eval;
+        typedef DenseAd::Evaluation<Scalar, /*size=*/numEq> Eval;
 
         static constexpr bool has_solvent = getPropValue<TypeTag, Properties::EnableSolvent>();
         static constexpr bool has_zFraction = getPropValue<TypeTag, Properties::EnableExtbo>();
