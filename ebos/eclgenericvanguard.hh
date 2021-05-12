@@ -256,7 +256,7 @@ public:
      *
      * Will only have usable values for CpGrid.
      */
-    const std::vector<std::pair<std::string,bool>>& parallelWells() const
+    const ParallelWellStruct& parallelWells() const
     { return parallelWells_; }
 
 protected:
