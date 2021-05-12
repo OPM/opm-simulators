@@ -422,11 +422,15 @@ namespace Opm
         /// One current control per injecting well.
         std::vector<Opm::Well::InjectorCMode>& currentInjectionControls() { return current_injection_controls_; }
         const std::vector<Opm::Well::InjectorCMode>& currentInjectionControls() const { return current_injection_controls_; }
+        void currentInjectionControl(std::size_t well_index, Well::InjectorCMode cmode) { current_injection_controls_[well_index] = cmode; }
+        Well::InjectorCMode currentInjectionControl(std::size_t well_index) const { return current_injection_controls_[well_index]; }
 
 
         /// One current control per producing well.
         std::vector<Well::ProducerCMode>& currentProductionControls() { return current_production_controls_; }
         const std::vector<Well::ProducerCMode>& currentProductionControls() const { return current_production_controls_; }
+        void currentProductionControl(std::size_t well_index, Well::ProducerCMode cmode) { current_production_controls_[well_index] = cmode; }
+        Well::ProducerCMode currentProductionControl(std::size_t well_index) const { return current_production_controls_[well_index]; }
 
         void setCurrentWellRates(const std::string& wellName, const std::vector<double>& rates ) {
             well_rates[wellName].second = rates;
