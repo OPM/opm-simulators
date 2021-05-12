@@ -41,10 +41,8 @@ namespace Opm
     class WellState
     {
     public:
-        typedef std::array< int, 3 >  mapentry_t;
-        typedef std::map< std::string, mapentry_t > WellMapType;
-
-
+        using mapentry_t = std::array<int, 3>;
+        using WellMapType = std::map<std::string, mapentry_t>;
 
         explicit WellState(const PhaseUsage& pu) :
             phase_usage_(pu)
