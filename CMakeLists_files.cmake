@@ -59,6 +59,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/WellGroupHelpers.cpp
   opm/simulators/wells/WellProdIndexCalculator.cpp
   opm/simulators/wells/WellState.cpp
+  opm/simulators/wells/WellStateFullyImplicitBlackoil.cpp
   opm/simulators/wells/WGState.cpp
   )
 
