@@ -848,7 +848,7 @@ namespace Opm
         }
 
         // Store the perforation pressure for later usage.
-        auto * perf_press = &well_state.perfPress()[first_perf_];
+        auto& perf_press = well_state.perfPress(index_of_well_);
         perf_press[perf] = well_state.bhp(index_of_well_) + perf_pressure_diffs_[perf];
     }
 
@@ -1665,9 +1665,9 @@ namespace Opm
         }
 
         // Compute the average pressure in each well block
-        const auto * perf_press = &well_state.perfPress()[first_perf_];
+        const auto& perf_press = well_state.perfPress(w);
         auto p_above =  this->parallel_well_info_.communicateAboveValues(well_state.bhp(w),
-                                                                         perf_press,
+                                                                         perf_press.data(),
                                                                          nperf);
 
         for (int perf = 0; perf < nperf; ++perf) {
@@ -2423,9 +2423,9 @@ namespace Opm
 
         //  Set current control to bhp, and bhp value in state, modify bhp limit in control object.
         if (well_ecl_.isInjector()) {
-            well_state_copy.currentInjectionControls()[index_of_well_] = Well::InjectorCMode::BHP;
+            well_state_copy.currentInjectionControl(index_of_well_, Well::InjectorCMode::BHP);
         } else {
-            well_state_copy.currentProductionControls()[index_of_well_] = Well::ProducerCMode::BHP;
+            well_state_copy.currentProductionControl(index_of_well_, Well::ProducerCMode::BHP);
         }
         well_state_copy.update_bhp(index_of_well_, bhp);
 
@@ -2507,8 +2507,7 @@ namespace Opm
         }
         if (this->glift_optimize_only_thp_wells) {
             const int well_index = index_of_well_;
-            const Well::ProducerCMode& control_mode
-                = well_state.currentProductionControls()[well_index];
+            auto control_mode = well_state.currentProductionControl(well_index);
             if (control_mode != Well::ProducerCMode::THP ) {
                 gliftDebug("Not THP control", deferred_logger);
                 return false;
@@ -2691,7 +2690,7 @@ namespace Opm
 
         // does the well have a THP related constraint?
         const auto& summaryState = ebosSimulator.vanguard().summaryState();
-        const Well::ProducerCMode& current_control = well_state.currentProductionControls()[this->index_of_well_];
+        auto current_control = well_state.currentProductionControl(this->index_of_well_);
         if ( !well.Base::wellHasTHPConstraints(summaryState) || current_control == Well::ProducerCMode::BHP ) {
             // get the bhp value based on the bhp constraints
             const double bhp = well.mostStrictBhpFromBhpLimits(summaryState);
@@ -3276,7 +3275,7 @@ namespace Opm
         }
         else if (this->isInjector() )
         {
-            const Opm::Well::InjectorCMode& current = well_state.currentInjectionControls()[well_index];
+            auto current = well_state.currentInjectionControl(well_index);
             switch(current) {
             case Well::InjectorCMode::THP:
                 ctrltype = CR::WellFailure::Type::ControlTHP;
@@ -3301,7 +3300,7 @@ namespace Opm
         }
         else if (this->isProducer() )
         {
-            const Well::ProducerCMode& current = well_state.currentProductionControls()[well_index];
+            auto current = well_state.currentProductionControl(well_index);
             switch(current) {
             case Well::ProducerCMode::THP:
                 ctrltype = CR::WellFailure::Type::ControlTHP;
