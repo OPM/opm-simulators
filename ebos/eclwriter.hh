@@ -528,7 +528,9 @@ private:
         typedef Dune::MultipleCodimMultipleGeomTypeMapper<GlobalGridView> ElementMapper;
         ElementMapper globalElemMapper(globalGridView, Dune::mcmgElementLayout());
 
-        const EclTransmissibility<TypeTag>* globalTrans;
+        using TransmissibilityType = typename Vanguard::TransmissibilityType;
+
+        const TransmissibilityType* globalTrans;
 
         if (!collectToIORank_.isParallel())
         {
@@ -622,7 +624,8 @@ private:
         typedef Dune::MultipleCodimMultipleGeomTypeMapper<GlobalGridView> ElementMapper;
         ElementMapper globalElemMapper(globalGridView, Dune::mcmgElementLayout());
 
-        const EclTransmissibility<TypeTag>* globalTrans;
+        using TransmissibilityType = typename Vanguard::TransmissibilityType;
+        const TransmissibilityType* globalTrans;
         if (!collectToIORank_.isParallel()) {
             // in the sequential case we must use the transmissibilites defined by
             // the problem. (because in the sequential case, the grid manager does

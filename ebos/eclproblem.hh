@@ -611,7 +611,7 @@ class EclProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
     using EqVector = GetPropType<TypeTag, Properties::EqVector>;
-
+    using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
 
     // Grid and world dimension
     enum { dim = GridView::dimension };
@@ -815,7 +815,11 @@ public:
      */
     EclProblem(Simulator& simulator)
         : ParentType(simulator)
-        , transmissibilities_(simulator.vanguard())
+        , transmissibilities_(simulator.vanguard().eclState(),
+                              simulator.vanguard().gridView(),
+                              simulator.vanguard().cartesianIndexMapper(),
+                              simulator.vanguard().grid(),
+                              simulator.vanguard().cellCentroids())
         , thresholdPressures_(simulator)
         , wellModel_(simulator)
         , aquiferModel_(simulator)
@@ -1514,7 +1518,7 @@ public:
     /*!
      * \brief Return a reference to the object that handles the "raw" transmissibilities.
      */
-    const EclTransmissibility<TypeTag>& eclTransmissibilities() const
+    const typename Vanguard::TransmissibilityType& eclTransmissibilities() const
     { return transmissibilities_; }
 
     /*!
@@ -3450,7 +3454,7 @@ private:
     static std::string briefDescription_;
 
     std::array<std::vector<Scalar>, 2> referencePorosity_;
-    EclTransmissibility<TypeTag> transmissibilities_;
+    typename Vanguard::TransmissibilityType transmissibilities_;
 
     std::shared_ptr<EclMaterialLawManager> materialLawManager_;
     std::shared_ptr<EclThermalLawManager> thermalLawManager_;

@@ -27,12 +27,12 @@
 #ifndef EWOMS_ECL_CP_GRID_VANGUARD_HH
 #define EWOMS_ECL_CP_GRID_VANGUARD_HH
 
+#include <opm/models/common/multiphasebaseproperties.hh>
+
 #include "eclbasevanguard.hh"
 #include "ecltransmissibility.hh"
 #include "femcpgridcompat.hh"
 #include "eclgenericcpgridvanguard.hh"
-
-#include <functional>
 
 namespace Opm {
 template <class TypeTag>
@@ -89,7 +89,9 @@ public:
     using Grid = GetPropType<TypeTag, Properties::Grid>;
     using EquilGrid = GetPropType<TypeTag, Properties::EquilGrid>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
-
+    using TransmissibilityType = EclTransmissibility<Grid, GridView, ElementMapper, Scalar,
+                                                     getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                                     getPropValue<TypeTag, Properties::EnableDiffusion>()>;
 private:
     typedef Dune::CartesianIndexMapper<Grid> CartesianIndexMapper;
     using Element = typename GridView::template Codim<0>::Entity;
@@ -111,7 +113,7 @@ public:
         globalTrans_.reset();
     }
 
-    const EclTransmissibility<TypeTag>& globalTransmissibility() const
+    const TransmissibilityType& globalTransmissibility() const
     {
         assert( globalTrans_ != nullptr );
         return *globalTrans_;
@@ -152,7 +154,11 @@ protected:
 
     void allocTrans() override
     {
-        globalTrans_.reset(new EclTransmissibility<TypeTag>(*this));
+        globalTrans_.reset(new TransmissibilityType(this->eclState(),
+                                                    this->gridView(),
+                                                    this->cartesianIndexMapper(),
+                                                    this->grid(),
+                                                    this->cellCentroids()));
         globalTrans_->update(false);
     }
 
@@ -167,7 +173,7 @@ protected:
         this->doFilterConnections_(this->schedule());
     }
 
-    std::unique_ptr<EclTransmissibility<TypeTag> > globalTrans_;
+    std::unique_ptr<TransmissibilityType> globalTrans_;
 };
 
 } // namespace Opm
