@@ -48,16 +48,17 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/utils/gatherDeferredLogger.cpp
   opm/simulators/utils/ParallelFileMerger.cpp
   opm/simulators/utils/ParallelRestart.cpp
+  opm/simulators/wells/ALQState.cpp
   opm/simulators/wells/GlobalWellInfo.cpp
   opm/simulators/wells/GroupState.cpp
-  opm/simulators/wells/WGState.cpp
-  opm/simulators/wells/ALQState.cpp
   opm/simulators/wells/ParallelWellInfo.cpp
   opm/simulators/wells/TargetCalculator.cpp
   opm/simulators/wells/VFPProdProperties.cpp
   opm/simulators/wells/VFPInjProperties.cpp
   opm/simulators/wells/WellGroupHelpers.cpp
   opm/simulators/wells/WellProdIndexCalculator.cpp
+  opm/simulators/wells/WellState.cpp
+  opm/simulators/wells/WGState.cpp
   )
 
 if(CUDA_FOUND)
