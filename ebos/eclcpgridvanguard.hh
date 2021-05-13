@@ -131,18 +131,23 @@ public:
      */
     void loadBalance()
     {
+#if HAVE_MPI
         this->doLoadBalance_(this->edgeWeightsMethod(), this->ownersFirst(),
                              this->serialPartitioning(), this->enableDistributedWells(),
                              this->zoltanImbalanceTol(), this->gridView(),
                              this->schedule(), this->centroids_,
                              this->eclState(), this->parallelWells_);
+#endif
 
+        this->allocCartMapper();
         this->updateGridView_();
         this->updateCartesianToCompressedMapping_();
         this->updateCellDepths_();
         this->updateCellThickness_();
 
+#if HAVE_MPI
         this->distributeFieldProps_(this->eclState());
+#endif
     }
 
 

@@ -100,6 +100,7 @@ protected:
      *
      * (For parallel simulation runs.)
      */
+#if HAVE_MPI
     void doLoadBalance_(Dune::EdgeWeightMethod edgeWeightsMethod,
                         bool ownersFirst, bool serialPartitioning,
                         bool enableDistributedWells, double zoltanImbalanceTol,
@@ -108,9 +109,12 @@ protected:
                         EclipseState& eclState,
                         EclGenericVanguard::ParallelWellStruct& parallelWells);
 
-    void doCreateGrids_(EclipseState& eclState);
-
     void distributeFieldProps_(EclipseState& eclState);
+#endif
+
+    void allocCartMapper();
+
+    void doCreateGrids_(EclipseState& eclState);
 
     virtual void allocTrans() = 0;
     virtual double getTransmissibility(unsigned I, unsigned J) = 0;
