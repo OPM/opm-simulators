@@ -372,8 +372,8 @@ private:
     // for (int perf = first_perf_index_[well_index]; perf < first_perf_index_[well_index] + num_perf_[well_index]; ++perf)
     std::vector<int> first_perf_index_;
     std::vector<int> num_perf_;
-    std::vector<Opm::Well::InjectorCMode> current_injection_controls_;
-    std::vector<Well::ProducerCMode> current_production_controls_;
+    WellContainer<Opm::Well::InjectorCMode> current_injection_controls_;
+    WellContainer<Well::ProducerCMode> current_production_controls_;
 
     // Use of std::optional<> here is a technical crutch, the
     // WellStateFullyImplicitBlackoil class should be default constructible,
