@@ -24,6 +24,7 @@
 #include <opm/output/data/Wells.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
+#include <opm/simulators/wells/WellContainer.hpp>
 
 #include <array>
 #include <cstddef>
@@ -96,12 +97,16 @@ public:
     const std::vector<double>& wellRates() const { return wellrates_; }
 
     /// One rate per well connection.
-    std::vector<double>& perfRates() { return perfrates_; }
-    const std::vector<double>& perfRates() const { return perfrates_; }
+    std::vector<double>& perfRates(std::size_t well_index) { return this->perfrates_[well_index]; }
+    const std::vector<double>& perfRates(std::size_t well_index) const { return this->perfrates_[well_index]; }
+    std::vector<double>& perfRates(const std::string& wname) { return this->perfrates_[wname]; }
+    const std::vector<double>& perfRates(const std::string& wname) const { return this->perfrates_[wname]; }
 
     /// One pressure per well connection.
-    std::vector<double>& perfPress() { return perfpress_; }
-    const std::vector<double>& perfPress() const { return perfpress_; }
+    std::vector<double>& perfPress(std::size_t well_index) { return perfpress_[well_index]; }
+    const std::vector<double>& perfPress(std::size_t well_index) const { return perfpress_[well_index]; }
+    std::vector<double>& perfPress(const std::string& wname) { return perfpress_[wname]; }
+    const std::vector<double>& perfPress(const std::string& wname) const { return perfpress_[wname]; }
 
     const WellMapType& wellMap() const { return wellMap_; }
     WellMapType& wellMap() { return wellMap_; }
@@ -148,7 +153,7 @@ public:
                                    const int* globalCellIdxMap) const;
 
 protected:
-    std::vector<Well::Status> status_;
+    WellContainer<Well::Status> status_;
     std::vector<std::vector<PerforationData>> well_perf_data_;
     std::vector<ParallelWellInfo*> parallel_well_info_;
 
@@ -158,8 +163,8 @@ private:
     std::vector<double> thp_;
     std::vector<double> temperature_;
     std::vector<double> wellrates_;
-    std::vector<double> perfrates_;
-    std::vector<double> perfpress_;
+    WellContainer<std::vector<double>> perfrates_;
+    WellContainer<std::vector<double>> perfpress_;
 
     WellMapType wellMap_;
 
