@@ -121,9 +121,12 @@ void WellStateFullyImplicitBlackoil::init(const std::vector<double>& cellPressur
         this->is_producer_.add( ecl_well.name(), ecl_well.isProducer());
     }
 
-    current_injection_controls_.resize(nw, Well::InjectorCMode::CMODE_UNDEFINED);
-    current_production_controls_.resize(nw, Well::ProducerCMode::CMODE_UNDEFINED);
+    current_injection_controls_.clear();
+    current_production_controls_.clear();
     for (int w = 0; w < nw; ++w) {
+        const auto& wname = wells_ecl[w].name();
+        current_production_controls_.add(wname, Well::ProducerCMode::CMODE_UNDEFINED);
+        current_injection_controls_.add(wname, Well::InjectorCMode::CMODE_UNDEFINED);
         if (wells_ecl[w].isProducer()) {
             const auto controls = wells_ecl[w].productionControls(summary_state);
             currentProductionControl(w, controls.cmode);
@@ -849,7 +852,7 @@ void WellStateFullyImplicitBlackoil::communicateGroupRates(const Comm& comm)
 template<class Comm>
 void WellStateFullyImplicitBlackoil::updateGlobalIsGrup(const Comm& comm)
 {
-    this->global_well_info.value().update_group(this->status_.data(), this->current_injection_controls_, this->current_production_controls_);
+    this->global_well_info.value().update_group(this->status_.data(), this->current_injection_controls_.data(), this->current_production_controls_.data());
     this->global_well_info.value().communicate(comm);
 }
 
