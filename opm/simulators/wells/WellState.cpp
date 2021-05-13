@@ -36,12 +36,11 @@ void WellState::init(const std::vector<double>& cellPressures,
 {
     // clear old name mapping
     this->wellMap_.clear();
-    this->parallel_well_info_ = parallel_well_info;
     this->perfpress_.clear();
     this->perfrates_.clear();
     this->status_.clear();
     this->well_perf_data_.clear();
-
+    this->parallel_well_info_.clear();
     {
         // const int nw = wells->number_of_wells;
         const int nw = wells_ecl.size();
@@ -56,7 +55,7 @@ void WellState::init(const std::vector<double>& cellPressures,
             const Well& well = wells_ecl[w];
 
             // Initialize bhp(), thp(), wellRates(), temperature().
-            initSingleWell(cellPressures, w, well, well_perf_data[w], *parallel_well_info[w], summary_state);
+            initSingleWell(cellPressures, w, well, well_perf_data[w], parallel_well_info[w], summary_state);
 
             // Setup wellname -> well index mapping.
             const int num_perf_this_well = well_perf_data[w].size();
@@ -273,7 +272,7 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
                                const int w,
                                const Well& well,
                                const std::vector<PerforationData>& well_perf_data,
-                               const ParallelWellInfo& well_info,
+                               const ParallelWellInfo* well_info,
                                const SummaryState& summary_state)
 {
     assert(well.isInjector() || well.isProducer());
@@ -291,8 +290,9 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     }
     this->status_.add(well.name(), Well::Status::OPEN);
     this->well_perf_data_.add(well.name(), well_perf_data);
+    this->parallel_well_info_.add(well.name(), well_info);
 
-    const int num_perf_this_well = well_info.communication().sum(well_perf_data_[w].size());
+    const int num_perf_this_well = well_info->communication().sum(well_perf_data_[w].size());
     this->perfpress_.add(well.name(), std::vector<double>(num_perf_this_well, -1e100));
     this->perfrates_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
     if ( num_perf_this_well == 0 ) {
@@ -315,7 +315,7 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
 
     const double local_pressure = well_perf_data_[w].empty() ?
                                       0 : cellPressures[well_perf_data_[w][0].cell_index];
-    const double global_pressure = well_info.broadcastFirstPerforationValue(local_pressure);
+    const double global_pressure = well_info->broadcastFirstPerforationValue(local_pressure);
 
     if (well.getStatus() == Well::Status::OPEN) {
         this->openWell(w);

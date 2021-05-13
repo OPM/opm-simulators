@@ -155,7 +155,7 @@ public:
 protected:
     WellContainer<Well::Status> status_;
     WellContainer<std::vector<PerforationData>> well_perf_data_;
-    std::vector<ParallelWellInfo*> parallel_well_info_;
+    WellContainer<const ParallelWellInfo*> parallel_well_info_;
 
 private:
     PhaseUsage phase_usage_;
@@ -177,7 +177,7 @@ private:
                         const int w,
                         const Well& well,
                         const std::vector<PerforationData>& well_perf_data,
-                        const ParallelWellInfo& well_info,
+                        const ParallelWellInfo* well_info,
                         const SummaryState& summary_state);
 };
 
