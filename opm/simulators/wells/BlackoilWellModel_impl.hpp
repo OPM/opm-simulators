@@ -1979,10 +1979,10 @@ namespace Opm {
             well_state.update_temperature( well_index,  rst_well.temperature);
 
             if (rst_well.current_control.isProducer) {
-                well_state.currentProductionControls()[ well_index ] = rst_well.current_control.prod;
+                well_state.currentProductionControl( well_index, rst_well.current_control.prod);
             }
             else {
-                well_state.currentInjectionControls()[ well_index ] = rst_well.current_control.inj;
+                well_state.currentInjectionControl( well_index, rst_well.current_control.inj);
             }
 
             const auto wellrate_index = well_index * np;
@@ -1991,8 +1991,8 @@ namespace Opm {
                 well_state.wellRates()[ wellrate_index + i ] = rst_well.rates.get( phs[ i ] );
             }
 
-            auto * perf_pressure = well_state.perfPress().data() + wm.second[1];
-            auto * perf_rates = well_state.perfRates().data() + wm.second[1];
+            auto& perf_pressure = well_state.perfPress(well_index);
+            auto& perf_rates = well_state.perfRates(well_index);
             auto * perf_phase_rates = well_state.mutable_perfPhaseRates().data() + wm.second[1]*np;
             const auto& perf_data = this->well_perf_data_[well_index];
 
