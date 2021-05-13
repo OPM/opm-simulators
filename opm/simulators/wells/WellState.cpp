@@ -35,13 +35,12 @@ void WellState::init(const std::vector<double>& cellPressures,
                      const SummaryState& summary_state)
 {
     // clear old name mapping
-    wellMap_.clear();
-
-    well_perf_data_ = well_perf_data;
-    parallel_well_info_ = parallel_well_info;
-    perfpress_.clear();
-    perfrates_.clear();
-    status_.clear();
+    this->wellMap_.clear();
+    this->parallel_well_info_ = parallel_well_info;
+    this->perfpress_.clear();
+    this->perfrates_.clear();
+    this->status_.clear();
+    this->well_perf_data_.clear();
 
     {
         // const int nw = wells->number_of_wells;
@@ -57,7 +56,7 @@ void WellState::init(const std::vector<double>& cellPressures,
             const Well& well = wells_ecl[w];
 
             // Initialize bhp(), thp(), wellRates(), temperature().
-            initSingleWell(cellPressures, w, well, *parallel_well_info[w], summary_state);
+            initSingleWell(cellPressures, w, well, well_perf_data[w], *parallel_well_info[w], summary_state);
 
             // Setup wellname -> well index mapping.
             const int num_perf_this_well = well_perf_data[w].size();
@@ -273,6 +272,7 @@ void WellState::gatherVectorsOnRoot(const std::vector<data::Connection>& from_co
 void WellState::initSingleWell(const std::vector<double>& cellPressures,
                                const int w,
                                const Well& well,
+                               const std::vector<PerforationData>& well_perf_data,
                                const ParallelWellInfo& well_info,
                                const SummaryState& summary_state)
 {
@@ -290,6 +290,7 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
         temperature_[w] = well.injectionControls(summary_state).temperature;
     }
     this->status_.add(well.name(), Well::Status::OPEN);
+    this->well_perf_data_.add(well.name(), well_perf_data);
 
     const int num_perf_this_well = well_info.communication().sum(well_perf_data_[w].size());
     this->perfpress_.add(well.name(), std::vector<double>(num_perf_this_well, -1e100));
