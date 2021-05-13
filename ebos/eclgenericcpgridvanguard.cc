@@ -69,16 +69,19 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::releaseEquilGrid()
     equilCartesianIndexMapper_.reset();
 }
 
+#if HAVE_MPI
 template<class ElementMapper, class GridView, class Scalar>
 void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doLoadBalance_(Dune::EdgeWeightMethod edgeWeightsMethod,
-                                                                             bool ownersFirst, bool serialPartitioning,
-                                                                             bool enableDistributedWells, double zoltanImbalanceTol,
-                                                                             const GridView& gridv, const Schedule& schedule,
+                                                                             bool ownersFirst,
+                                                                             bool serialPartitioning,
+                                                                             bool enableDistributedWells,
+                                                                             double zoltanImbalanceTol,
+                                                                             const GridView& gridv,
+                                                                             const Schedule& schedule,
                                                                              std::vector<double>& centroids,
                                                                              EclipseState& eclState1,
                                                                              EclGenericVanguard::ParallelWellStruct& parallelWells)
 {
-#if HAVE_MPI
     int mpiSize = 1;
     MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
 
@@ -177,15 +180,11 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doLoadBalance_(Dun
         // But we need all connections to figure out the first cell of a well (e.g. for
         // pressure). Hence this is now skipped. Rank 0 had everything even before.
     }
-#endif
-    this->cartesianIndexMapper_.reset(new CartesianIndexMapper(this->grid()));
 }
-
 
 template<class ElementMapper, class GridView, class Scalar>
 void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::distributeFieldProps_(EclipseState& eclState1)
 {
-#if HAVE_MPI
     int mpiSize = 1;
     MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
 
@@ -206,9 +205,14 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::distributeFieldPro
             std::rethrow_exception(std::current_exception());
         }
     }
-#endif
 }
+#endif
 
+template<class ElementMapper, class GridView, class Scalar>
+void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::allocCartMapper()
+{
+    this->cartesianIndexMapper_.reset(new CartesianIndexMapper(this->grid()));
+}
 
 template<class ElementMapper, class GridView, class Scalar>
 void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(EclipseState& eclState)
