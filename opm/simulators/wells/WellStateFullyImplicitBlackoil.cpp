@@ -100,7 +100,7 @@ void WellStateFullyImplicitBlackoil::init(const std::vector<double>& cellPressur
         const int connpos = well_info[1];
         const int num_perf_this_well = well_info[2];
         const int global_num_perf_this_well = parallel_well_info[w]->communication().sum(num_perf_this_well);
-        auto * perf_press = &this->perfPress()[connpos];
+        auto& perf_press = this->perfPress(w);
         auto * phase_rates = &this->mutable_perfPhaseRates()[connpos * this->numPhases()];
 
         for (int perf = 0; perf < num_perf_this_well; ++perf) {
@@ -115,9 +115,10 @@ void WellStateFullyImplicitBlackoil::init(const std::vector<double>& cellPressur
         first_perf_index_[w] = connpos;
     }
 
-    is_producer_.resize(nw, false);
+    is_producer_.clear();
     for (int w = 0; w < nw; ++w) {
-        is_producer_[w] = wells_ecl[w].isProducer();
+        const auto& ecl_well = wells_ecl[w];
+        this->is_producer_.add( ecl_well.name(), ecl_well.isProducer());
     }
 
     current_injection_controls_.resize(nw, Well::InjectorCMode::CMODE_UNDEFINED);
@@ -125,11 +126,11 @@ void WellStateFullyImplicitBlackoil::init(const std::vector<double>& cellPressur
     for (int w = 0; w < nw; ++w) {
         if (wells_ecl[w].isProducer()) {
             const auto controls = wells_ecl[w].productionControls(summary_state);
-            currentProductionControls()[w] = controls.cmode;
+            currentProductionControl(w, controls.cmode);
         }
         else {
             const auto controls = wells_ecl[w].injectionControls(summary_state);
-            currentInjectionControls()[w] = controls.cmode;
+            currentInjectionControl(w, controls.cmode);
         }
     }
 
@@ -194,8 +195,8 @@ void WellStateFullyImplicitBlackoil::init(const std::vector<double>& cellPressur
 
                 // If new target is set using WCONPROD, WCONINJE etc. we use the new control
                 if (!this->events_[w].hasEvent(WellStateFullyImplicitBlackoil::event_mask)) {
-                    current_injection_controls_[ newIndex ] = prevState->currentInjectionControls()[ oldIndex ];
-                    current_production_controls_[ newIndex ] = prevState->currentProductionControls()[ oldIndex ];
+                    current_injection_controls_[ newIndex ] = prevState->currentInjectionControl(oldIndex);
+                    current_production_controls_[ newIndex ] = prevState->currentProductionControl(oldIndex);
                 }
 
                 // wellrates
@@ -261,8 +262,8 @@ void WellStateFullyImplicitBlackoil::init(const std::vector<double>& cellPressur
                 // perfPressures
                 if (global_num_perf_same)
                 {
-                    auto * target_press = &perfPress()[connpos];
-                    const auto * src_press = &prevState->perfPress()[oldPerf_idx_beg];
+                    auto& target_press = perfPress(w);
+                    const auto& src_press = prevState->perfPress(well.name());
                     for (int perf = 0; perf < num_perf_this_well; ++perf)
                     {
                         target_press[perf] = src_press[perf];
@@ -468,8 +469,8 @@ WellStateFullyImplicitBlackoil::report(const int* globalCellIdxMap,
             auto& curr = well.current_control;
 
             curr.isProducer = this->is_producer_[w];
-            curr.prod = this->currentProductionControls()[w];
-            curr.inj  = this->currentInjectionControls() [w];
+            curr.prod = this->currentProductionControl(w);
+            curr.inj  = this->currentInjectionControl(w);
         }
 
         const auto nseg = this->numSegments(w);
@@ -641,8 +642,7 @@ void WellStateFullyImplicitBlackoil::initWellStateMSWell(const std::vector<Well>
                 // top segment is always the first one, and its pressure is the well bhp
                 seg_press_.push_back(bhp(w));
                 const int top_segment = top_segment_index_[w];
-                const int start_perf = connpos;
-                const auto * perf_press = &this->perfPress()[start_perf];
+                const auto& perf_press = this->perfPress(w);
                 for (int seg = 1; seg < well_nseg; ++seg) {
                     if ( !segment_perforations[seg].empty() ) {
                         const int first_perf = segment_perforations[seg][0];
@@ -849,7 +849,7 @@ void WellStateFullyImplicitBlackoil::communicateGroupRates(const Comm& comm)
 template<class Comm>
 void WellStateFullyImplicitBlackoil::updateGlobalIsGrup(const Comm& comm)
 {
-    this->global_well_info.value().update_group(this->status_, this->currentInjectionControls(), this->currentProductionControls());
+    this->global_well_info.value().update_group(this->status_.data(), this->current_injection_controls_, this->current_production_controls_);
     this->global_well_info.value().communicate(comm);
 }
 
