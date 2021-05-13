@@ -39,13 +39,15 @@ void WellState::init(const std::vector<double>& cellPressures,
 
     well_perf_data_ = well_perf_data;
     parallel_well_info_ = parallel_well_info;
+    perfpress_.clear();
+    perfrates_.clear();
+    status_.clear();
 
     {
         // const int nw = wells->number_of_wells;
         const int nw = wells_ecl.size();
         const int np = this->phase_usage_.num_phases;
         // const int np = wells->number_of_phases;
-        status_.assign(nw, Well::Status::OPEN);
         bhp_.resize(nw, 0.0);
         thp_.resize(nw, 0.0);
         temperature_.resize(nw, 273.15 + 15.56); // standard condition temperature
@@ -67,12 +69,6 @@ void WellState::init(const std::vector<double>& cellPressures,
             wellMapEntry[ 2 ] = num_perf_this_well;
             connpos += num_perf_this_well;
         }
-
-        // The perforation rates and perforation pressures are
-        // not expected to be consistent with bhp_ and wellrates_
-        // after init().
-        perfrates_.resize(connpos, 0.0);
-        perfpress_.resize(connpos, -1e100);
     }
 }
 
@@ -239,8 +235,8 @@ void WellState::reportConnections(data::Well& well,
     const int num_perf_well = pd.size();
     well.connections.resize(num_perf_well);
 
-    const auto * perf_rates = &this->perfRates()[itr.second[1]];
-    const auto * perf_pressure = &this->perfPress()[itr.second[1]];
+    const auto& perf_rates = this->perfRates(itr.second[1]);
+    const auto& perf_pressure = this->perfPress(itr.second[1]);
     for( int i = 0; i < num_perf_well; ++i ) {
         const auto active_index = this->well_perf_data_[well_index][i].cell_index;
         auto& connection = well.connections[ i ];
@@ -293,8 +289,11 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     if ( well.isInjector() ) {
         temperature_[w] = well.injectionControls(summary_state).temperature;
     }
+    this->status_.add(well.name(), Well::Status::OPEN);
 
     const int num_perf_this_well = well_info.communication().sum(well_perf_data_[w].size());
+    this->perfpress_.add(well.name(), std::vector<double>(num_perf_this_well, -1e100));
+    this->perfrates_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
     if ( num_perf_this_well == 0 ) {
         // No perforations of the well. Initialize to zero.
         bhp_[w] = 0.;
