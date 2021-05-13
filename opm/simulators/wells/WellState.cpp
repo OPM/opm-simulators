@@ -233,8 +233,8 @@ void WellState::reportConnections(data::Well& well,
     const int num_perf_well = pd.size();
     well.connections.resize(num_perf_well);
 
-    const auto& perf_rates = this->perfRates(itr.second[1]);
-    const auto& perf_pressure = this->perfPress(itr.second[1]);
+    const auto& perf_rates = this->perfRates(well_index);
+    const auto& perf_pressure = this->perfPress(well_index);
     for( int i = 0; i < num_perf_well; ++i ) {
         const auto active_index = this->well_perf_data_[well_index][i].cell_index;
         auto& connection = well.connections[ i ];
