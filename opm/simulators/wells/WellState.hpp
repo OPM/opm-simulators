@@ -154,7 +154,7 @@ public:
 
 protected:
     WellContainer<Well::Status> status_;
-    std::vector<std::vector<PerforationData>> well_perf_data_;
+    WellContainer<std::vector<PerforationData>> well_perf_data_;
     std::vector<ParallelWellInfo*> parallel_well_info_;
 
 private:
@@ -176,6 +176,7 @@ private:
     void initSingleWell(const std::vector<double>& cellPressures,
                         const int w,
                         const Well& well,
+                        const std::vector<PerforationData>& well_perf_data,
                         const ParallelWellInfo& well_info,
                         const SummaryState& summary_state);
 };
