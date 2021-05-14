@@ -547,12 +547,12 @@ void printUsage(const std::string& helpPreamble,
 }
 
 /// \cond 0
-inline int noPositionalParameters_(std::set<std::string>& seenParams OPM_UNUSED,
+inline int noPositionalParameters_(std::set<std::string>&,
                                    std::string& errorMsg,
-                                   int argc OPM_UNUSED,
+                                   int,
                                    const char** argv,
                                    int paramIdx,
-                                   int posParamIdx OPM_UNUSED)
+                                   int)
 {
     errorMsg = std::string("Illegal parameter \"")+argv[paramIdx]+"\".";
     return 0;
@@ -653,7 +653,7 @@ inline std::string parseQuotedValue_(std::string& s, const std::string& errorPre
     return result;
 }
 
-inline std::string parseUnquotedValue_(std::string& s, const std::string& errorPrefix OPM_UNUSED)
+inline std::string parseUnquotedValue_(std::string& s, const std::string&)
 {
     unsigned i;
     for (i = 0; i < s.size(); ++ i)
