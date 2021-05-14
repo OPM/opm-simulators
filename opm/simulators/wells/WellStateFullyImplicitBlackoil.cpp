@@ -62,7 +62,7 @@ void WellStateFullyImplicitBlackoil::init(const std::vector<double>& cellPressur
         nperf += wpd.size();
     }
 
-    well_reservoir_rates_.resize(nw * this->numPhases(), 0.0);
+    well_reservoir_rates_.clear();
     well_dissolved_gas_rates_.resize(nw, 0.0);
     well_vaporized_oil_rates_.resize(nw, 0.0);
 
@@ -106,13 +106,15 @@ void WellStateFullyImplicitBlackoil::init(const std::vector<double>& cellPressur
         for (int perf = 0; perf < num_perf_this_well; ++perf) {
             if (wells_ecl[w].getStatus() == Well::Status::OPEN) {
                 for (int p = 0; p < this->numPhases(); ++p) {
-                    phase_rates[this->numPhases()*perf + p] = wellRates()[this->numPhases()*w + p] / double(global_num_perf_this_well);
+                    phase_rates[this->numPhases()*perf + p] = wellRates(w)[p] / double(global_num_perf_this_well);
                 }
             }
             perf_press[perf] = cellPressures[well_perf_data[w][perf].cell_index];
         }
         num_perf_[w] = num_perf_this_well;
         first_perf_index_[w] = connpos;
+
+        this->well_reservoir_rates_.add(wname, std::vector<double>(np, 0));
     }
 
     is_producer_.clear();
@@ -202,17 +204,8 @@ void WellStateFullyImplicitBlackoil::init(const std::vector<double>& cellPressur
                     current_production_controls_[ newIndex ] = prevState->currentProductionControl(oldIndex);
                 }
 
-                // wellrates
-                for( int i=0, idx=newIndex*np, oldidx=oldIndex*np; i<np; ++i, ++idx, ++oldidx )
-                {
-                    wellRates()[ idx ] = prevState->wellRates()[ oldidx ];
-                }
-
-                // wellResrates
-                for( int i=0, idx=newIndex*np, oldidx=oldIndex*np; i<np; ++i, ++idx, ++oldidx )
-                {
-                    wellReservoirRates()[ idx ] = prevState->wellReservoirRates()[ oldidx ];
-                }
+                wellRates(w) = prevState->wellRates(oldIndex);
+                wellReservoirRates(w) = prevState->wellReservoirRates(oldIndex);
 
                 // Well potentials
                 for( int i=0, idx=newIndex*np, oldidx=oldIndex*np; i<np; ++i, ++idx, ++oldidx )
@@ -257,7 +250,7 @@ void WellStateFullyImplicitBlackoil::init(const std::vector<double>& cellPressur
                     auto * target_rates = &this->mutable_perfPhaseRates()[connpos*np];
                     for (int perf_index = 0; perf_index < num_perf_this_well; perf_index++) {
                         for (int p = 0; p < np; ++p) {
-                            target_rates[perf_index*np + p] = wellRates()[np*newIndex + p] / double(global_num_perf_this_well);
+                            target_rates[perf_index*np + p] = wellRates(w)[p] / double(global_num_perf_this_well);
                         }
                     }
                 }
@@ -339,8 +332,8 @@ void WellStateFullyImplicitBlackoil::init(const std::vector<double>& cellPressur
             seg_number_[w] = 1; // Top segment is segment #1
             this->seg_press_[w] = this->bhp(w);
         }
-        seg_rates_ = wellRates();
-
+        //seg_rates_ = wellRates();
+        seg_rates_.assign(nw*np, 0);
         seg_pressdrop_.assign(nw, 0.);
         seg_pressdrop_hydorstatic_.assign(nw, 0.);
         seg_pressdrop_friction_.assign(nw, 0.);
@@ -424,24 +417,25 @@ WellStateFullyImplicitBlackoil::report(const int* globalCellIdxMap,
 
         auto& well = res.at(wt.first);
         const int well_rate_index = w * pu.num_phases;
+        const auto& reservoir_rates = this->well_reservoir_rates_[w];
 
         if (pu.phase_used[Water]) {
             const auto i = well_rate_index + pu.phase_pos[Water];
-            well.rates.set(rt::reservoir_water, this->well_reservoir_rates_[i]);
+            well.rates.set(rt::reservoir_water, reservoir_rates[pu.phase_pos[Water]]);
             well.rates.set(rt::productivity_index_water, this->productivity_index_[i]);
             well.rates.set(rt::well_potential_water, this->well_potentials_[i]);
         }
 
         if (pu.phase_used[Oil]) {
             const auto i = well_rate_index + pu.phase_pos[Oil];
-            well.rates.set(rt::reservoir_oil, this->well_reservoir_rates_[i]);
+            well.rates.set(rt::reservoir_oil, reservoir_rates[pu.phase_pos[Oil]]);
             well.rates.set(rt::productivity_index_oil, this->productivity_index_[i]);
             well.rates.set(rt::well_potential_oil, this->well_potentials_[i]);
         }
 
         if (pu.phase_used[Gas]) {
             const auto i = well_rate_index + pu.phase_pos[Gas];
-            well.rates.set(rt::reservoir_gas, this->well_reservoir_rates_[i]);
+            well.rates.set(rt::reservoir_gas, reservoir_rates[pu.phase_pos[Gas]]);
             well.rates.set(rt::productivity_index_gas, this->productivity_index_[i]);
             well.rates.set(rt::well_potential_gas, this->well_potentials_[i]);
         }
@@ -563,13 +557,14 @@ void WellStateFullyImplicitBlackoil::initWellStateMSWell(const std::vector<Well>
         const int connpos = well_info[1];
         const int num_perf_this_well = well_info[2];
 
+        const auto& rates = this->wellRates(w);
         top_segment_index_.push_back(nseg_);
         if ( !well_ecl.isMultiSegment() ) { // not multi-segment well
             nseg_ += 1;
             seg_number_.push_back(1); // Assign single segment (top) as number 1.
             seg_press_.push_back(bhp(w));
             for (int p = 0; p < np; ++p) {
-                seg_rates_.push_back(wellRates()[np * w + p]);
+                seg_rates_.push_back(rates[p]);
             }
         } else { // it is a multi-segment well
             const WellSegments& segment_set = well_ecl.getSegments();
@@ -772,7 +767,7 @@ void WellStateFullyImplicitBlackoil::shutWell(int well_index)
     WellState::shutWell(well_index);
     const int np = numPhases();
 
-    auto* resv = &this->well_reservoir_rates_[np*well_index + 0];
+    auto& resv = this->well_reservoir_rates_[well_index];
     auto* wpi  = &this->productivity_index_[np*well_index + 0];
 
     for (int p = 0; p < np; ++p) {

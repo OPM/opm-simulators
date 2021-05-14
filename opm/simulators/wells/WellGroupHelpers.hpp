@@ -39,6 +39,9 @@ class Schedule;
 class VFPProdProperties;
 class WellStateFullyImplicitBlackoil;
 
+template <typename>
+class WellContainer;
+
 namespace Network { class ExtNetwork; }
 
 namespace WellGroupHelpers
@@ -58,7 +61,7 @@ namespace WellGroupHelpers
                                          const int reportStepIdx,
                                          double& factor);
 
-    double sumWellPhaseRates(const std::vector<double>& rates,
+    double sumWellPhaseRates(const WellContainer<std::vector<double>>& rates,
                              const Group& group,
                              const Schedule& schedule,
                              const WellStateFullyImplicitBlackoil& wellState,

@@ -420,12 +420,11 @@ GasLiftStage2<TypeTag>::
 getStdWellRates_(const WellInterface<TypeTag> &well)
 {
     const int well_index = well.indexOfWell();
-    const int np = this->well_state_.numPhases();
     const auto& pu = well.phaseUsage();
     auto oil_rate =
-        -this->well_state_.wellRates()[np * well_index + pu.phase_pos[Oil]];
+        -this->well_state_.wellRates(well_index)[pu.phase_pos[Oil]];
     auto gas_rate =
-        -this->well_state_.wellRates()[np * well_index + pu.phase_pos[Gas]];
+        -this->well_state_.wellRates(well_index)[pu.phase_pos[Gas]];
     return {oil_rate, gas_rate};
 }
 
