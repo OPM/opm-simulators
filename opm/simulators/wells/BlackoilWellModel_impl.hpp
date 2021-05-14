@@ -3370,6 +3370,7 @@ namespace Opm {
 
             auto& well_info = *local_parallel_well_info_[wellID];
             const int num_perf_this_well = well_info.communication().sum(well_perf_data_[wellID].size());
+            auto * perf_phase_rate = &this->wellState().perfPhaseRates()[connpos];
 
             for (int perf = 0; perf < num_perf_this_well; ++perf) {
                 const int cell_idx = well_perf_data_[wellID][perf].cell_index;
@@ -3382,7 +3383,7 @@ namespace Opm {
                     cellInternalEnergy = fs.enthalpy(phaseIdx).value() - fs.pressure(phaseIdx).value() / fs.density(phaseIdx).value();
                     cellBinv = fs.invB(phaseIdx).value();
                     cellDensity = fs.density(phaseIdx).value();
-                    perfPhaseRate = this->wellState().perfPhaseRates()[connpos + perf*np + phaseIdx ];
+                    perfPhaseRate = perf_phase_rate[ perf*np + phaseIdx ];
                     weight_factor += cellDensity  * perfPhaseRate/cellBinv * cellInternalEnergy/cellTemperatures;
                 }
                 total_weight += weight_factor;
