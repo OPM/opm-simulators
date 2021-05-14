@@ -77,7 +77,7 @@ namespace Opm
             OPM_THROW(std::runtime_error, "foam is not supported by multisegment well yet");
         }
 
-        if (Base::has_brine) {
+        if constexpr (Base::has_brine) {
             OPM_THROW(std::runtime_error, "brine is not supported by multisegment well yet");
         }
         // since we decide to use the WellSegments from the well parser. we can reuse a lot from it.

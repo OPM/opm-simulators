@@ -831,7 +831,7 @@ namespace Opm
             connectionRates[perf][contiZfracEqIdx] = Base::restrictEval(cq_s_zfrac_effective);
         }
 
-        if (has_brine) {
+        if constexpr (has_brine) {
             // TODO: the application of well efficiency factor has not been tested with an example yet
             const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
             EvalWell cq_s_sm = cq_s[waterCompIdx];
