@@ -1722,7 +1722,7 @@ namespace Opm
                     rates[p] = well_state.wellRates()[well_index*np + p];
                 }
                 double bhp = calculateBhpFromThp(well_state, rates, well, summaryState, deferred_logger);
-                well_state.bhp()[well_index] = bhp;
+                well_state.update_bhp(well_index, bhp);
 
                 // if the total rates are negative or zero
                 // we try to provide a better intial well rate
@@ -1737,7 +1737,7 @@ namespace Opm
             }
             case Well::InjectorCMode::BHP:
             {
-                well_state.bhp()[well_index] = controls.bhp_limit;
+                well_state.update_bhp(well_index, controls.bhp_limit);
                 double total_rate = 0.0;
                 for (int p = 0; p<np; ++p) {
                     total_rate += well_state.wellRates()[well_index*np + p];
@@ -1910,7 +1910,7 @@ namespace Opm
             }
             case Well::ProducerCMode::BHP:
             {
-                well_state.bhp()[well_index] = controls.bhp_limit;
+                well_state.update_bhp(well_index, controls.bhp_limit);
                 double total_rate = 0.0;
                 for (int p = 0; p<np; ++p) {
                     total_rate -= well_state.wellRates()[well_index*np + p];
@@ -1932,7 +1932,7 @@ namespace Opm
                     rates[p] = well_state.wellRates()[well_index*np + p];
                 }
                 double bhp = calculateBhpFromThp(well_state, rates, well, summaryState, deferred_logger);
-                well_state.bhp()[well_index] = bhp;
+                well_state.update_bhp(well_index, bhp);
 
                 // if the total rates are negative or zero
                 // we try to provide a better intial well rate
@@ -2052,7 +2052,7 @@ namespace Opm
             if (controls.hasControl(Well::InjectorCMode::BHP) && currentControl != Well::InjectorCMode::BHP)
             {
                 const auto& bhp = controls.bhp_limit;
-                double current_bhp = well_state.bhp()[well_index];
+                double current_bhp = well_state.bhp(well_index);
                 if (bhp < current_bhp) {
                     currentControl = Well::InjectorCMode::BHP;
                     return true;
@@ -2128,7 +2128,7 @@ namespace Opm
             if (controls.hasControl(Well::ProducerCMode::BHP) && currentControl != Well::ProducerCMode::BHP )
             {
                 const double bhp = controls.bhp_limit;
-                double current_bhp = well_state.bhp()[well_index];
+                double current_bhp = well_state.bhp(well_index);
                 if (bhp > current_bhp) {
                     currentControl = Well::ProducerCMode::BHP;
                     return true;

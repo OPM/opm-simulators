@@ -318,7 +318,7 @@ namespace Opm
     {
         //scale segment pressures
         const int top_segment_index = well_state.topSegmentIndex(index_of_well_);
-        const double bhp = well_state.bhp()[index_of_well_];
+        const double bhp = well_state.bhp(index_of_well_);
         const double unscaled_top_seg_pressure = well_state.segPress()[top_segment_index];
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
             const int seg_index = top_segment_index + seg;
@@ -632,7 +632,7 @@ namespace Opm
             prod_controls.bhp_limit = bhp;
             well_state_copy.currentProductionControls()[index_of_well_] = Well::ProducerCMode::BHP;
         }
-        well_state_copy.bhp()[well_copy.index_of_well_] = bhp;
+        well_state_copy.update_bhp(well_copy.index_of_well_, bhp);
         well_copy.scaleSegmentPressuresWithBhp(well_state_copy);
 
         // initialized the well rates with the potentials i.e. the well rates based on bhp
@@ -1857,7 +1857,7 @@ namespace Opm
             rates[ Gas ] = well_state.wellRates()[index_of_well_ * number_of_phases_ + pu.phase_pos[ Gas ] ];
         }
 
-        const double bhp = well_state.bhp()[index_of_well_];
+        const double bhp = well_state.bhp(index_of_well_);
 
         well_state.thp()[index_of_well_] = calculateThpFromBhp(rates, bhp, deferred_logger);
 
@@ -2383,7 +2383,7 @@ namespace Opm
             // update the segment pressure
             well_state.segPress()[seg + top_segment_index] = primary_variables_[seg][SPres];
             if (seg == 0) { // top segment
-                well_state.bhp()[index_of_well_] = well_state.segPress()[seg + top_segment_index];
+                well_state.update_bhp(index_of_well_, well_state.segPress()[seg + top_segment_index]);
             }
         }
         updateThp(well_state, deferred_logger);

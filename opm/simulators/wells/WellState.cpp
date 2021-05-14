@@ -192,7 +192,7 @@ data::Wells WellState::report(const int* globalCellIdxMap,
         using WellT = std::remove_reference_t<decltype(dw[ itr.first ])>;
         WellT dummyWell; // dummy if we are not owner
         auto& well = pwinfo.isOwner() ? dw[ itr.first ] : dummyWell;
-        well.bhp = this->bhp().at( well_index );
+        well.bhp = this->bhp(well_index);
         well.thp = this->thp().at( well_index );
         well.temperature = this->temperature().at( well_index );
 

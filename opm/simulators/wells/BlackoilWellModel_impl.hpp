@@ -1954,7 +1954,7 @@ namespace Opm {
         for( const auto& wm : well_state.wellMap() ) {
             const auto well_index = wm.second[ 0 ];
             const auto& rst_well = rst_wells.at( wm.first );
-            well_state.bhp()[ well_index ] = rst_well.bhp;
+            well_state.update_bhp( well_index, rst_well.bhp);
             well_state.temperature()[ well_index ] = rst_well.temperature;
 
             if (rst_well.current_control.isProducer) {

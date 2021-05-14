@@ -187,7 +187,7 @@ void WellStateFullyImplicitBlackoil::init(const std::vector<double>& cellPressur
                 }
 
                 // bhp
-                bhp()[ newIndex ] = prevState->bhp()[ oldIndex ];
+                this->update_bhp( newIndex, prevState->bhp( oldIndex ));
 
                 // thp
                 thp()[ newIndex ] = prevState->thp()[ oldIndex ];
@@ -329,11 +329,12 @@ void WellStateFullyImplicitBlackoil::init(const std::vector<double>& cellPressur
         nseg_ = nw;
         top_segment_index_.resize(nw);
         seg_number_.resize(nw);
+        seg_press_.resize(nw);
         for (int w = 0; w < nw; ++w) {
             top_segment_index_[w] = w;
             seg_number_[w] = 1; // Top segment is segment #1
+            this->seg_press_[w] = this->bhp(w);
         }
-        seg_press_ = bhp();
         seg_rates_ = wellRates();
 
         seg_pressdrop_.assign(nw, 0.);
@@ -562,7 +563,7 @@ void WellStateFullyImplicitBlackoil::initWellStateMSWell(const std::vector<Well>
         if ( !well_ecl.isMultiSegment() ) { // not multi-segment well
             nseg_ += 1;
             seg_number_.push_back(1); // Assign single segment (top) as number 1.
-            seg_press_.push_back(bhp()[w]);
+            seg_press_.push_back(bhp(w));
             for (int p = 0; p < np; ++p) {
                 seg_rates_.push_back(wellRates()[np * w + p]);
             }
@@ -638,7 +639,7 @@ void WellStateFullyImplicitBlackoil::initWellStateMSWell(const std::vector<Well>
             // improved during the solveWellEq process
             {
                 // top segment is always the first one, and its pressure is the well bhp
-                seg_press_.push_back(bhp()[w]);
+                seg_press_.push_back(bhp(w));
                 const int top_segment = top_segment_index_[w];
                 const int start_perf = connpos;
                 const auto * perf_press = &this->perfPress()[start_perf];

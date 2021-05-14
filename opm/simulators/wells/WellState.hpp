@@ -80,8 +80,8 @@ public:
                                      const std::vector<PerforationData>& well_perf_data);
 
     /// One bhp pressure per well.
-    std::vector<double>& bhp() { return bhp_; }
-    const std::vector<double>& bhp() const { return bhp_; }
+    void update_bhp(std::size_t well_index, double value) { bhp_[well_index] = value; }
+    double bhp(std::size_t well_index) const { return bhp_[well_index]; }
 
     /// One thp pressure per well.
     std::vector<double>& thp() { return thp_; }
@@ -116,7 +116,7 @@ public:
     /// The number of wells present.
     int numWells() const
     {
-        return bhp().size();
+        return wellMap_.size();
     }
 
     /// The number of phases present.
