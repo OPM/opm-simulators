@@ -88,8 +88,8 @@ public:
     double thp(std::size_t well_index) const { return thp_[well_index]; }
 
     /// One temperature per well.
-    std::vector<double>& temperature() { return temperature_; }
-    const std::vector<double>& temperature() const { return temperature_; }
+    void update_temperature(std::size_t well_index, double value) { temperature_[well_index] = value; }
+    double temperature(std::size_t well_index) const { return temperature_[well_index]; }
 
     /// One rate per well and phase.
     std::vector<double>& wellRates() { return wellrates_; }

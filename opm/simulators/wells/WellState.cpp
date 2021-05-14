@@ -194,7 +194,7 @@ data::Wells WellState::report(const int* globalCellIdxMap,
         auto& well = pwinfo.isOwner() ? dw[ itr.first ] : dummyWell;
         well.bhp = this->bhp(well_index);
         well.thp = this->thp( well_index );
-        well.temperature = this->temperature().at( well_index );
+        well.temperature = this->temperature( well_index );
 
         const auto wellrate_index = well_index * pu.num_phases;
         const auto& wv = this->wellRates();
