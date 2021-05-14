@@ -73,7 +73,7 @@ namespace Opm
             OPM_THROW(std::runtime_error, "energy is not supported by multisegment well yet");
         }
 
-        if (Base::has_foam) {
+        if constexpr (Base::has_foam) {
             OPM_THROW(std::runtime_error, "foam is not supported by multisegment well yet");
         }
 

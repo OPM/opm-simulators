@@ -793,7 +793,7 @@ namespace Opm
             }
         }
 
-        if (has_foam) {
+        if constexpr (has_foam) {
             // TODO: the application of well efficiency factor has not been tested with an example yet
             const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
             EvalWell cq_s_foam = cq_s[gasCompIdx] * well_efficiency_factor_;
