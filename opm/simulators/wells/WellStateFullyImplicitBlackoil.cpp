@@ -190,7 +190,7 @@ void WellStateFullyImplicitBlackoil::init(const std::vector<double>& cellPressur
                 this->update_bhp( newIndex, prevState->bhp( oldIndex ));
 
                 // thp
-                thp()[ newIndex ] = prevState->thp()[ oldIndex ];
+                this->update_thp( newIndex, prevState->thp( oldIndex ));
 
                 // If new target is set using WCONPROD, WCONINJE etc. we use the new control
                 if (!this->events_[w].hasEvent(WellStateFullyImplicitBlackoil::event_mask)) {
@@ -318,7 +318,7 @@ void WellStateFullyImplicitBlackoil::init(const std::vector<double>& cellPressur
                 : well.productionControls(summary_state).hasControl(Well::ProducerCMode::THP);
 
             if (!has_thp) {
-                thp()[w] = 0.0;
+                this->update_thp(w, 0.0);
             }
         }
     }

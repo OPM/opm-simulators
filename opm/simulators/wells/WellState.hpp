@@ -84,8 +84,8 @@ public:
     double bhp(std::size_t well_index) const { return bhp_[well_index]; }
 
     /// One thp pressure per well.
-    std::vector<double>& thp() { return thp_; }
-    const std::vector<double>& thp() const { return thp_; }
+    void update_thp(std::size_t well_index, double value) { thp_[well_index] = value; }
+    double thp(std::size_t well_index) const { return thp_[well_index]; }
 
     /// One temperature per well.
     std::vector<double>& temperature() { return temperature_; }

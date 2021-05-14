@@ -1667,7 +1667,7 @@ namespace Opm
             for (int p = 0; p<np; ++p) {
                 well_state.wellRates()[well_index*np + p] = 0.0;
             }
-            well_state.thp()[well_index] = 0.0;
+            well_state.update_thp(well_index, 0.0);
             return;
         }
 
@@ -2112,7 +2112,7 @@ namespace Opm
             if (controls.hasControl(Well::InjectorCMode::THP) && currentControl != Well::InjectorCMode::THP)
             {
                 const auto& thp = this->getTHPConstraint(summaryState);
-                double current_thp = well_state.thp()[well_index];
+                double current_thp = well_state.thp(well_index);
                 if (thp < current_thp) {
                     currentControl = Well::InjectorCMode::THP;
                     return true;
@@ -2214,7 +2214,7 @@ namespace Opm
             if (controls.hasControl(Well::ProducerCMode::THP) && currentControl != Well::ProducerCMode::THP)
             {
                 const auto& thp = this->getTHPConstraint(summaryState);
-                double current_thp =  well_state.thp()[well_index];
+                double current_thp =  well_state.thp(well_index);
                 if (thp > current_thp) {
                     currentControl = Well::ProducerCMode::THP;
                     return true;

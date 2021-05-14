@@ -1839,7 +1839,7 @@ namespace Opm
     {
         // When there is no vaild VFP table provided, we set the thp to be zero.
         if (!this->isVFPActive(deferred_logger) || this->wellIsStopped()) {
-            well_state.thp()[index_of_well_] = 0.;
+            well_state.update_thp(index_of_well_, 0.);
             return;
         }
 
@@ -1859,7 +1859,7 @@ namespace Opm
 
         const double bhp = well_state.bhp(index_of_well_);
 
-        well_state.thp()[index_of_well_] = calculateThpFromBhp(rates, bhp, deferred_logger);
+        well_state.update_thp(index_of_well_, calculateThpFromBhp(rates, bhp, deferred_logger));
 
     }
 
