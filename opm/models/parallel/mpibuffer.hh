@@ -82,7 +82,7 @@ public:
     /*!
      * \brief Send the buffer asyncronously to a peer process.
      */
-    void send(unsigned peerRank OPM_UNUSED_NOMPI)
+    void send([[maybe_unused]] unsigned peerRank)
     {
 #if HAVE_MPI
         MPI_Isend(data_,
@@ -108,7 +108,7 @@ public:
     /*!
      * \brief Receive the buffer syncronously from a peer rank
      */
-    void receive(unsigned peerRank OPM_UNUSED_NOMPI)
+    void receive([[maybe_unused]] unsigned peerRank)
     {
 #if HAVE_MPI
         MPI_Recv(data_,
