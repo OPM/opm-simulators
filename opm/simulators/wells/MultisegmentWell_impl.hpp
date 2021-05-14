@@ -69,7 +69,7 @@ namespace Opm
             OPM_THROW(std::runtime_error, "polymer is not supported by multisegment well yet");
         }
 
-        if (Base::has_energy) {
+        if constexpr (Base::has_energy) {
             OPM_THROW(std::runtime_error, "energy is not supported by multisegment well yet");
         }
 

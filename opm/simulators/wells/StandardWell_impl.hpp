@@ -722,11 +722,11 @@ namespace Opm
             well_state.wellVaporizedOilRates()[index_of_well_] += perf_vap_oil_rate;
         }
 
-        if (has_energy) {
+        if constexpr (has_energy) {
             connectionRates[perf][contiEnergyEqIdx] = 0.0;
         }
 
-        if (has_energy) {
+        if constexpr (has_energy) {
 
             auto fs = intQuants.fluidState();
             for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
