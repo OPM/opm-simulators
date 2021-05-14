@@ -41,15 +41,14 @@ void WellState::init(const std::vector<double>& cellPressures,
     this->status_.clear();
     this->well_perf_data_.clear();
     this->parallel_well_info_.clear();
+    this->wellrates_.clear();
     {
         // const int nw = wells->number_of_wells;
         const int nw = wells_ecl.size();
-        const int np = this->phase_usage_.num_phases;
         // const int np = wells->number_of_phases;
         bhp_.resize(nw, 0.0);
         thp_.resize(nw, 0.0);
         temperature_.resize(nw, 273.15 + 15.56); // standard condition temperature
-        wellrates_.resize(nw * np, 0.0);
         int connpos = 0;
         for (int w = 0; w < nw; ++w) {
             const Well& well = wells_ecl[w];
@@ -140,8 +139,7 @@ void WellState::shutWell(int well_index)
     this->thp_[well_index] = 0;
     this->bhp_[well_index] = 0;
     const int np = numPhases();
-    for (int p = 0; p < np; ++p)
-        this->wellrates_[np * well_index + p] = 0;
+    this->wellrates_[well_index].assign(np, 0);
 }
 
 void WellState::stopWell(int well_index)
@@ -190,18 +188,17 @@ data::Wells WellState::report(const int* globalCellIdxMap,
         well.thp = this->thp( well_index );
         well.temperature = this->temperature( well_index );
 
-        const auto wellrate_index = well_index * pu.num_phases;
-        const auto& wv = this->wellRates();
+        const auto& wv = this->wellRates(well_index);
         if( pu.phase_used[BlackoilPhases::Aqua] ) {
-            well.rates.set( rt::wat, wv[ wellrate_index + pu.phase_pos[BlackoilPhases::Aqua] ] );
+            well.rates.set( rt::wat, wv[ pu.phase_pos[BlackoilPhases::Aqua] ] );
         }
 
         if( pu.phase_used[BlackoilPhases::Liquid] ) {
-            well.rates.set( rt::oil, wv[ wellrate_index + pu.phase_pos[BlackoilPhases::Liquid] ] );
+            well.rates.set( rt::oil, wv[ pu.phase_pos[BlackoilPhases::Liquid] ] );
         }
 
         if( pu.phase_used[BlackoilPhases::Vapour] ) {
-            well.rates.set( rt::gas, wv[ wellrate_index + pu.phase_pos[BlackoilPhases::Vapour] ] );
+            well.rates.set( rt::gas, wv[ pu.phase_pos[BlackoilPhases::Vapour] ] );
         }
 
         if (pwinfo.communication().size()==1)
@@ -281,9 +278,6 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     // May be overwritten below.
     const auto& pu = this->phase_usage_;
     const int np = pu.num_phases;
-    for (int p = 0; p < np; ++p) {
-        wellrates_[np*w + p] = 0.0;
-    }
 
     if ( well.isInjector() ) {
         temperature_[w] = well.injectionControls(summary_state).temperature;
@@ -291,6 +285,7 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     this->status_.add(well.name(), Well::Status::OPEN);
     this->well_perf_data_.add(well.name(), well_perf_data);
     this->parallel_well_info_.add(well.name(), well_info);
+    this->wellrates_.add(well.name(), std::vector<double>(np, 0));
 
     const int num_perf_this_well = well_info->communication().sum(well_perf_data_[w].size());
     this->perfpress_.add(well.name(), std::vector<double>(num_perf_this_well, -1e100));
@@ -348,20 +343,21 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
         //    (producer) or RATE (injector).
         //    Otherwise, we cannot set the correct
         //    value here and initialize to zero rate.
+        auto & well_rates = this->wellrates_[w];
         if (well.isInjector()) {
             if (inj_controls.cmode == Well::InjectorCMode::RATE) {
                 switch (inj_controls.injector_type) {
                 case InjectorType::WATER:
                     assert(pu.phase_used[BlackoilPhases::Aqua]);
-                    wellrates_[np*w + pu.phase_pos[BlackoilPhases::Aqua]] = inj_surf_rate;
+                    well_rates[pu.phase_pos[BlackoilPhases::Aqua]] = inj_surf_rate;
                     break;
                 case InjectorType::GAS:
                     assert(pu.phase_used[BlackoilPhases::Vapour]);
-                    wellrates_[np*w + pu.phase_pos[BlackoilPhases::Vapour]] = inj_surf_rate;
+                    well_rates[pu.phase_pos[BlackoilPhases::Vapour]] = inj_surf_rate;
                     break;
                 case InjectorType::OIL:
                     assert(pu.phase_used[BlackoilPhases::Liquid]);
-                    wellrates_[np*w + pu.phase_pos[BlackoilPhases::Liquid]] = inj_surf_rate;
+                    well_rates[pu.phase_pos[BlackoilPhases::Liquid]] = inj_surf_rate;
                     break;
                 case InjectorType::MULTI:
                     // Not currently handled, keep zero init.
@@ -376,15 +372,15 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
             switch (prod_controls.cmode) {
             case Well::ProducerCMode::ORAT:
                 assert(pu.phase_used[BlackoilPhases::Liquid]);
-                wellrates_[np*w + pu.phase_pos[BlackoilPhases::Liquid]] = -prod_controls.oil_rate;
+                well_rates[pu.phase_pos[BlackoilPhases::Liquid]] = -prod_controls.oil_rate;
                 break;
             case Well::ProducerCMode::WRAT:
                 assert(pu.phase_used[BlackoilPhases::Aqua]);
-                wellrates_[np*w + pu.phase_pos[BlackoilPhases::Aqua]] = -prod_controls.water_rate;
+                well_rates[pu.phase_pos[BlackoilPhases::Aqua]] = -prod_controls.water_rate;
                 break;
             case Well::ProducerCMode::GRAT:
                 assert(pu.phase_used[BlackoilPhases::Vapour]);
-                wellrates_[np*w + pu.phase_pos[BlackoilPhases::Vapour]] = -prod_controls.gas_rate;
+                well_rates[pu.phase_pos[BlackoilPhases::Vapour]] = -prod_controls.gas_rate;
                 break;
             default:
                 // Keep zero init.

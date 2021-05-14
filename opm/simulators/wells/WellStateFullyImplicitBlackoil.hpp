@@ -161,14 +161,16 @@ public:
     /// One rate pr well
     double brineWellRate(const int w) const;
 
-    std::vector<double>& wellReservoirRates()
+    const WellContainer<std::vector<double>>& wellReservoirRates() const { return well_reservoir_rates_; }
+
+    std::vector<double>& wellReservoirRates(std::size_t well_index)
     {
-        return well_reservoir_rates_;
+        return well_reservoir_rates_[well_index];
     }
 
-    const std::vector<double>& wellReservoirRates() const
+    const std::vector<double>& wellReservoirRates(std::size_t well_index) const
     {
-        return well_reservoir_rates_;
+        return well_reservoir_rates_[well_index];
     }
 
     std::vector<double>& wellDissolvedGasRates()
@@ -405,7 +407,7 @@ private:
 
     // phase rates under reservoir condition for wells
     // or voidage phase rates
-    std::vector<double> well_reservoir_rates_;
+    WellContainer<std::vector<double>> well_reservoir_rates_;
 
     // dissolved gas rates or solution gas production rates
     // should be zero for injection wells

@@ -1271,21 +1271,21 @@ namespace Opm
         if (this->isProducer()) {
             const double g_total = primary_variables_[WQTotal];
             for (int p = 0; p < number_of_phases_; ++p) {
-                well_state.wellRates()[index_of_well_ * number_of_phases_ + p] = g_total * F[p];
+                well_state.wellRates(index_of_well_)[p] = g_total * F[p];
             }
         } else { // injectors
             for (int p = 0; p < number_of_phases_; ++p) {
-                well_state.wellRates()[index_of_well_ * number_of_phases_ + p] = 0.0;
+                well_state.wellRates(index_of_well_)[p] = 0.0;
             }
             switch (this->wellEcl().injectorType()) {
             case InjectorType::WATER:
-                well_state.wellRates()[index_of_well_ * number_of_phases_ + pu.phase_pos[Water]] = primary_variables_[WQTotal];
+                well_state.wellRates(index_of_well_)[pu.phase_pos[Water]] = primary_variables_[WQTotal];
                 break;
             case InjectorType::GAS:
-                well_state.wellRates()[index_of_well_ * number_of_phases_ + pu.phase_pos[Gas]] = primary_variables_[WQTotal];
+                well_state.wellRates(index_of_well_)[pu.phase_pos[Gas]] = primary_variables_[WQTotal];
                 break;
             case InjectorType::OIL:
-                well_state.wellRates()[index_of_well_ * number_of_phases_ + pu.phase_pos[Oil]] = primary_variables_[WQTotal];
+                well_state.wellRates(index_of_well_)[pu.phase_pos[Oil]] = primary_variables_[WQTotal];
                 break;
             case InjectorType::MULTI:
                 // Not supported.
@@ -1328,13 +1328,13 @@ namespace Opm
 
         const Opm::PhaseUsage& pu = phaseUsage();
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-            rates[ Water ] = well_state.wellRates()[index_of_well_ * number_of_phases_ + pu.phase_pos[ Water ] ];
+            rates[ Water ] = well_state.wellRates(index_of_well_)[pu.phase_pos[ Water ] ];
         }
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-            rates[ Oil ] = well_state.wellRates()[index_of_well_ * number_of_phases_ + pu.phase_pos[ Oil ] ];
+            rates[ Oil ] = well_state.wellRates(index_of_well_)[pu.phase_pos[ Oil ] ];
         }
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            rates[ Gas ] = well_state.wellRates()[index_of_well_ * number_of_phases_ + pu.phase_pos[ Gas ] ];
+            rates[ Gas ] = well_state.wellRates(index_of_well_)[pu.phase_pos[ Gas ] ];
         }
 
         const double bhp = well_state.bhp(index_of_well_);
@@ -1690,14 +1690,12 @@ namespace Opm
             if (gasPresent) {
                 const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
                 const int gaspos = gasCompIdx + perf * num_components_;
-                const int gaspos_well = pu.phase_pos[Gas] + w * pu.num_phases;
 
                 if (oilPresent) {
-                    const int oilpos_well = pu.phase_pos[Oil] + w * pu.num_phases;
-                    const double oilrate = std::abs(well_state.wellRates()[oilpos_well]); //in order to handle negative rates in producers
+                    const double oilrate = std::abs(well_state.wellRates(w)[pu.phase_pos[Oil]]); //in order to handle negative rates in producers
                     rvmax_perf[perf] = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), temperature, p_avg);
                     if (oilrate > 0) {
-                        const double gasrate = std::abs(well_state.wellRates()[gaspos_well]) - (has_solvent ? well_state.solventWellRate(w) : 0.0);
+                        const double gasrate = std::abs(well_state.wellRates(w)[pu.phase_pos[Gas]]) - (has_solvent ? well_state.solventWellRate(w) : 0.0);
                         double rv = 0.0;
                         if (gasrate > 0) {
                             rv = oilrate / gasrate;
@@ -1718,13 +1716,11 @@ namespace Opm
             if (oilPresent) {
                 const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
                 const int oilpos = oilCompIdx + perf * num_components_;
-                const int oilpos_well = pu.phase_pos[Oil] + w * pu.num_phases;
                 if (gasPresent) {
                     rsmax_perf[perf] = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(), temperature, p_avg);
-                    const int gaspos_well = pu.phase_pos[Gas] + w * pu.num_phases;
-                    const double gasrate = std::abs(well_state.wellRates()[gaspos_well]) - (has_solvent ? well_state.solventWellRate(w) : 0.0);
+                    const double gasrate = std::abs(well_state.wellRates(w)[pu.phase_pos[Gas]]) - (has_solvent ? well_state.solventWellRate(w) : 0.0);
                     if (gasrate > 0) {
-                        const double oilrate = std::abs(well_state.wellRates()[oilpos_well]);
+                        const double oilrate = std::abs(well_state.wellRates(w)[pu.phase_pos[Oil]]);
                         double rs = 0.0;
                         if (oilrate > 0) {
                             rs = gasrate / oilrate;
@@ -2720,7 +2716,7 @@ namespace Opm
         // the weighted total well rate
         double total_well_rate = 0.0;
         for (int p = 0; p < np; ++p) {
-            total_well_rate += scalingFactor(p) * well_state.wellRates()[np * well_index + p];
+            total_well_rate += scalingFactor(p) * well_state.wellRates(well_index)[p];
         }
 
         // Not: for the moment, the first primary variable for the injectors is not G_total. The injection rate
@@ -2728,13 +2724,13 @@ namespace Opm
         if (this->isInjector()) {
             switch (this->wellEcl().injectorType()) {
             case InjectorType::WATER:
-                primary_variables_[WQTotal] = well_state.wellRates()[np * well_index + pu.phase_pos[Water]];
+                primary_variables_[WQTotal] = well_state.wellRates(well_index)[pu.phase_pos[Water]];
                 break;
             case InjectorType::GAS:
-                primary_variables_[WQTotal] = well_state.wellRates()[np * well_index + pu.phase_pos[Gas]];
+                primary_variables_[WQTotal] = well_state.wellRates(well_index)[pu.phase_pos[Gas]];
                 break;
             case InjectorType::OIL:
-                primary_variables_[WQTotal] = well_state.wellRates()[np * well_index + pu.phase_pos[Oil]];
+                primary_variables_[WQTotal] = well_state.wellRates(well_index)[pu.phase_pos[Oil]];
                 break;
             case InjectorType::MULTI:
                 // Not supported.
@@ -2748,10 +2744,10 @@ namespace Opm
 
         if (std::abs(total_well_rate) > 0.) {
             if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                primary_variables_[WFrac] = scalingFactor(pu.phase_pos[Water]) * well_state.wellRates()[np*well_index + pu.phase_pos[Water]] / total_well_rate;
+                primary_variables_[WFrac] = scalingFactor(pu.phase_pos[Water]) * well_state.wellRates(well_index)[pu.phase_pos[Water]] / total_well_rate;
             }
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                primary_variables_[GFrac] = scalingFactor(pu.phase_pos[Gas]) * (well_state.wellRates()[np*well_index + pu.phase_pos[Gas]]
+                primary_variables_[GFrac] = scalingFactor(pu.phase_pos[Gas]) * (well_state.wellRates(well_index)[pu.phase_pos[Gas]]
                                                  - (has_solvent ? well_state.solventWellRate(well_index) : 0.0) ) / total_well_rate ;
             }
             if constexpr (has_solvent) {

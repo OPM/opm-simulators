@@ -1985,10 +1985,9 @@ namespace Opm {
                 well_state.currentInjectionControl( well_index, rst_well.current_control.inj);
             }
 
-            const auto wellrate_index = well_index * np;
             for( size_t i = 0; i < phs.size(); ++i ) {
                 assert( rst_well.rates.has( phs[ i ] ) );
-                well_state.wellRates()[ wellrate_index + i ] = rst_well.rates.get( phs[ i ] );
+                well_state.wellRates(well_index)[ i ] = rst_well.rates.get( phs[ i ] );
             }
 
             auto& perf_pressure = well_state.perfPress(well_index);

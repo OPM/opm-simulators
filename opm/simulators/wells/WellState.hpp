@@ -93,8 +93,9 @@ public:
     double temperature(std::size_t well_index) const { return temperature_[well_index]; }
 
     /// One rate per well and phase.
-    std::vector<double>& wellRates() { return wellrates_; }
-    const std::vector<double>& wellRates() const { return wellrates_; }
+    const WellContainer<std::vector<double>>& wellRates() const { return wellrates_; }
+    std::vector<double>& wellRates(std::size_t well_index) { return wellrates_[well_index]; }
+    const std::vector<double>& wellRates(std::size_t well_index) const { return wellrates_[well_index]; }
 
     /// One rate per well connection.
     std::vector<double>& perfRates(std::size_t well_index) { return this->perfrates_[well_index]; }
@@ -162,7 +163,7 @@ private:
     std::vector<double> bhp_;
     std::vector<double> thp_;
     std::vector<double> temperature_;
-    std::vector<double> wellrates_;
+    WellContainer<std::vector<double>> wellrates_;
     WellContainer<std::vector<double>> perfrates_;
     WellContainer<std::vector<double>> perfpress_;
 
