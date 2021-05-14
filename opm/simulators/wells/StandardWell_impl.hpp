@@ -394,10 +394,12 @@ namespace Opm
             b_perfcells_dense[contiSolventEqIdx] = extendEval(intQuants.solventInverseFormationVolumeFactor());
         }
 
-        if (has_zFraction && this->isInjector()) {
-            const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-            b_perfcells_dense[gasCompIdx] *= (1.0 - wsolvent());
-            b_perfcells_dense[gasCompIdx] += wsolvent()*intQuants.zPureInvFormationVolumeFactor().value();
+        if constexpr (has_zFraction) {
+            if (this->isInjector()) {
+                const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+                b_perfcells_dense[gasCompIdx] *= (1.0 - wsolvent());
+                b_perfcells_dense[gasCompIdx] += wsolvent()*intQuants.zPureInvFormationVolumeFactor().value();
+            }
         }
 
         // Pressure drawdown (also used to determine direction of flow)
@@ -626,7 +628,7 @@ namespace Opm
                 }
             }
 
-            if (has_zFraction) {
+            if constexpr (has_zFraction) {
                 for (int pvIdx = 0; pvIdx < numWellEq_; ++pvIdx) {
                     duneC_[0][cell_idx][pvIdx][contiZfracEqIdx] -= cq_s_zfrac_effective.derivative(pvIdx+numEq);
                 }
@@ -805,7 +807,7 @@ namespace Opm
             connectionRates[perf][contiFoamEqIdx] = Base::restrictEval(cq_s_foam);
         }
 
-        if (has_zFraction) {
+        if constexpr (has_zFraction) {
             // TODO: the application of well efficiency factor has not been tested with an example yet
             const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
             cq_s_zfrac_effective = cq_s[gasCompIdx];
