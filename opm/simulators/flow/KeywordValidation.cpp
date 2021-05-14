@@ -39,15 +39,20 @@ namespace KeywordValidation
     std::string get_error_report(const std::vector<ValidationError>& errors, const bool critical)
     {
         const std::string keyword_format = "  {keyword}: keyword not supported\n";
-        const std::string item_format = "  {{keyword}}: invalid value '{}' in record {} for item {}\n";
+        const std::string item_format1 = "  {{keyword}}: invalid value '{}' for item {}\n";
+        const std::string item_format2 = "  {{keyword}}: invalid value '{}' in record {} for item {}\n";
         const std::string location_format = "  In file: {file}, line {line}\n";
 
         std::string report;
         for (const ValidationError& err : errors) {
             if (err.critical == critical) {
                 if (err.item_number && err.item_value) {
-                    std::string message
-                        = fmt::format(item_format, *(err.item_value), err.record_number, *(err.item_number));
+                    std::string message;
+                    if (err.record_number == 0) {
+                        message = fmt::format(item_format1, *(err.item_value), *(err.item_number));
+                    } else {
+                        message = fmt::format(item_format2, *(err.item_value), err.record_number, *(err.item_number));
+                    }
                     report.append(OpmInputError::format(message, err.location));
                 } else {
                     report.append(OpmInputError::format(keyword_format, err.location));
@@ -124,8 +129,13 @@ namespace KeywordValidation
                     const auto& item_properties = keyword_properties->second.find(item_index + 1);
                     if (item_properties != keyword_properties->second.end()) {
                         // Validate the item, if it is partially supported.
-                        validateKeywordItem<T>(
-                            keyword, item_properties->second, record_index, item_index, item.get<T>(0), errors);
+                        validateKeywordItem<T>(keyword,
+                                               item_properties->second,
+                                               keyword.size() > 1,
+                                               record_index,
+                                               item_index,
+                                               item.get<T>(0),
+                                               errors);
                     }
                 }
             }
@@ -136,6 +146,7 @@ namespace KeywordValidation
     template <typename T>
     void KeywordValidator::validateKeywordItem(const DeckKeyword& keyword,
                                                const PartiallySupportedKeywordProperties<T>& properties,
+                                               const bool multiple_records,
                                                const size_t record_index,
                                                const size_t item_index,
                                                const T& item_value,
@@ -149,11 +160,13 @@ namespace KeywordValidation
                 formatted_value = std::to_string(item_value);
             else
                 formatted_value = item_value;
-            // Add the relevant information to the vector of errors.
+            // Add the relevant information to the vector of errors. Record and
+            // index numbers start at 1, so add 1. Pass zero for the record
+            // index if there is only a single record.
             errors.push_back(ValidationError {properties.critical,
                                               keyword.location(),
-                                              record_index + 1, // record numbers start at 1
-                                              item_index + 1, // item numbers start at 1
+                                              multiple_records ? record_index + 1 : 0,
+                                              item_index + 1,
                                               formatted_value,
                                               properties.message});
         }

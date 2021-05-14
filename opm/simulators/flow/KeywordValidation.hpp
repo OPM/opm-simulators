@@ -106,6 +106,7 @@ namespace KeywordValidation
         template <typename T>
         void validateKeywordItem(const DeckKeyword& keyword,
                                  const PartiallySupportedKeywordProperties<T>& properties,
+                                 const bool multiple_records,
                                  const size_t record_number,
                                  const size_t item_number,
                                  const T& item_value,

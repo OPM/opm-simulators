@@ -279,7 +279,7 @@ PINCH
     const auto report = get_error_report(errors, false);
     BOOST_CHECK(report
                 == "Unsupported keywords or keyword items:\n\n"
-                   "  PINCH: invalid value 'FOO' in record 1 for item 2\n"
+                   "  PINCH: invalid value 'FOO' for item 2\n"
                    "  In file: <memory string>, line 2");
 }
 
@@ -339,7 +339,7 @@ ENDSCALE
     const auto report = get_error_report(errors, false);
     BOOST_CHECK(report
                 == "Unsupported keywords or keyword items:\n\n"
-                   "  ENDSCALE: invalid value '0' in record 1 for item 3\n"
+                   "  ENDSCALE: invalid value '0' for item 3\n"
                    "  In file: <memory string>, line 2");
 }
 
@@ -374,7 +374,7 @@ ENDSCALE
     const auto report = get_error_report(errors, true);
     BOOST_CHECK(report
                 == "Unsupported keywords or keyword items:\n\n"
-                   "  ENDSCALE: invalid value '0' in record 1 for item 4\n"
+                   "  ENDSCALE: invalid value '0' for item 4\n"
                    "  In file: <memory string>, line 2");
 }
 
@@ -422,7 +422,7 @@ ENDSCALE
                    "  ECHO: keyword not supported\n"
                    "  In file: <memory string>, line 2\n"
                    "  This is not a critical error\n\n"
-                   "  ENDSCALE: invalid value '0' in record 1 for item 3\n"
+                   "  ENDSCALE: invalid value '0' for item 3\n"
                    "  In file: <memory string>, line 6");
 }
 
@@ -452,7 +452,7 @@ ENDSCALE
                 == "Unsupported keywords or keyword items:\n\n"
                    "  NOECHO: keyword not supported\n"
                    "  In file: <memory string>, line 3\n\n"
-                   "  PINCH: invalid value 'FOO' in record 1 for item 4\n"
+                   "  PINCH: invalid value 'FOO' for item 4\n"
                    "  In file: <memory string>, line 4\n"
                    "  This is a critical error");
 }
