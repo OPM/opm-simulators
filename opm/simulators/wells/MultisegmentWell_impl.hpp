@@ -65,7 +65,7 @@ namespace Opm
             OPM_THROW(std::runtime_error, "solvent is not supported by multisegment well yet");
         }
 
-        if (has_polymer) {
+        if constexpr (has_polymer) {
             OPM_THROW(std::runtime_error, "polymer is not supported by multisegment well yet");
         }
 

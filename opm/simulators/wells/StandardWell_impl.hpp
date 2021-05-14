@@ -773,7 +773,7 @@ namespace Opm
             }
         }
 
-        if (has_polymer) {
+        if constexpr (has_polymer) {
             // TODO: the application of well efficiency factor has not been tested with an example yet
             const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
             EvalWell cq_s_poly = cq_s[waterCompIdx];
@@ -957,13 +957,13 @@ namespace Opm
             }
 
             // this may not work if viscosity and relperms has been modified?
-            if (has_solvent) {
+            if constexpr (has_solvent) {
                 OPM_DEFLOG_THROW(std::runtime_error, "individual mobility for wells does not work in combination with solvent", deferred_logger);
             }
         }
 
         // modify the water mobility if polymer is present
-        if (has_polymer) {
+        if constexpr (has_polymer) {
             if (!FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                 OPM_DEFLOG_THROW(std::runtime_error, "Water is required when polymer is active", deferred_logger);
             }
