@@ -33,7 +33,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRate.hpp>
 
 #include <opm/core/props/BlackoilPhases.hpp>
-#include <opm/simulators/timestepping/SimulatorReport.hpp>
 
 #include <opm/simulators/wells/RateConverter.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
@@ -52,7 +51,6 @@ namespace Opm {
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 #include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
 
-#include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
 #include<dune/common/fmatrix.hh>
@@ -78,7 +76,7 @@ namespace Opm
 
         using WellState = WellStateFullyImplicitBlackoil;
 
-        typedef BlackoilModelParametersEbos<TypeTag> ModelParameters;
+        using ModelParameters = BlackoilModelParametersEbos<TypeTag>;
 
         static const int Water = BlackoilPhases::Aqua;
         static const int Oil = BlackoilPhases::Liquid;
@@ -92,20 +90,20 @@ namespace Opm
         using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
         using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
         using RateVector = GetPropType<TypeTag, Properties::RateVector>;
-        using GasLiftSingleWell = Opm::GasLiftSingleWell<TypeTag>;
-        using GLiftOptWells = typename Opm::BlackoilWellModel<TypeTag>::GLiftOptWells;
-        using GLiftProdWells = typename Opm::BlackoilWellModel<TypeTag>::GLiftProdWells;
+        using GasLiftSingleWell = ::Opm::GasLiftSingleWell<TypeTag>;
+        using GLiftOptWells = typename BlackoilWellModel<TypeTag>::GLiftOptWells;
+        using GLiftProdWells = typename BlackoilWellModel<TypeTag>::GLiftProdWells;
         using GLiftWellStateMap =
-            typename Opm::BlackoilWellModel<TypeTag>::GLiftWellStateMap;
+            typename BlackoilWellModel<TypeTag>::GLiftWellStateMap;
 
         static const int numEq = Indices::numEq;
         static const int numPhases = Indices::numPhases;
-        typedef double Scalar;
+        using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
-        typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
-        typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
-        typedef Dune::BlockVector<VectorBlockType> BVector;
-        typedef DenseAd::Evaluation<double, /*size=*/numEq> Eval;
+        using VectorBlockType = Dune::FieldVector<Scalar, numEq>;
+        using MatrixBlockType = Dune::FieldMatrix<Scalar, numEq, numEq>;
+        using BVector = Dune::BlockVector<VectorBlockType>;
+        using Eval = DenseAd::Evaluation<Scalar, /*size=*/numEq>;
 
         static constexpr bool has_solvent = getPropValue<TypeTag, Properties::EnableSolvent>();
         static constexpr bool has_zFraction = getPropValue<TypeTag, Properties::EnableExtbo>();
@@ -128,13 +126,13 @@ namespace Opm
         using RateConverterType = RateConverter::
         SurfaceToReservoirVoidage<FluidSystem, std::vector<int> >;
         static const bool compositionSwitchEnabled = Indices::gasEnabled;
-        using FluidState = Opm::BlackOilFluidState<Eval,
-                                                   FluidSystem,
-                                                   has_temperature,
-                                                   has_energy,
-                                                   compositionSwitchEnabled,
-                                                   has_brine,
-                                                   Indices::numPhases >;
+        using FluidState = BlackOilFluidState<Eval,
+                                              FluidSystem,
+                                              has_temperature,
+                                              has_energy,
+                                              compositionSwitchEnabled,
+                                              has_brine,
+                                              Indices::numPhases >;
         /// Constructor
         WellInterface(const Well& well,
                       const ParallelWellInfo& pw_info,
@@ -178,15 +176,15 @@ namespace Opm
 
         virtual void initPrimaryVariablesEvaluation() const = 0;
 
-        virtual ConvergenceReport getWellConvergence(const WellState& well_state, const std::vector<double>& B_avg, Opm::DeferredLogger& deferred_logger, const bool relax_tolerance = false) const = 0;
+        virtual ConvergenceReport getWellConvergence(const WellState& well_state, const std::vector<double>& B_avg, DeferredLogger& deferred_logger, const bool relax_tolerance = false) const = 0;
 
-        virtual void solveEqAndUpdateWellState(WellState& well_state, Opm::DeferredLogger& deferred_logger) = 0;
+        virtual void solveEqAndUpdateWellState(WellState& well_state, DeferredLogger& deferred_logger) = 0;
 
         void assembleWellEq(const Simulator& ebosSimulator,
                             const double dt,
                             WellState& well_state,
                             const GroupState& group_state,
-                            Opm::DeferredLogger& deferred_logger);
+                            DeferredLogger& deferred_logger);
 
         virtual void gasLiftOptimizationStage1 (
             WellState& well_state,
@@ -201,7 +199,7 @@ namespace Opm
                                  const double& simulationTime,
                                  const bool& writeMessageToOPMLog,
                                  WellTestState& wellTestState,
-                                 Opm::DeferredLogger& deferred_logger) const;
+                                 DeferredLogger& deferred_logger) const;
 
         void setWellEfficiencyFactor(const double efficiency_factor);
 
@@ -211,7 +209,7 @@ namespace Opm
         /// xw to update Well State
         virtual void recoverWellSolutionAndUpdateWellState(const BVector& x,
                                                            WellState& well_state,
-                                                           Opm::DeferredLogger& deferred_logger) const = 0;
+                                                           DeferredLogger& deferred_logger) const = 0;
 
         /// Ax = Ax - C D^-1 B x
         virtual void apply(const BVector& x, BVector& Ax) const = 0;
@@ -223,24 +221,24 @@ namespace Opm
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
                                            const WellState& well_state,
                                            std::vector<double>& well_potentials,
-                                           Opm::DeferredLogger& deferred_logger) = 0;
+                                           DeferredLogger& deferred_logger) = 0;
 
         void updateWellStateWithTarget(const Simulator& ebos_simulator,
                                        WellState& well_state,
-                                       Opm::DeferredLogger& deferred_logger) const;
+                                       DeferredLogger& deferred_logger) const;
 
         enum class IndividualOrGroup { Individual, Group, Both };
         bool updateWellControl(const Simulator& ebos_simulator,
                                const IndividualOrGroup iog,
                                WellState& well_state,
                                const GroupState& group_state,
-                               Opm::DeferredLogger& deferred_logger) /* const */;
+                               DeferredLogger& deferred_logger) /* const */;
 
-        virtual void updatePrimaryVariables(const WellState& well_state, Opm::DeferredLogger& deferred_logger) const = 0;
+        virtual void updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_logger) const = 0;
 
         virtual void calculateExplicitQuantities(const Simulator& ebosSimulator,
                                                  const WellState& well_state,
-                                                 Opm::DeferredLogger& deferred_logger) = 0; // should be const?
+                                                 DeferredLogger& deferred_logger) = 0; // should be const?
 
         virtual void updateProductivityIndex(const Simulator& ebosSimulator,
                                              const WellProdIndexCalculator& wellPICalc,
@@ -285,17 +283,17 @@ namespace Opm
                          const double simulation_time, const int report_step,
                          const WellTestConfig::Reason testing_reason,
                          /* const */ WellState& well_state, const GroupState& group_state, WellTestState& welltest_state,
-                         Opm::DeferredLogger& deferred_logger);
+                         DeferredLogger& deferred_logger);
 
         void updatePerforatedCell(std::vector<bool>& is_cell_perforated);
 
-        void checkWellOperability(const Simulator& ebos_simulator, const WellState& well_state, Opm::DeferredLogger& deferred_logger);
+        void checkWellOperability(const Simulator& ebos_simulator, const WellState& well_state, DeferredLogger& deferred_logger);
 
         // check whether the well is operable under the current reservoir condition
         // mostly related to BHP limit and THP limit
         void updateWellOperability(const Simulator& ebos_simulator,
                                    const WellState& well_state,
-                                   Opm::DeferredLogger& deferred_logger);
+                                   DeferredLogger& deferred_logger);
 
 
         // whether the well is operable
@@ -341,7 +339,7 @@ namespace Opm
         void solveWellEquation(const Simulator& ebosSimulator,
                                WellState& well_state,
                                const GroupState& group_state,
-                               Opm::DeferredLogger& deferred_logger);
+                               DeferredLogger& deferred_logger);
 
         const PhaseUsage& phaseUsage() const;
 
@@ -473,12 +471,12 @@ namespace Opm
 
         bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
                                  const std::vector<double>& well_rates,
-                                 Opm::DeferredLogger& deferred_logger) const;
+                                 DeferredLogger& deferred_logger) const;
 
         double getTHPConstraint(const SummaryState& summaryState) const;
 
         template <class ValueType>
-        ValueType calculateBhpFromThp(const WellState& well_state, const std::vector<ValueType>& rates, const Well& well, const SummaryState& summaryState, Opm::DeferredLogger& deferred_logger) const;
+        ValueType calculateBhpFromThp(const WellState& well_state, const std::vector<ValueType>& rates, const Well& well, const SummaryState& summaryState, DeferredLogger& deferred_logger) const;
 
         double getALQ(const WellState& well_state) const;
 
@@ -506,7 +504,7 @@ namespace Opm
         void checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
                                   const WellState& well_state,
                                   RatioLimitCheckReport& report,
-                                  Opm::DeferredLogger& deferred_logger) const;
+                                  DeferredLogger& deferred_logger) const;
 
 
         template <typename RatioFunc>
@@ -522,33 +520,33 @@ namespace Opm
 
         double scalingFactor(const int comp_idx) const;
 
-        std::vector<double> initialWellRateFrations(const Simulator& ebosSimulator, const std::vector<double>& potentials) const;
+        std::vector<double> initialWellRateFractions(const Simulator& ebosSimulator, const std::vector<double>& potentials) const;
 
         // whether a well is specified with a non-zero and valid VFP table number
-        bool isVFPActive(Opm::DeferredLogger& deferred_logger) const;
+        bool isVFPActive(DeferredLogger& deferred_logger) const;
 
         struct OperabilityStatus;
 
         OperabilityStatus operability_status_;
 
         // check whether the well is operable under BHP limit with current reservoir condition
-        virtual void checkOperabilityUnderBHPLimitProducer(const WellState& well_state, const Simulator& ebos_simulator, Opm::DeferredLogger& deferred_logger) =0;
+        virtual void checkOperabilityUnderBHPLimitProducer(const WellState& well_state, const Simulator& ebos_simulator, DeferredLogger& deferred_logger) =0;
 
         // check whether the well is operable under THP limit with current reservoir condition
-        virtual void checkOperabilityUnderTHPLimitProducer(const Simulator& ebos_simulator, const WellState& well_state, Opm::DeferredLogger& deferred_logger) =0;
+        virtual void checkOperabilityUnderTHPLimitProducer(const Simulator& ebos_simulator, const WellState& well_state, DeferredLogger& deferred_logger) =0;
 
-        virtual void updateIPR(const Simulator& ebos_simulator, Opm::DeferredLogger& deferred_logger) const=0;
+        virtual void updateIPR(const Simulator& ebos_simulator, DeferredLogger& deferred_logger) const=0;
 
 
         void wellTestingEconomic(const Simulator& simulator,
                                  const double simulation_time, const WellState& well_state, const GroupState& group_state,
-                                 WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger);
+                                 WellTestState& welltest_state, DeferredLogger& deferred_logger);
 
         void wellTestingPhysical(const Simulator& simulator,
                                  const double simulation_time, const int report_step,
                                  WellState& well_state,
                                  const GroupState& group_state,
-                                 WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger);
+                                 WellTestState& welltest_state, DeferredLogger& deferred_logger);
 
 
         virtual void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
@@ -557,7 +555,7 @@ namespace Opm
                                                     const Well::ProductionControls& prod_controls,
                                                     WellState& well_state,
                                                     const GroupState& group_state,
-                                                    Opm::DeferredLogger& deferred_logger) = 0;
+                                                    DeferredLogger& deferred_logger) = 0;
 
         // iterate well equations with the specified control until converged
         virtual bool iterateWellEqWithControl(const Simulator& ebosSimulator,
@@ -566,28 +564,28 @@ namespace Opm
                                               const Well::ProductionControls& prod_controls,
                                               WellState& well_state,
                                               const GroupState& group_state,
-                                              Opm::DeferredLogger& deferred_logger) = 0;
+                                              DeferredLogger& deferred_logger) = 0;
 
         bool iterateWellEquations(const Simulator& ebosSimulator,
                                   const double dt,
                                   WellState& well_state,
                                   const GroupState& group_state,
-                                  Opm::DeferredLogger& deferred_logger);
+                                  DeferredLogger& deferred_logger);
 
         void updateWellTestStateEconomic(const WellState& well_state,
                                          const double simulation_time,
                                          const bool write_message_to_opmlog,
                                          WellTestState& well_test_state,
-                                         Opm::DeferredLogger& deferred_logger) const;
+                                         DeferredLogger& deferred_logger) const;
 
         void updateWellTestStatePhysical(const WellState& well_state,
                                          const double simulation_time,
                                          const bool write_message_to_opmlog,
                                          WellTestState& well_test_state,
-                                         Opm::DeferredLogger& deferred_logger) const;
+                                         DeferredLogger& deferred_logger) const;
 
         void solveWellForTesting(const Simulator& ebosSimulator, WellState& well_state, const GroupState& group_state,
-                                 Opm::DeferredLogger& deferred_logger);
+                                 DeferredLogger& deferred_logger);
 
         void initCompletions();
 
@@ -626,20 +624,20 @@ namespace Opm
         void getGroupInjectionControl(const Group& group,
                                       const WellState& well_state,
                                       const GroupState& group_state,
-                                      const Opm::Schedule& schedule,
+                                      const Schedule& schedule,
                                       const SummaryState& summaryState,
                                       const InjectorType& injectorType,
                                       const EvalWell& bhp,
                                       const EvalWell& injection_rate,
                                       EvalWell& control_eq,
                                       double efficiencyFactor,
-                                      Opm::DeferredLogger& deferred_logger);
+                                      DeferredLogger& deferred_logger);
 
         template <class EvalWell>
         void getGroupProductionControl(const Group& group,
                                        const WellState& well_state,
                                        const GroupState& group_state,
-                                       const Opm::Schedule& schedule,
+                                       const Schedule& schedule,
                                        const SummaryState& summaryState,
                                        const EvalWell& bhp,
                                        const std::vector<EvalWell>& rates,
@@ -649,26 +647,26 @@ namespace Opm
         template <class EvalWell, class BhpFromThpFunc>
         void assembleControlEqInj(const WellState& well_state,
                                   const GroupState& group_state,
-                                  const Opm::Schedule& schedule,
+                                  const Schedule& schedule,
                                   const SummaryState& summaryState,
                                   const Well::InjectionControls& controls,
                                   const EvalWell& bhp,
                                   const EvalWell& injection_rate,
                                   BhpFromThpFunc bhp_from_thp,
                                   EvalWell& control_eq,
-                                  Opm::DeferredLogger& deferred_logger);
+                                  DeferredLogger& deferred_logger);
 
         template <class EvalWell, class BhpFromThpFunc>
         void assembleControlEqProd(const WellState& well_state,
                                    const GroupState& group_state,
-                                   const Opm::Schedule& schedule,
+                                   const Schedule& schedule,
                                    const SummaryState& summaryState,
                                    const Well::ProductionControls& controls,
                                    const EvalWell& bhp,
                                    const std::vector<EvalWell>& rates, // Always 3 canonical rates.
                                    BhpFromThpFunc bhp_from_thp,
                                    EvalWell& control_eq,
-                                   Opm::DeferredLogger& deferred_logger);
+                                   DeferredLogger& deferred_logger);
     };
 
 
@@ -726,8 +724,6 @@ namespace Opm
         int worst_offending_completion = INVALIDCOMPLETION;
         double violation_extent = 0.0;
     };
-
-    const std::string modestring[4] = { "BHP", "THP", "RESERVOIR_RATE", "SURFACE_RATE" };
 
 }
 
