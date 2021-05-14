@@ -61,7 +61,7 @@ namespace Opm
     , segment_phase_densities_(numberOfSegments(), std::vector<EvalWell>(num_components_, 0.0)) // number of phase here?
     {
         // not handling solvent or polymer for now with multisegment well
-        if (has_solvent) {
+        if constexpr (has_solvent) {
             OPM_THROW(std::runtime_error, "solvent is not supported by multisegment well yet");
         }
 
