@@ -111,7 +111,7 @@ namespace Opm
         static const bool has_energy = getPropValue<TypeTag, Properties::EnableEnergy>();
         static const bool has_temperature = getPropValue<TypeTag, Properties::EnableTemperature>();
         // flag for polymer molecular weight related
-        static const bool has_polymermw = getPropValue<TypeTag, Properties::EnablePolymerMW>();
+        static constexpr bool has_polymermw = getPropValue<TypeTag, Properties::EnablePolymerMW>();
         static constexpr bool has_foam = getPropValue<TypeTag, Properties::EnableFoam>();
         static constexpr bool has_brine = getPropValue<TypeTag, Properties::EnableBrine>();
         static const int contiSolventEqIdx = Indices::contiSolventEqIdx;
