@@ -30,8 +30,6 @@
 
 #include <opm/grid/common/CartesianIndexMapper.hpp>
 
-#include <opm/material/common/ConditionalStorage.hpp>
-
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
@@ -47,8 +45,7 @@ class EclipseState;
 struct NNCdata;
 class TransMult;
 
-template<class Grid, class GridView, class ElementMapper,
-         class Scalar, bool enableEnergy, bool enableDiffusion>
+template<class Grid, class GridView, class ElementMapper, class Scalar>
 class EclTransmissibility {
     // Grid and world dimension
     enum { dimWorld = GridView::dimensionworld };
@@ -61,7 +58,9 @@ public:
                         const GridView& gridView,
                         const Dune::CartesianIndexMapper<Grid>& cartMapper,
                         const Grid& grid,
-                        const std::vector<double>& centroids);
+                        const std::vector<double>& centroids,
+                        bool enableEnergy,
+                        bool enableDiffusivity);
 
     /*!
      * \brief Return the permeability for an element.
@@ -241,10 +240,10 @@ protected:
     Scalar transmissibilityThreshold_;
     std::map<std::pair<unsigned, unsigned>, Scalar> transBoundary_;
     std::map<std::pair<unsigned, unsigned>, Scalar> thermalHalfTransBoundary_;
-    Opm::ConditionalStorage<enableEnergy,
-                            std::unordered_map<std::uint64_t, Scalar> > thermalHalfTrans_;
-    Opm::ConditionalStorage<enableDiffusion,
-                            std::unordered_map<std::uint64_t, Scalar> > diffusivity_;
+    bool enableEnergy_;
+    bool enableDiffusivity_;
+    std::unordered_map<std::uint64_t, Scalar> thermalHalfTrans_;
+    std::unordered_map<std::uint64_t, Scalar> diffusivity_;
 };
 
 } // namespace Opm

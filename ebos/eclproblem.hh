@@ -819,7 +819,9 @@ public:
                               simulator.vanguard().gridView(),
                               simulator.vanguard().cartesianIndexMapper(),
                               simulator.vanguard().grid(),
-                              simulator.vanguard().cellCentroids())
+                              simulator.vanguard().cellCentroids(),
+                              enableEnergy,
+                              enableDiffusion)
         , thresholdPressures_(simulator)
         , wellModel_(simulator)
         , aquiferModel_(simulator)

@@ -50,7 +50,7 @@ struct EclCpGridVanguard {
 // declare the properties
 template<class TypeTag>
 struct Vanguard<TypeTag, TTag::EclCpGridVanguard> {
-    using type = Opm::EclCpGridVanguard<TypeTag>;
+    using type = EclCpGridVanguard<TypeTag>;
 };
 template<class TypeTag>
 struct Grid<TypeTag, TTag::EclCpGridVanguard> {
@@ -89,9 +89,8 @@ public:
     using Grid = GetPropType<TypeTag, Properties::Grid>;
     using EquilGrid = GetPropType<TypeTag, Properties::EquilGrid>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
-    using TransmissibilityType = EclTransmissibility<Grid, GridView, ElementMapper, Scalar,
-                                                     getPropValue<TypeTag, Properties::EnableEnergy>(),
-                                                     getPropValue<TypeTag, Properties::EnableDiffusion>()>;
+    using TransmissibilityType = EclTransmissibility<Grid, GridView, ElementMapper, Scalar>;
+
 private:
     typedef Dune::CartesianIndexMapper<Grid> CartesianIndexMapper;
     using Element = typename GridView::template Codim<0>::Entity;
@@ -163,7 +162,9 @@ protected:
                                                     this->gridView(),
                                                     this->cartesianIndexMapper(),
                                                     this->grid(),
-                                                    this->cellCentroids()));
+                                                    this->cellCentroids(),
+                                                    getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                                    getPropValue<TypeTag, Properties::EnableDiffusion>()));
         globalTrans_->update(false);
     }
 
