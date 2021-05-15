@@ -2329,7 +2329,7 @@ private:
     bool computeFip_;
     bool forceDisableFipOutput_;
 
-    ScalarBuffer saturation_[numPhases];
+    std::array<ScalarBuffer, numPhases> saturation_;
     ScalarBuffer oilPressure_;
     ScalarBuffer temperature_;
     ScalarBuffer gasDissolutionFactor_;
@@ -2339,10 +2339,10 @@ private:
     ScalarBuffer oilSaturationPressure_;
     ScalarBuffer rs_;
     ScalarBuffer rv_;
-    ScalarBuffer invB_[numPhases];
-    ScalarBuffer density_[numPhases];
-    ScalarBuffer viscosity_[numPhases];
-    ScalarBuffer relativePermeability_[numPhases];
+    std::array<ScalarBuffer, numPhases> invB_;
+    std::array<ScalarBuffer, numPhases> density_;
+    std::array<ScalarBuffer, numPhases> viscosity_;
+    std::array<ScalarBuffer, numPhases> relativePermeability_;
     ScalarBuffer sSol_;
     ScalarBuffer extboX_;
     ScalarBuffer extboY_;
