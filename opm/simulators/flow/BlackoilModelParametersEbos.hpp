@@ -23,7 +23,6 @@
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
 
-#include <ebos/eclbasevanguard.hh>
 #include <string>
 
 namespace Opm::Properties {
@@ -32,6 +31,10 @@ namespace TTag {
 struct FlowModelParameters {};
 }
 
+template<class TypeTag, class MyTypeTag>
+struct EclDeckFileName {
+    using type = UndefinedProperty;
+};
 template<class TypeTag, class MyTypeTag>
 struct DbhpMaxRel {
     using type = UndefinedProperty;
