@@ -1138,10 +1138,11 @@ public:
 
         // tracers
         if (!tracerConcentrations_.empty()) {
-            const auto& tracerModel = simulator_.problem().tracerModel();
-            for (int tracerIdx = 0; tracerIdx<tracerModel.numTracers(); tracerIdx++){
-                std::string tmp = tracerModel.tracerName(tracerIdx) + "F";
-                sol.insert(tmp, UnitSystem::measure::identity, std::move(tracerConcentrations_[tracerIdx]), data::TargetType::RESTART_SOLUTION);
+            const auto& tracers = simulator_.vanguard().eclState().tracer();
+            size_t tracerIdx = 0;
+            for (const auto& tracer : tracers) {
+                std::string tmp = tracer.name + "F";
+                sol.insert(tmp, UnitSystem::measure::identity, std::move(tracerConcentrations_[tracerIdx++]), data::TargetType::RESTART_SOLUTION);
             }
         }
     }
