@@ -308,7 +308,7 @@ public:
 
         std::map<std::string, double> miscSummaryData;
         std::map<std::string, std::vector<double>> regionData;
-        auto inplace = eclOutputModule_->outputFipLog(miscSummaryData, regionData, isSubStep);
+        auto inplace = eclOutputModule_->outputFipLog(miscSummaryData, regionData, isSubStep, simulator_.gridView().comm());
 
         bool forceDisableProdOutput = false;
         bool forceDisableInjOutput = false;
@@ -400,7 +400,7 @@ public:
         const int reportStepNum = simulator_.episodeIndex() + 1;
 
         this->prepareLocalCellData(isSubStep, reportStepNum);
-        this->eclOutputModule_->outputErrorLog();
+        this->eclOutputModule_->outputErrorLog(simulator_.gridView().comm());
 
         // output using eclWriter if enabled
         auto localWellData = simulator_.problem().wellModel().wellData();
