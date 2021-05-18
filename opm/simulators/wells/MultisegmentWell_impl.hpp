@@ -741,11 +741,11 @@ namespace Opm
 
             primary_variables_[seg][GTotal] = total_seg_rate;
             if (std::abs(total_seg_rate) > 0.) {
-                if (has_water) {
+                if (has_wfrac_variable) {
                     const int water_pos = pu.phase_pos[Water];
                     primary_variables_[seg][WFrac] = scalingFactor(water_pos) * segment_rates[number_of_phases_ * seg_index + water_pos] / total_seg_rate;
                 }
-                if (has_gas) {
+                if (has_gfrac_variable) {
                     const int gas_pos = pu.phase_pos[Gas];
                     primary_variables_[seg][GFrac] = scalingFactor(gas_pos) * segment_rates[number_of_phases_ * seg_index + gas_pos] / total_seg_rate;
                 }
@@ -754,7 +754,7 @@ namespace Opm
                     // only single phase injection handled
                     auto phase = well.getInjectionProperties().injectorType;
 
-                    if (has_water) {
+                    if (has_wfrac_variable) {
                         if (phase == InjectorType::WATER) {
                             primary_variables_[seg][WFrac] = 1.0;
                         } else {
@@ -762,7 +762,7 @@ namespace Opm
                         }
                     }
 
-                    if (has_gas) {
+                    if (has_gfrac_variable) {
                         if (phase == InjectorType::GAS) {
                             primary_variables_[seg][GFrac] = 1.0;
                         } else {
@@ -771,11 +771,11 @@ namespace Opm
                     }
 
                 } else if (this->isProducer()) { // producers
-                    if (has_water) {
+                    if (has_wfrac_variable) {
                         primary_variables_[seg][WFrac] = 1.0 / number_of_phases_;
                     }
 
-                    if (has_gas) {
+                    if (has_gfrac_variable) {
                         primary_variables_[seg][GFrac] = 1.0 / number_of_phases_;
                     }
                 }
@@ -911,13 +911,13 @@ namespace Opm
         const std::vector<std::array<double, numWellEq> > old_primary_variables = primary_variables_;
 
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
-            if (has_water) {
+            if (has_wfrac_variable) {
                 const int sign = dwells[seg][WFrac] > 0. ? 1 : -1;
                 const double dx_limited = sign * std::min(std::abs(dwells[seg][WFrac]) * relaxation_factor, dFLimit);
                 primary_variables_[seg][WFrac] = old_primary_variables[seg][WFrac] - dx_limited;
             }
 
-            if (has_gas) {
+            if (has_gfrac_variable) {
                 const int sign = dwells[seg][GFrac] > 0. ? 1 : -1;
                 const double dx_limited = sign * std::min(std::abs(dwells[seg][GFrac]) * relaxation_factor, dFLimit);
                 primary_variables_[seg][GFrac] = old_primary_variables[seg][GFrac] - dx_limited;
@@ -1148,21 +1148,21 @@ namespace Opm
     volumeFraction(const int seg, const unsigned compIdx) const
     {
 
-        if (has_water && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx)) {
+        if (has_wfrac_variable && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx)) {
             return primary_variables_evaluation_[seg][WFrac];
         }
 
-        if (has_gas && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx)) {
+        if (has_gfrac_variable && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx)) {
             return primary_variables_evaluation_[seg][GFrac];
         }
 
         // Oil fraction
         EvalWell oil_fraction = 1.0;
-        if (has_water) {
+        if (has_wfrac_variable) {
             oil_fraction -= primary_variables_evaluation_[seg][WFrac];
         }
 
-        if (has_gas) {
+        if (has_gfrac_variable) {
             oil_fraction -= primary_variables_evaluation_[seg][GFrac];
         }
         /* if (has_solvent) {
@@ -1941,10 +1941,10 @@ namespace Opm
         const int seg_upwind = upwinding_segments_[seg];
         duneD_[seg][seg][SPres][SPres] += pressure_equation.derivative(SPres + numEq);
         duneD_[seg][seg][SPres][GTotal] += pressure_equation.derivative(GTotal + numEq);
-        if (has_water) {
+        if (has_wfrac_variable) {
             duneD_[seg][seg_upwind][SPres][WFrac] += pressure_equation.derivative(WFrac + numEq);
         }
-        if (has_gas) {
+        if (has_gfrac_variable) {
             duneD_[seg][seg_upwind][SPres][GFrac] += pressure_equation.derivative(GFrac + numEq);
         }
 
@@ -2052,10 +2052,10 @@ namespace Opm
         resWell_[seg][SPres] -= accelerationPressureLoss.value();
         duneD_[seg][seg][SPres][SPres] -= accelerationPressureLoss.derivative(SPres + numEq);
         duneD_[seg][seg][SPres][GTotal] -= accelerationPressureLoss.derivative(GTotal + numEq);
-        if (has_water) {
+        if (has_wfrac_variable) {
             duneD_[seg][seg_upwind][SPres][WFrac] -= accelerationPressureLoss.derivative(WFrac + numEq);
         }
-        if (has_gas) {
+        if (has_gfrac_variable) {
             duneD_[seg][seg_upwind][SPres][GFrac] -= accelerationPressureLoss.derivative(GFrac + numEq);
         }
     }
