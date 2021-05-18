@@ -190,16 +190,6 @@ public:
             (*this)[i] = value;
         return *this;
     }
-
-    /*!
-     * \brief Assignment operator from another rate vector
-     */
-    BlackOilRateVector& operator=(const BlackOilRateVector& other)
-    {
-        for (unsigned i=0; i < this->size(); ++i)
-            (*this)[i] = other[i];
-        return *this;
-    }
 };
 
 } // namespace Opm
