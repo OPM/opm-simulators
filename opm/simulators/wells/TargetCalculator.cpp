@@ -93,11 +93,8 @@ RateType TargetCalculator::calcModeRateFromRates(const RateType* rates) const
         return rates[opos] + rates[wpos];
     }
     case Group::ProductionCMode::RESV: {
-        assert(pu_.phase_used[BlackoilPhases::Liquid]);
-        assert(pu_.phase_used[BlackoilPhases::Aqua]);
-        assert(pu_.phase_used[BlackoilPhases::Vapour]);
-        ElemType mode_rate = zero<ElemType>();
-        for (int phase = 0; phase < pu_.num_phases; ++phase) {
+        ElemType mode_rate = rates[0] * resv_coeff_[0];
+        for (int phase = 1; phase < pu_.num_phases; ++phase) {
             mode_rate += rates[phase] * resv_coeff_[phase];
         }
         return mode_rate;
