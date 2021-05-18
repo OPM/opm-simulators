@@ -43,6 +43,8 @@ protected:
 public:
     EclGenericCpGridVanguard();
 
+    virtual ~EclGenericCpGridVanguard() = default;
+
     /*!
      * \brief Return a reference to the simulation grid.
      */
