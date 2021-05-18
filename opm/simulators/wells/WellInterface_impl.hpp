@@ -2177,7 +2177,7 @@ namespace Opm
                 if( pu.phase_used[BlackoilPhases::Vapour] )
                     current_rate -= well_state.wellReservoirRates()[ wellrate_index + pu.phase_pos[BlackoilPhases::Vapour] ];
 
-                if (controls.prediction_mode && controls.resv_rate > current_rate) {
+                if (controls.prediction_mode && controls.resv_rate < current_rate) {
                     currentControl = Well::ProducerCMode::RESV;
                     return true;
                 }
