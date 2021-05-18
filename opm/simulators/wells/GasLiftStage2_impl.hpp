@@ -56,6 +56,7 @@ GasLiftStage2(
     schedule_{ebos_simulator.vanguard().schedule()},
     phase_usage_{well_model_.phaseUsage()},
     glo_{schedule_.glo(report_step_idx_)},
+    comm_{ebos_simulator.vanguard().grid().comm()},
     debug_{false}
 {
 //    this->time_step_idx_
@@ -286,8 +287,7 @@ GasLiftStage2<TypeTag>::
 getCurrentGroupRates_(const Group &group)
 {
     auto rates = getCurrentGroupRatesRecursive_(group);
-    const auto& comm = ebos_simulator_.vanguard().grid().comm();
-    comm.sum(rates.data(), rates.size());
+    this->comm_.sum(rates.data(), rates.size());
     auto [oil_rate, gas_rate, alq] = rates;
     if (this->debug_) {
         const std::string msg = fmt::format(
@@ -471,6 +471,64 @@ getGroupGliftWellsRecursive_(const Group &group,
 template<typename TypeTag>
 void
 GasLiftStage2<TypeTag>::
+mpiSyncGlobalGradVector_(std::vector<GradPair> &grads_global) const
+{
+    if (this->comm_.size() == 1)
+        return;
+
+    std::vector<GradPair> grads_local;
+    for (auto itr = grads_global.begin(); itr != grads_global.end(); itr++) {
+        if (well_state_map_.count(itr->first) > 0) {
+            grads_local.push_back(*itr);
+        }
+    }
+    mpiSyncLocalToGlobalGradVector_(grads_local, grads_global);
+}
+
+template<typename TypeTag>
+void
+GasLiftStage2<TypeTag>::
+mpiSyncLocalToGlobalGradVector_(
+    const std::vector<GradPair> &grads_local, std::vector<GradPair> &grads_global) const
+{
+    assert(this->comm_.size() > 1);  // The parent should check if comm. size is > 1
+    using Pair = std::pair<int, double>;
+    std::vector<Pair> grads_local_tmp;
+    grads_local_tmp.reserve(grads_local.size());
+    for (size_t i = 0; i < grads_local.size(); ++i) {
+        if(!this->well_state_.wellIsOwned(grads_local[i].first))
+            continue;
+        grads_local_tmp.push_back(
+           std::make_pair(
+              this->well_state_.wellNameToGlobalIdx(grads_local[i].first),
+              grads_local[i].second));
+    }
+
+    std::vector<int> sizes_(this->comm_.size());
+    std::vector<int> displ_(this->comm_.size() + 1, 0);
+    int mySize = grads_local_tmp.size();
+    this->comm_.allgather(&mySize, 1, sizes_.data());
+    std::partial_sum(sizes_.begin(), sizes_.end(), displ_.begin()+1);
+    std::vector<Pair> grads_global_tmp(displ_.back());
+
+    this->comm_.allgatherv(grads_local_tmp.data(), grads_local_tmp.size(),
+        grads_global_tmp.data(), sizes_.data(), displ_.data());
+
+    // NOTE: This leaves the capacity of 'grads_global' unchanged, so
+    //   memory is not reallocated here
+    grads_global.clear();
+
+    for (size_t i = 0; i < grads_global_tmp.size(); ++i) {
+        grads_global.emplace_back(
+            std::make_pair(
+                well_state_.globalIdxToWellName(grads_global_tmp[i].first),
+                grads_global_tmp[i].second));
+    }
+}
+
+template<typename TypeTag>
+void
+GasLiftStage2<TypeTag>::
 optimizeGroup_(const Group &group)
 {
     const auto &gl_group = this->glo_.group(group.name());
@@ -514,13 +572,16 @@ optimizeGroupsRecursive_(const Group &group)
         optimizeGroup_(group);
 
 }
-
 template<typename TypeTag>
 void
 GasLiftStage2<TypeTag>::
 recalculateGradientAndUpdateData_(
     GradPairItr &grad_itr, bool increase,
-    std::vector<GradPair> &grads, std::vector<GradPair> &other_grads)
+
+    //incremental and decremental gradients, if 'grads' are incremental, then
+    // 'other_grads' are decremental, or conversely, if 'grads' are decremental, then
+    // 'other_grads' are incremental
+    std::vector<GradPair> &grads,  std::vector<GradPair> &other_grads)
 {
     // NOTE: We make a copy of the name string instead of taking a reference
     //   since we may have to erase grad_itr (in the "else" condition below)
@@ -547,6 +608,8 @@ recalculateGradientAndUpdateData_(
         // The old incremental gradient becomes the new decremental gradient
         //   or the old decremental gradient becomes the new incremental gradient
         updateGrad_(name, *old_grad, !increase);
+        // NOTE: This may invalidate any iterator into 'other_grads' since
+        //   updateGradVector_() will do a push_back() if 'name' is not found..
         updateGradVector_(name, other_grads, old_grad->grad);
     }
 }
@@ -601,15 +664,24 @@ redistributeALQ_(std::vector<GasLiftSingleWell *> &wells,  const Group &group,
     std::vector<GradPair> &inc_grads, std::vector<GradPair> &dec_grads)
 {
     OptimizeState state {*this, group};
-    std::vector<GradPair> inc_grads_local;
-    std::vector<GradPair> dec_grads_local;
-    inc_grads_local.reserve(wells.size());
-    dec_grads_local.reserve(wells.size());
-    state.calculateEcoGradients(wells, inc_grads_local, dec_grads_local);
-
-    // the gradients needs to be communicated to all ranks
-    dec_grads = localToGlobalGradVector_(dec_grads_local);
-    inc_grads = localToGlobalGradVector_(inc_grads_local);
+    // NOTE: 'inc_grads' and 'dec_grads' can never grow larger than wells.size()
+    //   By reserving space here, we can ensure that any push_back() on these
+    //   will never reallocate memory and invalidate any iterators.
+    inc_grads.reserve(wells.size());
+    dec_grads.reserve(wells.size());
+    if (this->comm_.size() == 1) {
+        state.calculateEcoGradients(wells, inc_grads, dec_grads);
+    }
+    else {
+        std::vector<GradPair> inc_grads_local;
+        std::vector<GradPair> dec_grads_local;
+        inc_grads_local.reserve(wells.size());
+        dec_grads_local.reserve(wells.size());
+        state.calculateEcoGradients(wells, inc_grads_local, dec_grads_local);
+        // the gradients needs to be communicated to all ranks
+        mpiSyncLocalToGlobalGradVector_(dec_grads_local, dec_grads);
+        mpiSyncLocalToGlobalGradVector_(inc_grads_local, inc_grads);
+    }
 
     if (!state.checkAtLeastTwoWells(wells)) {
         // NOTE: Even though we here in redistributeALQ_() do not use the
@@ -705,8 +777,8 @@ removeSurplusALQ_(const Group &group,
                         dec_grad_itr, /*increase=*/false, dec_grads, inc_grads);
 
             // The dec_grads and inc_grads needs to be syncronized across ranks
-            dec_grads = updateGlobalGradVector_(dec_grads);
-            inc_grads = updateGlobalGradVector_(inc_grads);
+            mpiSyncGlobalGradVector_(dec_grads);
+            mpiSyncGlobalGradVector_(inc_grads);
             // NOTE: recalculateGradientAndUpdateData_() will remove the current gradient
             //   from dec_grads if it cannot calculate a new decremental gradient.
             //   This will invalidate dec_grad_itr and well_name
@@ -803,58 +875,6 @@ updateGradVector_(const std::string &name, std::vector<GradPair> &grads, double 
     //   later in getEcoGradients()
 }
 
-template<typename TypeTag>
-std::vector<typename GasLiftStage2<TypeTag>::GradPair>
-GasLiftStage2<TypeTag>::
-localToGlobalGradVector_(const std::vector<GradPair> &grads_local) const
-{
-    const auto& comm = ebos_simulator_.vanguard().grid().comm();
-    if (comm.size() == 1)
-        return grads_local;
-
-    using Pair = std::pair<int, double>;
-    std::vector<Pair> grads_local_tmp;
-    grads_local_tmp.reserve(grads_local.size());
-    for (size_t i = 0; i < grads_local.size(); ++i) {
-        if(!well_state_.wellIsOwned(grads_local[i].first))
-            continue;
-
-        grads_local_tmp.push_back(std::make_pair(well_state_.wellNameToGlobalIdx(grads_local[i].first), grads_local[i].second));
-    }
-
-    std::vector<int> sizes_(comm.size());
-    std::vector<int> displ_(comm.size() + 1, 0);
-    int mySize = grads_local_tmp.size();
-    comm.allgather(&mySize, 1, sizes_.data());
-    std::partial_sum(sizes_.begin(), sizes_.end(), displ_.begin()+1);
-    std::vector<Pair> grads_global(displ_.back());
-
-    comm.allgatherv(grads_local_tmp.data(), grads_local_tmp.size(), grads_global.data(), sizes_.data(), displ_.data());
-    std::vector<GradPair> grads(grads_global.size());
-    for (size_t i = 0; i < grads_global.size(); ++i) {
-        grads[i] = std::make_pair(well_state_.globalIdxToWellName(grads_global[i].first), grads_global[i].second);
-    }
-    return grads;
-}
-
-template<typename TypeTag>
-std::vector<typename GasLiftStage2<TypeTag>::GradPair>
-GasLiftStage2<TypeTag>::
-updateGlobalGradVector_(const std::vector<GradPair> &grads_global) const
-{
-    const auto& comm = ebos_simulator_.vanguard().grid().comm();
-    if (comm.size() == 1)
-        return grads_global;
-
-    std::vector<GradPair> grads_local;
-    for (auto itr = grads_global.begin(); itr != grads_global.end(); itr++) {
-        if (well_state_map_.count(itr->first) > 0) {
-            grads_local.push_back(*itr);
-        }
-    }
-    return localToGlobalGradVector_(grads_local);
-}
-
 /***********************************************
  * Public methods declared in OptimizeState
  ***********************************************/
@@ -894,8 +914,7 @@ checkAtLeastTwoWells(std::vector<GasLiftSingleWell *> &wells)
             continue;
         numberOfwells++;
     }
-    const auto& comm = this->parent.ebos_simulator_.vanguard().grid().comm();
-    numberOfwells = comm.sum(numberOfwells);
+    numberOfwells = this->parent.comm_.sum(numberOfwells);
     if (numberOfwells < 2) {
         const std::string msg = fmt::format(
             "skipping: too few wells ({}) to optimize.", numberOfwells);
@@ -970,8 +989,8 @@ recalculateGradients(
         min_dec_grad_itr, /*increase=*/false, dec_grads, inc_grads);
 
     // The dec_grads and inc_grads needs to be syncronized across ranks
-    dec_grads = this->parent.updateGlobalGradVector_(dec_grads);
-    inc_grads = this->parent.updateGlobalGradVector_(inc_grads);
+    this->parent.mpiSyncGlobalGradVector_(dec_grads);
+    this->parent.mpiSyncGlobalGradVector_(inc_grads);
 }
 
 // Take one ALQ increment from well1, and give it to well2
@@ -1132,8 +1151,7 @@ updateRates(const std::string &well_name)
     }
 
     // and communicate the results
-    const auto& comm = this->parent.ebos_simulator_.vanguard().grid().comm();
-    comm.sum(delta.data(), delta.size());
+    this->parent.comm_.sum(delta.data(), delta.size());
 
     // and update
     const auto& [delta_oil, delta_gas, delta_alq] = delta;

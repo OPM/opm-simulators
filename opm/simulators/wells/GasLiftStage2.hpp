@@ -69,6 +69,12 @@ namespace Opm
         using GradPairItr = std::vector<GradPair>::iterator;
         using GradInfo = typename GasLiftSingleWell::GradInfo;
         using GradMap = std::map<std::string, GradInfo>;
+        using MPIComm = typename Dune::MPIHelper::MPICommunicator;
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+        using Communication = Dune::Communication<MPIComm>;
+#else
+        using Communication = Dune::CollectiveCommunication<MPIComm>;
+#endif
         static const int Water = BlackoilPhases::Aqua;
         static const int Oil = BlackoilPhases::Liquid;
         static const int Gas = BlackoilPhases::Vapour;
@@ -127,8 +133,10 @@ namespace Opm
             const std::string &name, GradInfo &grad, bool increase);
         void updateGradVector_(
             const std::string &name, std::vector<GradPair> &grads, double grad);
-        std::vector<GradPair> updateGlobalGradVector_(const std::vector<GradPair> &grads_global) const;
-        std::vector<GradPair> localToGlobalGradVector_(const std::vector<GradPair> &grads_local) const;
+        void mpiSyncGlobalGradVector_(std::vector<GradPair> &grads_global) const;
+        void mpiSyncLocalToGlobalGradVector_(
+            const std::vector<GradPair> &grads_local,
+            std::vector<GradPair> &grads_global) const;
 
 
         DeferredLogger &deferred_logger_;
@@ -144,6 +152,7 @@ namespace Opm
         const Schedule &schedule_;
         const PhaseUsage &phase_usage_;
         const GasLiftOpt& glo_;
+        const Communication &comm_;
         GradMap inc_grads_;
         GradMap dec_grads_;
         bool debug_;
