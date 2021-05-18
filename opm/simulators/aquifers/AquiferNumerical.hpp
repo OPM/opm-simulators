@@ -104,6 +104,11 @@ public:
         this->cumulative_flux_ = 0.;
     }
 
+    int aquiferID() const
+    {
+        return static_cast<int>(this->id_);
+    }
+
 private:
     const size_t id_;
     const Simulator& ebos_simulator_;

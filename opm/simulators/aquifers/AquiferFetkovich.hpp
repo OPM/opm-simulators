@@ -71,13 +71,15 @@ public:
     data::AquiferData aquiferData() const
     {
         // TODO: how to unify the two functions?
-        data::AquiferData data;
-        data.aquiferID = this->aquiferID;
+        auto data = data::AquiferData{};
+
+        data.aquiferID = this->aquiferID();
         data.pressure = this->aquifer_pressure_;
-        data.fluxRate = 0.;
-        for (const auto& q : this->Qai_) {
-            data.fluxRate += q.value();
-        }
+        data.fluxRate = std::accumulate(this->Qai_.begin(), this->Qai_.end(), 0.0,
+                                        [](const double flux, const auto& q) -> double
+                                        {
+                                            return flux + q.value();
+                                        });
         data.volume = this->W_flux_.value();
         data.initPressure = this->pa0_;
         data.type = data::AquiferType::Fetkovich;
@@ -95,8 +97,10 @@ protected:
     void assignRestartData(const data::AquiferData& xaq) override
     {
         if (xaq.type != data::AquiferType::Fetkovich) {
-            throw std::invalid_argument {"Analytic aquifer data for unexpected aquifer type "
-                                         "passed to Fetkovich aquifer"};
+            throw std::invalid_argument {
+                "Analytic aquifer data for unexpected aquifer "
+                "type passed to Fetkovich aquifer"
+            };
         }
 
         this->aquifer_pressure_ = xaq.pressure;
