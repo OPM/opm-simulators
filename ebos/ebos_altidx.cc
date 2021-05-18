@@ -50,7 +50,7 @@ struct FluidSystem<TypeTag, TTag::EbosAltIdxTypeTag>
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    typedef Opm::BlackOilFluidSystem<Scalar, Opm::EclAlternativeBlackOilIndexTraits> type;
+    typedef BlackOilFluidSystem<Scalar, EclAlternativeBlackOilIndexTraits> type;
 };
 
 } // namespace Opm::Properties
