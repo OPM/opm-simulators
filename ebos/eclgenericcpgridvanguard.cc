@@ -52,6 +52,8 @@
 
 namespace Opm {
 
+std::optional<std::function<std::vector<int> (const Dune::CpGrid&)>> externalLoadBalancer;
+
 template<class ElementMapper, class GridView, class Scalar>
 EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::EclGenericCpGridVanguard()
 {
@@ -102,7 +104,7 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doLoadBalance_(Dun
         const auto& gridView = grid_->leafGridView();
         unsigned numFaces = grid_->numFaces();
         std::vector<double> faceTrans;
-        int loadBalancerSet = externalLoadBalancer_.has_value();
+        int loadBalancerSet = externalLoadBalancer.has_value();
         grid_->comm().broadcast(&loadBalancerSet, 1, 0);
         if (!loadBalancerSet){
             faceTrans.resize(numFaces, 0.0);
@@ -150,7 +152,7 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doLoadBalance_(Dun
                     std::vector<int> parts;
                     if (grid_->comm().rank() == 0)
                     {
-                        parts =  (*externalLoadBalancer_)(*grid_);
+                        parts =  (*externalLoadBalancer)(*grid_);
                     }
                     parallelWells = std::get<1>(grid_->loadBalance(handle, parts, &wells, ownersFirst, false, 1));
                 }
@@ -366,10 +368,6 @@ Scalar EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::computeCellThick
     zz2 /=4;
     return zz2-zz1;
 }
-
-template<class ElementMapper, class GridView, class Scalar>
-std::optional<std::function<std::vector<int> (const Dune::CpGrid&)>>
-EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::externalLoadBalancer_;
 
 #if HAVE_DUNE_FEM
 template class EclGenericCpGridVanguard<Dune::MultipleCodimMultipleGeomTypeMapper<
