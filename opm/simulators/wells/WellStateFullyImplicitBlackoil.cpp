@@ -537,21 +537,18 @@ void WellStateFullyImplicitBlackoil::initWellStateMSWell(const std::vector<Well>
 {
     // still using the order in wells
     const int nw = wells_ecl.size();
-    const auto& pu = this->phaseUsage();
-    const int np = pu.num_phases;
     if (nw == 0) {
         return;
     }
+    const auto& pu = this->phaseUsage();
+    const int np = pu.num_phases;
 
     top_segment_index_.clear();
-    top_segment_index_.reserve(nw);
     seg_press_.clear();
-    seg_press_.reserve(nw);
     seg_rates_.clear();
-    seg_rates_.reserve(nw * numPhases());
     seg_number_.clear();
-
     nseg_ = 0;
+
     // in the init function, the well rates and perforation rates have been initialized or copied from prevState
     // what we do here, is to set the segment rates and perforation rates
     for (int w = 0; w < nw; ++w) {

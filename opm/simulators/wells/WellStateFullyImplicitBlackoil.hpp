@@ -424,6 +424,11 @@ private:
     // for StandardWell, the number of segments will be one
     std::vector<double> seg_rates_;
     std::vector<double> seg_press_;
+    // the index of the top segments, which is used to locate the
+    // multisegment well related information in WellState
+    std::vector<int> top_segment_index_;
+    int nseg_; // total number of the segments
+
     // The following data are only recorded for output
     // pressure drop
     std::vector<double> seg_pressdrop_;
@@ -433,10 +438,6 @@ private:
     std::vector<double> seg_pressdrop_hydorstatic_;
     // accelerational pressure drop
     std::vector<double> seg_pressdrop_acceleration_;
-    // the index of the top segments, which is used to locate the
-    // multisegment well related information in WellState
-    std::vector<int> top_segment_index_;
-    int nseg_; // total number of the segments
 
     // Productivity Index
     std::vector<double> productivity_index_;
