@@ -26,6 +26,7 @@ list (APPEND MAIN_SOURCE_FILES
   ebos/collecttoiorank.cc
   ebos/eclgenericcpgridvanguard.cc
   ebos/eclgenericthresholdpressure.cc
+  ebos/eclgenerictracermodel.cc
   ebos/eclgenericvanguard.cc
   ebos/ecltransmissibility.cc
   opm/core/props/phaseUsageFromDeck.cpp
