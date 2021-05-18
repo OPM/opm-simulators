@@ -36,6 +36,7 @@
 #include <opm/grid/common/GridEnums.hpp>
 #include <opm/grid/common/CartesianIndexMapper.hpp>
 #include <opm/parser/eclipse/EclipseState/Aquifer/NumericalAquifer/NumericalAquiferCell.hpp>
+#include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
 
 #include <array>
 #include <optional>
@@ -56,10 +57,6 @@ struct EclBaseVanguard {};
 // declare the properties required by the for the ecl simulator vanguard
 template<class TypeTag, class MyTypeTag>
 struct EquilGrid {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct EclDeckFileName {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
