@@ -849,7 +849,7 @@ namespace Opm
 
         // Store the perforation pressure for later usage.
         auto * perf_press = &well_state.perfPress()[first_perf_];
-        perf_press[perf] = well_state.bhp()[index_of_well_] + perf_pressure_diffs_[perf];
+        perf_press[perf] = well_state.bhp(index_of_well_) + perf_pressure_diffs_[perf];
     }
 
 
@@ -1264,7 +1264,7 @@ namespace Opm
             F[pu.phase_pos[Gas]] += F_solvent;
         }
 
-        well_state.bhp()[index_of_well_] = primary_variables_[Bhp];
+        well_state.update_bhp(index_of_well_, primary_variables_[Bhp]);
 
         // calculate the phase rates based on the primary variables
         // for producers, this is not a problem, while not sure for injectors here
@@ -1319,7 +1319,7 @@ namespace Opm
     {
         // When there is no vaild VFP table provided, we set the thp to be zero.
         if (!this->isVFPActive(deferred_logger) || this->wellIsStopped()) {
-            well_state.thp()[index_of_well_] = 0.;
+            well_state.update_thp(index_of_well_, 0);
             return;
         }
 
@@ -1337,9 +1337,9 @@ namespace Opm
             rates[ Gas ] = well_state.wellRates()[index_of_well_ * number_of_phases_ + pu.phase_pos[ Gas ] ];
         }
 
-        const double bhp = well_state.bhp()[index_of_well_];
+        const double bhp = well_state.bhp(index_of_well_);
 
-        well_state.thp()[index_of_well_] = calculateThpFromBhp(well_state, rates, bhp, deferred_logger);
+        well_state.update_thp(index_of_well_, calculateThpFromBhp(well_state, rates, bhp, deferred_logger));
 
     }
 
@@ -1598,7 +1598,7 @@ namespace Opm
                                    const WellState& well_state,
                                    Opm::DeferredLogger& deferred_logger)
     {
-        const double bhp = well_state.bhp()[index_of_well_];
+        const double bhp = well_state.bhp(index_of_well_);
         std::vector<double> well_rates;
         computeWellRatesWithBhp(ebos_simulator, bhp, well_rates, deferred_logger);
 
@@ -1666,7 +1666,7 @@ namespace Opm
 
         // Compute the average pressure in each well block
         const auto * perf_press = &well_state.perfPress()[first_perf_];
-        auto p_above =  this->parallel_well_info_.communicateAboveValues(well_state.bhp()[w],
+        auto p_above =  this->parallel_well_info_.communicateAboveValues(well_state.bhp(w),
                                                                          perf_press,
                                                                          nperf);
 
@@ -2427,7 +2427,7 @@ namespace Opm
         } else {
             well_state_copy.currentProductionControls()[index_of_well_] = Well::ProducerCMode::BHP;
         }
-        well_state_copy.bhp()[index_of_well_] = bhp;
+        well_state_copy.update_bhp(index_of_well_, bhp);
 
         const double dt = ebosSimulator.timeStepSize();
         bool converged = this->iterateWellEquations(ebosSimulator, dt, well_state_copy, group_state, deferred_logger);
@@ -2800,7 +2800,7 @@ namespace Opm
 
 
         // BHP
-        primary_variables_[Bhp] = well_state.bhp()[index_of_well_];
+        primary_variables_[Bhp] = well_state.bhp(index_of_well_);
 
         // other primary variables related to polymer injection
         if constexpr (Base::has_polymermw) {

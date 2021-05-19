@@ -1954,8 +1954,8 @@ namespace Opm {
         for( const auto& wm : well_state.wellMap() ) {
             const auto well_index = wm.second[ 0 ];
             const auto& rst_well = rst_wells.at( wm.first );
-            well_state.bhp()[ well_index ] = rst_well.bhp;
-            well_state.temperature()[ well_index ] = rst_well.temperature;
+            well_state.update_bhp( well_index, rst_well.bhp);
+            well_state.update_temperature( well_index,  rst_well.temperature);
 
             if (rst_well.current_control.isProducer) {
                 well_state.currentProductionControls()[ well_index ] = rst_well.current_control.prod;
@@ -3367,7 +3367,7 @@ namespace Opm {
             }
             weighted_temperature = well_info.communication().sum(weighted_temperature);
             total_weight = well_info.communication().sum(total_weight);
-            this->wellState().temperature()[wellID] =  weighted_temperature/total_weight;
+            this->wellState().update_temperature(wellID, weighted_temperature/total_weight);
         }
     }
 } // namespace Opm
