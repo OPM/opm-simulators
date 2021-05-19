@@ -61,23 +61,23 @@ namespace Opm
     , segment_phase_densities_(numberOfSegments(), std::vector<EvalWell>(num_components_, 0.0)) // number of phase here?
     {
         // not handling solvent or polymer for now with multisegment well
-        if (has_solvent) {
+        if constexpr (has_solvent) {
             OPM_THROW(std::runtime_error, "solvent is not supported by multisegment well yet");
         }
 
-        if (has_polymer) {
+        if constexpr (has_polymer) {
             OPM_THROW(std::runtime_error, "polymer is not supported by multisegment well yet");
         }
 
-        if (Base::has_energy) {
+        if constexpr (Base::has_energy) {
             OPM_THROW(std::runtime_error, "energy is not supported by multisegment well yet");
         }
 
-        if (Base::has_foam) {
+        if constexpr (Base::has_foam) {
             OPM_THROW(std::runtime_error, "foam is not supported by multisegment well yet");
         }
 
-        if (Base::has_brine) {
+        if constexpr (Base::has_brine) {
             OPM_THROW(std::runtime_error, "brine is not supported by multisegment well yet");
         }
         // since we decide to use the WellSegments from the well parser. we can reuse a lot from it.

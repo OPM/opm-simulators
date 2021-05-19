@@ -79,11 +79,13 @@ namespace Opm
         }
 
         // counting/updating primary variable numbers
-        if (this->has_polymermw && this->isInjector()) {
-            // adding a primary variable for water perforation rate per connection
-            numWellEq_ += number_of_perforations_;
-            // adding a primary variable for skin pressure per connection
-            numWellEq_ += number_of_perforations_;
+        if constexpr (Base::has_polymermw) {
+            if (this->isInjector()) {
+                // adding a primary variable for water perforation rate per connection
+                numWellEq_ += number_of_perforations_;
+                // adding a primary variable for skin pressure per connection
+                numWellEq_ += number_of_perforations_;
+            }
         }
 
         // with the updated numWellEq_, we can initialize the primary variables and matrices now
@@ -390,24 +392,28 @@ namespace Opm
             const unsigned compIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
             b_perfcells_dense[compIdx] = extendEval(fs.invB(phaseIdx));
         }
-        if (has_solvent) {
+        if constexpr (has_solvent) {
             b_perfcells_dense[contiSolventEqIdx] = extendEval(intQuants.solventInverseFormationVolumeFactor());
         }
 
-        if (has_zFraction && this->isInjector()) {
-            const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-            b_perfcells_dense[gasCompIdx] *= (1.0 - wsolvent());
-            b_perfcells_dense[gasCompIdx] += wsolvent()*intQuants.zPureInvFormationVolumeFactor().value();
+        if constexpr (has_zFraction) {
+            if (this->isInjector()) {
+                const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+                b_perfcells_dense[gasCompIdx] *= (1.0 - wsolvent());
+                b_perfcells_dense[gasCompIdx] += wsolvent()*intQuants.zPureInvFormationVolumeFactor().value();
+            }
         }
 
         // Pressure drawdown (also used to determine direction of flow)
         const EvalWell well_pressure = bhp + perf_pressure_diffs_[perf];
         EvalWell drawdown = pressure - well_pressure;
 
-        if (this->has_polymermw && this->isInjector()) {
-            const int pskin_index = Bhp + 1 + number_of_perforations_ + perf;
-            const EvalWell& skin_pressure = primary_variables_evaluation_[pskin_index];
-            drawdown += skin_pressure;
+        if constexpr (Base::has_polymermw) {
+            if (this->isInjector()) {
+                const int pskin_index = Bhp + 1 + number_of_perforations_ + perf;
+                const EvalWell& skin_pressure = primary_variables_evaluation_[pskin_index];
+                drawdown += skin_pressure;
+            }
         }
 
         // producing perforations
@@ -469,7 +475,7 @@ namespace Opm
                 volumeRatio += cmix_s[waterCompIdx] / b_perfcells_dense[waterCompIdx];
             }
 
-            if (has_solvent) {
+            if constexpr (has_solvent) {
                 volumeRatio += cmix_s[contiSolventEqIdx] / b_perfcells_dense[contiSolventEqIdx];
             }
 
@@ -594,8 +600,10 @@ namespace Opm
             calculateSinglePerf(ebosSimulator, perf, well_state, connectionRates, cq_s, water_flux_s, cq_s_zfrac_effective, deferred_logger);
 
             // Equation assembly for this perforation.
-            if (has_polymer && this->has_polymermw && this->isInjector()) {
-                handleInjectivityEquations(ebosSimulator, well_state, perf, water_flux_s, deferred_logger);
+            if constexpr (has_polymer && Base::has_polymermw) {
+                if (this->isInjector()) {
+                    handleInjectivityEquations(ebosSimulator, well_state, perf, water_flux_s, deferred_logger);
+                }
             }
             const int cell_idx = well_cells_[perf];
             for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
@@ -626,7 +634,7 @@ namespace Opm
                 }
             }
 
-            if (has_zFraction) {
+            if constexpr (has_zFraction) {
                 for (int pvIdx = 0; pvIdx < numWellEq_; ++pvIdx) {
                     duneC_[0][cell_idx][pvIdx][contiZfracEqIdx] -= cq_s_zfrac_effective.derivative(pvIdx+numEq);
                 }
@@ -696,14 +704,16 @@ namespace Opm
         computePerfRate(intQuants, mob, bhp, Tw, perf, allow_cf,
                         cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
 
-        if (has_polymer && this->has_polymermw && this->isInjector()) {
-            // Store the original water flux computed from the reservoir quantities.
-            // It will be required to assemble the injectivity equations.
-            const unsigned water_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-            water_flux_s = cq_s[water_comp_idx];
-            // Modify the water flux for the rest of this function to depend directly on the
-            // local water velocity primary variable.
-            handleInjectivityRate(ebosSimulator, perf, cq_s);
+        if constexpr (has_polymer && Base::has_polymermw) {
+            if (this->isInjector()) {
+                // Store the original water flux computed from the reservoir quantities.
+                // It will be required to assemble the injectivity equations.
+                const unsigned water_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+                water_flux_s = cq_s[water_comp_idx];
+                // Modify the water flux for the rest of this function to depend directly on the
+                // local water velocity primary variable.
+                handleInjectivityRate(ebosSimulator, perf, cq_s);
+            }
         }
 
         // updating the solution gas rate and solution oil rate
@@ -712,11 +722,11 @@ namespace Opm
             well_state.wellVaporizedOilRates()[index_of_well_] += perf_vap_oil_rate;
         }
 
-        if (has_energy) {
+        if constexpr (has_energy) {
             connectionRates[perf][contiEnergyEqIdx] = 0.0;
         }
 
-        if (has_energy) {
+        if constexpr (has_energy) {
 
             auto fs = intQuants.fluidState();
             for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
@@ -773,7 +783,7 @@ namespace Opm
             }
         }
 
-        if (has_polymer) {
+        if constexpr (has_polymer) {
             // TODO: the application of well efficiency factor has not been tested with an example yet
             const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
             EvalWell cq_s_poly = cq_s[waterCompIdx];
@@ -788,12 +798,12 @@ namespace Opm
             cq_s_poly *= well_efficiency_factor_;
             connectionRates[perf][contiPolymerEqIdx] = Base::restrictEval(cq_s_poly);
 
-            if (this->has_polymermw) {
+            if constexpr (Base::has_polymermw) {
                 updateConnectionRatePolyMW(cq_s_poly, intQuants, well_state, perf, connectionRates, deferred_logger);
             }
         }
 
-        if (has_foam) {
+        if constexpr (has_foam) {
             // TODO: the application of well efficiency factor has not been tested with an example yet
             const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
             EvalWell cq_s_foam = cq_s[gasCompIdx] * well_efficiency_factor_;
@@ -805,7 +815,7 @@ namespace Opm
             connectionRates[perf][contiFoamEqIdx] = Base::restrictEval(cq_s_foam);
         }
 
-        if (has_zFraction) {
+        if constexpr (has_zFraction) {
             // TODO: the application of well efficiency factor has not been tested with an example yet
             const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
             cq_s_zfrac_effective = cq_s[gasCompIdx];
@@ -821,7 +831,7 @@ namespace Opm
             connectionRates[perf][contiZfracEqIdx] = Base::restrictEval(cq_s_zfrac_effective);
         }
 
-        if (has_brine) {
+        if constexpr (has_brine) {
             // TODO: the application of well efficiency factor has not been tested with an example yet
             const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
             EvalWell cq_s_sm = cq_s[waterCompIdx];
@@ -957,18 +967,22 @@ namespace Opm
             }
 
             // this may not work if viscosity and relperms has been modified?
-            if (has_solvent) {
+            if constexpr (has_solvent) {
                 OPM_DEFLOG_THROW(std::runtime_error, "individual mobility for wells does not work in combination with solvent", deferred_logger);
             }
         }
 
         // modify the water mobility if polymer is present
-        if (has_polymer) {
+        if constexpr (has_polymer) {
             if (!FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                 OPM_DEFLOG_THROW(std::runtime_error, "Water is required when polymer is active", deferred_logger);
             }
 
-            updateWaterMobilityWithPolymer(ebosSimulator, perf, mob, deferred_logger);
+            // for the cases related to polymer molecular weight, we assume fully mixing
+            // as a result, the polymer and water share the same viscosity
+            if constexpr (!Base::has_polymermw) {
+                updateWaterMobilityWithPolymer(ebosSimulator, perf, mob, deferred_logger);
+            }
         }
     }
 
@@ -1025,7 +1039,7 @@ namespace Opm
             primary_variables_[GFrac] = old_primary_variables[GFrac] - dx3_limited;
         }
 
-        if (has_solvent) {
+        if constexpr (has_solvent) {
             const int sign4 = dwells[0][SFrac] > 0 ? 1: -1;
             const double dx4_limited = sign4 * std::min(std::abs(dwells[0][SFrac]) * relaxation_factor_fractions, dFLimit);
             primary_variables_[SFrac] = old_primary_variables[SFrac] - dx4_limited;
@@ -1066,17 +1080,19 @@ namespace Opm
     updateExtraPrimaryVariables(const BVectorWell& dwells) const
     {
         // for the water velocity and skin pressure
-        if (this->has_polymermw && this->isInjector()) {
-            for (int perf = 0; perf < number_of_perforations_; ++perf) {
-                const int wat_vel_index = Bhp + 1 + perf;
-                const int pskin_index = Bhp + 1 + number_of_perforations_ + perf;
+        if constexpr (Base::has_polymermw) {
+            if (this->isInjector()) {
+                for (int perf = 0; perf < number_of_perforations_; ++perf) {
+                    const int wat_vel_index = Bhp + 1 + perf;
+                    const int pskin_index = Bhp + 1 + number_of_perforations_ + perf;
 
-                const double relaxation_factor = 0.9;
-                const double dx_wat_vel = dwells[0][wat_vel_index];
-                primary_variables_[wat_vel_index] -= relaxation_factor * dx_wat_vel;
+                    const double relaxation_factor = 0.9;
+                    const double dx_wat_vel = dwells[0][wat_vel_index];
+                    primary_variables_[wat_vel_index] -= relaxation_factor * dx_wat_vel;
 
-                const double dx_pskin = dwells[0][pskin_index];
-                primary_variables_[pskin_index] -= relaxation_factor * dx_pskin;
+                    const double dx_pskin = dwells[0][pskin_index];
+                    primary_variables_[pskin_index] -= relaxation_factor * dx_pskin;
+                }
             }
         }
     }
@@ -1118,8 +1134,8 @@ namespace Opm
             F[pu.phase_pos[Gas]] = 1.0;
         }
 
-        double F_solvent = 0.0;
-        if (has_solvent) {
+        [[maybe_unused]] double F_solvent;
+        if constexpr (has_solvent) {
             F_solvent = primary_variables_[SFrac];
             F[pu.phase_pos[Oil]] -= F_solvent;
         }
@@ -1129,7 +1145,7 @@ namespace Opm
                 if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                         F[pu.phase_pos[Gas]] /= (1.0 - F[pu.phase_pos[Water]]);
                 }
-                if (has_solvent) {
+                if constexpr (has_solvent) {
                     F_solvent /= (1.0 - F[pu.phase_pos[Water]]);
                 }
                 if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
@@ -1144,7 +1160,7 @@ namespace Opm
                 if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                     F[pu.phase_pos[Water]] /= (1.0 - F[pu.phase_pos[Gas]]);
                 }
-                if (has_solvent) {
+                if constexpr (has_solvent) {
                     F_solvent /= (1.0 - F[pu.phase_pos[Gas]]);
                 }
                 if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
@@ -1162,8 +1178,8 @@ namespace Opm
                 if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                     F[pu.phase_pos[Gas]] /= (1.0 - F[pu.phase_pos[Oil]]);
                 }
-                if (has_solvent) {
-                 F_solvent /= (1.0 - F[pu.phase_pos[Oil]]);
+                if constexpr (has_solvent) {
+                    F_solvent /= (1.0 - F[pu.phase_pos[Oil]]);
                 }
                 F[pu.phase_pos[Oil]] = 0.0;
             }
@@ -1175,7 +1191,7 @@ namespace Opm
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
             primary_variables_[GFrac] = F[pu.phase_pos[Gas]];
         }
-        if(has_solvent) {
+        if constexpr (has_solvent) {
             primary_variables_[SFrac] = F_solvent;
         }
     }
@@ -1191,7 +1207,7 @@ namespace Opm
     {
         const PhaseUsage& pu = phaseUsage();
         std::vector<double> F(number_of_phases_, 0.0);
-        double F_solvent = 0.0;
+        [[maybe_unused]] double F_solvent = 0.0;
         if ( FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) ) {
             const int oil_pos = pu.phase_pos[Oil];
             F[oil_pos] = 1.0;
@@ -1208,7 +1224,7 @@ namespace Opm
                 F[oil_pos] -= F[gas_pos];
             }
 
-            if (has_solvent) {
+            if constexpr (has_solvent) {
                 F_solvent = primary_variables_[SFrac];
                 F[oil_pos] -= F_solvent;
             }
@@ -1243,7 +1259,7 @@ namespace Opm
 
         // F_solvent is added to F_gas. This means that well_rate[Gas] also contains solvent.
         // More testing is needed to make sure this is correct for well groups and THP.
-        if (has_solvent){
+        if constexpr (has_solvent){
             F_solvent /= scalingFactor(contiSolventEqIdx);
             F[pu.phase_pos[Gas]] += F_solvent;
         }
@@ -1282,10 +1298,12 @@ namespace Opm
         updateThp(well_state, deferred_logger);
 
         // other primary variables related to polymer injectivity study
-        if (this->has_polymermw && this->isInjector()) {
-            for (int perf = 0; perf < number_of_perforations_; ++perf) {
-                well_state.perfWaterVelocity()[first_perf_ + perf] = primary_variables_[Bhp + 1 + perf];
-                well_state.perfSkinPressure()[first_perf_ + perf] = primary_variables_[Bhp + 1 + number_of_perforations_ + perf];
+        if constexpr (Base::has_polymermw) {
+            if (this->isInjector()) {
+                for (int perf = 0; perf < number_of_perforations_; ++perf) {
+                    well_state.perfWaterVelocity()[first_perf_ + perf] = primary_variables_[Bhp + 1 + perf];
+                    well_state.perfSkinPressure()[first_perf_ + perf] = primary_variables_[Bhp + 1 + number_of_perforations_ + perf];
+                }
             }
         }
     }
@@ -1732,7 +1750,7 @@ namespace Opm
             }
 
             // We use cell values for solvent injector
-            if (has_solvent) {
+            if constexpr (has_solvent) {
                 b_perf[num_components_ * perf + contiSolventEqIdx] = intQuants.solventInverseFormationVolumeFactor().value();
                 surf_dens_perf[num_components_ * perf + contiSolventEqIdx] = intQuants.solventRefDensity();
             }
@@ -2089,7 +2107,7 @@ namespace Opm
             for (int comp = 0; comp < np; ++comp) {
                 perfRates[perf * num_components_ + comp] =  perf_rates_state[perf * np + ebosCompIdxToFlowCompIdx(comp)];
             }
-            if(has_solvent) {
+            if constexpr (has_solvent) {
                 perfRates[perf * num_components_ + contiSolventEqIdx] =  well_state.perfRateSolvent()[first_perf_ + perf];
             }
         }
@@ -2113,14 +2131,14 @@ namespace Opm
                     int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(p);
                     total_mobility += fs.invB(ebosPhaseIdx).value() * intQuants.mobility(ebosPhaseIdx).value();
                 }
-                if(has_solvent) {
+                if constexpr (has_solvent) {
                     total_mobility += intQuants.solventInverseFormationVolumeFactor().value() * intQuants.solventMobility().value();
                 }
                 for (int p = 0; p < np; ++p) {
                     int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(p);
                     perfRates[perf * num_components_ + p] = well_tw_fraction * intQuants.mobility(ebosPhaseIdx).value() / total_mobility;
                 }
-                if(has_solvent) {
+                if constexpr (has_solvent) {
                     perfRates[perf * num_components_ + contiSolventEqIdx] = well_tw_fraction * intQuants.solventInverseFormationVolumeFactor().value() / total_mobility;
                 }
             }
@@ -2737,7 +2755,7 @@ namespace Opm
                 primary_variables_[GFrac] = scalingFactor(pu.phase_pos[Gas]) * (well_state.wellRates()[np*well_index + pu.phase_pos[Gas]]
                                                  - (has_solvent ? well_state.solventWellRate(well_index) : 0.0) ) / total_well_rate ;
             }
-            if (has_solvent) {
+            if constexpr (has_solvent) {
                 primary_variables_[SFrac] = scalingFactor(pu.phase_pos[Gas]) * well_state.solventWellRate(well_index) / total_well_rate ;
             }
         } else { // total_well_rate == 0
@@ -2755,7 +2773,7 @@ namespace Opm
                 if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                     if (phase == InjectorType::GAS) {
                         primary_variables_[GFrac] = 1.0;
-                        if (has_solvent) {
+                        if constexpr (has_solvent) {
                             primary_variables_[GFrac] = 1.0 - wsolvent();
                             primary_variables_[SFrac] = wsolvent();
                         }
@@ -2785,10 +2803,12 @@ namespace Opm
         primary_variables_[Bhp] = well_state.bhp()[index_of_well_];
 
         // other primary variables related to polymer injection
-        if (this->has_polymermw && this->isInjector()) {
-            for (int perf = 0; perf < number_of_perforations_; ++perf) {
-                primary_variables_[Bhp + 1 + perf] = well_state.perfWaterVelocity()[first_perf_ + perf];
-                primary_variables_[Bhp + 1 + number_of_perforations_ + perf] = well_state.perfSkinPressure()[first_perf_ + perf];
+        if constexpr (Base::has_polymermw) {
+            if (this->isInjector()) {
+                for (int perf = 0; perf < number_of_perforations_; ++perf) {
+                    primary_variables_[Bhp + 1 + perf] = well_state.perfWaterVelocity()[first_perf_ + perf];
+                    primary_variables_[Bhp + 1 + number_of_perforations_ + perf] = well_state.perfSkinPressure()[first_perf_ + perf];
+                }
             }
         }
 #ifndef NDEBUG
@@ -2860,11 +2880,6 @@ namespace Opm
                                    std::vector<EvalWell>& mob,
                                    Opm::DeferredLogger& deferred_logger) const
     {
-        // for the cases related to polymer molecular weight, we assume fully mixing
-        // as a result, the polymer and water share the same viscosity
-        if (this->has_polymermw) {
-            return;
-        }
         const int cell_idx = well_cells_[perf];
         const auto& int_quant = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
         const EvalWell polymer_concentration = extendEval(int_quant.polymerConcentration());
@@ -3061,20 +3076,21 @@ namespace Opm
                const EvalWell& water_velocity,
               Opm::DeferredLogger& deferred_logger) const
     {
-        if (!this->has_polymermw) {
+        if constexpr (Base::has_polymermw) {
+            const int water_table_id = well_ecl_.getPolymerProperties().m_skprwattable;
+            if (water_table_id <= 0) {
+                OPM_DEFLOG_THROW(std::runtime_error, "Unused SKPRWAT table id used for well " << name(), deferred_logger);
+            }
+            const auto& water_table_func = PolymerModule::getSkprwatTable(water_table_id);
+            const EvalWell throughput_eval(numWellEq_ + numEq, throughput);
+            // the skin pressure when injecting water, which also means the polymer concentration is zero
+            EvalWell pskin_water(numWellEq_ + numEq, 0.0);
+            pskin_water = water_table_func.eval(throughput_eval, water_velocity);
+            return pskin_water;
+        } else {
             OPM_DEFLOG_THROW(std::runtime_error, "Polymermw is not activated, "
                                           "while injecting skin pressure is requested for well " << name(), deferred_logger);
         }
-        const int water_table_id = well_ecl_.getPolymerProperties().m_skprwattable;
-        if (water_table_id <= 0) {
-            OPM_DEFLOG_THROW(std::runtime_error, "Unused SKPRWAT table id used for well " << name(), deferred_logger);
-        }
-        const auto& water_table_func = PolymerModule::getSkprwatTable(water_table_id);
-        const EvalWell throughput_eval(numWellEq_ + numEq, throughput);
-        // the skin pressure when injecting water, which also means the polymer concentration is zero
-        EvalWell pskin_water(numWellEq_ + numEq, 0.0);
-        pskin_water = water_table_func.eval(throughput_eval, water_velocity);
-        return pskin_water;
     }
 
 
@@ -3089,32 +3105,33 @@ namespace Opm
               const EvalWell& poly_inj_conc,
               Opm::DeferredLogger& deferred_logger) const
     {
-        if (!this->has_polymermw) {
+        if constexpr (Base::has_polymermw) {
+            const double sign = water_velocity >= 0. ? 1.0 : -1.0;
+            const EvalWell water_velocity_abs = Opm::abs(water_velocity);
+            if (poly_inj_conc == 0.) {
+                return sign * pskinwater(throughput, water_velocity_abs, deferred_logger);
+            }
+            const int polymer_table_id = well_ecl_.getPolymerProperties().m_skprpolytable;
+            if (polymer_table_id <= 0) {
+                OPM_DEFLOG_THROW(std::runtime_error, "Unavailable SKPRPOLY table id used for well " << name(), deferred_logger);
+            }
+            const auto& skprpolytable = PolymerModule::getSkprpolyTable(polymer_table_id);
+            const double reference_concentration = skprpolytable.refConcentration;
+            const EvalWell throughput_eval(numWellEq_ + numEq, throughput);
+            // the skin pressure when injecting water, which also means the polymer concentration is zero
+            EvalWell pskin_poly(numWellEq_ + numEq, 0.0);
+            pskin_poly = skprpolytable.table_func.eval(throughput_eval, water_velocity_abs);
+            if (poly_inj_conc == reference_concentration) {
+                return sign * pskin_poly;
+            }
+            // poly_inj_conc != reference concentration of the table, then some interpolation will be required
+            const EvalWell pskin_water = pskinwater(throughput, water_velocity_abs, deferred_logger);
+            const EvalWell pskin = pskin_water + (pskin_poly - pskin_water) / reference_concentration * poly_inj_conc;
+            return sign * pskin;
+        } else {
             OPM_DEFLOG_THROW(std::runtime_error, "Polymermw is not activated, "
                                           "while injecting skin pressure is requested for well " << name(), deferred_logger);
         }
-        const double sign = water_velocity >= 0. ? 1.0 : -1.0;
-        const EvalWell water_velocity_abs = Opm::abs(water_velocity);
-        if (poly_inj_conc == 0.) {
-            return sign * pskinwater(throughput, water_velocity_abs, deferred_logger);
-        }
-        const int polymer_table_id = well_ecl_.getPolymerProperties().m_skprpolytable;
-        if (polymer_table_id <= 0) {
-            OPM_DEFLOG_THROW(std::runtime_error, "Unavailable SKPRPOLY table id used for well " << name(), deferred_logger);
-        }
-        const auto& skprpolytable = PolymerModule::getSkprpolyTable(polymer_table_id);
-        const double reference_concentration = skprpolytable.refConcentration;
-        const EvalWell throughput_eval(numWellEq_ + numEq, throughput);
-        // the skin pressure when injecting water, which also means the polymer concentration is zero
-        EvalWell pskin_poly(numWellEq_ + numEq, 0.0);
-        pskin_poly = skprpolytable.table_func.eval(throughput_eval, water_velocity_abs);
-        if (poly_inj_conc == reference_concentration) {
-            return sign * pskin_poly;
-        }
-        // poly_inj_conc != reference concentration of the table, then some interpolation will be required
-        const EvalWell pskin_water = pskinwater(throughput, water_velocity_abs, deferred_logger);
-        const EvalWell pskin = pskin_water + (pskin_poly - pskin_water) / reference_concentration * poly_inj_conc;
-        return sign * pskin;
     }
 
 
@@ -3128,19 +3145,20 @@ namespace Opm
                const EvalWell& water_velocity,
               Opm::DeferredLogger& deferred_logger) const
     {
-        if (!this->has_polymermw) {
+        if constexpr (Base::has_polymermw) {
+            const int table_id = well_ecl_.getPolymerProperties().m_plymwinjtable;
+            const auto& table_func = PolymerModule::getPlymwinjTable(table_id);
+            const EvalWell throughput_eval(numWellEq_ + numEq, throughput);
+            EvalWell molecular_weight(numWellEq_ + numEq, 0.);
+            if (wpolymer() == 0.) { // not injecting polymer
+                return molecular_weight;
+            }
+            molecular_weight = table_func.eval(throughput_eval, Opm::abs(water_velocity));
+            return molecular_weight;
+        } else {
             OPM_DEFLOG_THROW(std::runtime_error, "Polymermw is not activated, "
                                           "while injecting polymer molecular weight is requested for well " << name(), deferred_logger);
         }
-        const int table_id = well_ecl_.getPolymerProperties().m_plymwinjtable;
-        const auto& table_func = PolymerModule::getPlymwinjTable(table_id);
-        const EvalWell throughput_eval(numWellEq_ + numEq, throughput);
-        EvalWell molecular_weight(numWellEq_ + numEq, 0.);
-        if (wpolymer() == 0.) { // not injecting polymer
-            return molecular_weight;
-        }
-        molecular_weight = table_func.eval(throughput_eval, Opm::abs(water_velocity));
-        return molecular_weight;
     }
 
 
@@ -3152,12 +3170,14 @@ namespace Opm
     StandardWell<TypeTag>::
     updateWaterThroughput(const double dt, WellState &well_state) const
     {
-        if (this->has_polymermw && this->isInjector()) {
-            for (int perf = 0; perf < number_of_perforations_; ++perf) {
-                const double perf_water_vel = primary_variables_[Bhp + 1 + perf];
-                // we do not consider the formation damage due to water flowing from reservoir into wellbore
-                if (perf_water_vel > 0.) {
-                    well_state.perfThroughput()[first_perf_ + perf] += perf_water_vel * dt;
+        if constexpr (Base::has_polymermw) {
+            if (this->isInjector()) {
+                for (int perf = 0; perf < number_of_perforations_; ++perf) {
+                    const double perf_water_vel = primary_variables_[Bhp + 1 + perf];
+                    // we do not consider the formation damage due to water flowing from reservoir into wellbore
+                    if (perf_water_vel > 0.) {
+                        well_state.perfThroughput()[first_perf_ + perf] += perf_water_vel * dt;
+                    }
                 }
             }
         }
@@ -3334,35 +3354,37 @@ namespace Opm
         // if different types of extra equations are involved, this function needs to be refactored further
 
         // checking the convergence of the extra equations related to polymer injectivity
-        if (this->has_polymermw && this->isInjector()) {
-            //  checking the convergence of the perforation rates
-            const double wat_vel_tol = 1.e-8;
-            const int dummy_component = -1;
-            const double maxResidualAllowed = param_.max_residual_allowed_;
-            using CR = ConvergenceReport;
-            const auto wat_vel_failure_type = CR::WellFailure::Type::MassBalance;
-            for (int perf = 0; perf < number_of_perforations_; ++perf) {
-                const double wat_vel_residual = res[Bhp + 1 + perf];
-                if (std::isnan(wat_vel_residual)) {
-                    report.setWellFailed({wat_vel_failure_type, CR::Severity::NotANumber, dummy_component, name()});
-                } else if (wat_vel_residual > maxResidualAllowed * 10.) {
-                    report.setWellFailed({wat_vel_failure_type, CR::Severity::TooLarge, dummy_component, name()});
-                } else if (wat_vel_residual > wat_vel_tol) {
-                    report.setWellFailed({wat_vel_failure_type, CR::Severity::Normal, dummy_component, name()});
+        if constexpr (Base::has_polymermw) {
+            if (this->isInjector()) {
+                //  checking the convergence of the perforation rates
+                const double wat_vel_tol = 1.e-8;
+                const int dummy_component = -1;
+                const double maxResidualAllowed = param_.max_residual_allowed_;
+                using CR = ConvergenceReport;
+                const auto wat_vel_failure_type = CR::WellFailure::Type::MassBalance;
+                for (int perf = 0; perf < number_of_perforations_; ++perf) {
+                    const double wat_vel_residual = res[Bhp + 1 + perf];
+                    if (std::isnan(wat_vel_residual)) {
+                        report.setWellFailed({wat_vel_failure_type, CR::Severity::NotANumber, dummy_component, name()});
+                    } else if (wat_vel_residual > maxResidualAllowed * 10.) {
+                        report.setWellFailed({wat_vel_failure_type, CR::Severity::TooLarge, dummy_component, name()});
+                    } else if (wat_vel_residual > wat_vel_tol) {
+                        report.setWellFailed({wat_vel_failure_type, CR::Severity::Normal, dummy_component, name()});
+                    }
                 }
-            }
 
-            // checking the convergence of the skin pressure
-            const double pskin_tol = 1000.; // 1000 pascal
-            const auto pskin_failure_type = CR::WellFailure::Type::Pressure;
-            for (int perf = 0; perf < number_of_perforations_; ++perf) {
-                const double pskin_residual = res[Bhp + 1 + perf + number_of_perforations_];
-                if (std::isnan(pskin_residual)) {
-                    report.setWellFailed({pskin_failure_type, CR::Severity::NotANumber, dummy_component, name()});
-                } else if (pskin_residual > maxResidualAllowed * 10.) {
-                    report.setWellFailed({pskin_failure_type, CR::Severity::TooLarge, dummy_component, name()});
-                } else if (pskin_residual > pskin_tol) {
-                    report.setWellFailed({pskin_failure_type, CR::Severity::Normal, dummy_component, name()});
+                // checking the convergence of the skin pressure
+                const double pskin_tol = 1000.; // 1000 pascal
+                const auto pskin_failure_type = CR::WellFailure::Type::Pressure;
+                for (int perf = 0; perf < number_of_perforations_; ++perf) {
+                    const double pskin_residual = res[Bhp + 1 + perf + number_of_perforations_];
+                    if (std::isnan(pskin_residual)) {
+                        report.setWellFailed({pskin_failure_type, CR::Severity::NotANumber, dummy_component, name()});
+                    } else if (pskin_residual > maxResidualAllowed * 10.) {
+                        report.setWellFailed({pskin_failure_type, CR::Severity::TooLarge, dummy_component, name()});
+                    } else if (pskin_residual > pskin_tol) {
+                        report.setWellFailed({pskin_failure_type, CR::Severity::Normal, dummy_component, name()});
+                    }
                 }
             }
         }
