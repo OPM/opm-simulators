@@ -66,13 +66,28 @@ namespace Opm
         // TODO: we need to have order for the primary variables and also the order for the well equations.
         // sometimes, they are similar, while sometimes, they can have very different forms.
 
-        static constexpr bool has_gas = (Indices::compositionSwitchIdx >= 0);
+        // Table showing the primary variable indices, depending on what phases are present:
+        //
+        //         WOG     OG     WG     WO    W/O/G (single phase)
+        // GTotal    0      0      0      0                       0
+        // WFrac     1  -1000      1      1                   -1000
+        // GFrac     2      1  -1000  -1000                   -1000
+        // Spres     3      2      2      2                       1
+
         static constexpr bool has_water = (Indices::waterSaturationIdx >= 0);
+        static constexpr bool has_gas = (Indices::compositionSwitchIdx >= 0);
+        static constexpr bool has_oil = (numPhases - has_gas - has_water) > 0;
+
+        // In the implementation, one should use has_wfrac_variable
+        // rather than has_water to check if you should do something
+        // with the variable at the WFrac location, similar for GFrac.
+        static constexpr bool has_wfrac_variable = has_water && numPhases > 1;
+        static constexpr bool has_gfrac_variable = has_gas && has_oil;
 
         static constexpr int GTotal = 0;
-        static constexpr int WFrac = has_water ? 1: -1000;
-        static constexpr int GFrac = has_gas ? has_water + 1 : -1000;
-        static constexpr int SPres = has_gas + has_water + 1;
+        static constexpr int WFrac = has_wfrac_variable ? 1 : -1000;
+        static constexpr int GFrac = has_gfrac_variable ? has_wfrac_variable + 1 : -1000;
+        static constexpr int SPres = has_wfrac_variable + has_gfrac_variable + 1;
 
         //  the number of well equations  TODO: it should have a more general strategy for it
         static const int numWellEq = numPhases + 1;
