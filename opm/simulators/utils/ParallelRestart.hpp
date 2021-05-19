@@ -348,13 +348,13 @@ ADD_PACK_PROTOTYPES(data::WellRates)
 ADD_PACK_PROTOTYPES(RestartKey)
 ADD_PACK_PROTOTYPES(RestartValue)
 ADD_PACK_PROTOTYPES(std::string)
-ADD_PACK_PROTOTYPES(Opm::time_point)
+ADD_PACK_PROTOTYPES(time_point)
 
 } // end namespace Mpi
 
 RestartValue loadParallelRestart(const EclipseIO* eclIO, Action::State& actionState, SummaryState& summaryState,
-                                 const std::vector<Opm::RestartKey>& solutionKeys,
-                                 const std::vector<Opm::RestartKey>& extraKeys,
+                                 const std::vector<RestartKey>& solutionKeys,
+                                 const std::vector<RestartKey>& extraKeys,
                                  Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> comm);
 
 } // end namespace Opm

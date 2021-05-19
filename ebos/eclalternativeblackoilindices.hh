@@ -20,43 +20,28 @@
   module for the precise wording of the license and the list of
   copyright holders.
 */
-/*!
- * \file
- *
- * \brief This is an ebos variant which uses alternative phase and component indices than
- *        the default variant.
- *
- * It is purely for testing purposes and is supposed to produce bitwise identical
- * results.
- */
-#include "config.h"
 
-#include "ebos.hh"
-#include "startEbos.hh"
-#include "eclalternativeblackoilindices.hh"
+#ifndef ECL_ALTERNATIVE_BLACKOIL_INDICES_HH
+#define ECL_ALTERNATIVE_BLACKOIL_INDICES_HH
 
-namespace Opm::Properties {
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
-namespace TTag {
-struct EbosAltIdxTypeTag {
-    using InheritsFrom = std::tuple<EbosTypeTag>;
-};
-}
+namespace Opm {
 
-// use a fluid system with different indices than the default
-template<class TypeTag>
-struct FluidSystem<TypeTag, TTag::EbosAltIdxTypeTag>
+class EclAlternativeBlackOilIndexTraits
 {
-    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using DIT = Opm::BlackOilDefaultIndexTraits;
 
 public:
-    typedef BlackOilFluidSystem<Scalar, EclAlternativeBlackOilIndexTraits> type;
+    static const unsigned waterPhaseIdx = DIT::oilPhaseIdx;
+    static const unsigned oilPhaseIdx = DIT::gasPhaseIdx;
+    static const unsigned gasPhaseIdx = DIT::waterPhaseIdx;
+
+    static const unsigned waterCompIdx = DIT::gasCompIdx;
+    static const unsigned oilCompIdx = DIT::waterCompIdx;
+    static const unsigned gasCompIdx = DIT::oilCompIdx;
 };
 
-} // namespace Opm::Properties
-
-int main(int argc, char **argv)
-{
-    using ProblemTypeTag = Opm::Properties::TTag::EbosAltIdxTypeTag;
-    return Opm::startEbos<ProblemTypeTag>(argc, argv);
 }
+
+#endif

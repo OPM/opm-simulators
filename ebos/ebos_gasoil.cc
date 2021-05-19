@@ -50,14 +50,14 @@ private:
     using FluidSystem = GetPropType<TTag::EbosTypeTag, Properties::FluidSystem>;
 
 public:
-    typedef Opm::BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
-                                         getPropValue<TypeTag, Properties::EnableExtbo>(),
-                                         getPropValue<TypeTag, Properties::EnablePolymer>(),
-                                         getPropValue<TypeTag, Properties::EnableEnergy>(),
-                                         getPropValue<TypeTag, Properties::EnableFoam>(),
-                                         getPropValue<TypeTag, Properties::EnableBrine>(),
-                                         /*PVOffset=*/0,
-                                         /*disabledCompIdx=*/FluidSystem::waterCompIdx> type;
+    typedef BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
+                                    getPropValue<TypeTag, Properties::EnableExtbo>(),
+                                    getPropValue<TypeTag, Properties::EnablePolymer>(),
+                                    getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                    getPropValue<TypeTag, Properties::EnableFoam>(),
+                                    getPropValue<TypeTag, Properties::EnableBrine>(),
+                                    /*PVOffset=*/0,
+                                    /*disabledCompIdx=*/FluidSystem::waterCompIdx> type;
 };
 
 } // namespace Opm::Properties
