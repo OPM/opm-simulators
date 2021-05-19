@@ -332,6 +332,13 @@ add_test_compareECLFiles(CASENAME spe9group
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol})
 
+add_test_compareECLFiles(CASENAME spe9group_resv
+                         FILENAME SPE9_CP_GROUP_RESV
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR spe9group)
+
 add_test_compareECLFiles(CASENAME msw_2d_h
                          FILENAME 2D_H__
                          SIMULATOR flow
