@@ -27,11 +27,7 @@
 #include <ebos/eclproblem.hh>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
-#include <opm/common/utility/platform_dependent/disable_warnings.h>
-#include <opm/common/utility/platform_dependent/reenable_warnings.h>
-
 #include <cassert>
-#include <functional>
 #include <map>
 #include <memory>
 #include <optional>
@@ -48,7 +44,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRate.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/GConSale.hpp>
 
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>
@@ -76,6 +71,8 @@
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
+#include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
+
 namespace Opm::Properties {
 
 template<class TypeTag, class MyTypeTag>
@@ -90,6 +87,7 @@ namespace Opm {
         /// Class for handling the blackoil well model.
         template<typename TypeTag>
         class BlackoilWellModel : public BaseAuxiliaryModule<TypeTag>
+                                , public BlackoilWellModelGeneric
         {
         public:
             // ---------      Types      ---------
@@ -212,126 +210,12 @@ namespace Opm {
             using WellInterfacePtr = std::shared_ptr<WellInterface<TypeTag> >;
             WellInterfacePtr well(const std::string& wellName) const;
 
-            void initFromRestartFile(const RestartValue& restartValues);
-
-            data::GroupAndNetworkValues
-            groupAndNetworkData(const int reportStepIdx, const Schedule& sched) const
+            using BlackoilWellModelGeneric::initFromRestartFile;
+            void initFromRestartFile(const RestartValue& restartValues)
             {
-                auto grp_nwrk_values = ::Opm::data::GroupAndNetworkValues{};
-
-                this->assignGroupValues(reportStepIdx, sched, grp_nwrk_values.groupData);
-                this->assignNodeValues(grp_nwrk_values.nodeData);
-
-                return grp_nwrk_values;
-            }
-
-
-            /*
-              The dynamic state of the well model is maintained with an instance
-              of the WellState class. Currently we have
-              three different wellstate instances:
-
-               1. The currently active wellstate is in the active_well_state_
-                  member. That is the state which is mutated by the simulator.
-
-               2. In the case timestep fails to converge and we must go back and
-                  try again with a smaller timestep we need to recover the last
-                  valid wellstate. This is maintained with the
-                  last_valid_well_state_ member and the functions
-                  commitWellState() and resetWellState().
-
-                3. For the NUPCOL functionality we should either use the
-                   currently active wellstate or a wellstate frozen at max
-                   nupcol iterations. This is handled with the member
-                   nupcol_well_state_ and the initNupcolWellState() function.
-            */
-
-
-            /*
-              Immutable version of the currently active wellstate.
-            */
-            const WellState& wellState() const
-            {
-                return this->active_wgstate_.well_state;
-            }
-
-            /*
-              Mutable version of the currently active wellstate.
-            */
-            WellState& wellState()
-            {
-                return this->active_wgstate_.well_state;
-            }
-
-            /*
-              Will return the last good wellstate. This is typcially used when
-              initializing a new report step where the Schedule object might
-              have introduced new wells. The wellstate returned by
-              prevWellState() must have been stored with the commitWellState()
-              function first.
-            */
-            const WellState& prevWellState() const
-            {
-                return this->last_valid_wgstate_.well_state;
-            }
-
-            const WGState& prevWGState() const
-            {
-                return this->last_valid_wgstate_;
-            }
-            /*
-              Will return the currently active nupcolWellState; must initialize
-              the internal nupcol wellstate with initNupcolWellState() first.
-            */
-            const WellState& nupcolWellState() const
-            {
-                return this->nupcol_wgstate_.well_state;
-            }
-
-            /*
-              Will assign the internal member last_valid_well_state_ to the
-              current value of the this->active_well_state_. The state stored
-              with storeWellState() can then subsequently be recovered with the
-              resetWellState() method.
-            */
-            void commitWGState()
-            {
-                this->last_valid_wgstate_ = this->active_wgstate_;
-            }
-
-            /*
-              Will store a copy of the input argument well_state in the
-              last_valid_well_state_ member, that state can then be recovered
-              with a subsequent call to resetWellState().
-            */
-            void commitWGState(WGState wgstate)
-            {
-                this->last_valid_wgstate_ = std::move(wgstate);
-            }
-
-            /*
-              Will update the internal variable active_well_state_ to whatever
-              was stored in the last_valid_well_state_ member. This function
-              works in pair with commitWellState() which should be called first.
-            */
-            void resetWGState()
-            {
-                this->active_wgstate_ = this->last_valid_wgstate_;
-            }
-
-            /*
-              Will store the current active wellstate in the nupcol_well_state_
-              member. This can then be subsequently retrieved with accessor
-              nupcolWellState().
-            */
-            void updateNupcolWGState()
-            {
-                this->nupcol_wgstate_ = this->active_wgstate_;
-            }
-
-            const GroupState& groupState() const
-            {
-                return this->active_wgstate_.group_state;
+                initFromRestartFile(restartValues,
+                                    UgGridHelpers::numCells(grid()),
+                                    param_.use_multisegment_well_);
             }
 
             data::Wells wellData() const
@@ -343,7 +227,7 @@ namespace Opm {
                                                       });
 
                 this->assignWellGuideRates(wsrpt);
-                this->assignShutConnections(wsrpt);
+                this->assignShutConnections(wsrpt, this->reportStepIndex());
 
                 return wsrpt;
             }
@@ -365,8 +249,6 @@ namespace Opm {
             // Check if well equations is converged.
             ConvergenceReport getWellConvergence(const std::vector<Scalar>& B_avg, const bool checkGroupConvergence = false) const;
 
-            const PhaseUsage& phaseUsage() const { return phase_usage_; }
-
             const SimulatorReportSingle& lastReport() const;
 
             void addWellContributions(SparseMatrixAdapter& jacobian) const
@@ -386,11 +268,6 @@ namespace Opm {
             /// Returns true if the well was actually found and shut.
             bool forceShutWellByNameIfPredictionMode(const std::string& wellname, const double simulation_time);
 
-            void updateEclWells(const int timeStepIdx, const std::unordered_set<std::string>& wells);
-            bool hasWell(const std::string& wname);
-            double wellPI(const int well_index) const;
-            double wellPI(const std::string& well_name) const;
-
             void updatePerforationIntensiveQuantities();
             // it should be able to go to prepareTimeStep(), however, the updateWellControls() and initPrimaryVariablesEvaluation()
             // makes it a little more difficult. unless we introduce if (iterationIdx != 0) to avoid doing the above functions
@@ -404,33 +281,17 @@ namespace Opm {
             void initPrimaryVariablesEvaluation() const;
             void updateWellControls(DeferredLogger& deferred_logger, const bool checkGroupControls);
             WellInterfacePtr getWell(const std::string& well_name) const;
+
         protected:
             Simulator& ebosSimulator_;
 
-            std::vector< Well > wells_ecl_{};
-            std::vector< std::vector<PerforationData> > well_perf_data_{};
-            std::vector< WellProdIndexCalculator > prod_index_calc_{};
             std::vector<int> local_shut_wells_{};
-
-            std::vector< ParallelWellInfo > parallel_well_info_;
-            std::vector< ParallelWellInfo* > local_parallel_well_info_;
-
-            bool wells_active_{false};
 
             // a vector of all the wells.
             std::vector<WellInterfacePtr > well_container_{};
 
-            // Map from logically cartesian cell indices to compressed ones.
-            // Cells not in the interior are not mapped. This deactivates
-            // these for distributed wells and makes the distribution non-overlapping.
-            std::vector<int> cartesian_to_compressed_{};
-
             std::vector<bool> is_cell_perforated_{};
 
-            std::function<bool(const Well&)> not_on_process_{};
-
-            void initializeWellProdIndCalculators();
-            void initializeWellPerfData();
             void initializeWellState(const int           timeStepIdx,
                                      const SummaryState& summaryState);
 
@@ -452,15 +313,11 @@ namespace Opm {
 
 
             const ModelParameters param_;
-            bool terminal_output_{false};
-            std::vector<int> pvt_region_idx_{};
-            PhaseUsage phase_usage_;
             size_t global_num_cells_{};
             // the number of the cells in the local grid
             size_t local_num_cells_{};
             double gravity_{};
             std::vector<double> depth_{};
-            bool initial_step_{};
             bool report_step_starts_{};
             bool glift_debug = false;
             bool alternative_well_rate_init_{};
@@ -471,12 +328,6 @@ namespace Opm {
             std::unique_ptr<VFPProperties> vfp_properties_{};
 
             SimulatorReportSingle last_report_{};
-
-            WellTestState wellTestState_{};
-            std::unique_ptr<GuideRate> guideRate_{};
-
-            std::map<std::string, double> node_pressures_{}; // Storing network pressures for output.
-            mutable std::unordered_set<std::string> closed_this_step_{};
 
             // used to better efficiency of calcuation
             mutable BVector scaleAddRes_{};
@@ -489,22 +340,9 @@ namespace Opm {
             const EclipseState& eclState() const
             { return ebosSimulator_.vanguard().eclState(); }
 
-            const Schedule& schedule() const
-            { return ebosSimulator_.vanguard().schedule(); }
-
             void gliftDebug(
                 const std::string &msg,
                 DeferredLogger& deferred_logger) const;
-
-            /// \brief Get the wells of our partition that are not shut.
-            /// \param timeStepIdx The index of the time step.
-            /// \param[out] globalNumWells the number of wells globally.
-            std::vector< Well > getLocalWells(const int timeStepId) const;
-
-            /// \brief Create the parallel well information
-            /// \param localWells The local wells from ECL schedule
-            std::vector< ParallelWellInfo* >
-            createLocalParallelWellInfo(const std::vector<Well>& localWells);
 
             // compute the well fluxes and assemble them in to the reservoir equations as source terms
             // and in the well equations.
@@ -521,7 +359,6 @@ namespace Opm {
             // xw to update Well State
             void recoverWellSolutionAndUpdateWellState(const BVector& x);
 
-            void updateAndCommunicateGroupData();
             void updateNetworkPressures();
 
             // setting the well_solutions_ based on well_state.
@@ -549,10 +386,6 @@ namespace Opm {
             // The number of components in the model.
             int numComponents() const;
 
-            int numLocalWells() const;
-
-            int numPhases() const;
-
             int reportStepIndex() const;
 
             void assembleWellEq(const double dt, DeferredLogger& deferred_logger);
@@ -569,91 +402,22 @@ namespace Opm {
 
             void extractLegacyDepth_();
 
-            /// return true if wells are available in the reservoir
-            bool wellsActive() const;
-
-            void setWellsActive(const bool wells_active);
-
-            /// return true if wells are available on this process
-            bool localWellsActive() const;
-
             /// upate the wellTestState related to economic limits
             void updateWellTestState(const double& simulationTime, WellTestState& wellTestState) const;
 
             void wellTesting(const int timeStepIdx, const double simulationTime, DeferredLogger& deferred_logger);
 
-            // convert well data from opm-common to well state from opm-core
-            void loadRestartData( const data::Wells& wells,
-                               const data::GroupAndNetworkValues& grpNwrkValues,
-                               const PhaseUsage& phases,
-                               const bool handle_ms_well,
-                               WellState& state );
-
-            // whether there exists any multisegment well open on this process
-            bool anyMSWellOpenLocal() const;
-
-            const Well& getWellEcl(const std::string& well_name) const;
-
-            void updateGroupIndividualControls(DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
-            void updateGroupIndividualControl(const Group& group, DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
-            bool checkGroupConstraints(const Group& group, DeferredLogger& deferred_logger) const;
-            Group::ProductionCMode checkGroupProductionConstraints(const Group& group, DeferredLogger& deferred_logger) const;
-            Group::InjectionCMode checkGroupInjectionConstraints(const Group& group, const Phase& phase) const;
-            void checkGconsaleLimits(const Group& group, WellState& well_state, DeferredLogger& deferred_logger );
-
-            void updateGroupHigherControls(DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
-            void checkGroupHigherConstraints(const Group& group, DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
-
-            void actionOnBrokenConstraints(const Group& group, const Group::ExceedAction& exceed_action, const Group::ProductionCMode& newControl, DeferredLogger& deferred_logger);
-
-            void actionOnBrokenConstraints(const Group& group, const Group::InjectionCMode& newControl, const Phase& topUpPhase, DeferredLogger& deferred_logger);
-
-            void updateWsolvent(const Group& group, const Schedule& schedule, const int reportStepIdx, const WellState& wellState);
-
-            void setWsolvent(const Group& group, const Schedule& schedule, const int reportStepIdx, double wsolvent);
+            void setWellWsolvent(const std::string& name, double wsolvent) override;
+            void calcRates(const int fipnum,
+                           const int pvtreg,
+                           std::vector<double>& resv_coeff) override;
 
             void runWellPIScaling(const int timeStepIdx, DeferredLogger& local_deferredLogger);
 
-            bool wasDynamicallyShutThisTimeStep(const int well_index) const;
+             void computeWellTemperature();
 
-            void assignWellGuideRates(data::Wells& wsrpt) const;
-            void assignShutConnections(data::Wells& wsrpt) const;
-            void assignGroupValues(const int                               reportStepIdx,
-                                   const Schedule&                         sched,
-                                   std::map<std::string, data::GroupData>& gvalues) const;
-
-            void assignNodeValues(std::map<std::string, data::NodeData>& gvalues) const;
-
-            std::unordered_map<std::string, data::GroupGuideRates>
-            calculateAllGroupGuiderates(const int reportStepIdx, const Schedule& sched) const;
-
-            void assignGroupControl(const Group& group, data::GroupData& gdata) const;
-            data::GuideRateValue getGuideRateValues(const Well& well) const;
-            data::GuideRateValue getGuideRateValues(const Group& group) const;
-            data::GuideRateValue getGuideRateInjectionGroupValues(const Group& group) const;
-            void getGuideRateValues(const GuideRate::RateVector& qs,
-                                    const bool                   is_inj,
-                                    const std::string&           wgname,
-                                    data::GuideRateValue&        grval) const;
-
-            void assignGroupGuideRates(const Group& group,
-                                       const std::unordered_map<std::string, data::GroupGuideRates>& groupGuideRates,
-                                       data::GroupData& gdata) const;
-
-             void computeWellTemperature();                       
         private:
-            GroupState& groupState() { return this->active_wgstate_.group_state; }
             BlackoilWellModel(Simulator& ebosSimulator, const PhaseUsage& pu);
-            /*
-              The various wellState members should be accessed and modified
-              through the accessor functions wellState(), prevWellState(),
-              commitWellState(), resetWellState(), nupcolWellState() and
-              updateNupcolWellState().
-            */
-            WGState active_wgstate_;
-            WGState last_valid_wgstate_;
-            WGState nupcol_wgstate_;
-
         };
 
 

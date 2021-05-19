@@ -171,7 +171,7 @@ public:
 
         const auto localWellData            = simulator_.problem().wellModel().wellData();
         const auto localGroupAndNetworkData = simulator_.problem().wellModel()
-            .groupAndNetworkData(reportStepNum, simulator_.vanguard().schedule());
+            .groupAndNetworkData(reportStepNum);
 
 
         const auto localAquiferData = simulator_.problem().aquiferModel().aquiferData();
@@ -229,7 +229,7 @@ public:
         // output using eclWriter if enabled
         auto localWellData = simulator_.problem().wellModel().wellData();
         auto localGroupAndNetworkData = simulator_.problem().wellModel()
-            .groupAndNetworkData(reportStepNum, simulator_.vanguard().schedule());
+            .groupAndNetworkData(reportStepNum);
 
         auto localAquiferData = simulator_.problem().aquiferModel().aquiferData();
 

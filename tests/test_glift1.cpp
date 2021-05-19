@@ -160,7 +160,7 @@ BOOST_AUTO_TEST_CASE(G1)
     const auto &well = wells_ecl[*idx];
     BOOST_CHECK_EQUAL( well.name(), "B-1H");
     const auto& summary_state = simulator->vanguard().summaryState();
-    WellState &well_state = const_cast<WellState &>(well_model.wellState());
+    WellState &well_state = well_model.wellState();
     GasLiftSingleWell glift {*std_well, *(simulator.get()), summary_state,
                              deferred_logger, well_state};
     auto state = glift.runOptimize(simulator->model().newtonMethod().numIterations());

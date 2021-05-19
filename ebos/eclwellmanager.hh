@@ -568,8 +568,7 @@ public:
     }
 
     data::GroupAndNetworkValues
-    groupAndNetworkData(const int /* reportStepIdx */,
-                        const Schedule& /* sched */) const
+    groupAndNetworkData(const int /* reportStepIdx */)
     {
         return {};
     }
