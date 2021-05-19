@@ -31,20 +31,6 @@
 #include <stdexcept>
 #include <type_traits>
 
-namespace
-{
-
-template <typename ElemType>
-ElemType zero()
-{
-    // This is for Evaluation types.
-    ElemType x;
-    x = 0.0;
-    return x;
-}
-
-}
-
 namespace Opm
 {
 
@@ -66,9 +52,6 @@ TargetCalculator::TargetCalculator(const Group::ProductionCMode cmode,
 template <typename RateType>
 RateType TargetCalculator::calcModeRateFromRates(const RateType* rates) const
 {
-    // ElemType is just the plain element type of the rates container,
-    // without any reference, const or volatile modifiers.
-    using ElemType = std::remove_cv_t<std::remove_reference_t<decltype(rates[0])>>;
     switch (cmode_) {
     case Group::ProductionCMode::ORAT: {
         assert(pu_.phase_used[BlackoilPhases::Liquid]);
@@ -93,11 +76,8 @@ RateType TargetCalculator::calcModeRateFromRates(const RateType* rates) const
         return rates[opos] + rates[wpos];
     }
     case Group::ProductionCMode::RESV: {
-        assert(pu_.phase_used[BlackoilPhases::Liquid]);
-        assert(pu_.phase_used[BlackoilPhases::Aqua]);
-        assert(pu_.phase_used[BlackoilPhases::Vapour]);
-        ElemType mode_rate = zero<ElemType>();
-        for (int phase = 0; phase < pu_.num_phases; ++phase) {
+        auto mode_rate = rates[0] * resv_coeff_[0];
+        for (int phase = 1; phase < pu_.num_phases; ++phase) {
             mode_rate += rates[phase] * resv_coeff_[phase];
         }
         return mode_rate;
@@ -105,7 +85,7 @@ RateType TargetCalculator::calcModeRateFromRates(const RateType* rates) const
     default:
         // Should never be here.
         assert(false);
-        return zero<ElemType>();
+        return rates[0];
     }
 }
 
