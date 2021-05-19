@@ -60,6 +60,8 @@ namespace Opm {
 #include <opm/material/densead/Math.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 
+#include <opm/simulators/wells/WellInterfaceGeneric.hpp>
+
 #include <string>
 #include <memory>
 #include <vector>
@@ -70,7 +72,7 @@ namespace Opm
 
 
     template<typename TypeTag>
-    class WellInterface
+    class WellInterface : public WellInterfaceGeneric
     {
     public:
 
@@ -146,27 +148,8 @@ namespace Opm
                       const int first_perf_index,
                       const std::vector<PerforationData>& perf_data);
 
-        /// Virutal destructor
-        virtual ~WellInterface() {}
-
-        /// Well name.
-        const std::string& name() const;
-
-        /// True if the well is an injector.
-        bool isInjector() const;
-
-        /// True if the well is a producer.
-        bool isProducer() const;
-
-        /// Index of well in the wells struct and wellState
-        int indexOfWell() const;
-
-        /// Well cells.
-        const std::vector<int>& cells() const {return well_cells_; }
-
-        void setVFPProperties(const VFPProperties* vfp_properties_arg);
-
-        void setGuideRate(const GuideRate* guide_rate_arg);
+        /// Virtual destructor
+        virtual ~WellInterface() = default;
 
         virtual void init(const PhaseUsage* phase_usage_arg,
                           const std::vector<double>& depth_arg,
@@ -200,10 +183,6 @@ namespace Opm
                                  const bool& writeMessageToOPMLog,
                                  WellTestState& wellTestState,
                                  DeferredLogger& deferred_logger) const;
-
-        void setWellEfficiencyFactor(const double efficiency_factor);
-
-        void setRepRadiusPerfLength(const std::vector<int>& cartesian_to_compressed);
 
         /// using the solution x to recover the solution xw for wells and applying
         /// xw to update Well State
@@ -273,10 +252,6 @@ namespace Opm
             return out;
         }
 
-        void closeCompletions(WellTestState& wellTestState);
-
-        const Well& wellEcl() const;
-
         // TODO: theoretically, it should be a const function
         // Simulator is not const is because that assembleWellEq is non-const Simulator
         void wellTesting(const Simulator& simulator,
@@ -284,8 +259,6 @@ namespace Opm
                          const WellTestConfig::Reason testing_reason,
                          /* const */ WellState& well_state, const GroupState& group_state, WellTestState& welltest_state,
                          DeferredLogger& deferred_logger);
-
-        void updatePerforatedCell(std::vector<bool>& is_cell_perforated);
 
         void checkWellOperability(const Simulator& ebos_simulator, const WellState& well_state, DeferredLogger& deferred_logger);
 
@@ -295,15 +268,6 @@ namespace Opm
                                    const WellState& well_state,
                                    DeferredLogger& deferred_logger);
 
-
-        // whether the well is operable
-        bool isOperable() const;
-
-        /// Returns true if the well has one or more THP limits/constraints.
-        bool wellHasTHPConstraints(const SummaryState& summaryState) const;
-
-        /// Returns true if the well is currently in prediction mode (i.e. not history mode).
-        bool underPredictionMode() const;
 
         // update perforation water throughput based on solved water rate
         virtual void updateWaterThroughput(const double dt, WellState& well_state) const = 0;
@@ -320,28 +284,10 @@ namespace Opm
                                   WellState& well_state,
                                   DeferredLogger& deferred_logger) const;
 
-        void stopWell() {
-            this->wellStatus_ = Well::Status::STOP;
-        }
-
-        void openWell() {
-            this->wellStatus_ = Well::Status::OPEN;
-        }
-
-        bool wellIsStopped() const {
-            return this->wellStatus_ == Well::Status::STOP;
-        }
-
-        void setWsolvent(const double wsolvent);
-
-        void setDynamicThpLimit(const double thp_limit);
-
         void solveWellEquation(const Simulator& ebosSimulator,
                                WellState& well_state,
                                const GroupState& group_state,
                                DeferredLogger& deferred_logger);
-
-        const PhaseUsage& phaseUsage() const;
 
         virtual bool useInnerIterations() const = 0;
 
@@ -350,108 +296,15 @@ namespace Opm
         // to indicate a invalid completion
         static const int INVALIDCOMPLETION = INT_MAX;
 
-        Well well_ecl_;
-
-        const ParallelWellInfo& parallel_well_info_;
-
-        const int current_step_;
-
         // simulation parameters
         const ModelParameters& param_;
-
-        // number of the perforations for this well
-        int number_of_perforations_;
-
-        // well index for each perforation
-        std::vector<double> well_index_;
-
-        // depth for each perforation
-        std::vector<double> perf_depth_;
-
-        // reference depth for the BHP
-        double ref_depth_;
-
-        double well_efficiency_factor_;
-
-        // cell index for each well perforation
-        std::vector<int> well_cells_;
-
-        // saturation table nubmer for each well perforation
-        std::vector<int> saturation_table_number_;
-
-        // representative radius of the perforations, used in shear calculation
-        std::vector<double> perf_rep_radius_;
-
-        // length of the perforations, use in shear calculation
-        std::vector<double> perf_length_;
-
-        // well bore diameter
-        std::vector<double> bore_diameters_;
-
-        /*
-         *  completions_ contains the mapping from completion id to connection indices
-         *  {
-         *      2 : [ConnectionIndex, ConnectionIndex],
-         *      1 : [ConnectionIndex, ConnectionIndex, ConnectionIndex],
-         *      5 : [ConnectionIndex],
-         *      7 : [ConnectionIndex]
-         *      ...
-         *   }
-         *   The integer IDs correspond to the COMPLETION id given by the COMPLUMP keyword.
-         *   When there is no COMPLUMP keyword used, a default completion number will be assigned
-         *   based on the order of the declaration of the connections.
-         *   Since the connections not OPEN is not included in the Wells, so they will not be considered
-         *   in this mapping relation.
-         */
-        std::map<int, std::vector<int>> completions_;
-
-        const PhaseUsage* phase_usage_;
-
-        bool getAllowCrossFlow() const;
-
-        const VFPProperties* vfp_properties_;
-
-        const GuideRate* guide_rate_;
-
-        double gravity_;
 
         // For the conversion between the surface volume rate and resrevoir voidage rate
         const RateConverterType& rateConverter_;
 
-        // The pvt region of the well. We assume
-        // We assume a well to not penetrate more than one pvt region.
-        const int pvtRegionIdx_;
-
-        const int num_components_;
-
-        // number of phases
-        int number_of_phases_;
-
-        // the index of well in Wells struct
-        int index_of_well_;
-
-        // record the index of the first perforation
-        // of states of individual well.
-        int first_perf_;
-
-        const std::vector<PerforationData>* perf_data_;
-
         std::vector<RateVector> connectionRates_;
 
-        Well::Status wellStatus_;
-
-        double wsolvent_;
-
-        std::optional<double> dynamic_thp_limit_;
-
         std::vector< Scalar > B_avg_;
-
-        // the vectors used to describe the inflow performance relationship (IPR)
-        // Q = IPR_A - BHP * IPR_B
-        // TODO: it minght need to go to WellInterface, let us implement it in StandardWell first
-        // it is only updated and used for producers for now
-        mutable std::vector<double> ipr_a_;
-        mutable std::vector<double> ipr_b_;
 
         bool changed_to_stopped_this_step_ = false;
 
@@ -460,8 +313,6 @@ namespace Opm
         int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const;
 
         int ebosCompIdxToFlowCompIdx( const unsigned compIdx ) const;
-
-        double wsolvent() const;
 
         double wpolymer() const;
 
@@ -473,19 +324,13 @@ namespace Opm
                                  const std::vector<double>& well_rates,
                                  DeferredLogger& deferred_logger) const;
 
-        double getTHPConstraint(const SummaryState& summaryState) const;
-
         template <class ValueType>
         ValueType calculateBhpFromThp(const WellState& well_state, const std::vector<ValueType>& rates, const Well& well, const SummaryState& summaryState, DeferredLogger& deferred_logger) const;
-
-        double getALQ(const WellState& well_state) const;
 
         virtual double getRefDensity() const = 0;
 
         // Component fractions for each phase for the well
         const std::vector<double>& compFrac() const;
-
-        double mostStrictBhpFromBhpLimits(const SummaryState& summaryState) const;
 
         struct RatioLimitCheckReport;
 
@@ -521,13 +366,6 @@ namespace Opm
         double scalingFactor(const int comp_idx) const;
 
         std::vector<double> initialWellRateFractions(const Simulator& ebosSimulator, const std::vector<double>& potentials) const;
-
-        // whether a well is specified with a non-zero and valid VFP table number
-        bool isVFPActive(DeferredLogger& deferred_logger) const;
-
-        struct OperabilityStatus;
-
-        OperabilityStatus operability_status_;
 
         // check whether the well is operable under BHP limit with current reservoir condition
         virtual void checkOperabilityUnderBHPLimitProducer(const WellState& well_state, const Simulator& ebos_simulator, DeferredLogger& deferred_logger) =0;
@@ -578,16 +416,8 @@ namespace Opm
                                          WellTestState& well_test_state,
                                          DeferredLogger& deferred_logger) const;
 
-        void updateWellTestStatePhysical(const WellState& well_state,
-                                         const double simulation_time,
-                                         const bool write_message_to_opmlog,
-                                         WellTestState& well_test_state,
-                                         DeferredLogger& deferred_logger) const;
-
         void solveWellForTesting(const Simulator& ebosSimulator, WellState& well_state, const GroupState& group_state,
                                  DeferredLogger& deferred_logger);
-
-        void initCompletions();
 
         bool checkConstraints(WellState& well_state,
                               const GroupState& group_state,
@@ -668,53 +498,6 @@ namespace Opm
                                    EvalWell& control_eq,
                                    DeferredLogger& deferred_logger);
     };
-
-
-
-
-
-    // definition of the struct OperabilityStatus
-    template<typename TypeTag>
-    struct
-    WellInterface<TypeTag>::
-    OperabilityStatus {
-        bool isOperable() const {
-            if (!operable_under_only_bhp_limit) {
-                return false;
-            } else {
-                return ( (isOperableUnderBHPLimit() || isOperableUnderTHPLimit()) );
-            }
-        }
-
-        bool isOperableUnderBHPLimit() const {
-            return operable_under_only_bhp_limit && obey_thp_limit_under_bhp_limit;
-        }
-
-        bool isOperableUnderTHPLimit() const {
-            return can_obtain_bhp_with_thp_limit && obey_bhp_limit_with_thp_limit;
-        }
-
-        void reset() {
-            operable_under_only_bhp_limit = true;
-            obey_thp_limit_under_bhp_limit = true;
-            can_obtain_bhp_with_thp_limit = true;
-            obey_bhp_limit_with_thp_limit = true;
-        }
-
-        // whether the well can be operated under bhp limit
-        // without considering other limits.
-        // if it is false, then the well is not operable for sure.
-        bool operable_under_only_bhp_limit = true;
-        // if the well can be operated under bhp limit, will it obey(not violate)
-        // the thp limit when operated under bhp limit
-        bool obey_thp_limit_under_bhp_limit = true;
-        // whether the well operate under the thp limit only
-        bool can_obtain_bhp_with_thp_limit = true;
-        // whether the well obey bhp limit when operated under thp limit
-        bool obey_bhp_limit_with_thp_limit = true;
-
-    };
-
 
     template<typename TypeTag>
     struct
