@@ -538,7 +538,7 @@ namespace Opm {
             void updateAverageFormationFactor();
 
             // Calculating well potentials for each well
-            void computeWellPotentials(std::vector<double>& well_potentials, const int reportStepIdx, DeferredLogger& deferred_logger);
+            void updateWellPotentials(const int reportStepIdx, const bool onlyAfterEvent, DeferredLogger& deferred_logger);
 
             const std::vector<double>& wellPerfEfficiencyFactors() const;
 
