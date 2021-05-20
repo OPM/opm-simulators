@@ -61,7 +61,6 @@ public:
     static const int Gas = BlackoilPhases::Vapour;
 
     using BaseType :: wellRates;
-    using BaseType :: bhp;
     using BaseType :: perfPress;
 
     explicit WellStateFullyImplicitBlackoil(const PhaseUsage& pu) :
@@ -410,6 +409,18 @@ public:
     const PhaseUsage& phaseUsage() const {
         return this->phase_usage_;
     }
+
+    /// One bhp pressure per well.
+    void update_bhp(std::size_t well_index, double value) { bhp_[well_index] = value; }
+    double bhp(std::size_t well_index) const { return bhp_[well_index]; }
+
+    /// One thp pressure per well.
+    void update_thp(std::size_t well_index, double value) { thp_[well_index] = value; }
+    double thp(std::size_t well_index) const { return thp_[well_index]; }
+
+    /// One temperature per well.
+    void update_temperature(std::size_t well_index, double value) { temperature_[well_index] = value; }
+    double temperature(std::size_t well_index) const { return temperature_[well_index]; }
 
 private:
     std::vector<double> perfphaserates_;
