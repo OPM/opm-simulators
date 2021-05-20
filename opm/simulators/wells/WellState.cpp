@@ -165,60 +165,6 @@ void WellState::updateStatus(int well_index, Well::Status status)
     }
 }
 
-data::Wells WellState::report(const int* globalCellIdxMap,
-                              const std::function<bool(const int)>& wasDynamicallyClosed) const
-{
-    using rt = data::Rates::opt;
-
-    const auto& pu = this->phaseUsage();
-    data::Wells dw;
-    for( const auto& itr : this->wellMap_ ) {
-        const auto well_index = itr.second[ 0 ];
-        if ((this->status_[well_index] == Well::Status::SHUT) &&
-            ! wasDynamicallyClosed(well_index))
-        {
-            continue;
-        }
-
-        const auto& pwinfo = *parallel_well_info_[well_index];
-        using WellT = std::remove_reference_t<decltype(dw[ itr.first ])>;
-        WellT dummyWell; // dummy if we are not owner
-        auto& well = pwinfo.isOwner() ? dw[ itr.first ] : dummyWell;
-        well.bhp = this->bhp(well_index);
-        well.thp = this->thp( well_index );
-        well.temperature = this->temperature( well_index );
-
-        const auto& wv = this->wellRates(well_index);
-        if( pu.phase_used[BlackoilPhases::Aqua] ) {
-            well.rates.set( rt::wat, wv[ pu.phase_pos[BlackoilPhases::Aqua] ] );
-        }
-
-        if( pu.phase_used[BlackoilPhases::Liquid] ) {
-            well.rates.set( rt::oil, wv[ pu.phase_pos[BlackoilPhases::Liquid] ] );
-        }
-
-        if( pu.phase_used[BlackoilPhases::Vapour] ) {
-            well.rates.set( rt::gas, wv[ pu.phase_pos[BlackoilPhases::Vapour] ] );
-        }
-
-        if (pwinfo.communication().size()==1)
-        {
-            reportConnections(well, pu, itr, globalCellIdxMap);
-        }
-        else
-        {
-            assert(pwinfo.communication().rank() != 0 || &dummyWell != &well);
-            // report the local connections
-            reportConnections(dummyWell, pu, itr, globalCellIdxMap);
-            // gather them to well on root.
-            gatherVectorsOnRoot(dummyWell.connections, well.connections,
-                                pwinfo.communication());
-        }
-    }
-
-    return dw;
-
-}
 
 void WellState::reportConnections(data::Well& well,
                                   const PhaseUsage&,
@@ -243,27 +189,6 @@ void WellState::reportConnections(data::Well& well,
     assert(num_perf_well == int(well.connections.size()));
 }
 
-template<class Communication>
-void WellState::gatherVectorsOnRoot(const std::vector<data::Connection>& from_connections,
-                                    std::vector<data::Connection>& to_connections,
-                                    const Communication& comm) const
-{
-    int size = from_connections.size();
-    std::vector<int> sizes;
-    std::vector<int> displ;
-    if (comm.rank()==0){
-        sizes.resize(comm.size());
-    }
-    comm.gather(&size, sizes.data(), 1, 0);
-
-    if (comm.rank()==0){
-        displ.resize(comm.size()+1, 0);
-        std::partial_sum(sizes.begin(), sizes.end(), displ.begin()+1);
-        to_connections.resize(displ.back());
-    }
-    comm.gatherv(from_connections.data(), size, to_connections.data(),
-                 sizes.data(), displ.data(), 0);
-}
 
 void WellState::initSingleWell(const std::vector<double>& cellPressures,
                                const int w,

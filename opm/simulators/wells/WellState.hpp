@@ -145,10 +145,6 @@ public:
 
     void updateStatus(int well_index, Well::Status status);
 
-    virtual data::Wells
-    report(const int* globalCellIdxMap,
-           const std::function<bool(const int)>& wasDynamicallyClosed) const;
-
     virtual void reportConnections(data::Well& well, const PhaseUsage&,
                                    const WellMapType::value_type& itr,
                                    const int* globalCellIdxMap) const;
@@ -167,12 +163,6 @@ private:
     WellContainer<std::vector<double>> perfrates_;
     WellContainer<std::vector<double>> perfpress_;
 
-    WellMapType wellMap_;
-
-    template<class Communication>
-    void gatherVectorsOnRoot(const std::vector< data::Connection >& from_connections,
-                             std::vector< data::Connection >& to_connections,
-                             const Communication& comm) const;
 
     void initSingleWell(const std::vector<double>& cellPressures,
                         const int w,
