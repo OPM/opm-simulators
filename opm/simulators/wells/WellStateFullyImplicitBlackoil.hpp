@@ -79,6 +79,9 @@ public:
         return wellMap_.size();
     }
 
+    const ParallelWellInfo& parallelWellInfo(std::size_t well_index) const;
+
+
 
     /// Allocate and initialize if wells is non-null.  Also tries
     /// to give useful initial values to the bhp(), wellRates()

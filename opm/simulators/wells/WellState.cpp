@@ -70,11 +70,6 @@ void WellState::init(const std::vector<double>& cellPressures,
 }
 
 
-const ParallelWellInfo&
-WellState::parallelWellInfo(std::size_t well_index) const
-{
-    return *parallel_well_info_[well_index];
-}
 
 
 void WellState::shutWell(int well_index)
