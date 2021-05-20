@@ -628,7 +628,8 @@ namespace Opm
 
                 // Store the perforation phase flux for later usage.
                 if (has_solvent && componentIdx == contiSolventEqIdx) {
-                    well_state.perfRateSolvent()[first_perf_ + perf] = cq_s[componentIdx].value();
+                    auto * perf_rate_solvent = &well_state.perfRateSolvent()[first_perf_];
+                    perf_rate_solvent[perf] = cq_s[componentIdx].value();
                 } else {
                     perf_rates[perf*np + ebosCompIdxToFlowCompIdx(componentIdx)] = cq_s[componentIdx].value();
                 }
@@ -825,7 +826,8 @@ namespace Opm
                 const double dis_gas_frac = perf_dis_gas_rate / cq_s_zfrac_effective.value();
                 cq_s_zfrac_effective *= extendEval(dis_gas_frac*intQuants.xVolume() + (1.0-dis_gas_frac)*intQuants.yVolume());
             }
-            well_state.perfRateSolvent()[first_perf_ + perf] = cq_s_zfrac_effective.value();
+            auto * perf_rate_solvent = &well_state.perfRateSolvent()[first_perf_];
+            perf_rate_solvent[perf] = cq_s_zfrac_effective.value();
 
             cq_s_zfrac_effective *= well_efficiency_factor_;
             connectionRates[perf][contiZfracEqIdx] = Base::restrictEval(cq_s_zfrac_effective);
@@ -2099,12 +2101,17 @@ namespace Opm
         const int np = number_of_phases_;
         std::vector<double> perfRates(b_perf.size(),0.0);
         const auto * perf_rates_state = &well_state.perfPhaseRates()[first_perf_ * np];
+
         for (int perf = 0; perf < nperf; ++perf) {
             for (int comp = 0; comp < np; ++comp) {
                 perfRates[perf * num_components_ + comp] =  perf_rates_state[perf * np + ebosCompIdxToFlowCompIdx(comp)];
             }
-            if constexpr (has_solvent) {
-                perfRates[perf * num_components_ + contiSolventEqIdx] =  well_state.perfRateSolvent()[first_perf_ + perf];
+        }
+
+        if constexpr (has_solvent) {
+            const auto * solvent_perf_rates_state = &well_state.perfRateSolvent()[this->first_perf_];
+            for (int perf = 0; perf < nperf; ++perf) {
+                perfRates[perf * num_components_ + contiSolventEqIdx] = solvent_perf_rates_state[perf];
             }
         }
 

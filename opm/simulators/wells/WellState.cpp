@@ -794,7 +794,8 @@ void WellState::reportConnections(data::Well& well,
             comp.rates.set( rt::brine, this->perfRateBrine()[wt.second[1] + local_comp_index]);
         }
         if ( pu.has_solvent ) {
-            comp.rates.set( rt::solvent, this->perfRateSolvent()[wt.second[1] + local_comp_index]);
+            const auto * perf_solvent_rate = &this->perfRateSolvent()[wt.second[1]];
+            comp.rates.set( rt::solvent, perf_solvent_rate[local_comp_index] );
         }
 
         ++local_comp_index;
@@ -1010,8 +1011,8 @@ WellState::calculateSegmentRates(const std::vector<std::vector<int>>& segment_in
 
 double WellState::solventWellRate(const int w) const
 {
-    return parallel_well_info_[w]->sumPerfValues(&perfRateSolvent_[0] + first_perf_index_[w],
-                                                 &perfRateSolvent_[0] + first_perf_index_[w] + num_perf_[w]);
+    const auto * perf_rates_solvent = &perfRateSolvent_[first_perf_index_[w]];
+    return parallel_well_info_[w]->sumPerfValues(perf_rates_solvent, perf_rates_solvent + this->num_perf_[w]);
 }
 
 double WellState::polymerWellRate(const int w) const
