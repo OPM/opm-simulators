@@ -70,25 +70,6 @@ public:
 
 
 
-    /// One rate per well and phase.
-    const WellContainer<std::vector<double>>& wellRates() const { return wellrates_; }
-    std::vector<double>& wellRates(std::size_t well_index) { return wellrates_[well_index]; }
-    const std::vector<double>& wellRates(std::size_t well_index) const { return wellrates_[well_index]; }
-
-    /// One rate per well connection.
-    std::vector<double>& perfRates(std::size_t well_index) { return this->perfrates_[well_index]; }
-    const std::vector<double>& perfRates(std::size_t well_index) const { return this->perfrates_[well_index]; }
-    std::vector<double>& perfRates(const std::string& wname) { return this->perfrates_[wname]; }
-    const std::vector<double>& perfRates(const std::string& wname) const { return this->perfrates_[wname]; }
-
-    /// One pressure per well connection.
-    std::vector<double>& perfPress(std::size_t well_index) { return perfpress_[well_index]; }
-    const std::vector<double>& perfPress(std::size_t well_index) const { return perfpress_[well_index]; }
-    std::vector<double>& perfPress(const std::string& wname) { return perfpress_[wname]; }
-    const std::vector<double>& perfPress(const std::string& wname) const { return perfpress_[wname]; }
-
-
-
 
 protected:
     WellContainer<Well::Status> status_;
@@ -100,10 +81,10 @@ protected:
     std::vector<double> temperature_;
     WellContainer<std::vector<double>> wellrates_;
     PhaseUsage phase_usage_;
-
-private:
     WellContainer<std::vector<double>> perfrates_;
     WellContainer<std::vector<double>> perfpress_;
+
+private:
 
 
     void initSingleWell(const std::vector<double>& cellPressures,

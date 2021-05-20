@@ -60,9 +60,6 @@ public:
     static const int Oil = BlackoilPhases::Liquid;
     static const int Gas = BlackoilPhases::Vapour;
 
-    using BaseType :: wellRates;
-    using BaseType :: perfPress;
-
     explicit WellStateFullyImplicitBlackoil(const PhaseUsage& pu) :
         WellState(pu)
     {
@@ -421,6 +418,25 @@ public:
     /// One temperature per well.
     void update_temperature(std::size_t well_index, double value) { temperature_[well_index] = value; }
     double temperature(std::size_t well_index) const { return temperature_[well_index]; }
+
+    /// One rate per well and phase.
+    const WellContainer<std::vector<double>>& wellRates() const { return wellrates_; }
+    std::vector<double>& wellRates(std::size_t well_index) { return wellrates_[well_index]; }
+    const std::vector<double>& wellRates(std::size_t well_index) const { return wellrates_[well_index]; }
+
+    /// One rate per well connection.
+    std::vector<double>& perfRates(std::size_t well_index) { return this->perfrates_[well_index]; }
+    const std::vector<double>& perfRates(std::size_t well_index) const { return this->perfrates_[well_index]; }
+    std::vector<double>& perfRates(const std::string& wname) { return this->perfrates_[wname]; }
+    const std::vector<double>& perfRates(const std::string& wname) const { return this->perfrates_[wname]; }
+
+    /// One pressure per well connection.
+    std::vector<double>& perfPress(std::size_t well_index) { return perfpress_[well_index]; }
+    const std::vector<double>& perfPress(std::size_t well_index) const { return perfpress_[well_index]; }
+    std::vector<double>& perfPress(const std::string& wname) { return perfpress_[wname]; }
+    const std::vector<double>& perfPress(const std::string& wname) const { return perfpress_[wname]; }
+
+
 
 private:
     std::vector<double> perfphaserates_;
