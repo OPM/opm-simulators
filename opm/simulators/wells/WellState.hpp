@@ -111,10 +111,6 @@ public:
 
     const ParallelWellInfo& parallelWellInfo(std::size_t well_index) const;
 
-    bool wellIsOwned(std::size_t well_index,
-                     const std::string& wellName) const;
-
-    bool wellIsOwned(const std::string& wellName) const;
 
 
     /// The number of phases present.
