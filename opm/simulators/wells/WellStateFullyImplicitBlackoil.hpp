@@ -377,6 +377,11 @@ public:
         return this->global_well_info.value().well_name(index);
     }
 
+    bool wellIsOwned(std::size_t well_index,
+                     const std::string& wellName) const;
+
+    bool wellIsOwned(const std::string& wellName) const;
+
 private:
     std::vector<double> perfphaserates_;
     WellContainer<int> is_producer_; // Size equal to number of local wells.
@@ -492,6 +497,7 @@ private:
     // overhead) this is simpler than writing code to delete it.
     //
     void updateWellsDefaultALQ(const std::vector<Well>& wells_ecl);
+
 };
 
 } // namespace Opm

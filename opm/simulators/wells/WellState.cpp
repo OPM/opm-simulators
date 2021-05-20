@@ -114,24 +114,6 @@ WellState::parallelWellInfo(std::size_t well_index) const
     return *parallel_well_info_[well_index];
 }
 
-bool WellState::wellIsOwned(std::size_t well_index,
-                            [[maybe_unused]] const std::string& wellName) const
-{
-    const auto& well_info = parallelWellInfo(well_index);
-    assert(well_info.name() == wellName);
-
-    return well_info.isOwner();
-}
-
-bool WellState::wellIsOwned(const std::string& wellName) const
-{
-    const auto& it = this->wellMap_.find( wellName );
-    if (it == this->wellMap_.end()) {
-        OPM_THROW(std::logic_error, "Could not find well " << wellName << " in well map");
-    }
-    const int well_index = it->second[0];
-    return wellIsOwned(well_index, wellName);
-}
 
 void WellState::shutWell(int well_index)
 {

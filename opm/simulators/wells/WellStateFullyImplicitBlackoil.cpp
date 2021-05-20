@@ -975,6 +975,25 @@ WellStateFullyImplicitBlackoil::reportSegmentResults(const PhaseUsage& pu,
     return seg_res;
 }
 
+bool WellStateFullyImplicitBlackoil::wellIsOwned(std::size_t well_index,
+                                                 [[maybe_unused]] const std::string& wellName) const
+{
+    const auto& well_info = parallelWellInfo(well_index);
+    assert(well_info.name() == wellName);
+
+    return well_info.isOwner();
+}
+
+bool WellStateFullyImplicitBlackoil::wellIsOwned(const std::string& wellName) const
+{
+    const auto& it = this->wellMap_.find( wellName );
+    if (it == this->wellMap_.end()) {
+        OPM_THROW(std::logic_error, "Could not find well " << wellName << " in well map");
+    }
+    const int well_index = it->second[0];
+    return wellIsOwned(well_index, wellName);
+}
+
 int WellStateFullyImplicitBlackoil::numSegments(const int well_id) const
 {
     const auto topseg = this->topSegmentIndex(well_id);
