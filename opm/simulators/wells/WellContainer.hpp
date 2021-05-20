@@ -55,23 +55,23 @@ public:
 
 
     std::size_t size() const {
-        return this->data.size();
+        return this->m_data.size();
     }
 
     void add(const std::string& name, T&& value) {
         if (index_map.count(name) != 0)
             throw std::logic_error("An object with name: " + name + " already exists in container");
 
-        this->index_map.emplace(name, this->data.size());
-        this->data.push_back(std::forward<T>(value));
+        this->index_map.emplace(name, this->m_data.size());
+        this->m_data.push_back(std::forward<T>(value));
     }
 
     void add(const std::string& name, const T& value) {
         if (index_map.count(name) != 0)
             throw std::logic_error("An object with name: " + name + " already exists in container");
 
-        this->index_map.emplace(name, this->data.size());
-        this->data.push_back(value);
+        this->index_map.emplace(name, this->m_data.size());
+        this->m_data.push_back(value);
     }
 
     bool has(const std::string& name) const {
@@ -81,20 +81,20 @@ public:
 
     void update(const std::string& name, T&& value) {
         auto index = this->index_map.at(name);
-        this->data[index] = std::forward<T>(value);
+        this->m_data[index] = std::forward<T>(value);
     }
 
     void update(const std::string& name, const T& value) {
         auto index = this->index_map.at(name);
-        this->data[index] = value;
+        this->m_data[index] = value;
     }
 
     void update(std::size_t index, T&& value) {
-        this->data.at(index) = std::forward<T>(value);
+        this->m_data.at(index) = std::forward<T>(value);
     }
 
     void update(std::size_t index, const T& value) {
-        this->data.at(index) = value;
+        this->m_data.at(index) = value;
     }
 
     /*
@@ -103,7 +103,7 @@ public:
     */
     void copy_welldata(const WellContainer<T>& other) {
         if (this->index_map == other.index_map)
-            this->data = other.data;
+            this->m_data = other.m_data;
         else {
             for (const auto& [name, index] : this->index_map)
                 this->update_if(index, name, other);
@@ -117,39 +117,44 @@ public:
     void copy_welldata(const WellContainer<T>& other, const std::string& name) {
         auto this_index = this->index_map.at(name);
         auto other_index = other.index_map.at(name);
-        this->data[this_index] = other.data[other_index];
+        this->m_data[this_index] = other.m_data[other_index];
     }
 
     T& operator[](std::size_t index) {
-        return this->data.at(index);
+        return this->m_data.at(index);
     }
 
     const T& operator[](std::size_t index) const {
-        return this->data.at(index);
+        return this->m_data.at(index);
     }
 
     T& operator[](const std::string& name) {
         auto index = this->index_map.at(name);
-        return this->data[index];
+        return this->m_data[index];
     }
 
     const T& operator[](const std::string& name) const {
         auto index = this->index_map.at(name);
-        return this->data[index];
+        return this->m_data[index];
     }
 
     void clear() {
-        this->data.clear();
+        this->m_data.clear();
         this->index_map.clear();
     }
 
     typename std::vector<T>::const_iterator begin() const {
-        return this->data.begin();
+        return this->m_data.begin();
     }
 
     typename std::vector<T>::const_iterator end() const {
-        return this->data.end();
+        return this->m_data.end();
     }
+
+    const std::vector<T>& data() const {
+        return this->m_data;
+    }
+
 
 private:
     void update_if(std::size_t index, const std::string& name, const WellContainer<T>& other) {
@@ -158,11 +163,11 @@ private:
             return;
 
         auto other_index = other_iter->second;
-        this->data[index] = other.data[other_index];
+        this->m_data[index] = other.m_data[other_index];
     }
 
 
-    std::vector<T> data;
+    std::vector<T> m_data;
     std::unordered_map<std::string, std::size_t> index_map;
 };
 

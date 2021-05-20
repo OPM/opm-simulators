@@ -99,12 +99,12 @@ public:
     const std::vector<double>& perfPhaseRates() const { return perfphaserates_; }
 
     /// One current control per injecting well.
-    std::vector<Opm::Well::InjectorCMode>& currentInjectionControls() { return current_injection_controls_; }
-    const std::vector<Opm::Well::InjectorCMode>& currentInjectionControls() const { return current_injection_controls_; }
+    Well::InjectorCMode currentInjectionControl(std::size_t well_index) const { return current_injection_controls_[well_index]; }
+    void currentInjectionControl(std::size_t well_index, Well::InjectorCMode cmode) { current_injection_controls_[well_index] = cmode; }
 
     /// One current control per producing well.
-    std::vector<Well::ProducerCMode>& currentProductionControls() { return current_production_controls_; }
-    const std::vector<Well::ProducerCMode>& currentProductionControls() const { return current_production_controls_; }
+    Well::ProducerCMode currentProductionControl(std::size_t well_index) const { return current_production_controls_[well_index]; }
+    void currentProductionControl(std::size_t well_index, Well::ProducerCMode cmode) { current_production_controls_[well_index] = cmode; }
 
     void setCurrentWellRates(const std::string& wellName, const std::vector<double>& rates ) {
         well_rates[wellName].second = rates;
@@ -161,14 +161,16 @@ public:
     /// One rate pr well
     double brineWellRate(const int w) const;
 
-    std::vector<double>& wellReservoirRates()
+    const WellContainer<std::vector<double>>& wellReservoirRates() const { return well_reservoir_rates_; }
+
+    std::vector<double>& wellReservoirRates(std::size_t well_index)
     {
-        return well_reservoir_rates_;
+        return well_reservoir_rates_[well_index];
     }
 
-    const std::vector<double>& wellReservoirRates() const
+    const std::vector<double>& wellReservoirRates(std::size_t well_index) const
     {
-        return well_reservoir_rates_;
+        return well_reservoir_rates_[well_index];
     }
 
     std::vector<double>& wellDissolvedGasRates()
@@ -365,15 +367,15 @@ public:
 
 private:
     std::vector<double> perfphaserates_;
-    std::vector<bool> is_producer_; // Size equal to number of local wells.
+    WellContainer<int> is_producer_; // Size equal to number of local wells.
 
     // vector with size number of wells +1.
     // iterate over all perforations of a given well
     // for (int perf = first_perf_index_[well_index]; perf < first_perf_index_[well_index] + num_perf_[well_index]; ++perf)
     std::vector<int> first_perf_index_;
     std::vector<int> num_perf_;
-    std::vector<Opm::Well::InjectorCMode> current_injection_controls_;
-    std::vector<Well::ProducerCMode> current_production_controls_;
+    WellContainer<Opm::Well::InjectorCMode> current_injection_controls_;
+    WellContainer<Well::ProducerCMode> current_production_controls_;
 
     // Use of std::optional<> here is a technical crutch, the
     // WellStateFullyImplicitBlackoil class should be default constructible,
@@ -405,7 +407,7 @@ private:
 
     // phase rates under reservoir condition for wells
     // or voidage phase rates
-    std::vector<double> well_reservoir_rates_;
+    WellContainer<std::vector<double>> well_reservoir_rates_;
 
     // dissolved gas rates or solution gas production rates
     // should be zero for injection wells

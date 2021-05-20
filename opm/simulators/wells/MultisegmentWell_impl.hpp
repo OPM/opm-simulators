@@ -281,8 +281,8 @@ namespace Opm
         const int top_segment_index = well_state.topSegmentIndex(index_of_well_);
         auto * segment_rates = &well_state.segRates()[top_segment_index*this->number_of_phases_];
         for (int phase = 0; phase < number_of_phases_; ++phase) {
-            const double well_phase_rate = well_state.wellRates()[number_of_phases_*index_of_well_ + phase];
             const double unscaled_top_seg_rate = segment_rates[phase];
+            const double well_phase_rate = well_state.wellRates(index_of_well_)[phase];
             if (std::abs(unscaled_top_seg_rate) > 1e-12)
             {
                 for (int seg = 0; seg < numberOfSegments(); ++seg) {
@@ -297,7 +297,7 @@ namespace Opm
                 }
 
                 std::vector<double> perforation_rates(number_of_phases_ * number_of_perforations_,0.0);
-                const double perf_phaserate_scaled = well_state.wellRates()[number_of_phases_ * index_of_well_ + phase] / sumTw;
+                const double perf_phaserate_scaled = well_state.wellRates(index_of_well_)[phase] / sumTw;
                 for (int perf = 0; perf < number_of_perforations_; ++perf) {
                     perforation_rates[number_of_phases_ * perf + phase] = well_index_[perf] * perf_phaserate_scaled;
                 }
@@ -545,7 +545,7 @@ namespace Opm
 /*         {
             bool pressure_controlled_well = false;
             if (this->isInjector()) {
-                const Well::InjectorCMode& current = well_state.currentInjectionControls()[index_of_well_];
+                const Well::InjectorCMode& current = well_state.currentInjectionControl()[index_of_well_];
                 if (current == Well::InjectorCMode::BHP || current == Well::InjectorCMode::THP) {
                     pressure_controlled_well = true;
                 }
@@ -566,7 +566,7 @@ namespace Opm
         debug_cost_counter_ = 0;
         // does the well have a THP related constraint?
         const auto& summaryState = ebosSimulator.vanguard().summaryState();
-        const Well::ProducerCMode& current_control = well_state.currentProductionControls()[this->index_of_well_];
+        auto current_control = well_state.currentProductionControl(this->index_of_well_);
         if ( !Base::wellHasTHPConstraints(summaryState) || current_control == Well::ProducerCMode::BHP) {
             computeWellRatesAtBhpLimit(ebosSimulator, well_potentials, deferred_logger);
         } else {
@@ -626,10 +626,10 @@ namespace Opm
         //  Set current control to bhp, and bhp value in state, modify bhp limit in control object.
         if (well_copy.well_ecl_.isInjector()) {
             inj_controls.bhp_limit = bhp;
-            well_state_copy.currentInjectionControls()[index_of_well_] = Well::InjectorCMode::BHP;
+            well_state_copy.currentInjectionControl(index_of_well_, Well::InjectorCMode::BHP);
         } else {
             prod_controls.bhp_limit = bhp;
-            well_state_copy.currentProductionControls()[index_of_well_] = Well::ProducerCMode::BHP;
+            well_state_copy.currentProductionControl(index_of_well_, Well::ProducerCMode::BHP);
         }
         well_state_copy.update_bhp(well_copy.index_of_well_, bhp);
         well_copy.scaleSegmentPressuresWithBhp(well_state_copy);
@@ -638,7 +638,7 @@ namespace Opm
         const int np = number_of_phases_;
         const double sign = well_copy.well_ecl_.isInjector() ? 1.0 : -1.0;
         for (int phase = 0; phase < np; ++phase){
-            well_state_copy.wellRates()[well_copy.index_of_well_*np + phase]
+            well_state_copy.wellRates(well_copy.index_of_well_)[phase]
                     = sign * well_state_copy.wellPotentials()[well_copy.index_of_well_*np + phase];
         }
         well_copy.scaleSegmentRatesWithWellRates(well_state_copy);
@@ -1847,13 +1847,13 @@ namespace Opm
 
         const PhaseUsage& pu = phaseUsage();
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-            rates[ Water ] = well_state.wellRates()[index_of_well_ * number_of_phases_ + pu.phase_pos[ Water ] ];
+            rates[ Water ] = well_state.wellRates(index_of_well_)[pu.phase_pos[ Water ] ];
         }
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-            rates[ Oil ] = well_state.wellRates()[index_of_well_ * number_of_phases_ + pu.phase_pos[ Oil ] ];
+            rates[ Oil ] = well_state.wellRates(index_of_well_)[pu.phase_pos[ Oil ] ];
         }
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            rates[ Gas ] = well_state.wellRates()[index_of_well_ * number_of_phases_ + pu.phase_pos[ Gas ] ];
+            rates[ Gas ] = well_state.wellRates(index_of_well_)[pu.phase_pos[ Gas ] ];
         }
 
         const double bhp = well_state.bhp(index_of_well_);
@@ -2376,7 +2376,7 @@ namespace Opm
                 const double phase_rate = g_total * fractions[p];
                 segment_rates[seg*this->number_of_phases_ + p] = phase_rate;
                 if (seg == 0) { // top segment
-                    well_state.wellRates()[index_of_well_ * number_of_phases_ + p] = phase_rate;
+                    well_state.wellRates(index_of_well_)[p] = phase_rate;
                 }
             }
 
@@ -2644,7 +2644,7 @@ namespace Opm
             const EvalWell seg_pressure = getSegmentPressure(seg);
             const int rate_start_offset = first_perf_ * number_of_phases_;
             auto * perf_rates = &well_state.mutable_perfPhaseRates()[rate_start_offset];
-            auto * perf_press_state = &well_state.perfPress()[first_perf_];
+            auto& perf_press_state = well_state.perfPress(this->index_of_well_);
             for (const int perf : segment_perforations_[seg]) {
                 const int cell_idx = well_cells_[perf];
                 const auto& int_quants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
@@ -3063,7 +3063,7 @@ namespace Opm
         const int well_index = index_of_well_;
         if (this->isInjector() )
         {
-            const Well::InjectorCMode& current = well_state.currentInjectionControls()[well_index];
+            auto current = well_state.currentInjectionControl(well_index);
             switch(current) {
             case Well::InjectorCMode::THP:
                 control_tolerance = param_.tolerance_pressure_ms_wells_;
@@ -3085,7 +3085,7 @@ namespace Opm
 
         if (this->isProducer() )
         {
-            const Well::ProducerCMode& current = well_state.currentProductionControls()[well_index];
+            auto current = well_state.currentProductionControl(well_index);
             switch(current) {
             case Well::ProducerCMode::THP:
                 control_tolerance = param_.tolerance_pressure_ms_wells_; // 0.1 bar
@@ -3130,7 +3130,7 @@ namespace Opm
         const int well_index = index_of_well_;
         if (this->isInjector() )
         {
-            const Well::InjectorCMode& current = well_state.currentInjectionControls()[well_index];
+            auto current = well_state.currentInjectionControl(well_index);
             switch(current) {
             case Well::InjectorCMode::THP:
                 ctrltype = CR::WellFailure::Type::ControlTHP;
@@ -3156,7 +3156,7 @@ namespace Opm
 
         if (this->isProducer() )
         {
-            const Well::ProducerCMode& current = well_state.currentProductionControls()[well_index];
+            auto current = well_state.currentProductionControl(well_index);
             switch(current) {
             case Well::ProducerCMode::THP:
                 ctrltype = CR::WellFailure::Type::ControlTHP;

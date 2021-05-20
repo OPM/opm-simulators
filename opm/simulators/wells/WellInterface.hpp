@@ -321,7 +321,7 @@ namespace Opm
         double wsalt() const;
 
         bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
-                                 const std::vector<double>& well_rates,
+                                 const double * rates_or_potentials,
                                  DeferredLogger& deferred_logger) const;
 
         template <class ValueType>

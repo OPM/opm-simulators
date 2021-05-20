@@ -1979,20 +1979,19 @@ namespace Opm {
             well_state.update_temperature( well_index,  rst_well.temperature);
 
             if (rst_well.current_control.isProducer) {
-                well_state.currentProductionControls()[ well_index ] = rst_well.current_control.prod;
+                well_state.currentProductionControl( well_index, rst_well.current_control.prod);
             }
             else {
-                well_state.currentInjectionControls()[ well_index ] = rst_well.current_control.inj;
+                well_state.currentInjectionControl( well_index, rst_well.current_control.inj);
             }
 
-            const auto wellrate_index = well_index * np;
             for( size_t i = 0; i < phs.size(); ++i ) {
                 assert( rst_well.rates.has( phs[ i ] ) );
-                well_state.wellRates()[ wellrate_index + i ] = rst_well.rates.get( phs[ i ] );
+                well_state.wellRates(well_index)[ i ] = rst_well.rates.get( phs[ i ] );
             }
 
-            auto * perf_pressure = well_state.perfPress().data() + wm.second[1];
-            auto * perf_rates = well_state.perfRates().data() + wm.second[1];
+            auto& perf_pressure = well_state.perfPress(well_index);
+            auto& perf_rates = well_state.perfRates(well_index);
             auto * perf_phase_rates = well_state.mutable_perfPhaseRates().data() + wm.second[1]*np;
             const auto& perf_data = this->well_perf_data_[well_index];
 
@@ -3370,6 +3369,7 @@ namespace Opm {
 
             auto& well_info = *local_parallel_well_info_[wellID];
             const int num_perf_this_well = well_info.communication().sum(well_perf_data_[wellID].size());
+            auto * perf_phase_rate = &this->wellState().perfPhaseRates()[connpos];
 
             for (int perf = 0; perf < num_perf_this_well; ++perf) {
                 const int cell_idx = well_perf_data_[wellID][perf].cell_index;
@@ -3382,7 +3382,7 @@ namespace Opm {
                     cellInternalEnergy = fs.enthalpy(phaseIdx).value() - fs.pressure(phaseIdx).value() / fs.density(phaseIdx).value();
                     cellBinv = fs.invB(phaseIdx).value();
                     cellDensity = fs.density(phaseIdx).value();
-                    perfPhaseRate = this->wellState().perfPhaseRates()[connpos + perf*np + phaseIdx ];
+                    perfPhaseRate = perf_phase_rate[ perf*np + phaseIdx ];
                     weight_factor += cellDensity  * perfPhaseRate/cellBinv * cellInternalEnergy/cellTemperatures;
                 }
                 total_weight += weight_factor;

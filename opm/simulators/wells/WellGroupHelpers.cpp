@@ -31,6 +31,7 @@
 #include <opm/simulators/wells/TargetCalculator.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/simulators/wells/WellContainer.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -125,7 +126,7 @@ namespace WellGroupHelpers
                 schedule.getGroup(group.parent(), reportStepIdx), schedule, reportStepIdx, factor);
     }
 
-    double sumWellPhaseRates(const std::vector<double>& rates,
+    double sumWellPhaseRates(const WellContainer<std::vector<double>>& rates,
                              const Group& group,
                              const Schedule& schedule,
                              const WellStateFullyImplicitBlackoil& wellState,
@@ -162,11 +163,11 @@ namespace WellGroupHelpers
                 continue;
 
             double factor = wellEcl.getEfficiencyFactor();
-            const auto wellrate_index = well_index * wellState.numPhases();
+            const auto& well_rates = rates[well_index];
             if (injector)
-                rate += factor * rates[wellrate_index + phasePos];
+                rate += factor * well_rates[phasePos];
             else
-                rate -= factor * rates[wellrate_index + phasePos];
+                rate -= factor * well_rates[phasePos];
         }
         const auto& gefac = group.getGroupEfficiencyFactor();
         return gefac * rate;
@@ -391,18 +392,17 @@ namespace WellGroupHelpers
                 continue;
             }
 
-            const auto wellrate_index = well_index * wellState.numPhases();
             const double efficiency = wellTmp.getEfficiencyFactor();
             // add contributino from wells not under group control
             if (isInjector) {
-                if (wellState.currentInjectionControls()[well_index] != Well::InjectorCMode::GRUP)
+                if (wellState.currentInjectionControl(well_index) != Well::InjectorCMode::GRUP)
                     for (int phase = 0; phase < np; phase++) {
-                        groupTargetReduction[phase] += wellStateNupcol.wellRates()[wellrate_index + phase] * efficiency;
+                        groupTargetReduction[phase] += wellStateNupcol.wellRates(well_index)[phase] * efficiency;
                     }
             } else {
-                if (wellState.currentProductionControls()[well_index] != Well::ProducerCMode::GRUP)
+                if (wellState.currentProductionControl(well_index) != Well::ProducerCMode::GRUP)
                     for (int phase = 0; phase < np; phase++) {
-                        groupTargetReduction[phase] -= wellStateNupcol.wellRates()[wellrate_index + phase] * efficiency;
+                        groupTargetReduction[phase] -= wellStateNupcol.wellRates(well_index)[phase] * efficiency;
                     }
             }
         }
@@ -491,7 +491,7 @@ namespace WellGroupHelpers
                 if (!wellTmp.isInjector())
                     sign = -1;
                 for (int phase = 0; phase < np; ++phase) {
-                    rates[phase] = sign * wellStateNupcol.wellRates()[well_index * np + phase];
+                    rates[phase] = sign * wellStateNupcol.wellRates(well_index)[phase];
                 }
             }
             wellState.setCurrentWellRates(wellName, rates);
