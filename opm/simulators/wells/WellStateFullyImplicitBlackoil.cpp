@@ -841,10 +841,19 @@ int WellStateFullyImplicitBlackoil::topSegmentIndex(const int w) const
     return top_segment_index_[w];
 }
 
+void WellStateFullyImplicitBlackoil::stopWell(int well_index)
+{
+    this->status_[well_index] = Well::Status::STOP;
+    this->thp_[well_index] = 0;
+}
+
 void WellStateFullyImplicitBlackoil::shutWell(int well_index)
 {
-    WellState::shutWell(well_index);
+    this->status_[well_index] = Well::Status::SHUT;
+    this->thp_[well_index] = 0;
+    this->bhp_[well_index] = 0;
     const int np = numPhases();
+    this->wellrates_[well_index].assign(np, 0);
 
     auto& resv = this->well_reservoir_rates_[well_index];
     auto* wpi  = &this->productivity_index_[np*well_index + 0];
@@ -859,6 +868,25 @@ void WellStateFullyImplicitBlackoil::shutWell(int well_index)
     std::fill(this->conn_productivity_index_.begin() + first,
               this->conn_productivity_index_.begin() + last, 0.0);
 }
+
+void WellStateFullyImplicitBlackoil::updateStatus(int well_index, Well::Status status)
+{
+    switch (status) {
+    case Well::Status::OPEN:
+        this->openWell(well_index);
+        break;
+    case Well::Status::SHUT:
+        this->shutWell(well_index);
+        break;
+    case Well::Status::STOP:
+        this->stopWell(well_index);
+        break;
+    default:
+        throw std::logic_error("Invalid well status");
+    }
+}
+
+
 
 template<class Comm>
 void WellStateFullyImplicitBlackoil::communicateGroupRates(const Comm& comm)

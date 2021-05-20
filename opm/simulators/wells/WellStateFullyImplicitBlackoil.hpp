@@ -64,7 +64,6 @@ public:
     using BaseType :: bhp;
     using BaseType :: perfPress;
     using BaseType :: numPhases;
-    using BaseType :: updateStatus;
 
     explicit WellStateFullyImplicitBlackoil(const PhaseUsage& pu) :
         WellState(pu)
@@ -312,8 +311,6 @@ public:
         return perf_water_velocity_;
     }
 
-    void shutWell(int well_index) override;
-
     template<class Comm>
     void communicateGroupRates(const Comm& comm);
 
@@ -395,6 +392,16 @@ public:
     ///    used (overwrites existing internal values).
     void resetConnectionTransFactors(const int well_index,
                                      const std::vector<PerforationData>& well_perf_data);
+
+    void updateStatus(int well_index, Well::Status status);
+
+    void openWell(int well_index) {
+        this->status_[well_index] = Well::Status::OPEN;
+    }
+
+    void shutWell(int well_index);
+    void stopWell(int well_index);
+
 
 private:
     std::vector<double> perfphaserates_;

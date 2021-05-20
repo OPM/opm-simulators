@@ -110,28 +110,18 @@ public:
         return this->phase_usage_;
     }
 
-    void openWell(int well_index) {
-        this->status_[well_index] = Well::Status::OPEN;
-    }
-
-    virtual void shutWell(int well_index);
-
-    virtual void stopWell(int well_index);
-
-    void updateStatus(int well_index, Well::Status status);
-
 protected:
     WellContainer<Well::Status> status_;
     WellContainer<std::vector<PerforationData>> well_perf_data_;
     WellContainer<const ParallelWellInfo*> parallel_well_info_;
     WellMapType wellMap_;
+    std::vector<double> bhp_;
+    std::vector<double> thp_;
+    WellContainer<std::vector<double>> wellrates_;
 
 private:
     PhaseUsage phase_usage_;
-    std::vector<double> bhp_;
-    std::vector<double> thp_;
     std::vector<double> temperature_;
-    WellContainer<std::vector<double>> wellrates_;
     WellContainer<std::vector<double>> perfrates_;
     WellContainer<std::vector<double>> perfpress_;
 
