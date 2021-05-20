@@ -163,7 +163,7 @@ BOOST_AUTO_TEST_CASE(G1)
     WellState &well_state = const_cast<WellState &>(well_model.wellState());
     GasLiftSingleWell glift {*std_well, *(simulator.get()), summary_state,
                              deferred_logger, well_state};
-    auto state = glift.runOptimize();
+    auto state = glift.runOptimize(simulator->model().newtonMethod().numIterations());
     BOOST_CHECK_CLOSE(state->oilRate(), 0.01736111111111111, 1e-8);
     BOOST_CHECK_CLOSE(state->gasRate(), 1.6464646999768586, 1e-8);
     BOOST_CHECK(state->oilIsLimited());

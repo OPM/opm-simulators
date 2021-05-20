@@ -2652,7 +2652,7 @@ namespace Opm
                         = std::make_unique<GasLiftSingleWell>(
                              *this, ebos_simulator, summary_state,
                              deferred_logger, well_state);
-                    auto state = glift->runOptimize();
+                    auto state = glift->runOptimize(ebos_simulator.model().newtonMethod().numIterations());
                     if (state) {
                         glift_state_map.insert({this->name(), std::move(state)});
                         glift_wells.insert({this->name(), std::move(glift)});
