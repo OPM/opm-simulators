@@ -20,14 +20,11 @@
 #ifndef OPM_GASLIFT_WELL_STATE_HEADER_INCLUDED
 #define OPM_GASLIFT_WELL_STATE_HEADER_INCLUDED
 
-#include <memory>
 #include <optional>
-#include <string>
 #include <utility>
 
 namespace Opm
 {
-    template<class TypeTag>
     class GasLiftWellState
     {
     public:
@@ -76,7 +73,5 @@ namespace Opm
     };
 
 } // namespace Opm
-
-#include "GasLiftWellState_impl.hpp"
 
 #endif // OPM_GASLIFT_WELL_STATE_HEADER_INCLUDED

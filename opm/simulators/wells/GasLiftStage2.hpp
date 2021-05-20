@@ -61,7 +61,7 @@ namespace Opm
         using WellState = WellStateFullyImplicitBlackoil;
         using BlackoilWellModel = ::Opm::BlackoilWellModel<TypeTag>;
         using GasLiftSingleWell = ::Opm::GasLiftSingleWell<TypeTag>;
-        using GLiftWellState = ::Opm::GasLiftWellState<TypeTag>;
+        using GLiftWellState = GasLiftWellState;
         using GLiftOptWells = typename BlackoilWellModel::GLiftOptWells;
         using GLiftProdWells = typename BlackoilWellModel::GLiftProdWells;
         using GLiftWellStateMap = typename BlackoilWellModel::GLiftWellStateMap;

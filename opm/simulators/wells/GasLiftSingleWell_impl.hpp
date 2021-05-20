@@ -199,11 +199,11 @@ calcIncOrDecGradient(double oil_rate, double gas_rate, double alq, bool increase
  *
  */
 template<typename TypeTag>
-std::unique_ptr<typename GasLiftSingleWell<TypeTag>::GLiftWellState>
+std::unique_ptr<GasLiftWellState>
 GasLiftSingleWell<TypeTag>::
 runOptimize()
 {
-    std::unique_ptr<GLiftWellState> state;
+    std::unique_ptr<GasLiftWellState> state;
     if (this->optimize_) {
         if (this->debug_limit_increase_decrease_) {
             state = runOptimize1_();
@@ -224,11 +224,11 @@ runOptimize()
 }
 
 template<typename TypeTag>
-std::unique_ptr<typename GasLiftSingleWell<TypeTag>::GLiftWellState>
+std::unique_ptr<GasLiftWellState>
 GasLiftSingleWell<TypeTag>::
 runOptimize2_()
 {
-    std::unique_ptr<GLiftWellState> state;
+    std::unique_ptr<GasLiftWellState> state;
     state = tryIncreaseLiftGas_();
     if (!state || !(state->alqChanged())) {
         state = tryDecreaseLiftGas_();
@@ -237,11 +237,11 @@ runOptimize2_()
 }
 
 template<typename TypeTag>
-std::unique_ptr<typename GasLiftSingleWell<TypeTag>::GLiftWellState>
+std::unique_ptr<GasLiftWellState>
 GasLiftSingleWell<TypeTag>::
 runOptimize1_()
 {
-    std::unique_ptr<GLiftWellState> state;
+    std::unique_ptr<GasLiftWellState> state;
     auto inc_count = this->well_state_.gliftGetAlqIncreaseCount(this->well_name_);
     auto dec_count = this->well_state_.gliftGetAlqDecreaseCount(this->well_name_);
     if (dec_count == 0 && inc_count == 0) {
@@ -848,15 +848,15 @@ reduceALQtoOilTarget_(double alq, double oil_rate, double gas_rate,
 //
 // OUTPUT:
 //
-//  - return value: a new GLiftWellState or nullptr
+//  - return value: a new GasLiftWellState or nullptr
 //
 template<typename TypeTag>
-std::unique_ptr<typename GasLiftSingleWell<TypeTag>::GLiftWellState>
+std::unique_ptr<GasLiftWellState>
 GasLiftSingleWell<TypeTag>::
 runOptimizeLoop_(bool increase)
 {
     std::vector<double> potentials(this->num_phases_, 0.0);
-    std::unique_ptr<GLiftWellState> ret_value; // nullptr initially
+    std::unique_ptr<GasLiftWellState> ret_value; // nullptr initially
     if (!computeInitialWellRates_(potentials)) return ret_value;
     bool alq_is_limited = false;
     bool oil_is_limited = false;
@@ -960,7 +960,7 @@ runOptimizeLoop_(bool increase)
     else {
         increase_opt = std::nullopt;
     }
-    ret_value = std::make_unique<GLiftWellState>(oil_rate, oil_is_limited,
+    ret_value = std::make_unique<GasLiftWellState>(oil_rate, oil_is_limited,
         gas_rate, gas_is_limited, cur_alq, alq_is_limited, increase_opt);
     return ret_value;
 }
@@ -1025,7 +1025,7 @@ setAlqMinRate_(const GasLiftOpt::Well &well)
 }
 
 template<typename TypeTag>
-std::unique_ptr<typename GasLiftSingleWell<TypeTag>::GLiftWellState>
+std::unique_ptr<GasLiftWellState>
 GasLiftSingleWell<TypeTag>::
 tryDecreaseLiftGas_()
 {
@@ -1033,7 +1033,7 @@ tryDecreaseLiftGas_()
 }
 
 template<typename TypeTag>
-std::unique_ptr<typename GasLiftSingleWell<TypeTag>::GLiftWellState>
+std::unique_ptr<GasLiftWellState>
 GasLiftSingleWell<TypeTag>::
 tryIncreaseLiftGas_()
 {

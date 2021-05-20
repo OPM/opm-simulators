@@ -60,8 +60,7 @@ namespace Opm
     {
         using Simulator = GetPropType<TypeTag, Properties::Simulator>;
         using WellState = WellStateFullyImplicitBlackoil;
-        using StdWell = Opm::StandardWell<TypeTag>;
-        using GLiftWellState = Opm::GasLiftWellState<TypeTag>;
+        using StdWell = StandardWell<TypeTag>;
         // TODO: same definition with WellInterface, and
         //  WellStateFullyImplicitBlackoil eventually they should go
         //  to a common header file.
@@ -70,7 +69,6 @@ namespace Opm
         static const int Gas = BlackoilPhases::Vapour;
         static constexpr double ALQ_EPSILON = 1e-8;
         struct OptimizeState;
-        class Stage2State;
     public:
         GasLiftSingleWell(
             const StdWell &std_well,
@@ -82,12 +80,9 @@ namespace Opm
         struct GradInfo;
         std::optional<GradInfo> calcIncOrDecGradient(
             double oil_rate, double gas_rate, double alq, bool increase) const;
-        std::pair<double, double> getStage2Rates();
         const WellInterface<TypeTag> &getStdWell() const { return std_well_; }
-        bool hasStage2Rates();
-        std::unique_ptr<GLiftWellState> runOptimize();
+        std::unique_ptr<GasLiftWellState> runOptimize();
         const std::string& name() const {return well_name_; }
-        void updateStage2State(const GradInfo &gi, bool increase);
 
         struct GradInfo
         {
@@ -155,13 +150,13 @@ namespace Opm
         reduceALQtoOilTarget_(double alq, double oil_rate, double gas_rate,
             bool oil_is_limited, bool gas_is_limited, std::vector<double> &potentials);
 
-        std::unique_ptr<GLiftWellState> runOptimize1_();
-        std::unique_ptr<GLiftWellState> runOptimize2_();
-        std::unique_ptr<GLiftWellState> runOptimizeLoop_(bool increase);
+        std::unique_ptr<GasLiftWellState> runOptimize1_();
+        std::unique_ptr<GasLiftWellState> runOptimize2_();
+        std::unique_ptr<GasLiftWellState> runOptimizeLoop_(bool increase);
         void setAlqMaxRate_(const GasLiftOpt::Well &well);
         void setAlqMinRate_(const GasLiftOpt::Well &well);
-        std::unique_ptr<GLiftWellState> tryIncreaseLiftGas_();
-        std::unique_ptr<GLiftWellState> tryDecreaseLiftGas_();
+        std::unique_ptr<GasLiftWellState> tryIncreaseLiftGas_();
+        std::unique_ptr<GasLiftWellState> tryDecreaseLiftGas_();
         void updateWellStateAlqFixedValue_(const GasLiftOpt::Well &well);
         bool useFixedAlq_(const GasLiftOpt::Well &well);
         void warnMaxIterationsExceeded_();
