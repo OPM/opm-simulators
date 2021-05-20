@@ -21,11 +21,12 @@
 #ifndef OPM_WELLSTATEFULLYIMPLICITBLACKOIL_HEADER_INCLUDED
 #define OPM_WELLSTATEFULLYIMPLICITBLACKOIL_HEADER_INCLUDED
 
-#include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/wells/ALQState.hpp>
 #include <opm/simulators/wells/GlobalWellInfo.hpp>
 #include <opm/simulators/wells/WellContainer.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
+#include <opm/simulators/wells/PerforationData.hpp>
+#include <opm/output/data/Wells.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
@@ -46,12 +47,12 @@ class Schedule;
 /// The state of a set of wells, tailored for use by the fully
 /// implicit blackoil simulator.
 class WellStateFullyImplicitBlackoil
-    : public WellState
 {
-    typedef WellState  BaseType;
 public:
+    using mapentry_t = std::array<int, 3>;
+    using WellMapType = std::map<std::string, mapentry_t>;
+
     static const uint64_t event_mask = ScheduleEvents::WELL_STATUS_CHANGE + ScheduleEvents::PRODUCTION_UPDATE + ScheduleEvents::INJECTION_UPDATE;
-    typedef BaseType :: WellMapType WellMapType;
 
     virtual ~WellStateFullyImplicitBlackoil() = default;
 
@@ -60,9 +61,9 @@ public:
     static const int Oil = BlackoilPhases::Liquid;
     static const int Gas = BlackoilPhases::Vapour;
 
-    explicit WellStateFullyImplicitBlackoil(const PhaseUsage& pu) :
-        WellState(pu)
+    explicit WellStateFullyImplicitBlackoil(const PhaseUsage& pu)
     {
+        this->phase_usage_ = pu;
     }
 
     const WellMapType& wellMap() const { return wellMap_; }
@@ -439,6 +440,18 @@ public:
 
 
 private:
+    WellContainer<Well::Status> status_;
+    WellContainer<std::vector<PerforationData>> well_perf_data_;
+    WellContainer<const ParallelWellInfo*> parallel_well_info_;
+    WellMapType wellMap_;
+    std::vector<double> bhp_;
+    std::vector<double> thp_;
+    std::vector<double> temperature_;
+    WellContainer<std::vector<double>> wellrates_;
+    PhaseUsage phase_usage_;
+    WellContainer<std::vector<double>> perfrates_;
+    WellContainer<std::vector<double>> perfpress_;
+
     std::vector<double> perfphaserates_;
     WellContainer<int> is_producer_; // Size equal to number of local wells.
 
