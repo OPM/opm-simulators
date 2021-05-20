@@ -20,9 +20,7 @@
 #ifndef OPM_GASLIFT_WELL_STATE_HEADER_INCLUDED
 #define OPM_GASLIFT_WELL_STATE_HEADER_INCLUDED
 
-#include <memory>
 #include <optional>
-#include <string>
 #include <utility>
 
 namespace Opm
