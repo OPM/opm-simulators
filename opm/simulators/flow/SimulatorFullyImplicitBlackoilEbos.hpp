@@ -25,7 +25,7 @@
 #include <opm/simulators/flow/NonlinearSolverEbos.hpp>
 #include <opm/simulators/flow/BlackoilModelEbos.hpp>
 #include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
-#include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
 #include <opm/simulators/utils/moduleVersion.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
@@ -80,7 +80,6 @@ public:
     typedef AdaptiveTimeSteppingEbos<TypeTag> TimeStepper;
     typedef BlackOilPolymerModule<TypeTag> PolymerModule;
 
-    typedef WellStateFullyImplicitBlackoil WellState;
     typedef BlackoilModelEbos<TypeTag> Model;
     typedef NonlinearSolverEbos<TypeTag, Model> Solver;
     typedef typename Model::ModelParameters ModelParameters;

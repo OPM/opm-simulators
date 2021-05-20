@@ -149,7 +149,6 @@ namespace Opm {
     {
     public:
         // ---------  Types and enums  ---------
-        typedef WellStateFullyImplicitBlackoil WellState;
         typedef BlackoilModelParametersEbos<TypeTag> ModelParameters;
 
         using Simulator = GetPropType<TypeTag, Properties::Simulator>;

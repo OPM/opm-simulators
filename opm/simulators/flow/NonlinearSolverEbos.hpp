@@ -80,6 +80,7 @@ struct NewtonRelaxationType<TypeTag, TTag::FlowNonLinearSolver> {
 
 namespace Opm {
 
+class WellState;
 
     /// A nonlinear solver class suitable for general fully-implicit models,
     /// as well as pressure, transport and sequential models.
@@ -147,7 +148,7 @@ namespace Opm {
         };
 
         // Forwarding types from PhysicalModel.
-        typedef typename PhysicalModel::WellState WellState;
+        //typedef typename PhysicalModel::WellState WellState;
 
         // ---------  Public methods  ---------
 

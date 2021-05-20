@@ -67,7 +67,6 @@ namespace Opm
         // dealing with derivatives. It can be beneficial to make functions can work with either AD or scalar value.
         // And also, it can also be beneficial to make these functions hanle different types of AD variables.
         using typename Base::Simulator;
-        using typename Base::WellState;
         using typename Base::IntensiveQuantities;
         using typename Base::FluidSystem;
         using typename Base::MaterialLaw;

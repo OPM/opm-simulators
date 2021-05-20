@@ -812,13 +812,13 @@ namespace Opm {
                     // TODO: more checking here, to make sure this standard more specific and complete
                     // maybe there is some WCON keywords will not open the well
                     auto& events = this->wellState().events(w);
-                    if (events.hasEvent(WellStateFullyImplicitBlackoil::event_mask)) {
+                    if (events.hasEvent(WellState::event_mask)) {
                         if (wellTestState_.lastTestTime(well_name) == ebosSimulator_.time()) {
                             // The well was shut this timestep, we are most likely retrying
                             // a timestep without the well in question, after it caused
                             // repeated timestep cuts. It should therefore not be opened,
                             // even if it was new or received new targets this report step.
-                            events.clearEvent(WellStateFullyImplicitBlackoil::event_mask);
+                            events.clearEvent(WellState::event_mask);
                         } else {
                             wellTestState_.openWell(well_name);
                         }
@@ -1700,11 +1700,11 @@ namespace Opm {
                 if (!well->isOperable() ) continue;
 
                 auto& events = this->wellState().events(well->indexOfWell());
-                if (events.hasEvent(WellStateFullyImplicitBlackoil::event_mask)) {
+                if (events.hasEvent(WellState::event_mask)) {
                     well->updateWellStateWithTarget(ebosSimulator_, this->wellState(), deferred_logger);
                     // There is no new well control change input within a report step,
                     // so next time step, the well does not consider to have effective events anymore.
-                    events.clearEvent(WellStateFullyImplicitBlackoil::event_mask);
+                    events.clearEvent(WellState::event_mask);
                 }
 
                 // solve the well equation initially to improve the initial solution of the well model
@@ -1951,7 +1951,7 @@ namespace Opm {
                      const data::GroupAndNetworkValues& grpNwrkValues,
                      const PhaseUsage& phases,
                      const bool handle_ms_well,
-                     WellStateFullyImplicitBlackoil& well_state)
+                     WellState& well_state)
     {
         using GPMode = Group::ProductionCMode;
         using GIMode = Group::InjectionCMode;
@@ -2948,7 +2948,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    updateWsolvent(const Group& group, const Schedule& schedule, const int reportStepIdx, const WellStateFullyImplicitBlackoil& wellState) {
+    updateWsolvent(const Group& group, const Schedule& schedule, const int reportStepIdx, const WellState& wellState) {
         for (const std::string& groupName : group.groups()) {
             const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
             updateWsolvent(groupTmp, schedule, reportStepIdx, wellState);

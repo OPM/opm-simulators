@@ -61,7 +61,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/WellGroupHelpers.cpp
   opm/simulators/wells/WellInterfaceGeneric.cpp
   opm/simulators/wells/WellProdIndexCalculator.cpp
-  opm/simulators/wells/WellStateFullyImplicitBlackoil.cpp
+  opm/simulators/wells/WellState.cpp
   opm/simulators/wells/WGState.cpp
   )
 
@@ -120,7 +120,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_relpermdiagnostics.cpp
   tests/test_norne_pvt.cpp
   tests/test_wellprodindexcalculator.cpp
-  tests/test_wellstatefullyimplicitblackoil.cpp
+  tests/test_wellstate.cpp
   tests/test_parallelwellinfo.cpp
   tests/test_glift1.cpp
   tests/test_keyword_validator.cpp
@@ -271,7 +271,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/utils/readDeck.hpp
   opm/simulators/wells/TargetCalculator.hpp
   opm/simulators/wells/WellConnectionAuxiliaryModule.hpp
-  opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp
+  opm/simulators/wells/WellState.hpp
   opm/simulators/wells/GlobalWellInfo.hpp
   opm/simulators/wells/GroupState.hpp
   opm/simulators/wells/ALQState.hpp

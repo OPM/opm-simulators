@@ -33,7 +33,7 @@
 #include <opm/simulators/wells/GasLiftSingleWell.hpp>
 #include <opm/simulators/wells/GasLiftWellState.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
-#include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/simulators/wells/WellState.hpp>
 // NOTE: BlackoilWellModel.hpp includes ourself (GasLiftStage2.hpp), so we need
 //   to forward declare BlackoilWellModel for it to be defined in this file.
 namespace Opm {
@@ -58,7 +58,6 @@ namespace Opm
     template<class TypeTag>
     class GasLiftStage2 {
         using Simulator = GetPropType<TypeTag, Properties::Simulator>;
-        using WellState = WellStateFullyImplicitBlackoil;
         using BlackoilWellModel = ::Opm::BlackoilWellModel<TypeTag>;
         using GasLiftSingleWell = ::Opm::GasLiftSingleWell<TypeTag>;
         using GLiftWellState = ::Opm::GasLiftWellState<TypeTag>;

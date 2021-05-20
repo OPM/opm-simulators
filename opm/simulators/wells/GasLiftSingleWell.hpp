@@ -35,7 +35,7 @@ namespace Opm {
 }
 #include <opm/simulators/wells/StandardWell.hpp>
 
-#include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/simulators/wells/WellState.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/simulators/wells/GasLiftWellState.hpp>
 
@@ -59,11 +59,10 @@ namespace Opm
     class GasLiftSingleWell
     {
         using Simulator = GetPropType<TypeTag, Properties::Simulator>;
-        using WellState = WellStateFullyImplicitBlackoil;
         using StdWell = Opm::StandardWell<TypeTag>;
         using GLiftWellState = Opm::GasLiftWellState<TypeTag>;
         // TODO: same definition with WellInterface, and
-        //  WellStateFullyImplicitBlackoil eventually they should go
+        //  WellState eventually they should go
         //  to a common header file.
         static const int Water = BlackoilPhases::Aqua;
         static const int Oil = BlackoilPhases::Liquid;

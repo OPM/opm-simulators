@@ -19,7 +19,7 @@
 */
 
 #include <config.h>
-#include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/simulators/wells/WellState.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
@@ -32,7 +32,7 @@
 namespace Opm
 {
 
-void WellStateFullyImplicitBlackoil::base_init(const std::vector<double>& cellPressures,
+void WellState::base_init(const std::vector<double>& cellPressures,
                                                const std::vector<Well>& wells_ecl,
                                                const std::vector<ParallelWellInfo*>& parallel_well_info,
                                                const std::vector<std::vector<PerforationData>>& well_perf_data,
@@ -77,7 +77,7 @@ void WellStateFullyImplicitBlackoil::base_init(const std::vector<double>& cellPr
 
 
 
-void WellStateFullyImplicitBlackoil::initSingleWell(const std::vector<double>& cellPressures,
+void WellState::initSingleWell(const std::vector<double>& cellPressures,
                                                     const int w,
                                                     const Well& well,
                                                     const std::vector<PerforationData>& well_perf_data,
@@ -224,12 +224,12 @@ void WellStateFullyImplicitBlackoil::initSingleWell(const std::vector<double>& c
 
 
 
-void WellStateFullyImplicitBlackoil::init(const std::vector<double>& cellPressures,
+void WellState::init(const std::vector<double>& cellPressures,
                                           const Schedule& schedule,
                                           const std::vector<Well>& wells_ecl,
                                           const std::vector<ParallelWellInfo*>& parallel_well_info,
                                           const int report_step,
-                                          const WellStateFullyImplicitBlackoil* prevState,
+                                          const WellState* prevState,
                                           const std::vector<std::vector<PerforationData>>& well_perf_data,
                                           const SummaryState& summary_state)
 {
@@ -391,7 +391,7 @@ void WellStateFullyImplicitBlackoil::init(const std::vector<double>& cellPressur
                 this->update_thp( newIndex, prevState->thp( oldIndex ));
 
                 // If new target is set using WCONPROD, WCONINJE etc. we use the new control
-                if (!this->events_[w].hasEvent(WellStateFullyImplicitBlackoil::event_mask)) {
+                if (!this->events_[w].hasEvent(WellState::event_mask)) {
                     current_injection_controls_[ newIndex ] = prevState->currentInjectionControl(oldIndex);
                     current_production_controls_[ newIndex ] = prevState->currentProductionControl(oldIndex);
                 }
@@ -412,7 +412,7 @@ void WellStateFullyImplicitBlackoil::init(const std::vector<double>& cellPressur
                 if (new_iter == this->wellMap().end()) {
                     throw std::logic_error {
                         well.name() + " is not in internal well map - "
-                        "Bug in WellStateFullyImplicitBlackoil"
+                        "Bug in WellState"
                     };
                 }
 
@@ -536,7 +536,7 @@ void WellStateFullyImplicitBlackoil::init(const std::vector<double>& cellPressur
     do_glift_optimization_ = true;
 }
 
-void WellStateFullyImplicitBlackoil::resize(const std::vector<Well>& wells_ecl,
+void WellState::resize(const std::vector<Well>& wells_ecl,
                                             const std::vector<ParallelWellInfo*>& parallel_well_info,
                                             const Schedule& schedule,
                                             const bool handle_ms_well,
@@ -553,7 +553,7 @@ void WellStateFullyImplicitBlackoil::resize(const std::vector<Well>& wells_ecl,
 }
 
 const std::vector<double>&
-WellStateFullyImplicitBlackoil::currentWellRates(const std::string& wellName) const
+WellState::currentWellRates(const std::string& wellName) const
 {
     auto it = well_rates.find(wellName);
 
@@ -564,7 +564,7 @@ WellStateFullyImplicitBlackoil::currentWellRates(const std::string& wellName) co
 }
 
 template<class Communication>
-void WellStateFullyImplicitBlackoil::gatherVectorsOnRoot(const std::vector<data::Connection>& from_connections,
+void WellState::gatherVectorsOnRoot(const std::vector<data::Connection>& from_connections,
                                                          std::vector<data::Connection>& to_connections,
                                                          const Communication& comm) const
 {
@@ -586,7 +586,7 @@ void WellStateFullyImplicitBlackoil::gatherVectorsOnRoot(const std::vector<data:
 }
 
 data::Wells
-WellStateFullyImplicitBlackoil::report(const int* globalCellIdxMap,
+WellState::report(const int* globalCellIdxMap,
                                        const std::function<bool(const int)>& wasDynamicallyClosed) const
 {
     if (this->numWells() == 0)
@@ -735,7 +735,7 @@ WellStateFullyImplicitBlackoil::report(const int* globalCellIdxMap,
     return res;
 }
 
-void WellStateFullyImplicitBlackoil::reportConnections(data::Well& well,
+void WellState::reportConnections(data::Well& well,
                                                        const PhaseUsage &pu,
                                                        const WellMapType::value_type& wt,
                                                        const int* globalCellIdxMap) const
@@ -802,8 +802,8 @@ void WellStateFullyImplicitBlackoil::reportConnections(data::Well& well,
     assert(local_comp_index == this->well_perf_data_[wt.second[0]].size());
 }
 
-void WellStateFullyImplicitBlackoil::initWellStateMSWell(const std::vector<Well>& wells_ecl,
-                                                         const WellStateFullyImplicitBlackoil* prev_well_state)
+void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
+                                                         const WellState* prev_well_state)
 {
     // still using the order in wells
     const int nw = wells_ecl.size();
@@ -981,7 +981,7 @@ void WellStateFullyImplicitBlackoil::initWellStateMSWell(const std::vector<Well>
 }
 
 void
-WellStateFullyImplicitBlackoil::calculateSegmentRates(const std::vector<std::vector<int>>& segment_inlets,
+WellState::calculateSegmentRates(const std::vector<std::vector<int>>& segment_inlets,
                                                       const std::vector<std::vector<int>>&segment_perforations,
                                                       const std::vector<double>& perforation_rates,
                                                       const int np, const int segment,
@@ -1008,38 +1008,38 @@ WellStateFullyImplicitBlackoil::calculateSegmentRates(const std::vector<std::vec
     }
 }
 
-double WellStateFullyImplicitBlackoil::solventWellRate(const int w) const
+double WellState::solventWellRate(const int w) const
 {
     return parallel_well_info_[w]->sumPerfValues(&perfRateSolvent_[0] + first_perf_index_[w],
                                                  &perfRateSolvent_[0] + first_perf_index_[w] + num_perf_[w]);
 }
 
-double WellStateFullyImplicitBlackoil::polymerWellRate(const int w) const
+double WellState::polymerWellRate(const int w) const
 {
     return parallel_well_info_[w]->sumPerfValues(&perfRatePolymer_[0] + first_perf_index_[w],
                                                  &perfRatePolymer_[0] + first_perf_index_[w] + num_perf_[w]);
 }
 
-double WellStateFullyImplicitBlackoil::brineWellRate(const int w) const
+double WellState::brineWellRate(const int w) const
 {
     return parallel_well_info_[w]->sumPerfValues(&perfRateBrine_[0] + first_perf_index_[w],
                                                  &perfRateBrine_[0] + first_perf_index_[w] + num_perf_[w]);
 }
 
-int WellStateFullyImplicitBlackoil::topSegmentIndex(const int w) const
+int WellState::topSegmentIndex(const int w) const
 {
     assert(w < int(top_segment_index_.size()) );
 
     return top_segment_index_[w];
 }
 
-void WellStateFullyImplicitBlackoil::stopWell(int well_index)
+void WellState::stopWell(int well_index)
 {
     this->status_[well_index] = Well::Status::STOP;
     this->thp_[well_index] = 0;
 }
 
-void WellStateFullyImplicitBlackoil::shutWell(int well_index)
+void WellState::shutWell(int well_index)
 {
     this->status_[well_index] = Well::Status::SHUT;
     this->thp_[well_index] = 0;
@@ -1061,7 +1061,7 @@ void WellStateFullyImplicitBlackoil::shutWell(int well_index)
               this->conn_productivity_index_.begin() + last, 0.0);
 }
 
-void WellStateFullyImplicitBlackoil::updateStatus(int well_index, Well::Status status)
+void WellState::updateStatus(int well_index, Well::Status status)
 {
     switch (status) {
     case Well::Status::OPEN:
@@ -1081,7 +1081,7 @@ void WellStateFullyImplicitBlackoil::updateStatus(int well_index, Well::Status s
 
 
 template<class Comm>
-void WellStateFullyImplicitBlackoil::communicateGroupRates(const Comm& comm)
+void WellState::communicateGroupRates(const Comm& comm)
 {
     // Note that injection_group_vrep_rates is handled separate from
     // the forAllGroupData() function, since it contains single doubles,
@@ -1144,14 +1144,14 @@ void WellStateFullyImplicitBlackoil::communicateGroupRates(const Comm& comm)
 }
 
 template<class Comm>
-void WellStateFullyImplicitBlackoil::updateGlobalIsGrup(const Comm& comm)
+void WellState::updateGlobalIsGrup(const Comm& comm)
 {
     this->global_well_info.value().update_group(this->status_.data(), this->current_injection_controls_.data(), this->current_production_controls_.data());
     this->global_well_info.value().communicate(comm);
 }
 
 data::Segment
-WellStateFullyImplicitBlackoil::reportSegmentResults(const PhaseUsage& pu,
+WellState::reportSegmentResults(const PhaseUsage& pu,
                                                      const int         well_id,
                                                      const int         seg_ix,
                                                      const int         seg_no) const
@@ -1194,7 +1194,7 @@ WellStateFullyImplicitBlackoil::reportSegmentResults(const PhaseUsage& pu,
     return seg_res;
 }
 
-bool WellStateFullyImplicitBlackoil::wellIsOwned(std::size_t well_index,
+bool WellState::wellIsOwned(std::size_t well_index,
                                                  [[maybe_unused]] const std::string& wellName) const
 {
     const auto& well_info = parallelWellInfo(well_index);
@@ -1203,7 +1203,7 @@ bool WellStateFullyImplicitBlackoil::wellIsOwned(std::size_t well_index,
     return well_info.isOwner();
 }
 
-bool WellStateFullyImplicitBlackoil::wellIsOwned(const std::string& wellName) const
+bool WellState::wellIsOwned(const std::string& wellName) const
 {
     const auto& it = this->wellMap_.find( wellName );
     if (it == this->wellMap_.end()) {
@@ -1213,7 +1213,7 @@ bool WellStateFullyImplicitBlackoil::wellIsOwned(const std::string& wellName) co
     return wellIsOwned(well_index, wellName);
 }
 
-int WellStateFullyImplicitBlackoil::numSegments(const int well_id) const
+int WellState::numSegments(const int well_id) const
 {
     const auto topseg = this->topSegmentIndex(well_id);
 
@@ -1222,14 +1222,14 @@ int WellStateFullyImplicitBlackoil::numSegments(const int well_id) const
             : (this->topSegmentIndex(well_id + 1) - topseg);
 }
 
-int WellStateFullyImplicitBlackoil::segmentNumber(const int well_id, const int seg_id) const
+int WellState::segmentNumber(const int well_id, const int seg_id) const
 {
     const auto top_offset = this->topSegmentIndex(well_id);
 
     return this->seg_number_[top_offset + seg_id];
 }
 
-void WellStateFullyImplicitBlackoil::updateWellsDefaultALQ( const std::vector<Well>& wells_ecl )
+void WellState::updateWellsDefaultALQ( const std::vector<Well>& wells_ecl )
 {
     const int nw = wells_ecl.size();
     for (int i = 0; i<nw; i++) {
@@ -1242,7 +1242,7 @@ void WellStateFullyImplicitBlackoil::updateWellsDefaultALQ( const std::vector<We
     }
 }
 
-void WellStateFullyImplicitBlackoil::resetConnectionTransFactors(const int well_index,
+void WellState::resetConnectionTransFactors(const int well_index,
                                                                  const std::vector<PerforationData>& well_perf_data)
 {
     if (this->well_perf_data_[well_index].size() != well_perf_data.size()) {
@@ -1282,11 +1282,11 @@ void WellStateFullyImplicitBlackoil::resetConnectionTransFactors(const int well_
 }
 
 const ParallelWellInfo&
-WellStateFullyImplicitBlackoil::parallelWellInfo(std::size_t well_index) const
+WellState::parallelWellInfo(std::size_t well_index) const
 {
     return *parallel_well_info_[well_index];
 }
 
-template void WellStateFullyImplicitBlackoil::updateGlobalIsGrup<ParallelWellInfo::Communication>(const ParallelWellInfo::Communication& comm);
-template void WellStateFullyImplicitBlackoil::communicateGroupRates<ParallelWellInfo::Communication>(const ParallelWellInfo::Communication& comm);
+template void WellState::updateGlobalIsGrup<ParallelWellInfo::Communication>(const ParallelWellInfo::Communication& comm);
+template void WellState::communicateGroupRates<ParallelWellInfo::Communication>(const ParallelWellInfo::Communication& comm);
 } // namespace Opm

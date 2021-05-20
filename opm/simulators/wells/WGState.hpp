@@ -20,7 +20,7 @@
 #ifndef OPM_WGSTATE_HEADER_INCLUDED
 #define OPM_WGSTATE_HEADER_INCLUDED
 
-#include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 
 namespace Opm {
@@ -34,7 +34,7 @@ struct PhaseUsage;
 struct WGState {
     WGState(const PhaseUsage& pu);
 
-    WellStateFullyImplicitBlackoil well_state;
+    WellState well_state;
     GroupState group_state;
 };
 

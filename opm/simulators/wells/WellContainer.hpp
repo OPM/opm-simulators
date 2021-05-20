@@ -36,7 +36,7 @@ namespace Opm {
   can also be accessed and updated with the name.
 
   The class is created to facilitate safe and piecewise refactoring of the
-  WellStateFullyImplicitBlackOil class, and might have a short life in the
+  WellState class, and might have a short life in the
   development timeline.
 */
 

@@ -40,7 +40,7 @@
 #include <opm/simulators/wells/GasLiftSingleWell.hpp>
 //#include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
 //#include <flow/flow_ebos_blackoil.hpp>
-#include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/simulators/wells/WellState.hpp>
 /// #include <opm/simulators/flow/Main.hpp>
 
 #if HAVE_DUNE_FEM
@@ -119,7 +119,7 @@ BOOST_AUTO_TEST_CASE(G1)
     //using EclProblem = Opm::EclProblem<TypeTag>;
     //using EclWellModel = typename EclProblem::EclWellModel;
     using WellModel = Opm::BlackoilWellModel<TypeTag>;
-    using WellState = Opm::WellStateFullyImplicitBlackoil;
+    using WellState = Opm::WellState;
     using StdWell = Opm::StandardWell<TypeTag>;
     using GasLiftSingleWell = Opm::GasLiftSingleWell<TypeTag>;
     const std::string filename = "GLIFT1.DATA";

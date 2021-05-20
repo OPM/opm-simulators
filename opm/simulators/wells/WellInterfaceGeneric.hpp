@@ -42,11 +42,10 @@ struct PhaseUsage;
 class SummaryState;
 class VFPProperties;
 class WellTestState;
-class WellStateFullyImplicitBlackoil;
+class WellState;
 
 class WellInterfaceGeneric {
 public:
-    using WellState = WellStateFullyImplicitBlackoil;
 
     WellInterfaceGeneric(const Well& well,
                          const ParallelWellInfo& parallel_well_info,
