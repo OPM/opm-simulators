@@ -98,8 +98,6 @@ public:
     std::vector<double>& perfPress(const std::string& wname) { return perfpress_[wname]; }
     const std::vector<double>& perfPress(const std::string& wname) const { return perfpress_[wname]; }
 
-    const ParallelWellInfo& parallelWellInfo(std::size_t well_index) const;
-
 
 
     /// The number of phases present.

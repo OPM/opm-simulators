@@ -1061,6 +1061,12 @@ void WellStateFullyImplicitBlackoil::resetConnectionTransFactors(const int well_
     }
 }
 
+const ParallelWellInfo&
+WellStateFullyImplicitBlackoil::parallelWellInfo(std::size_t well_index) const
+{
+    return *parallel_well_info_[well_index];
+}
+
 template void WellStateFullyImplicitBlackoil::updateGlobalIsGrup<ParallelWellInfo::Communication>(const ParallelWellInfo::Communication& comm);
 template void WellStateFullyImplicitBlackoil::communicateGroupRates<ParallelWellInfo::Communication>(const ParallelWellInfo::Communication& comm);
 } // namespace Opm
