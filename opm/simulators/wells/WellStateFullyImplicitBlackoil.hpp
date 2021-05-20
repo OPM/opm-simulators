@@ -116,9 +116,14 @@ public:
         return this->well_rates.find(wellName) != this->well_rates.end();
     }
 
+    template<class Communication>
+    void gatherVectorsOnRoot(const std::vector< data::Connection >& from_connections,
+                             std::vector< data::Connection >& to_connections,
+                             const Communication& comm) const;
+
     data::Wells
     report(const int* globalCellIdxMap,
-           const std::function<bool(const int)>& wasDynamicallyClosed) const override;
+           const std::function<bool(const int)>& wasDynamicallyClosed) const;
 
     void reportConnections(data::Well& well, const PhaseUsage &pu,
                            const WellMapType::value_type& wt,

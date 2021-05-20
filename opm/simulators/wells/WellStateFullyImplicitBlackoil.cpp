@@ -371,22 +371,85 @@ WellStateFullyImplicitBlackoil::currentWellRates(const std::string& wellName) co
     return it->second.second;
 }
 
+template<class Communication>
+void WellStateFullyImplicitBlackoil::gatherVectorsOnRoot(const std::vector<data::Connection>& from_connections,
+                                                         std::vector<data::Connection>& to_connections,
+                                                         const Communication& comm) const
+{
+    int size = from_connections.size();
+    std::vector<int> sizes;
+    std::vector<int> displ;
+    if (comm.rank()==0){
+        sizes.resize(comm.size());
+    }
+    comm.gather(&size, sizes.data(), 1, 0);
+
+    if (comm.rank()==0){
+        displ.resize(comm.size()+1, 0);
+        std::partial_sum(sizes.begin(), sizes.end(), displ.begin()+1);
+        to_connections.resize(displ.back());
+    }
+    comm.gatherv(from_connections.data(), size, to_connections.data(),
+                 sizes.data(), displ.data(), 0);
+}
+
 data::Wells
 WellStateFullyImplicitBlackoil::report(const int* globalCellIdxMap,
                                        const std::function<bool(const int)>& wasDynamicallyClosed) const
 {
-    data::Wells res =
-            WellState::report(globalCellIdxMap, wasDynamicallyClosed);
+    if (this->numWells() == 0)
+        return {};
 
-    const int nw = this->numWells();
-    if (nw == 0) {
-        return res;
-    }
-
+    using rt = data::Rates::opt;
     const auto& pu = this->phaseUsage();
     const int np = pu.num_phases;
 
-    using rt = data::Rates::opt;
+    data::Wells res;
+    for( const auto& itr : this->wellMap() ) {
+        const auto well_index = itr.second[ 0 ];
+        if ((this->status_[well_index] == Well::Status::SHUT) &&
+            ! wasDynamicallyClosed(well_index))
+        {
+            continue;
+        }
+
+        const auto& pwinfo = *this->parallel_well_info_[well_index];
+        using WellT = std::remove_reference_t<decltype(res[ itr.first ])>;
+        WellT dummyWell; // dummy if we are not owner
+        auto& well = pwinfo.isOwner() ? res[ itr.first ] : dummyWell;
+        well.bhp = this->bhp(well_index);
+        well.thp = this->thp( well_index );
+        well.temperature = this->temperature( well_index );
+
+        const auto& wv = this->wellRates(well_index);
+        if( pu.phase_used[BlackoilPhases::Aqua] ) {
+            well.rates.set( rt::wat, wv[ pu.phase_pos[BlackoilPhases::Aqua] ] );
+        }
+
+        if( pu.phase_used[BlackoilPhases::Liquid] ) {
+            well.rates.set( rt::oil, wv[ pu.phase_pos[BlackoilPhases::Liquid] ] );
+        }
+
+        if( pu.phase_used[BlackoilPhases::Vapour] ) {
+            well.rates.set( rt::gas, wv[ pu.phase_pos[BlackoilPhases::Vapour] ] );
+        }
+
+        if (pwinfo.communication().size()==1)
+        {
+            reportConnections(well, pu, itr, globalCellIdxMap);
+        }
+        else
+        {
+            assert(pwinfo.communication().rank() != 0 || &dummyWell != &well);
+            // report the local connections
+            reportConnections(dummyWell, pu, itr, globalCellIdxMap);
+            // gather them to well on root.
+            gatherVectorsOnRoot(dummyWell.connections, well.connections,
+                                pwinfo.communication());
+        }
+    }
+
+    const int nw = this->numWells();
     std::vector<rt> phs(np);
     if (pu.phase_used[Water]) {
         phs.at( pu.phase_pos[Water] ) = rt::wat;
