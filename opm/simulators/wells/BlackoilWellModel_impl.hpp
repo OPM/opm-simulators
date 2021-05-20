@@ -2013,21 +2013,23 @@ namespace Opm {
                 const WellSegments& segment_set = well_ecl.getSegments();
 
                 const int top_segment_index = well_state.topSegmentIndex(well_index);
-                const auto& segments = rst_well.segments;
+                const auto& rst_segments = rst_well.segments;
 
                 // \Note: eventually we need to hanlde the situations that some segments are shut
-                assert(0u + segment_set.size() == segments.size());
+                assert(0u + segment_set.size() == rst_segments.size());
 
-                for (const auto& segment : segments) {
-                    const int segment_index = segment_set.segmentNumberToIndex(segment.first);
+                auto * segment_pressure = &well_state.segPress()[top_segment_index];
+                auto * segment_rates  = &well_state.segRates()[top_segment_index*np];
+                for (const auto& rst_segment : rst_segments) {
+                    const int segment_index = segment_set.segmentNumberToIndex(rst_segment.first);
 
                     // recovering segment rates and pressure from the restart values
                     const auto pres_idx = data::SegmentPressures::Value::Pressure;
-                    well_state.segPress()[top_segment_index + segment_index] = segment.second.pressures[pres_idx];
+                    segment_pressure[segment_index] = rst_segment.second.pressures[pres_idx];
 
-                    const auto& segment_rates = segment.second.rates;
+                    const auto& rst_segment_rates = rst_segment.second.rates;
                     for (int p = 0; p < np; ++p) {
-                        well_state.segRates()[(top_segment_index + segment_index) * np + p] = segment_rates.get(phs[p]);
+                        segment_rates[segment_index * np + p] = rst_segment_rates.get(phs[p]);
                     }
                 }
             }

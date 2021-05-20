@@ -685,21 +685,26 @@ void WellStateFullyImplicitBlackoil::initWellStateMSWell(const std::vector<Well>
                 }
 
                 const int old_top_segment_index = prev_well_state->topSegmentIndex(old_index_well);
-                const int new_top_segmnet_index = topSegmentIndex(new_index_well);
+                const int new_top_segment_index = topSegmentIndex(new_index_well);
                 int number_of_segment = 0;
                 // if it is the last well in list
                 if (new_index_well == int(top_segment_index_.size()) - 1) {
-                    number_of_segment = nseg_ - new_top_segmnet_index;
+                    number_of_segment = nseg_ - new_top_segment_index;
                 } else {
-                    number_of_segment = topSegmentIndex(new_index_well + 1) - new_top_segmnet_index;
+                    number_of_segment = topSegmentIndex(new_index_well + 1) - new_top_segment_index;
                 }
 
-                for (int i = 0; i < number_of_segment * np; ++i) {
-                    seg_rates_[new_top_segmnet_index * np + i] = prev_well_state->segRates()[old_top_segment_index * np + i];
-                }
+                auto * segment_rates = &this->seg_rates_[new_top_segment_index*np];
+                auto * segment_pressure = &this->seg_press_[new_top_segment_index];
 
-                for (int i = 0; i < number_of_segment; ++i) {
-                    seg_press_[new_top_segmnet_index + i] = prev_well_state->segPress()[old_top_segment_index + i];
+                const auto * prev_segment_rates = &prev_well_state->segRates()[old_top_segment_index*np];
+                const auto * prev_segment_pressure = &prev_well_state->segPress()[new_top_segment_index];
+
+                for (int seg=0; seg < number_of_segment; ++seg) {
+                    for (int p = 0; p < np; ++p)
+                        segment_rates[seg*np + p] = prev_segment_rates[seg*np + p];
+
+                    segment_pressure[seg] = prev_segment_pressure[seg];
                 }
             }
         }
