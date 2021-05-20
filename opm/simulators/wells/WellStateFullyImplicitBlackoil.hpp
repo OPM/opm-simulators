@@ -64,7 +64,6 @@ public:
     using BaseType :: bhp;
     using BaseType :: perfPress;
     using BaseType :: numPhases;
-    using BaseType :: resetConnectionTransFactors;
     using BaseType :: updateStatus;
 
     explicit WellStateFullyImplicitBlackoil(const PhaseUsage& pu) :
@@ -381,6 +380,18 @@ public:
                      const std::string& wellName) const;
 
     bool wellIsOwned(const std::string& wellName) const;
+
+    /// Special purpose method to support dynamically rescaling a well's
+    /// CTFs through WELPI.
+    ///
+    /// \param[in] well_index Process-local linear index of single well.
+    ///    Must be in the range 0..numWells()-1.
+    ///
+    /// \param[in] well_perf_data New perforation data.  Only
+    ///    PerforationData::connection_transmissibility_factor actually
+    ///    used (overwrites existing internal values).
+    void resetConnectionTransFactors(const int well_index,
+                                     const std::vector<PerforationData>& well_perf_data);
 
 private:
     std::vector<double> perfphaserates_;
