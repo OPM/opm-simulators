@@ -125,8 +125,8 @@ bool WellState::wellIsOwned(std::size_t well_index,
 
 bool WellState::wellIsOwned(const std::string& wellName) const
 {
-    const auto& it = wellMap().find( wellName );
-    if (it == wellMap().end()) {
+    const auto& it = this->wellMap_.find( wellName );
+    if (it == this->wellMap_.end()) {
         OPM_THROW(std::logic_error, "Could not find well " << wellName << " in well map");
     }
     const int well_index = it->second[0];

@@ -109,9 +109,6 @@ public:
     std::vector<double>& perfPress(const std::string& wname) { return perfpress_[wname]; }
     const std::vector<double>& perfPress(const std::string& wname) const { return perfpress_[wname]; }
 
-    const WellMapType& wellMap() const { return wellMap_; }
-    WellMapType& wellMap() { return wellMap_; }
-
     const ParallelWellInfo& parallelWellInfo(std::size_t well_index) const;
 
     bool wellIsOwned(std::size_t well_index,
@@ -119,11 +116,6 @@ public:
 
     bool wellIsOwned(const std::string& wellName) const;
 
-    /// The number of wells present.
-    int numWells() const
-    {
-        return wellMap_.size();
-    }
 
     /// The number of phases present.
     int numPhases() const
@@ -149,6 +141,7 @@ protected:
     WellContainer<Well::Status> status_;
     WellContainer<std::vector<PerforationData>> well_perf_data_;
     WellContainer<const ParallelWellInfo*> parallel_well_info_;
+    WellMapType wellMap_;
 
 private:
     PhaseUsage phase_usage_;

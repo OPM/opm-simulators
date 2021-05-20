@@ -63,8 +63,6 @@ public:
     using BaseType :: wellRates;
     using BaseType :: bhp;
     using BaseType :: perfPress;
-    using BaseType :: wellMap;
-    using BaseType :: numWells;
     using BaseType :: numPhases;
     using BaseType :: resetConnectionTransFactors;
     using BaseType :: updateStatus;
@@ -73,6 +71,15 @@ public:
         WellState(pu)
     {
     }
+
+    const WellMapType& wellMap() const { return wellMap_; }
+    WellMapType& wellMap() { return wellMap_; }
+
+    int numWells() const
+    {
+        return wellMap_.size();
+    }
+
 
     /// Allocate and initialize if wells is non-null.  Also tries
     /// to give useful initial values to the bhp(), wellRates()
