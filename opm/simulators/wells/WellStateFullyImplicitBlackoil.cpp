@@ -32,6 +32,198 @@
 namespace Opm
 {
 
+void WellStateFullyImplicitBlackoil::base_init(const std::vector<double>& cellPressures,
+                                               const std::vector<Well>& wells_ecl,
+                                               const std::vector<ParallelWellInfo*>& parallel_well_info,
+                                               const std::vector<std::vector<PerforationData>>& well_perf_data,
+                                               const SummaryState& summary_state)
+{
+    // clear old name mapping
+    this->wellMap_.clear();
+    this->perfpress_.clear();
+    this->perfrates_.clear();
+    this->status_.clear();
+    this->well_perf_data_.clear();
+    this->parallel_well_info_.clear();
+    this->wellrates_.clear();
+    {
+        // const int nw = wells->number_of_wells;
+        const int nw = wells_ecl.size();
+        // const int np = wells->number_of_phases;
+        bhp_.resize(nw, 0.0);
+        thp_.resize(nw, 0.0);
+        temperature_.resize(nw, 273.15 + 15.56); // standard condition temperature
+        int connpos = 0;
+        for (int w = 0; w < nw; ++w) {
+            const Well& well = wells_ecl[w];
+
+            // Initialize bhp(), thp(), wellRates(), temperature().
+            initSingleWell(cellPressures, w, well, well_perf_data[w], parallel_well_info[w], summary_state);
+
+            // Setup wellname -> well index mapping.
+            const int num_perf_this_well = well_perf_data[w].size();
+            std::string name = well.name();
+            assert( name.size() > 0 );
+            mapentry_t& wellMapEntry = wellMap_[name];
+            wellMapEntry[ 0 ] = w;
+            wellMapEntry[ 1 ] = connpos;
+            wellMapEntry[ 2 ] = num_perf_this_well;
+            connpos += num_perf_this_well;
+        }
+    }
+}
+
+
+
+
+
+void WellStateFullyImplicitBlackoil::initSingleWell(const std::vector<double>& cellPressures,
+                                                    const int w,
+                                                    const Well& well,
+                                                    const std::vector<PerforationData>& well_perf_data,
+                                                    const ParallelWellInfo* well_info,
+                                                    const SummaryState& summary_state)
+{
+    assert(well.isInjector() || well.isProducer());
+
+    // Set default zero initial well rates.
+    // May be overwritten below.
+    const auto& pu = this->phase_usage_;
+    const int np = pu.num_phases;
+
+    if ( well.isInjector() ) {
+        temperature_[w] = well.injectionControls(summary_state).temperature;
+    }
+    this->status_.add(well.name(), Well::Status::OPEN);
+    this->well_perf_data_.add(well.name(), well_perf_data);
+    this->parallel_well_info_.add(well.name(), well_info);
+    this->wellrates_.add(well.name(), std::vector<double>(np, 0));
+
+    const int num_perf_this_well = well_info->communication().sum(well_perf_data_[w].size());
+    this->perfpress_.add(well.name(), std::vector<double>(num_perf_this_well, -1e100));
+    this->perfrates_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
+    if ( num_perf_this_well == 0 ) {
+        // No perforations of the well. Initialize to zero.
+        bhp_[w] = 0.;
+        thp_[w] = 0.;
+        return;
+    }
+
+    const auto inj_controls = well.isInjector() ? well.injectionControls(summary_state) : Well::InjectionControls(0);
+    const auto prod_controls = well.isProducer() ? well.productionControls(summary_state) : Well::ProductionControls(0);
+
+    const bool is_bhp = well.isInjector() ? (inj_controls.cmode == Well::InjectorCMode::BHP)
+                                          : (prod_controls.cmode == Well::ProducerCMode::BHP);
+    const double bhp_limit = well.isInjector() ? inj_controls.bhp_limit : prod_controls.bhp_limit;
+    const bool is_grup = well.isInjector() ? (inj_controls.cmode == Well::InjectorCMode::GRUP)
+                                           : (prod_controls.cmode == Well::ProducerCMode::GRUP);
+
+    const double inj_surf_rate = well.isInjector() ? inj_controls.surface_rate : 0.0; // To avoid a "maybe-uninitialized" warning.
+
+    const double local_pressure = well_perf_data_[w].empty() ?
+                                      0 : cellPressures[well_perf_data_[w][0].cell_index];
+    const double global_pressure = well_info->broadcastFirstPerforationValue(local_pressure);
+
+    if (well.getStatus() == Well::Status::OPEN) {
+        this->status_[w] = Well::Status::OPEN;
+    }
+
+    if (well.getStatus() == Well::Status::STOP) {
+        // Stopped well:
+        // 1. Rates: zero well rates.
+        // 2. Bhp: assign bhp equal to bhp control, if
+        //    applicable, otherwise assign equal to
+        //    first perforation cell pressure.
+        if (is_bhp) {
+            bhp_[w] = bhp_limit;
+        } else {
+            bhp_[w] = global_pressure;
+        }
+    } else if (is_grup) {
+        // Well under group control.
+        // 1. Rates: zero well rates.
+        // 2. Bhp: initialize bhp to be a
+        //    little above or below (depending on if
+        //    the well is an injector or producer)
+        //    pressure in first perforation cell.
+        const double safety_factor = well.isInjector() ? 1.01 : 0.99;
+        bhp_[w] = safety_factor * global_pressure;
+    } else {
+        // Open well, under own control:
+        // 1. Rates: initialize well rates to match
+        //    controls if type is ORAT/GRAT/WRAT
+        //    (producer) or RATE (injector).
+        //    Otherwise, we cannot set the correct
+        //    value here and initialize to zero rate.
+        auto& rates = this->wellrates_[w];
+        if (well.isInjector()) {
+            if (inj_controls.cmode == Well::InjectorCMode::RATE) {
+                switch (inj_controls.injector_type) {
+                case InjectorType::WATER:
+                    assert(pu.phase_used[BlackoilPhases::Aqua]);
+                    rates[pu.phase_pos[BlackoilPhases::Aqua]] = inj_surf_rate;
+                    break;
+                case InjectorType::GAS:
+                    assert(pu.phase_used[BlackoilPhases::Vapour]);
+                    rates[pu.phase_pos[BlackoilPhases::Vapour]] = inj_surf_rate;
+                    break;
+                case InjectorType::OIL:
+                    assert(pu.phase_used[BlackoilPhases::Liquid]);
+                    rates[pu.phase_pos[BlackoilPhases::Liquid]] = inj_surf_rate;
+                    break;
+                case InjectorType::MULTI:
+                    // Not currently handled, keep zero init.
+                    break;
+                }
+            } else {
+                // Keep zero init.
+            }
+        } else {
+            assert(well.isProducer());
+            // Note negative rates for producing wells.
+            switch (prod_controls.cmode) {
+            case Well::ProducerCMode::ORAT:
+                assert(pu.phase_used[BlackoilPhases::Liquid]);
+                rates[pu.phase_pos[BlackoilPhases::Liquid]] = -prod_controls.oil_rate;
+                break;
+            case Well::ProducerCMode::WRAT:
+                assert(pu.phase_used[BlackoilPhases::Aqua]);
+                rates[pu.phase_pos[BlackoilPhases::Aqua]] = -prod_controls.water_rate;
+                break;
+            case Well::ProducerCMode::GRAT:
+                assert(pu.phase_used[BlackoilPhases::Vapour]);
+                rates[pu.phase_pos[BlackoilPhases::Vapour]] = -prod_controls.gas_rate;
+                break;
+            default:
+                // Keep zero init.
+                break;
+            }
+        }
+        // 2. Bhp: initialize bhp to be target pressure if
+        //    bhp-controlled well, otherwise set to a
+        //    little above or below (depending on if
+        //    the well is an injector or producer)
+        //    pressure in first perforation cell.
+        if (is_bhp) {
+            bhp_[w] = bhp_limit;
+        } else {
+            const double safety_factor = well.isInjector() ? 1.01 : 0.99;
+            bhp_[w] = safety_factor * global_pressure;
+        }
+    }
+
+    // 3. Thp: assign thp equal to thp target/limit, if such a limit exists,
+    //    otherwise keep it zero.
+    const bool has_thp = well.isInjector() ? inj_controls.hasControl(Well::InjectorCMode::THP)
+                                           : prod_controls.hasControl(Well::ProducerCMode::THP);
+    const double thp_limit = well.isInjector() ? inj_controls.thp_limit : prod_controls.thp_limit;
+    if (has_thp) {
+        thp_[w] = thp_limit;
+    }
+}
+
+
+
 void WellStateFullyImplicitBlackoil::init(const std::vector<double>& cellPressures,
                                           const Schedule& schedule,
                                           const std::vector<Well>& wells_ecl,
@@ -42,7 +234,7 @@ void WellStateFullyImplicitBlackoil::init(const std::vector<double>& cellPressur
                                           const SummaryState& summary_state)
 {
     // call init on base class
-    BaseType :: init(cellPressures, wells_ecl, parallel_well_info, well_perf_data, summary_state);
+    this->base_init(cellPressures, wells_ecl, parallel_well_info, well_perf_data, summary_state);
     this->global_well_info = std::make_optional<GlobalWellInfo>( schedule, report_step, wells_ecl );
     for (const auto& winfo: parallel_well_info)
     {

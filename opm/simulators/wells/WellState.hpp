@@ -57,19 +57,6 @@ public:
 
     WellState& operator=(const WellState& rhs) = default;
 
-    /// Allocate and initialize if wells is non-null.
-    /// Also tries to give useful initial values to the bhp() and
-    /// wellRates() fields, depending on controls.  The
-    /// perfRates() field is filled with zero, and perfPress()
-    /// with -1e100.
-    void init(const std::vector<double>& cellPressures,
-              const std::vector<Well>& wells_ecl,
-              const std::vector<ParallelWellInfo*>& parallel_well_info,
-              const std::vector<std::vector<PerforationData>>& well_perf_data,
-              const SummaryState& summary_state);
-
-
-
 
 protected:
     WellContainer<Well::Status> status_;
@@ -83,16 +70,6 @@ protected:
     PhaseUsage phase_usage_;
     WellContainer<std::vector<double>> perfrates_;
     WellContainer<std::vector<double>> perfpress_;
-
-private:
-
-
-    void initSingleWell(const std::vector<double>& cellPressures,
-                        const int w,
-                        const Well& well,
-                        const std::vector<PerforationData>& well_perf_data,
-                        const ParallelWellInfo* well_info,
-                        const SummaryState& summary_state);
 };
 
 } // namespace Opm

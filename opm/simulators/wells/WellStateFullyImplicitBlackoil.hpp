@@ -554,6 +554,26 @@ private:
     //
     void updateWellsDefaultALQ(const std::vector<Well>& wells_ecl);
 
+    /// Allocate and initialize if wells is non-null.
+    /// Also tries to give useful initial values to the bhp() and
+    /// wellRates() fields, depending on controls.  The
+    /// perfRates() field is filled with zero, and perfPress()
+    /// with -1e100.
+    void base_init(const std::vector<double>& cellPressures,
+                   const std::vector<Well>& wells_ecl,
+                   const std::vector<ParallelWellInfo*>& parallel_well_info,
+                   const std::vector<std::vector<PerforationData>>& well_perf_data,
+                   const SummaryState& summary_state);
+
+    void initSingleWell(const std::vector<double>& cellPressures,
+                        const int w,
+                        const Well& well,
+                        const std::vector<PerforationData>& well_perf_data,
+                        const ParallelWellInfo* well_info,
+                        const SummaryState& summary_state);
+
+
+
 };
 
 } // namespace Opm
