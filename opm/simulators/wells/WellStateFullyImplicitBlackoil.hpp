@@ -127,7 +127,7 @@ public:
 
     void reportConnections(data::Well& well, const PhaseUsage &pu,
                            const WellMapType::value_type& wt,
-                           const int* globalCellIdxMap) const override;
+                           const int* globalCellIdxMap) const;
 
     /// init the MS well related.
     void initWellStateMSWell(const std::vector<Well>& wells_ecl,

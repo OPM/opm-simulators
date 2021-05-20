@@ -166,30 +166,6 @@ void WellState::updateStatus(int well_index, Well::Status status)
 }
 
 
-void WellState::reportConnections(data::Well& well,
-                                  const PhaseUsage&,
-                                  const WellMapType::value_type& itr,
-                                  const int* globalCellIdxMap) const
-{
-    const auto well_index = itr.second[ 0 ];
-    const auto& pd = this->well_perf_data_[well_index];
-    const int num_perf_well = pd.size();
-    well.connections.resize(num_perf_well);
-
-    const auto& perf_rates = this->perfRates(well_index);
-    const auto& perf_pressure = this->perfPress(well_index);
-    for( int i = 0; i < num_perf_well; ++i ) {
-        const auto active_index = this->well_perf_data_[well_index][i].cell_index;
-        auto& connection = well.connections[ i ];
-        connection.index = globalCellIdxMap[active_index];
-        connection.pressure = perf_pressure[i];
-        connection.reservoir_rate = perf_rates[i];
-        connection.trans_factor = pd[i].connection_transmissibility_factor;
-    }
-    assert(num_perf_well == int(well.connections.size()));
-}
-
-
 void WellState::initSingleWell(const std::vector<double>& cellPressures,
                                const int w,
                                const Well& well,

@@ -145,10 +145,6 @@ public:
 
     void updateStatus(int well_index, Well::Status status);
 
-    virtual void reportConnections(data::Well& well, const PhaseUsage&,
-                                   const WellMapType::value_type& itr,
-                                   const int* globalCellIdxMap) const;
-
 protected:
     WellContainer<Well::Status> status_;
     WellContainer<std::vector<PerforationData>> well_perf_data_;
