@@ -69,17 +69,6 @@ public:
               const SummaryState& summary_state);
 
 
-    /// One bhp pressure per well.
-    void update_bhp(std::size_t well_index, double value) { bhp_[well_index] = value; }
-    double bhp(std::size_t well_index) const { return bhp_[well_index]; }
-
-    /// One thp pressure per well.
-    void update_thp(std::size_t well_index, double value) { thp_[well_index] = value; }
-    double thp(std::size_t well_index) const { return thp_[well_index]; }
-
-    /// One temperature per well.
-    void update_temperature(std::size_t well_index, double value) { temperature_[well_index] = value; }
-    double temperature(std::size_t well_index) const { return temperature_[well_index]; }
 
     /// One rate per well and phase.
     const WellContainer<std::vector<double>>& wellRates() const { return wellrates_; }
@@ -108,11 +97,11 @@ protected:
     WellMapType wellMap_;
     std::vector<double> bhp_;
     std::vector<double> thp_;
+    std::vector<double> temperature_;
     WellContainer<std::vector<double>> wellrates_;
     PhaseUsage phase_usage_;
 
 private:
-    std::vector<double> temperature_;
     WellContainer<std::vector<double>> perfrates_;
     WellContainer<std::vector<double>> perfpress_;
 
