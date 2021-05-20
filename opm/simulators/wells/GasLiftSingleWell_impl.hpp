@@ -18,6 +18,16 @@
 */
 
 namespace Opm {
+#include <opm/simulators/wells/StandardWell.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
+#include <opm/simulators/utils/DeferredLogger.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
+#include <opm/simulators/wells/WellState.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/GasLiftOpt.hpp>
+
+#include <optional>
+#include <string>
 
 template<typename TypeTag>
 GasLiftSingleWell<TypeTag>::

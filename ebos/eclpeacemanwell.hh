@@ -33,7 +33,7 @@
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/alignedallocator.hh>
 
-#include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/wells/WGState.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/densead/Evaluation.hpp>
@@ -1413,12 +1413,12 @@ protected:
                 / rhoWaterSurface;
     }
 
-    const WellStateFullyImplicitBlackoil& wellState() const
+    const WellState& wellState() const
     {
         throw std::logic_error("wellState() method not implemented for class eclpeacemanwell");
     }
 
-    WellStateFullyImplicitBlackoil& wellState()
+    WellState& wellState()
     {
         throw std::logic_error("wellState() method not implemented for class eclpeacemanwell");
     }

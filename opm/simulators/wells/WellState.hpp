@@ -46,7 +46,7 @@ class Schedule;
 
 /// The state of a set of wells, tailored for use by the fully
 /// implicit blackoil simulator.
-class WellStateFullyImplicitBlackoil
+class WellState
 {
 public:
     using mapentry_t = std::array<int, 3>;
@@ -54,14 +54,14 @@ public:
 
     static const uint64_t event_mask = ScheduleEvents::WELL_STATUS_CHANGE + ScheduleEvents::PRODUCTION_UPDATE + ScheduleEvents::INJECTION_UPDATE;
 
-    virtual ~WellStateFullyImplicitBlackoil() = default;
+    virtual ~WellState() = default;
 
     // TODO: same definition with WellInterface, eventually they should go to a common header file.
     static const int Water = BlackoilPhases::Aqua;
     static const int Oil = BlackoilPhases::Liquid;
     static const int Gas = BlackoilPhases::Vapour;
 
-    explicit WellStateFullyImplicitBlackoil(const PhaseUsage& pu)
+    explicit WellState(const PhaseUsage& pu)
     {
         this->phase_usage_ = pu;
     }
@@ -86,7 +86,7 @@ public:
               const std::vector<Well>& wells_ecl,
               const std::vector<ParallelWellInfo*>& parallel_well_info,
               const int report_step,
-              const WellStateFullyImplicitBlackoil* prevState,
+              const WellState* prevState,
               const std::vector<std::vector<PerforationData>>& well_perf_data,
               const SummaryState& summary_state);
 
@@ -135,7 +135,7 @@ public:
 
     /// init the MS well related.
     void initWellStateMSWell(const std::vector<Well>& wells_ecl,
-                             const WellStateFullyImplicitBlackoil* prev_well_state);
+                             const WellState* prev_well_state);
 
     static void calculateSegmentRates(const std::vector<std::vector<int>>& segment_inlets, const std::vector<std::vector<int>>&segment_perforations,
                                       const std::vector<double>& perforation_rates, const int np, const int segment, std::vector<double>& segment_rates);

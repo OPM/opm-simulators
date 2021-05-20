@@ -26,7 +26,6 @@ namespace Opm {
     template<typename TypeTag> class StandardWell;
 }
 #include <opm/simulators/wells/StandardWell.hpp>
-
 #include <opm/simulators/wells/GasLiftSingleWellGeneric.hpp>
 
 #include <optional>
@@ -40,7 +39,6 @@ namespace Opm
     class GasLiftSingleWell : public GasLiftSingleWellGeneric
     {
         using Simulator = GetPropType<TypeTag, Properties::Simulator>;
-        using WellState = WellStateFullyImplicitBlackoil;
         using StdWell = StandardWell<TypeTag>;
 
     public:

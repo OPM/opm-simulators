@@ -58,7 +58,7 @@
 #include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
-#include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/wells/WGState.hpp>
 #include <opm/simulators/wells/RateConverter.hpp>
 #include <opm/simulators/wells/WellInterface.hpp>
@@ -93,7 +93,6 @@ namespace Opm {
         {
         public:
             // ---------      Types      ---------
-            typedef WellStateFullyImplicitBlackoil WellState;
             typedef BlackoilModelParametersEbos<TypeTag> ModelParameters;
 
             using Grid = GetPropType<TypeTag, Properties::Grid>;
@@ -231,7 +230,7 @@ namespace Opm {
 
             /*
               The dynamic state of the well model is maintained with an instance
-              of the WellStateFullyImplicitBlackoil class. Currently we have
+              of the WellState class. Currently we have
               three different wellstate instances:
 
                1. The currently active wellstate is in the active_well_state_
@@ -253,7 +252,7 @@ namespace Opm {
             /*
               Immutable version of the currently active wellstate.
             */
-            const WellStateFullyImplicitBlackoil& wellState() const
+            const WellState& wellState() const
             {
                 return this->active_wgstate_.well_state;
             }
@@ -261,7 +260,7 @@ namespace Opm {
             /*
               Mutable version of the currently active wellstate.
             */
-            WellStateFullyImplicitBlackoil& wellState()
+            WellState& wellState()
             {
                 return this->active_wgstate_.well_state;
             }
@@ -273,7 +272,7 @@ namespace Opm {
               prevWellState() must have been stored with the commitWellState()
               function first.
             */
-            const WellStateFullyImplicitBlackoil& prevWellState() const
+            const WellState& prevWellState() const
             {
                 return this->last_valid_wgstate_.well_state;
             }
@@ -286,7 +285,7 @@ namespace Opm {
               Will return the currently active nupcolWellState; must initialize
               the internal nupcol wellstate with initNupcolWellState() first.
             */
-            const WellStateFullyImplicitBlackoil& nupcolWellState() const
+            const WellState& nupcolWellState() const
             {
                 return this->nupcol_wgstate_.well_state;
             }
@@ -590,7 +589,7 @@ namespace Opm {
                                const data::GroupAndNetworkValues& grpNwrkValues,
                                const PhaseUsage& phases,
                                const bool handle_ms_well,
-                               WellStateFullyImplicitBlackoil& state );
+                               WellState& state );
 
             // whether there exists any multisegment well open on this process
             bool anyMSWellOpenLocal() const;
@@ -611,7 +610,7 @@ namespace Opm {
 
             void actionOnBrokenConstraints(const Group& group, const Group::InjectionCMode& newControl, const Phase& topUpPhase, DeferredLogger& deferred_logger);
 
-            void updateWsolvent(const Group& group, const Schedule& schedule, const int reportStepIdx, const WellStateFullyImplicitBlackoil& wellState);
+            void updateWsolvent(const Group& group, const Schedule& schedule, const int reportStepIdx, const WellState& wellState);
 
             void setWsolvent(const Group& group, const Schedule& schedule, const int reportStepIdx, double wsolvent);
 

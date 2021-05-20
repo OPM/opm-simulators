@@ -28,7 +28,7 @@
 #include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
-#include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/simulators/wells/WellState.hpp>
 
 #include <cassert>
 #include <cmath>
