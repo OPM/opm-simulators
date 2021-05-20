@@ -109,7 +109,7 @@ namespace Opm {
             typedef typename BaseAuxiliaryModule<TypeTag>::NeighborSet NeighborSet;
             using GasLiftSingleWell = ::Opm::GasLiftSingleWell<TypeTag>;
             using GasLiftStage2 = ::Opm::GasLiftStage2<TypeTag>;
-            using GLiftWellState = ::Opm::GasLiftWellState<TypeTag>;
+            using GLiftWellState = GasLiftWellState;
             using GLiftWellStateMap =
                 std::map<std::string,std::unique_ptr<GLiftWellState>>;
             using GLiftOptWells =

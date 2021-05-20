@@ -27,7 +27,6 @@
 
 namespace Opm
 {
-    template<class TypeTag>
     class GasLiftWellState
     {
     public:

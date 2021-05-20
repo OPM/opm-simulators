@@ -60,8 +60,8 @@ namespace Opm
     {
         using Simulator = GetPropType<TypeTag, Properties::Simulator>;
         using WellState = WellStateFullyImplicitBlackoil;
-        using StdWell = Opm::StandardWell<TypeTag>;
-        using GLiftWellState = Opm::GasLiftWellState<TypeTag>;
+        using StdWell = StandardWell<TypeTag>;
+        using GLiftWellState = GasLiftWellState;
         // TODO: same definition with WellInterface, and
         //  WellStateFullyImplicitBlackoil eventually they should go
         //  to a common header file.
