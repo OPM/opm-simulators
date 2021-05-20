@@ -74,6 +74,4 @@ namespace Opm
 
 } // namespace Opm
 
-#include "GasLiftWellState_impl.hpp"
-
 #endif // OPM_GASLIFT_WELL_STATE_HEADER_INCLUDED
