@@ -72,37 +72,6 @@ void WellState::init(const std::vector<double>& cellPressures,
 
 
 
-void WellState::shutWell(int well_index)
-{
-    this->status_[well_index] = Well::Status::SHUT;
-    this->thp_[well_index] = 0;
-    this->bhp_[well_index] = 0;
-    const int np = numPhases();
-    this->wellrates_[well_index].assign(np, 0);
-}
-
-void WellState::stopWell(int well_index)
-{
-    this->status_[well_index] = Well::Status::STOP;
-    this->thp_[well_index] = 0;
-}
-
-void WellState::updateStatus(int well_index, Well::Status status)
-{
-    switch (status) {
-    case Well::Status::OPEN:
-        this->openWell(well_index);
-        break;
-    case Well::Status::SHUT:
-        this->shutWell(well_index);
-        break;
-    case Well::Status::STOP:
-        this->stopWell(well_index);
-        break;
-    default:
-        throw std::logic_error("Invalid well status");
-    }
-}
 
 
 void WellState::initSingleWell(const std::vector<double>& cellPressures,
@@ -153,7 +122,7 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     const double global_pressure = well_info->broadcastFirstPerforationValue(local_pressure);
 
     if (well.getStatus() == Well::Status::OPEN) {
-        this->openWell(w);
+        this->status_[w] = Well::Status::OPEN;
     }
 
     if (well.getStatus() == Well::Status::STOP) {
