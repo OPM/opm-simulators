@@ -68,17 +68,6 @@ public:
               const std::vector<std::vector<PerforationData>>& well_perf_data,
               const SummaryState& summary_state);
 
-    /// Special purpose method to support dynamically rescaling a well's
-    /// CTFs through WELPI.
-    ///
-    /// \param[in] well_index Process-local linear index of single well.
-    ///    Must be in the range 0..numWells()-1.
-    ///
-    /// \param[in] well_perf_data New perforation data.  Only
-    ///    PerforationData::connection_transmissibility_factor actually
-    ///    used (overwrites existing internal values).
-    void resetConnectionTransFactors(const int well_index,
-                                     const std::vector<PerforationData>& well_perf_data);
 
     /// One bhp pressure per well.
     void update_bhp(std::size_t well_index, double value) { bhp_[well_index] = value; }

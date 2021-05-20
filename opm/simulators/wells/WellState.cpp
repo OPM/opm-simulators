@@ -69,44 +69,6 @@ void WellState::init(const std::vector<double>& cellPressures,
     }
 }
 
-void WellState::resetConnectionTransFactors(const int well_index,
-                                            const std::vector<PerforationData>& well_perf_data)
-{
-    if (this->well_perf_data_[well_index].size() != well_perf_data.size()) {
-        throw std::invalid_argument {
-            "Size mismatch for perforation data in well "
-            + std::to_string(well_index)
-        };
-    }
-
-    auto connID = std::size_t{0};
-    auto dst = this->well_perf_data_[well_index].begin();
-    for (const auto& src : well_perf_data) {
-        if (dst->cell_index != src.cell_index) {
-            throw std::invalid_argument {
-                "Cell index mismatch in connection "
-                + std::to_string(connID)
-                        + " of well "
-                        + std::to_string(well_index)
-            };
-        }
-
-        if (dst->satnum_id != src.satnum_id) {
-            throw std::invalid_argument {
-                "Saturation function table mismatch in connection "
-                + std::to_string(connID)
-                        + " of well "
-                        + std::to_string(well_index)
-            };
-        }
-
-        dst->connection_transmissibility_factor =
-                src.connection_transmissibility_factor;
-
-        ++dst;
-        ++connID;
-    }
-}
 
 const ParallelWellInfo&
 WellState::parallelWellInfo(std::size_t well_index) const

@@ -449,7 +449,6 @@ WellStateFullyImplicitBlackoil::report(const int* globalCellIdxMap,
         }
     }
 
-    const int nw = this->numWells();
     std::vector<rt> phs(np);
     if (pu.phase_used[Water]) {
         phs.at( pu.phase_pos[Water] ) = rt::wat;
@@ -1020,6 +1019,45 @@ void WellStateFullyImplicitBlackoil::updateWellsDefaultALQ( const std::vector<We
             auto alq = well.alq_value();
             this->alq_state.update_default(well.name(), alq);
         }
+    }
+}
+
+void WellStateFullyImplicitBlackoil::resetConnectionTransFactors(const int well_index,
+                                                                 const std::vector<PerforationData>& well_perf_data)
+{
+    if (this->well_perf_data_[well_index].size() != well_perf_data.size()) {
+        throw std::invalid_argument {
+            "Size mismatch for perforation data in well "
+            + std::to_string(well_index)
+        };
+    }
+
+    auto connID = std::size_t{0};
+    auto dst = this->well_perf_data_[well_index].begin();
+    for (const auto& src : well_perf_data) {
+        if (dst->cell_index != src.cell_index) {
+            throw std::invalid_argument {
+                "Cell index mismatch in connection "
+                + std::to_string(connID)
+                        + " of well "
+                        + std::to_string(well_index)
+            };
+        }
+
+        if (dst->satnum_id != src.satnum_id) {
+            throw std::invalid_argument {
+                "Saturation function table mismatch in connection "
+                + std::to_string(connID)
+                        + " of well "
+                        + std::to_string(well_index)
+            };
+        }
+
+        dst->connection_transmissibility_factor =
+                src.connection_transmissibility_factor;
+
+        ++dst;
+        ++connID;
     }
 }
 
