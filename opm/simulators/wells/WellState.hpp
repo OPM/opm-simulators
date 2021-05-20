@@ -100,15 +100,6 @@ public:
 
 
 
-    /// The number of phases present.
-    int numPhases() const
-    {
-        return this->phase_usage_.num_phases;
-    }
-
-    const PhaseUsage& phaseUsage() const {
-        return this->phase_usage_;
-    }
 
 protected:
     WellContainer<Well::Status> status_;
@@ -118,9 +109,9 @@ protected:
     std::vector<double> bhp_;
     std::vector<double> thp_;
     WellContainer<std::vector<double>> wellrates_;
+    PhaseUsage phase_usage_;
 
 private:
-    PhaseUsage phase_usage_;
     std::vector<double> temperature_;
     WellContainer<std::vector<double>> perfrates_;
     WellContainer<std::vector<double>> perfpress_;

@@ -63,7 +63,6 @@ public:
     using BaseType :: wellRates;
     using BaseType :: bhp;
     using BaseType :: perfPress;
-    using BaseType :: numPhases;
 
     explicit WellStateFullyImplicitBlackoil(const PhaseUsage& pu) :
         WellState(pu)
@@ -402,6 +401,15 @@ public:
     void shutWell(int well_index);
     void stopWell(int well_index);
 
+    /// The number of phases present.
+    int numPhases() const
+    {
+        return this->phase_usage_.num_phases;
+    }
+
+    const PhaseUsage& phaseUsage() const {
+        return this->phase_usage_;
+    }
 
 private:
     std::vector<double> perfphaserates_;
