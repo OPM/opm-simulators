@@ -794,7 +794,8 @@ namespace Opm
                 cq_s_poly *= extendEval(intQuants.polymerConcentration() * intQuants.polymerViscosityCorrection());
             }
             // Note. Efficiency factor is handled in the output layer
-            well_state.perfRatePolymer()[first_perf_ + perf] = cq_s_poly.value();
+            auto * perf_rate_polymer = &well_state.perfRatePolymer()[first_perf_];
+            perf_rate_polymer[perf] = cq_s_poly.value();
 
             cq_s_poly *= well_efficiency_factor_;
             connectionRates[perf][contiPolymerEqIdx] = Base::restrictEval(cq_s_poly);

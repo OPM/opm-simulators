@@ -788,7 +788,8 @@ void WellState::reportConnections(data::Well& well,
             comp.rates.set( pi [ i ], *(connPI + i) );
         }
         if ( pu.has_polymer ) {
-            comp.rates.set( rt::polymer, this->perfRatePolymer()[wt.second[1] + local_comp_index]);
+            const auto * perf_polymer_rate = &this->perfRatePolymer()[wt.second[1]];
+            comp.rates.set( rt::polymer, perf_polymer_rate[local_comp_index]);
         }
         if ( pu.has_brine ) {
             comp.rates.set( rt::brine, this->perfRateBrine()[wt.second[1] + local_comp_index]);
@@ -1017,8 +1018,8 @@ double WellState::solventWellRate(const int w) const
 
 double WellState::polymerWellRate(const int w) const
 {
-    return parallel_well_info_[w]->sumPerfValues(&perfRatePolymer_[0] + first_perf_index_[w],
-                                                 &perfRatePolymer_[0] + first_perf_index_[w] + num_perf_[w]);
+    const auto * perf_rates_polymer = &perfRatePolymer_[first_perf_index_[w]];
+    return parallel_well_info_[w]->sumPerfValues(perf_rates_polymer, perf_rates_polymer + this->num_perf_[w]);
 }
 
 double WellState::brineWellRate(const int w) const
