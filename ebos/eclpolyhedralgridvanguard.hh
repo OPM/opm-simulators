@@ -86,9 +86,7 @@ public:
     using Grid = GetPropType<TypeTag, Properties::Grid>;
     using EquilGrid = GetPropType<TypeTag, Properties::EquilGrid>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
-    using TransmissibilityType = EclTransmissibility<Grid, GridView, ElementMapper, Scalar,
-                                                     getPropValue<TypeTag, Properties::EnableEnergy>(),
-                                                     getPropValue<TypeTag, Properties::EnableDiffusion>()>;
+    using TransmissibilityType = EclTransmissibility<Grid, GridView, ElementMapper, Scalar>;
 
 private:
     typedef Grid* GridPointer;
