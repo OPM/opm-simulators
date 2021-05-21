@@ -3176,11 +3176,12 @@ namespace Opm
     {
         if constexpr (Base::has_polymermw) {
             if (this->isInjector()) {
+                auto * perf_water_throughput = &well_state.perfThroughput()[first_perf_];
                 for (int perf = 0; perf < number_of_perforations_; ++perf) {
                     const double perf_water_vel = primary_variables_[Bhp + 1 + perf];
                     // we do not consider the formation damage due to water flowing from reservoir into wellbore
                     if (perf_water_vel > 0.) {
-                        well_state.perfThroughput()[first_perf_ + perf] += perf_water_vel * dt;
+                        perf_water_throughput[perf] += perf_water_vel * dt;
                     }
                 }
             }
@@ -3236,7 +3237,8 @@ namespace Opm
         const EvalWell eq_wat_vel = primary_variables_evaluation_[wat_vel_index] - water_velocity;
         resWell_[0][wat_vel_index] = eq_wat_vel.value();
 
-        const double throughput = well_state.perfThroughput()[first_perf_ + perf];
+        const auto * perf_water_throughput = &well_state.perfThroughput()[this->first_perf_];
+        const double throughput = perf_water_throughput[perf];
         const int pskin_index = Bhp + 1 + number_of_perforations_ + perf;
 
         EvalWell poly_conc(numWellEq_ + numEq, 0.0);
@@ -3414,7 +3416,8 @@ namespace Opm
             const int wat_vel_index = Bhp + 1 + perf;
             const EvalWell water_velocity = primary_variables_evaluation_[wat_vel_index];
             if (water_velocity > 0.) { // injecting
-                const double throughput = well_state.perfThroughput()[first_perf_ + perf];
+                const auto * perf_water_throughput = &well_state.perfThroughput()[this->first_perf_];
+                const double throughput = perf_water_throughput[perf];
                 const EvalWell molecular_weight = wpolymermw(throughput, water_velocity, deferred_logger);
                 cq_s_polymw *= molecular_weight;
             } else {
