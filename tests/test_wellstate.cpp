@@ -25,7 +25,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/simulators/wells/GlobalWellInfo.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
-#include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/wells/WellContainer.hpp>
 #include <opm/parser/eclipse/Python/Python.hpp>
 
@@ -123,11 +123,11 @@ struct Setup
 };
 
 namespace {
-    Opm::WellStateFullyImplicitBlackoil
+    Opm::WellState
     buildWellState(const Setup& setup, const std::size_t timeStep,
                    std::vector<Opm::ParallelWellInfo>& pinfos)
     {
-        auto state  = Opm::WellStateFullyImplicitBlackoil{setup.pu};
+        auto state  = Opm::WellState{setup.pu};
 
         const auto cpress =
             std::vector<double>(setup.grid.c_grid()->number_of_cells,
@@ -160,7 +160,7 @@ namespace {
 
 
     void setSegPress(const std::vector<Opm::Well>& wells,
-                     Opm::WellStateFullyImplicitBlackoil& wstate)
+                     Opm::WellState& wstate)
     {
         const auto nWell = wells.size();
 
@@ -193,7 +193,7 @@ namespace {
 
   void setSegRates(const std::vector<Opm::Well>& wells,
                      const Opm::PhaseUsage&               pu,
-                     Opm::WellStateFullyImplicitBlackoil& wstate)
+                     Opm::WellState& wstate)
     {
         const auto wat = pu.phase_used[Opm::BlackoilPhases::Aqua];
         const auto iw  = wat ? pu.phase_pos[Opm::BlackoilPhases::Aqua] : -1;

@@ -36,7 +36,7 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
-#include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/wells/WGState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellConnections.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
@@ -622,12 +622,12 @@ public:
         throw std::logic_error("initFromRestartFile() method not implemented for class eclwellmanager");
     }
 
-    const WellStateFullyImplicitBlackoil& wellState() const
+    const WellState& wellState() const
     {
         throw std::logic_error("wellState() method not implemented for class eclwellmanager");
     }
 
-    WellStateFullyImplicitBlackoil& wellState()
+    WellState& wellState()
     {
         throw std::logic_error("wellState() method not implemented for class eclwellmanager");
     }

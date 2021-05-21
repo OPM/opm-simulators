@@ -36,7 +36,6 @@ namespace Opm
     public:
         typedef WellInterface<TypeTag> Base;
 
-        using typename Base::WellState;
         using typename Base::Simulator;
         using typename Base::IntensiveQuantities;
         using typename Base::FluidSystem;

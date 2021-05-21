@@ -39,7 +39,7 @@ class DeferredLogger;
 class GasLiftWellState;
 class Schedule;
 class SummaryState;
-class WellStateFullyImplicitBlackoil;
+class WellState;
 
 class GasLiftSingleWellGeneric
 {
@@ -49,8 +49,6 @@ class GasLiftSingleWellGeneric
     static constexpr double ALQ_EPSILON = 1e-8;
 
 public:
-    using WellState = WellStateFullyImplicitBlackoil;
-
     struct GradInfo
     {
         GradInfo() { }

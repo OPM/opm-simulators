@@ -39,7 +39,7 @@
 #include <opm/simulators/wells/WellHelpers.hpp>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
-#include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/simulators/wells/WellState.hpp>
 // NOTE: GasLiftSingleWell.hpp includes StandardWell.hpp which includes ourself
 //   (WellInterface.hpp), so we need to forward declare GasLiftSingleWell
 //   for it to be defined in this file. Similar for BlackoilWellModel
@@ -75,8 +75,6 @@ namespace Opm
     class WellInterface : public WellInterfaceGeneric
     {
     public:
-
-        using WellState = WellStateFullyImplicitBlackoil;
 
         using ModelParameters = BlackoilModelParametersEbos<TypeTag>;
 
