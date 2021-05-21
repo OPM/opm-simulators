@@ -49,19 +49,19 @@ class RestartValue;
 
 namespace data
 {
-class CellData;
-class Connection;
-class CurrentControl;
+struct CellData;
+struct Connection;
+struct CurrentControl;
 class GroupAndNetworkValues;
-class GroupConstraints;
-class GroupData;
-class GroupGuideRates;
+struct GroupConstraints;
+struct GroupData;
+struct GroupGuideRates;
 class GuideRateValue;
-class NodeData;
+struct NodeData;
 class Rates;
-class Segment;
+struct Segment;
 class Solution;
-class Well;
+struct Well;
 class WellRates;
 }
 

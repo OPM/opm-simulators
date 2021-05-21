@@ -34,6 +34,11 @@
 
 namespace Opm {
 
+/// \brief optional functor returning external load balancing information
+///
+/// If it is set then this will be used during loadbalance.
+extern std::optional<std::function<std::vector<int> (const Dune::CpGrid&)>> externalLoadBalancer;
+
 template<class ElementMapper, class GridView, class Scalar>
 class EclGenericCpGridVanguard {
 protected:
@@ -42,6 +47,8 @@ protected:
 
 public:
     EclGenericCpGridVanguard();
+
+    virtual ~EclGenericCpGridVanguard() = default;
 
     /*!
      * \brief Return a reference to the simulation grid.
@@ -80,7 +87,7 @@ public:
     /// The information is a vector of integers indication the partition index for each cell id.
     static void setExternalLoadBalancer(const std::function<std::vector<int> (const Dune::CpGrid&)>& loadBalancer)
     {
-        externalLoadBalancer_ = loadBalancer;
+        externalLoadBalancer = loadBalancer;
     }
 
     /*!
@@ -129,10 +136,6 @@ protected:
     std::unique_ptr<CartesianIndexMapper> cartesianIndexMapper_;
     std::unique_ptr<CartesianIndexMapper> equilCartesianIndexMapper_;
 
-    /// \brief optional functor returning external load balancing information
-    ///
-    /// If it is set then this will be used during loadbalance.
-    static std::optional<std::function<std::vector<int> (const Dune::CpGrid&)>> externalLoadBalancer_;
     int mpiRank;
 };
 

@@ -45,7 +45,7 @@ namespace Action { class State; }
 class Deck;
 class EclipseState;
 class ErrorGuard;
-class NumericalAquiferCell;
+struct NumericalAquiferCell;
 class ParseContext;
 class Schedule;
 class Python;

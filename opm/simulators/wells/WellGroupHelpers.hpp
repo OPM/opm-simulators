@@ -34,7 +34,7 @@ class DeferredLogger;
 class Group;
 class GroupState;
 namespace Network { class ExtNetwork; }
-class PhaseUsage;
+struct PhaseUsage;
 class Schedule;
 class VFPProdProperties;
 class WellStateFullyImplicitBlackoil;

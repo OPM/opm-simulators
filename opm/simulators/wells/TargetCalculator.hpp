@@ -32,7 +32,7 @@ namespace Opm
 
 class DeferredLogger;
 class GroupState;
-class PhaseUsage;
+struct PhaseUsage;
 
 namespace WellGroupHelpers
 {
