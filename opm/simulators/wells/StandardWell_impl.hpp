@@ -844,7 +844,8 @@ namespace Opm
                 cq_s_sm *= extendEval(intQuants.fluidState().saltConcentration());
             }
             // Note. Efficiency factor is handled in the output layer
-            well_state.perfRateBrine()[first_perf_ + perf] = cq_s_sm.value();
+            auto * perf_rate_brine = &well_state.perfRateBrine()[this->first_perf_];
+            perf_rate_brine[perf] = cq_s_sm.value();
 
             cq_s_sm *= well_efficiency_factor_;
             connectionRates[perf][contiBrineEqIdx] = Base::restrictEval(cq_s_sm);
