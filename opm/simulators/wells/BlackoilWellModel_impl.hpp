@@ -1589,7 +1589,7 @@ namespace Opm {
                                                  + ScheduleEvents::PRODUCTION_UPDATE
                                                  + ScheduleEvents::INJECTION_UPDATE;
             const auto& events = schedule()[reportStepIdx].wellgroup_events();
-            const bool event = report_step_starts_ && events.hasEvent(well->name(), effective_events_mask);
+            const bool event = events.hasEvent(well->name(), ScheduleEvents::ACTIONX_WELL_EVENT) || (report_step_starts_ && events.hasEvent(well->name(), effective_events_mask));
             const bool needPotentialsForGuideRates = well->underPredictionMode() && (!onlyAfterEvent || event);
             const bool needPotentialsForOutput = !onlyAfterEvent && (needed_for_summary || write_restart_file);
             const bool compute_potential = needPotentialsForOutput || needPotentialsForGuideRates;
