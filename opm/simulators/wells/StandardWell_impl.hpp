@@ -1304,9 +1304,11 @@ namespace Opm
         // other primary variables related to polymer injectivity study
         if constexpr (Base::has_polymermw) {
             if (this->isInjector()) {
+                auto * perf_water_velocity = &well_state.perfWaterVelocity()[this->first_perf_];
+                auto * perf_skin_pressure = &well_state.perfSkinPressure()[this->first_perf_];
                 for (int perf = 0; perf < number_of_perforations_; ++perf) {
-                    well_state.perfWaterVelocity()[first_perf_ + perf] = primary_variables_[Bhp + 1 + perf];
-                    well_state.perfSkinPressure()[first_perf_ + perf] = primary_variables_[Bhp + 1 + number_of_perforations_ + perf];
+                    perf_water_velocity[perf] = primary_variables_[Bhp + 1 + perf];
+                    perf_skin_pressure[perf] = primary_variables_[Bhp + 1 + number_of_perforations_ + perf];
                 }
             }
         }
@@ -2809,9 +2811,11 @@ namespace Opm
         // other primary variables related to polymer injection
         if constexpr (Base::has_polymermw) {
             if (this->isInjector()) {
+                const auto * water_velocity = &well_state.perfWaterVelocity()[first_perf_];
+                const auto * skin_pressure = &well_state.perfSkinPressure()[first_perf_];
                 for (int perf = 0; perf < number_of_perforations_; ++perf) {
-                    primary_variables_[Bhp + 1 + perf] = well_state.perfWaterVelocity()[first_perf_ + perf];
-                    primary_variables_[Bhp + 1 + number_of_perforations_ + perf] = well_state.perfSkinPressure()[first_perf_ + perf];
+                    primary_variables_[Bhp + 1 + perf] = water_velocity[perf];
+                    primary_variables_[Bhp + 1 + number_of_perforations_ + perf] = skin_pressure[perf];
                 }
             }
         }

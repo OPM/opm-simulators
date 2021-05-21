@@ -478,12 +478,19 @@ void WellState::init(const std::vector<double>& cellPressures,
                 if (pu.has_polymermw) {
                     if (global_num_perf_same)
                     {
-                        int oldPerf_idx = oldPerf_idx_beg;
-                        for (int perf = connpos; perf < connpos + num_perf_this_well; ++perf, ++oldPerf_idx )
+                        auto * throughput_target = &perf_water_throughput_[connpos];
+                        auto * pressure_target = &perf_skin_pressure_[connpos];
+                        auto * velocity_target = &perf_water_velocity_[connpos];
+
+                        const auto * throughput_src = &prevState->perfThroughput()[oldPerf_idx_beg];
+                        const auto * pressure_src = &prevState->perfSkinPressure()[oldPerf_idx_beg];
+                        const auto * velocity_src = &prevState->perfWaterVelocity()[oldPerf_idx_beg];
+
+                        for (int perf = 0; perf < num_perf_this_well; ++perf)
                         {
-                            perf_water_throughput_[ perf ] = prevState->perfThroughput()[ oldPerf_idx ];
-                            perf_skin_pressure_[ perf ] = prevState->perfSkinPressure()[ oldPerf_idx ];
-                            perf_water_velocity_[ perf ] = prevState->perfWaterVelocity()[ oldPerf_idx ];
+                            throughput_target[ perf ] = throughput_src[perf];
+                            pressure_target[ perf ]   = pressure_src[perf];
+                            velocity_target[ perf ]   = velocity_src[perf];
                         }
                     }
                 }
