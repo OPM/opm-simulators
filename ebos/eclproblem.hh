@@ -95,6 +95,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionContext.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionX.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/State.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/RockwnodTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/OverburdTable.hpp>
@@ -838,7 +839,7 @@ public:
         ExtboModule::initFromState(vanguard.eclState());
 
         // create the ECL writer
-        eclWriter_.reset(new EclWriterType(simulator));
+        eclWriter_.reset(new EclWriterType(simulator, *this));
 
         enableDriftCompensation_ = EWOMS_GET_PARAM(TypeTag, bool, EclEnableDriftCompensation);
 
