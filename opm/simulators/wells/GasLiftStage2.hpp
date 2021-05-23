@@ -60,7 +60,6 @@ namespace Opm
         using Simulator = GetPropType<TypeTag, Properties::Simulator>;
         using BlackoilWellModel = ::Opm::BlackoilWellModel<TypeTag>;
         using GasLiftSingleWell = ::Opm::GasLiftSingleWell<TypeTag>;
-        using GLiftWellState = GasLiftWellState;
         using GLiftOptWells = typename BlackoilWellModel::GLiftOptWells;
         using GLiftProdWells = typename BlackoilWellModel::GLiftProdWells;
         using GLiftWellStateMap = typename BlackoilWellModel::GLiftWellStateMap;
@@ -93,7 +92,7 @@ namespace Opm
             GradMap &grad_map, const std::string well_name, bool add);
         std::optional<GradInfo> calcIncOrDecGrad_(
             const std::string name, const GasLiftSingleWell &gs_well, bool increase);
-        bool checkRateAlreadyLimited_(GLiftWellState &state, bool increase);
+        bool checkRateAlreadyLimited_(GasLiftWellState &state, bool increase);
         GradInfo deleteDecGradItem_(const std::string &name);
         GradInfo deleteIncGradItem_(const std::string &name);
         GradInfo deleteGrad_(const std::string &name, bool increase);

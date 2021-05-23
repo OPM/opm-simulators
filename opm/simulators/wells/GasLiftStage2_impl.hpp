@@ -108,7 +108,7 @@ addOrRemoveALQincrement_(GradMap &grad_map, const std::string well_name, bool ad
     if (it == this->well_state_map_.end())
         return;
 
-    GLiftWellState &state = *(it->second.get());
+    GasLiftWellState &state = *(it->second.get());
     const GradInfo &gi = grad_map.at(well_name);
     if (this->debug_) {
         auto new_alq = gi.alq;
@@ -135,7 +135,7 @@ calcIncOrDecGrad_(
     if(this->well_state_map_.count(well_name) == 0)
         return std::nullopt;
 
-    GLiftWellState &state = *(this->well_state_map_.at(well_name).get());
+    GasLiftWellState &state = *(this->well_state_map_.at(well_name).get());
     if (checkRateAlreadyLimited_(state, increase)) {
         /*
         const std::string msg = fmt::format(
@@ -167,7 +167,7 @@ calcIncOrDecGrad_(
 template<typename TypeTag>
 bool
 GasLiftStage2<TypeTag>::
-checkRateAlreadyLimited_(GLiftWellState &state, bool increase)
+checkRateAlreadyLimited_(GasLiftWellState &state, bool increase)
 {
     auto current_increase = state.increase();
     bool do_check = false;
@@ -354,7 +354,7 @@ getCurrentWellRates_(const std::string &well_name, const std::string &group_name
         GasLiftSingleWell &gs_well = *(this->stage1_wells_.at(well_name).get());
         const WellInterface<TypeTag> &well = gs_well.getStdWell();
         well_ptr = &well;
-        GLiftWellState &state = *(this->well_state_map_.at(well_name).get());
+        GasLiftWellState &state = *(this->well_state_map_.at(well_name).get());
         std::tie(oil_rate, gas_rate) = state.getRates();
         success = true;
         if ( this->debug_) debug_info = "(A)";
@@ -1135,7 +1135,7 @@ updateRates(const std::string &well_name)
     // compute the delta on wells on own rank
     if (this->parent.well_state_map_.count(well_name) > 0) {
         const GradInfo &gi = this->parent.dec_grads_.at(well_name);
-        GLiftWellState &state = *(this->parent.well_state_map_.at(well_name).get());
+        GasLiftWellState &state = *(this->parent.well_state_map_.at(well_name).get());
         GasLiftSingleWell &gs_well = *(this->parent.stage1_wells_.at(well_name).get());
         const WellInterface<TypeTag> &well = gs_well.getStdWell();
         // only get deltas for wells owned by this rank
