@@ -73,6 +73,7 @@ namespace Opm
         GasLiftStage2(
             const PhaseUsage& phase_usage,
             const Simulator &ebos_simulator,
+            const SummaryState& summary_state,
             DeferredLogger &deferred_logger,
             WellState &well_state,
             GLiftProdWells &prod_wells,
