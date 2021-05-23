@@ -29,6 +29,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/GasLiftOpt.hpp>
+#include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/StandardWell.hpp>
 #include <opm/simulators/wells/GasLiftSingleWell.hpp>
 #include <opm/simulators/wells/GasLiftWellState.hpp>
@@ -53,7 +54,7 @@ namespace Opm
     class GasLiftStage2 {
         using GasLiftSingleWell = ::Opm::GasLiftSingleWell<TypeTag>;
         using GLiftOptWells = std::map<std::string,std::unique_ptr<GasLiftSingleWell>>;
-        using GLiftProdWells = std::map<std::string,const WellInterface<TypeTag> *>;
+        using GLiftProdWells = std::map<std::string,const WellInterfaceGeneric*>;
         using GLiftWellStateMap = std::map<std::string,std::unique_ptr<GasLiftWellState>>;
         using GradPair = std::pair<std::string, double>;
         using GradPairItr = std::vector<GradPair>::iterator;
@@ -106,7 +107,7 @@ namespace Opm
             const Group &group);
         void getGroupGliftWellsRecursive_(
             const Group &group, std::vector<GasLiftSingleWell *> &wells);
-        std::pair<double, double> getStdWellRates_(const WellInterface<TypeTag> &well);
+        std::pair<double, double> getStdWellRates_(const WellInterfaceGeneric &well);
         void optimizeGroup_(const Group &group);
         void optimizeGroupsRecursive_(const Group &group);
         void recalculateGradientAndUpdateData_(

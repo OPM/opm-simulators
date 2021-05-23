@@ -113,7 +113,7 @@ namespace Opm {
             using GLiftOptWells =
                 std::map<std::string,std::unique_ptr<GasLiftSingleWell>>;
             using GLiftProdWells =
-                std::map<std::string,const WellInterface<TypeTag> *>;
+                std::map<std::string,const WellInterfaceGeneric*>;
 
             static const int numEq = Indices::numEq;
             static const int solventSaturationIdx = Indices::solventSaturationIdx;
