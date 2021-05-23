@@ -36,7 +36,7 @@ namespace Opm {
 template<typename TypeTag>
 GasLiftStage2<TypeTag>::
 GasLiftStage2(
-    const BlackoilWellModel &well_model,
+    const PhaseUsage& phase_usage,
     const Simulator &ebos_simulator,
     DeferredLogger &deferred_logger,
     WellState &well_state,
@@ -46,7 +46,6 @@ GasLiftStage2(
 ) :
     deferred_logger_{deferred_logger},
     ebos_simulator_{ebos_simulator},
-    well_model_{well_model},
     well_state_{well_state},
     prod_wells_{prod_wells},
     stage1_wells_{glift_wells},
@@ -54,7 +53,7 @@ GasLiftStage2(
     report_step_idx_{ebos_simulator_.episodeIndex()},
     summary_state_{ebos_simulator_.vanguard().summaryState()},
     schedule_{ebos_simulator.vanguard().schedule()},
-    phase_usage_{well_model_.phaseUsage()},
+    phase_usage_{phase_usage},
     glo_{schedule_.glo(report_step_idx_)},
     comm_{ebos_simulator.vanguard().grid().comm()},
     debug_{false}
