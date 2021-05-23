@@ -45,13 +45,12 @@ GasLiftStage2(
     GLiftWellStateMap &state_map
 ) :
     deferred_logger_{deferred_logger},
-    ebos_simulator_{ebos_simulator},
     well_state_{well_state},
     prod_wells_{prod_wells},
     stage1_wells_{glift_wells},
     well_state_map_{state_map},
-    report_step_idx_{ebos_simulator_.episodeIndex()},
-    summary_state_{ebos_simulator_.vanguard().summaryState()},
+    report_step_idx_{ebos_simulator.episodeIndex()},
+    summary_state_{ebos_simulator.vanguard().summaryState()},
     schedule_{ebos_simulator.vanguard().schedule()},
     phase_usage_{phase_usage},
     glo_{schedule_.glo(report_step_idx_)},
@@ -61,7 +60,7 @@ GasLiftStage2(
 //    this->time_step_idx_
 //        = this->ebos_simulator_.model().newtonMethod().currentTimeStep();
     this->nonlinear_iteration_idx_
-        = this->ebos_simulator_.model().newtonMethod().numIterations();
+        = ebos_simulator.model().newtonMethod().numIterations();
 
 }
 

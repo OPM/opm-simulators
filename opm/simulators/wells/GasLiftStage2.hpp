@@ -131,7 +131,6 @@ namespace Opm
 
 
         DeferredLogger &deferred_logger_;
-        const Simulator &ebos_simulator_;
         WellState &well_state_;
         GLiftProdWells &prod_wells_;
         GLiftOptWells &stage1_wells_;
