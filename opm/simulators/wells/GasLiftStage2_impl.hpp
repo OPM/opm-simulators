@@ -37,6 +37,7 @@ template<typename TypeTag>
 GasLiftStage2<TypeTag>::
 GasLiftStage2(
     const PhaseUsage& phase_usage,
+    const Schedule& schedule,
     const Simulator &ebos_simulator,
     const SummaryState& summary_state,
     DeferredLogger &deferred_logger,
@@ -52,7 +53,7 @@ GasLiftStage2(
     well_state_map_{state_map},
     report_step_idx_{ebos_simulator.episodeIndex()},
     summary_state_{summary_state},
-    schedule_{ebos_simulator.vanguard().schedule()},
+    schedule_{schedule},
     phase_usage_{phase_usage},
     glo_{schedule_.glo(report_step_idx_)},
     comm_{ebos_simulator.vanguard().grid().comm()},

@@ -1108,7 +1108,9 @@ namespace Opm {
         GLiftWellStateMap &glift_well_state_map)
     {
 
-        GasLiftStage2 glift {this->phaseUsage(), ebosSimulator_,
+        GasLiftStage2 glift {this->phaseUsage(),
+                             ebosSimulator_.vanguard().schedule(),
+                             ebosSimulator_,
                              ebosSimulator_.vanguard().summaryState(),
                              deferred_logger, this->wellState(),
                              prod_wells, glift_wells, glift_well_state_map};

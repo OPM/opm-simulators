@@ -72,6 +72,7 @@ namespace Opm
     public:
         GasLiftStage2(
             const PhaseUsage& phase_usage,
+            const Schedule& schedule,
             const Simulator &ebos_simulator,
             const SummaryState& summary_state,
             DeferredLogger &deferred_logger,
