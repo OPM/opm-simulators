@@ -36,10 +36,10 @@ namespace Opm {
 template<typename TypeTag>
 GasLiftStage2<TypeTag>::
 GasLiftStage2(
+    const int report_step_idx,
     const Communication& comm,
     const PhaseUsage& phase_usage,
     const Schedule& schedule,
-    const Simulator &ebos_simulator,
     const SummaryState& summary_state,
     DeferredLogger &deferred_logger,
     WellState &well_state,
@@ -52,7 +52,7 @@ GasLiftStage2(
     prod_wells_{prod_wells},
     stage1_wells_{glift_wells},
     well_state_map_{state_map},
-    report_step_idx_{ebos_simulator.episodeIndex()},
+    report_step_idx_{report_step_idx},
     summary_state_{summary_state},
     schedule_{schedule},
     phase_usage_{phase_usage},

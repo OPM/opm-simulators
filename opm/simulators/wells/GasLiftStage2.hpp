@@ -51,7 +51,6 @@ namespace Opm
 {
     template<class TypeTag>
     class GasLiftStage2 {
-        using Simulator = GetPropType<TypeTag, Properties::Simulator>;
         using GasLiftSingleWell = ::Opm::GasLiftSingleWell<TypeTag>;
         using GLiftOptWells = std::map<std::string,std::unique_ptr<GasLiftSingleWell>>;
         using GLiftProdWells = std::map<std::string,const WellInterface<TypeTag> *>;
@@ -71,10 +70,10 @@ namespace Opm
         static const int Gas = BlackoilPhases::Vapour;
     public:
         GasLiftStage2(
+            const int report_step_idx,
             const Communication& comm,
             const PhaseUsage& phase_usage,
             const Schedule& schedule,
-            const Simulator &ebos_simulator,
             const SummaryState& summary_state,
             DeferredLogger &deferred_logger,
             WellState &well_state,
