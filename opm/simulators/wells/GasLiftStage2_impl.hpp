@@ -61,9 +61,6 @@ GasLiftStage2(
 {
 //    this->time_step_idx_
 //        = this->ebos_simulator_.model().newtonMethod().currentTimeStep();
-    this->nonlinear_iteration_idx_
-        = ebos_simulator.model().newtonMethod().numIterations();
-
 }
 
 /********************************************

@@ -149,7 +149,6 @@ namespace Opm
         bool debug_;
         int max_iterations_ = 1000;
         //int time_step_idx_;
-        int nonlinear_iteration_idx_;
 
         struct OptimizeState {
             OptimizeState( GasLiftStage2 &parent_, const Group &group_ ) :
