@@ -36,6 +36,7 @@ namespace Opm {
 template<typename TypeTag>
 GasLiftStage2<TypeTag>::
 GasLiftStage2(
+    const Communication& comm,
     const PhaseUsage& phase_usage,
     const Schedule& schedule,
     const Simulator &ebos_simulator,
@@ -56,7 +57,7 @@ GasLiftStage2(
     schedule_{schedule},
     phase_usage_{phase_usage},
     glo_{schedule_.glo(report_step_idx_)},
-    comm_{ebos_simulator.vanguard().grid().comm()},
+    comm_{comm},
     debug_{false}
 {
 //    this->time_step_idx_

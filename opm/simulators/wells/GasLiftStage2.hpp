@@ -71,6 +71,7 @@ namespace Opm
         static const int Gas = BlackoilPhases::Vapour;
     public:
         GasLiftStage2(
+            const Communication& comm,
             const PhaseUsage& phase_usage,
             const Schedule& schedule,
             const Simulator &ebos_simulator,
