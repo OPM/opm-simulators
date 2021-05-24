@@ -787,11 +787,11 @@ void WellState::reportConnections(data::Well& well,
     for( auto& comp : well.connections) {
         const auto connPhaseOffset = np * (wt.second[1] + local_comp_index);
 
-        const auto rates  = this->perfPhaseRates().begin() + connPhaseOffset;
-        const auto connPI = this->connectionProductivityIndex().begin() + connPhaseOffset;
+        const auto * rates = &this->perfPhaseRates()[connPhaseOffset];
+        const auto connPI  = this->connectionProductivityIndex().begin() + connPhaseOffset;
 
         for( int i = 0; i < np; ++i ) {
-            comp.rates.set( phs[ i ], *(rates  + i) );
+            comp.rates.set( phs[ i ], rates[i] );
             comp.rates.set( pi [ i ], *(connPI + i) );
         }
         if ( pu.has_polymer ) {
