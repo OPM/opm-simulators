@@ -154,6 +154,14 @@ public:
         return this->m_data.end();
     }
 
+    typename std::vector<T>::iterator begin() {
+        return this->m_data.begin();
+    }
+
+    typename std::vector<T>::iterator end() {
+        return this->m_data.end();
+    }
+
     const std::vector<T>& data() const {
         return this->m_data;
     }
