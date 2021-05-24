@@ -43,6 +43,7 @@ class WellState;
 
 class GasLiftSingleWellGeneric
 {
+protected:
     static const int Water = BlackoilPhases::Aqua;
     static const int Oil = BlackoilPhases::Liquid;
     static const int Gas = BlackoilPhases::Vapour;
