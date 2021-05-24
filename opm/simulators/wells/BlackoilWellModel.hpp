@@ -106,7 +106,7 @@ namespace Opm {
             using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
 
             typedef typename BaseAuxiliaryModule<TypeTag>::NeighborSet NeighborSet;
-            using GasLiftSingleWell = ::Opm::GasLiftSingleWell<TypeTag>;
+            using GasLiftSingleWell = GasLiftSingleWellGeneric;
             using GasLiftStage2 = ::Opm::GasLiftStage2<TypeTag>;
             using GLiftWellStateMap =
                 std::map<std::string,std::unique_ptr<GasLiftWellState>>;

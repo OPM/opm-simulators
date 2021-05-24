@@ -49,7 +49,7 @@ namespace Opm
             DeferredLogger &deferred_logger,
             WellState &well_state
         );
-        const WellInterface<TypeTag> &getStdWell() const { return std_well_; }
+        const WellInterfaceGeneric &getStdWell() const override { return std_well_; }
 
     private:
         std::optional<double> computeBhpAtThpLimit_(double alq) const override;

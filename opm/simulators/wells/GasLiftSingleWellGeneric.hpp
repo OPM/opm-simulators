@@ -39,6 +39,7 @@ class DeferredLogger;
 class GasLiftWellState;
 class Schedule;
 class SummaryState;
+class WellInterfaceGeneric;
 class WellState;
 
 class GasLiftSingleWellGeneric
@@ -81,6 +82,8 @@ public:
                                                  double alq, bool increase) const;
 
     std::unique_ptr<GasLiftWellState> runOptimize(const int iteration_idx);
+
+    virtual const WellInterfaceGeneric& getStdWell() const = 0;
 
 protected:
     GasLiftSingleWellGeneric(DeferredLogger &deferred_logger,

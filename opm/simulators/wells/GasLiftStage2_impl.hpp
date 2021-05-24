@@ -350,7 +350,7 @@ getCurrentWellRates_(const std::string &well_name, const std::string &group_name
     std::string debug_info;
     if (this->stage1_wells_.count(well_name) == 1) {
         GasLiftSingleWell &gs_well = *(this->stage1_wells_.at(well_name).get());
-        const WellInterface<TypeTag> &well = gs_well.getStdWell();
+        const WellInterfaceGeneric &well = gs_well.getStdWell();
         well_ptr = &well;
         GasLiftWellState &state = *(this->well_state_map_.at(well_name).get());
         std::tie(oil_rate, gas_rate) = state.getRates();
@@ -435,7 +435,7 @@ getStdWellRates_(const WellInterfaceGeneric &well)
 //       groups are located at the other nodes (not leaf nodes) of the tree
 //
 template<typename TypeTag>
-std::vector<GasLiftSingleWell<TypeTag> *>
+std::vector<GasLiftSingleWellGeneric*>
 GasLiftStage2<TypeTag>::
 getGroupGliftWells_(const Group &group)
 {
@@ -1135,7 +1135,7 @@ updateRates(const std::string &well_name)
         const GradInfo &gi = this->parent.dec_grads_.at(well_name);
         GasLiftWellState &state = *(this->parent.well_state_map_.at(well_name).get());
         GasLiftSingleWell &gs_well = *(this->parent.stage1_wells_.at(well_name).get());
-        const WellInterface<TypeTag> &well = gs_well.getStdWell();
+        const WellInterfaceGeneric &well = gs_well.getStdWell();
         // only get deltas for wells owned by this rank
         if (this->parent.well_state_.wellIsOwned(well.indexOfWell(), well_name)) {
             const auto &well_ecl = well.wellEcl();

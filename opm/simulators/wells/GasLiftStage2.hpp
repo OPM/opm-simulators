@@ -31,7 +31,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/GasLiftOpt.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/StandardWell.hpp>
-#include <opm/simulators/wells/GasLiftSingleWell.hpp>
+#include <opm/simulators/wells/GasLiftSingleWellGeneric.hpp>
 #include <opm/simulators/wells/GasLiftWellState.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/WellState.hpp>
@@ -52,13 +52,13 @@ namespace Opm
 {
     template<class TypeTag>
     class GasLiftStage2 {
-        using GasLiftSingleWell = ::Opm::GasLiftSingleWell<TypeTag>;
+        using GasLiftSingleWell = GasLiftSingleWellGeneric;
         using GLiftOptWells = std::map<std::string,std::unique_ptr<GasLiftSingleWell>>;
         using GLiftProdWells = std::map<std::string,const WellInterfaceGeneric*>;
         using GLiftWellStateMap = std::map<std::string,std::unique_ptr<GasLiftWellState>>;
         using GradPair = std::pair<std::string, double>;
         using GradPairItr = std::vector<GradPair>::iterator;
-        using GradInfo = typename GasLiftSingleWell::GradInfo;
+        using GradInfo = typename GasLiftSingleWellGeneric::GradInfo;
         using GradMap = std::map<std::string, GradInfo>;
         using MPIComm = typename Dune::MPIHelper::MPICommunicator;
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
@@ -217,7 +217,6 @@ namespace Opm
             bool checkGasTarget();
             bool checkOilTarget();
             void updateRates(const std::string &name);
-        private:
         };
     };
 
