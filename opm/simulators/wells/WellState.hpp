@@ -182,14 +182,14 @@ public:
         return well_reservoir_rates_[well_index];
     }
 
-    std::vector<double>& wellDissolvedGasRates()
+    double& wellDissolvedGasRates(std::size_t well_index)
     {
-        return well_dissolved_gas_rates_;
+        return well_dissolved_gas_rates_[well_index];
     }
 
-    std::vector<double>& wellVaporizedOilRates()
+    double& wellVaporizedOilRates(std::size_t well_index)
     {
-        return well_vaporized_oil_rates_;
+        return well_vaporized_oil_rates_[well_index];
     }
 
     const std::vector<double>& segRates() const
@@ -497,11 +497,11 @@ private:
 
     // dissolved gas rates or solution gas production rates
     // should be zero for injection wells
-    std::vector<double> well_dissolved_gas_rates_;
+    WellContainer<double> well_dissolved_gas_rates_;
 
     // vaporized oil rates or solution oil producation rates
     // should be zero for injection wells
-    std::vector<double> well_vaporized_oil_rates_;
+    WellContainer<double> well_vaporized_oil_rates_;
 
     // some events happens to the well, like this well is a new well
     // or new well control keywords happens
