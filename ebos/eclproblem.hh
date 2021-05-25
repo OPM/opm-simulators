@@ -2121,7 +2121,7 @@ private:
                                               Scalar>(fs, iq.pvtRegionIndex());
             }
         }
-        OPM_END_PARALLEL_TRY_CATCH("EclProblem::_updateCompositionLayers() failed: ");
+        OPM_END_PARALLEL_TRY_CATCH("EclProblem::_updateCompositionLayers() failed: ", this->simulator().vanguard().grid().comm());
     }
 
     bool updateMaxOilSaturation_()
@@ -2150,7 +2150,7 @@ private:
 
                 this->maxOilSaturation_[compressedDofIdx] = std::max(this->maxOilSaturation_[compressedDofIdx], So);
             }
-            OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateMayOilSaturation() failed:");
+            OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateMayOilSaturation() failed:", vanguard.grid().comm());
             // we need to invalidate the intensive quantities cache here because the
             // derivatives of Rs and Rv will most likely have changed
             return true;
@@ -2184,7 +2184,7 @@ private:
             Scalar Sw = decay<Scalar>(fs.saturation(waterPhaseIdx));
             this->maxWaterSaturation_[compressedDofIdx] = std::max(this->maxWaterSaturation_[compressedDofIdx], Sw);
         }
-        OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateMayWaterSaturation() failed: ");
+        OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateMayWaterSaturation() failed: ", vanguard.grid().comm());
 
         return true;
     }
@@ -2214,8 +2214,7 @@ private:
                 std::min(this->minOilPressure_[compressedDofIdx],
                          getValue(fs.pressure(oilPhaseIdx)));
         }
-
-        OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateMinPressure_() failed: ");
+        OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateMinPressure_() failed: ", this->simulator().vanguard().grid().comm());
         return true;
     }
 
@@ -2658,7 +2657,7 @@ private:
             const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
             materialLawManager_->updateHysteresis(intQuants.fluidState(), compressedDofIdx);
         }
-        OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateHyteresis_(): ");
+        OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateHyteresis_(): ", vanguard.grid().comm());
         return true;
     }
 
@@ -2683,7 +2682,7 @@ private:
             this->maxPolymerAdsorption_[compressedDofIdx] = std::max(this->maxPolymerAdsorption_[compressedDofIdx],
                                                                      scalarValue(intQuants.polymerAdsorption()));
         }
-        OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateMaxPolymerAdsorption_(): ");
+        OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateMaxPolymerAdsorption_(): ", vanguard.grid().comm());
     }
 
     struct PffDofData_

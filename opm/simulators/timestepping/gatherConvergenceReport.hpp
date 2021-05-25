@@ -21,14 +21,24 @@
 #ifndef OPM_GATHERCONVERGENCEREPORT_HEADER_INCLUDED
 #define OPM_GATHERCONVERGENCEREPORT_HEADER_INCLUDED
 
+#include <dune/common/version.hh>
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
+#include <dune/common/parallel/mpihelper.hh>
+
+namespace Opm::Parallel { 
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+    using Communication = Dune::Communication<Dune::MPIHelper::MPICommunicator>; 
+#else
+    using Communication = Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator>;
+#endif
+} // end namespace Communication
 
 namespace Opm
 {
 
     /// Create a global convergence report combining local
     /// (per-process) reports.
-    ConvergenceReport gatherConvergenceReport(const ConvergenceReport& local_report);
+    ConvergenceReport gatherConvergenceReport(const ConvergenceReport& local_report, Parallel::Communication communicator);
 
 } // namespace Opm
 

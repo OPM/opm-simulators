@@ -34,6 +34,9 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 
+#include <dune/common/version.hh>
+#include <dune/common/parallel/mpihelper.hh>
+
 #include <functional>
 #include <map>
 #include <optional>

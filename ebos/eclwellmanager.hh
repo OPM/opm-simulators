@@ -420,7 +420,7 @@ public:
             for (size_t wellIdx = 0; wellIdx < wellSize; ++wellIdx)
                 wells_[wellIdx]->beginIterationAccumulate(elemCtx, /*timeIdx=*/0);
         }
-        OPM_END_PARALLEL_TRY_CATCH("EclWellManager::beginIteration() failed: ");
+        OPM_END_PARALLEL_TRY_CATCH("EclWellManager::beginIteration() failed: ", simulator_.vanguard().grid().comm());
 
         // call the postprocessing routines
         for (size_t wellIdx = 0; wellIdx < wellSize; ++wellIdx)

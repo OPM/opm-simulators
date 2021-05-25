@@ -393,7 +393,7 @@ private:
 
             eclOutputModule_->processElement(elemCtx);
         }
-        OPM_END_PARALLEL_TRY_CATCH("EclWriter::prepareLocalCellData() failed: ")
+        OPM_END_PARALLEL_TRY_CATCH("EclWriter::prepareLocalCellData() failed: ", simulator_.vanguard().grid().comm())
     }
 
     Simulator& simulator_;

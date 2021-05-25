@@ -21,8 +21,19 @@
 #ifndef OPM_DEFERREDLOGGER_HEADER_INCLUDED
 #define OPM_DEFERREDLOGGER_HEADER_INCLUDED
 
+#include <dune/common/version.hh>
+#include <dune/common/parallel/mpihelper.hh>
+
 #include <string>
 #include <vector>
+
+namespace Opm::Parallel {   
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+    using Communication = Dune::Communication<Dune::MPIHelper::MPICommunicator>; 
+#else
+    using Communication = Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator>;
+#endif
+}
 
 namespace Opm
 {
@@ -87,7 +98,8 @@ enum ExcEnum {
 
     private:
         std::vector<Message> messages_;
-        friend DeferredLogger gatherDeferredLogger(const DeferredLogger& local_deferredlogger);
+        friend DeferredLogger gatherDeferredLogger(const DeferredLogger& local_deferredlogger,
+                                                   Parallel::Communication mpi_communicator);
     };
 
 } // namespace Opm

@@ -25,6 +25,7 @@
 
 #include <boost/test/unit_test.hpp>
 
+#include <dune/common/version.hh>
 #include <opm/simulators/utils/gatherDeferredLogger.hpp>
 #include <dune/common/parallel/mpihelper.hh>
 
@@ -80,14 +81,14 @@ void initLogger(std::ostringstream& log_stream) {
 
 BOOST_AUTO_TEST_CASE(NoMessages)
 {
-    auto cc = Dune::MPIHelper::getCollectiveCommunication();
+    const Opm::Parallel::Communication& cc = Dune::MPIHelper::getCollectiveCommunication();
 
     std::ostringstream log_stream;
     initLogger(log_stream);
 
     Opm::DeferredLogger local_deferredlogger;
 
-    Opm::DeferredLogger global_deferredlogger = gatherDeferredLogger(local_deferredlogger);
+    Opm::DeferredLogger global_deferredlogger = gatherDeferredLogger(local_deferredlogger, cc);
 
     if (cc.rank() == 0) {
 
@@ -103,7 +104,7 @@ BOOST_AUTO_TEST_CASE(NoMessages)
 
 BOOST_AUTO_TEST_CASE(VariableNumberOfMessages)
 {
-    auto cc = Dune::MPIHelper::getCollectiveCommunication();
+    const Opm::Parallel::Communication& cc = Dune::MPIHelper::getCollectiveCommunication();
 
     std::ostringstream log_stream;
     initLogger(log_stream);
@@ -119,7 +120,7 @@ BOOST_AUTO_TEST_CASE(VariableNumberOfMessages)
         local_deferredlogger.bug("tagme", "bug from rank " + std::to_string(cc.rank()));
     }
 
-    Opm::DeferredLogger global_deferredlogger = gatherDeferredLogger(local_deferredlogger);
+    Opm::DeferredLogger global_deferredlogger = gatherDeferredLogger(local_deferredlogger, cc);
 
     if (cc.rank() == 0) {
 
@@ -141,7 +142,7 @@ BOOST_AUTO_TEST_CASE(VariableNumberOfMessages)
 
 BOOST_AUTO_TEST_CASE(AllHaveOneMessage)
 {
-    auto cc = Dune::MPIHelper::getCollectiveCommunication();
+    const Opm::Parallel::Communication& cc = Dune::MPIHelper::getCollectiveCommunication();
 
     std::ostringstream log_stream;
     initLogger(log_stream);
@@ -149,7 +150,7 @@ BOOST_AUTO_TEST_CASE(AllHaveOneMessage)
     Opm::DeferredLogger local_deferredlogger;
     local_deferredlogger.info("info from rank " + std::to_string(cc.rank()));
 
-    Opm::DeferredLogger global_deferredlogger = gatherDeferredLogger(local_deferredlogger);
+    Opm::DeferredLogger global_deferredlogger = gatherDeferredLogger(local_deferredlogger, cc);
 
     if (cc.rank() == 0) {
 

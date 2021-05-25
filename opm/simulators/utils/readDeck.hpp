@@ -22,6 +22,8 @@
 #ifndef OPM_READDECK_HEADER_INCLUDED
 #define OPM_READDECK_HEADER_INCLUDED
 
+#include <dune/common/version.hh>
+#include <dune/common/parallel/mpihelper.hh>
 #include <memory>
 #include <optional>
 #include <string>
@@ -42,6 +44,14 @@ namespace Action {
 class State;
 }
 
+namespace Parallel {   
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+    using Communication = Dune::Communication<Dune::MPIHelper::MPICommunicator>; 
+#else
+    using Communication = Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator>;
+#endif
+}
+
 enum class FileOutputMode {
     //! \brief No output to files.
     OUTPUT_NONE = 0,
@@ -57,7 +67,7 @@ FileOutputMode setupLogging(int mpi_rank_, const std::string& deck_filename, con
 /// \brief Reads the deck and creates all necessary objects if needed
 ///
 /// If pointers already contains objects then they are used otherwise they are created and can be used outside later.
-void readDeck(int rank, std::string& deckFilename, std::shared_ptr<Deck>& deck, std::shared_ptr<EclipseState>& eclipseState,
+void readDeck(Parallel::Communication comm, std::string& deckFilename, std::shared_ptr<Deck>& deck, std::shared_ptr<EclipseState>& eclipseState,
               std::shared_ptr<Schedule>& schedule, std::unique_ptr<UDQState>& udqState, std::unique_ptr<Action::State>& actionState, std::shared_ptr<SummaryConfig>& summaryConfig,
               std::unique_ptr<ErrorGuard> errorGuard, std::shared_ptr<Python>& python, std::unique_ptr<ParseContext> parseContext,
               bool initFromRestart, bool checkDeck, const std::optional<int>& outputInterval);

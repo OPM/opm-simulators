@@ -191,7 +191,7 @@ void setupMessageLimiter(const Opm::MessageLimits msgLimits,  const std::string&
 }
 
 
-void readDeck(int rank, std::string& deckFilename, std::shared_ptr<Opm::Deck>& deck, std::shared_ptr<Opm::EclipseState>& eclipseState,
+void readDeck(Opm::Parallel::Communication comm, std::string& deckFilename, std::shared_ptr<Opm::Deck>& deck, std::shared_ptr<Opm::EclipseState>& eclipseState,
               std::shared_ptr<Opm::Schedule>& schedule, std::unique_ptr<UDQState>& udqState, std::unique_ptr<Action::State>& actionState, std::shared_ptr<Opm::SummaryConfig>& summaryConfig,
               std::unique_ptr<ErrorGuard> errorGuard, std::shared_ptr<Opm::Python>& python, std::unique_ptr<ParseContext> parseContext,
               bool initFromRestart, bool checkDeck, const std::optional<int>& outputInterval)
@@ -203,6 +203,7 @@ void readDeck(int rank, std::string& deckFilename, std::shared_ptr<Opm::Deck>& d
 
     int parseSuccess = 1; // > 0 is success
     std::string failureMessage;
+    int rank = comm.rank();
 
     if (rank==0) {
         try
@@ -215,6 +216,7 @@ void readDeck(int rank, std::string& deckFilename, std::shared_ptr<Opm::Deck>& d
 
             if (!deck)
             {
+
 
                 deck = std::make_unique<Opm::Deck>( parser.parseFile(deckFilename , *parseContext, *errorGuard));
 
@@ -233,7 +235,7 @@ void readDeck(int rank, std::string& deckFilename, std::shared_ptr<Opm::Deck>& d
 
             if (!eclipseState) {
 #if HAVE_MPI
-                eclipseState = std::make_unique<Opm::ParallelEclipseState>(*deck);
+                eclipseState = std::make_unique<Opm::ParallelEclipseState>(*deck, comm);
 #else
                 eclipseState = std::make_unique<Opm::EclipseState>(*deck);
 #endif
@@ -324,7 +326,7 @@ void readDeck(int rank, std::string& deckFilename, std::shared_ptr<Opm::Deck>& d
         if (!schedule)
             schedule = std::make_unique<Opm::Schedule>(python);
         if (!eclipseState)
-            eclipseState = std::make_unique<Opm::ParallelEclipseState>();
+            eclipseState = std::make_unique<Opm::ParallelEclipseState>(comm);
         if (!udqState)
             udqState = std::make_unique<UDQState>(0);
         if (!actionState)
@@ -334,13 +336,12 @@ void readDeck(int rank, std::string& deckFilename, std::shared_ptr<Opm::Deck>& d
     // In case of parse errors eclipseState/schedule might be null
     // and trigger segmentation faults in parallel during broadcast
     // (e.g. when serializing the non-existent TableManager)
-    auto comm = Dune::MPIHelper::getCollectiveCommunication();
     parseSuccess = comm.min(parseSuccess);
     try
     {
         if (parseSuccess)
         {
-            Opm::eclStateBroadcast(*eclipseState, *schedule, *summaryConfig, *udqState, *actionState);
+            Opm::eclStateBroadcast(comm, *eclipseState, *schedule, *summaryConfig, *udqState, *actionState);
         }
     }
     catch(const std::exception& broadcast_error)
@@ -359,7 +360,7 @@ void readDeck(int rank, std::string& deckFilename, std::shared_ptr<Opm::Deck>& d
         errorGuard->clear();
     }
 
-    parseSuccess = Dune::MPIHelper::getCollectiveCommunication().min(parseSuccess);
+    parseSuccess = comm.min(parseSuccess);
 
     if (!parseSuccess)
     {

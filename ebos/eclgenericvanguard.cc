@@ -62,7 +62,7 @@ std::shared_ptr<Schedule> EclGenericVanguard::externalEclSchedule_;
 std::shared_ptr<SummaryConfig> EclGenericVanguard::externalEclSummaryConfig_;
 std::unique_ptr<UDQState> EclGenericVanguard::externalUDQState_;
 std::unique_ptr<Action::State> EclGenericVanguard::externalActionState_;
-std::unique_ptr<EclGenericVanguard::CommunicationType> EclGenericVanguard::comm_;
+std::unique_ptr<Parallel::Communication> EclGenericVanguard::comm_;
 
 EclGenericVanguard::EclGenericVanguard()
     : python(std::make_shared<Python>())
@@ -295,7 +295,7 @@ void EclGenericVanguard::init()
         parseContext_ = createParseContext(ignoredKeywords_, eclStrictParsing_);
     }
 
-    readDeck(myRank, fileName_, deck_, eclState_, eclSchedule_, udqState_, actionState_,
+    readDeck(EclGenericVanguard::comm(), fileName_, deck_, eclState_, eclSchedule_, udqState_, actionState_,
              eclSummaryConfig_, std::move(errorGuard), python,
              std::move(parseContext_), /* initFromRestart = */ false,
              /* checkDeck = */ enableExperiments_, outputInterval_);
@@ -338,11 +338,8 @@ void EclGenericVanguard::init()
                 }
             }
         }
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
-        const auto& comm = Dune::MPIHelper::getCommunication();
-#else
-        const auto& comm = Dune::MPIHelper::getCollectiveCommunication();
-#endif
+
+        const auto& comm = Parallel::Communication();
         hasMsWell = comm.max(hasMsWell);
 
         if (hasMsWell)

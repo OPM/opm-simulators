@@ -18,7 +18,10 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include<config.h>
+
 #include<opm/simulators/wells/ParallelWellInfo.hpp>
+
+#include <dune/common/version.hh>
 #include<vector>
 #include<string>
 #include<tuple>
@@ -105,7 +108,7 @@ BOOST_AUTO_TEST_CASE(ParallelWellComparison)
 {
     int argc = 0;
     char** argv = nullptr;
-    const auto& helper = Dune::MPIHelper::instance(argc, argv);
+    const auto& helper = Dune::MPIHelper::instance(argc, argv);       
     std::vector<std::pair<std::string,bool>> pairs;
     if (helper.rank() == 0)
         pairs = {{"Test1", true},{"Test2", true}, {"Test1", false} };
@@ -113,7 +116,12 @@ BOOST_AUTO_TEST_CASE(ParallelWellComparison)
         pairs = {{"Test1", false},{"Test2", true}, {"Test1", true} };
 
     std::vector<Opm::ParallelWellInfo> well_info;
-    well_info.assign(pairs.begin(), pairs.end());
+    
+    for (const auto& wellinfo : pairs) {                   
+        well_info.emplace_back(wellinfo, Opm::ParallelWellInfo::Communication());         
+    }
+
+    //well_info.assign(pairs.begin(), pairs.end());
 
     BOOST_CHECK_EQUAL_COLLECTIONS(pairs.begin(), pairs.end(),
                                   well_info.begin(), well_info.end());
@@ -227,13 +235,7 @@ BOOST_AUTO_TEST_CASE(CommunicateAboveBelowSelf1)
     }
 }
 
-using MPIComm = typename Dune::MPIHelper::MPICommunicator;
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
-using Communication = Dune::Communication<MPIComm>;
-#else
-using Communication = Dune::CollectiveCommunication<MPIComm>;
-#endif
-std::vector<int> createGlobalEclIndex(const Communication& comm)
+std::vector<int> createGlobalEclIndex(const Opm::ParallelWellInfo::Communication& comm)
 {
     std::vector<int> globalEclIndex = {0, 1, 2, 3, 7 , 8, 10, 11};
     auto oldSize = globalEclIndex.size();
@@ -254,7 +256,7 @@ std::vector<int> createGlobalEclIndex(const Communication& comm)
 
 template<class C>
 std::vector<double> populateCommAbove(C& commAboveBelow,
-                                      const Communication& comm,
+                                      const Opm::ParallelWellInfo::Communication& comm,
                                       const std::vector<int>& globalEclIndex,
                                       const std::vector<double> globalCurrent,
                                       int num_component = 1,
@@ -285,7 +287,7 @@ std::vector<double> populateCommAbove(C& commAboveBelow,
 
 BOOST_AUTO_TEST_CASE(CommunicateAboveBelowParallel)
 {
-    auto comm = Communication(Dune::MPIHelper::getCommunicator());
+    auto comm = Opm::ParallelWellInfo::Communication(Dune::MPIHelper::getCommunicator());
 
     Opm::CommunicateAboveBelow commAboveBelow{ comm };
     for(std::size_t count=0; count < 2; ++count)
@@ -363,7 +365,7 @@ BOOST_AUTO_TEST_CASE(PartialSumself)
     commAboveBelow.endReset();
 
     initRandomNumbers(std::begin(current), std::end(current),
-                      Communication(comm));
+                      Opm::ParallelWellInfo::Communication(comm));
     auto stdCopy = current;
     std::partial_sum(std::begin(stdCopy), std::end(stdCopy), std::begin(stdCopy));
 
@@ -377,13 +379,13 @@ BOOST_AUTO_TEST_CASE(PartialSumself)
 BOOST_AUTO_TEST_CASE(PartialSumParallel)
 {
 
-    auto comm = Communication(Dune::MPIHelper::getCommunicator());
+    auto comm = Opm::ParallelWellInfo::Communication(Dune::MPIHelper::getCommunicator());
 
     Opm::CommunicateAboveBelow commAboveBelow{ comm };
     auto globalEclIndex = createGlobalEclIndex(comm);
     std::vector<double> globalCurrent(globalEclIndex.size());
     initRandomNumbers(std::begin(globalCurrent), std::end(globalCurrent),
-                      Communication(comm));
+                      Opm::ParallelWellInfo::Communication(comm));
 
     auto localCurrent = populateCommAbove(commAboveBelow, comm,
                                           globalEclIndex, globalCurrent);
@@ -405,7 +407,7 @@ BOOST_AUTO_TEST_CASE(PartialSumParallel)
 
 void testGlobalPerfFactoryParallel(int num_component, bool local_consecutive = false)
 {
-    auto comm = Communication(Dune::MPIHelper::getCommunicator());
+    auto comm = Opm::ParallelWellInfo::Communication(Dune::MPIHelper::getCommunicator());
 
     Opm::ParallelWellInfo wellInfo{ {"Test", true }, comm };
     auto globalEclIndex = createGlobalEclIndex(comm);
@@ -471,7 +473,7 @@ BOOST_AUTO_TEST_CASE(GlobalPerfFactoryParallel1)
 
 
 BOOST_AUTO_TEST_CASE(EmptyWell) {
-    auto comm = Communication(Dune::MPIHelper::getCommunicator());
+    auto comm = Opm::ParallelWellInfo::Communication(Dune::MPIHelper::getCommunicator());
     Opm::ParallelWellInfo pw({"WELL1", true}, comm);
     pw.communicateFirstPerforation(false);
     double local_p = 1;
