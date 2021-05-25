@@ -78,7 +78,7 @@ class WellState;
         void runOptimize();
     private:
         void addOrRemoveALQincrement_(
-            GradMap &grad_map, const std::string well_name, bool add);
+            GradMap &grad_map, const std::string& well_name, bool add);
         std::optional<GradInfo> calcIncOrDecGrad_(
             const std::string name, const GasLiftSingleWell &gs_well, bool increase);
         bool checkRateAlreadyLimited_(GasLiftWellState &state, bool increase);
@@ -203,7 +203,7 @@ class WellState;
             int it;
 
             void addOrRemoveALQincrement(
-                GradMap &grad_map, const std::string well_name, bool add);
+                GradMap &grad_map, const std::string& well_name, bool add);
             bool checkALQlimit();
             bool checkEcoGradient(const std::string &well_name, double eco_grad);
             bool checkGasTarget();
