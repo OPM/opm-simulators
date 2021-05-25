@@ -153,10 +153,6 @@ class WellState;
             const Group &group;
             int it;
 
-            using GradInfo = typename GasLiftStage2::GradInfo;
-            using GradPair = typename GasLiftStage2::GradPair;
-            using GradPairItr = typename GasLiftStage2::GradPairItr;
-            using GradMap = typename GasLiftStage2::GradMap;
             void calculateEcoGradients(std::vector<GasLiftSingleWell *> &wells,
                 std::vector<GradPair> &inc_grads, std::vector<GradPair> &dec_grads);
             bool checkAtLeastTwoWells(std::vector<GasLiftSingleWell *> &wells);
