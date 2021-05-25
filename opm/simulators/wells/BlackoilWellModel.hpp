@@ -404,7 +404,7 @@ namespace Opm {
             // at the beginning of each time step (Not report step)
             void prepareTimeStep(DeferredLogger& deferred_logger);
             void initPrimaryVariablesEvaluation() const;
-            void updateWellControls(DeferredLogger& deferred_logger, const bool checkGroupControls);
+            void updateWellControls(DeferredLogger& deferred_logger);
             WellInterfacePtr getWell(const std::string& well_name) const;
         protected:
             Simulator& ebosSimulator_;
@@ -596,15 +596,15 @@ namespace Opm {
 
             const Well& getWellEcl(const std::string& well_name) const;
 
-            void updateGroupIndividualControls(DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
-            void updateGroupIndividualControl(const Group& group, DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
+            void updateGroupIndividualControls(DeferredLogger& deferred_logger);
+            void updateGroupIndividualControl(const Group& group, DeferredLogger& deferred_logger);
             bool checkGroupConstraints(const Group& group, DeferredLogger& deferred_logger) const;
             Group::ProductionCMode checkGroupProductionConstraints(const Group& group, DeferredLogger& deferred_logger) const;
             Group::InjectionCMode checkGroupInjectionConstraints(const Group& group, const Phase& phase) const;
             void checkGconsaleLimits(const Group& group, WellState& well_state, DeferredLogger& deferred_logger );
 
-            void updateGroupHigherControls(DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
-            void checkGroupHigherConstraints(const Group& group, DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
+            void updateGroupHigherControls(DeferredLogger& deferred_logger);
+            void checkGroupHigherConstraints(const Group& group, DeferredLogger& deferred_logger);
 
             void actionOnBrokenConstraints(const Group& group, const Group::ExceedAction& exceed_action, const Group::ProductionCMode& newControl, DeferredLogger& deferred_logger);
 

@@ -1048,7 +1048,7 @@ namespace Opm {
                 calculateExplicitQuantities(local_deferredLogger);
                 prepareTimeStep(local_deferredLogger);
             }
-            updateWellControls(local_deferredLogger, /* check group controls */ true);
+            updateWellControls(local_deferredLogger);
 
             // Set the well primary variables based on the value of well solutions
             initPrimaryVariablesEvaluation();
@@ -1381,7 +1381,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    updateWellControls(DeferredLogger& deferred_logger, const bool checkGroupControls)
+    updateWellControls(DeferredLogger& deferred_logger)
     {
         // Even if there are no wells active locally, we cannot
         // return as the DeferredLogger uses global communication.
@@ -1392,34 +1392,22 @@ namespace Opm {
 
         updateNetworkPressures();
 
-        std::set<std::string> switched_wells;
-        std::set<std::string> switched_groups;
+        // start from top
 
-        if (checkGroupControls) {
-            // Check group individual constraints.
-            updateGroupIndividualControls(deferred_logger, switched_groups);
+        // Check group's constraints from higher levels.
+        updateGroupHigherControls(deferred_logger);
 
-            // Check group's constraints from higher levels.
-            updateGroupHigherControls(deferred_logger, switched_groups);
+        // Check group individual constraints.
+        updateGroupIndividualControls(deferred_logger);
 
-            updateAndCommunicateGroupData();
-
-            // Check wells' group constraints and communicate.
-            for (const auto& well : well_container_) {
-                const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Group;
-                const bool changed = well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->groupState(), deferred_logger);
-                if (changed) {
-                    switched_wells.insert(well->name());
-                }
-            }
-            updateAndCommunicateGroupData();
+        // Check wells' group constraints
+        for (const auto& well : well_container_) {
+            const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Group;
+            well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->groupState(), deferred_logger);
         }
 
-        // Check individual well constraints and communicate.
+        // Check individual well constraints
         for (const auto& well : well_container_) {
-            if (switched_wells.count(well->name())) {
-                continue;
-            }
             const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Individual;
             well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->groupState(), deferred_logger);
         }
@@ -2115,7 +2103,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    updateGroupIndividualControls(DeferredLogger& deferred_logger, std::set<std::string>& switched_groups)
+    updateGroupIndividualControls(DeferredLogger& deferred_logger)
     {
         const int reportStepIdx = ebosSimulator_.episodeIndex();
 
@@ -2127,7 +2115,7 @@ namespace Opm {
             return;
 
         const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
-        updateGroupIndividualControl(fieldGroup, deferred_logger, switched_groups);
+        updateGroupIndividualControl(fieldGroup, deferred_logger);
     }
 
 
@@ -2135,11 +2123,10 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    updateGroupIndividualControl(const Group& group, DeferredLogger& deferred_logger, std::set<std::string>& switched_groups) {
+    updateGroupIndividualControl(const Group& group, DeferredLogger& deferred_logger) {
 
         const int reportStepIdx = ebosSimulator_.episodeIndex();
-        const bool skip = switched_groups.count(group.name());
-        if (!skip && group.isInjectionGroup())
+        if (group.isInjectionGroup())
         {
             const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
             for (Phase phase : all) {
@@ -2149,25 +2136,23 @@ namespace Opm {
                 Group::InjectionCMode newControl = checkGroupInjectionConstraints(group, phase);
                 if (newControl != Group::InjectionCMode::NONE)
                 {
-                    switched_groups.insert(group.name());
                     actionOnBrokenConstraints(group, newControl, phase, deferred_logger);
                 }
             }
         }
-        if (!skip && group.isProductionGroup()) {
+        if (group.isProductionGroup()) {
             Group::ProductionCMode newControl = checkGroupProductionConstraints(group, deferred_logger);
             const auto& summaryState = ebosSimulator_.vanguard().summaryState();
             const auto controls = group.productionControls(summaryState);
             if (newControl != Group::ProductionCMode::NONE)
             {
-                switched_groups.insert(group.name());
                 actionOnBrokenConstraints(group, controls.exceed_action, newControl, deferred_logger);
             }
         }
 
         // call recursively down the group hiearchy
         for (const std::string& groupName : group.groups()) {
-            updateGroupIndividualControl( schedule().getGroup(groupName, reportStepIdx), deferred_logger, switched_groups);
+            updateGroupIndividualControl( schedule().getGroup(groupName, reportStepIdx), deferred_logger);
         }
     }
 
@@ -2615,18 +2600,18 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    updateGroupHigherControls(DeferredLogger& deferred_logger, std::set<std::string>& switched_groups)
+    updateGroupHigherControls(DeferredLogger& deferred_logger)
     {
         const int reportStepIdx = ebosSimulator_.episodeIndex();
         const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
-        checkGroupHigherConstraints(fieldGroup, deferred_logger, switched_groups);
+        checkGroupHigherConstraints(fieldGroup, deferred_logger);
     }
 
 
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    checkGroupHigherConstraints(const Group& group, DeferredLogger& deferred_logger, std::set<std::string>& switched_groups)
+    checkGroupHigherConstraints(const Group& group, DeferredLogger& deferred_logger)
     {
         // Set up coefficients for RESV <-> surface rate conversion.
         // Use the pvtRegionIdx from the top cell of the first well.
@@ -2662,7 +2647,7 @@ namespace Opm {
 
         std::vector<double> rates(phase_usage_.num_phases, 0.0);
 
-        const bool skip = switched_groups.count(group.name()) || group.name() == "FIELD";
+        const bool skip = group.name() == "FIELD";
 
         if (!skip && group.isInjectionGroup()) {
             // Obtain rates for group.
@@ -2694,7 +2679,6 @@ namespace Opm {
                         resv_coeff,
                         deferred_logger);
                     if (changed.first) {
-                        switched_groups.insert(group.name());
                         actionOnBrokenConstraints(group, Group::InjectionCMode::FLD, phase, deferred_logger);
                     }
                 }
@@ -2728,7 +2712,6 @@ namespace Opm {
                         resv_coeff,
                         deferred_logger);
                     if (changed.first) {
-                        switched_groups.insert(group.name());
                         const auto exceed_action = group.productionControls(summaryState).exceed_action;
                         actionOnBrokenConstraints(group, exceed_action, Group::ProductionCMode::FLD, deferred_logger);
                     }
@@ -2737,7 +2720,7 @@ namespace Opm {
 
         // call recursively down the group hiearchy
         for (const std::string& groupName : group.groups()) {
-            checkGroupHigherConstraints( schedule().getGroup(groupName, reportStepIdx), deferred_logger, switched_groups);
+            checkGroupHigherConstraints( schedule().getGroup(groupName, reportStepIdx), deferred_logger);
          }
     }
 
