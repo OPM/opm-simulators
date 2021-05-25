@@ -24,6 +24,9 @@
 #define OPM_WELLHELPERS_HEADER_INCLUDED
 
 #include <opm/common/OpmLog/OpmLog.hpp>
+
+#include <opm/grid/cpgrid/GridHelpers.hpp>
+
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 
 #include <dune/istl/bcrsmatrix.hh>

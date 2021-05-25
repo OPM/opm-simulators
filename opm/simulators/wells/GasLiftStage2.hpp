@@ -20,25 +20,12 @@
 #ifndef OPM_GASLIFT_STAGE2_HEADER_INCLUDED
 #define OPM_GASLIFT_STAGE2_HEADER_INCLUDED
 
-#include <ebos/eclproblem.hh>
-#include <opm/models/utils/propertysystem.hh>
-#include <opm/models/utils/parametersystem.hh>
 #include <opm/core/props/BlackoilPhases.hpp>
-#include <opm/output/data/Wells.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/GasLiftOpt.hpp>
-#include <opm/simulators/wells/WellInterfaceGeneric.hpp>
-#include <opm/simulators/wells/StandardWell.hpp>
 #include <opm/simulators/wells/GasLiftSingleWellGeneric.hpp>
-#include <opm/simulators/wells/GasLiftWellState.hpp>
-#include <opm/simulators/utils/DeferredLogger.hpp>
-#include <opm/simulators/wells/WellState.hpp>
 
-#include <cassert>
-#include <functional>
-#include <iostream>
+#include <dune/common/version.hh>
+#include <dune/common/parallel/mpihelper.hh>
+
 #include <iterator>
 #include <map>
 #include <memory>
@@ -46,11 +33,18 @@
 #include <string>
 #include <tuple>
 #include <vector>
-#include <fmt/format.h>
 
 namespace Opm
 {
-    template<class TypeTag>
+
+class DeferredLogger;
+class GasLiftOpt;
+class GasLiftWellState;
+class Group;
+class Schedule;
+class WellInterfaceGeneric;
+class WellState;
+
     class GasLiftStage2 {
         using GasLiftSingleWell = GasLiftSingleWellGeneric;
         using GLiftOptWells = std::map<std::string,std::unique_ptr<GasLiftSingleWell>>;
@@ -221,7 +215,5 @@ namespace Opm
     };
 
 } // namespace Opm
-
-#include "GasLiftStage2_impl.hpp"
 
 #endif // OPM_GASLIFT_STAGE2_HEADER_INCLUDED

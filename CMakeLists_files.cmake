@@ -55,6 +55,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/utils/ParallelRestart.cpp
   opm/simulators/wells/ALQState.cpp
   opm/simulators/wells/GasLiftSingleWellGeneric.cpp
+  opm/simulators/wells/GasLiftStage2.cpp
   opm/simulators/wells/GlobalWellInfo.cpp
   opm/simulators/wells/GroupState.cpp
   opm/simulators/wells/ParallelWellInfo.cpp

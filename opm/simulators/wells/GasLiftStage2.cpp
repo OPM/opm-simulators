@@ -17,13 +17,17 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <opm/simulators/wells/StandardWell.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
-#include <opm/simulators/utils/DeferredLogger.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
-#include <opm/simulators/wells/WellState.hpp>
+#include <config.h>
+#include <opm/simulators/wells/GasLiftStage2.hpp>
+
 #include <opm/parser/eclipse/EclipseState/Schedule/GasLiftOpt.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+
+#include <opm/simulators/utils/DeferredLogger.hpp>
+#include <opm/simulators/wells/GasLiftSingleWellGeneric.hpp>
+#include <opm/simulators/wells/GasLiftWellState.hpp>
+#include <opm/simulators/wells/WellInterfaceGeneric.hpp>
+#include <opm/simulators/wells/WellState.hpp>
 
 #include <cmath>
 #include <optional>
@@ -33,9 +37,7 @@
 
 namespace Opm {
 
-template<typename TypeTag>
-GasLiftStage2<TypeTag>::
-GasLiftStage2(
+GasLiftStage2::GasLiftStage2(
     const int report_step_idx,
     const Communication& comm,
     const PhaseUsage& phase_usage,
@@ -77,9 +79,8 @@ GasLiftStage2(
 // currently has the largest weighted incremental gradient. The
 // procedure takes account of any limits on the group production rate
 // or lift gas supply applied to any level of group, including the FIELD level group.
-template<typename TypeTag>
 void
-GasLiftStage2<TypeTag>::
+GasLiftStage2::
 runOptimize()
 {
     const auto& group = this->schedule_.getGroup("FIELD", this->report_step_idx_);
@@ -96,9 +97,8 @@ runOptimize()
 // Update GasLiftWellState and WellState for "well_name" to the
 //   new ALQ value and related data (the data has already been computed and
 //   saved in "grad_map")
-template<typename TypeTag>
 void
-GasLiftStage2<TypeTag>::
+GasLiftStage2::
 addOrRemoveALQincrement_(GradMap &grad_map, const std::string well_name, bool add)
 {
     // only applies to wells in the well_state_map (i.e. wells on this rank)
@@ -122,9 +122,8 @@ addOrRemoveALQincrement_(GradMap &grad_map, const std::string well_name, bool ad
     this->well_state_.setALQ(well_name, gi.alq);
 }
 
-template<typename TypeTag>
-std::optional<typename GasLiftStage2<TypeTag>::GradInfo>
-GasLiftStage2<TypeTag>::
+std::optional<GasLiftStage2::GradInfo>
+GasLiftStage2::
 calcIncOrDecGrad_(
     const std::string well_name, const GasLiftSingleWell &gs_well, bool increase)
 {
@@ -162,9 +161,8 @@ calcIncOrDecGrad_(
     }
 }
 
-template<typename TypeTag>
 bool
-GasLiftStage2<TypeTag>::
+GasLiftStage2::
 checkRateAlreadyLimited_(GasLiftWellState &state, bool increase)
 {
     auto current_increase = state.increase();
@@ -197,9 +195,8 @@ checkRateAlreadyLimited_(GasLiftWellState &state, bool increase)
 }
 
 
-template<typename TypeTag>
-typename GasLiftStage2<TypeTag>::GradInfo
-GasLiftStage2<TypeTag>::
+GasLiftStage2::GradInfo
+GasLiftStage2::
 deleteGrad_(const std::string &name, bool increase)
 {
     GradMap &map = increase ? this->inc_grads_ : this->dec_grads_;
@@ -208,25 +205,22 @@ deleteGrad_(const std::string &name, bool increase)
     return value;
 }
 
-template<typename TypeTag>
-typename GasLiftStage2<TypeTag>::GradInfo
-GasLiftStage2<TypeTag>::
+GasLiftStage2::GradInfo
+GasLiftStage2::
 deleteDecGradItem_(const std::string &name)
 {
     return deleteGrad_(name, /*increase=*/false);
 }
 
-template<typename TypeTag>
-typename GasLiftStage2<TypeTag>::GradInfo
-GasLiftStage2<TypeTag>::
+GasLiftStage2::GradInfo
+GasLiftStage2::
 deleteIncGradItem_(const std::string &name)
 {
     return deleteGrad_(name, /*increase=*/true);
 }
 
-template<typename TypeTag>
 void
-GasLiftStage2<TypeTag>::
+GasLiftStage2::
 displayWarning_(const std::string &msg, const std::string &group_name)
 {
     const std::string message = fmt::format(
@@ -234,9 +228,8 @@ displayWarning_(const std::string &msg, const std::string &group_name)
     this->deferred_logger_.warning("WARNING", message);
 }
 
-template<typename TypeTag>
 void
-GasLiftStage2<TypeTag>::
+GasLiftStage2::
 displayWarning_(const std::string &msg)
 {
     const std::string message = fmt::format(
@@ -244,9 +237,8 @@ displayWarning_(const std::string &msg)
     this->deferred_logger_.warning("WARNING", message);
 }
 
-template<typename TypeTag>
 void
-GasLiftStage2<TypeTag>::
+GasLiftStage2::
 displayDebugMessage_(const std::string &msg)
 {
     if (this->debug_) {
@@ -256,9 +248,8 @@ displayDebugMessage_(const std::string &msg)
     }
 }
 
-template<typename TypeTag>
 void
-GasLiftStage2<TypeTag>::
+GasLiftStage2::
 displayDebugMessage2B_(const std::string &msg)
 {
     if (this->debug_) {
@@ -267,9 +258,9 @@ displayDebugMessage2B_(const std::string &msg)
         displayDebugMessage_(message);
     }
 }
-template<typename TypeTag>
+
 void
-GasLiftStage2<TypeTag>::
+GasLiftStage2::
 displayDebugMessage_(const std::string &msg, const std::string &group_name)
 {
     if (this->debug_) {
@@ -279,9 +270,8 @@ displayDebugMessage_(const std::string &msg, const std::string &group_name)
     }
 }
 
-template<typename TypeTag>
 std::tuple<double, double, double>
-GasLiftStage2<TypeTag>::
+GasLiftStage2::
 getCurrentGroupRates_(const Group &group)
 {
     auto rates = getCurrentGroupRatesRecursive_(group);
@@ -298,8 +288,8 @@ getCurrentGroupRates_(const Group &group)
 }
 
 
-template<typename TypeTag>
-std::array <double, 3> GasLiftStage2<TypeTag>::
+std::array <double, 3>
+GasLiftStage2::
 getCurrentGroupRatesRecursive_(const Group &group)
 {
     double oil_rate = 0.0;
@@ -339,9 +329,8 @@ getCurrentGroupRatesRecursive_(const Group &group)
     return {oil_rate, gas_rate, alq};
 }
 
-template<typename TypeTag>
 std::tuple<double, double, double>
-GasLiftStage2<TypeTag>::
+GasLiftStage2::
 getCurrentWellRates_(const std::string &well_name, const std::string &group_name)
 {
     double oil_rate, gas_rate, alq;
@@ -412,9 +401,8 @@ getCurrentWellRates_(const std::string &well_name, const std::string &group_name
     return std::make_tuple(oil_rate, gas_rate, alq);
 }
 
-template<typename TypeTag>
 std::pair<double, double>
-GasLiftStage2<TypeTag>::
+GasLiftStage2::
 getStdWellRates_(const WellInterfaceGeneric &well)
 {
     const int well_index = well.indexOfWell();
@@ -434,9 +422,8 @@ getStdWellRates_(const WellInterfaceGeneric &well)
 // NOTE: This means that wells are located at the leaf nodes of the tree, and
 //       groups are located at the other nodes (not leaf nodes) of the tree
 //
-template<typename TypeTag>
 std::vector<GasLiftSingleWellGeneric*>
-GasLiftStage2<TypeTag>::
+GasLiftStage2::
 getGroupGliftWells_(const Group &group)
 {
     std::vector<GasLiftSingleWell *> wells;
@@ -444,9 +431,8 @@ getGroupGliftWells_(const Group &group)
     return wells;
 }
 
-template<typename TypeTag>
 void
-GasLiftStage2<TypeTag>::
+GasLiftStage2::
 getGroupGliftWellsRecursive_(const Group &group,
          std::vector<GasLiftSingleWell *> &wells)
 {
@@ -465,9 +451,8 @@ getGroupGliftWellsRecursive_(const Group &group,
     }
 }
 
-template<typename TypeTag>
 void
-GasLiftStage2<TypeTag>::
+GasLiftStage2::
 mpiSyncGlobalGradVector_(std::vector<GradPair> &grads_global) const
 {
     if (this->comm_.size() == 1)
@@ -482,9 +467,8 @@ mpiSyncGlobalGradVector_(std::vector<GradPair> &grads_global) const
     mpiSyncLocalToGlobalGradVector_(grads_local, grads_global);
 }
 
-template<typename TypeTag>
 void
-GasLiftStage2<TypeTag>::
+GasLiftStage2::
 mpiSyncLocalToGlobalGradVector_(
     const std::vector<GradPair> &grads_local, std::vector<GradPair> &grads_global) const
 {
@@ -523,9 +507,8 @@ mpiSyncLocalToGlobalGradVector_(
     }
 }
 
-template<typename TypeTag>
 void
-GasLiftStage2<TypeTag>::
+GasLiftStage2::
 optimizeGroup_(const Group &group)
 {
     const auto &gl_group = this->glo_.group(group.name());
@@ -546,9 +529,8 @@ optimizeGroup_(const Group &group)
     }
 }
 
-template<typename TypeTag>
 void
-GasLiftStage2<TypeTag>::
+GasLiftStage2::
 optimizeGroupsRecursive_(const Group &group)
 {
     for (const std::string& group_name : group.groups()) {
@@ -569,9 +551,9 @@ optimizeGroupsRecursive_(const Group &group)
         optimizeGroup_(group);
 
 }
-template<typename TypeTag>
+
 void
-GasLiftStage2<TypeTag>::
+GasLiftStage2::
 recalculateGradientAndUpdateData_(
     GradPairItr &grad_itr, bool increase,
 
@@ -654,9 +636,8 @@ recalculateGradientAndUpdateData_(
 //  just do it once for the topmost group "PLAT-A" and then skip redistribution for
 //  all sub groups of "PLAT-A"
 //
-template<typename TypeTag>
 void
-GasLiftStage2<TypeTag>::
+GasLiftStage2::
 redistributeALQ_(std::vector<GasLiftSingleWell *> &wells,  const Group &group,
     std::vector<GradPair> &inc_grads, std::vector<GradPair> &dec_grads)
 {
@@ -718,9 +699,8 @@ redistributeALQ_(std::vector<GasLiftSingleWell *> &wells,  const Group &group,
 // Lift gas increments are removed in turn from the well that currently has
 //   the smallest weighted decremental gradient, until there is no surplus
 //   lift gas in the group.
-template<typename TypeTag>
 void
-GasLiftStage2<TypeTag>::
+GasLiftStage2::
 removeSurplusALQ_(const Group &group,
     std::vector<GradPair> &inc_grads, std::vector<GradPair> &dec_grads)
 {
@@ -801,9 +781,8 @@ removeSurplusALQ_(const Group &group,
     }
 }
 
-template<typename TypeTag>
 void
-GasLiftStage2<TypeTag>::
+GasLiftStage2::
 saveGrad_(GradMap &map, const std::string &name, GradInfo &grad)
 {
     if (auto it = map.find(name); it == map.end()) {
@@ -815,25 +794,22 @@ saveGrad_(GradMap &map, const std::string &name, GradInfo &grad)
     }
 }
 
-template<typename TypeTag>
 void
-GasLiftStage2<TypeTag>::
+GasLiftStage2::
 saveDecGrad_(const std::string &name, GradInfo &grad)
 {
     saveGrad_(this->dec_grads_, name, grad);
 }
 
-template<typename TypeTag>
 void
-GasLiftStage2<TypeTag>::
+GasLiftStage2::
 saveIncGrad_(const std::string &name, GradInfo &grad)
 {
     saveGrad_(this->inc_grads_, name, grad);
 }
 
-template<typename TypeTag>
 void
-GasLiftStage2<TypeTag>::
+GasLiftStage2::
 sortGradients_(std::vector<GradPair> &grads)
 {
     auto cmp = [](GradPair a, GradPair b) {
@@ -842,9 +818,8 @@ sortGradients_(std::vector<GradPair> &grads)
     std::sort(grads.begin(), grads.end(), cmp);
 }
 
-template<typename TypeTag>
-std::optional<typename GasLiftStage2<TypeTag>::GradInfo>
-GasLiftStage2<TypeTag>::
+std::optional<GasLiftStage2::GradInfo>
+GasLiftStage2::
 updateGrad_(const std::string &name, GradInfo &grad, bool increase)
 {
     GradMap &map = increase ? this->inc_grads_ : this->dec_grads_;
@@ -856,9 +831,8 @@ updateGrad_(const std::string &name, GradInfo &grad, bool increase)
     return old_value;
 }
 
-template<typename TypeTag>
 void
-GasLiftStage2<TypeTag>::
+GasLiftStage2::
 updateGradVector_(const std::string &name, std::vector<GradPair> &grads, double grad)
 {
     for (auto itr = grads.begin(); itr != grads.end(); itr++) {
@@ -876,9 +850,8 @@ updateGradVector_(const std::string &name, std::vector<GradPair> &grads, double 
  * Public methods declared in OptimizeState
  ***********************************************/
 
-template<typename TypeTag>
 void
-GasLiftStage2<TypeTag>::OptimizeState::
+GasLiftStage2::OptimizeState::
 calculateEcoGradients(std::vector<GasLiftSingleWell *> &wells,
            std::vector<GradPair> &inc_grads, std::vector<GradPair> &dec_grads)
 {
@@ -899,9 +872,8 @@ calculateEcoGradients(std::vector<GasLiftSingleWell *> &wells,
 }
 
 
-template<typename TypeTag>
 bool
-GasLiftStage2<TypeTag>::OptimizeState::
+GasLiftStage2::OptimizeState::
 checkAtLeastTwoWells(std::vector<GasLiftSingleWell *> &wells)
 {
     int numberOfwells = 0;
@@ -921,19 +893,17 @@ checkAtLeastTwoWells(std::vector<GasLiftSingleWell *> &wells)
     return true;
 }
 
-template<typename TypeTag>
 void
-GasLiftStage2<TypeTag>::OptimizeState::
+GasLiftStage2::OptimizeState::
 debugShowIterationInfo()
 {
     const std::string msg = fmt::format("iteration {}", this->it);
     displayDebugMessage_(msg);
 }
 
-template<typename TypeTag>
-std::pair<std::optional<typename GasLiftStage2<TypeTag>::GradPairItr>,
-          std::optional<typename GasLiftStage2<TypeTag>::GradPairItr>>
-GasLiftStage2<TypeTag>::OptimizeState::
+std::pair<std::optional<GasLiftStage2::GradPairItr>,
+          std::optional<GasLiftStage2::GradPairItr>>
+GasLiftStage2::OptimizeState::
 getEcoGradients(std::vector<GradPair> &inc_grads, std::vector<GradPair> &dec_grads)
 {
     if (inc_grads.size() > 0 && dec_grads.size() > 0) {
@@ -973,9 +943,8 @@ getEcoGradients(std::vector<GradPair> &inc_grads, std::vector<GradPair> &dec_gra
 //   a new decremental gradient given the new ALQ. The new incremental gradient
 //   for this well is set equal to the current decremental gradient
 //   (before the ALQ is subtracted)
-template<typename TypeTag>
 void
-GasLiftStage2<TypeTag>::OptimizeState::
+GasLiftStage2::OptimizeState::
 recalculateGradients(
          std::vector<GradPair> &inc_grads, std::vector<GradPair> &dec_grads,
          GradPairItr &min_dec_grad_itr, GradPairItr &max_inc_grad_itr)
@@ -991,9 +960,8 @@ recalculateGradients(
 }
 
 // Take one ALQ increment from well1, and give it to well2
-template<typename TypeTag>
 void
-GasLiftStage2<TypeTag>::OptimizeState::
+GasLiftStage2::OptimizeState::
     redistributeALQ( GradPairItr &min_dec_grad, GradPairItr &max_inc_grad)
 {
     const std::string msg = fmt::format(
@@ -1012,17 +980,15 @@ GasLiftStage2<TypeTag>::OptimizeState::
  * Private methods declared in OptimizeState
  **********************************************/
 
-template<typename TypeTag>
 void
-GasLiftStage2<TypeTag>::OptimizeState::
+GasLiftStage2::OptimizeState::
 displayDebugMessage_(const std::string &msg)
 {
     this->parent.displayDebugMessage_(msg, this->group.name());
 }
 
-template<typename TypeTag>
 void
-GasLiftStage2<TypeTag>::OptimizeState::
+GasLiftStage2::OptimizeState::
 displayWarning_(const std::string &msg)
 {
     this->parent.displayWarning_(msg, this->group.name());
@@ -1032,9 +998,8 @@ displayWarning_(const std::string &msg)
  * Public methods declared in SurplusState
  **********************************************/
 
-template<typename TypeTag>
 void
-GasLiftStage2<TypeTag>::SurplusState::
+GasLiftStage2::SurplusState::
 addOrRemoveALQincrement(GradMap &grad_map, const std::string well_name, bool add)
 {
     if (this->parent.debug_) {
@@ -1045,9 +1010,8 @@ addOrRemoveALQincrement(GradMap &grad_map, const std::string well_name, bool add
     this->parent.addOrRemoveALQincrement_(grad_map, well_name, add);
 }
 
-template<typename TypeTag>
 bool
-GasLiftStage2<TypeTag>::SurplusState::
+GasLiftStage2::SurplusState::
 checkALQlimit()
 {
     if (this->max_glift) {
@@ -1067,9 +1031,8 @@ checkALQlimit()
     return false;
 }
 
-template<typename TypeTag>
 bool
-GasLiftStage2<TypeTag>::SurplusState::
+GasLiftStage2::SurplusState::
 checkEcoGradient(const std::string &well_name, double eco_grad)
 {
     if (eco_grad < this->min_eco_grad) {
@@ -1086,9 +1049,8 @@ checkEcoGradient(const std::string &well_name, double eco_grad)
     }
 }
 
-template<typename TypeTag>
 bool
-GasLiftStage2<TypeTag>::SurplusState::
+GasLiftStage2::SurplusState::
 checkGasTarget()
 {
     if (this->group.has_control(Group::ProductionCMode::GRAT)) {
@@ -1105,9 +1067,8 @@ checkGasTarget()
     return false;
 }
 
-template<typename TypeTag>
 bool
-GasLiftStage2<TypeTag>::SurplusState::
+GasLiftStage2::SurplusState::
 checkOilTarget()
 {
     if (this->group.has_control(Group::ProductionCMode::ORAT)) {
@@ -1124,9 +1085,8 @@ checkOilTarget()
     return false;
 }
 
-template<typename TypeTag>
 void
-GasLiftStage2<TypeTag>::SurplusState::
+GasLiftStage2::SurplusState::
 updateRates(const std::string &well_name)
 {
     std::array<double, 3> delta = {0.0,0.0,0.0};

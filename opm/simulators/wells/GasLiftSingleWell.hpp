@@ -20,6 +20,10 @@
 #ifndef OPM_GASLIFT_SINGLE_WELL_HEADER_INCLUDED
 #define OPM_GASLIFT_SINGLE_WELL_HEADER_INCLUDED
 
+#include <opm/models/utils/propertysystem.hh>
+#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+
 // NOTE: StandardWell.hpp includes ourself (GasLiftSingleWell.hpp), so we need
 //   to forward declare StandardWell for it to be defined in this file.
 namespace Opm {
