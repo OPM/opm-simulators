@@ -111,10 +111,22 @@ public:
     void currentProductionControl(std::size_t well_index, Well::ProducerCMode cmode) { current_production_controls_[well_index] = cmode; }
 
     void setCurrentWellRates(const std::string& wellName, const std::vector<double>& rates ) {
-        well_rates[wellName].second = rates;
+        this->well_rates[wellName].second = rates;
+        this->container_well_rates[wellName].second = rates;
     }
 
-    const std::vector<double>& currentWellRates(const std::string& wellName) const;
+    const std::vector<double>& currentWellRates(const std::string& wellName) const {
+        auto it = well_rates.find(wellName);
+
+        if (it == well_rates.end())
+            std::logic_error("Could not find any rates for well: " + wellName);
+
+        auto other = this->container_well_rates[wellName].second;
+        if (other != it->second.second)
+            std::logic_error("Wellrates different ...\n");
+
+        return it->second.second;
+    }
 
     bool hasWellRates(const std::string& wellName) const {
         return this->well_rates.find(wellName) != this->well_rates.end();
@@ -471,7 +483,7 @@ private:
     WellContainer<Well::ProducerCMode> current_production_controls_;
 
     std::map<std::string, std::pair<bool, std::vector<double>>> well_rates;
-
+    WellContainer<std::pair<bool, std::vector<double>>> container_well_rates;
 
     std::vector<double> perfRateSolvent_;
 

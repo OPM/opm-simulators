@@ -236,9 +236,11 @@ void WellState::init(const std::vector<double>& cellPressures,
     // call init on base class
     this->base_init(cellPressures, wells_ecl, parallel_well_info, well_perf_data, summary_state);
     this->global_well_info = std::make_optional<GlobalWellInfo>( schedule, report_step, wells_ecl );
+    this->container_well_rates.clear();
     for (const auto& winfo: parallel_well_info)
     {
         well_rates.insert({winfo->name(), std::make_pair(winfo->isOwner(), std::vector<double>(this->numPhases()))});
+        this->container_well_rates.add( winfo->name(), std::make_pair(winfo->isOwner(), std::vector<double>(this->numPhases())));
     }
 
     const int nw = wells_ecl.size();
@@ -561,16 +563,6 @@ void WellState::resize(const std::vector<Well>& wells_ecl,
     }
 }
 
-const std::vector<double>&
-WellState::currentWellRates(const std::string& wellName) const
-{
-    auto it = well_rates.find(wellName);
-
-    if (it == well_rates.end())
-        OPM_THROW(std::logic_error, "Could not find any rates for well  " << wellName);
-
-    return it->second.second;
-}
 
 template<class Communication>
 void WellState::gatherVectorsOnRoot(const std::vector<data::Connection>& from_connections,
