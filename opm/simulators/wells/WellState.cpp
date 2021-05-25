@@ -238,7 +238,7 @@ void WellState::init(const std::vector<double>& cellPressures,
     this->global_well_info = std::make_optional<GlobalWellInfo>( schedule, report_step, wells_ecl );
     for (const auto& winfo: parallel_well_info)
     {
-        well_rates.insert({winfo->name(), std::make_pair(winfo->isOwner(), std::vector<double>())});
+        well_rates.insert({winfo->name(), std::make_pair(winfo->isOwner(), std::vector<double>(this->numPhases()))});
     }
 
     const int nw = wells_ecl.size();
@@ -1095,65 +1095,48 @@ void WellState::updateStatus(int well_index, Well::Status status)
 template<class Comm>
 void WellState::communicateGroupRates(const Comm& comm)
 {
-    // Note that injection_group_vrep_rates is handled separate from
-    // the forAllGroupData() function, since it contains single doubles,
-    // not vectors.
-
-    // Create a function that calls some function
-    // for all the individual data items to simplify
-    // the further code.
-    auto iterateRatesContainer = [](auto& container, auto& func) {
-        for (auto& x : container) {
-            if (x.second.first)
-            {
-                func(x.second.second);
-            }
-            else
-            {
-                // We might actually store non-zero values for
-                // distributed wells even if they are not owned.
-                std::vector<double> dummyRate;
-                dummyRate.assign(x.second.second.size(), 0);
-                func(dummyRate);
-            }
-        }
-    };
-
-
     // Compute the size of the data.
     std::size_t sz = 0;
-    auto computeSize = [&sz](const auto& v) {
-        sz += v.size();
-    };
-    iterateRatesContainer(this->well_rates, computeSize);
+    for (const auto& [_, owner_rates] : this->well_rates) {
+        (void)_;
+        const auto& [__, rates] = owner_rates;
+        (void)__;
+        sz += rates.size();
+    }
     sz += this->alq_state.pack_size();
+
 
     // Make a vector and collect all data into it.
     std::vector<double> data(sz);
     std::size_t pos = 0;
-    auto collect = [&data, &pos](const auto& v) {
-        for (const auto& x : v) {
-            data[pos++] = x;
+    for (const auto& [_, owner_rates] : this->well_rates) {
+        (void)_;
+        const auto& [owner, rates] = owner_rates;
+        for (const auto& value : rates) {
+            if (owner)
+                data[pos++] = value;
+            else
+                data[pos++] = 0;
         }
-    };
-    iterateRatesContainer(this->well_rates, collect);
+    }
     pos += this->alq_state.pack_data(&data[pos]);
     assert(pos == sz);
 
     // Communicate it with a single sum() call.
     comm.sum(data.data(), data.size());
 
-    // Distribute the summed vector to the data items.
     pos = 0;
-    auto distribute = [&data, &pos](auto& v) {
-        for (auto& x : v) {
-            x = data[pos++];
-        }
-    };
-    iterateRatesContainer(this->well_rates, distribute);
+    for (auto& [_, owner_rates] : this->well_rates) {
+        (void)_;
+        auto& [__, rates] = owner_rates;
+        (void)__;
+        for (auto& value : rates)
+            value = data[pos++];
+    }
     pos += this->alq_state.unpack_data(&data[pos]);
     assert(pos == sz);
 }
+
 
 template<class Comm>
 void WellState::updateGlobalIsGrup(const Comm& comm)
