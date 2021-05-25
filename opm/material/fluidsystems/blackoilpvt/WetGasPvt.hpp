@@ -36,6 +36,7 @@
 #if HAVE_ECL_INPUT
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #endif
 
 namespace Opm {
