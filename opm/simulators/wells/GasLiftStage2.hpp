@@ -60,9 +60,9 @@ class WellState;
 #else
         using Communication = Dune::CollectiveCommunication<MPIComm>;
 #endif
-        static const int Water = BlackoilPhases::Aqua;
-        static const int Oil = BlackoilPhases::Liquid;
-        static const int Gas = BlackoilPhases::Vapour;
+        static constexpr int Water = BlackoilPhases::Aqua;
+        static constexpr int Oil = BlackoilPhases::Liquid;
+        static constexpr int Gas = BlackoilPhases::Vapour;
     public:
         GasLiftStage2(
             const int report_step_idx,
@@ -140,7 +140,7 @@ class WellState;
         GradMap inc_grads_;
         GradMap dec_grads_;
         bool debug_;
-        int max_iterations_ = 1000;
+        static constexpr int max_iterations_ = 1000;
         //int time_step_idx_;
 
         struct OptimizeState {
