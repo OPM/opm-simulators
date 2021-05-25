@@ -71,6 +71,7 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
                            bool enableEnergy,
                            bool enableSolvent,
                            bool enablePolymer,
+                           bool enablePolymerMolarWeight,
                            bool enableFoam,
                            bool enableBrine,
                            bool enableExtbo)
@@ -81,6 +82,7 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
     , enableEnergy_(enableEnergy)
     , enableSolvent_(enableSolvent)
     , enablePolymer_(enablePolymer)
+    , enablePolymerMolarWeight_(enablePolymerMolarWeight)
     , enableFoam_(enableFoam)
     , enableBrine_(enableBrine)
     , enableExtbo_(enableExtbo)
@@ -660,6 +662,9 @@ assignToSolution(data::Solution& sol)
     if (!cPolymer_.empty())
         sol.insert ("POLYMER", UnitSystem::measure::identity, std::move(cPolymer_), data::TargetType::RESTART_SOLUTION);
 
+    if (!mwPolymer_.empty())
+        sol.insert ("POLY_MW", UnitSystem::measure::identity, std::move(mwPolymer_), data::TargetType::RESTART_SOLUTION);
+
     if (!cFoam_.empty())
         sol.insert ("FOAM", UnitSystem::measure::identity, std::move(cFoam_), data::TargetType::RESTART_SOLUTION);
 
@@ -748,6 +753,8 @@ setRestart(const data::Solution& sol,
         rv_[elemIdx] = sol.data("RV")[globalDofIndex];
     if (!cPolymer_.empty() && sol.has("POLYMER"))
         cPolymer_[elemIdx] = sol.data("POLYMER")[globalDofIndex];
+    if(!mwPolymer_.empty() && sol.has("POLY_MW"))
+        mwPolymer_[elemIdx] = sol.data("POLY_MW")[globalDofIndex];
     if (!cFoam_.empty() && sol.has("FOAM"))
         cFoam_[elemIdx] = sol.data("FOAM")[globalDofIndex];
     if (!cSalt_.empty() && sol.has("SALT"))
@@ -923,6 +930,8 @@ doAllocBuffers(unsigned bufferSize,
         sSol_.resize(bufferSize, 0.0);
     if (enablePolymer_)
         cPolymer_.resize(bufferSize, 0.0);
+    if (enablePolymerMolarWeight_)
+        mwPolymer_.resize(bufferSize, 0.0);
     if (enableFoam_)
         cFoam_.resize(bufferSize, 0.0);
     if (enableBrine_)

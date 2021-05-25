@@ -120,6 +120,7 @@ public:
                    getPropValue<TypeTag, Properties::EnableEnergy>(),
                    getPropValue<TypeTag, Properties::EnableSolvent>(),
                    getPropValue<TypeTag, Properties::EnablePolymer>(),
+                   getPropValue<TypeTag, Properties::EnablePolymerMW>(),
                    getPropValue<TypeTag, Properties::EnableFoam>(),
                    getPropValue<TypeTag, Properties::EnableBrine>(),
                    getPropValue<TypeTag, Properties::EnableExtbo>())
@@ -305,6 +306,10 @@ public:
 
             if (!this->cPolymer_.empty()) {
                 this->cPolymer_[globalDofIdx] = intQuants.polymerConcentration().value();
+            }
+
+            if (!this->mwPolymer_.empty()) {
+                this->mwPolymer_[globalDofIdx] = intQuants.polymerMoleWeight().value();
             }
 
             if (!this->cFoam_.empty()) {
