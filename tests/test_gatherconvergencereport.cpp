@@ -71,7 +71,7 @@ BOOST_AUTO_TEST_CASE(AllHaveFailure)
     using CR = Opm::ConvergenceReport;
     CR cr;
     cr.setWellFailed({CR::WellFailure::Type::ControlBHP, CR::Severity::Normal, -1, name.str()});
-    CR global_cr = gatherConvergenceReport(cr);
+    CR global_cr = gatherConvergenceReport(cr, cc);
     BOOST_CHECK(global_cr.wellFailures().size() == std::size_t(cc.size()));
     BOOST_CHECK(global_cr.wellFailures()[cc.rank()] == cr.wellFailures()[0]);
     // Extra output for debugging.
@@ -92,7 +92,7 @@ BOOST_AUTO_TEST_CASE(EvenHaveFailure)
         name << "WellRank" << cc.rank() << std::flush;
         cr.setWellFailed({CR::WellFailure::Type::ControlBHP, CR::Severity::Normal, -1, name.str()});
     }
-    CR global_cr = gatherConvergenceReport(cr);
+    CR global_cr = gatherConvergenceReport(cr, cc);
     BOOST_CHECK(global_cr.wellFailures().size() == std::size_t((cc.size())+1) / 2);
     if (cc.rank() % 2 == 0) {
         BOOST_CHECK(global_cr.wellFailures()[cc.rank()/2] == cr.wellFailures()[0]);

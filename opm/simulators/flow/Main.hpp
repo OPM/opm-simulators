@@ -392,7 +392,7 @@ namespace Opm
             using PreProblem = GetPropType<PreTypeTag, Properties::Problem>;
 
             PreProblem::setBriefDescription("Flow, an advanced reservoir simulator for ECL-decks provided by the Open Porous Media project.");
-            int status = FlowMainEbos<PreTypeTag>::setupParameters_(argc_, argv_);
+            int status = FlowMainEbos<PreTypeTag>::setupParameters_(argc_, argv_, EclGenericVanguard::comm());
             if (status != 0) {
                 // if setupParameters_ returns a value smaller than 0, there was no error, but
                 // the program should abort. This is the case e.g. for the --help and the
@@ -437,7 +437,7 @@ namespace Opm
                 return false;
             }
             if (outputCout_) {
-                FlowMainEbos<PreTypeTag>::printBanner();
+                FlowMainEbos<PreTypeTag>::printBanner(EclGenericVanguard::comm());
             }
             // Create Deck and EclipseState.
             try {

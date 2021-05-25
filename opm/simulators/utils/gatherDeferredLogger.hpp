@@ -21,13 +21,14 @@
 #ifndef OPM_GATHERDEFERREDLOGGER_HEADER_INCLUDED
 #define OPM_GATHERDEFERREDLOGGER_HEADER_INCLUDED
 
+#include <dune/common/parallel/mpihelper.hh>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
 namespace Opm
 {
 
     /// Create a global log combining local logs
-    Opm::DeferredLogger gatherDeferredLogger(const Opm::DeferredLogger& local_deferredlogger);
+    Opm::DeferredLogger gatherDeferredLogger(const Opm::DeferredLogger& local_deferredlogger, Dune::MPIHelper::MPICommunicator communicator);
 
 } // namespace Opm
 

@@ -183,7 +183,7 @@ namespace Opm
             changed = this->checkConstraints(well_state, group_state, schedule, summaryState, deferred_logger);
         }
 
-        auto cc = Dune::MPIHelper::getCollectiveCommunication();
+        Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> cc = ebos_simulator.vanguard().grid().comm();
 
         // checking whether control changed
         if (changed) {

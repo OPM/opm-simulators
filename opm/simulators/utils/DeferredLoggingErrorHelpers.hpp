@@ -22,6 +22,7 @@
 #define OPM_DEFERREDLOGGINGERRORHELPERS_HPP
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
+#include <opm/simulators/utils/gatherDeferredLogger.hpp>
 
 #include <dune/common/version.hh>
 #include <dune/common/parallel/mpihelper.hh>
@@ -51,8 +52,10 @@
 
 namespace {
 
-void _throw(Opm::ExceptionType::ExcEnum exc_type, const std::string& message) {
-    const auto& cc = Dune::MPIHelper::getCollectiveCommunication();
+void _throw(Opm::ExceptionType::ExcEnum exc_type,
+            const std::string& message,
+            Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> cc)
+{
     auto global_exc = cc.max(exc_type);
 
     switch (global_exc) {
@@ -73,18 +76,25 @@ void _throw(Opm::ExceptionType::ExcEnum exc_type, const std::string& message) {
     }
 }
 
+} // anonymous namespace
+
+
+
+inline void checkForExceptionsAndThrow(Opm::ExceptionType::ExcEnum exc_type,
+                                       const std::string& message,
+                                       Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> cc)
+{
+    _throw(exc_type, message, cc);
 }
 
-
-
-inline void checkForExceptionsAndThrow(Opm::ExceptionType::ExcEnum exc_type, const std::string& message)
+inline void logAndCheckForExceptionsAndThrow(Opm::DeferredLogger& deferred_logger,
+                                             Opm::ExceptionType::ExcEnum exc_type,
+                                             const std::string& message,
+                                             const bool terminal_output,
+                                             Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> cc)
 {
-    _throw(exc_type, message);
-}
+    Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(deferred_logger, cc);
 
-inline void logAndCheckForExceptionsAndThrow(Opm::DeferredLogger& deferred_logger, Opm::ExceptionType::ExcEnum exc_type , const std::string& message, const bool terminal_output)
-{
-    Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(deferred_logger);
     if (terminal_output) {
         global_deferredLogger.logMessages();
     }
@@ -92,7 +102,7 @@ inline void logAndCheckForExceptionsAndThrow(Opm::DeferredLogger& deferred_logge
     // cleared from the global logger, but we must also clear them
     // from the local logger.
     deferred_logger.clearMessages();
-    _throw(exc_type, message);
+    _throw(exc_type, message, cc);
 }
 
 #endif // OPM_DEFERREDLOGGINGERRORHELPERS_HPP

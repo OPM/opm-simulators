@@ -85,7 +85,7 @@ protected:
     static const bool gasEnabled = Indices::gasEnabled;
     static const bool oilEnabled = Indices::oilEnabled;
 
-    static constexpr bool has_wfrac_variable = Indices::waterEnabled && Indices::oilEnabled;;
+    static constexpr bool has_wfrac_variable = Indices::waterEnabled && Indices::oilEnabled;
     static constexpr bool has_gfrac_variable = Indices::gasEnabled && Indices::numPhases > 1;
     static constexpr int WFrac = has_wfrac_variable ? 1 : -1000;
     static constexpr int GFrac = has_gfrac_variable ? has_wfrac_variable + 1 : -1000;

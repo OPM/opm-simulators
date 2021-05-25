@@ -230,7 +230,7 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Ecl
         OpmLog::info("\nProcessing grid");
     }
 
-    grid_.reset(new Dune::CpGrid());
+    grid_.reset(new Dune::CpGrid(EclGenericVanguard::comm()));
     const auto& removed_cells = grid_->processEclipseFormat(input_grid,
                                                             &eclState,
                                                             /*isPeriodic=*/false,

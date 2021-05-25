@@ -96,6 +96,8 @@ namespace Opm
 
         typedef SimulatorFullyImplicitBlackoilEbos<TypeTag> Simulator;
 
+        using CComm = Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator>;
+
         FlowMainEbos(int argc, char **argv, bool output_cout, bool output_files )
             : argc_{argc}, argv_{argv},
               output_cout_{output_cout}, output_files_{output_files}
@@ -104,7 +106,7 @@ namespace Opm
         }
 
         // Read the command line parameters. Throws an exception if something goes wrong.
-        static int setupParameters_(int argc, char** argv)
+        static int setupParameters_(int argc, char** argv, CComm ccomm)
         {
             using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
             if (!ParamsMeta::registrationOpen()) {
@@ -214,10 +216,7 @@ namespace Opm
             
             EWOMS_END_PARAM_REGISTRATION(TypeTag);
 
-            int mpiRank = 0;
-#if HAVE_MPI
-            MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
-#endif
+            int mpiRank = ccomm.rank();
 
             // read in the command line parameters
             int status = ::Opm::setupParameters_<TypeTag>(argc, const_cast<const char**>(argv), /*doRegistration=*/false, /*allowUnused=*/true, /*handleHelp=*/(mpiRank==0));
@@ -229,11 +228,8 @@ namespace Opm
                 if (mpiRank == 0) {
                     unknownKeyWords = Parameters::printUnused<TypeTag>(std::cerr);
                 }
-#if HAVE_MPI
-                int globalUnknownKeyWords;
-                MPI_Allreduce(&unknownKeyWords,  &globalUnknownKeyWords, 1, MPI_INT,  MPI_SUM, MPI_COMM_WORLD);
+                int globalUnknownKeyWords = ccomm.sum(unknownKeyWords);
                 unknownKeyWords = globalUnknownKeyWords;
-#endif
                 if ( unknownKeyWords )
                 {
                     if ( mpiRank == 0 )
@@ -275,7 +271,7 @@ namespace Opm
             return status;
         }
 
-        static void printBanner()
+        static void printBanner(CComm ccomm)
         {
             const int lineLen = 70;
             const std::string version = moduleVersionName();
@@ -293,7 +289,6 @@ namespace Opm
             std::cout << "**********************************************************************\n\n";
 
             int threads = 1;
-            int mpiSize = 1;
 
 #ifdef _OPENMP
             // This function is called before the parallel OpenMP stuff gets initialized.
@@ -310,9 +305,7 @@ namespace Opm
                 threads = std::min(input_threads, omp_get_max_threads());
 #endif
 
-#if HAVE_MPI
-            MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
-#endif
+            int mpiSize = ccomm.size();
 
             std::cout << "Using "<< mpiSize << " MPI processes with "<< threads <<" OMP threads on each \n\n";
         }
@@ -402,7 +395,7 @@ namespace Opm
             try {
                 // deal with some administrative boilerplate
 
-                int status = setupParameters_(this->argc_, this->argv_);
+                int status = setupParameters_(this->argc_, this->argv_, EclGenericVanguard::comm());
                 if (status)
                     return status;
 
@@ -447,13 +440,9 @@ namespace Opm
             // determine the rank of the current process and the number of processes
             // involved in the simulation. MPI must have already been initialized
             // here. (yes, the name of this method is misleading.)
-#if HAVE_MPI
-            MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank_);
-            MPI_Comm_size(MPI_COMM_WORLD, &mpi_size_);
-#else
-            mpi_rank_ = 0;
-            mpi_size_ = 1;
-#endif
+            auto ccomm = EclGenericVanguard::comm();
+            mpi_rank_ = ccomm.rank();
+            mpi_size_ = ccomm.size();
 
 #if _OPENMP
             // if openMP is available, default to 2 threads per process.
