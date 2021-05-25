@@ -93,7 +93,7 @@ class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
 
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
+    typedef MathToolbox<Evaluation> Toolbox;
 
     typedef typename GridView::template Codim<0>::Entity        Element;
     typedef Element  ElementStorage;
@@ -125,7 +125,7 @@ class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
 
     static constexpr bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
 
-    typedef Opm::CompositionalFluidState<Scalar, FluidSystem, /*storeEnthalpy=*/true> FluidState;
+    typedef CompositionalFluidState<Scalar, FluidSystem, /*storeEnthalpy=*/true> FluidState;
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
 
     // all quantities that need to be stored per degree of freedom that intersects the
@@ -329,7 +329,7 @@ public:
 
         // make valgrind shut up about the DOFs for the well even if the PrimaryVariables
         // class contains some "holes" due to alignment
-        Opm::Valgrind::SetDefined(sol[wellGlobalDof]);
+        Valgrind::SetDefined(sol[wellGlobalDof]);
 
         // also apply the initial solution of the well to the "old" time steps
         for (unsigned timeIdx = 1; timeIdx < historySize; ++timeIdx) {
@@ -468,10 +468,10 @@ public:
             // rate for each component as its first conservation equation, but we require
             // the black-oil model for now anyway, so this should not be too much of a
             // problem...
-            Opm::Valgrind::CheckDefined(q);
+            Valgrind::CheckDefined(q);
             block = 0.0;
             for (unsigned eqIdx = 0; eqIdx < numModelEq; ++ eqIdx)
-                block[eqIdx][0] = - Opm::getValue(q[eqIdx])/dofVars.totalVolume;
+                block[eqIdx][0] = - getValue(q[eqIdx])/dofVars.totalVolume;
 
             matrix.setBlock(gridDofIdx, wellGlobalDofIdx, block);
 
@@ -1220,7 +1220,7 @@ public:
                 q[conti0EqIdx + eqIdx] += modelRate[conti0EqIdx + eqIdx];
         }
 
-        Opm::Valgrind::CheckDefined(q);
+        Valgrind::CheckDefined(q);
     }
 
 protected:
@@ -1259,7 +1259,7 @@ protected:
                                     const BhpEval& bottomHolePressure,
                                     const DofVariables& dofVars) const
     {
-        typedef Opm::MathToolbox<Evaluation> DofVarsToolbox;
+        typedef MathToolbox<Evaluation> DofVarsToolbox;
         typedef typename std::conditional<std::is_same<BhpEval, Scalar>::value,
                                           ResultEval,
                                           Scalar>::type DofEval;
@@ -1312,13 +1312,13 @@ protected:
             else
                 throw std::logic_error("Type of well \""+name()+"\" is undefined");
 
-            Opm::Valgrind::CheckDefined(pbh);
-            Opm::Valgrind::CheckDefined(p);
-            Opm::Valgrind::CheckDefined(g);
-            Opm::Valgrind::CheckDefined(rho);
-            Opm::Valgrind::CheckDefined(lambda);
-            Opm::Valgrind::CheckDefined(depth);
-            Opm::Valgrind::CheckDefined(refDepth_);
+            Valgrind::CheckDefined(pbh);
+            Valgrind::CheckDefined(p);
+            Valgrind::CheckDefined(g);
+            Valgrind::CheckDefined(rho);
+            Valgrind::CheckDefined(lambda);
+            Valgrind::CheckDefined(depth);
+            Valgrind::CheckDefined(refDepth_);
 
             // pressure in the borehole ("hole pressure") at the given location
             ResultEval ph = pbh + rho*g*(depth - refDepth_);
@@ -1326,9 +1326,9 @@ protected:
             // volumetric reservoir rate for the phase
             volRates[phaseIdx] = Twj*lambda*(ph - p);
 
-            Opm::Valgrind::CheckDefined(g);
-            Opm::Valgrind::CheckDefined(ph);
-            Opm::Valgrind::CheckDefined(volRates[phaseIdx]);
+            Valgrind::CheckDefined(g);
+            Valgrind::CheckDefined(ph);
+            Valgrind::CheckDefined(volRates[phaseIdx]);
         }
     }
 
@@ -1577,7 +1577,7 @@ protected:
         bool onBail = false;
 
         // Newton-Raphson method
-        typedef Opm::DenseAd::Evaluation<Scalar, 1> BhpEval;
+        typedef DenseAd::Evaluation<Scalar, 1> BhpEval;
 
         BhpEval bhpEval(bhpScalar);
         bhpEval.setDerivative(0, 1.0);
@@ -1587,8 +1587,8 @@ protected:
             const auto& f = wellResidual_<BhpEval>(bhpEval);
 
             if (std::abs(f.derivative(0)) < 1e-20)
-                throw Opm::NumericalIssue("Cannot determine the bottom hole pressure for well "+name()
-                                            +": Derivative of the well residual is too small");
+                throw NumericalIssue("Cannot determine the bottom hole pressure for well "+name()
+                                     +": Derivative of the well residual is too small");
             Scalar delta = f.value()/f.derivative(0);
 
             bhpEval.setValue(bhpEval.value() - delta);
@@ -1606,8 +1606,8 @@ protected:
                 return bhpEval.value();
         }
 
-        throw Opm::NumericalIssue("Could not determine the bottom hole pressure of well '"+name()
-                                  +"' within " + std::to_string(maxIter) + " iterations.");
+        throw NumericalIssue("Could not determine the bottom hole pressure of well '"+name()
+                              +"' within " + std::to_string(maxIter) + " iterations.");
     }
 
     template <class BhpEval>
@@ -1615,7 +1615,7 @@ protected:
                           const DofVariables *replacementDofVars = 0,
                           int replacedGridIdx = -1) const
     {
-        typedef Opm::MathToolbox<BhpEval> BhpEvalToolbox;
+        typedef MathToolbox<BhpEval> BhpEvalToolbox;
 
         // compute the volumetric reservoir and surface rates for the complete well
         BhpEval resvRate = 0.0;
@@ -1652,10 +1652,10 @@ protected:
         // injectors. (i.e., the target bottom hole pressure is an upper limit for
         // injectors and a lower limit for producers.) Note that with this approach, one
         // of the limits must always be reached to get the well equation to zero...
-        Opm::Valgrind::CheckDefined(maximumSurfaceRate_);
-        Opm::Valgrind::CheckDefined(maximumReservoirRate_);
-        Opm::Valgrind::CheckDefined(surfaceRate);
-        Opm::Valgrind::CheckDefined(resvRate);
+        Valgrind::CheckDefined(maximumSurfaceRate_);
+        Valgrind::CheckDefined(maximumReservoirRate_);
+        Valgrind::CheckDefined(surfaceRate);
+        Valgrind::CheckDefined(resvRate);
 
         BhpEval result = 1e30;
 
@@ -1701,7 +1701,7 @@ protected:
 
     std::string name_;
 
-    std::vector<DofVariables, Opm::aligned_allocator<DofVariables, alignof(DofVariables)> > dofVarsStore_;
+    std::vector<DofVariables, aligned_allocator<DofVariables, alignof(DofVariables)> > dofVarsStore_;
     std::map<int, DofVariables*> dofVariables_;
 
     // the number of times beginIteration*() was called for the current time step

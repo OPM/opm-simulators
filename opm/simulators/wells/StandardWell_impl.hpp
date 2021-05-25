@@ -376,7 +376,7 @@ namespace Opm
                     std::vector<EvalWell>& cq_s,
                     double& perf_dis_gas_rate,
                     double& perf_vap_oil_rate,
-                    Opm::DeferredLogger& deferred_logger) const
+                    DeferredLogger& deferred_logger) const
     {
 
         const auto& fs = intQuants.fluidState();
@@ -486,7 +486,7 @@ namespace Opm
                 const EvalWell d = EvalWell(numWellEq_ + numEq, 1.0) - rv * rs;
 
                 if (d.value() == 0.0) {
-                    OPM_DEFLOG_THROW(Opm::NumericalIssue, "Zero d value obtained for well " << name() << " during flux calcuation"
+                    OPM_DEFLOG_THROW(NumericalIssue, "Zero d value obtained for well " << name() << " during flux calcuation"
                                                   << " with rs " << rs << " and rv " << rv, deferred_logger);
                 }
 
@@ -552,7 +552,7 @@ namespace Opm
                                    const Well::ProductionControls& /*prod_controls*/,
                                    WellState& well_state,
                                    const GroupState& group_state,
-                                   Opm::DeferredLogger& deferred_logger)
+                                   DeferredLogger& deferred_logger)
     {
         // TODO: only_wells should be put back to save some computation
         // for example, the matrices B C does not need to update if only_wells
@@ -577,7 +577,7 @@ namespace Opm
                                        const double dt,
                                        WellState& well_state,
                                        const GroupState& group_state,
-                                       Opm::DeferredLogger& deferred_logger)
+                                       DeferredLogger& deferred_logger)
     {
 
         // TODO: it probably can be static member for StandardWell
@@ -663,7 +663,7 @@ namespace Opm
         }
 
         const auto& summaryState = ebosSimulator.vanguard().summaryState();
-        const Opm::Schedule& schedule = ebosSimulator.vanguard().schedule();
+        const Schedule& schedule = ebosSimulator.vanguard().schedule();
         assembleControlEq(well_state, group_state, schedule, summaryState, deferred_logger);
 
 
@@ -671,7 +671,7 @@ namespace Opm
         try {
             Dune::ISTLUtility::invertMatrix(invDuneD_[0][0]);
         } catch( ... ) {
-            OPM_DEFLOG_THROW(Opm::NumericalIssue,"Error when inverting local well equations for well " + name(), deferred_logger);
+            OPM_DEFLOG_THROW(NumericalIssue,"Error when inverting local well equations for well " + name(), deferred_logger);
         }
     }
 
@@ -688,7 +688,7 @@ namespace Opm
                         std::vector<EvalWell>& cq_s,
                         EvalWell& water_flux_s,
                         EvalWell& cq_s_zfrac_effective,
-                        Opm::DeferredLogger& deferred_logger) const
+                        DeferredLogger& deferred_logger) const
     {
         const bool allow_cf = getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebosSimulator);
         const EvalWell& bhp = getBhp();
@@ -859,9 +859,9 @@ namespace Opm
     void
     StandardWell<TypeTag>::assembleControlEq(const WellState& well_state,
                                              const GroupState& group_state,
-                                             const Opm::Schedule& schedule,
+                                             const Schedule& schedule,
                                              const SummaryState& summaryState,
-                                             Opm::DeferredLogger& deferred_logger)
+                                             DeferredLogger& deferred_logger)
     {
         EvalWell control_eq(numWellEq_ + numEq, 0.0);
 
@@ -923,7 +923,7 @@ namespace Opm
     getMobility(const Simulator& ebosSimulator,
                 const int perf,
                 std::vector<EvalWell>& mob,
-                Opm::DeferredLogger& deferred_logger) const
+                DeferredLogger& deferred_logger) const
     {
         const int cell_idx = well_cells_[perf];
         assert (int(mob.size()) == num_components_);
@@ -995,7 +995,7 @@ namespace Opm
     StandardWell<TypeTag>::
     updateWellState(const BVectorWell& dwells,
                     WellState& well_state,
-                    Opm::DeferredLogger& deferred_logger) const
+                    DeferredLogger& deferred_logger) const
     {
         if (!this->isOperable() && !this->wellIsStopped()) return;
 
@@ -1064,7 +1064,7 @@ namespace Opm
 
 #ifndef NDEBUG
         for (double v : primary_variables_) {
-            assert(Opm::isfinite(v));
+            assert(isfinite(v));
         }
 #endif
 
@@ -1203,7 +1203,7 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    updateWellStateFromPrimaryVariables(WellState& well_state, Opm::DeferredLogger& deferred_logger) const
+    updateWellStateFromPrimaryVariables(WellState& well_state, DeferredLogger& deferred_logger) const
     {
         const PhaseUsage& pu = phaseUsage();
         std::vector<double> F(number_of_phases_, 0.0);
@@ -1315,7 +1315,7 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    updateThp(WellState& well_state, Opm::DeferredLogger& deferred_logger) const
+    updateThp(WellState& well_state, DeferredLogger& deferred_logger) const
     {
         // When there is no vaild VFP table provided, we set the thp to be zero.
         if (!this->isVFPActive(deferred_logger) || this->wellIsStopped()) {
@@ -1326,7 +1326,7 @@ namespace Opm
         // the well is under other control types, we calculate the thp based on bhp and rates
         std::vector<double> rates(3, 0.0);
 
-        const Opm::PhaseUsage& pu = phaseUsage();
+        const PhaseUsage& pu = phaseUsage();
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
             rates[ Water ] = well_state.wellRates(index_of_well_)[pu.phase_pos[ Water ] ];
         }
@@ -1352,7 +1352,7 @@ namespace Opm
     StandardWell<TypeTag>::
     updateWellStateWithTarget(const Simulator& ebos_simulator,
                               WellState& well_state,
-                              Opm::DeferredLogger& deferred_logger) const
+                              DeferredLogger& deferred_logger) const
     {
         Base::updateWellStateWithTarget(ebos_simulator, well_state, deferred_logger);
     }
@@ -1364,7 +1364,7 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    updateIPR(const Simulator& ebos_simulator, Opm::DeferredLogger& deferred_logger) const
+    updateIPR(const Simulator& ebos_simulator, DeferredLogger& deferred_logger) const
     {
         // TODO: not handling solvent related here for now
 
@@ -1460,7 +1460,7 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    checkOperabilityUnderBHPLimitProducer(const WellState& well_state, const Simulator& ebos_simulator, Opm::DeferredLogger& deferred_logger)
+    checkOperabilityUnderBHPLimitProducer(const WellState& well_state, const Simulator& ebos_simulator, DeferredLogger& deferred_logger)
     {
         const auto& summaryState = ebos_simulator.vanguard().summaryState();
         const double bhp_limit = mostStrictBhpFromBhpLimits(summaryState);
@@ -1514,7 +1514,7 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    checkOperabilityUnderTHPLimitProducer(const Simulator& ebos_simulator, const WellState& well_state, Opm::DeferredLogger& deferred_logger)
+    checkOperabilityUnderTHPLimitProducer(const Simulator& ebos_simulator, const WellState& well_state, DeferredLogger& deferred_logger)
     {
         const auto& summaryState = ebos_simulator.vanguard().summaryState();
         const auto obtain_bhp = computeBhpAtThpLimitProd(well_state, ebos_simulator, summaryState, deferred_logger);
@@ -1596,7 +1596,7 @@ namespace Opm
     StandardWell<TypeTag>::
     canProduceInjectWithCurrentBhp(const Simulator& ebos_simulator,
                                    const WellState& well_state,
-                                   Opm::DeferredLogger& deferred_logger)
+                                   DeferredLogger& deferred_logger)
     {
         const double bhp = well_state.bhp(index_of_well_);
         std::vector<double> well_rates;
@@ -1954,7 +1954,7 @@ namespace Opm
     StandardWell<TypeTag>::
     getWellConvergence(const WellState& well_state,
                        const std::vector<double>& B_avg,
-                       Opm::DeferredLogger& deferred_logger,
+                       DeferredLogger& deferred_logger,
                        const bool /*relax_tolerance*/) const
     {
         // the following implementation assume that the polymer is always after the w-o-g phases
@@ -2174,7 +2174,7 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    solveEqAndUpdateWellState(WellState& well_state, Opm::DeferredLogger& deferred_logger)
+    solveEqAndUpdateWellState(WellState& well_state, DeferredLogger& deferred_logger)
     {
         if (!this->isOperable() && !this->wellIsStopped()) return;
 
@@ -2196,7 +2196,7 @@ namespace Opm
     StandardWell<TypeTag>::
     calculateExplicitQuantities(const Simulator& ebosSimulator,
                                 const WellState& well_state,
-                                Opm::DeferredLogger& deferred_logger)
+                                DeferredLogger& deferred_logger)
     {
         updatePrimaryVariables(well_state, deferred_logger);
         initPrimaryVariablesEvaluation();
@@ -2350,7 +2350,7 @@ namespace Opm
     StandardWell<TypeTag>::
     recoverWellSolutionAndUpdateWellState(const BVector& x,
                                           WellState& well_state,
-                                          Opm::DeferredLogger& deferred_logger) const
+                                          DeferredLogger& deferred_logger) const
     {
         if (!this->isOperable() && !this->wellIsStopped()) return;
 
@@ -2370,7 +2370,7 @@ namespace Opm
     computeWellRatesWithBhp(const Simulator& ebosSimulator,
                             const double& bhp,
                             std::vector<double>& well_flux,
-                            Opm::DeferredLogger& deferred_logger) const
+                            DeferredLogger& deferred_logger) const
     {
 
         const int np = number_of_phases_;
@@ -2408,7 +2408,7 @@ namespace Opm
     computeWellRatesWithBhpPotential(const Simulator& ebosSimulator,
                             const double& bhp,
                             std::vector<double>& well_flux,
-                            Opm::DeferredLogger& deferred_logger)
+                            DeferredLogger& deferred_logger)
     {
 
         // iterate to get a more accurate well density
@@ -2448,7 +2448,7 @@ namespace Opm
     std::vector<double>
     StandardWell<TypeTag>::
     computeWellPotentialWithTHP(const Simulator& ebos_simulator,
-                               Opm::DeferredLogger& deferred_logger,
+                               DeferredLogger& deferred_logger,
                                const WellState &well_state) const
     {
         std::vector<double> potentials(number_of_phases_, 0.0);
@@ -2488,7 +2488,7 @@ namespace Opm
     bool
     StandardWell<TypeTag>::
     doGasLiftOptimize(const WellState &well_state, const Simulator &ebos_simulator,
-                      Opm::DeferredLogger& deferred_logger) const
+                      DeferredLogger& deferred_logger) const
     {
 
         gliftDebug("checking if GLIFT should be done..", deferred_logger);
@@ -2513,7 +2513,7 @@ namespace Opm
             return false;
         }
         const int report_step_idx = ebos_simulator.episodeIndex();
-        const Opm::Schedule& schedule = ebos_simulator.vanguard().schedule();
+        const Schedule& schedule = ebos_simulator.vanguard().schedule();
         const GasLiftOpt& glo = schedule.glo(report_step_idx);
         if (!glo.has_well(name())) {
             gliftDebug("Gas Lift not activated: WLIFTOPT is probably missing",
@@ -2548,7 +2548,7 @@ namespace Opm
             DeferredLogger& deferred_logger ) const
     {
         const int report_step_idx = ebos_simulator.episodeIndex();
-        const Opm::Schedule& schedule = ebos_simulator.vanguard().schedule();
+        const Schedule& schedule = ebos_simulator.vanguard().schedule();
         const GasLiftOpt& glo = schedule.glo(report_step_idx);
         const int iteration_idx = ebos_simulator.model().newtonMethod().numIterations();
         if (glo.all_newton()) {
@@ -2636,7 +2636,7 @@ namespace Opm
     gasLiftOptimizationStage1(
                        WellState& well_state,
                        const Simulator& ebos_simulator,
-                       Opm::DeferredLogger& deferred_logger,
+                       DeferredLogger& deferred_logger,
                        GLiftProdWells &prod_wells,
                        GLiftOptWells &glift_wells,
                        GLiftWellStateMap &glift_state_map
@@ -2670,7 +2670,7 @@ namespace Opm
     computeWellPotentials(const Simulator& ebosSimulator,
                           const WellState& well_state,
                           std::vector<double>& well_potentials,
-                          Opm::DeferredLogger& deferred_logger) // const
+                          DeferredLogger& deferred_logger) // const
     {
         const int np = number_of_phases_;
         well_potentials.resize(np, 0.0);
@@ -2705,7 +2705,7 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    updatePrimaryVariables(const WellState& well_state, Opm::DeferredLogger& deferred_logger) const
+    updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_logger) const
     {
         if (!this->isOperable() && !this->wellIsStopped()) return;
 
@@ -2808,7 +2808,7 @@ namespace Opm
         }
 #ifndef NDEBUG
         for (double v : primary_variables_) {
-            assert(Opm::isfinite(v));
+            assert(isfinite(v));
         }
 #endif
     }
@@ -2821,7 +2821,7 @@ namespace Opm
     StandardWell<TypeTag>::
     calculateThpFromBhp(const WellState &well_state, const std::vector<double>& rates,
                         const double bhp,
-                        Opm::DeferredLogger& deferred_logger) const
+                        DeferredLogger& deferred_logger) const
     {
         assert(int(rates.size()) == 3); // the vfp related only supports three phases now.
 
@@ -2873,7 +2873,7 @@ namespace Opm
     updateWaterMobilityWithPolymer(const Simulator& ebos_simulator,
                                    const int perf,
                                    std::vector<EvalWell>& mob,
-                                   Opm::DeferredLogger& deferred_logger) const
+                                   DeferredLogger& deferred_logger) const
     {
         const int cell_idx = well_cells_[perf];
         const auto& int_quant = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
@@ -2915,7 +2915,7 @@ namespace Opm
             const EvalWell poro = extendEval(int_quant.porosity());
             const EvalWell sw = extendEval(int_quant.fluidState().saturation(FluidSystem::waterPhaseIdx));
             // guard against zero porosity and no water
-            const EvalWell denom = Opm::max( (area * poro * (sw - swcr)), 1e-12);
+            const EvalWell denom = max( (area * poro * (sw - swcr)), 1e-12);
             const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
             EvalWell water_velocity = cq_s[waterCompIdx] / denom * extendEval(int_quant.fluidState().invB(FluidSystem::waterPhaseIdx));
 
@@ -3069,7 +3069,7 @@ namespace Opm
     StandardWell<TypeTag>::
     pskinwater(const double throughput,
                const EvalWell& water_velocity,
-              Opm::DeferredLogger& deferred_logger) const
+              DeferredLogger& deferred_logger) const
     {
         if constexpr (Base::has_polymermw) {
             const int water_table_id = well_ecl_.getPolymerProperties().m_skprwattable;
@@ -3098,11 +3098,11 @@ namespace Opm
     pskin(const double throughput,
               const EvalWell& water_velocity,
               const EvalWell& poly_inj_conc,
-              Opm::DeferredLogger& deferred_logger) const
+              DeferredLogger& deferred_logger) const
     {
         if constexpr (Base::has_polymermw) {
             const double sign = water_velocity >= 0. ? 1.0 : -1.0;
-            const EvalWell water_velocity_abs = Opm::abs(water_velocity);
+            const EvalWell water_velocity_abs = abs(water_velocity);
             if (poly_inj_conc == 0.) {
                 return sign * pskinwater(throughput, water_velocity_abs, deferred_logger);
             }
@@ -3138,7 +3138,7 @@ namespace Opm
     StandardWell<TypeTag>::
     wpolymermw(const double throughput,
                const EvalWell& water_velocity,
-              Opm::DeferredLogger& deferred_logger) const
+               DeferredLogger& deferred_logger) const
     {
         if constexpr (Base::has_polymermw) {
             const int table_id = well_ecl_.getPolymerProperties().m_plymwinjtable;
@@ -3148,7 +3148,7 @@ namespace Opm
             if (wpolymer() == 0.) { // not injecting polymer
                 return molecular_weight;
             }
-            molecular_weight = table_func.eval(throughput_eval, Opm::abs(water_velocity));
+            molecular_weight = table_func.eval(throughput_eval, abs(water_velocity));
             return molecular_weight;
         } else {
             OPM_DEFLOG_THROW(std::runtime_error, "Polymermw is not activated, "
@@ -3212,7 +3212,7 @@ namespace Opm
                                const WellState& well_state,
                                const int perf,
                                const EvalWell& water_flux_s,
-                               Opm::DeferredLogger& deferred_logger)
+                               DeferredLogger& deferred_logger)
     {
         const int cell_idx = well_cells_[perf];
         const auto& int_quants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
@@ -3859,7 +3859,7 @@ namespace Opm
                              const Well::ProductionControls& prod_controls,
                              WellState& well_state,
                              const GroupState& group_state,
-                             Opm::DeferredLogger& deferred_logger)
+                             DeferredLogger& deferred_logger)
     {
         const int max_iter = param_.max_inner_iter_wells_;
         int it = 0;
@@ -3993,7 +3993,7 @@ namespace Opm
             phase_pos = pu.phase_pos[Water];
         }
         else {
-            OPM_DEFLOG_THROW(Opm::NotImplemented,
+            OPM_DEFLOG_THROW(NotImplemented,
                              "Unsupported Injector Type ("
                              << static_cast<int>(preferred_phase)
                              << ") for well " << this->name()

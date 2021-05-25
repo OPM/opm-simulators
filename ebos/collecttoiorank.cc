@@ -269,15 +269,15 @@ private:
 
 class PackUnPackCellData : public P2PCommunicatorType::DataHandleInterface
 {
-    const Opm::data::Solution& localCellData_;
-    Opm::data::Solution& globalCellData_;
+    const data::Solution& localCellData_;
+    data::Solution& globalCellData_;
 
     const IndexMapType& localIndexMap_;
     const IndexMapStorageType& indexMaps_;
 
 public:
-    PackUnPackCellData(const Opm::data::Solution& localCellData,
-                       Opm::data::Solution& globalCellData,
+    PackUnPackCellData(const data::Solution& localCellData,
+                       data::Solution& globalCellData,
                        const IndexMapType& localIndexMap,
                        const IndexMapStorageType& indexMaps,
                        size_t globalSize,
@@ -378,12 +378,12 @@ protected:
 
 class PackUnPackWellData : public P2PCommunicatorType::DataHandleInterface
 {
-    const Opm::data::Wells& localWellData_;
-    Opm::data::Wells& globalWellData_;
+    const data::Wells& localWellData_;
+    data::Wells& globalWellData_;
 
 public:
-    PackUnPackWellData(const Opm::data::Wells& localWellData,
-                       Opm::data::Wells& globalWellData,
+    PackUnPackWellData(const data::Wells& localWellData,
+                       data::Wells& globalWellData,
                        bool isIORank)
         : localWellData_(localWellData)
         , globalWellData_(globalWellData)
@@ -416,12 +416,12 @@ public:
 
 class PackUnPackGroupAndNetworkValues : public P2PCommunicatorType::DataHandleInterface
 {
-    const Opm::data::GroupAndNetworkValues& localGroupAndNetworkData_;
-    Opm::data::GroupAndNetworkValues&       globalGroupAndNetworkData_;
+    const data::GroupAndNetworkValues& localGroupAndNetworkData_;
+    data::GroupAndNetworkValues&       globalGroupAndNetworkData_;
 
 public:
-    PackUnPackGroupAndNetworkValues(const Opm::data::GroupAndNetworkValues& localGroupAndNetworkData,
-                                    Opm::data::GroupAndNetworkValues&       globalGroupAndNetworkData,
+    PackUnPackGroupAndNetworkValues(const data::GroupAndNetworkValues& localGroupAndNetworkData,
+                                    data::GroupAndNetworkValues&       globalGroupAndNetworkData,
                                     const bool                              isIORank)
         : localGroupAndNetworkData_ (localGroupAndNetworkData)
         , globalGroupAndNetworkData_(globalGroupAndNetworkData)
@@ -568,12 +568,12 @@ public:
 
 class PackUnPackAquiferData : public P2PCommunicatorType::DataHandleInterface
 {
-    const Opm::data::Aquifers& localAquiferData_;
+    const data::Aquifers& localAquiferData_;
     data::Aquifers& globalAquiferData_;
 
 public:
-    PackUnPackAquiferData(const Opm::data::Aquifers& localAquiferData,
-                          Opm::data::Aquifers& globalAquiferData,
+    PackUnPackAquiferData(const data::Aquifers& localAquiferData,
+                          data::Aquifers& globalAquiferData,
                           bool isIORank)
         : localAquiferData_(localAquiferData)
         , globalAquiferData_(globalAquiferData)
@@ -791,12 +791,12 @@ CollectDataToIORank(const Grid& grid, const EquilGrid* equilGrid,
 
 template <class Grid, class EquilGrid, class GridView>
 void CollectDataToIORank<Grid,EquilGrid,GridView>::
-collect(const Opm::data::Solution& localCellData,
+collect(const data::Solution& localCellData,
         const std::map<std::pair<std::string, int>, double>& localBlockData,
         const std::map<std::size_t, double>& localWBPData,
-        const Opm::data::Wells& localWellData,
-        const Opm::data::GroupAndNetworkValues& localGroupAndNetworkData,
-        const Opm::data::Aquifers& localAquiferData)
+        const data::Wells& localWellData,
+        const data::GroupAndNetworkValues& localGroupAndNetworkData,
+        const data::Aquifers& localAquiferData)
 {
     globalCellData_ = {};
     globalBlockData_.clear();

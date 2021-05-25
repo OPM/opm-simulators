@@ -150,7 +150,7 @@ namespace PhasePressODE {
 template <class FluidSystem>
 class Water
 {
-using TabulatedFunction = Opm::Tabulated1DFunction<double>;
+using TabulatedFunction = Tabulated1DFunction<double>;
 public:
     Water(const double temp,
           const TabulatedFunction& saltVdTable,
@@ -1532,8 +1532,8 @@ std::pair<double,double> cellZMinMax(const Element& element)
 } // namespace Details
 
 namespace DeckDependent {
-inline std::vector<Opm::EquilRecord>
-getEquil(const Opm::EclipseState& state)
+inline std::vector<EquilRecord>
+getEquil(const EclipseState& state)
 {
     const auto& init = state.getInitConfig();
 
@@ -1547,7 +1547,7 @@ getEquil(const Opm::EclipseState& state)
 
 template<class GridView>
 std::vector<int>
-equilnum(const Opm::EclipseState& eclipseState,
+equilnum(const EclipseState& eclipseState,
          const GridView& gridview)
 {
     std::vector<int> eqlnum(gridview.size(0), 0);
@@ -1573,10 +1573,10 @@ class InitialStateComputer
 public:
     template<class MaterialLawManager>
     InitialStateComputer(MaterialLawManager& materialLawManager,
-                         const Opm::EclipseState& eclipseState,
+                         const EclipseState& eclipseState,
                          const GridView& gridView,
                          const CartesianIndexMapper& cartMapper,
-                         const double grav = Opm::unit::gravity,
+                         const double grav = unit::gravity,
                          const bool applySwatInit = true)
         : temperature_(gridView.size(/*codim=*/0)),
           saltConcentration_(gridView.size(/*codim=*/0)),
@@ -1601,10 +1601,10 @@ public:
         updateCellProps_(gridView, num_aquifers);
 
         // Get the equilibration records.
-        const std::vector<Opm::EquilRecord> rec = getEquil(eclipseState);
+        const std::vector<EquilRecord> rec = getEquil(eclipseState);
         const auto& tables = eclipseState.getTableManager();
         // Create (inverse) region mapping.
-        const Opm::RegionMapping<> eqlmap(equilnum(eclipseState, gridView));
+        const RegionMapping<> eqlmap(equilnum(eclipseState, gridView));
         const int invalidRegion = -1;
         regionPvtIdx_.resize(rec.size(), invalidRegion);
         setRegionPvtIdx(eclipseState, eqlmap);
@@ -1619,17 +1619,17 @@ public:
                 }
                 const int pvtIdx = regionPvtIdx_[i];
                 if (!rec[i].liveOilInitConstantRs()) {
-                    const Opm::TableContainer& rsvdTables = tables.getRsvdTables();
-                    const Opm::TableContainer& pbvdTables = tables.getPbvdTables();
+                    const TableContainer& rsvdTables = tables.getRsvdTables();
+                    const TableContainer& pbvdTables = tables.getPbvdTables();
                     if (rsvdTables.size() > 0) {
 
-                        const Opm::RsvdTable& rsvdTable = rsvdTables.getTable<Opm::RsvdTable>(i);
+                        const RsvdTable& rsvdTable = rsvdTables.getTable<RsvdTable>(i);
                         std::vector<double> depthColumn = rsvdTable.getColumn("DEPTH").vectorCopy();
                         std::vector<double> rsColumn = rsvdTable.getColumn("RS").vectorCopy();
                         rsFunc_.push_back(std::make_shared<Miscibility::RsVD<FluidSystem>>(pvtIdx,
                                                                                            depthColumn, rsColumn));
                     } else if (pbvdTables.size() > 0) {
-                        const Opm::PbvdTable& pbvdTable = pbvdTables.getTable<Opm::PbvdTable>(i);
+                        const PbvdTable& pbvdTable = pbvdTables.getTable<PbvdTable>(i);
                         std::vector<double> depthColumn = pbvdTable.getColumn("DEPTH").vectorCopy();
                         std::vector<double> pbubColumn = pbvdTable.getColumn("PBUB").vectorCopy();
                         rsFunc_.push_back(std::make_shared<Miscibility::PBVD<FluidSystem>>(pvtIdx,
@@ -1667,17 +1667,17 @@ public:
                 }
                 const int pvtIdx = regionPvtIdx_[i];
                 if (!rec[i].wetGasInitConstantRv()) {
-                    const Opm::TableContainer& rvvdTables = tables.getRvvdTables();
-                    const Opm::TableContainer& pdvdTables = tables.getPdvdTables();
+                    const TableContainer& rvvdTables = tables.getRvvdTables();
+                    const TableContainer& pdvdTables = tables.getPdvdTables();
 
                     if (rvvdTables.size() > 0) {
-                        const Opm::RvvdTable& rvvdTable = rvvdTables.getTable<Opm::RvvdTable>(i);
+                        const RvvdTable& rvvdTable = rvvdTables.getTable<RvvdTable>(i);
                         std::vector<double> depthColumn = rvvdTable.getColumn("DEPTH").vectorCopy();
                         std::vector<double> rvColumn = rvvdTable.getColumn("RV").vectorCopy();
                         rvFunc_.push_back(std::make_shared<Miscibility::RvVD<FluidSystem>>(pvtIdx,
                                                                                            depthColumn, rvColumn));
                     } else if (pdvdTables.size() > 0) {
-                        const Opm::PdvdTable& pdvdTable = pdvdTables.getTable<Opm::PdvdTable>(i);
+                        const PdvdTable& pdvdTable = pdvdTables.getTable<PdvdTable>(i);
                         std::vector<double> depthColumn = pdvdTable.getColumn("DEPTH").vectorCopy();
                         std::vector<double> pdewColumn = pdvdTable.getColumn("PDEW").vectorCopy();
                         rvFunc_.push_back(std::make_shared<Miscibility::PDVD<FluidSystem>>(pvtIdx,
@@ -1734,18 +1734,18 @@ public:
 
 private:
 
-    void updateInitialTemperature_(const Opm::EclipseState& eclState)
+    void updateInitialTemperature_(const EclipseState& eclState)
     {
         this->temperature_ = eclState.fieldProps().get_double("TEMPI");
     }
 
     template <class RMap>
-    void updateInitialSaltConcentration_(const Opm::EclipseState& eclState, const RMap& reg)
+    void updateInitialSaltConcentration_(const EclipseState& eclState, const RMap& reg)
     {
         const int numEquilReg = rsFunc_.size();
         saltVdTable_.resize(numEquilReg);
         const auto& tables = eclState.getTableManager();
-        const Opm::TableContainer& saltvdTables = tables.getSaltvdTables();
+        const TableContainer& saltvdTables = tables.getSaltvdTables();
 
         // If no saltvd table is given, we create a trivial table for the density calculations
         if (saltvdTables.empty()) {
@@ -1756,7 +1756,7 @@ private:
             }
         } else {
             for (size_t i = 0; i < saltvdTables.size(); ++i) {
-                const Opm::SaltvdTable& saltvdTable = saltvdTables.getTable<Opm::SaltvdTable>(i);
+                const SaltvdTable& saltvdTable = saltvdTables.getTable<SaltvdTable>(i);
                 saltVdTable_[i].setXYContainers(saltvdTable.getDepthColumn(), saltvdTable.getSaltColumn());
 
                 const auto& cells = reg.cells(i);
@@ -1770,7 +1770,7 @@ private:
 
     std::vector< std::shared_ptr<Miscibility::RsFunction> > rsFunc_;
     std::vector< std::shared_ptr<Miscibility::RsFunction> > rvFunc_;
-    using TabulatedFunction = Opm::Tabulated1DFunction<double>;
+    using TabulatedFunction = Tabulated1DFunction<double>;
     std::vector<TabulatedFunction> saltVdTable_;
     std::vector<int> regionPvtIdx_;
     Vec temperature_;
@@ -1868,7 +1868,7 @@ private:
         }
     }
     template<class RMap>
-    void setRegionPvtIdx(const Opm::EclipseState& eclState, const RMap& reg)
+    void setRegionPvtIdx(const EclipseState& eclState, const RMap& reg)
     {
         const auto& pvtnumData = eclState.fieldProps().get_int("PVTNUM");
 
@@ -1880,7 +1880,7 @@ private:
 
     template <class RMap, class MaterialLawManager, class Comm>
     void calcPressSatRsRv(const RMap& reg,
-                          const std::vector<Opm::EquilRecord>& rec,
+                          const std::vector<EquilRecord>& rec,
                           MaterialLawManager& materialLawManager,
                           const Comm& comm,
                           const double grav)
@@ -1942,8 +1942,8 @@ private:
         if (comm.rank() == 0) {
             for (size_t r = 0; r < rec.size(); ++r) {
                 if (regionIsEmpty[r]) //region is empty on all partitions
-                    Opm::OpmLog::warning("Equilibration region " + std::to_string(r + 1)
-                                         + " has no active cells");
+                    OpmLog::warning("Equilibration region " + std::to_string(r + 1)
+                                     + " has no active cells");
             }
         }
     }

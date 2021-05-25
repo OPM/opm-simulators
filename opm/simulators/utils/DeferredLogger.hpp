@@ -88,7 +88,7 @@ enum ExcEnum {
 
     private:
         std::vector<Message> messages_;
-        friend Opm::DeferredLogger gatherDeferredLogger(const Opm::DeferredLogger& local_deferredlogger);
+        friend DeferredLogger gatherDeferredLogger(const DeferredLogger& local_deferredlogger);
     };
 
 } // namespace Opm
