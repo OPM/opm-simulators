@@ -440,10 +440,17 @@ public:
 
 
 private:
+    WellMapType wellMap_;
+    // Use of std::optional<> here is a technical crutch, the
+    // WellStateFullyImplicitBlackoil class should be default constructible,
+    // whereas the GlobalWellInfo is not.
+    std::optional<GlobalWellInfo> global_well_info;
+    ALQState alq_state;
+    bool do_glift_optimization_;
+
     WellContainer<Well::Status> status_;
     WellContainer<std::vector<PerforationData>> well_perf_data_;
     WellContainer<const ParallelWellInfo*> parallel_well_info_;
-    WellMapType wellMap_;
     std::vector<double> bhp_;
     std::vector<double> thp_;
     std::vector<double> temperature_;
@@ -463,14 +470,8 @@ private:
     WellContainer<Opm::Well::InjectorCMode> current_injection_controls_;
     WellContainer<Well::ProducerCMode> current_production_controls_;
 
-    // Use of std::optional<> here is a technical crutch, the
-    // WellStateFullyImplicitBlackoil class should be default constructible,
-    // whereas the GlobalWellInfo is not.
-    std::optional<GlobalWellInfo> global_well_info;
     std::map<std::string, std::pair<bool, std::vector<double>>> well_rates;
 
-    ALQState alq_state;
-    bool do_glift_optimization_;
 
     std::vector<double> perfRateSolvent_;
 
