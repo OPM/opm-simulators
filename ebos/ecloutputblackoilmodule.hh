@@ -170,7 +170,7 @@ public:
                              substep,
                              log,
                              isRestart,
-                             simulator_.problem().vapparsActive(),
+                             simulator_.problem().vapparsActive(std::max(simulator_.episodeIndex(), 0)),
                              simulator_.problem().materialLawManager()->enableHysteresis(),
                              simulator_.problem().tracerModel().numTracers());
     }

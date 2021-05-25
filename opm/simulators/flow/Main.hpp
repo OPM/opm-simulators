@@ -61,7 +61,6 @@
 
 #if HAVE_MPI
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
-#include <opm/simulators/utils/ParallelSerialization.hpp>
 #endif
 
 #include <string>

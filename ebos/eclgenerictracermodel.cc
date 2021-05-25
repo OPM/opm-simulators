@@ -258,7 +258,8 @@ template class EclGenericTracerModel<Dune::CpGrid,
 #endif
 
 template class EclGenericTracerModel<Dune::PolyhedralGrid<3,3,double>,
-                                     Dune::GridView<Dune::PolyhedralGridViewTraits<3,3,double,Dune::PartitionIteratorType(4)>>,Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::PolyhedralGridViewTraits<3,3,double,Dune::PartitionIteratorType(4)>>,Dune::Impl::MCMGFailLayout>,
+                                     Dune::GridView<Dune::PolyhedralGridViewTraits<3,3,double,Dune::PartitionIteratorType(4)>>,
+                                     Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::PolyhedralGridViewTraits<3,3,double,Dune::PartitionIteratorType(4)>>,Dune::Impl::MCMGFailLayout>,
                                      Opm::EcfvStencil<double, Dune::GridView<Dune::PolyhedralGridViewTraits<3,3,double,Dune::PartitionIteratorType(4)>>,false,false>,
                                      double>;
 
