@@ -171,7 +171,7 @@ public:
         if (index_iter != this->index_map.end())
             return index_iter->second;
 
-        return {};
+        return std::nullopt;
     }
 
 
