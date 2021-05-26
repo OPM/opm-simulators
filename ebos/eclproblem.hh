@@ -1839,7 +1839,7 @@ public:
         if(!context.intersection(spaceIdx).boundary())
             return;
 
-        if (!enableEnergy || !enableThermalFluxBoundaries)
+        if constexpr (!enableEnergy || !enableThermalFluxBoundaries)
             values.setNoFlow();
         else {
             // in the energy case we need to specify a non-trivial boundary condition
@@ -2329,10 +2329,13 @@ private:
                 throw std::runtime_error("The deck enables both, the TEMP and the THERMAL options, but they are mutually exclusive.");
 
             bool deckEnergyEnabled = (deck.hasKeyword("TEMP") || deck.hasKeyword("THERMAL"));
-            if (enableEnergy && !deckEnergyEnabled)
-                throw std::runtime_error("The simulator requires the TEMP or the THERMAL option to be enabled, but the deck activates neither.");
-            else if (!enableEnergy && deckEnergyEnabled)
-                throw std::runtime_error("The deck enables the TEMP or the THERMAL option, but the simulator is not compiled to support either.");
+            if constexpr (enableEnergy) {
+                if (!deckEnergyEnabled)
+                    throw std::runtime_error("The simulator requires the TEMP or the THERMAL option to be enabled, but the deck activates neither.");
+            } else {
+                if (deckEnergyEnabled)
+                    throw std::runtime_error("The deck enables the TEMP or the THERMAL option, but the simulator is not compiled to support either.");
+            }
 
             if (deckEnergyEnabled && deck.hasKeyword("TEMP"))
                 std::cerr << "WARNING: The deck requests the TEMP option, i.e., treating energy "
@@ -2757,16 +2760,16 @@ private:
 
     void readThermalParameters_()
     {
-        if (!enableEnergy)
-            return;
+        if constexpr (enableEnergy)
+        {
+            const auto& simulator = this->simulator();
+            const auto& vanguard = simulator.vanguard();
+            const auto& eclState = vanguard.eclState();
 
-        const auto& simulator = this->simulator();
-        const auto& vanguard = simulator.vanguard();
-        const auto& eclState = vanguard.eclState();
-
-        // fluid-matrix interactions (saturation functions; relperm/capillary pressure)
-        thermalLawManager_ = std::make_shared<EclThermalLawManager>();
-        thermalLawManager_->initParamsForElements(eclState, this->model().numGridDof());
+            // fluid-matrix interactions (saturation functions; relperm/capillary pressure)
+            thermalLawManager_ = std::make_shared<EclThermalLawManager>();
+            thermalLawManager_->initParamsForElements(eclState, this->model().numGridDof());
+        }
     }
 
     void updateReferencePorosity_()
@@ -3272,7 +3275,7 @@ private:
                 unsigned globalCenterElemIdx = elementMapper.index(stencil.entity(/*dofIdx=*/0));
                 dofData.transmissibility = transmissibilities_.transmissibility(globalCenterElemIdx, globalElemIdx);
 
-                if (enableEnergy) {
+                if constexpr (enableEnergy) {
                     *dofData.thermalHalfTransIn = transmissibilities_.thermalHalfTrans(globalCenterElemIdx, globalElemIdx);
                     *dofData.thermalHalfTransOut = transmissibilities_.thermalHalfTrans(globalElemIdx, globalCenterElemIdx);
                 }
