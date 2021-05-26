@@ -516,6 +516,13 @@ BOOST_AUTO_TEST_CASE(TESTWellContainer) {
     BOOST_CHECK(wci.has("W1"));
     BOOST_CHECK_EQUAL(wci[1], 2);
     BOOST_CHECK_EQUAL(wci["W3"], 3);
+
+    auto w3 = wci.well_index("W3");
+    BOOST_CHECK(w3.has_value());
+    BOOST_CHECK_EQUAL(w3.value(), 2);
+
+    auto wx = wci.well_index("WX");
+    BOOST_CHECK(!wx.has_value());
 }
 
 

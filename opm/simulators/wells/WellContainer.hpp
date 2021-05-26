@@ -53,6 +53,9 @@ public:
             this->add(name, value);
     }
 
+    bool empty() const {
+        return this->index_map.empty();
+    }
 
     std::size_t size() const {
         return this->m_data.size();
@@ -153,6 +156,14 @@ public:
 
     const std::vector<T>& data() const {
         return this->m_data;
+    }
+
+    std::optional<int> well_index(const std::string& wname) const {
+        auto index_iter = this->index_map.find(wname);
+        if (index_iter != this->index_map.end())
+            return index_iter->second;
+
+        return {};
     }
 
 

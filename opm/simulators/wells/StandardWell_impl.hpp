@@ -628,7 +628,8 @@ namespace Opm
 
                 // Store the perforation phase flux for later usage.
                 if (has_solvent && componentIdx == contiSolventEqIdx) {
-                    well_state.perfRateSolvent()[first_perf_ + perf] = cq_s[componentIdx].value();
+                    auto * perf_rate_solvent = &well_state.perfRateSolvent()[first_perf_];
+                    perf_rate_solvent[perf] = cq_s[componentIdx].value();
                 } else {
                     perf_rates[perf*np + ebosCompIdxToFlowCompIdx(componentIdx)] = cq_s[componentIdx].value();
                 }
@@ -793,7 +794,8 @@ namespace Opm
                 cq_s_poly *= extendEval(intQuants.polymerConcentration() * intQuants.polymerViscosityCorrection());
             }
             // Note. Efficiency factor is handled in the output layer
-            well_state.perfRatePolymer()[first_perf_ + perf] = cq_s_poly.value();
+            auto * perf_rate_polymer = &well_state.perfRatePolymer()[first_perf_];
+            perf_rate_polymer[perf] = cq_s_poly.value();
 
             cq_s_poly *= well_efficiency_factor_;
             connectionRates[perf][contiPolymerEqIdx] = Base::restrictEval(cq_s_poly);
@@ -825,7 +827,8 @@ namespace Opm
                 const double dis_gas_frac = perf_dis_gas_rate / cq_s_zfrac_effective.value();
                 cq_s_zfrac_effective *= extendEval(dis_gas_frac*intQuants.xVolume() + (1.0-dis_gas_frac)*intQuants.yVolume());
             }
-            well_state.perfRateSolvent()[first_perf_ + perf] = cq_s_zfrac_effective.value();
+            auto * perf_rate_solvent = &well_state.perfRateSolvent()[first_perf_];
+            perf_rate_solvent[perf] = cq_s_zfrac_effective.value();
 
             cq_s_zfrac_effective *= well_efficiency_factor_;
             connectionRates[perf][contiZfracEqIdx] = Base::restrictEval(cq_s_zfrac_effective);
@@ -841,7 +844,8 @@ namespace Opm
                 cq_s_sm *= extendEval(intQuants.fluidState().saltConcentration());
             }
             // Note. Efficiency factor is handled in the output layer
-            well_state.perfRateBrine()[first_perf_ + perf] = cq_s_sm.value();
+            auto * perf_rate_brine = &well_state.perfRateBrine()[this->first_perf_];
+            perf_rate_brine[perf] = cq_s_sm.value();
 
             cq_s_sm *= well_efficiency_factor_;
             connectionRates[perf][contiBrineEqIdx] = Base::restrictEval(cq_s_sm);
@@ -1300,9 +1304,11 @@ namespace Opm
         // other primary variables related to polymer injectivity study
         if constexpr (Base::has_polymermw) {
             if (this->isInjector()) {
+                auto * perf_water_velocity = &well_state.perfWaterVelocity()[this->first_perf_];
+                auto * perf_skin_pressure = &well_state.perfSkinPressure()[this->first_perf_];
                 for (int perf = 0; perf < number_of_perforations_; ++perf) {
-                    well_state.perfWaterVelocity()[first_perf_ + perf] = primary_variables_[Bhp + 1 + perf];
-                    well_state.perfSkinPressure()[first_perf_ + perf] = primary_variables_[Bhp + 1 + number_of_perforations_ + perf];
+                    perf_water_velocity[perf] = primary_variables_[Bhp + 1 + perf];
+                    perf_skin_pressure[perf] = primary_variables_[Bhp + 1 + number_of_perforations_ + perf];
                 }
             }
         }
@@ -2099,12 +2105,17 @@ namespace Opm
         const int np = number_of_phases_;
         std::vector<double> perfRates(b_perf.size(),0.0);
         const auto * perf_rates_state = &well_state.perfPhaseRates()[first_perf_ * np];
+
         for (int perf = 0; perf < nperf; ++perf) {
             for (int comp = 0; comp < np; ++comp) {
                 perfRates[perf * num_components_ + comp] =  perf_rates_state[perf * np + ebosCompIdxToFlowCompIdx(comp)];
             }
-            if constexpr (has_solvent) {
-                perfRates[perf * num_components_ + contiSolventEqIdx] =  well_state.perfRateSolvent()[first_perf_ + perf];
+        }
+
+        if constexpr (has_solvent) {
+            const auto * solvent_perf_rates_state = &well_state.perfRateSolvent()[this->first_perf_];
+            for (int perf = 0; perf < nperf; ++perf) {
+                perfRates[perf * num_components_ + contiSolventEqIdx] = solvent_perf_rates_state[perf];
             }
         }
 
@@ -2800,9 +2811,11 @@ namespace Opm
         // other primary variables related to polymer injection
         if constexpr (Base::has_polymermw) {
             if (this->isInjector()) {
+                const auto * water_velocity = &well_state.perfWaterVelocity()[first_perf_];
+                const auto * skin_pressure = &well_state.perfSkinPressure()[first_perf_];
                 for (int perf = 0; perf < number_of_perforations_; ++perf) {
-                    primary_variables_[Bhp + 1 + perf] = well_state.perfWaterVelocity()[first_perf_ + perf];
-                    primary_variables_[Bhp + 1 + number_of_perforations_ + perf] = well_state.perfSkinPressure()[first_perf_ + perf];
+                    primary_variables_[Bhp + 1 + perf] = water_velocity[perf];
+                    primary_variables_[Bhp + 1 + number_of_perforations_ + perf] = skin_pressure[perf];
                 }
             }
         }
@@ -3167,11 +3180,12 @@ namespace Opm
     {
         if constexpr (Base::has_polymermw) {
             if (this->isInjector()) {
+                auto * perf_water_throughput = &well_state.perfThroughput()[first_perf_];
                 for (int perf = 0; perf < number_of_perforations_; ++perf) {
                     const double perf_water_vel = primary_variables_[Bhp + 1 + perf];
                     // we do not consider the formation damage due to water flowing from reservoir into wellbore
                     if (perf_water_vel > 0.) {
-                        well_state.perfThroughput()[first_perf_ + perf] += perf_water_vel * dt;
+                        perf_water_throughput[perf] += perf_water_vel * dt;
                     }
                 }
             }
@@ -3227,7 +3241,8 @@ namespace Opm
         const EvalWell eq_wat_vel = primary_variables_evaluation_[wat_vel_index] - water_velocity;
         resWell_[0][wat_vel_index] = eq_wat_vel.value();
 
-        const double throughput = well_state.perfThroughput()[first_perf_ + perf];
+        const auto * perf_water_throughput = &well_state.perfThroughput()[this->first_perf_];
+        const double throughput = perf_water_throughput[perf];
         const int pskin_index = Bhp + 1 + number_of_perforations_ + perf;
 
         EvalWell poly_conc(numWellEq_ + numEq, 0.0);
@@ -3405,7 +3420,8 @@ namespace Opm
             const int wat_vel_index = Bhp + 1 + perf;
             const EvalWell water_velocity = primary_variables_evaluation_[wat_vel_index];
             if (water_velocity > 0.) { // injecting
-                const double throughput = well_state.perfThroughput()[first_perf_ + perf];
+                const auto * perf_water_throughput = &well_state.perfThroughput()[this->first_perf_];
+                const double throughput = perf_water_throughput[perf];
                 const EvalWell molecular_weight = wpolymermw(throughput, water_velocity, deferred_logger);
                 cq_s_polymw *= molecular_weight;
             } else {

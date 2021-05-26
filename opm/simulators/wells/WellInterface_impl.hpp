@@ -582,20 +582,18 @@ namespace Opm
         // the maximum water cut value of the completions
         // it is used to identify the most offending completion
         double max_ratio_completion = 0;
+        const int np = number_of_phases_;
 
+        const auto * perf_phase_rates = &well_state.perfPhaseRates()[first_perf_ * np];
         // look for the worst_offending_completion
         for (const auto& completion : completions_) {
-
-            const int np = number_of_phases_;
             std::vector<double> completion_rates(np, 0.0);
 
             // looping through the connections associated with the completion
             const std::vector<int>& conns = completion.second;
             for (const int c : conns) {
-                const int index_con = c + first_perf_;
-
                 for (int p = 0; p < np; ++p) {
-                    const double connection_rate = well_state.perfPhaseRates()[index_con * np + p];
+                    const double connection_rate = perf_phase_rates[c * np + p];
                     completion_rates[p] += connection_rate;
                 }
             } // end of for (const int c : conns)
