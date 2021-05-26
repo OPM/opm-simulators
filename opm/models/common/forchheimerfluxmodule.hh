@@ -225,7 +225,7 @@ class ForchheimerExtensiveQuantities
     enum { dimWorld = GridView::dimensionworld };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
 
-    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using Toolbox = MathToolbox<Evaluation>;
 
     using DimVector = Dune::FieldVector<Scalar, dimWorld>;
     using DimEvalVector = Dune::FieldVector<Evaluation, dimWorld>;
@@ -271,16 +271,16 @@ protected:
         if (focusDofIdx == i) {
             ergunCoefficient_ =
                 (intQuantsIn.ergunCoefficient() +
-                 Opm::getValue(intQuantsEx.ergunCoefficient()))/2;
+                 getValue(intQuantsEx.ergunCoefficient()))/2;
         }
         else if (focusDofIdx == j)
             ergunCoefficient_ =
-                (Opm::getValue(intQuantsIn.ergunCoefficient()) +
+                (getValue(intQuantsIn.ergunCoefficient()) +
                  intQuantsEx.ergunCoefficient())/2;
         else
             ergunCoefficient_ =
-                (Opm::getValue(intQuantsIn.ergunCoefficient()) +
-                 Opm::getValue(intQuantsEx.ergunCoefficient()))/2;
+                (getValue(intQuantsIn.ergunCoefficient()) +
+                 getValue(intQuantsEx.ergunCoefficient()))/2;
 
         // obtain the mobility to passability ratio for each phase.
         for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
@@ -298,9 +298,9 @@ protected:
             }
             else {
                 density_[phaseIdx] =
-                    Opm::getValue(up.fluidState().density(phaseIdx));
+                    getValue(up.fluidState().density(phaseIdx));
                 mobilityPassabilityRatio_[phaseIdx] =
-                    Opm::getValue(up.mobilityPassabilityRatio(phaseIdx));
+                    getValue(up.mobilityPassabilityRatio(phaseIdx));
             }
         }
     }
@@ -325,7 +325,7 @@ protected:
         if (focusDofIdx == i)
             ergunCoefficient_ = intQuantsIn.ergunCoefficient();
         else
-            ergunCoefficient_ = Opm::getValue(intQuantsIn.ergunCoefficient());
+            ergunCoefficient_ = getValue(intQuantsIn.ergunCoefficient());
 
         // calculate the square root of the intrinsic permeability
         assert(isDiagonal_(this->K_));
@@ -343,9 +343,9 @@ protected:
             }
             else {
                 density_[phaseIdx] =
-                    Opm::getValue(intQuantsIn.fluidState().density(phaseIdx));
+                    getValue(intQuantsIn.fluidState().density(phaseIdx));
                 mobilityPassabilityRatio_[phaseIdx] =
-                    Opm::getValue(intQuantsIn.mobilityPassabilityRatio(phaseIdx));
+                    getValue(intQuantsIn.mobilityPassabilityRatio(phaseIdx));
             }
         }
     }
@@ -366,22 +366,22 @@ protected:
 
         const auto& scvf = elemCtx.stencil(timeIdx).interiorFace(scvfIdx);
         const auto& normal = scvf.normal();
-        Opm::Valgrind::CheckDefined(normal);
+        Valgrind::CheckDefined(normal);
 
         // obtain the Ergun coefficient from the intensive quantity object. Until a
         // better method comes along, we use arithmetic averaging.
         if (focusDofIdx == i)
             ergunCoefficient_ =
                 (intQuantsI.ergunCoefficient() +
-                 Opm::getValue(intQuantsJ.ergunCoefficient())) / 2;
+                 getValue(intQuantsJ.ergunCoefficient())) / 2;
         else if (focusDofIdx == j)
             ergunCoefficient_ =
-                (Opm::getValue(intQuantsI.ergunCoefficient()) +
+                (getValue(intQuantsI.ergunCoefficient()) +
                  intQuantsJ.ergunCoefficient()) / 2;
         else
             ergunCoefficient_ =
-                (Opm::getValue(intQuantsI.ergunCoefficient()) +
-                 Opm::getValue(intQuantsJ.ergunCoefficient())) / 2;
+                (getValue(intQuantsI.ergunCoefficient()) +
+                 getValue(intQuantsJ.ergunCoefficient())) / 2;
 
         ///////////////
         // calculate the weights of the upstream and the downstream control volumes
@@ -449,8 +449,8 @@ protected:
         unsigned newtonIter = 0;
         while (deltaV.one_norm() > 1e-11) {
             if (newtonIter >= 50)
-                throw Opm::NumericalIssue("Could not determine Forchheimer velocity within "
-                                            +std::to_string(newtonIter)+" iterations");
+                throw NumericalIssue("Could not determine Forchheimer velocity within "
+                                     +std::to_string(newtonIter)+" iterations");
             ++newtonIter;
 
             // calculate the residual and its Jacobian matrix
@@ -506,7 +506,7 @@ protected:
         const auto& alpha = density*mobilityPassabilityRatio*ergunCoefficient_*absVel;
         for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
             residual[dimIdx] += sqrtK_[dimIdx]*alpha*velocity[dimIdx];
-        Opm::Valgrind::CheckDefined(residual);
+        Valgrind::CheckDefined(residual);
     }
 
     void gradForchheimerResid_(DimEvalVector& residual,

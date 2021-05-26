@@ -83,11 +83,11 @@ struct NumComponents<TypeTag, TTag::MultiPhaseBaseModel> { static constexpr int 
 
 //! The type of the base base class for actual problems
 template<class TypeTag>
-struct BaseProblem<TypeTag, TTag::MultiPhaseBaseModel> { using type = Opm::MultiPhaseBaseProblem<TypeTag>; };
+struct BaseProblem<TypeTag, TTag::MultiPhaseBaseModel> { using type = MultiPhaseBaseProblem<TypeTag>; };
 
 //! By default, use the Darcy relation to determine the phase velocity
 template<class TypeTag>
-struct FluxModule<TypeTag, TTag::MultiPhaseBaseModel> { using type = Opm::DarcyFluxModule<TypeTag>; };
+struct FluxModule<TypeTag, TTag::MultiPhaseBaseModel> { using type = DarcyFluxModule<TypeTag>; };
 
 /*!
  * \brief Set the material law to the null law by default.
@@ -98,10 +98,10 @@ struct MaterialLaw<TypeTag, TTag::MultiPhaseBaseModel>
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
-    using Traits = Opm::NullMaterialTraits<Scalar, FluidSystem::numPhases>;
+    using Traits = NullMaterialTraits<Scalar, FluidSystem::numPhases>;
 
 public:
-    using type = Opm::NullMaterial<Traits>;
+    using type = NullMaterial<Traits>;
 };
 
 /*!
@@ -116,7 +116,7 @@ struct MaterialLawParams<TypeTag, TTag::MultiPhaseBaseModel>
 //! by default
 template<class TypeTag>
 struct SolidEnergyLaw<TypeTag, TTag::MultiPhaseBaseModel>
-{ using type = Opm::NullSolidEnergyLaw<GetPropType<TypeTag, Properties::Scalar>>; };
+{ using type = NullSolidEnergyLaw<GetPropType<TypeTag, Properties::Scalar>>; };
 
 //! extract the type of the parameter objects for the solid energy storage law from the
 //! law itself
@@ -127,7 +127,7 @@ struct SolidEnergyLawParams<TypeTag, TTag::MultiPhaseBaseModel>
 //! set the thermal conduction law to a dummy one by default
 template<class TypeTag>
 struct ThermalConductionLaw<TypeTag, TTag::MultiPhaseBaseModel>
-{ using type = Opm::NullThermalConductionLaw<GetPropType<TypeTag, Properties::Scalar>>; };
+{ using type = NullThermalConductionLaw<GetPropType<TypeTag, Properties::Scalar>>; };
 
 //! extract the type of the parameter objects for the thermal conduction law from the law
 //! itself
@@ -182,8 +182,8 @@ public:
         ParentType::registerParameters();
 
         // register runtime parameters of the VTK output modules
-        Opm::VtkMultiPhaseModule<TypeTag>::registerParameters();
-        Opm::VtkTemperatureModule<TypeTag>::registerParameters();
+        VtkMultiPhaseModule<TypeTag>::registerParameters();
+        VtkTemperatureModule<TypeTag>::registerParameters();
     }
 
     /*!
@@ -257,8 +257,8 @@ public:
         ParentType::registerOutputModules_();
 
         // add the VTK output modules which make sense for all multi-phase models
-        this->addOutputModule(new Opm::VtkMultiPhaseModule<TypeTag>(this->simulator_));
-        this->addOutputModule(new Opm::VtkTemperatureModule<TypeTag>(this->simulator_));
+        this->addOutputModule(new VtkMultiPhaseModule<TypeTag>(this->simulator_));
+        this->addOutputModule(new VtkTemperatureModule<TypeTag>(this->simulator_));
     }
 
 private:

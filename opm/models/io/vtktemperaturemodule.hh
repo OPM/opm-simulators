@@ -76,7 +76,7 @@ class VtkTemperatureModule : public BaseOutputModule<TypeTag>
     using ScalarBuffer = typename ParentType::ScalarBuffer;
 
     static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
-    using VtkMultiWriter = Opm::VtkMultiWriter<GridView, vtkFormat>;
+    using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
 public:
     VtkTemperatureModule(const Simulator& simulator)
@@ -107,7 +107,7 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
-        using Toolbox = Opm::MathToolbox<Evaluation>;
+        using Toolbox = MathToolbox<Evaluation>;
 
         if (!EWOMS_GET_PARAM(TypeTag, bool, EnableVtkOutput))
             return;

@@ -89,7 +89,7 @@ class FvBaseLinearizer
 
     using GridCommHandleFactory = GetPropType<TypeTag, Properties::GridCommHandleFactory>;
 
-    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using Toolbox = MathToolbox<Evaluation>;
 
     using Element = typename GridView::template Codim<0>::Entity;
     using ElementIterator = typename GridView::template Codim<0>::Iterator;
@@ -219,7 +219,7 @@ public:
         succeeded = gridView_().comm().min(succeeded);
 
         if (!succeeded)
-            throw Opm::NumericalIssue("A process did not succeed in linearizing the system");
+            throw NumericalIssue("A process did not succeed in linearizing the system");
     }
 
     void finalize()
@@ -252,7 +252,7 @@ public:
             succeeded = comm.min(succeeded);
 
             if (!succeeded)
-                throw Opm::NumericalIssue("linearization of an auxilary equation failed");
+                throw NumericalIssue("linearization of an auxilary equation failed");
         }
     }
 

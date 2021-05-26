@@ -103,10 +103,10 @@ public:
     }
 
     static void *operator new(size_t size)
-    { return Opm::aligned_alloc(alignof(FvBaseElementContext), size); }
+    { return aligned_alloc(alignof(FvBaseElementContext), size); }
 
     static void operator delete(void *ptr)
-    { Opm::aligned_free(ptr); }
+    { aligned_free(ptr); }
 
     /*!
      * \brief Construct all volume and extensive quantities of an element
@@ -597,8 +597,8 @@ protected:
 
     GradientCalculator gradientCalculator_;
 
-    std::vector<DofStore_, Opm::aligned_allocator<DofStore_, alignof(DofStore_)> > dofVars_;
-    std::vector<ExtensiveQuantities, Opm::aligned_allocator<ExtensiveQuantities, alignof(ExtensiveQuantities)> > extensiveQuantities_;
+    std::vector<DofStore_, aligned_allocator<DofStore_, alignof(DofStore_)> > dofVars_;
+    std::vector<ExtensiveQuantities, aligned_allocator<ExtensiveQuantities, alignof(ExtensiveQuantities)> > extensiveQuantities_;
 
     const Simulator *simulatorPtr_;
     const Element *elemPtr_;

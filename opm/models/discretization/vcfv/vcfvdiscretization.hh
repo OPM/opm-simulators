@@ -61,7 +61,7 @@ private:
     using CoordScalar = typename GridView::ctype;
 
 public:
-    using type = Opm::VcfvStencil<CoordScalar, GridView>;
+    using type = VcfvStencil<CoordScalar, GridView>;
 };
 
 //! Mapper for the degrees of freedoms.
@@ -70,23 +70,23 @@ struct DofMapper<TypeTag, TTag::VcfvDiscretization> { using type = GetPropType<T
 
 //! The concrete class which manages the spatial discretization
 template<class TypeTag>
-struct Discretization<TypeTag, TTag::VcfvDiscretization> { using type = Opm::VcfvDiscretization<TypeTag>; };
+struct Discretization<TypeTag, TTag::VcfvDiscretization> { using type = VcfvDiscretization<TypeTag>; };
 
 //! The base class for the output modules (decides whether to write
 //! element or vertex based fields)
 template<class TypeTag>
 struct DiscBaseOutputModule<TypeTag, TTag::VcfvDiscretization>
-{ using type = Opm::VcfvBaseOutputModule<TypeTag>; };
+{ using type = VcfvBaseOutputModule<TypeTag>; };
 
 //! Calculates the gradient of any quantity given the index of a flux approximation point
 template<class TypeTag>
 struct GradientCalculator<TypeTag, TTag::VcfvDiscretization>
-{ using type = Opm::P1FeGradientCalculator<TypeTag>; };
+{ using type = P1FeGradientCalculator<TypeTag>; };
 
 //! The class to create grid communication handles
 template<class TypeTag>
 struct GridCommHandleFactory<TypeTag, TTag::VcfvDiscretization>
-{ using type = Opm::VcfvGridCommHandleFactory<TypeTag>; };
+{ using type = VcfvGridCommHandleFactory<TypeTag>; };
 
 //! Use two-point gradients by default for the vertex centered finite volume scheme.
 template<class TypeTag>
@@ -118,7 +118,7 @@ struct BorderListCreator<TypeTag, TTag::VcfvDiscretization>
     using VertexMapper = GetPropType<TypeTag, Properties::VertexMapper>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
 public:
-    using type = Opm::Linear::VertexBorderListFromGrid<GridView, VertexMapper>;
+    using type = Linear::VertexBorderListFromGrid<GridView, VertexMapper>;
 };
 
 //! For the vertex centered finite volume method, ghost and overlap elements must _not_

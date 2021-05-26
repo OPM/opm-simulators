@@ -76,7 +76,7 @@ class VtkPrimaryVarsModule : public BaseOutputModule<TypeTag>
     using GridView = GetPropType<TypeTag, Properties::GridView>;
 
     static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
-    using VtkMultiWriter = Opm::VtkMultiWriter<GridView, vtkFormat>;
+    using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
     using ScalarBuffer = typename ParentType::ScalarBuffer;
     using EqBuffer = typename ParentType::EqBuffer;

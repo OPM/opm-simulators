@@ -108,7 +108,7 @@ class VtkCompositionModule : public BaseOutputModule<TypeTag>
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
 
     static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
-    using VtkMultiWriter = Opm::VtkMultiWriter<GridView, vtkFormat>;
+    using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
     using ComponentBuffer = typename ParentType::ComponentBuffer;
     using PhaseComponentBuffer = typename ParentType::PhaseComponentBuffer;
@@ -168,7 +168,7 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
-        using Toolbox = Opm::MathToolbox<Evaluation>;
+        using Toolbox = MathToolbox<Evaluation>;
 
         if (!EWOMS_GET_PARAM(TypeTag, bool, EnableVtkOutput))
             return;
