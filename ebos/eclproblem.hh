@@ -1396,7 +1396,7 @@ public:
             if (actionResult) {
                 std::string wells_string;
                 const auto& matching_wells = actionResult.wells();
-                if (matching_wells.size() > 0) {
+                if (!matching_wells.empty()) {
                     for (std::size_t iw = 0; iw < matching_wells.size() - 1; iw++)
                         wells_string += matching_wells[iw] + ", ";
                     wells_string += matching_wells.back();
@@ -2253,7 +2253,7 @@ public:
                 min(decay<LhsEval>(fs.pressure(oilPhaseIdx)),
                     minOilPressure_[elementIdx]);
 
-        if (overburdenPressure_.size() > 0)
+        if (!overburdenPressure_.empty())
             effectiveOilPressure -= overburdenPressure_[elementIdx];
 
         if (!rockCompTransMult_.empty())
@@ -2527,7 +2527,7 @@ private:
     bool updateMaxWaterSaturation_()
     {
         // water compaction is activated in ROCKCOMP
-        if (maxWaterSaturation_.size()== 0)
+        if (maxWaterSaturation_.empty())
             return false;
 
         maxWaterSaturation_[/*timeIdx=*/1] = maxWaterSaturation_[/*timeIdx=*/0];
@@ -2821,11 +2821,11 @@ private:
         size_t numElems = this->model().numGridDof();
         for (size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             const auto& fs = initialFluidStates_[elemIdx];
-            if(maxWaterSaturation_.size() > 0)
+            if (!maxWaterSaturation_.empty())
                 maxWaterSaturation_[elemIdx] = std::max(maxWaterSaturation_[elemIdx], fs.saturation(waterPhaseIdx));
-            if(maxOilSaturation_.size() > 0)
+            if (!maxOilSaturation_.empty())
                 maxOilSaturation_[elemIdx] = std::max(maxOilSaturation_[elemIdx], fs.saturation(oilPhaseIdx));
-            if(minOilPressure_.size() > 0)
+            if (!minOilPressure_.empty())
                 minOilPressure_[elemIdx] = std::min(minOilPressure_[elemIdx], fs.pressure(oilPhaseIdx));
         }
 
