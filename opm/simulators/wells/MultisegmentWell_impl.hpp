@@ -318,7 +318,7 @@ namespace Opm
         //scale segment pressures
         const int top_segment_index = well_state.topSegmentIndex(index_of_well_);
         const double bhp = well_state.bhp(index_of_well_);
-        auto * segment_pressure = &well_state.segPress()[top_segment_index];
+        auto segment_pressure = well_state.segPress(index_of_well_);
         const double unscaled_top_seg_pressure = segment_pressure[0];
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
             segment_pressure[seg] *= bhp/unscaled_top_seg_pressure;
@@ -724,7 +724,7 @@ namespace Opm
         // the index of the top segment in the WellState
         const int top_segment_index = well_state.topSegmentIndex(index_of_well_);
         const auto * segment_rates = &well_state.segRates()[top_segment_index * this->number_of_phases_];
-        const auto * segment_pressure = &well_state.segPress()[top_segment_index];
+        const auto segment_pressure = well_state.segPress(index_of_well_);
         const PhaseUsage& pu = phaseUsage();
 
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
@@ -2341,7 +2341,7 @@ namespace Opm
         const int oil_pos = pu.phase_pos[Oil];
 
         auto * segment_rates = &well_state.segRates()[well_state.topSegmentIndex(this->index_of_well_) * this->number_of_phases_];
-        auto * segment_pressure = &well_state.segPress()[well_state.topSegmentIndex(this->index_of_well_)];
+        auto segment_pressure = well_state.segPress(this->index_of_well_);
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
             std::vector<double> fractions(number_of_phases_, 0.0);
             fractions[oil_pos] = 1.0;

@@ -202,9 +202,16 @@ public:
         return seg_rates_;
     }
 
-    const std::vector<double>& segPress() const
+    double * segPress(std::size_t well_index)
     {
-        return seg_press_;
+        const int top_segment_index = this->top_segment_index_[well_index];
+        return &seg_press_[top_segment_index];
+    }
+
+    const double * segPress(std::size_t well_index) const
+    {
+        const int top_segment_index = this->top_segment_index_[well_index];
+        return &seg_press_[top_segment_index];
     }
 
     std::vector<double>& segPressDrop()
@@ -245,11 +252,6 @@ public:
     const std::vector<double>& segPressDropAcceleration() const
     {
         return seg_pressdrop_acceleration_;
-    }
-
-    std::vector<double>& segPress()
-    {
-        return seg_press_;
     }
 
     int numSegment() const

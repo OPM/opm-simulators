@@ -164,14 +164,12 @@ namespace {
     {
         const auto nWell = wells.size();
 
-        auto& segPress = wstate.segPress();
 
         for (auto wellID = 0*nWell; wellID < nWell; ++wellID) {
             const auto& well     = wells[wellID];
-            const auto  topSegIx = wstate.topSegmentIndex(wellID);
             const auto  pressTop = 100.0 * wellID;
 
-            auto* press = &segPress[topSegIx];
+            auto* press = wstate.segPress(wellID);
 
             press[0] = pressTop;
 
