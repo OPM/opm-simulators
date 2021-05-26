@@ -675,8 +675,6 @@ class EclProblem : public GetPropType<TypeTag, Properties::BaseProblem>
 
     using TracerModel = EclTracerModel<TypeTag>;
 
-    using ElementIterator = typename GridView::template Codim<0>::Iterator;
-
     using TabulatedTwoDFunction = UniformXTabulated2DFunction<Scalar>;
     using TabulatedFunction = Tabulated1DFunction<Scalar>;
 
