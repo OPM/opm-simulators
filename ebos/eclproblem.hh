@@ -129,7 +129,7 @@ namespace TTag {
 
 #if EBOS_USE_ALUGRID
 struct EclBaseProblem {
-  using InheritstFrom = std::tuple<VtkEclTracer, EclOutputBlackOil, EclAluGridVanguard>;
+  using InheritsFrom = std::tuple<VtkEclTracer, EclOutputBlackOil, EclAluGridVanguard>;
 };
 #elif USE_POLYHEDRALGRID
 struct EclBaseProblem {
