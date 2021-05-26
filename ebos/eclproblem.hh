@@ -129,7 +129,7 @@ namespace TTag {
 
 #if EBOS_USE_ALUGRID
 struct EclBaseProblem {
-  using InheritstFrom = std::tuple<VtkEclTracer, EclOutputBlackOil, EclAluGridVanguard>;
+  using InheritsFrom = std::tuple<VtkEclTracer, EclOutputBlackOil, EclAluGridVanguard>;
 };
 #elif USE_POLYHEDRALGRID
 struct EclBaseProblem {
@@ -246,15 +246,15 @@ private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
-    typedef ThreePhaseMaterialTraits<Scalar,
-                                     /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
-                                     /*nonWettingPhaseIdx=*/FluidSystem::oilPhaseIdx,
-                                     /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx> Traits;
+    using Traits = ThreePhaseMaterialTraits<Scalar,
+                                            /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
+                                            /*nonWettingPhaseIdx=*/FluidSystem::oilPhaseIdx,
+                                            /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx>;
 
 public:
-    typedef ::Opm::EclMaterialLawManager<Traits> EclMaterialLawManager;
+    using EclMaterialLawManager = ::Opm::EclMaterialLawManager<Traits>;
 
-    typedef typename EclMaterialLawManager::MaterialLaw type;
+    using type = typename EclMaterialLawManager::MaterialLaw;
 };
 
 // Set the material law for energy storage in rock
@@ -266,9 +266,9 @@ private:
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
 public:
-    typedef ::Opm::EclThermalLawManager<Scalar, FluidSystem> EclThermalLawManager;
+    using EclThermalLawManager = ::Opm::EclThermalLawManager<Scalar, FluidSystem>;
 
-    typedef typename EclThermalLawManager::SolidEnergyLaw type;
+    using type = typename EclThermalLawManager::SolidEnergyLaw;
 };
 
 // Set the material law for thermal conduction
@@ -280,9 +280,9 @@ private:
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
 public:
-    typedef ::Opm::EclThermalLawManager<Scalar, FluidSystem> EclThermalLawManager;
+    using EclThermalLawManager = ::Opm::EclThermalLawManager<Scalar, FluidSystem>;
 
-    typedef typename EclThermalLawManager::ThermalConductionLaw type;
+    using type = typename EclThermalLawManager::ThermalConductionLaw;
 };
 
 // ebos can use a slightly faster stencil class because it does not need the normals and
@@ -295,10 +295,10 @@ private:
     using GridView = GetPropType<TypeTag, Properties::GridView>;
 
 public:
-    typedef EcfvStencil<Scalar,
-                        GridView,
-                        /*needIntegrationPos=*/false,
-                        /*needNormal=*/false> type;
+    using type = EcfvStencil<Scalar,
+                             GridView,
+                             /*needIntegrationPos=*/false,
+                             /*needNormal=*/false>;
 };
 
 // by default use the dummy aquifer "model"
@@ -660,25 +660,23 @@ class EclProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     using EclWellModel = GetPropType<TypeTag, Properties::EclWellModel>;
     using EclAquiferModel = GetPropType<TypeTag, Properties::EclAquiferModel>;
 
-    typedef BlackOilSolventModule<TypeTag> SolventModule;
-    typedef BlackOilPolymerModule<TypeTag> PolymerModule;
-    typedef BlackOilFoamModule<TypeTag> FoamModule;
-    typedef BlackOilBrineModule<TypeTag> BrineModule;
-    typedef BlackOilExtboModule<TypeTag> ExtboModule;
+    using SolventModule = BlackOilSolventModule<TypeTag>;
+    using PolymerModule = BlackOilPolymerModule<TypeTag>;
+    using FoamModule = BlackOilFoamModule<TypeTag>;
+    using BrineModule = BlackOilBrineModule<TypeTag>;
+    using ExtboModule = BlackOilExtboModule<TypeTag>;
 
-    typedef typename EclEquilInitializer<TypeTag>::ScalarFluidState InitialFluidState;
+    using InitialFluidState = typename EclEquilInitializer<TypeTag>::ScalarFluidState;
 
-    typedef MathToolbox<Evaluation> Toolbox;
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
+    using Toolbox = MathToolbox<Evaluation>;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
-    typedef EclWriter<TypeTag> EclWriterType;
+    using EclWriterType = EclWriter<TypeTag>;
 
-    typedef EclTracerModel<TypeTag> TracerModel;
+    using TracerModel = EclTracerModel<TypeTag>;
 
-    typedef typename GridView::template Codim<0>::Iterator ElementIterator;
-
-    typedef UniformXTabulated2DFunction<Scalar> TabulatedTwoDFunction;
-    typedef Tabulated1DFunction<Scalar> TabulatedFunction;
+    using TabulatedTwoDFunction = UniformXTabulated2DFunction<Scalar>;
+    using TabulatedFunction = Tabulated1DFunction<Scalar>;
 
     struct RockParams {
         Scalar referencePressure;
@@ -709,7 +707,7 @@ public:
                              "Transport tracers found in the deck.");
         EWOMS_REGISTER_PARAM(TypeTag, bool, EclEnableDriftCompensation,
                              "Enable partial compensation of systematic mass losses via the source term of the next time step");
-        if (enableExperiments)
+        if constexpr (enableExperiments)
             EWOMS_REGISTER_PARAM(TypeTag, bool, EclEnableAquifers,
                                  "Enable analytic and numeric aquifer models");
         EWOMS_REGISTER_PARAM(TypeTag, Scalar, EclMaxTimeStepSizeAfterWellEvent,
@@ -734,10 +732,10 @@ public:
      */
     static int handlePositionalParameter(std::set<std::string>& seenParams,
                                          std::string& errorMsg,
-                                         int argc OPM_UNUSED,
+                                         int,
                                          const char** argv,
                                          int paramIdx,
-                                         int posParamIdx OPM_UNUSED)
+                                         int)
     {
         using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
         Dune::ParameterTree& tree = ParamsMeta::tree();
@@ -773,7 +771,7 @@ public:
     /*!
      * \copydoc FvBaseProblem::helpPreamble
      */
-    static std::string helpPreamble(int argc OPM_UNUSED,
+    static std::string helpPreamble(int,
                                     const char **argv)
     {
         std::string desc = Implementation::briefDescription();
@@ -845,7 +843,7 @@ public:
 
         enableEclOutput_ = EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput);
 
-        if (enableExperiments)
+        if constexpr (enableExperiments)
             enableAquifers_ = EWOMS_GET_PARAM(TypeTag, bool, EclEnableAquifers);
         else
             enableAquifers_ = true;
@@ -955,7 +953,7 @@ public:
             drift_ = 0.0;
         }
 
-        if (enableExperiments)
+        if constexpr (enableExperiments)
         {
             int success = 1;
             const auto& cc = simulator.vanguard().grid().comm();
@@ -1066,21 +1064,23 @@ public:
             updatePffDofData_();
         }
 
-        if (enableExperiments && this->gridView().comm().rank() == 0 && episodeIdx >= 0) {
-            // print some useful information in experimental mode. (the production
-            // simulator does this externally.)
-            std::ostringstream ss;
-            boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
-            boost::posix_time::ptime curDateTime =
-                boost::posix_time::from_time_t(schedule.simTime(episodeIdx));
-            ss.imbue(std::locale(std::locale::classic(), facet));
-            ss << "Report step " << episodeIdx + 1
-                      << "/" << schedule.size() - 1
-                      << " at day " << schedule.seconds(episodeIdx)/(24*3600)
-                      << "/" << schedule.seconds(schedule.size() - 1)/(24*3600)
-                      << ", date = " << curDateTime.date()
-                      << "\n ";
-            OpmLog::info(ss.str());
+        if constexpr (enableExperiments) {
+            if (this->gridView().comm().rank() == 0 && episodeIdx >= 0) {
+                // print some useful information in experimental mode. (the production
+                // simulator does this externally.)
+                std::ostringstream ss;
+                boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
+                boost::posix_time::ptime curDateTime =
+                    boost::posix_time::from_time_t(schedule.simTime(episodeIdx));
+                ss.imbue(std::locale(std::locale::classic(), facet));
+                ss << "Report step " << episodeIdx + 1
+                          << "/" << schedule.size() - 1
+                          << " at day " << schedule.seconds(episodeIdx)/(24*3600)
+                          << "/" << schedule.seconds(schedule.size() - 1)/(24*3600)
+                          << ", date = " << curDateTime.date()
+                          << "\n ";
+                OpmLog::info(ss.str());
+            }
         }
 
         // react to TUNING changes
@@ -1121,17 +1121,19 @@ public:
         const auto& simulator = this->simulator();
         int episodeIdx = simulator.episodeIndex();
 
-        if (enableExperiments && this->gridView().comm().rank() == 0 && episodeIdx >= 0) {
-            std::ostringstream ss;
-            boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
-            boost::posix_time::ptime date = boost::posix_time::from_time_t((this->simulator().startTime())) + boost::posix_time::milliseconds(static_cast<long long>(this->simulator().time() / prefix::milli));
-            ss.imbue(std::locale(std::locale::classic(), facet));
-            ss <<"\nTime step " << this->simulator().timeStepIndex() << ", stepsize "
-               << unit::convert::to(this->simulator().timeStepSize(), unit::day) << " days,"
-               << " at day " << (double)unit::convert::to(this->simulator().time(), unit::day)
-               << "/" << (double)unit::convert::to(this->simulator().endTime(), unit::day)
-               << ", date = " << date;
-            OpmLog::info(ss.str());
+        if constexpr (enableExperiments) {
+            if (this->gridView().comm().rank() == 0 && episodeIdx >= 0) {
+                std::ostringstream ss;
+                boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
+                boost::posix_time::ptime date = boost::posix_time::from_time_t((this->simulator().startTime())) + boost::posix_time::milliseconds(static_cast<long long>(this->simulator().time() / prefix::milli));
+                ss.imbue(std::locale(std::locale::classic(), facet));
+                ss <<"\nTime step " << this->simulator().timeStepIndex() << ", stepsize "
+                   << unit::convert::to(this->simulator().timeStepSize(), unit::day) << " days,"
+                   << " at day " << (double)unit::convert::to(this->simulator().time(), unit::day)
+                   << "/" << (double)unit::convert::to(this->simulator().endTime(), unit::day)
+                   << ", date = " << date;
+                OpmLog::info(ss.str());
+            }
         }
 
         // update explicit quantities between timesteps.
@@ -1394,7 +1396,7 @@ public:
             if (actionResult) {
                 std::string wells_string;
                 const auto& matching_wells = actionResult.wells();
-                if (matching_wells.size() > 0) {
+                if (!matching_wells.empty()) {
                     for (std::size_t iw = 0; iw < matching_wells.size() - 1; iw++)
                         wells_string += matching_wells[iw] + ", ";
                     wells_string += matching_wells.back();
@@ -1451,7 +1453,7 @@ public:
      */
     template <class Context>
     Scalar transmissibility(const Context& context,
-                            unsigned OPM_OPTIM_UNUSED fromDofLocalIdx,
+                            [[maybe_unused]] unsigned fromDofLocalIdx,
                             unsigned toDofLocalIdx) const
     {
         assert(fromDofLocalIdx == 0);
@@ -1463,7 +1465,7 @@ public:
      */
     template <class Context>
     Scalar diffusivity(const Context& context,
-                       unsigned OPM_OPTIM_UNUSED fromDofLocalIdx,
+                       [[maybe_unused]] unsigned fromDofLocalIdx,
                        unsigned toDofLocalIdx) const
     {
         assert(fromDofLocalIdx == 0);
@@ -1642,9 +1644,9 @@ public:
      */
     template <class Context>
     const SolidEnergyLawParams&
-    solidEnergyLawParams(const Context& context OPM_UNUSED,
-                         unsigned spaceIdx OPM_UNUSED,
-                         unsigned timeIdx OPM_UNUSED) const
+    solidEnergyLawParams(const Context& context,
+                         unsigned spaceIdx,
+                         unsigned timeIdx) const
     {
         unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         return thermalLawManager_->solidEnergyLawParams(globalSpaceIdx);
@@ -1727,9 +1729,6 @@ public:
 
         return pvtnum_[elemIdx];
     }
-
-    const std::vector<int>& pvtRegionArray() const
-    { return pvtnum_; }
 
     /*!
      * \brief Returns the index of the relevant region for thermodynmic properties
@@ -1835,7 +1834,7 @@ public:
         if(!context.intersection(spaceIdx).boundary())
             return;
 
-        if (!enableEnergy || !enableThermalFluxBoundaries)
+        if constexpr (!enableEnergy || !enableThermalFluxBoundaries)
             values.setNoFlow();
         else {
             // in the energy case we need to specify a non-trivial boundary condition
@@ -1911,16 +1910,16 @@ public:
         values.setPvtRegionIndex(pvtRegionIndex(context, spaceIdx, timeIdx));
         values.assignNaive(initialFluidStates_[globalDofIdx]);
 
-        if (enableSolvent)
+        if constexpr (enableSolvent)
             values[Indices::solventSaturationIdx] = solventSaturation_[globalDofIdx];
 
-        if (enablePolymer)
+        if constexpr (enablePolymer)
             values[Indices::polymerConcentrationIdx] = polymerConcentration_[globalDofIdx];
 
-        if (enablePolymerMolarWeight)
+        if constexpr (enablePolymerMolarWeight)
             values[Indices::polymerMoleWeightIdx]= polymerMoleWeight_[globalDofIdx];
 
-        if (enableBrine)
+        if constexpr (enableBrine)
             values[Indices::saltConcentrationIdx] = initialFluidStates_[globalDofIdx].saltConcentration();
 
         values.checkDefined();
@@ -2254,7 +2253,7 @@ public:
                 min(decay<LhsEval>(fs.pressure(oilPhaseIdx)),
                     minOilPressure_[elementIdx]);
 
-        if (overburdenPressure_.size() > 0)
+        if (!overburdenPressure_.empty())
             effectiveOilPressure -= overburdenPressure_[elementIdx];
 
         if (!rockCompTransMult_.empty())
@@ -2292,34 +2291,48 @@ private:
             // Only rank 0 has the deck and hence can do the checks!
             const auto& deck = this->simulator().vanguard().deck();
 
-            if (enableApiTracking)
+            if constexpr (enableApiTracking)
                 throw std::logic_error("API tracking is not yet implemented but requested at compile time.");
-            if (!enableApiTracking && deck.hasKeyword("API"))
-                throw std::logic_error("The simulator is build with API tracking disabled, but API tracking is requested by the deck.");
+            else  {
+                if (deck.hasKeyword("API"))
+                    throw std::logic_error("The simulator is build with API tracking disabled, but API tracking is requested by the deck.");
+            }
 
-            if (enableSolvent && !deck.hasKeyword("SOLVENT"))
-                throw std::runtime_error("The simulator requires the solvent option to be enabled, but the deck does not.");
-            else if (!enableSolvent && deck.hasKeyword("SOLVENT"))
-                throw std::runtime_error("The deck enables the solvent option, but the simulator is compiled without it.");
+            if constexpr (enableSolvent) {
+                if (!deck.hasKeyword("SOLVENT"))
+                    throw std::runtime_error("The simulator requires the solvent option to be enabled, but the deck does not.");
+            } else {
+                if (deck.hasKeyword("SOLVENT"))
+                    throw std::runtime_error("The deck enables the solvent option, but the simulator is compiled without it.");
+            }
 
-            if (enablePolymer && !deck.hasKeyword("POLYMER"))
-                throw std::runtime_error("The simulator requires the polymer option to be enabled, but the deck does not.");
-            else if (!enablePolymer && deck.hasKeyword("POLYMER"))
-                throw std::runtime_error("The deck enables the polymer option, but the simulator is compiled without it.");
+            if constexpr (enablePolymer) {
+                if (!deck.hasKeyword("POLYMER"))
+                    throw std::runtime_error("The simulator requires the polymer option to be enabled, but the deck does not.");
+            } else {
+                if (deck.hasKeyword("POLYMER"))
+                    throw std::runtime_error("The deck enables the polymer option, but the simulator is compiled without it.");
+            }
 
-            if (enableExtbo && !deck.hasKeyword("PVTSOL"))
-                throw std::runtime_error("The simulator requires the extendedBO option to be enabled, but the deck does not.");
-            else if (!enableExtbo && deck.hasKeyword("PVTSOL"))
-                throw std::runtime_error("The deck enables the extendedBO option, but the simulator is compiled without it.");
+            if constexpr (enableExtbo) {
+                if (!deck.hasKeyword("PVTSOL"))
+                    throw std::runtime_error("The simulator requires the extendedBO option to be enabled, but the deck does not.");
+            } else {
+                if (deck.hasKeyword("PVTSOL"))
+                  throw std::runtime_error("The deck enables the extendedBO option, but the simulator is compiled without it.");
+            }
 
             if (deck.hasKeyword("TEMP") && deck.hasKeyword("THERMAL"))
                 throw std::runtime_error("The deck enables both, the TEMP and the THERMAL options, but they are mutually exclusive.");
 
             bool deckEnergyEnabled = (deck.hasKeyword("TEMP") || deck.hasKeyword("THERMAL"));
-            if (enableEnergy && !deckEnergyEnabled)
-                throw std::runtime_error("The simulator requires the TEMP or the THERMAL option to be enabled, but the deck activates neither.");
-            else if (!enableEnergy && deckEnergyEnabled)
-                throw std::runtime_error("The deck enables the TEMP or the THERMAL option, but the simulator is not compiled to support either.");
+            if constexpr (enableEnergy) {
+                if (!deckEnergyEnabled)
+                    throw std::runtime_error("The simulator requires the TEMP or the THERMAL option to be enabled, but the deck activates neither.");
+            } else {
+                if (deckEnergyEnabled)
+                    throw std::runtime_error("The deck enables the TEMP or the THERMAL option, but the simulator is not compiled to support either.");
+            }
 
             if (deckEnergyEnabled && deck.hasKeyword("TEMP"))
                 std::cerr << "WARNING: The deck requests the TEMP option, i.e., treating energy "
@@ -2436,7 +2449,7 @@ private:
                 const auto& iq = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
                 const auto& fs = iq.fluidState();
 
-                typedef typename std::decay<decltype(fs)>::type FluidState;
+                using FluidState = typename std::decay<decltype(fs)>::type;
 
                 int pvtRegionIdx = pvtRegionIndex(compressedDofIdx);
                 int episodeIdx = std::max(simulator.episodeIndex(), 0);
@@ -2468,7 +2481,7 @@ private:
                 const auto& iq = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
                 const auto& fs = iq.fluidState();
 
-                typedef typename std::decay<decltype(fs)>::type FluidState;
+                using FluidState = typename std::decay<decltype(fs)>::type;
 
                 lastRv_[compressedDofIdx] =
                     BlackOil::template getRv_<FluidSystem,
@@ -2514,7 +2527,7 @@ private:
     bool updateMaxWaterSaturation_()
     {
         // water compaction is activated in ROCKCOMP
-        if (maxWaterSaturation_.size()== 0)
+        if (maxWaterSaturation_.empty())
             return false;
 
         maxWaterSaturation_[/*timeIdx=*/1] = maxWaterSaturation_[/*timeIdx=*/0];
@@ -2744,16 +2757,16 @@ private:
 
     void readThermalParameters_()
     {
-        if (!enableEnergy)
-            return;
+        if constexpr (enableEnergy)
+        {
+            const auto& simulator = this->simulator();
+            const auto& vanguard = simulator.vanguard();
+            const auto& eclState = vanguard.eclState();
 
-        const auto& simulator = this->simulator();
-        const auto& vanguard = simulator.vanguard();
-        const auto& eclState = vanguard.eclState();
-
-        // fluid-matrix interactions (saturation functions; relperm/capillary pressure)
-        thermalLawManager_ = std::make_shared<EclThermalLawManager>();
-        thermalLawManager_->initParamsForElements(eclState, this->model().numGridDof());
+            // fluid-matrix interactions (saturation functions; relperm/capillary pressure)
+            thermalLawManager_ = std::make_shared<EclThermalLawManager>();
+            thermalLawManager_->initParamsForElements(eclState, this->model().numGridDof());
+        }
     }
 
     void updateReferencePorosity_()
@@ -2801,17 +2814,18 @@ private:
         else
             readExplicitInitialCondition_();
 
-        readBlackoilExtentionsInitialConditions_();
+        if constexpr (enableSolvent || enablePolymer || enablePolymerMolarWeight)
+            readBlackoilExtentionsInitialConditions_();
 
         //initialize min/max values
         size_t numElems = this->model().numGridDof();
         for (size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             const auto& fs = initialFluidStates_[elemIdx];
-            if(maxWaterSaturation_.size() > 0)
+            if (!maxWaterSaturation_.empty())
                 maxWaterSaturation_[elemIdx] = std::max(maxWaterSaturation_[elemIdx], fs.saturation(waterPhaseIdx));
-            if(maxOilSaturation_.size() > 0)
+            if (!maxOilSaturation_.empty())
                 maxOilSaturation_[elemIdx] = std::max(maxOilSaturation_[elemIdx], fs.saturation(oilPhaseIdx));
-            if(minOilPressure_.size() > 0)
+            if (!minOilPressure_.empty())
                 minOilPressure_[elemIdx] = std::min(minOilPressure_[elemIdx], fs.pressure(oilPhaseIdx));
         }
 
@@ -2823,7 +2837,7 @@ private:
         const auto& simulator = this->simulator();
 
         // initial condition corresponds to hydrostatic conditions.
-        typedef EclEquilInitializer<TypeTag> EquilInitializer;
+        using EquilInitializer = EclEquilInitializer<TypeTag>;
         EquilInitializer equilInitializer(simulator, *materialLawManager_);
 
         size_t numElems = this->model().numGridDof();
@@ -2858,13 +2872,13 @@ private:
 
         size_t numElems = this->model().numGridDof();
         initialFluidStates_.resize(numElems);
-        if (enableSolvent)
+        if constexpr (enableSolvent)
             solventSaturation_.resize(numElems, 0.0);
 
-        if (enablePolymer)
+        if constexpr (enablePolymer)
             polymerConcentration_.resize(numElems, 0.0);
 
-        if (enablePolymerMolarWeight) {
+        if constexpr (enablePolymerMolarWeight) {
             const std::string msg {"Support of the RESTART for polymer molecular weight "
                                    "is not implemented yet. The polymer weight value will be "
                                    "zero when RESTART begins"};
@@ -2891,14 +2905,14 @@ private:
 
                 processRestartSaturations_(elemFluidState, ssol);
 
-                if (enableSolvent)
+                if constexpr (enableSolvent)
                     solventSaturation_[elemIdx] = ssol;
             }
 
             lastRs_[elemIdx] = elemFluidState.Rs();
             lastRv_[elemIdx] = elemFluidState.Rv();
 
-            if (enablePolymer)
+            if constexpr (enablePolymer)
                  polymerConcentration_[elemIdx] = eclWriter_->eclOutputModule().getPolymerConcentration(elemIdx);
             // if we need to restart for polymer molecular weight simulation, we need to add related here
         }
@@ -2963,7 +2977,7 @@ private:
             }
 
         }
-        if (enableSolvent) {
+        if constexpr (enableSolvent) {
             if (solventSaturation < smallSaturationTolerance)
                 solventSaturation = 0.0;
 
@@ -2978,7 +2992,7 @@ private:
                 elemFluidState.setSaturation(phaseIdx, saturation);
             }
         }
-        if (enableSolvent) {
+        if constexpr (enableSolvent) {
             solventSaturation = solventSaturation / sumSaturation;
         }
     }
@@ -3127,21 +3141,21 @@ private:
         const auto& eclState = vanguard.eclState();
         size_t numDof = this->model().numGridDof();
 
-        if (enableSolvent) {
+        if constexpr (enableSolvent) {
             if (eclState.fieldProps().has_double("SSOL"))
                 solventSaturation_ = eclState.fieldProps().get_double("SSOL");
             else
                 solventSaturation_.resize(numDof, 0.0);
         }
 
-        if (enablePolymer) {
+        if constexpr (enablePolymer) {
             if (eclState.fieldProps().has_double("SPOLY"))
                 polymerConcentration_ = eclState.fieldProps().get_double("SPOLY");
             else
                 polymerConcentration_.resize(numDof, 0.0);
         }
 
-        if (enablePolymerMolarWeight) {
+        if constexpr (enablePolymerMolarWeight) {
             if (eclState.fieldProps().has_double("SPOLYMW"))
                 polymerMoleWeight_ = eclState.fieldProps().get_double("SPOLYMW");
             else
@@ -3259,11 +3273,11 @@ private:
                 unsigned globalCenterElemIdx = elementMapper.index(stencil.entity(/*dofIdx=*/0));
                 dofData.transmissibility = transmissibilities_.transmissibility(globalCenterElemIdx, globalElemIdx);
 
-                if (enableEnergy) {
+                if constexpr (enableEnergy) {
                     *dofData.thermalHalfTransIn = transmissibilities_.thermalHalfTrans(globalCenterElemIdx, globalElemIdx);
                     *dofData.thermalHalfTransOut = transmissibilities_.thermalHalfTrans(globalElemIdx, globalCenterElemIdx);
                 }
-                if (enableDiffusion)
+                if constexpr (enableDiffusion)
                     *dofData.diffusivity = transmissibilities_.diffusivity(globalCenterElemIdx, globalElemIdx);
             }
         };
@@ -3316,13 +3330,13 @@ private:
                         compIdx = Indices::canonicalToActiveComponentIndex(waterCompIdx);
                         break;
                     case BCComponent::SOLVENT:
-                        if (!enableSolvent)
+                        if constexpr (!enableSolvent)
                             throw std::logic_error("solvent is disabled and you're trying to add solvent to BC");
 
                         compIdx = Indices::solventSaturationIdx;
                         break;
                     case BCComponent::POLYMER:
-                        if (!enablePolymer)
+                        if constexpr (!enablePolymer)
                             throw std::logic_error("polymer is disabled and you're trying to add polymer to BC");
 
                         compIdx = Indices::polymerConcentrationIdx;
@@ -3416,39 +3430,38 @@ private:
     // line parameters for the size of the next time step.
     Scalar limitNextTimeStepSize_(Scalar dtNext) const
     {
-        if (!enableExperiments)
-            return dtNext;
+        if constexpr (enableExperiments) {
+            const auto& simulator = this->simulator();
+            int episodeIdx = simulator.episodeIndex();
 
-        const auto& simulator = this->simulator();
-        int episodeIdx = simulator.episodeIndex();
+            // first thing in the morning, limit the time step size to the maximum size
+            dtNext = std::min(dtNext, maxTimeStepSize_);
 
-        // first thing in the morning, limit the time step size to the maximum size
-        dtNext = std::min(dtNext, maxTimeStepSize_);
+            Scalar remainingEpisodeTime =
+                simulator.episodeStartTime() + simulator.episodeLength()
+                - (simulator.startTime() + simulator.time());
+            assert(remainingEpisodeTime >= 0.0);
 
-        Scalar remainingEpisodeTime =
-            simulator.episodeStartTime() + simulator.episodeLength()
-            - (simulator.startTime() + simulator.time());
-        assert(remainingEpisodeTime >= 0.0);
+            // if we would have a small amount of time left over in the current episode, make
+            // two equal time steps instead of a big and a small one
+            if (remainingEpisodeTime/2.0 < dtNext && dtNext < remainingEpisodeTime*(1.0 - 1e-5))
+                // note: limiting to the maximum time step size here is probably not strictly
+                // necessary, but it should not hurt and is more fool-proof
+                dtNext = std::min(maxTimeStepSize_, remainingEpisodeTime/2.0);
 
-        // if we would have a small amount of time left over in the current episode, make
-        // two equal time steps instead of a big and a small one
-        if (remainingEpisodeTime/2.0 < dtNext && dtNext < remainingEpisodeTime*(1.0 - 1e-5))
-            // note: limiting to the maximum time step size here is probably not strictly
-            // necessary, but it should not hurt and is more fool-proof
-            dtNext = std::min(maxTimeStepSize_, remainingEpisodeTime/2.0);
-
-        if (simulator.episodeStarts()) {
-            // if a well event occured, respect the limit for the maximum time step after
-            // that, too
-            int reportStepIdx = std::max(episodeIdx, 0);
-            const auto& events = simulator.vanguard().schedule()[reportStepIdx].events();
-            bool wellEventOccured =
-                    events.hasEvent(ScheduleEvents::NEW_WELL)
-                    || events.hasEvent(ScheduleEvents::PRODUCTION_UPDATE)
-                    || events.hasEvent(ScheduleEvents::INJECTION_UPDATE)
-                    || events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE);
-            if (episodeIdx >= 0 && wellEventOccured && maxTimeStepAfterWellEvent_ > 0)
-                dtNext = std::min(dtNext, maxTimeStepAfterWellEvent_);
+            if (simulator.episodeStarts()) {
+                // if a well event occured, respect the limit for the maximum time step after
+                // that, too
+                int reportStepIdx = std::max(episodeIdx, 0);
+                const auto& events = simulator.vanguard().schedule()[reportStepIdx].events();
+                bool wellEventOccured =
+                        events.hasEvent(ScheduleEvents::NEW_WELL)
+                        || events.hasEvent(ScheduleEvents::PRODUCTION_UPDATE)
+                        || events.hasEvent(ScheduleEvents::INJECTION_UPDATE)
+                        || events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE);
+                if (episodeIdx >= 0 && wellEventOccured && maxTimeStepAfterWellEvent_ > 0)
+                    dtNext = std::min(dtNext, maxTimeStepAfterWellEvent_);
+            }
         }
 
         return dtNext;
