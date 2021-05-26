@@ -2296,10 +2296,12 @@ private:
             // Only rank 0 has the deck and hence can do the checks!
             const auto& deck = this->simulator().vanguard().deck();
 
-            if (enableApiTracking)
+            if constexpr (enableApiTracking)
                 throw std::logic_error("API tracking is not yet implemented but requested at compile time.");
-            if (!enableApiTracking && deck.hasKeyword("API"))
-                throw std::logic_error("The simulator is build with API tracking disabled, but API tracking is requested by the deck.");
+            else  {
+                if (deck.hasKeyword("API"))
+                    throw std::logic_error("The simulator is build with API tracking disabled, but API tracking is requested by the deck.");
+            }
 
             if constexpr (enableSolvent) {
                 if (!deck.hasKeyword("SOLVENT"))
