@@ -312,6 +312,18 @@ public:
                 this->mwPolymer_[globalDofIdx] = intQuants.polymerMoleWeight().value();
             }
 
+            if (!this->effectivePolymerViscosityPolymer_.empty()) {
+                this->effectivePolymerViscosityPolymer_[globalDofIdx] = intQuants.epvis().value();
+            }
+
+            if (!this->effectiveMixtureViscosityPolymer_.empty()) {
+                this->effectiveMixtureViscosityPolymer_[globalDofIdx] = intQuants.emvis().value();
+            }
+
+            if (!this->effectiveWaterViscosityPolymer_.empty()) {
+                this->effectiveWaterViscosityPolymer_[globalDofIdx] = intQuants.ewv_pol().value();
+            }
+
             if (!this->cFoam_.empty()) {
                 this->cFoam_[globalDofIdx] = intQuants.foamConcentration().value();
             }

@@ -112,6 +112,30 @@ public:
         return 0;
     }
 
+    Scalar getEffectivePolymerViscosityPolymer(unsigned elemIdx) const
+    {
+        if (effectivePolymerViscosityPolymer_.size() > elemIdx)
+            return effectivePolymerViscosityPolymer_[elemIdx];
+
+        return 0;
+    }
+
+    Scalar getEffectiveMixtureViscosityPolymer(unsigned elemIdx) const
+    {
+        if (effectiveMixtureViscosityPolymer_.size() > elemIdx)
+            return effectiveMixtureViscosityPolymer_[elemIdx];
+
+        return 0;
+    }
+
+    Scalar getEffectiveWaterViscosityPolymer(unsigned elemIdx) const
+    {
+        if (effectiveWaterViscosityPolymer_.size() > elemIdx)
+            return effectiveWaterViscosityPolymer_[elemIdx];
+
+        return 0;
+    }
+
     Scalar getFoamConcentration(unsigned elemIdx) const
     {
         if (cFoam_.size() > elemIdx)
@@ -341,6 +365,9 @@ protected:
     ScalarBuffer sSol_;
     ScalarBuffer cPolymer_;
     ScalarBuffer mwPolymer_;
+    ScalarBuffer effectivePolymerViscosityPolymer_;
+    ScalarBuffer effectiveMixtureViscosityPolymer_;
+    ScalarBuffer effectiveWaterViscosityPolymer_;
     ScalarBuffer cFoam_;
     ScalarBuffer cSalt_;
     ScalarBuffer extboX_;
