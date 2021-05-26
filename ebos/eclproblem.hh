@@ -734,10 +734,10 @@ public:
      */
     static int handlePositionalParameter(std::set<std::string>& seenParams,
                                          std::string& errorMsg,
-                                         int argc OPM_UNUSED,
+                                         int,
                                          const char** argv,
                                          int paramIdx,
-                                         int posParamIdx OPM_UNUSED)
+                                         int)
     {
         using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
         Dune::ParameterTree& tree = ParamsMeta::tree();
@@ -773,7 +773,7 @@ public:
     /*!
      * \copydoc FvBaseProblem::helpPreamble
      */
-    static std::string helpPreamble(int argc OPM_UNUSED,
+    static std::string helpPreamble(int,
                                     const char **argv)
     {
         std::string desc = Implementation::briefDescription();
@@ -1642,9 +1642,9 @@ public:
      */
     template <class Context>
     const SolidEnergyLawParams&
-    solidEnergyLawParams(const Context& context OPM_UNUSED,
-                         unsigned spaceIdx OPM_UNUSED,
-                         unsigned timeIdx OPM_UNUSED) const
+    solidEnergyLawParams(const Context& context,
+                         unsigned spaceIdx,
+                         unsigned timeIdx) const
     {
         unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         return thermalLawManager_->solidEnergyLawParams(globalSpaceIdx);
