@@ -1921,7 +1921,7 @@ public:
         if constexpr (enablePolymer)
             values[Indices::polymerConcentrationIdx] = polymerConcentration_[globalDofIdx];
 
-        if (enablePolymerMolarWeight)
+        if constexpr (enablePolymerMolarWeight)
             values[Indices::polymerMoleWeightIdx]= polymerMoleWeight_[globalDofIdx];
 
         if (enableBrine)
@@ -2874,7 +2874,7 @@ private:
         if constexpr (enablePolymer)
             polymerConcentration_.resize(numElems, 0.0);
 
-        if (enablePolymerMolarWeight) {
+        if constexpr (enablePolymerMolarWeight) {
             const std::string msg {"Support of the RESTART for polymer molecular weight "
                                    "is not implemented yet. The polymer weight value will be "
                                    "zero when RESTART begins"};
@@ -3151,7 +3151,7 @@ private:
                 polymerConcentration_.resize(numDof, 0.0);
         }
 
-        if (enablePolymerMolarWeight) {
+        if constexpr (enablePolymerMolarWeight) {
             if (eclState.fieldProps().has_double("SPOLYMW"))
                 polymerMoleWeight_ = eclState.fieldProps().get_double("SPOLYMW");
             else
