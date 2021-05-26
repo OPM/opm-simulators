@@ -246,15 +246,15 @@ private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
-    typedef ThreePhaseMaterialTraits<Scalar,
-                                     /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
-                                     /*nonWettingPhaseIdx=*/FluidSystem::oilPhaseIdx,
-                                     /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx> Traits;
+    using Traits = ThreePhaseMaterialTraits<Scalar,
+                                            /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
+                                            /*nonWettingPhaseIdx=*/FluidSystem::oilPhaseIdx,
+                                            /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx>;
 
 public:
-    typedef ::Opm::EclMaterialLawManager<Traits> EclMaterialLawManager;
+    using EclMaterialLawManager = ::Opm::EclMaterialLawManager<Traits>;
 
-    typedef typename EclMaterialLawManager::MaterialLaw type;
+    using type = typename EclMaterialLawManager::MaterialLaw;
 };
 
 // Set the material law for energy storage in rock
@@ -266,9 +266,9 @@ private:
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
 public:
-    typedef ::Opm::EclThermalLawManager<Scalar, FluidSystem> EclThermalLawManager;
+    using EclThermalLawManager = ::Opm::EclThermalLawManager<Scalar, FluidSystem>;
 
-    typedef typename EclThermalLawManager::SolidEnergyLaw type;
+    using type = typename EclThermalLawManager::SolidEnergyLaw;
 };
 
 // Set the material law for thermal conduction
@@ -280,9 +280,9 @@ private:
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
 public:
-    typedef ::Opm::EclThermalLawManager<Scalar, FluidSystem> EclThermalLawManager;
+    using EclThermalLawManager = ::Opm::EclThermalLawManager<Scalar, FluidSystem>;
 
-    typedef typename EclThermalLawManager::ThermalConductionLaw type;
+    using type = typename EclThermalLawManager::ThermalConductionLaw;
 };
 
 // ebos can use a slightly faster stencil class because it does not need the normals and
@@ -295,10 +295,10 @@ private:
     using GridView = GetPropType<TypeTag, Properties::GridView>;
 
 public:
-    typedef EcfvStencil<Scalar,
-                        GridView,
-                        /*needIntegrationPos=*/false,
-                        /*needNormal=*/false> type;
+    using type = EcfvStencil<Scalar,
+                             GridView,
+                             /*needIntegrationPos=*/false,
+                             /*needNormal=*/false>;
 };
 
 // by default use the dummy aquifer "model"
@@ -660,25 +660,25 @@ class EclProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     using EclWellModel = GetPropType<TypeTag, Properties::EclWellModel>;
     using EclAquiferModel = GetPropType<TypeTag, Properties::EclAquiferModel>;
 
-    typedef BlackOilSolventModule<TypeTag> SolventModule;
-    typedef BlackOilPolymerModule<TypeTag> PolymerModule;
-    typedef BlackOilFoamModule<TypeTag> FoamModule;
-    typedef BlackOilBrineModule<TypeTag> BrineModule;
-    typedef BlackOilExtboModule<TypeTag> ExtboModule;
+    using SolventModule = BlackOilSolventModule<TypeTag>;
+    using PolymerModule = BlackOilPolymerModule<TypeTag>;
+    using FoamModule = BlackOilFoamModule<TypeTag>;
+    using BrineModule = BlackOilBrineModule<TypeTag>;
+    using ExtboModule = BlackOilExtboModule<TypeTag>;
 
-    typedef typename EclEquilInitializer<TypeTag>::ScalarFluidState InitialFluidState;
+    using InitialFluidState = typename EclEquilInitializer<TypeTag>::ScalarFluidState;
 
-    typedef MathToolbox<Evaluation> Toolbox;
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
+    using Toolbox = MathToolbox<Evaluation>;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
-    typedef EclWriter<TypeTag> EclWriterType;
+    using EclWriterType = EclWriter<TypeTag>;
 
-    typedef EclTracerModel<TypeTag> TracerModel;
+    using TracerModel = EclTracerModel<TypeTag>;
 
-    typedef typename GridView::template Codim<0>::Iterator ElementIterator;
+    using ElementIterator = typename GridView::template Codim<0>::Iterator;
 
-    typedef UniformXTabulated2DFunction<Scalar> TabulatedTwoDFunction;
-    typedef Tabulated1DFunction<Scalar> TabulatedFunction;
+    using TabulatedTwoDFunction = UniformXTabulated2DFunction<Scalar>;
+    using TabulatedFunction = Tabulated1DFunction<Scalar>;
 
     struct RockParams {
         Scalar referencePressure;
@@ -2436,7 +2436,7 @@ private:
                 const auto& iq = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
                 const auto& fs = iq.fluidState();
 
-                typedef typename std::decay<decltype(fs)>::type FluidState;
+                using FluidState = typename std::decay<decltype(fs)>::type;
 
                 int pvtRegionIdx = pvtRegionIndex(compressedDofIdx);
                 int episodeIdx = std::max(simulator.episodeIndex(), 0);
@@ -2468,7 +2468,7 @@ private:
                 const auto& iq = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
                 const auto& fs = iq.fluidState();
 
-                typedef typename std::decay<decltype(fs)>::type FluidState;
+                using FluidState = typename std::decay<decltype(fs)>::type;
 
                 lastRv_[compressedDofIdx] =
                     BlackOil::template getRv_<FluidSystem,
@@ -2823,7 +2823,7 @@ private:
         const auto& simulator = this->simulator();
 
         // initial condition corresponds to hydrostatic conditions.
-        typedef EclEquilInitializer<TypeTag> EquilInitializer;
+        using EquilInitializer = EclEquilInitializer<TypeTag>;
         EquilInitializer equilInitializer(simulator, *materialLawManager_);
 
         size_t numElems = this->model().numGridDof();
