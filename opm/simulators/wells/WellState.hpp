@@ -111,7 +111,7 @@ public:
     void currentProductionControl(std::size_t well_index, Well::ProducerCMode cmode) { current_production_controls_[well_index] = cmode; }
 
     void setCurrentWellRates(const std::string& wellName, const std::vector<double>& rates ) {
-        well_rates[wellName].second = rates;
+        well_rates.at(wellName).second = rates;
     }
 
     const std::vector<double>& currentWellRates(const std::string& wellName) const;
@@ -470,6 +470,9 @@ private:
     WellContainer<Opm::Well::InjectorCMode> current_injection_controls_;
     WellContainer<Well::ProducerCMode> current_production_controls_;
 
+    // The well_rates variable is defined for all wells on all processors. The
+    // bool in the value pair is whether the current process owns the well or
+    // not.
     std::map<std::string, std::pair<bool, std::vector<double>>> well_rates;
 
 
