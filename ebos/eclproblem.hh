@@ -1451,7 +1451,7 @@ public:
      */
     template <class Context>
     Scalar transmissibility(const Context& context,
-                            unsigned OPM_OPTIM_UNUSED fromDofLocalIdx,
+                            [[maybe_unused]] unsigned fromDofLocalIdx,
                             unsigned toDofLocalIdx) const
     {
         assert(fromDofLocalIdx == 0);
@@ -1463,7 +1463,7 @@ public:
      */
     template <class Context>
     Scalar diffusivity(const Context& context,
-                       unsigned OPM_OPTIM_UNUSED fromDofLocalIdx,
+                       [[maybe_unused]] unsigned fromDofLocalIdx,
                        unsigned toDofLocalIdx) const
     {
         assert(fromDofLocalIdx == 0);
