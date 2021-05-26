@@ -1915,7 +1915,7 @@ public:
         values.setPvtRegionIndex(pvtRegionIndex(context, spaceIdx, timeIdx));
         values.assignNaive(initialFluidStates_[globalDofIdx]);
 
-        if (enableSolvent)
+        if constexpr (enableSolvent)
             values[Indices::solventSaturationIdx] = solventSaturation_[globalDofIdx];
 
         if (enablePolymer)
@@ -2301,10 +2301,13 @@ private:
             if (!enableApiTracking && deck.hasKeyword("API"))
                 throw std::logic_error("The simulator is build with API tracking disabled, but API tracking is requested by the deck.");
 
-            if (enableSolvent && !deck.hasKeyword("SOLVENT"))
-                throw std::runtime_error("The simulator requires the solvent option to be enabled, but the deck does not.");
-            else if (!enableSolvent && deck.hasKeyword("SOLVENT"))
-                throw std::runtime_error("The deck enables the solvent option, but the simulator is compiled without it.");
+            if constexpr (enableSolvent) {
+                if (!deck.hasKeyword("SOLVENT"))
+                    throw std::runtime_error("The simulator requires the solvent option to be enabled, but the deck does not.");
+            } else {
+                if (deck.hasKeyword("SOLVENT"))
+                    throw std::runtime_error("The deck enables the solvent option, but the simulator is compiled without it.");
+            }
 
             if (enablePolymer && !deck.hasKeyword("POLYMER"))
                 throw std::runtime_error("The simulator requires the polymer option to be enabled, but the deck does not.");
@@ -2862,7 +2865,7 @@ private:
 
         size_t numElems = this->model().numGridDof();
         initialFluidStates_.resize(numElems);
-        if (enableSolvent)
+        if constexpr (enableSolvent)
             solventSaturation_.resize(numElems, 0.0);
 
         if (enablePolymer)
@@ -2895,7 +2898,7 @@ private:
 
                 processRestartSaturations_(elemFluidState, ssol);
 
-                if (enableSolvent)
+                if constexpr (enableSolvent)
                     solventSaturation_[elemIdx] = ssol;
             }
 
@@ -2967,7 +2970,7 @@ private:
             }
 
         }
-        if (enableSolvent) {
+        if constexpr (enableSolvent) {
             if (solventSaturation < smallSaturationTolerance)
                 solventSaturation = 0.0;
 
@@ -2982,7 +2985,7 @@ private:
                 elemFluidState.setSaturation(phaseIdx, saturation);
             }
         }
-        if (enableSolvent) {
+        if constexpr (enableSolvent) {
             solventSaturation = solventSaturation / sumSaturation;
         }
     }
@@ -3131,7 +3134,7 @@ private:
         const auto& eclState = vanguard.eclState();
         size_t numDof = this->model().numGridDof();
 
-        if (enableSolvent) {
+        if constexpr (enableSolvent) {
             if (eclState.fieldProps().has_double("SSOL"))
                 solventSaturation_ = eclState.fieldProps().get_double("SSOL");
             else
@@ -3320,7 +3323,7 @@ private:
                         compIdx = Indices::canonicalToActiveComponentIndex(waterCompIdx);
                         break;
                     case BCComponent::SOLVENT:
-                        if (!enableSolvent)
+                        if constexpr (!enableSolvent)
                             throw std::logic_error("solvent is disabled and you're trying to add solvent to BC");
 
                         compIdx = Indices::solventSaturationIdx;
