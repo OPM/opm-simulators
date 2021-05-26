@@ -1918,7 +1918,7 @@ public:
         if constexpr (enableSolvent)
             values[Indices::solventSaturationIdx] = solventSaturation_[globalDofIdx];
 
-        if (enablePolymer)
+        if constexpr (enablePolymer)
             values[Indices::polymerConcentrationIdx] = polymerConcentration_[globalDofIdx];
 
         if (enablePolymerMolarWeight)
@@ -2309,10 +2309,13 @@ private:
                     throw std::runtime_error("The deck enables the solvent option, but the simulator is compiled without it.");
             }
 
-            if (enablePolymer && !deck.hasKeyword("POLYMER"))
-                throw std::runtime_error("The simulator requires the polymer option to be enabled, but the deck does not.");
-            else if (!enablePolymer && deck.hasKeyword("POLYMER"))
-                throw std::runtime_error("The deck enables the polymer option, but the simulator is compiled without it.");
+            if constexpr (enablePolymer) {
+                if (!deck.hasKeyword("POLYMER"))
+                    throw std::runtime_error("The simulator requires the polymer option to be enabled, but the deck does not.");
+            } else {
+                if (deck.hasKeyword("POLYMER"))
+                    throw std::runtime_error("The deck enables the polymer option, but the simulator is compiled without it.");
+            }
 
             if (enableExtbo && !deck.hasKeyword("PVTSOL"))
                 throw std::runtime_error("The simulator requires the extendedBO option to be enabled, but the deck does not.");
@@ -2868,7 +2871,7 @@ private:
         if constexpr (enableSolvent)
             solventSaturation_.resize(numElems, 0.0);
 
-        if (enablePolymer)
+        if constexpr (enablePolymer)
             polymerConcentration_.resize(numElems, 0.0);
 
         if (enablePolymerMolarWeight) {
@@ -2905,7 +2908,7 @@ private:
             lastRs_[elemIdx] = elemFluidState.Rs();
             lastRv_[elemIdx] = elemFluidState.Rv();
 
-            if (enablePolymer)
+            if constexpr (enablePolymer)
                  polymerConcentration_[elemIdx] = eclWriter_->eclOutputModule().getPolymerConcentration(elemIdx);
             // if we need to restart for polymer molecular weight simulation, we need to add related here
         }
@@ -3141,7 +3144,7 @@ private:
                 solventSaturation_.resize(numDof, 0.0);
         }
 
-        if (enablePolymer) {
+        if constexpr (enablePolymer) {
             if (eclState.fieldProps().has_double("SPOLY"))
                 polymerConcentration_ = eclState.fieldProps().get_double("SPOLY");
             else
@@ -3329,7 +3332,7 @@ private:
                         compIdx = Indices::solventSaturationIdx;
                         break;
                     case BCComponent::POLYMER:
-                        if (!enablePolymer)
+                        if constexpr (!enablePolymer)
                             throw std::logic_error("polymer is disabled and you're trying to add polymer to BC");
 
                         compIdx = Indices::polymerConcentrationIdx;
