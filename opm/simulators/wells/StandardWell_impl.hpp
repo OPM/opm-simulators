@@ -584,8 +584,8 @@ namespace Opm
         const double volume = 0.002831684659200; // 0.1 cu ft;
 
         // the solution gas rate and solution oil rate needs to be reset to be zero for well_state.
-        well_state.wellVaporizedOilRates()[index_of_well_] = 0.;
-        well_state.wellDissolvedGasRates()[index_of_well_] = 0.;
+        well_state.wellVaporizedOilRates(index_of_well_) = 0.;
+        well_state.wellDissolvedGasRates(index_of_well_) = 0.;
 
         const int np = number_of_phases_;
 
@@ -719,8 +719,8 @@ namespace Opm
 
         // updating the solution gas rate and solution oil rate
         if (this->isProducer()) {
-            well_state.wellDissolvedGasRates()[index_of_well_] += perf_dis_gas_rate;
-            well_state.wellVaporizedOilRates()[index_of_well_] += perf_vap_oil_rate;
+            well_state.wellDissolvedGasRates(index_of_well_) += perf_dis_gas_rate;
+            well_state.wellVaporizedOilRates(index_of_well_) += perf_vap_oil_rate;
         }
 
         if constexpr (has_energy) {

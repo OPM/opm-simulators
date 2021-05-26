@@ -255,8 +255,8 @@ void WellState::init(const std::vector<double>& cellPressures,
     }
 
     well_reservoir_rates_.clear();
-    well_dissolved_gas_rates_.resize(nw, 0.0);
-    well_vaporized_oil_rates_.resize(nw, 0.0);
+    well_dissolved_gas_rates_.clear();
+    well_vaporized_oil_rates_.clear();
 
     this->events_.clear();
     {
@@ -307,6 +307,8 @@ void WellState::init(const std::vector<double>& cellPressures,
         first_perf_index_[w] = connpos;
 
         this->well_reservoir_rates_.add(wname, std::vector<double>(np, 0));
+        this->well_dissolved_gas_rates_.add(wname, 0);
+        this->well_vaporized_oil_rates_.add(wname, 0);
     }
 
     is_producer_.clear();
