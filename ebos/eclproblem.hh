@@ -2317,10 +2317,13 @@ private:
                     throw std::runtime_error("The deck enables the polymer option, but the simulator is compiled without it.");
             }
 
-            if (enableExtbo && !deck.hasKeyword("PVTSOL"))
-                throw std::runtime_error("The simulator requires the extendedBO option to be enabled, but the deck does not.");
-            else if (!enableExtbo && deck.hasKeyword("PVTSOL"))
-                throw std::runtime_error("The deck enables the extendedBO option, but the simulator is compiled without it.");
+            if constexpr (enableExtbo) {
+                if (!deck.hasKeyword("PVTSOL"))
+                    throw std::runtime_error("The simulator requires the extendedBO option to be enabled, but the deck does not.");
+            } else {
+                if (deck.hasKeyword("PVTSOL"))
+                  throw std::runtime_error("The deck enables the extendedBO option, but the simulator is compiled without it.");
+            }
 
             if (deck.hasKeyword("TEMP") && deck.hasKeyword("THERMAL"))
                 throw std::runtime_error("The deck enables both, the TEMP and the THERMAL options, but they are mutually exclusive.");
