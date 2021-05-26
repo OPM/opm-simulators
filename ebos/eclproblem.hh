@@ -2819,7 +2819,8 @@ private:
         else
             readExplicitInitialCondition_();
 
-        readBlackoilExtentionsInitialConditions_();
+        if constexpr (enableSolvent || enablePolymer || enablePolymerMolarWeight)
+            readBlackoilExtentionsInitialConditions_();
 
         //initialize min/max values
         size_t numElems = this->model().numGridDof();
