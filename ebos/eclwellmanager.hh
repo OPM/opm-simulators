@@ -105,9 +105,10 @@ public:
         const Schedule& deckSchedule = simulator_.vanguard().schedule();
         const auto& summaryState = simulator_.vanguard().summaryState();
         // create the wells which intersect with the current process' grid
+        const auto wellsatEnd = deckSchedule.getWellsatEnd();
         for (size_t deckWellIdx = 0; deckWellIdx < deckSchedule.numWells(); ++deckWellIdx)
         {
-            const auto& deckWell = deckSchedule.getWellsatEnd()[deckWellIdx];
+            const auto& deckWell = wellsatEnd[deckWellIdx];
             const std::string& wellName = deckWell.name();
             Scalar wellTemperature = 273.15 + 15.56; // [K]
             if (deckWell.isInjector())
