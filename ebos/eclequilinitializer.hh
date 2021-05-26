@@ -78,14 +78,13 @@ class EclEquilInitializer
 public:
     // NB: setting the enableEnergy argument to true enables storage of enthalpy and
     // internal energy!
-    typedef Opm::BlackOilFluidState<Scalar,
-                                    FluidSystem,
-                                    enableTemperature,
-                                    enableEnergy,
-                                    Indices::gasEnabled,
-                                    enableBrine,
-                                    Indices::numPhases
-                                    > ScalarFluidState;
+    using ScalarFluidState = BlackOilFluidState<Scalar,
+                                                FluidSystem,
+                                                enableTemperature,
+                                                enableEnergy,
+                                                Indices::gasEnabled,
+                                                enableBrine,
+                                                Indices::numPhases>;
 
 
     template <class EclMaterialLawManager>

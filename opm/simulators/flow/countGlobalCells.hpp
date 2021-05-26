@@ -46,7 +46,7 @@ namespace detail {
     std::vector<bool>
     activePhases(const PU& pu)
     {
-        const int maxnp = Opm::BlackoilPhases::MaxNumPhases;
+        const int maxnp = BlackoilPhases::MaxNumPhases;
         std::vector<bool> active(maxnp, false);
 
         for (int p = 0; p < pu.MaxNumPhases; ++p) {
@@ -62,7 +62,7 @@ namespace detail {
     std::vector<int>
     active2Canonical(const PU& pu)
     {
-        const int maxnp = Opm::BlackoilPhases::MaxNumPhases;
+        const int maxnp = BlackoilPhases::MaxNumPhases;
         std::vector<int> act2can(maxnp, -1);
 
         for (int phase = 0; phase < maxnp; ++phase) {
@@ -110,7 +110,7 @@ namespace detail {
                     auto component_container =
                         boost::make_iterator_range(it, end);
                     info.computeReduction(component_container,
-                                           Opm::Reduction::makeInnerProductFunctor<double>(),
+                                           Reduction::makeInnerProductFunctor<double>(),
                                            product);
                 }
                 else

@@ -64,12 +64,12 @@ public:
                         const Dune::CartesianIndexMapper<EquilGrid>* equilCartMapper);
 
     // gather solution to rank 0 for EclipseWriter
-    void collect(const Opm::data::Solution& localCellData,
+    void collect(const data::Solution& localCellData,
                  const std::map<std::pair<std::string, int>, double>& localBlockData,
                  const std::map<std::size_t, double>& localWBPData,
-                 const Opm::data::Wells& localWellData,
-                 const Opm::data::GroupAndNetworkValues& localGroupAndNetworkData,
-                 const Opm::data::Aquifers& localAquiferData);
+                 const data::Wells& localWellData,
+                 const data::GroupAndNetworkValues& localGroupAndNetworkData,
+                 const data::Aquifers& localAquiferData);
 
     const std::map<std::size_t, double>& globalWBPData() const
     { return this->globalWBPData_; }
@@ -77,16 +77,16 @@ public:
     const std::map<std::pair<std::string, int>, double>& globalBlockData() const
     { return globalBlockData_; }
 
-    const Opm::data::Solution& globalCellData() const
+    const data::Solution& globalCellData() const
     { return globalCellData_; }
 
-    const Opm::data::Wells& globalWellData() const
+    const data::Wells& globalWellData() const
     { return globalWellData_; }
 
-    const Opm::data::GroupAndNetworkValues& globalGroupAndNetworkData() const
+    const data::GroupAndNetworkValues& globalGroupAndNetworkData() const
     { return globalGroupAndNetworkData_; }
 
-    const Opm::data::Aquifers& globalAquiferData() const
+    const data::Aquifers& globalAquiferData() const
     { return globalAquiferData_; }
 
     bool isIORank() const
@@ -111,12 +111,12 @@ protected:
     IndexMapType localIndexMap_;
     IndexMapStorageType indexMaps_;
     std::vector<int> globalRanks_;
-    Opm::data::Solution globalCellData_;
+    data::Solution globalCellData_;
     std::map<std::pair<std::string, int>, double> globalBlockData_;
     std::map<std::size_t, double> globalWBPData_;
-    Opm::data::Wells globalWellData_;
-    Opm::data::GroupAndNetworkValues globalGroupAndNetworkData_;
-    Opm::data::Aquifers globalAquiferData_;
+    data::Wells globalWellData_;
+    data::GroupAndNetworkValues globalGroupAndNetworkData_;
+    data::Aquifers globalAquiferData_;
     std::vector<int> localIdxToGlobalIdx_;
     /// \brief sorted list of cartesian indices present-
     ///

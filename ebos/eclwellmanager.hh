@@ -84,9 +84,9 @@ class EclWellManager
 
     typedef typename GridView::template Codim<0>::Entity Element;
 
-    typedef Opm::EclPeacemanWell<TypeTag> Well;
+    using Well = EclPeacemanWell<TypeTag>;
 
-    typedef std::map<int, std::pair<const Opm::Connection*, std::shared_ptr<Well> > > WellConnectionsMap;
+    typedef std::map<int, std::pair<const Connection*, std::shared_ptr<Well> > > WellConnectionsMap;
 
     typedef Dune::FieldVector<Evaluation, numEq> EvalEqVector;
 
@@ -102,12 +102,12 @@ public:
      */
     void init()
     {
-        const Opm::Schedule& deckSchedule = simulator_.vanguard().schedule();
+        const Schedule& deckSchedule = simulator_.vanguard().schedule();
         const auto& summaryState = simulator_.vanguard().summaryState();
         // create the wells which intersect with the current process' grid
         for (size_t deckWellIdx = 0; deckWellIdx < deckSchedule.numWells(); ++deckWellIdx)
         {
-            const Opm::Well deckWell = deckSchedule.getWellsatEnd()[deckWellIdx];
+            const auto& deckWell = deckSchedule.getWellsatEnd()[deckWellIdx];
             const std::string& wellName = deckWell.name();
             Scalar wellTemperature = 273.15 + 15.56; // [K]
             if (deckWell.isInjector())
@@ -132,8 +132,8 @@ public:
      */
     void beginEpisode(bool wasRestarted=false)
     {
-        const Opm::EclipseState& eclState = simulator_.vanguard().eclState();
-        const Opm::Schedule& deckSchedule = simulator_.vanguard().schedule();
+        const EclipseState& eclState = simulator_.vanguard().eclState();
+        const Schedule& deckSchedule = simulator_.vanguard().schedule();
         const auto& summaryState = simulator_.vanguard().summaryState();
         unsigned episodeIdx = simulator_.episodeIndex();
         WellConnectionsMap wellCompMap;
@@ -146,7 +146,7 @@ public:
         // linearized system of equations
         updateWellParameters_(episodeIdx, wellCompMap);
 
-        const std::vector<Opm::Well>& deckWells = deckSchedule.getWells(episodeIdx);
+        const auto& deckWells = deckSchedule.getWells(episodeIdx);
         // set the injection data for the respective wells.
         for (const auto& deckWell : deckWells) {
             if (!hasWell(deckWell.name()))
@@ -159,15 +159,15 @@ public:
 
             auto deckWellStatus = deckWell.getStatus( );
             switch (deckWellStatus) {
-            case Opm::Well::Status::AUTO:
+            case ::Opm::Well::Status::AUTO:
                 // TODO: for now, auto means open...
-            case Opm::Well::Status::OPEN:
+            case ::Opm::Well::Status::OPEN:
                 well->setWellStatus(Well::Open);
                 break;
-            case Opm::Well::Status::STOP:
+            case ::Opm::Well::Status::STOP:
                 well->setWellStatus(Well::Closed);
                 break;
-            case Opm::Well::Status::SHUT:
+            case ::Opm::Well::Status::SHUT:
                 well->setWellStatus(Well::Shut);
                 break;
             }
@@ -182,40 +182,41 @@ public:
                 well->setWellType(Well::Injector);
                 const auto controls = deckWell.injectionControls(summaryState);
                 switch (controls.injector_type) {
-                case Opm::InjectorType::WATER:
+                case InjectorType::WATER:
                     well->setInjectedPhaseIndex(FluidSystem::waterPhaseIdx);
                     break;
-                case Opm::InjectorType::GAS:
+                case InjectorType::GAS:
                     well->setInjectedPhaseIndex(FluidSystem::gasPhaseIdx);
                     break;
-                case Opm::InjectorType::OIL:
+                case InjectorType::OIL:
                     well->setInjectedPhaseIndex(FluidSystem::oilPhaseIdx);
                     break;
-                case Opm::InjectorType::MULTI:
+                case InjectorType::MULTI:
                     throw std::runtime_error("Not implemented: Multi-phase injector wells");
                 }
 
+                using InjectorCMode = ::Opm::Well::InjectorCMode;
                 switch (controls.cmode) {
-                case Opm::Well::InjectorCMode::RATE:
+                case InjectorCMode::RATE:
                     well->setControlMode(Well::ControlMode::VolumetricSurfaceRate);
                     break;
 
-                case Opm::Well::InjectorCMode::RESV:
+                case InjectorCMode::RESV:
                     well->setControlMode(Well::ControlMode::VolumetricReservoirRate);
                     break;
 
-                case Opm::Well::InjectorCMode::BHP:
+                case InjectorCMode::BHP:
                     well->setControlMode(Well::ControlMode::BottomHolePressure);
                     break;
 
-                case Opm::Well::InjectorCMode::THP:
+                case InjectorCMode::THP:
                     well->setControlMode(Well::ControlMode::TubingHeadPressure);
                     break;
 
-                case Opm::Well::InjectorCMode::GRUP:
+                case InjectorCMode::GRUP:
                     throw std::runtime_error("Not implemented: Well groups");
 
-                case Opm::Well::InjectorCMode::CMODE_UNDEFINED:
+                case InjectorCMode::CMODE_UNDEFINED:
                     std::cout << "Warning: Control mode of injection well " << well->name()
                               << " is undefined. Assuming well to be shut.\n";
                     well->setWellStatus(Well::WellStatus::Shut);
@@ -223,19 +224,19 @@ public:
                 }
 
                 switch (controls.injector_type) {
-                case Opm::InjectorType::WATER:
+                case InjectorType::WATER:
                     well->setVolumetricPhaseWeights(/*oil=*/0.0, /*gas=*/0.0, /*water=*/1.0);
                     break;
 
-                case Opm::InjectorType::OIL:
+                case InjectorType::OIL:
                     well->setVolumetricPhaseWeights(/*oil=*/1.0, /*gas=*/0.0, /*water=*/0.0);
                     break;
 
-                case Opm::InjectorType::GAS:
+                case InjectorType::GAS:
                     well->setVolumetricPhaseWeights(/*oil=*/0.0, /*gas=*/1.0, /*water=*/0.0);
                     break;
 
-                case Opm::InjectorType::MULTI:
+                case InjectorType::MULTI:
                     throw std::runtime_error("Not implemented: Multi-phase injection wells");
                 }
 
@@ -252,54 +253,55 @@ public:
                 well->setWellType(Well::Producer);
                 const auto controls = deckWell.productionControls(summaryState);
 
+                using ProducerCMode = ::Opm::Well::ProducerCMode;
                 switch (controls.cmode) {
-                case Opm::Well::ProducerCMode::ORAT:
+                case ProducerCMode::ORAT:
                     well->setControlMode(Well::ControlMode::VolumetricSurfaceRate);
                     well->setVolumetricPhaseWeights(/*oil=*/1.0, /*gas=*/0.0, /*water=*/0.0);
                     well->setMaximumSurfaceRate(controls.oil_rate);
                     break;
 
-                case Opm::Well::ProducerCMode::GRAT:
+                case ProducerCMode::GRAT:
                     well->setControlMode(Well::ControlMode::VolumetricSurfaceRate);
                     well->setVolumetricPhaseWeights(/*oil=*/0.0, /*gas=*/1.0, /*water=*/0.0);
                     well->setMaximumSurfaceRate(controls.gas_rate);
                     break;
 
-                case Opm::Well::ProducerCMode::WRAT:
+                case ProducerCMode::WRAT:
                     well->setControlMode(Well::ControlMode::VolumetricSurfaceRate);
                     well->setVolumetricPhaseWeights(/*oil=*/0.0, /*gas=*/0.0, /*water=*/1.0);
                     well->setMaximumSurfaceRate(controls.water_rate);
                     break;
 
-                case Opm::Well::ProducerCMode::LRAT:
+                case ProducerCMode::LRAT:
                     well->setControlMode(Well::ControlMode::VolumetricSurfaceRate);
                     well->setVolumetricPhaseWeights(/*oil=*/1.0, /*gas=*/0.0, /*water=*/1.0);
                     well->setMaximumSurfaceRate(controls.liquid_rate);
                     break;
 
-                case Opm::Well::ProducerCMode::CRAT:
+                case ProducerCMode::CRAT:
                     throw std::runtime_error("Not implemented: Linearly combined rates");
 
-                case Opm::Well::ProducerCMode::RESV:
+                case ProducerCMode::RESV:
                     well->setControlMode(Well::ControlMode::VolumetricReservoirRate);
                     well->setVolumetricPhaseWeights(/*oil=*/1.0, /*gas=*/1.0, /*water=*/1.0);
                     well->setMaximumSurfaceRate(controls.resv_rate);
                     break;
 
-                case Opm::Well::ProducerCMode::BHP:
+                case ProducerCMode::BHP:
                     well->setControlMode(Well::ControlMode::BottomHolePressure);
                     break;
 
-                case Opm::Well::ProducerCMode::THP:
+                case ProducerCMode::THP:
                     well->setControlMode(Well::ControlMode::TubingHeadPressure);
                     break;
 
-                case Opm::Well::ProducerCMode::GRUP:
+                case ProducerCMode::GRUP:
                     throw std::runtime_error("Not implemented: Well groups");
 
-                case Opm::Well::ProducerCMode::NONE:
+                case ProducerCMode::NONE:
                     // fall-through
-                case Opm::Well::ProducerCMode::CMODE_UNDEFINED:
+                case ProducerCMode::CMODE_UNDEFINED:
                     std::cout << "Warning: Control mode of production well " << well->name()
                               << " is undefined. Assuming well to be shut.";
                     well->setWellStatus(Well::WellStatus::Shut);
@@ -531,11 +533,11 @@ public:
         }
     }
 
-    Opm::data::Wells wellData() const
+    data::Wells wellData() const
     {
-        Opm::data::Wells wellDat;
+        data::Wells wellDat;
 
-        using rt = Opm::data::Rates::opt;
+        using rt = data::Rates::opt;
         for (unsigned wellIdx = 0; wellIdx < numWells(); ++wellIdx) {
             const auto& ebosWell = well(wellIdx);
             auto& wellOut = wellDat[ebosWell->name()];
@@ -564,9 +566,9 @@ public:
         return wellDat;
     }
 
-    Opm::data::GroupAndNetworkValues
+    data::GroupAndNetworkValues
     groupAndNetworkData(const int /* reportStepIdx */,
-                        const Opm::Schedule& /* sched */) const
+                        const Schedule& /* sched */) const
     {
         return {};
     }
@@ -601,8 +603,8 @@ public:
      * "Something" can either be the well topology (i.e., which grid blocks are contained
      * in which well) or it can be a well parameter like the bottom hole pressure...
      */
-    bool wellsChanged(const Opm::EclipseState& eclState,
-                      const Opm::Schedule& schedule,
+    bool wellsChanged(const EclipseState& eclState,
+                      const Schedule& schedule,
                       unsigned reportStepIdx) const
     {
         if (wellTopologyChanged_(eclState, reportStepIdx))
@@ -612,10 +614,10 @@ public:
             // for the "until the universe dies" episode, the wells don't change
             return false;
 
-        const Opm::Events& events = schedule[reportStepIdx].events();
-        return events.hasEvent(Opm::ScheduleEvents::PRODUCTION_UPDATE |
-                               Opm::ScheduleEvents::INJECTION_UPDATE |
-                               Opm::ScheduleEvents::WELL_STATUS_CHANGE );
+        const Events& events = schedule[reportStepIdx].events();
+        return events.hasEvent(ScheduleEvents::PRODUCTION_UPDATE |
+                               ScheduleEvents::INJECTION_UPDATE |
+                               ScheduleEvents::WELL_STATUS_CHANGE );
     }
 
     void initFromRestartFile(const RestartValue& restartValues OPM_UNUSED){
@@ -682,8 +684,8 @@ public:
 
 
 protected:
-    bool wellTopologyChanged_(const Opm::EclipseState& eclState OPM_UNUSED,
-                              const Opm::Schedule& schedule,
+    bool wellTopologyChanged_(const EclipseState& eclState OPM_UNUSED,
+                              const Schedule& schedule,
                               unsigned reportStepIdx) const
     {
         if (reportStepIdx == 0) {
@@ -696,9 +698,9 @@ protected:
             // for the "until the universe dies" episode, the wells don't change
             return false;
 
-        const Opm::Events& events = schedule[reportStepIdx].events();
-        return events.hasEvent(Opm::ScheduleEvents::NEW_WELL |
-                               Opm::ScheduleEvents::COMPLETION_CHANGE);
+        const Events& events = schedule[reportStepIdx].events();
+        return events.hasEvent(ScheduleEvents::NEW_WELL |
+                               ScheduleEvents::COMPLETION_CHANGE);
     }
 
     void updateWellTopology_(unsigned reportStepIdx OPM_UNUSED,
@@ -856,7 +858,7 @@ protected:
                     continue;
 
                 const auto& connInfo = wellConnections.at(cartesianDofIdx);
-                const Opm::Connection* connection = connInfo.first;
+                const Connection* connection = connInfo.first;
                 std::shared_ptr<Well> eclWell = connInfo.second;
                 eclWell->addDof(elemCtx, dofIdx);
                 eclWell->setConnectionTransmissibilityFactor(elemCtx, dofIdx, connection->CF());

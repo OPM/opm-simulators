@@ -91,21 +91,21 @@ namespace Opm {
 namespace EQUIL {
 
 
-typedef Opm::BlackOilFluidSystem<double> FluidSystemSimple;
+using FluidSystemSimple = BlackOilFluidSystem<double>;
 
 // Adjust oil pressure according to gas saturation and cap pressure
-typedef Opm::SimpleModularFluidState<double,
-                                     /*numPhases=*/3,
-                                     /*numComponents=*/3,
-                                     FluidSystemSimple,
-                                     /*storePressure=*/false,
-                                     /*storeTemperature=*/false,
-                                     /*storeComposition=*/false,
-                                     /*storeFugacity=*/false,
-                                     /*storeSaturation=*/true,
-                                     /*storeDensity=*/false,
-                                     /*storeViscosity=*/false,
-                                     /*storeEnthalpy=*/false> SatOnlyFluidState;
+using SatOnlyFluidState = SimpleModularFluidState<double,
+                                                  /*numPhases=*/3,
+                                                  /*numComponents=*/3,
+                                                  FluidSystemSimple,
+                                                  /*storePressure=*/false,
+                                                  /*storeTemperature=*/false,
+                                                  /*storeComposition=*/false,
+                                                  /*storeFugacity=*/false,
+                                                  /*storeSaturation=*/true,
+                                                  /*storeDensity=*/false,
+                                                  /*storeViscosity=*/false,
+                                                  /*storeEnthalpy=*/false>;
 
 /**
  * Types and routines relating to phase mixing in
@@ -236,7 +236,7 @@ public:
     }
 
 private:
-    typedef Opm::Tabulated1DFunction<double> RsVsDepthFunc;
+    using RsVsDepthFunc = Tabulated1DFunction<double>;
 
     const int pvtRegionIdx_;
     RsVsDepthFunc rsVsDepth_;
@@ -304,7 +304,7 @@ public:
     }
 
 private:
-    typedef Opm::Tabulated1DFunction<double> PbubVsDepthFunc;
+    using PbubVsDepthFunc = Tabulated1DFunction<double>;
 
     const int pvtRegionIdx_;
     PbubVsDepthFunc pbubVsDepth_;
@@ -372,7 +372,7 @@ public:
     }
 
 private:
-    typedef Opm::Tabulated1DFunction<double> PdewVsDepthFunc;
+    using PdewVsDepthFunc = Tabulated1DFunction<double>;
 
     const int pvtRegionIdx_;
     PdewVsDepthFunc pdewVsDepth_;
@@ -440,7 +440,7 @@ public:
     }
 
 private:
-    typedef Opm::Tabulated1DFunction<double> RvVsDepthFunc;
+    using RvVsDepthFunc = Tabulated1DFunction<double>;
 
     const int pvtRegionIdx_;
     RvVsDepthFunc rvVsDepth_;
@@ -614,7 +614,7 @@ private:
  */
 class EquilReg
 {
-    using TabulatedFunction = Opm::Tabulated1DFunction<double>;
+    using TabulatedFunction = Tabulated1DFunction<double>;
 
 public:
     /**
@@ -625,7 +625,7 @@ public:
      * \param[in] rv      Calculator of vapourised oil-gas ratio.
      * \param[in] pvtRegionIdx The pvt region index
      */
-    EquilReg(const Opm::EquilRecord& rec,
+    EquilReg(const EquilRecord& rec,
              std::shared_ptr<Miscibility::RsFunction> rs,
              std::shared_ptr<Miscibility::RsFunction> rv,
              const TabulatedFunction& saltVdTable,
@@ -715,7 +715,7 @@ public:
     int pvtIdx() const { return this->pvtIdx_; }
 
 private:
-    Opm::EquilRecord rec_;     /**< Equilibration data */
+    EquilRecord rec_;     /**< Equilibration data */
     std::shared_ptr<Miscibility::RsFunction> rs_;      /**< RS calculator */
     std::shared_ptr<Miscibility::RsFunction> rv_;      /**< RV calculator */
     const TabulatedFunction& saltVdTable_;
