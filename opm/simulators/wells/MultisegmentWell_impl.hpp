@@ -278,8 +278,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     scaleSegmentRatesWithWellRates(WellState& well_state) const
     {
-        const int top_segment_index = well_state.topSegmentIndex(index_of_well_);
-        auto * segment_rates = &well_state.segRates()[top_segment_index*this->number_of_phases_];
+        auto segment_rates = well_state.segRates(index_of_well_);
         for (int phase = 0; phase < number_of_phases_; ++phase) {
             const double unscaled_top_seg_rate = segment_rates[phase];
             const double well_phase_rate = well_state.wellRates(index_of_well_)[phase];
@@ -316,7 +315,6 @@ namespace Opm
     scaleSegmentPressuresWithBhp(WellState& well_state) const
     {
         //scale segment pressures
-        const int top_segment_index = well_state.topSegmentIndex(index_of_well_);
         const double bhp = well_state.bhp(index_of_well_);
         auto segment_pressure = well_state.segPress(index_of_well_);
         const double unscaled_top_seg_pressure = segment_pressure[0];
@@ -722,8 +720,7 @@ namespace Opm
         const Well& well = Base::wellEcl();
 
         // the index of the top segment in the WellState
-        const int top_segment_index = well_state.topSegmentIndex(index_of_well_);
-        const auto * segment_rates = &well_state.segRates()[top_segment_index * this->number_of_phases_];
+        const auto segment_rates = well_state.segRates(index_of_well_);
         const auto segment_pressure = well_state.segPress(index_of_well_);
         const PhaseUsage& pu = phaseUsage();
 
@@ -2340,7 +2337,7 @@ namespace Opm
         assert( FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) );
         const int oil_pos = pu.phase_pos[Oil];
 
-        auto * segment_rates = &well_state.segRates()[well_state.topSegmentIndex(this->index_of_well_) * this->number_of_phases_];
+        auto segment_rates = well_state.segRates(this->index_of_well_);
         auto segment_pressure = well_state.segPress(this->index_of_well_);
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
             std::vector<double> fractions(number_of_phases_, 0.0);

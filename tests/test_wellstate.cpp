@@ -206,16 +206,15 @@ namespace {
 
         const auto nWell = wells.size();
 
-        auto& segRates = wstate.segRates();
 
         for (auto wellID = 0*nWell; wellID < nWell; ++wellID) {
             const auto& well     = wells[wellID];
-            const auto  topSegIx = wstate.topSegmentIndex(wellID);
             const auto  rateTop  = 1000.0 * wellID;
+            auto segRates = wstate.segRates(wellID);
 
-            if (wat) { segRates[np*topSegIx + iw] = rateTop; }
-            if (oil) { segRates[np*topSegIx + io] = rateTop; }
-            if (gas) { segRates[np*topSegIx + ig] = rateTop; }
+            if (wat) { segRates[iw] = rateTop; }
+            if (oil) { segRates[io] = rateTop; }
+            if (gas) { segRates[ig] = rateTop; }
 
             if (! well.isMultiSegment()) {
                 continue;
@@ -228,7 +227,7 @@ namespace {
                 // One-based numbering scheme for segments.
                 const auto segNo = segSet[segID].segmentNumber();
 
-                auto* rates = &segRates[(topSegIx + segNo - 1) * np];
+                auto* rates = &segRates[(segNo - 1) * np];
 
                 if (wat) { rates[iw] = rateTop + 100.0*(segNo - 1); }
                 if (oil) { rates[io] = rateTop + 200.0*(segNo - 1); }
