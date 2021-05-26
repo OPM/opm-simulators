@@ -1730,9 +1730,6 @@ public:
         return pvtnum_[elemIdx];
     }
 
-    const std::vector<int>& pvtRegionArray() const
-    { return pvtnum_; }
-
     /*!
      * \brief Returns the index of the relevant region for thermodynmic properties
      */
