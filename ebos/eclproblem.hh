@@ -1924,7 +1924,7 @@ public:
         if constexpr (enablePolymerMolarWeight)
             values[Indices::polymerMoleWeightIdx]= polymerMoleWeight_[globalDofIdx];
 
-        if (enableBrine)
+        if constexpr (enableBrine)
             values[Indices::saltConcentrationIdx] = initialFluidStates_[globalDofIdx].saltConcentration();
 
         values.checkDefined();
