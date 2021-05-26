@@ -73,7 +73,7 @@ class VcfvScvGeometries<Scalar, /*dim=*/1, ElementType::cube>
     enum { numScv = 2 };
 
 public:
-    using ScvLocalGeometry = Opm::QuadrialteralQuadratureGeometry<Scalar, dim>;
+    using ScvLocalGeometry = QuadrialteralQuadratureGeometry<Scalar, dim>;
 
     static void init()
     {
@@ -112,7 +112,7 @@ class VcfvScvGeometries<Scalar, /*dim=*/1, ElementType::simplex>
     enum { numScv = 2 };
 
 public:
-    using ScvLocalGeometry = Opm::QuadrialteralQuadratureGeometry<Scalar, dim>;
+    using ScvLocalGeometry = QuadrialteralQuadratureGeometry<Scalar, dim>;
 
     static const ScvLocalGeometry& get(unsigned scvIdx OPM_UNUSED)
     {
@@ -130,7 +130,7 @@ class VcfvScvGeometries<Scalar, /*dim=*/2, ElementType::simplex>
     enum { numScv = 3 };
 
 public:
-    using ScvLocalGeometry = Opm::QuadrialteralQuadratureGeometry<Scalar, dim>;
+    using ScvLocalGeometry = QuadrialteralQuadratureGeometry<Scalar, dim>;
 
     static const ScvLocalGeometry& get(unsigned scvIdx)
     { return scvGeoms_[scvIdx]; }
@@ -182,7 +182,7 @@ class VcfvScvGeometries<Scalar, /*dim=*/2, ElementType::cube>
     enum { numScv = 4 };
 
 public:
-    using ScvLocalGeometry = Opm::QuadrialteralQuadratureGeometry<Scalar, dim>;
+    using ScvLocalGeometry = QuadrialteralQuadratureGeometry<Scalar, dim>;
 
     static const ScvLocalGeometry& get(unsigned scvIdx)
     { return scvGeoms_[scvIdx]; }
@@ -243,7 +243,7 @@ class VcfvScvGeometries<Scalar, /*dim=*/3, ElementType::simplex>
     enum { numScv = 4 };
 
 public:
-    using ScvLocalGeometry = Opm::QuadrialteralQuadratureGeometry<Scalar, dim>;
+    using ScvLocalGeometry = QuadrialteralQuadratureGeometry<Scalar, dim>;
 
     static const ScvLocalGeometry& get(unsigned scvIdx)
     { return scvGeoms_[scvIdx]; }
@@ -322,7 +322,7 @@ class VcfvScvGeometries<Scalar, /*dim=*/3, ElementType::cube>
     enum { numScv = 8 };
 
 public:
-    using ScvLocalGeometry = Opm::QuadrialteralQuadratureGeometry<Scalar, dim>;
+    using ScvLocalGeometry = QuadrialteralQuadratureGeometry<Scalar, dim>;
 
     static const ScvLocalGeometry& get(unsigned scvIdx)
     { return scvGeoms_[scvIdx]; }
@@ -484,7 +484,7 @@ private:
     using LocalPosition = Dune::FieldVector<CoordScalar,dim>;
     using IntersectionIterator = typename GridView::IntersectionIterator;
 
-    using ScvLocalGeometry = Opm::QuadrialteralQuadratureGeometry<Scalar, dim>;
+    using ScvLocalGeometry = QuadrialteralQuadratureGeometry<Scalar, dim>;
 
 #if HAVE_DUNE_LOCALFUNCTIONS
     using LocalFiniteElementCache = Dune::PQkLocalFiniteElementCache<CoordScalar, Scalar, dim, 1>;

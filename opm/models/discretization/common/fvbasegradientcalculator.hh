@@ -116,12 +116,12 @@ public:
         if (i == focusDofIdx)
             value = quantityCallback(i)*interiorDistance;
         else
-            value = Opm::getValue(quantityCallback(i))*interiorDistance;
+            value = getValue(quantityCallback(i))*interiorDistance;
 
         if (j == focusDofIdx)
             value += quantityCallback(j)*exteriorDistance;
         else
-            value += Opm::getValue(quantityCallback(j))*exteriorDistance;
+            value += getValue(quantityCallback(j))*exteriorDistance;
 
         value /= interiorDistance + exteriorDistance;
 
@@ -165,9 +165,9 @@ public:
                 value[k] *= interiorDistance;
         }
         else {
-            const auto& dofVal = Opm::getValue(quantityCallback(i));
+            const auto& dofVal = getValue(quantityCallback(i));
             for (int k = 0; k < dofVal.size(); ++k)
-                value[k] = Opm::getValue(dofVal[k])*interiorDistance;
+                value[k] = getValue(dofVal[k])*interiorDistance;
         }
 
         if (j == focusDofIdx) {
@@ -178,7 +178,7 @@ public:
         else {
             const auto& dofVal = quantityCallback(j);
             for (int k = 0; k < dofVal.size(); ++k)
-                value[k] += Opm::getValue(dofVal[k])*exteriorDistance;
+                value[k] += getValue(dofVal[k])*exteriorDistance;
         }
 
         Scalar totDistance = interiorDistance + exteriorDistance;
@@ -218,18 +218,18 @@ public:
         Evaluation deltay;
         if (i == focusIdx) {
             deltay =
-                Opm::getValue(quantityCallback(j))
+                getValue(quantityCallback(j))
                 - quantityCallback(i);
         }
         else if (j == focusIdx) {
             deltay =
                 quantityCallback(j)
-                - Opm::getValue(quantityCallback(i));
+                - getValue(quantityCallback(i));
         }
         else
             deltay =
-                Opm::getValue(quantityCallback(j))
-                - Opm::getValue(quantityCallback(i));
+                getValue(quantityCallback(j))
+                - getValue(quantityCallback(i));
 
         Scalar distSquared = 0.0;
         for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
@@ -296,8 +296,8 @@ public:
             deltay = quantityCallback.boundaryValue() - quantityCallback(face.interiorIndex());
         else
             deltay =
-                Opm::getValue(quantityCallback.boundaryValue())
-                - Opm::getValue(quantityCallback(face.interiorIndex()));
+                getValue(quantityCallback.boundaryValue())
+                - getValue(quantityCallback(face.interiorIndex()));
 
         const auto& boundaryFacePos = face.integrationPos();
         const auto& interiorPos = stencil.subControlVolume(face.interiorIndex()).center();

@@ -71,12 +71,12 @@ class BlackOilRateVector
     enum { enablePolymerMolarWeight = getPropValue<TypeTag, Properties::EnablePolymerMW>() };
     enum { enableFoam = getPropValue<TypeTag, Properties::EnableFoam>() };
     enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
-    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using Toolbox = MathToolbox<Evaluation>;
     using ParentType = Dune::FieldVector<Evaluation, numEq>;
 
 public:
     BlackOilRateVector() : ParentType()
-    { Opm::Valgrind::SetUndefined(*this); }
+    { Valgrind::SetUndefined(*this); }
 
     /*!
      * \copydoc ImmiscibleRateVector::ImmiscibleRateVector(Scalar)

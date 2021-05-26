@@ -101,7 +101,7 @@ public:
 
     Simulator(bool verbose = true)
     {
-        Opm::TimerGuard setupTimerGuard(setupTimer_);
+        TimerGuard setupTimerGuard(setupTimer_);
 
         setupTimer_.start();
 
@@ -359,51 +359,51 @@ public:
      * \brief Returns a reference to the timer object which measures the time needed to
      *        set up and initialize the simulation
      */
-    const Opm::Timer& setupTimer() const
+    const Timer& setupTimer() const
     { return setupTimer_; }
 
     /*!
      * \brief Returns a reference to the timer object which measures the time needed to
      *        run the simulation
      */
-    const Opm::Timer& executionTimer() const
+    const Timer& executionTimer() const
     { return executionTimer_; }
-    Opm::Timer& executionTimer()
+    Timer& executionTimer()
     { return executionTimer_; }
 
     /*!
      * \brief Returns a reference to the timer object which measures the time needed for
      *        pre- and postprocessing of the solutions.
      */
-    const Opm::Timer& prePostProcessTimer() const
+    const Timer& prePostProcessTimer() const
     { return prePostProcessTimer_; }
 
     /*!
      * \brief Returns a reference to the timer object which measures the time needed for
      *        linarizing the solutions.
      */
-    const Opm::Timer& linearizeTimer() const
+    const Timer& linearizeTimer() const
     { return linearizeTimer_; }
 
     /*!
      * \brief Returns a reference to the timer object which measures the time needed by
      *        the solver.
      */
-    const Opm::Timer& solveTimer() const
+    const Timer& solveTimer() const
     { return solveTimer_; }
 
     /*!
      * \brief Returns a reference to the timer object which measures the time needed to
      *        the solutions of the non-linear system of equations.
      */
-    const Opm::Timer& updateTimer() const
+    const Timer& updateTimer() const
     { return updateTimer_; }
 
     /*!
      * \brief Returns a reference to the timer object which measures the time needed to
      *        write the visualization output
      */
-    const Opm::Timer& writeTimer() const
+    const Timer& writeTimer() const
     { return writeTimer_; }
 
     /*!
@@ -636,7 +636,7 @@ public:
             // try to restart a previous simulation
             time_ = restartTime;
 
-            Opm::Restart res;
+            Restart res;
             EWOMS_CATCH_PARALLEL_EXCEPTIONS_FATAL(res.deserializeBegin(*this, time_));
             if (verbose_)
                 std::cout << "Deserialize from file '" << res.fileName() << "'\n" << std::flush;
@@ -887,7 +887,7 @@ public:
      */
     void serialize()
     {
-        using Restarter = Opm::Restart;
+        using Restarter = Restart;
         Restarter res;
         res.serializeBegin(*this);
         if (gridView().comm().rank() == 0)
@@ -952,13 +952,13 @@ private:
     Scalar episodeStartTime_;
     Scalar episodeLength_;
 
-    Opm::Timer setupTimer_;
-    Opm::Timer executionTimer_;
-    Opm::Timer prePostProcessTimer_;
-    Opm::Timer linearizeTimer_;
-    Opm::Timer solveTimer_;
-    Opm::Timer updateTimer_;
-    Opm::Timer writeTimer_;
+    Timer setupTimer_;
+    Timer executionTimer_;
+    Timer prePostProcessTimer_;
+    Timer linearizeTimer_;
+    Timer solveTimer_;
+    Timer updateTimer_;
+    Timer writeTimer_;
 
     std::vector<Scalar> forcedTimeSteps_;
     Scalar startTime_;
@@ -974,7 +974,7 @@ private:
 
 namespace Properties {
 template<class TypeTag>
-struct Simulator<TypeTag, TTag::NumericModel> { using type = Opm::Simulator<TypeTag>; };
+struct Simulator<TypeTag, TTag::NumericModel> { using type = ::Opm::Simulator<TypeTag>; };
 }
 
 } // namespace Opm

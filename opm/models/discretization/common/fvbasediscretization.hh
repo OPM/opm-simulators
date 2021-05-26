@@ -90,7 +90,7 @@ namespace Opm::Properties {
 
 //! Set the default type for the time manager
 template<class TypeTag>
-struct Simulator<TypeTag, TTag::FvBaseDiscretization> { using type = Opm::Simulator<TypeTag>; };
+struct Simulator<TypeTag, TTag::FvBaseDiscretization> { using type = ::Opm::Simulator<TypeTag>; };
 
 //! Mapper for the grid view's vertices.
 template<class TypeTag>
@@ -109,20 +109,20 @@ struct BorderListCreator<TypeTag, TTag::FvBaseDiscretization>
     using DofMapper = GetPropType<TypeTag, Properties::DofMapper>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
 public:
-    using type = Opm::Linear::NullBorderListCreator<GridView, DofMapper>;
+    using type = Linear::NullBorderListCreator<GridView, DofMapper>;
 };
 
 template<class TypeTag>
-struct DiscLocalResidual<TypeTag, TTag::FvBaseDiscretization> { using type = Opm::FvBaseLocalResidual<TypeTag>; };
+struct DiscLocalResidual<TypeTag, TTag::FvBaseDiscretization> { using type = FvBaseLocalResidual<TypeTag>; };
 
 template<class TypeTag>
-struct DiscIntensiveQuantities<TypeTag, TTag::FvBaseDiscretization> { using type = Opm::FvBaseIntensiveQuantities<TypeTag>; };
+struct DiscIntensiveQuantities<TypeTag, TTag::FvBaseDiscretization> { using type = FvBaseIntensiveQuantities<TypeTag>; };
 template<class TypeTag>
-struct DiscExtensiveQuantities<TypeTag, TTag::FvBaseDiscretization> { using type = Opm::FvBaseExtensiveQuantities<TypeTag>; };
+struct DiscExtensiveQuantities<TypeTag, TTag::FvBaseDiscretization> { using type = FvBaseExtensiveQuantities<TypeTag>; };
 
 //! Calculates the gradient of any quantity given the index of a flux approximation point
 template<class TypeTag>
-struct GradientCalculator<TypeTag, TTag::FvBaseDiscretization> { using type = Opm::FvBaseGradientCalculator<TypeTag>; };
+struct GradientCalculator<TypeTag, TTag::FvBaseDiscretization> { using type = FvBaseGradientCalculator<TypeTag>; };
 
 //! The maximum allowed number of timestep divisions for the
 //! Newton solver
@@ -164,7 +164,7 @@ struct BoundaryRateVector<TypeTag, TTag::FvBaseDiscretization>
  * \brief The class which represents constraints.
  */
 template<class TypeTag>
-struct Constraints<TypeTag, TTag::FvBaseDiscretization> { using type = Opm::FvBaseConstraints<TypeTag>; };
+struct Constraints<TypeTag, TTag::FvBaseDiscretization> { using type = FvBaseConstraints<TypeTag>; };
 
 /*!
  * \brief The type for storing a residual for an element.
@@ -184,7 +184,7 @@ struct GlobalEqVector<TypeTag, TTag::FvBaseDiscretization>
  * \brief An object representing a local set of primary variables.
  */
 template<class TypeTag>
-struct PrimaryVariables<TypeTag, TTag::FvBaseDiscretization> { using type = Opm::FvBasePrimaryVariables<TypeTag>; };
+struct PrimaryVariables<TypeTag, TTag::FvBaseDiscretization> { using type = FvBasePrimaryVariables<TypeTag>; };
 
 /*!
  * \brief The type of a solution for the whole grid at a fixed time.
@@ -199,23 +199,23 @@ struct SolutionVector<TypeTag, TTag::FvBaseDiscretization>
  * This should almost certainly be overloaded by the model...
  */
 template<class TypeTag>
-struct IntensiveQuantities<TypeTag, TTag::FvBaseDiscretization> { using type = Opm::FvBaseIntensiveQuantities<TypeTag>; };
+struct IntensiveQuantities<TypeTag, TTag::FvBaseDiscretization> { using type = FvBaseIntensiveQuantities<TypeTag>; };
 
 /*!
  * \brief The element context
  */
 template<class TypeTag>
-struct ElementContext<TypeTag, TTag::FvBaseDiscretization> { using type = Opm::FvBaseElementContext<TypeTag>; };
+struct ElementContext<TypeTag, TTag::FvBaseDiscretization> { using type = FvBaseElementContext<TypeTag>; };
 template<class TypeTag>
-struct BoundaryContext<TypeTag, TTag::FvBaseDiscretization> { using type = Opm::FvBaseBoundaryContext<TypeTag>; };
+struct BoundaryContext<TypeTag, TTag::FvBaseDiscretization> { using type = FvBaseBoundaryContext<TypeTag>; };
 template<class TypeTag>
-struct ConstraintsContext<TypeTag, TTag::FvBaseDiscretization> { using type = Opm::FvBaseConstraintsContext<TypeTag>; };
+struct ConstraintsContext<TypeTag, TTag::FvBaseDiscretization> { using type = FvBaseConstraintsContext<TypeTag>; };
 
 /*!
  * \brief The OpenMP threads manager
  */
 template<class TypeTag>
-struct ThreadManager<TypeTag, TTag::FvBaseDiscretization> { using type = Opm::ThreadManager<TypeTag>; };
+struct ThreadManager<TypeTag, TTag::FvBaseDiscretization> { using type = ::Opm::ThreadManager<TypeTag>; };
 template<class TypeTag>
 struct ThreadsPerProcess<TypeTag, TTag::FvBaseDiscretization> { static constexpr int value = 1; };
 template<class TypeTag>
@@ -225,7 +225,7 @@ struct UseLinearizationLock<TypeTag, TTag::FvBaseDiscretization> { static conste
  * \brief Linearizer for the global system of equations.
  */
 template<class TypeTag>
-struct Linearizer<TypeTag, TTag::FvBaseDiscretization> { using type = Opm::FvBaseLinearizer<TypeTag>; };
+struct Linearizer<TypeTag, TTag::FvBaseDiscretization> { using type = FvBaseLinearizer<TypeTag>; };
 
 //! use an unlimited time step size by default
 template<class TypeTag>
@@ -370,12 +370,12 @@ class FvBaseDiscretization
         historySize = getPropValue<TypeTag, Properties::TimeDiscHistorySize>(),
     };
 
-    using IntensiveQuantitiesVector = std::vector<IntensiveQuantities, Opm::aligned_allocator<IntensiveQuantities, alignof(IntensiveQuantities)> >;
+    using IntensiveQuantitiesVector = std::vector<IntensiveQuantities, aligned_allocator<IntensiveQuantities, alignof(IntensiveQuantities)> >;
 
     using Element = typename GridView::template Codim<0>::Entity;
     using ElementIterator = typename GridView::template Codim<0>::Iterator;
 
-    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using Toolbox = MathToolbox<Evaluation>;
     using VectorBlock = Dune::FieldVector<Evaluation, numEq>;
     using EvalEqVector = Dune::FieldVector<Evaluation, numEq>;
 
@@ -500,7 +500,7 @@ public:
         NewtonMethod::registerParameters();
 
         // register runtime parameters of the output modules
-        Opm::VtkPrimaryVarsModule<TypeTag>::registerParameters();
+        VtkPrimaryVarsModule<TypeTag>::registerParameters();
 
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableGridAdaptation, "Enable adaptive grid refinement/coarsening");
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableVtkOutput, "Global switch for turning on writing VTK files");
@@ -1050,7 +1050,7 @@ public:
                                                          boundaryCtx,
                                                          faceIdx,
                                                          /*timeIdx=*/0);
-                    Opm::Valgrind::CheckDefined(values);
+                    Valgrind::CheckDefined(values);
 
                     unsigned dofIdx = boundaryCtx.interiorScvIndex(faceIdx, /*timeIdx=*/0);
                     const auto& insideIntQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
@@ -1075,7 +1075,7 @@ public:
                                             elemCtx,
                                             dofIdx,
                                             /*timeIdx=*/0);
-                Opm::Valgrind::CheckDefined(values);
+                Valgrind::CheckDefined(values);
 
                 const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
                 Scalar dofVolume =
@@ -1257,7 +1257,7 @@ public:
      */
     bool update()
     {
-        Opm::TimerGuard prePostProcessGuard(prePostProcessTimer_);
+        TimerGuard prePostProcessGuard(prePostProcessTimer_);
 
 #ifndef NDEBUG
         for (unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx) {
@@ -1859,16 +1859,16 @@ public:
     }
 #endif
 
-    const Opm::Timer& prePostProcessTimer() const
+    const Timer& prePostProcessTimer() const
     { return prePostProcessTimer_; }
 
-    const Opm::Timer& linearizeTimer() const
+    const Timer& linearizeTimer() const
     { return linearizeTimer_; }
 
-    const Opm::Timer& solveTimer() const
+    const Timer& solveTimer() const
     { return solveTimer_; }
 
-    const Opm::Timer& updateTimer() const
+    const Timer& updateTimer() const
     { return updateTimer_; }
 
 protected:
@@ -1909,7 +1909,7 @@ protected:
     void registerOutputModules_()
     {
         // add the output modules available on all model
-        auto *mod = new Opm::VtkPrimaryVarsModule<TypeTag>(simulator_);
+        auto *mod = new VtkPrimaryVarsModule<TypeTag>(simulator_);
         this->outputModules_.push_back(mod);
     }
 
@@ -1946,10 +1946,10 @@ protected:
 
     NewtonMethod newtonMethod_;
 
-    Opm::Timer prePostProcessTimer_;
-    Opm::Timer linearizeTimer_;
-    Opm::Timer solveTimer_;
-    Opm::Timer updateTimer_;
+    Timer prePostProcessTimer_;
+    Timer linearizeTimer_;
+    Timer solveTimer_;
+    Timer updateTimer_;
 
     // calculates the local jacobian matrix for a given element
     std::vector<LocalLinearizer> localLinearizer_;

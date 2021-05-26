@@ -169,7 +169,7 @@ public:
 #else
             using QuantityConstType = typename std::remove_reference<typename QuantityCallback::ResultType>::type;
             using QuantityType = typename std::remove_const<QuantityConstType>::type;
-            using Toolbox = Opm::MathToolbox<QuantityType>;
+            using Toolbox = MathToolbox<QuantityType>;
 
             // If the user does not want to use two-point gradients, we
             // use P1 finite element gradients..
@@ -218,7 +218,7 @@ public:
             using RawFieldType = decltype(std::declval<QuantityType>()[0]);
             using FieldType = typename std::remove_const<typename std::remove_reference<RawFieldType>::type>::type;
 
-            using Toolbox = Opm::MathToolbox<FieldType>;
+            using Toolbox = MathToolbox<FieldType>;
 
             // If the user does not want to use two-point gradients, we
             // use P1 finite element gradients..
@@ -287,7 +287,7 @@ public:
                     const auto& dofVal = quantityCallback(vertIdx);
                     const auto& tmp = p1Gradient_[fapIdx][vertIdx];
                     for (int dimIdx = 0; dimIdx < dim; ++ dimIdx)
-                        quantityGrad[dimIdx] += Opm::scalarValue(dofVal)*tmp[dimIdx];
+                        quantityGrad[dimIdx] += scalarValue(dofVal)*tmp[dimIdx];
                 }
             }
 #endif

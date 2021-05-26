@@ -89,7 +89,7 @@ class VtkBlackOilSolventModule : public BaseOutputModule<TypeTag>
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
     static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
-    using VtkMultiWriter = Opm::VtkMultiWriter<GridView, vtkFormat>;
+    using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
     enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
 
@@ -157,7 +157,7 @@ public:
         if (!enableSolvent)
             return;
 
-        using Toolbox = Opm::MathToolbox<Evaluation>;
+        using Toolbox = MathToolbox<Evaluation>;
         for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
             const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
             unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);

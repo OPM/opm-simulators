@@ -127,9 +127,9 @@ struct NewtonMaxIterations { using type = UndefinedProperty; };
 
 // set default values for the properties
 template<class TypeTag>
-struct NewtonMethod<TypeTag, TTag::NewtonMethod> { using type = Opm::NewtonMethod<TypeTag>; };
+struct NewtonMethod<TypeTag, TTag::NewtonMethod> { using type = ::Opm::NewtonMethod<TypeTag>; };
 template<class TypeTag>
-struct NewtonConvergenceWriter<TypeTag, TTag::NewtonMethod> { using type = Opm::NullConvergenceWriter<TypeTag>; };
+struct NewtonConvergenceWriter<TypeTag, TTag::NewtonMethod> { using type = NullConvergenceWriter<TypeTag>; };
 template<class TypeTag>
 struct NewtonWriteConvergence<TypeTag, TTag::NewtonMethod> { static constexpr bool value = false; };
 template<class TypeTag>
@@ -327,7 +327,7 @@ public:
 
         Linearizer& linearizer = model().linearizer();
 
-        Opm::TimerGuard prePostProcessTimerGuard(prePostProcessTimer_);
+        TimerGuard prePostProcessTimerGuard(prePostProcessTimer_);
 
         // tell the implementation that we begin solving
         prePostProcessTimer_.start();
@@ -335,10 +335,10 @@ public:
         prePostProcessTimer_.stop();
 
         try {
-            Opm::TimerGuard innerPrePostProcessTimerGuard(prePostProcessTimer_);
-            Opm::TimerGuard linearizeTimerGuard(linearizeTimer_);
-            Opm::TimerGuard updateTimerGuard(updateTimer_);
-            Opm::TimerGuard solveTimerGuard(solveTimer_);
+            TimerGuard innerPrePostProcessTimerGuard(prePostProcessTimer_);
+            TimerGuard linearizeTimerGuard(linearizeTimer_);
+            TimerGuard updateTimerGuard(updateTimer_);
+            TimerGuard solveTimerGuard(solveTimer_);
 
             // execute the method as long as the implementation thinks
             // that we should do another iteration
@@ -460,7 +460,7 @@ public:
 
             return false;
         }
-        catch (const Opm::NumericalIssue& e)
+        catch (const NumericalIssue& e)
         {
             if (asImp_().verbose_())
                 std::cout << "Newton method caught exception: \""
@@ -569,16 +569,16 @@ public:
     const LinearSolverBackend& linearSolver() const
     { return linearSolver_; }
 
-    const Opm::Timer& prePostProcessTimer() const
+    const Timer& prePostProcessTimer() const
     { return prePostProcessTimer_; }
 
-    const Opm::Timer& linearizeTimer() const
+    const Timer& linearizeTimer() const
     { return linearizeTimer_; }
 
-    const Opm::Timer& solveTimer() const
+    const Timer& solveTimer() const
     { return solveTimer_; }
 
-    const Opm::Timer& updateTimer() const
+    const Timer& updateTimer() const
     { return updateTimer_; }
 
 protected:
@@ -627,7 +627,7 @@ protected:
         succeeded = comm.min(succeeded);
 
         if (!succeeded)
-            throw Opm::NumericalIssue("pre processing of the problem failed");
+            throw NumericalIssue("pre processing of the problem failed");
 
         lastError_ = error_;
     }
@@ -670,7 +670,7 @@ protected:
 
             const auto& r = currentResidual[dofIdx];
             for (unsigned eqIdx = 0; eqIdx < r.size(); ++eqIdx)
-                error_ = Opm::max(std::abs(r[eqIdx] * model().eqWeight(dofIdx, eqIdx)), error_);
+                error_ = max(std::abs(r[eqIdx] * model().eqWeight(dofIdx, eqIdx)), error_);
         }
 
         // take the other processes into account
@@ -679,9 +679,9 @@ protected:
         // make sure that the error never grows beyond the maximum
         // allowed one
         if (error_ > newtonMaxError)
-            throw Opm::NumericalIssue("Newton: Error "+std::to_string(double(error_))
-                                        +" is larger than maximum allowed error of "
-                                        +std::to_string(double(newtonMaxError)));
+            throw NumericalIssue("Newton: Error "+std::to_string(double(error_))
+                                  +" is larger than maximum allowed error of "
+                                  +std::to_string(double(newtonMaxError)));
     }
 
     /*!
@@ -722,7 +722,7 @@ protected:
             succeeded = comm.min(succeeded);
 
             if (!succeeded)
-                throw Opm::NumericalIssue("post processing of an auxilary equation failed");
+                throw NumericalIssue("post processing of an auxilary equation failed");
         }
     }
 
@@ -753,7 +753,7 @@ protected:
 
         // make sure not to swallow non-finite values at this point
         if (!std::isfinite(solutionUpdate.one_norm()))
-            throw Opm::NumericalIssue("Non-finite update!");
+            throw NumericalIssue("Non-finite update!");
 
         size_t numGridDof = model().numGridDof();
         for (unsigned dofIdx = 0; dofIdx < numGridDof; ++dofIdx) {
@@ -851,7 +851,7 @@ protected:
         succeeded = comm.min(succeeded);
 
         if (!succeeded)
-            throw Opm::NumericalIssue("post processing of the problem failed");
+            throw NumericalIssue("post processing of the problem failed");
 
         if (asImp_().verbose_()) {
             std::cout << "Newton iteration " << numIterations_ << ""
@@ -921,10 +921,10 @@ protected:
 
     Simulator& simulator_;
 
-    Opm::Timer prePostProcessTimer_;
-    Opm::Timer linearizeTimer_;
-    Opm::Timer solveTimer_;
-    Opm::Timer updateTimer_;
+    Timer prePostProcessTimer_;
+    Timer linearizeTimer_;
+    Timer solveTimer_;
+    Timer updateTimer_;
 
     std::ostringstream endIterMsgStream_;
 

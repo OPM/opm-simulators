@@ -83,55 +83,55 @@ struct BlackOilModel { using InheritsFrom = std::tuple<VtkComposition,
 
 //! Set the local residual function
 template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::BlackOilModel> { using type = Opm::BlackOilLocalResidual<TypeTag>; };
+struct LocalResidual<TypeTag, TTag::BlackOilModel> { using type = BlackOilLocalResidual<TypeTag>; };
 
 //! Use the black-oil specific newton method
 template<class TypeTag>
-struct NewtonMethod<TypeTag, TTag::BlackOilModel> { using type = Opm::BlackOilNewtonMethod<TypeTag>; };
+struct NewtonMethod<TypeTag, TTag::BlackOilModel> { using type = BlackOilNewtonMethod<TypeTag>; };
 
 //! The Model property
 template<class TypeTag>
-struct Model<TypeTag, TTag::BlackOilModel> { using type = Opm::BlackOilModel<TypeTag>; };
+struct Model<TypeTag, TTag::BlackOilModel> { using type = BlackOilModel<TypeTag>; };
 
 //! The Problem property
 template<class TypeTag>
-struct BaseProblem<TypeTag, TTag::BlackOilModel> { using type = Opm::BlackOilProblem<TypeTag>; };
+struct BaseProblem<TypeTag, TTag::BlackOilModel> { using type = BlackOilProblem<TypeTag>; };
 
 //! the RateVector property
 template<class TypeTag>
-struct RateVector<TypeTag, TTag::BlackOilModel> { using type = Opm::BlackOilRateVector<TypeTag>; };
+struct RateVector<TypeTag, TTag::BlackOilModel> { using type = BlackOilRateVector<TypeTag>; };
 
 //! the BoundaryRateVector property
 template<class TypeTag>
-struct BoundaryRateVector<TypeTag, TTag::BlackOilModel> { using type = Opm::BlackOilBoundaryRateVector<TypeTag>; };
+struct BoundaryRateVector<TypeTag, TTag::BlackOilModel> { using type = BlackOilBoundaryRateVector<TypeTag>; };
 
 //! the PrimaryVariables property
 template<class TypeTag>
-struct PrimaryVariables<TypeTag, TTag::BlackOilModel> { using type = Opm::BlackOilPrimaryVariables<TypeTag>; };
+struct PrimaryVariables<TypeTag, TTag::BlackOilModel> { using type = BlackOilPrimaryVariables<TypeTag>; };
 
 //! the IntensiveQuantities property
 template<class TypeTag>
-struct IntensiveQuantities<TypeTag, TTag::BlackOilModel> { using type = Opm::BlackOilIntensiveQuantities<TypeTag>; };
+struct IntensiveQuantities<TypeTag, TTag::BlackOilModel> { using type = BlackOilIntensiveQuantities<TypeTag>; };
 
 //! the ExtensiveQuantities property
 template<class TypeTag>
-struct ExtensiveQuantities<TypeTag, TTag::BlackOilModel> { using type = Opm::BlackOilExtensiveQuantities<TypeTag>; };
+struct ExtensiveQuantities<TypeTag, TTag::BlackOilModel> { using type = BlackOilExtensiveQuantities<TypeTag>; };
 
 //! Use the the velocity module which is aware of the black-oil specific model extensions
 //! (i.e., the polymer and solvent extensions)
 template<class TypeTag>
-struct FluxModule<TypeTag, TTag::BlackOilModel> { using type = Opm::BlackOilDarcyFluxModule<TypeTag>; };
+struct FluxModule<TypeTag, TTag::BlackOilModel> { using type = BlackOilDarcyFluxModule<TypeTag>; };
 
 //! The indices required by the model
 template<class TypeTag>
 struct Indices<TypeTag, TTag::BlackOilModel>
-{ using type = Opm::BlackOilIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
-                                    getPropValue<TypeTag, Properties::EnableExtbo>(),
-                                    getPropValue<TypeTag, Properties::EnablePolymer>(),
-                                    getPropValue<TypeTag, Properties::EnableEnergy>(),
-                                    getPropValue<TypeTag, Properties::EnableFoam>(),
-                                    getPropValue<TypeTag, Properties::EnableBrine>(),
-                                    /*PVOffset=*/0>; };
+{ using type = BlackOilIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
+                               getPropValue<TypeTag, Properties::EnableExtbo>(),
+                               getPropValue<TypeTag, Properties::EnablePolymer>(),
+                               getPropValue<TypeTag, Properties::EnableEnergy>(),
+                               getPropValue<TypeTag, Properties::EnableFoam>(),
+                               getPropValue<TypeTag, Properties::EnableBrine>(),
+                               /*PVOffset=*/0>; };
 
 //! Set the fluid system to the black-oil fluid system by default
 template<class TypeTag>
@@ -142,7 +142,7 @@ private:
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
 
 public:
-    using type = Opm::BlackOilFluidSystem<Scalar>;
+    using type = BlackOilFluidSystem<Scalar>;
 };
 
 // by default, all ECL extension modules are disabled
@@ -286,7 +286,7 @@ class BlackOilModel
     using ExtboModule = BlackOilExtboModule<TypeTag>;
     using PolymerModule = BlackOilPolymerModule<TypeTag>;
     using EnergyModule = BlackOilEnergyModule<TypeTag>;
-    using DiffusionModule = Opm::BlackOilDiffusionModule<TypeTag, enableDiffusion>;
+    using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
 
 public:
     BlackOilModel(Simulator& simulator)
@@ -307,11 +307,11 @@ public:
         DiffusionModule::registerParameters();
 
         // register runtime parameters of the VTK output modules
-        Opm::VtkBlackOilModule<TypeTag>::registerParameters();
-        Opm::VtkCompositionModule<TypeTag>::registerParameters();
+        VtkBlackOilModule<TypeTag>::registerParameters();
+        VtkCompositionModule<TypeTag>::registerParameters();
 
         if (enableDiffusion)
-            Opm::VtkDiffusionModule<TypeTag>::registerParameters();
+            VtkDiffusionModule<TypeTag>::registerParameters();
     }
 
     /*!
@@ -596,11 +596,11 @@ protected:
         PolymerModule::registerOutputModules(*this, this->simulator_);
         EnergyModule::registerOutputModules(*this, this->simulator_);
 
-        this->addOutputModule(new Opm::VtkBlackOilModule<TypeTag>(this->simulator_));
-        this->addOutputModule(new Opm::VtkCompositionModule<TypeTag>(this->simulator_));
+        this->addOutputModule(new VtkBlackOilModule<TypeTag>(this->simulator_));
+        this->addOutputModule(new VtkCompositionModule<TypeTag>(this->simulator_));
 
         if (enableDiffusion)
-            this->addOutputModule(new Opm::VtkDiffusionModule<TypeTag>(this->simulator_));
+            this->addOutputModule(new VtkDiffusionModule<TypeTag>(this->simulator_));
     }
 
 private:
