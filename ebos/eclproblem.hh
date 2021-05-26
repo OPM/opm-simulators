@@ -709,7 +709,7 @@ public:
                              "Transport tracers found in the deck.");
         EWOMS_REGISTER_PARAM(TypeTag, bool, EclEnableDriftCompensation,
                              "Enable partial compensation of systematic mass losses via the source term of the next time step");
-        if (enableExperiments)
+        if constexpr (enableExperiments)
             EWOMS_REGISTER_PARAM(TypeTag, bool, EclEnableAquifers,
                                  "Enable analytic and numeric aquifer models");
         EWOMS_REGISTER_PARAM(TypeTag, Scalar, EclMaxTimeStepSizeAfterWellEvent,
@@ -845,7 +845,7 @@ public:
 
         enableEclOutput_ = EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput);
 
-        if (enableExperiments)
+        if constexpr (enableExperiments)
             enableAquifers_ = EWOMS_GET_PARAM(TypeTag, bool, EclEnableAquifers);
         else
             enableAquifers_ = true;
@@ -955,7 +955,7 @@ public:
             drift_ = 0.0;
         }
 
-        if (enableExperiments)
+        if constexpr (enableExperiments)
         {
             int success = 1;
             const auto& cc = simulator.vanguard().grid().comm();
@@ -1066,21 +1066,23 @@ public:
             updatePffDofData_();
         }
 
-        if (enableExperiments && this->gridView().comm().rank() == 0 && episodeIdx >= 0) {
-            // print some useful information in experimental mode. (the production
-            // simulator does this externally.)
-            std::ostringstream ss;
-            boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
-            boost::posix_time::ptime curDateTime =
-                boost::posix_time::from_time_t(schedule.simTime(episodeIdx));
-            ss.imbue(std::locale(std::locale::classic(), facet));
-            ss << "Report step " << episodeIdx + 1
-                      << "/" << schedule.size() - 1
-                      << " at day " << schedule.seconds(episodeIdx)/(24*3600)
-                      << "/" << schedule.seconds(schedule.size() - 1)/(24*3600)
-                      << ", date = " << curDateTime.date()
-                      << "\n ";
-            OpmLog::info(ss.str());
+        if constexpr (enableExperiments) {
+            if (this->gridView().comm().rank() == 0 && episodeIdx >= 0) {
+                // print some useful information in experimental mode. (the production
+                // simulator does this externally.)
+                std::ostringstream ss;
+                boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
+                boost::posix_time::ptime curDateTime =
+                    boost::posix_time::from_time_t(schedule.simTime(episodeIdx));
+                ss.imbue(std::locale(std::locale::classic(), facet));
+                ss << "Report step " << episodeIdx + 1
+                          << "/" << schedule.size() - 1
+                          << " at day " << schedule.seconds(episodeIdx)/(24*3600)
+                          << "/" << schedule.seconds(schedule.size() - 1)/(24*3600)
+                          << ", date = " << curDateTime.date()
+                          << "\n ";
+                OpmLog::info(ss.str());
+            }
         }
 
         // react to TUNING changes
@@ -1121,17 +1123,19 @@ public:
         const auto& simulator = this->simulator();
         int episodeIdx = simulator.episodeIndex();
 
-        if (enableExperiments && this->gridView().comm().rank() == 0 && episodeIdx >= 0) {
-            std::ostringstream ss;
-            boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
-            boost::posix_time::ptime date = boost::posix_time::from_time_t((this->simulator().startTime())) + boost::posix_time::milliseconds(static_cast<long long>(this->simulator().time() / prefix::milli));
-            ss.imbue(std::locale(std::locale::classic(), facet));
-            ss <<"\nTime step " << this->simulator().timeStepIndex() << ", stepsize "
-               << unit::convert::to(this->simulator().timeStepSize(), unit::day) << " days,"
-               << " at day " << (double)unit::convert::to(this->simulator().time(), unit::day)
-               << "/" << (double)unit::convert::to(this->simulator().endTime(), unit::day)
-               << ", date = " << date;
-            OpmLog::info(ss.str());
+        if constexpr (enableExperiments) {
+            if (this->gridView().comm().rank() == 0 && episodeIdx >= 0) {
+                std::ostringstream ss;
+                boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
+                boost::posix_time::ptime date = boost::posix_time::from_time_t((this->simulator().startTime())) + boost::posix_time::milliseconds(static_cast<long long>(this->simulator().time() / prefix::milli));
+                ss.imbue(std::locale(std::locale::classic(), facet));
+                ss <<"\nTime step " << this->simulator().timeStepIndex() << ", stepsize "
+                   << unit::convert::to(this->simulator().timeStepSize(), unit::day) << " days,"
+                   << " at day " << (double)unit::convert::to(this->simulator().time(), unit::day)
+                   << "/" << (double)unit::convert::to(this->simulator().endTime(), unit::day)
+                   << ", date = " << date;
+                OpmLog::info(ss.str());
+            }
         }
 
         // update explicit quantities between timesteps.
@@ -3416,39 +3420,38 @@ private:
     // line parameters for the size of the next time step.
     Scalar limitNextTimeStepSize_(Scalar dtNext) const
     {
-        if (!enableExperiments)
-            return dtNext;
+        if constexpr (enableExperiments) {
+            const auto& simulator = this->simulator();
+            int episodeIdx = simulator.episodeIndex();
 
-        const auto& simulator = this->simulator();
-        int episodeIdx = simulator.episodeIndex();
+            // first thing in the morning, limit the time step size to the maximum size
+            dtNext = std::min(dtNext, maxTimeStepSize_);
 
-        // first thing in the morning, limit the time step size to the maximum size
-        dtNext = std::min(dtNext, maxTimeStepSize_);
+            Scalar remainingEpisodeTime =
+                simulator.episodeStartTime() + simulator.episodeLength()
+                - (simulator.startTime() + simulator.time());
+            assert(remainingEpisodeTime >= 0.0);
 
-        Scalar remainingEpisodeTime =
-            simulator.episodeStartTime() + simulator.episodeLength()
-            - (simulator.startTime() + simulator.time());
-        assert(remainingEpisodeTime >= 0.0);
+            // if we would have a small amount of time left over in the current episode, make
+            // two equal time steps instead of a big and a small one
+            if (remainingEpisodeTime/2.0 < dtNext && dtNext < remainingEpisodeTime*(1.0 - 1e-5))
+                // note: limiting to the maximum time step size here is probably not strictly
+                // necessary, but it should not hurt and is more fool-proof
+                dtNext = std::min(maxTimeStepSize_, remainingEpisodeTime/2.0);
 
-        // if we would have a small amount of time left over in the current episode, make
-        // two equal time steps instead of a big and a small one
-        if (remainingEpisodeTime/2.0 < dtNext && dtNext < remainingEpisodeTime*(1.0 - 1e-5))
-            // note: limiting to the maximum time step size here is probably not strictly
-            // necessary, but it should not hurt and is more fool-proof
-            dtNext = std::min(maxTimeStepSize_, remainingEpisodeTime/2.0);
-
-        if (simulator.episodeStarts()) {
-            // if a well event occured, respect the limit for the maximum time step after
-            // that, too
-            int reportStepIdx = std::max(episodeIdx, 0);
-            const auto& events = simulator.vanguard().schedule()[reportStepIdx].events();
-            bool wellEventOccured =
-                    events.hasEvent(ScheduleEvents::NEW_WELL)
-                    || events.hasEvent(ScheduleEvents::PRODUCTION_UPDATE)
-                    || events.hasEvent(ScheduleEvents::INJECTION_UPDATE)
-                    || events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE);
-            if (episodeIdx >= 0 && wellEventOccured && maxTimeStepAfterWellEvent_ > 0)
-                dtNext = std::min(dtNext, maxTimeStepAfterWellEvent_);
+            if (simulator.episodeStarts()) {
+                // if a well event occured, respect the limit for the maximum time step after
+                // that, too
+                int reportStepIdx = std::max(episodeIdx, 0);
+                const auto& events = simulator.vanguard().schedule()[reportStepIdx].events();
+                bool wellEventOccured =
+                        events.hasEvent(ScheduleEvents::NEW_WELL)
+                        || events.hasEvent(ScheduleEvents::PRODUCTION_UPDATE)
+                        || events.hasEvent(ScheduleEvents::INJECTION_UPDATE)
+                        || events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE);
+                if (episodeIdx >= 0 && wellEventOccured && maxTimeStepAfterWellEvent_ > 0)
+                    dtNext = std::min(dtNext, maxTimeStepAfterWellEvent_);
+            }
         }
 
         return dtNext;
