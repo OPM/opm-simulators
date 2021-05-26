@@ -451,9 +451,9 @@ private:
     WellContainer<Well::Status> status_;
     WellContainer<std::vector<PerforationData>> well_perf_data_;
     WellContainer<const ParallelWellInfo*> parallel_well_info_;
-    std::vector<double> bhp_;
-    std::vector<double> thp_;
-    std::vector<double> temperature_;
+    WellContainer<double> bhp_;
+    WellContainer<double> thp_;
+    WellContainer<double> temperature_;
     WellContainer<std::vector<double>> wellrates_;
     PhaseUsage phase_usage_;
     WellContainer<std::vector<double>> perfrates_;

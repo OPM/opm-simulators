@@ -46,13 +46,13 @@ void WellState::base_init(const std::vector<double>& cellPressures,
     this->well_perf_data_.clear();
     this->parallel_well_info_.clear();
     this->wellrates_.clear();
+    this->bhp_.clear();
+    this->thp_.clear();
+    this->temperature_.clear();
     {
         // const int nw = wells->number_of_wells;
         const int nw = wells_ecl.size();
         // const int np = wells->number_of_phases;
-        bhp_.resize(nw, 0.0);
-        thp_.resize(nw, 0.0);
-        temperature_.resize(nw, 273.15 + 15.56); // standard condition temperature
         int connpos = 0;
         for (int w = 0; w < nw; ++w) {
             const Well& well = wells_ecl[w];
@@ -91,9 +91,6 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     const auto& pu = this->phase_usage_;
     const int np = pu.num_phases;
 
-    if ( well.isInjector() ) {
-        temperature_[w] = well.injectionControls(summary_state).temperature;
-    }
     this->status_.add(well.name(), Well::Status::OPEN);
     this->well_perf_data_.add(well.name(), well_perf_data);
     this->parallel_well_info_.add(well.name(), well_info);
@@ -102,12 +99,15 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     const int num_perf_this_well = well_info->communication().sum(well_perf_data_[w].size());
     this->perfpress_.add(well.name(), std::vector<double>(num_perf_this_well, -1e100));
     this->perfrates_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
-    if ( num_perf_this_well == 0 ) {
-        // No perforations of the well. Initialize to zero.
-        bhp_[w] = 0.;
-        thp_[w] = 0.;
+    this->bhp_.add(well.name(), 0.0);
+    this->thp_.add(well.name(), 0.0);
+    if ( well.isInjector() )
+        this->temperature_.add(well.name(), well.injectionControls(summary_state).temperature);
+    else
+        this->temperature_.add(well.name(), 273.15 + 15.56); // standard condition temperature
+
+    if ( num_perf_this_well == 0 )
         return;
-    }
 
     const auto inj_controls = well.isInjector() ? well.injectionControls(summary_state) : Well::InjectionControls(0);
     const auto prod_controls = well.isProducer() ? well.productionControls(summary_state) : Well::ProductionControls(0);
