@@ -2043,8 +2043,7 @@ namespace Opm
         const double sign = mass_rate < 0. ? 1.0 : - 1.0;
         accelerationPressureLoss *= sign;
 
-        auto top_segment_index = well_state.topSegmentIndex(this->index_of_well_);
-        well_state.segPressDropAcceleration()[top_segment_index + seg] = accelerationPressureLoss.value();
+        well_state.segPressDropAcceleration(index_of_well_)[seg] = accelerationPressureLoss.value();
 
         resWell_[seg][SPres] -= accelerationPressureLoss.value();
         duneD_[seg][seg][SPres][SPres] -= accelerationPressureLoss.derivative(SPres + numEq);
@@ -2707,9 +2706,10 @@ namespace Opm
             auto seg_press_drop = well_state.segPressDrop(index_of_well_);
             auto seg_press_friction = well_state.segPressDropFriction(index_of_well_);
             auto seg_press_static = well_state.segPressDropHydroStatic(index_of_well_);
+            auto seg_press_accel = well_state.segPressDropAcceleration(index_of_well_);
             seg_press_drop[seg] = seg_press_static[seg] +
                                   seg_press_friction[seg] +
-                                  well_state.segPressDropAcceleration()[seg];
+                                  seg_press_accel[seg];
         }
     }
 
