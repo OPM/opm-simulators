@@ -40,19 +40,18 @@ namespace Opm
                   const int index_of_well,
                   const int first_perf_index,
                   const std::vector<PerforationData>& perf_data)
-      : WellInterfaceGeneric(well, pw_info, time_step, pvtRegionIdx,
-                             num_components, num_phases, index_of_well,
-                             first_perf_index, perf_data)
+      : WellInterfaceFluidSystem<FluidSystem>(well, pw_info, time_step, rate_converter,
+                                              pvtRegionIdx, num_components, num_phases,
+                                              index_of_well, first_perf_index, perf_data)
       , param_(param)
-      , rateConverter_(rate_converter)
     {
-        connectionRates_.resize(number_of_perforations_);
+        connectionRates_.resize(this->number_of_perforations_);
 
         if constexpr (has_solvent || has_zFraction) {
             if (well.isInjector()) {
-                auto injectorType = well_ecl_.injectorType();
+                auto injectorType = this->well_ecl_.injectorType();
                 if (injectorType == InjectorType::GAS) {
-                    wsolvent_ = well_ecl_.getSolventFraction();
+                    this->wsolvent_ = this->well_ecl_.getSolventFraction();
                 }
             }
         }
@@ -68,8 +67,8 @@ namespace Opm
          const int /* num_cells */,
          const std::vector< Scalar >& B_avg)
     {
-        phase_usage_ = phase_usage_arg;
-        gravity_ = gravity_arg;
+        this->phase_usage_ = phase_usage_arg;
+        this->gravity_ = gravity_arg;
         B_avg_ = B_avg;
     }
 
@@ -79,7 +78,7 @@ namespace Opm
     WellInterface<TypeTag>::
     flowPhaseToEbosCompIdx( const int phaseIdx ) const
     {
-        const auto& pu = phaseUsage();
+        const auto& pu = this->phaseUsage();
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && pu.phase_pos[Water] == phaseIdx)
             return Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && pu.phase_pos[Oil] == phaseIdx)
@@ -96,7 +95,7 @@ namespace Opm
     WellInterface<TypeTag>::
     flowPhaseToEbosPhaseIdx( const int phaseIdx ) const
     {
-        const auto& pu = phaseUsage();
+        const auto& pu = this->phaseUsage();
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && pu.phase_pos[Water] == phaseIdx)
             return FluidSystem::waterPhaseIdx;
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && pu.phase_pos[Oil] == phaseIdx)
@@ -113,7 +112,7 @@ namespace Opm
     WellInterface<TypeTag>::
     ebosCompIdxToFlowCompIdx( const unsigned compIdx ) const
     {
-        const auto& pu = phaseUsage();
+        const auto& pu = this->phaseUsage();
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx) == compIdx)
             return pu.phase_pos[Water];
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx) == compIdx)
@@ -134,10 +133,10 @@ namespace Opm
     wpolymer() const
     {
         if constexpr (has_polymer) {
-            auto injectorType = well_ecl_.injectorType();
+            auto injectorType = this->well_ecl_.injectorType();
 
             if (injectorType == InjectorType::WATER) {
-                WellPolymerProperties polymer = well_ecl_.getPolymerProperties();
+                WellPolymerProperties polymer = this->well_ecl_.getPolymerProperties();
                 const double polymer_injection_concentration = polymer.m_polymerConcentration;
                 return polymer_injection_concentration;
             } else {
@@ -159,10 +158,10 @@ namespace Opm
     wfoam() const
     {
         if constexpr (has_foam) {
-            auto injectorType = well_ecl_.injectorType();
+            auto injectorType = this->well_ecl_.injectorType();
 
             if (injectorType == InjectorType::GAS) {
-                WellFoamProperties fprop = well_ecl_.getFoamProperties();
+                WellFoamProperties fprop = this->well_ecl_.getFoamProperties();
                 return fprop.m_foamConcentration;
             } else {
                 // Not a gas injection well => no foam.
@@ -181,10 +180,10 @@ namespace Opm
     wsalt() const
     {
         if constexpr (has_brine) {
-            auto injectorType = well_ecl_.injectorType();
+            auto injectorType = this->well_ecl_.injectorType();
 
             if (injectorType == InjectorType::WATER) {
-                WellBrineProperties fprop = well_ecl_.getBrineProperties();
+                WellBrineProperties fprop = this->well_ecl_.getBrineProperties();
                 return fprop.m_saltConcentration;
             } else {
                 // Not a water injection well => no salt (?).
@@ -211,22 +210,22 @@ namespace Opm
 
         const auto& summaryState = ebos_simulator.vanguard().summaryState();
         const auto& schedule = ebos_simulator.vanguard().schedule();
-        const auto& well = well_ecl_;
+        const auto& well = this->well_ecl_;
         std::string from;
         if (well.isInjector()) {
-            from = Well::InjectorCMode2String(well_state.currentInjectionControl(index_of_well_));
+            from = Well::InjectorCMode2String(well_state.currentInjectionControl(this->index_of_well_));
         } else {
-            from = Well::ProducerCMode2String(well_state.currentProductionControl(index_of_well_));
+            from = Well::ProducerCMode2String(well_state.currentProductionControl(this->index_of_well_));
         }
 
         bool changed = false;
         if (iog == IndividualOrGroup::Individual) {
-            changed = checkIndividualConstraints(well_state, summaryState);
+            changed = this->checkIndividualConstraints(well_state, summaryState);
         } else if (iog == IndividualOrGroup::Group) {
-            changed = checkGroupConstraints(well_state, group_state, schedule, summaryState, deferred_logger);
+            changed = this->checkGroupConstraints(well_state, group_state, schedule, summaryState, deferred_logger);
         } else {
             assert(iog == IndividualOrGroup::Both);
-            changed = checkConstraints(well_state, group_state, schedule, summaryState, deferred_logger);
+            changed = this->checkConstraints(well_state, group_state, schedule, summaryState, deferred_logger);
         }
 
         auto cc = Dune::MPIHelper::getCollectiveCommunication();
@@ -235,12 +234,12 @@ namespace Opm
         if (changed) {
             std::string to;
             if (well.isInjector()) {
-                to = Well::InjectorCMode2String(well_state.currentInjectionControl(index_of_well_));
+                to = Well::InjectorCMode2String(well_state.currentInjectionControl(this->index_of_well_));
             } else {
-                to = Well::ProducerCMode2String(well_state.currentProductionControl(index_of_well_));
+                to = Well::ProducerCMode2String(well_state.currentProductionControl(this->index_of_well_));
             }
             std::ostringstream ss;
-            ss << "    Switching control mode for well " << name()
+            ss << "    Switching control mode for well " << this->name()
                << " from " << from
                << " to " <<  to;
             if (cc.size() > 1) {
@@ -252,56 +251,6 @@ namespace Opm
         }
 
         return changed;
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    bool
-    WellInterface<TypeTag>::
-    checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
-                        const double * rates_or_potentials,
-                        DeferredLogger& deferred_logger) const
-    {
-        const PhaseUsage& pu = phaseUsage();
-
-        if (econ_production_limits.onMinOilRate()) {
-            assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
-            const double oil_rate = rates_or_potentials[pu.phase_pos[ Oil ] ];
-            const double min_oil_rate = econ_production_limits.minOilRate();
-            if (std::abs(oil_rate) < min_oil_rate) {
-                return true;
-            }
-        }
-
-        if (econ_production_limits.onMinGasRate() ) {
-            assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
-            const double gas_rate = rates_or_potentials[pu.phase_pos[ Gas ] ];
-            const double min_gas_rate = econ_production_limits.minGasRate();
-            if (std::abs(gas_rate) < min_gas_rate) {
-                return true;
-            }
-        }
-
-        if (econ_production_limits.onMinLiquidRate() ) {
-            assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
-            assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
-            const double oil_rate = rates_or_potentials[pu.phase_pos[ Oil ] ];
-            const double water_rate = rates_or_potentials[pu.phase_pos[ Water ] ];
-            const double liquid_rate = oil_rate + water_rate;
-            const double min_liquid_rate = econ_production_limits.minLiquidRate();
-            if (std::abs(liquid_rate) < min_liquid_rate) {
-                return true;
-            }
-        }
-
-        if (econ_production_limits.onMinReservoirFluidRate()) {
-            deferred_logger.warning("NOT_SUPPORTING_MIN_RESERVOIR_FLUID_RATE", "Minimum reservoir fluid production rate limit is not supported yet");
-        }
-
-        return false;
     }
 
 
@@ -335,468 +284,23 @@ namespace Opm
         if (this->isInjector() )
         {
             const auto& controls = well.injectionControls(summaryState);
-            const double vfp_ref_depth = vfp_properties_->getInj()->getTable(controls.vfp_table_number).getDatumDepth();
-            const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
-            return vfp_properties_->getInj()->bhp(controls.vfp_table_number, aqua, liquid, vapour, this->getTHPConstraint(summaryState)) - dp;
+            const double vfp_ref_depth = this->vfp_properties_->getInj()->getTable(controls.vfp_table_number).getDatumDepth();
+            const double dp = wellhelpers::computeHydrostaticCorrection(this->ref_depth_, vfp_ref_depth, rho, this->gravity_);
+            return this->vfp_properties_->getInj()->bhp(controls.vfp_table_number, aqua, liquid, vapour, this->getTHPConstraint(summaryState)) - dp;
          }
          else if (this->isProducer()) {
              const auto& controls = well.productionControls(summaryState);
-             const double vfp_ref_depth = vfp_properties_->getProd()->getTable(controls.vfp_table_number).getDatumDepth();
-             const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
-             return vfp_properties_->getProd()->bhp(controls.vfp_table_number, aqua, liquid, vapour, this->getTHPConstraint(summaryState), this->getALQ(well_state)) - dp;
+             const double vfp_ref_depth = this->vfp_properties_->getProd()->getTable(controls.vfp_table_number).getDatumDepth();
+             const double dp = wellhelpers::computeHydrostaticCorrection(this->ref_depth_, vfp_ref_depth, rho, this->gravity_);
+             return this->vfp_properties_->getProd()->bhp(controls.vfp_table_number, aqua, liquid, vapour, this->getTHPConstraint(summaryState), this->getALQ(well_state)) - dp;
          }
          else {
-             OPM_DEFLOG_THROW(std::logic_error, "Expected INJECTOR or PRODUCER for well " + name(), deferred_logger);
+             OPM_DEFLOG_THROW(std::logic_error, "Expected INJECTOR or PRODUCER for well " + this->name(), deferred_logger);
          }
 
 
 
     }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    WellInterface<TypeTag>::
-    checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
-                          const WellState& well_state,
-                          RatioLimitCheckReport& report) const
-    {
-
-        assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
-        assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
-
-        // function to calculate water cut based on rates
-        auto waterCut = [](const std::vector<double>& rates,
-                           const PhaseUsage& pu) {
-
-            const double oil_rate = rates[pu.phase_pos[Oil]];
-            const double water_rate = rates[pu.phase_pos[Water]];
-
-            // both rate should be in the same direction
-            assert(oil_rate * water_rate >= 0.);
-
-            const double liquid_rate = oil_rate + water_rate;
-            if (liquid_rate != 0.) {
-                return (water_rate / liquid_rate);
-            } else {
-                return 0.;
-            }
-        };
-
-        const double max_water_cut_limit = econ_production_limits.maxWaterCut();
-        assert(max_water_cut_limit > 0.);
-
-        const bool watercut_limit_violated = checkMaxRatioLimitWell(well_state, max_water_cut_limit, waterCut);
-
-        if (watercut_limit_violated) {
-            report.ratio_limit_violated = true;
-            checkMaxRatioLimitCompletions(well_state, max_water_cut_limit, waterCut, report);
-        }
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    WellInterface<TypeTag>::
-    checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
-                     const WellState& well_state,
-                     RatioLimitCheckReport& report) const
-    {
-
-        assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
-        assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
-
-        // function to calculate gor based on rates
-        auto gor = [](const std::vector<double>& rates,
-                      const PhaseUsage& pu) {
-
-            const double oil_rate = rates[pu.phase_pos[Oil]];
-            const double gas_rate = rates[pu.phase_pos[Gas]];
-
-            // both rate should be in the same direction
-            assert(oil_rate * gas_rate >= 0.);
-
-            double gas_oil_ratio = 0.;
-
-            if (oil_rate != 0.) {
-                gas_oil_ratio = gas_rate / oil_rate;
-            } else {
-                if (gas_rate != 0.) {
-                    gas_oil_ratio = 1.e100; // big value to mark it as violated
-                } else {
-                    gas_oil_ratio = 0.0;
-                }
-            }
-
-            return gas_oil_ratio;
-        };
-
-        const double max_gor_limit = econ_production_limits.maxGasOilRatio();
-        assert(max_gor_limit > 0.);
-
-        const bool gor_limit_violated = checkMaxRatioLimitWell(well_state, max_gor_limit, gor);
-
-        if (gor_limit_violated) {
-            report.ratio_limit_violated = true;
-            checkMaxRatioLimitCompletions(well_state, max_gor_limit, gor, report);
-        }
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    WellInterface<TypeTag>::
-    checkMaxWGRLimit(const WellEconProductionLimits& econ_production_limits,
-                     const WellState& well_state,
-                     RatioLimitCheckReport& report) const
-    {
-
-        assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
-        assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
-
-        // function to calculate wgr based on rates
-        auto wgr = [](const std::vector<double>& rates,
-                      const PhaseUsage& pu) {
-
-            const double water_rate = rates[pu.phase_pos[Water]];
-            const double gas_rate = rates[pu.phase_pos[Gas]];
-
-            // both rate should be in the same direction
-            assert(water_rate * gas_rate >= 0.);
-
-            double water_gas_ratio = 0.;
-
-            if (gas_rate != 0.) {
-                water_gas_ratio = water_rate / gas_rate;
-            } else {
-                if (water_rate != 0.) {
-                    water_gas_ratio = 1.e100; // big value to mark it as violated
-                } else {
-                    water_gas_ratio = 0.0;
-                }
-            }
-
-            return water_gas_ratio;
-        };
-
-        const double max_wgr_limit = econ_production_limits.maxWaterGasRatio();
-        assert(max_wgr_limit > 0.);
-
-        const bool wgr_limit_violated = checkMaxRatioLimitWell(well_state, max_wgr_limit, wgr);
-
-        if (wgr_limit_violated) {
-            report.ratio_limit_violated = true;
-            checkMaxRatioLimitCompletions(well_state, max_wgr_limit, wgr, report);
-        }
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    WellInterface<TypeTag>::
-    checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
-                         const WellState& well_state,
-                         RatioLimitCheckReport& report,
-                         DeferredLogger& deferred_logger) const
-    {
-        // TODO: not sure how to define the worst-offending completion when more than one
-        //       ratio related limit is violated.
-        //       The defintion used here is that we define the violation extent based on the
-        //       ratio between the value and the corresponding limit.
-        //       For each violated limit, we decide the worst-offending completion separately.
-        //       Among the worst-offending completions, we use the one has the biggest violation
-        //       extent.
-
-        if (econ_production_limits.onMaxWaterCut()) {
-            checkMaxWaterCutLimit(econ_production_limits, well_state, report);
-        }
-
-        if (econ_production_limits.onMaxGasOilRatio()) {
-            checkMaxGORLimit(econ_production_limits, well_state, report);
-        }
-
-        if (econ_production_limits.onMaxWaterGasRatio()) {
-            checkMaxWGRLimit(econ_production_limits, well_state, report);
-        }
-
-        if (econ_production_limits.onMaxGasLiquidRatio()) {
-            deferred_logger.warning("NOT_SUPPORTING_MAX_GLR", "the support for max Gas-Liquid ratio is not implemented yet!");
-        }
-
-        if (report.ratio_limit_violated) {
-            assert(report.worst_offending_completion != INVALIDCOMPLETION);
-            assert(report.violation_extent > 1.);
-        }
-    }
-
-
-
-
-    template<typename TypeTag>
-    template<typename RatioFunc>
-    bool
-    WellInterface<TypeTag>::
-    checkMaxRatioLimitWell(const WellState& well_state,
-                           const double max_ratio_limit,
-                           const RatioFunc& ratioFunc) const
-    {
-        const int np = number_of_phases_;
-
-        std::vector<double> well_rates(np, 0.0);
-
-        for (int p = 0; p < np; ++p) {
-            well_rates[p] = well_state.wellRates(index_of_well_)[p];
-        }
-
-        const double well_ratio = ratioFunc(well_rates, phaseUsage());
-
-        return (well_ratio > max_ratio_limit);
-    }
-
-
-
-
-    template<typename TypeTag>
-    template<typename RatioFunc>
-    void
-    WellInterface<TypeTag>::
-    checkMaxRatioLimitCompletions(const WellState& well_state,
-                                  const double max_ratio_limit,
-                                  const RatioFunc& ratioFunc,
-                                  RatioLimitCheckReport& report) const
-    {
-        int worst_offending_completion = INVALIDCOMPLETION;
-
-        // the maximum water cut value of the completions
-        // it is used to identify the most offending completion
-        double max_ratio_completion = 0;
-        const int np = number_of_phases_;
-
-        const auto * perf_phase_rates = &well_state.perfPhaseRates()[first_perf_ * np];
-        // look for the worst_offending_completion
-        for (const auto& completion : completions_) {
-            std::vector<double> completion_rates(np, 0.0);
-
-            // looping through the connections associated with the completion
-            const std::vector<int>& conns = completion.second;
-            for (const int c : conns) {
-                for (int p = 0; p < np; ++p) {
-                    const double connection_rate = perf_phase_rates[c * np + p];
-                    completion_rates[p] += connection_rate;
-                }
-            } // end of for (const int c : conns)
-
-            parallel_well_info_.communication().sum(completion_rates.data(), completion_rates.size());
-            const double ratio_completion = ratioFunc(completion_rates, phaseUsage());
-
-            if (ratio_completion > max_ratio_completion) {
-                worst_offending_completion = completion.first;
-                max_ratio_completion = ratio_completion;
-            }
-        } // end of for (const auto& completion : completions_)
-
-        assert(max_ratio_completion > max_ratio_limit);
-        assert(worst_offending_completion != INVALIDCOMPLETION);
-        const double violation_extent = max_ratio_completion / max_ratio_limit;
-        assert(violation_extent > 1.0);
-
-        if (violation_extent > report.violation_extent) {
-            report.worst_offending_completion = worst_offending_completion;
-            report.violation_extent = violation_extent;
-        }
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    WellInterface<TypeTag>::
-    updateWellTestState(const WellState& well_state,
-                        const double& simulationTime,
-                        const bool& writeMessageToOPMLog,
-                        WellTestState& wellTestState,
-                        DeferredLogger& deferred_logger) const
-    {
-
-        // currently, we only updateWellTestState for producers
-        if (this->isInjector()) {
-            return;
-        }
-
-        // Based on current understanding, only under prediction mode, we need to shut well due to various
-        // reasons or limits. With more knowlage or testing cases later, this might need to be corrected.
-        if (!underPredictionMode() ) {
-            return;
-        }
-
-        // updating well test state based on physical (THP/BHP) limits.
-        updateWellTestStatePhysical(well_state, simulationTime, writeMessageToOPMLog, wellTestState, deferred_logger);
-
-        // updating well test state based on Economic limits.
-        updateWellTestStateEconomic(well_state, simulationTime, writeMessageToOPMLog, wellTestState, deferred_logger);
-
-        // TODO: well can be shut/closed due to other reasons
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    WellInterface<TypeTag>::
-    updateWellTestStateEconomic(const WellState& well_state,
-                                const double simulation_time,
-                                const bool write_message_to_opmlog,
-                                WellTestState& well_test_state,
-                                DeferredLogger& deferred_logger) const
-    {
-        if (this->wellIsStopped())
-            return;
-
-        const WellEconProductionLimits& econ_production_limits = well_ecl_.getEconLimits();
-
-        // if no limit is effective here, then continue to the next well
-        if ( !econ_production_limits.onAnyEffectiveLimit() ) {
-            return;
-        }
-
-        // flag to check if the mim oil/gas rate limit is violated
-        bool rate_limit_violated = false;
-
-        const auto& quantity_limit = econ_production_limits.quantityLimit();
-        const int np = number_of_phases_;
-        if (econ_production_limits.onAnyRateLimit()) {
-            if (quantity_limit == WellEconProductionLimits::QuantityLimit::POTN)
-                rate_limit_violated = checkRateEconLimits(econ_production_limits, &well_state.wellPotentials()[index_of_well_ * np], deferred_logger);
-            else {
-                rate_limit_violated = checkRateEconLimits(econ_production_limits, well_state.wellRates(index_of_well_).data(), deferred_logger);
-            }
-        }
-
-        if (rate_limit_violated) {
-            if (econ_production_limits.endRun()) {
-                const std::string warning_message = std::string("ending run after well closed due to economic limits")
-                                                  + std::string("is not supported yet \n")
-                                                  + std::string("the program will keep running after ") + name()
-                                                  + std::string(" is closed");
-                deferred_logger.warning("NOT_SUPPORTING_ENDRUN", warning_message);
-            }
-
-            if (econ_production_limits.validFollowonWell()) {
-                deferred_logger.warning("NOT_SUPPORTING_FOLLOWONWELL", "opening following on well after well closed is not supported yet");
-            }
-
-            well_test_state.closeWell(name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
-            if (write_message_to_opmlog) {
-                if (well_ecl_.getAutomaticShutIn()) {
-                    const std::string msg = std::string("well ") + name() + std::string(" will be shut due to rate economic limit");
-                    deferred_logger.info(msg);
-                } else {
-                    const std::string msg = std::string("well ") + name() + std::string(" will be stopped due to rate economic limit");
-                    deferred_logger.info(msg);
-                }
-            }
-            // the well is closed, not need to check other limits
-            return;
-        }
-
-
-        if ( !econ_production_limits.onAnyRatioLimit() ) {
-            // there is no need to check the ratio limits
-            return;
-        }
-
-        // checking for ratio related limits, mostly all kinds of ratio.
-        RatioLimitCheckReport ratio_report;
-
-        checkRatioEconLimits(econ_production_limits, well_state, ratio_report, deferred_logger);
-
-        if (ratio_report.ratio_limit_violated) {
-            const auto workover = econ_production_limits.workover();
-            switch (workover) {
-            case WellEconProductionLimits::EconWorkover::CON:
-                {
-                    const int worst_offending_completion = ratio_report.worst_offending_completion;
-
-                    well_test_state.addClosedCompletion(name(), worst_offending_completion, simulation_time);
-                    if (write_message_to_opmlog) {
-                        if (worst_offending_completion < 0) {
-                            const std::string msg = std::string("Connection ") + std::to_string(- worst_offending_completion)
-                                    + std::string(" for well ") + name() + std::string(" will be closed due to economic limit");
-                            deferred_logger.info(msg);
-                        } else {
-                            const std::string msg = std::string("Completion ") + std::to_string(worst_offending_completion)
-                                    + std::string(" for well ") + name() + std::string(" will be closed due to economic limit");
-                            deferred_logger.info(msg);
-                        }
-                    }
-
-                    bool allCompletionsClosed = true;
-                    const auto& connections = well_ecl_.getConnections();
-                    for (const auto& connection : connections) {
-                        if (connection.state() == Connection::State::OPEN
-                            && !well_test_state.hasCompletion(name(), connection.complnum())) {
-                            allCompletionsClosed = false;
-                        }
-                    }
-
-                    if (allCompletionsClosed) {
-                        well_test_state.closeWell(name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
-                        if (write_message_to_opmlog) {
-                            if (well_ecl_.getAutomaticShutIn()) {
-                                const std::string msg = name() + std::string(" will be shut due to last completion closed");
-                                deferred_logger.info(msg);
-                            } else {
-                                const std::string msg = name() + std::string(" will be stopped due to last completion closed");
-                                deferred_logger.info(msg);
-                            }
-                        }
-                    }
-                    break;
-                }
-            case WellEconProductionLimits::EconWorkover::WELL:
-                {
-                well_test_state.closeWell(name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
-                if (write_message_to_opmlog) {
-                    if (well_ecl_.getAutomaticShutIn()) {
-                        // tell the control that the well is closed
-                        const std::string msg = name() + std::string(" will be shut due to ratio economic limit");
-                        deferred_logger.info(msg);
-                    } else {
-                        const std::string msg = name() + std::string(" will be stopped due to ratio economic limit");
-                        deferred_logger.info(msg);
-                    }
-                }
-                    break;
-                }
-            case WellEconProductionLimits::EconWorkover::NONE:
-                break;
-                default:
-                {
-                    deferred_logger.warning("NOT_SUPPORTED_WORKOVER_TYPE",
-                                            "not supporting workover type " + WellEconProductionLimits::EconWorkover2String(workover) );
-                }
-            }
-        }
-    }
-
-
-
 
 
     template<typename TypeTag>
@@ -832,7 +336,7 @@ namespace Opm
                         const double simulation_time, const WellState& well_state, const GroupState& group_state,
                         WellTestState& welltest_state, DeferredLogger& deferred_logger)
     {
-        deferred_logger.info(" well " + name() + " is being tested for economic limits");
+        deferred_logger.info(" well " + this->name() + " is being tested for economic limits");
 
         WellState well_state_copy = well_state;
 
@@ -850,8 +354,8 @@ namespace Opm
         while (testWell) {
             const size_t original_number_closed_completions = welltest_state_temp.sizeCompletions();
             solveWellForTesting(simulator, well_state_copy, group_state, deferred_logger);
-            updateWellTestState(well_state_copy, simulation_time, /*writeMessageToOPMLog=*/ false, welltest_state_temp, deferred_logger);
-            closeCompletions(welltest_state_temp);
+            this->updateWellTestState(well_state_copy, simulation_time, /*writeMessageToOPMLog=*/ false, welltest_state_temp, deferred_logger);
+            this->closeCompletions(welltest_state_temp);
 
             // Stop testing if the well is closed or shut due to all completions shut
             // Also check if number of completions has increased. If the number of closed completions do not increased
@@ -864,15 +368,15 @@ namespace Opm
         }
 
         // update wellTestState if the well test succeeds
-        if (!welltest_state_temp.hasWellClosed(name(), WellTestConfig::Reason::ECONOMIC)) {
-            welltest_state.openWell(name(), WellTestConfig::Reason::ECONOMIC);
-            const std::string msg = std::string("well ") + name() + std::string(" is re-opened through ECONOMIC testing");
+        if (!welltest_state_temp.hasWellClosed(this->name(), WellTestConfig::Reason::ECONOMIC)) {
+            welltest_state.openWell(this->name(), WellTestConfig::Reason::ECONOMIC);
+            const std::string msg = std::string("well ") + this->name() + std::string(" is re-opened through ECONOMIC testing");
             deferred_logger.info(msg);
 
             // also reopen completions
-            for (auto& completion : well_ecl_.getCompletions()) {
-                if (!welltest_state_temp.hasCompletion(name(), completion.first)) {
-                    welltest_state.dropCompletion(name(), completion.first);
+            for (auto& completion : this->well_ecl_.getCompletions()) {
+                if (!welltest_state_temp.hasCompletion(this->name(), completion.first)) {
+                    welltest_state.dropCompletion(this->name(), completion.first);
                 }
             }
         }
@@ -884,7 +388,7 @@ namespace Opm
     double
     WellInterface<TypeTag>::scalingFactor(const int phaseIdx) const
     {
-        const auto& pu = phaseUsage();
+        const auto& pu = this->phaseUsage();
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && pu.phase_pos[Water] == phaseIdx)
             return 1.0;
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && pu.phase_pos[Oil] == phaseIdx)
@@ -912,35 +416,12 @@ namespace Opm
                          DeferredLogger& deferred_logger)
     {
         const auto& summary_state = ebosSimulator.vanguard().summaryState();
-        const auto inj_controls = well_ecl_.isInjector() ? well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
-        const auto prod_controls = well_ecl_.isProducer() ? well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
+        const auto inj_controls = this->well_ecl_.isInjector() ? this->well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
+        const auto prod_controls = this->well_ecl_.isProducer() ? this->well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
 
         return this->iterateWellEqWithControl(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
     }
 
-
-
-
-
-    template<typename TypeTag>
-    void
-    WellInterface<TypeTag>::calculateReservoirRates(WellState& well_state) const
-    {
-        const int fipreg = 0; // not considering the region for now
-        const int np = number_of_phases_;
-
-        std::vector<double> surface_rates(np, 0.0);
-        for (int p = 0; p < np; ++p) {
-            surface_rates[p] = well_state.wellRates(index_of_well_)[p];
-        }
-
-        std::vector<double> voidage_rates(np, 0.0);
-        rateConverter_.calcReservoirVoidageRates(fipreg, pvtRegionIdx_, surface_rates, voidage_rates);
-
-        for (int p = 0; p < np; ++p) {
-            well_state.wellReservoirRates(index_of_well_)[p] = voidage_rates[p];
-        }
-    }
 
     template<typename TypeTag>
     void
@@ -953,10 +434,10 @@ namespace Opm
         const double dt = ebosSimulator.timeStepSize();
         const bool converged = iterateWellEquations(ebosSimulator, dt, well_state, group_state, deferred_logger);
         if (converged) {
-            deferred_logger.debug("WellTest: Well equation for well " + name() +  " converged");
+            deferred_logger.debug("WellTest: Well equation for well " + this->name() +  " converged");
         } else {
             const int max_iter = param_.max_welleq_iter_;
-            deferred_logger.debug("WellTest: Well equation for well " +name() + " failed converging in "
+            deferred_logger.debug("WellTest: Well equation for well " + this->name() + " failed converging in "
                           + std::to_string(max_iter) + " iterations");
             well_state = well_state0;
         }
@@ -978,10 +459,10 @@ namespace Opm
         const double dt = ebosSimulator.timeStepSize();
         const bool converged = iterateWellEquations(ebosSimulator, dt, well_state, group_state, deferred_logger);
         if (converged) {
-            deferred_logger.debug("Compute initial well solution for well " + name() +  ". Converged");
+            deferred_logger.debug("Compute initial well solution for well " + this->name() +  ". Converged");
         } else {
             const int max_iter = param_.max_welleq_iter_;
-            deferred_logger.debug("Compute initial well solution for well " +name() + ". Failed to converge in "
+            deferred_logger.debug("Compute initial well solution for well " + this->name() + ". Failed to converge in "
                                   + std::to_string(max_iter) + " iterations");
             well_state = well_state0;
         }
@@ -1006,8 +487,8 @@ namespace Opm
         }
 
         const auto& summary_state = ebosSimulator.vanguard().summaryState();
-        const auto inj_controls = well_ecl_.isInjector() ? well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
-        const auto prod_controls = well_ecl_.isProducer() ? well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
+        const auto inj_controls = this->well_ecl_.isInjector() ? this->well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
+        const auto prod_controls = this->well_ecl_.isProducer() ? this->well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
         assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
     }
 
@@ -1017,8 +498,8 @@ namespace Opm
     void
     WellInterface<TypeTag>::addCellRates(RateVector& rates, int cellIdx) const
     {
-        for (int perfIdx = 0; perfIdx < number_of_perforations_; ++perfIdx) {
-            if (cells()[perfIdx] == cellIdx) {
+        for (int perfIdx = 0; perfIdx < this->number_of_perforations_; ++perfIdx) {
+            if (this->cells()[perfIdx] == cellIdx) {
                 for (int i = 0; i < RateVector::dimension; ++i) {
                     rates[i] += connectionRates_[perfIdx][i];
                 }
@@ -1029,14 +510,14 @@ namespace Opm
     template<typename TypeTag>
     typename WellInterface<TypeTag>::Scalar
     WellInterface<TypeTag>::volumetricSurfaceRateForConnection(int cellIdx, int phaseIdx) const {
-        for (int perfIdx = 0; perfIdx < number_of_perforations_; ++perfIdx) {
-            if (cells()[perfIdx] == cellIdx) {
+        for (int perfIdx = 0; perfIdx < this->number_of_perforations_; ++perfIdx) {
+            if (this->cells()[perfIdx] == cellIdx) {
                 const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
                 return connectionRates_[perfIdx][activeCompIdx].value();
             }
         }
         // this is not thread safe
-        OPM_THROW(std::invalid_argument, "The well with name " + name()
+        OPM_THROW(std::invalid_argument, "The well with name " + this->name()
                   + " does not perforate cell " + std::to_string(cellIdx));
         return 0.0;
     }
@@ -1052,7 +533,7 @@ namespace Opm
                         WellTestState& welltest_state,
                         DeferredLogger& deferred_logger)
     {
-        deferred_logger.info(" well " + name() + " is being tested for physical limits");
+        deferred_logger.info(" well " + this->name() + " is being tested for physical limits");
 
         // some most difficult things are the explicit quantities, since there is no information
         // in the WellState to do a decent initialization
@@ -1074,7 +555,7 @@ namespace Opm
         updateWellOperability(ebos_simulator, well_state_copy, deferred_logger);
 
         if ( !this->isOperable() ) {
-            const std::string msg = " well " + name() + " is not operable during well testing for physical reason";
+            const std::string msg = " well " + this->name() + " is not operable during well testing for physical reason";
             deferred_logger.debug(msg);
             return;
         }
@@ -1087,18 +568,18 @@ namespace Opm
         const bool converged = this->iterateWellEquations(ebos_simulator, dt, well_state_copy, group_state, deferred_logger);
 
         if (!converged) {
-            const std::string msg = " well " + name() + " did not get converged during well testing for physical reason";
+            const std::string msg = " well " + this->name() + " did not get converged during well testing for physical reason";
             deferred_logger.debug(msg);
             return;
         }
 
         if (this->isOperable() ) {
-            welltest_state.openWell(name(), WellTestConfig::PHYSICAL );
-            const std::string msg = " well " + name() + " is re-opened through well testing for physical reason";
+            welltest_state.openWell(this->name(), WellTestConfig::PHYSICAL );
+            const std::string msg = " well " + this->name() + " is re-opened through well testing for physical reason";
             deferred_logger.info(msg);
             well_state = well_state_copy;
         } else {
-            const std::string msg = " well " + name() + " is not operable during well testing for physical reason";
+            const std::string msg = " well " + this->name() + " is not operable during well testing for physical reason";
             deferred_logger.debug(msg);
         }
     }
@@ -1138,17 +619,17 @@ namespace Opm
         const bool well_operable = this->operability_status_.isOperable();
 
         if (!well_operable && old_well_operable) {
-            if (well_ecl_.getAutomaticShutIn()) {
-                deferred_logger.info(" well " + name() + " gets SHUT during iteration ");
+            if (this->well_ecl_.getAutomaticShutIn()) {
+                deferred_logger.info(" well " + this->name() + " gets SHUT during iteration ");
             } else {
                 if (!this->wellIsStopped()) {
-                    deferred_logger.info(" well " + name() + " gets STOPPED during iteration ");
+                    deferred_logger.info(" well " + this->name() + " gets STOPPED during iteration ");
                     this->stopWell();
                     changed_to_stopped_this_step_ = true;
                 }
             }
         } else if (well_operable && !old_well_operable) {
-            deferred_logger.info(" well " + name() + " gets REVIVED during iteration ");
+            deferred_logger.info(" well " + this->name() + " gets REVIVED during iteration ");
             this->openWell();
             changed_to_stopped_this_step_ = false;
         }
@@ -1190,9 +671,9 @@ namespace Opm
     {
 
         // only bhp and wellRates are used to initilize the primaryvariables for standard wells
-        const auto& well = well_ecl_;
-        const int well_index = index_of_well_;
-        const auto& pu = phaseUsage();
+        const auto& well = this->well_ecl_;
+        const int well_index = this->index_of_well_;
+        const auto& pu = this->phaseUsage();
         const int np = well_state.numPhases();
         const auto& summaryState = ebos_simulator.vanguard().summaryState();
 
@@ -1227,7 +708,7 @@ namespace Opm
                 break;
             }
             default:
-                OPM_DEFLOG_THROW(std::runtime_error, "Expected WATER, OIL or GAS as type for injectors "  + name(), deferred_logger );
+                OPM_DEFLOG_THROW(std::runtime_error, "Expected WATER, OIL or GAS as type for injectors "  + this->name(), deferred_logger );
             }
 
             auto current = well_state.currentInjectionControl(well_index);
@@ -1241,8 +722,8 @@ namespace Opm
 
             case Well::InjectorCMode::RESV:
             {
-                std::vector<double> convert_coeff(number_of_phases_, 1.0);
-                rateConverter_.calcCoeff(/*fipreg*/ 0, pvtRegionIdx_, convert_coeff);
+                std::vector<double> convert_coeff(this->number_of_phases_, 1.0);
+                this->rateConverter_.calcCoeff(/*fipreg*/ 0, this->pvtRegionIdx_, convert_coeff);
                 const double coeff = convert_coeff[phasePos];
                 well_state.wellRates(well_index)[phasePos] = controls.reservoir_rate/coeff;
                 break;
@@ -1292,7 +773,7 @@ namespace Opm
             }
             case Well::InjectorCMode::CMODE_UNDEFINED:
             {
-                OPM_DEFLOG_THROW(std::runtime_error, "Well control must be specified for well "  + name(), deferred_logger );
+                OPM_DEFLOG_THROW(std::runtime_error, "Well control must be specified for well "  + this->name(), deferred_logger );
             }
 
             }
@@ -1388,12 +869,12 @@ namespace Opm
             }
             case Well::ProducerCMode::CRAT:
             {
-                OPM_DEFLOG_THROW(std::runtime_error, "CRAT control not supported " << name(), deferred_logger);
+                OPM_DEFLOG_THROW(std::runtime_error, "CRAT control not supported " << this->name(), deferred_logger);
             }
             case Well::ProducerCMode::RESV:
             {
-                std::vector<double> convert_coeff(number_of_phases_, 1.0);
-                rateConverter_.calcCoeff(/*fipreg*/ 0, pvtRegionIdx_, convert_coeff);
+                std::vector<double> convert_coeff(this->number_of_phases_, 1.0);
+                this->rateConverter_.calcCoeff(/*fipreg*/ 0, this->pvtRegionIdx_, convert_coeff);
                 double total_res_rate = 0.0;
                 for (int p = 0; p<np; ++p) {
                     total_res_rate -= well_state.wellRates(well_index)[p] * convert_coeff[p];
@@ -1412,7 +893,7 @@ namespace Opm
                         }
                     }
                 } else {
-                    std::vector<double> hrates(number_of_phases_,0.);
+                    std::vector<double> hrates(this->number_of_phases_,0.);
                     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                         hrates[pu.phase_pos[Water]] = controls.water_rate;
                     }
@@ -1422,8 +903,8 @@ namespace Opm
                     if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                         hrates[pu.phase_pos[Gas]] = controls.gas_rate;
                     }
-                    std::vector<double> hrates_resv(number_of_phases_,0.);
-                    rateConverter_.calcReservoirVoidageRates(/*fipreg*/ 0, pvtRegionIdx_, hrates, hrates_resv);
+                    std::vector<double> hrates_resv(this->number_of_phases_,0.);
+                    this->rateConverter_.calcReservoirVoidageRates(/*fipreg*/ 0, this->pvtRegionIdx_, hrates, hrates_resv);
                     double target = std::accumulate(hrates_resv.begin(), hrates_resv.end(), 0.0);
                     // or trivial rates or opposite direction we don't just scale the rates
                     // but use either the potentials or the mobility ratio to initial the well rates
@@ -1486,7 +967,7 @@ namespace Opm
             case Well::ProducerCMode::CMODE_UNDEFINED:
             case Well::ProducerCMode::NONE:
             {
-                OPM_DEFLOG_THROW(std::runtime_error, "Well control must be specified for well "  + name() , deferred_logger);
+                OPM_DEFLOG_THROW(std::runtime_error, "Well control must be specified for well "  + this->name() , deferred_logger);
             }
 
                 break;
@@ -1499,31 +980,31 @@ namespace Opm
     WellInterface<TypeTag>::
     initialWellRateFractions(const Simulator& ebosSimulator, const std::vector<double>& potentials) const
     {
-        const int np = number_of_phases_;
+        const int np = this->number_of_phases_;
         std::vector<double> scaling_factor(np);
 
         double total_potentials = 0.0;
         for (int p = 0; p<np; ++p) {
-            total_potentials += potentials[index_of_well_*np + p];
+            total_potentials += potentials[this->index_of_well_*np + p];
         }
         if (total_potentials > 0) {
             for (int p = 0; p<np; ++p) {
-                scaling_factor[p] = potentials[index_of_well_*np + p] / total_potentials;
+                scaling_factor[p] = potentials[this->index_of_well_*np + p] / total_potentials;
             }
             return scaling_factor;
         }
         // if we don't have any potentials we weight it using the mobilites
         // We only need approximation so we don't bother with the vapporized oil and dissolved gas
         double total_tw = 0;
-        const int nperf = number_of_perforations_;
+        const int nperf = this->number_of_perforations_;
         for (int perf = 0; perf < nperf; ++perf) {
-            total_tw += well_index_[perf];
+            total_tw += this->well_index_[perf];
         }
         for (int perf = 0; perf < nperf; ++perf) {
-            const int cell_idx = well_cells_[perf];
+            const int cell_idx = this->well_cells_[perf];
             const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
             const auto& fs = intQuants.fluidState();
-            const double well_tw_fraction = well_index_[perf] / total_tw;
+            const double well_tw_fraction = this->well_index_[perf] / total_tw;
             double total_mobility = 0.0;
             for (int p = 0; p < np; ++p) {
                 int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(p);
@@ -1536,386 +1017,6 @@ namespace Opm
         }
         return scaling_factor;
     }
-
-
-
-    template <typename TypeTag>
-    bool
-    WellInterface<TypeTag>::checkConstraints(WellState& well_state,
-                                             const GroupState& group_state,
-                                             const Schedule& schedule,
-                                             const SummaryState& summaryState,
-                                             DeferredLogger& deferred_logger) const
-    {
-        const bool ind_broken = checkIndividualConstraints(well_state, summaryState);
-        if (ind_broken) {
-            return true;
-        } else {
-            return checkGroupConstraints(well_state, group_state, schedule, summaryState, deferred_logger);
-        }
-    }
-
-
-
-
-
-    template <typename TypeTag>
-    bool
-    WellInterface<TypeTag>::checkIndividualConstraints(WellState& well_state,
-                                                       const SummaryState& summaryState) const
-    {
-        const auto& well = well_ecl_;
-        const PhaseUsage& pu = phaseUsage();
-        const int well_index = index_of_well_;
-
-        if (well.isInjector()) {
-            const auto controls = well.injectionControls(summaryState);
-            auto currentControl = well_state.currentInjectionControl(well_index);
-
-            if (controls.hasControl(Well::InjectorCMode::BHP) && currentControl != Well::InjectorCMode::BHP)
-            {
-                const auto& bhp = controls.bhp_limit;
-                double current_bhp = well_state.bhp(well_index);
-                if (bhp < current_bhp) {
-                    well_state.currentInjectionControl(well_index, Well::InjectorCMode::BHP);
-                    return true;
-                }
-            }
-
-            if (controls.hasControl(Well::InjectorCMode::RATE) && currentControl != Well::InjectorCMode::RATE)
-            {
-                InjectorType injectorType = controls.injector_type;
-                double current_rate = 0.0;
-
-                switch (injectorType) {
-                case InjectorType::WATER:
-                {
-                    current_rate = well_state.wellRates(well_index)[ pu.phase_pos[BlackoilPhases::Aqua] ];
-                    break;
-                }
-                case InjectorType::OIL:
-                {
-                    current_rate = well_state.wellRates(well_index)[ pu.phase_pos[BlackoilPhases::Liquid] ];
-                    break;
-                }
-                case InjectorType::GAS:
-                {
-                    current_rate = well_state.wellRates(well_index)[  pu.phase_pos[BlackoilPhases::Vapour] ];
-                    break;
-                }
-                default:
-                    throw("Expected WATER, OIL or GAS as type for injectors " + well.name());
-                }
-
-                if (controls.surface_rate < current_rate) {
-                    well_state.currentInjectionControl(well_index, Well::InjectorCMode::RATE);
-                    return true;
-                }
-
-            }
-
-            if (controls.hasControl(Well::InjectorCMode::RESV) && currentControl != Well::InjectorCMode::RESV)
-            {
-                double current_rate = 0.0;
-                if( pu.phase_used[BlackoilPhases::Aqua] )
-                    current_rate += well_state.wellReservoirRates(well_index)[ pu.phase_pos[BlackoilPhases::Aqua] ];
-
-                if( pu.phase_used[BlackoilPhases::Liquid] )
-                    current_rate += well_state.wellReservoirRates(well_index)[ pu.phase_pos[BlackoilPhases::Liquid] ];
-
-                if( pu.phase_used[BlackoilPhases::Vapour] )
-                    current_rate += well_state.wellReservoirRates(well_index)[ pu.phase_pos[BlackoilPhases::Vapour] ];
-
-                if (controls.reservoir_rate < current_rate) {
-                    currentControl = Well::InjectorCMode::RESV;
-                    return true;
-                }
-            }
-
-            if (controls.hasControl(Well::InjectorCMode::THP) && currentControl != Well::InjectorCMode::THP)
-            {
-                const auto& thp = this->getTHPConstraint(summaryState);
-                double current_thp = well_state.thp(well_index);
-                if (thp < current_thp) {
-                    currentControl = Well::InjectorCMode::THP;
-                    return true;
-                }
-            }
-
-        }
-
-        if (well.isProducer( )) {
-            const auto controls = well.productionControls(summaryState);
-            auto currentControl = well_state.currentProductionControl(well_index);
-
-            if (controls.hasControl(Well::ProducerCMode::BHP) && currentControl != Well::ProducerCMode::BHP )
-            {
-                const double bhp = controls.bhp_limit;
-                double current_bhp = well_state.bhp(well_index);
-                if (bhp > current_bhp) {
-                    well_state.currentProductionControl(well_index, Well::ProducerCMode::BHP);
-                    return true;
-                }
-            }
-
-            if (controls.hasControl(Well::ProducerCMode::ORAT) && currentControl != Well::ProducerCMode::ORAT) {
-                double current_rate = -well_state.wellRates(well_index)[ pu.phase_pos[BlackoilPhases::Liquid] ];
-                if (controls.oil_rate < current_rate  ) {
-                    well_state.currentProductionControl(well_index, Well::ProducerCMode::ORAT);
-                    return true;
-                }
-            }
-
-            if (controls.hasControl(Well::ProducerCMode::WRAT) && currentControl != Well::ProducerCMode::WRAT ) {
-                double current_rate = -well_state.wellRates(well_index)[ pu.phase_pos[BlackoilPhases::Aqua] ];
-                if (controls.water_rate < current_rate  ) {
-                    well_state.currentProductionControl(well_index, Well::ProducerCMode::WRAT);
-                    return true;
-                }
-            }
-
-            if (controls.hasControl(Well::ProducerCMode::GRAT) && currentControl != Well::ProducerCMode::GRAT ) {
-                double current_rate = -well_state.wellRates(well_index)[ pu.phase_pos[BlackoilPhases::Vapour] ];
-                if (controls.gas_rate < current_rate  ) {
-                    well_state.currentProductionControl(well_index, Well::ProducerCMode::GRAT);
-                    return true;
-                }
-            }
-
-            if (controls.hasControl(Well::ProducerCMode::LRAT) && currentControl != Well::ProducerCMode::LRAT) {
-                double current_rate = -well_state.wellRates(well_index)[ pu.phase_pos[BlackoilPhases::Liquid] ];
-                current_rate -= well_state.wellRates(well_index)[ pu.phase_pos[BlackoilPhases::Aqua] ];
-                if (controls.liquid_rate < current_rate  ) {
-                    well_state.currentProductionControl(well_index, Well::ProducerCMode::LRAT);
-                    return true;
-                }
-            }
-
-            if (controls.hasControl(Well::ProducerCMode::RESV) && currentControl != Well::ProducerCMode::RESV ) {
-                double current_rate = 0.0;
-                if( pu.phase_used[BlackoilPhases::Aqua] )
-                    current_rate -= well_state.wellReservoirRates(well_index)[ pu.phase_pos[BlackoilPhases::Aqua] ];
-
-                if( pu.phase_used[BlackoilPhases::Liquid] )
-                    current_rate -= well_state.wellReservoirRates(well_index)[ pu.phase_pos[BlackoilPhases::Liquid] ];
-
-                if( pu.phase_used[BlackoilPhases::Vapour] )
-                    current_rate -= well_state.wellReservoirRates(well_index)[ pu.phase_pos[BlackoilPhases::Vapour] ];
-
-                if (controls.prediction_mode && controls.resv_rate < current_rate) {
-                    well_state.currentProductionControl(well_index, Well::ProducerCMode::RESV);
-                    return true;
-                }
-
-                if (!controls.prediction_mode) {
-                    const int fipreg = 0; // not considering the region for now
-                    const int np = number_of_phases_;
-
-                    std::vector<double> surface_rates(np, 0.0);
-                    if( pu.phase_used[BlackoilPhases::Aqua] )
-                        surface_rates[pu.phase_pos[BlackoilPhases::Aqua]] = controls.water_rate;
-                    if( pu.phase_used[BlackoilPhases::Liquid] )
-                        surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] = controls.oil_rate;
-                    if( pu.phase_used[BlackoilPhases::Vapour] )
-                        surface_rates[pu.phase_pos[BlackoilPhases::Vapour]] = controls.gas_rate;
-
-                    std::vector<double> voidage_rates(np, 0.0);
-                    rateConverter_.calcReservoirVoidageRates(fipreg, pvtRegionIdx_, surface_rates, voidage_rates);
-
-                    double resv_rate = 0.0;
-                    for (int p = 0; p < np; ++p) {
-                        resv_rate += voidage_rates[p];
-                    }
-
-                    if (resv_rate < current_rate) {
-                        well_state.currentProductionControl(well_index, Well::ProducerCMode::RESV);
-                        return true;
-                    }
-                }
-            }
-
-            if (controls.hasControl(Well::ProducerCMode::THP) && currentControl != Well::ProducerCMode::THP)
-            {
-                const auto& thp = this->getTHPConstraint(summaryState);
-                double current_thp =  well_state.thp(well_index);
-                if (thp > current_thp) {
-                    well_state.currentProductionControl(well_index, Well::ProducerCMode::THP);
-                    return true;
-                }
-            }
-
-        }
-
-        return false;
-    }
-
-
-
-
-
-    template <typename TypeTag>
-    bool
-    WellInterface<TypeTag>::checkGroupConstraints(WellState& well_state,
-                                                  const GroupState& group_state,
-                                                  const Schedule& schedule,
-                                                  const SummaryState& summaryState,
-                                                  DeferredLogger& deferred_logger) const
-    {
-        const auto& well = well_ecl_;
-        const int well_index = index_of_well_;
-
-        if (well.isInjector()) {
-            auto currentControl = well_state.currentInjectionControl(well_index);
-
-            if (currentControl != Well::InjectorCMode::GRUP) {
-                // This checks only the first encountered group limit,
-                // in theory there could be several, and then we should
-                // test all but the one currently applied. At that point,
-                // this if-statement should be removed and we should always
-                // check, skipping over only the single group parent whose
-                // control is the active one for the well (if any).
-                const auto& group = schedule.getGroup( well.groupName(), current_step_ );
-                const double efficiencyFactor = well.getEfficiencyFactor();
-                const std::pair<bool, double> group_constraint = checkGroupConstraintsInj(
-                                                                                          group, well_state, group_state, efficiencyFactor, schedule, summaryState, deferred_logger);
-                // If a group constraint was broken, we set the current well control to
-                // be GRUP.
-                if (group_constraint.first) {
-                    well_state.currentInjectionControl(index_of_well_, Well::InjectorCMode::GRUP);
-                    const int np = well_state.numPhases();
-                    for (int p = 0; p<np; ++p) {
-                        well_state.wellRates(index_of_well_)[p] *= group_constraint.second;
-                    }
-                }
-                return group_constraint.first;
-            }
-        }
-
-        if (well.isProducer( )) {
-            auto currentControl = well_state.currentProductionControl(well_index);
-
-            if (currentControl != Well::ProducerCMode::GRUP) {
-                // This checks only the first encountered group limit,
-                // in theory there could be several, and then we should
-                // test all but the one currently applied. At that point,
-                // this if-statement should be removed and we should always
-                // check, skipping over only the single group parent whose
-                // control is the active one for the well (if any).
-                const auto& group = schedule.getGroup( well.groupName(), current_step_ );
-                const double efficiencyFactor = well.getEfficiencyFactor();
-                const std::pair<bool, double> group_constraint = checkGroupConstraintsProd(
-                                                                                           group, well_state, group_state, efficiencyFactor, schedule, summaryState, deferred_logger);
-                // If a group constraint was broken, we set the current well control to
-                // be GRUP.
-                if (group_constraint.first) {
-                    well_state.currentProductionControl(index_of_well_, Well::ProducerCMode::GRUP);
-                    const int np = well_state.numPhases();
-                    for (int p = 0; p<np; ++p) {
-                        well_state.wellRates(index_of_well_)[p] *= group_constraint.second;
-                    }
-                }
-                return group_constraint.first;
-            }
-        }
-
-        return false;
-    }
-
-
-
-
-
-    template <typename TypeTag>
-    std::pair<bool, double>
-    WellInterface<TypeTag>::checkGroupConstraintsInj(const Group& group,
-                                                     const WellState& well_state,
-                                                     const GroupState& group_state,
-                                                     const double efficiencyFactor,
-                                                     const Schedule& schedule,
-                                                     const SummaryState& summaryState,
-                                                     DeferredLogger& deferred_logger) const
-    {
-        // Translate injector type from control to Phase.
-        const auto& well_controls = well_ecl_.injectionControls(summaryState);
-        auto injectorType = well_controls.injector_type;
-        Phase injectionPhase;
-        switch (injectorType) {
-        case InjectorType::WATER:
-        {
-            injectionPhase = Phase::WATER;
-            break;
-        }
-        case InjectorType::OIL:
-        {
-            injectionPhase = Phase::OIL;
-            break;
-        }
-        case InjectorType::GAS:
-        {
-            injectionPhase = Phase::GAS;
-            break;
-        }
-        default:
-            throw("Expected WATER, OIL or GAS as type for injector " + name());
-        }
-
-        // Make conversion factors for RESV <-> surface rates.
-        std::vector<double> resv_coeff(phaseUsage().num_phases, 1.0);
-        rateConverter_.calcCoeff(0, pvtRegionIdx_, resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
-
-        // Call check for the well's injection phase.
-        return WellGroupHelpers::checkGroupConstraintsInj(name(),
-                                                          well_ecl_.groupName(),
-                                                          group,
-                                                          well_state,
-                                                          group_state,
-                                                          current_step_,
-                                                          guide_rate_,
-                                                          well_state.wellRates(index_of_well_).data(),
-                                                          injectionPhase,
-                                                          phaseUsage(),
-                                                          efficiencyFactor,
-                                                          schedule,
-                                                          summaryState,
-                                                          resv_coeff,
-                                                          deferred_logger);
-    }
-
-
-
-
-
-    template <typename TypeTag>
-    std::pair<bool, double>
-    WellInterface<TypeTag>::checkGroupConstraintsProd(const Group& group,
-                                                      const WellState& well_state,
-                                                      const GroupState& group_state,
-                                                      const double efficiencyFactor,
-                                                      const Schedule& schedule,
-                                                      const SummaryState& summaryState,
-                                                      DeferredLogger& deferred_logger) const
-    {
-        // Make conversion factors for RESV <-> surface rates.
-        std::vector<double> resv_coeff(phaseUsage().num_phases, 1.0);
-        rateConverter_.calcCoeff(0, pvtRegionIdx_, resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
-
-        return WellGroupHelpers::checkGroupConstraintsProd(name(),
-                                                           well_ecl_.groupName(),
-                                                           group,
-                                                           well_state,
-                                                           group_state,
-                                                           current_step_,
-                                                           guide_rate_,
-                                                           well_state.wellRates(index_of_well_).data(),
-                                                           phaseUsage(),
-                                                           efficiencyFactor,
-                                                           schedule,
-                                                           summaryState,
-                                                           resv_coeff,
-                                                           deferred_logger);
-    }
-
-
 
 
 
@@ -1933,10 +1034,10 @@ namespace Opm
                                                  EvalWell& control_eq,
                                                  DeferredLogger& deferred_logger)
     {
-        auto current = well_state.currentInjectionControl(index_of_well_);
+        auto current = well_state.currentInjectionControl(this->index_of_well_);
         const InjectorType injectorType = controls.injector_type;
-        const auto& pu = phaseUsage();
-        const double efficiencyFactor = well_ecl_.getEfficiencyFactor();
+        const auto& pu = this->phaseUsage();
+        const double efficiencyFactor = this->well_ecl_.getEfficiencyFactor();
 
         switch (current) {
         case Well::InjectorCMode::RATE: {
@@ -1944,8 +1045,8 @@ namespace Opm
             break;
         }
         case Well::InjectorCMode::RESV: {
-            std::vector<double> convert_coeff(number_of_phases_, 1.0);
-            rateConverter_.calcCoeff(/*fipreg*/ 0, pvtRegionIdx_, convert_coeff);
+            std::vector<double> convert_coeff(this->number_of_phases_, 1.0);
+            this->rateConverter_.calcCoeff(/*fipreg*/ 0, this->pvtRegionIdx_, convert_coeff);
 
             double coeff = 1.0;
 
@@ -1963,7 +1064,7 @@ namespace Opm
                 break;
             }
             default:
-                throw("Expected WATER, OIL or GAS as type for injectors " + well_ecl_.name());
+                throw("Expected WATER, OIL or GAS as type for injectors " + this->well_ecl_.name());
             }
 
             control_eq = coeff * injection_rate - controls.reservoir_rate;
@@ -1978,8 +1079,8 @@ namespace Opm
             break;
         }
         case Well::InjectorCMode::GRUP: {
-            assert(well_ecl_.isAvailableForGroupControl());
-            const auto& group = schedule.getGroup(well_ecl_.groupName(), current_step_);
+            assert(this->well_ecl_.isAvailableForGroupControl());
+            const auto& group = schedule.getGroup(this->well_ecl_.groupName(), this->current_step_);
             getGroupInjectionControl(group,
                                      well_state,
                                      group_state,
@@ -1994,7 +1095,7 @@ namespace Opm
             break;
         }
         case Well::InjectorCMode::CMODE_UNDEFINED: {
-            OPM_DEFLOG_THROW(std::runtime_error, "Well control must be specified for well " + name(), deferred_logger);
+            OPM_DEFLOG_THROW(std::runtime_error, "Well control must be specified for well " + this->name(), deferred_logger);
         }
         }
     }
@@ -2016,9 +1117,9 @@ namespace Opm
                                                   EvalWell& control_eq,
                                                   DeferredLogger& deferred_logger)
     {
-        auto current = well_state.currentProductionControl(index_of_well_);
-        const auto& pu = phaseUsage();
-        const double efficiencyFactor = well_ecl_.getEfficiencyFactor();
+        auto current = well_state.currentProductionControl(this->index_of_well_);
+        const auto& pu = this->phaseUsage();
+        const double efficiencyFactor = this->well_ecl_.getEfficiencyFactor();
 
         switch (current) {
         case Well::ProducerCMode::ORAT: {
@@ -2047,13 +1148,13 @@ namespace Opm
             break;
         }
         case Well::ProducerCMode::CRAT: {
-            OPM_DEFLOG_THROW(std::runtime_error, "CRAT control not supported " << name(), deferred_logger);
+            OPM_DEFLOG_THROW(std::runtime_error, "CRAT control not supported " << this->name(), deferred_logger);
         }
         case Well::ProducerCMode::RESV: {
             auto total_rate = rates[0]; // To get the correct type only.
             total_rate = 0.0;
-            std::vector<double> convert_coeff(number_of_phases_, 1.0);
-            rateConverter_.calcCoeff(/*fipreg*/ 0, pvtRegionIdx_, convert_coeff);
+            std::vector<double> convert_coeff(this->number_of_phases_, 1.0);
+            this->rateConverter_.calcCoeff(/*fipreg*/ 0, this->pvtRegionIdx_, convert_coeff);
             for (int phase = 0; phase < 3; ++phase) {
                 if (pu.phase_used[phase]) {
                     const int pos = pu.phase_pos[phase];
@@ -2063,7 +1164,7 @@ namespace Opm
             if (controls.prediction_mode) {
                 control_eq = total_rate - controls.resv_rate;
             } else {
-                std::vector<double> hrates(number_of_phases_, 0.);
+                std::vector<double> hrates(this->number_of_phases_, 0.);
                 if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                     hrates[pu.phase_pos[Water]] = controls.water_rate;
                 }
@@ -2073,8 +1174,8 @@ namespace Opm
                 if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                     hrates[pu.phase_pos[Gas]] = controls.gas_rate;
                 }
-                std::vector<double> hrates_resv(number_of_phases_, 0.);
-                rateConverter_.calcReservoirVoidageRates(/*fipreg*/ 0, pvtRegionIdx_, hrates, hrates_resv);
+                std::vector<double> hrates_resv(this->number_of_phases_, 0.);
+                this->rateConverter_.calcReservoirVoidageRates(/*fipreg*/ 0, this->pvtRegionIdx_, hrates, hrates_resv);
                 double target = std::accumulate(hrates_resv.begin(), hrates_resv.end(), 0.0);
                 control_eq = total_rate - target;
             }
@@ -2089,8 +1190,8 @@ namespace Opm
             break;
         }
         case Well::ProducerCMode::GRUP: {
-            assert(well_ecl_.isAvailableForGroupControl());
-            const auto& group = schedule.getGroup(well_ecl_.groupName(), current_step_);
+            assert(this->well_ecl_.isAvailableForGroupControl());
+            const auto& group = schedule.getGroup(this->well_ecl_.groupName(), this->current_step_);
             // Annoying thing: the rates passed to this function are
             // always of size 3 and in canonical (for PhaseUsage)
             // order. This is what is needed for VFP calculations if
@@ -2107,10 +1208,10 @@ namespace Opm
             break;
         }
         case Well::ProducerCMode::CMODE_UNDEFINED: {
-            OPM_DEFLOG_THROW(std::runtime_error, "Well control must be specified for well " + name(), deferred_logger);
+            OPM_DEFLOG_THROW(std::runtime_error, "Well control must be specified for well " + this->name(), deferred_logger);
         }
         case Well::ProducerCMode::NONE: {
-            OPM_DEFLOG_THROW(std::runtime_error, "Well control must be specified for well " + name(), deferred_logger);
+            OPM_DEFLOG_THROW(std::runtime_error, "Well control must be specified for well " + this->name(), deferred_logger);
         }
         }
     }
@@ -2168,12 +1269,12 @@ namespace Opm
                 // no appropriate controls defined on any of its
                 // containing groups. We will therefore use the wells' bhp
                 // limit equation as a fallback.
-                const auto& controls = well_ecl_.injectionControls(summaryState);
+                const auto& controls = this->well_ecl_.injectionControls(summaryState);
                 control_eq = bhp - controls.bhp_limit;
                 return;
             } else {
                 // Inject share of parents control
-                const auto& parent = schedule.getGroup( group.parent(), current_step_ );
+                const auto& parent = schedule.getGroup( group.parent(), this->current_step_ );
                 efficiencyFactor *= group.getGroupEfficiencyFactor();
                 getGroupInjectionControl(parent, well_state, group_state, schedule, summaryState, injectorType, bhp, injection_rate, control_eq, efficiencyFactor, deferred_logger);
                 return;
@@ -2181,8 +1282,8 @@ namespace Opm
         }
 
         efficiencyFactor *= group.getGroupEfficiencyFactor();
-        const auto& well = well_ecl_;
-        const auto pu = phaseUsage();
+        const auto& well = this->well_ecl_;
+        const auto pu = this->phaseUsage();
 
         if (!group.isInjectionGroup()) {
             // use bhp as control eq and let the updateControl code find a valid control
@@ -2195,16 +1296,16 @@ namespace Opm
         // This is the group containing the control we will check against.
 
         // Make conversion factors for RESV <-> surface rates.
-        std::vector<double> resv_coeff(phaseUsage().num_phases, 1.0);
-        rateConverter_.calcCoeff(0, pvtRegionIdx_, resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
+        std::vector<double> resv_coeff(this->phaseUsage().num_phases, 1.0);
+        this->rateConverter_.calcCoeff(0, this->pvtRegionIdx_, resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
         double sales_target = 0;
-        if (schedule[current_step_].gconsale().has(group.name())) {
-            const auto& gconsale = schedule[current_step_].gconsale().get(group.name(), summaryState);
+        if (schedule[this->current_step_].gconsale().has(group.name())) {
+            const auto& gconsale = schedule[this->current_step_].gconsale().get(group.name(), summaryState);
             sales_target = gconsale.sales_target;
         }
         WellGroupHelpers::InjectionTargetCalculator tcalc(currentGroupControl, pu, resv_coeff, group.name(), sales_target, group_state, injectionPhase, deferred_logger);
-        WellGroupHelpers::FractionCalculator fcalc(schedule, well_state, group_state, current_step_, guide_rate_, tcalc.guideTargetMode(), pu, false, injectionPhase);
+        WellGroupHelpers::FractionCalculator fcalc(schedule, well_state, group_state, this->current_step_, this->guide_rate_, tcalc.guideTargetMode(), pu, false, injectionPhase);
 
         auto localFraction = [&](const std::string& child) {
             return fcalc.localFraction(child, "");
@@ -2216,12 +1317,12 @@ namespace Opm
         };
 
         const double orig_target = tcalc.groupTarget(group.injectionControls(injectionPhase, summaryState), deferred_logger);
-        const auto chain = WellGroupHelpers::groupChainTopBot(name(), group.name(), schedule, current_step_);
+        const auto chain = WellGroupHelpers::groupChainTopBot(this->name(), group.name(), schedule, this->current_step_);
         // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
         const size_t num_ancestors = chain.size() - 1;
         double target = orig_target;
         for (size_t ii = 0; ii < num_ancestors; ++ii) {
-            if ((ii == 0) || guide_rate_->has(chain[ii], injectionPhase)) {
+            if ((ii == 0) || this->guide_rate_->has(chain[ii], injectionPhase)) {
                 // Apply local reductions only at the control level
                 // (top) and for levels where we have a specified
                 // group guide rate.
@@ -2262,12 +1363,12 @@ namespace Opm
                 // no appropriate controls defined on any of its
                 // containing groups. We will therefore use the wells' bhp
                 // limit equation as a fallback.
-                const auto& controls = well_ecl_.productionControls(summaryState);
+                const auto& controls = this->well_ecl_.productionControls(summaryState);
                 control_eq = bhp - controls.bhp_limit;
                 return;
             } else {
                 // Produce share of parents control
-                const auto& parent = schedule.getGroup( group.parent(), current_step_ );
+                const auto& parent = schedule.getGroup( group.parent(), this->current_step_ );
                 efficiencyFactor *= group.getGroupEfficiencyFactor();
                 getGroupProductionControl(parent, well_state, group_state, schedule, summaryState, bhp, rates, control_eq, efficiencyFactor);
                 return;
@@ -2275,8 +1376,8 @@ namespace Opm
         }
 
         efficiencyFactor *= group.getGroupEfficiencyFactor();
-        const auto& well = well_ecl_;
-        const auto pu = phaseUsage();
+        const auto& well = this->well_ecl_;
+        const auto pu = this->phaseUsage();
 
         if (!group.isProductionGroup()) {
             // use bhp as control eq and let the updateControl code find a valid control
@@ -2289,8 +1390,8 @@ namespace Opm
         // This is the group containing the control we will check against.
 
         // Make conversion factors for RESV <-> surface rates.
-        std::vector<double> resv_coeff(phaseUsage().num_phases, 1.0);
-        rateConverter_.calcCoeff(0, pvtRegionIdx_, resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
+        std::vector<double> resv_coeff(this->phaseUsage().num_phases, 1.0);
+        this->rateConverter_.calcCoeff(0, this->pvtRegionIdx_, resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
         // gconsale may adjust the grat target.
         // the adjusted rates is send to the targetCalculator
@@ -2299,7 +1400,7 @@ namespace Opm
             gratTargetFromSales = group_state.grat_sales_target(group.name());
 
         WellGroupHelpers::TargetCalculator tcalc(currentGroupControl, pu, resv_coeff, gratTargetFromSales);
-        WellGroupHelpers::FractionCalculator fcalc(schedule, well_state, group_state, current_step_, guide_rate_, tcalc.guideTargetMode(), pu, true, Phase::OIL);
+        WellGroupHelpers::FractionCalculator fcalc(schedule, well_state, group_state, this->current_step_, this->guide_rate_, tcalc.guideTargetMode(), pu, true, Phase::OIL);
 
         auto localFraction = [&](const std::string& child) {
             return fcalc.localFraction(child, "");
@@ -2311,12 +1412,12 @@ namespace Opm
         };
 
         const double orig_target = tcalc.groupTarget(group.productionControls(summaryState));
-        const auto chain = WellGroupHelpers::groupChainTopBot(name(), group.name(), schedule, current_step_);
+        const auto chain = WellGroupHelpers::groupChainTopBot(this->name(), group.name(), schedule, this->current_step_);
         // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
         const size_t num_ancestors = chain.size() - 1;
         double target = orig_target;
         for (size_t ii = 0; ii < num_ancestors; ++ii) {
-            if ((ii == 0) || guide_rate_->has(chain[ii])) {
+            if ((ii == 0) || this->guide_rate_->has(chain[ii])) {
                 // Apply local reductions only at the control level
                 // (top) and for levels where we have a specified
                 // group guide rate.
@@ -2343,8 +1444,8 @@ namespace Opm
         // Check if the rates of this well only are single-phase, do nothing
         // if more than one nonzero rate.
         int nonzero_rate_index = -1;
-        for (int p = 0; p < number_of_phases_; ++p) {
-            if (well_state.wellRates(index_of_well_)[p] != 0.0) {
+        for (int p = 0; p < this->number_of_phases_; ++p) {
+            if (well_state.wellRates(this->index_of_well_)[p] != 0.0) {
                 if (nonzero_rate_index == -1) {
                     nonzero_rate_index = p;
                 } else {
@@ -2362,12 +1463,12 @@ namespace Opm
         std::vector<double> well_q_s = computeCurrentWellRates(ebosSimulator, deferred_logger);
 
         // Set the currently-zero phase flows to be nonzero in proportion to well_q_s.
-        const double initial_nonzero_rate = well_state.wellRates(index_of_well_)[nonzero_rate_index];
+        const double initial_nonzero_rate = well_state.wellRates(this->index_of_well_)[nonzero_rate_index];
         const int comp_idx_nz = flowPhaseToEbosCompIdx(nonzero_rate_index);
-        for (int p = 0; p < number_of_phases_; ++p) {
+        for (int p = 0; p < this->number_of_phases_; ++p) {
             if (p != nonzero_rate_index) {
                 const int comp_idx = flowPhaseToEbosCompIdx(p);
-                double& rate = well_state.wellRates(index_of_well_)[p];
+                double& rate = well_state.wellRates(this->index_of_well_)[p];
                 rate = (initial_nonzero_rate/well_q_s[comp_idx_nz]) * (well_q_s[comp_idx]);
             }
         }
