@@ -874,7 +874,7 @@ public:
 
         updatePffDofData_();
 
-        if (getPropValue<TypeTag, Properties::EnablePolymer>()) {
+        if constexpr (getPropValue<TypeTag, Properties::EnablePolymer>()) {
             const auto& vanguard = this->simulator().vanguard();
             const auto& gridView = vanguard.gridView();
             int numElements = gridView.size(/*codim=*/0);
@@ -1065,7 +1065,7 @@ public:
         if (invalidateIntensiveQuantities)
             this->model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
 
-        if (getPropValue<TypeTag, Properties::EnablePolymer>())
+        if constexpr (getPropValue<TypeTag, Properties::EnablePolymer>())
             updateMaxPolymerAdsorption_();
 
         wellModel_.beginTimeStep();
@@ -1101,7 +1101,7 @@ public:
     void endTimeStep()
     {
 #ifndef NDEBUG
-        if (getPropValue<TypeTag, Properties::EnableDebuggingChecks>()) {
+        if constexpr (getPropValue<TypeTag, Properties::EnableDebuggingChecks>()) {
             // in debug mode, we don't care about performance, so we check if the model does
             // the right thing (i.e., the mass change inside the whole reservoir must be
             // equivalent to the fluxes over the grid's boundaries plus the source rates
@@ -1129,7 +1129,7 @@ public:
             for (unsigned globalDofIdx = 0; globalDofIdx < residual.size(); globalDofIdx ++) {
                 drift_[globalDofIdx] = residual[globalDofIdx];
                 drift_[globalDofIdx] *= simulator.timeStepSize();
-                if (getPropValue<TypeTag, Properties::UseVolumetricResidual>())
+                if constexpr (getPropValue<TypeTag, Properties::UseVolumetricResidual>())
                     drift_[globalDofIdx] *= this->model().dofTotalVolume(globalDofIdx);
             }
         }
