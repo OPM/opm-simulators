@@ -34,12 +34,6 @@
 #include <opm/simulators/wells/GasLiftWellState.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/WellState.hpp>
-// NOTE: BlackoilWellModel.hpp includes ourself (GasLiftStage2.hpp), so we need
-//   to forward declare BlackoilWellModel for it to be defined in this file.
-namespace Opm {
-    template<typename TypeTag> class BlackoilWellModel;
-}
-#include <opm/simulators/wells/BlackoilWellModel.hpp>
 
 #include <cassert>
 #include <functional>
@@ -58,12 +52,10 @@ namespace Opm
     template<class TypeTag>
     class GasLiftStage2 {
         using Simulator = GetPropType<TypeTag, Properties::Simulator>;
-        using BlackoilWellModel = ::Opm::BlackoilWellModel<TypeTag>;
         using GasLiftSingleWell = ::Opm::GasLiftSingleWell<TypeTag>;
-        using GLiftWellState = GasLiftWellState;
-        using GLiftOptWells = typename BlackoilWellModel::GLiftOptWells;
-        using GLiftProdWells = typename BlackoilWellModel::GLiftProdWells;
-        using GLiftWellStateMap = typename BlackoilWellModel::GLiftWellStateMap;
+        using GLiftOptWells = std::map<std::string,std::unique_ptr<GasLiftSingleWell>>;
+        using GLiftProdWells = std::map<std::string,const WellInterface<TypeTag> *>;
+        using GLiftWellStateMap = std::map<std::string,std::unique_ptr<GasLiftWellState>>;
         using GradPair = std::pair<std::string, double>;
         using GradPairItr = std::vector<GradPair>::iterator;
         using GradInfo = typename GasLiftSingleWell::GradInfo;
@@ -79,7 +71,7 @@ namespace Opm
         static const int Gas = BlackoilPhases::Vapour;
     public:
         GasLiftStage2(
-            const BlackoilWellModel &well_model,
+            const PhaseUsage& phase_usage,
             const Simulator &ebos_simulator,
             DeferredLogger &deferred_logger,
             WellState &well_state,
@@ -93,7 +85,7 @@ namespace Opm
             GradMap &grad_map, const std::string well_name, bool add);
         std::optional<GradInfo> calcIncOrDecGrad_(
             const std::string name, const GasLiftSingleWell &gs_well, bool increase);
-        bool checkRateAlreadyLimited_(GLiftWellState &state, bool increase);
+        bool checkRateAlreadyLimited_(GasLiftWellState &state, bool increase);
         GradInfo deleteDecGradItem_(const std::string &name);
         GradInfo deleteIncGradItem_(const std::string &name);
         GradInfo deleteGrad_(const std::string &name, bool increase);
@@ -140,7 +132,6 @@ namespace Opm
 
         DeferredLogger &deferred_logger_;
         const Simulator &ebos_simulator_;
-        const BlackoilWellModel &well_model_;
         WellState &well_state_;
         GLiftProdWells &prod_wells_;
         GLiftOptWells &stage1_wells_;
