@@ -965,7 +965,6 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                     continue;
                 }
 
-                const int old_top_segment_index = prev_well_state->topSegmentIndex(old_index_well);
                 const int new_top_segment_index = topSegmentIndex(new_index_well);
                 int number_of_segment = 0;
                 // if it is the last well in list
@@ -975,11 +974,11 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                     number_of_segment = topSegmentIndex(new_index_well + 1) - new_top_segment_index;
                 }
 
-                auto * segment_rates = &this->seg_rates_[new_top_segment_index*np];
-                auto * segment_pressure = &this->seg_press_[new_top_segment_index];
+                auto segment_rates = this->segRates(w);
+                auto segment_pressure = this->segPress(w);
 
-                const auto * prev_segment_rates = &prev_well_state->segRates()[old_top_segment_index*np];
-                const auto * prev_segment_pressure = &prev_well_state->segPress()[new_top_segment_index];
+                const auto prev_segment_rates = prev_well_state->segRates(old_index_well);
+                const auto prev_segment_pressure = prev_well_state->segPress(old_index_well);
 
                 for (int seg=0; seg < number_of_segment; ++seg) {
                     for (int p = 0; p < np; ++p)
@@ -1152,23 +1151,20 @@ WellState::reportSegmentResults(const PhaseUsage& pu,
                                                      const int         seg_no) const
 {
     auto seg_res = data::Segment{};
-
     const auto seg_dof =
             this->topSegmentIndex(well_id) + seg_ix;
-
-    const auto* rate =
-            &this->segRates()[seg_dof * this->numPhases()];
-
     {
         using Value = data::SegmentPressures::Value;
         auto& segpress = seg_res.pressures;
-        segpress[Value::Pressure] = this->segPress()[seg_dof];
+        segpress[Value::Pressure] = this->segPress(well_id)[seg_ix];
         segpress[Value::PDrop] = this->segPressDrop()[seg_dof];
         segpress[Value::PDropHydrostatic] = this->segPressDropHydroStatic()[seg_dof];
         segpress[Value::PDropFriction] = this->segPressDropFriction()[seg_dof];
         segpress[Value::PDropAccel] = this->segPressDropAcceleration()[seg_dof];
     }
 
+    const auto segment_rates = this->segRates(well_id);
+    const auto rate = &segment_rates[seg_ix * this->numPhases()];
     if (pu.phase_used[Water]) {
         seg_res.rates.set(data::Rates::opt::wat,
                           rate[pu.phase_pos[Water]]);

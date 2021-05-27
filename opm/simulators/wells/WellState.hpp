@@ -192,19 +192,29 @@ public:
         return well_vaporized_oil_rates_[well_index];
     }
 
-    const std::vector<double>& segRates() const
+
+    const double * segRates(std::size_t well_index) const
     {
-        return seg_rates_;
+        const int top_segment_index = this->top_segment_index_[well_index];
+        return &this->seg_rates_[top_segment_index * this->phase_usage_.num_phases];
     }
 
-    std::vector<double>& segRates()
+    double * segRates(std::size_t well_index)
     {
-        return seg_rates_;
+        const int top_segment_index = this->top_segment_index_[well_index];
+        return &this->seg_rates_[top_segment_index * this->phase_usage_.num_phases];
     }
 
-    const std::vector<double>& segPress() const
+    double * segPress(std::size_t well_index)
     {
-        return seg_press_;
+        const int top_segment_index = this->top_segment_index_[well_index];
+        return &seg_press_[top_segment_index];
+    }
+
+    const double * segPress(std::size_t well_index) const
+    {
+        const int top_segment_index = this->top_segment_index_[well_index];
+        return &seg_press_[top_segment_index];
     }
 
     std::vector<double>& segPressDrop()
@@ -245,11 +255,6 @@ public:
     const std::vector<double>& segPressDropAcceleration() const
     {
         return seg_pressdrop_acceleration_;
-    }
-
-    std::vector<double>& segPress()
-    {
-        return seg_press_;
     }
 
     int numSegment() const
