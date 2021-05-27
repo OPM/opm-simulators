@@ -1930,7 +1930,7 @@ namespace Opm
         if (frictionalPressureLossConsidered()) {
             const auto friction_pressure_drop = getFrictionPressureLoss(seg);
             pressure_equation -= friction_pressure_drop;
-            well_state.segPressDropFriction()[top_segment_index + seg] = friction_pressure_drop.value();
+            well_state.segPressDropFriction(index_of_well_)[seg] = friction_pressure_drop.value();
         }
 
         resWell_[seg][SPres] = pressure_equation.value();
@@ -2705,8 +2705,9 @@ namespace Opm
             }
 
             auto seg_press_drop = well_state.segPressDrop(index_of_well_);
+            auto seg_press_friction = well_state.segPressDropFriction(index_of_well_);
             seg_press_drop[seg] = well_state.segPressDropHydroStatic()[seg] +
-                                  well_state.segPressDropFriction()[seg] +
+                                  seg_press_friction[seg] +
                                   well_state.segPressDropAcceleration()[seg];
         }
     }
@@ -3261,8 +3262,7 @@ namespace Opm
             }
         }
         pressure_equation = pressure_equation - icd_pressure_drop;
-        auto top_segment_index = well_state.topSegmentIndex(this->index_of_well_);
-        well_state.segPressDropFriction()[top_segment_index + seg] = icd_pressure_drop.value();
+        well_state.segPressDropFriction(index_of_well_)[seg] = icd_pressure_drop.value();
 
         const int seg_upwind = upwinding_segments_[seg];
         resWell_[seg][SPres] = pressure_equation.value();
