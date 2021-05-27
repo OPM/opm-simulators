@@ -256,15 +256,6 @@ public:
 
     void gliftTimeStepInit() {
         this->alq_state.reset_count();
-        disableGliftOptimization();
-    }
-
-    void disableGliftOptimization() {
-        do_glift_optimization_ = false;
-    }
-
-    void enableGliftOptimization() {
-        do_glift_optimization_ = true;
     }
 
     int wellNameToGlobalIdx(const std::string &name) {
