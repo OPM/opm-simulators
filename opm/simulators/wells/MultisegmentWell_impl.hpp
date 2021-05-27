@@ -540,32 +540,31 @@ namespace Opm
         }
 
         // If the well is pressure controlled the potential equals the rate.
-/*         {
-            bool pressure_controlled_well = false;
-            if (this->isInjector()) {
-                const Well::InjectorCMode& current = well_state.currentInjectionControl()[index_of_well_];
-                if (current == Well::InjectorCMode::BHP || current == Well::InjectorCMode::THP) {
-                    pressure_controlled_well = true;
-                }
-            } else {
-                const Well::ProducerCMode& current = well_state.currentProductionControls()[index_of_well_];
-                if (current == Well::ProducerCMode::BHP || current == Well::ProducerCMode::THP) {
-                    pressure_controlled_well = true;
-                }
+        bool pressure_controlled_well = false;
+        if (this->isInjector()) {
+            const Well::InjectorCMode& current = well_state.currentInjectionControl(index_of_well_);
+            if (current == Well::InjectorCMode::BHP || current == Well::InjectorCMode::THP) {
+                pressure_controlled_well = true;
             }
-            if (pressure_controlled_well) {
-                for (int compIdx = 0; compIdx < num_components_; ++compIdx) {
-                    const EvalWell rate = this->getQs(compIdx);
-                    well_potentials[ebosCompIdxToFlowCompIdx(compIdx)] = rate.value();
-                }
-                return;
+        } else {
+            const Well::ProducerCMode& current = well_state.currentProductionControl(index_of_well_);
+            if (current == Well::ProducerCMode::BHP || current == Well::ProducerCMode::THP) {
+                pressure_controlled_well = true;
             }
-        } */
+        }
+        if (pressure_controlled_well) {
+            // initialized the well rates with the potentials i.e. the well rates based on bhp
+            const double sign = this->well_ecl_.isInjector() ? 1.0 : -1.0;
+            for (int phase = 0; phase < np; ++phase){
+                well_potentials[phase] = sign * well_state.wellRates(index_of_well_)[phase];
+            }
+            return;
+        }
+
         debug_cost_counter_ = 0;
         // does the well have a THP related constraint?
         const auto& summaryState = ebosSimulator.vanguard().summaryState();
-        auto current_control = well_state.currentProductionControl(this->index_of_well_);
-        if ( !Base::wellHasTHPConstraints(summaryState) || current_control == Well::ProducerCMode::BHP) {
+        if (!Base::wellHasTHPConstraints(summaryState)) {
             computeWellRatesAtBhpLimit(ebosSimulator, well_potentials, deferred_logger);
         } else {
             well_potentials = computeWellPotentialWithTHP(ebosSimulator, deferred_logger);
