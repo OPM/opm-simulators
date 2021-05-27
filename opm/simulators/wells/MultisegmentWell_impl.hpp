@@ -1924,7 +1924,7 @@ namespace Opm
         // TODO: we might be able to add member variables to store these values, then we update well state
         // after converged
         const auto hydro_pressure_drop = getHydroPressureLoss(seg);
-        well_state.segPressDropHydroStatic()[top_segment_index + seg] = hydro_pressure_drop.value();
+        well_state.segPressDropHydroStatic(index_of_well_)[seg] = hydro_pressure_drop.value();
         pressure_equation -= hydro_pressure_drop;
 
         if (frictionalPressureLossConsidered()) {
@@ -2706,7 +2706,8 @@ namespace Opm
 
             auto seg_press_drop = well_state.segPressDrop(index_of_well_);
             auto seg_press_friction = well_state.segPressDropFriction(index_of_well_);
-            seg_press_drop[seg] = well_state.segPressDropHydroStatic()[seg] +
+            auto seg_press_static = well_state.segPressDropHydroStatic(index_of_well_);
+            seg_press_drop[seg] = seg_press_static[seg] +
                                   seg_press_friction[seg] +
                                   well_state.segPressDropAcceleration()[seg];
         }
