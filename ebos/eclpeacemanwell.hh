@@ -136,7 +136,7 @@ class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
 
         // retrieve the solution dependent quantities that are only updated at the
         // beginning of a time step from the IntensiveQuantities of the model
-        void updateBeginTimestep(const IntensiveQuantities& intQuants OPM_UNUSED)
+        void updateBeginTimestep(const IntensiveQuantities&)
         {}
 
         // retrieve the solution dependent quantities from the IntensiveQuantities of the
@@ -294,13 +294,13 @@ public:
     /*!
      * \copydoc Opm::BaseAuxiliaryModule::numDofs()
      */
-    virtual unsigned numDofs() const
+    unsigned numDofs() const override
     { return 1; }
 
     /*!
      * \copydoc Opm::BaseAuxiliaryModule::addNeighbors()
      */
-    virtual void addNeighbors(std::vector<NeighborSet>& neighbors) const
+    void addNeighbors(std::vector<NeighborSet>& neighbors) const override
     {
         int wellGlobalDof = AuxModule::localToGlobalDof(/*localDofIdx=*/0);
 
@@ -320,7 +320,7 @@ public:
     /*!
      * \copydoc Opm::BaseAuxiliaryModule::addNeighbors()
      */
-    virtual void applyInitial()
+    void applyInitial() override
     {
         auto& sol = const_cast<SolutionVector&>(simulator_.model().solution(/*timeIdx=*/0));
 
@@ -342,7 +342,7 @@ public:
     /*!
      * \copydoc Opm::BaseAuxiliaryModule::linearize()
      */
-    virtual void linearize(SparseMatrixAdapter& matrix, GlobalEqVector& residual)
+    void linearize(SparseMatrixAdapter& matrix, GlobalEqVector& residual) override
     {
         const SolutionVector& curSol = simulator_.model().solution(/*timeIdx=*/0);
 
@@ -1762,7 +1762,7 @@ protected:
     std::array<Scalar, numPhases> actualResvRates_;
 
     // The relative weight of the volumetric rate of each fluid
-    Scalar volumetricWeight_[numPhases];
+    std::array<Scalar, numPhases> volumetricWeight_;
 
     // the reference depth for the bottom hole pressure. if not specified otherwise, this
     // is the position of the _highest_ DOF in the well.
