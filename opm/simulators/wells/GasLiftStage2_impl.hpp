@@ -36,8 +36,11 @@ namespace Opm {
 template<typename TypeTag>
 GasLiftStage2<TypeTag>::
 GasLiftStage2(
+    const int report_step_idx,
+    const Communication& comm,
     const PhaseUsage& phase_usage,
-    const Simulator &ebos_simulator,
+    const Schedule& schedule,
+    const SummaryState& summary_state,
     DeferredLogger &deferred_logger,
     WellState &well_state,
     GLiftProdWells &prod_wells,
@@ -45,24 +48,20 @@ GasLiftStage2(
     GLiftWellStateMap &state_map
 ) :
     deferred_logger_{deferred_logger},
-    ebos_simulator_{ebos_simulator},
     well_state_{well_state},
     prod_wells_{prod_wells},
     stage1_wells_{glift_wells},
     well_state_map_{state_map},
-    report_step_idx_{ebos_simulator_.episodeIndex()},
-    summary_state_{ebos_simulator_.vanguard().summaryState()},
-    schedule_{ebos_simulator.vanguard().schedule()},
+    report_step_idx_{report_step_idx},
+    summary_state_{summary_state},
+    schedule_{schedule},
     phase_usage_{phase_usage},
     glo_{schedule_.glo(report_step_idx_)},
-    comm_{ebos_simulator.vanguard().grid().comm()},
+    comm_{comm},
     debug_{false}
 {
 //    this->time_step_idx_
 //        = this->ebos_simulator_.model().newtonMethod().currentTimeStep();
-    this->nonlinear_iteration_idx_
-        = this->ebos_simulator_.model().newtonMethod().numIterations();
-
 }
 
 /********************************************

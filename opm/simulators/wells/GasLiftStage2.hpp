@@ -51,7 +51,6 @@ namespace Opm
 {
     template<class TypeTag>
     class GasLiftStage2 {
-        using Simulator = GetPropType<TypeTag, Properties::Simulator>;
         using GasLiftSingleWell = ::Opm::GasLiftSingleWell<TypeTag>;
         using GLiftOptWells = std::map<std::string,std::unique_ptr<GasLiftSingleWell>>;
         using GLiftProdWells = std::map<std::string,const WellInterface<TypeTag> *>;
@@ -71,8 +70,11 @@ namespace Opm
         static const int Gas = BlackoilPhases::Vapour;
     public:
         GasLiftStage2(
+            const int report_step_idx,
+            const Communication& comm,
             const PhaseUsage& phase_usage,
-            const Simulator &ebos_simulator,
+            const Schedule& schedule,
+            const SummaryState& summary_state,
             DeferredLogger &deferred_logger,
             WellState &well_state,
             GLiftProdWells &prod_wells,
@@ -131,7 +133,6 @@ namespace Opm
 
 
         DeferredLogger &deferred_logger_;
-        const Simulator &ebos_simulator_;
         WellState &well_state_;
         GLiftProdWells &prod_wells_;
         GLiftOptWells &stage1_wells_;
@@ -148,7 +149,6 @@ namespace Opm
         bool debug_;
         int max_iterations_ = 1000;
         //int time_step_idx_;
-        int nonlinear_iteration_idx_;
 
         struct OptimizeState {
             OptimizeState( GasLiftStage2 &parent_, const Group &group_ ) :
