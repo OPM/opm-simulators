@@ -1157,7 +1157,7 @@ WellState::reportSegmentResults(const PhaseUsage& pu,
         using Value = data::SegmentPressures::Value;
         auto& segpress = seg_res.pressures;
         segpress[Value::Pressure] = this->segPress(well_id)[seg_ix];
-        segpress[Value::PDrop] = this->segPressDrop()[seg_dof];
+        segpress[Value::PDrop] = this->segPressDrop(well_id)[seg_ix];
         segpress[Value::PDropHydrostatic] = this->segPressDropHydroStatic()[seg_dof];
         segpress[Value::PDropFriction] = this->segPressDropFriction()[seg_dof];
         segpress[Value::PDropAccel] = this->segPressDropAcceleration()[seg_dof];

@@ -217,14 +217,16 @@ public:
         return &seg_press_[top_segment_index];
     }
 
-    std::vector<double>& segPressDrop()
+    double * segPressDrop(std::size_t well_index)
     {
-        return seg_pressdrop_;
+        const int top_segment_index = this->top_segment_index_[well_index];
+        return &seg_pressdrop_[top_segment_index];
     }
 
-    const std::vector<double>& segPressDrop() const
+    const double * segPressDrop(std::size_t well_index) const
     {
-        return seg_pressdrop_;
+        const int top_segment_index = this->top_segment_index_[well_index];
+        return &seg_pressdrop_[top_segment_index];
     }
 
     std::vector<double>& segPressDropFriction()

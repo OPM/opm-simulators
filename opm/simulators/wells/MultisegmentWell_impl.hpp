@@ -2704,10 +2704,10 @@ namespace Opm
                 assemblePressureEq(seg, unit_system, well_state, deferred_logger);
             }
 
-            auto top_segment_index = well_state.topSegmentIndex(index_of_well_);
-            well_state.segPressDrop()[top_segment_index + seg] = well_state.segPressDropHydroStatic()[top_segment_index + seg] +
-                                                                 well_state.segPressDropFriction()[top_segment_index + seg] +
-                                                                 well_state.segPressDropAcceleration()[top_segment_index + seg];
+            auto seg_press_drop = well_state.segPressDrop(index_of_well_);
+            seg_press_drop[seg] = well_state.segPressDropHydroStatic()[seg] +
+                                  well_state.segPressDropFriction()[seg] +
+                                  well_state.segPressDropAcceleration()[seg];
         }
     }
 
