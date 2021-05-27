@@ -110,8 +110,10 @@ public:
     Well::ProducerCMode currentProductionControl(std::size_t well_index) const { return current_production_controls_[well_index]; }
     void currentProductionControl(std::size_t well_index, Well::ProducerCMode cmode) { current_production_controls_[well_index] = cmode; }
 
-    void setCurrentWellRates(const std::string& wellName, const std::vector<double>& rates ) {
-        well_rates.at(wellName).second = rates;
+    void setCurrentWellRates(const std::string& wellName, const std::vector<double>& new_rates ) {
+        auto& [owner, rates] = this->well_rates.at(wellName);
+        if (owner)
+            rates = new_rates;
     }
 
     const std::vector<double>& currentWellRates(const std::string& wellName) const;
