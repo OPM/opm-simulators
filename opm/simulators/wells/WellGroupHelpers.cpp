@@ -323,26 +323,33 @@ namespace WellGroupHelpers
             // accumulate group contribution from sub group
             if (isInjector) {
                 const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
+                bool individual_control = false;
+                int num_group_controlled_wells = 0;
                 for (Phase phase : all) {
                     const Group::InjectionCMode& currentGroupControl
-                        = group_state.injection_control(subGroup.name(), phase);
-                    int phasePos;
-                    if (phase == Phase::GAS && pu.phase_used[BlackoilPhases::Vapour])
-                        phasePos = pu.phase_pos[BlackoilPhases::Vapour];
-                    else if (phase == Phase::OIL && pu.phase_used[BlackoilPhases::Liquid])
-                        phasePos = pu.phase_pos[BlackoilPhases::Liquid];
-                    else if (phase == Phase::WATER && pu.phase_used[BlackoilPhases::Aqua])
-                        phasePos = pu.phase_pos[BlackoilPhases::Aqua];
-                    else
-                        continue;
+                            = group_state.injection_control(subGroup.name(), phase);
+                    individual_control = individual_control || (currentGroupControl != Group::InjectionCMode::FLD
+                            && currentGroupControl != Group::InjectionCMode::NONE);
+                    num_group_controlled_wells
+                            += groupControlledWells(schedule, wellStateNupcol, group_state, reportStepIdx, subGroupName, "", !isInjector, phase);
+                }
+                if (individual_control || num_group_controlled_wells == 0) {
+                    for (int phase = 0; phase < np; phase++) {
+                        groupTargetReduction[phase]
+                            += sumWellRates(subGroup, schedule, wellStateNupcol, reportStepIdx, phase, isInjector);
+                    }
+                } else {
+                    // The subgroup may participate in group control.
+                    bool has_guide_rate = false;
+                    for (Phase phase : all) {
+                        has_guide_rate = has_guide_rate || guide_rate.has(subGroupName, phase);
+                    }
 
-                    if (currentGroupControl != Group::InjectionCMode::FLD
-                        && currentGroupControl != Group::InjectionCMode::NONE) {
-                        // Subgroup is under individual control.
-                        groupTargetReduction[phasePos]
-                            += sumWellRates(subGroup, schedule, wellStateNupcol, reportStepIdx, phasePos, isInjector);
-                    } else {
-                        groupTargetReduction[phasePos] += subGroupTargetReduction[phasePos];
+                    if (!has_guide_rate) {
+                        // Accumulate from this subgroup only if no group guide rate is set for it.
+                        for (int phase = 0; phase < np; phase++) {
+                            groupTargetReduction[phase] += subGroupTargetReduction[phase];
+                        }
                     }
                 }
             } else {
