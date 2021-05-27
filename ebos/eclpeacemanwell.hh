@@ -1762,7 +1762,7 @@ protected:
     std::array<Scalar, numPhases> actualResvRates_;
 
     // The relative weight of the volumetric rate of each fluid
-    Scalar volumetricWeight_[numPhases];
+    std::array<Scalar, numPhases> volumetricWeight_;
 
     // the reference depth for the bottom hole pressure. if not specified otherwise, this
     // is the position of the _highest_ DOF in the well.
