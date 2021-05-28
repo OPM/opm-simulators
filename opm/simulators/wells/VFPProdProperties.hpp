@@ -20,16 +20,14 @@
 #ifndef OPM_AUTODIFF_VFPPRODPROPERTIES_HPP_
 #define OPM_AUTODIFF_VFPPRODPROPERTIES_HPP_
 
-#include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
-#include <opm/material/densead/Math.hpp>
-#include <opm/material/densead/Evaluation.hpp>
-#include <opm/simulators/wells/VFPHelpers.hpp>
-
-#include <vector>
+#include <functional>
 #include <map>
+#include <vector>
 
 
 namespace Opm {
+
+class VFPProdTable;
 
 /**
  * Class which linearly interpolates BHP as a function of rate, tubing head pressure,
@@ -67,31 +65,7 @@ public:
                  const EvalWell& liquid,
                  const EvalWell& vapour,
                  const double& thp,
-                 const double& alq) const {
-
-        //Get the table
-        const VFPProdTable& table = detail::getTable(m_tables, table_id);
-        EvalWell bhp = 0.0 * aqua;
-
-        //Find interpolation variables
-        EvalWell flo = detail::getFlo(table, aqua, liquid, vapour);
-        EvalWell wfr = detail::getWFR(table, aqua, liquid, vapour);
-        EvalWell gfr = detail::getGFR(table, aqua, liquid, vapour);
-
-        //First, find the values to interpolate between
-        //Value of FLO is negative in OPM for producers, but positive in VFP table
-        auto flo_i = detail::findInterpData(-flo.value(), table.getFloAxis());
-        auto thp_i = detail::findInterpData( thp, table.getTHPAxis()); // assume constant
-        auto wfr_i = detail::findInterpData( wfr.value(), table.getWFRAxis());
-        auto gfr_i = detail::findInterpData( gfr.value(), table.getGFRAxis());
-        auto alq_i = detail::findInterpData( alq, table.getALQAxis()); //assume constant
-
-        detail::VFPEvaluation bhp_val = detail::interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
-
-        bhp = (bhp_val.dwfr * wfr) + (bhp_val.dgfr * gfr) - (bhp_val.dflo * flo);
-        bhp.setValue(bhp_val.value);
-        return bhp;
-    }
+                 const double& alq) const;
 
     /**
      * Linear interpolation of bhp as a function of the input parameters

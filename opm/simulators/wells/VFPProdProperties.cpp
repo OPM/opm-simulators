@@ -18,12 +18,13 @@
 */
 
 #include "config.h"
-
 #include <opm/simulators/wells/VFPProdProperties.hpp>
-#include <opm/core/props/BlackoilPhases.hpp>
-#include <opm/common/ErrorMacros.hpp>
+
 #include <opm/material/densead/Math.hpp>
 #include <opm/material/densead/Evaluation.hpp>
+
+#include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
+
 #include <opm/simulators/wells/VFPHelpers.hpp>
 
 
@@ -137,5 +138,56 @@ bhpwithflo(const std::vector<double>& flos,
 void VFPProdProperties::addTable(const VFPProdTable& new_table) {
     this->m_tables.emplace( new_table.getTableNum(), new_table );
 }
+
+template <class EvalWell>
+EvalWell VFPProdProperties::bhp(const int table_id,
+                                const EvalWell& aqua,
+                                const EvalWell& liquid,
+                                const EvalWell& vapour,
+                                const double& thp,
+                                const double& alq) const
+{
+    //Get the table
+    const VFPProdTable& table = detail::getTable(m_tables, table_id);
+    EvalWell bhp = 0.0 * aqua;
+
+    //Find interpolation variables
+    EvalWell flo = detail::getFlo(table, aqua, liquid, vapour);
+    EvalWell wfr = detail::getWFR(table, aqua, liquid, vapour);
+    EvalWell gfr = detail::getGFR(table, aqua, liquid, vapour);
+
+    //First, find the values to interpolate between
+    //Value of FLO is negative in OPM for producers, but positive in VFP table
+    auto flo_i = detail::findInterpData(-flo.value(), table.getFloAxis());
+    auto thp_i = detail::findInterpData( thp, table.getTHPAxis()); // assume constant
+    auto wfr_i = detail::findInterpData( wfr.value(), table.getWFRAxis());
+    auto gfr_i = detail::findInterpData( gfr.value(), table.getGFRAxis());
+    auto alq_i = detail::findInterpData( alq, table.getALQAxis()); //assume constant
+
+    detail::VFPEvaluation bhp_val = detail::interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
+
+    bhp = (bhp_val.dwfr * wfr) + (bhp_val.dgfr * gfr) - (bhp_val.dflo * flo);
+    bhp.setValue(bhp_val.value);
+    return bhp;
+}
+
+#define INSTANCE(...) \
+    template __VA_ARGS__ VFPProdProperties::bhp<__VA_ARGS__>(const int, \
+                                                             const __VA_ARGS__&, const __VA_ARGS__&, const __VA_ARGS__&, \
+                                                             const double&, const double&) const;
+
+INSTANCE(DenseAd::Evaluation<double, -1, 4u>)
+INSTANCE(DenseAd::Evaluation<double, -1, 5u>)
+INSTANCE(DenseAd::Evaluation<double, -1, 6u>)
+INSTANCE(DenseAd::Evaluation<double, -1, 7u>)
+INSTANCE(DenseAd::Evaluation<double, -1, 8u>)
+INSTANCE(DenseAd::Evaluation<double, -1, 9u>)
+INSTANCE(DenseAd::Evaluation<double, -1, 10u>)
+INSTANCE(DenseAd::Evaluation<double, 3, 0u>)
+INSTANCE(DenseAd::Evaluation<double, 4, 0u>)
+INSTANCE(DenseAd::Evaluation<double, 5, 0u>)
+INSTANCE(DenseAd::Evaluation<double, 6, 0u>)
+INSTANCE(DenseAd::Evaluation<double, 7, 0u>)
+INSTANCE(DenseAd::Evaluation<double, 8, 0u>)
 
 }

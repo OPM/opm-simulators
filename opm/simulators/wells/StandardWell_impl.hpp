@@ -23,6 +23,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellInjectionProperties.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/linalg/MatrixBlock.hpp>
+#include <opm/simulators/wells/VFPHelpers.hpp>
 
 #include <algorithm>
 #include <functional>

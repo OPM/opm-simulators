@@ -22,17 +22,16 @@
 
 
 #include "config.h"
-
 #include <opm/simulators/wells/VFPInjProperties.hpp>
-#include <opm/core/props/BlackoilPhases.hpp>
-#include <opm/common/ErrorMacros.hpp>
+
+#include <opm/material/densead/Math.hpp>
+#include <opm/material/densead/Evaluation.hpp>
+
+#include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
 
 #include <opm/simulators/wells/VFPHelpers.hpp>
 
 namespace Opm {
-
-
-
 
 double VFPInjProperties::bhp(int table_id,
                                  const double& aqua,
@@ -44,7 +43,6 @@ double VFPInjProperties::bhp(int table_id,
     detail::VFPEvaluation retval = detail::bhp(table, aqua, liquid, vapour, thp_arg);
     return retval.value;
 }
-
 
 double VFPInjProperties::thp(int table_id,
                              const double& aqua,
@@ -87,5 +85,51 @@ void VFPInjProperties::addTable(const VFPInjTable& new_table) {
     this->m_tables.emplace( new_table.getTableNum(), new_table );
 }
 
+template <class EvalWell>
+EvalWell VFPInjProperties::bhp(const int table_id,
+                               const EvalWell& aqua,
+                               const EvalWell& liquid,
+                               const EvalWell& vapour,
+                               const double& thp) const
+{
+    //Get the table
+    const VFPInjTable& table = detail::getTable(m_tables, table_id);
+    EvalWell bhp = 0.0 * aqua;
+
+    //Find interpolation variables
+    EvalWell flo = detail::getFlo(table, aqua, liquid, vapour);
+
+    //First, find the values to interpolate between
+    //Value of FLO is negative in OPM for producers, but positive in VFP table
+    auto flo_i = detail::findInterpData(flo.value(), table.getFloAxis());
+    auto thp_i = detail::findInterpData( thp, table.getTHPAxis()); // assume constant
+
+    detail::VFPEvaluation bhp_val = detail::interpolate(table, flo_i, thp_i);
+
+    bhp = bhp_val.dflo * flo;
+    bhp.setValue(bhp_val.value); // thp is assumed constant i.e.
+    return bhp;
+}
+
+#define INSTANCE(...) \
+    template __VA_ARGS__ VFPInjProperties::bhp<__VA_ARGS__>(const int, \
+                                                            const __VA_ARGS__&, \
+                                                            const __VA_ARGS__&, \
+                                                            const __VA_ARGS__&, \
+                                                            const double&) const;
+
+INSTANCE(DenseAd::Evaluation<double, -1, 4u>)
+INSTANCE(DenseAd::Evaluation<double, -1, 5u>)
+INSTANCE(DenseAd::Evaluation<double, -1, 6u>)
+INSTANCE(DenseAd::Evaluation<double, -1, 7u>)
+INSTANCE(DenseAd::Evaluation<double, -1, 8u>)
+INSTANCE(DenseAd::Evaluation<double, -1, 9u>)
+INSTANCE(DenseAd::Evaluation<double, -1, 10u>)
+INSTANCE(DenseAd::Evaluation<double, 3, 0u>)
+INSTANCE(DenseAd::Evaluation<double, 4, 0u>)
+INSTANCE(DenseAd::Evaluation<double, 5, 0u>)
+INSTANCE(DenseAd::Evaluation<double, 6, 0u>)
+INSTANCE(DenseAd::Evaluation<double, 7, 0u>)
+INSTANCE(DenseAd::Evaluation<double, 8, 0u>)
 
 } //Namespace Opm

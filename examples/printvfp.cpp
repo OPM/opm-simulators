@@ -31,6 +31,8 @@
 #include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <opm/common/utility/TimeService.hpp>
 
+#include <opm/simulators/wells/VFPHelpers.hpp>
+
 #include <iostream>
 #include <iomanip>
 

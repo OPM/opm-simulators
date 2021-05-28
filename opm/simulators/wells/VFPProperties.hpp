@@ -20,15 +20,15 @@
 #ifndef OPM_AUTODIFF_VFPPROPERTIES_HPP_
 #define OPM_AUTODIFF_VFPPROPERTIES_HPP_
 
-#include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
-
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
 
 #include <map>
 
 namespace Opm {
+
+class VFPInjTable;
+class VFPProdTable;
 
 /**
  * A thin wrapper class that holds one VFPProdProperties and one
