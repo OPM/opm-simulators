@@ -26,6 +26,7 @@
 #endif
 #include "readDeck.hpp"
 
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/OpmLog/EclipsePRTLog.hpp>
 #include <opm/common/utility/String.hpp>
 #include <opm/common/utility/OpmInputError.hpp>
@@ -151,7 +152,9 @@ FileOutputMode setupLogging(int mpi_rank_, const std::string& deck_filename, con
     if (mpi_rank_ == 0) {
         std::shared_ptr<Opm::StreamLog> streamLog = std::make_shared<Opm::StreamLog>(std::cout, Opm::Log::StdoutMessageTypes);
         Opm::OpmLog::addBackend(stdout_log_id, streamLog);
-        streamLog->setMessageFormatter(std::make_shared<Opm::SimpleMessageFormatter>(true));
+
+        bool use_color_coding = OpmLog::stdoutIsTerminal();
+        streamLog->setMessageFormatter(std::make_shared<Opm::SimpleMessageFormatter>(use_color_coding));
     }
     return output;
 }
