@@ -20,24 +20,12 @@
 #ifndef OPM_GASLIFT_STAGE2_HEADER_INCLUDED
 #define OPM_GASLIFT_STAGE2_HEADER_INCLUDED
 
-#include <ebos/eclproblem.hh>
-#include <opm/models/utils/propertysystem.hh>
-#include <opm/models/utils/parametersystem.hh>
 #include <opm/core/props/BlackoilPhases.hpp>
-#include <opm/output/data/Wells.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/GasLiftOpt.hpp>
-#include <opm/simulators/wells/StandardWell.hpp>
-#include <opm/simulators/wells/GasLiftSingleWell.hpp>
-#include <opm/simulators/wells/GasLiftWellState.hpp>
-#include <opm/simulators/utils/DeferredLogger.hpp>
-#include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/GasLiftSingleWellGeneric.hpp>
 
-#include <cassert>
-#include <functional>
-#include <iostream>
+#include <dune/common/version.hh>
+#include <dune/common/parallel/mpihelper.hh>
+
 #include <iterator>
 #include <map>
 #include <memory>
@@ -45,19 +33,26 @@
 #include <string>
 #include <tuple>
 #include <vector>
-#include <fmt/format.h>
 
 namespace Opm
 {
-    template<class TypeTag>
+
+class DeferredLogger;
+class GasLiftOpt;
+class GasLiftWellState;
+class Group;
+class Schedule;
+class WellInterfaceGeneric;
+class WellState;
+
     class GasLiftStage2 {
-        using GasLiftSingleWell = ::Opm::GasLiftSingleWell<TypeTag>;
+        using GasLiftSingleWell = GasLiftSingleWellGeneric;
         using GLiftOptWells = std::map<std::string,std::unique_ptr<GasLiftSingleWell>>;
-        using GLiftProdWells = std::map<std::string,const WellInterface<TypeTag> *>;
+        using GLiftProdWells = std::map<std::string,const WellInterfaceGeneric*>;
         using GLiftWellStateMap = std::map<std::string,std::unique_ptr<GasLiftWellState>>;
         using GradPair = std::pair<std::string, double>;
         using GradPairItr = std::vector<GradPair>::iterator;
-        using GradInfo = typename GasLiftSingleWell::GradInfo;
+        using GradInfo = typename GasLiftSingleWellGeneric::GradInfo;
         using GradMap = std::map<std::string, GradInfo>;
         using MPIComm = typename Dune::MPIHelper::MPICommunicator;
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
@@ -106,7 +101,7 @@ namespace Opm
             const Group &group);
         void getGroupGliftWellsRecursive_(
             const Group &group, std::vector<GasLiftSingleWell *> &wells);
-        std::pair<double, double> getStdWellRates_(const WellInterface<TypeTag> &well);
+        std::pair<double, double> getStdWellRates_(const WellInterfaceGeneric &well);
         void optimizeGroup_(const Group &group);
         void optimizeGroupsRecursive_(const Group &group);
         void recalculateGradientAndUpdateData_(
@@ -216,12 +211,9 @@ namespace Opm
             bool checkGasTarget();
             bool checkOilTarget();
             void updateRates(const std::string &name);
-        private:
         };
     };
 
 } // namespace Opm
-
-#include "GasLiftStage2_impl.hpp"
 
 #endif // OPM_GASLIFT_STAGE2_HEADER_INCLUDED
