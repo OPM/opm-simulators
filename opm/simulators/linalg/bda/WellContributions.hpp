@@ -40,9 +40,6 @@
 namespace Opm
 {
 
-using bda::stdwell_apply_kernel_type;
-using bda::stdwell_apply_no_reorder_kernel_type;
-
 /// This class serves to eliminate the need to include the WellContributions into the matrix (with --matrix-add-well-contributions=true) for the cusparseSolver
 /// If the --matrix-add-well-contributions commandline parameter is true, this class should not be used
 /// So far, StandardWell and MultisegmentWell are supported
@@ -97,8 +94,8 @@ private:
 #if HAVE_OPENCL
     cl::Context *context;
     cl::CommandQueue *queue;
-    stdwell_apply_kernel_type *kernel;
-    stdwell_apply_no_reorder_kernel_type *kernel_no_reorder;
+    bda::stdwell_apply_kernel_type *kernel;
+    bda::stdwell_apply_no_reorder_kernel_type *kernel_no_reorder;
     std::vector<cl::Event> events;
 
     std::unique_ptr<cl::Buffer> d_Cnnzs_ocl, d_Dnnzs_ocl, d_Bnnzs_ocl;
@@ -150,7 +147,8 @@ public:
 #endif
 
 #if HAVE_OPENCL
-    void setKernel(stdwell_apply_kernel_type *kernel_, stdwell_apply_no_reorder_kernel_type *kernel_no_reorder_);
+    void setKernel(bda::stdwell_apply_kernel_type *kernel_,
+                   bda::stdwell_apply_no_reorder_kernel_type *kernel_no_reorder_);
     void setOpenCLEnv(cl::Context *context_, cl::CommandQueue *queue_);
 
     /// Since the rows of the matrix are reordered, the columnindices of the matrixdata is incorrect
