@@ -26,6 +26,7 @@
 
 #include <ebos/equil/equilibrationhelpers.hh>
 #include <ebos/eclproblem.hh>
+#include <ebos/eclwellmanager.hh>
 #include <opm/models/utils/start.hh>
 
 #include <opm/grid/UnstructuredGrid.h>
@@ -67,17 +68,25 @@
 
 namespace Opm::Properties {
 namespace TTag {
+
 struct TestEclOutputTypeTag {
     using InheritsFrom = std::tuple<EclBaseProblem, BlackOilModel>;
 };
 }
+
 template<class TypeTag>
 struct EnableGravity<TypeTag, TTag::TestEclOutputTypeTag> {
     static constexpr bool value = false;
 };
+
 template<class TypeTag>
 struct EnableAsyncEclOutput<TypeTag, TTag::TestEclOutputTypeTag> {
     static constexpr bool value = false;
+};
+
+template<class TypeTag>
+struct EclWellModel<TypeTag, TTag::TestEclOutputTypeTag> {
+    using type = EclWellManager<TypeTag>;
 };
 
 } // namespace Opm::Properties

@@ -53,7 +53,6 @@
 #include "eclcpgridvanguard.hh"
 #endif
 
-#include "eclwellmanager.hh"
 #include "eclequilinitializer.hh"
 #include "eclwriter.hh"
 #include "ecloutputblackoilmodule.hh"
@@ -305,12 +304,6 @@ public:
 template<class TypeTag>
 struct EclAquiferModel<TypeTag, TTag::EclBaseProblem> {
     using type = EclBaseAquiferModel<TypeTag>;
-};
-
-// use the built-in proof of concept well model by default
-template<class TypeTag>
-struct EclWellModel<TypeTag, TTag::EclBaseProblem> {
-    using type = EclWellManager<TypeTag>;
 };
 
 // Enable aquifers by default in experimental mode
