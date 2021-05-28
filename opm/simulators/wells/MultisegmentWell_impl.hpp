@@ -1924,13 +1924,13 @@ namespace Opm
         // TODO: we might be able to add member variables to store these values, then we update well state
         // after converged
         const auto hydro_pressure_drop = getHydroPressureLoss(seg);
-        well_state.segPressDropHydroStatic()[top_segment_index + seg] = hydro_pressure_drop.value();
+        well_state.segPressDropHydroStatic(index_of_well_)[seg] = hydro_pressure_drop.value();
         pressure_equation -= hydro_pressure_drop;
 
         if (frictionalPressureLossConsidered()) {
             const auto friction_pressure_drop = getFrictionPressureLoss(seg);
             pressure_equation -= friction_pressure_drop;
-            well_state.segPressDropFriction()[top_segment_index + seg] = friction_pressure_drop.value();
+            well_state.segPressDropFriction(index_of_well_)[seg] = friction_pressure_drop.value();
         }
 
         resWell_[seg][SPres] = pressure_equation.value();
@@ -2043,8 +2043,7 @@ namespace Opm
         const double sign = mass_rate < 0. ? 1.0 : - 1.0;
         accelerationPressureLoss *= sign;
 
-        auto top_segment_index = well_state.topSegmentIndex(this->index_of_well_);
-        well_state.segPressDropAcceleration()[top_segment_index + seg] = accelerationPressureLoss.value();
+        well_state.segPressDropAcceleration(index_of_well_)[seg] = accelerationPressureLoss.value();
 
         resWell_[seg][SPres] -= accelerationPressureLoss.value();
         duneD_[seg][seg][SPres][SPres] -= accelerationPressureLoss.derivative(SPres + numEq);
@@ -2704,10 +2703,13 @@ namespace Opm
                 assemblePressureEq(seg, unit_system, well_state, deferred_logger);
             }
 
-            auto top_segment_index = well_state.topSegmentIndex(index_of_well_);
-            well_state.segPressDrop()[top_segment_index + seg] = well_state.segPressDropHydroStatic()[top_segment_index + seg] +
-                                                                 well_state.segPressDropFriction()[top_segment_index + seg] +
-                                                                 well_state.segPressDropAcceleration()[top_segment_index + seg];
+            auto seg_press_drop = well_state.segPressDrop(index_of_well_);
+            auto seg_press_friction = well_state.segPressDropFriction(index_of_well_);
+            auto seg_press_static = well_state.segPressDropHydroStatic(index_of_well_);
+            auto seg_press_accel = well_state.segPressDropAcceleration(index_of_well_);
+            seg_press_drop[seg] = seg_press_static[seg] +
+                                  seg_press_friction[seg] +
+                                  seg_press_accel[seg];
         }
     }
 
@@ -3261,8 +3263,7 @@ namespace Opm
             }
         }
         pressure_equation = pressure_equation - icd_pressure_drop;
-        auto top_segment_index = well_state.topSegmentIndex(this->index_of_well_);
-        well_state.segPressDropFriction()[top_segment_index + seg] = icd_pressure_drop.value();
+        well_state.segPressDropFriction(index_of_well_)[seg] = icd_pressure_drop.value();
 
         const int seg_upwind = upwinding_segments_[seg];
         resWell_[seg][SPres] = pressure_equation.value();

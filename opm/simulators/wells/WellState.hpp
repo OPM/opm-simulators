@@ -217,44 +217,52 @@ public:
         return &seg_press_[top_segment_index];
     }
 
-    std::vector<double>& segPressDrop()
+    double * segPressDrop(std::size_t well_index)
     {
-        return seg_pressdrop_;
+        const int top_segment_index = this->top_segment_index_[well_index];
+        return &seg_pressdrop_[top_segment_index];
     }
 
-    const std::vector<double>& segPressDrop() const
+    const double * segPressDrop(std::size_t well_index) const
     {
-        return seg_pressdrop_;
+        const int top_segment_index = this->top_segment_index_[well_index];
+        return &seg_pressdrop_[top_segment_index];
     }
 
-    std::vector<double>& segPressDropFriction()
+    double* segPressDropFriction(std::size_t well_index)
     {
-        return seg_pressdrop_friction_;
+        const int top_segment_index = this->top_segment_index_[well_index];
+        return &seg_pressdrop_friction_[top_segment_index];
     }
 
-    const std::vector<double>& segPressDropFriction() const
+    const double* segPressDropFriction(std::size_t well_index) const
     {
-        return seg_pressdrop_friction_;
+        const int top_segment_index = this->top_segment_index_[well_index];
+        return &seg_pressdrop_friction_[top_segment_index];
     }
 
-    std::vector<double>& segPressDropHydroStatic()
+    double* segPressDropHydroStatic(std::size_t well_index)
     {
-        return seg_pressdrop_hydorstatic_;
+        const int top_segment_index = this->top_segment_index_[well_index];
+        return &seg_pressdrop_hydorstatic_[top_segment_index];
     }
 
-    const std::vector<double>& segPressDropHydroStatic() const
+    const double* segPressDropHydroStatic(std::size_t well_index) const
     {
-        return seg_pressdrop_hydorstatic_;
+        const int top_segment_index = this->top_segment_index_[well_index];
+        return &seg_pressdrop_hydorstatic_[top_segment_index];
     }
 
-    std::vector<double>& segPressDropAcceleration()
+    double * segPressDropAcceleration(std::size_t well_index)
     {
-        return seg_pressdrop_acceleration_;
+        const int top_segment_index = this->top_segment_index_[well_index];
+        return &seg_pressdrop_acceleration_[top_segment_index];
     }
 
-    const std::vector<double>& segPressDropAcceleration() const
+    const double* segPressDropAcceleration(std::size_t well_index) const
     {
-        return seg_pressdrop_acceleration_;
+        const int top_segment_index = this->top_segment_index_[well_index];
+        return &seg_pressdrop_acceleration_[top_segment_index];
     }
 
     int numSegment() const
