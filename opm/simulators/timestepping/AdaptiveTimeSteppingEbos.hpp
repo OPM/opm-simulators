@@ -18,6 +18,8 @@
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/common/Exceptions.hpp>
 
+#include <boost/date_time.hpp>
+
 namespace Opm::Properties {
 
 namespace TTag {

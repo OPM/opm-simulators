@@ -347,6 +347,11 @@ public:
         return cellCenterDepth_[globalSpaceIdx];
     }
 
+    const std::vector<Scalar>& cellCenterDepths() const
+    {
+        return cellCenterDepth_;
+    }
+
     /*!
      * \brief Returns the thickness of a degree of freedom [m]
      *

@@ -279,7 +279,7 @@ public:
             {"SSOLVENT" , UnitSystem::measure::identity, enableSolvent},
             {"RS", UnitSystem::measure::gas_oil_ratio, FluidSystem::enableDissolvedGas()},
             {"RV", UnitSystem::measure::oil_gas_ratio, FluidSystem::enableVaporizedOil()},
-            {"SOMAX", UnitSystem::measure::identity, simulator_.problem().vapparsActive()},
+            {"SOMAX", UnitSystem::measure::identity, simulator_.problem().vapparsActive(simulator_.episodeIndex())},
             {"PCSWM_OW", UnitSystem::measure::identity, enableHysteresis},
             {"KRNSW_OW", UnitSystem::measure::identity, enableHysteresis},
             {"PCSWM_GO", UnitSystem::measure::identity, enableHysteresis},
