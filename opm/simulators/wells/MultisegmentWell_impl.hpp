@@ -1917,7 +1917,6 @@ namespace Opm
 
         // for top segment, the well control equation will be used.
         EvalWell pressure_equation = getSegmentPressure(seg);
-        auto top_segment_index = well_state.topSegmentIndex(this->index_of_well_);
 
         // we need to handle the pressure difference between the two segments
         // we only consider the hydrostatic pressure loss first
