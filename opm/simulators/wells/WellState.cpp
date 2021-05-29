@@ -236,9 +236,13 @@ void WellState::init(const std::vector<double>& cellPressures,
     // call init on base class
     this->base_init(cellPressures, wells_ecl, parallel_well_info, well_perf_data, summary_state);
     this->global_well_info = std::make_optional<GlobalWellInfo>( schedule, report_step, wells_ecl );
+    for (const auto& wname : schedule.wellNames(report_step))
+    {
+        well_rates.insert({wname, std::make_pair(false, std::vector<double>(this->numPhases()))});
+    }
     for (const auto& winfo: parallel_well_info)
     {
-        well_rates.insert({winfo->name(), std::make_pair(winfo->isOwner(), std::vector<double>(this->numPhases()))});
+        well_rates[winfo->name()].first = winfo->isOwner();
     }
 
     const int nw = wells_ecl.size();
