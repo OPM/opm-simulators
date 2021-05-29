@@ -72,7 +72,7 @@ public:
         }
     }
 
-    void initFromRestart([[maybe_unused]]const std::vector<data::AquiferData>& aquiferSoln)
+    void initFromRestart([[maybe_unused]]const data::Aquifers& aquiferSoln)
     {
         // NOT handling Restart for now
     }

@@ -72,7 +72,7 @@ public:
      *        aquifer pressure and the base run's total produced liquid
      *        volume from the model's aquifers.
      */
-    void initFromRestart(const std::vector<data::AquiferData>& aquiferSoln OPM_UNUSED)
+    void initFromRestart(const data::Aquifers& aquiferSoln OPM_UNUSED)
     {
         throw std::logic_error {
             "Initialization from restart data not supported "

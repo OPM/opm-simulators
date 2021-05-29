@@ -24,6 +24,7 @@
 
 #include <boost/test/unit_test.hpp>
 
+#include <memory>
 #include <tuple>
 #include <utility>
 
@@ -116,6 +117,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/TableContainer.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableSchema.hpp>
+#include <opm/output/data/Aquifer.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
 #include <opm/simulators/utils/ParallelRestart.hpp>
 #include <ebos/eclmpiserializer.hh>
@@ -260,6 +262,39 @@ Opm::data::NodeData getNodeData()
         123.457
     };
 }
+
+Opm::data::AquiferData getFetkovichAquifer(const int aquiferID = 1)
+{
+    auto aquifer = Opm::data::AquiferData {
+        aquiferID, 123.456, 56.78, 9.0e10, 290.0, 2515.5, Opm::data::AquiferType::Fetkovich
+    };
+
+    aquifer.aquFet = std::make_shared<Opm::data::FetkovichData>();
+
+    aquifer.aquFet->initVolume = 1.23;
+    aquifer.aquFet->prodIndex = 45.67;
+    aquifer.aquFet->timeConstant = 890.123;
+
+    return aquifer;
+}
+
+Opm::data::AquiferData getCarterTracyAquifer(const int aquiferID = 5)
+{
+    auto aquifer = Opm::data::AquiferData {
+        aquiferID, 123.456, 56.78, 9.0e10, 290.0, 2515.5, Opm::data::AquiferType::CarterTracy
+    };
+
+    aquifer.aquCT = std::make_shared<Opm::data::CarterTracyData>();
+
+    aquifer.aquCT->timeConstant = 987.65;
+    aquifer.aquCT->influxConstant = 43.21;
+    aquifer.aquCT->waterDensity = 1014.5;
+    aquifer.aquCT->waterViscosity = 0.00318;
+    aquifer.aquCT->dimensionless_time = 42.0;
+    aquifer.aquCT->dimensionless_pressure = 2.34;
+
+    return aquifer;
+}
 }
 
 
@@ -311,6 +346,35 @@ BOOST_AUTO_TEST_CASE(Rates)
     Opm::data::Rates val1 = getRates();
     auto val2 = PackUnpack(val1);
     DO_CHECKS(data::Rates)
+}
+
+BOOST_AUTO_TEST_CASE(dataFetkovichData)
+{
+    const auto val1 = getFetkovichAquifer();
+    const auto val2 = PackUnpack(val1);
+
+    DO_CHECKS(data::FetkovichData)
+}
+
+BOOST_AUTO_TEST_CASE(dataCarterTracyData)
+{
+    const auto val1 = getCarterTracyAquifer();
+    const auto val2 = PackUnpack(val1);
+
+    DO_CHECKS(data::CarterTracyData)
+}
+
+BOOST_AUTO_TEST_CASE(dataAquifers)
+{
+    const auto val1 = Opm::data::Aquifers {
+        { 1, getFetkovichAquifer(1) },
+        { 4, getFetkovichAquifer(4) },
+        { 5, getCarterTracyAquifer(5) },
+    };
+
+    const auto val2 = PackUnpack(val1);
+
+    DO_CHECKS(data::Aquifers)
 }
 
 BOOST_AUTO_TEST_CASE(dataGuideRateValue)
@@ -436,8 +500,13 @@ BOOST_AUTO_TEST_CASE(RestartValue)
         }
     };
 
+    auto aquifers = Opm::data::Aquifers {
+        { 2, getCarterTracyAquifer(2) },
+        {11, getFetkovichAquifer(11) },
+    };
+
     const auto val1 = Opm::RestartValue {
-        getSolution(), std::move(wells1), std::move(grp_nwrk_1)
+        getSolution(), std::move(wells1), std::move(grp_nwrk_1), std::move(aquifers)
     };
     const auto val2 = PackUnpack(val1);
 

@@ -82,6 +82,7 @@ protected:
                        data::Solution&&              localCellData,
                        data::Wells&&                 localWellData,
                        data::GroupAndNetworkValues&& localGroupAndNetworkData,
+                       data::Aquifers&&              localAquiferData,
                        const Action::State& actionState,
                        const UDQState& udqState,
                        const SummaryState& summaryState,

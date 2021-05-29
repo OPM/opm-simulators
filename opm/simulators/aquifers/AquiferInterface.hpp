@@ -88,19 +88,16 @@ public:
     {
     }
 
-    void initFromRestart(const std::vector<data::AquiferData>& aquiferSoln)
+    void initFromRestart(const data::Aquifers& aquiferSoln)
     {
-        auto xaqPos
-            = std::find_if(aquiferSoln.begin(), aquiferSoln.end(), [this](const data::AquiferData& xaq) -> bool {
-                   return xaq.aquiferID == this->aquiferID();
-              });
-
+        auto xaqPos = aquiferSoln.find(this->aquiferID());
         if (xaqPos == aquiferSoln.end())
             return;
 
-        this->assignRestartData(*xaqPos);
-        this->W_flux_ = xaqPos->volume;
-        this->pa0_ = xaqPos->initPressure;
+        this->assignRestartData(xaqPos->second);
+
+        this->W_flux_ = xaqPos->second.volume;
+        this->pa0_ = xaqPos->second.initPressure;
         this->solution_set_from_restart_ = true;
     }
 

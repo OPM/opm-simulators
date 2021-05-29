@@ -141,7 +141,6 @@ public:
     /*!
      * \brief collect and pass data and pass it to eclIO writer
      */
-
     void evalSummaryState(bool isSubStep)
     {
         const int reportStepNum = simulator_.episodeIndex() + 1;
@@ -176,7 +175,7 @@ public:
             .groupAndNetworkData(reportStepNum, simulator_.vanguard().schedule());
 
 
-        const auto localAquiferData = simulator_.problem().mutableAquiferModel().aquiferData();
+        const auto localAquiferData = simulator_.problem().aquiferModel().aquiferData();
 
         this->prepareLocalCellData(isSubStep, reportStepNum);
 
@@ -221,7 +220,6 @@ public:
                           eclOutputModule_->initialInplace());
     }
 
-
     void writeOutput(bool isSubStep)
     {
         const int reportStepNum = simulator_.episodeIndex() + 1;
@@ -233,6 +231,8 @@ public:
         auto localWellData = simulator_.problem().wellModel().wellData();
         auto localGroupAndNetworkData = simulator_.problem().wellModel()
             .groupAndNetworkData(reportStepNum, simulator_.vanguard().schedule());
+
+        auto localAquiferData = simulator_.problem().aquiferModel().aquiferData();
 
         data::Solution localCellData = {};
         if (! isSubStep) {
@@ -248,7 +248,7 @@ public:
                                            eclOutputModule_->getWBPData(),
                                            localWellData,
                                            localGroupAndNetworkData,
-                                           {});
+                                           localAquiferData);
         }
 
         if (this->collectToIORank_.isIORank()) {
@@ -258,6 +258,7 @@ public:
                                 std::move(localCellData),
                                 std::move(localWellData),
                                 std::move(localGroupAndNetworkData),
+                                std::move(localAquiferData),
                                 this->actionState(),
                                 this->udqState(),
                                 this->summaryState(),

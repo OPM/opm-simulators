@@ -83,8 +83,9 @@ public:
         data.volume = this->W_flux_.value();
         data.initPressure = this->pa0_;
         data.type = data::AquiferType::Fetkovich;
-        // Not handling std::shared_ptr<FetkovichData> aquFet for now,
-        // because we do not need it yet
+
+        data.aquFet = std::make_shared<data::FetkovichData>();
+
         return data;
     }
 

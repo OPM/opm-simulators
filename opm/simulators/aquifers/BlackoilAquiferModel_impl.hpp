@@ -59,19 +59,21 @@ BlackoilAquiferModel<TypeTag>::initialSolutionApplied()
 
 template <typename TypeTag>
 void
-BlackoilAquiferModel<TypeTag>::initFromRestart(const std::vector<data::AquiferData>& aquiferSoln)
+BlackoilAquiferModel<TypeTag>::initFromRestart(const data::Aquifers& aquiferSoln)
 {
-    if (aquiferCarterTracyActive()) {
-        for (auto& aquifer : aquifers_CarterTracy) {
+    if (this->aquiferCarterTracyActive()) {
+        for (auto& aquifer : this->aquifers_CarterTracy) {
             aquifer.initFromRestart(aquiferSoln);
         }
     }
-    if (aquiferFetkovichActive()) {
-        for (auto& aquifer : aquifers_Fetkovich) {
+
+    if (this->aquiferFetkovichActive()) {
+        for (auto& aquifer : this->aquifers_Fetkovich) {
             aquifer.initFromRestart(aquiferSoln);
         }
     }
-    if (aquiferNumericalActive()) {
+
+    if (this->aquiferNumericalActive()) {
         for (auto& aquifer : this->aquifers_numerical) {
             aquifer.initFromRestart(aquiferSoln);
         }
