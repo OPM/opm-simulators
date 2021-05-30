@@ -60,6 +60,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/GlobalWellInfo.cpp
   opm/simulators/wells/GroupState.cpp
   opm/simulators/wells/ParallelWellInfo.cpp
+  opm/simulators/wells/SegmentState.cpp
   opm/simulators/wells/TargetCalculator.cpp
   opm/simulators/wells/VFPHelpers.cpp
   opm/simulators/wells/VFPProdProperties.cpp
@@ -205,6 +206,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/core/props/phaseUsageFromDeck.hpp
   opm/core/props/satfunc/RelpermDiagnostics.hpp
   opm/simulators/timestepping/SimulatorReport.hpp
+  opm/simulators/wells/SegmentState.hpp
   opm/simulators/wells/WellContainer.hpp
   opm/simulators/aquifers/AquiferInterface.hpp
   opm/simulators/aquifers/AquiferCarterTracy.hpp
