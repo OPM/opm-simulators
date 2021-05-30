@@ -541,7 +541,6 @@ void WellState::init(const std::vector<double>& cellPressures,
         }
         //seg_rates_ = wellRates();
         seg_rates_.assign(nw*np, 0);
-        seg_pressdrop_acceleration_.assign(nw, 0.);
     }
 
     updateWellsDefaultALQ(wells_ecl);
@@ -946,7 +945,6 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
     assert(int(seg_press_.size()) == nseg_);
     assert(int(seg_rates_.size()) == nseg_ * numPhases() );
 
-    seg_pressdrop_acceleration_.assign(nseg_, 0.);
 
     if (prev_well_state && !prev_well_state->wellMap().empty()) {
         const auto& end = prev_well_state->wellMap().end();
@@ -1161,9 +1159,9 @@ WellState::reportSegmentResults(const PhaseUsage& pu,
         auto& segpress = seg_res.pressures;
         segpress[Value::Pressure] = this->segPress(well_id)[seg_ix];
         segpress[Value::PDrop] = this->segPressDrop(well_id, seg_ix);
-        segpress[Value::PDropAccel] = this->segPressDropAcceleration(well_id)[seg_ix];
         segpress[Value::PDropHydrostatic] = segments.pressure_drop_hydrostatic[seg_ix];
         segpress[Value::PDropFriction] = segments.pressure_drop_friction[seg_ix];
+        segpress[Value::PDropAccel] = segments.pressure_drop_accel[seg_ix];
     }
 
     const auto segment_rates = this->segRates(well_id);
