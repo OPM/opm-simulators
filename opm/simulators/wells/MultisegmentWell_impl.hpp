@@ -278,14 +278,14 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     scaleSegmentRatesWithWellRates(WellState& well_state) const
     {
-        auto segment_rates = well_state.segRates(index_of_well_);
+        auto& segments = well_state.segments(index_of_well_);
         for (int phase = 0; phase < number_of_phases_; ++phase) {
-            const double unscaled_top_seg_rate = segment_rates[phase];
+            const double unscaled_top_seg_rate = segments.rates[0 + phase];
             const double well_phase_rate = well_state.wellRates(index_of_well_)[phase];
             if (std::abs(unscaled_top_seg_rate) > 1e-12)
             {
                 for (int seg = 0; seg < numberOfSegments(); ++seg) {
-                    segment_rates[this->number_of_phases_*seg + phase] *= well_phase_rate/unscaled_top_seg_rate;
+                    segments.rates[this->number_of_phases_*seg + phase] *= well_phase_rate/unscaled_top_seg_rate;
                 }
             } else {
                 // for newly opened wells, the unscaled rate top segment rate is zero
@@ -301,10 +301,8 @@ namespace Opm
                     perforation_rates[number_of_phases_ * perf + phase] = well_index_[perf] * perf_phaserate_scaled;
                 }
 
-                std::vector<double> rates;
                 WellState::calculateSegmentRates(segment_inlets_, segment_perforations_, perforation_rates, number_of_phases_,
-                                                 0, rates);
-                std::copy(rates.begin(), rates.end(), segment_rates);
+                                                 0, segments.rates);
             }
         }
     }
@@ -316,7 +314,7 @@ namespace Opm
     {
         //scale segment pressures
         const double bhp = well_state.bhp(index_of_well_);
-        auto segment_pressure = well_state.segPress(index_of_well_);
+        auto& segment_pressure = well_state.segments(index_of_well_).pressure;
         const double unscaled_top_seg_pressure = segment_pressure[0];
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
             segment_pressure[seg] *= bhp/unscaled_top_seg_pressure;
@@ -718,16 +716,15 @@ namespace Opm
 
         const Well& well = Base::wellEcl();
 
-        // the index of the top segment in the WellState
-        const auto segment_rates = well_state.segRates(index_of_well_);
-        const auto segment_pressure = well_state.segPress(index_of_well_);
+        const auto& segments = well_state.segments(index_of_well_);
+        const auto& segment_rates = segments.rates;
         const PhaseUsage& pu = phaseUsage();
 
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
             // calculate the total rate for each segment
             double total_seg_rate = 0.0;
             // the segment pressure
-            primary_variables_[seg][SPres] = segment_pressure[seg];
+            primary_variables_[seg][SPres] = segments.pressure[seg];
             // TODO: under what kind of circustances, the following will be wrong?
             // the definition of g makes the gas phase is always the last phase
             for (int p = 0; p < number_of_phases_; p++) {
@@ -2337,8 +2334,7 @@ namespace Opm
         assert( FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) );
         const int oil_pos = pu.phase_pos[Oil];
 
-        auto segment_rates = well_state.segRates(this->index_of_well_);
-        auto segment_pressure = well_state.segPress(this->index_of_well_);
+        auto& segments = well_state.segments(this->index_of_well_);
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
             std::vector<double> fractions(number_of_phases_, 0.0);
             fractions[oil_pos] = 1.0;
@@ -2371,16 +2367,16 @@ namespace Opm
             const double g_total = primary_variables_[seg][GTotal];
             for (int p = 0; p < number_of_phases_; ++p) {
                 const double phase_rate = g_total * fractions[p];
-                segment_rates[seg*this->number_of_phases_ + p] = phase_rate;
+                segments.rates[seg*this->number_of_phases_ + p] = phase_rate;
                 if (seg == 0) { // top segment
                     well_state.wellRates(index_of_well_)[p] = phase_rate;
                 }
             }
 
             // update the segment pressure
-            segment_pressure[seg] = primary_variables_[seg][SPres];
+            segments.pressure[seg] = primary_variables_[seg][SPres];
             if (seg == 0) { // top segment
-                well_state.update_bhp(index_of_well_, segment_pressure[seg]);
+                well_state.update_bhp(index_of_well_, segments.pressure[seg]);
             }
         }
         updateThp(well_state, deferred_logger);

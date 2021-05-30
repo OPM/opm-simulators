@@ -263,7 +263,6 @@ void WellState::init(const std::vector<double>& cellPressures,
     well_reservoir_rates_.clear();
     well_dissolved_gas_rates_.clear();
     well_vaporized_oil_rates_.clear();
-
     this->events_.clear();
     {
         const auto& wg_events = schedule[report_step].wellgroup_events();
@@ -533,14 +532,10 @@ void WellState::init(const std::vector<double>& cellPressures,
         nseg_ = nw;
         top_segment_index_.resize(nw);
         seg_number_.resize(nw);
-        seg_press_.resize(nw);
         for (int w = 0; w < nw; ++w) {
             top_segment_index_[w] = w;
             seg_number_[w] = 1; // Top segment is segment #1
-            this->seg_press_[w] = this->bhp(w);
         }
-        //seg_rates_ = wellRates();
-        seg_rates_.assign(nw*np, 0);
     }
 
     updateWellsDefaultALQ(wells_ecl);
@@ -828,8 +823,6 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
     const int np = pu.num_phases;
 
     top_segment_index_.clear();
-    seg_press_.clear();
-    seg_rates_.clear();
     seg_number_.clear();
     nseg_ = 0;
 
@@ -842,21 +835,18 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
         const int connpos = well_info[1];
         const int num_perf_this_well = well_info[2];
 
-        const auto& rates = this->wellRates(w);
         top_segment_index_.push_back(nseg_);
         if ( !well_ecl.isMultiSegment() ) { // not multi-segment well
             nseg_ += 1;
             seg_number_.push_back(1); // Assign single segment (top) as number 1.
-            seg_press_.push_back(bhp(w));
-            for (int p = 0; p < np; ++p) {
-                seg_rates_.push_back(rates[p]);
-            }
         } else { // it is a multi-segment well
             const WellSegments& segment_set = well_ecl.getSegments();
             // assuming the order of the perforations in well_ecl is the same with Wells
             const WellConnections& completion_set = well_ecl.getConnections();
             // number of segment for this single well
             this->segment_state.update(w, SegmentState{np, segment_set});
+            auto& segments  = this->segments(w);
+
             const int well_nseg = segment_set.size();
             int n_activeperf = 0;
             nseg_ += well_nseg;
@@ -911,10 +901,8 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
 
                 const auto * perf_rates = &perfPhaseRates()[np*start_perf];
                 std::vector<double> perforation_rates(perf_rates, perf_rates + num_perf_this_well*np);
-                std::vector<double> segment_rates;
 
-                calculateSegmentRates(segment_inlets, segment_perforations, perforation_rates, np, 0 /* top segment */, segment_rates);
-                std::copy(segment_rates.begin(), segment_rates.end(), std::back_inserter(seg_rates_));
+                calculateSegmentRates(segment_inlets, segment_perforations, perforation_rates, np, 0 /* top segment */, segments.rates);
             }
 
             // for the segment pressure, the segment pressure is the same with the first perforation belongs to the segment
@@ -924,27 +912,24 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
             // improved during the solveWellEq process
             {
                 // top segment is always the first one, and its pressure is the well bhp
-                seg_press_.push_back(bhp(w));
-                const int top_segment = top_segment_index_[w];
+                auto& segment_pressure = segments.pressure;
+                segment_pressure[0] = this->bhp(w);
+
                 const auto& perf_press = this->perfPress(w);
                 for (int seg = 1; seg < well_nseg; ++seg) {
                     if ( !segment_perforations[seg].empty() ) {
                         const int first_perf = segment_perforations[seg][0];
-                        seg_press_.push_back(perf_press[first_perf]);
+                        segment_pressure[seg] = perf_press[first_perf];
                     } else {
                         // seg_press_.push_back(bhp); // may not be a good decision
                         // using the outlet segment pressure // it needs the ordering is correct
                         const int outlet_seg = segment_set[seg].outletSegment();
-                        seg_press_.push_back(
-                            seg_press_[top_segment + segment_set.segmentNumberToIndex(outlet_seg)]);
+                        segment_pressure[seg] = segment_pressure[ segment_set.segmentNumberToIndex(outlet_seg) ];
                     }
                 }
             }
         }
     }
-    assert(int(seg_press_.size()) == nseg_);
-    assert(int(seg_rates_.size()) == nseg_ * numPhases() );
-
 
     if (prev_well_state && !prev_well_state->wellMap().empty()) {
         const auto& end = prev_well_state->wellMap().end();
@@ -953,38 +938,36 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
             if (well.getStatus() == Well::Status::SHUT)
                 continue;
 
-            const auto& it = prev_well_state->wellMap().find( wells_ecl[w].name() );
+            const auto& wname = wells_ecl[w].name();
+            const auto& it = prev_well_state->wellMap().find(wname);
             if (it != end) { // the well is found in the prev_well_state
                 // TODO: the well with same name can change a lot, like they might not have same number of segments
                 // we need to handle that later.
                 // for now, we just copy them.
                 const int old_index_well = (*it).second[0];
-                const int new_index_well = w;
                 if (prev_well_state->status_[old_index_well] == Well::Status::SHUT) {
                     continue;
                 }
+                this->segment_state.copy_welldata(prev_well_state->segment_state, wname);
 
-                const int new_top_segment_index = topSegmentIndex(new_index_well);
-                int number_of_segment = 0;
-                // if it is the last well in list
-                if (new_index_well == int(top_segment_index_.size()) - 1) {
-                    number_of_segment = nseg_ - new_top_segment_index;
-                } else {
-                    number_of_segment = topSegmentIndex(new_index_well + 1) - new_top_segment_index;
-                }
+                //const int new_top_segment_index = topSegmentIndex(new_index_well);
+                //int number_of_segment = 0;
+                //// if it is the last well in list
+                //if (new_index_well == int(top_segment_index_.size()) - 1) {
+                //    number_of_segment = nseg_ - new_top_segment_index;
+                //} else {
+                //    number_of_segment = topSegmentIndex(new_index_well + 1) - new_top_segment_index;
+                //}
 
-                auto segment_rates = this->segRates(w);
-                auto segment_pressure = this->segPress(w);
+                //auto& segments = this->segments(w);
+                //const auto& prev_segments = this->segments(w);
 
-                const auto prev_segment_rates = prev_well_state->segRates(old_index_well);
-                const auto prev_segment_pressure = prev_well_state->segPress(old_index_well);
+                //for (int seg=0; seg < number_of_segment; ++seg) {
+                //    for (int p = 0; p < np; ++p)
+                //        segments.rates[seg*np + p] = prev_segments.rates[seg*np + p];
 
-                for (int seg=0; seg < number_of_segment; ++seg) {
-                    for (int p = 0; p < np; ++p)
-                        segment_rates[seg*np + p] = prev_segment_rates[seg*np + p];
-
-                    segment_pressure[seg] = prev_segment_pressure[seg];
-                }
+                //    segments.pressure[seg] = prev_segments.pressure[seg];
+                //}
             }
         }
     }
@@ -1000,10 +983,6 @@ WellState::calculateSegmentRates(const std::vector<std::vector<int>>& segment_in
     // the rate of the segment equals to the sum of the contribution from the perforations and inlet segment rates.
     // the first segment is always the top segment, its rates should be equal to the well rates.
     assert(segment_inlets.size() == segment_perforations.size());
-    const int well_nseg = segment_inlets.size();
-    if (segment == 0) { // beginning the calculation
-        segment_rates.resize(np * well_nseg, 0.0);
-    }
     // contributions from the perforations belong to this segment
     for (const int& perf : segment_perforations[segment]) {
         for (int p = 0; p < np; ++p) {
@@ -1157,14 +1136,14 @@ WellState::reportSegmentResults(const PhaseUsage& pu,
     {
         using Value = data::SegmentPressures::Value;
         auto& segpress = seg_res.pressures;
-        segpress[Value::Pressure] = this->segPress(well_id)[seg_ix];
+        segpress[Value::Pressure] = segments.pressure[seg_ix];
         segpress[Value::PDrop] = segments.pressure_drop(seg_ix);
         segpress[Value::PDropHydrostatic] = segments.pressure_drop_hydrostatic[seg_ix];
         segpress[Value::PDropFriction] = segments.pressure_drop_friction[seg_ix];
         segpress[Value::PDropAccel] = segments.pressure_drop_accel[seg_ix];
     }
 
-    const auto rate = &this->segRates(well_id)[seg_ix * pu.num_phases];
+    const auto * rate = &segments.rates[seg_ix * pu.num_phases];
     if (pu.phase_used[Water]) {
         seg_res.rates.set(data::Rates::opt::wat,
                           rate[pu.phase_pos[Water]]);

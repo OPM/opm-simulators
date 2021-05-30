@@ -171,10 +171,9 @@ namespace {
             if (! well.isMultiSegment()) {
                 continue;
             }
-
             const auto  pressTop = 100.0 * wellID;
-            auto* press = wstate.segPress(wellID);
-            press[0] = pressTop;
+            auto& segments = wstate.segments(wellID);
+            segments.pressure[0] = pressTop;
 
             const auto& segSet = well.getSegments();
             const auto  nSeg   = segSet.size();
@@ -182,7 +181,7 @@ namespace {
             for (auto segID = 0*nSeg + 1; segID < nSeg; ++segID) {
                 // One-based numbering scheme for segments.
                 const auto segNo = segSet[segID].segmentNumber();
-                press[segNo - 1] = pressTop + 1.0*(segNo - 1);
+                segments.pressure[segNo - 1] = pressTop + 1.0*(segNo - 1);
             }
         }
     }
@@ -213,11 +212,11 @@ namespace {
             }
 
             const auto  rateTop  = 1000.0 * wellID;
-            auto segRates = wstate.segRates(wellID);
+            auto& segments = wstate.segments(wellID);
 
-            if (wat) { segRates[iw] = rateTop; }
-            if (oil) { segRates[io] = rateTop; }
-            if (gas) { segRates[ig] = rateTop; }
+            if (wat) { segments.rates[iw] = rateTop; }
+            if (oil) { segments.rates[io] = rateTop; }
+            if (gas) { segments.rates[ig] = rateTop; }
 
             const auto& segSet = well.getSegments();
             const auto  nSeg   = segSet.size();
@@ -226,7 +225,7 @@ namespace {
                 // One-based numbering scheme for segments.
                 const auto segNo = segSet[segID].segmentNumber();
 
-                auto* rates = &segRates[(segNo - 1) * np];
+                auto* rates = &segments.rates[(segNo - 1) * np];
 
                 if (wat) { rates[iw] = rateTop + 100.0*(segNo - 1); }
                 if (oil) { rates[io] = rateTop + 200.0*(segNo - 1); }

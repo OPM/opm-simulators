@@ -196,31 +196,6 @@ public:
     }
 
 
-    const double * segRates(std::size_t well_index) const
-    {
-        const int top_segment_index = this->top_segment_index_[well_index];
-        return &this->seg_rates_[top_segment_index * this->phase_usage_.num_phases];
-    }
-
-    double * segRates(std::size_t well_index)
-    {
-        const int top_segment_index = this->top_segment_index_[well_index];
-        return &this->seg_rates_[top_segment_index * this->phase_usage_.num_phases];
-    }
-
-    double * segPress(std::size_t well_index)
-    {
-        const int top_segment_index = this->top_segment_index_[well_index];
-        return &seg_press_[top_segment_index];
-    }
-
-    const double * segPress(std::size_t well_index) const
-    {
-        const int top_segment_index = this->top_segment_index_[well_index];
-        return &seg_press_[top_segment_index];
-    }
-
-
     int numSegment() const
     {
         return nseg_;
@@ -492,9 +467,6 @@ private:
 
     WellContainer<SegmentState> segment_state;
     // MS well related
-    // for StandardWell, the number of segments will be one
-    std::vector<double> seg_rates_;
-    std::vector<double> seg_press_;
     // the index of the top segments, which is used to locate the
     // multisegment well related information in WellState
     std::vector<int> top_segment_index_;
