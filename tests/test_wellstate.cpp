@@ -538,5 +538,23 @@ BOOST_AUTO_TEST_CASE(TESTSegmentState) {
     BOOST_CHECK_EQUAL(ss1.pressure_drop(0), 6);
 }
 
+BOOST_AUTO_TEST_CASE(TESTSegmentState2) {
+    const Setup setup{ "msw.data" };
+    std::vector<Opm::ParallelWellInfo> pinfo;
+    const auto wstate = buildWellState(setup, 0, pinfo);
+    const auto& well = setup.sched.getWell("PROD01", 0);
+
+    BOOST_CHECK_THROW(wstate.segments(100), std::exception);
+    auto segments = wstate.segments(1);   // PROD01 is well 1
+    BOOST_CHECK_EQUAL(segments.pressure.size(), well.getSegments().size());
+
+    segments.pressure_drop_friction[0] = 1;
+    segments.pressure_drop_accel[0] = 2;
+    segments.pressure_drop_hydrostatic[0] = 4;
+
+    BOOST_CHECK_EQUAL(segments.pressure_drop(0), 7);
+}
+
+
 
 BOOST_AUTO_TEST_SUITE_END()

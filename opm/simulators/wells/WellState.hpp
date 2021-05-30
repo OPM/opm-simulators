@@ -23,6 +23,7 @@
 
 #include <opm/simulators/wells/ALQState.hpp>
 #include <opm/simulators/wells/GlobalWellInfo.hpp>
+#include <opm/simulators/wells/SegmentState.hpp>
 #include <opm/simulators/wells/WellContainer.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
@@ -269,6 +270,15 @@ public:
     }
 
     int topSegmentIndex(const int w) const;
+
+
+    const SegmentState& segments(const std::size_t well_index) const {
+        return this->segment_state[well_index];
+    }
+
+    SegmentState& segments(const std::size_t well_index) {
+        return this->segment_state[well_index];
+    }
 
     std::vector<double>& productivityIndex() {
         return productivity_index_;
@@ -524,6 +534,7 @@ private:
     // \Note: for now, only WCON* keywords, and well status change is considered
     WellContainer<Events> events_;
 
+    WellContainer<SegmentState> segment_state;
     // MS well related
     // for StandardWell, the number of segments will be one
     std::vector<double> seg_rates_;

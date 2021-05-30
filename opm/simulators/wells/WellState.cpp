@@ -49,6 +49,7 @@ void WellState::base_init(const std::vector<double>& cellPressures,
     this->bhp_.clear();
     this->thp_.clear();
     this->temperature_.clear();
+    this->segment_state.clear();
     {
         // const int nw = wells->number_of_wells;
         const int nw = wells_ecl.size();
@@ -97,6 +98,7 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     this->wellrates_.add(well.name(), std::vector<double>(np, 0));
 
     const int num_perf_this_well = well_info->communication().sum(well_perf_data_[w].size());
+    this->segment_state.add(well.name(), SegmentState{});
     this->perfpress_.add(well.name(), std::vector<double>(num_perf_this_well, -1e100));
     this->perfrates_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
     this->bhp_.add(well.name(), 0.0);
@@ -851,6 +853,7 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
             // assuming the order of the perforations in well_ecl is the same with Wells
             const WellConnections& completion_set = well_ecl.getConnections();
             // number of segment for this single well
+            this->segment_state.update(w, SegmentState{np, segment_set});
             const int well_nseg = segment_set.size();
             int n_activeperf = 0;
             nseg_ += well_nseg;
