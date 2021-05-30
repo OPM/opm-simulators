@@ -223,23 +223,11 @@ public:
     double segPressDrop(std::size_t well_index, std::size_t segment_index) const
     {
         const auto& segments = this->segments(well_index);
-        const int top_segment_index = this->top_segment_index_[well_index];
         return segments.pressure_drop_friction[segment_index] +
                segments.pressure_drop_hydrostatic[segment_index] +
-               this->seg_pressdrop_acceleration_[top_segment_index + segment_index];
+               segments.pressure_drop_accel[segment_index];
     }
 
-    double * segPressDropAcceleration(std::size_t well_index)
-    {
-        const int top_segment_index = this->top_segment_index_[well_index];
-        return &seg_pressdrop_acceleration_[top_segment_index];
-    }
-
-    const double* segPressDropAcceleration(std::size_t well_index) const
-    {
-        const int top_segment_index = this->top_segment_index_[well_index];
-        return &seg_pressdrop_acceleration_[top_segment_index];
-    }
 
     int numSegment() const
     {
@@ -521,8 +509,6 @@ private:
     int nseg_; // total number of the segments
 
     // The following data are only recorded for output
-    // accelerational pressure drop
-    std::vector<double> seg_pressdrop_acceleration_;
 
     // Productivity Index
     std::vector<double> productivity_index_;
