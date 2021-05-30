@@ -220,14 +220,6 @@ public:
         return &seg_press_[top_segment_index];
     }
 
-    double segPressDrop(std::size_t well_index, std::size_t segment_index) const
-    {
-        const auto& segments = this->segments(well_index);
-        return segments.pressure_drop_friction[segment_index] +
-               segments.pressure_drop_hydrostatic[segment_index] +
-               segments.pressure_drop_accel[segment_index];
-    }
-
 
     int numSegment() const
     {

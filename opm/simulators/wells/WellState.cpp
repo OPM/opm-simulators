@@ -1158,14 +1158,13 @@ WellState::reportSegmentResults(const PhaseUsage& pu,
         using Value = data::SegmentPressures::Value;
         auto& segpress = seg_res.pressures;
         segpress[Value::Pressure] = this->segPress(well_id)[seg_ix];
-        segpress[Value::PDrop] = this->segPressDrop(well_id, seg_ix);
+        segpress[Value::PDrop] = segments.pressure_drop(seg_ix);
         segpress[Value::PDropHydrostatic] = segments.pressure_drop_hydrostatic[seg_ix];
         segpress[Value::PDropFriction] = segments.pressure_drop_friction[seg_ix];
         segpress[Value::PDropAccel] = segments.pressure_drop_accel[seg_ix];
     }
 
-    const auto segment_rates = this->segRates(well_id);
-    const auto rate = &segment_rates[seg_ix * this->numPhases()];
+    const auto rate = &segments.rates[seg_ix * this->numPhases()];
     if (pu.phase_used[Water]) {
         seg_res.rates.set(data::Rates::opt::wat,
                           rate[pu.phase_pos[Water]]);
