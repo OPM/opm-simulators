@@ -2043,7 +2043,7 @@ namespace Opm
         const double sign = mass_rate < 0. ? 1.0 : - 1.0;
         accelerationPressureLoss *= sign;
 
-        well_state.segPressDropAcceleration(index_of_well_)[seg] = accelerationPressureLoss.value();
+        well_state.segments(this->index_of_well_).pressure_drop_accel[seg] = accelerationPressureLoss.value();
 
         resWell_[seg][SPres] -= accelerationPressureLoss.value();
         duneD_[seg][seg][SPres][SPres] -= accelerationPressureLoss.derivative(SPres + numEq);
