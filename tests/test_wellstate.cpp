@@ -26,6 +26,7 @@
 #include <opm/simulators/wells/GlobalWellInfo.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/SegmentState.hpp>
 #include <opm/simulators/wells/WellContainer.hpp>
 #include <opm/parser/eclipse/Python/Python.hpp>
 
@@ -520,6 +521,21 @@ BOOST_AUTO_TEST_CASE(TESTWellContainer) {
 
     auto wx = wci.well_index("WX");
     BOOST_CHECK(!wx.has_value());
+}
+
+BOOST_AUTO_TEST_CASE(TESTSegmentState) {
+    const Setup setup{ "msw.data" };
+    const auto& well = setup.sched.getWell("PROD01", 0);
+    const auto& segments = well.getSegments();
+    Opm::SegmentState ss1(3, segments);
+    Opm::SegmentState ss2;
+
+
+    ss1.pressure_drop_hydrostatic[0] = 1;
+    ss1.pressure_drop_friction[0] = 2;
+    ss1.pressure_drop_accel[0] = 3;
+
+    BOOST_CHECK_EQUAL(ss1.pressure_drop(0), 6);
 }
 
 
