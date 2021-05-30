@@ -1923,8 +1923,8 @@ namespace Opm
         // TODO: we might be able to add member variables to store these values, then we update well state
         // after converged
         const auto hydro_pressure_drop = getHydroPressureLoss(seg);
-        well_state.segPressDropHydroStatic(index_of_well_)[seg] = hydro_pressure_drop.value();
         auto& segments = well_state.segments(this->index_of_well_);
+        segments.pressure_drop_hydrostatic[seg] = hydro_pressure_drop.value();
         pressure_equation -= hydro_pressure_drop;
 
         if (frictionalPressureLossConsidered()) {
