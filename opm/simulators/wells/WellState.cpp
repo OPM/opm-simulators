@@ -539,7 +539,6 @@ void WellState::init(const std::vector<double>& cellPressures,
         }
         //seg_rates_ = wellRates();
         seg_rates_.assign(nw*np, 0);
-        seg_pressdrop_.assign(nw, 0.);
         seg_pressdrop_hydorstatic_.assign(nw, 0.);
         seg_pressdrop_friction_.assign(nw, 0.);
         seg_pressdrop_acceleration_.assign(nw, 0.);
@@ -946,7 +945,6 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
     assert(int(seg_press_.size()) == nseg_);
     assert(int(seg_rates_.size()) == nseg_ * numPhases() );
 
-    seg_pressdrop_.assign(nseg_, 0.);
     seg_pressdrop_hydorstatic_.assign(nseg_, 0.);
     seg_pressdrop_friction_.assign(nseg_, 0.);
     seg_pressdrop_acceleration_.assign(nseg_, 0.);
@@ -1159,7 +1157,7 @@ WellState::reportSegmentResults(const PhaseUsage& pu,
         using Value = data::SegmentPressures::Value;
         auto& segpress = seg_res.pressures;
         segpress[Value::Pressure] = this->segPress(well_id)[seg_ix];
-        segpress[Value::PDrop] = this->segPressDrop(well_id)[seg_ix];
+        segpress[Value::PDrop] = this->segPressDrop(well_id, seg_ix);
         segpress[Value::PDropHydrostatic] = this->segPressDropHydroStatic(well_id)[seg_ix];
         segpress[Value::PDropFriction] = this->segPressDropFriction(well_id)[seg_ix];
         segpress[Value::PDropAccel] = this->segPressDropAcceleration(well_id)[seg_ix];
