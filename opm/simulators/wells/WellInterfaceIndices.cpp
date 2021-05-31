@@ -25,6 +25,7 @@
 #include <ebos/eclalternativeblackoilindices.hh>
 
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
 #include <opm/models/blackoil/blackoilindices.hh>
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
@@ -56,6 +57,7 @@ WellInterfaceIndices(const Well& well,
                                             index_of_well,
                                             first_perf_index,
                                             perf_data)
+    , WellInterfaceEval<FluidSystem>(static_cast<const WellInterfaceFluidSystem<FluidSystem>&>(*this))
 {
 }
 

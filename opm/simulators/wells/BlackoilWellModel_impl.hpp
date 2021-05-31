@@ -25,6 +25,8 @@
 
 #include <opm/parser/eclipse/Units/UnitSystem.hpp>
 
+#include <opm/simulators/wells/VFPProperties.hpp>
+
 #include <algorithm>
 #include <utility>
 

@@ -66,6 +66,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/VFPProdProperties.cpp
   opm/simulators/wells/VFPInjProperties.cpp
   opm/simulators/wells/WellGroupHelpers.cpp
+  opm/simulators/wells/WellInterfaceEval.cpp
   opm/simulators/wells/WellInterfaceFluidSystem.cpp
   opm/simulators/wells/WellInterfaceGeneric.cpp
   opm/simulators/wells/WellInterfaceIndices.cpp

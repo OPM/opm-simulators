@@ -1789,7 +1789,7 @@ namespace Opm
             // Setup function for evaluation of BHP from THP (used only if needed).
             auto bhp_from_thp = [&]() {
                 const auto rates = getRates();
-                return calculateBhpFromThp(well_state, rates, well, summaryState, deferred_logger);
+                return this->calculateBhpFromThp(well_state, rates, well, summaryState, this->getRefDensity(), deferred_logger);
             };
             // Call generic implementation.
             Base::assembleControlEqInj(well_state, group_state, schedule, summaryState, inj_controls, getBhp(), injection_rate, bhp_from_thp, control_eq, deferred_logger);
@@ -1798,7 +1798,7 @@ namespace Opm
             const auto rates = getRates();
             // Setup function for evaluation of BHP from THP (used only if needed).
             auto bhp_from_thp = [&]() {
-                return calculateBhpFromThp(well_state, rates, well, summaryState, deferred_logger);
+                return this->calculateBhpFromThp(well_state, rates, well, summaryState, this->getRefDensity(), deferred_logger);
             };
             // Call generic implementation.
             Base::assembleControlEqProd(well_state, group_state, schedule, summaryState, prod_controls, getBhp(), rates, bhp_from_thp, control_eq, deferred_logger);
