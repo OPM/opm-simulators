@@ -52,13 +52,13 @@ public:
 
     int flowPhaseToEbosPhaseIdx(const int phaseIdx) const;
 
-protected:
-    using RateConverterType = RateConverter::
-    SurfaceToReservoirVoidage<FluidSystem, std::vector<int>>;
-
     static constexpr int Water = BlackoilPhases::Aqua;
     static constexpr int Oil = BlackoilPhases::Liquid;
     static constexpr int Gas = BlackoilPhases::Vapour;
+
+protected:
+    using RateConverterType = RateConverter::
+    SurfaceToReservoirVoidage<FluidSystem, std::vector<int>>;
 
     // to indicate a invalid completion
     static constexpr int INVALIDCOMPLETION = std::numeric_limits<int>::max();

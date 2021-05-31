@@ -59,7 +59,7 @@ namespace Opm {
 #include <opm/material/densead/Math.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 
-#include <opm/simulators/wells/WellInterfaceFluidSystem.hpp>
+#include <opm/simulators/wells/WellInterfaceIndices.hpp>
 
 #include <array>
 #include <cassert>
@@ -71,7 +71,9 @@ namespace Opm
 {
 
 template<typename TypeTag>
-class WellInterface : public WellInterfaceFluidSystem<GetPropType<TypeTag, Properties::FluidSystem>>
+class WellInterface : public WellInterfaceIndices<GetPropType<TypeTag, Properties::FluidSystem>,
+                                                  GetPropType<TypeTag, Properties::Indices>,
+                                                  GetPropType<TypeTag, Properties::Scalar>>
 {
 public:
 
@@ -292,10 +294,6 @@ protected:
 
     bool changed_to_stopped_this_step_ = false;
 
-    int flowPhaseToEbosCompIdx( const int phaseIdx ) const;
-
-    int ebosCompIdxToFlowCompIdx( const unsigned compIdx ) const;
-
     double wpolymer() const;
 
     double wfoam() const;
@@ -309,8 +307,6 @@ protected:
 
     // Component fractions for each phase for the well
     const std::vector<double>& compFrac() const;
-
-    double scalingFactor(const int comp_idx) const;
 
     std::vector<double> initialWellRateFractions(const Simulator& ebosSimulator, const WellState& well_state) const;
 

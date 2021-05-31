@@ -41,9 +41,16 @@ namespace Opm
                   const int index_of_well,
                   const int first_perf_index,
                   const std::vector<PerforationData>& perf_data)
-      : WellInterfaceFluidSystem<FluidSystem>(well, pw_info, time_step, rate_converter,
-                                              pvtRegionIdx, num_components, num_phases,
-                                              index_of_well, first_perf_index, perf_data)
+      : WellInterfaceIndices<FluidSystem,Indices,Scalar>(well,
+                                                         pw_info,
+                                                         time_step,
+                                                         rate_converter,
+                                                         pvtRegionIdx,
+                                                         num_components,
+                                                         num_phases,
+                                                         index_of_well,
+                                                         first_perf_index,
+                                                         perf_data)
       , param_(param)
     {
         connectionRates_.resize(this->number_of_perforations_);
@@ -71,41 +78,6 @@ namespace Opm
         this->phase_usage_ = phase_usage_arg;
         this->gravity_ = gravity_arg;
         B_avg_ = B_avg;
-    }
-
-
-    template<typename TypeTag>
-    int
-    WellInterface<TypeTag>::
-    flowPhaseToEbosCompIdx( const int phaseIdx ) const
-    {
-        const auto& pu = this->phaseUsage();
-        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && pu.phase_pos[Water] == phaseIdx)
-            return Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && pu.phase_pos[Oil] == phaseIdx)
-            return Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
-        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && pu.phase_pos[Gas] == phaseIdx)
-            return Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-
-        // for other phases return the index
-        return phaseIdx;
-    }
-
-    template<typename TypeTag>
-    int
-    WellInterface<TypeTag>::
-    ebosCompIdxToFlowCompIdx( const unsigned compIdx ) const
-    {
-        const auto& pu = this->phaseUsage();
-        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx) == compIdx)
-            return pu.phase_pos[Water];
-        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx) == compIdx)
-            return pu.phase_pos[Oil];
-        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx) == compIdx)
-            return pu.phase_pos[Gas];
-
-        // for other phases return the index
-        return compIdx;
     }
 
 
@@ -365,28 +337,6 @@ namespace Opm
             }
         }
     }
-
-
-
-    template<typename TypeTag>
-    double
-    WellInterface<TypeTag>::scalingFactor(const int phaseIdx) const
-    {
-        const auto& pu = this->phaseUsage();
-        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && pu.phase_pos[Water] == phaseIdx)
-            return 1.0;
-        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && pu.phase_pos[Oil] == phaseIdx)
-            return 1.0;
-        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && pu.phase_pos[Gas] == phaseIdx)
-            return 0.01;
-        if (has_solvent && phaseIdx == contiSolventEqIdx )
-            return 0.01;
-
-        // we should not come this far
-        assert(false);
-        return 1.0;
-    }
-
 
 
 
@@ -1448,10 +1398,10 @@ namespace Opm
 
         // Set the currently-zero phase flows to be nonzero in proportion to well_q_s.
         const double initial_nonzero_rate = well_state.wellRates(this->index_of_well_)[nonzero_rate_index];
-        const int comp_idx_nz = flowPhaseToEbosCompIdx(nonzero_rate_index);
+        const int comp_idx_nz = this->flowPhaseToEbosCompIdx(nonzero_rate_index);
         for (int p = 0; p < this->number_of_phases_; ++p) {
             if (p != nonzero_rate_index) {
-                const int comp_idx = flowPhaseToEbosCompIdx(p);
+                const int comp_idx = this->flowPhaseToEbosCompIdx(p);
                 double& rate = well_state.wellRates(this->index_of_well_)[p];
                 rate = (initial_nonzero_rate/well_q_s[comp_idx_nz]) * (well_q_s[comp_idx]);
             }
