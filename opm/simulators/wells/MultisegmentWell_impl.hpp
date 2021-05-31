@@ -2701,14 +2701,6 @@ namespace Opm
                 const UnitSystem& unit_system = ebosSimulator.vanguard().eclState().getDeckUnitSystem();
                 assemblePressureEq(seg, unit_system, well_state, deferred_logger);
             }
-
-            auto seg_press_drop = well_state.segPressDrop(index_of_well_);
-            auto seg_press_friction = well_state.segPressDropFriction(index_of_well_);
-            auto seg_press_static = well_state.segPressDropHydroStatic(index_of_well_);
-            auto seg_press_accel = well_state.segPressDropAcceleration(index_of_well_);
-            seg_press_drop[seg] = seg_press_static[seg] +
-                                  seg_press_friction[seg] +
-                                  seg_press_accel[seg];
         }
     }
 
