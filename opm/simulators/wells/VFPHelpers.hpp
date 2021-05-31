@@ -94,7 +94,7 @@ struct InterpData {
  *  @param values Sorted list of values to search for value in.
  *  @return Data required to find the interpolated value
  */
-InterpData findInterpData(const double& value_in, const std::vector<double>& values);
+InterpData findInterpData(const double value_in, const std::vector<double>& values);
 
 /**
  * An "ADB-like" structure with a single value and a set of derivatives
@@ -132,17 +132,17 @@ VFPEvaluation interpolate(const VFPInjTable& table,
                           const InterpData& thp_i);
 
 VFPEvaluation bhp(const VFPProdTable& table,
-                  const double& aqua,
-                  const double& liquid,
-                  const double& vapour,
-                  const double& thp,
-                  const double& alq);
+                  const double aqua,
+                  const double liquid,
+                  const double vapour,
+                  const double thp,
+                  const double alq);
 
 VFPEvaluation bhp(const VFPInjTable& table,
-                  const double& aqua,
-                  const double& liquid,
-                  const double& vapour,
-                  const double& thp);
+                  const double aqua,
+                  const double liquid,
+                  const double vapour,
+                  const double thp);
 
 
 /**

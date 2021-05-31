@@ -37,11 +37,11 @@ namespace {
  * Helper function that finds x for a given value of y for a line
  * *NOTE ORDER OF ARGUMENTS*
  */
-double findX(const double& x0,
-             const double& x1,
-             const double& y0,
-             const double& y1,
-             const double& y)
+double findX(const double  x0,
+             const double  x1,
+             const double  y0,
+             const double  y1,
+             const double  y)
 {
     const double dx = x1 - x0;
     const double dy = y1 - y0;
@@ -78,7 +78,7 @@ static T chopNegativeValues(const T& value) {
 namespace Opm {
 namespace detail {
 
-InterpData findInterpData(const double& value_in, const std::vector<double>& values)
+InterpData findInterpData(const double value_in, const std::vector<double>& values)
 {
     InterpData retval;
 
@@ -341,11 +341,11 @@ VFPEvaluation interpolate(const VFPInjTable& table,
 }
 
 VFPEvaluation bhp(const VFPProdTable& table,
-                  const double& aqua,
-                  const double& liquid,
-                  const double& vapour,
-                  const double& thp,
-                  const double& alq)
+                  const double  aqua,
+                  const double  liquid,
+                  const double  vapour,
+                  const double  thp,
+                  const double  alq)
 {
     //Find interpolation variables
     double flo = detail::getFlo(table, aqua, liquid, vapour);
@@ -366,10 +366,10 @@ VFPEvaluation bhp(const VFPProdTable& table,
 }
 
 VFPEvaluation bhp(const VFPInjTable& table,
-                  const double& aqua,
-                  const double& liquid,
-                  const double& vapour,
-                  const double& thp)
+                  const double  aqua,
+                  const double  liquid,
+                  const double  vapour,
+                  const double  thp)
 {
     //Find interpolation variables
     double flo = detail::getFlo(table, aqua, liquid, vapour);
