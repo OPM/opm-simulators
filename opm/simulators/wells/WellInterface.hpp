@@ -294,8 +294,6 @@ protected:
 
     int flowPhaseToEbosCompIdx( const int phaseIdx ) const;
 
-    int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const;
-
     int ebosCompIdxToFlowCompIdx( const unsigned compIdx ) const;
 
     double wpolymer() const;

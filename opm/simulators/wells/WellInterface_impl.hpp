@@ -94,23 +94,6 @@ namespace Opm
     template<typename TypeTag>
     int
     WellInterface<TypeTag>::
-    flowPhaseToEbosPhaseIdx( const int phaseIdx ) const
-    {
-        const auto& pu = this->phaseUsage();
-        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && pu.phase_pos[Water] == phaseIdx)
-            return FluidSystem::waterPhaseIdx;
-        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && pu.phase_pos[Oil] == phaseIdx)
-            return FluidSystem::oilPhaseIdx;
-        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && pu.phase_pos[Gas] == phaseIdx)
-            return FluidSystem::gasPhaseIdx;
-
-        // for other phases return the index
-        return phaseIdx;
-    }
-
-    template<typename TypeTag>
-    int
-    WellInterface<TypeTag>::
     ebosCompIdxToFlowCompIdx( const unsigned compIdx ) const
     {
         const auto& pu = this->phaseUsage();
@@ -1008,11 +991,11 @@ namespace Opm
             const double well_tw_fraction = this->well_index_[perf] / total_tw;
             double total_mobility = 0.0;
             for (int p = 0; p < np; ++p) {
-                int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(p);
+                int ebosPhaseIdx = this->flowPhaseToEbosPhaseIdx(p);
                 total_mobility += fs.invB(ebosPhaseIdx).value() * intQuants.mobility(ebosPhaseIdx).value();
             }
             for (int p = 0; p < np; ++p) {
-                int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(p);
+                int ebosPhaseIdx = this->flowPhaseToEbosPhaseIdx(p);
                 scaling_factor[p] += well_tw_fraction * fs.invB(ebosPhaseIdx).value() * intQuants.mobility(ebosPhaseIdx).value() / total_mobility;
             }
         }

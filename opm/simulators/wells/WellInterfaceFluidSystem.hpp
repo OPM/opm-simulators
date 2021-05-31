@@ -50,6 +50,8 @@ public:
                              WellTestState& wellTestState,
                              DeferredLogger& deferred_logger) const;
 
+    int flowPhaseToEbosPhaseIdx(const int phaseIdx) const;
+
 protected:
     using RateConverterType = RateConverter::
     SurfaceToReservoirVoidage<FluidSystem, std::vector<int>>;
