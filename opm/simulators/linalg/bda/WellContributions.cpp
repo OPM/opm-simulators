@@ -77,7 +77,8 @@ void WellContributions::setOpenCLEnv(cl::Context *context_, cl::CommandQueue *qu
     this->queue = queue_;
 }
 
-void WellContributions::setKernel(stdwell_apply_kernel_type *kernel_, stdwell_apply_no_reorder_kernel_type *kernel_no_reorder_){
+void WellContributions::setKernel(bda::stdwell_apply_kernel_type *kernel_,
+                                  bda::stdwell_apply_no_reorder_kernel_type *kernel_no_reorder_){
     this->kernel = kernel_;
     this->kernel_no_reorder = kernel_no_reorder_;
 }

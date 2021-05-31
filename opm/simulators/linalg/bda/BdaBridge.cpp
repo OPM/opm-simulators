@@ -55,7 +55,8 @@ template <class BridgeMatrix, class BridgeVector, int block_size>
 BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string accelerator_mode_,
                                                              [[maybe_unused]] std::string fpga_bitstream,
                                                              int linear_solver_verbosity, int maxit,
-                                                             double tolerance, unsigned int platformID,
+                                                             double tolerance,
+                                                             [[maybe_unused]] unsigned int platformID,
                                                              unsigned int deviceID,
                                                              [[maybe_unused]] std::string opencl_ilu_reorder)
 : accelerator_mode(accelerator_mode_)
@@ -264,7 +265,7 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::get_result(BridgeVector 
 }
 
 template <class BridgeMatrix, class BridgeVector, int block_size>
-void BdaBridge<BridgeMatrix, BridgeVector, block_size>::initWellContributions(WellContributions& wellContribs) {
+void BdaBridge<BridgeMatrix, BridgeVector, block_size>::initWellContributions([[maybe_unused]] WellContributions& wellContribs) {
     if(accelerator_mode.compare("opencl") == 0){
 #if HAVE_OPENCL
         const auto openclBackend = static_cast<const bda::openclSolverBackend<block_size>*>(backend.get());
