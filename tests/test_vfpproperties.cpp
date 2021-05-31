@@ -39,6 +39,7 @@
 #include <opm/parser/eclipse/Units/UnitSystem.hpp>
 #include <opm/simulators/wells/VFPHelpers.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
 
 
 

@@ -20,17 +20,15 @@
 #ifndef OPM_AUTODIFF_VFPINJPROPERTIES_HPP_
 #define OPM_AUTODIFF_VFPINJPROPERTIES_HPP_
 
-#include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
-#include <opm/material/densead/Math.hpp>
-#include <opm/material/densead/Evaluation.hpp>
-#include <opm/simulators/wells/VFPHelpers.hpp>
 
-#include <vector>
+#include <functional>
 #include <map>
-
+#include <vector>
 
 
 namespace Opm {
+
+class VFPInjTable;
 
 class VFPInjProperties {
 public:
@@ -61,26 +59,7 @@ public:
                  const EvalWell& aqua,
                  const EvalWell& liquid,
                  const EvalWell& vapour,
-                 const double& thp) const {
-
-        //Get the table
-        const VFPInjTable& table = detail::getTable(m_tables, table_id);
-        EvalWell bhp = 0.0 * aqua;
-
-        //Find interpolation variables
-        EvalWell flo = detail::getFlo(table, aqua, liquid, vapour);
-
-        //First, find the values to interpolate between
-        //Value of FLO is negative in OPM for producers, but positive in VFP table
-        auto flo_i = detail::findInterpData(flo.value(), table.getFloAxis());
-        auto thp_i = detail::findInterpData( thp, table.getTHPAxis()); // assume constant
-
-        detail::VFPEvaluation bhp_val = detail::interpolate(table, flo_i, thp_i);
-
-        bhp = bhp_val.dflo * flo;
-        bhp.setValue(bhp_val.value); // thp is assumed constant i.e.
-        return bhp;
-    }
+                 const double& thp) const;
 
     /**
      * Returns the table associated with the ID, or throws an exception if
