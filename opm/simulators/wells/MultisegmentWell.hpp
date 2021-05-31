@@ -217,7 +217,7 @@ namespace Opm
                                     DeferredLogger& deferred_logger) const;
 
         virtual bool useInnerIterations() const override {
-            return param_.use_inner_iterations_ms_wells_;
+            return param_.use_inner_iterations_ms_wells_ || this->underPredictionMode();
         }
     protected:
         int number_segments_;
