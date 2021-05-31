@@ -168,15 +168,13 @@ namespace {
 
         for (auto wellID = 0*nWell; wellID < nWell; ++wellID) {
             const auto& well     = wells[wellID];
-            const auto  pressTop = 100.0 * wellID;
-
-            auto* press = wstate.segPress(wellID);
-
-            press[0] = pressTop;
-
             if (! well.isMultiSegment()) {
                 continue;
             }
+
+            const auto  pressTop = 100.0 * wellID;
+            auto* press = wstate.segPress(wellID);
+            press[0] = pressTop;
 
             const auto& segSet = well.getSegments();
             const auto  nSeg   = segSet.size();
@@ -210,16 +208,16 @@ namespace {
 
         for (auto wellID = 0*nWell; wellID < nWell; ++wellID) {
             const auto& well     = wells[wellID];
+            if (! well.isMultiSegment()) {
+                continue;
+            }
+
             const auto  rateTop  = 1000.0 * wellID;
             auto segRates = wstate.segRates(wellID);
 
             if (wat) { segRates[iw] = rateTop; }
             if (oil) { segRates[io] = rateTop; }
             if (gas) { segRates[ig] = rateTop; }
-
-            if (! well.isMultiSegment()) {
-                continue;
-            }
 
             const auto& segSet = well.getSegments();
             const auto  nSeg   = segSet.size();
@@ -280,18 +278,6 @@ BOOST_AUTO_TEST_CASE(Pressure)
     const auto rpt = wstate.report(setup.grid.c_grid()->global_cell, [](const int){return false;});
 
     {
-        const auto& xw = rpt.at("INJE01");
-
-        BOOST_CHECK_EQUAL(xw.segments.size(), 1); // Top Segment
-
-        const auto& xseg = xw.segments.at(1);
-
-        BOOST_CHECK_EQUAL(xseg.segNumber, 1);
-        const auto pres_idx = Opm::data::SegmentPressures::Value::Pressure;
-        BOOST_CHECK_CLOSE(xseg.pressures[pres_idx], prod01_first ? 100.0 : 0.0, 1.0e-10);
-    }
-
-    {
         const auto expect_nSeg = 6;
         const auto& xw = rpt.at("PROD01");
 
@@ -333,26 +319,6 @@ BOOST_AUTO_TEST_CASE(Rates)
     const auto gas = pu.phase_used[Opm::BlackoilPhases::Vapour];
 
     BOOST_CHECK(wat && oil && gas);
-
-    {
-        const auto rateTop = prod01_first ? 1000.0 : 0.0;
-
-        const auto& xw = rpt.at("INJE01");
-
-        BOOST_CHECK_EQUAL(xw.segments.size(), 1); // Top Segment
-
-        const auto& xseg = xw.segments.at(1);
-
-        BOOST_CHECK_EQUAL(xseg.segNumber, 1);
-        BOOST_CHECK_CLOSE(xseg.rates.get(Opm::data::Rates::opt::wat),
-                          rateTop, 1.0e-10);
-
-        BOOST_CHECK_CLOSE(xseg.rates.get(Opm::data::Rates::opt::oil),
-                          rateTop, 1.0e-10);
-
-        BOOST_CHECK_CLOSE(xseg.rates.get(Opm::data::Rates::opt::gas),
-                          rateTop, 1.0e-10);
-    }
 
     {
         const auto expect_nSeg = 6;
