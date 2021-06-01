@@ -527,7 +527,6 @@ void WellState::init(const std::vector<double>& cellPressures,
         nseg_ = nw;
         top_segment_index_.resize(nw);
         seg_number_.resize(nw);
-        seg_press_.resize(nw);
         for (int w = 0; w < nw; ++w) {
             top_segment_index_[w] = w;
             seg_number_[w] = 1; // Top segment is segment #1
@@ -821,7 +820,6 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
     const int np = pu.num_phases;
 
     top_segment_index_.clear();
-    seg_press_.clear();
     seg_rates_.clear();
     seg_number_.clear();
     nseg_ = 0;
@@ -840,7 +838,6 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
         if ( !well_ecl.isMultiSegment() ) { // not multi-segment well
             nseg_ += 1;
             seg_number_.push_back(1); // Assign single segment (top) as number 1.
-            seg_press_.push_back(0);
             for (int p = 0; p < np; ++p) {
                 seg_rates_.push_back(rates[p]);
             }
@@ -917,19 +914,18 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
             // improved during the solveWellEq process
             {
                 // top segment is always the first one, and its pressure is the well bhp
-                seg_press_.push_back(bhp(w));
-                const int top_segment = top_segment_index_[w];
+                auto& segment_pressure = this->segments(w).pressure;
+                segment_pressure[0] = bhp(w);
                 const auto& perf_press = this->perfPress(w);
                 for (int seg = 1; seg < well_nseg; ++seg) {
                     if ( !segment_perforations[seg].empty() ) {
                         const int first_perf = segment_perforations[seg][0];
-                        seg_press_.push_back(perf_press[first_perf]);
+                        segment_pressure[seg] = perf_press[first_perf];
                     } else {
                         // seg_press_.push_back(bhp); // may not be a good decision
                         // using the outlet segment pressure // it needs the ordering is correct
                         const int outlet_seg = segment_set[seg].outletSegment();
-                        seg_press_.push_back(
-                            seg_press_[top_segment + segment_set.segmentNumberToIndex(outlet_seg)]);
+                        segment_pressure[seg] = segment_pressure[segment_set.segmentNumberToIndex(outlet_seg)];
                     }
                 }
             }
@@ -944,6 +940,9 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
         for (int w = 0; w < nw; ++w) {
             const Well& well = wells_ecl[w];
             if (well.getStatus() == Well::Status::SHUT)
+                continue;
+
+            if ( !well.isMultiSegment() )
                 continue;
 
             const auto& it = prev_well_state->wellMap().find( wells_ecl[w].name() );
