@@ -36,6 +36,8 @@ public:
     SegmentState(int num_phases, const WellSegments& segments);
     double pressure_drop(std::size_t index) const;
     bool empty() const;
+    void scale_pressure(double bhp);
+
 
     std::vector<double> rates;
     std::vector<double> pressure;

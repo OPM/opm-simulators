@@ -16,6 +16,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include <algorithm>
+#include <stdexcept>
 
 #include <opm/simulators/wells/SegmentState.hpp>
 
@@ -42,6 +44,17 @@ double SegmentState::pressure_drop(std::size_t index) const {
 
 bool SegmentState::empty() const {
     return this->rates.empty();
+}
+
+void SegmentState::scale_pressure(double bhp) {
+    if (this->empty())
+        throw std::logic_error("Tried to pressure scale empty SegmentState");
+
+    auto scale_factor = bhp / this->pressure[0];
+    std::transform(this->pressure.begin(),
+                   this->pressure.end(),
+                   this->pressure.begin(),
+                   [scale_factor] (const double& p) { return p*scale_factor;});
 }
 
 }

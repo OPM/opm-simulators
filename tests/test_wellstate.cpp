@@ -519,6 +519,16 @@ BOOST_AUTO_TEST_CASE(TESTSegmentState2) {
     segments.pressure_drop_hydrostatic[0] = 4;
 
     BOOST_CHECK_EQUAL(segments.pressure_drop(0), 7);
+
+
+    for (std::size_t i=0; i < segments.pressure.size(); i++)
+        segments.pressure[i] = (i + 1);
+
+    const double bhp = 2.0;
+    segments.scale_pressure(bhp);
+
+    for (std::size_t i=0; i < segments.pressure.size(); i++)
+        BOOST_CHECK_EQUAL(segments.pressure[i], 2*(i+1));
 }
 
 
