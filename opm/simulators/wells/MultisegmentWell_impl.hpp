@@ -265,8 +265,8 @@ namespace Opm
         Base::updateWellStateWithTarget(ebos_simulator, well_state, deferred_logger);
         // scale segment rates based on the wellRates
         // and segment pressure based on bhp
-        scaleSegmentPressuresWithBhp(well_state);
         scaleSegmentRatesWithWellRates(well_state);
+        scaleSegmentPressuresWithBhp(well_state);
     }
 
 
@@ -314,13 +314,9 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     scaleSegmentPressuresWithBhp(WellState& well_state) const
     {
-        //scale segment pressures
         auto& segments = well_state.segments(this->index_of_well_);
-        const double bhp = well_state.bhp(index_of_well_);
-        const double unscaled_top_seg_pressure = segments.pressure[0];
-        const double scale_factor = bhp / unscaled_top_seg_pressure;
-
-        std::transform(segments.pressure.begin(), segments.pressure.end(), segments.pressure.begin(), [scale_factor](const double& p) { return p*scale_factor;} );
+        auto bhp = well_state.bhp(this->index_of_well_);
+        segments.scale_pressure(bhp);
     }
 
 
