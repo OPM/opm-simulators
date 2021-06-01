@@ -249,16 +249,10 @@ BOOST_AUTO_TEST_CASE(Linearisation)
     std::vector<Opm::ParallelWellInfo> pinfos;
     const auto wstate = buildWellState(setup, tstep, pinfos);
 
-    BOOST_CHECK_EQUAL(wstate.numSegment(), 6 + 1);
+    BOOST_CHECK_EQUAL(wstate.segments("PROD01").size(), 6);
 
     const auto& wells = setup.sched.getWellsatEnd();
     BOOST_CHECK_EQUAL(wells.size(), 2);
-
-    const auto prod01_first = wells[0].name() == "PROD01";
-
-    BOOST_CHECK_EQUAL(wstate.topSegmentIndex(0), 0);
-    BOOST_CHECK_EQUAL(wstate.topSegmentIndex(1),
-                      prod01_first ? 6 : 1);
 }
 
 // ---------------------------------------------------------------------

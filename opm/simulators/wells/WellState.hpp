@@ -197,8 +197,6 @@ public:
 
 
 
-    int topSegmentIndex(const int w) const;
-
 
     const SegmentState& segments(const std::size_t well_index) const {
         return this->segment_state[well_index];
@@ -471,11 +469,6 @@ private:
     WellContainer<Events> events_;
 
     WellContainer<SegmentState> segment_state;
-    // the index of the top segments, which is used to locate the
-    // multisegment well related information in WellState
-    std::vector<int> top_segment_index_;
-
-    // The following data are only recorded for output
 
     // Productivity Index
     std::vector<double> productivity_index_;

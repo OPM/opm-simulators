@@ -521,14 +521,6 @@ void WellState::init(const std::vector<double>& cellPressures,
         }
     }
 
-    {
-        // we need to create a trival segment related values to avoid there will be some
-        // multi-segment wells added later.
-        top_segment_index_.resize(nw);
-        for (int w = 0; w < nw; ++w) {
-            top_segment_index_[w] = w;
-        }
-    }
 
     updateWellsDefaultALQ(wells_ecl);
     do_glift_optimization_ = true;
@@ -814,11 +806,8 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
     const auto& pu = this->phaseUsage();
     const int np = pu.num_phases;
 
-    top_segment_index_.clear();
-
     // in the init function, the well rates and perforation rates have been initialized or copied from prevState
     // what we do here, is to set the segment rates and perforation rates
-    int nseg_ = 0;
     for (int w = 0; w < nw; ++w) {
         const auto& well_ecl = wells_ecl[w];
         const auto& wname = wells_ecl[w].name();
@@ -826,10 +815,7 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
         const int connpos = well_info[1];
         const int num_perf_this_well = well_info[2];
 
-        top_segment_index_.push_back(nseg_);
-        if ( !well_ecl.isMultiSegment() ) { // not multi-segment well
-            nseg_ += 1;
-        } else { // it is a multi-segment well
+        if ( well_ecl.isMultiSegment() ) {
             const WellSegments& segment_set = well_ecl.getSegments();
             // assuming the order of the perforations in well_ecl is the same with Wells
             const WellConnections& completion_set = well_ecl.getConnections();
@@ -837,7 +823,6 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
             this->segment_state.update(w, SegmentState{np, segment_set});
             const int well_nseg = segment_set.size();
             int n_activeperf = 0;
-            nseg_ += well_nseg;
 
             // we need to know for each segment, how many perforation it has and how many segments using it as outlet_segment
             // that is why I think we should use a well model to initialize the WellState here
@@ -986,12 +971,6 @@ double WellState::brineWellRate(const int w) const
     return parallel_well_info_[w]->sumPerfValues(perf_rates_brine, perf_rates_brine + this->numPerf(w));
 }
 
-int WellState::topSegmentIndex(const int w) const
-{
-    assert(w < int(top_segment_index_.size()) );
-
-    return top_segment_index_[w];
-}
 
 void WellState::stopWell(int well_index)
 {
