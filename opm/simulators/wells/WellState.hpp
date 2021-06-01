@@ -491,14 +491,6 @@ private:
     // Well potentials
     std::vector<double> well_potentials_;
 
-    /// Map segment index to segment number, mostly for MS wells.
-    ///
-    /// Segment number (one-based) of j-th segment in i-th well is
-    /// \code
-    ///    const auto top    = topSegmentIndex(i);
-    ///    const auto seg_No = seg_number_[top + j];
-    /// \end
-    std::vector<int> seg_number_;
 
     data::Segment
     reportSegmentResults(const PhaseUsage& pu,

@@ -526,10 +526,8 @@ void WellState::init(const std::vector<double>& cellPressures,
         // multi-segment wells added later.
         nseg_ = nw;
         top_segment_index_.resize(nw);
-        seg_number_.resize(nw);
         for (int w = 0; w < nw; ++w) {
             top_segment_index_[w] = w;
-            seg_number_[w] = 1; // Top segment is segment #1
         }
     }
 
@@ -818,7 +816,6 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
     const int np = pu.num_phases;
 
     top_segment_index_.clear();
-    seg_number_.clear();
     nseg_ = 0;
 
     // in the init function, the well rates and perforation rates have been initialized or copied from prevState
@@ -833,7 +830,6 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
         top_segment_index_.push_back(nseg_);
         if ( !well_ecl.isMultiSegment() ) { // not multi-segment well
             nseg_ += 1;
-            seg_number_.push_back(1); // Assign single segment (top) as number 1.
         } else { // it is a multi-segment well
             const WellSegments& segment_set = well_ecl.getSegments();
             // assuming the order of the perforations in well_ecl is the same with Wells
@@ -843,9 +839,6 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
             const int well_nseg = segment_set.size();
             int n_activeperf = 0;
             nseg_ += well_nseg;
-            for (auto segID = 0*well_nseg; segID < well_nseg; ++segID) {
-                this->seg_number_.push_back(segment_set[segID].segmentNumber());
-            }
 
             // we need to know for each segment, how many perforation it has and how many segments using it as outlet_segment
             // that is why I think we should use a well model to initialize the WellState here
@@ -1175,9 +1168,8 @@ int WellState::numSegments(const int well_id) const
 
 int WellState::segmentNumber(const int well_id, const int seg_id) const
 {
-    const auto top_offset = this->topSegmentIndex(well_id);
-
-    return this->seg_number_[top_offset + seg_id];
+    const auto& segments = this->segment_state[well_id];
+    return segments.segment_number[seg_id];
 }
 
 void WellState::updateWellsDefaultALQ( const std::vector<Well>& wells_ecl )
