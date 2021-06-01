@@ -38,6 +38,7 @@ public:
     bool empty() const;
     void scale_pressure(double bhp);
     const std::vector<int>& segment_number() const;
+    std::size_t size() const;
 
     std::vector<double> rates;
     std::vector<double> pressure;

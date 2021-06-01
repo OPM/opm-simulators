@@ -530,6 +530,8 @@ BOOST_AUTO_TEST_CASE(TESTSegmentState2) {
 
     for (std::size_t i=0; i < segments.pressure.size(); i++)
         BOOST_CHECK_EQUAL(segments.pressure[i], 2*(i+1));
+
+    BOOST_CHECK_EQUAL( segments.size(), well.getSegments().size() );
 }
 
 

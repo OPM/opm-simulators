@@ -55,6 +55,11 @@ bool SegmentState::empty() const {
     return this->rates.empty();
 }
 
+std::size_t SegmentState::size() const {
+    return this->pressure.size();
+}
+
+
 void SegmentState::scale_pressure(double bhp) {
     if (this->empty())
         throw std::logic_error("Tried to pressure scale empty SegmentState");
