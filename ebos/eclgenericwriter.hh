@@ -69,14 +69,20 @@ public:
                      const GridView& gridView,
                      const Dune::CartesianIndexMapper<Grid>& cartMapper,
                      const Dune::CartesianIndexMapper<EquilGrid>* equilCartMapper,
-                     const TransmissibilityType& globalTrans,
                      bool enableAsyncOutput);
 
     const EclipseIO& eclIO() const;
 
     void writeInit();
 
+    void setTransmissibilities(const TransmissibilityType* globalTrans)
+    {
+        globalTrans_ = globalTrans;
+    }
+
 protected:
+    const TransmissibilityType& globalTrans() const;
+
     void doWriteOutput(const int                     reportStepNum,
                        const bool                    isSubStep,
                        data::Solution&&              localCellData,
@@ -114,7 +120,7 @@ protected:
     std::unique_ptr<EclipseIO> eclIO_;
     std::unique_ptr<TaskletRunner> taskletRunner_;
     Scalar restartTimeStepSize_;
-    const TransmissibilityType& globalTrans_;
+    const TransmissibilityType* globalTrans_ = nullptr;
     const Dune::CartesianIndexMapper<Grid>& cartMapper_;
     const Dune::CartesianIndexMapper<EquilGrid>* equilCartMapper_;
     const EquilGrid* equilGrid_;
