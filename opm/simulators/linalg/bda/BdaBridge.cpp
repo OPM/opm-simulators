@@ -276,10 +276,14 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::initWellContributions([[
     }
 }
 
-
-#define INSTANTIATE_BDA_FUNCTIONS(n)                                                                                         \
-template class BdaBridge<Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >, \
-Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >,                             \
+// the tests use Dune::FieldMatrix, Flow uses Opm::MatrixBlock
+#define INSTANTIATE_BDA_FUNCTIONS(n)                                                                                           \
+template class BdaBridge<Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >,   \
+Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >,                               \
+n>;                                                                                                                            \
+                                                                                                                               \
+template class BdaBridge<Dune::BCRSMatrix<Dune::FieldMatrix<double, n, n>, std::allocator<Dune::FieldMatrix<double, n, n> > >, \
+Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >,                               \
 n>;
 
 
