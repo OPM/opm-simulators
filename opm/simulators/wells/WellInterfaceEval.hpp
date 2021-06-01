@@ -48,33 +48,14 @@ class WellInterfaceEval {
     static constexpr int Oil = BlackoilPhases::Liquid;
     static constexpr int Gas = BlackoilPhases::Vapour;
 
-protected:
-    WellInterfaceEval(const WellInterfaceFluidSystem<FluidSystem>& baseif);
-
-    template<class EvalWell>
-    void getGroupInjectionControl(const Group& group,
-                                  const WellState& well_state,
-                                  const GroupState& group_state,
-                                  const Schedule& schedule,
-                                  const SummaryState& summaryState,
-                                  const InjectorType& injectorType,
-                                  const EvalWell& bhp,
-                                  const EvalWell& injection_rate,
-                                  EvalWell& control_eq,
-                                  double efficiencyFactor,
-                                  DeferredLogger& deferred_logger);
-
-
-    template<class EvalWell>
-    void getGroupProductionControl(const Group& group,
-                                   const WellState& well_state,
-                                   const GroupState& group_state,
-                                   const Schedule& schedule,
-                                   const SummaryState& summaryState,
-                                   const EvalWell& bhp,
-                                   const std::vector<EvalWell>& rates,
-                                   EvalWell& control_eq,
-                                   double efficiencyFactor);
+public:
+    template <class EvalWell>
+    EvalWell calculateBhpFromThp(const WellState& well_state,
+                                 const std::vector<EvalWell>& rates,
+                                 const Well& well,
+                                 const SummaryState& summaryState,
+                                 const double rho,
+                                 DeferredLogger& deferred_logger) const;
 
     template<class EvalWell, class BhpFromThpFunc>
     void assembleControlEqProd(const WellState& well_state,
@@ -86,7 +67,7 @@ protected:
                                const std::vector<EvalWell>& rates, // Always 3 canonical rates.
                                BhpFromThpFunc bhp_from_thp,
                                EvalWell& control_eq,
-                               DeferredLogger& deferred_logger)
+                               DeferredLogger& deferred_logger) const
     {
         std::function<EvalWell()> eval = [&bhp_from_thp]() { return bhp_from_thp(); };
         assembleControlEqProd_(well_state,
@@ -111,7 +92,7 @@ protected:
                                 const std::vector<EvalWell>& rates, // Always 3 canonical rates.
                                 const std::function<EvalWell()>& bhp_from_thp,
                                 EvalWell& control_eq,
-                                DeferredLogger& deferred_logger);
+                                DeferredLogger& deferred_logger) const;
 
     template<class EvalWell, class BhpFromThpFunc>
     void assembleControlEqInj(const WellState& well_state,
@@ -123,7 +104,7 @@ protected:
                               const EvalWell& injection_rate,
                               BhpFromThpFunc bhp_from_thp,
                               EvalWell& control_eq,
-                              DeferredLogger& deferred_logger)
+                              DeferredLogger& deferred_logger) const
     {
         std::function<EvalWell()> eval = [&bhp_from_thp]() { return bhp_from_thp(); };
         assembleControlEqInj_(well_state,
@@ -148,15 +129,59 @@ protected:
                                const EvalWell& injection_rate,
                                const std::function<EvalWell()>& bhp_from_thp,
                                EvalWell& control_eq,
-                               DeferredLogger& deferred_logger);
+                               DeferredLogger& deferred_logger) const;
 
-    template <class EvalWell>
-    EvalWell calculateBhpFromThp(const WellState& well_state,
-                                 const std::vector<EvalWell>& rates,
-                                 const Well& well,
-                                 const SummaryState& summaryState,
-                                 const double rho,
-                                 DeferredLogger& deferred_logger) const;
+protected:
+    WellInterfaceEval(const WellInterfaceFluidSystem<FluidSystem>& baseif);
+
+    template<class EvalWell>
+    void getGroupInjectionControl(const Group& group,
+                                  const WellState& well_state,
+                                  const GroupState& group_state,
+                                  const Schedule& schedule,
+                                  const SummaryState& summaryState,
+                                  const InjectorType& injectorType,
+                                  const EvalWell& bhp,
+                                  const EvalWell& injection_rate,
+                                  EvalWell& control_eq,
+                                  double efficiencyFactor,
+                                  DeferredLogger& deferred_logger) const;
+
+
+    template<class EvalWell>
+    void getGroupProductionControl(const Group& group,
+                                   const WellState& well_state,
+                                   const GroupState& group_state,
+                                   const Schedule& schedule,
+                                   const SummaryState& summaryState,
+                                   const EvalWell& bhp,
+                                   const std::vector<EvalWell>& rates,
+                                   EvalWell& control_eq,
+                                   double efficiencyFactor) const;
+
+    template<class EvalWell>
+    void assembleControlEqProd(const WellState& well_state,
+                               const GroupState& group_state,
+                               const Schedule& schedule,
+                               const SummaryState& summaryState,
+                               const Well::ProductionControls& controls,
+                               const EvalWell& bhp,
+                               const std::vector<EvalWell>& rates, // Always 3 canonical rates.
+                               const EvalWell& bhp_from_thp,
+                               EvalWell& control_eq,
+                               DeferredLogger& deferred_logger) const;
+
+    template<class EvalWell>
+    void assembleControlEqInj_(const WellState& well_state,
+                               const GroupState& group_state,
+                               const Schedule& schedule,
+                               const SummaryState& summaryState,
+                               const Well::InjectionControls& controls,
+                               const EvalWell& bhp,
+                               const EvalWell& injection_rate,
+                               const std::function<EvalWell()>& bhp_from_thp,
+                               EvalWell& control_eq,
+                               DeferredLogger& deferred_logger);
 
     const WellInterfaceFluidSystem<FluidSystem>& baseif_;
 };

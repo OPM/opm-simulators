@@ -118,6 +118,10 @@ public:
         return guide_rate_;
     }
 
+    int numComponents() const{
+        return num_components_;
+    }
+
     int numPhases() const {
         return number_of_phases_;
     }
@@ -156,13 +160,13 @@ public:
 
     double getTHPConstraint(const SummaryState& summaryState) const;
     double getALQ(const WellState& well_state) const;
+    double wsolvent() const;
 
-protected:
     // whether a well is specified with a non-zero and valid VFP table number
     bool isVFPActive(DeferredLogger& deferred_logger) const;
 
+protected:
     bool getAllowCrossFlow() const;
-    double wsolvent() const;
     double mostStrictBhpFromBhpLimits(const SummaryState& summaryState) const;
     void updateWellTestStatePhysical(const WellState& well_state,
                                      const double simulation_time,

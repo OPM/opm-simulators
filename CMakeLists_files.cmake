@@ -66,6 +66,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/MultisegmentWellGeneric.cpp
   opm/simulators/wells/ParallelWellInfo.cpp
   opm/simulators/wells/SegmentState.cpp
+  opm/simulators/wells/StandardWellEval.cpp
   opm/simulators/wells/StandardWellGeneric.cpp
   opm/simulators/wells/TargetCalculator.cpp
   opm/simulators/wells/VFPHelpers.cpp

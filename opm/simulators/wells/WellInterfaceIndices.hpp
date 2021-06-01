@@ -38,6 +38,10 @@ public:
     using WellInterfaceFluidSystem<FluidSystem>::Oil;
     using WellInterfaceFluidSystem<FluidSystem>::Water;
 
+    int flowPhaseToEbosCompIdx(const int phaseIdx) const;
+    int ebosCompIdxToFlowCompIdx(const unsigned compIdx) const;
+    double scalingFactor(const int phaseIdx) const;
+
 protected:
     WellInterfaceIndices(const Well& well,
                          const ParallelWellInfo& parallel_well_info,
@@ -48,11 +52,6 @@ protected:
                          const int num_phases,
                          const int index_of_well,
                          const std::vector<PerforationData>& perf_data);
-
-    int flowPhaseToEbosCompIdx( const int phaseIdx ) const;
-    int ebosCompIdxToFlowCompIdx( const unsigned compIdx ) const;
-
-    double scalingFactor(const int phaseIdx) const;
 };
 
 }
