@@ -27,14 +27,23 @@
 namespace Opm
 {
 
+namespace {
+std::vector<int> make_segment_number( const WellSegments& segments ) {
+    std::vector<int> segment_number;
+    std::transform(segments.begin(), segments.end(), std::back_insert_iterator(segment_number), [](const Segment& segment) { return segment.segmentNumber(); });
+    return segment_number;
+}
+
+}
+
 SegmentState::SegmentState(int num_phases, const WellSegments& segments) :
     rates(segments.size() * num_phases),
     pressure(segments.size()),
     pressure_drop_friction(segments.size()),
     pressure_drop_hydrostatic(segments.size()),
-    pressure_drop_accel(segments.size())
+    pressure_drop_accel(segments.size()),
+    m_segment_number(make_segment_number(segments))
 {
-
 }
 
 double SegmentState::pressure_drop(std::size_t index) const {
@@ -55,6 +64,10 @@ void SegmentState::scale_pressure(double bhp) {
                    this->pressure.end(),
                    this->pressure.begin(),
                    [scale_factor] (const double& p) { return p*scale_factor;});
+}
+
+const std::vector<int>& SegmentState::segment_number() const {
+    return this->m_segment_number;
 }
 
 }

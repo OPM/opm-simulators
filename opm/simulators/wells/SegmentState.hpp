@@ -37,13 +37,15 @@ public:
     double pressure_drop(std::size_t index) const;
     bool empty() const;
     void scale_pressure(double bhp);
-
+    const std::vector<int>& segment_number() const;
 
     std::vector<double> rates;
     std::vector<double> pressure;
     std::vector<double> pressure_drop_friction;
     std::vector<double> pressure_drop_hydrostatic;
     std::vector<double> pressure_drop_accel;
+private:
+    std::vector<int>    m_segment_number;
 };
 
 }
