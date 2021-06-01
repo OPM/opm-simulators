@@ -276,28 +276,11 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::initWellContributions([[
     }
 }
 
-#define INSTANTIATE_BDA_FUNCTIONS(n)                                                                                                \
-template BdaBridge<Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >,              \
-Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >,                                    \
-n>::BdaBridge                                                                                                                       \
-(std::string accelerator_mode_, std::string fpga_bitstream, int linear_solver_verbosity, int maxit, double tolerance,               \
-unsigned int platformID, unsigned int deviceID, std::string opencl_ilu_reorder);                                                    \
-                                                                                                                                    \
-template void BdaBridge<Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >,         \
-Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >,                                    \
-n>::solve_system                                                                                                                    \
-(Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >*,                               \
-    Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >&,                               \
-    WellContributions&, InverseOperatorResult&);                                                                                    \
-                                                                                                                                    \
-template void BdaBridge<Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >,         \
-Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >,                                    \
-n>::get_result                                                                                                                      \
-(Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >&);                                 \
-                                                                                                                                    \
-template void BdaBridge<Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >,         \
-Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >,                                    \
-n>::initWellContributions(WellContributions&)
+
+#define INSTANTIATE_BDA_FUNCTIONS(n)                                                                                         \
+template class BdaBridge<Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >, \
+Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >,                             \
+n>;
 
 
 INSTANTIATE_BDA_FUNCTIONS(1);
