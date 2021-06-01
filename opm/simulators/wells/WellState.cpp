@@ -531,7 +531,6 @@ void WellState::init(const std::vector<double>& cellPressures,
         for (int w = 0; w < nw; ++w) {
             top_segment_index_[w] = w;
             seg_number_[w] = 1; // Top segment is segment #1
-            this->seg_press_[w] = this->bhp(w);
         }
         //seg_rates_ = wellRates();
         seg_rates_.assign(nw*np, 0);
@@ -841,7 +840,7 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
         if ( !well_ecl.isMultiSegment() ) { // not multi-segment well
             nseg_ += 1;
             seg_number_.push_back(1); // Assign single segment (top) as number 1.
-            seg_press_.push_back(bhp(w));
+            seg_press_.push_back(0);
             for (int p = 0; p < np; ++p) {
                 seg_rates_.push_back(rates[p]);
             }
