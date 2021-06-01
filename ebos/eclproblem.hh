@@ -791,7 +791,7 @@ public:
         ExtboModule::initFromState(vanguard.eclState());
 
         // create the ECL writer
-        eclWriter_.reset(new EclWriterType(simulator, *this));
+        eclWriter_.reset(new EclWriterType(simulator));
 
         enableDriftCompensation_ = EWOMS_GET_PARAM(TypeTag, bool, EclEnableDriftCompensation);
 
@@ -926,8 +926,15 @@ public:
         }
 
         // write the static output files (EGRID, INIT, SMSPEC, etc.)
-        if (enableEclOutput_)
+        if (enableEclOutput_) {
+            if (simulator.vanguard().grid().comm().size() > 1) {
+                if (simulator.vanguard().grid().comm().rank() == 0)
+                    eclWriter_->setTransmissibilities(&simulator.vanguard().globalTransmissibility());
+            } else
+                eclWriter_->setTransmissibilities(&simulator.problem().eclTransmissibilities());
+
             eclWriter_->writeInit();
+        }
 
         simulator.vanguard().releaseGlobalTransmissibilities();
 

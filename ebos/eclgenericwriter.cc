@@ -163,7 +163,6 @@ EclGenericWriter(const Schedule& schedule,
                  const GridView& gridView,
                  const Dune::CartesianIndexMapper<Grid>& cartMapper,
                  const Dune::CartesianIndexMapper<EquilGrid>* equilCartMapper,
-                 const TransmissibilityType& globalTrans,
                  bool enableAsyncOutput)
     : collectToIORank_(grid,
                        equilGrid,
@@ -175,7 +174,6 @@ EclGenericWriter(const Schedule& schedule,
     , schedule_(schedule)
     , eclState_(eclState)
     , summaryConfig_(summaryConfig)
-    , globalTrans_(globalTrans)
     , cartMapper_(cartMapper)
     , equilCartMapper_(equilCartMapper)
     , equilGrid_(equilGrid)
@@ -278,18 +276,18 @@ computeTrans_(const std::unordered_map<int,int>& cartesianToActive) const
             int gc2 = std::max(cartIdx1, cartIdx2);
 
             if (gc2 - gc1 == 1 && cartDims[0] > 1 ) {
-                tranx.data[gc1] = globalTrans_.transmissibility(c1, c2);
+                tranx.data[gc1] = globalTrans().transmissibility(c1, c2);
                 continue; // skip other if clauses as they are false, last one needs some computation
             }
 
             if (gc2 - gc1 == cartDims[0] && cartDims[1] > 1) {
-                trany.data[gc1] = globalTrans_.transmissibility(c1, c2);
+                trany.data[gc1] = globalTrans().transmissibility(c1, c2);
                 continue; // skipt next if clause as it needs some computation
             }
 
             if ( gc2 - gc1 == cartDims[0]*cartDims[1] ||
                  directVerticalNeighbors(cartDims, cartesianToActive, gc1, gc2))
-                tranz.data[gc1] = globalTrans_.transmissibility(c1, c2);
+                tranz.data[gc1] = globalTrans().transmissibility(c1, c2);
         }
     }
 
@@ -365,7 +363,7 @@ exportNncStructure_(const std::unordered_map<int,int>& cartesianToActive) const
                 !directVerticalNeighbors(cartDims, cartesianToActive, cc1, cc2)) {
                 // We need to check whether an NNC for this face was also specified
                 // via the NNC keyword in the deck (i.e. in the first origNncSize entries.
-                auto t = globalTrans_.transmissibility(c1, c2);
+                auto t = globalTrans().transmissibility(c1, c2);
                 auto candidate = std::lower_bound(nncData.begin(), nncData.end(), NNCdata(cc1, cc2, 0.0));
 
                 while ( candidate != nncData.end() && candidate->cell1 == cc1
@@ -517,6 +515,15 @@ evalSummary(int reportStepNum,
         }
 #endif
     }
+}
+
+template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
+const typename EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::TransmissibilityType&
+EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
+globalTrans() const
+{
+    assert (globalTrans_);
+    return *globalTrans_;
 }
 
 #if HAVE_DUNE_FEM

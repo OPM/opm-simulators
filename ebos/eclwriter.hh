@@ -112,8 +112,7 @@ public:
     // The Simulator object should preferably have been const - the
     // only reason that is not the case is due to the SummaryState
     // object owned deep down by the vanguard.
-    template<class Problem>
-    EclWriter(Simulator& simulator, const Problem& problem)
+    EclWriter(Simulator& simulator)
         : BaseType(simulator.vanguard().schedule(),
                    simulator.vanguard().eclState(),
                    simulator.vanguard().summaryConfig(),
@@ -122,7 +121,6 @@ public:
                    simulator.vanguard().gridView(),
                    simulator.vanguard().cartesianIndexMapper(),
                    simulator.vanguard().grid().comm().rank() == 0 ? &simulator.vanguard().equilCartesianIndexMapper() : nullptr,
-                   simulator.vanguard().grid().comm().size() > 1 ? simulator.vanguard().globalTransmissibility() : problem.eclTransmissibilities(),
                    EWOMS_GET_PARAM(TypeTag, bool, EnableAsyncEclOutput))
         , simulator_(simulator)
     {
