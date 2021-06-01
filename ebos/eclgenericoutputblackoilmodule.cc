@@ -69,6 +69,7 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
                            const SummaryConfig& summaryConfig,
                            const SummaryState& summaryState,
                            bool enableEnergy,
+                           bool enableTemperature,
                            bool enableSolvent,
                            bool enablePolymer,
                            bool enableFoam,
@@ -79,6 +80,7 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
     , summaryConfig_(summaryConfig)
     , summaryState_(summaryState)
     , enableEnergy_(enableEnergy)
+    , enableTemperature_(enableTemperature)
     , enableSolvent_(enableSolvent)
     , enablePolymer_(enablePolymer)
     , enableFoam_(enableFoam)
@@ -554,7 +556,14 @@ assignToSolution(data::Solution& sol)
     }
 
     if (!temperature_.empty()) {
-        sol.insert("TEMP", UnitSystem::measure::temperature, std::move(temperature_), data::TargetType::RESTART_SOLUTION);
+        if (enableEnergy_)
+            sol.insert("TEMP", UnitSystem::measure::temperature, std::move(temperature_), data::TargetType::RESTART_SOLUTION);
+        else {
+            // Flow allows for initializing of non-constant initial temperature.
+            // For output of this temperature for visualization and restart set --enable-opm-restart=true
+            assert(enableTemperature_);
+            sol.insert("TEMP", UnitSystem::measure::temperature, std::move(temperature_), data::TargetType::RESTART_AUXILIARY);
+        }
     }
 
     if (FluidSystem::phaseIsActive(waterPhaseIdx) && !saturation_[waterPhaseIdx].empty()) {
@@ -898,7 +907,7 @@ doAllocBuffers(unsigned bufferSize,
     rstKeywords["PRESSURE"] = 0;
 
     // allocate memory for temperature
-    if (enableEnergy_ || rstKeywords["TEMP"]) {
+    if (enableEnergy_ || enableTemperature_) {
         temperature_.resize(bufferSize, 0.0);
         rstKeywords["TEMP"] = 0;
     }

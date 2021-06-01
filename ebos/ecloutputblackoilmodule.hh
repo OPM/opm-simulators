@@ -118,6 +118,7 @@ public:
                    simulator.vanguard().summaryConfig(),
                    simulator.vanguard().summaryState(),
                    getPropValue<TypeTag, Properties::EnableEnergy>(),
+                   getPropValue<TypeTag, Properties::EnableTemperature>(),
                    getPropValue<TypeTag, Properties::EnableSolvent>(),
                    getPropValue<TypeTag, Properties::EnablePolymer>(),
                    getPropValue<TypeTag, Properties::EnableFoam>(),
