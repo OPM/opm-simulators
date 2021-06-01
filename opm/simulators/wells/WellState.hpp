@@ -237,6 +237,14 @@ public:
         return this->segment_state[well_index];
     }
 
+    const SegmentState& segments(const std::string& wname) const {
+        return this->segment_state[wname];
+    }
+
+    SegmentState& segments(const std::string& wname) {
+        return this->segment_state[wname];
+    }
+
     std::vector<double>& productivityIndex() {
         return productivity_index_;
     }
