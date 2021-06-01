@@ -531,8 +531,6 @@ void WellState::init(const std::vector<double>& cellPressures,
             top_segment_index_[w] = w;
             seg_number_[w] = 1; // Top segment is segment #1
         }
-        //seg_rates_ = wellRates();
-        seg_rates_.assign(nw*np, 0);
     }
 
     updateWellsDefaultALQ(wells_ecl);
@@ -820,7 +818,6 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
     const int np = pu.num_phases;
 
     top_segment_index_.clear();
-    seg_rates_.clear();
     seg_number_.clear();
     nseg_ = 0;
 
@@ -833,14 +830,10 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
         const int connpos = well_info[1];
         const int num_perf_this_well = well_info[2];
 
-        const auto& rates = this->wellRates(w);
         top_segment_index_.push_back(nseg_);
         if ( !well_ecl.isMultiSegment() ) { // not multi-segment well
             nseg_ += 1;
             seg_number_.push_back(1); // Assign single segment (top) as number 1.
-            for (int p = 0; p < np; ++p) {
-                seg_rates_.push_back(rates[p]);
-            }
         } else { // it is a multi-segment well
             const WellSegments& segment_set = well_ecl.getSegments();
             // assuming the order of the perforations in well_ecl is the same with Wells
@@ -901,12 +894,10 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
 
                 const auto * perf_rates = &perfPhaseRates()[np*start_perf];
                 std::vector<double> perforation_rates(perf_rates, perf_rates + num_perf_this_well*np);
-                std::vector<double> segment_rates;
 
-                calculateSegmentRates(segment_inlets, segment_perforations, perforation_rates, np, 0 /* top segment */, segment_rates);
-                std::copy(segment_rates.begin(), segment_rates.end(), std::back_inserter(seg_rates_));
+                auto& segments = this->segments(w);
+                calculateSegmentRates(segment_inlets, segment_perforations, perforation_rates, np, 0 /* top segment */, segments.rates);
             }
-
             // for the segment pressure, the segment pressure is the same with the first perforation belongs to the segment
             // if there is no perforation associated with this segment, it uses the pressure from the outlet segment
             // which requres the ordering is successful
@@ -935,8 +926,7 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
     assert(int(seg_rates_.size()) == nseg_ * numPhases() );
 
 
-    if (prev_well_state && !prev_well_state->wellMap().empty()) {
-        const auto& end = prev_well_state->wellMap().end();
+    if (prev_well_state) {
         for (int w = 0; w < nw; ++w) {
             const Well& well = wells_ecl[w];
             if (well.getStatus() == Well::Status::SHUT)
@@ -946,39 +936,15 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                 continue;
 
             const auto& wname = well.name();
-            const auto& it = prev_well_state->wellMap().find( wells_ecl[w].name() );
-            if (it != end) { // the well is found in the prev_well_state
-                // TODO: the well with same name can change a lot, like they might not have same number of segments
-                // we need to handle that later.
-                // for now, we just copy them.
-                const int old_index_well = (*it).second[0];
-                const int new_index_well = w;
-                if (prev_well_state->status_[old_index_well] == Well::Status::SHUT) {
+            if (prev_well_state->segment_state.has(wname)) {
+                if (prev_well_state->status_[wname] == Well::Status::SHUT) {
                     continue;
                 }
 
-                const int new_top_segment_index = topSegmentIndex(new_index_well);
-                int number_of_segment = 0;
-                // if it is the last well in list
-                if (new_index_well == int(top_segment_index_.size()) - 1) {
-                    number_of_segment = nseg_ - new_top_segment_index;
-                } else {
-                    number_of_segment = topSegmentIndex(new_index_well + 1) - new_top_segment_index;
-                }
-
-
-                auto& segments = this->segments(wname);
-                const auto& prev_segments = prev_well_state->segments(wname);
-
-                segments.pressure = prev_segments.pressure;
-
-                auto segment_rates = this->segRates(w);
-                const auto prev_segment_rates = prev_well_state->segRates(old_index_well);
-
-                for (int seg=0; seg < number_of_segment; ++seg) {
-                    for (int p = 0; p < np; ++p)
-                        segment_rates[seg*np + p] = prev_segment_rates[seg*np + p];
-                }
+                // TODO: the well with same name can change a lot, like they might not have same number of segments
+                // we need to handle that later.
+                // for now, we just copy them.
+                this->segment_state.copy_welldata(prev_well_state->segment_state, wname);
             }
         }
     }
@@ -1158,7 +1124,7 @@ WellState::reportSegmentResults(const PhaseUsage& pu,
         segpress[Value::PDropAccel] = segments.pressure_drop_accel[seg_ix];
     }
 
-    const auto rate = &this->segRates(well_id)[seg_ix * pu.num_phases];
+    const auto rate = &segments.rates[seg_ix * pu.num_phases];
     if (pu.phase_used[Water]) {
         seg_res.rates.set(data::Rates::opt::wat,
                           rate[pu.phase_pos[Water]]);

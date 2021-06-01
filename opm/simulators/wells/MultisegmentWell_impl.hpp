@@ -278,7 +278,8 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     scaleSegmentRatesWithWellRates(WellState& well_state) const
     {
-        auto segment_rates = well_state.segRates(index_of_well_);
+        auto& segments = well_state.segments(this->index_of_well_);
+        auto& segment_rates = segments.rates;
         for (int phase = 0; phase < number_of_phases_; ++phase) {
             const double unscaled_top_seg_rate = segment_rates[phase];
             const double well_phase_rate = well_state.wellRates(index_of_well_)[phase];
@@ -302,9 +303,8 @@ namespace Opm
                 }
 
                 std::vector<double> rates;
-                WellState::calculateSegmentRates(segment_inlets_, segment_perforations_, perforation_rates, number_of_phases_,
-                                                 0, rates);
-                std::copy(rates.begin(), rates.end(), segment_rates);
+                WellState::calculateSegmentRates(segment_inlets_, segment_perforations_, perforation_rates, number_of_phases_, 0, rates);
+                std::copy(rates.begin(), rates.end(), segment_rates.begin());
             }
         }
     }
@@ -716,7 +716,7 @@ namespace Opm
 
         // the index of the top segment in the WellState
         const auto& segments = well_state.segments(this->index_of_well_);
-        const auto segment_rates = well_state.segRates(index_of_well_);
+        const auto& segment_rates = segments.rates;
         const auto& segment_pressure = segments.pressure;
         const PhaseUsage& pu = phaseUsage();
 
@@ -2335,7 +2335,7 @@ namespace Opm
         const int oil_pos = pu.phase_pos[Oil];
 
         auto& segments = well_state.segments(this->index_of_well_);
-        auto segment_rates = well_state.segRates(this->index_of_well_);
+        auto& segment_rates = segments.rates;
         auto& segment_pressure = segments.pressure;
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
             std::vector<double> fractions(number_of_phases_, 0.0);

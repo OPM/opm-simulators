@@ -213,7 +213,8 @@ namespace {
             }
 
             const auto  rateTop  = 1000.0 * wellID;
-            auto segRates = wstate.segRates(wellID);
+            auto& segments = wstate.segments(wellID);
+            auto& segRates = segments.rates;
 
             if (wat) { segRates[iw] = rateTop; }
             if (oil) { segRates[io] = rateTop; }

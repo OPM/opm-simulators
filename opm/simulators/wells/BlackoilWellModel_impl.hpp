@@ -2023,7 +2023,7 @@ namespace Opm {
 
                 auto& segments = well_state.segments(well_index);
                 auto& segment_pressure = segments.pressure;
-                auto segment_rates  = well_state.segRates(well_index);
+                auto& segment_rates  = segments.rates;
                 for (const auto& rst_segment : rst_segments) {
                     const int segment_index = segment_set.segmentNumberToIndex(rst_segment.first);
 
