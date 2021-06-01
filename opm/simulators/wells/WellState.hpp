@@ -196,10 +196,6 @@ public:
     }
 
 
-    int numSegment() const
-    {
-        return nseg_;
-    }
 
     int topSegmentIndex(const int w) const;
 
@@ -478,7 +474,6 @@ private:
     // the index of the top segments, which is used to locate the
     // multisegment well related information in WellState
     std::vector<int> top_segment_index_;
-    int nseg_; // total number of the segments
 
     // The following data are only recorded for output
 

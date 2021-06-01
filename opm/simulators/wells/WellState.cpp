@@ -524,7 +524,6 @@ void WellState::init(const std::vector<double>& cellPressures,
     {
         // we need to create a trival segment related values to avoid there will be some
         // multi-segment wells added later.
-        nseg_ = nw;
         top_segment_index_.resize(nw);
         for (int w = 0; w < nw; ++w) {
             top_segment_index_[w] = w;
@@ -816,10 +815,10 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
     const int np = pu.num_phases;
 
     top_segment_index_.clear();
-    nseg_ = 0;
 
     // in the init function, the well rates and perforation rates have been initialized or copied from prevState
     // what we do here, is to set the segment rates and perforation rates
+    int nseg_ = 0;
     for (int w = 0; w < nw; ++w) {
         const auto& well_ecl = wells_ecl[w];
         const auto& wname = wells_ecl[w].name();
@@ -915,8 +914,6 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
             }
         }
     }
-    assert(int(seg_press_.size()) == nseg_);
-    assert(int(seg_rates_.size()) == nseg_ * numPhases() );
 
 
     if (prev_well_state) {
@@ -1159,17 +1156,14 @@ bool WellState::wellIsOwned(const std::string& wellName) const
 
 int WellState::numSegments(const int well_id) const
 {
-    const auto topseg = this->topSegmentIndex(well_id);
-
-    return (well_id + 1 == this->numWells()) // Last well?
-            ? (this->numSegment() - topseg)
-            : (this->topSegmentIndex(well_id + 1) - topseg);
+    const auto& segments = this->segments(well_id);
+    return segments.size();
 }
 
 int WellState::segmentNumber(const int well_id, const int seg_id) const
 {
     const auto& segments = this->segment_state[well_id];
-    return segments.segment_number[seg_id];
+    return segments.segment_number()[seg_id];
 }
 
 void WellState::updateWellsDefaultALQ( const std::vector<Well>& wells_ecl )
