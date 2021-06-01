@@ -81,15 +81,14 @@ public:
         }
         data.volume = this->W_flux_.value();
         data.initPressure = this->pa0_;
-        data.type = data::AquiferType::CarterTracy;
 
-        data.aquCT = std::make_shared<data::CarterTracyData>();
-        data.aquCT->timeConstant = this->aquct_data_.timeConstant();
-        data.aquCT->influxConstant = this->aquct_data_.influxConstant();
-        data.aquCT->waterDensity = this->aquct_data_.waterDensity();
-        data.aquCT->waterViscosity = this->aquct_data_.waterViscosity();
-        data.aquCT->dimensionless_time = this->dimensionless_time_;
-        data.aquCT->dimensionless_pressure = this->dimensionless_pressure_;
+        auto* aquCT = data.typeData.template create<data::AquiferType::CarterTracy>();
+        aquCT->timeConstant = this->aquct_data_.timeConstant();
+        aquCT->influxConstant = this->aquct_data_.influxConstant();
+        aquCT->waterDensity = this->aquct_data_.waterDensity();
+        aquCT->waterViscosity = this->aquct_data_.waterViscosity();
+        aquCT->dimensionless_time = this->dimensionless_time_;
+        aquCT->dimensionless_pressure = this->dimensionless_pressure_;
 
         return data;
     }

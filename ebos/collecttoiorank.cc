@@ -37,6 +37,7 @@
 #include <ebos/femcpgridcompat.hh>
 #endif
 
+#include <algorithm>
 #include <cassert>
 #include <stdexcept>
 #include <string>
@@ -627,12 +628,20 @@ public:
 
             this->unpackCommon(data, aq);
 
-            if (data.aquFet != nullptr) {
-                this->unpackAquFet(std::move(data.aquFet), aq);
+            if (auto const* aquFet = data.typeData.get<data::AquiferType::Fetkovich>();
+                aquFet != nullptr)
+            {
+                this->unpackAquFet(*aquFet, aq);
             }
-
-            if (data.aquCT != nullptr) {
-                this->unpackCarterTracy(std::move(data.aquCT), aq);
+            else if (auto const* aquCT = data.typeData.get<data::AquiferType::CarterTracy>();
+                     aquCT != nullptr)
+            {
+                this->unpackCarterTracy(*aquCT, aq);
+            }
+            else if (auto const* aquNum = data.typeData.get<data::AquiferType::Numerical>();
+                     aquNum != nullptr)
+            {
+                this->unpackNumericAquifer(*aquNum, aq);
             }
         }
     }
@@ -648,14 +657,15 @@ private:
         aq.volume += data.volume;
     }
 
-    void unpackAquFet(std::shared_ptr<data::FetkovichData> aquFet, data::AquiferData& aq)
+    void unpackAquFet(const data::FetkovichData& aquFet, data::AquiferData& aq)
     {
-        if (aq.aquFet == nullptr) {
-            aq.aquFet = std::move(aquFet);
+        if (! aq.typeData.is<data::AquiferType::Fetkovich>()) {
+            auto* tData = aq.typeData.create<data::AquiferType::Fetkovich>();
+            *tData = aquFet;
         }
         else {
-            const auto& src = *aquFet;
-            auto&       dst = *aq.aquFet;
+            const auto& src = aquFet;
+            auto&       dst = *aq.typeData.getMutable<data::AquiferType::Fetkovich>();
 
             dst.initVolume   = std::max(dst.initVolume  , src.initVolume);
             dst.prodIndex    = std::max(dst.prodIndex   , src.prodIndex);
@@ -663,17 +673,44 @@ private:
         }
     }
 
-    void unpackCarterTracy(std::shared_ptr<data::CarterTracyData> aquCT, data::AquiferData& aq)
+    void unpackCarterTracy(const data::CarterTracyData& aquCT, data::AquiferData& aq)
     {
-        if (aq.aquCT == nullptr) {
-            aq.aquCT = std::move(aquCT);
+        if (! aq.typeData.is<data::AquiferType::CarterTracy>()) {
+            auto* tData = aq.typeData.create<data::AquiferType::CarterTracy>();
+            *tData = aquCT;
         }
         else {
-            const auto& src = *aquCT;
-            auto&       dst = *aq.aquCT;
+            const auto& src = aquCT;
+            auto&       dst = *aq.typeData.getMutable<data::AquiferType::CarterTracy>();
+
+            dst.timeConstant   = std::max(dst.timeConstant  , src.timeConstant);
+            dst.influxConstant = std::max(dst.influxConstant, src.influxConstant);
+            dst.waterDensity   = std::max(dst.waterDensity  , src.waterDensity);
+            dst.waterViscosity = std::max(dst.waterViscosity, src.waterViscosity);
 
             dst.dimensionless_time     = std::max(dst.dimensionless_time    , src.dimensionless_time);
             dst.dimensionless_pressure = std::max(dst.dimensionless_pressure, src.dimensionless_pressure);
+        }
+    }
+
+    void unpackNumericAquifer(const data::NumericAquiferData& aquNum, data::AquiferData& aq)
+    {
+        if (! aq.typeData.is<data::AquiferType::Numerical>()) {
+            auto* tData = aq.typeData.create<data::AquiferType::Numerical>();
+            *tData = aquNum;
+        }
+        else {
+            const auto& src = aquNum;
+            auto&       dst = *aq.typeData.getMutable<data::AquiferType::Numerical>();
+
+            std::transform(src.initPressure.begin(),
+                           src.initPressure.end(),
+                           dst.initPressure.begin(),
+                           dst.initPressure.begin(),
+                           [](const double p0_1, const double p0_2)
+                           {
+                               return std::max(p0_1, p0_2);
+                           });
         }
     }
 };
