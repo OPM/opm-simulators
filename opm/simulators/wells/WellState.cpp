@@ -945,6 +945,7 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
             if ( !well.isMultiSegment() )
                 continue;
 
+            const auto& wname = well.name();
             const auto& it = prev_well_state->wellMap().find( wells_ecl[w].name() );
             if (it != end) { // the well is found in the prev_well_state
                 // TODO: the well with same name can change a lot, like they might not have same number of segments
@@ -965,17 +966,18 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                     number_of_segment = topSegmentIndex(new_index_well + 1) - new_top_segment_index;
                 }
 
-                auto segment_rates = this->segRates(w);
-                auto segment_pressure = this->segPress(w);
 
+                auto& segments = this->segments(wname);
+                const auto& prev_segments = prev_well_state->segments(wname);
+
+                segments.pressure = prev_segments.pressure;
+
+                auto segment_rates = this->segRates(w);
                 const auto prev_segment_rates = prev_well_state->segRates(old_index_well);
-                const auto prev_segment_pressure = prev_well_state->segPress(old_index_well);
 
                 for (int seg=0; seg < number_of_segment; ++seg) {
                     for (int p = 0; p < np; ++p)
                         segment_rates[seg*np + p] = prev_segment_rates[seg*np + p];
-
-                    segment_pressure[seg] = prev_segment_pressure[seg];
                 }
             }
         }
@@ -1149,7 +1151,7 @@ WellState::reportSegmentResults(const PhaseUsage& pu,
     {
         using Value = data::SegmentPressures::Value;
         auto& segpress = seg_res.pressures;
-        segpress[Value::Pressure] = this->segPress(well_id)[seg_ix];
+        segpress[Value::Pressure] = segments.pressure[seg_ix];
         segpress[Value::PDrop] = segments.pressure_drop(seg_ix);
         segpress[Value::PDropHydrostatic] = segments.pressure_drop_hydrostatic[seg_ix];
         segpress[Value::PDropFriction] = segments.pressure_drop_friction[seg_ix];

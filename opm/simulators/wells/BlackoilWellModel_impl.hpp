@@ -2021,7 +2021,8 @@ namespace Opm {
                 // \Note: eventually we need to hanlde the situations that some segments are shut
                 assert(0u + segment_set.size() == rst_segments.size());
 
-                auto segment_pressure = well_state.segPress(well_index);
+                auto& segments = well_state.segments(well_index);
+                auto& segment_pressure = segments.pressure;
                 auto segment_rates  = well_state.segRates(well_index);
                 for (const auto& rst_segment : rst_segments) {
                     const int segment_index = segment_set.segmentNumberToIndex(rst_segment.first);

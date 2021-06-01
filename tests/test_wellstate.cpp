@@ -173,8 +173,8 @@ namespace {
             }
 
             const auto  pressTop = 100.0 * wellID;
-            auto* press = wstate.segPress(wellID);
-            press[0] = pressTop;
+            auto& segments = wstate.segments(wellID);
+            segments.pressure[0] = pressTop;
 
             const auto& segSet = well.getSegments();
             const auto  nSeg   = segSet.size();
@@ -182,7 +182,7 @@ namespace {
             for (auto segID = 0*nSeg + 1; segID < nSeg; ++segID) {
                 // One-based numbering scheme for segments.
                 const auto segNo = segSet[segID].segmentNumber();
-                press[segNo - 1] = pressTop + 1.0*(segNo - 1);
+                segments.pressure[segNo - 1] = pressTop + 1.0*(segNo - 1);
             }
         }
     }

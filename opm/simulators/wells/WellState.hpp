@@ -208,18 +208,6 @@ public:
         return &this->seg_rates_[top_segment_index * this->phase_usage_.num_phases];
     }
 
-    double * segPress(std::size_t well_index)
-    {
-        auto& segment = this->segments(well_index);
-        return segment.pressure.data();
-    }
-
-    const double * segPress(std::size_t well_index) const
-    {
-        const auto& segment = this->segments(well_index);
-        return segment.pressure.data();
-    }
-
 
     int numSegment() const
     {
