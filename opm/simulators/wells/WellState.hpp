@@ -172,8 +172,13 @@ public:
     double polymerWellRate(const int w) const;
 
     /// One rate pr well connection.
-    std::vector<double>& perfRateBrine() { return perfRateBrine_; }
-    const std::vector<double>& perfRateBrine() const { return perfRateBrine_; }
+    double* perfRateBrine(std::size_t well_index) {
+        return &this->perfRateBrine_[this->first_perf_index_[well_index]];
+    }
+
+    const double* perfRateBrine(std::size_t well_index) const {
+        return &this->perfRateBrine_[this->first_perf_index_[well_index]];
+    }
 
     /// One rate pr well
     double brineWellRate(const int w) const;
