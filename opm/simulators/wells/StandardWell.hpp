@@ -270,13 +270,6 @@ namespace Opm
             const std::string &msg,
             DeferredLogger& deferred_logger) const;
 
-        void gasLiftOptimizeProduction(
-            const Simulator& ebosSimulator,
-            const SummaryState& summaryState,
-            DeferredLogger& deferredLogger,
-            std::vector<double>& potentials,
-            const WellState& well_state);
-
         /* returns BHP */
         double computeWellRatesAndBhpWithThpAlqProd(const Simulator &ebos_simulator,
                                const SummaryState &summary_state,
