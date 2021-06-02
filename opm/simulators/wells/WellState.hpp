@@ -160,8 +160,13 @@ public:
     double solventWellRate(const int w) const;
 
     /// One rate pr well connection.
-    std::vector<double>& perfRatePolymer() { return perfRatePolymer_; }
-    const std::vector<double>& perfRatePolymer() const { return perfRatePolymer_; }
+    double * perfRatePolymer(std::size_t well_index) {
+        return &this->perfRatePolymer_[this->first_perf_index_[well_index]];
+    }
+
+    const double * perfRatePolymer(std::size_t well_index) const {
+        return &this->perfRatePolymer_[this->first_perf_index_[well_index]];
+    }
 
     /// One rate pr well
     double polymerWellRate(const int w) const;
