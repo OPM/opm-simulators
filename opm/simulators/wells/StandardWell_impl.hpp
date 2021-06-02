@@ -629,7 +629,7 @@ namespace Opm
 
                 // Store the perforation phase flux for later usage.
                 if (has_solvent && componentIdx == contiSolventEqIdx) {
-                    auto * perf_rate_solvent = &well_state.perfRateSolvent()[first_perf_];
+                    auto * perf_rate_solvent = well_state.perfRateSolvent(this->index_of_well_);
                     perf_rate_solvent[perf] = cq_s[componentIdx].value();
                 } else {
                     perf_rates[perf*np + ebosCompIdxToFlowCompIdx(componentIdx)] = cq_s[componentIdx].value();
@@ -828,7 +828,7 @@ namespace Opm
                 const double dis_gas_frac = perf_dis_gas_rate / cq_s_zfrac_effective.value();
                 cq_s_zfrac_effective *= extendEval(dis_gas_frac*intQuants.xVolume() + (1.0-dis_gas_frac)*intQuants.yVolume());
             }
-            auto * perf_rate_solvent = &well_state.perfRateSolvent()[first_perf_];
+            auto * perf_rate_solvent = well_state.perfRateSolvent(this->index_of_well_);
             perf_rate_solvent[perf] = cq_s_zfrac_effective.value();
 
             cq_s_zfrac_effective *= well_efficiency_factor_;
@@ -2114,7 +2114,7 @@ namespace Opm
         }
 
         if constexpr (has_solvent) {
-            const auto * solvent_perf_rates_state = &well_state.perfRateSolvent()[this->first_perf_];
+            const auto * solvent_perf_rates_state = well_state.perfRateSolvent(this->index_of_well_);
             for (int perf = 0; perf < nperf; ++perf) {
                 perfRates[perf * num_components_ + contiSolventEqIdx] = solvent_perf_rates_state[perf];
             }

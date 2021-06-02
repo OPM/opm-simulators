@@ -464,10 +464,11 @@ void WellState::init(const std::vector<double>& cellPressures,
                 if (pu.has_solvent) {
                     if (global_num_perf_same)
                     {
-                        int oldPerf_idx = oldPerf_idx_beg;
-                        for (int perf = connpos; perf < connpos + num_perf_this_well; ++perf, ++oldPerf_idx )
+                        auto * solvent_target = this->perfRateSolvent(newIndex);
+                        const auto * solvent_src = prevState->perfRateSolvent(oldIndex);
+                        for (int perf = 0; perf < num_perf_this_well; ++perf)
                         {
-                            perfRateSolvent()[ perf ] = prevState->perfRateSolvent()[ oldPerf_idx ];
+                            solvent_target[perf] = solvent_src[perf];
                         }
                     }
                 }
@@ -786,7 +787,7 @@ void WellState::reportConnections(data::Well& well,
             comp.rates.set( rt::brine, perf_brine_rate[local_comp_index]);
         }
         if ( pu.has_solvent ) {
-            const auto * perf_solvent_rate = &this->perfRateSolvent()[wt.second[1]];
+            const auto * perf_solvent_rate = this->perfRateSolvent(well_index);
             comp.rates.set( rt::solvent, perf_solvent_rate[local_comp_index] );
         }
 
@@ -955,7 +956,7 @@ WellState::calculateSegmentRates(const std::vector<std::vector<int>>& segment_in
 
 double WellState::solventWellRate(const int w) const
 {
-    const auto * perf_rates_solvent = &perfRateSolvent_[first_perf_index_[w]];
+    const auto * perf_rates_solvent = this->perfRateSolvent(w);
     return parallel_well_info_[w]->sumPerfValues(perf_rates_solvent, perf_rates_solvent + this->numPerf(w));
 }
 
