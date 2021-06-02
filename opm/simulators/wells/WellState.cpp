@@ -480,11 +480,11 @@ void WellState::init(const std::vector<double>& cellPressures,
                 if (pu.has_polymermw) {
                     if (global_num_perf_same)
                     {
-                        auto * throughput_target = &perf_water_throughput_[connpos];
+                        auto * throughput_target = this->perfThroughput(newIndex);
                         auto * pressure_target = &perf_skin_pressure_[connpos];
                         auto * velocity_target = &perf_water_velocity_[connpos];
 
-                        const auto * throughput_src = &prevState->perfThroughput()[oldPerf_idx_beg];
+                        const auto * throughput_src = prevState->perfThroughput(oldIndex);
                         const auto * pressure_src = &prevState->perfSkinPressure()[oldPerf_idx_beg];
                         const auto * velocity_src = &prevState->perfWaterVelocity()[oldPerf_idx_beg];
 
