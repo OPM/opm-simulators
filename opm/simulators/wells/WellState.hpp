@@ -449,6 +449,8 @@ public:
     const std::vector<double>& perfPress(const std::string& wname) const { return perfpress_[wname]; }
 
 
+    std::size_t numPerf(std::size_t well_index) const { return this->perfpress_[well_index].size(); }
+
 
 private:
     WellMapType wellMap_;
@@ -477,7 +479,6 @@ private:
     // iterate over all perforations of a given well
     // for (int perf = first_perf_index_[well_index]; perf < first_perf_index_[well_index] + num_perf_[well_index]; ++perf)
     std::vector<int> first_perf_index_;
-    std::vector<int> num_perf_;
     WellContainer<Opm::Well::InjectorCMode> current_injection_controls_;
     WellContainer<Well::ProducerCMode> current_production_controls_;
 
