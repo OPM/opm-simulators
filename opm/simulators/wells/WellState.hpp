@@ -254,12 +254,12 @@ public:
         return &perf_skin_pressure_[this->first_perf_index_[well_index]];
     }
 
-    std::vector<double>& perfWaterVelocity() {
-        return perf_water_velocity_;
+    double * perfWaterVelocity(std::size_t well_index) {
+        return &perf_water_velocity_[this->first_perf_index_[well_index]];
     }
 
-    const std::vector<double>& perfWaterVelocity() const {
-        return perf_water_velocity_;
+    const double * perfWaterVelocity(std::size_t well_index) const {
+        return &perf_water_velocity_[this->first_perf_index_[well_index]];
     }
 
     template<class Comm>

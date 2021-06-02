@@ -1305,7 +1305,7 @@ namespace Opm
         // other primary variables related to polymer injectivity study
         if constexpr (Base::has_polymermw) {
             if (this->isInjector()) {
-                auto * perf_water_velocity = &well_state.perfWaterVelocity()[this->first_perf_];
+                auto * perf_water_velocity = well_state.perfWaterVelocity(this->index_of_well_);
                 auto * perf_skin_pressure = well_state.perfSkinPressure(this->index_of_well_);
                 for (int perf = 0; perf < number_of_perforations_; ++perf) {
                     perf_water_velocity[perf] = primary_variables_[Bhp + 1 + perf];
@@ -2833,7 +2833,7 @@ namespace Opm
         // other primary variables related to polymer injection
         if constexpr (Base::has_polymermw) {
             if (this->isInjector()) {
-                const auto * water_velocity = &well_state.perfWaterVelocity()[first_perf_];
+                const auto * water_velocity = well_state.perfWaterVelocity(this->index_of_well_);
                 const auto * skin_pressure = well_state.perfSkinPressure(this->index_of_well_);
                 for (int perf = 0; perf < number_of_perforations_; ++perf) {
                     primary_variables_[Bhp + 1 + perf] = water_velocity[perf];

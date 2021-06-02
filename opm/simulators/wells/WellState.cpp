@@ -482,11 +482,11 @@ void WellState::init(const std::vector<double>& cellPressures,
                     {
                         auto * throughput_target = this->perfThroughput(newIndex);
                         auto * pressure_target = this->perfSkinPressure(newIndex);
-                        auto * velocity_target = &perf_water_velocity_[connpos];
+                        auto * velocity_target = this->perfWaterVelocity(newIndex);
 
                         const auto * throughput_src = prevState->perfThroughput(oldIndex);
                         const auto * pressure_src = prevState->perfSkinPressure(oldIndex);
-                        const auto * velocity_src = &prevState->perfWaterVelocity()[oldPerf_idx_beg];
+                        const auto * velocity_src = prevState->perfWaterVelocity(oldIndex);
 
                         for (int perf = 0; perf < num_perf_this_well; ++perf)
                         {
