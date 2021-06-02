@@ -262,7 +262,7 @@ namespace Opm
             bool use_fpga = bdaBridge->getUseFpga();
             if (use_gpu || use_fpga) {
                 const std::string accelerator_mode = EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode);
-                WellContributions wellContribs(accelerator_mode);
+                WellContributions wellContribs(accelerator_mode, useWellConn_);
                 bdaBridge->initWellContributions(wellContribs);
 
                 if (!useWellConn_) {

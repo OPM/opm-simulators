@@ -28,7 +28,7 @@
 namespace Opm
 {
 
-WellContributions::WellContributions(std::string accelerator_mode){
+WellContributions::WellContributions(std::string accelerator_mode, bool useWellConn){
     if(accelerator_mode.compare("cusparse") == 0){
         cuda_gpu = true;
     }

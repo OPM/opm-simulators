@@ -173,7 +173,9 @@ public:
     void alloc();
 
     /// Create a new WellContributions
-    WellContributions(std::string accelerator_mode);
+    /// \param[in] accelerator_mode    string indicating which solverBackend is used
+    /// \param[in] useWellConn         true iff wellcontributions are added to the matrix
+    WellContributions(std::string accelerator_mode, bool useWellConn);
 
     /// Destroy a WellContributions, and free memory
     ~WellContributions();
