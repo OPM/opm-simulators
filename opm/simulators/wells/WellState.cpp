@@ -337,17 +337,13 @@ void WellState::init(const std::vector<double>& cellPressures,
         }
     }
 
-    perfRateSolvent_.clear();
-    perfRateSolvent_.resize(nperf, 0.0);
-    productivity_index_.resize(nw * this->numPhases(), 0.0);
-    conn_productivity_index_.resize(nperf * this->numPhases(), 0.0);
-    well_potentials_.resize(nw * this->numPhases(), 0.0);
+    perfRateSolvent_.assign(nperf, 0.0);
+    productivity_index_.assign(nw * this->numPhases(), 0.0);
+    conn_productivity_index_.assign(nperf * this->numPhases(), 0.0);
+    well_potentials_.assign(nw * this->numPhases(), 0.0);
 
-    perfRatePolymer_.clear();
-    perfRatePolymer_.resize(nperf, 0.0);
-
-    perfRateBrine_.clear();
-    perfRateBrine_.resize(nperf, 0.0);
+    perfRatePolymer_.assign(nperf, 0.0);
+    perfRateBrine_.assign(nperf, 0.0);
 
     for (int w = 0; w < nw; ++w) {
         switch (wells_ecl[w].getStatus()) {
