@@ -38,6 +38,11 @@ WellContributions::WellContributions(std::string accelerator_mode, bool useWellC
     else if(accelerator_mode.compare("fpga") == 0){
         // unused for FPGA, but must be defined to avoid error
     }
+    else if(accelerator_mode.compare("amgcl") == 0){
+        if (!useWellConn) {
+            OPM_THROW(std::logic_error, "Error amgcl requires --matrix-add-well-contributions=true");
+        }
+    }
     else{
         OPM_THROW(std::logic_error, "Invalid accelerator mode");
     }

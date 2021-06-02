@@ -213,6 +213,18 @@ if(OpenCL_FOUND)
   endif()
 endif()
 
+# search for amgcl
+find_file(AMG_HPP amgcl/amg.hpp HINTS ${AMGCL_INCLUDE_DIRS})
+if(AMG_HPP)
+  set(HAVE_AMGCL 1)
+  set(AMGCL_FOUND 1)
+  include_directories(${AMGCL_INCLUDE_DIRS})
+  set_source_files_properties(opm/simulators/linalg/bda/amgclSolverBackend.cpp PROPERTIES LANGUAGE CUDA)
+else()
+  set(HAVE_AMGCL 0)
+  set(AMGCL_FOUND 0)
+endif()
+
 # read the list of components from this file (in the project directory);
 # it should set various lists with the names of the files to include
 include (CMakeLists_files.cmake)

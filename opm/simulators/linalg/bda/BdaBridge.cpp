@@ -38,8 +38,9 @@
 #include <opm/simulators/linalg/bda/FPGASolverBackend.hpp>
 #endif
 
-
-#define PRINT_TIMERS_BRIDGE 0
+#if HAVE_AMGCL
+#include <opm/simulators/linalg/bda/amgclSolverBackend.hpp>
+#endif
 
 typedef Dune::InverseOperatorResult InverseOperatorResult;
 
@@ -59,7 +60,7 @@ BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string acceler
                                                              [[maybe_unused]] unsigned int platformID,
                                                              unsigned int deviceID,
                                                              [[maybe_unused]] std::string opencl_ilu_reorder)
-: accelerator_mode(accelerator_mode_)
+: verbosity(linear_solver_verbosity), accelerator_mode(accelerator_mode_)
 {
     if (accelerator_mode.compare("cusparse") == 0) {
 #if HAVE_CUDA
@@ -104,11 +105,18 @@ BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string acceler
 #else
         OPM_THROW(std::logic_error, "Error fpgaSolver was chosen, but FPGA was not enabled by CMake");
 #endif
+    } else if (accelerator_mode.compare("amgcl") == 0) {
+#if HAVE_AMGCL
+        use_gpu = true; // should be replaced by a 'use_bridge' boolean
+        backend.reset(new bda::amgclSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance, platformID, deviceID));
+#else
+        OPM_THROW(std::logic_error, "Error amgclSolver was chosen, but amgcl was not found by CMake");
+#endif
     } else if (accelerator_mode.compare("none") == 0) {
         use_gpu = false;
         use_fpga = false;
     } else {
-        OPM_THROW(std::logic_error, "Error unknown value for parameter 'AcceleratorMode', should be passed like '--accelerator-mode=[none|cusparse|opencl|fpga]");
+        OPM_THROW(std::logic_error, "Error unknown value for parameter 'AcceleratorMode', should be passed like '--accelerator-mode=[none|cusparse|opencl|fpga|amgcl]");
     }
 }
 
@@ -197,40 +205,30 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatri
         const int nnz = nnzb * dim * dim;
 
         if (dim != 3) {
-            OpmLog::warning("cusparseSolver only accepts blocksize = 3 at this time, will use Dune for the remainder of the program");
-            use_gpu = false;
+            OpmLog::warning("BdaSolver only accepts blocksize = 3 at this time, will use Dune for the remainder of the program");
+            use_gpu = use_fpga = false;
             return;
         }
 
         if (h_rows.capacity() == 0) {
             h_rows.reserve(Nb+1);
             h_cols.reserve(nnzb);
-#if PRINT_TIMERS_BRIDGE
-            Dune::Timer t;
-#endif
             getSparsityPattern(*mat, h_rows, h_cols);
-#if PRINT_TIMERS_BRIDGE
-            std::ostringstream out;
-            out << "getSparsityPattern() took: " << t.stop() << " s";
-            OpmLog::info(out.str());
-#endif
         }
 
-#if PRINT_TIMERS_BRIDGE
         Dune::Timer t_zeros;
         int numZeros = checkZeroDiagonal(*mat);
-        std::ostringstream out;
-        out << "Checking zeros took: " << t_zeros.stop() << " s, found " << numZeros << " zeros";
-        OpmLog::info(out.str());
-#else
-        checkZeroDiagonal(*mat);
-#endif
+        if (verbosity >= 2) {
+            std::ostringstream out;
+            out << "Checking zeros took: " << t_zeros.stop() << " s, found " << numZeros << " zeros";
+            OpmLog::info(out.str());
+        }
 
 
         /////////////////////////
         // actually solve
 
-        // assume that underlying data (nonzeroes) from mat (Dune::BCRSMatrix) are contiguous, if this is not the case, cusparseSolver is expected to perform undefined behaviour
+        // assume that underlying data (nonzeroes) from mat (Dune::BCRSMatrix) are contiguous, if this is not the case, the chosen BdaSolver is expected to perform undefined behaviour
         SolverStatus status = backend->solve_system(N, nnz, dim, static_cast<double*>(&(((*mat)[0][0][0][0]))), h_rows.data(), h_cols.data(), static_cast<double*>(&(b[0][0])), wellContribs, result);
         switch(status) {
         case SolverStatus::BDA_SOLVER_SUCCESS:
