@@ -321,10 +321,28 @@ namespace Opm {
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         std::vector<double> pot(numPhases(), 0.0);
+        // Debug code for prototyping
+        // checking all the wells in the guideRate_, looking for the earliest update time, to decide the point to begin
+        // counting for the guide rate update
+        // if there is no values, we get a negative big value
+        // then we check whether to update the guide rates, which is for every production wells.
+        // TODO: potentially, there should be more sophiscated strategy, but let do this one first
+        // For example, there might be GUIDERAT for different phases setup, then guide rates for different phases
+        // might be updated under different paces.
+        // if we handle it for all the wells, the how to determine whether to update can be a variable and method for
+        // the class GuideRate_; // in the class, we check all the exisiting values and incorprate the GUIDERAT config
+        // to decide whether we should update the production guide rates
+        const auto& guideRateConfig = this->schedule().guideRateConfig(reportStepIdx);
+        // end of Debug code
         const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
+        // why updating the wells the last, should not be the other way?
+        // TODO: this function should consider parallel situation
+        const bool update_guiderate = this->guideRate_->timeToUpdate(simulationTime, guideRateConfig.model().update_delay());
+        std::cout << " current time is " << simulationTime/86400. << " TIME to update? " << update_guiderate << std::endl;
         WellGroupHelpers::updateGuideRateForProductionGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, this->wellState(), this->groupState(), comm, guideRate_.get(), pot);
         WellGroupHelpers::updateGuideRatesForInjectionGroups(fieldGroup, schedule(), summaryState, phase_usage_, reportStepIdx, this->wellState(), this->groupState(), guideRate_.get(), local_deferredLogger);
-        WellGroupHelpers::updateGuideRatesForWells(schedule(), phase_usage_, reportStepIdx, simulationTime, this->wellState(), comm, guideRate_.get());
+        // counting all the wells, that pick the one updated earliest, to decide whether
+        WellGroupHelpers::updateGuideRatesForWells(schedule(), phase_usage_, reportStepIdx, simulationTime, this->wellState(), comm, guideRate_.get(), update_guiderate);
 
         try {
             // Compute initial well solution for new wells and injectors that change injection type i.e. WAG.

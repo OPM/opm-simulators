@@ -119,7 +119,8 @@ namespace WellGroupHelpers
                                   const double& simTime,
                                   const WellState& wellState,
                                   const Comm& comm,
-                                  GuideRate* guideRate);
+                                  GuideRate* guideRate,
+                                  const bool update_now = false);
 
     void updateGuideRatesForInjectionGroups(const Group& group,
                                             const Schedule& schedule,
