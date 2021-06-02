@@ -148,6 +148,7 @@ protected:
                                    const SummaryConfig& summaryConfig,
                                    const SummaryState& summaryState,
                                    bool enableEnergy,
+                                   bool enableTemperature,
                                    bool enableSolvent,
                                    bool enablePolymer,
                                    bool enableFoam,
@@ -297,6 +298,7 @@ protected:
     const SummaryConfig& summaryConfig_;
     const SummaryState& summaryState_;
     bool enableEnergy_;
+    bool enableTemperature_;
 
     bool enableSolvent_;
     bool enablePolymer_;

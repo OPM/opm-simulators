@@ -98,6 +98,7 @@ class EclWriter : public EclGenericWriter<GetPropType<TypeTag, Properties::Grid>
     using BaseType = EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>;
 
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
     enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
 
 public:
@@ -270,11 +271,13 @@ public:
     {
         bool enableHysteresis = simulator_.problem().materialLawManager()->enableHysteresis();
         bool enableSwatinit = simulator_.vanguard().eclState().fieldProps().has_double("SWATINIT");
+        bool opm_rst_file = EWOMS_GET_PARAM(TypeTag, bool, EnableOpmRstFile);
+        bool read_temp = enableEnergy || (opm_rst_file && enableTemperature);
         std::vector<RestartKey> solutionKeys{
             {"PRESSURE", UnitSystem::measure::pressure},
             {"SWAT", UnitSystem::measure::identity, static_cast<bool>(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))},
             {"SGAS", UnitSystem::measure::identity, static_cast<bool>(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))},
-            {"TEMP" , UnitSystem::measure::temperature, enableEnergy},
+            {"TEMP" , UnitSystem::measure::temperature, read_temp},
             {"SSOLVENT" , UnitSystem::measure::identity, enableSolvent},
             {"RS", UnitSystem::measure::gas_oil_ratio, FluidSystem::enableDissolvedGas()},
             {"RV", UnitSystem::measure::oil_gas_ratio, FluidSystem::enableVaporizedOil()},
