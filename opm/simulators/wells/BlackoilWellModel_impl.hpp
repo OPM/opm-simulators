@@ -587,6 +587,12 @@ namespace Opm {
 
             for (int w = 0; w < nw; ++w) {
                 const Well& well_ecl = wells_ecl_[w];
+
+                if (well_ecl.getConnections().empty()) {
+                    // No connections in this well.  Nothing to do.
+                    continue;
+                }
+
                 const std::string& well_name = well_ecl.name();
                 const auto well_status = this->schedule()
                     .getWell(well_name, time_step).getStatus();
@@ -1370,6 +1376,11 @@ namespace Opm {
         // corresponding "this->wells_ecl_[shutWell]".
 
         for (const auto& shutWell : this->local_shut_wells_) {
+            if (this->wells_ecl_[shutWell].getConnections().empty()) {
+                // No connections in this well.  Nothing to do.
+                continue;
+            }
+
             auto wellPtr = this->template createTypedWellPointer
                 <StandardWell<TypeTag>>(shutWell, reportStepIdx);
 
