@@ -246,12 +246,12 @@ public:
         return &perf_water_throughput_[this->first_perf_index_[well_index]];
     }
 
-    std::vector<double>& perfSkinPressure() {
-        return perf_skin_pressure_;
+    double * perfSkinPressure(std::size_t well_index) {
+        return &perf_skin_pressure_[this->first_perf_index_[well_index]];
     }
 
-    const std::vector<double>& perfSkinPressure() const {
-        return perf_skin_pressure_;
+    const double * perfSkinPressure(std::size_t well_index) const {
+        return &perf_skin_pressure_[this->first_perf_index_[well_index]];
     }
 
     std::vector<double>& perfWaterVelocity() {
