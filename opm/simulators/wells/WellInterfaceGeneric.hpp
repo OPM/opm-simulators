@@ -118,7 +118,7 @@ public:
         return guide_rate_;
     }
 
-    int numComponents() const{
+    int numComponents() const {
         return num_components_;
     }
 
