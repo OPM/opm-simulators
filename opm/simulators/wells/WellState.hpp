@@ -158,36 +158,36 @@ public:
     }
 
     /// One rate pr well connection.
-    double * perfRateSolvent(std::size_t well_index) {
-        return &perfRateSolvent_[this->first_perf_index_[well_index]];
+    std::vector<double>& perfRateSolvent(std::size_t well_index) {
+        return this->perfRateSolvent_[well_index];
     }
 
-    const double * perfRateSolvent(std::size_t well_index) const {
-        return &perfRateSolvent_[this->first_perf_index_[well_index]];
+    const std::vector<double>& perfRateSolvent(std::size_t well_index) const {
+        return this->perfRateSolvent_[well_index];
     }
 
     /// One rate pr well
     double solventWellRate(const int w) const;
 
     /// One rate pr well connection.
-    double * perfRatePolymer(std::size_t well_index) {
-        return &this->perfRatePolymer_[this->first_perf_index_[well_index]];
+    std::vector<double>& perfRatePolymer(std::size_t well_index) {
+        return this->perfRatePolymer_[well_index];
     }
 
-    const double * perfRatePolymer(std::size_t well_index) const {
-        return &this->perfRatePolymer_[this->first_perf_index_[well_index]];
+    const std::vector<double>& perfRatePolymer(std::size_t well_index) const {
+        return this->perfRatePolymer_[well_index];
     }
 
     /// One rate pr well
     double polymerWellRate(const int w) const;
 
     /// One rate pr well connection.
-    double* perfRateBrine(std::size_t well_index) {
-        return &this->perfRateBrine_[this->first_perf_index_[well_index]];
+    std::vector<double>& perfRateBrine(std::size_t well_index) {
+        return this->perfRateBrine_[well_index];
     }
 
-    const double* perfRateBrine(std::size_t well_index) const {
-        return &this->perfRateBrine_[this->first_perf_index_[well_index]];
+    const std::vector<double>& perfRateBrine(std::size_t well_index) const {
+        return this->perfRateBrine_[well_index];
     }
 
     /// One rate pr well
@@ -452,11 +452,11 @@ private:
     std::map<std::string, std::pair<bool, std::vector<double>>> well_rates;
 
 
-    std::vector<double> perfRateSolvent_;
+    WellContainer<std::vector<double>> perfRateSolvent_;
 
     // only for output
-    std::vector<double> perfRatePolymer_;
-    std::vector<double> perfRateBrine_;
+    WellContainer<std::vector<double>> perfRatePolymer_;
+    WellContainer<std::vector<double>> perfRateBrine_;
 
     // it is the throughput of water flow through the perforations
     // it is used as a measure of formation damage around well-bore due to particle deposition
