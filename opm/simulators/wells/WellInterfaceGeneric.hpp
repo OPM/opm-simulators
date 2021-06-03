@@ -123,16 +123,28 @@ public:
         return number_of_phases_;
     }
 
+    int numPerfs() const {
+        return number_of_perforations_;
+    }
+
     double refDepth() const {
         return ref_depth_;
+    }
+
+    double gravity() const {
+        return gravity_;
     }
 
     const VFPProperties* vfpProperties() const {
         return vfp_properties_;
     }
 
-    double gravity() const {
-        return gravity_;
+    const ParallelWellInfo& parallelWellInfo() const {
+        return parallel_well_info_;
+    }
+
+    const std::vector<double>& perfDepth() const {
+        return perf_depth_;
     }
 
     double getTHPConstraint(const SummaryState& summaryState) const;

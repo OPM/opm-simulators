@@ -46,16 +46,10 @@ namespace Opm
                  const int first_perf_index,
                  const std::vector<PerforationData>& perf_data)
     : Base(well, pw_info, time_step, param, rate_converter, pvtRegionIdx, num_components, num_phases, index_of_well, first_perf_index, perf_data)
-    , perf_densities_(number_of_perforations_)
-    , perf_pressure_diffs_(number_of_perforations_)
-    , parallelB_(duneB_, pw_info)
+    , StandardWellGeneric<Scalar>(Bhp, pw_info, *this)
     , F0_(numWellConservationEq)
     {
         assert(num_components_ == numWellConservationEq);
-
-        duneB_.setBuildMode( OffDiagMatWell::row_wise );
-        duneC_.setBuildMode( OffDiagMatWell::row_wise );
-        invDuneD_.setBuildMode( DiagMatWell::row_wise );
     }
 
 
@@ -97,18 +91,18 @@ namespace Opm
         //[A C^T    [x    =  [ res
         // B D] x_well]      res_well]
         // set the size of the matrices
-        invDuneD_.setSize(1, 1, 1);
-        duneB_.setSize(1, num_cells, number_of_perforations_);
-        duneC_.setSize(1, num_cells, number_of_perforations_);
+        this->invDuneD_.setSize(1, 1, 1);
+        this->duneB_.setSize(1, num_cells, number_of_perforations_);
+        this->duneC_.setSize(1, num_cells, number_of_perforations_);
 
-        for (auto row=invDuneD_.createbegin(), end = invDuneD_.createend(); row!=end; ++row) {
+        for (auto row=this->invDuneD_.createbegin(), end = this->invDuneD_.createend(); row!=end; ++row) {
             // Add nonzeros for diagonal
             row.insert(row.index());
         }
         // the block size is run-time determined now
-        invDuneD_[0][0].resize(numWellEq_, numWellEq_);
+        this->invDuneD_[0][0].resize(numWellEq_, numWellEq_);
 
-        for (auto row = duneB_.createbegin(), end = duneB_.createend(); row!=end; ++row) {
+        for (auto row = this->duneB_.createbegin(), end = this->duneB_.createend(); row!=end; ++row) {
             for (int perf = 0 ; perf < number_of_perforations_; ++perf) {
                 const int cell_idx = well_cells_[perf];
                 row.insert(cell_idx);
@@ -118,11 +112,11 @@ namespace Opm
         for (int perf = 0 ; perf < number_of_perforations_; ++perf) {
             const int cell_idx = well_cells_[perf];
              // the block size is run-time determined now
-             duneB_[0][cell_idx].resize(numWellEq_, numEq);
+             this->duneB_[0][cell_idx].resize(numWellEq_, numEq);
         }
 
         // make the C^T matrix
-        for (auto row = duneC_.createbegin(), end = duneC_.createend(); row!=end; ++row) {
+        for (auto row = this->duneC_.createbegin(), end = this->duneC_.createend(); row!=end; ++row) {
             for (int perf = 0; perf < number_of_perforations_; ++perf) {
                 const int cell_idx = well_cells_[perf];
                 row.insert(cell_idx);
@@ -131,22 +125,22 @@ namespace Opm
 
         for (int perf = 0; perf < number_of_perforations_; ++perf) {
             const int cell_idx = well_cells_[perf];
-            duneC_[0][cell_idx].resize(numWellEq_, numEq);
+            this->duneC_[0][cell_idx].resize(numWellEq_, numEq);
         }
 
-        resWell_.resize(1);
+        this->resWell_.resize(1);
         // the block size of resWell_ is also run-time determined now
-        resWell_[0].resize(numWellEq_);
+        this->resWell_[0].resize(numWellEq_);
 
         // resize temporary class variables
-        Bx_.resize( duneB_.N() );
-        for (unsigned i = 0; i < duneB_.N(); ++i) {
-            Bx_[i].resize(numWellEq_);
+        this->Bx_.resize( this->duneB_.N() );
+        for (unsigned i = 0; i < this->duneB_.N(); ++i) {
+            this->Bx_[i].resize(numWellEq_);
         }
 
-        invDrw_.resize( invDuneD_.N() );
-        for (unsigned i = 0; i < invDuneD_.N(); ++i) {
-            invDrw_[i].resize(numWellEq_);
+        this->invDrw_.resize( this->invDuneD_.N() );
+        for (unsigned i = 0; i < this->invDuneD_.N(); ++i) {
+            this->invDrw_[i].resize(numWellEq_);
         }
     }
 
@@ -406,7 +400,7 @@ namespace Opm
         }
 
         // Pressure drawdown (also used to determine direction of flow)
-        const EvalWell well_pressure = bhp + perf_pressure_diffs_[perf];
+        const EvalWell well_pressure = bhp + this->perf_pressure_diffs_[perf];
         EvalWell drawdown = pressure - well_pressure;
 
         if constexpr (Base::has_polymermw) {
@@ -560,10 +554,10 @@ namespace Opm
         if (!this->isOperable() && !this->wellIsStopped()) return;
 
         // clear all entries
-        duneB_ = 0.0;
-        duneC_ = 0.0;
-        invDuneD_ = 0.0;
-        resWell_ = 0.0;
+        this->duneB_ = 0.0;
+        this->duneC_ = 0.0;
+        this->invDuneD_ = 0.0;
+        this->resWell_ = 0.0;
 
         assembleWellEqWithoutIterationImpl(ebosSimulator, dt, well_state, group_state, deferred_logger);
     }
@@ -613,17 +607,17 @@ namespace Opm
                 connectionRates[perf][componentIdx] = Base::restrictEval(cq_s_effective);
 
                 // subtract sum of phase fluxes in the well equations.
-                resWell_[0][componentIdx] += cq_s_effective.value();
+                this->resWell_[0][componentIdx] += cq_s_effective.value();
 
                 // assemble the jacobians
                 for (int pvIdx = 0; pvIdx < numWellEq_; ++pvIdx) {
                     // also need to consider the efficiency factor when manipulating the jacobians.
-                    duneC_[0][cell_idx][pvIdx][componentIdx] -= cq_s_effective.derivative(pvIdx+numEq); // intput in transformed matrix
-                    invDuneD_[0][0][componentIdx][pvIdx] += cq_s_effective.derivative(pvIdx+numEq);
+                    this->duneC_[0][cell_idx][pvIdx][componentIdx] -= cq_s_effective.derivative(pvIdx+numEq); // intput in transformed matrix
+                    this->invDuneD_[0][0][componentIdx][pvIdx] += cq_s_effective.derivative(pvIdx+numEq);
                 }
 
                 for (int pvIdx = 0; pvIdx < numEq; ++pvIdx) {
-                    duneB_[0][cell_idx][componentIdx][pvIdx] += cq_s_effective.derivative(pvIdx);
+                    this->duneB_[0][cell_idx][componentIdx][pvIdx] += cq_s_effective.derivative(pvIdx);
                 }
 
                 // Store the perforation phase flux for later usage.
@@ -637,7 +631,7 @@ namespace Opm
 
             if constexpr (has_zFraction) {
                 for (int pvIdx = 0; pvIdx < numWellEq_; ++pvIdx) {
-                    duneC_[0][cell_idx][pvIdx][contiZfracEqIdx] -= cq_s_zfrac_effective.derivative(pvIdx+numEq);
+                    this->duneC_[0][cell_idx][pvIdx][contiZfracEqIdx] -= cq_s_zfrac_effective.derivative(pvIdx+numEq);
                 }
             }
         }
@@ -645,8 +639,8 @@ namespace Opm
         connectionRates_ = connectionRates;
 
         // accumulate resWell_ and invDuneD_ in parallel to get effects of all perforations (might be distributed)
-        wellhelpers::sumDistributedWellEntries(invDuneD_[0][0], resWell_[0],
-                                            this->parallel_well_info_.communication());
+        wellhelpers::sumDistributedWellEntries(this->invDuneD_[0][0], this->resWell_[0],
+                                               this->parallel_well_info_.communication());
         // add vol * dF/dt + Q to the well equations;
         for (int componentIdx = 0; componentIdx < numWellConservationEq; ++componentIdx) {
             // TODO: following the development in MSW, we need to convert the volume of the wellbore to be surface volume
@@ -658,9 +652,9 @@ namespace Opm
             }
             resWell_loc -= getQs(componentIdx) * well_efficiency_factor_;
             for (int pvIdx = 0; pvIdx < numWellEq_; ++pvIdx) {
-                invDuneD_[0][0][componentIdx][pvIdx] += resWell_loc.derivative(pvIdx+numEq);
+                this->invDuneD_[0][0][componentIdx][pvIdx] += resWell_loc.derivative(pvIdx+numEq);
             }
-            resWell_[0][componentIdx] += resWell_loc.value();
+            this->resWell_[0][componentIdx] += resWell_loc.value();
         }
 
         const auto& summaryState = ebosSimulator.vanguard().summaryState();
@@ -670,7 +664,7 @@ namespace Opm
 
         // do the local inversion of D.
         try {
-            Dune::ISTLUtility::invertMatrix(invDuneD_[0][0]);
+            Dune::ISTLUtility::invertMatrix(this->invDuneD_[0][0]);
         } catch( ... ) {
             OPM_DEFLOG_THROW(NumericalIssue,"Error when inverting local well equations for well " + name(), deferred_logger);
         }
@@ -853,7 +847,7 @@ namespace Opm
 
         // Store the perforation pressure for later usage.
         auto& perf_press = well_state.perfPress(index_of_well_);
-        perf_press[perf] = well_state.bhp(index_of_well_) + perf_pressure_diffs_[perf];
+        perf_press[perf] = well_state.bhp(index_of_well_) + this->perf_pressure_diffs_[perf];
     }
 
 
@@ -912,9 +906,9 @@ namespace Opm
 
         // using control_eq to update the matrix and residuals
         // TODO: we should use a different index system for the well equations
-        resWell_[0][Bhp] = control_eq.value();
+        this->resWell_[0][Bhp] = control_eq.value();
         for (int pv_idx = 0; pv_idx < numWellEq_; ++pv_idx) {
-            invDuneD_[0][0][Bhp][pv_idx] = control_eq.derivative(pv_idx + numEq);
+            this->invDuneD_[0][0][Bhp][pv_idx] = control_eq.derivative(pv_idx + numEq);
         }
     }
 
@@ -1052,7 +1046,7 @@ namespace Opm
         processFractions();
 
         // updating the total rates Q_t
-        const double relaxation_factor_rate = relaxationFactorRate(old_primary_variables, dwells);
+        const double relaxation_factor_rate = this->relaxationFactorRate(old_primary_variables, dwells);
         primary_variables_[WQTotal] = old_primary_variables[WQTotal] - dwells[0][WQTotal] * relaxation_factor_rate;
 
         // updating the bottom hole pressure
@@ -1345,7 +1339,7 @@ namespace Opm
 
         const double bhp = well_state.bhp(index_of_well_);
 
-        well_state.update_thp(index_of_well_, calculateThpFromBhp(well_state, rates, bhp, deferred_logger));
+        well_state.update_thp(index_of_well_, this->calculateThpFromBhp(well_state, rates, bhp, deferred_logger));
 
     }
 
@@ -1407,7 +1401,7 @@ namespace Opm
             }
 
             // the pressure difference between the connection and BHP
-            const double h_perf = perf_pressure_diffs_[perf];
+            const double h_perf = this->perf_pressure_diffs_[perf];
             const double pressure_diff = p_r - h_perf;
 
             // Let us add a check, since the pressure is calculated based on zero value BHP
@@ -1493,7 +1487,7 @@ namespace Opm
                 std::vector<double> well_rates_bhp_limit;
                 computeWellRatesWithBhp(ebos_simulator, bhp_limit, well_rates_bhp_limit, deferred_logger);
 
-                const double thp = calculateThpFromBhp(well_state, well_rates_bhp_limit, bhp_limit, deferred_logger);
+                const double thp = this->calculateThpFromBhp(well_state, well_rates_bhp_limit, bhp_limit, deferred_logger);
                 const double thp_limit = this->getTHPConstraint(summaryState);
 
                 if (thp < thp_limit) {
@@ -1571,7 +1565,7 @@ namespace Opm
             const double bhp = getBhp().value();
 
             // Pressure drawdown (also used to determine direction of flow)
-            const double well_pressure = bhp + perf_pressure_diffs_[perf];
+            const double well_pressure = bhp + this->perf_pressure_diffs_[perf];
             const double drawdown = pressure - well_pressure;
 
             // for now, if there is one perforation can produce/inject in the correct
@@ -1907,50 +1901,9 @@ namespace Opm
             }
 
             // Compute segment density.
-            perf_densities_[perf] = std::inner_product(surf_dens.begin(), surf_dens.end(), mix.begin(), 0.0) / volrat;
+            this->perf_densities_[perf] = std::inner_product(surf_dens.begin(), surf_dens.end(), mix.begin(), 0.0) / volrat;
         }
     }
-
-
-
-
-    template<typename TypeTag>
-    void
-    StandardWell<TypeTag>::
-    computeConnectionPressureDelta()
-    {
-        // Algorithm:
-
-        // We'll assume the perforations are given in order from top to
-        // bottom for each well.  By top and bottom we do not necessarily
-        // mean in a geometric sense (depth), but in a topological sense:
-        // the 'top' perforation is nearest to the surface topologically.
-        // Our goal is to compute a pressure delta for each perforation.
-
-        // 1. Compute pressure differences between perforations.
-        //    dp_perf will contain the pressure difference between a
-        //    perforation and the one above it, except for the first
-        //    perforation for each well, for which it will be the
-        //    difference to the reference (bhp) depth.
-
-        const int nperf = number_of_perforations_;
-        perf_pressure_diffs_.resize(nperf, 0.0);
-        auto z_above = this->parallel_well_info_.communicateAboveValues(ref_depth_, perf_depth_);
-
-        for (int perf = 0; perf < nperf; ++perf) {
-            const double dz = perf_depth_[perf] - z_above[perf];
-            perf_pressure_diffs_[perf] = dz * perf_densities_[perf] * gravity_;
-        }
-
-        // 2. Compute pressure differences to the reference point (bhp) by
-        //    accumulating the already computed adjacent pressure
-        //    differences, storing the result in dp_perf.
-        //    This accumulation must be done per well.
-        const auto beg = perf_pressure_diffs_.begin();
-        const auto end = perf_pressure_diffs_.end();
-        this->parallel_well_info_.partialSumPerfValues(beg, end);
-    }
-
 
 
 
@@ -1973,7 +1926,7 @@ namespace Opm
         std::vector<double> res(numWellEq_);
         for (int eq_idx = 0; eq_idx < numWellEq_; ++eq_idx) {
             // magnitude of the residual matters
-            res[eq_idx] = std::abs(resWell_[0][eq_idx]);
+            res[eq_idx] = std::abs(this->resWell_[0][eq_idx]);
         }
 
         std::vector<double> well_flux_residual(num_components_);
@@ -2005,7 +1958,7 @@ namespace Opm
             }
         }
 
-        checkConvergenceControlEq(well_state, report, deferred_logger);
+        this->checkConvergenceControlEq(well_state, report, deferred_logger, maxResidualAllowed);
 
         checkConvergenceExtraEqs(res, report);
 
@@ -2153,7 +2106,7 @@ namespace Opm
 
         computeConnectionDensities(perfRates, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
 
-        computeConnectionPressureDelta();
+        this->computeConnectionPressureDelta();
 
     }
 
@@ -2193,7 +2146,7 @@ namespace Opm
         // which is why we do not put the assembleWellEq here.
         BVectorWell dx_well(1);
         dx_well[0].resize(numWellEq_);
-        invDuneD_.mv(resWell_, dx_well);
+        this->invDuneD_.mv(this->resWell_, dx_well);
 
         updateWellState(dx_well, well_state, deferred_logger);
     }
@@ -2243,20 +2196,20 @@ namespace Opm
             // Contributions are already in the matrix itself
             return;
         }
-        assert( Bx_.size() == duneB_.N() );
-        assert( invDrw_.size() == invDuneD_.N() );
+        assert( this->Bx_.size() == this->duneB_.N() );
+        assert( this->invDrw_.size() == this->invDuneD_.N() );
 
         // Bx_ = duneB_ * x
-        parallelB_.mv(x, Bx_);
+        this->parallelB_.mv(x, this->Bx_);
 
         // invDBx = invDuneD_ * Bx_
         // TODO: with this, we modified the content of the invDrw_.
         // Is it necessary to do this to save some memory?
-        BVectorWell& invDBx = invDrw_;
-        invDuneD_.mv(Bx_, invDBx);
+        BVectorWell& invDBx = this->invDrw_;
+        this->invDuneD_.mv(this->Bx_, invDBx);
 
         // Ax = Ax - duneC_^T * invDBx
-        duneC_.mmtv(invDBx,Ax);
+        this->duneC_.mmtv(invDBx,Ax);
     }
 
 
@@ -2269,12 +2222,12 @@ namespace Opm
     {
         if (!this->isOperable() && !this->wellIsStopped()) return;
 
-        assert( invDrw_.size() == invDuneD_.N() );
+        assert( this->invDrw_.size() == this->invDuneD_.N() );
 
         // invDrw_ = invDuneD_ * resWell_
-        invDuneD_.mv(resWell_, invDrw_);
+        this->invDuneD_.mv(this->resWell_, this->invDrw_);
         // r = r - duneC_^T * invDrw_
-        duneC_.mmtv(invDrw_, r);
+        this->duneC_.mmtv(this->invDrw_, r);
     }
 
 #if HAVE_CUDA || HAVE_OPENCL
@@ -2285,11 +2238,11 @@ namespace Opm
     {
         std::vector<int> colIndices;
         std::vector<double> nnzValues;
-        colIndices.reserve(duneB_.nonzeroes());
-        nnzValues.reserve(duneB_.nonzeroes()*numStaticWellEq * numEq);
+        colIndices.reserve(this->duneB_.nonzeroes());
+        nnzValues.reserve(this->duneB_.nonzeroes()*numStaticWellEq * numEq);
 
         // duneC
-        for ( auto colC = duneC_[0].begin(), endC = duneC_[0].end(); colC != endC; ++colC )
+        for ( auto colC = this->duneC_[0].begin(), endC = this->duneC_[0].end(); colC != endC; ++colC )
         {
             colIndices.emplace_back(colC.index());
             for (int i = 0; i < numStaticWellEq; ++i) {
@@ -2298,7 +2251,7 @@ namespace Opm
                 }
             }
         }
-        wellContribs.addMatrix(WellContributions::MatrixType::C, colIndices.data(), nnzValues.data(), duneC_.nonzeroes());
+        wellContribs.addMatrix(WellContributions::MatrixType::C, colIndices.data(), nnzValues.data(), this->duneC_.nonzeroes());
 
         // invDuneD
         colIndices.clear();
@@ -2307,7 +2260,7 @@ namespace Opm
         for (int i = 0; i < numStaticWellEq; ++i)
         {
             for (int j = 0; j < numStaticWellEq; ++j) {
-                nnzValues.emplace_back(invDuneD_[0][0][i][j]);
+                nnzValues.emplace_back(this->invDuneD_[0][0][i][j]);
             }
         }
         wellContribs.addMatrix(WellContributions::MatrixType::D, colIndices.data(), nnzValues.data(), 1);
@@ -2315,7 +2268,7 @@ namespace Opm
         // duneB
         colIndices.clear();
         nnzValues.clear();
-        for ( auto colB = duneB_[0].begin(), endB = duneB_[0].end(); colB != endB; ++colB )
+        for ( auto colB = this->duneB_[0].begin(), endB = this->duneB_[0].end(); colB != endB; ++colB )
         {
             colIndices.emplace_back(colB.index());
             for (int i = 0; i < numStaticWellEq; ++i) {
@@ -2324,16 +2277,7 @@ namespace Opm
                 }
             }
         }
-        wellContribs.addMatrix(WellContributions::MatrixType::B, colIndices.data(), nnzValues.data(), duneB_.nonzeroes());
-    }
-
-
-    template<typename TypeTag>
-    void
-    StandardWell<TypeTag>::
-    getNumBlocks(unsigned int& numBlocks) const
-    {
-        numBlocks = duneB_.nonzeroes();
+        wellContribs.addMatrix(WellContributions::MatrixType::B, colIndices.data(), nnzValues.data(), this->duneB_.nonzeroes());
     }
 #endif
 
@@ -2345,11 +2289,11 @@ namespace Opm
     {
         if (!this->isOperable() && !this->wellIsStopped()) return;
 
-        BVectorWell resWell = resWell_;
+        BVectorWell resWell = this->resWell_;
         // resWell = resWell - B * x
-        parallelB_.mmv(x, resWell);
+        this->parallelB_.mmv(x, resWell);
         // xw = D^-1 * resWell
-        invDuneD_.mv(resWell, xw);
+        this->invDuneD_.mv(resWell, xw);
     }
 
 
@@ -2489,115 +2433,6 @@ namespace Opm
         return potentials;
     }
 
-    /* At this point we know that the well does not have BHP control mode and
-       that it does have THP constraints, see computeWellPotentials().
-     * TODO: Currently we limit the application of gas lift optimization to wells
-     *    operating under THP control mode, does it make sense to
-     *    extend it to other modes?
-     */
-    template<typename TypeTag>
-    bool
-    StandardWell<TypeTag>::
-    doGasLiftOptimize(const WellState &well_state, const Simulator &ebos_simulator,
-                      DeferredLogger& deferred_logger) const
-    {
-
-        gliftDebug("checking if GLIFT should be done..", deferred_logger);
-        if (!well_state.gliftOptimizationEnabled()) {
-            gliftDebug("Optimization disabled in WellState", deferred_logger);
-            return false;
-        }
-        if (well_state.gliftCheckAlqOscillation(name())) {
-            gliftDebug("further optimization skipped due to oscillation in ALQ",
-                deferred_logger);
-            return false;
-        }
-        if (this->glift_optimize_only_thp_wells) {
-            const int well_index = index_of_well_;
-            auto control_mode = well_state.currentProductionControl(well_index);
-            if (control_mode != Well::ProducerCMode::THP ) {
-                gliftDebug("Not THP control", deferred_logger);
-                return false;
-            }
-        }
-        if (!checkGliftNewtonIterationIdxOk(ebos_simulator, deferred_logger)) {
-            return false;
-        }
-        const int report_step_idx = ebos_simulator.episodeIndex();
-        const Schedule& schedule = ebos_simulator.vanguard().schedule();
-        const GasLiftOpt& glo = schedule.glo(report_step_idx);
-        if (!glo.has_well(name())) {
-            gliftDebug("Gas Lift not activated: WLIFTOPT is probably missing",
-                deferred_logger);
-            return false;
-        }
-        auto increment = glo.gaslift_increment();
-        // NOTE: According to the manual: LIFTOPT, item 1, :
-        //   "Increment size for lift gas injection rate. Lift gas is
-        //   allocated to individual wells in whole numbers of the increment
-        //   size.  If gas lift optimization is no longer required, it can be
-        //   turned off by entering a zero or negative number."
-        if (increment <= 0) {
-            if (this->glift_debug) {
-                const std::string msg = fmt::format(
-                    "Gas Lift switched off in LIFTOPT item 1 due to non-positive "
-                    "value: {}", increment);
-                gliftDebug(msg, deferred_logger);
-            }
-            return false;
-        }
-        else {
-            return true;
-        }
-    }
-
-    template<typename TypeTag>
-    bool
-    StandardWell<TypeTag>::
-    checkGliftNewtonIterationIdxOk(
-            const Simulator& ebos_simulator,
-            DeferredLogger& deferred_logger ) const
-    {
-        const int report_step_idx = ebos_simulator.episodeIndex();
-        const Schedule& schedule = ebos_simulator.vanguard().schedule();
-        const GasLiftOpt& glo = schedule.glo(report_step_idx);
-        const int iteration_idx = ebos_simulator.model().newtonMethod().numIterations();
-        if (glo.all_newton()) {
-            const int nupcol = schedule[report_step_idx].nupcol();
-            if (this->glift_debug) {
-                const std::string msg = fmt::format(
-                    "LIFTOPT item4 == YES, it = {}, nupcol = {} -->  GLIFT optimize = {}",
-                    iteration_idx,
-                    nupcol,
-                    ((iteration_idx <= nupcol) ? "TRUE" : "FALSE"));
-                gliftDebug(msg, deferred_logger);
-            }
-            return iteration_idx <= nupcol;
-        }
-        else {
-            if (this->glift_debug) {
-                const std::string msg = fmt::format(
-                    "LIFTOPT item4 == NO, it = {} --> GLIFT optimize = {}",
-                    iteration_idx, ((iteration_idx == 1) ? "TRUE" : "FALSE"));
-                gliftDebug(msg, deferred_logger);
-            }
-            return iteration_idx == 1;
-        }
-    }
-
-    template<typename TypeTag>
-    void
-    StandardWell<TypeTag>::
-    gliftDebug(
-        const std::string &msg, DeferredLogger& deferred_logger) const
-    {
-        if (this->glift_debug) {
-            const std::string message = fmt::format(
-                "  GLIFT (DEBUG) : SW : Well {} : {}", this->name(), msg);
-            deferred_logger.info(message);
-        }
-    }
-
     template<typename TypeTag>
     double
     StandardWell<TypeTag>::
@@ -2658,12 +2493,17 @@ namespace Opm
         if (well.isProducer()) {
             const auto& summary_state = ebos_simulator.vanguard().summaryState();
             if ( this->Base::wellHasTHPConstraints(summary_state) ) {
-                if (doGasLiftOptimize(well_state, ebos_simulator, deferred_logger)) {
+                const int iteration_idx = ebos_simulator.model().newtonMethod().numIterations();
+                if (this->doGasLiftOptimize(well_state,
+                                            ebos_simulator.episodeIndex(),
+                                            iteration_idx,
+                                            ebos_simulator.vanguard().schedule(),
+                                            deferred_logger)) {
                     std::unique_ptr<GasLiftSingleWell> glift
                         = std::make_unique<GasLiftSingleWell>(
                              *this, ebos_simulator, summary_state,
                              deferred_logger, well_state);
-                    auto state = glift->runOptimize(ebos_simulator.model().newtonMethod().numIterations());
+                    auto state = glift->runOptimize(iteration_idx);
                     if (state) {
                         glift_state_map.insert({this->name(), std::move(state)});
                         glift_wells.insert({this->name(), std::move(glift)});
@@ -2853,49 +2693,9 @@ namespace Opm
     template<typename TypeTag>
     double
     StandardWell<TypeTag>::
-    calculateThpFromBhp(const WellState &well_state, const std::vector<double>& rates,
-                        const double bhp,
-                        DeferredLogger& deferred_logger) const
-    {
-        assert(int(rates.size()) == 3); // the vfp related only supports three phases now.
-
-        const double aqua = rates[Water];
-        const double liquid = rates[Oil];
-        const double vapour = rates[Gas];
-
-        // pick the density in the top layer
-        const double rho = getRefDensity();
-
-        double thp = 0.0;
-        if (this->isInjector()) {
-            const int table_id = well_ecl_.vfp_table_number();
-            const double vfp_ref_depth = vfp_properties_->getInj()->getTable(table_id).getDatumDepth();
-            const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
-
-            thp = vfp_properties_->getInj()->thp(table_id, aqua, liquid, vapour, bhp + dp);
-        }
-        else if (this->isProducer()) {
-            const int table_id = well_ecl_.vfp_table_number();
-            const double alq = getALQ(well_state);
-            const double vfp_ref_depth = vfp_properties_->getProd()->getTable(table_id).getDatumDepth();
-            const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
-
-            thp = vfp_properties_->getProd()->thp(table_id, aqua, liquid, vapour, bhp + dp, alq);
-        }
-        else {
-            OPM_DEFLOG_THROW(std::logic_error, "Expected INJECTOR or PRODUCER well", deferred_logger);
-        }
-
-        return thp;
-    }
-
-
-    template<typename TypeTag>
-    double
-    StandardWell<TypeTag>::
     getRefDensity() const
     {
-        return perf_densities_[0];
+        return this->perf_densities_[0];
     }
 
 
@@ -2977,48 +2777,17 @@ namespace Opm
         // at (0,j) only if this well has a perforation at cell j.
         typename SparseMatrixAdapter::MatrixBlock tmpMat;
         Dune::DynamicMatrix<Scalar> tmp;
-        for ( auto colC = duneC_[0].begin(), endC = duneC_[0].end(); colC != endC; ++colC )
+        for ( auto colC = this->duneC_[0].begin(), endC = this->duneC_[0].end(); colC != endC; ++colC )
         {
             const auto row_index = colC.index();
 
-            for ( auto colB = duneB_[0].begin(), endB = duneB_[0].end(); colB != endB; ++colB )
+            for ( auto colB = this->duneB_[0].begin(), endB = this->duneB_[0].end(); colB != endB; ++colB )
             {
-                Detail::multMatrix(invDuneD_[0][0],  (*colB), tmp);
+                Detail::multMatrix(this->invDuneD_[0][0],  (*colB), tmp);
                 Detail::negativeMultMatrixTransposed((*colC), tmp, tmpMat);
                 jacobian.addToBlock( row_index, colB.index(), tmpMat );
             }
         }
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    double
-    StandardWell<TypeTag>::
-    relaxationFactorFraction(const double old_value,
-                             const double dx)
-    {
-        assert(old_value >= 0. && old_value <= 1.0);
-
-        double relaxation_factor = 1.;
-
-        // updated values without relaxation factor
-        const double possible_updated_value = old_value - dx;
-
-        // 0.95 is an experimental value remains to be optimized
-        if (possible_updated_value < 0.0) {
-            relaxation_factor = std::abs(old_value / dx) * 0.95;
-        } else if (possible_updated_value > 1.0) {
-            relaxation_factor = std::abs((1. - old_value) / dx) * 0.95;
-        }
-        // if possible_updated_value is between 0. and 1.0, then relaxation_factor
-        // remains to be one
-
-        assert(relaxation_factor >= 0. && relaxation_factor <= 1.);
-
-        return relaxation_factor;
     }
 
 
@@ -3037,12 +2806,14 @@ namespace Opm
 
         if (FluidSystem::numActivePhases() > 1) {
             if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                const double relaxation_factor_w = relaxationFactorFraction(primary_variables[WFrac], dwells[0][WFrac]);
+                const double relaxation_factor_w = StandardWellGeneric<Scalar>::
+                                                   relaxationFactorFraction(primary_variables[WFrac], dwells[0][WFrac]);
                 relaxation_factor = std::min(relaxation_factor, relaxation_factor_w);
             }
 
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                const double relaxation_factor_g = relaxationFactorFraction(primary_variables[GFrac], dwells[0][GFrac]);
+                const double relaxation_factor_g = StandardWellGeneric<Scalar>::
+                                                   relaxationFactorFraction(primary_variables[GFrac], dwells[0][GFrac]);
                 relaxation_factor = std::min(relaxation_factor, relaxation_factor_g);
             }
 
@@ -3066,34 +2837,6 @@ namespace Opm
         return relaxation_factor;
     }
 
-
-
-
-
-    template<typename TypeTag>
-    double
-    StandardWell<TypeTag>::
-    relaxationFactorRate(const std::vector<double>& primary_variables,
-                         const BVectorWell& dwells)
-    {
-        double relaxation_factor = 1.0;
-
-        // For injector, we only check the total rates to avoid sign change of rates
-        const double original_total_rate = primary_variables[WQTotal];
-        const double newton_update = dwells[0][WQTotal];
-        const double possible_update_total_rate = primary_variables[WQTotal] - newton_update;
-
-        // 0.8 here is a experimental value, which remains to be optimized
-        // if the original rate is zero or possible_update_total_rate is zero, relaxation_factor will
-        // always be 1.0, more thoughts might be needed.
-        if (original_total_rate * possible_update_total_rate < 0.) { // sign changed
-            relaxation_factor = std::abs(original_total_rate / newton_update) * 0.8;
-        }
-
-        assert(relaxation_factor >= 0.0 && relaxation_factor <= 1.0);
-
-        return relaxation_factor;
-    }
 
 
 
@@ -3260,7 +3003,7 @@ namespace Opm
 
         // equation for the water velocity
         const EvalWell eq_wat_vel = primary_variables_evaluation_[wat_vel_index] - water_velocity;
-        resWell_[0][wat_vel_index] = eq_wat_vel.value();
+        this->resWell_[0][wat_vel_index] = eq_wat_vel.value();
 
         const auto& perf_water_throughput = well_state.perfThroughput(this->index_of_well_);
         const double throughput = perf_water_throughput[perf];
@@ -3273,102 +3016,15 @@ namespace Opm
         const EvalWell eq_pskin = primary_variables_evaluation_[pskin_index]
                                   - pskin(throughput, primary_variables_evaluation_[wat_vel_index], poly_conc, deferred_logger);
 
-        resWell_[0][pskin_index] = eq_pskin.value();
+        this->resWell_[0][pskin_index] = eq_pskin.value();
         for (int pvIdx = 0; pvIdx < numWellEq_; ++pvIdx) {
-            invDuneD_[0][0][wat_vel_index][pvIdx] = eq_wat_vel.derivative(pvIdx+numEq);
-            invDuneD_[0][0][pskin_index][pvIdx] = eq_pskin.derivative(pvIdx+numEq);
+            this->invDuneD_[0][0][wat_vel_index][pvIdx] = eq_wat_vel.derivative(pvIdx+numEq);
+            this->invDuneD_[0][0][pskin_index][pvIdx] = eq_pskin.derivative(pvIdx+numEq);
         }
 
         // the water velocity is impacted by the reservoir primary varaibles. It needs to enter matrix B
         for (int pvIdx = 0; pvIdx < numEq; ++pvIdx) {
-            duneB_[0][cell_idx][wat_vel_index][pvIdx] = eq_wat_vel.derivative(pvIdx);
-        }
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    StandardWell<TypeTag>::
-    checkConvergenceControlEq(const WellState& well_state,
-                              ConvergenceReport& report,
-                              DeferredLogger& deferred_logger) const
-    {
-        double control_tolerance = 0.;
-        using CR = ConvergenceReport;
-        CR::WellFailure::Type ctrltype = CR::WellFailure::Type::Invalid;
-
-        const int well_index = index_of_well_;
-        if (this->wellIsStopped()) {
-            ctrltype = CR::WellFailure::Type::ControlRate;
-            control_tolerance = 1.e-6; // use smaller tolerance for zero control?
-        }
-        else if (this->isInjector() )
-        {
-            auto current = well_state.currentInjectionControl(well_index);
-            switch(current) {
-            case Well::InjectorCMode::THP:
-                ctrltype = CR::WellFailure::Type::ControlTHP;
-                control_tolerance = 1.e4; // 0.1 bar
-                break;
-            case Well::InjectorCMode::BHP:
-                ctrltype = CR::WellFailure::Type::ControlBHP;
-                control_tolerance = 1.e3; // 0.01 bar
-                break;
-            case Well::InjectorCMode::RATE:
-            case Well::InjectorCMode::RESV:
-                ctrltype = CR::WellFailure::Type::ControlRate;
-                control_tolerance = 1.e-4; //
-                break;
-            case Well::InjectorCMode::GRUP:
-                ctrltype = CR::WellFailure::Type::ControlRate;
-                control_tolerance = 1.e-6; //
-                break;
-            default:
-                OPM_DEFLOG_THROW(std::runtime_error, "Unknown well control control types for well " << name(), deferred_logger);
-            }
-        }
-        else if (this->isProducer() )
-        {
-            auto current = well_state.currentProductionControl(well_index);
-            switch(current) {
-            case Well::ProducerCMode::THP:
-                ctrltype = CR::WellFailure::Type::ControlTHP;
-                control_tolerance = 1.e4; // 0.1 bar
-                break;
-            case Well::ProducerCMode::BHP:
-                ctrltype = CR::WellFailure::Type::ControlBHP;
-                control_tolerance = 1.e3; // 0.01 bar
-                break;
-            case Well::ProducerCMode::ORAT:
-            case Well::ProducerCMode::WRAT:
-            case Well::ProducerCMode::GRAT:
-            case Well::ProducerCMode::LRAT:
-            case Well::ProducerCMode::RESV:
-            case Well::ProducerCMode::CRAT:
-                ctrltype = CR::WellFailure::Type::ControlRate;
-                control_tolerance = 1.e-4; // smaller tolerance for rate control
-                break;
-            case Well::ProducerCMode::GRUP:
-                ctrltype = CR::WellFailure::Type::ControlRate;
-                control_tolerance = 1.e-6; // smaller tolerance for rate control
-                break;
-            default:
-                OPM_DEFLOG_THROW(std::runtime_error, "Unknown well control control types for well " << name(), deferred_logger);
-            }
-        }
-
-        const double well_control_residual = std::abs(resWell_[0][Bhp]);
-        const int dummy_component = -1;
-        const double max_residual_allowed = param_.max_residual_allowed_;
-        if (std::isnan(well_control_residual)) {
-            report.setWellFailed({ctrltype, CR::Severity::NotANumber, dummy_component, name()});
-        } else if (well_control_residual > max_residual_allowed * 10.) {
-            report.setWellFailed({ctrltype, CR::Severity::TooLarge, dummy_component, name()});
-        } else if ( well_control_residual > control_tolerance) {
-            report.setWellFailed({ctrltype, CR::Severity::Normal, dummy_component, name()});
+            this->duneB_[0][cell_idx][wat_vel_index][pvIdx] = eq_wat_vel.derivative(pvIdx);
         }
     }
 
@@ -3386,38 +3042,7 @@ namespace Opm
 
         // checking the convergence of the extra equations related to polymer injectivity
         if constexpr (Base::has_polymermw) {
-            if (this->isInjector()) {
-                //  checking the convergence of the perforation rates
-                const double wat_vel_tol = 1.e-8;
-                const int dummy_component = -1;
-                const double maxResidualAllowed = param_.max_residual_allowed_;
-                using CR = ConvergenceReport;
-                const auto wat_vel_failure_type = CR::WellFailure::Type::MassBalance;
-                for (int perf = 0; perf < number_of_perforations_; ++perf) {
-                    const double wat_vel_residual = res[Bhp + 1 + perf];
-                    if (std::isnan(wat_vel_residual)) {
-                        report.setWellFailed({wat_vel_failure_type, CR::Severity::NotANumber, dummy_component, name()});
-                    } else if (wat_vel_residual > maxResidualAllowed * 10.) {
-                        report.setWellFailed({wat_vel_failure_type, CR::Severity::TooLarge, dummy_component, name()});
-                    } else if (wat_vel_residual > wat_vel_tol) {
-                        report.setWellFailed({wat_vel_failure_type, CR::Severity::Normal, dummy_component, name()});
-                    }
-                }
-
-                // checking the convergence of the skin pressure
-                const double pskin_tol = 1000.; // 1000 pascal
-                const auto pskin_failure_type = CR::WellFailure::Type::Pressure;
-                for (int perf = 0; perf < number_of_perforations_; ++perf) {
-                    const double pskin_residual = res[Bhp + 1 + perf + number_of_perforations_];
-                    if (std::isnan(pskin_residual)) {
-                        report.setWellFailed({pskin_failure_type, CR::Severity::NotANumber, dummy_component, name()});
-                    } else if (pskin_residual > maxResidualAllowed * 10.) {
-                        report.setWellFailed({pskin_failure_type, CR::Severity::TooLarge, dummy_component, name()});
-                    } else if (pskin_residual > pskin_tol) {
-                        report.setWellFailed({pskin_failure_type, CR::Severity::Normal, dummy_component, name()});
-                    }
-                }
-            }
+            this->checkConvergencePolyMW(res, report, param_.max_residual_allowed_);
         }
     }
 
@@ -3487,63 +3112,6 @@ namespace Opm
                                     DeferredLogger& deferred_logger,
                                     double alq_value) const
     {
-        // Given a VFP function returning bhp as a function of phase
-        // rates and thp:
-        //     fbhp(rates, thp),
-        // a function extracting the particular flow rate used for VFP
-        // lookups:
-        //     flo(rates)
-        // and the inflow function (assuming the reservoir is fixed):
-        //     frates(bhp)
-        // we want to solve the equation:
-        //     fbhp(frates(bhp, thplimit)) - bhp = 0
-        // for bhp.
-        //
-        // This may result in 0, 1 or 2 solutions. If two solutions,
-        // the one corresponding to the lowest bhp (and therefore
-        // highest rate) is returned.
-        //
-        // In order to detect these situations, we will find piecewise
-        // linear approximations both to the inverse of the frates
-        // function and to the fbhp function.
-        //
-        // We first take the FLO sample points of the VFP curve, and
-        // find the corresponding bhp values by solving the equation:
-        //     flo(frates(bhp)) - flo_sample = 0
-        // for bhp, for each flo_sample. The resulting (flo_sample,
-        // bhp_sample) values give a piecewise linear approximation to
-        // the true inverse inflow function, at the same flo values as
-        // the VFP data.
-        //
-        // Then we extract a piecewise linear approximation from the
-        // multilinear fbhp() by evaluating it at the flo_sample
-        // points, with fractions given by the frates(bhp_sample)
-        // values.
-        //
-        // When we have both piecewise linear curves defined on the
-        // same flo_sample points, it is easy to distinguish between
-        // the 0, 1 or 2 solution cases, and obtain the right interval
-        // in which to solve for the solution we want (with highest
-        // flow in case of 2 solutions).
-
-        // Make the fbhp() function.
-        const auto& controls = well_ecl_.productionControls(summary_state);
-        const auto& table = vfp_properties_->getProd()->getTable(controls.vfp_table_number);
-        const double vfp_ref_depth = table.getDatumDepth();
-        const double rho = getRefDensity(); // Use the density at the top perforation.
-        const double thp_limit = this->getTHPConstraint(summary_state);
-        const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
-        auto fbhp = [this, &controls, thp_limit, dp, alq_value](const std::vector<double>& rates) {
-            assert(rates.size() == 3);
-            return this->vfp_properties_->getProd()
-            ->bhp(controls.vfp_table_number, rates[Water], rates[Oil], rates[Gas], thp_limit, alq_value) - dp;
-        };
-
-        // Make the flo() function.
-        auto flo = [&table](const std::vector<double>& rates) {
-            return detail::getFlo(table, rates[Water], rates[Oil], rates[Gas]);
-        };
-
         // Make the frates() function.
         auto frates = [this, &ebos_simulator, &deferred_logger](const double bhp) {
             // Not solving the well equations here, which means we are
@@ -3556,131 +3124,10 @@ namespace Opm
             return rates;
         };
 
-        // Get the flo samples, add extra samples at low rates and bhp
-        // limit point if necessary. Then the sign must be flipped
-        // since the VFP code expects that production flo values are
-        // negative.
-        std::vector<double> flo_samples = table.getFloAxis();
-        if (flo_samples[0] > 0.0) {
-            const double f0 = flo_samples[0];
-            flo_samples.insert(flo_samples.begin(), { f0/20.0, f0/10.0, f0/5.0, f0/2.0 });
-        }
-        const double flo_bhp_limit = -flo(frates(controls.bhp_limit));
-        if (flo_samples.back() < flo_bhp_limit) {
-            flo_samples.push_back(flo_bhp_limit);
-        }
-        for (double& x : flo_samples) {
-            x = -x;
-        }
-
-        // Find bhp values for inflow relation corresponding to flo samples.
-        std::vector<double> bhp_samples;
-        for (double flo_sample : flo_samples) {
-            if (flo_sample < -flo_bhp_limit) {
-                // We would have to go under the bhp limit to obtain a
-                // flow of this magnitude. We associate all such flows
-                // with simply the bhp limit. The first one
-                // encountered is considered valid, the rest not. They
-                // are therefore skipped.
-                bhp_samples.push_back(controls.bhp_limit);
-                break;
-            }
-            auto eq = [&flo, &frates, flo_sample](double bhp) {
-                return flo(frates(bhp)) - flo_sample;
-            };
-            // TODO: replace hardcoded low/high limits.
-            const double low = 10.0 * unit::barsa;
-            const double high = 600.0 * unit::barsa;
-            const int max_iteration = 50;
-            const double flo_tolerance = 1e-6 * std::fabs(flo_samples.back());
-            int iteration = 0;
-            try {
-                const double solved_bhp = RegulaFalsiBisection<>::
-                    solve(eq, low, high, max_iteration, flo_tolerance, iteration);
-                bhp_samples.push_back(solved_bhp);
-            }
-            catch (...) {
-                // Use previous value (or max value if at start) if we failed.
-                bhp_samples.push_back(bhp_samples.empty() ? high : bhp_samples.back());
-                deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_EXTRACT_SAMPLES",
-                                        "Robust bhp(thp) solve failed extracting bhp values at flo samples for well " + name());
-            }
-        }
-
-        // Find bhp values for VFP relation corresponding to flo samples.
-        const int num_samples = bhp_samples.size(); // Note that this can be smaller than flo_samples.size()
-        std::vector<double> fbhp_samples(num_samples);
-        for (int ii = 0; ii < num_samples; ++ii) {
-            fbhp_samples[ii] = fbhp(frates(bhp_samples[ii]));
-        }
-// #define EXTRA_THP_DEBUGGING
-#ifdef EXTRA_THP_DEBUGGING
-        std::string dbgmsg;
-        dbgmsg += "flo: ";
-        for (int ii = 0; ii < num_samples; ++ii) {
-            dbgmsg += "  " + std::to_string(flo_samples[ii]);
-        }
-        dbgmsg += "\nbhp: ";
-        for (int ii = 0; ii < num_samples; ++ii) {
-            dbgmsg += "  " + std::to_string(bhp_samples[ii]);
-        }
-        dbgmsg += "\nfbhp: ";
-        for (int ii = 0; ii < num_samples; ++ii) {
-            dbgmsg += "  " + std::to_string(fbhp_samples[ii]);
-        }
-        OpmLog::debug(dbgmsg);
-#endif // EXTRA_THP_DEBUGGING
-
-        // Look for sign changes for the (fbhp_samples - bhp_samples) piecewise linear curve.
-        // We only look at the valid
-        int sign_change_index = -1;
-        for (int ii = 0; ii < num_samples - 1; ++ii) {
-            const double curr = fbhp_samples[ii] - bhp_samples[ii];
-            const double next = fbhp_samples[ii + 1] - bhp_samples[ii + 1];
-            if (curr * next < 0.0) {
-                // Sign change in the [ii, ii + 1] interval.
-                sign_change_index = ii; // May overwrite, thereby choosing the highest-flo solution.
-            }
-        }
-
-        // Handle the no solution case.
-        if (sign_change_index == -1) {
-            return std::optional<double>();
-        }
-
-        // Solve for the proper solution in the given interval.
-        auto eq = [&fbhp, &frates](double bhp) {
-            return fbhp(frates(bhp)) - bhp;
-        };
-        // TODO: replace hardcoded low/high limits.
-        const double low = bhp_samples[sign_change_index + 1];
-        const double high = bhp_samples[sign_change_index];
-        const int max_iteration = 50;
-        const double bhp_tolerance = 0.01 * unit::barsa;
-        int iteration = 0;
-        if (low == high) {
-            // We are in the high flow regime where the bhp_samples
-            // are all equal to the bhp_limit.
-            assert(low == controls.bhp_limit);
-            deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
-                                    "Robust bhp(thp) solve failed for well " + name());
-            return std::optional<double>();
-        }
-        try {
-            const double solved_bhp = RegulaFalsiBisection<>::
-                solve(eq, low, high, max_iteration, bhp_tolerance, iteration);
-#ifdef EXTRA_THP_DEBUGGING
-            OpmLog::debug("*****    " + name() + "    solved_bhp = " + std::to_string(solved_bhp)
-                          + "    flo_bhp_limit = " + std::to_string(flo_bhp_limit));
-#endif // EXTRA_THP_DEBUGGING
-            return solved_bhp;
-        }
-        catch (...) {
-            deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
-                                    "Robust bhp(thp) solve failed for well " + name());
-            return std::optional<double>();
-        }
-
+        return this->StandardWellGeneric<Scalar>::computeBhpAtThpLimitProdWithAlq(frates,
+                                                                                  summary_state,
+                                                                                  deferred_logger,
+                                                                                  alq_value);
     }
 
 
@@ -3692,63 +3139,6 @@ namespace Opm
                             const SummaryState& summary_state,
                             DeferredLogger& deferred_logger) const
     {
-        // Given a VFP function returning bhp as a function of phase
-        // rates and thp:
-        //     fbhp(rates, thp),
-        // a function extracting the particular flow rate used for VFP
-        // lookups:
-        //     flo(rates)
-        // and the inflow function (assuming the reservoir is fixed):
-        //     frates(bhp)
-        // we want to solve the equation:
-        //     fbhp(frates(bhp, thplimit)) - bhp = 0
-        // for bhp.
-        //
-        // This may result in 0, 1 or 2 solutions. If two solutions,
-        // the one corresponding to the lowest bhp (and therefore
-        // highest rate) is returned.
-        //
-        // In order to detect these situations, we will find piecewise
-        // linear approximations both to the inverse of the frates
-        // function and to the fbhp function.
-        //
-        // We first take the FLO sample points of the VFP curve, and
-        // find the corresponding bhp values by solving the equation:
-        //     flo(frates(bhp)) - flo_sample = 0
-        // for bhp, for each flo_sample. The resulting (flo_sample,
-        // bhp_sample) values give a piecewise linear approximation to
-        // the true inverse inflow function, at the same flo values as
-        // the VFP data.
-        //
-        // Then we extract a piecewise linear approximation from the
-        // multilinear fbhp() by evaluating it at the flo_sample
-        // points, with fractions given by the frates(bhp_sample)
-        // values.
-        //
-        // When we have both piecewise linear curves defined on the
-        // same flo_sample points, it is easy to distinguish between
-        // the 0, 1 or 2 solution cases, and obtain the right interval
-        // in which to solve for the solution we want (with highest
-        // flow in case of 2 solutions).
-
-        // Make the fbhp() function.
-        const auto& controls = well_ecl_.injectionControls(summary_state);
-        const auto& table = vfp_properties_->getInj()->getTable(controls.vfp_table_number);
-        const double vfp_ref_depth = table.getDatumDepth();
-        const double rho = getRefDensity(); // Use the density at the top perforation.
-        const double thp_limit = this->getTHPConstraint(summary_state);
-        const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
-        auto fbhp = [this, &controls, thp_limit, dp](const std::vector<double>& rates) {
-            assert(rates.size() == 3);
-            return this->vfp_properties_->getInj()
-                    ->bhp(controls.vfp_table_number, rates[Water], rates[Oil], rates[Gas], thp_limit) - dp;
-        };
-
-        // Make the flo() function.
-        auto flo = [&table](const std::vector<double>& rates) {
-            return detail::getFlo(table, rates[Water], rates[Oil], rates[Gas]);
-        };
-
         // Make the frates() function.
         auto frates = [this, &ebos_simulator, &deferred_logger](const double bhp) {
             // Not solving the well equations here, which means we are
@@ -3761,126 +3151,9 @@ namespace Opm
             return rates;
         };
 
-        // Get the flo samples, add extra samples at low rates and bhp
-        // limit point if necessary.
-        std::vector<double> flo_samples = table.getFloAxis();
-        if (flo_samples[0] > 0.0) {
-            const double f0 = flo_samples[0];
-            flo_samples.insert(flo_samples.begin(), { f0/20.0, f0/10.0, f0/5.0, f0/2.0 });
-        }
-        const double flo_bhp_limit = flo(frates(controls.bhp_limit));
-        if (flo_samples.back() < flo_bhp_limit) {
-            flo_samples.push_back(flo_bhp_limit);
-        }
-
-        // Find bhp values for inflow relation corresponding to flo samples.
-        std::vector<double> bhp_samples;
-        for (double flo_sample : flo_samples) {
-            if (flo_sample > flo_bhp_limit) {
-                // We would have to go over the bhp limit to obtain a
-                // flow of this magnitude. We associate all such flows
-                // with simply the bhp limit. The first one
-                // encountered is considered valid, the rest not. They
-                // are therefore skipped.
-                bhp_samples.push_back(controls.bhp_limit);
-                break;
-            }
-            auto eq = [&flo, &frates, flo_sample](double bhp) {
-                return flo(frates(bhp)) - flo_sample;
-            };
-            // TODO: replace hardcoded low/high limits.
-            const double low = 10.0 * unit::barsa;
-            const double high = 800.0 * unit::barsa;
-            const int max_iteration = 50;
-            const double flo_tolerance = 1e-6 * std::fabs(flo_samples.back());
-            int iteration = 0;
-            try {
-                const double solved_bhp = RegulaFalsiBisection<>::
-                        solve(eq, low, high, max_iteration, flo_tolerance, iteration);
-                bhp_samples.push_back(solved_bhp);
-            }
-            catch (...) {
-                // Use previous value (or max value if at start) if we failed.
-                bhp_samples.push_back(bhp_samples.empty() ? low : bhp_samples.back());
-                deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_EXTRACT_SAMPLES",
-                                        "Robust bhp(thp) solve failed extracting bhp values at flo samples for well " + name());
-            }
-        }
-
-        // Find bhp values for VFP relation corresponding to flo samples.
-        const int num_samples = bhp_samples.size(); // Note that this can be smaller than flo_samples.size()
-        std::vector<double> fbhp_samples(num_samples);
-        for (int ii = 0; ii < num_samples; ++ii) {
-            fbhp_samples[ii] = fbhp(frates(bhp_samples[ii]));
-        }
-// #define EXTRA_THP_DEBUGGING
-#ifdef EXTRA_THP_DEBUGGING
-        std::string dbgmsg;
-        dbgmsg += "flo: ";
-        for (int ii = 0; ii < num_samples; ++ii) {
-            dbgmsg += "  " + std::to_string(flo_samples[ii]);
-        }
-        dbgmsg += "\nbhp: ";
-        for (int ii = 0; ii < num_samples; ++ii) {
-            dbgmsg += "  " + std::to_string(bhp_samples[ii]);
-        }
-        dbgmsg += "\nfbhp: ";
-        for (int ii = 0; ii < num_samples; ++ii) {
-            dbgmsg += "  " + std::to_string(fbhp_samples[ii]);
-        }
-        OpmLog::debug(dbgmsg);
-#endif // EXTRA_THP_DEBUGGING
-
-        // Look for sign changes for the (fbhp_samples - bhp_samples) piecewise linear curve.
-        // We only look at the valid
-        int sign_change_index = -1;
-        for (int ii = 0; ii < num_samples - 1; ++ii) {
-            const double curr = fbhp_samples[ii] - bhp_samples[ii];
-            const double next = fbhp_samples[ii + 1] - bhp_samples[ii + 1];
-            if (curr * next < 0.0) {
-                // Sign change in the [ii, ii + 1] interval.
-                sign_change_index = ii; // May overwrite, thereby choosing the highest-flo solution.
-            }
-        }
-
-        // Handle the no solution case.
-        if (sign_change_index == -1) {
-            return std::optional<double>();
-        }
-
-        // Solve for the proper solution in the given interval.
-        auto eq = [&fbhp, &frates](double bhp) {
-            return fbhp(frates(bhp)) - bhp;
-        };
-        // TODO: replace hardcoded low/high limits.
-        const double low = bhp_samples[sign_change_index + 1];
-        const double high = bhp_samples[sign_change_index];
-        const int max_iteration = 50;
-        const double bhp_tolerance = 0.01 * unit::barsa;
-        int iteration = 0;
-        if (low == high) {
-            // We are in the high flow regime where the bhp_samples
-            // are all equal to the bhp_limit.
-            assert(low == controls.bhp_limit);
-            deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
-                                    "Robust bhp(thp) solve failed for well " + name());
-            return std::optional<double>();
-        }
-        try {
-            const double solved_bhp = RegulaFalsiBisection<>::
-                    solve(eq, low, high, max_iteration, bhp_tolerance, iteration);
-#ifdef EXTRA_THP_DEBUGGING
-            OpmLog::debug("*****    " + name() + "    solved_bhp = " + std::to_string(solved_bhp)
-                          + "    flo_bhp_limit = " + std::to_string(flo_bhp_limit));
-#endif // EXTRA_THP_DEBUGGING
-            return solved_bhp;
-        }
-        catch (...) {
-            deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
-                                    "Robust bhp(thp) solve failed for well " + name());
-            return std::optional<double>();
-        }
-
+        return this->StandardWellGeneric<Scalar>::computeBhpAtThpLimitInj(frates,
+                                                                          summary_state,
+                                                                          deferred_logger);
     }
 
 
