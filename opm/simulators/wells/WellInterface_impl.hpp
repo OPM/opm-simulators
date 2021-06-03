@@ -481,8 +481,9 @@ namespace Opm
     {
 
         checkWellOperability(ebosSimulator, well_state, deferred_logger);
+        const int iterationIdx = ebosSimulator.model().newtonMethod().numIterations();
 
-        if (this->useInnerIterations()) {
+        if (this->useInnerIterations() && iterationIdx < 3) {
             this->iterateWellEquations(ebosSimulator, dt, well_state, group_state, deferred_logger);
         }
 
