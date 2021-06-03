@@ -50,6 +50,8 @@ class EclGenericTracerModel {
 public:
     using TracerMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, 1, 1>>;
     using TracerVector = Dune::BlockVector<Dune::FieldVector<Scalar,1>>;
+    using DualTracerMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, 2, 2>>;
+    using DualTracerVector = Dune::BlockVector<Dune::FieldVector<Scalar,2>>;
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
 
     /*!
@@ -68,6 +70,12 @@ public:
      */
     Scalar tracerConcentration(int tracerIdx, int globalDofIdx) const;
 
+    /*!
+    * \brief Return well tracer rates
+    */
+    const std::map<std::pair<std::string, std::string>, double>&
+    getWellTracerRates() const {return wellTracerRate_;}
+
 protected:
     EclGenericTracerModel(const GridView& gridView,
                           const EclipseState& eclState,
@@ -85,6 +93,8 @@ protected:
 
     bool linearSolve_(const TracerMatrix& M, TracerVector& x, TracerVector& b);
 
+    bool linearSolveBatchwise_(const TracerMatrix& M, std::vector<TracerVector>& x, std::vector<TracerVector>& b);
+
     const GridView& gridView_;
     const EclipseState& eclState_;
     const CartesianIndexMapper& cartMapper_;
@@ -98,6 +108,10 @@ protected:
     TracerVector tracerResidual_;
     std::vector<int> cartToGlobal_;
     std::vector<Dune::BlockVector<Dune::FieldVector<Scalar, 1>>> storageOfTimeIndex1_;
+
+    // <wellName, tracerIdx> -> wellRate
+    std::map<std::pair<std::string, std::string>, double> wellTracerRate_;
+
 };
 
 } // namespace Opm
