@@ -100,8 +100,13 @@ public:
                 const SummaryState& summary_state);
 
     /// One rate per phase and well connection.
-    std::vector<double>& mutable_perfPhaseRates() { return perfphaserates_; }
-    const std::vector<double>& perfPhaseRates() const { return perfphaserates_; }
+    double * perfPhaseRates(std::size_t well_index) {
+        return &this->perfphaserates_[this->first_perf_index_[well_index] * this->numPhases()];
+    }
+
+    const double * perfPhaseRates(std::size_t well_index) const {
+        return &this->perfphaserates_[this->first_perf_index_[well_index] * this->numPhases()];
+    }
 
     /// One current control per injecting well.
     Well::InjectorCMode currentInjectionControl(std::size_t well_index) const { return current_injection_controls_[well_index]; }
