@@ -35,7 +35,7 @@
 #include <opm/simulators/linalg/setupPropertyTree.hpp>
 
 
-#if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA
+#if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA || HAVE_AMGCL
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
 #endif
 
@@ -93,7 +93,7 @@ namespace Opm
         using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
         constexpr static std::size_t pressureIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
 
-#if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA
+#if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA || HAVE_AMGCL
         static const unsigned int block_size = Matrix::block_type::rows;
         std::unique_ptr<BdaBridge<Matrix, Vector, block_size>> bdaBridge;
 #endif
@@ -130,7 +130,7 @@ namespace Opm
                                      EWOMS_PARAM_IS_SET(TypeTag, int, LinearSolverMaxIter),
                                      EWOMS_PARAM_IS_SET(TypeTag, int, CprMaxEllIter));
 
-#if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA
+#if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA || HAVE_AMGCL
             {
                 std::string accelerator_mode = EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode);
                 if ((simulator_.vanguard().grid().comm().size() > 1) && (accelerator_mode != "none")) {
@@ -150,7 +150,7 @@ namespace Opm
             }
 #else
             if (EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode) != "none") {
-                OPM_THROW(std::logic_error,"Cannot use accelerated solver since neither CUDA nor OpenCL were found by cmake and FPGA was not enabled");
+                OPM_THROW(std::logic_error,"Cannot use accelerated solver since CUDA, OpenCL and amgcl were not found by cmake and FPGA was not enabled");
             }
 #endif
             extractParallelGridInformationToISTL(simulator_.vanguard().grid(), parallelInformation_);
@@ -257,7 +257,7 @@ namespace Opm
 
             // Use GPU if: available, chosen by user, and successful.
             // Use FPGA if: support compiled, chosen by user, and successful.
-#if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA
+#if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA || HAVE_AMGCL
             bool use_gpu = bdaBridge->getUseGpu();
             bool use_fpga = bdaBridge->getUseFpga();
             if (use_gpu || use_fpga) {
