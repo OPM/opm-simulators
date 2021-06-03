@@ -52,9 +52,6 @@
 namespace Opm {
 
 template<class GridView, class FluidSystem, class Scalar>
-std::string EclGenericProblem<GridView,FluidSystem,Scalar>::briefDescription_;
-
-template<class GridView, class FluidSystem, class Scalar>
 EclGenericProblem<GridView,FluidSystem,Scalar>::
 EclGenericProblem(const EclipseState& eclState,
                   const Schedule& schedule,

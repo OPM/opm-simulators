@@ -40,7 +40,6 @@ namespace Opm {
 GasLiftStage2::GasLiftStage2(
     const int report_step_idx,
     const Communication& comm,
-    const PhaseUsage& phase_usage,
     const Schedule& schedule,
     const SummaryState& summary_state,
     DeferredLogger &deferred_logger,
@@ -57,7 +56,6 @@ GasLiftStage2::GasLiftStage2(
     report_step_idx_{report_step_idx},
     summary_state_{summary_state},
     schedule_{schedule},
-    phase_usage_{phase_usage},
     glo_{schedule_.glo(report_step_idx_)},
     comm_{comm},
     debug_{false}
