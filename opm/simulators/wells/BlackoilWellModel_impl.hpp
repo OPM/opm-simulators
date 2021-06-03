@@ -1110,7 +1110,6 @@ namespace Opm {
 
         GasLiftStage2 glift {this->ebosSimulator_.episodeIndex(),
                              this->ebosSimulator_.vanguard().grid().comm(),
-                             this->phaseUsage(),
                              ebosSimulator_.vanguard().schedule(),
                              ebosSimulator_.vanguard().summaryState(),
                              deferred_logger, this->wellState(),

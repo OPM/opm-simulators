@@ -67,7 +67,6 @@ class WellState;
         GasLiftStage2(
             const int report_step_idx,
             const Communication& comm,
-            const PhaseUsage& phase_usage,
             const Schedule& schedule,
             const SummaryState& summary_state,
             DeferredLogger &deferred_logger,
@@ -136,7 +135,6 @@ class WellState;
         int report_step_idx_;
         const SummaryState &summary_state_;
         const Schedule &schedule_;
-        const PhaseUsage &phase_usage_;
         const GasLiftOpt& glo_;
         const Communication &comm_;
         GradMap inc_grads_;
