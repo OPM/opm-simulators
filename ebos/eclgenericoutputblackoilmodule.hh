@@ -135,6 +135,9 @@ public:
         return this->initialInplace_.value();
     }
 
+    // Virtual destructor for safer inheritance.
+    virtual ~EclGenericOutputBlackoilModule() = default;
+
 protected:
     using ScalarBuffer = std::vector<Scalar>;
     using StringBuffer = std::vector<std::string>;
