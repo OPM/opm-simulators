@@ -258,12 +258,12 @@ public:
         return well_potentials_;
     }
 
-    double * perfThroughput(std::size_t well_index) {
-        return &perf_water_throughput_[this->first_perf_index_[well_index]];
+    std::vector<double>& perfThroughput(std::size_t well_index) {
+        return perf_water_throughput_[well_index];
     }
 
-    const double * perfThroughput(std::size_t well_index) const {
-        return &perf_water_throughput_[this->first_perf_index_[well_index]];
+    const std::vector<double>& perfThroughput(std::size_t well_index) const {
+        return perf_water_throughput_[well_index];
     }
 
     std::vector<double>& perfSkinPressure(std::size_t well_index) {
@@ -461,7 +461,7 @@ private:
     // it is the throughput of water flow through the perforations
     // it is used as a measure of formation damage around well-bore due to particle deposition
     // it will only be used for injectors to check the injectivity
-    std::vector<double> perf_water_throughput_;
+    WellContainer<std::vector<double>> perf_water_throughput_;
 
     // skin pressure of peforation
     // it will only be used for injectors to check the injectivity
