@@ -23,6 +23,7 @@
 
 #include <opm/simulators/wells/ALQState.hpp>
 #include <opm/simulators/wells/GlobalWellInfo.hpp>
+#include <opm/simulators/wells/SegmentState.hpp>
 #include <opm/simulators/wells/WellContainer.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
@@ -195,80 +196,23 @@ public:
     }
 
 
-    const double * segRates(std::size_t well_index) const
-    {
-        const int top_segment_index = this->top_segment_index_[well_index];
-        return &this->seg_rates_[top_segment_index * this->phase_usage_.num_phases];
+
+
+    const SegmentState& segments(const std::size_t well_index) const {
+        return this->segment_state[well_index];
     }
 
-    double * segRates(std::size_t well_index)
-    {
-        const int top_segment_index = this->top_segment_index_[well_index];
-        return &this->seg_rates_[top_segment_index * this->phase_usage_.num_phases];
+    SegmentState& segments(const std::size_t well_index) {
+        return this->segment_state[well_index];
     }
 
-    double * segPress(std::size_t well_index)
-    {
-        const int top_segment_index = this->top_segment_index_[well_index];
-        return &seg_press_[top_segment_index];
+    const SegmentState& segments(const std::string& wname) const {
+        return this->segment_state[wname];
     }
 
-    const double * segPress(std::size_t well_index) const
-    {
-        const int top_segment_index = this->top_segment_index_[well_index];
-        return &seg_press_[top_segment_index];
+    SegmentState& segments(const std::string& wname) {
+        return this->segment_state[wname];
     }
-
-    double segPressDrop(std::size_t well_index, std::size_t segment_index) const
-    {
-        const int top_segment_index = this->top_segment_index_[well_index];
-        return this->seg_pressdrop_friction_[top_segment_index + segment_index] +
-               this->seg_pressdrop_hydorstatic_[top_segment_index + segment_index] +
-               this->seg_pressdrop_acceleration_[top_segment_index + segment_index];
-    }
-
-    double* segPressDropFriction(std::size_t well_index)
-    {
-        const int top_segment_index = this->top_segment_index_[well_index];
-        return &seg_pressdrop_friction_[top_segment_index];
-    }
-
-    const double* segPressDropFriction(std::size_t well_index) const
-    {
-        const int top_segment_index = this->top_segment_index_[well_index];
-        return &seg_pressdrop_friction_[top_segment_index];
-    }
-
-    double* segPressDropHydroStatic(std::size_t well_index)
-    {
-        const int top_segment_index = this->top_segment_index_[well_index];
-        return &seg_pressdrop_hydorstatic_[top_segment_index];
-    }
-
-    const double* segPressDropHydroStatic(std::size_t well_index) const
-    {
-        const int top_segment_index = this->top_segment_index_[well_index];
-        return &seg_pressdrop_hydorstatic_[top_segment_index];
-    }
-
-    double * segPressDropAcceleration(std::size_t well_index)
-    {
-        const int top_segment_index = this->top_segment_index_[well_index];
-        return &seg_pressdrop_acceleration_[top_segment_index];
-    }
-
-    const double* segPressDropAcceleration(std::size_t well_index) const
-    {
-        const int top_segment_index = this->top_segment_index_[well_index];
-        return &seg_pressdrop_acceleration_[top_segment_index];
-    }
-
-    int numSegment() const
-    {
-        return nseg_;
-    }
-
-    int topSegmentIndex(const int w) const;
 
     std::vector<double>& productivityIndex() {
         return productivity_index_;
@@ -524,22 +468,7 @@ private:
     // \Note: for now, only WCON* keywords, and well status change is considered
     WellContainer<Events> events_;
 
-    // MS well related
-    // for StandardWell, the number of segments will be one
-    std::vector<double> seg_rates_;
-    std::vector<double> seg_press_;
-    // the index of the top segments, which is used to locate the
-    // multisegment well related information in WellState
-    std::vector<int> top_segment_index_;
-    int nseg_; // total number of the segments
-
-    // The following data are only recorded for output
-    // frictional pressure drop
-    std::vector<double> seg_pressdrop_friction_;
-    // hydrostatic pressure drop
-    std::vector<double> seg_pressdrop_hydorstatic_;
-    // accelerational pressure drop
-    std::vector<double> seg_pressdrop_acceleration_;
+    WellContainer<SegmentState> segment_state;
 
     // Productivity Index
     std::vector<double> productivity_index_;
@@ -550,14 +479,6 @@ private:
     // Well potentials
     std::vector<double> well_potentials_;
 
-    /// Map segment index to segment number, mostly for MS wells.
-    ///
-    /// Segment number (one-based) of j-th segment in i-th well is
-    /// \code
-    ///    const auto top    = topSegmentIndex(i);
-    ///    const auto seg_No = seg_number_[top + j];
-    /// \end
-    std::vector<int> seg_number_;
 
     data::Segment
     reportSegmentResults(const PhaseUsage& pu,

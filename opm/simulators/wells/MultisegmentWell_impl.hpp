@@ -265,8 +265,8 @@ namespace Opm
         Base::updateWellStateWithTarget(ebos_simulator, well_state, deferred_logger);
         // scale segment rates based on the wellRates
         // and segment pressure based on bhp
-        scaleSegmentPressuresWithBhp(well_state);
         scaleSegmentRatesWithWellRates(well_state);
+        scaleSegmentPressuresWithBhp(well_state);
     }
 
 
@@ -278,7 +278,8 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     scaleSegmentRatesWithWellRates(WellState& well_state) const
     {
-        auto segment_rates = well_state.segRates(index_of_well_);
+        auto& segments = well_state.segments(this->index_of_well_);
+        auto& segment_rates = segments.rates;
         for (int phase = 0; phase < number_of_phases_; ++phase) {
             const double unscaled_top_seg_rate = segment_rates[phase];
             const double well_phase_rate = well_state.wellRates(index_of_well_)[phase];
@@ -302,9 +303,8 @@ namespace Opm
                 }
 
                 std::vector<double> rates;
-                WellState::calculateSegmentRates(segment_inlets_, segment_perforations_, perforation_rates, number_of_phases_,
-                                                 0, rates);
-                std::copy(rates.begin(), rates.end(), segment_rates);
+                WellState::calculateSegmentRates(segment_inlets_, segment_perforations_, perforation_rates, number_of_phases_, 0, rates);
+                std::copy(rates.begin(), rates.end(), segment_rates.begin());
             }
         }
     }
@@ -314,13 +314,9 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     scaleSegmentPressuresWithBhp(WellState& well_state) const
     {
-        //scale segment pressures
-        const double bhp = well_state.bhp(index_of_well_);
-        auto segment_pressure = well_state.segPress(index_of_well_);
-        const double unscaled_top_seg_pressure = segment_pressure[0];
-        for (int seg = 0; seg < numberOfSegments(); ++seg) {
-            segment_pressure[seg] *= bhp/unscaled_top_seg_pressure;
-        }
+        auto& segments = well_state.segments(this->index_of_well_);
+        auto bhp = well_state.bhp(this->index_of_well_);
+        segments.scale_pressure(bhp);
     }
 
 
@@ -719,8 +715,9 @@ namespace Opm
         const Well& well = Base::wellEcl();
 
         // the index of the top segment in the WellState
-        const auto segment_rates = well_state.segRates(index_of_well_);
-        const auto segment_pressure = well_state.segPress(index_of_well_);
+        const auto& segments = well_state.segments(this->index_of_well_);
+        const auto& segment_rates = segments.rates;
+        const auto& segment_pressure = segments.pressure;
         const PhaseUsage& pu = phaseUsage();
 
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
@@ -1923,13 +1920,14 @@ namespace Opm
         // TODO: we might be able to add member variables to store these values, then we update well state
         // after converged
         const auto hydro_pressure_drop = getHydroPressureLoss(seg);
-        well_state.segPressDropHydroStatic(index_of_well_)[seg] = hydro_pressure_drop.value();
+        auto& segments = well_state.segments(this->index_of_well_);
+        segments.pressure_drop_hydrostatic[seg] = hydro_pressure_drop.value();
         pressure_equation -= hydro_pressure_drop;
 
         if (frictionalPressureLossConsidered()) {
             const auto friction_pressure_drop = getFrictionPressureLoss(seg);
             pressure_equation -= friction_pressure_drop;
-            well_state.segPressDropFriction(index_of_well_)[seg] = friction_pressure_drop.value();
+            segments.pressure_drop_friction[seg] = friction_pressure_drop.value();
         }
 
         resWell_[seg][SPres] = pressure_equation.value();
@@ -2042,7 +2040,7 @@ namespace Opm
         const double sign = mass_rate < 0. ? 1.0 : - 1.0;
         accelerationPressureLoss *= sign;
 
-        well_state.segPressDropAcceleration(index_of_well_)[seg] = accelerationPressureLoss.value();
+        well_state.segments(this->index_of_well_).pressure_drop_accel[seg] = accelerationPressureLoss.value();
 
         resWell_[seg][SPres] -= accelerationPressureLoss.value();
         duneD_[seg][seg][SPres][SPres] -= accelerationPressureLoss.derivative(SPres + numEq);
@@ -2336,8 +2334,9 @@ namespace Opm
         assert( FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) );
         const int oil_pos = pu.phase_pos[Oil];
 
-        auto segment_rates = well_state.segRates(this->index_of_well_);
-        auto segment_pressure = well_state.segPress(this->index_of_well_);
+        auto& segments = well_state.segments(this->index_of_well_);
+        auto& segment_rates = segments.rates;
+        auto& segment_pressure = segments.pressure;
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
             std::vector<double> fractions(number_of_phases_, 0.0);
             fractions[oil_pos] = 1.0;
@@ -3254,7 +3253,7 @@ namespace Opm
             }
         }
         pressure_equation = pressure_equation - icd_pressure_drop;
-        well_state.segPressDropFriction(index_of_well_)[seg] = icd_pressure_drop.value();
+        well_state.segments(this->index_of_well_).pressure_drop_friction[seg] = icd_pressure_drop.value();
 
         const int seg_upwind = upwinding_segments_[seg];
         resWell_[seg][SPres] = pressure_equation.value();
