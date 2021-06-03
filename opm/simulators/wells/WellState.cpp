@@ -43,6 +43,7 @@ void WellState::base_init(const std::vector<double>& cellPressures,
     this->perfpress_.clear();
     this->perf_skin_pressure_.clear();
     this->perf_water_throughput_.clear();
+    this->perf_water_velocity_.clear();
     this->perfrates_.clear();
     this->status_.clear();
     this->well_perf_data_.clear();
@@ -104,6 +105,7 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     this->perfpress_.add(well.name(), std::vector<double>(num_perf_this_well, -1e100));
     this->perfrates_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
     this->perf_skin_pressure_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
+    this->perf_water_velocity_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
     this->perf_water_throughput_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
     this->bhp_.add(well.name(), 0.0);
     this->thp_.add(well.name(), 0.0);
@@ -282,10 +284,6 @@ void WellState::init(const std::vector<double>& cellPressures,
     // Ensure that we start out with zero rates by default.
     perfphaserates_.clear();
     perfphaserates_.resize(nperf * this->numPhases(), 0.0);
-
-    // these are only used to monitor the injectivity
-    perf_water_velocity_.clear();
-    perf_water_velocity_.resize(nperf, 0.0);
 
     first_perf_index_.resize(nw, 0);
     first_perf_index_[0] = 0;
@@ -481,14 +479,7 @@ void WellState::init(const std::vector<double>& cellPressures,
                 if (pu.has_polymermw) {
                     if (global_num_perf_same)
                     {
-                        auto * velocity_target = this->perfWaterVelocity(newIndex);
-
-                        const auto * velocity_src = prevState->perfWaterVelocity(oldIndex);
-
-                        for (int perf = 0; perf < num_perf_this_well; ++perf)
-                        {
-                            velocity_target[ perf ]   = velocity_src[perf];
-                        }
+                        this->perf_water_velocity_.copy_welldata(prevState->perf_water_velocity_, wname);
                         this->perf_skin_pressure_.copy_welldata(prevState->perf_skin_pressure_, wname);
                         this->perf_water_throughput_.copy_welldata(prevState->perf_water_throughput_, wname);
                     }

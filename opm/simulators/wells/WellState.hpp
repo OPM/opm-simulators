@@ -274,12 +274,12 @@ public:
         return perf_skin_pressure_[well_index];
     }
 
-    double * perfWaterVelocity(std::size_t well_index) {
-        return &perf_water_velocity_[this->first_perf_index_[well_index]];
+    std::vector<double>& perfWaterVelocity(std::size_t well_index) {
+        return perf_water_velocity_[well_index];
     }
 
-    const double * perfWaterVelocity(std::size_t well_index) const {
-        return &perf_water_velocity_[this->first_perf_index_[well_index]];
+    const std::vector<double>& perfWaterVelocity(std::size_t well_index) const {
+        return perf_water_velocity_[well_index];
     }
 
     template<class Comm>
@@ -469,7 +469,7 @@ private:
 
     // it will only be used for injectors to check the injectivity
     // water velocity of perforation
-    std::vector<double> perf_water_velocity_;
+    WellContainer<std::vector<double>> perf_water_velocity_;
 
     // phase rates under reservoir condition for wells
     // or voidage phase rates
