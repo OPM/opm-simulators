@@ -266,12 +266,12 @@ public:
         return &perf_water_throughput_[this->first_perf_index_[well_index]];
     }
 
-    double * perfSkinPressure(std::size_t well_index) {
-        return &perf_skin_pressure_[this->first_perf_index_[well_index]];
+    std::vector<double>& perfSkinPressure(std::size_t well_index) {
+        return perf_skin_pressure_[well_index];
     }
 
-    const double * perfSkinPressure(std::size_t well_index) const {
-        return &perf_skin_pressure_[this->first_perf_index_[well_index]];
+    const std::vector<double>& perfSkinPressure(std::size_t well_index) const {
+        return perf_skin_pressure_[well_index];
     }
 
     double * perfWaterVelocity(std::size_t well_index) {
@@ -465,7 +465,7 @@ private:
 
     // skin pressure of peforation
     // it will only be used for injectors to check the injectivity
-    std::vector<double> perf_skin_pressure_;
+    WellContainer<std::vector<double>> perf_skin_pressure_;
 
     // it will only be used for injectors to check the injectivity
     // water velocity of perforation

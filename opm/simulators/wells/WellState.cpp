@@ -41,6 +41,7 @@ void WellState::base_init(const std::vector<double>& cellPressures,
     // clear old name mapping
     this->wellMap_.clear();
     this->perfpress_.clear();
+    this->perf_skin_pressure_.clear();
     this->perfrates_.clear();
     this->status_.clear();
     this->well_perf_data_.clear();
@@ -101,6 +102,7 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     this->segment_state.add(well.name(), SegmentState{});
     this->perfpress_.add(well.name(), std::vector<double>(num_perf_this_well, -1e100));
     this->perfrates_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
+    this->perf_skin_pressure_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
     this->bhp_.add(well.name(), 0.0);
     this->thp_.add(well.name(), 0.0);
     if ( well.isInjector() )
@@ -284,8 +286,6 @@ void WellState::init(const std::vector<double>& cellPressures,
     perf_water_throughput_.resize(nperf, 0.0);
     perf_water_velocity_.clear();
     perf_water_velocity_.resize(nperf, 0.0);
-    perf_skin_pressure_.clear();
-    perf_skin_pressure_.resize(nperf, 0.0);
 
     first_perf_index_.resize(nw, 0);
     first_perf_index_[0] = 0;
@@ -371,6 +371,7 @@ void WellState::init(const std::vector<double>& cellPressures,
             if (well.getStatus() == Well::Status::SHUT) {
                 continue;
             }
+            const auto& wname = well.name();
 
             auto it = prevState->wellMap().find(well.name());
             if (it != end)
@@ -481,19 +482,17 @@ void WellState::init(const std::vector<double>& cellPressures,
                     if (global_num_perf_same)
                     {
                         auto * throughput_target = this->perfThroughput(newIndex);
-                        auto * pressure_target = this->perfSkinPressure(newIndex);
                         auto * velocity_target = this->perfWaterVelocity(newIndex);
 
                         const auto * throughput_src = prevState->perfThroughput(oldIndex);
-                        const auto * pressure_src = prevState->perfSkinPressure(oldIndex);
                         const auto * velocity_src = prevState->perfWaterVelocity(oldIndex);
 
                         for (int perf = 0; perf < num_perf_this_well; ++perf)
                         {
                             throughput_target[ perf ] = throughput_src[perf];
-                            pressure_target[ perf ]   = pressure_src[perf];
                             velocity_target[ perf ]   = velocity_src[perf];
                         }
+                        this->perf_skin_pressure_.copy_welldata(prevState->perf_skin_pressure_, wname);
                     }
                 }
 
