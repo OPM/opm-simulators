@@ -285,7 +285,6 @@ void WellState::init(const std::vector<double>& cellPressures,
     perf_skin_pressure_.clear();
     perf_skin_pressure_.resize(nperf, 0.0);
 
-    num_perf_.resize(nw, 0);
     first_perf_index_.resize(nw, 0);
     first_perf_index_[0] = 0;
     for (int w = 0; w < nw; ++w) {
@@ -307,7 +306,6 @@ void WellState::init(const std::vector<double>& cellPressures,
             }
             perf_press[perf] = cellPressures[well_perf_data[w][perf].cell_index];
         }
-        num_perf_[w] = num_perf_this_well;
         first_perf_index_[w] = connpos;
 
         this->well_reservoir_rates_.add(wname, std::vector<double>(np, 0));
@@ -1020,19 +1018,19 @@ WellState::calculateSegmentRates(const std::vector<std::vector<int>>& segment_in
 double WellState::solventWellRate(const int w) const
 {
     const auto * perf_rates_solvent = &perfRateSolvent_[first_perf_index_[w]];
-    return parallel_well_info_[w]->sumPerfValues(perf_rates_solvent, perf_rates_solvent + this->num_perf_[w]);
+    return parallel_well_info_[w]->sumPerfValues(perf_rates_solvent, perf_rates_solvent + this->numPerf(w));
 }
 
 double WellState::polymerWellRate(const int w) const
 {
     const auto * perf_rates_polymer = &perfRatePolymer_[first_perf_index_[w]];
-    return parallel_well_info_[w]->sumPerfValues(perf_rates_polymer, perf_rates_polymer + this->num_perf_[w]);
+    return parallel_well_info_[w]->sumPerfValues(perf_rates_polymer, perf_rates_polymer + this->numPerf(w));
 }
 
 double WellState::brineWellRate(const int w) const
 {
     const auto * perf_rates_brine = &perfRateBrine_[first_perf_index_[w]];
-    return parallel_well_info_[w]->sumPerfValues(perf_rates_brine, perf_rates_brine + this->num_perf_[w]);
+    return parallel_well_info_[w]->sumPerfValues(perf_rates_brine, perf_rates_brine + this->numPerf(w));
 }
 
 int WellState::topSegmentIndex(const int w) const
@@ -1065,7 +1063,7 @@ void WellState::shutWell(int well_index)
     }
 
     const auto first = this->first_perf_index_[well_index]*np;
-    const auto last  = first + this->num_perf_[well_index]*np;
+    const auto last  = first + this->numPerf(well_index)*np;
     std::fill(this->conn_productivity_index_.begin() + first,
               this->conn_productivity_index_.begin() + last, 0.0);
 }
