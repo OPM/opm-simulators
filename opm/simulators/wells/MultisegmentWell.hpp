@@ -23,6 +23,7 @@
 #define OPM_MULTISEGMENTWELL_HEADER_INCLUDED
 
 #include <opm/simulators/wells/WellInterface.hpp>
+#include <opm/simulators/wells/MultisegmentWellGeneric.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 
@@ -31,7 +32,8 @@ namespace Opm
     class DeferredLogger;
 
     template<typename TypeTag>
-    class MultisegmentWell: public WellInterface<TypeTag>
+    class MultisegmentWell : public WellInterface<TypeTag>
+                           , public MultisegmentWellGeneric<GetPropType<TypeTag, Properties::Scalar>>
     {
     public:
         typedef WellInterface<TypeTag> Base;
@@ -195,10 +197,6 @@ namespace Opm
 
         virtual void  addWellContributions(SparseMatrixAdapter& jacobian) const override;
 
-        /// number of segments for this well
-        /// int number_of_segments_;
-        int numberOfSegments() const;
-
         virtual std::vector<double> computeCurrentWellRates(const Simulator& ebosSimulator,
                                                             DeferredLogger& deferred_logger) const override;
 
@@ -224,9 +222,6 @@ namespace Opm
         WellSegments::CompPressureDrop compPressureDrop() const;
         // multi-phase flow model
         WellSegments::MultiPhaseModel multiphaseModel() const;
-
-        // get the WellSegments from the well_ecl_
-        const WellSegments& segmentSet() const;
 
         // protected member variables from the Base class
         using Base::well_ecl_;
@@ -267,24 +262,6 @@ namespace Opm
         using Base::calculateBhpFromThp;
         using Base::getALQ;
 
-        // TODO: trying to use the information from the Well opm-parser as much
-        // as possible, it will possibly be re-implemented later for efficiency reason.
-
-        // the completions that is related to each segment
-        // the completions's ids are their index in the vector well_index_, well_cell_
-        // This is also assuming the order of the completions in Well is the same with
-        // the order of the completions in wells.
-        // it is for convinience reason. we can just calcuate the inforation for segment once then using it for all the perofrations
-        // belonging to this segment
-        std::vector<std::vector<int> > segment_perforations_;
-
-        // the inlet segments for each segment. It is for convinience and efficiency reason
-        std::vector<std::vector<int> > segment_inlets_;
-
-        // segment number is an ID of the segment, it is specified in the deck
-        // get the loation of the segment with a segment number in the segmentSet
-        int segmentNumberToIndex(const int segment_number) const;
-
         // TODO, the following should go to a class for computing purpose
         // two off-diagonal matrices
         mutable OffDiagMatWell duneB_;
@@ -312,11 +289,6 @@ namespace Opm
         // center depth of the grid block
         std::vector<double> cell_perforation_pressure_diffs_;
 
-        // depth difference between the segment and the peforation
-        // or in another way, the depth difference between the perforation and
-        // the segment the perforation belongs to
-        std::vector<double> perforation_segment_depth_diffs_;
-
         // the intial amount of fluids in each segment under surface condition
         std::vector<std::vector<double> > segment_fluid_initial_;
 
@@ -329,8 +301,6 @@ namespace Opm
 
         // the mass rate of the segments
         std::vector<EvalWell> segment_mass_rates_;
-
-        std::vector<double> segment_depth_diffs_;
 
         // the upwinding segment for each segment based on the flow direction
         std::vector<int> upwinding_segments_;
@@ -359,10 +329,6 @@ namespace Opm
                              DeferredLogger& deferred_logger,
                              const double relaxation_factor=1.0) const;
 
-
-        // scale the segment rates and pressure based on well rates and bhp
-        void scaleSegmentRatesWithWellRates(WellState& well_state) const;
-        void scaleSegmentPressuresWithBhp(WellState& well_state) const;
 
         // computing the accumulation term for later use in well mass equations
         void computeInitialSegmentFluids(const Simulator& ebos_simulator);
@@ -396,7 +362,6 @@ namespace Opm
         // convert a Eval from reservoir to contain the derivative related to wells
         EvalWell extendEval(const Eval& in) const;
 
-        double calculateThpFromBhp(const std::vector<double>& rates, const double bhp, DeferredLogger& deferred_logger) const;
         void updateThp(WellState& well_state, DeferredLogger& deferred_logger) const;
 
         // compute the fluid properties, such as densities, viscosities, and so on, in the segments
@@ -457,10 +422,6 @@ namespace Opm
 
         virtual double getRefDensity() const override;
 
-        bool frictionalPressureLossConsidered() const;
-
-        bool accelerationalPressureLossConsidered() const;
-
         virtual bool iterateWellEqWithControl(const Simulator& ebosSimulator,
                                               const double dt,
                                               const Well::InjectionControls& inj_controls,
@@ -483,9 +444,6 @@ namespace Opm
 
         std::vector<Scalar> getWellResiduals(const std::vector<Scalar>& B_avg,
                                              DeferredLogger& deferred_logger) const;
-
-        void detectOscillations(const std::vector<double>& measure_history,
-                                const int it, bool& oscillate, bool& stagnate) const;
 
         double getResidualMeasureValue(const WellState& well_state,
                                        const std::vector<double>& residuals,
