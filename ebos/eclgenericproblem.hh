@@ -251,7 +251,7 @@ protected:
     const Schedule& schedule_;
     const GridView& gridView_;
 
-    static std::string briefDescription_;
+    static inline std::string briefDescription_;
     std::array<std::vector<Scalar>, 2> referencePorosity_;
 
     std::vector<int> pvtnum_;
