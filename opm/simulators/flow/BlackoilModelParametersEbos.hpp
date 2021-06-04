@@ -118,10 +118,6 @@ struct MaxPressureChangeMsWells {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
-struct UseInnerIterationsMsWells {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
 struct MaxInnerIterMsWells {
     using type = UndefinedProperty;
 };
@@ -142,7 +138,7 @@ struct RegularizationFactorMsw {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
-struct UseInnerIterationsWells {
+struct MaxNewtonIterationsWithInnerWellIterations  {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
@@ -243,16 +239,12 @@ struct MaxPressureChangeMsWells<TypeTag, TTag::FlowModelParameters> {
     static constexpr type value = 10*1e5;
 };
 template<class TypeTag>
-struct UseInnerIterationsMsWells<TypeTag, TTag::FlowModelParameters> {
-    static constexpr bool value = true;
+struct MaxNewtonIterationsWithInnerWellIterations<TypeTag, TTag::FlowModelParameters> {
+    static constexpr int value = 3;
 };
 template<class TypeTag>
 struct MaxInnerIterMsWells<TypeTag, TTag::FlowModelParameters> {
     static constexpr int value = 100;
-};
-template<class TypeTag>
-struct UseInnerIterationsWells<TypeTag, TTag::FlowModelParameters> {
-    static constexpr bool value = false;
 };
 template<class TypeTag>
 struct MaxInnerIterWells<TypeTag, TTag::FlowModelParameters> {
@@ -337,9 +329,6 @@ namespace Opm
         /// Maximum pressure change over an iteratio for ms wells
         double max_pressure_change_ms_wells_;
 
-        /// Whether to use inner iterations for ms wells
-        bool use_inner_iterations_ms_wells_;
-
         /// Maximum inner iteration number for ms wells
         int max_inner_iter_ms_wells_;
 
@@ -349,8 +338,8 @@ namespace Opm
         /// Regularization factor for ms wells
         int regularization_factor_ms_wells_;
 
-        /// Whether to use inner iterations for standard wells
-        bool use_inner_iterations_wells_;
+        /// Maximum newton iterations with inner well iterations
+        int max_niter_inner_well_iter_;
 
         /// Maximum inner iteration number for standard wells
         int max_inner_iter_wells_;
@@ -405,11 +394,10 @@ namespace Opm
             relaxed_inner_tolerance_flow_ms_well_ = EWOMS_GET_PARAM(TypeTag, Scalar, RelaxedFlowTolInnerIterMsw);
             relaxed_inner_tolerance_pressure_ms_well_ = EWOMS_GET_PARAM(TypeTag, Scalar, RelaxedPressureTolInnerIterMsw);
             max_pressure_change_ms_wells_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxPressureChangeMsWells);
-            use_inner_iterations_ms_wells_ = EWOMS_GET_PARAM(TypeTag, bool, UseInnerIterationsMsWells);
             max_inner_iter_ms_wells_ = EWOMS_GET_PARAM(TypeTag, int, MaxInnerIterMsWells);
             strict_inner_iter_ms_wells_ = EWOMS_GET_PARAM(TypeTag, int, StrictInnerIterMsWells);
             regularization_factor_ms_wells_ = EWOMS_GET_PARAM(TypeTag, Scalar, RegularizationFactorMsw);
-            use_inner_iterations_wells_ = EWOMS_GET_PARAM(TypeTag, bool, UseInnerIterationsWells);
+            max_niter_inner_well_iter_ = EWOMS_GET_PARAM(TypeTag, bool, MaxNewtonIterationsWithInnerWellIterations);
             max_inner_iter_wells_ = EWOMS_GET_PARAM(TypeTag, int, MaxInnerIterWells);
             maxSinglePrecisionTimeStep_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxSinglePrecisionDays) *24*60*60;
             max_strict_iter_ = EWOMS_GET_PARAM(TypeTag, int, MaxStrictIter);
@@ -439,10 +427,9 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, RelaxedFlowTolInnerIterMsw, "Relaxed tolerance for the inner iteration for the MSW flow solution");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, RelaxedPressureTolInnerIterMsw, "Relaxed tolerance for the inner iteration for the MSW pressure solution");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaxPressureChangeMsWells, "Maximum relative pressure change for a single iteration of the multi-segment well model");
-            EWOMS_REGISTER_PARAM(TypeTag, bool, UseInnerIterationsMsWells, "Use nested iterations for multi-segment wells");
             EWOMS_REGISTER_PARAM(TypeTag, int, MaxInnerIterMsWells, "Maximum number of inner iterations for multi-segment wells");
             EWOMS_REGISTER_PARAM(TypeTag, int, StrictInnerIterMsWells, "Number of inner iterations for multi-segment wells with strict tolerance");
-            EWOMS_REGISTER_PARAM(TypeTag, bool, UseInnerIterationsWells, "Use nested iterations for standard wells");
+            EWOMS_REGISTER_PARAM(TypeTag, int, MaxNewtonIterationsWithInnerWellIterations, "Maximum newton iterations with inner well iterations");
             EWOMS_REGISTER_PARAM(TypeTag, int, MaxInnerIterWells, "Maximum number of inner iterations for standard wells");
             EWOMS_REGISTER_PARAM(TypeTag, bool, AlternativeWellRateInit, "Use alternative well rate initialization procedure");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, RegularizationFactorMsw, "Regularization factor for ms wells");
