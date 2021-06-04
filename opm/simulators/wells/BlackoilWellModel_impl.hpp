@@ -1619,7 +1619,7 @@ namespace Opm {
                 // potentials is resized and set to zero in the beginning of well->ComputeWellPotentials
                 // and updated only if sucessfull. i.e. the potentials are zero for exceptions
                 for (int p = 0; p < np; ++p) {
-                    this->wellState().wellPotentials()[well->indexOfWell() * np + p] = std::abs(potentials[p]);
+                    this->wellState().wellPotentials(well->indexOfWell())[p] = std::abs(potentials[p]);
                 }
             }
         }
@@ -2787,8 +2787,7 @@ namespace Opm {
     wellPI(const int well_index) const
     {
         const auto& pu = this->phase_usage_;
-        const auto  np = this->numPhases();
-        const auto* pi = &this->wellState().productivityIndex()[np*well_index + 0];
+        const auto& pi = this->wellState().productivityIndex(well_index);
 
         const auto preferred = this->wells_ecl_[well_index].getPreferredPhase();
         switch (preferred) { // Should really have LIQUID = OIL + WATER here too...

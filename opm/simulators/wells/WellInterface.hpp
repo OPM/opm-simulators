@@ -314,7 +314,7 @@ protected:
 
     double scalingFactor(const int comp_idx) const;
 
-    std::vector<double> initialWellRateFractions(const Simulator& ebosSimulator, const std::vector<double>& potentials) const;
+    std::vector<double> initialWellRateFractions(const Simulator& ebosSimulator, const WellState& well_state) const;
 
     // check whether the well is operable under BHP limit with current reservoir condition
     virtual void checkOperabilityUnderBHPLimitProducer(const WellState& well_state, const Simulator& ebos_simulator, DeferredLogger& deferred_logger) =0;

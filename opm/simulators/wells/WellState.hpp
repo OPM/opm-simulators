@@ -235,28 +235,29 @@ public:
         return this->segment_state[wname];
     }
 
-    std::vector<double>& productivityIndex() {
-        return productivity_index_;
+    std::vector<double>& productivityIndex(std::size_t well_index) {
+        return this->productivity_index_[well_index];
     }
 
-    const std::vector<double>& productivityIndex() const {
-        return productivity_index_;
+    const std::vector<double>& productivityIndex(std::size_t well_index) const {
+        return this->productivity_index_[well_index];
     }
 
-    std::vector<double>& connectionProductivityIndex() {
-        return this->conn_productivity_index_;
+    std::vector<double>& connectionProductivityIndex(std::size_t well_index) {
+        return this->conn_productivity_index_[well_index];
     }
 
-    const std::vector<double>& connectionProductivityIndex() const {
-        return this->conn_productivity_index_;
+    const std::vector<double>& connectionProductivityIndex(std::size_t well_index) const {
+        return this->conn_productivity_index_[well_index];
     }
 
-    std::vector<double>& wellPotentials() {
-        return well_potentials_;
+
+    std::vector<double>& wellPotentials(std::size_t well_index) {
+        return this->well_potentials_[well_index];
     }
 
-    const std::vector<double>& wellPotentials() const {
-        return well_potentials_;
+    const std::vector<double>& wellPotentials(std::size_t well_index) const {
+        return this->well_potentials_[well_index];
     }
 
     std::vector<double>& perfThroughput(std::size_t well_index) {
@@ -492,13 +493,13 @@ private:
     WellContainer<SegmentState> segment_state;
 
     // Productivity Index
-    std::vector<double> productivity_index_;
+    WellContainer<std::vector<double>> productivity_index_;
 
     // Connection-level Productivity Index
-    std::vector<double> conn_productivity_index_;
+    WellContainer<std::vector<double>> conn_productivity_index_;
 
     // Well potentials
-    std::vector<double> well_potentials_;
+    WellContainer<std::vector<double>> well_potentials_;
 
 
     data::Segment

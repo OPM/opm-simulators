@@ -685,10 +685,9 @@ updateWellTestStateEconomic(const WellState& well_state,
     bool rate_limit_violated = false;
 
     const auto& quantity_limit = econ_production_limits.quantityLimit();
-    const int np = number_of_phases_;
     if (econ_production_limits.onAnyRateLimit()) {
         if (quantity_limit == WellEconProductionLimits::QuantityLimit::POTN)
-            rate_limit_violated = checkRateEconLimits(econ_production_limits, &well_state.wellPotentials()[index_of_well_ * np], deferred_logger);
+            rate_limit_violated = checkRateEconLimits(econ_production_limits, well_state.wellPotentials(index_of_well_).data(), deferred_logger);
         else {
             rate_limit_violated = checkRateEconLimits(econ_production_limits, well_state.wellRates(index_of_well_).data(), deferred_logger);
         }
