@@ -81,7 +81,7 @@ public:
 
     /// Allocate and initialize if wells is non-null.  Also tries
     /// to give useful initial values to the bhp(), wellRates()
-    /// and perfPhaseRates() fields, depending on controls
+    /// and perfPhaseRatesORG() fields, depending on controls
     void init(const std::vector<double>& cellPressures,
               const Schedule& schedule,
               const std::vector<Well>& wells_ecl,
@@ -100,12 +100,13 @@ public:
                 const SummaryState& summary_state);
 
     /// One rate per phase and well connection.
-    double * perfPhaseRates(std::size_t well_index) {
-        return &this->perfphaserates_[this->first_perf_index_[well_index] * this->numPhases()];
+
+    std::vector<double>& perfPhaseRates(std::size_t well_index) {
+        return this->perfphaserates_[well_index];
     }
 
-    const double * perfPhaseRates(std::size_t well_index) const {
-        return &this->perfphaserates_[this->first_perf_index_[well_index] * this->numPhases()];
+    const std::vector<double>& perfPhaseRates(std::size_t well_index) const {
+        return this->perfphaserates_[well_index];
     }
 
     /// One current control per injecting well.
@@ -436,7 +437,7 @@ private:
     WellContainer<std::vector<double>> perfrates_;
     WellContainer<std::vector<double>> perfpress_;
 
-    std::vector<double> perfphaserates_;
+    WellContainer<std::vector<double>> perfphaserates_;
     WellContainer<int> is_producer_; // Size equal to number of local wells.
 
     // vector with size number of wells +1.

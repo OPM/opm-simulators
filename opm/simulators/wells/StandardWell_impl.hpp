@@ -591,7 +591,7 @@ namespace Opm
         const int np = number_of_phases_;
 
         std::vector<RateVector> connectionRates = connectionRates_; // Copy to get right size.
-        auto * perf_rates = well_state.perfPhaseRates(this->index_of_well_);
+        auto& perf_rates = well_state.perfPhaseRates(this->index_of_well_);
         for (int perf = 0; perf < number_of_perforations_; ++perf) {
             // Calculate perforation quantities.
             std::vector<EvalWell> cq_s(num_components_, {numWellEq_ + numEq, 0.0});
@@ -2104,7 +2104,7 @@ namespace Opm
         const int nperf = number_of_perforations_;
         const int np = number_of_phases_;
         std::vector<double> perfRates(b_perf.size(),0.0);
-        const auto * perf_rates_state = well_state.perfPhaseRates(this->index_of_well_);
+        const auto& perf_rates_state = well_state.perfPhaseRates(this->index_of_well_);
 
         for (int perf = 0; perf < nperf; ++perf) {
             for (int comp = 0; comp < np; ++comp) {
