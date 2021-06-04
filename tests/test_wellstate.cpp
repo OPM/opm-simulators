@@ -28,6 +28,7 @@
 #include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/wells/SegmentState.hpp>
 #include <opm/simulators/wells/WellContainer.hpp>
+#include <opm/simulators/wells/PerfData.hpp>
 #include <opm/parser/eclipse/Python/Python.hpp>
 
 #include <boost/test/unit_test.hpp>
@@ -526,6 +527,20 @@ BOOST_AUTO_TEST_CASE(TESTSegmentState2) {
         BOOST_CHECK_EQUAL(segments.pressure[i], 2*(i+1));
 
     BOOST_CHECK_EQUAL( segments.size(), well.getSegments().size() );
+}
+
+
+BOOST_AUTO_TEST_CASE(TESTPerfData) {
+    const auto& deck_string = R"(
+RUNSPEC
+
+OIL
+WATER
+GAS
+)";
+    Opm::PhaseUsage pu = Opm::phaseUsageFromDeck(Opm::Parser{}.parseString(deck_string));
+
+    Opm::PerfData pd(100,pu);
 }
 
 
