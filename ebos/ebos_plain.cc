@@ -28,6 +28,7 @@
 #include "config.h"
 
 #include "eclproblem.hh"
+#include "eclwellmanager.hh"
 
 #include <opm/models/utils/start.hh>
 
@@ -38,6 +39,11 @@ struct EbosPlainTypeTag {
     using InheritsFrom = std::tuple<EclBaseProblem, BlackOilModel>;
 };
 }
+
+template<class TypeTag>
+struct EclWellModel<TypeTag, TTag::EbosPlainTypeTag> {
+    using type = EclWellManager<TypeTag>;
+};
 
 } // namespace Opm::Properties
 
