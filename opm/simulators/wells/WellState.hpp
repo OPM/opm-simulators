@@ -100,8 +100,13 @@ public:
                 const SummaryState& summary_state);
 
     /// One rate per phase and well connection.
-    std::vector<double>& mutable_perfPhaseRates() { return perfphaserates_; }
-    const std::vector<double>& perfPhaseRates() const { return perfphaserates_; }
+    double * perfPhaseRates(std::size_t well_index) {
+        return &this->perfphaserates_[this->first_perf_index_[well_index] * this->numPhases()];
+    }
+
+    const double * perfPhaseRates(std::size_t well_index) const {
+        return &this->perfphaserates_[this->first_perf_index_[well_index] * this->numPhases()];
+    }
 
     /// One current control per injecting well.
     Well::InjectorCMode currentInjectionControl(std::size_t well_index) const { return current_injection_controls_[well_index]; }
@@ -153,22 +158,37 @@ public:
     }
 
     /// One rate pr well connection.
-    std::vector<double>& perfRateSolvent() { return perfRateSolvent_; }
-    const std::vector<double>& perfRateSolvent() const { return perfRateSolvent_; }
+    double * perfRateSolvent(std::size_t well_index) {
+        return &perfRateSolvent_[this->first_perf_index_[well_index]];
+    }
+
+    const double * perfRateSolvent(std::size_t well_index) const {
+        return &perfRateSolvent_[this->first_perf_index_[well_index]];
+    }
 
     /// One rate pr well
     double solventWellRate(const int w) const;
 
     /// One rate pr well connection.
-    std::vector<double>& perfRatePolymer() { return perfRatePolymer_; }
-    const std::vector<double>& perfRatePolymer() const { return perfRatePolymer_; }
+    double * perfRatePolymer(std::size_t well_index) {
+        return &this->perfRatePolymer_[this->first_perf_index_[well_index]];
+    }
+
+    const double * perfRatePolymer(std::size_t well_index) const {
+        return &this->perfRatePolymer_[this->first_perf_index_[well_index]];
+    }
 
     /// One rate pr well
     double polymerWellRate(const int w) const;
 
     /// One rate pr well connection.
-    std::vector<double>& perfRateBrine() { return perfRateBrine_; }
-    const std::vector<double>& perfRateBrine() const { return perfRateBrine_; }
+    double* perfRateBrine(std::size_t well_index) {
+        return &this->perfRateBrine_[this->first_perf_index_[well_index]];
+    }
+
+    const double* perfRateBrine(std::size_t well_index) const {
+        return &this->perfRateBrine_[this->first_perf_index_[well_index]];
+    }
 
     /// One rate pr well
     double brineWellRate(const int w) const;
@@ -238,28 +258,28 @@ public:
         return well_potentials_;
     }
 
-    std::vector<double>& perfThroughput() {
-        return perf_water_throughput_;
+    double * perfThroughput(std::size_t well_index) {
+        return &perf_water_throughput_[this->first_perf_index_[well_index]];
     }
 
-    const std::vector<double>& perfThroughput() const {
-        return perf_water_throughput_;
+    const double * perfThroughput(std::size_t well_index) const {
+        return &perf_water_throughput_[this->first_perf_index_[well_index]];
     }
 
-    std::vector<double>& perfSkinPressure() {
-        return perf_skin_pressure_;
+    double * perfSkinPressure(std::size_t well_index) {
+        return &perf_skin_pressure_[this->first_perf_index_[well_index]];
     }
 
-    const std::vector<double>& perfSkinPressure() const {
-        return perf_skin_pressure_;
+    const double * perfSkinPressure(std::size_t well_index) const {
+        return &perf_skin_pressure_[this->first_perf_index_[well_index]];
     }
 
-    std::vector<double>& perfWaterVelocity() {
-        return perf_water_velocity_;
+    double * perfWaterVelocity(std::size_t well_index) {
+        return &perf_water_velocity_[this->first_perf_index_[well_index]];
     }
 
-    const std::vector<double>& perfWaterVelocity() const {
-        return perf_water_velocity_;
+    const double * perfWaterVelocity(std::size_t well_index) const {
+        return &perf_water_velocity_[this->first_perf_index_[well_index]];
     }
 
     template<class Comm>
