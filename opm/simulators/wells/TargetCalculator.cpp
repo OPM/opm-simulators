@@ -184,7 +184,7 @@ double InjectionTargetCalculator::groupTarget(const Group::InjectionControls& ct
     case Group::InjectionCMode::RATE:
         return ctrl.surface_max_rate;
     case Group::InjectionCMode::RESV:
-        return ctrl.resv_max_rate;
+        return ctrl.resv_max_rate / resv_coeff_[pos_];
     case Group::InjectionCMode::REIN: {
         double production_rate = this->group_state_.injection_rein_rates(ctrl.reinj_group)[pos_];
         return ctrl.target_reinj_fraction * production_rate;
