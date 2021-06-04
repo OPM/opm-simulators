@@ -41,6 +41,7 @@ void WellState::base_init(const std::vector<double>& cellPressures,
     // clear old name mapping
     this->wellMap_.clear();
     this->perfpress_.clear();
+    this->perfdata.clear();
     this->perf_skin_pressure_.clear();
     this->perf_water_throughput_.clear();
     this->perf_water_velocity_.clear();
@@ -109,6 +110,7 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     this->well_potentials_.add(well.name(), std::vector<double>(np, 0));
     const int num_perf_this_well = well_info->communication().sum(well_perf_data_[w].size());
     this->segment_state.add(well.name(), SegmentState{});
+    this->perfdata.add(well.name(), PerfData{num_perf_this_well, this->phase_usage_});
     this->perfpress_.add(well.name(), std::vector<double>(num_perf_this_well, -1e100));
     this->perfrates_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
     this->perfphaserates_.add(well.name(), std::vector<double>(np*num_perf_this_well, 0));
@@ -118,6 +120,7 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     this->perfRatePolymer_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
     this->perfRateSolvent_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
     this->perfRateBrine_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
+    this->perfdata.add(well.name(), PerfData{static_cast<std::size_t>(num_perf_this_well), this->phase_usage_});
     this->bhp_.add(well.name(), 0.0);
     this->thp_.add(well.name(), 0.0);
     this->productivity_index_.add(well.name(), std::vector<double>(np, 0));

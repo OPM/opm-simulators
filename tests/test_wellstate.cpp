@@ -289,6 +289,9 @@ BOOST_AUTO_TEST_CASE(Pressure)
             BOOST_CHECK_CLOSE(xseg.pressures[pres_idx], pressTop + 1.0*segID, 1.0e-10);
         }
     }
+
+
+    const auto& perf_data = wstate.perfData("PROD01");
 }
 
 // ---------------------------------------------------------------------

@@ -27,6 +27,7 @@
 #include <opm/simulators/wells/WellContainer.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
+#include <opm/simulators/wells/PerfData.hpp>
 #include <opm/output/data/Wells.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
@@ -412,6 +413,21 @@ public:
 
     std::size_t numPerf(std::size_t well_index) const { return this->perfpress_[well_index].size(); }
 
+    PerfData& perfData(const std::string& wname) {
+        return this->perfdata[wname];
+    }
+
+    const PerfData& perfData(const std::string& wname) const {
+        return this->perfdata[wname];
+    }
+
+    PerfData& perfData(std::size_t well_index) {
+        return this->perfdata[well_index];
+    }
+
+    const PerfData& perfData(std::size_t well_index) const {
+        return this->perfdata[well_index];
+    }
 
 private:
     WellMapType wellMap_;
@@ -430,6 +446,7 @@ private:
     WellContainer<double> temperature_;
     WellContainer<std::vector<double>> wellrates_;
     PhaseUsage phase_usage_;
+    WellContainer<PerfData> perfdata;
     WellContainer<std::vector<double>> perfrates_;
     WellContainer<std::vector<double>> perfpress_;
 
