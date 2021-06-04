@@ -97,7 +97,7 @@ runOptimize()
 //   saved in "grad_map")
 void
 GasLiftStage2::
-addOrRemoveALQincrement_(GradMap &grad_map, const std::string well_name, bool add)
+addOrRemoveALQincrement_(GradMap &grad_map, const std::string& well_name, bool add)
 {
     // only applies to wells in the well_state_map (i.e. wells on this rank)
     auto it = this->well_state_map_.find(well_name);
@@ -998,7 +998,7 @@ displayWarning_(const std::string &msg)
 
 void
 GasLiftStage2::SurplusState::
-addOrRemoveALQincrement(GradMap &grad_map, const std::string well_name, bool add)
+addOrRemoveALQincrement(GradMap &grad_map, const std::string& well_name, bool add)
 {
     if (this->parent.debug_) {
         const std::string msg = fmt::format("group: {} : well {} : {} ALQ increment",
