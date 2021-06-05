@@ -35,6 +35,8 @@ private:
 
 public:
     PerfData(std::size_t num_perf, const PhaseUsage& pu);
+    std::size_t size() const;
+
     std::vector<double> pressure;
     std::vector<double> rates;
     std::vector<double> phase_rates;

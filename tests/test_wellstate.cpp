@@ -292,6 +292,7 @@ BOOST_AUTO_TEST_CASE(Pressure)
 
 
     const auto& perf_data = wstate.perfData("PROD01");
+    (void) perf_data;
 }
 
 // ---------------------------------------------------------------------

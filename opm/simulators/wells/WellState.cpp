@@ -46,7 +46,6 @@ void WellState::base_init(const std::vector<double>& cellPressures,
     this->perf_water_throughput_.clear();
     this->perf_water_velocity_.clear();
     this->perfphaserates_.clear();
-    this->perfrates_.clear();
     this->perfRateBrine_.clear();
     this->perfRateSolvent_.clear();
     this->perfRatePolymer_.clear();
@@ -112,7 +111,6 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     this->segment_state.add(well.name(), SegmentState{});
     this->perfdata.add(well.name(), PerfData{num_perf_this_well, this->phase_usage_});
     this->perfpress_.add(well.name(), std::vector<double>(num_perf_this_well, -1e100));
-    this->perfrates_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
     this->perfphaserates_.add(well.name(), std::vector<double>(np*num_perf_this_well, 0));
     this->perf_skin_pressure_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
     this->perf_water_velocity_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
@@ -710,8 +708,8 @@ void WellState::reportConnections(data::Well& well,
     const auto& pd = this->well_perf_data_[well_index];
     const int num_perf_well = pd.size();
     well.connections.resize(num_perf_well);
-
-    const auto& perf_rates = this->perfRates(well_index);
+    const auto& perf_data = this->perfData(well_index);
+    const auto& perf_rates = perf_data.rates;
     const auto& perf_pressure = this->perfPress(well_index);
     for( int i = 0; i < num_perf_well; ++i ) {
         const auto active_index = this->well_perf_data_[well_index][i].cell_index;

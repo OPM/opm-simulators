@@ -40,5 +40,9 @@ PerfData::PerfData(std::size_t num_perf, const PhaseUsage& pu_arg):
 
 }
 
+std::size_t PerfData::size() const {
+    return this->pressure.size();
+}
+
 }
 
