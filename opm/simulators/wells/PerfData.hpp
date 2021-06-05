@@ -36,6 +36,8 @@ private:
 public:
     PerfData(std::size_t num_perf, const PhaseUsage& pu);
     std::size_t size() const;
+    bool try_assign(const PerfData& other);
+
 
     std::vector<double> pressure;
     std::vector<double> rates;

@@ -463,8 +463,8 @@ namespace Opm
         }
 
         // Store the perforation pressure for later usage.
-        auto& perf_press = well_state.perfPress(index_of_well_);
-        perf_press[perf] = well_state.bhp(index_of_well_) + this->perf_pressure_diffs_[perf];
+        auto& perf_data = well_state.perfData(this->index_of_well_);
+        perf_data.pressure[perf] = well_state.bhp(this->index_of_well_) + this->perf_pressure_diffs_[perf];
     }
 
 
@@ -922,7 +922,7 @@ namespace Opm
         }
 
         // Compute the average pressure in each well block
-        const auto& perf_press = well_state.perfPress(w);
+        const auto& perf_press = well_state.perfData(w).pressure;
         auto p_above =  this->parallel_well_info_.communicateAboveValues(well_state.bhp(w),
                                                                          perf_press.data(),
                                                                          nperf);

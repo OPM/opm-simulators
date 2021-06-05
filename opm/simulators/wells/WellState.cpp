@@ -40,7 +40,6 @@ void WellState::base_init(const std::vector<double>& cellPressures,
 {
     // clear old name mapping
     this->wellMap_.clear();
-    this->perfpress_.clear();
     this->perfdata.clear();
     this->perf_skin_pressure_.clear();
     this->perf_water_throughput_.clear();
@@ -110,7 +109,6 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     const int num_perf_this_well = well_info->communication().sum(well_perf_data_[w].size());
     this->segment_state.add(well.name(), SegmentState{});
     this->perfdata.add(well.name(), PerfData{num_perf_this_well, this->phase_usage_});
-    this->perfpress_.add(well.name(), std::vector<double>(num_perf_this_well, -1e100));
     this->perfphaserates_.add(well.name(), std::vector<double>(np*num_perf_this_well, 0));
     this->perf_skin_pressure_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
     this->perf_water_velocity_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
@@ -304,7 +302,7 @@ void WellState::init(const std::vector<double>& cellPressures,
         const auto& well_info = this->wellMap().at(wname);
         const int num_perf_this_well = well_info[2];
         const int global_num_perf_this_well = ecl_well.getConnections().num_open();
-        auto& perf_press = this->perfPress(w);
+        auto& perf_data = this->perfData(w);
 
         auto& phase_rates = this->perfPhaseRates(w);
 
@@ -314,7 +312,7 @@ void WellState::init(const std::vector<double>& cellPressures,
                     phase_rates[this->numPhases()*perf + p] = wellRates(w)[p] / double(global_num_perf_this_well);
                 }
             }
-            perf_press[perf] = cellPressures[well_perf_data[w][perf].cell_index];
+            perf_data.pressure[perf] = cellPressures[well_perf_data[w][perf].cell_index];
         }
 
         this->well_reservoir_rates_.add(wname, std::vector<double>(np, 0));
@@ -449,12 +447,9 @@ void WellState::init(const std::vector<double>& cellPressures,
                 // perfPressures
                 if (global_num_perf_same)
                 {
-                    auto& target_press = perfPress(w);
-                    const auto& src_press = prevState->perfPress(well.name());
-                    for (int perf = 0; perf < num_perf_this_well; ++perf)
-                    {
-                        target_press[perf] = src_press[perf];
-                    }
+                    auto& perf_data = this->perfData(w);
+                    const auto& prev_perf_data = prevState->perfData(w);
+                    perf_data.try_assign( prev_perf_data );
                 }
 
                 // perfSolventRates
@@ -710,7 +705,7 @@ void WellState::reportConnections(data::Well& well,
     well.connections.resize(num_perf_well);
     const auto& perf_data = this->perfData(well_index);
     const auto& perf_rates = perf_data.rates;
-    const auto& perf_pressure = this->perfPress(well_index);
+    const auto& perf_pressure = perf_data.pressure;
     for( int i = 0; i < num_perf_well; ++i ) {
         const auto active_index = this->well_perf_data_[well_index][i].cell_index;
         auto& connection = well.connections[ i ];
@@ -816,6 +811,7 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
             }
 
 
+            auto& perf_data = this->perfData(w);
             // for the seg_rates_, now it becomes a recursive solution procedure.
             {
                 // make sure the information from wells_ecl consistent with wells
@@ -849,7 +845,7 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                 // top segment is always the first one, and its pressure is the well bhp
                 auto& segment_pressure = this->segments(w).pressure;
                 segment_pressure[0] = bhp(w);
-                const auto& perf_press = this->perfPress(w);
+                const auto& perf_press = perf_data.pressure;
                 for (int seg = 1; seg < well_nseg; ++seg) {
                     if ( !segment_perforations[seg].empty() ) {
                         const int first_perf = segment_perforations[seg][0];

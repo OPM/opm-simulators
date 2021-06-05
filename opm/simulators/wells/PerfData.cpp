@@ -44,5 +44,23 @@ std::size_t PerfData::size() const {
     return this->pressure.size();
 }
 
+bool PerfData::try_assign(const PerfData& other) {
+    if (this->size() != other.size())
+        return false;
+
+    this->pressure = other.pressure;
+    this->rates = other.rates;
+    this->phase_rates = other.phase_rates;
+    this->solvent_rates = other.solvent_rates;
+    this->polymer_rates = other.polymer_rates;
+    this->brine_rates = other.brine_rates;
+    this->water_throughput = other.water_throughput;
+    this->skin_pressure = other.skin_pressure;
+    this->water_velocity = other.water_velocity;
+    this->prod_index = other.prod_index;
+
+    return true;
+}
+
 }
 

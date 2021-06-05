@@ -398,14 +398,7 @@ public:
     std::vector<double>& wellRates(std::size_t well_index) { return wellrates_[well_index]; }
     const std::vector<double>& wellRates(std::size_t well_index) const { return wellrates_[well_index]; }
 
-    /// One pressure per well connection.
-    std::vector<double>& perfPress(std::size_t well_index) { return perfpress_[well_index]; }
-    const std::vector<double>& perfPress(std::size_t well_index) const { return perfpress_[well_index]; }
-    std::vector<double>& perfPress(const std::string& wname) { return perfpress_[wname]; }
-    const std::vector<double>& perfPress(const std::string& wname) const { return perfpress_[wname]; }
-
-
-    std::size_t numPerf(std::size_t well_index) const { return this->perfpress_[well_index].size(); }
+    std::size_t numPerf(std::size_t well_index) const { return this->perfdata[well_index].size(); }
 
     PerfData& perfData(const std::string& wname) {
         return this->perfdata[wname];
@@ -441,7 +434,6 @@ private:
     WellContainer<std::vector<double>> wellrates_;
     PhaseUsage phase_usage_;
     WellContainer<PerfData> perfdata;
-    WellContainer<std::vector<double>> perfpress_;
 
     WellContainer<std::vector<double>> perfphaserates_;
     WellContainer<int> is_producer_; // Size equal to number of local wells.

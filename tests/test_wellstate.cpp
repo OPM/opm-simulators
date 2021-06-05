@@ -358,7 +358,8 @@ BOOST_AUTO_TEST_CASE(STOP_well)
     std::vector<Opm::ParallelWellInfo> pinfos;
     auto wstate = buildWellState(setup, 0, pinfos);
     for (std::size_t well_index = 0; well_index < setup.sched.numWells(0); well_index++) {
-        for (const auto& p : wstate.perfPress(well_index))
+        const auto& perf_data = wstate.perfData(well_index);
+        for (const auto& p : perf_data.pressure)
             BOOST_CHECK(p > 0);
     }
 }
@@ -544,7 +545,26 @@ GAS
 )";
     Opm::PhaseUsage pu = Opm::phaseUsageFromDeck(Opm::Parser{}.parseString(deck_string));
 
-    Opm::PerfData pd(100,pu);
+    Opm::PerfData pd1(3,pu);
+    Opm::PerfData pd2(3,pu);
+    Opm::PerfData pd3(2,pu);
+
+
+    for (std::size_t i = 0; i < 3; i++) {
+        pd1.pressure[i] = i+1;
+        pd2.pressure[i] = 10*(i+1);
+    }
+
+    BOOST_CHECK(pd1.try_assign(pd2));
+    for (std::size_t i = 0; i < 3; i++) {
+        BOOST_CHECK(pd2.pressure[i] == 10*(i+1));
+        BOOST_CHECK(pd1.pressure[i] == 10*(i+1));
+    }
+
+    BOOST_CHECK(!pd1.try_assign(pd3));
+    for (std::size_t i = 0; i < 3; i++) {
+        BOOST_CHECK(pd1.pressure[i] == 10*(i+1));
+    }
 }
 
 
