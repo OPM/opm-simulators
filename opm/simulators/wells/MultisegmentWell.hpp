@@ -199,8 +199,6 @@ namespace Opm
         /// int number_of_segments_;
         int numberOfSegments() const;
 
-        int numberOfPerforations() const;
-
         virtual std::vector<double> computeCurrentWellRates(const Simulator& ebosSimulator,
                                                             DeferredLogger& deferred_logger) const override;
 

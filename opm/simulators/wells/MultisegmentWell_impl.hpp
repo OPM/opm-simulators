@@ -1097,18 +1097,6 @@ namespace Opm
 
 
     template <typename TypeTag>
-    int
-    MultisegmentWell<TypeTag>::
-    numberOfPerforations() const
-    {
-        return segmentSet().number_of_perforations_;
-    }
-
-
-
-
-
-    template <typename TypeTag>
     WellSegments::CompPressureDrop
     MultisegmentWell<TypeTag>::
     compPressureDrop() const
