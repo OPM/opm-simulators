@@ -1279,10 +1279,9 @@ namespace WellGroupHelpers
                 continue;
             }
 
-            const auto wellrate_index = well_index * wellState.numPhases();
             // add contribution from wells unconditionally
             for (int phase = 0; phase < np; phase++) {
-                pot[phase] += wefac * wellState.wellPotentials()[wellrate_index + phase];
+                pot[phase] += wefac * wellState.wellPotentials(well_index)[phase];
             }
         }
 
@@ -1332,7 +1331,7 @@ namespace WellGroupHelpers
                 // the well is found and owned
                 int well_index = it->second[0];
 
-                const auto wpot = wellState.wellPotentials().data() + well_index * wellState.numPhases();
+                const auto wpot = wellState.wellPotentials(well_index);
                 if (pu.phase_used[BlackoilPhases::Liquid] > 0)
                     oilpot = wpot[pu.phase_pos[BlackoilPhases::Liquid]];
 

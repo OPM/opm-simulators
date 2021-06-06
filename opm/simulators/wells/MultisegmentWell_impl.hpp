@@ -632,7 +632,7 @@ namespace Opm
         const double sign = well_copy.well_ecl_.isInjector() ? 1.0 : -1.0;
         for (int phase = 0; phase < np; ++phase){
             well_state_copy.wellRates(well_copy.index_of_well_)[phase]
-                    = sign * well_state_copy.wellPotentials()[well_copy.index_of_well_*np + phase];
+                    = sign * well_state_copy.wellPotentials(well_copy.index_of_well_)[phase];
         }
         well_copy.scaleSegmentRatesWithWellRates(well_state_copy);
 
@@ -992,8 +992,8 @@ namespace Opm
             std::transform(src, src + np, dest, dest, std::plus<>{});
         };
 
-        auto* wellPI = &well_state.productivityIndex()[this->index_of_well_*np + 0];
-        auto* connPI = &well_state.connectionProductivityIndex()[this->first_perf_*np + 0];
+        auto* wellPI = well_state.productivityIndex(this->index_of_well_).data();
+        auto* connPI = well_state.connectionProductivityIndex(this->index_of_well_).data();
 
         setToZero(wellPI);
 

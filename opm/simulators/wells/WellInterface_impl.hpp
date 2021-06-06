@@ -745,7 +745,7 @@ namespace Opm
                 double total_rate = std::accumulate(rates.begin(), rates.end(), 0.0);
                 if (total_rate <= 0.0){
                     for (int p = 0; p<np; ++p) {
-                        well_state.wellRates(well_index)[p] = well_state.wellPotentials()[well_index*np + p];
+                        well_state.wellRates(well_index)[p] = well_state.wellPotentials(well_index)[p];
                     }
                 }
                 break;
@@ -762,7 +762,7 @@ namespace Opm
                 // using the well potentials
                 if (total_rate <= 0.0){
                     for (int p = 0; p<np; ++p) {
-                        well_state.wellRates(well_index)[p] = well_state.wellPotentials()[well_index*np + p];
+                        well_state.wellRates(well_index)[p] = well_state.wellPotentials(well_index)[p];
                     }
                 }
                 break;
@@ -795,7 +795,7 @@ namespace Opm
                         well_state.wellRates(well_index)[p] *= controls.oil_rate/current_rate;
                     }
                 } else {
-                    const std::vector<double> fractions = initialWellRateFractions(ebos_simulator, well_state.wellPotentials());
+                    const std::vector<double> fractions = initialWellRateFractions(ebos_simulator, well_state);
                     double control_fraction = fractions[pu.phase_pos[Oil]];
                     if (control_fraction != 0.0) {
                         for (int p = 0; p<np; ++p) {
@@ -815,7 +815,7 @@ namespace Opm
                         well_state.wellRates(well_index)[p] *= controls.water_rate/current_rate;
                     }
                 } else {
-                    const std::vector<double> fractions = initialWellRateFractions(ebos_simulator, well_state.wellPotentials());
+                    const std::vector<double> fractions = initialWellRateFractions(ebos_simulator, well_state);
                     double control_fraction = fractions[pu.phase_pos[Water]];
                     if (control_fraction != 0.0) {
                         for (int p = 0; p<np; ++p) {
@@ -835,7 +835,7 @@ namespace Opm
                         well_state.wellRates(well_index)[p] *= controls.gas_rate/current_rate;
                     }
                 } else {
-                    const std::vector<double> fractions = initialWellRateFractions(ebos_simulator, well_state.wellPotentials());
+                    const std::vector<double> fractions = initialWellRateFractions(ebos_simulator, well_state);
                     double control_fraction = fractions[pu.phase_pos[Gas]];
                     if (control_fraction != 0.0) {
                         for (int p = 0; p<np; ++p) {
@@ -858,7 +858,7 @@ namespace Opm
                         well_state.wellRates(well_index)[p] *= controls.liquid_rate/current_rate;
                     }
                 } else {
-                    const std::vector<double> fractions = initialWellRateFractions(ebos_simulator, well_state.wellPotentials());
+                    const std::vector<double> fractions = initialWellRateFractions(ebos_simulator, well_state);
                     double control_fraction = fractions[pu.phase_pos[Water]] + fractions[pu.phase_pos[Oil]];
                     if (control_fraction != 0.0) {
                         for (int p = 0; p<np; ++p) {
@@ -888,7 +888,7 @@ namespace Opm
                             well_state.wellRates(well_index)[p] *= controls.resv_rate/total_res_rate;
                         }
                     } else {
-                        const std::vector<double> fractions = initialWellRateFractions(ebos_simulator, well_state.wellPotentials());
+                        const std::vector<double> fractions = initialWellRateFractions(ebos_simulator, well_state);
                         for (int p = 0; p<np; ++p) {
                             well_state.wellRates(well_index)[p] = - fractions[p] * controls.resv_rate / convert_coeff[p];
                         }
@@ -914,7 +914,7 @@ namespace Opm
                             well_state.wellRates(well_index)[p] *= target/total_res_rate;
                         }
                     } else {
-                        const std::vector<double> fractions = initialWellRateFractions(ebos_simulator, well_state.wellPotentials());
+                        const std::vector<double> fractions = initialWellRateFractions(ebos_simulator, well_state);
                         for (int p = 0; p<np; ++p) {
                             well_state.wellRates(well_index)[p] = - fractions[p] * target / convert_coeff[p];
                         }
@@ -935,7 +935,7 @@ namespace Opm
                 // using the well potentials
                 if (total_rate <= 0.0){
                     for (int p = 0; p<np; ++p) {
-                        well_state.wellRates(well_index)[p] = -well_state.wellPotentials()[well_index*np + p];
+                        well_state.wellRates(well_index)[p] = -well_state.wellPotentials(well_index)[p];
                     }
                 }
                 break;
@@ -955,7 +955,7 @@ namespace Opm
                 double total_rate = -std::accumulate(rates.begin(), rates.end(), 0.0);
                 if (total_rate <= 0.0){
                     for (int p = 0; p<np; ++p) {
-                        well_state.wellRates(well_index)[p] = -well_state.wellPotentials()[well_index*np + p];
+                        well_state.wellRates(well_index)[p] = -well_state.wellPotentials(well_index)[p];
                     }
                 }
                 break;
@@ -979,18 +979,18 @@ namespace Opm
     template<typename TypeTag>
     std::vector<double>
     WellInterface<TypeTag>::
-    initialWellRateFractions(const Simulator& ebosSimulator, const std::vector<double>& potentials) const
+    initialWellRateFractions(const Simulator& ebosSimulator, const WellState& well_state) const
     {
         const int np = this->number_of_phases_;
         std::vector<double> scaling_factor(np);
 
         double total_potentials = 0.0;
         for (int p = 0; p<np; ++p) {
-            total_potentials += potentials[this->index_of_well_*np + p];
+            total_potentials += well_state.wellPotentials(this->index_of_well_)[p];
         }
         if (total_potentials > 0) {
             for (int p = 0; p<np; ++p) {
-                scaling_factor[p] = potentials[this->index_of_well_*np + p] / total_potentials;
+                scaling_factor[p] = well_state.wellPotentials(this->index_of_well_)[p] / total_potentials;
             }
             return scaling_factor;
         }
