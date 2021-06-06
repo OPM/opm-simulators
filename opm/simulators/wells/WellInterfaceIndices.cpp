@@ -45,7 +45,6 @@ WellInterfaceIndices(const Well& well,
                      const int num_components,
                      const int num_phases,
                      const int index_of_well,
-                     const int first_perf_index,
                      const std::vector<PerforationData>& perf_data)
     : WellInterfaceFluidSystem<FluidSystem>(well,
                                             parallel_well_info,
@@ -55,7 +54,6 @@ WellInterfaceIndices(const Well& well,
                                             num_components,
                                             num_phases,
                                             index_of_well,
-                                            first_perf_index,
                                             perf_data)
     , WellInterfaceEval<FluidSystem>(static_cast<const WellInterfaceFluidSystem<FluidSystem>&>(*this))
 {

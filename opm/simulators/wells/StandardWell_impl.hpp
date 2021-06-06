@@ -43,9 +43,8 @@ namespace Opm
                  const int num_components,
                  const int num_phases,
                  const int index_of_well,
-                 const int first_perf_index,
                  const std::vector<PerforationData>& perf_data)
-    : Base(well, pw_info, time_step, param, rate_converter, pvtRegionIdx, num_components, num_phases, index_of_well, first_perf_index, perf_data)
+    : Base(well, pw_info, time_step, param, rate_converter, pvtRegionIdx, num_components, num_phases, index_of_well, perf_data)
     , StandardWellGeneric<Scalar>(Bhp, pw_info, *this)
     , F0_(numWellConservationEq)
     {

@@ -47,7 +47,6 @@ protected:
                          const int num_components,
                          const int num_phases,
                          const int index_of_well,
-                         const int first_perf_index,
                          const std::vector<PerforationData>& perf_data);
 
     int flowPhaseToEbosCompIdx( const int phaseIdx ) const;

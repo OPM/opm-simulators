@@ -153,11 +153,6 @@ public:
         return this->events_[well_index];
     }
 
-    const std::vector<int>& firstPerfIndex() const
-    {
-        return first_perf_index_;
-    }
-
     /// One rate pr well connection.
     std::vector<double>& perfRateSolvent(std::size_t well_index) {
         return this->perfRateSolvent_[well_index];
@@ -444,7 +439,6 @@ private:
     // vector with size number of wells +1.
     // iterate over all perforations of a given well
     // for (int perf = first_perf_index_[well_index]; perf < first_perf_index_[well_index] + num_perf_[well_index]; ++perf)
-    std::vector<int> first_perf_index_;
     WellContainer<Opm::Well::InjectorCMode> current_injection_controls_;
     WellContainer<Well::ProducerCMode> current_production_controls_;
 

@@ -54,7 +54,6 @@ public:
                          const int num_components,
                          const int num_phases,
                          const int index_of_well,
-                         const int first_perf_index,
                          const std::vector<PerforationData>& perf_data);
 
     /// Well name.
@@ -227,10 +226,6 @@ protected:
 
     // the index of well in Wells struct
     int index_of_well_;
-
-    // record the index of the first perforation
-    // of states of individual well.
-    int first_perf_;
 
     const std::vector<PerforationData>* perf_data_;
 

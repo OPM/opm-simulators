@@ -45,7 +45,6 @@ WellInterfaceGeneric::WellInterfaceGeneric(const Well& well,
                                            const int num_components,
                                            const int num_phases,
                                            const int index_of_well,
-                                           const int first_perf_index,
                                            const std::vector<PerforationData>& perf_data)
       : well_ecl_(well)
       , parallel_well_info_(pw_info)
@@ -54,7 +53,6 @@ WellInterfaceGeneric::WellInterfaceGeneric(const Well& well,
       , num_components_(num_components)
       , number_of_phases_(num_phases)
       , index_of_well_(index_of_well)
-      , first_perf_(first_perf_index)
       , perf_data_(&perf_data)
       , ipr_a_(number_of_phases_)
       , ipr_b_(number_of_phases_)

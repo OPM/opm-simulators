@@ -39,7 +39,6 @@ namespace Opm
                   const int num_components,
                   const int num_phases,
                   const int index_of_well,
-                  const int first_perf_index,
                   const std::vector<PerforationData>& perf_data)
       : WellInterfaceIndices<FluidSystem,Indices,Scalar>(well,
                                                          pw_info,
@@ -49,7 +48,6 @@ namespace Opm
                                                          num_components,
                                                          num_phases,
                                                          index_of_well,
-                                                         first_perf_index,
                                                          perf_data)
       , param_(param)
     {
