@@ -100,16 +100,6 @@ public:
                 const std::vector<std::vector<PerforationData>>& well_perf_data,
                 const SummaryState& summary_state);
 
-    /// One rate per phase and well connection.
-
-    std::vector<double>& perfPhaseRates(std::size_t well_index) {
-        return this->perfphaserates_[well_index];
-    }
-
-    const std::vector<double>& perfPhaseRates(std::size_t well_index) const {
-        return this->perfphaserates_[well_index];
-    }
-
     /// One current control per injecting well.
     Well::InjectorCMode currentInjectionControl(std::size_t well_index) const { return current_injection_controls_[well_index]; }
     void currentInjectionControl(std::size_t well_index, Well::InjectorCMode cmode) { current_injection_controls_[well_index] = cmode; }
@@ -177,15 +167,6 @@ public:
 
     /// One rate pr well
     double polymerWellRate(const int w) const;
-
-    /// One rate pr well connection.
-    std::vector<double>& perfRateBrine(std::size_t well_index) {
-        return this->perfRateBrine_[well_index];
-    }
-
-    const std::vector<double>& perfRateBrine(std::size_t well_index) const {
-        return this->perfRateBrine_[well_index];
-    }
 
     /// One rate pr well
     double brineWellRate(const int w) const;
@@ -435,7 +416,6 @@ private:
     PhaseUsage phase_usage_;
     WellContainer<PerfData> perfdata;
 
-    WellContainer<std::vector<double>> perfphaserates_;
     WellContainer<int> is_producer_; // Size equal to number of local wells.
 
     // vector with size number of wells +1.
@@ -454,7 +434,6 @@ private:
 
     // only for output
     WellContainer<std::vector<double>> perfRatePolymer_;
-    WellContainer<std::vector<double>> perfRateBrine_;
 
     // it is the throughput of water flow through the perforations
     // it is used as a measure of formation damage around well-bore due to particle deposition

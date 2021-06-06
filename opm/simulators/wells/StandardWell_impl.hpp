@@ -202,7 +202,8 @@ namespace Opm
         const int np = number_of_phases_;
 
         std::vector<RateVector> connectionRates = connectionRates_; // Copy to get right size.
-        auto& perf_rates = well_state.perfPhaseRates(this->index_of_well_);
+        auto& perf_data = well_state.perfData(this->index_of_well_);
+        auto& perf_rates = perf_data.phase_rates;
         for (int perf = 0; perf < number_of_perforations_; ++perf) {
             // Calculate perforation quantities.
             std::vector<EvalWell> cq_s(num_components_, {this->numWellEq_ + numEq, 0.0});
@@ -316,6 +317,7 @@ namespace Opm
         computePerfRate(intQuants, mob, bhp, Tw, perf, allow_cf,
                         cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
 
+        auto& perf_data = well_state.perfData(this->index_of_well_);
         if constexpr (has_polymer && Base::has_polymermw) {
             if (this->isInjector()) {
                 // Store the original water flux computed from the reservoir quantities.
@@ -455,7 +457,7 @@ namespace Opm
                 cq_s_sm *= this->extendEval(intQuants.fluidState().saltConcentration());
             }
             // Note. Efficiency factor is handled in the output layer
-            auto& perf_rate_brine = well_state.perfRateBrine(this->index_of_well_);
+            auto& perf_rate_brine = perf_data.brine_rates;
             perf_rate_brine[perf] = cq_s_sm.value();
 
             cq_s_sm *= well_efficiency_factor_;
@@ -463,7 +465,6 @@ namespace Opm
         }
 
         // Store the perforation pressure for later usage.
-        auto& perf_data = well_state.perfData(this->index_of_well_);
         perf_data.pressure[perf] = well_state.bhp(this->index_of_well_) + this->perf_pressure_diffs_[perf];
     }
 
@@ -1133,7 +1134,8 @@ namespace Opm
         const int nperf = number_of_perforations_;
         const int np = number_of_phases_;
         std::vector<double> perfRates(b_perf.size(),0.0);
-        const auto& perf_rates_state = well_state.perfPhaseRates(this->index_of_well_);
+        const auto& perf_data = well_state.perfData(this->index_of_well_);
+        const auto& perf_rates_state = perf_data.phase_rates;
 
         for (int perf = 0; perf < nperf; ++perf) {
             for (int comp = 0; comp < np; ++comp) {

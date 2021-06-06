@@ -1248,7 +1248,7 @@ namespace Opm
             // calculating the perforation rate for each perforation that belongs to this segment
             const EvalWell seg_pressure = this->getSegmentPressure(seg);
             auto& perf_data = well_state.perfData(this->index_of_well_);
-            auto& perf_rates = well_state.perfPhaseRates(this->index_of_well_);
+            auto& perf_rates = perf_data.phase_rates;
             auto& perf_press_state = perf_data.pressure;
             for (const int perf : this->segment_perforations_[seg]) {
                 const int cell_idx = well_cells_[perf];
