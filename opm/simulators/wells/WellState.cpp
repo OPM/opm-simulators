@@ -821,8 +821,8 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
             // for the seg_rates_, now it becomes a recursive solution procedure.
             {
                 // make sure the information from wells_ecl consistent with wells
-                assert((n_activeperf == num_perf_this_well) &&
-                       "Inconsistent number of reservoir connections in well");
+//                assert((n_activeperf == num_perf_this_well) &&
+//                       "Inconsistent number of reservoir connections in well");
 
                 if (pu.phase_used[Gas]) {
                     auto& perf_rates = this->perfPhaseRates(w);
