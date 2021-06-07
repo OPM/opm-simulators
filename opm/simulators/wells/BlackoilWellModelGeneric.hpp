@@ -56,6 +56,7 @@ class EclipseState;
 class Group;
 class RestartValue;
 class Schedule;
+class VFPProperties;
 class WellState;
 
 /// Class for handling the blackoil well model.
@@ -234,6 +235,8 @@ protected:
 
     bool wasDynamicallyShutThisTimeStep(const int well_index) const;
 
+    void updateNetworkPressures(const int reportStepIdx);
+
     void updateWsolvent(const Group& group,
                         const int reportStepIdx,
                         const WellState& wellState);
@@ -352,6 +355,7 @@ protected:
 
     WellTestState wellTestState_{};
     std::unique_ptr<GuideRate> guideRate_;
+    std::unique_ptr<VFPProperties> vfp_properties_{};
     std::map<std::string, double> node_pressures_; // Storing network pressures for output.
 
     /*

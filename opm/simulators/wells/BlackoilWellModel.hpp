@@ -314,7 +314,6 @@ namespace Opm {
             std::optional<int> last_run_wellpi_{};
 
             std::unique_ptr<RateConverterType> rateConverter_{};
-            std::unique_ptr<VFPProperties> vfp_properties_{};
 
             SimulatorReportSingle last_report_{};
 
@@ -347,8 +346,6 @@ namespace Opm {
             // using the solution x to recover the solution xw for wells and applying
             // xw to update Well State
             void recoverWellSolutionAndUpdateWellState(const BVector& x);
-
-            void updateNetworkPressures();
 
             // setting the well_solutions_ based on well_state.
             void updatePrimaryVariables(DeferredLogger& deferred_logger);

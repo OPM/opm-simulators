@@ -1132,7 +1132,7 @@ namespace Opm {
         const int iterationIdx = ebosSimulator_.model().newtonMethod().numIterations();
         updateAndCommunicateGroupData(episodeIdx, iterationIdx);
 
-        updateNetworkPressures();
+        updateNetworkPressures(episodeIdx);
 
         std::set<std::string> switched_wells;
         std::set<std::string> switched_groups;
@@ -1169,38 +1169,6 @@ namespace Opm {
             well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->groupState(), deferred_logger);
         }
         updateAndCommunicateGroupData(episodeIdx, iterationIdx);
-    }
-
-
-
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    updateNetworkPressures()
-    {
-        // Get the network and return if inactive.
-        const int reportStepIdx = ebosSimulator_.episodeIndex();
-        const auto& network = schedule()[reportStepIdx].network();
-        if (!network.active()) {
-            return;
-        }
-        node_pressures_ = WellGroupHelpers::computeNetworkPressures(network, this->wellState(), this->groupState(), *(vfp_properties_->getProd()), schedule(), reportStepIdx);
-
-        // Set the thp limits of wells
-        for (auto& well : well_container_) {
-            // Producers only, since we so far only support the
-            // "extended" network model (properties defined by
-            // BRANPROP and NODEPROP) which only applies to producers.
-            if (well->isProducer()) {
-                const auto it = node_pressures_.find(well->wellEcl().groupName());
-                if (it != node_pressures_.end()) {
-                    // The well belongs to a group with has a network pressure constraint,
-                    // set the dynamic THP constraint of the well accordingly.
-                    well->setDynamicThpLimit(it->second);
-                }
-            }
-        }
     }
 
 

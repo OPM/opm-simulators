@@ -32,6 +32,7 @@
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
@@ -1568,6 +1569,38 @@ inferLocalShutWells()
     for (auto wellID = 0; wellID < nw; ++wellID) {
         if (! used[wellID]) {
             this->local_shut_wells_.push_back(wellID);
+        }
+    }
+}
+
+void
+BlackoilWellModelGeneric::
+updateNetworkPressures(const int reportStepIdx)
+{
+    // Get the network and return if inactive.
+    const auto& network = schedule()[reportStepIdx].network();
+    if (!network.active()) {
+        return;
+    }
+    node_pressures_ = WellGroupHelpers::computeNetworkPressures(network,
+                                                                this->wellState(),
+                                                                this->groupState(),
+                                                                *(vfp_properties_->getProd()),
+                                                                schedule(),
+                                                                reportStepIdx);
+
+    // Set the thp limits of wells
+    for (auto& well : well_container_generic_) {
+        // Producers only, since we so far only support the
+        // "extended" network model (properties defined by
+        // BRANPROP and NODEPROP) which only applies to producers.
+        if (well->isProducer()) {
+            const auto it = node_pressures_.find(well->wellEcl().groupName());
+            if (it != node_pressures_.end()) {
+                // The well belongs to a group with has a network pressure constraint,
+                // set the dynamic THP constraint of the well accordingly.
+                well->setDynamicThpLimit(it->second);
+            }
         }
     }
 }
