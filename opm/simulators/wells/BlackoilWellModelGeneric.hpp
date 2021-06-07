@@ -138,6 +138,9 @@ public:
 
     data::GroupAndNetworkValues groupAndNetworkData(const int reportStepIdx) const;
 
+    /// Return true if any well has a THP constraint.
+    bool hasTHPConstraints() const;
+
 protected:
     GroupState& groupState() { return this->active_wgstate_.group_state; }
 

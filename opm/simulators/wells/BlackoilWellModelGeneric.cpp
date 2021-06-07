@@ -1508,4 +1508,17 @@ updateAndCommunicateGroupData(const int reportStepIdx,
     updateWsolvent(fieldGroup, reportStepIdx,  well_state_nupcol);
 }
 
+bool
+BlackoilWellModelGeneric::
+hasTHPConstraints() const
+{
+    int local_result = false;
+    for (const auto& well : well_container_generic_) {
+        if (well->wellHasTHPConstraints(summaryState_)) {
+            local_result=true;
+        }
+    }
+    return comm_.max(local_result);
+}
+
 }

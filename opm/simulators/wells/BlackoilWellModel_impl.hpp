@@ -156,25 +156,6 @@ namespace Opm {
     }
 
 
-    /// Return true if any well has a THP constraint.
-    template<typename TypeTag>
-    bool
-    BlackoilWellModel<TypeTag>::
-    hasTHPConstraints() const
-    {
-        int local_result = false;
-        const auto& summaryState = ebosSimulator_.vanguard().summaryState();
-        for (const auto& well : well_container_) {
-            if (well->wellHasTHPConstraints(summaryState)) {
-                local_result=true;
-            }
-        }
-        return grid().comm().max(local_result);
-    }
-
-
-
-
     /// Return true if the well was found and shut.
     template<typename TypeTag>
     bool
