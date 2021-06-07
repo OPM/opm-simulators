@@ -261,10 +261,6 @@ namespace Opm {
             // called at the beginning of a report step
             void beginReportStep(const int time_step);
 
-            /// Shut down any single well, but only if it is in prediction mode.
-            /// Returns true if the well was actually found and shut.
-            bool forceShutWellByNameIfPredictionMode(const std::string& wellname, const double simulation_time);
-
             void updatePerforationIntensiveQuantities();
             // it should be able to go to prepareTimeStep(), however, the updateWellControls() and initPrimaryVariablesEvaluation()
             // makes it a little more difficult. unless we introduce if (iterationIdx != 0) to avoid doing the above functions

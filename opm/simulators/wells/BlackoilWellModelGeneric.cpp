@@ -1521,4 +1521,35 @@ hasTHPConstraints() const
     return comm_.max(local_result);
 }
 
+bool
+BlackoilWellModelGeneric::
+forceShutWellByNameIfPredictionMode(const std::string& wellname,
+                                    const double simulation_time)
+{
+    // Only add the well to the closed list on the
+    // process that owns it.
+    int well_was_shut = 0;
+    for (const auto& well : well_container_generic_) {
+        if (well->name() == wellname && !well->wellIsStopped()) {
+            if (well->underPredictionMode()) {
+                wellTestState_.closeWell(wellname, WellTestConfig::Reason::PHYSICAL, simulation_time);
+                well_was_shut = 1;
+            }
+            break;
+        }
+    }
+
+    // Communicate across processes if a well was shut.
+    well_was_shut = comm_.max(well_was_shut);
+
+    // Only log a message on the output rank.
+    if (terminal_output_ && well_was_shut) {
+        const std::string msg = "Well " + wellname
+            + " will be shut because it cannot get converged.";
+        OpmLog::info(msg);
+    }
+
+    return (well_was_shut == 1);
+}
+
 }
