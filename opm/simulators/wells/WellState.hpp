@@ -202,15 +202,6 @@ public:
         return this->productivity_index_[well_index];
     }
 
-    std::vector<double>& connectionProductivityIndex(std::size_t well_index) {
-        return this->conn_productivity_index_[well_index];
-    }
-
-    const std::vector<double>& connectionProductivityIndex(std::size_t well_index) const {
-        return this->conn_productivity_index_[well_index];
-    }
-
-
     std::vector<double>& wellPotentials(std::size_t well_index) {
         return this->well_potentials_[well_index];
     }
@@ -408,9 +399,6 @@ private:
 
     // Productivity Index
     WellContainer<std::vector<double>> productivity_index_;
-
-    // Connection-level Productivity Index
-    WellContainer<std::vector<double>> conn_productivity_index_;
 
     // Well potentials
     WellContainer<std::vector<double>> well_potentials_;

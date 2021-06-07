@@ -51,7 +51,6 @@ void WellState::base_init(const std::vector<double>& cellPressures,
     this->segment_state.clear();
     this->well_potentials_.clear();
     this->productivity_index_.clear();
-    this->conn_productivity_index_.clear();
     {
         // const int nw = wells->number_of_wells;
         const int nw = wells_ecl.size();
@@ -105,7 +104,6 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     this->bhp_.add(well.name(), 0.0);
     this->thp_.add(well.name(), 0.0);
     this->productivity_index_.add(well.name(), std::vector<double>(np, 0));
-    this->conn_productivity_index_.add(well.name(), std::vector<double>(num_perf_this_well * np, 0));
     if ( well.isInjector() )
         this->temperature_.add(well.name(), well.injectionControls(summary_state).temperature);
     else
@@ -687,7 +685,7 @@ void WellState::reportConnections(data::Well& well,
     }
     for( auto& comp : well.connections) {
         const auto * rates = &perf_data.phase_rates[np*local_comp_index];
-        const auto& connPI  = this->connectionProductivityIndex(well_index);
+        const auto& connPI  = perf_data.prod_index;
 
         for( int i = 0; i < np; ++i ) {
             comp.rates.set( phs[ i ], rates[i] );
@@ -908,7 +906,8 @@ void WellState::shutWell(int well_index)
         wpi[p]  = 0.0;
     }
 
-    auto& connpi = this->conn_productivity_index_[well_index];
+    auto& perf_data = this->perfData(well_index);
+    auto& connpi = perf_data.prod_index;
     connpi.assign(connpi.size(), 0);
 }
 
