@@ -343,6 +343,12 @@ namespace Opm {
             // Calculating well potentials for each well
             void updateWellPotentials(const int reportStepIdx, const bool onlyAfterEvent, DeferredLogger& deferred_logger);
 
+            void computePotentials(const std::size_t widx,
+                                   const WellState& well_state_copy,
+                                   std::string& exc_msg,
+                                   ExceptionType::ExcEnum& exc_type,
+                                   DeferredLogger& deferred_logger);
+
             const std::vector<double>& wellPerfEfficiencyFactors() const;
 
             void calculateProductivityIndexValuesShutWells(const int reportStepIdx, DeferredLogger& deferred_logger);

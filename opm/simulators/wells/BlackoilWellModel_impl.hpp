@@ -1146,20 +1146,54 @@ namespace Opm {
     }
 
 
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::computePotentials(const std::size_t widx,
+                                                  const WellState& well_state_copy,
+                                                  std::string& exc_msg,
+                                                  ExceptionType::ExcEnum& exc_type,
+                                                  DeferredLogger& deferred_logger)
+    {
+        const int np = numPhases();
+        std::vector<double> potentials;
+        const auto& well= well_container_[widx];
+        try {
+            well->computeWellPotentials(ebosSimulator_, well_state_copy, potentials, deferred_logger);
+        } catch (const std::runtime_error& e) {
+            exc_type = ExceptionType::RUNTIME_ERROR;
+            exc_msg = e.what();
+        } catch (const std::invalid_argument& e) {
+            exc_type = ExceptionType::INVALID_ARGUMENT;
+            exc_msg = e.what();
+        } catch (const std::logic_error& e) {
+            exc_type = ExceptionType::LOGIC_ERROR;
+            exc_msg = e.what();
+        } catch (const std::exception& e) {
+            exc_type = ExceptionType::DEFAULT;
+            exc_msg = e.what();
+        }
+        // Store it in the well state
+        // potentials is resized and set to zero in the beginning of well->ComputeWellPotentials
+        // and updated only if sucessfull. i.e. the potentials are zero for exceptions
+        for (int p = 0; p < np; ++p) {
+            this->wellState().wellPotentials(well->indexOfWell())[p] = std::abs(potentials[p]);
+        }
+    }
+
+
 
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
     updateWellPotentials(const int reportStepIdx, const bool onlyAfterEvent, DeferredLogger& deferred_logger)
     {
-        const int np = numPhases();
-
         auto well_state_copy = this->wellState();
 
         const SummaryConfig& summaryConfig = ebosSimulator_.vanguard().summaryConfig();
         const bool write_restart_file = ebosSimulator_.vanguard().schedule().write_rst_file(reportStepIdx);
         auto exc_type = ExceptionType::NONE;
         std::string exc_msg;
+        size_t widx = 0;
         for (const auto& well : well_container_) {
             const bool needed_for_summary =
                     ((summaryConfig.hasSummaryKey( "WWPI:" + well->name()) ||
@@ -1198,29 +1232,9 @@ namespace Opm {
             const bool compute_potential = needPotentialsForOutput || needPotentialsForGuideRates;
             if (compute_potential)
             {
-                std::vector<double> potentials;
-                try {
-                    well->computeWellPotentials(ebosSimulator_, well_state_copy, potentials, deferred_logger);
-                 } catch (const std::runtime_error& e) {
-                    exc_type = ExceptionType::RUNTIME_ERROR;
-                    exc_msg = e.what();
-                } catch (const std::invalid_argument& e) {
-                    exc_type = ExceptionType::INVALID_ARGUMENT;
-                    exc_msg = e.what();
-                } catch (const std::logic_error& e) {
-                    exc_type = ExceptionType::LOGIC_ERROR;
-                    exc_msg = e.what();
-                } catch (const std::exception& e) {
-                    exc_type = ExceptionType::DEFAULT;
-                    exc_msg = e.what();
-                }
-                // Store it in the well state
-                // potentials is resized and set to zero in the beginning of well->ComputeWellPotentials
-                // and updated only if sucessfull. i.e. the potentials are zero for exceptions
-                for (int p = 0; p < np; ++p) {
-                    this->wellState().wellPotentials(well->indexOfWell())[p] = std::abs(potentials[p]);
-                }
+                this->computePotentials(widx, well_state_copy, exc_msg, exc_type, deferred_logger);
             }
+            ++widx;
         }
         logAndCheckForExceptionsAndThrow(deferred_logger, exc_type,
                                          "computeWellPotentials() failed: " + exc_msg,
