@@ -362,8 +362,6 @@ namespace Opm {
 
             const std::vector<double>& wellPerfEfficiencyFactors() const;
 
-            void calculateEfficiencyFactors(const int reportStepIdx);
-
             void calculateProductivityIndexValuesShutWells(const int reportStepIdx, DeferredLogger& deferred_logger);
             void calculateProductivityIndexValues(DeferredLogger& deferred_logger);
             void calculateProductivityIndexValues(const WellInterface<TypeTag>* wellPtr,

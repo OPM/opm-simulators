@@ -271,6 +271,8 @@ protected:
     std::unordered_map<std::string, data::GroupGuideRates>
     calculateAllGroupGuiderates(const int reportStepIdx) const;
 
+    void calculateEfficiencyFactors(const int reportStepIdx);
+
     bool checkGroupConstraints(const Group& group,
                                const int reportStepIdx,
                                DeferredLogger& deferred_logger) const;

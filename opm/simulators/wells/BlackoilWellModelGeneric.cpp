@@ -1605,4 +1605,20 @@ updateNetworkPressures(const int reportStepIdx)
     }
 }
 
+void
+BlackoilWellModelGeneric::
+calculateEfficiencyFactors(const int reportStepIdx)
+{
+    if ( !localWellsActive() ) {
+        return;
+    }
+
+    for (auto& well : well_container_generic_) {
+        const Well& wellEcl = well->wellEcl();
+        double well_efficiency_factor = wellEcl.getEfficiencyFactor();
+        WellGroupHelpers::accumulateGroupEfficiencyFactor(schedule().getGroup(wellEcl.groupName(), reportStepIdx), schedule(), reportStepIdx, well_efficiency_factor);
+        well->setWellEfficiencyFactor(well_efficiency_factor);
+    }
+}
+
 }

@@ -1391,25 +1391,6 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    calculateEfficiencyFactors(const int reportStepIdx)
-    {
-        if ( !localWellsActive() ) {
-            return;
-        }
-
-        for (auto& well : well_container_) {
-            const Well& wellEcl = well->wellEcl();
-            double well_efficiency_factor = wellEcl.getEfficiencyFactor();
-            WellGroupHelpers::accumulateGroupEfficiencyFactor(schedule().getGroup(wellEcl.groupName(), reportStepIdx), schedule(), reportStepIdx, well_efficiency_factor);
-            well->setWellEfficiencyFactor(well_efficiency_factor);
-        }
-    }
-
-
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
     setupCartesianToCompressed_(const int* global_cell, int number_of_cartesian_cells)
     {
         cartesian_to_compressed_.resize(number_of_cartesian_cells, -1);
