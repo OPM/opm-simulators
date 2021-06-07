@@ -45,7 +45,6 @@ void WellState::base_init(const std::vector<double>& cellPressures,
     this->perf_water_throughput_.clear();
     this->perf_water_velocity_.clear();
     this->perfRateSolvent_.clear();
-    this->perfRatePolymer_.clear();
     this->status_.clear();
     this->well_perf_data_.clear();
     this->parallel_well_info_.clear();
@@ -110,7 +109,6 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     this->perf_skin_pressure_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
     this->perf_water_velocity_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
     this->perf_water_throughput_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
-    this->perfRatePolymer_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
     this->perfRateSolvent_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
     this->perfRateBrine_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
     this->perfdata.add(well.name(), PerfData{static_cast<std::size_t>(num_perf_this_well), this->phase_usage_});
@@ -737,7 +735,7 @@ void WellState::reportConnections(data::Well& well,
             comp.rates.set( pi [ i ], connPI[i] );
         }
         if ( pu.has_polymer ) {
-            const auto& perf_polymer_rate = this->perfRatePolymer(well_index);
+            const auto& perf_polymer_rate = perf_data.polymer_rates;
             comp.rates.set( rt::polymer, perf_polymer_rate[local_comp_index]);
         }
         if ( pu.has_brine ) {
@@ -915,7 +913,8 @@ double WellState::solventWellRate(const int w) const
 
 double WellState::polymerWellRate(const int w) const
 {
-    const auto& perf_rates_polymer = this->perfRatePolymer(w);
+    const auto& perf_data = this->perfData(w);
+    const auto& perf_rates_polymer = perf_data.polymer_rates;
     return parallel_well_info_[w]->sumPerfValues(perf_rates_polymer.begin(), perf_rates_polymer.end());
 }
 

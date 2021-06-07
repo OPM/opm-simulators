@@ -407,7 +407,7 @@ namespace Opm
                 cq_s_poly *= this->extendEval(intQuants.polymerConcentration() * intQuants.polymerViscosityCorrection());
             }
             // Note. Efficiency factor is handled in the output layer
-            auto& perf_rate_polymer = well_state.perfRatePolymer(this->index_of_well_);
+            auto& perf_rate_polymer = perf_data.polymer_rates;
             perf_rate_polymer[perf] = cq_s_poly.value();
 
             cq_s_poly *= well_efficiency_factor_;
