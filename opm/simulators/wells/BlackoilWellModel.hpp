@@ -279,7 +279,7 @@ namespace Opm {
                                      const SummaryState& summaryState);
 
             // create the well container
-            std::vector<WellInterfacePtr > createWellContainer(const int time_step);
+            void createWellContainer(const int time_step);
 
             WellInterfacePtr
             createWellPointer(const int wellID,

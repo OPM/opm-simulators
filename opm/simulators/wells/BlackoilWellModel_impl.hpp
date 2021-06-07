@@ -244,7 +244,7 @@ namespace Opm {
             wellTesting(reportStepIdx, simulationTime, local_deferredLogger);
 
             // create the well container
-            well_container_ = createWellContainer(reportStepIdx);
+            createWellContainer(reportStepIdx);
 
             // do the initialization for all the wells
             // TODO: to see whether we can postpone of the intialization of the well containers to
@@ -570,18 +570,18 @@ namespace Opm {
 
 
     template<typename TypeTag>
-    std::vector<typename BlackoilWellModel<TypeTag>::WellInterfacePtr >
+    void
     BlackoilWellModel<TypeTag>::
     createWellContainer(const int time_step)
     {
-        std::vector<WellInterfacePtr> well_container;
-
         DeferredLogger local_deferredLogger;
 
         const int nw = numLocalWells();
 
+        well_container_.clear();
+
         if (nw > 0) {
-            well_container.reserve(nw);
+            well_container_.reserve(nw);
 
             for (int w = 0; w < nw; ++w) {
                 const Well& well_ecl = wells_ecl_[w];
@@ -688,10 +688,10 @@ namespace Opm {
                     wellIsStopped = true;
                 }
 
-                well_container.emplace_back(this->createWellPointer(w, time_step));
+                well_container_.emplace_back(this->createWellPointer(w, time_step));
 
                 if (wellIsStopped)
-                    well_container.back()->stopWell();
+                    well_container_.back()->stopWell();
             }
         }
 
@@ -702,10 +702,8 @@ namespace Opm {
         }
 
         well_container_generic_.clear();
-        for (auto& w : well_container)
+        for (auto& w : well_container_)
           well_container_generic_.push_back(w.get());
-
-        return well_container;
     }
 
 
@@ -1551,7 +1549,7 @@ namespace Opm {
             auto saved_previous_wgstate = this->prevWGState();
             this->commitWGState();
 
-            this->well_container_ = this->createWellContainer(timeStepIdx);
+            this->createWellContainer(timeStepIdx);
             this->inferLocalShutWells();
 
             this->initWellContainer();
