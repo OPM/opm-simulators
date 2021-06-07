@@ -284,7 +284,10 @@ namespace Opm {
 
         // calculate the well potentials
         try {
-            updateWellPotentials(reportStepIdx, /*onlyAfterEvent*/true, local_deferredLogger);
+            updateWellPotentials(reportStepIdx,
+                                 /*onlyAfterEvent*/true,
+                                 ebosSimulator_.vanguard().summaryConfig(),
+                                 local_deferredLogger);
         } catch ( std::runtime_error& e ) {
             const std::string msg = "A zero well potential is returned for output purposes. ";
             local_deferredLogger.warning("WELL_POTENTIAL_CALCULATION_FAILED", msg);
@@ -448,7 +451,10 @@ namespace Opm {
 
         // calculate the well potentials
         try {
-            updateWellPotentials(reportStepIdx, /*onlyAfterEvent*/false, local_deferredLogger);
+            updateWellPotentials(reportStepIdx,
+                                 /*onlyAfterEvent*/false,
+                                 ebosSimulator_.vanguard().summaryConfig(),
+                                 local_deferredLogger);
         } catch ( std::runtime_error& e ) {
             const std::string msg = "A zero well potential is returned for output purposes. ";
             local_deferredLogger.warning("WELL_POTENTIAL_CALCULATION_FAILED", msg);
@@ -1179,71 +1185,6 @@ namespace Opm {
             this->wellState().wellPotentials(well->indexOfWell())[p] = std::abs(potentials[p]);
         }
     }
-
-
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    updateWellPotentials(const int reportStepIdx, const bool onlyAfterEvent, DeferredLogger& deferred_logger)
-    {
-        auto well_state_copy = this->wellState();
-
-        const SummaryConfig& summaryConfig = ebosSimulator_.vanguard().summaryConfig();
-        const bool write_restart_file = ebosSimulator_.vanguard().schedule().write_rst_file(reportStepIdx);
-        auto exc_type = ExceptionType::NONE;
-        std::string exc_msg;
-        size_t widx = 0;
-        for (const auto& well : well_container_) {
-            const bool needed_for_summary =
-                    ((summaryConfig.hasSummaryKey( "WWPI:" + well->name()) ||
-                      summaryConfig.hasSummaryKey( "WOPI:" + well->name()) ||
-                      summaryConfig.hasSummaryKey( "WGPI:" + well->name())) && well->isInjector()) ||
-                    ((summaryConfig.hasKeyword( "GWPI") ||
-                      summaryConfig.hasKeyword( "GOPI") ||
-                      summaryConfig.hasKeyword( "GGPI")) && well->isInjector()) ||
-                    ((summaryConfig.hasKeyword( "FWPI") ||
-                      summaryConfig.hasKeyword( "FOPI") ||
-                      summaryConfig.hasKeyword( "FGPI")) && well->isInjector()) ||
-                    ((summaryConfig.hasSummaryKey( "WWPP:" + well->name()) ||
-                      summaryConfig.hasSummaryKey( "WOPP:" + well->name()) ||
-                      summaryConfig.hasSummaryKey( "WGPP:" + well->name())) && well->isProducer()) ||
-                    ((summaryConfig.hasKeyword( "GWPP") ||
-                      summaryConfig.hasKeyword( "GOPP") ||
-                      summaryConfig.hasKeyword( "GGPP")) && well->isProducer()) ||
-                    ((summaryConfig.hasKeyword( "FWPP") ||
-                      summaryConfig.hasKeyword( "FOPP") ||
-                      summaryConfig.hasKeyword( "FGPP")) && well->isProducer());
-
-            // At the moment, the following events are considered
-            // for potentials update
-            const uint64_t effective_events_mask = ScheduleEvents::WELL_STATUS_CHANGE
-                                                 + ScheduleEvents::COMPLETION_CHANGE
-                                                 + ScheduleEvents::WELL_PRODUCTIVITY_INDEX
-                                                 + ScheduleEvents::WELL_WELSPECS_UPDATE
-                                                 + ScheduleEvents::WELLGROUP_EFFICIENCY_UPDATE
-                                                 + ScheduleEvents::NEW_WELL
-                                                 + ScheduleEvents::PRODUCTION_UPDATE
-                                                 + ScheduleEvents::INJECTION_UPDATE;
-            const auto& events = schedule()[reportStepIdx].wellgroup_events();
-            const bool event = events.hasEvent(well->name(), ScheduleEvents::ACTIONX_WELL_EVENT) || (report_step_starts_ && events.hasEvent(well->name(), effective_events_mask));
-            const bool needPotentialsForGuideRates = well->underPredictionMode() && (!onlyAfterEvent || event);
-            const bool needPotentialsForOutput = !onlyAfterEvent && (needed_for_summary || write_restart_file);
-            const bool compute_potential = needPotentialsForOutput || needPotentialsForGuideRates;
-            if (compute_potential)
-            {
-                this->computePotentials(widx, well_state_copy, exc_msg, exc_type, deferred_logger);
-            }
-            ++widx;
-        }
-        logAndCheckForExceptionsAndThrow(deferred_logger, exc_type,
-                                         "computeWellPotentials() failed: " + exc_msg,
-                                         terminal_output_);
-
-    }
-
-
-
 
 
 

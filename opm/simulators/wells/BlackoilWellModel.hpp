@@ -298,7 +298,6 @@ namespace Opm {
             size_t local_num_cells_{};
             double gravity_{};
             std::vector<double> depth_{};
-            bool report_step_starts_{};
             bool alternative_well_rate_init_{};
 
             std::optional<int> last_run_wellpi_{};
@@ -340,14 +339,11 @@ namespace Opm {
 
             void updateAverageFormationFactor();
 
-            // Calculating well potentials for each well
-            void updateWellPotentials(const int reportStepIdx, const bool onlyAfterEvent, DeferredLogger& deferred_logger);
-
             void computePotentials(const std::size_t widx,
                                    const WellState& well_state_copy,
                                    std::string& exc_msg,
                                    ExceptionType::ExcEnum& exc_type,
-                                   DeferredLogger& deferred_logger);
+                                   DeferredLogger& deferred_logger) override;
 
             const std::vector<double>& wellPerfEfficiencyFactors() const;
 

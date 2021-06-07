@@ -36,6 +36,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRate.hpp>
 
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
@@ -58,6 +59,7 @@ class GasLiftWellState;
 class Group;
 class RestartValue;
 class Schedule;
+class SummaryConfig;
 class VFPProperties;
 class WellState;
 
@@ -339,6 +341,19 @@ protected:
                                    GLiftWellStateMap& map,
                                    const int episodeIndex);
 
+    virtual void computePotentials(const std::size_t widx,
+                                   const WellState& well_state_copy,
+                                   std::string& exc_msg,
+                                   ExceptionType::ExcEnum& exc_type,
+                                   DeferredLogger& deferred_logger) = 0;
+
+    // Calculating well potentials for each well
+    void updateWellPotentials(const int reportStepIdx,
+                              const bool onlyAfterEvent,
+                              const SummaryConfig& summaryConfig,
+                              DeferredLogger& deferred_logger);
+
+
     const Schedule& schedule_;
     const SummaryState& summaryState_;
     const EclipseState& eclState_;
@@ -348,6 +363,7 @@ protected:
     bool terminal_output_{false};
     bool wells_active_{false};
     bool initial_step_{};
+    bool report_step_starts_{};
 
     std::vector<Well> wells_ecl_;
     std::vector<std::vector<PerforationData>> well_perf_data_;

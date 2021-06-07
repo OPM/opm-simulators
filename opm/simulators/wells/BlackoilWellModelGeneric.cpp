@@ -29,9 +29,9 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRate.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
-#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/GasLiftStage2.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
@@ -1700,6 +1700,68 @@ gasLiftOptimizationStage2(DeferredLogger& deferred_logger,
                          glift_wells,
                          glift_well_state_map};
     glift.runOptimize();
+}
+
+void
+BlackoilWellModelGeneric::
+updateWellPotentials(const int reportStepIdx,
+                     const bool onlyAfterEvent,
+                     const SummaryConfig& summaryConfig,
+                     DeferredLogger& deferred_logger)
+{
+    auto well_state_copy = this->wellState();
+
+    const bool write_restart_file = schedule().write_rst_file(reportStepIdx);
+    auto exc_type = ExceptionType::NONE;
+    std::string exc_msg;
+    size_t widx = 0;
+    for (const auto& well : well_container_generic_) {
+        const bool needed_for_summary =
+                ((summaryConfig.hasSummaryKey( "WWPI:" + well->name()) ||
+                  summaryConfig.hasSummaryKey( "WOPI:" + well->name()) ||
+                  summaryConfig.hasSummaryKey( "WGPI:" + well->name())) && well->isInjector()) ||
+                ((summaryConfig.hasKeyword( "GWPI") ||
+                  summaryConfig.hasKeyword( "GOPI") ||
+                  summaryConfig.hasKeyword( "GGPI")) && well->isInjector()) ||
+                ((summaryConfig.hasKeyword( "FWPI") ||
+                  summaryConfig.hasKeyword( "FOPI") ||
+                  summaryConfig.hasKeyword( "FGPI")) && well->isInjector()) ||
+                ((summaryConfig.hasSummaryKey( "WWPP:" + well->name()) ||
+                  summaryConfig.hasSummaryKey( "WOPP:" + well->name()) ||
+                  summaryConfig.hasSummaryKey( "WGPP:" + well->name())) && well->isProducer()) ||
+                ((summaryConfig.hasKeyword( "GWPP") ||
+                  summaryConfig.hasKeyword( "GOPP") ||
+                  summaryConfig.hasKeyword( "GGPP")) && well->isProducer()) ||
+                ((summaryConfig.hasKeyword( "FWPP") ||
+                  summaryConfig.hasKeyword( "FOPP") ||
+                  summaryConfig.hasKeyword( "FGPP")) && well->isProducer());
+
+        // At the moment, the following events are considered
+        // for potentials update
+        const uint64_t effective_events_mask = ScheduleEvents::WELL_STATUS_CHANGE
+                                             + ScheduleEvents::COMPLETION_CHANGE
+                                             + ScheduleEvents::WELL_PRODUCTIVITY_INDEX
+                                             + ScheduleEvents::WELL_WELSPECS_UPDATE
+                                             + ScheduleEvents::WELLGROUP_EFFICIENCY_UPDATE
+                                             + ScheduleEvents::NEW_WELL
+                                             + ScheduleEvents::PRODUCTION_UPDATE
+                                             + ScheduleEvents::INJECTION_UPDATE;
+        const auto& events = schedule()[reportStepIdx].wellgroup_events();
+        const bool event = events.hasEvent(well->name(), ScheduleEvents::ACTIONX_WELL_EVENT) ||
+                           (report_step_starts_ && events.hasEvent(well->name(), effective_events_mask));
+        const bool needPotentialsForGuideRates = well->underPredictionMode() && (!onlyAfterEvent || event);
+        const bool needPotentialsForOutput = !onlyAfterEvent && (needed_for_summary || write_restart_file);
+        const bool compute_potential = needPotentialsForOutput || needPotentialsForGuideRates;
+        if (compute_potential)
+        {
+            this->computePotentials(widx, well_state_copy, exc_msg, exc_type, deferred_logger);
+        }
+        ++widx;
+    }
+    logAndCheckForExceptionsAndThrow(deferred_logger, exc_type,
+                                     "computeWellPotentials() failed: " + exc_msg,
+                                     terminal_output_);
+
 }
 
 }
