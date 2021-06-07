@@ -43,6 +43,12 @@ class WellState;
 
 template<class FluidSystem>
 class WellInterfaceFluidSystem : public WellInterfaceGeneric {
+protected:
+    using RateConverterType = RateConverter::
+    SurfaceToReservoirVoidage<FluidSystem, std::vector<int>>;
+    // to indicate a invalid completion
+    static constexpr int INVALIDCOMPLETION = std::numeric_limits<int>::max();
+
 public:
     void updateWellTestState(const WellState& well_state,
                              const double& simulationTime,
@@ -50,17 +56,18 @@ public:
                              WellTestState& wellTestState,
                              DeferredLogger& deferred_logger) const;
 
-protected:
-    using RateConverterType = RateConverter::
-    SurfaceToReservoirVoidage<FluidSystem, std::vector<int>>;
+    int flowPhaseToEbosPhaseIdx(const int phaseIdx) const;
 
     static constexpr int Water = BlackoilPhases::Aqua;
     static constexpr int Oil = BlackoilPhases::Liquid;
     static constexpr int Gas = BlackoilPhases::Vapour;
 
-    // to indicate a invalid completion
-    static constexpr int INVALIDCOMPLETION = std::numeric_limits<int>::max();
+    const RateConverterType& rateConverter() const
+    {
+        return rateConverter_;
+    }
 
+protected:
     WellInterfaceFluidSystem(const Well& well,
                              const ParallelWellInfo& parallel_well_info,
                              const int time_step,

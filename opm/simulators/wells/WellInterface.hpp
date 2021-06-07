@@ -30,13 +30,9 @@
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRate.hpp>
 
 #include <opm/core/props/BlackoilPhases.hpp>
 
-#include <opm/simulators/wells/VFPProperties.hpp>
-#include <opm/simulators/wells/WellHelpers.hpp>
-#include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 // NOTE: GasLiftSingleWell.hpp includes StandardWell.hpp which includes ourself
@@ -56,22 +52,20 @@ namespace Opm {
 #include<dune/istl/bcrsmatrix.hh>
 #include<dune/istl/matrixmatrix.hh>
 
-#include <opm/material/densead/Math.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 
-#include <opm/simulators/wells/WellInterfaceFluidSystem.hpp>
+#include <opm/simulators/wells/WellInterfaceIndices.hpp>
 
-#include <array>
 #include <cassert>
-#include <memory>
-#include <string>
 #include <vector>
 
 namespace Opm
 {
 
 template<typename TypeTag>
-class WellInterface : public WellInterfaceFluidSystem<GetPropType<TypeTag, Properties::FluidSystem>>
+class WellInterface : public WellInterfaceIndices<GetPropType<TypeTag, Properties::FluidSystem>,
+                                                  GetPropType<TypeTag, Properties::Indices>,
+                                                  GetPropType<TypeTag, Properties::Scalar>>
 {
 public:
 
@@ -230,7 +224,6 @@ public:
 
     Scalar volumetricSurfaceRateForConnection(int cellIdx, int phaseIdx) const;
 
-
     template <class EvalWell>
     Eval restrictEval(const EvalWell& in) const
     {
@@ -292,27 +285,16 @@ protected:
 
     bool changed_to_stopped_this_step_ = false;
 
-    int flowPhaseToEbosCompIdx( const int phaseIdx ) const;
-
-    int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const;
-
-    int ebosCompIdxToFlowCompIdx( const unsigned compIdx ) const;
-
     double wpolymer() const;
 
     double wfoam() const;
 
     double wsalt() const;
 
-    template <class ValueType>
-    ValueType calculateBhpFromThp(const WellState& well_state, const std::vector<ValueType>& rates, const Well& well, const SummaryState& summaryState, DeferredLogger& deferred_logger) const;
-
     virtual double getRefDensity() const = 0;
 
     // Component fractions for each phase for the well
     const std::vector<double>& compFrac() const;
-
-    double scalingFactor(const int comp_idx) const;
 
     std::vector<double> initialWellRateFractions(const Simulator& ebosSimulator, const WellState& well_state) const;
 
@@ -361,54 +343,6 @@ protected:
 
     void solveWellForTesting(const Simulator& ebosSimulator, WellState& well_state, const GroupState& group_state,
                              DeferredLogger& deferred_logger);
-
-    template <class EvalWell>
-    void getGroupInjectionControl(const Group& group,
-                                  const WellState& well_state,
-                                  const GroupState& group_state,
-                                  const Schedule& schedule,
-                                  const SummaryState& summaryState,
-                                  const InjectorType& injectorType,
-                                  const EvalWell& bhp,
-                                  const EvalWell& injection_rate,
-                                  EvalWell& control_eq,
-                                  double efficiencyFactor,
-                                  DeferredLogger& deferred_logger);
-
-    template <class EvalWell>
-    void getGroupProductionControl(const Group& group,
-                                   const WellState& well_state,
-                                   const GroupState& group_state,
-                                   const Schedule& schedule,
-                                   const SummaryState& summaryState,
-                                   const EvalWell& bhp,
-                                   const std::vector<EvalWell>& rates,
-                                   EvalWell& control_eq,
-                                   double efficiencyFactor);
-
-    template <class EvalWell, class BhpFromThpFunc>
-    void assembleControlEqInj(const WellState& well_state,
-                              const GroupState& group_state,
-                              const Schedule& schedule,
-                              const SummaryState& summaryState,
-                              const Well::InjectionControls& controls,
-                              const EvalWell& bhp,
-                              const EvalWell& injection_rate,
-                              BhpFromThpFunc bhp_from_thp,
-                              EvalWell& control_eq,
-                              DeferredLogger& deferred_logger);
-
-    template <class EvalWell, class BhpFromThpFunc>
-    void assembleControlEqProd(const WellState& well_state,
-                               const GroupState& group_state,
-                               const Schedule& schedule,
-                               const SummaryState& summaryState,
-                               const Well::ProductionControls& controls,
-                               const EvalWell& bhp,
-                               const std::vector<EvalWell>& rates, // Always 3 canonical rates.
-                               BhpFromThpFunc bhp_from_thp,
-                               EvalWell& control_eq,
-                               DeferredLogger& deferred_logger);
 };
 
 }

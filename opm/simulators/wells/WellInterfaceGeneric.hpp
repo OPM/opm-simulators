@@ -107,6 +107,37 @@ public:
         return this->wellStatus_ == Well::Status::STOP;
     }
 
+    int currentStep() const {
+        return this->current_step_;
+    }
+
+    int pvtRegionIdx() const {
+        return pvtRegionIdx_;
+    }
+
+    const GuideRate* guideRate() const {
+        return guide_rate_;
+    }
+
+    int numPhases() const {
+        return number_of_phases_;
+    }
+
+    double refDepth() const {
+        return ref_depth_;
+    }
+
+    const VFPProperties* vfpProperties() const {
+        return vfp_properties_;
+    }
+
+    double gravity() const {
+        return gravity_;
+    }
+
+    double getTHPConstraint(const SummaryState& summaryState) const;
+    double getALQ(const WellState& well_state) const;
+
 protected:
     // whether a well is specified with a non-zero and valid VFP table number
     bool isVFPActive(DeferredLogger& deferred_logger) const;
@@ -114,13 +145,11 @@ protected:
     bool getAllowCrossFlow() const;
     double wsolvent() const;
     double mostStrictBhpFromBhpLimits(const SummaryState& summaryState) const;
-    double getTHPConstraint(const SummaryState& summaryState) const;
     void updateWellTestStatePhysical(const WellState& well_state,
                                      const double simulation_time,
                                      const bool write_message_to_opmlog,
                                      WellTestState& well_test_state,
                                      DeferredLogger& deferred_logger) const;
-    double getALQ(const WellState& well_state) const;
 
     // definition of the struct OperabilityStatus
     struct OperabilityStatus {
