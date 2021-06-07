@@ -352,9 +352,6 @@ namespace Opm {
 
             void setupCartesianToCompressed_(const int* global_cell, int local_num__cells);
 
-            void setRepRadiusPerfLength();
-
-
             void updateAverageFormationFactor();
 
             // Calculating well potentials for each well

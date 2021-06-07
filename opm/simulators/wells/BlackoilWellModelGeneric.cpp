@@ -1637,4 +1637,13 @@ getGenWell(const std::string& well_name)
     return *well;
 }
 
+void
+BlackoilWellModelGeneric::
+setRepRadiusPerfLength()
+{
+    for (const auto& well : well_container_generic_) {
+        well->setRepRadiusPerfLength(cartesian_to_compressed_);
+    }
+}
+
 }

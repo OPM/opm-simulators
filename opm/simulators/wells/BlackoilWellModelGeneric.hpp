@@ -321,6 +321,8 @@ protected:
 
     void inferLocalShutWells();
 
+    void setRepRadiusPerfLength();
+
     const Schedule& schedule_;
     const SummaryState& summaryState_;
     const EclipseState& eclState_;

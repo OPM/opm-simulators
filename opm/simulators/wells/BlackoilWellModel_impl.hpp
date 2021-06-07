@@ -1417,20 +1417,6 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    setRepRadiusPerfLength()
-    {
-        for (const auto& well : well_container_) {
-            well->setRepRadiusPerfLength(cartesian_to_compressed_);
-        }
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
     updateAverageFormationFactor()
     {
         std::vector< Scalar > B_avg(numComponents(), Scalar() );
