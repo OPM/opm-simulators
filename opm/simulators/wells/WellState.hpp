@@ -144,15 +144,6 @@ public:
         return this->events_[well_index];
     }
 
-    /// One rate pr well connection.
-    std::vector<double>& perfRateSolvent(std::size_t well_index) {
-        return this->perfRateSolvent_[well_index];
-    }
-
-    const std::vector<double>& perfRateSolvent(std::size_t well_index) const {
-        return this->perfRateSolvent_[well_index];
-    }
-
     /// One rate pr well
     double solventWellRate(const int w) const;
 
@@ -420,8 +411,6 @@ private:
     // not.
     std::map<std::string, std::pair<bool, std::vector<double>>> well_rates;
 
-
-    WellContainer<std::vector<double>> perfRateSolvent_;
 
     // it is the throughput of water flow through the perforations
     // it is used as a measure of formation damage around well-bore due to particle deposition
