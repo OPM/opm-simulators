@@ -219,30 +219,6 @@ public:
         return this->well_potentials_[well_index];
     }
 
-    std::vector<double>& perfThroughput(std::size_t well_index) {
-        return perf_water_throughput_[well_index];
-    }
-
-    const std::vector<double>& perfThroughput(std::size_t well_index) const {
-        return perf_water_throughput_[well_index];
-    }
-
-    std::vector<double>& perfSkinPressure(std::size_t well_index) {
-        return perf_skin_pressure_[well_index];
-    }
-
-    const std::vector<double>& perfSkinPressure(std::size_t well_index) const {
-        return perf_skin_pressure_[well_index];
-    }
-
-    std::vector<double>& perfWaterVelocity(std::size_t well_index) {
-        return perf_water_velocity_[well_index];
-    }
-
-    const std::vector<double>& perfWaterVelocity(std::size_t well_index) const {
-        return perf_water_velocity_[well_index];
-    }
-
     template<class Comm>
     void communicateGroupRates(const Comm& comm);
 
@@ -410,20 +386,6 @@ private:
     // bool in the value pair is whether the current process owns the well or
     // not.
     std::map<std::string, std::pair<bool, std::vector<double>>> well_rates;
-
-
-    // it is the throughput of water flow through the perforations
-    // it is used as a measure of formation damage around well-bore due to particle deposition
-    // it will only be used for injectors to check the injectivity
-    WellContainer<std::vector<double>> perf_water_throughput_;
-
-    // skin pressure of peforation
-    // it will only be used for injectors to check the injectivity
-    WellContainer<std::vector<double>> perf_skin_pressure_;
-
-    // it will only be used for injectors to check the injectivity
-    // water velocity of perforation
-    WellContainer<std::vector<double>> perf_water_velocity_;
 
     // phase rates under reservoir condition for wells
     // or voidage phase rates

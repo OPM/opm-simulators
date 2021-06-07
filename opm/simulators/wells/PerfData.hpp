@@ -45,10 +45,13 @@ public:
     std::vector<double> solvent_rates;
     std::vector<double> polymer_rates;
     std::vector<double> brine_rates;
+    std::vector<double> prod_index;
+
+    // The water_throughput, skin_pressure and water_velocity variables are only
+    // used for injectors to check the injectivity.
     std::vector<double> water_throughput;
     std::vector<double> skin_pressure;
     std::vector<double> water_velocity;
-    std::vector<double> prod_index;
 };
 
 } // namespace Opm

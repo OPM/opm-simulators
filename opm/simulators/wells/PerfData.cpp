@@ -32,10 +32,10 @@ PerfData::PerfData(std::size_t num_perf, const PhaseUsage& pu_arg):
     solvent_rates(num_perf),
     polymer_rates(num_perf),
     brine_rates(num_perf),
+    prod_index(num_perf),
     water_throughput(num_perf),
     skin_pressure(num_perf),
-    water_velocity(num_perf),
-    prod_index(num_perf)
+    water_velocity(num_perf)
 {
 
 }
