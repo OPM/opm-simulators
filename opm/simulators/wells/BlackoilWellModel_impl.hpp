@@ -709,30 +709,6 @@ namespace Opm {
 
 
     template <typename TypeTag>
-    void BlackoilWellModel<TypeTag>::
-    inferLocalShutWells()
-    {
-        this->local_shut_wells_.clear();
-
-        const auto nw = this->numLocalWells();
-
-        auto used = std::vector<bool>(nw, false);
-        for (const auto& wellPtr : this->well_container_) {
-            used[wellPtr->indexOfWell()] = true;
-        }
-
-        for (auto wellID = 0; wellID < nw; ++wellID) {
-            if (! used[wellID]) {
-                this->local_shut_wells_.push_back(wellID);
-            }
-        }
-    }
-
-
-
-
-
-    template <typename TypeTag>
     typename BlackoilWellModel<TypeTag>::WellInterfacePtr
     BlackoilWellModel<TypeTag>::
     createWellPointer(const int wellID, const int time_step) const

@@ -315,6 +315,8 @@ protected:
     void updateAndCommunicateGroupData(const int reportStepIdx,
                                        const int iterationIdx);
 
+    void inferLocalShutWells();
+
     const Schedule& schedule_;
     const SummaryState& summaryState_;
     const EclipseState& eclState_;
@@ -331,6 +333,8 @@ protected:
 
     // a vector of all the wells.
     std::vector<WellInterfaceGeneric*> well_container_generic_{};
+
+    std::vector<int> local_shut_wells_{};
 
     std::vector<ParallelWellInfo> parallel_well_info_;
     std::vector<ParallelWellInfo*> local_parallel_well_info_;

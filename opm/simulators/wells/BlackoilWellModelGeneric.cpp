@@ -1552,4 +1552,24 @@ forceShutWellByNameIfPredictionMode(const std::string& wellname,
     return (well_was_shut == 1);
 }
 
+void
+BlackoilWellModelGeneric::
+inferLocalShutWells()
+{
+    this->local_shut_wells_.clear();
+
+    const auto nw = this->numLocalWells();
+
+    auto used = std::vector<bool>(nw, false);
+    for (const auto& wellPtr : this->well_container_generic_) {
+        used[wellPtr->indexOfWell()] = true;
+    }
+
+    for (auto wellID = 0; wellID < nw; ++wellID) {
+        if (! used[wellID]) {
+            this->local_shut_wells_.push_back(wellID);
+        }
+    }
+}
+
 }

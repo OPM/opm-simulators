@@ -278,8 +278,6 @@ namespace Opm {
         protected:
             Simulator& ebosSimulator_;
 
-            std::vector<int> local_shut_wells_{};
-
             // a vector of all the wells.
             std::vector<WellInterfacePtr > well_container_{};
 
@@ -290,8 +288,6 @@ namespace Opm {
 
             // create the well container
             std::vector<WellInterfacePtr > createWellContainer(const int time_step);
-
-            void inferLocalShutWells();
 
             WellInterfacePtr
             createWellPointer(const int wellID,
