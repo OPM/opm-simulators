@@ -32,12 +32,15 @@
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/simulators/wells/GasLiftStage2.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
 #include <cassert>
 #include <stdexcept>
+
+#include <fmt/format.h>
 
 namespace Opm {
 
@@ -1644,6 +1647,59 @@ setRepRadiusPerfLength()
     for (const auto& well : well_container_generic_) {
         well->setRepRadiusPerfLength(cartesian_to_compressed_);
     }
+}
+
+void
+BlackoilWellModelGeneric::
+gliftDebug(const std::string& msg,
+           DeferredLogger& deferred_logger) const
+{
+    if (this->glift_debug) {
+        const std::string message = fmt::format(
+            "  GLIFT (DEBUG) : BlackoilWellModel : {}", msg);
+        deferred_logger.info(message);
+    }
+}
+
+void
+BlackoilWellModelGeneric::
+gliftDebugShowALQ(DeferredLogger& deferred_logger)
+{
+    for (auto& well : this->well_container_generic_) {
+        if (well->isProducer()) {
+            auto alq = this->wellState().getALQ(well->name());
+            const std::string msg = fmt::format("ALQ_REPORT : {} : {}",
+                                                well->name(), alq);
+            gliftDebug(msg, deferred_logger);
+        }
+    }
+}
+
+// If a group has any production rate constraints, and/or a limit
+// on its total rate of lift gas supply,  allocate lift gas
+// preferentially to the wells that gain the most benefit from
+// it. Lift gas increments are allocated in turn to the well that
+// currently has the largest weighted incremental gradient. The
+// procedure takes account of any limits on the group production
+// rate or lift gas supply applied to any level of group.
+void
+BlackoilWellModelGeneric::
+gasLiftOptimizationStage2(DeferredLogger& deferred_logger,
+                          GLiftProdWells& prod_wells,
+                          GLiftOptWells& glift_wells,
+                          GLiftWellStateMap& glift_well_state_map,
+                          const int episodeIndex)
+{
+    GasLiftStage2 glift {episodeIndex,
+                         comm_,
+                         schedule_,
+                         summaryState_,
+                         deferred_logger,
+                         this->wellState(),
+                         prod_wells,
+                         glift_wells,
+                         glift_well_state_map};
+    glift.runOptimize();
 }
 
 }

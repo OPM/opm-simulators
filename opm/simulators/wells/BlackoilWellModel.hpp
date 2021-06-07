@@ -47,8 +47,8 @@
 
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>
+#include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/wells/GasLiftSingleWell.hpp>
-#include <opm/simulators/wells/GasLiftStage2.hpp>
 #include <opm/simulators/wells/GasLiftWellState.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/VFPInjProperties.hpp>
@@ -70,8 +70,6 @@
 #include <opm/material/densead/Math.hpp>
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
-
-#include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 
 namespace Opm::Properties {
 
@@ -104,13 +102,6 @@ namespace Opm {
             using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
 
             typedef typename BaseAuxiliaryModule<TypeTag>::NeighborSet NeighborSet;
-            using GasLiftSingleWell = GasLiftSingleWellGeneric;
-            using GLiftWellStateMap =
-                std::map<std::string,std::unique_ptr<GasLiftWellState>>;
-            using GLiftOptWells =
-                std::map<std::string,std::unique_ptr<GasLiftSingleWell>>;
-            using GLiftProdWells =
-                std::map<std::string,const WellInterfaceGeneric*>;
 
             static const int numEq = Indices::numEq;
             static const int solventSaturationIdx = Indices::solventSaturationIdx;
@@ -308,7 +299,6 @@ namespace Opm {
             double gravity_{};
             std::vector<double> depth_{};
             bool report_step_starts_{};
-            bool glift_debug = false;
             bool alternative_well_rate_init_{};
 
             std::optional<int> last_run_wellpi_{};
@@ -327,10 +317,6 @@ namespace Opm {
 
             const EclipseState& eclState() const
             { return ebosSimulator_.vanguard().eclState(); }
-
-            void gliftDebug(
-                const std::string &msg,
-                DeferredLogger& deferred_logger) const;
 
             // compute the well fluxes and assemble them in to the reservoir equations as source terms
             // and in the well equations.
@@ -372,12 +358,6 @@ namespace Opm {
             void assembleWellEq(const double dt, DeferredLogger& deferred_logger);
 
             void maybeDoGasLiftOptimize(DeferredLogger& deferred_logger);
-
-            void gliftDebugShowALQ(DeferredLogger& deferred_logger);
-
-            void gasLiftOptimizationStage2(DeferredLogger& deferred_logger,
-                GLiftProdWells &prod_wells, GLiftOptWells &glift_wells,
-                GLiftWellStateMap &map);
 
             void extractLegacyCellPvtRegionIndex_();
 

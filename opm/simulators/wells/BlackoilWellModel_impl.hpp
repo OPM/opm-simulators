@@ -358,18 +358,6 @@ namespace Opm {
 
     template<typename TypeTag>
     void
-    BlackoilWellModel<TypeTag>::gliftDebug(
-        const std::string &msg, DeferredLogger &deferred_logger) const
-    {
-        if (this->glift_debug) {
-            const std::string message = fmt::format(
-                "  GLIFT (DEBUG) : BlackoilWellModel : {}", msg);
-            deferred_logger.info(message);
-        }
-    }
-
-    template<typename TypeTag>
-    void
     BlackoilWellModel<TypeTag>::wellTesting(const int timeStepIdx,
                                             const double simulationTime,
                                             DeferredLogger& deferred_logger)
@@ -858,48 +846,9 @@ namespace Opm {
                 this->wellState(), ebosSimulator_, deferred_logger,
                 prod_wells, glift_wells, state_map);
         }
-        gasLiftOptimizationStage2(deferred_logger, prod_wells, glift_wells, state_map);
+        gasLiftOptimizationStage2(deferred_logger, prod_wells, glift_wells, state_map, ebosSimulator_.episodeIndex());
         if (this->glift_debug) gliftDebugShowALQ(deferred_logger);
         this->wellState().disableGliftOptimization();
-    }
-
-    // If a group has any production rate constraints, and/or a limit
-    // on its total rate of lift gas supply,  allocate lift gas
-    // preferentially to the wells that gain the most benefit from
-    // it. Lift gas increments are allocated in turn to the well that
-    // currently has the largest weighted incremental gradient. The
-    // procedure takes account of any limits on the group production
-    // rate or lift gas supply applied to any level of group.
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    gasLiftOptimizationStage2(DeferredLogger& deferred_logger,
-        GLiftProdWells &prod_wells, GLiftOptWells &glift_wells,
-        GLiftWellStateMap &glift_well_state_map)
-    {
-
-        GasLiftStage2 glift {this->ebosSimulator_.episodeIndex(),
-                             this->ebosSimulator_.vanguard().grid().comm(),
-                             ebosSimulator_.vanguard().schedule(),
-                             ebosSimulator_.vanguard().summaryState(),
-                             deferred_logger, this->wellState(),
-                             prod_wells, glift_wells, glift_well_state_map};
-        glift.runOptimize();
-    }
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    gliftDebugShowALQ(DeferredLogger& deferred_logger)
-    {
-        for (auto& well : this->well_container_) {
-            if (well->isProducer()) {
-                auto alq = this->wellState().getALQ(well->name());
-                const std::string msg = fmt::format("ALQ_REPORT : {} : {}",
-                    well->name(), alq);
-                gliftDebug(msg, deferred_logger);
-            }
-        }
     }
 
     template<typename TypeTag>

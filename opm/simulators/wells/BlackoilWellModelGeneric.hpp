@@ -53,6 +53,8 @@ struct NodeData;
 
 class DeferredLogger;
 class EclipseState;
+class GasLiftSingleWellGeneric;
+class GasLiftWellState;
 class Group;
 class RestartValue;
 class Schedule;
@@ -65,6 +67,9 @@ class BlackoilWellModelGeneric
 public:
     // ---------      Types      ---------
     using Comm = Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator>;
+    using GLiftOptWells = std::map<std::string,std::unique_ptr<GasLiftSingleWellGeneric>>;
+    using GLiftProdWells = std::map<std::string,const WellInterfaceGeneric*>;
+    using GLiftWellStateMap = std::map<std::string,std::unique_ptr<GasLiftWellState>>;
 
     BlackoilWellModelGeneric(const Schedule& schedule,
                              const SummaryState& summaryState,
@@ -323,6 +328,17 @@ protected:
 
     void setRepRadiusPerfLength();
 
+    void gliftDebug(const std::string& msg,
+                    DeferredLogger& deferred_logger) const;
+
+    void gliftDebugShowALQ(DeferredLogger& deferred_logger);
+
+    void gasLiftOptimizationStage2(DeferredLogger& deferred_logger,
+                                   GLiftProdWells& prod_wells,
+                                   GLiftOptWells& glift_wells,
+                                   GLiftWellStateMap& map,
+                                   const int episodeIndex);
+
     const Schedule& schedule_;
     const SummaryState& summaryState_;
     const EclipseState& eclState_;
@@ -370,6 +386,8 @@ protected:
     WGState active_wgstate_;
     WGState last_valid_wgstate_;
     WGState nupcol_wgstate_;
+
+    bool glift_debug = false;
 
   private:
     WellInterfaceGeneric* getGenWell(const std::string& well_name);
