@@ -1124,7 +1124,7 @@ setWsolvent(const Group& group,
         if (wellTmp.getStatus() == Well::Status::SHUT)
             continue;
 
-        this->setWellWsolvent(wellName, wsolvent);
+        getGenWell(wellName)->setWsolvent(wsolvent);
     }
 }
 
@@ -1619,6 +1619,22 @@ calculateEfficiencyFactors(const int reportStepIdx)
         WellGroupHelpers::accumulateGroupEfficiencyFactor(schedule().getGroup(wellEcl.groupName(), reportStepIdx), schedule(), reportStepIdx, well_efficiency_factor);
         well->setWellEfficiencyFactor(well_efficiency_factor);
     }
+}
+
+WellInterfaceGeneric*
+BlackoilWellModelGeneric::
+getGenWell(const std::string& well_name)
+{
+    // finding the iterator of the well in wells_ecl
+    auto well = std::find_if(well_container_generic_.begin(),
+                             well_container_generic_.end(),
+                                 [&well_name](const WellInterfaceGeneric* elem)->bool {
+                                     return elem->name() == well_name;
+                                 });
+
+    assert(well != well_container_generic_.end());
+
+    return *well;
 }
 
 }

@@ -391,7 +391,6 @@ namespace Opm {
 
             void wellTesting(const int timeStepIdx, const double simulationTime, DeferredLogger& deferred_logger);
 
-            void setWellWsolvent(const std::string& name, double wsolvent) override;
             void calcRates(const int fipnum,
                            const int pvtreg,
                            std::vector<double>& resv_coeff) override;

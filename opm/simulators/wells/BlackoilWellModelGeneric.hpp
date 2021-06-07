@@ -243,7 +243,6 @@ protected:
     void setWsolvent(const Group& group,
                      const int reportStepIdx,
                      double wsolvent);
-    virtual void setWellWsolvent(const std::string& name, double wsolvent) = 0;
     virtual void calcRates(const int fipnum,
                            const int pvtreg,
                            std::vector<double>& resv_coeff) = 0;
@@ -369,6 +368,9 @@ protected:
     WGState active_wgstate_;
     WGState last_valid_wgstate_;
     WGState nupcol_wgstate_;
+
+  private:
+    WellInterfaceGeneric* getGenWell(const std::string& well_name);
 };
 
 

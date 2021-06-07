@@ -1590,16 +1590,6 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    setWellWsolvent(const std::string& wellName, double wsolvent) {
-        auto well = getWell(wellName);
-        well->setWsolvent(wsolvent);
-    }
-
-
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
     calcRates(const int fipnum,
               const int pvtreg,
               std::vector<double>& resv_coeff)
