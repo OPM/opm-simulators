@@ -36,10 +36,11 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRate.hpp>
 
-#include <opm/simulators/wells/PerforationData.hpp>
-#include <opm/simulators/wells/WGState.hpp>
-#include <opm/simulators/wells/WellProdIndexCalculator.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
+#include <opm/simulators/wells/PerforationData.hpp>
+#include <opm/simulators/wells/WellInterfaceGeneric.hpp>
+#include <opm/simulators/wells/WellProdIndexCalculator.hpp>
+#include <opm/simulators/wells/WGState.hpp>
 
 namespace Opm {
 
@@ -319,6 +320,9 @@ protected:
     std::vector<Well> wells_ecl_;
     std::vector<std::vector<PerforationData>> well_perf_data_;
     std::function<bool(const Well&)> not_on_process_{};
+
+    // a vector of all the wells.
+    std::vector<WellInterfaceGeneric*> well_container_generic_{};
 
     std::vector<ParallelWellInfo> parallel_well_info_;
     std::vector<ParallelWellInfo*> local_parallel_well_info_;

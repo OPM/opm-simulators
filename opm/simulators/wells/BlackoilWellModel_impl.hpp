@@ -751,6 +751,10 @@ namespace Opm {
             global_deferredLogger.logMessages();
         }
 
+        well_container_generic_.clear();
+        for (auto& w : well_container)
+          well_container_generic_.push_back(w.get());
+
         return well_container;
     }
 
