@@ -125,7 +125,7 @@ namespace Opm {
             BlackoilWellModel(Simulator& ebosSimulator);
 
             void init();
-            void initWellContainer();
+            void initWellContainer() override;
 
             /////////////
             // <eWoms auxiliary module stuff>
@@ -279,7 +279,7 @@ namespace Opm {
                                      const SummaryState& summaryState);
 
             // create the well container
-            void createWellContainer(const int time_step);
+            void createWellContainer(const int time_step) override;
 
             WellInterfacePtr
             createWellPointer(const int wellID,
@@ -300,8 +300,6 @@ namespace Opm {
             double gravity_{};
             std::vector<double> depth_{};
             bool alternative_well_rate_init_{};
-
-            std::optional<int> last_run_wellpi_{};
 
             std::unique_ptr<RateConverterType> rateConverter_{};
 
@@ -348,8 +346,8 @@ namespace Opm {
 
             const std::vector<double>& wellPerfEfficiencyFactors() const;
 
-            void calculateProductivityIndexValuesShutWells(const int reportStepIdx, DeferredLogger& deferred_logger);
-            void calculateProductivityIndexValues(DeferredLogger& deferred_logger);
+            void calculateProductivityIndexValuesShutWells(const int reportStepIdx, DeferredLogger& deferred_logger) override;
+            void calculateProductivityIndexValues(DeferredLogger& deferred_logger) override;
             void calculateProductivityIndexValues(const WellInterface<TypeTag>* wellPtr,
                                                   DeferredLogger& deferred_logger);
 
@@ -374,8 +372,6 @@ namespace Opm {
             void calcRates(const int fipnum,
                            const int pvtreg,
                            std::vector<double>& resv_coeff) override;
-
-            void runWellPIScaling(const int timeStepIdx, DeferredLogger& local_deferredLogger);
 
              void computeWellTemperature();
 

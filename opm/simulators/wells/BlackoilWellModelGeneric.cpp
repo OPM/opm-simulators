@@ -45,7 +45,7 @@
 namespace Opm {
 
 BlackoilWellModelGeneric::
-BlackoilWellModelGeneric(const Schedule& schedule,
+BlackoilWellModelGeneric(Schedule& schedule,
                          const SummaryState& summaryState,
                          const EclipseState& eclState,
                          const PhaseUsage& phase_usage,
@@ -1762,6 +1762,80 @@ updateWellPotentials(const int reportStepIdx,
                                      "computeWellPotentials() failed: " + exc_msg,
                                      terminal_output_);
 
+}
+
+void
+BlackoilWellModelGeneric::
+runWellPIScaling(const int timeStepIdx,
+                 DeferredLogger& local_deferredLogger)
+{
+    if (this->last_run_wellpi_.has_value() && (*this->last_run_wellpi_ == timeStepIdx)) {
+        // We've already run WELPI scaling for this report step.  Most
+        // common for the very first report step.  Don't redo WELPI scaling.
+        return;
+    }
+
+    auto hasWellPIEvent = [this, timeStepIdx](const int well_index) -> bool
+    {
+        return this->schedule()[timeStepIdx].wellgroup_events()
+            .hasEvent(this->wells_ecl_[well_index].name(),
+                      ScheduleEvents::Events::WELL_PRODUCTIVITY_INDEX);
+    };
+
+    auto updateEclWell = [this, timeStepIdx](const int well_index) -> void
+    {
+        const auto& schedule = this->schedule();
+        const auto& wname = this->wells_ecl_[well_index].name();
+        this->wells_ecl_[well_index] = schedule.getWell(wname, timeStepIdx);
+
+        const auto& well = this->wells_ecl_[well_index];
+        auto& pd     = this->well_perf_data_[well_index];
+        auto  pdIter = pd.begin();
+        for (const auto& conn : well.getConnections()) {
+            if (conn.state() != Connection::State::SHUT) {
+                pdIter->connection_transmissibility_factor = conn.CF();
+                ++pdIter;
+            }
+        }
+        this->wellState().resetConnectionTransFactors(well_index, pd);
+        this->prod_index_calc_[well_index].reInit(well);
+    };
+
+
+    auto rescaleWellPI =
+        [this, timeStepIdx](const int    well_index,
+                            const double newWellPI) -> void
+    {
+        const auto& wname = this->wells_ecl_[well_index].name();
+
+        schedule_.applyWellProdIndexScaling(wname, timeStepIdx, newWellPI);
+    };
+
+    // Minimal well setup to compute PI/II values
+    {
+        auto saved_previous_wgstate = this->prevWGState();
+        this->commitWGState();
+
+        this->createWellContainer(timeStepIdx);
+        this->inferLocalShutWells();
+
+        this->initWellContainer();
+
+        this->calculateProductivityIndexValues(local_deferredLogger);
+        this->calculateProductivityIndexValuesShutWells(timeStepIdx, local_deferredLogger);
+
+        this->commitWGState(std::move(saved_previous_wgstate));
+    }
+
+    const auto nw = this->numLocalWells();
+    for (auto wellID = 0*nw; wellID < nw; ++wellID) {
+        if (hasWellPIEvent(wellID)) {
+            rescaleWellPI(wellID, this->wellPI(wellID));
+            updateEclWell(wellID);
+        }
+    }
+
+    this->last_run_wellpi_ = timeStepIdx;
 }
 
 }

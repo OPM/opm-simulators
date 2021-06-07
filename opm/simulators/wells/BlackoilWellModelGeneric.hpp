@@ -73,7 +73,7 @@ public:
     using GLiftProdWells = std::map<std::string,const WellInterfaceGeneric*>;
     using GLiftWellStateMap = std::map<std::string,std::unique_ptr<GasLiftWellState>>;
 
-    BlackoilWellModelGeneric(const Schedule& schedule,
+    BlackoilWellModelGeneric(Schedule& schedule,
                              const SummaryState& summaryState,
                              const EclipseState& eclState,
                              const PhaseUsage& phase_usage,
@@ -353,8 +353,18 @@ protected:
                               const SummaryConfig& summaryConfig,
                               DeferredLogger& deferred_logger);
 
+    // create the well container
+    virtual void createWellContainer(const int time_step) = 0;
+    virtual void initWellContainer() = 0;
 
-    const Schedule& schedule_;
+    virtual void calculateProductivityIndexValuesShutWells(const int reportStepIdx,
+                                                           DeferredLogger& deferred_logger) = 0;
+    virtual void calculateProductivityIndexValues(DeferredLogger& deferred_logger) = 0;
+
+    void runWellPIScaling(const int timeStepIdx,
+                          DeferredLogger& local_deferredLogger);
+
+    Schedule& schedule_;
     const SummaryState& summaryState_;
     const EclipseState& eclState_;
     const Comm& comm_;
@@ -364,6 +374,8 @@ protected:
     bool wells_active_{false};
     bool initial_step_{};
     bool report_step_starts_{};
+
+    std::optional<int> last_run_wellpi_{};
 
     std::vector<Well> wells_ecl_;
     std::vector<std::vector<PerforationData>> well_perf_data_;
