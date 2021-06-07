@@ -90,6 +90,18 @@ namespace Opm {
         is_cell_perforated_.resize(local_num_cells_, false);
     }
 
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    initWellContainer()
+    {
+        for (auto& wellPtr : this->well_container_) {
+            wellPtr->init(&this->phase_usage_, this->depth_, this->gravity_,
+                          this->local_num_cells_, this->B_avg_);
+        }
+    }
+
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
@@ -237,9 +249,7 @@ namespace Opm {
             // do the initialization for all the wells
             // TODO: to see whether we can postpone of the intialization of the well containers to
             // optimize the usage of the following several member variables
-            for (auto& well : well_container_) {
-                well->init(&phase_usage_, depth_, gravity_, local_num_cells_, B_avg_);
-            }
+            this->initWellContainer();
 
             // update the updated cell flag
             std::fill(is_cell_perforated_.begin(), is_cell_perforated_.end(), false);
@@ -1544,10 +1554,7 @@ namespace Opm {
             this->well_container_ = this->createWellContainer(timeStepIdx);
             this->inferLocalShutWells();
 
-            for (auto& wellPtr : this->well_container_) {
-                wellPtr->init(&this->phase_usage_, this->depth_, this->gravity_,
-                              this->local_num_cells_, this->B_avg_);
-            }
+            this->initWellContainer();
 
             this->calculateProductivityIndexValues(local_deferredLogger);
             this->calculateProductivityIndexValuesShutWells(timeStepIdx, local_deferredLogger);

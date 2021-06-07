@@ -125,6 +125,7 @@ namespace Opm {
             BlackoilWellModel(Simulator& ebosSimulator);
 
             void init();
+            void initWellContainer();
 
             /////////////
             // <eWoms auxiliary module stuff>
