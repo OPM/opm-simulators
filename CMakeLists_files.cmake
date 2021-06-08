@@ -37,6 +37,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/timestepping/SimulatorReport.cpp
   opm/simulators/flow/countGlobalCells.cpp
   opm/simulators/flow/KeywordValidation.cpp
+  opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.cpp
   opm/simulators/linalg/ExtractParallelGridInformationToISTL.cpp
   opm/simulators/linalg/FlexibleSolver1.cpp
   opm/simulators/linalg/FlexibleSolver2.cpp

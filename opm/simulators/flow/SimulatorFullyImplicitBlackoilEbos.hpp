@@ -61,6 +61,10 @@ struct EnableTuning<TypeTag, TTag::EclFlowProblem> {
 
 namespace Opm {
 
+void outputReportStep(const SimulatorTimer& timer);
+void outputTimestampFIP(const SimulatorTimer& timer,
+                        const std::string& title,
+                        const std::string& version);
 
 /// a simulator for the blackoil model
 template<class TypeTag>
@@ -199,15 +203,7 @@ public:
         }
 
         if (terminalOutput_) {
-            std::ostringstream stepMsg;
-            boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
-            stepMsg.imbue(std::locale(std::locale::classic(), facet));
-            stepMsg << "\nReport step " << std::setw(2) <<timer.currentStepNum()
-                    << "/" << timer.numSteps()
-                    << " at day " << (double)unit::convert::to(timer.simulationTimeElapsed(), unit::day)
-                    << "/" << (double)unit::convert::to(timer.totalTime(), unit::day)
-                    << ", date = " << timer.currentDateTime();
-            OpmLog::info(stepMsg.str());
+            outputReportStep(timer);
         }
 
         // write the inital state at the report stage
@@ -289,7 +285,7 @@ public:
         if (terminalOutput_) {
             if (!timer.initialStep()) {
                 const std::string version = moduleVersionName();
-                outputTimestampFIP(timer, version);
+                outputTimestampFIP(timer, eclState().getTitle(), version);
             }
         }
 
@@ -334,20 +330,6 @@ protected:
                                              terminalOutput_);
 
         return std::make_unique<Solver>(solverParam_, std::move(model));
-    }
-
-    void outputTimestampFIP(const SimulatorTimer& timer, const std::string version)
-    {
-        std::ostringstream ss;
-        boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d %b %Y");
-        ss.imbue(std::locale(std::locale::classic(), facet));
-        ss << "\n                              **************************************************************************\n"
-        << "  Balance  at" << std::setw(10) << (double)unit::convert::to(timer.simulationTimeElapsed(), unit::day) << "  Days"
-        << " *" << std::setw(30) << eclState().getTitle() << "                                          *\n"
-        << "  Report " << std::setw(4) << timer.reportStepNum() << "    " << timer.currentDateTime()
-        << "  *                                             Flow  version " << std::setw(11) << version << "  *\n"
-        << "                              **************************************************************************\n";
-        OpmLog::note(ss.str());
     }
 
     const EclipseState& eclState() const
