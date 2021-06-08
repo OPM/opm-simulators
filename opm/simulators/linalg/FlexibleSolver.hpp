@@ -50,14 +50,16 @@ public:
     /// Create a sequential solver.
     FlexibleSolver(AbstractOperatorType& op,
                    const Opm::PropertyTree& prm,
-                   const std::function<VectorType()>& weightsCalculator = std::function<VectorType()>());
+                   const std::function<VectorType()>& weightsCalculator,
+                   std::size_t pressureIndex);
 
     /// Create a parallel solver (if Comm is e.g. OwnerOverlapCommunication).
     template <class Comm>
     FlexibleSolver(AbstractOperatorType& op,
                    const Comm& comm,
                    const Opm::PropertyTree& prm,
-                   const std::function<VectorType()>& weightsCalculator = std::function<VectorType()>());
+                   const std::function<VectorType()>& weightsCalculator,
+                   std::size_t pressureIndex);
 
     virtual void apply(VectorType& x, VectorType& rhs, Dune::InverseOperatorResult& res) override;
 
@@ -75,10 +77,12 @@ private:
     // Machinery for making sequential or parallel operators/preconditioners/scalar products.
     template <class Comm>
     void initOpPrecSp(AbstractOperatorType& op, const Opm::PropertyTree& prm,
-                      const std::function<VectorType()> weightsCalculator, const Comm& comm);
+                      const std::function<VectorType()> weightsCalculator, const Comm& comm,
+                      std::size_t pressureIndex);
 
     void initOpPrecSp(AbstractOperatorType& op, const Opm::PropertyTree& prm,
-                      const std::function<VectorType()> weightsCalculator, const Dune::Amg::SequentialInformation&);
+                      const std::function<VectorType()> weightsCalculator, const Dune::Amg::SequentialInformation&,
+                      std::size_t pressureIndex);
 
     void initSolver(const Opm::PropertyTree& prm, const bool is_iorank);
 
@@ -88,7 +92,8 @@ private:
     void init(AbstractOperatorType& op,
               const Comm& comm,
               const Opm::PropertyTree& prm,
-              const std::function<VectorType()> weightsCalculator);
+              const std::function<VectorType()> weightsCalculator,
+              std::size_t pressureIndex);
 
     AbstractOperatorType* linearoperator_for_solver_;
     std::shared_ptr<AbstractOperatorType> linearoperator_for_precond_;

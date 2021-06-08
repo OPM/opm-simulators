@@ -100,10 +100,10 @@ testPrec(const Opm::PropertyTree& prm, const std::string& matrix_filename, const
                     {
                         return Opm::Amg::getQuasiImpesWeights<Matrix,
                                                               Vector>(matrix,
-                                                                      prm.get<int>("preconditioner.pressure_var_index"),
+                                                                      1,
                                                                       transpose);
                     };
-    auto prec = PrecFactory::create(op, prm.get_child("preconditioner"), wc);
+    auto prec = PrecFactory::create(op, prm.get_child("preconditioner"), wc, 1);
     Dune::BiCGSTABSolver<Vector> solver(op, *prec, prm.get<double>("tol"), prm.get<int>("maxiter"), prm.get<int>("verbosity"));
     Vector x(rhs.size());
     Dune::InverseOperatorResult res;
@@ -191,7 +191,8 @@ BOOST_AUTO_TEST_CASE(TestAddingPreconditioner)
 
 
     // Add preconditioner to factory for block size 1.
-    PF<1>::addCreator("nothing", [](const O<1>&, const Opm::PropertyTree&, const std::function<V<1>()>&) {
+    PF<1>::addCreator("nothing", [](const O<1>&, const Opm::PropertyTree&, const std::function<V<1>()>&,
+                                    std::size_t) {
             return Dune::wrapPreconditioner<NothingPreconditioner<V<1>>>();
         });
 
@@ -206,7 +207,8 @@ BOOST_AUTO_TEST_CASE(TestAddingPreconditioner)
     }
 
     // Add preconditioner to factory for block size 3.
-    PF<3>::addCreator("nothing", [](const O<3>&, const Opm::PropertyTree&, const std::function<V<3>()>&) {
+    PF<3>::addCreator("nothing", [](const O<3>&, const Opm::PropertyTree&, const std::function<V<3>()>&,
+                                    std::size_t) {
             return Dune::wrapPreconditioner<NothingPreconditioner<V<3>>>();
         });
 
@@ -298,7 +300,8 @@ testPrecRepeating(const Opm::PropertyTree& prm, const std::string& matrix_filena
     using PrecFactory = Opm::PreconditionerFactory<Operator>;
 
     // Add no-oppreconditioner to factory for block size 1.
-    PrecFactory::addCreator("nothing", [](const Operator&, const Opm::PropertyTree&, const std::function<Vector()>&) {
+    PrecFactory::addCreator("nothing", [](const Operator&, const Opm::PropertyTree&, const std::function<Vector()>&,
+                                          std::size_t) {
         return Dune::wrapPreconditioner<NothingPreconditioner<Vector>>();
     });
 
