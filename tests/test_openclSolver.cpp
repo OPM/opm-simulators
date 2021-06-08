@@ -71,14 +71,18 @@ testOpenclSolver(const boost::property_tree::ptree& prm, const std::string& matr
     const int deviceID = 0;
     const std::string gpu_mode("opencl");
     const std::string fpga_bitstream("empty");    // unused
+    Dune::InverseOperatorResult result;
 
     Vector x(rhs.size());
     Opm::WellContributions wellContribs("opencl");
-    Opm::BdaBridge<Matrix, Vector, bz> bridge(gpu_mode, fpga_bitstream, linear_solver_verbosity, maxit, tolerance, platformID, deviceID, opencl_ilu_reorder);
-    Dune::InverseOperatorResult result;
+    try {
+        Opm::BdaBridge<Matrix, Vector, bz> bridge(gpu_mode, fpga_bitstream, linear_solver_verbosity, maxit, tolerance, platformID, deviceID, opencl_ilu_reorder);
 
-    bridge.solve_system(&matrix, rhs, wellContribs, result);
-    bridge.get_result(x);
+        bridge.solve_system(&matrix, rhs, wellContribs, result);
+        bridge.get_result(x);
+    } catch (const std::logic_error& error) {
+        BOOST_WARN_MESSAGE(true, error.what());
+    }
 
     return x;
 }
