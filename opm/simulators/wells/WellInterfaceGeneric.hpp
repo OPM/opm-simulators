@@ -147,6 +147,14 @@ public:
         return perf_depth_;
     }
 
+    std::vector<double>& perfDepth() {
+        return perf_depth_;
+    }
+
+    const std::vector<double>& wellIndex() const {
+        return well_index_;
+    }
+
     double getTHPConstraint(const SummaryState& summaryState) const;
     double getALQ(const WellState& well_state) const;
 
