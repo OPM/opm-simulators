@@ -26,6 +26,8 @@
 #include <iosfwd>
 #include <vector>
 
+namespace boost { namespace gregorian { class date; } }
+
 namespace Opm
 {
 
@@ -122,7 +124,7 @@ namespace Opm
         int current_step_;
         double current_time_;
         double total_time_;
-        boost::gregorian::date start_date_;
+        std::shared_ptr<boost::gregorian::date> start_date_;
     };
 
 
