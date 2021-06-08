@@ -24,6 +24,7 @@
 #include <vector>
 
 #include <algorithm>
+#include <memory>
 #include <numeric>
 
 #include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
@@ -106,7 +107,7 @@ namespace Opm
         virtual std::unique_ptr< SimulatorTimerInterface > clone() const;
 
     protected:
-        const boost::posix_time::ptime start_date_time_;
+        std::shared_ptr<boost::posix_time::ptime> start_date_time_;
         const double start_time_;
         const double total_time_;
         const int report_step_;
