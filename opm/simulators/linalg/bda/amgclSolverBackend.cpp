@@ -51,7 +51,7 @@ void amgclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doubl
     std::ostringstream out;
     out << "Initializing amgclSolverBackend, matrix size: " << N << " blocks, nnzb: " << nnzb << "\n";
     out << "Maxit: " << maxit << std::scientific << ", tolerance: " << tolerance << "\n";
-    out << "PlatformID: " << platformID << ", deviceID: " << deviceID << "\n";
+    out << "DeviceID: " << deviceID << "\n";
     OpmLog::info(out.str());
     out.str("");
     out.clear();
@@ -63,12 +63,20 @@ void amgclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doubl
     x.resize(N);
 
 #if AMGCL_CUDA
+    cudaDeviceProp prop;
+    cudaGetDeviceProperties(&prop, deviceID);
+    std::cout << prop.name << std::endl;
     cusparseCreate(&bprm.cusparse_handle);
 #endif
 
+    // set amgcl parameters
+    prm.precond.damping = 0.9;
+    prm.solver.maxiter = maxit;
+    prm.solver.tol = tolerance;
+    prm.solver.verbose = (verbosity >= 2);
+
     initialized = true;
 } // end initialize()
-
 
 
 template <unsigned int block_size>
@@ -98,6 +106,7 @@ void amgclSolverBackend<block_size>::convert_sparsity_pattern(int *rows, int *co
         OpmLog::info(out.str());
     }
 } // end convert_sparsity_pattern()
+
 
 template <unsigned int block_size>
 void amgclSolverBackend<block_size>::convert_data(double *vals, int *rows) {
@@ -136,23 +145,12 @@ void amgclSolverBackend<block_size>::solve_system(double *b, WellContributions &
         // create matrix object
         auto A = std::tie(N, A_rows, A_cols, A_vals);
 
-        // set parameters
-        typename Solver::params prm;
-        prm.precond.damping = 0.9;
-        prm.solver.maxiter = maxit;
-        prm.solver.tol = tolerance;
-        prm.solver.verbose = (verbosity >= 2);
-
-        // create solver
+        // create solver and construct preconditioner
+        // don't reuse this unless the preconditioner can be reused
         Solver solve(A, prm, bprm);
 
         // print info (once)
         std::call_once(print_info, [&](){
-#if AMGCL_CUDA
-            cudaDeviceProp prop;
-            cudaGetDeviceProperties(&prop, deviceID);
-            std::cout << prop.name << std::endl;
-#endif
             // print solver structure
             std::cout << solve << std::endl;
         });

@@ -89,6 +89,7 @@ private:
     std::vector<double> x;
     std::once_flag print_info;
 
+    typename Solver::params prm;
     typename Backend::params bprm;  // amgcl backend parameters, only used for cusparseHandle
 
     /// Initialize GPU and allocate memory
