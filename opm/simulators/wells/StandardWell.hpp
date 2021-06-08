@@ -29,9 +29,9 @@
 
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/wells/RateConverter.hpp>
+#include <opm/simulators/wells/StandardWellGeneric.hpp>
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
-#include <opm/simulators/wells/WellHelpers.hpp>
 #include <opm/simulators/wells/WellInterface.hpp>
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
@@ -58,7 +58,8 @@ namespace Opm
 {
 
     template<typename TypeTag>
-    class StandardWell: public WellInterface<TypeTag>
+    class StandardWell : public WellInterface<TypeTag>
+                       , public StandardWellGeneric<GetPropType<TypeTag, Properties::Scalar>>
     {
 
     public:
@@ -136,22 +137,6 @@ namespace Opm
         using typename Base::BVector;
         using typename Base::Eval;
 
-        // sparsity pattern for the matrices
-        //[A C^T    [x       =  [ res
-        // B  D ]   x_well]      res_well]
-
-        // the vector type for the res_well and x_well
-        typedef Dune::DynamicVector<Scalar> VectorBlockWellType;
-        typedef Dune::BlockVector<VectorBlockWellType> BVectorWell;
-
-        // the matrix type for the diagonal matrix D
-        typedef Dune::DynamicMatrix<Scalar> DiagMatrixBlockWellType;
-        typedef Dune::BCRSMatrix <DiagMatrixBlockWellType> DiagMatWell;
-
-        // the matrix type for the non-diagonal matrix B and C^T
-        typedef Dune::DynamicMatrix<Scalar> OffDiagMatrixBlockWellType;
-        typedef Dune::BCRSMatrix<OffDiagMatrixBlockWellType> OffDiagMatWell;
-
         typedef DenseAd::DynamicEvaluation<Scalar, numStaticWellEq + numEq + 1> EvalWell;
 
         using Base::contiSolventEqIdx;
@@ -200,9 +185,6 @@ namespace Opm
 #if HAVE_CUDA || HAVE_OPENCL
         /// add the contribution (C, D^-1, B matrices) of this Well to the WellContributions object
         void addWellContribution(WellContributions& wellContribs) const;
-
-        /// get the number of blocks of the C and B matrices, used to allocate memory in a WellContributions object
-        void getNumBlocks(unsigned int& _nnzs) const;
 #endif
 
         /// using the solution x to recover the solution xw for wells and applying
@@ -247,12 +229,6 @@ namespace Opm
             return param_.matrix_add_well_contributions_;
         }
 
-        bool doGasLiftOptimize(
-            const WellState& well_state,
-            const Simulator& ebosSimulator,
-            DeferredLogger& deferred_logger
-        ) const;
-
         virtual void gasLiftOptimizationStage1 (
             WellState& well_state,
             const Simulator& ebosSimulator,
@@ -261,15 +237,6 @@ namespace Opm
             GLiftOptWells &glift_wells,
             GLiftWellStateMap &state_map
         ) const override;
-
-        bool checkGliftNewtonIterationIdxOk(
-            const Simulator& ebosSimulator,
-            DeferredLogger& deferred_logger
-        ) const;
-
-        void gliftDebug(
-            const std::string &msg,
-            DeferredLogger& deferred_logger) const;
 
         /* returns BHP */
         double computeWellRatesAndBhpWithThpAlqProd(const Simulator &ebos_simulator,
@@ -364,32 +331,12 @@ namespace Opm
         using Base::ipr_a_;
         using Base::ipr_b_;
         using Base::changed_to_stopped_this_step_;
+        using typename StandardWellGeneric<Scalar>::BVectorWell;
 
 
         // total number of the well equations and primary variables
         // there might be extra equations be used, numWellEq will be updated during the initialization
         int numWellEq_ = numStaticWellEq;
-
-        // densities of the fluid in each perforation
-        std::vector<double> perf_densities_;
-        // pressure drop between different perforations
-        std::vector<double> perf_pressure_diffs_;
-
-        // residuals of the well equations
-        BVectorWell resWell_;
-
-        // two off-diagonal matrices
-        OffDiagMatWell duneB_;
-        OffDiagMatWell duneC_;
-        // diagonal matrix for the well
-        DiagMatWell invDuneD_;
-
-        // Wrapper for the parallel application of B for distributed wells
-        wellhelpers::ParallelStandardWellB<Scalar> parallelB_;
-
-        // several vector used in the matrix calculation
-        mutable BVectorWell Bx_;
-        mutable BVectorWell invDrw_;
 
         // the values for the primary varibles
         // based on different solutioin strategies, the wells can have different primary variables
@@ -400,9 +347,6 @@ namespace Opm
 
         // the saturations in the well bore under surface conditions at the beginning of the time step
         std::vector<double> F0_;
-
-        // Enable GLIFT debug mode. This will enable output of logging messages.
-        bool glift_debug = false;
 
         // Optimize only wells under THP control
         bool glift_optimize_only_thp_wells = true;
@@ -448,8 +392,6 @@ namespace Opm
                                         const std::vector<double>& rvmax_perf,
                                         const std::vector<double>& surf_dens_perf);
 
-        void computeConnectionPressureDelta();
-
         void computeWellConnectionDensitesPressures(const Simulator& ebosSimulator,
                                                     const WellState& well_state,
                                                     const std::vector<double>& b_perf,
@@ -484,8 +426,6 @@ namespace Opm
             DeferredLogger& deferred_logger,
             const WellState &well_state) const;
 
-
-        double calculateThpFromBhp(const WellState &well_state, const std::vector<double>& rates, const double bhp, DeferredLogger& deferred_logger) const;
 
         virtual double getRefDensity() const override;
 
@@ -570,18 +510,10 @@ namespace Opm
         // TODO: looking for better alternative to avoid wrong-signed well rates
         bool openCrossFlowAvoidSingularity(const Simulator& ebos_simulator) const;
 
-        // relaxation factor considering only one fraction value
-        static double relaxationFactorFraction(const double old_value,
-                                               const double dx);
-
         // calculate a relaxation factor to avoid overshoot of the fractions for producers
         // which might result in negative rates
         static double relaxationFactorFractionsProducer(const std::vector<double>& primary_variables,
                                                         const BVectorWell& dwells);
-
-        // calculate a relaxation factor to avoid overshoot of total rates
-        static double relaxationFactorRate(const std::vector<double>& primary_variables,
-                                           const BVectorWell& dwells);
 
         // calculate the skin pressure based on water velocity, throughput and polymer concentration.
         // throughput is used to describe the formation damage during water/polymer injection.
@@ -615,11 +547,6 @@ namespace Opm
                                         DeferredLogger& deferred_logger);
 
         virtual void updateWaterThroughput(const double dt, WellState& well_state) const override;
-
-        // checking the convergence of the well control equations
-        void checkConvergenceControlEq(const WellState& well_state,
-                                       ConvergenceReport& report,
-                                       DeferredLogger& deferred_logger) const;
 
         // checking convergence of extra equations, if there are any
         void checkConvergenceExtraEqs(const std::vector<double>& res,
