@@ -26,6 +26,8 @@
 #include <opm/simulators/linalg/bda/BdaSolver.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 
+#include <boost/property_tree/ptree.hpp>
+
 #include <amgcl/amg.hpp>
 #include <amgcl/backend/builtin.hpp>
 #include <amgcl/backend/cuda.hpp>
@@ -35,6 +37,8 @@
 #include <amgcl/relaxation/as_preconditioner.hpp>
 #include <amgcl/relaxation/ilu0.hpp>
 #include <amgcl/solver/bicgstab.hpp>
+
+#include <amgcl/preconditioner/runtime.hpp>
 
 #include <amgcl/value_type/static_matrix.hpp>
 
@@ -72,15 +76,7 @@ class amgclSolverBackend : public BdaSolver<block_size>
     typedef amgcl::backend::builtin<dmat_type> Backend;
 #endif
 
-    // choose linear solver components
-    typedef amgcl::relaxation::as_preconditioner<Backend, amgcl::relaxation::ilu0> Precond;
-    typedef amgcl::solver::bicgstab<Backend> IterSolver;
-
-#if AMGCL_CUDA
-    typedef amgcl::make_solver<Precond, IterSolver> Solver;
-#else
-    typedef amgcl::make_block_solver<Precond, IterSolver> Solver;
-#endif
+    typedef amgcl::make_solver<amgcl::runtime::preconditioner<Backend>, amgcl::runtime::solver::wrapper<Backend> > Solver;
 
 private:
     // store matrix in CSR format
@@ -89,7 +85,7 @@ private:
     std::vector<double> x;
     std::once_flag print_info;
 
-    typename Solver::params prm;
+    boost::property_tree::ptree prm;
     typename Backend::params bprm;  // amgcl backend parameters, only used for cusparseHandle
 
     /// Initialize GPU and allocate memory

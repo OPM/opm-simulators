@@ -27,6 +27,9 @@
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 #include <opm/simulators/linalg/bda/amgclSolverBackend.hpp>
 
+#include <boost/property_tree/json_parser.hpp>
+
+
 namespace bda
 {
 
@@ -69,11 +72,12 @@ void amgclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doubl
     cusparseCreate(&bprm.cusparse_handle);
 #endif
 
-    // set amgcl parameters
-    prm.precond.damping = 0.9;
-    prm.solver.maxiter = maxit;
-    prm.solver.tol = tolerance;
-    prm.solver.verbose = (verbosity >= 2);
+    // read amgcl parameters via json file
+    std::ifstream file("amgcl_options.json");
+    boost::property_tree::read_json(file, prm);
+
+    // print json parameters
+    boost::property_tree::write_json(std::cout, prm);
 
     initialized = true;
 } // end initialize()
@@ -143,7 +147,12 @@ void amgclSolverBackend<block_size>::solve_system(double *b, WellContributions &
 
     try {
         // create matrix object
+#if AMGCL_CUDA
         auto A = std::tie(N, A_rows, A_cols, A_vals);
+#else
+        auto Atmp = std::tie(N, A_rows, A_cols, A_vals);
+        auto A = amgcl::adapter::block_matrix<dmat_type>(Atmp);
+#endif
 
         // create solver and construct preconditioner
         // don't reuse this unless the preconditioner can be reused
@@ -174,7 +183,7 @@ void amgclSolverBackend<block_size>::solve_system(double *b, WellContributions &
         auto X = amgcl::make_iterator_range(x_ptr, x_ptr + N / block_size);
 
         // actually solve
-        std::tie(iters, error) = solve(A, B, X);
+        std::tie(iters, error) = solve(B, X);
 #endif
 
     } catch (const std::exception& ex) {
