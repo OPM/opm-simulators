@@ -23,7 +23,6 @@
 
 #include <vector>
 
-#include <boost/range/iterator_range.hpp>
 #include <opm/simulators/timestepping/TimeStepControlInterface.hpp>
 
 namespace Opm
