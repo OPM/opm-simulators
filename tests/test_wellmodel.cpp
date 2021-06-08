@@ -134,7 +134,7 @@ BOOST_AUTO_TEST_CASE(TestStandardWellInput) {
 
     Opm::ParallelWellInfo pinfo{well.name()};
 
-    BOOST_CHECK_THROW( StandardWell( well, pinfo, -1, param, *rateConverter, 0, 3, 3, 0, 0, pdata), std::invalid_argument);
+    BOOST_CHECK_THROW( StandardWell( well, pinfo, -1, param, *rateConverter, 0, 3, 3, 0, pdata), std::invalid_argument);
 }
 
 
@@ -168,7 +168,7 @@ BOOST_AUTO_TEST_CASE(TestBehavoir) {
             }
 
             Opm::ParallelWellInfo pinfo{wells_ecl[w].name()};
-            wells.emplace_back(new StandardWell(wells_ecl[w], pinfo, current_timestep, param, *rateConverter, 0, 3, 3, w, 0, pdata) );
+            wells.emplace_back(new StandardWell(wells_ecl[w], pinfo, current_timestep, param, *rateConverter, 0, 3, 3, w, pdata) );
         }
     }
 

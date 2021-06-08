@@ -756,7 +756,6 @@ namespace Opm {
                                           this->numComponents(),
                                           this->numPhases(),
                                           wellID,
-                                          this->wellState().firstPerfIndex()[wellID],
                                           perf_data);
     }
 

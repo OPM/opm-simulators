@@ -129,7 +129,6 @@ namespace Opm
                          const int num_components,
                          const int num_phases,
                          const int index_of_well,
-                         const int first_perf_index,
                          const std::vector<PerforationData>& perf_data);
 
         virtual void init(const PhaseUsage* phase_usage_arg,
@@ -237,7 +236,6 @@ namespace Opm
         using Base::well_cells_;
         using Base::param_;
         using Base::well_index_;
-        using Base::first_perf_;
         using Base::saturation_table_number_;
         using Base::well_efficiency_factor_;
         using Base::gravity_;

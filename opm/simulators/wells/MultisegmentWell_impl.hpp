@@ -42,9 +42,8 @@ namespace Opm
                      const int num_components,
                      const int num_phases,
                      const int index_of_well,
-                     const int first_perf_index,
                      const std::vector<PerforationData>& perf_data)
-    : Base(well, pw_info, time_step, param, rate_converter, pvtRegionIdx, num_components, num_phases, index_of_well, first_perf_index, perf_data)
+    : Base(well, pw_info, time_step, param, rate_converter, pvtRegionIdx, num_components, num_phases, index_of_well, perf_data)
     , MultisegmentWellGeneric<Scalar>(static_cast<WellInterfaceGeneric&>(*this))
     , cell_perforation_depth_diffs_(number_of_perforations_, 0.0)
     , cell_perforation_pressure_diffs_(number_of_perforations_, 0.0)
