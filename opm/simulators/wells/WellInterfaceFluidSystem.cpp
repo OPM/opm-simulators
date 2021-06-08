@@ -308,7 +308,7 @@ checkGroupConstraintsInj(const Group& group,
 
     // Make conversion factors for RESV <-> surface rates.
     std::vector<double> resv_coeff(phaseUsage().num_phases, 1.0);
-    rateConverter_.calcCoeff(0, pvtRegionIdx_, resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
+    rateConverter_.calcInjCoeff(0, pvtRegionIdx_, resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
     // Call check for the well's injection phase.
     return WellGroupHelpers::checkGroupConstraintsInj(name(),

@@ -373,6 +373,10 @@ namespace Opm {
                            const int pvtreg,
                            std::vector<double>& resv_coeff) override;
 
+            void calcInjRates(const int fipnum,
+                           const int pvtreg,
+                           std::vector<double>& resv_coeff) override;
+
              void computeWellTemperature();
 
         private:
