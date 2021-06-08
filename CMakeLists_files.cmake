@@ -46,8 +46,9 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/utils/PartiallySupportedFlowKeywords.cpp
   opm/simulators/utils/readDeck.cpp
   opm/simulators/utils/UnsupportedFlowKeywords.cpp
-  opm/simulators/timestepping/TimeStepControl.cpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.cpp
+  opm/simulators/timestepping/AdaptiveTimeSteppingEbos.cpp
+  opm/simulators/timestepping/TimeStepControl.cpp
   opm/simulators/timestepping/SimulatorTimer.cpp
   opm/simulators/timestepping/gatherConvergenceReport.cpp
   opm/simulators/utils/DeferredLogger.cpp
