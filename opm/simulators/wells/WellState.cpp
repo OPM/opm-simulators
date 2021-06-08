@@ -396,11 +396,7 @@ void WellState::init(const std::vector<double>& cellPressures,
                 }
 
                 const int num_perf_this_well = new_iter->second[2];
-
-                const int num_perf_changed = parallel_well_info[w]->communication()
-                    .sum(static_cast<int>(num_perf_old_well != num_perf_this_well));
-                const bool global_num_perf_same = num_perf_changed == 0;
-
+                const bool global_num_perf_same = (num_perf_this_well == num_perf_old_well);
 
                 // copy perforation rates when the number of
                 // perforations is equal, otherwise initialize
