@@ -27,6 +27,18 @@
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 
 #include <amgcl/amg.hpp>
+#include <amgcl/backend/builtin.hpp>
+#include <amgcl/backend/cuda.hpp>
+#include <amgcl/relaxation/cusparse_ilu0.hpp>
+#include <amgcl/adapter/crs_tuple.hpp>
+#include <amgcl/make_block_solver.hpp>
+#include <amgcl/relaxation/as_preconditioner.hpp>
+#include <amgcl/relaxation/ilu0.hpp>
+#include <amgcl/solver/bicgstab.hpp>
+
+#include <amgcl/value_type/static_matrix.hpp>
+
+#define AMGCL_CUDA 0
 
 namespace bda
 {
@@ -49,6 +61,27 @@ class amgclSolverBackend : public BdaSolver<block_size>
     using Base::tolerance;
     using Base::initialized;
 
+#if AMGCL_CUDA
+#if !HAVE_CUDA
+    #error "Error amgcl is trying to use CUDA, but CUDA was not found by CMake"
+#endif
+    typedef amgcl::backend::cuda<double> Backend;
+#else
+    typedef amgcl::static_matrix<double, block_size, block_size> dmat_type; // matrix value type in double precision
+    typedef amgcl::static_matrix<double, block_size, 1> dvec_type; // the corresponding vector value type
+    typedef amgcl::backend::builtin<dmat_type> Backend;
+#endif
+
+    // choose linear solver components
+    typedef amgcl::relaxation::as_preconditioner<Backend, amgcl::relaxation::ilu0> Precond;
+    typedef amgcl::solver::bicgstab<Backend> IterSolver;
+
+#if AMGCL_CUDA
+    typedef amgcl::make_solver<Precond, IterSolver> Solver;
+#else
+    typedef amgcl::make_block_solver<Precond, IterSolver> Solver;
+#endif
+
 private:
     // store matrix in CSR format
     std::vector<unsigned> A_rows, A_cols;
@@ -56,6 +89,7 @@ private:
     std::vector<double> x;
     std::once_flag print_info;
 
+    typename Backend::params bprm;  // amgcl backend parameters, only used for cusparseHandle
 
     /// Initialize GPU and allocate memory
     /// \param[in] N              number of nonzeroes, divide by dim*dim to get number of blocks

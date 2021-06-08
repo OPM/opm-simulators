@@ -27,19 +27,6 @@
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 #include <opm/simulators/linalg/bda/amgclSolverBackend.hpp>
 
-#include <amgcl/backend/builtin.hpp>
-#include <amgcl/backend/cuda.hpp>
-#include <amgcl/relaxation/cusparse_ilu0.hpp>
-#include <amgcl/adapter/crs_tuple.hpp>
-#include <amgcl/make_block_solver.hpp>
-#include <amgcl/relaxation/as_preconditioner.hpp>
-#include <amgcl/relaxation/ilu0.hpp>
-#include <amgcl/solver/bicgstab.hpp>
-
-#include <amgcl/value_type/static_matrix.hpp>
-#include <amgcl/adapter/block_matrix.hpp>
-
-
 namespace bda
 {
 
@@ -74,6 +61,10 @@ void amgclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doubl
     A_rows.resize(N + 1);
     rhs.resize(N);
     x.resize(N);
+
+#if AMGCL_CUDA
+    cusparseCreate(&bprm.cusparse_handle);
+#endif
 
     initialized = true;
 } // end initialize()
@@ -141,35 +132,7 @@ void amgclSolverBackend<block_size>::solve_system(double *b, WellContributions &
     int iters = 0;
     double error = 0.0;
 
-#define AMGCL_CUDA 0
-
     try {
-#if AMGCL_CUDA
-#if !HAVE_CUDA
-        #error "Error amgcl is trying to use CUDA, but CUDA was not found by CMake"
-#endif
-        typedef amgcl::backend::cuda<double> Backend;
-
-        Backend::params bprm;
-        cusparseCreate(&bprm.cusparse_handle);
-#else
-        typedef amgcl::static_matrix<double, block_size, block_size> dmat_type; // matrix value type in double precision
-        typedef amgcl::static_matrix<double, block_size, 1> dvec_type; // the corresponding vector value type
-        typedef amgcl::backend::builtin<dmat_type> Backend;
-
-        typename Backend::params bprm; // leave empty
-#endif
-
-        // choose linear solver components
-        typedef amgcl::relaxation::as_preconditioner<Backend, amgcl::relaxation::ilu0> Precond;
-        typedef amgcl::solver::bicgstab<Backend> IterSolver;
-
-#if AMGCL_CUDA
-        typedef amgcl::make_solver<Precond, IterSolver> Solver;
-#else
-        typedef amgcl::make_block_solver<Precond, IterSolver> Solver;
-#endif
-
         // create matrix object
         auto A = std::tie(N, A_rows, A_cols, A_vals);
 
