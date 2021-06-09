@@ -133,14 +133,14 @@ doInit(bool enabled, size_t numGridDof,
 
 
         //TBLK keyword
-        if (!tracer.concentration.empty()){
-            int tblkDatasize = tracer.concentration.size();
+        if (!tracer.free_concentration.empty()){
+            int tblkDatasize = tracer.free_concentration.size();
             if (tblkDatasize < cartMapper_.cartesianSize()){
                 throw std::runtime_error("Wrong size of TBLK for" + tracer.name);
             }
             for (size_t globalDofIdx = 0; globalDofIdx < numGridDof; ++globalDofIdx){
                 int cartDofIdx = cartMapper_.cartesianIndex(globalDofIdx);
-                tracerConcentration_[tracerIdx][globalDofIdx] = tracer.concentration[cartDofIdx];
+                tracerConcentration_[tracerIdx][globalDofIdx] = tracer.free_concentration[cartDofIdx];
             }
         }
         //TVDPF keyword
@@ -150,7 +150,7 @@ doInit(bool enabled, size_t numGridDof,
             for (size_t globalDofIdx = 0; globalDofIdx < numGridDof; ++globalDofIdx){
                 int cartDofIdx = cartMapper_.cartesianIndex(globalDofIdx);
                 const auto& center = eclGrid.getCellCenter(cartDofIdx);
-                tracerConcentration_[tracerIdx][globalDofIdx] = tracer.tvdpf.evaluate("TRACER_CONCENTRATION", center[2]);
+                tracerConcentration_[tracerIdx][globalDofIdx] = tracer.free_tvdp.evaluate("TRACER_CONCENTRATION", center[2]);
             }
         }
         ++tracerIdx;
