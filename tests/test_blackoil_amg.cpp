@@ -296,8 +296,9 @@ void runBlackoilAmgLaplace()
     Dune::OverlappingSchwarzScalarProduct<Vector,Communication> sp(comm);
     Dune::InverseOperatorResult r;
 
-    boost::property_tree::ptree prm;
-    prm.put("type", "amg");
+    using namespace std::string_literals;
+    Opm::PropertyTree prm;
+    prm.put("type", "amg"s);
     std::function<Vector()> weights = [&mat]() {
         return Opm::Amg::getQuasiImpesWeights<BCRSMat, Vector>(mat, 0, false);
     };

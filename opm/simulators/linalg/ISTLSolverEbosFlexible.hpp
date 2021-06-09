@@ -28,8 +28,6 @@
 
 #include <opm/common/ErrorMacros.hpp>
 
-#include <boost/property_tree/json_parser.hpp>
-
 #include <memory>
 #include <utility>
 
@@ -123,7 +121,7 @@ public:
         if (simulator.gridView().comm().rank() == 0) {
             std::ostringstream os;
             os << "Property tree for linear solver:\n";
-            boost::property_tree::write_json(os, prm_, true);
+            prm_.write_json(os, true);
             OpmLog::note(os.str());
         }
     }
@@ -266,10 +264,12 @@ protected:
     {
         std::function<VectorType()> weightsCalculator;
 
-        auto preconditionerType = prm_.get("preconditioner.type", "cpr");
+        using namespace std::string_literals;
+
+        auto preconditionerType = prm_.get("preconditioner.type", "cpr"s);
         if (preconditionerType == "cpr" || preconditionerType == "cprt") {
             const bool transpose = preconditionerType == "cprt";
-            const auto weightsType = prm_.get("preconditioner.weight_type", "quasiimpes");
+            const auto weightsType = prm_.get("preconditioner.weight_type", "quasiimpes"s);
             const auto pressureIndex = this->prm_.get("preconditioner.pressure_var_index", 1);
             if (weightsType == "quasiimpes") {
                 // weighs will be created as default in the solver
@@ -340,7 +340,7 @@ protected:
     std::unique_ptr<AbstractOperatorType> linear_operator_;
     std::unique_ptr<SolverType> solver_;
     FlowLinearSolverParameters parameters_;
-    boost::property_tree::ptree prm_;
+    PropertyTree prm_;
     VectorType rhs_;
     Dune::InverseOperatorResult res_;
     std::any parallelInformation_;

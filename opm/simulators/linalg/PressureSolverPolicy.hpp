@@ -21,8 +21,7 @@
 #define OPM_PRESSURE_SOLVER_POLICY_HEADER_INCLUDED
 
 #include <opm/simulators/linalg/PressureTransferPolicy.hpp>
-
-#include <boost/property_tree/ptree.hpp>
+#include <opm/simulators/linalg/PropertyTree.hpp>
 
 #include <dune/istl/solver.hh>
 #include <dune/istl/owneroverlapcopy.hh>
@@ -31,8 +30,6 @@ namespace Dune
 {
 namespace Amg
 {
-    namespace pt = boost::property_tree;
-
     template <class OperatorType, class Solver, class LevelTransferPolicy>
     class PressureSolverPolicy
     {
@@ -43,7 +40,7 @@ namespace Amg
          * @brief Constructs the coarse solver policy.
          * @param prm Parameter tree specifying the solver details.
          */
-        explicit PressureSolverPolicy(const pt::ptree prm)
+        explicit PressureSolverPolicy(const Opm::PropertyTree& prm)
             : prm_(prm)
         {
         }
@@ -61,7 +58,7 @@ namespace Amg
 #if HAVE_MPI
             template <typename GlobalIndex, typename LocalIndex>
             PressureInverseOperator(Operator& op,
-                                    const boost::property_tree::ptree& prm,
+                                    const Opm::PropertyTree& prm,
                                     const Dune::OwnerOverlapCopyCommunication<GlobalIndex, LocalIndex>& comm)
                 : linsolver_()
             {
@@ -71,7 +68,7 @@ namespace Amg
 #endif // HAVE_MPI
 
             PressureInverseOperator(Operator& op,
-                                    const boost::property_tree::ptree& prm,
+                                    const Opm::PropertyTree& prm,
                                     const SequentialInformation&)
                 : linsolver_()
             {
@@ -132,7 +129,7 @@ namespace Amg
     private:
         /** @brief The coarse level operator. */
         std::shared_ptr<Operator> coarseOperator_;
-        pt::ptree prm_;
+        Opm::PropertyTree prm_;
     };
 } // namespace Amg
 } // namespace Dune

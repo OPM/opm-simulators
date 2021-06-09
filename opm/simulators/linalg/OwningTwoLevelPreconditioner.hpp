@@ -32,8 +32,6 @@
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/paamg/amg.hh>
 
-#include <boost/property_tree/ptree.hpp>
-
 #include <fstream>
 #include <type_traits>
 
@@ -82,21 +80,20 @@ template <class OperatorType,
 class OwningTwoLevelPreconditioner : public Dune::PreconditionerWithUpdate<VectorType, VectorType>
 {
 public:
-    using pt = boost::property_tree::ptree;
     using MatrixType = typename OperatorType::matrix_type;
     using PrecFactory = Opm::PreconditionerFactory<OperatorType, Communication>;
 
-    OwningTwoLevelPreconditioner(const OperatorType& linearoperator, const pt& prm,
+    OwningTwoLevelPreconditioner(const OperatorType& linearoperator, const Opm::PropertyTree& prm,
                                  const std::function<VectorType()> weightsCalculator)
         : linear_operator_(linearoperator)
         , finesmoother_(PrecFactory::create(linearoperator,
-                                            prm.get_child_optional("finesmoother")?
-                                            prm.get_child("finesmoother"): pt()))
+                                            prm.get_child_optional("finesmoother") ?
+                                            prm.get_child("finesmoother") : Opm::PropertyTree()))
         , comm_(nullptr)
         , weightsCalculator_(weightsCalculator)
         , weights_(weightsCalculator())
         , levelTransferPolicy_(dummy_comm_, weights_, prm.get<int>("pressure_var_index"))
-        , coarseSolverPolicy_(prm.get_child_optional("coarsesolver")? prm.get_child("coarsesolver") : pt())
+        , coarseSolverPolicy_(prm.get_child_optional("coarsesolver")? prm.get_child("coarsesolver") : Opm::PropertyTree())
         , twolevel_method_(linearoperator,
                            finesmoother_,
                            levelTransferPolicy_,
@@ -115,17 +112,17 @@ public:
         }
     }
 
-    OwningTwoLevelPreconditioner(const OperatorType& linearoperator, const pt& prm,
+    OwningTwoLevelPreconditioner(const OperatorType& linearoperator, const Opm::PropertyTree& prm,
                                  const std::function<VectorType()> weightsCalculator, const Communication& comm)
         : linear_operator_(linearoperator)
         , finesmoother_(PrecFactory::create(linearoperator,
-                                            prm.get_child_optional("finesmoother")?
-                                            prm.get_child("finesmoother"): pt(), comm))
+                                            prm.get_child_optional("finesmoother") ?
+                                            prm.get_child("finesmoother"): Opm::PropertyTree(), comm))
         , comm_(&comm)
         , weightsCalculator_(weightsCalculator)
         , weights_(weightsCalculator())
         , levelTransferPolicy_(*comm_, weights_, prm.get<int>("pressure_var_index", 1))
-        , coarseSolverPolicy_(prm.get_child_optional("coarsesolver")? prm.get_child("coarsesolver") : pt())
+        , coarseSolverPolicy_(prm.get_child_optional("coarsesolver")? prm.get_child("coarsesolver") : Opm::PropertyTree())
         , twolevel_method_(linearoperator,
                            finesmoother_,
                            levelTransferPolicy_,
@@ -192,7 +189,7 @@ private:
     {
         // Parallel case.
         auto child = prm_.get_child_optional("finesmoother");
-        finesmoother_ = PrecFactory::create(linear_operator_, child ? *child : pt(), *comm_);
+        finesmoother_ = PrecFactory::create(linear_operator_, child ? *child : Opm::PropertyTree(), *comm_);
         twolevel_method_.updatePreconditioner(finesmoother_, coarseSolverPolicy_);
     }
 
@@ -200,7 +197,7 @@ private:
     {
         // Serial case.
         auto child = prm_.get_child_optional("finesmoother");
-        finesmoother_ = PrecFactory::create(linear_operator_, child ? *child : pt());
+        finesmoother_ = PrecFactory::create(linear_operator_, child ? *child : Opm::PropertyTree());
         twolevel_method_.updatePreconditioner(finesmoother_, coarseSolverPolicy_);
     }
 
@@ -212,7 +209,7 @@ private:
     LevelTransferPolicy levelTransferPolicy_;
     CoarseSolverPolicy coarseSolverPolicy_;
     TwoLevelMethod twolevel_method_;
-    boost::property_tree::ptree prm_;
+    Opm::PropertyTree prm_;
     Communication dummy_comm_;
 };
 

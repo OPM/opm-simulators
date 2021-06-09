@@ -26,14 +26,13 @@
 #include <opm/simulators/linalg/OwningTwoLevelPreconditioner.hpp>
 #include <opm/simulators/linalg/ParallelOverlappingILU0.hpp>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
+#include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/amgcpr.hh>
 
 #include <dune/istl/paamg/amg.hh>
 #include <dune/istl/paamg/kamg.hh>
 #include <dune/istl/paamg/fastamg.hh>
 #include <dune/istl/preconditioners.hh>
-
-#include <boost/property_tree/ptree.hpp>
 
 #include <map>
 #include <memory>
@@ -58,15 +57,15 @@ public:
     using PrecPtr = std::shared_ptr<Dune::PreconditionerWithUpdate<Vector, Vector>>;
 
     /// The type of creator functions passed to addCreator().
-    using Creator = std::function<PrecPtr(const Operator&, const boost::property_tree::ptree&, const std::function<Vector()>&)>;
-    using ParCreator = std::function<PrecPtr(const Operator&, const boost::property_tree::ptree&, const std::function<Vector()>&, const Comm&)>;
+    using Creator = std::function<PrecPtr(const Operator&, const PropertyTree&, const std::function<Vector()>&)>;
+    using ParCreator = std::function<PrecPtr(const Operator&, const PropertyTree&, const std::function<Vector()>&, const Comm&)>;
 
     /// Create a new serial preconditioner and return a pointer to it.
     /// \param op    operator to be preconditioned.
     /// \param prm   parameters for the preconditioner, in particular its type.
     /// \param weightsCalculator Calculator for weights used in CPR.
     /// \return      (smart) pointer to the created preconditioner.
-    static PrecPtr create(const Operator& op, const boost::property_tree::ptree& prm,
+    static PrecPtr create(const Operator& op, const PropertyTree& prm,
                           const std::function<Vector()>& weightsCalculator = std::function<Vector()>())
     {
         return instance().doCreate(op, prm, weightsCalculator);
@@ -78,7 +77,7 @@ public:
     /// \param comm  communication object (typically OwnerOverlapCopyCommunication).
     /// \param weightsCalculator Calculator for weights used in CPR.
     /// \return      (smart) pointer to the created preconditioner.
-    static PrecPtr create(const Operator& op, const boost::property_tree::ptree& prm,
+    static PrecPtr create(const Operator& op, const PropertyTree& prm,
                           const std::function<Vector()>& weightsCalculator, const Comm& comm)
     {
         return instance().doCreate(op, prm, weightsCalculator, comm);
@@ -89,7 +88,7 @@ public:
     /// \param prm   parameters for the preconditioner, in particular its type.
     /// \param comm  communication object (typically OwnerOverlapCopyCommunication).
     /// \return      (smart) pointer to the created preconditioner.
-    static PrecPtr create(const Operator& op, const boost::property_tree::ptree& prm, const Comm& comm)
+    static PrecPtr create(const Operator& op, const PropertyTree& prm, const Comm& comm)
     {
         return instance().doCreate(op, prm, std::function<Vector()>(), comm);
     }
@@ -123,7 +122,7 @@ private:
     using Criterion = Dune::Amg::CoarsenCriterion<CriterionBase>;
 
     // Helpers for creation of AMG preconditioner.
-    static Criterion amgCriterion(const boost::property_tree::ptree& prm)
+    static Criterion amgCriterion(const PropertyTree& prm)
     {
         Criterion criterion(15, prm.get<int>("coarsenTarget", 1200));
         criterion.setDefaultValuesIsotropic(2);
@@ -151,13 +150,13 @@ private:
     template <typename X> struct Id { using Type = X; };
 
     template <typename Smoother>
-    static auto amgSmootherArgs(const boost::property_tree::ptree& prm)
+    static auto amgSmootherArgs(const PropertyTree& prm)
     {
         return amgSmootherArgs(prm, Id<Smoother>());
     }
 
     template <typename Smoother>
-    static auto amgSmootherArgs(const boost::property_tree::ptree& prm,
+    static auto amgSmootherArgs(const PropertyTree& prm,
                                 Id<Smoother>)
     {
         using SmootherArgs = typename Dune::Amg::SmootherTraits<Smoother>::Arguments;
@@ -170,7 +169,7 @@ private:
         return smootherArgs;
     }
 
-    static auto amgSmootherArgs(const boost::property_tree::ptree& prm,
+    static auto amgSmootherArgs(const PropertyTree& prm,
                                 Id<Opm::ParallelOverlappingILU0<Matrix, Vector, Vector, Comm>>)
     {
         using Smoother = Opm::ParallelOverlappingILU0<Matrix, Vector, Vector, Comm>;
@@ -189,7 +188,7 @@ private:
     }
 
     template <class Smoother>
-    static PrecPtr makeAmgPreconditioner(const Operator& op, const boost::property_tree::ptree& prm, bool useKamg = false)
+    static PrecPtr makeAmgPreconditioner(const Operator& op, const PropertyTree& prm, bool useKamg = false)
     {
         auto crit = amgCriterion(prm);
         auto sargs = amgSmootherArgs<Smoother>(prm);
@@ -230,7 +229,7 @@ private:
     }
 
     static PrecPtr
-    createParILU(const Operator& op, const boost::property_tree::ptree& prm, const Comm& comm, const int ilulevel)
+    createParILU(const Operator& op, const PropertyTree& prm, const Comm& comm, const int ilulevel)
     {
         const double w = prm.get<double>("relaxation", 1.0);
         const bool redblack = prm.get<bool>("redblack", false);
@@ -256,7 +255,7 @@ private:
         using O = Operator;
         using M = Matrix;
         using V = Vector;
-        using P = boost::property_tree::ptree;
+        using P = PropertyTree;
         using C = Comm;
         doAddCreator("ILU0", [](const O& op, const P& prm, const std::function<Vector()>&, const C& comm) {
             return createParILU(op, prm, comm, 0);
@@ -325,7 +324,7 @@ private:
         using O = Operator;
         using M = Matrix;
         using V = Vector;
-        using P = boost::property_tree::ptree;
+        using P = PropertyTree;
         doAddCreator("ILU0", [](const O& op, const P& prm, const std::function<Vector()>&) {
             const double w = prm.get<double>("relaxation", 1.0);
             return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V>>(
@@ -461,7 +460,7 @@ private:
     }
 
     // Actually creates the product object.
-    PrecPtr doCreate(const Operator& op, const boost::property_tree::ptree& prm,
+    PrecPtr doCreate(const Operator& op, const PropertyTree& prm,
                      const std::function<Vector()> weightsCalculator)
     {
         const std::string& type = prm.get<std::string>("type", "ParOverILU0");
@@ -478,7 +477,7 @@ private:
         return it->second(op, prm, weightsCalculator);
     }
 
-    PrecPtr doCreate(const Operator& op, const boost::property_tree::ptree& prm,
+    PrecPtr doCreate(const Operator& op, const PropertyTree& prm,
                      const std::function<Vector()> weightsCalculator, const Comm& comm)
     {
         const std::string& type = prm.get<std::string>("type", "ParOverILU0");
