@@ -1,0 +1,195 @@
+/*
+  Copyright 2017 SINTEF Digital, Mathematics and Cybernetics.
+  Copyright 2017 Statoil ASA.
+  Copyright 2016 - 2017 IRIS AS.
+
+  This file is part of the Open Porous Media project (OPM).
+
+  OPM is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OPM is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+
+#ifndef OPM_STANDARDWELL_EVAL_HEADER_INCLUDED
+#define OPM_STANDARDWELL_EVAL_HEADER_INCLUDED
+
+#include <opm/simulators/wells/StandardWellGeneric.hpp>
+
+#include <opm/material/densead/DynamicEvaluation.hpp>
+
+#include <optional>
+#include <vector>
+
+namespace Opm
+{
+
+class ConvergenceReport;
+class DeferredLogger;
+class GroupState;
+class Schedule;
+class SummaryState;
+class WellContributions;
+template<class FluidSystem, class Indices, class Scalar> class WellInterfaceIndices;
+class WellState;
+
+template<class FluidSystem, class Indices, class Scalar>
+class StandardWellEval : public StandardWellGeneric<Scalar>
+{
+protected:
+    // number of the conservation equations
+    static constexpr int numWellConservationEq = Indices::numPhases + Indices::numSolvents;
+    // number of the well control equations
+    static constexpr int numWellControlEq = 1;
+    // number of the well equations that will always be used
+    // based on the solution strategy, there might be other well equations be introduced
+    static constexpr int numStaticWellEq = numWellConservationEq + numWellControlEq;
+    // the index for Bhp in primary variables and also the index of well control equation
+    // they both will be the last one in their respective system.
+    // TODO: we should have indices for the well equations and well primary variables separately
+    static constexpr int Bhp = numStaticWellEq - numWellControlEq;
+
+    // the positions of the primary variables for StandardWell
+    // the first one is the weighted total rate (WQ_t), the second and the third ones are F_w and F_g,
+    // which represent the fraction of Water and Gas based on the weighted total rate, the last one is BHP.
+    // correspondingly, we have four well equations for blackoil model, the first three are mass
+    // converstation equations, and the last one is the well control equation.
+    // primary variables related to other components, will be before the Bhp and after F_g.
+    // well control equation is always the last well equation.
+    // TODO: in the current implementation, we use the well rate as the first primary variables for injectors,
+    // instead of G_t.
+    static constexpr bool gasoil = Indices::numPhases == 2 && (Indices::compositionSwitchIdx >= 0);
+    static constexpr int WQTotal = 0;
+    static constexpr int WFrac = gasoil ? -1000 : 1;
+    static constexpr int GFrac = gasoil ? 1 : 2;
+    static constexpr int SFrac = !Indices::enableSolvent ? -1000 : 3;
+
+public:
+    using EvalWell = DenseAd::DynamicEvaluation<Scalar, numStaticWellEq + Indices::numEq + 1>;
+    using Eval = DenseAd::Evaluation<Scalar, Indices::numEq>;
+    using BVectorWell = typename StandardWellGeneric<Scalar>::BVectorWell;
+
+#if HAVE_CUDA || HAVE_OPENCL
+        /// add the contribution (C, D^-1, B matrices) of this Well to the WellContributions object
+        void addWellContribution(WellContributions& wellContribs) const;
+#endif
+
+protected:
+    StandardWellEval(const WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif);
+
+    const WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif_;
+
+    void initPrimaryVariablesEvaluation() const;
+
+    const EvalWell& getBhp() const
+    {
+        return primary_variables_evaluation_[Bhp];
+    }
+
+    const EvalWell& getWQTotal() const
+    {
+        return primary_variables_evaluation_[WQTotal];
+    }
+
+    EvalWell extendEval(const Eval& in) const;
+    EvalWell getQs(const int compIdx) const;
+    EvalWell wellSurfaceVolumeFraction(const int compIdx) const;
+    EvalWell wellVolumeFraction(const unsigned compIdx) const;
+    EvalWell wellVolumeFractionScaled(const int phase) const;
+
+    // calculate a relaxation factor to avoid overshoot of the fractions for producers
+    // which might result in negative rates
+    static double relaxationFactorFractionsProducer(const std::vector<double>& primary_variables,
+                                                    const BVectorWell& dwells);
+
+    void assembleControlEq(const WellState& well_state,
+                           const GroupState& group_state,
+                           const Schedule& schedule,
+                           const SummaryState& summaryState,
+                           DeferredLogger& deferred_logger);
+
+    // computing the accumulation term for later use in well mass equations
+    void computeAccumWell();
+
+    // TODO: not total sure whether it is a good idea to put this function here
+    // the major reason to put here is to avoid the usage of Wells struct
+    void computeConnectionDensities(const std::vector<double>& perfComponentRates,
+                                    const std::vector<double>& b_perf,
+                                    const std::vector<double>& rsmax_perf,
+                                    const std::vector<double>& rvmax_perf,
+                                    const std::vector<double>& surf_dens_perf);
+
+    void computePerfRate(const std::vector<EvalWell>& mob,
+                         const EvalWell& pressure,
+                         const EvalWell& bhp,
+                         const EvalWell& rs,
+                         const EvalWell& rv,
+                         std::vector<EvalWell>& b_perfcells_dense,
+                         const double Tw,
+                         const int perf,
+                         const bool allow_cf,
+                         const bool enable_polymermw,
+                         std::vector<EvalWell>& cq_s,
+                         double& perf_dis_gas_rate,
+                         double& perf_vap_oil_rate,
+                         DeferredLogger& deferred_logger) const;
+
+    ConvergenceReport getWellConvergence(const WellState& well_state,
+                                         const std::vector<double>& B_avg,
+                                         const double tol_wells,
+                                         const double maxResidualAllowed,
+                                         std::vector<double>& res,
+                                         DeferredLogger& deferred_logger) const;
+
+    void init(std::vector<double>& perf_depth,
+              const std::vector<double>& depth_arg,
+              const int num_cells,
+              const bool has_polymermw);
+
+    // handle the non reasonable fractions due to numerical overshoot
+    void processFractions() const;
+
+    void updatePrimaryVariables(const WellState& well_state,
+                                DeferredLogger& deferred_logger) const;
+
+    void updatePrimaryVariablesPolyMW(const BVectorWell& dwells) const;
+
+    void updateWellStateFromPrimaryVariables(WellState& well_state,
+                                             DeferredLogger& deferred_logger) const;
+
+    void updatePrimaryVariablesNewton(const BVectorWell& dwells,
+                                      const double dFLimit,
+                                      const double dBHPLimit) const;
+
+    void updateWellStateFromPrimaryVariablesPolyMW(WellState& well_state) const;
+
+    void updateThp(WellState& well_state,
+                   DeferredLogger& deferred_logger) const;
+
+    // total number of the well equations and primary variables
+    // there might be extra equations be used, numWellEq will be updated during the initialization
+    int numWellEq_ = numStaticWellEq;
+
+    // the values for the primary varibles
+    // based on different solutioin strategies, the wells can have different primary variables
+    mutable std::vector<double> primary_variables_;
+
+    // the Evaluation for the well primary variables, which contain derivativles and are used in AD calculation
+    mutable std::vector<EvalWell> primary_variables_evaluation_;
+
+    // the saturations in the well bore under surface conditions at the beginning of the time step
+    std::vector<double> F0_;
+};
+
+}
+
+#endif // OPM_STANDARDWELL_EVAL_HEADER_INCLUDED

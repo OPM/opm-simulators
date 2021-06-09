@@ -66,7 +66,7 @@ getGroupInjectionControl(const Group& group,
                          const EvalWell& injection_rate,
                          EvalWell& control_eq,
                          double efficiencyFactor,
-                         DeferredLogger& deferred_logger)
+                         DeferredLogger& deferred_logger) const
 {
     // Setting some defaults to silence warnings below.
     // Will be overwritten in the switch statement.
@@ -183,7 +183,7 @@ getGroupProductionControl(const Group& group,
                           const EvalWell& bhp,
                           const std::vector<EvalWell>& rates,
                           EvalWell& control_eq,
-                          double efficiencyFactor)
+                          double efficiencyFactor) const
 {
     const Group::ProductionCMode& currentGroupControl = group_state.production_control(group.name());
     if (currentGroupControl == Group::ProductionCMode::FLD ||
@@ -278,7 +278,7 @@ assembleControlEqProd_(const WellState& well_state,
                        const std::vector<EvalWell>& rates, // Always 3 canonical rates.
                        const std::function<EvalWell()>& bhp_from_thp,
                        EvalWell& control_eq,
-                       DeferredLogger& deferred_logger)
+                       DeferredLogger& deferred_logger) const
 {
     auto current = well_state.currentProductionControl(baseif_.indexOfWell());
     const auto& pu = baseif_.phaseUsage();
@@ -392,7 +392,7 @@ assembleControlEqInj_(const WellState& well_state,
                       const EvalWell& injection_rate,
                       const std::function<EvalWell()>& bhp_from_thp,
                       EvalWell& control_eq,
-                      DeferredLogger& deferred_logger)
+                      DeferredLogger& deferred_logger) const
 {
     auto current = well_state.currentInjectionControl(baseif_.indexOfWell());
     const InjectorType injectorType = controls.injector_type;
@@ -514,7 +514,7 @@ assembleControlEqProd_<__VA_ARGS__>(const WellState&, \
                                     const std::vector<__VA_ARGS__>&, \
                                     const std::function<__VA_ARGS__()>&, \
                                     __VA_ARGS__&, \
-                                    DeferredLogger&); \
+                                    DeferredLogger&) const; \
 template void WellInterfaceEval<A>:: \
 assembleControlEqInj_<__VA_ARGS__>(const WellState&, \
                                    const GroupState&, \
@@ -525,7 +525,7 @@ assembleControlEqInj_<__VA_ARGS__>(const WellState&, \
                                    const __VA_ARGS__&, \
                                    const std::function<__VA_ARGS__()>&, \
                                    __VA_ARGS__&, \
-                                   DeferredLogger&); \
+                                   DeferredLogger&) const; \
 template __VA_ARGS__ WellInterfaceEval<A>:: \
 calculateBhpFromThp<__VA_ARGS__>(const WellState&, \
                                  const std::vector<__VA_ARGS__>&, \

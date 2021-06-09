@@ -72,7 +72,6 @@ public:
 
 protected:
     StandardWellGeneric(int Bhp,
-                        const ParallelWellInfo& pw_info,
                         const WellInterfaceGeneric& baseif);
 
     // calculate a relaxation factor to avoid overshoot of total rates

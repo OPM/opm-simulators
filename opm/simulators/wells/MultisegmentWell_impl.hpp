@@ -27,6 +27,10 @@
 #include <string>
 #include <algorithm>
 
+#if HAVE_CUDA || HAVE_OPENCL
+#include <opm/simulators/linalg/bda/WellContributions.hpp>
+#endif
+
 namespace Opm
 {
 

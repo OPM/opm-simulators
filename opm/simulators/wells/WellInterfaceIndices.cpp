@@ -129,6 +129,7 @@ INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,fa
 INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,1u,0u,false,false,0u,2u>)
 INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u>)
 INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,2u>)
+INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,1u,0u,false,true,0u,2u>)
 
 // Blackoil
 INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,0u,0u,false,false,0u>)
@@ -138,6 +139,7 @@ INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<1u,0u,0u,0u,false,false,0u>)
 INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,1u,0u,0u,false,false,0u>)
 INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,1u,0u,false,false,0u>)
 INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,0u,1u,false,false,0u>)
+INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,0u,1u,false,false,1u>)
 
 // Alternative indices
 INSTANCE(EclAlternativeBlackOilIndexTraits,BlackOilIndices<0u,0u,0u,0u,false,false,0u>)
