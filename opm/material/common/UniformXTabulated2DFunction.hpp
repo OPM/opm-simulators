@@ -39,6 +39,7 @@
 #include <tuple>
 #include <sstream>
 #include <cassert>
+#include <cmath>
 
 namespace Opm {
 /*!
