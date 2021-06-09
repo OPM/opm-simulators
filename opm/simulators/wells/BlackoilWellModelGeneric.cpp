@@ -768,15 +768,15 @@ checkGroupHigherConstraints(const Group& group,
             ->first;
     }
 
-    std::vector<double> resv_coeff(phase_usage_.num_phases, 0.0);
-    calcRates(fipnum, pvtreg, resv_coeff);
-
     std::vector<double> rates(phase_usage_.num_phases, 0.0);
 
     const bool skip = switched_groups.count(group.name()) || group.name() == "FIELD";
 
     if (!skip && group.isInjectionGroup()) {
         // Obtain rates for group.
+        std::vector<double> resv_coeff_inj(phase_usage_.num_phases, 0.0);
+        calcInjRates(fipnum, pvtreg, resv_coeff_inj);
+
         for (int phasePos = 0; phasePos < phase_usage_.num_phases; ++phasePos) {
             const double local_current_rate = WellGroupHelpers::sumWellRates(group, schedule(), this->wellState(), reportStepIdx, phasePos, /* isInjector */ true);
             // Sum over all processes
@@ -802,7 +802,7 @@ checkGroupHigherConstraints(const Group& group,
                     group.getGroupEfficiencyFactor(),
                     schedule(),
                     summaryState_,
-                    resv_coeff,
+                    resv_coeff_inj,
                     deferred_logger);
                 if (changed.first) {
                     switched_groups.insert(group.name());
@@ -819,6 +819,8 @@ checkGroupHigherConstraints(const Group& group,
             // Sum over all processes
             rates[phasePos] = -comm_.sum(local_current_rate);
         }
+        std::vector<double> resv_coeff(phase_usage_.num_phases, 0.0);
+        calcRates(fipnum, pvtreg, resv_coeff);
         // Check higher up only if under individual (not FLD) control.
         const Group::ProductionCMode& currentControl = this->groupState().production_control(group.name());
             if (currentControl != Group::ProductionCMode::FLD && group.productionGroupControlAvailable()) {

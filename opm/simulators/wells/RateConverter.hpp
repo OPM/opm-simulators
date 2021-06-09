@@ -645,6 +645,41 @@ namespace Opm {
                 }
             }
 
+            template <class Coeff>
+            void
+            calcInjCoeff(const RegionId r, const int pvtRegionIdx, Coeff& coeff) const
+            {
+                const auto& pu = phaseUsage_;
+                const auto& ra = attr_.attributes(r);
+                const double p = ra.pressure;
+                const double T = ra.temperature;
+                const double saltConcentration = ra.saltConcentration;
+
+                const int   iw = Details::PhasePos::water(pu);
+                const int   io = Details::PhasePos::oil  (pu);
+                const int   ig = Details::PhasePos::gas  (pu);
+
+                std::fill(& coeff[0], & coeff[0] + phaseUsage_.num_phases, 0.0);
+
+                if (Details::PhaseUsed::water(pu)) {
+                    // q[w]_r = q[w]_s / bw
+
+                    const double bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, saltConcentration);
+
+                    coeff[iw] = 1.0 / bw;
+                }
+
+                if (Details::PhaseUsed::oil(pu)) {
+                    const double bo = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, 0.0);
+                    coeff[io] += 1.0 / bo;
+                }
+
+                if (Details::PhaseUsed::gas(pu)) {
+                    const double bg = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, 0.0);
+                    coeff[ig] += 1.0 / bg;
+                }
+            }
+
 
             /**
              * Converting surface volume rates to reservoir voidage rates

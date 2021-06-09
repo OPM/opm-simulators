@@ -132,7 +132,7 @@ getGroupInjectionControl(const Group& group,
 
     // Make conversion factors for RESV <-> surface rates.
     std::vector<double> resv_coeff(pu.num_phases, 1.0);
-    baseif_.rateConverter().calcCoeff(0, baseif_.pvtRegionIdx(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
+    baseif_.rateConverter().calcInjCoeff(0, baseif_.pvtRegionIdx(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
     double sales_target = 0;
     if (schedule[baseif_.currentStep()].gconsale().has(group.name())) {
@@ -406,7 +406,7 @@ assembleControlEqInj_(const WellState& well_state,
     }
     case Well::InjectorCMode::RESV: {
         std::vector<double> convert_coeff(baseif_.numPhases(), 1.0);
-        baseif_.rateConverter().calcCoeff(/*fipreg*/ 0, baseif_.pvtRegionIdx(), convert_coeff);
+        baseif_.rateConverter().calcInjCoeff(/*fipreg*/ 0, baseif_.pvtRegionIdx(), convert_coeff);
 
         double coeff = 1.0;
 
