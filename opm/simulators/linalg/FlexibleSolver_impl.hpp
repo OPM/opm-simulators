@@ -152,6 +152,16 @@ namespace Dune
                                                                   tol, // desired residual reduction factor
                                                                   maxiter, // maximum number of iterations
                                                                   verbosity));
+        }  else if (solver_type == "restartedFCG") {
+            int restart = prm.get<int>("restart", 15);
+            linsolver_.reset(new Dune::RestartedFCGSolver<VectorType>(*linearoperator_for_solver_,
+                                                                  *scalarproduct_,
+                                                                  *preconditioner_,
+                                                                  tol, // desired residual reduction factor
+                                                                  restart,//    
+                                                                  maxiter, // maximum number of iterations
+                                                                  verbosity));
+    
         } else if (solver_type == "loopsolver") {
             linsolver_.reset(new Dune::LoopSolver<VectorType>(*linearoperator_for_solver_,
                                                               *scalarproduct_,
@@ -168,6 +178,16 @@ namespace Dune
                                                                         restart, // desired residual reduction factor
                                                                         maxiter, // maximum number of iterations
                                                                         verbosity));
+        } else if (solver_type == "flexiblegmres") {
+            int restart = prm.get<int>("restart", 15);
+            linsolver_.reset(new Dune::RestartedFlexibleGMResSolver<VectorType>(*linearoperator_for_solver_,
+                                                                        *scalarproduct_,
+                                                                        *preconditioner_,
+                                                                        tol,
+                                                                        restart, // desired residual reduction factor
+                                                                        maxiter, // maximum number of iterations
+                                                                        verbosity));
+    
 #if HAVE_SUITESPARSE_UMFPACK
         } else if (solver_type == "umfpack") {
             bool dummy = false;

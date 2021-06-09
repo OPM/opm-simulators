@@ -21,7 +21,17 @@
 
 #ifndef OPM_PRECONDITIONERFACTORY_HEADER
 #define OPM_PRECONDITIONERFACTORY_HEADER
+namespace Dune {
 
+  namespace ILU {
+   
+    inline double& firstMatrixElement (double& A)
+    {
+      return A;
+    }
+
+  }
+}
 #include <opm/simulators/linalg/OwningBlockPreconditioner.hpp>
 #include <opm/simulators/linalg/OwningTwoLevelPreconditioner.hpp>
 #include <opm/simulators/linalg/ParallelOverlappingILU0.hpp>
@@ -196,7 +206,7 @@ private:
 	if(useKamg){
 	    return std::make_shared<
 		Dune::DummyUpdatePreconditioner<
-		    Dune::Amg::KAMG< Operator, Vector, Smoother>
+		    Dune::Amg::KAMG< Operator, Vector, Smoother, Comm, Dune::CompleteFCGSolver<Vector>> //Dune::RestartedFlexibleGMResSolver<Vector>> 
 		    >
 		>(op, crit, sargs,
 		  prm.get<size_t>("max_krylov", 1),

@@ -430,7 +430,8 @@ namespace Opm
                                           detail::IsPositiveFunctor() );
             break;
         default:
-            bilu0_decomposition( ILU );
+            //bilu0_decomposition( ILU );
+            Dune::ILU::blockILU0Decomposition(ILU);
             break;
         }
     }
@@ -1022,7 +1023,8 @@ public:
                     break;
                 default:
                     if (interiorSize_ == A_->N())
-                        bilu0_decomposition( *ILU );
+                        //bilu0_decomposition( *ILU );
+                        Dune::ILU::blockILU0Decomposition( *ILU );
                     else
                         detail::ghost_last_bilu0_decomposition(*ILU, interiorSize_);
                     break;

@@ -39,7 +39,8 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
-#include <dune/common/parallel/mpicollectivecommunication.hh>
+//#include <dune/common/parallel/mpicollectivecommunication.hh>
+#include <dune/common/parallel/mpicommunication.hh>
 #include <dune/common/parallel/mpihelper.hh>
 
 namespace Opm {
