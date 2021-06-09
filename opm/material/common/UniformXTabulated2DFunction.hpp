@@ -39,6 +39,7 @@
 #include <tuple>
 #include <sstream>
 #include <cassert>
+#include <cmath>
 
 namespace Opm {
 /*!
@@ -446,7 +447,7 @@ public:
 
         Scalar y0 = 1e30;
         Scalar y1 = -1e30;
-        int n = 0;
+        size_t n = 0;
         for (int i = 0; i < m; ++ i) {
             y0 = std::min(y0, yMin(i));
             y1 = std::max(y1, yMax(i));
@@ -457,7 +458,7 @@ public:
         n *= 3;
         for (int i = 0; i <= m; ++i) {
             Scalar x = x0 + (x1 - x0)*i/m;
-            for (int j = 0; j <= n; ++j) {
+            for (size_t j = 0; j <= n; ++j) {
                 Scalar y = y0 + (y1 - y0)*j/n;
                 os << x << " " << y << " " << eval(x, y) << "\n";
             }

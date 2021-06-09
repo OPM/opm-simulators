@@ -39,6 +39,10 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #endif
 
+#if HAVE_OPM_COMMON
+#include <opm/common/OpmLog/OpmLog.hpp>
+#endif
+
 namespace Opm {
 
 /*!
