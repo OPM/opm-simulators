@@ -447,7 +447,7 @@ protected:
                 const size_t cartIdx = simulator_.vanguard().cartesianIndex(cartesianCoordinate);
                 const int I = this->cartToGlobal_[cartIdx];
                 Scalar rate = simulator_.problem().wellModel().well(well.name())->volumetricSurfaceRateForConnection(I, tr.phaseIdx_);
-                if (rate < 0) { //Injection rates already reported during assembly
+                if (rate < 0 && well.isProducer()) { //Injection rates already reported during assembly
                     for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
                         this->wellTracerRate_.at(std::make_pair(well.name(),this->tracerNames_[tr.idx_[tIdx]])) += rate*tr.concentration_[tIdx][I];
                     }
