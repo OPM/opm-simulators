@@ -298,10 +298,11 @@ void WellState::init(const std::vector<double>& cellPressures,
     for (int w = 0; w < nw; ++w) {
         // Initialize perfphaserates_ to well
         // rates divided by the number of perforations.
-        const auto& wname = wells_ecl[w].name();
+        const auto& ecl_well = wells_ecl[w];
+        const auto& wname = ecl_well.name();
         const auto& well_info = this->wellMap().at(wname);
         const int num_perf_this_well = well_info[2];
-        const int global_num_perf_this_well = parallel_well_info[w]->communication().sum(num_perf_this_well);
+        const int global_num_perf_this_well = ecl_well.getConnections().num_open();
         auto& perf_press = this->perfPress(w);
 
         auto& phase_rates = this->perfPhaseRates(w);
@@ -435,7 +436,7 @@ void WellState::init(const std::vector<double>& cellPressures,
                         }
                     }
                 } else {
-                    const int global_num_perf_this_well = parallel_well_info[w]->communication().sum(num_perf_this_well);
+                    const int global_num_perf_this_well = well.getConnections().num_open();
                     auto& target_rates = this->perfPhaseRates(newIndex);
                     for (int perf_index = 0; perf_index < num_perf_this_well; perf_index++) {
                         for (int p = 0; p < np; ++p) {
