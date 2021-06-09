@@ -125,7 +125,10 @@ namespace Opm
             comm_.reset( new CommunicationType( simulator_.vanguard().grid().comm() ) );
 #endif
             parameters_.template init<TypeTag>();
-            prm_ = setupPropertyTree<TypeTag>(parameters_);
+            prm_ = setupPropertyTree(parameters_,
+                                     EWOMS_PARAM_IS_SET(TypeTag, int, LinearSolverMaxIter),
+                                     EWOMS_PARAM_IS_SET(TypeTag, int, CprMaxEllIter));
+
 #if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA
             {
                 std::string accelerator_mode = EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode);
@@ -179,7 +182,7 @@ namespace Opm
             if (on_io_rank) {
                 std::ostringstream os;
                 os << "Property tree for linear solver:\n";
-                boost::property_tree::write_json(os, prm_, true);
+                prm_.write_json(os, true);
                 OpmLog::note(os.str());
             }
         }
@@ -420,10 +423,12 @@ namespace Opm
         {
             std::function<Vector()> weightsCalculator;
 
-            auto preconditionerType = prm_.get("preconditioner.type", "cpr");
+            using namespace std::string_literals;
+
+            auto preconditionerType = prm_.get("preconditioner.type"s, "cpr"s);
             if (preconditionerType == "cpr" || preconditionerType == "cprt") {
                 const bool transpose = preconditionerType == "cprt";
-                const auto weightsType = prm_.get("preconditioner.weight_type", "quasiimpes");
+                const auto weightsType = prm_.get("preconditioner.weight_type"s, "quasiimpes"s);
                 const auto pressureIndex = this->prm_.get("preconditioner.pressure_var_index", 1);
                 if (weightsType == "quasiimpes") {
                     // weighs will be created as default in the solver
@@ -511,7 +516,7 @@ namespace Opm
         size_t interiorCellNum_;
 
         FlowLinearSolverParameters parameters_;
-        boost::property_tree::ptree prm_;
+        PropertyTree prm_;
         bool scale_variables_;
 
         std::shared_ptr< CommunicationType > comm_;

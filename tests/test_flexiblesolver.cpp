@@ -30,20 +30,19 @@
 
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
+#include <opm/simulators/linalg/PropertyTree.hpp>
 
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixmarket.hh>
 
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/property_tree/ptree.hpp>
 #include <fstream>
 #include <iostream>
 
 
 template <int bz>
 Dune::BlockVector<Dune::FieldVector<double, bz>>
-testSolver(const boost::property_tree::ptree& prm, const std::string& matrix_filename, const std::string& rhs_filename)
+testSolver(const Opm::PropertyTree& prm, const std::string& matrix_filename, const std::string& rhs_filename)
 {
     using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
     using Vector = Dune::BlockVector<Dune::FieldVector<double, bz>>;
@@ -86,15 +85,8 @@ testSolver(const boost::property_tree::ptree& prm, const std::string& matrix_fil
 
 BOOST_AUTO_TEST_CASE(TestFlexibleSolver)
 {
-    namespace pt = boost::property_tree;
-    pt::ptree prm;
-
     // Read parameters.
-    {
-        std::ifstream file("options_flexiblesolver.json");
-        pt::read_json(file, prm);
-        // pt::write_json(std::cout, prm);
-    }
+    Opm::PropertyTree prm("options_flexiblesolver.json");
 
     // Test with 1x1 block solvers.
     {

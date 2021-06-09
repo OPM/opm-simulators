@@ -21,35 +21,98 @@
 
 #include <opm/simulators/linalg/setupPropertyTree.hpp>
 
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/version.hpp>
+#include <opm/common/utility/FileSystem.hpp>
 
 namespace Opm
 {
 
-boost::property_tree::ptree
+/// Set up a property tree intended for FlexibleSolver by either reading
+/// the tree from a JSON file or creating a tree giving the default solver
+/// and preconditioner. If the latter, the parameters --linear-solver-reduction,
+/// --linear-solver-maxiter and --linear-solver-verbosity are used, but if reading
+/// from file the data in the JSON file will override any other options.
+PropertyTree
+setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters to potentially override.
+                  bool LinearSolverMaxIterSet,
+                  bool CprMaxEllIterSet)
+{
+    std::string conf = p.linsolver_;
+
+    // Get configuration from file.
+    if (conf.size() > 5 && conf.substr(conf.size() - 5, 5) == ".json") { // the ends_with() method is not available until C++20
+#if BOOST_VERSION / 100 % 1000 > 48
+        if ( !filesystem::exists(conf) ) {
+            OPM_THROW(std::invalid_argument, "JSON file " << conf << " does not exist.");
+        }
+        try {
+            return PropertyTree(conf);
+        }
+        catch (...) {
+            OPM_THROW(std::invalid_argument, "Failed reading linear solver configuration from JSON file " << conf);
+        }
+#else
+        OPM_THROW(std::invalid_argument,
+                  "--linear-solver-configuration=file.json not supported with "
+                      << "boost version. Needs version > 1.48.");
+#endif
+    }
+
+    // Use CPR configuration.
+    if ((conf == "cpr") || (conf == "cpr_trueimpes") || (conf == "cpr_quasiimpes")) {
+        if (conf == "cpr") {
+            // Treat "cpr" as short cut for the true IMPES variant.
+            conf = "cpr_trueimpes";
+        }
+        if (!LinearSolverMaxIterSet) {
+            // Use our own default unless it was explicitly overridden by user.
+            p.linear_solver_maxiter_ = 20;
+        }
+        if (!CprMaxEllIterSet) {
+            // Use our own default unless it was explicitly overridden by user.
+            p.cpr_max_ell_iter_ = 1;
+        }
+        return setupCPR(conf, p);
+    }
+
+    if (conf == "amg") {
+        return setupAMG(conf, p);
+    }
+
+    // Use ILU0 configuration.
+    if (conf == "ilu0") {
+        return setupILU(conf, p);
+    }
+
+    // No valid configuration option found.
+    OPM_THROW(std::invalid_argument,
+              conf << " is not a valid setting for --linear-solver-configuration."
+              << " Please use ilu0, cpr, cpr_trueimpes, or cpr_quasiimpes");
+}
+
+PropertyTree
 setupCPR(const std::string& conf, const FlowLinearSolverParameters& p)
 {
-    boost::property_tree::ptree prm;
+    using namespace std::string_literals;
+    PropertyTree prm;
     prm.put("maxiter", p.linear_solver_maxiter_);
     prm.put("tol", p.linear_solver_reduction_);
     prm.put("verbosity", p.linear_solver_verbosity_);
-    prm.put("solver", "bicgstab");
-    prm.put("preconditioner.type", "cpr");
+    prm.put("solver", "bicgstab"s);
+    prm.put("preconditioner.type", "cpr"s);
     if (conf == "cpr_quasiimpes") {
-        prm.put("preconditioner.weight_type", "quasiimpes");
+        prm.put("preconditioner.weight_type", "quasiimpes"s);
     } else {
-        prm.put("preconditioner.weight_type", "trueimpes");
+        prm.put("preconditioner.weight_type", "trueimpes"s);
     }
-    prm.put("preconditioner.finesmoother.type", "ParOverILU0");
+    prm.put("preconditioner.finesmoother.type", "ParOverILU0"s);
     prm.put("preconditioner.finesmoother.relaxation", 1.0);
     prm.put("preconditioner.pressure_var_index", 1);
     prm.put("preconditioner.verbosity", 0);
     prm.put("preconditioner.coarsesolver.maxiter", 1);
     prm.put("preconditioner.coarsesolver.tol", 1e-1);
-    prm.put("preconditioner.coarsesolver.solver", "loopsolver");
+    prm.put("preconditioner.coarsesolver.solver", "loopsolver"s);
     prm.put("preconditioner.coarsesolver.verbosity", 0);
-    prm.put("preconditioner.coarsesolver.preconditioner.type", "amg");
+    prm.put("preconditioner.coarsesolver.preconditioner.type", "amg"s);
     prm.put("preconditioner.coarsesolver.preconditioner.alpha", 0.333333333333);
     prm.put("preconditioner.coarsesolver.preconditioner.relaxation", 1.0);
     prm.put("preconditioner.coarsesolver.preconditioner.iterations", p.cpr_max_ell_iter_);
@@ -57,7 +120,7 @@ setupCPR(const std::string& conf, const FlowLinearSolverParameters& p)
     prm.put("preconditioner.coarsesolver.preconditioner.pre_smooth", 1);
     prm.put("preconditioner.coarsesolver.preconditioner.post_smooth", 1);
     prm.put("preconditioner.coarsesolver.preconditioner.beta", 1e-5);
-    prm.put("preconditioner.coarsesolver.preconditioner.smoother", "ILU0");
+    prm.put("preconditioner.coarsesolver.preconditioner.smoother", "ILU0"s);
     prm.put("preconditioner.coarsesolver.preconditioner.verbosity", 0);
     prm.put("preconditioner.coarsesolver.preconditioner.maxlevel", 15);
     prm.put("preconditioner.coarsesolver.preconditioner.skip_isolated", 0);
@@ -74,15 +137,16 @@ setupCPR(const std::string& conf, const FlowLinearSolverParameters& p)
 }
 
 
-boost::property_tree::ptree
+PropertyTree
 setupAMG([[maybe_unused]] const std::string& conf, const FlowLinearSolverParameters& p)
 {
-    boost::property_tree::ptree prm;
+    using namespace std::string_literals;
+    PropertyTree prm;
     prm.put("tol", p.linear_solver_reduction_);
     prm.put("maxiter", p.linear_solver_maxiter_);
     prm.put("verbosity", p.linear_solver_verbosity_);
-    prm.put("solver", "bicgstab");
-    prm.put("preconditioner.type", "amg");
+    prm.put("solver", "bicgstab"s);
+    prm.put("preconditioner.type", "amg"s);
     prm.put("preconditioner.alpha", 0.333333333333);
     prm.put("preconditioner.relaxation", 1.0);
     prm.put("preconditioner.iterations", 20);
@@ -90,7 +154,7 @@ setupAMG([[maybe_unused]] const std::string& conf, const FlowLinearSolverParamet
     prm.put("preconditioner.pre_smooth", 1);
     prm.put("preconditioner.post_smooth", 1);
     prm.put("preconditioner.beta", 1e-5);
-    prm.put("preconditioner.smoother", "ILU0");
+    prm.put("preconditioner.smoother", "ILU0"s);
     prm.put("preconditioner.verbosity", 0);
     prm.put("preconditioner.maxlevel", 15);
     prm.put("preconditioner.skip_isolated", 0);
@@ -107,15 +171,16 @@ setupAMG([[maybe_unused]] const std::string& conf, const FlowLinearSolverParamet
 }
 
 
-boost::property_tree::ptree
+PropertyTree
 setupILU([[maybe_unused]] const std::string& conf, const FlowLinearSolverParameters& p)
 {
-    boost::property_tree::ptree prm;
+    using namespace std::string_literals;
+    PropertyTree prm;
     prm.put("tol", p.linear_solver_reduction_);
     prm.put("maxiter", p.linear_solver_maxiter_);
     prm.put("verbosity", p.linear_solver_verbosity_);
-    prm.put("solver", "bicgstab");
-    prm.put("preconditioner.type", "ParOverILU0");
+    prm.put("solver", "bicgstab"s);
+    prm.put("preconditioner.type", "ParOverILU0"s);
     prm.put("preconditioner.relaxation", p.ilu_relaxation_);
     prm.put("preconditioner.ilulevel", p.ilu_fillin_level_);
     return prm;
