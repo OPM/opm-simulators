@@ -418,7 +418,7 @@ public:
         Scalar x0 = std::min(xi0, xi1);
         Scalar x1 = std::max(xi0, xi1);
         const int n = numSamples() - 1;
-        for (int i = 0; i <= k; ++i) {
+        for (unsigned i = 0; i <= k; ++i) {
             double x = i*(x1 - x0)/k + x0;
             double y;
             double dy_dx;
