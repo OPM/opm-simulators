@@ -56,6 +56,30 @@ public:
                                  const SummaryState& summaryState,
                                  const double rho,
                                  DeferredLogger& deferred_logger) const;
+    template<class EvalWell>
+    void getGroupInjectionControl(const Group& group,
+                                  const WellState& well_state,
+                                  const GroupState& group_state,
+                                  const Schedule& schedule,
+                                  const SummaryState& summaryState,
+                                  const InjectorType& injectorType,
+                                  const EvalWell& bhp,
+                                  const EvalWell& injection_rate,
+                                  EvalWell& control_eq,
+                                  double efficiencyFactor,
+                                  DeferredLogger& deferred_logger) const;
+
+
+    template<class EvalWell>
+    void getGroupProductionControl(const Group& group,
+                                   const WellState& well_state,
+                                   const GroupState& group_state,
+                                   const Schedule& schedule,
+                                   const SummaryState& summaryState,
+                                   const EvalWell& bhp,
+                                   const std::vector<EvalWell>& rates,
+                                   EvalWell& control_eq,
+                                   double efficiencyFactor) const;
 
     template<class EvalWell, class BhpFromThpFunc>
     void assembleControlEqProd(const WellState& well_state,
@@ -133,55 +157,6 @@ public:
 
 protected:
     WellInterfaceEval(const WellInterfaceFluidSystem<FluidSystem>& baseif);
-
-    template<class EvalWell>
-    void getGroupInjectionControl(const Group& group,
-                                  const WellState& well_state,
-                                  const GroupState& group_state,
-                                  const Schedule& schedule,
-                                  const SummaryState& summaryState,
-                                  const InjectorType& injectorType,
-                                  const EvalWell& bhp,
-                                  const EvalWell& injection_rate,
-                                  EvalWell& control_eq,
-                                  double efficiencyFactor,
-                                  DeferredLogger& deferred_logger) const;
-
-
-    template<class EvalWell>
-    void getGroupProductionControl(const Group& group,
-                                   const WellState& well_state,
-                                   const GroupState& group_state,
-                                   const Schedule& schedule,
-                                   const SummaryState& summaryState,
-                                   const EvalWell& bhp,
-                                   const std::vector<EvalWell>& rates,
-                                   EvalWell& control_eq,
-                                   double efficiencyFactor) const;
-
-    template<class EvalWell>
-    void assembleControlEqProd(const WellState& well_state,
-                               const GroupState& group_state,
-                               const Schedule& schedule,
-                               const SummaryState& summaryState,
-                               const Well::ProductionControls& controls,
-                               const EvalWell& bhp,
-                               const std::vector<EvalWell>& rates, // Always 3 canonical rates.
-                               const EvalWell& bhp_from_thp,
-                               EvalWell& control_eq,
-                               DeferredLogger& deferred_logger) const;
-
-    template<class EvalWell>
-    void assembleControlEqInj_(const WellState& well_state,
-                               const GroupState& group_state,
-                               const Schedule& schedule,
-                               const SummaryState& summaryState,
-                               const Well::InjectionControls& controls,
-                               const EvalWell& bhp,
-                               const EvalWell& injection_rate,
-                               const std::function<EvalWell()>& bhp_from_thp,
-                               EvalWell& control_eq,
-                               DeferredLogger& deferred_logger);
 
     const WellInterfaceFluidSystem<FluidSystem>& baseif_;
 };

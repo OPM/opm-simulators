@@ -29,7 +29,10 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/SICD.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <string>
+#include<dune/istl/matrix.hh>
+#include <dune/istl/preconditioners.hh>
 #include <dune/istl/solvers.hh>
+
 #if HAVE_UMFPACK
 #include <dune/istl/umfpack.hh>
 #endif // HAVE_UMFPACK
