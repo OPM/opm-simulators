@@ -125,7 +125,10 @@ namespace Opm
             comm_.reset( new CommunicationType( simulator_.vanguard().grid().comm() ) );
 #endif
             parameters_.template init<TypeTag>();
-            prm_ = setupPropertyTree<TypeTag>(parameters_);
+            prm_ = setupPropertyTree(parameters_,
+                                     EWOMS_PARAM_IS_SET(TypeTag, int, LinearSolverMaxIter),
+                                     EWOMS_PARAM_IS_SET(TypeTag, int, CprMaxEllIter));
+
 #if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA
             {
                 std::string accelerator_mode = EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode);

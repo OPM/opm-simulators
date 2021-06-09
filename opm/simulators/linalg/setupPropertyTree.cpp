@@ -21,11 +21,78 @@
 
 #include <opm/simulators/linalg/setupPropertyTree.hpp>
 
+#include <opm/common/utility/FileSystem.hpp>
+
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/version.hpp>
 
 namespace Opm
 {
+
+/// Set up a property tree intended for FlexibleSolver by either reading
+/// the tree from a JSON file or creating a tree giving the default solver
+/// and preconditioner. If the latter, the parameters --linear-solver-reduction,
+/// --linear-solver-maxiter and --linear-solver-verbosity are used, but if reading
+/// from file the data in the JSON file will override any other options.
+boost::property_tree::ptree
+setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters to potentially override.
+                  bool LinearSolverMaxIterSet,
+                  bool CprMaxEllIterSet)
+{
+    std::string conf = p.linsolver_;
+
+    // Get configuration from file.
+    if (conf.size() > 5 && conf.substr(conf.size() - 5, 5) == ".json") { // the ends_with() method is not available until C++20
+#if BOOST_VERSION / 100 % 1000 > 48
+        if ( !filesystem::exists(conf) ) {
+            OPM_THROW(std::invalid_argument, "JSON file " << conf << " does not exist.");
+        }
+        try {
+            boost::property_tree::ptree prm;
+            boost::property_tree::read_json(conf, prm);
+            return prm;
+        }
+        catch (...) {
+            OPM_THROW(std::invalid_argument, "Failed reading linear solver configuration from JSON file " << conf);
+        }
+#else
+        OPM_THROW(std::invalid_argument,
+                  "--linear-solver-configuration=file.json not supported with "
+                      << "boost version. Needs version > 1.48.");
+#endif
+    }
+
+    // Use CPR configuration.
+    if ((conf == "cpr") || (conf == "cpr_trueimpes") || (conf == "cpr_quasiimpes")) {
+        if (conf == "cpr") {
+            // Treat "cpr" as short cut for the true IMPES variant.
+            conf = "cpr_trueimpes";
+        }
+        if (!LinearSolverMaxIterSet) {
+            // Use our own default unless it was explicitly overridden by user.
+            p.linear_solver_maxiter_ = 20;
+        }
+        if (!CprMaxEllIterSet) {
+            // Use our own default unless it was explicitly overridden by user.
+            p.cpr_max_ell_iter_ = 1;
+        }
+        return setupCPR(conf, p);
+    }
+
+    if (conf == "amg") {
+        return setupAMG(conf, p);
+    }
+
+    // Use ILU0 configuration.
+    if (conf == "ilu0") {
+        return setupILU(conf, p);
+    }
+
+    // No valid configuration option found.
+    OPM_THROW(std::invalid_argument,
+              conf << " is not a valid setting for --linear-solver-configuration."
+              << " Please use ilu0, cpr, cpr_trueimpes, or cpr_quasiimpes");
+}
 
 boost::property_tree::ptree
 setupCPR(const std::string& conf, const FlowLinearSolverParameters& p)

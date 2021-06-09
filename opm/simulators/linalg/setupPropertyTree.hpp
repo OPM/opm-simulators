@@ -23,19 +23,19 @@
 #include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
 
 #include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
 
 namespace Opm
 {
 
-template<class TypeTag>
-boost::property_tree::ptree setupPropertyTree(FlowLinearSolverParameters p);
+boost::property_tree::ptree setupPropertyTree(FlowLinearSolverParameters p,
+                                              bool LinearSolverMaxIterSet,
+                                              bool CprMaxEllIterSet);
 
 boost::property_tree::ptree setupCPR(const std::string& conf, const FlowLinearSolverParameters& p);
 boost::property_tree::ptree setupAMG(const std::string& conf, const FlowLinearSolverParameters& p);
 boost::property_tree::ptree setupILU(const std::string& conf, const FlowLinearSolverParameters& p);
 
 } // namespace Opm
-
-#include "setupPropertyTree_impl.hpp"
 
 #endif // OPM_SETUPPROPERTYTREE_HEADER_INCLUDED

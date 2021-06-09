@@ -99,7 +99,10 @@ public:
         , interiorCellNum_(detail::numMatrixRowsToUseInSolver(simulator_.vanguard().grid(), ownersFirst_))
     {
         parameters_.template init<TypeTag>();
-        prm_ = setupPropertyTree<TypeTag>(parameters_);
+        prm_ = setupPropertyTree(parameters_,
+                                 EWOMS_PARAM_IS_SET(TypeTag, int, LinearSolverMaxIter),
+                                 EWOMS_PARAM_IS_SET(TypeTag, int, CprMaxEllIter));
+
         extractParallelGridInformationToISTL(simulator_.vanguard().grid(), parallelInformation_);
         // For some reason simulator_.model().elementMapper() is not initialized at this stage
         // Hence const auto& elemMapper = simulator_.model().elementMapper(); does not work.
