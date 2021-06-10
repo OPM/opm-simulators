@@ -264,10 +264,16 @@ protected:
     }
 
     template <class TrRe>
-    void linearizeTracer_(TrRe & tr)
+    void assembleTracerEquations_(TrRe & tr)
     {
         if (tr.numTracer() == 0)
             return;
+
+        // Note that we formulate the equations in terms of a concentration update
+        // (compared to previous time step) and not absolute concentration.
+        // This implies that current concentration (tr.concentration_[][]) contributes
+        // to the rhs both through storrage and flux terms.
+        // Compare also advanceTracerFields(...) below.
 
         (*this->tracerMatrix_) = 0.0;
         for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx)
@@ -412,11 +418,13 @@ protected:
         if (tr.numTracer() == 0)
             return;
 
+        // Note that we solve for a concentration update (compared to previous time step)
+        // Confer also assembleTracerEquations_(...) above.
         std::vector<TracerVector> dx(tr.concentration_);
         for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx)
             dx[tIdx] = 0.0;
 
-        linearizeTracer_(tr);
+        assembleTracerEquations_(tr);
 
         bool converged = this->linearSolveBatchwise_(*this->tracerMatrix_, dx, tr.residual_);
         if (!converged)
@@ -424,6 +432,7 @@ protected:
 
         for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
             tr.concentration_[tIdx] -= dx[tIdx];
+            // Tracer concentrations for restart report
             this->tracerConcentration_[tr.idx_[tIdx]] = tr.concentration_[tIdx];
         }
 
@@ -491,6 +500,14 @@ protected:
 
     Simulator& simulator_;
 
+    // This struct collects tracers of the same type (i.e, transported in same phase).
+    // The idea beeing that, under the assumption of linearity, tracers of same type can
+    // be solved in concert, having a common system matrix but separate right-hand-sides.
+
+    // Since oil or gas tracers appears in dual compositions when VAPOIL respectively DISGAS
+    // is active, the template argument is intended to support future extension to these 
+    // scenarios by supplying an extended vector type.
+ 
     template <typename TV>
     struct TracerBatch {
       std::vector<int> idx_;
