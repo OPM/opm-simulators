@@ -40,7 +40,6 @@
 #include <opm/simulators/wells/WGState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellConnections.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
 
 #include <opm/output/data/Wells.hpp>
