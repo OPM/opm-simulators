@@ -78,7 +78,6 @@ class EclTracerModel : public EclGenericTracerModel<GetPropType<TypeTag, Propert
     using TracerEvaluation = DenseAd::Evaluation<Scalar,1>;
 
     using TracerVector = typename BaseType::TracerVector;
-    using DualTracerVector = typename BaseType::DualTracerVector;
 
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { numPhases = FluidSystem::numPhases };
@@ -96,8 +95,6 @@ public:
         , wat_(TracerBatch<TracerVector>(waterPhaseIdx))
         , oil_(TracerBatch<TracerVector>(oilPhaseIdx))
         , gas_(TracerBatch<TracerVector>(gasPhaseIdx))
-        , oilS_(TracerBatch<DualTracerVector>(oilPhaseIdx))
-        , gasS_(TracerBatch<DualTracerVector>(gasPhaseIdx))
     { }
 
 
@@ -159,7 +156,6 @@ protected:
     // evaluate water storage volume(s) in a single cell
     template <class LhsEval>
     void computeVolume_(LhsEval& freeVolume,
-                        LhsEval& dissolvedVolume,
                         const int tracerPhaseIdx,
                         const ElementContext& elemCtx,
                         unsigned scvIdx,
@@ -180,29 +176,11 @@ protected:
         else
             freeVolume = phaseVolume * variable<LhsEval>(1.0, 0);
 
-        if (FluidSystem::enableDissolvedGas() && tracerPhaseIdx == gasPhaseIdx) {
-            dissolvedVolume =
-                decay<Scalar>(fs.saturation(oilPhaseIdx))
-                *decay<Scalar>(fs.invB(oilPhaseIdx))
-                *decay<Scalar>(fs.Rs())
-                *decay<Scalar>(intQuants.porosity());
-        }
-
-        if (FluidSystem::enableVaporizedOil() && tracerPhaseIdx == oilPhaseIdx) {
-            dissolvedVolume =
-                decay<Scalar>(fs.saturation(gasPhaseIdx))
-                *decay<Scalar>(fs.invB(gasPhaseIdx))
-                *decay<Scalar>(fs.Rv())
-                *decay<Scalar>(intQuants.porosity());
-        }
-
     }
 
     // evaluate the flux(es) over one face
     void computeFlux_(TracerEvaluation & freeFlux,
-                      TracerEvaluation & dissolvedFlux,
                       bool & isUpFree,
-                      bool & isUpDissolved,
                       const int tracerPhaseIdx,
                       const ElementContext& elemCtx,
                       unsigned scvfIdx,
@@ -232,35 +210,6 @@ protected:
             freeFlux = A*v*b*1.0;
             isUpFree = false;
         }
-
-        if (FluidSystem::enableDissolvedGas() && tracerPhaseIdx == gasPhaseIdx) {
-            v = decay<Scalar>(extQuants.volumeFlux(oilPhaseIdx));
-            b = decay<Scalar>(fs.invB(oilPhaseIdx))*decay<Scalar>(fs.Rs());
-            upIdx = extQuants.upstreamIndex(oilPhaseIdx);
-            if (inIdx == upIdx) {
-                dissolvedFlux += A*v*b*variable<TracerEvaluation>(1.0, 0);
-                isUpDissolved = true;
-            }
-            else {
-                dissolvedFlux += A*v*b*1.0;
-                isUpDissolved = false;
-            }
-        }
-
-        if (FluidSystem::enableVaporizedOil() && tracerPhaseIdx == oilPhaseIdx) {
-            v = decay<Scalar>(extQuants.volumeFlux(gasPhaseIdx));
-            b = decay<Scalar>(fs.invB(gasPhaseIdx))*decay<Scalar>(fs.Rv());
-            upIdx = extQuants.upstreamIndex(gasPhaseIdx);
-            if (inIdx == upIdx) {
-                dissolvedFlux += A*v*b*variable<TracerEvaluation>(1.0, 0);
-                isUpDissolved = true;
-            }
-            else {
-                dissolvedFlux += A*v*b*1.0;
-                isUpDissolved = false;
-            }
-        }
-
     }
 
     template <class TrRe>
@@ -279,8 +228,6 @@ protected:
         for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx)
             tr.residual_[tIdx] = 0.0;
 
-        size_t numGridDof =  simulator_.model().numGridDof();
-        //std::vector<double> volumes(numGridDof, 0.0);
         ElementContext elemCtx(simulator_);
         auto elemIt = simulator_.gridView().template begin</*codim=*/0>();
         auto elemEndIt = simulator_.gridView().template end</*codim=*/0>();
@@ -299,7 +246,6 @@ protected:
 
             size_t I = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timIdx=*/0);
             size_t I1 = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timIdx=*/1);
-            //volumes[I] = scvVolume;
 
             Scalar storageOfTimeIndex1[tr.numTracer()];
             if (elemCtx.enableStorageCache()) {
@@ -308,15 +254,15 @@ protected:
                 }
             }
             else {
-                Scalar fVolume1, sVolume1;
-                computeVolume_(fVolume1, sVolume1, tr.phaseIdx_, elemCtx, 0, /*timIdx=*/1);
+                Scalar fVolume1;
+                computeVolume_(fVolume1, tr.phaseIdx_, elemCtx, 0, /*timIdx=*/1);
                 for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
                     storageOfTimeIndex1[tIdx] = fVolume1*tr.concentrationInitial_[tIdx][I1];
                 }
             }
 
-            TracerEvaluation fVolume, sVolume;
-            computeVolume_(fVolume, sVolume, tr.phaseIdx_, elemCtx, 0, /*timIdx=*/0);
+            TracerEvaluation fVolume;
+            computeVolume_(fVolume, tr.phaseIdx_, elemCtx, 0, /*timIdx=*/0);
             for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
                 Scalar storageOfTimeIndex0 = fVolume.value()*tr.concentration_[tIdx][I];
                 Scalar localStorage = (storageOfTimeIndex0 - storageOfTimeIndex1[tIdx]) * scvVolume/dt;
@@ -326,12 +272,12 @@ protected:
 
             size_t numInteriorFaces = elemCtx.numInteriorFaces(/*timIdx=*/0);
             for (unsigned scvfIdx = 0; scvfIdx < numInteriorFaces; scvfIdx++) {
-                TracerEvaluation flux, sFlux;
+                TracerEvaluation flux;
                 const auto& face = elemCtx.stencil(0).interiorFace(scvfIdx);
                 unsigned j = face.exteriorIndex();
                 unsigned J = elemCtx.globalSpaceIndex(/*dofIdx=*/ j, /*timIdx=*/0);
-                bool isUpF, isUpS;
-                computeFlux_(flux, sFlux, isUpF, isUpS, tr.phaseIdx_, elemCtx, scvfIdx, 0);
+                bool isUpF;
+                computeFlux_(flux, isUpF, tr.phaseIdx_, elemCtx, scvfIdx, 0);
                 int globalUpIdx = isUpF ? I : J;
                 for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
                     tr.residual_[tIdx][I][0] += flux.value()*tr.concentration_[tIdx][globalUpIdx]; //residual + flux
@@ -404,8 +350,8 @@ protected:
         for (; elemIt != elemEndIt; ++ elemIt) {
             elemCtx.updateAll(*elemIt);
             int globalDofIdx = elemCtx.globalSpaceIndex(0, /*timIdx=*/0);
-            Scalar fVolume, sVolume;
-            computeVolume_(fVolume, sVolume, tr.phaseIdx_, elemCtx, 0, /*timIdx=*/0);
+            Scalar fVolume;
+            computeVolume_(fVolume, tr.phaseIdx_, elemCtx, 0, /*timIdx=*/0);
             for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
                 tr.storageOfTimeIndex1_[tIdx][globalDofIdx] = fVolume*tr.concentrationInitial_[tIdx][globalDofIdx];
             }
@@ -467,7 +413,7 @@ protected:
 
     void prepareTracerBatches()
     {
-        for (int tracerIdx=0; tracerIdx<this->tracerPhaseIdx_.size(); ++tracerIdx) {
+        for (size_t tracerIdx=0; tracerIdx<this->tracerPhaseIdx_.size(); ++tracerIdx) {
             if (this->tracerPhaseIdx_[tracerIdx] == FluidSystem::waterPhaseIdx) {
                 if (! FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)){
                     throw std::runtime_error("Water tracer specified for non-water fluid system:" + this->tracerNames_[tracerIdx]);
@@ -519,7 +465,7 @@ protected:
 
       TracerBatch(int phaseIdx) : phaseIdx_(phaseIdx) {}
 
-      const int numTracer() const {return idx_.size(); }
+      int numTracer() const {return idx_.size(); }
 
       void addTracer(const int idx, const TV & concentration)
       {
@@ -535,9 +481,6 @@ protected:
     TracerBatch<TracerVector> wat_;
     TracerBatch<TracerVector> oil_;
     TracerBatch<TracerVector> gas_;
-
-    TracerBatch<DualTracerVector> oilS_;
-    TracerBatch<DualTracerVector> gasS_;
 };
 
 } // namespace Opm

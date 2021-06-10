@@ -50,8 +50,6 @@ class EclGenericTracerModel {
 public:
     using TracerMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, 1, 1>>;
     using TracerVector = Dune::BlockVector<Dune::FieldVector<Scalar,1>>;
-    using DualTracerMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, 2, 2>>;
-    using DualTracerVector = Dune::BlockVector<Dune::FieldVector<Scalar,2>>;
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
 
     /*!
