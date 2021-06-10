@@ -1092,7 +1092,7 @@ if(MPI_FOUND)
                                        FILENAME ACTIONX_M1
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol_parallel}
-                                       REL_TOL ${rel_tol_parallel}
+                                       REL_TOL ${coarse_rel_tol_parallel}
                                        DIR udq_actionx
                                        TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
 endif()
