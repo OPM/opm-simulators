@@ -1236,6 +1236,7 @@ namespace WellGroupHelpers
                                             WellState& wellState,
                                             const GroupState& group_state,
                                             const Comm& comm,
+                                            const bool update_guiderate,
                                             GuideRate* guideRate,
                                             std::vector<double>& pot)
     {
@@ -1245,7 +1246,7 @@ namespace WellGroupHelpers
             const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
 
             // Note that group effiency factors for groupTmp are applied in updateGuideRateForGroups
-            updateGuideRateForProductionGroups(groupTmp, schedule, pu, reportStepIdx, simTime, wellState, group_state, comm, guideRate, thisPot);
+            updateGuideRateForProductionGroups(groupTmp, schedule, pu, reportStepIdx, simTime, wellState, group_state, comm, update_guiderate, guideRate, thisPot);
 
             // accumulate group contribution from sub group unconditionally
             const auto currentGroupControl = group_state.production_control(groupName);
@@ -1307,7 +1308,7 @@ namespace WellGroupHelpers
         oilPot = comm.sum(oilPot);
         gasPot = comm.sum(gasPot);
         waterPot = comm.sum(waterPot);
-        guideRate->compute(group.name(), reportStepIdx, simTime, oilPot, gasPot, waterPot);
+        guideRate->compute(group.name(), reportStepIdx, simTime, oilPot, gasPot, waterPot, update_guiderate);
     }
 
     template <class Comm>
@@ -1359,6 +1360,7 @@ namespace WellGroupHelpers
                                                               WellState& wellState, \
                                                               const GroupState& group_state, \
                                                               const Dune::CollectiveCommunication<__VA_ARGS__>& comm, \
+                                                              const bool update_guiderate, \
                                                               GuideRate* guideRate, \
                                                               std::vector<double>& pot); \
     template \
