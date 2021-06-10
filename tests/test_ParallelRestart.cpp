@@ -70,7 +70,6 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/RFTConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/ScheduleTypes.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Tuning.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQActive.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQAssign.hpp>
@@ -616,7 +615,6 @@ TEST_FOR_TYPE(TableContainer)
 TEST_FOR_TYPE(TableManager)
 TEST_FOR_TYPE(TableSchema)
 TEST_FOR_TYPE(ThresholdPressure)
-TEST_FOR_TYPE(TimeMap)
 TEST_FOR_TYPE(TracerConfig)
 TEST_FOR_TYPE(TransMult)
 TEST_FOR_TYPE(Tuning)
