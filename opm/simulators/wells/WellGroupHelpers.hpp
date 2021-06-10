@@ -109,6 +109,7 @@ namespace WellGroupHelpers
                                             WellState& wellState,
                                             const GroupState& group_state,
                                             const Comm& comm,
+                                            const bool update_guiderate,
                                             GuideRate* guideRate,
                                             std::vector<double>& pot);
 

@@ -337,9 +337,10 @@ namespace Opm {
         const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
         // why updating the wells the last, should not be the other way?
         // TODO: this function should consider parallel situation
-        const bool update_guiderate = this->guideRate_->timeToUpdate(simulationTime, guideRateConfig.model().update_delay());
-        std::cout << " current time is " << simulationTime/86400. << " TIME to update? " << update_guiderate << std::endl;
-        WellGroupHelpers::updateGuideRateForProductionGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, this->wellState(), this->groupState(), comm, guideRate_.get(), pot);
+        const bool update_guiderate = guideRateConfig.has_model() &&
+                this->guideRate_->timeToUpdate(simulationTime, guideRateConfig.model().update_delay());
+        // std::cout << " current time is " << simulationTime/86400. << " TIME to update? " << update_guiderate << std::endl;
+        WellGroupHelpers::updateGuideRateForProductionGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, this->wellState(), this->groupState(), comm, update_guiderate, guideRate_.get(), pot);
         WellGroupHelpers::updateGuideRatesForInjectionGroups(fieldGroup, schedule(), summaryState, phase_usage_, reportStepIdx, this->wellState(), this->groupState(), guideRate_.get(), local_deferredLogger);
         // counting all the wells, that pick the one updated earliest, to decide whether
         WellGroupHelpers::updateGuideRatesForWells(schedule(), phase_usage_, reportStepIdx, simulationTime, this->wellState(), comm, guideRate_.get(), update_guiderate);
