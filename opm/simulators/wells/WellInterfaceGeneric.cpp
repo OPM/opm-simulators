@@ -29,7 +29,6 @@
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/wells/WellState.hpp>
-
 #include <cassert>
 #include <cmath>
 #include <cstddef>

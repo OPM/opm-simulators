@@ -118,6 +118,7 @@ namespace Opm
 
         /// updating the well state based the current control mode
         virtual void updateWellStateWithTarget(const Simulator& ebos_simulator,
+                                               const GroupState& group_state,
                                                WellState& well_state,
                                                DeferredLogger& deferred_logger) const override;
 

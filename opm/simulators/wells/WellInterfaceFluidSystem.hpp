@@ -145,6 +145,24 @@ protected:
                                      WellTestState& well_test_state,
                                      DeferredLogger& deferred_logger) const;
 
+    std::optional<double>
+    getGroupInjectionTargetRate(const Group& group,
+                                const WellState& well_state,
+                                const GroupState& group_state,
+                                const Schedule& schedule,
+                                const SummaryState& summaryState,
+                                const InjectorType& injectorType,
+                                double efficiencyFactor,
+                                DeferredLogger& deferred_logger) const;
+
+    double
+    getGroupProductionTargetRate(const Group& group,
+                                 const WellState& well_state,
+                                 const GroupState& group_state,
+                                 const Schedule& schedule,
+                                 const SummaryState& summaryState,
+                                 double efficiencyFactor) const;
+
     // For the conversion between the surface volume rate and reservoir voidage rate
     const RateConverterType& rateConverter_;
 

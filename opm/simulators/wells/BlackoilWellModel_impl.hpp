@@ -338,7 +338,7 @@ namespace Opm {
                 const bool event = report_step_starts_ && events.hasEvent(well->name(), effective_events_mask);
                 if (event) {
                     try {
-                        well->updateWellStateWithTarget(ebosSimulator_, this->wellState(), local_deferredLogger);
+                        well->updateWellStateWithTarget(ebosSimulator_, this->groupState(), this->wellState(), local_deferredLogger);
                         well->calculateExplicitQuantities(ebosSimulator_, this->wellState(), local_deferredLogger);
                         well->solveWellEquation(ebosSimulator_, this->wellState(), this->groupState(), local_deferredLogger);
                     } catch (const std::exception& e) {
@@ -1415,7 +1415,7 @@ namespace Opm {
 
                 auto& events = this->wellState().events(well->indexOfWell());
                 if (events.hasEvent(WellState::event_mask)) {
-                    well->updateWellStateWithTarget(ebosSimulator_, this->wellState(), deferred_logger);
+                    well->updateWellStateWithTarget(ebosSimulator_, this->groupState(), this->wellState(), deferred_logger);
                     // There is no new well control change input within a report step,
                     // so next time step, the well does not consider to have effective events anymore.
                     events.clearEvent(WellState::event_mask);

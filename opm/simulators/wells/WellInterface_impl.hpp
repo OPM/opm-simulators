@@ -200,7 +200,7 @@ namespace Opm
                ss << " on rank " << cc.rank();
             }
             deferred_logger.info(ss.str());
-            updateWellStateWithTarget(ebos_simulator, well_state, deferred_logger);
+            updateWellStateWithTarget(ebos_simulator, group_state, well_state, deferred_logger);
             updatePrimaryVariables(well_state, deferred_logger);
         }
 
@@ -246,7 +246,7 @@ namespace Opm
 
         WellState well_state_copy = well_state;
 
-        updateWellStateWithTarget(simulator, well_state_copy, deferred_logger);
+        updateWellStateWithTarget(simulator, group_state, well_state_copy, deferred_logger);
         calculateExplicitQuantities(simulator, well_state_copy, deferred_logger);
         updatePrimaryVariables(well_state_copy, deferred_logger);
         initPrimaryVariablesEvaluation();
@@ -470,7 +470,7 @@ namespace Opm
             return;
         }
 
-        updateWellStateWithTarget(ebos_simulator, well_state_copy, deferred_logger);
+        updateWellStateWithTarget(ebos_simulator, group_state, well_state_copy, deferred_logger);
 
         calculateExplicitQuantities(ebos_simulator, well_state_copy, deferred_logger);
 
@@ -567,6 +567,7 @@ namespace Opm
     void
     WellInterface<TypeTag>::
     updateWellStateWithTarget(const Simulator& ebos_simulator,
+                              const GroupState& group_state,
                               WellState& well_state,
                               DeferredLogger& deferred_logger) const
     {
@@ -577,6 +578,7 @@ namespace Opm
         const auto& pu = this->phaseUsage();
         const int np = well_state.numPhases();
         const auto& summaryState = ebos_simulator.vanguard().summaryState();
+        const auto& schedule = ebos_simulator.vanguard().schedule();
 
         if (this->wellIsStopped()) {
             for (int p = 0; p<np; ++p) {
@@ -669,7 +671,20 @@ namespace Opm
             }
             case Well::InjectorCMode::GRUP:
             {
-                //do nothing at the moment
+                assert(well.isAvailableForGroupControl());
+                const auto& group = schedule.getGroup(well.groupName(), this->currentStep());
+                const double efficiencyFactor = well.getEfficiencyFactor();
+                std::optional<double> target =
+                        this->getGroupInjectionTargetRate(group,
+                                                          well_state,
+                                                          group_state,
+                                                          schedule,
+                                                          summaryState,
+                                                          injectorType,
+                                                          efficiencyFactor,
+                                                          deferred_logger);
+                if (target)
+                    well_state.wellRates(well_index)[phasePos] = *target;
                 break;
             }
             case Well::InjectorCMode::CMODE_UNDEFINED:
@@ -862,7 +877,22 @@ namespace Opm
             }
             case Well::ProducerCMode::GRUP:
             {
-                //do nothing at the moment
+                assert(well.isAvailableForGroupControl());
+                const auto& group = schedule.getGroup(well.groupName(), this->currentStep());
+                const double efficiencyFactor = well.getEfficiencyFactor();
+                double scale = this->getGroupProductionTargetRate(group,
+                                                          well_state,
+                                                          group_state,
+                                                          schedule,
+                                                          summaryState,
+                                                          efficiencyFactor);
+
+                // we don't want to scale with zero and get zero rates.
+                if (scale > 0) {
+                    for (int p = 0; p<np; ++p) {
+                        well_state.wellRates(well_index)[p] *= scale;
+                    }
+                }
                 break;
             }
             case Well::ProducerCMode::CMODE_UNDEFINED:
