@@ -171,9 +171,6 @@ namespace Opm
                                     double* connII,
                                     DeferredLogger& deferred_logger) const;
 
-        virtual bool useInnerIterations() const override {
-            return param_.use_inner_iterations_ms_wells_;
-        }
     protected:
         int number_segments_;
 

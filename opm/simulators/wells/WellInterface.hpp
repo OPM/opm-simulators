@@ -271,8 +271,6 @@ public:
                            const GroupState& group_state,
                            DeferredLogger& deferred_logger);
 
-    virtual bool useInnerIterations() const = 0;
-
 protected:
 
     // simulation parameters
