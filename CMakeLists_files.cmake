@@ -67,6 +67,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/MultisegmentWellEval.cpp
   opm/simulators/wells/MultisegmentWellGeneric.cpp
   opm/simulators/wells/ParallelWellInfo.cpp
+  opm/simulators/wells/PerfData.cpp
   opm/simulators/wells/SegmentState.cpp
   opm/simulators/wells/StandardWellEval.cpp
   opm/simulators/wells/StandardWellGeneric.cpp
@@ -286,6 +287,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/utils/ParallelEclipseState.hpp
   opm/simulators/utils/ParallelRestart.hpp
   opm/simulators/utils/PropsCentroidsDataHandle.hpp
+  opm/simulators/wells/PerfData.hpp
   opm/simulators/wells/PerforationData.hpp
   opm/simulators/wells/RateConverter.hpp
   opm/simulators/utils/readDeck.hpp

@@ -27,6 +27,7 @@
 #include <opm/simulators/wells/WellContainer.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
+#include <opm/simulators/wells/PerfData.hpp>
 #include <opm/output/data/Wells.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
@@ -99,16 +100,6 @@ public:
                 const std::vector<std::vector<PerforationData>>& well_perf_data,
                 const SummaryState& summary_state);
 
-    /// One rate per phase and well connection.
-
-    std::vector<double>& perfPhaseRates(std::size_t well_index) {
-        return this->perfphaserates_[well_index];
-    }
-
-    const std::vector<double>& perfPhaseRates(std::size_t well_index) const {
-        return this->perfphaserates_[well_index];
-    }
-
     /// One current control per injecting well.
     Well::InjectorCMode currentInjectionControl(std::size_t well_index) const { return current_injection_controls_[well_index]; }
     void currentInjectionControl(std::size_t well_index, Well::InjectorCMode cmode) { current_injection_controls_[well_index] = cmode; }
@@ -153,38 +144,11 @@ public:
         return this->events_[well_index];
     }
 
-    /// One rate pr well connection.
-    std::vector<double>& perfRateSolvent(std::size_t well_index) {
-        return this->perfRateSolvent_[well_index];
-    }
-
-    const std::vector<double>& perfRateSolvent(std::size_t well_index) const {
-        return this->perfRateSolvent_[well_index];
-    }
-
     /// One rate pr well
     double solventWellRate(const int w) const;
 
-    /// One rate pr well connection.
-    std::vector<double>& perfRatePolymer(std::size_t well_index) {
-        return this->perfRatePolymer_[well_index];
-    }
-
-    const std::vector<double>& perfRatePolymer(std::size_t well_index) const {
-        return this->perfRatePolymer_[well_index];
-    }
-
     /// One rate pr well
     double polymerWellRate(const int w) const;
-
-    /// One rate pr well connection.
-    std::vector<double>& perfRateBrine(std::size_t well_index) {
-        return this->perfRateBrine_[well_index];
-    }
-
-    const std::vector<double>& perfRateBrine(std::size_t well_index) const {
-        return this->perfRateBrine_[well_index];
-    }
 
     /// One rate pr well
     double brineWellRate(const int w) const;
@@ -238,45 +202,12 @@ public:
         return this->productivity_index_[well_index];
     }
 
-    std::vector<double>& connectionProductivityIndex(std::size_t well_index) {
-        return this->conn_productivity_index_[well_index];
-    }
-
-    const std::vector<double>& connectionProductivityIndex(std::size_t well_index) const {
-        return this->conn_productivity_index_[well_index];
-    }
-
-
     std::vector<double>& wellPotentials(std::size_t well_index) {
         return this->well_potentials_[well_index];
     }
 
     const std::vector<double>& wellPotentials(std::size_t well_index) const {
         return this->well_potentials_[well_index];
-    }
-
-    std::vector<double>& perfThroughput(std::size_t well_index) {
-        return perf_water_throughput_[well_index];
-    }
-
-    const std::vector<double>& perfThroughput(std::size_t well_index) const {
-        return perf_water_throughput_[well_index];
-    }
-
-    std::vector<double>& perfSkinPressure(std::size_t well_index) {
-        return perf_skin_pressure_[well_index];
-    }
-
-    const std::vector<double>& perfSkinPressure(std::size_t well_index) const {
-        return perf_skin_pressure_[well_index];
-    }
-
-    std::vector<double>& perfWaterVelocity(std::size_t well_index) {
-        return perf_water_velocity_[well_index];
-    }
-
-    const std::vector<double>& perfWaterVelocity(std::size_t well_index) const {
-        return perf_water_velocity_[well_index];
     }
 
     template<class Comm>
@@ -397,21 +328,23 @@ public:
     std::vector<double>& wellRates(std::size_t well_index) { return wellrates_[well_index]; }
     const std::vector<double>& wellRates(std::size_t well_index) const { return wellrates_[well_index]; }
 
-    /// One rate per well connection.
-    std::vector<double>& perfRates(std::size_t well_index) { return this->perfrates_[well_index]; }
-    const std::vector<double>& perfRates(std::size_t well_index) const { return this->perfrates_[well_index]; }
-    std::vector<double>& perfRates(const std::string& wname) { return this->perfrates_[wname]; }
-    const std::vector<double>& perfRates(const std::string& wname) const { return this->perfrates_[wname]; }
+    std::size_t numPerf(std::size_t well_index) const { return this->perfdata[well_index].size(); }
 
-    /// One pressure per well connection.
-    std::vector<double>& perfPress(std::size_t well_index) { return perfpress_[well_index]; }
-    const std::vector<double>& perfPress(std::size_t well_index) const { return perfpress_[well_index]; }
-    std::vector<double>& perfPress(const std::string& wname) { return perfpress_[wname]; }
-    const std::vector<double>& perfPress(const std::string& wname) const { return perfpress_[wname]; }
+    PerfData& perfData(const std::string& wname) {
+        return this->perfdata[wname];
+    }
 
+    const PerfData& perfData(const std::string& wname) const {
+        return this->perfdata[wname];
+    }
 
-    std::size_t numPerf(std::size_t well_index) const { return this->perfpress_[well_index].size(); }
+    PerfData& perfData(std::size_t well_index) {
+        return this->perfdata[well_index];
+    }
 
+    const PerfData& perfData(std::size_t well_index) const {
+        return this->perfdata[well_index];
+    }
 
 private:
     WellMapType wellMap_;
@@ -430,10 +363,8 @@ private:
     WellContainer<double> temperature_;
     WellContainer<std::vector<double>> wellrates_;
     PhaseUsage phase_usage_;
-    WellContainer<std::vector<double>> perfrates_;
-    WellContainer<std::vector<double>> perfpress_;
+    WellContainer<PerfData> perfdata;
 
-    WellContainer<std::vector<double>> perfphaserates_;
     WellContainer<int> is_producer_; // Size equal to number of local wells.
 
     // vector with size number of wells +1.
@@ -446,26 +377,6 @@ private:
     // bool in the value pair is whether the current process owns the well or
     // not.
     std::map<std::string, std::pair<bool, std::vector<double>>> well_rates;
-
-
-    WellContainer<std::vector<double>> perfRateSolvent_;
-
-    // only for output
-    WellContainer<std::vector<double>> perfRatePolymer_;
-    WellContainer<std::vector<double>> perfRateBrine_;
-
-    // it is the throughput of water flow through the perforations
-    // it is used as a measure of formation damage around well-bore due to particle deposition
-    // it will only be used for injectors to check the injectivity
-    WellContainer<std::vector<double>> perf_water_throughput_;
-
-    // skin pressure of peforation
-    // it will only be used for injectors to check the injectivity
-    WellContainer<std::vector<double>> perf_skin_pressure_;
-
-    // it will only be used for injectors to check the injectivity
-    // water velocity of perforation
-    WellContainer<std::vector<double>> perf_water_velocity_;
 
     // phase rates under reservoir condition for wells
     // or voidage phase rates
@@ -488,9 +399,6 @@ private:
 
     // Productivity Index
     WellContainer<std::vector<double>> productivity_index_;
-
-    // Connection-level Productivity Index
-    WellContainer<std::vector<double>> conn_productivity_index_;
 
     // Well potentials
     WellContainer<std::vector<double>> well_potentials_;

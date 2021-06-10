@@ -188,13 +188,14 @@ loadRestartData(const data::Wells& rst_wells,
             well_state.wellRates(well_index)[i] = rst_well.rates.get(phs[i]);
         }
 
-        auto& perf_pressure = well_state.perfPress(well_index);
-        auto& perf_rates = well_state.perfRates(well_index);
-        auto& perf_phase_rates = well_state.perfPhaseRates(well_index);
-        const auto& perf_data = this->well_perf_data_[well_index];
+        auto& perf_data = well_state.perfData(well_index);
+        auto& perf_pressure = perf_data.pressure;
+        auto& perf_rates = perf_data.rates;
+        auto& perf_phase_rates = perf_data.phase_rates;
+        const auto& old_perf_data = this->well_perf_data_[well_index];
 
-        for (std::size_t perf_index = 0; perf_index < perf_data.size(); perf_index++) {
-            const auto& pd = perf_data[perf_index];
+        for (std::size_t perf_index = 0; perf_index < old_perf_data.size(); perf_index++) {
+            const auto& pd = old_perf_data[perf_index];
             const auto& rst_connection = rst_well.connections[pd.ecl_index];
             perf_pressure[perf_index] = rst_connection.pressure;
             perf_rates[perf_index] = rst_connection.reservoir_rate;

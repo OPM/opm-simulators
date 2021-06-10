@@ -844,7 +844,8 @@ checkMaxRatioLimitCompletions(const WellState& well_state,
     double max_ratio_completion = 0;
     const int np = number_of_phases_;
 
-    const auto& perf_phase_rates = well_state.perfPhaseRates(this->index_of_well_);
+    const auto& perf_data = well_state.perfData(this->index_of_well_);
+    const auto& perf_phase_rates = perf_data.phase_rates;
     // look for the worst_offending_completion
     for (const auto& completion : completions_) {
         std::vector<double> completion_rates(np, 0.0);

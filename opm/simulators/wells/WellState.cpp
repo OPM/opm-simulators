@@ -40,15 +40,7 @@ void WellState::base_init(const std::vector<double>& cellPressures,
 {
     // clear old name mapping
     this->wellMap_.clear();
-    this->perfpress_.clear();
-    this->perf_skin_pressure_.clear();
-    this->perf_water_throughput_.clear();
-    this->perf_water_velocity_.clear();
-    this->perfphaserates_.clear();
-    this->perfrates_.clear();
-    this->perfRateBrine_.clear();
-    this->perfRateSolvent_.clear();
-    this->perfRatePolymer_.clear();
+    this->perfdata.clear();
     this->status_.clear();
     this->well_perf_data_.clear();
     this->parallel_well_info_.clear();
@@ -59,7 +51,6 @@ void WellState::base_init(const std::vector<double>& cellPressures,
     this->segment_state.clear();
     this->well_potentials_.clear();
     this->productivity_index_.clear();
-    this->conn_productivity_index_.clear();
     {
         // const int nw = wells->number_of_wells;
         const int nw = wells_ecl.size();
@@ -109,19 +100,10 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     this->well_potentials_.add(well.name(), std::vector<double>(np, 0));
     const int num_perf_this_well = well_info->communication().sum(well_perf_data_[w].size());
     this->segment_state.add(well.name(), SegmentState{});
-    this->perfpress_.add(well.name(), std::vector<double>(num_perf_this_well, -1e100));
-    this->perfrates_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
-    this->perfphaserates_.add(well.name(), std::vector<double>(np*num_perf_this_well, 0));
-    this->perf_skin_pressure_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
-    this->perf_water_velocity_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
-    this->perf_water_throughput_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
-    this->perfRatePolymer_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
-    this->perfRateSolvent_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
-    this->perfRateBrine_.add(well.name(), std::vector<double>(num_perf_this_well, 0));
+    this->perfdata.add(well.name(), PerfData{static_cast<std::size_t>(num_perf_this_well), this->phase_usage_});
     this->bhp_.add(well.name(), 0.0);
     this->thp_.add(well.name(), 0.0);
     this->productivity_index_.add(well.name(), std::vector<double>(np, 0));
-    this->conn_productivity_index_.add(well.name(), std::vector<double>(num_perf_this_well * np, 0));
     if ( well.isInjector() )
         this->temperature_.add(well.name(), well.injectionControls(summary_state).temperature);
     else
@@ -303,17 +285,15 @@ void WellState::init(const std::vector<double>& cellPressures,
         const auto& well_info = this->wellMap().at(wname);
         const int num_perf_this_well = well_info[2];
         const int global_num_perf_this_well = ecl_well.getConnections().num_open();
-        auto& perf_press = this->perfPress(w);
-
-        auto& phase_rates = this->perfPhaseRates(w);
+        auto& perf_data = this->perfData(w);
 
         for (int perf = 0; perf < num_perf_this_well; ++perf) {
             if (wells_ecl[w].getStatus() == Well::Status::OPEN) {
                 for (int p = 0; p < this->numPhases(); ++p) {
-                    phase_rates[this->numPhases()*perf + p] = wellRates(w)[p] / double(global_num_perf_this_well);
+                    perf_data.phase_rates[this->numPhases()*perf + p] = wellRates(w)[p] / double(global_num_perf_this_well);
                 }
             }
-            perf_press[perf] = cellPressures[well_perf_data[w][perf].cell_index];
+            perf_data.pressure[perf] = cellPressures[well_perf_data[w][perf].cell_index];
         }
 
         this->well_reservoir_rates_.add(wname, std::vector<double>(np, 0));
@@ -428,16 +408,13 @@ void WellState::init(const std::vector<double>& cellPressures,
                 // number of perforations.
                 if (global_num_perf_same)
                 {
-                    const auto& src_rates = prevState->perfPhaseRates(oldIndex);
-                    auto& target_rates = this->perfPhaseRates(newIndex);
-                    for (int perf_index = 0; perf_index < num_perf_this_well; perf_index++) {
-                        for (int p = 0; p < np; p++) {
-                            target_rates[perf_index*np + p] = src_rates[perf_index*np + p];
-                        }
-                    }
+                    auto& perf_data = this->perfData(w);
+                    const auto& prev_perf_data = prevState->perfData(w);
+                    perf_data.try_assign( prev_perf_data );
                 } else {
                     const int global_num_perf_this_well = well.getConnections().num_open();
-                    auto& target_rates = this->perfPhaseRates(newIndex);
+                    auto& perf_data = this->perfData(w);
+                    auto& target_rates = perf_data.phase_rates;
                     for (int perf_index = 0; perf_index < num_perf_this_well; perf_index++) {
                         for (int p = 0; p < np; ++p) {
                             target_rates[perf_index*np + p] = wellRates(w)[p] / double(global_num_perf_this_well);
@@ -445,40 +422,7 @@ void WellState::init(const std::vector<double>& cellPressures,
                     }
                 }
 
-                // perfPressures
-                if (global_num_perf_same)
-                {
-                    auto& target_press = perfPress(w);
-                    const auto& src_press = prevState->perfPress(well.name());
-                    for (int perf = 0; perf < num_perf_this_well; ++perf)
-                    {
-                        target_press[perf] = src_press[perf];
-                    }
-                }
-
-                // perfSolventRates
-                if (pu.has_solvent) {
-                    if (global_num_perf_same)
-                    {
-                        this->perfRateSolvent_.copy_welldata(prevState->perfRateSolvent_, wname);
-                    }
-                }
-
-                // polymer injectivity related
-                //
-                // here we did not consider the case that we close
-                // some perforation during the running and also,
-                // wells can be shut and re-opened
-                if (pu.has_polymermw) {
-                    if (global_num_perf_same)
-                    {
-                        this->perf_water_velocity_.copy_welldata(prevState->perf_water_velocity_, wname);
-                        this->perf_skin_pressure_.copy_welldata(prevState->perf_skin_pressure_, wname);
-                        this->perf_water_throughput_.copy_welldata(prevState->perf_water_throughput_, wname);
-                    }
-                }
-
-                    // Productivity index.
+                // Productivity index.
                 this->productivity_index_.copy_welldata( prevState->productivity_index_, wname );
             }
 
@@ -707,9 +651,9 @@ void WellState::reportConnections(data::Well& well,
     const auto& pd = this->well_perf_data_[well_index];
     const int num_perf_well = pd.size();
     well.connections.resize(num_perf_well);
-
-    const auto& perf_rates = this->perfRates(well_index);
-    const auto& perf_pressure = this->perfPress(well_index);
+    const auto& perf_data = this->perfData(well_index);
+    const auto& perf_rates = perf_data.rates;
+    const auto& perf_pressure = perf_data.pressure;
     for( int i = 0; i < num_perf_well; ++i ) {
         const auto active_index = this->well_perf_data_[well_index][i].cell_index;
         auto& connection = well.connections[ i ];
@@ -740,23 +684,23 @@ void WellState::reportConnections(data::Well& well,
         pi .at( pu.phase_pos[Gas] ) = rt::productivity_index_gas;
     }
     for( auto& comp : well.connections) {
-        const auto * rates = &this->perfPhaseRates(well_index)[np*local_comp_index];
-        const auto& connPI  = this->connectionProductivityIndex(well_index);
+        const auto * rates = &perf_data.phase_rates[np*local_comp_index];
+        const auto& connPI  = perf_data.prod_index;
 
         for( int i = 0; i < np; ++i ) {
             comp.rates.set( phs[ i ], rates[i] );
             comp.rates.set( pi [ i ], connPI[i] );
         }
         if ( pu.has_polymer ) {
-            const auto& perf_polymer_rate = this->perfRatePolymer(well_index);
+            const auto& perf_polymer_rate = perf_data.polymer_rates;
             comp.rates.set( rt::polymer, perf_polymer_rate[local_comp_index]);
         }
         if ( pu.has_brine ) {
-            const auto& perf_brine_rate = this->perfRateBrine(well_index);
+            const auto& perf_brine_rate = perf_data.brine_rates;
             comp.rates.set( rt::brine, perf_brine_rate[local_comp_index]);
         }
         if ( pu.has_solvent ) {
-            const auto& perf_solvent_rate = this->perfRateSolvent(well_index);
+            const auto& perf_solvent_rate = perf_data.solvent_rates;
             comp.rates.set( rt::solvent, perf_solvent_rate[local_comp_index] );
         }
 
@@ -815,6 +759,7 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
             }
 
 
+            auto& perf_data = this->perfData(w);
             // for the seg_rates_, now it becomes a recursive solution procedure.
             {
                 // make sure the information from wells_ecl consistent with wells
@@ -822,7 +767,7 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                        "Inconsistent number of reservoir connections in well");
 
                 if (pu.phase_used[Gas]) {
-                    auto& perf_rates = this->perfPhaseRates(w);
+                    auto& perf_rates = perf_data.phase_rates;
                     const int gaspos = pu.phase_pos[Gas];
                     // scale the phase rates for Gas to avoid too bad initial guess for gas fraction
                     // it will probably benefit the standard well too, while it needs to be justified
@@ -833,7 +778,7 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                         perf_rates[perf*np + gaspos] *= 100;
                 }
 
-                const auto& perf_rates = this->perfPhaseRates(w);
+                const auto& perf_rates = perf_data.phase_rates;
                 std::vector<double> perforation_rates(perf_rates.begin(), perf_rates.end());
 
                 auto& segments = this->segments(w);
@@ -848,7 +793,7 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                 // top segment is always the first one, and its pressure is the well bhp
                 auto& segment_pressure = this->segments(w).pressure;
                 segment_pressure[0] = bhp(w);
-                const auto& perf_press = this->perfPress(w);
+                const auto& perf_press = perf_data.pressure;
                 for (int seg = 1; seg < well_nseg; ++seg) {
                     if ( !segment_perforations[seg].empty() ) {
                         const int first_perf = segment_perforations[seg][0];
@@ -919,19 +864,22 @@ WellState::calculateSegmentRates(const std::vector<std::vector<int>>& segment_in
 
 double WellState::solventWellRate(const int w) const
 {
-    const auto& perf_rates_solvent = this->perfRateSolvent(w);
+    const auto& perf_data = this->perfData(w);
+    const auto& perf_rates_solvent = perf_data.solvent_rates;
     return parallel_well_info_[w]->sumPerfValues(perf_rates_solvent.begin(), perf_rates_solvent.end());
 }
 
 double WellState::polymerWellRate(const int w) const
 {
-    const auto& perf_rates_polymer = this->perfRatePolymer(w);
+    const auto& perf_data = this->perfData(w);
+    const auto& perf_rates_polymer = perf_data.polymer_rates;
     return parallel_well_info_[w]->sumPerfValues(perf_rates_polymer.begin(), perf_rates_polymer.end());
 }
 
 double WellState::brineWellRate(const int w) const
 {
-    const auto& perf_rates_brine = this->perfRateBrine(w);
+    const auto& perf_data = this->perfData(w);
+    const auto& perf_rates_brine = perf_data.brine_rates;
     return parallel_well_info_[w]->sumPerfValues(perf_rates_brine.begin(), perf_rates_brine.end());
 }
 
@@ -958,7 +906,8 @@ void WellState::shutWell(int well_index)
         wpi[p]  = 0.0;
     }
 
-    auto& connpi = this->conn_productivity_index_[well_index];
+    auto& perf_data = this->perfData(well_index);
+    auto& connpi = perf_data.prod_index;
     connpi.assign(connpi.size(), 0);
 }
 

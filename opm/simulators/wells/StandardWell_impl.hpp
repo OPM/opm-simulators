@@ -202,7 +202,8 @@ namespace Opm
         const int np = number_of_phases_;
 
         std::vector<RateVector> connectionRates = connectionRates_; // Copy to get right size.
-        auto& perf_rates = well_state.perfPhaseRates(this->index_of_well_);
+        auto& perf_data = well_state.perfData(this->index_of_well_);
+        auto& perf_rates = perf_data.phase_rates;
         for (int perf = 0; perf < number_of_perforations_; ++perf) {
             // Calculate perforation quantities.
             std::vector<EvalWell> cq_s(num_components_, {this->numWellEq_ + numEq, 0.0});
@@ -239,7 +240,7 @@ namespace Opm
 
                 // Store the perforation phase flux for later usage.
                 if (has_solvent && componentIdx == contiSolventEqIdx) {
-                    auto& perf_rate_solvent = well_state.perfRateSolvent(this->index_of_well_);
+                    auto& perf_rate_solvent = perf_data.solvent_rates;
                     perf_rate_solvent[perf] = cq_s[componentIdx].value();
                 } else {
                     perf_rates[perf*np + ebosCompIdxToFlowCompIdx(componentIdx)] = cq_s[componentIdx].value();
@@ -316,6 +317,7 @@ namespace Opm
         computePerfRate(intQuants, mob, bhp, Tw, perf, allow_cf,
                         cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
 
+        auto& perf_data = well_state.perfData(this->index_of_well_);
         if constexpr (has_polymer && Base::has_polymermw) {
             if (this->isInjector()) {
                 // Store the original water flux computed from the reservoir quantities.
@@ -405,7 +407,7 @@ namespace Opm
                 cq_s_poly *= this->extendEval(intQuants.polymerConcentration() * intQuants.polymerViscosityCorrection());
             }
             // Note. Efficiency factor is handled in the output layer
-            auto& perf_rate_polymer = well_state.perfRatePolymer(this->index_of_well_);
+            auto& perf_rate_polymer = perf_data.polymer_rates;
             perf_rate_polymer[perf] = cq_s_poly.value();
 
             cq_s_poly *= well_efficiency_factor_;
@@ -438,7 +440,7 @@ namespace Opm
                 const double dis_gas_frac = perf_dis_gas_rate / cq_s_zfrac_effective.value();
                 cq_s_zfrac_effective *= this->extendEval(dis_gas_frac*intQuants.xVolume() + (1.0-dis_gas_frac)*intQuants.yVolume());
             }
-            auto& perf_rate_solvent = well_state.perfRateSolvent(this->index_of_well_);
+            auto& perf_rate_solvent = perf_data.solvent_rates;
             perf_rate_solvent[perf] = cq_s_zfrac_effective.value();
 
             cq_s_zfrac_effective *= well_efficiency_factor_;
@@ -455,7 +457,7 @@ namespace Opm
                 cq_s_sm *= this->extendEval(intQuants.fluidState().saltConcentration());
             }
             // Note. Efficiency factor is handled in the output layer
-            auto& perf_rate_brine = well_state.perfRateBrine(this->index_of_well_);
+            auto& perf_rate_brine = perf_data.brine_rates;
             perf_rate_brine[perf] = cq_s_sm.value();
 
             cq_s_sm *= well_efficiency_factor_;
@@ -463,8 +465,7 @@ namespace Opm
         }
 
         // Store the perforation pressure for later usage.
-        auto& perf_press = well_state.perfPress(index_of_well_);
-        perf_press[perf] = well_state.bhp(index_of_well_) + this->perf_pressure_diffs_[perf];
+        perf_data.pressure[perf] = well_state.bhp(this->index_of_well_) + this->perf_pressure_diffs_[perf];
     }
 
 
@@ -922,7 +923,7 @@ namespace Opm
         }
 
         // Compute the average pressure in each well block
-        const auto& perf_press = well_state.perfPress(w);
+        const auto& perf_press = well_state.perfData(w).pressure;
         auto p_above =  this->parallel_well_info_.communicateAboveValues(well_state.bhp(w),
                                                                          perf_press.data(),
                                                                          nperf);
@@ -1071,8 +1072,9 @@ namespace Opm
             std::transform(src, src + np, dest, dest, std::plus<>{});
         };
 
+        auto& perf_data = well_state.perfData(this->index_of_well_);
         auto* wellPI = well_state.productivityIndex(this->index_of_well_).data();
-        auto* connPI = well_state.connectionProductivityIndex(this->index_of_well_).data();
+        auto* connPI = perf_data.prod_index.data();
 
         setToZero(wellPI);
 
@@ -1133,7 +1135,8 @@ namespace Opm
         const int nperf = number_of_perforations_;
         const int np = number_of_phases_;
         std::vector<double> perfRates(b_perf.size(),0.0);
-        const auto& perf_rates_state = well_state.perfPhaseRates(this->index_of_well_);
+        const auto& perf_data = well_state.perfData(this->index_of_well_);
+        const auto& perf_rates_state = perf_data.phase_rates;
 
         for (int perf = 0; perf < nperf; ++perf) {
             for (int comp = 0; comp < np; ++comp) {
@@ -1142,7 +1145,7 @@ namespace Opm
         }
 
         if constexpr (has_solvent) {
-            const auto& solvent_perf_rates_state = well_state.perfRateSolvent(this->index_of_well_);
+            const auto& solvent_perf_rates_state = perf_data.solvent_rates;
             for (int perf = 0; perf < nperf; ++perf) {
                 perfRates[perf * num_components_ + contiSolventEqIdx] = solvent_perf_rates_state[perf];
             }
@@ -1596,8 +1599,9 @@ namespace Opm
         // other primary variables related to polymer injection
         if constexpr (Base::has_polymermw) {
             if (this->isInjector()) {
-                const auto& water_velocity = well_state.perfWaterVelocity(this->index_of_well_);
-                const auto& skin_pressure = well_state.perfSkinPressure(this->index_of_well_);
+                const auto& perf_data = well_state.perfData(this->index_of_well_);
+                const auto& water_velocity = perf_data.water_velocity;
+                const auto& skin_pressure = perf_data.skin_pressure;
                 for (int perf = 0; perf < number_of_perforations_; ++perf) {
                     this->primary_variables_[Bhp + 1 + perf] = water_velocity[perf];
                     this->primary_variables_[Bhp + 1 + number_of_perforations_ + perf] = skin_pressure[perf];
@@ -1821,7 +1825,7 @@ namespace Opm
     {
         if constexpr (Base::has_polymermw) {
             if (this->isInjector()) {
-                auto& perf_water_throughput = well_state.perfThroughput(this->index_of_well_);
+                auto& perf_water_throughput = well_state.perfData(this->index_of_well_).water_throughput;
                 for (int perf = 0; perf < number_of_perforations_; ++perf) {
                     const double perf_water_vel = this->primary_variables_[Bhp + 1 + perf];
                     // we do not consider the formation damage due to water flowing from reservoir into wellbore
@@ -1882,7 +1886,8 @@ namespace Opm
         const EvalWell eq_wat_vel = this->primary_variables_evaluation_[wat_vel_index] - water_velocity;
         this->resWell_[0][wat_vel_index] = eq_wat_vel.value();
 
-        const auto& perf_water_throughput = well_state.perfThroughput(this->index_of_well_);
+        const auto& perf_data = well_state.perfData(this->index_of_well_);
+        const auto& perf_water_throughput = perf_data.water_throughput;
         const double throughput = perf_water_throughput[perf];
         const int pskin_index = Bhp + 1 + number_of_perforations_ + perf;
 
@@ -1943,7 +1948,7 @@ namespace Opm
             const int wat_vel_index = Bhp + 1 + perf;
             const EvalWell water_velocity = this->primary_variables_evaluation_[wat_vel_index];
             if (water_velocity > 0.) { // injecting
-                const auto& perf_water_throughput = well_state.perfThroughput(this->index_of_well_);
+                const auto& perf_water_throughput = well_state.perfData(this->index_of_well_).water_throughput;
                 const double throughput = perf_water_throughput[perf];
                 const EvalWell molecular_weight = wpolymermw(throughput, water_velocity, deferred_logger);
                 cq_s_polymw *= molecular_weight;

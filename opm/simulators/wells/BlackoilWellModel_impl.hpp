@@ -1536,7 +1536,8 @@ namespace Opm {
 
             auto& well_info = *local_parallel_well_info_[wellID];
             const int num_perf_this_well = well_info.communication().sum(well_perf_data_[wellID].size());
-            auto& perf_phase_rate = this->wellState().perfPhaseRates(wellID);
+            auto& perf_data = this->wellState().perfData(wellID);
+            auto& perf_phase_rate = perf_data.phase_rates;
 
             for (int perf = 0; perf < num_perf_this_well; ++perf) {
                 const int cell_idx = well_perf_data_[wellID][perf].cell_index;
