@@ -498,167 +498,123 @@ WellState::report(const int* globalCellIdxMap,
 
     using rt = data::Rates::opt;
     const auto& pu = this->phaseUsage();
-    const int np = pu.num_phases;
 
     data::Wells res;
-    for( const auto& itr : this->wellMap() ) {
-        const auto well_index = itr.second[ 0 ];
+    for( const auto& [wname, winfo]: this->wellMap() ) {
+        const auto well_index = winfo[ 0 ];
         if ((this->status_[well_index] == Well::Status::SHUT) &&
             ! wasDynamicallyClosed(well_index))
         {
             continue;
         }
 
-        const auto& pwinfo = *this->parallel_well_info_[well_index];
-        using WellT = std::remove_reference_t<decltype(res[ itr.first ])>;
-        WellT dummyWell; // dummy if we are not owner
-        auto& well = pwinfo.isOwner() ? res[ itr.first ] : dummyWell;
+        const auto& reservoir_rates = this->well_reservoir_rates_[well_index];
+        const auto& well_potentials = this->well_potentials_[well_index];
+        const auto& wpi = this->productivity_index_[well_index];
+        const auto& wv = this->wellRates(well_index);
+
+        data::Well well;
         well.bhp = this->bhp(well_index);
         well.thp = this->thp( well_index );
         well.temperature = this->temperature( well_index );
 
-        const auto& wv = this->wellRates(well_index);
         if( pu.phase_used[BlackoilPhases::Aqua] ) {
-            well.rates.set( rt::wat, wv[ pu.phase_pos[BlackoilPhases::Aqua] ] );
+            well.rates.set(rt::wat, wv[ pu.phase_pos[BlackoilPhases::Aqua] ] );
+            well.rates.set(rt::reservoir_water, reservoir_rates[pu.phase_pos[BlackoilPhases::Aqua]]);
+            well.rates.set(rt::productivity_index_water, wpi[pu.phase_pos[BlackoilPhases::Aqua]]);
+            well.rates.set(rt::well_potential_water, well_potentials[pu.phase_pos[BlackoilPhases::Aqua]]);
         }
 
         if( pu.phase_used[BlackoilPhases::Liquid] ) {
-            well.rates.set( rt::oil, wv[ pu.phase_pos[BlackoilPhases::Liquid] ] );
+            well.rates.set(rt::oil, wv[ pu.phase_pos[BlackoilPhases::Liquid] ] );
+            well.rates.set(rt::reservoir_oil, reservoir_rates[pu.phase_pos[BlackoilPhases::Liquid]]);
+            well.rates.set(rt::productivity_index_oil, wpi[pu.phase_pos[BlackoilPhases::Liquid]]);
+            well.rates.set(rt::well_potential_oil, well_potentials[pu.phase_pos[BlackoilPhases::Liquid]]);
         }
 
         if( pu.phase_used[BlackoilPhases::Vapour] ) {
-            well.rates.set( rt::gas, wv[ pu.phase_pos[BlackoilPhases::Vapour] ] );
-        }
-
-        if (pwinfo.communication().size()==1)
-        {
-            reportConnections(well, pu, itr, globalCellIdxMap);
-        }
-        else
-        {
-            assert(pwinfo.communication().rank() != 0 || &dummyWell != &well);
-            // report the local connections
-            reportConnections(dummyWell, pu, itr, globalCellIdxMap);
-            // gather them to well on root.
-            gatherVectorsOnRoot(dummyWell.connections, well.connections,
-                                pwinfo.communication());
-        }
-    }
-
-    std::vector<rt> phs(np);
-    if (pu.phase_used[Water]) {
-        phs.at( pu.phase_pos[Water] ) = rt::wat;
-    }
-
-    if (pu.phase_used[Oil]) {
-        phs.at( pu.phase_pos[Oil] ) = rt::oil;
-    }
-
-    if (pu.phase_used[Gas]) {
-        phs.at( pu.phase_pos[Gas] ) = rt::gas;
-    }
-
-    // This is a reference or example on **how** to convert from
-    // WellState to something understood by opm-common's output
-    // layer.  It is intended to be properly implemented and
-    // maintained as a part of simulators, as it relies on simulator
-    // internals, details and representations.
-
-    for (const auto& wt : this->wellMap()) {
-        const auto w = wt.second[ 0 ];
-        if (((this->status_[w] == Well::Status::SHUT) &&
-             ! wasDynamicallyClosed(w)) ||
-            ! this->parallel_well_info_[w]->isOwner())
-        {
-            continue;
-        }
-
-        auto& well = res.at(wt.first);
-        const auto& reservoir_rates = this->well_reservoir_rates_[w];
-        const auto& well_potentials = this->well_potentials_[w];
-        const auto& wpi = this->productivity_index_[w];
-
-        if (pu.phase_used[Water]) {
-            well.rates.set(rt::reservoir_water, reservoir_rates[pu.phase_pos[Water]]);
-            well.rates.set(rt::productivity_index_water, wpi[pu.phase_pos[Water]]);
-            well.rates.set(rt::well_potential_water, well_potentials[pu.phase_pos[Water]]);
-        }
-
-        if (pu.phase_used[Oil]) {
-            well.rates.set(rt::reservoir_oil, reservoir_rates[pu.phase_pos[Oil]]);
-            well.rates.set(rt::productivity_index_oil, wpi[pu.phase_pos[Oil]]);
-            well.rates.set(rt::well_potential_oil, well_potentials[pu.phase_pos[Oil]]);
-        }
-
-        if (pu.phase_used[Gas]) {
-            well.rates.set(rt::reservoir_gas, reservoir_rates[pu.phase_pos[Gas]]);
-            well.rates.set(rt::productivity_index_gas, wpi[pu.phase_pos[Gas]]);
-            well.rates.set(rt::well_potential_gas, well_potentials[pu.phase_pos[Gas]]);
+            well.rates.set(rt::gas, wv[ pu.phase_pos[BlackoilPhases::Vapour] ] );
+            well.rates.set(rt::reservoir_gas, reservoir_rates[pu.phase_pos[BlackoilPhases::Vapour]]);
+            well.rates.set(rt::productivity_index_gas, wpi[pu.phase_pos[BlackoilPhases::Vapour]]);
+            well.rates.set(rt::well_potential_gas, well_potentials[pu.phase_pos[BlackoilPhases::Vapour]]);
         }
 
         if (pu.has_solvent || pu.has_zFraction) {
-            well.rates.set(rt::solvent, solventWellRate(w));
+            well.rates.set(rt::solvent, solventWellRate(well_index));
         }
 
         if (pu.has_polymer) {
-            well.rates.set(rt::polymer, polymerWellRate(w));
+            well.rates.set(rt::polymer, polymerWellRate(well_index));
         }
 
         if (pu.has_brine) {
-            well.rates.set(rt::brine, brineWellRate(w));
+            well.rates.set(rt::brine, brineWellRate(well_index));
         }
 
-        if (is_producer_[w]) {
-            well.rates.set(rt::alq, getALQ(/*wellName=*/wt.first));
+        if (is_producer_[well_index]) {
+            well.rates.set(rt::alq, getALQ(wname));
         }
         else {
             well.rates.set(rt::alq, 0.0);
         }
 
-        well.rates.set(rt::dissolved_gas, this->well_dissolved_gas_rates_[w]);
-        well.rates.set(rt::vaporized_oil, this->well_vaporized_oil_rates_[w]);
+        well.rates.set(rt::dissolved_gas, this->well_dissolved_gas_rates_[well_index]);
+        well.rates.set(rt::vaporized_oil, this->well_vaporized_oil_rates_[well_index]);
 
         {
             auto& curr = well.current_control;
 
-            curr.isProducer = this->is_producer_[w];
-            curr.prod = this->currentProductionControl(w);
-            curr.inj  = this->currentInjectionControl(w);
+            curr.isProducer = this->is_producer_[well_index];
+            curr.prod = this->currentProductionControl(well_index);
+            curr.inj  = this->currentInjectionControl(well_index);
         }
 
-        const auto nseg = this->numSegments(w);
+        const auto& pwinfo = *this->parallel_well_info_[well_index];
+        if (pwinfo.communication().size()==1)
+        {
+            reportConnections(well.connections, pu, well_index, globalCellIdxMap);
+        }
+        else
+        {
+            std::vector<data::Connection> connections;
+
+            reportConnections(connections, pu, well_index, globalCellIdxMap);
+            gatherVectorsOnRoot(connections, well.connections, pwinfo.communication());
+        }
+
+        const auto nseg = this->numSegments(well_index);
         for (auto seg_ix = 0*nseg; seg_ix < nseg; ++seg_ix) {
-            const auto seg_no = this->segmentNumber(w, seg_ix);
-            well.segments[seg_no] =
-                    this->reportSegmentResults(pu, w, seg_ix, seg_no);
+            const auto seg_no = this->segmentNumber(well_index, seg_ix);
+            well.segments[seg_no] = this->reportSegmentResults(pu, well_index, seg_ix, seg_no);
         }
-    }
 
+        res.insert( {wname, well} );
+    }
     return res;
 }
 
-void WellState::reportConnections(data::Well& well,
-                                                       const PhaseUsage &pu,
-                                                       const WellMapType::value_type& wt,
-                                                       const int* globalCellIdxMap) const
+
+void WellState::reportConnections(std::vector<data::Connection>& connections,
+                                  const PhaseUsage &pu,
+                                  std::size_t well_index,
+                                  const int* globalCellIdxMap) const
 {
     using rt = data::Rates::opt;
-    const auto well_index = wt.second[ 0 ];
     const auto& pd = this->well_perf_data_[well_index];
     const int num_perf_well = pd.size();
-    well.connections.resize(num_perf_well);
+    connections.resize(num_perf_well);
     const auto& perf_data = this->perfData(well_index);
     const auto& perf_rates = perf_data.rates;
     const auto& perf_pressure = perf_data.pressure;
     for( int i = 0; i < num_perf_well; ++i ) {
         const auto active_index = this->well_perf_data_[well_index][i].cell_index;
-        auto& connection = well.connections[ i ];
+        auto& connection = connections[ i ];
         connection.index = globalCellIdxMap[active_index];
         connection.pressure = perf_pressure[i];
         connection.reservoir_rate = perf_rates[i];
         connection.trans_factor = pd[i].connection_transmissibility_factor;
     }
-    assert(num_perf_well == int(well.connections.size()));
+    assert(num_perf_well == int(connections.size()));
 
 
     const int np = pu.num_phases;
@@ -679,7 +635,7 @@ void WellState::reportConnections(data::Well& well,
         phs.at( pu.phase_pos[Gas] ) = rt::gas;
         pi .at( pu.phase_pos[Gas] ) = rt::productivity_index_gas;
     }
-    for( auto& comp : well.connections) {
+    for( auto& comp : connections) {
         const auto * rates = &perf_data.phase_rates[np*local_comp_index];
         const auto& connPI  = perf_data.prod_index;
 
@@ -702,7 +658,7 @@ void WellState::reportConnections(data::Well& well,
 
         ++local_comp_index;
     }
-    assert(local_comp_index == this->well_perf_data_[wt.second[0]].size());
+    assert(local_comp_index == this->well_perf_data_[well_index].size());
 }
 
 void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
