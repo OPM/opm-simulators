@@ -434,6 +434,21 @@ namespace Opm
                     weightsCalculator = [this, pressureIndex]() {
                         return this->getTrueImpesWeights(pressureIndex);
                     };
+                } else if (weightsType == "quasiimpesmod") {
+                    // weighs will be created as default in the solver
+                    weightsCalculator = [this, transpose, pressureIndex]() {
+                        return Amg::getQuasiImpesWeightsMod<Matrix, Vector>(this->getMatrix(), pressureIndex, transpose);
+                    };
+                } else if (weightsType == "trueimpesmod") {
+                    weightsCalculator = [this, pressureIndex]() {
+                        return this->getTrueImpesWeightsMod(pressureIndex);
+                    };
+                } else if (weightsType == "trueimpesbasic") {
+                    weightsCalculator = [this, pressureIndex]() {
+                        return this->getTrueImpesWeightsBasic(pressureIndex);
+                    };
+    
+                    
                 } else {
                     OPM_THROW(std::invalid_argument,
                               "Weights type " << weightsType << "not implemented for cpr."
@@ -457,6 +472,25 @@ namespace Opm
             return weights;
         }
 
+        Vector getTrueImpesWeightsMod(int pressureVarIndex) const
+        {
+            Vector weights(rhs_->size());
+            ElementContext elemCtx(simulator_);
+            Amg::getTrueImpesWeightsMod(pressureVarIndex, weights, simulator_.vanguard().gridView(),
+                                     elemCtx, simulator_.model(),
+                                     ThreadManager::threadId());
+            return weights;
+        }
+
+        Vector getTrueImpesWeightsBasic(int pressureVarIndex) const
+        {
+            Vector weights(rhs_->size());
+            ElementContext elemCtx(simulator_);
+            Amg::getTrueImpesWeightsBasic(pressureVarIndex, weights, simulator_.vanguard().gridView(),
+                                     elemCtx, simulator_.model(),
+                                     ThreadManager::threadId());
+            return weights;
+        }
 
         /// Zero out off-diagonal blocks on rows corresponding to overlap cells
         /// Diagonal blocks on ovelap rows are set to diag(1.0).

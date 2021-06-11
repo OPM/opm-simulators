@@ -21,7 +21,7 @@
 #define OPM_GET_QUASI_IMPES_WEIGHTS_HEADER_INCLUDED
 
 #include <dune/common/fvector.hh>
-
+#include <opm/material/common/MathToolbox.hpp>
 #include <algorithm>
 #include <cmath>
 
@@ -78,6 +78,40 @@ namespace Amg
     }
 
     template <class Matrix, class Vector>
+    void getQuasiImpesWeightsMod(const Matrix& matrix, const int pressureVarIndex, const bool transpose, Vector& weights)
+    {
+        using VectorBlockType = typename Vector::block_type;
+        using MatrixBlockType = typename Matrix::block_type;
+        const Matrix& A = matrix;
+        VectorBlockType rhs(0.0);
+        double pressure_scale = 50e5;
+        rhs[pressureVarIndex] = 1.0/pressure_scale;
+        const auto endi = A.end();
+        for (auto i = A.begin(); i != endi; ++i) {
+            const auto endj = (*i).end();
+            MatrixBlockType diag_block(0.0);
+            for (auto j = (*i).begin(); j != endj; ++j) {
+                if (i.index() == j.index()) {
+                    diag_block = (*j);
+                    break;
+                }
+            }
+            VectorBlockType bweights;
+            if (transpose) {
+                diag_block.solve(bweights, rhs);
+            } else {
+                auto diag_block_transpose = Details::transposeDenseMatrix(diag_block);
+                diag_block_transpose.solve(bweights, rhs);
+            }
+            //double abs_max = *std::max_element(
+            //    bweights.begin(), bweights.end(), [](double a, double b) { return std::fabs(a) < std::fabs(b); });
+            //bweights /= std::fabs(abs_max);
+            weights[i.index()] = bweights;
+        }
+        // return weights;
+    }
+    
+    template <class Matrix, class Vector>
     Vector getQuasiImpesWeights(const Matrix& matrix, const int pressureVarIndex, const bool transpose)
     {
         Vector weights(matrix.N());
@@ -85,6 +119,15 @@ namespace Amg
         return weights;
     }
 
+    template <class Matrix, class Vector>
+    Vector getQuasiImpesWeightsMod(const Matrix& matrix, const int pressureVarIndex, const bool transpose)
+    {
+        Vector weights(matrix.N());
+        getQuasiImpesWeightsMod(matrix, pressureVarIndex, transpose, weights);
+        return weights;
+    }
+
+    
     template<class Vector, class GridView, class ElementContext, class Model>
     void getTrueImpesWeights(int pressureVarIndex, Vector& weights, const GridView& gridView,
                              ElementContext& elemCtx, const Model& model, std::size_t threadId)
@@ -97,12 +140,12 @@ namespace Amg
             ::block_type;
         VectorBlockType rhs(0.0);
         rhs[pressureVarIndex] = 1.0;
-        int index = 0;
         auto elemIt = gridView.template begin</*codim=*/0>();
         const auto& elemEndIt = gridView.template end</*codim=*/0>();
         for (; elemIt != elemEndIt; ++elemIt) {
             elemCtx.updatePrimaryStencil(*elemIt);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+            const auto& index = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
             Dune::FieldVector<Evaluation, numEq> storage;
             model.localLinearizer(threadId).localResidual().computeStorage(storage,elemCtx,/*spaceIdx=*/0, /*timeIdx=*/0);
             auto extrusionFactor = elemCtx.intensiveQuantities(0, /*timeIdx=*/0).extrusionFactor();
@@ -123,9 +166,164 @@ namespace Amg
             block_transpose.solve(bweights, rhs);
             bweights /= 1000.0; // given normal densities this scales weights to about 1.
             weights[index] = bweights;
-            ++index;
         }
     }
+    
+    template<class Vector, class GridView, class ElementContext, class Model>
+    void getTrueImpesWeightsMod(int pressureVarIndex, Vector& weights, const GridView& gridView,
+                             ElementContext& elemCtx, const Model& model, std::size_t threadId)
+    {
+        using Indices = typename Model::Indices;
+        using FluidSystem = typename Model::FluidSystem;
+        using PrimaryVariables = typename Model::PrimaryVariables;
+        using VectorBlockType = typename Vector::block_type;
+        using Matrix = typename std::decay_t<decltype(model.linearizer().jacobian())>;
+        using MatrixBlockType = typename Matrix::MatrixBlock;
+        constexpr int numEq = VectorBlockType::size();
+        using Evaluation = typename std::decay_t<decltype(model.localLinearizer(threadId).localResidual().residual(0))>
+            ::block_type;
+        VectorBlockType rhs(0.0);
+        const auto& solution= model.solution(/*timeIdx*/0);
+        rhs[pressureVarIndex] = 1.0;
+        auto elemIt = gridView.template begin</*codim=*/0>();
+        const auto& elemEndIt = gridView.template end</*codim=*/0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            elemCtx.updatePrimaryStencil(*elemIt);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+            const auto& index = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+            Dune::FieldVector<Evaluation, numEq> storage;
+            model.localLinearizer(threadId).localResidual().computeStorage(storage,elemCtx,/*spaceIdx=*/0, /*timeIdx=*/0);
+            auto extrusionFactor = elemCtx.intensiveQuantities(0, /*timeIdx=*/0).extrusionFactor();
+            auto scvVolume = elemCtx.stencil(/*timeIdx=*/0).subControlVolume(0).volume() * extrusionFactor;
+            auto storage_scale = scvVolume / elemCtx.simulator().timeStepSize();
+
+            const auto& meaning =  solution[index].primaryVarsMeaning();
+            int skiprow = -1;
+            int skipcol = -1;
+            if( (meaning == PrimaryVariables::Sw_po_Rs) || (meaning ==PrimaryVariables::Sw_pg_Rv)){
+                skipcol = Indices::compositionSwitchIdx;
+            }
+            if( meaning == PrimaryVariables::Sw_pg_Rv){
+                unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(FluidSystem::oilCompIdx));
+                skiprow = activeCompIdx;
+            }
+            if( meaning == PrimaryVariables::Sw_po_Rs){
+                unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(FluidSystem::gasCompIdx));
+                skiprow = activeCompIdx;
+            }
+            assert( (skiprow *skipcol) > -1);
+            
+            MatrixBlockType block;
+            double pressure_scale = 50e5;
+            for (int ii = 0; ii < numEq; ++ii) {
+                for (int jj = 0; jj < numEq; ++jj) {
+                    block[ii][jj] = storage[ii].derivative(jj)/storage_scale;
+                    if (jj == pressureVarIndex) {
+                        block[ii][jj] *= pressure_scale;
+                    }
+                    if (jj == skipcol){
+                        assert(not(jj == pressureVarIndex));
+                        if( ii == skiprow){
+                            block[ii][jj] = 1;
+                        } else {
+                            block[ii][jj] = 0;
+                        }
+                    }
+                }
+            }
+            VectorBlockType bweights;
+            MatrixBlockType block_transpose = Details::transposeDenseMatrix(block);
+            block_transpose.solve(bweights, rhs);
+            bweights /= 1000.0; // given normal densities this scales weights to about 1.
+            weights[index] = bweights;
+        }
+    }
+    template<class Vector, class GridView, class ElementContext, class Model>
+    void getTrueImpesWeightsBasic(int pressureVarIndex, Vector& weights, const GridView& gridView,
+                             ElementContext& elemCtx, const Model& model, std::size_t threadId)
+    {
+      // The sequential residual is a linear combination of the
+      // mass balance residuals, with coefficients equal to (for
+      // water, oil, gas):
+      //    1/bw,
+      //    (1/bo - rs/bg)/(1-rs*rv)
+      //    (1/bg - rv/bo)/(1-rs*rv)
+      // These coefficients must be applied for both the residual and
+      // Jacobian.
+        using FluidSystem = typename Model::FluidSystem;
+        //using Evaluation =  typename FluidSystem::Evaluation; // maybe better than decay_t but requite making it public
+        using LhsEval = double;
+        using Indices = typename Model::Indices;
+        
+        using PrimaryVariables = typename Model::PrimaryVariables;
+        using VectorBlockType = typename Vector::block_type;
+        constexpr int numEq = VectorBlockType::size();
+        using Evaluation = typename std::decay_t<decltype(model.localLinearizer(threadId).localResidual().residual(0))>
+            ::block_type;
+        using Toolbox = MathToolbox<Evaluation>;
+        VectorBlockType rhs(0.0);
+        const auto& solution= model.solution(/*timeIdx*/0);
+        auto elemIt = gridView.template begin</*codim=*/0>();
+        const auto& elemEndIt = gridView.template end</*codim=*/0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            elemCtx.updatePrimaryStencil(*elemIt);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+            const auto& index = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto& fs = intQuants.fluidState();
+            VectorBlockType bweights;
+           
+            
+            if(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)){
+                unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(
+                    FluidSystem::solventComponentIndex(FluidSystem::waterCompIdx)
+                    );
+                bweights[FluidSystem::waterPhaseIdx]= Toolbox::template decay<LhsEval>(1/fs.invB(FluidSystem::waterPhaseIdx));
+            }
+            double denominator=1.0;
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
+                FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) ){
+                denominator =  Toolbox::template decay<LhsEval>(1 - fs.Rs()*fs.Rv());
+            }
+            
+            if( not(denominator>0)){
+                std::cout << "Probably negative compressibility" << std::endl;
+            }
+            if( FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) ){
+                unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(
+                    FluidSystem::solventComponentIndex(FluidSystem::oilCompIdx)
+                    );
+                bweights[activeCompIdx]= Toolbox::template decay<LhsEval>(
+                    (1/fs.invB(FluidSystem::oilPhaseIdx)-fs.Rs()
+                    /fs.invB(FluidSystem::gasPhaseIdx))/denominator);
+            }
+            if(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)){
+                 unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(
+                        FluidSystem::solventComponentIndex(FluidSystem::gasCompIdx)
+                        );
+                 bweights[activeCompIdx]= Toolbox::template decay<LhsEval>(
+                     (1/fs.invB(FluidSystem::gasPhaseIdx)-fs.Rv()
+                      /fs.invB(FluidSystem::oilPhaseIdx))/denominator);
+            }
+            const auto& meaning =  solution[index].primaryVarsMeaning();
+            if( (meaning == PrimaryVariables::Sw_pg_Rv) && (meaning == PrimaryVariables::Sw_po_Rs)){
+                unsigned activeCompIdx = -10;
+                if( meaning == PrimaryVariables::Sw_pg_Rv){
+                    activeCompIdx = Indices::canonicalToActiveComponentIndex(
+                        FluidSystem::solventComponentIndex(FluidSystem::oilCompIdx)
+                        );
+                }
+                if( meaning == PrimaryVariables::Sw_po_Rs){
+                    activeCompIdx = Indices::canonicalToActiveComponentIndex(
+                        FluidSystem::solventComponentIndex(FluidSystem::gasCompIdx)
+                        );
+                }
+                bweights[activeCompIdx] = 0.0;
+            }
+            
+            weights[index] = bweights;
+        }
+    }    
 } // namespace Amg
 
 } // namespace Opm
