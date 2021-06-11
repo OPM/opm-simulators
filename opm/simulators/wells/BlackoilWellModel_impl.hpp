@@ -1567,9 +1567,9 @@ namespace Opm {
     template <typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    assignWellTracerRates(data::Wells& wsrpt,
-                          const std::map<std::pair<std::string, std::string>, double>& wellTracerRates) const
+    assignWellTracerRates(data::Wells& wsrpt) const
     {
+        const auto & wellTracerRates = ebosSimulator_.problem().tracerModel().getWellTracerRates();
 
         if (wellTracerRates.empty())
             return; // no tracers

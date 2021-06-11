@@ -269,7 +269,7 @@ linearSolveBatchwise_(const TracerMatrix& M, std::vector<TracerVector>& x, std::
                          verbosity);
 
     bool converged = true;
-    for (int nrhs =0; nrhs < b.size(); ++nrhs) {
+    for (size_t nrhs =0; nrhs < b.size(); ++nrhs) {
         x[nrhs] = 0.0;
         Dune::InverseOperatorResult result;
         solver.apply(x[nrhs], b[nrhs], result);
