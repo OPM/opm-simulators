@@ -26,34 +26,68 @@
 
 #include <ebos/eclbaseaquifermodel.hh>
 
-#include <opm/parser/eclipse/EclipseState/Aquancon.hpp>
-#include <opm/parser/eclipse/EclipseState/AquiferCT.hpp>
-#include <opm/parser/eclipse/EclipseState/Aquifetp.hpp>
+#include <opm/parser/eclipse/EclipseState/Aquifer/Aquancon.hpp>
+#include <opm/parser/eclipse/EclipseState/Aquifer/AquiferCT.hpp>
+#include <opm/parser/eclipse/EclipseState/Aquifer/Aquifetp.hpp>
 
 #include <opm/output/data/Aquifer.hpp>
 
 #include <opm/simulators/aquifers/AquiferCarterTracy.hpp>
 #include <opm/simulators/aquifers/AquiferFetkovich.hpp>
+#include <opm/simulators/aquifers/AquiferNumerical.hpp>
+
+#include <opm/grid/CpGrid.hpp>
+#include <opm/grid/polyhedralgrid.hh>
+#if HAVE_DUNE_ALUGRID
+#include <dune/alugrid/grid.hh>
+#endif
 
 #include <opm/material/densead/Math.hpp>
 
 #include <vector>
+#include <type_traits>
 
 namespace Opm
 {
+
+template<class Grid>
+class SupportsFaceTag
+    : public std::bool_constant<false>
+{};
+
+
+template<>
+class SupportsFaceTag<Dune::CpGrid>
+    : public std::bool_constant<true>
+{};
+
+
+template<>
+class SupportsFaceTag<Dune::PolyhedralGrid<3, 3>>
+    : public std::bool_constant<true>
+{};
+
+#if HAVE_DUNE_ALUGRID
+template<>
+class SupportsFaceTag<Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming>>
+    : public std::bool_constant<true>
+{};
+#endif
+
 
 /// Class for handling the blackoil well model.
 template <typename TypeTag>
 class BlackoilAquiferModel
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+
 
 public:
     explicit BlackoilAquiferModel(Simulator& simulator);
 
     void initialSolutionApplied();
-    void initFromRestart(const std::vector<data::AquiferData>& aquiferSoln);
+    void initFromRestart(const data::Aquifers& aquiferSoln);
 
     void beginEpisode();
     void beginTimeStep();
@@ -65,6 +99,8 @@ public:
     void endTimeStep();
     void endEpisode();
 
+    data::Aquifers aquiferData() const;
+
     template <class Restarter>
     void serialize(Restarter& res);
 
@@ -73,17 +109,19 @@ public:
 
 protected:
     // ---------      Types      ---------
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
     typedef AquiferCarterTracy<TypeTag> AquiferCarterTracy_object;
     typedef AquiferFetkovich<TypeTag> AquiferFetkovich_object;
 
     Simulator& simulator_;
 
-    std::unordered_map<int, int> cartesian_to_compressed_;
+    // TODO: probably we can use one variable to store both types of aquifers, because
+    // they share the base class
     mutable std::vector<AquiferCarterTracy_object> aquifers_CarterTracy;
     mutable std::vector<AquiferFetkovich_object> aquifers_Fetkovich;
+    std::vector<AquiferNumerical<TypeTag>> aquifers_numerical;
 
     // This initialization function is used to connect the parser objects with the ones needed by AquiferCarterTracy
     void init();
@@ -91,6 +129,7 @@ protected:
     bool aquiferActive() const;
     bool aquiferCarterTracyActive() const;
     bool aquiferFetkovichActive() const;
+    bool aquiferNumericalActive() const;
 };
 
 

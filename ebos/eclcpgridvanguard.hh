@@ -27,36 +27,41 @@
 #ifndef EWOMS_ECL_CP_GRID_VANGUARD_HH
 #define EWOMS_ECL_CP_GRID_VANGUARD_HH
 
+#include <opm/models/common/multiphasebaseproperties.hh>
+
 #include "eclbasevanguard.hh"
 #include "ecltransmissibility.hh"
 #include "femcpgridcompat.hh"
-
-#include <opm/grid/CpGrid.hpp>
-#include <opm/grid/cpgrid/GridHelpers.hpp>
-#include <opm/simulators/utils/ParallelEclipseState.hpp>
-#include <opm/simulators/utils/PropsCentroidsDataHandle.hpp>
-
-#include <dune/grid/common/mcmgmapper.hh>
-
-#include <dune/common/version.hh>
-
-#include <sstream>
+#include "eclgenericcpgridvanguard.hh"
 
 namespace Opm {
 template <class TypeTag>
 class EclCpGridVanguard;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(EclCpGridVanguard, INHERITS_FROM(EclBaseVanguard));
+namespace TTag {
+struct EclCpGridVanguard {
+    using InheritsFrom = std::tuple<EclBaseVanguard>;
+};
+}
 
 // declare the properties
-SET_TYPE_PROP(EclCpGridVanguard, Vanguard, Opm::EclCpGridVanguard<TypeTag>);
-SET_TYPE_PROP(EclCpGridVanguard, Grid, Dune::CpGrid);
-SET_TYPE_PROP(EclCpGridVanguard, EquilGrid, typename GET_PROP_TYPE(TypeTag, Grid));
+template<class TypeTag>
+struct Vanguard<TypeTag, TTag::EclCpGridVanguard> {
+    using type = EclCpGridVanguard<TypeTag>;
+};
+template<class TypeTag>
+struct Grid<TypeTag, TTag::EclCpGridVanguard> {
+    using type = Dune::CpGrid;
+};
+template<class TypeTag>
+struct EquilGrid<TypeTag, TTag::EclCpGridVanguard> {
+    using type = GetPropType<TypeTag, Properties::Grid>;
+};
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -69,190 +74,32 @@ namespace Opm {
  */
 template <class TypeTag>
 class EclCpGridVanguard : public EclBaseVanguard<TypeTag>
+                        , public EclGenericCpGridVanguard<GetPropType<TypeTag, Properties::ElementMapper>,
+                                                          GetPropType<TypeTag, Properties::GridView>,
+                                                          GetPropType<TypeTag, Properties::Scalar>>
 {
     friend class EclBaseVanguard<TypeTag>;
     typedef EclBaseVanguard<TypeTag> ParentType;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementMapper) ElementMapper;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
 
 public:
-    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
-    typedef typename GET_PROP_TYPE(TypeTag, EquilGrid) EquilGrid;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    using Grid = GetPropType<TypeTag, Properties::Grid>;
+    using EquilGrid = GetPropType<TypeTag, Properties::EquilGrid>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using TransmissibilityType = EclTransmissibility<Grid, GridView, ElementMapper, Scalar>;
 
 private:
     typedef Dune::CartesianIndexMapper<Grid> CartesianIndexMapper;
+    using Element = typename GridView::template Codim<0>::Entity;
 
 public:
     EclCpGridVanguard(Simulator& simulator)
-        : EclBaseVanguard<TypeTag>(simulator), mpiRank()
+        : EclBaseVanguard<TypeTag>(simulator)
     {
-#if HAVE_MPI
-        MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
-#endif
         this->callImplementationInit();
-    }
-
-    /*!
-     * \brief Return a reference to the simulation grid.
-     */
-    Grid& grid()
-    { return *grid_; }
-
-    /*!
-     * \brief Return a reference to the simulation grid.
-     */
-    const Grid& grid() const
-    { return *grid_; }
-
-    /*!
-     * \brief Returns a refefence to the grid which should be used by the EQUIL
-     *        initialization code.
-     *
-     * The EQUIL keyword is used to specify the initial condition of the reservoir in
-     * hydrostatic equilibrium. Since the code which does this is not accepting arbitrary
-     * DUNE grids (the code is part of the opm-core module), this is not necessarily the
-     * same as the grid which is used for the actual simulation.
-     */
-    const EquilGrid& equilGrid() const
-    {
-        assert(mpiRank == 0);
-        return *equilGrid_;
-    }
-
-    /*!
-     * \brief Indicates that the initial condition has been computed and the memory used
-     *        by the EQUIL grid can be released.
-     *
-     * Depending on the implementation, subsequent accesses to the EQUIL grid lead to
-     * crashes.
-     */
-    void releaseEquilGrid()
-    {
-        equilGrid_.reset();
-        equilCartesianIndexMapper_.reset();
-    }
-
-    /*!
-     * \brief Distribute the simulation grid over multiple processes
-     *
-     * (For parallel simulation runs.)
-     */
-    void loadBalance()
-    {
-#if HAVE_MPI
-        int mpiSize = 1;
-        MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
-
-        if (mpiSize > 1) {
-            // the CpGrid's loadBalance() method likes to have the transmissibilities as
-            // its edge weights. since this is (kind of) a layering violation and
-            // transmissibilities are relatively expensive to compute, we only do it if
-            // more than a single process is involved in the simulation.
-            cartesianIndexMapper_.reset(new CartesianIndexMapper(*grid_));
-            if (grid_->size(0))
-            {
-                globalTrans_.reset(new EclTransmissibility<TypeTag>(*this));
-                globalTrans_->update(false);
-            }
-
-            Dune::EdgeWeightMethod edgeWeightsMethod = this->edgeWeightsMethod();
-            bool ownersFirst = this->ownersFirst();
-
-            // convert to transmissibility for faces
-            // TODO: grid_->numFaces() is not generic. use grid_->size(1) instead? (might
-            // not work)
-            const auto& gridView = grid_->leafGridView();
-            unsigned numFaces = grid_->numFaces();
-            std::vector<double> faceTrans(numFaces, 0.0);
-            ElementMapper elemMapper(this->gridView(), Dune::mcmgElementLayout());
-            auto elemIt = gridView.template begin</*codim=*/0>();
-            const auto& elemEndIt = gridView.template end</*codim=*/0>();
-            for (; elemIt != elemEndIt; ++ elemIt) {
-                const auto& elem = *elemIt;
-                auto isIt = gridView.ibegin(elem);
-                const auto& isEndIt = gridView.iend(elem);
-                for (; isIt != isEndIt; ++ isIt) {
-                    const auto& is = *isIt;
-                    if (!is.neighbor())
-                        continue;
-
-                    unsigned I = elemMapper.index(is.inside());
-                    unsigned J = elemMapper.index(is.outside());
-
-                    // FIXME (?): this is not portable!
-                    unsigned faceIdx = is.id();
-
-                    faceTrans[faceIdx] = globalTrans_->transmissibility(I, J);
-                }
-            }
-
-            //distribute the grid and switch to the distributed view.
-            {
-                const auto wells = this->schedule().getWellsatEnd();
-
-                try
-                {
-                    auto& eclState = dynamic_cast<ParallelEclipseState&>(this->eclState());
-                    const EclipseGrid* eclGrid = nullptr;
-
-                    if (grid_->comm().rank() == 0)
-                    {
-                        eclGrid = &this->eclState().getInputGrid();
-                    }
-
-                    PropsCentroidsDataHandle<Dune::CpGrid> handle(*grid_, eclState, eclGrid, this->centroids_,
-                                                                  cartesianIndexMapper());
-                    defunctWellNames_ = std::get<1>(grid_->loadBalance(handle, edgeWeightsMethod, &wells, faceTrans.data(), ownersFirst));
-                }
-                catch(const std::bad_cast& e)
-                {
-                    std::ostringstream message;
-                    message << "Parallel simulator setup is incorrect as it does not use ParallelEclipseState ("
-                            << e.what() <<")"<<std::flush;
-                    OpmLog::error(message.str());
-                    std::rethrow_exception(std::current_exception());
-                }
-            }
-            grid_->switchToDistributedView();
-
-            cartesianIndexMapper_.reset();
-
-            if ( ! equilGrid_ )
-            {
-                // for processes that do not hold the global grid we filter here using the local grid.
-                // If we would filter in filterConnection_ our partition would be empty and the connections of all
-                // wells would be removed.
-                ActiveGridCells activeCells(grid().logicalCartesianSize(),
-                                            grid().globalCell().data(), grid().size(0));
-                this->schedule().filterConnections(activeCells);
-            }
-        }
-#endif
-
-        cartesianIndexMapper_.reset(new CartesianIndexMapper(*grid_));
-        this->updateGridView_();
-#if HAVE_MPI
-        if (mpiSize > 1) {
-            try
-            {
-                auto& parallelEclState = dynamic_cast<ParallelEclipseState&>(this->eclState());
-                // reset cartesian index mapper for auto creation of field properties
-                parallelEclState.resetCartesianMapper(cartesianIndexMapper_.get());
-                parallelEclState.switchToDistributedProps();
-            }
-            catch(const std::bad_cast& e)
-            {
-                std::ostringstream message;
-                message << "Parallel simulator setup is incorrect as it does not use ParallelEclipseState ("
-                        << e.what() <<")"<<std::flush;
-                OpmLog::error(message.str());
-                std::rethrow_exception(std::current_exception());
-            }
-        }
-#endif
     }
 
     /*!
@@ -265,27 +112,7 @@ public:
         globalTrans_.reset();
     }
 
-    /*!
-     * \brief Returns the object which maps a global element index of the simulation grid
-     *        to the corresponding element index of the logically Cartesian index.
-     */
-    const CartesianIndexMapper& cartesianIndexMapper() const
-    { return *cartesianIndexMapper_; }
-
-    /*!
-     * \brief Returns mapper from compressed to cartesian indices for the EQUIL grid
-     */
-    const CartesianIndexMapper& equilCartesianIndexMapper() const
-    {
-        assert(mpiRank == 0);
-        assert(equilCartesianIndexMapper_);
-        return *equilCartesianIndexMapper_;
-    }
-
-    std::unordered_set<std::string> defunctWellNames() const
-    { return defunctWellNames_; }
-
-    const EclTransmissibility<TypeTag>& globalTransmissibility() const
+    const TransmissibilityType& globalTransmissibility() const
     {
         assert( globalTrans_ != nullptr );
         return *globalTrans_;
@@ -296,60 +123,63 @@ public:
         globalTrans_.reset();
     }
 
+    /*!
+     * \brief Distribute the simulation grid over multiple processes
+     *
+     * (For parallel simulation runs.)
+     */
+    void loadBalance()
+    {
+#if HAVE_MPI
+        this->doLoadBalance_(this->edgeWeightsMethod(), this->ownersFirst(),
+                             this->serialPartitioning(), this->enableDistributedWells(),
+                             this->zoltanImbalanceTol(), this->gridView(),
+                             this->schedule(), this->centroids_,
+                             this->eclState(), this->parallelWells_);
+#endif
+
+        this->allocCartMapper();
+        this->updateGridView_();
+        this->updateCartesianToCompressedMapping_();
+        this->updateCellDepths_();
+        this->updateCellThickness_();
+
+#if HAVE_MPI
+        this->distributeFieldProps_(this->eclState());
+#endif
+    }
+
+
 protected:
     void createGrids_()
     {
-        grid_.reset(new Dune::CpGrid());
-        grid_->processEclipseFormat(mpiRank == 0 ? &this->eclState().getInputGrid()
-                                                 : nullptr,
-                                    /*isPeriodic=*/false,
-                                    /*flipNormals=*/false,
-                                    /*clipZ=*/false,
-                                    mpiRank == 0 ? this->eclState().fieldProps().porv(true)
-                                                 : std::vector<double>(),
-                                    this->eclState().getInputNNC());
+        this->doCreateGrids_(this->eclState());
+    }
 
-        // we use separate grid objects: one for the calculation of the initial condition
-        // via EQUIL and one for the actual simulation. The reason is that the EQUIL code
-        // is allergic to distributed grids and the simulation grid is distributed before
-        // the initial condition is calculated.
-        // After loadbalance grid_ will contain a global and distribute view.
-        // equilGrid_being a shallow copy only the global view.
-        if (mpiRank == 0)
-        {
-            equilGrid_.reset(new Dune::CpGrid(*grid_));
-            equilCartesianIndexMapper_.reset(new CartesianIndexMapper(*equilGrid_));
+    void allocTrans() override
+    {
+        globalTrans_.reset(new TransmissibilityType(this->eclState(),
+                                                    this->gridView(),
+                                                    this->cartesianIndexMapper(),
+                                                    this->grid(),
+                                                    this->cellCentroids(),
+                                                    getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                                    getPropValue<TypeTag, Properties::EnableDiffusion>()));
+        globalTrans_->update(false);
+    }
 
-            std::vector<int> actnum = Opm::UgGridHelpers::createACTNUM(*grid_);
-            auto &field_props = this->eclState().fieldProps();
-            const_cast<FieldPropsManager&>(field_props).reset_actnum(actnum);
-        }
+    double getTransmissibility(unsigned I, unsigned J) override
+    {
+       return globalTrans_->transmissibility(I,J);
     }
 
     // removing some connection located in inactive grid cells
     void filterConnections_()
     {
-        // We only filter if we hold the global grid. Otherwise the filtering
-        // is done after load balancing as in the future the other processes
-        // will hold an empty partition for the global grid and hence filtering
-        // here would remove all well connections.
-        if (equilGrid_)
-        {
-            ActiveGridCells activeCells(equilGrid().logicalCartesianSize(),
-                                        equilGrid().globalCell().data(),
-                                        equilGrid().size(0));
-            this->schedule().filterConnections(activeCells);
-        }
+        this->doFilterConnections_(this->schedule());
     }
 
-    std::unique_ptr<Grid> grid_;
-    std::unique_ptr<EquilGrid> equilGrid_;
-    std::unique_ptr<CartesianIndexMapper> cartesianIndexMapper_;
-    std::unique_ptr<CartesianIndexMapper> equilCartesianIndexMapper_;
-
-    std::unique_ptr<EclTransmissibility<TypeTag> > globalTrans_;
-    std::unordered_set<std::string> defunctWellNames_;
-    int mpiRank;
+    std::unique_ptr<TransmissibilityType> globalTrans_;
 };
 
 } // namespace Opm

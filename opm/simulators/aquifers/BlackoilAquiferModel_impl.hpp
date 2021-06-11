@@ -1,4 +1,26 @@
+/*
+  Copyright 2017 TNO - Heat Transfer & Fluid Dynamics, Modelling & Optimization of the Subsurface
+  Copyright 2017 Statoil ASA.
+
+  This file is part of the Open Porous Media project (OPM).
+
+  OPM is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OPM is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <opm/grid/utility/cartesianToCompressed.hpp>
+#include "BlackoilAquiferModel.hpp"
+
 namespace Opm
 {
 
@@ -6,6 +28,10 @@ template <typename TypeTag>
 BlackoilAquiferModel<TypeTag>::BlackoilAquiferModel(Simulator& simulator)
     : simulator_(simulator)
 {
+    // Grid needs to support Facetag
+    using Grid = std::remove_const_t<std::remove_reference_t<decltype(simulator.vanguard().grid())>>;
+    static_assert(SupportsFaceTag<Grid>::value, "Grid has to support assumptions about face tag.");
+
     init();
 }
 
@@ -23,19 +49,32 @@ BlackoilAquiferModel<TypeTag>::initialSolutionApplied()
             aquifer.initialSolutionApplied();
         }
     }
+
+    if (this->aquiferNumericalActive()) {
+        for (auto& aquifer : this->aquifers_numerical) {
+            aquifer.initialSolutionApplied();
+        }
+    }
 }
 
 template <typename TypeTag>
 void
-BlackoilAquiferModel<TypeTag>::initFromRestart(const std::vector<data::AquiferData>& aquiferSoln)
+BlackoilAquiferModel<TypeTag>::initFromRestart(const data::Aquifers& aquiferSoln)
 {
-    if (aquiferCarterTracyActive()) {
-        for (auto& aquifer : aquifers_CarterTracy) {
+    if (this->aquiferCarterTracyActive()) {
+        for (auto& aquifer : this->aquifers_CarterTracy) {
             aquifer.initFromRestart(aquiferSoln);
         }
     }
-    if (aquiferFetkovichActive()) {
-        for (auto& aquifer : aquifers_Fetkovich) {
+
+    if (this->aquiferFetkovichActive()) {
+        for (auto& aquifer : this->aquifers_Fetkovich) {
+            aquifer.initFromRestart(aquiferSoln);
+        }
+    }
+
+    if (this->aquiferNumericalActive()) {
+        for (auto& aquifer : this->aquifers_numerical) {
             aquifer.initFromRestart(aquiferSoln);
         }
     }
@@ -109,6 +148,12 @@ BlackoilAquiferModel<TypeTag>::endTimeStep()
             aquifer.endTimeStep();
         }
     }
+    if (aquiferNumericalActive()) {
+        for (auto& aquifer : this->aquifers_numerical) {
+            aquifer.endTimeStep();
+            this->simulator_.vanguard().grid().comm().barrier();
+        }
+    }
 }
 template <typename TypeTag>
 void
@@ -145,33 +190,30 @@ BlackoilAquiferModel<TypeTag>::init()
         return;
     }
 
-    const auto& comm = this->simulator_.vanguard().gridView().comm();
-    if (comm.size() > 1)
-        throw std::runtime_error("Aquifers currently do not work in parallel.");
-
-    // Get all the carter tracy aquifer properties data and put it in aquifers vector
-    const auto& ugrid = simulator_.vanguard().grid();
-    const int number_of_cells = simulator_.gridView().size(0);
-
-    cartesian_to_compressed_ = cartesianToCompressed(number_of_cells,
-                                                     Opm::UgGridHelpers::globalCell(ugrid));
 
     const auto& connections = aquifer.connections();
     for (const auto& aq : aquifer.ct()) {
         aquifers_CarterTracy.emplace_back(connections[aq.aquiferID],
-                                          cartesian_to_compressed_, this->simulator_, aq);
+                                          this->simulator_, aq);
     }
 
     for (const auto& aq : aquifer.fetp()) {
         aquifers_Fetkovich.emplace_back(connections[aq.aquiferID],
-                                        cartesian_to_compressed_, this->simulator_, aq);
+                                        this->simulator_, aq);
     }
-}
-template <typename TypeTag>
-bool
-BlackoilAquiferModel<TypeTag>::aquiferActive() const
-{
-    return (aquiferCarterTracyActive() || aquiferFetkovichActive());
+
+    if (aquifer.hasNumericalAquifer()) {
+        const auto& num_aquifers = aquifer.numericalAquifers().aquifers();
+        const auto& ugrid = simulator_.vanguard().grid();
+        const int number_of_cells = simulator_.gridView().size(0);
+        const int* global_cell = UgGridHelpers::globalCell(ugrid);
+        const std::unordered_map<int, int> cartesian_to_compressed = cartesianToCompressed(number_of_cells,
+                                                                                           global_cell);
+        for ([[maybe_unused]]const auto& [id, aqu] : num_aquifers) {
+            this->aquifers_numerical.emplace_back(aqu,
+                  cartesian_to_compressed, this->simulator_, global_cell);
+        }
+    }
 }
 template <typename TypeTag>
 bool
@@ -184,5 +226,36 @@ bool
 BlackoilAquiferModel<TypeTag>::aquiferFetkovichActive() const
 {
     return !aquifers_Fetkovich.empty();
+}
+
+template<typename TypeTag>
+bool
+BlackoilAquiferModel<TypeTag>::aquiferNumericalActive() const
+{
+    return !(this->aquifers_numerical.empty());
+}
+
+template<typename TypeTag>
+data::Aquifers BlackoilAquiferModel<TypeTag>::aquiferData() const {
+    data::Aquifers data;
+    if (this->aquiferCarterTracyActive()) {
+        for (const auto& aqu : this->aquifers_CarterTracy) {
+            data.insert_or_assign(aqu.aquiferID(), aqu.aquiferData());
+        }
+    }
+
+    if (this->aquiferFetkovichActive()) {
+        for (const auto& aqu : this->aquifers_Fetkovich) {
+            data.insert_or_assign(aqu.aquiferID(), aqu.aquiferData());
+        }
+    }
+
+    if (this->aquiferNumericalActive()) {
+        for (const auto& aqu : this->aquifers_numerical) {
+            data.insert_or_assign(aqu.aquiferID(), aqu.aquiferData());
+        }
+    }
+
+    return data;
 }
 } // namespace Opm

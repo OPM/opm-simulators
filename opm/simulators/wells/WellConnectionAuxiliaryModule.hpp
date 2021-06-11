@@ -31,15 +31,15 @@ namespace Opm
 {
 template<class TypeTag>
 class WellConnectionAuxiliaryModule
-    : public Opm::BaseAuxiliaryModule<TypeTag>
+    : public BaseAuxiliaryModule<TypeTag>
 {
-    typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) GlobalEqVector;
-    typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
+    using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
+    using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
 
 public:
 
     using NeighborSet = typename
-        Opm::BaseAuxiliaryModule<TypeTag>::NeighborSet;
+        ::Opm::BaseAuxiliaryModule<TypeTag>::NeighborSet;
 
     WellConnectionAuxiliaryModule(const Schedule& schedule,
                                   const Dune::CpGrid& grid)
@@ -62,7 +62,7 @@ public:
         wells_.reserve(schedule_wells.size());
 
         // initialize the additional cell connections introduced by wells.
-        for ( const auto well : schedule_wells )
+        for ( const auto& well : schedule_wells )
         {
             std::vector<int> compressed_well_perforations;
             // All possible completions of the well
@@ -102,7 +102,7 @@ public:
 
     void addNeighbors(std::vector<NeighborSet>& neighbors) const
     {
-        for(const auto well_perforations : wells_)
+        for(const auto& well_perforations : wells_)
         {
             for(const auto& perforation : well_perforations)
                 neighbors[perforation].insert(well_perforations.begin(),

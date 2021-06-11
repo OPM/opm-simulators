@@ -33,6 +33,9 @@ class SummaryConfig;
 void eclStateBroadcast(EclipseState& eclState, Schedule& schedule,
                        SummaryConfig& summaryConfig);
 
+/// \brief Broadcasts an schedule from root node in parallel runs.
+void eclScheduleBroadcast(Schedule& schedule);
+
 } // end namespace Opm
 
 #endif // PARALLEL_SERIALIZATION_HPP

@@ -34,10 +34,12 @@
 #include <opm/common/utility/FileSystem.hpp>
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
+#include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Units/UnitSystem.hpp>
 #include <opm/simulators/wells/VFPHelpers.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
 
 
 
@@ -194,10 +196,10 @@ struct TrivialFixture {
     inline void initProperties() {
         table.reset(new Opm::VFPProdTable(1,
                                           1000.0,
-                                          Opm::VFPProdTable::FLO_OIL,
-                                          Opm::VFPProdTable::WFR_WOR,
-                                          Opm::VFPProdTable::GFR_GOR,
-                                          Opm::VFPProdTable::ALQ_UNDEF,
+                                          Opm::VFPProdTable::FLO_TYPE::FLO_OIL,
+                                          Opm::VFPProdTable::WFR_TYPE::WFR_WOR,
+                                          Opm::VFPProdTable::GFR_TYPE::GFR_GOR,
+                                          Opm::VFPProdTable::ALQ_TYPE::ALQ_UNDEF,
                                           flo_axis,
                                           thp_axis,
                                           wfr_axis,
@@ -205,7 +207,8 @@ struct TrivialFixture {
                                           alq_axis,
                                           data));
 
-        properties.reset(new Opm::VFPProdProperties(table.get()));
+        properties = std::make_shared<Opm::VFPProdProperties>();
+        properties->addTable( *table );
     }
 
     double& operator()(size_t thp_idx, size_t wfr_idx, size_t gfr_idx, size_t alq_idx, size_t flo_idx) {
@@ -230,7 +233,7 @@ private:
     int nz;
     int nu;
     int nv;
-    Opm::VFPProdTable::array_type data;
+    std::vector<double> data;
 };
 
 
@@ -590,7 +593,8 @@ VFPPROD \n\
     Opm::Parser parser;
     auto deck = parser.parseString(table_str);
     Opm::VFPProdTable table(deck.getKeyword("VFPPROD", 0), units);
-    Opm::VFPProdProperties properties(&table);
+    Opm::VFPProdProperties properties;
+    properties.addTable( table );
 
     const int n = 5; //Number of points to check per axis
     double bhp_sad = 0.0; //Sum of absolute difference
@@ -649,8 +653,8 @@ BOOST_AUTO_TEST_CASE(ParseInterpolateRealisticVFPPROD)
     BOOST_CHECK_EQUAL(deck.count("VFPPROD"), 1);
 
     Opm::VFPProdTable table(deck.getKeyword("VFPPROD", 0), units);
-
-    Opm::VFPProdProperties properties(&table);
+    Opm::VFPProdProperties properties;
+    properties.addTable(table);
 
     //Do some rudimentary testing
     //Get the BHP as a function of rate, thp, wfr, gfr, alq

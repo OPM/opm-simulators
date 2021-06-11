@@ -27,22 +27,20 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include <opm/common/utility/numeric/linearInterpolation.hpp>
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/common/OpmLog/OpmLog.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/SsfnTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/MiscTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/MsfnTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/SgcwmisTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/SorwmisTable.hpp>
 #include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
 
 namespace Opm {
 
+    class EclipseState;
+    class MiscTable;
+    class MsfnTable;
+    class SgcwimTable;
     class Sof2Table;
+    class SorwmisTable;
+    class SsfnTable;
     class SgwfnTable;
 
-    ///This class is intend to be a relpmer diganostics, to detect
+    ///This class is intend to be a relperm diagnostics, to detect
     ///wrong input of relperm table and endpoints.
     class RelpermDiagnostics
     {
@@ -52,9 +50,9 @@ namespace Opm {
         ///output if they're found.
         ///\param[in] eclState  eclipse state.
         ///\param[in] grid      unstructured grid.
-        template <class GridT>
+        template <class CartesianIndexMapper>
         void diagnosis(const EclipseState& eclState,
-                       const GridT& grid);
+                       const CartesianIndexMapper& cartesianIndexMapper);
 
     private:
         enum FluidSystem {
@@ -75,12 +73,13 @@ namespace Opm {
 
         SaturationFunctionFamily satFamily_;
 
-        std::vector<Opm::EclEpsScalingPointsInfo<double> > unscaledEpsInfo_;
-        std::vector<Opm::EclEpsScalingPointsInfo<double> > scaledEpsInfo_;
+        std::vector<EclEpsScalingPointsInfo<double> > unscaledEpsInfo_;
+        std::vector<EclEpsScalingPointsInfo<double> > scaledEpsInfo_;
 
 
         ///Check the phase that used.
-        void phaseCheck_(const EclipseState& es);
+        /// return false if one-phase system
+        bool phaseCheck_(const EclipseState& es);
 
         ///Check saturation family I and II.
         void satFamilyCheck_(const EclipseState& eclState);
@@ -91,42 +90,40 @@ namespace Opm {
         ///Check endpoints in the saturation tables.
         void unscaledEndPointsCheck_(const EclipseState& eclState);
 
-        template <class GridT>
+        template <class CartesianIndexMapper>
         void scaledEndPointsCheck_(const EclipseState& eclState,
-                                   const GridT& grid);
+                                   const CartesianIndexMapper& cartesianIndexMapper);
 
         ///For every table, need to deal with case by case.
-        void swofTableCheck_(const Opm::SwofTable& swofTables,
+        void swofTableCheck_(const SwofTable& swofTables,
                              const int satnumIdx);
-        void sgofTableCheck_(const Opm::SgofTable& sgofTables,
+        void sgofTableCheck_(const SgofTable& sgofTables,
                              const int satnumIdx);
-        void slgofTableCheck_(const Opm::SlgofTable& slgofTables,
+        void slgofTableCheck_(const SlgofTable& slgofTables,
                               const int satnumIdx);
-        void swfnTableCheck_(const Opm::SwfnTable& swfnTables,
+        void swfnTableCheck_(const SwfnTable& swfnTables,
                              const int satnumIdx);
-        void sgfnTableCheck_(const Opm::SgfnTable& sgfnTables,
+        void sgfnTableCheck_(const SgfnTable& sgfnTables,
                              const int satnumIdx);
-        void sof3TableCheck_(const Opm::Sof3Table& sof3Tables,
+        void sof3TableCheck_(const Sof3Table& sof3Tables,
                              const int satnumIdx);
-        void sof2TableCheck_(const Opm::Sof2Table& sof2Tables,
+        void sof2TableCheck_(const Sof2Table& sof2Tables,
                              const int satnumIdx);
-        void sgwfnTableCheck_(const Opm::SgwfnTable& sgwfnTables,
+        void sgwfnTableCheck_(const SgwfnTable& sgwfnTables,
                               const int satnumIdx);
         ///Tables for solvent model
-        void sgcwmisTableCheck_(const Opm::SgcwmisTable& sgcwmisTables,
+        void sgcwmisTableCheck_(const SgcwmisTable& sgcwmisTables,
                                 const int satnumIdx);
-        void sorwmisTableCheck_(const Opm::SorwmisTable& sorwmisTables,
+        void sorwmisTableCheck_(const SorwmisTable& sorwmisTables,
                                 const int satnumIdx);
-        void ssfnTableCheck_(const Opm::SsfnTable& ssfnTables,
+        void ssfnTableCheck_(const SsfnTable& ssfnTables,
                              const int satnumIdx);
-        void miscTableCheck_(const Opm::MiscTable& miscTables,
+        void miscTableCheck_(const MiscTable& miscTables,
                              const int miscnumIdx);
-        void msfnTableCheck_(const Opm::MsfnTable& msfnTables,
+        void msfnTableCheck_(const MsfnTable& msfnTables,
                              const int satnumIdx);
     };
 
 } //namespace Opm
-
-#include <opm/core/props/satfunc/RelpermDiagnostics_impl.hpp>
 
 #endif // OPM_RELPERMDIAGNOSTICS_HEADER_INCLUDED

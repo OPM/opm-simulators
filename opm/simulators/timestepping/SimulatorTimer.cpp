@@ -24,6 +24,9 @@
 #include <ostream>
 #include <numeric>
 
+#include <boost/date_time/gregorian_calendar.hpp>
+#include <boost/date_time/posix_time/conversion.hpp>
+
 namespace Opm
 {
 
@@ -31,7 +34,7 @@ namespace Opm
     SimulatorTimer::SimulatorTimer()
         : current_step_(0),
           current_time_(0.0),
-          start_date_(2012,1,1)    // A really arbitrary default starting value?!
+          start_date_(std::make_shared<boost::gregorian::date>(2012,1,1))    // A really arbitrary default starting value?!
     {
     }
 
@@ -49,16 +52,16 @@ namespace Opm
     }
 
     /// Use the SimulatorTimer as a shim around opm-parser's Opm::TimeMap
-    void SimulatorTimer::init(const TimeMap& timeMap, size_t report_step)
+    void SimulatorTimer::init(const Schedule& schedule, size_t report_step)
     {
-        total_time_ = timeMap.getTotalTime();
-        timesteps_.resize(timeMap.numTimesteps());
-        for ( size_t i = 0; i < timeMap.numTimesteps(); ++i ) {
-            timesteps_[i] = timeMap.getTimeStepLength(i);
+        total_time_ = schedule.seconds( schedule.size() - 1 );
+        timesteps_.resize(schedule.size() - 1);
+        for ( size_t i = 0; i < schedule.size() - 1; ++i ) {
+            timesteps_[i] = schedule.stepLength(i);
         }
 
         setCurrentStepNum(report_step);
-        start_date_ = boost::posix_time::from_time_t( timeMap.getStartTime(0)).date();
+        *start_date_ = boost::posix_time::from_time_t(schedule.getStartTime()).date();
     }
 
     /// Whether the current step is the first step.
@@ -108,7 +111,7 @@ namespace Opm
 
     boost::posix_time::ptime SimulatorTimer::startDateTime() const
     {
-        return boost::posix_time::ptime(start_date_);
+        return boost::posix_time::ptime(*start_date_);
     }
 
 
@@ -165,7 +168,7 @@ namespace Opm
     std::unique_ptr< SimulatorTimerInterface >
     SimulatorTimer::clone() const
     {
-       return std::unique_ptr< SimulatorTimerInterface > (new SimulatorTimer( *this ));
+       return std::make_unique<SimulatorTimer>(*this);
     }
 
 

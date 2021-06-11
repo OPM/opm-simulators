@@ -1,6 +1,7 @@
 /*
   Copyright 2017 SINTEF Digital, Mathematics and Cybernetics.
   Copyright 2017 Statoil ASA.
+  Copyright 2020 Equinor ASA.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -25,8 +26,13 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/MSW/SpiralICD.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/MSW/SICD.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
+#include <string>
+#include<dune/istl/matrix.hh>
+#include <dune/istl/preconditioners.hh>
 #include <dune/istl/solvers.hh>
+
 #if HAVE_UMFPACK
 #include <dune/istl/umfpack.hh>
 #endif // HAVE_UMFPACK
@@ -36,49 +42,91 @@ namespace Opm {
 
 namespace mswellhelpers
 {
-    // obtain y = D^-1 * x with a direct solver
+
+    /// Applies umfpack and checks for singularity
     template <typename MatrixType, typename VectorType>
     VectorType
-    invDXDirect(const MatrixType& D, VectorType x)
+    applyUMFPack(const MatrixType& D, std::shared_ptr<Dune::UMFPack<MatrixType> >& linsolver, VectorType x)
     {
 #if HAVE_UMFPACK
+        if (!linsolver)
+        {
+            linsolver.reset(new Dune::UMFPack<MatrixType>(D, 0));
+        }
+
+        // The copy of x seems mandatory for calling UMFPack!
         VectorType y(x.size());
         y = 0.;
-
-        Dune::UMFPack<MatrixType> linsolver(D, 0);
 
         // Object storing some statistics about the solving process
         Dune::InverseOperatorResult res;
 
         // Solve
-        linsolver.apply(y, x, res);
+        linsolver->apply(y, x, res);
 
         // Checking if there is any inf or nan in y
         // it will be the solution before we find a way to catch the singularity of the matrix
         for (size_t i_block = 0; i_block < y.size(); ++i_block) {
             for (size_t i_elem = 0; i_elem < y[i_block].size(); ++i_elem) {
                 if (std::isinf(y[i_block][i_elem]) || std::isnan(y[i_block][i_elem]) ) {
-                    OPM_THROW(Opm::NumericalIssue, "nan or inf value found in invDXDirect due to singular matrix");
+                    const std::string msg{"nan or inf value found after UMFPack solve due to singular matrix"};
+                    OpmLog::debug(msg);
+                    OPM_THROW_NOLOG(NumericalIssue, msg);
                 }
             }
         }
-
         return y;
 #else
         // this is not thread safe
-        OPM_THROW(std::runtime_error, "Cannot use invDXDirect() without UMFPACK. "
-                  "Reconfigure opm-simulator with SuiteSparse/UMFPACK support and recompile.");
+        OPM_THROW(std::runtime_error, "Cannot use applyUMFPack() without UMFPACK. "
+                  "Reconfigure opm-simulators with SuiteSparse/UMFPACK support and recompile.");
 #endif // HAVE_UMFPACK
     }
 
 
+
+    /// Applies umfpack and checks for singularity
+    template <typename MatrixType, typename VectorType>
+    Dune::Matrix<typename MatrixType::block_type>
+    invertWithUMFPack(const MatrixType& D, std::shared_ptr<Dune::UMFPack<MatrixType> >& linsolver)
+    {
+#if HAVE_UMFPACK
+        const int sz = D.M();
+        const int bsz = D[0][0].M();
+        VectorType e(sz);
+        e = 0.0;
+
+        // Make a full block matrix.
+        Dune::Matrix<typename MatrixType::block_type> inv(sz, sz);
+
+        // Create inverse by passing basis vectors to the solver.
+        for (int ii = 0; ii < sz; ++ii) {
+            for (int jj = 0; jj < bsz; ++jj) {
+                e[ii][jj] = 1.0;
+                auto col = applyUMFPack(D, linsolver, e);
+                for (int cc = 0; cc < sz; ++cc) {
+                    for (int dd = 0; dd < bsz; ++dd) {
+                        inv[cc][ii][dd][jj] = col[cc][dd];
+                    }
+                }
+                e[ii][jj] = 0.0;
+            }
+        }
+
+        return inv;
+#else
+        // this is not thread safe
+        OPM_THROW(std::runtime_error, "Cannot use invertWithUMFPack() without UMFPACK. "
+                  "Reconfigure opm-simulators with SuiteSparse/UMFPACK support and recompile.");
+#endif // HAVE_UMFPACK
+    }
 
 
 
     // obtain y = D^-1 * x with a BICSSTAB iterative solver
     template <typename MatrixType, typename VectorType>
     VectorType
-    invDX(const MatrixType& D, VectorType x, Opm::DeferredLogger& deferred_logger)
+    invDX(const MatrixType& D, VectorType x, DeferredLogger& deferred_logger)
     {
         // the function will change the value of x, so we should not use reference of x here.
 
@@ -115,7 +163,7 @@ namespace mswellhelpers
         linsolver.apply(y, x, res);
 
         if ( !res.converged ) {
-            OPM_DEFLOG_THROW(Opm::NumericalIssue, "the invDX does not get converged! ", deferred_logger);
+            OPM_DEFLOG_THROW(NumericalIssue, "the invDX did not converge ", deferred_logger);
         }
 
         return y;
@@ -127,7 +175,7 @@ namespace mswellhelpers
     template <typename ValueType>
     inline ValueType haalandFormular(const ValueType& re, const double diameter, const double roughness)
     {
-        const ValueType value = -3.6 * Opm::log10(6.9 / re + std::pow(roughness / (3.7 * diameter), 10. / 9.) );
+        const ValueType value = -3.6 * log10(6.9 / re + std::pow(roughness / (3.7 * diameter), 10. / 9.) );
 
         // sqrt(1/f) should be non-positive
         assert(value >= 0.0);
@@ -145,7 +193,7 @@ namespace mswellhelpers
 
         ValueType f = 0.;
         // Reynolds number
-        const ValueType re = Opm::abs( diameter * w / (area * mu));
+        const ValueType re = abs( diameter * w / (area * mu));
 
         if ( re == 0.0 ) {
             // make sure it is because the mass rate is zero
@@ -206,7 +254,9 @@ namespace mswellhelpers
     template <typename ValueType>
     ValueType velocityHead(const double area, const ValueType& mass_rate, const ValueType& density)
     {
-        return (0.5 * mass_rate * mass_rate / (area * area * density));
+        // \Note: a factor of 2 is added to the formulation in order to match results from the
+        // reference simulator. This is inline with what is done for the friction loss.
+        return (mass_rate * mass_rate / (area * area * density));
     }
 
 
@@ -218,7 +268,7 @@ namespace mswellhelpers
                                    const double max_visco_ratio)
     {
         const ValueType temp_value = 1. / (1. - (0.8415 / 0.7480 * water_liquid_fraction) );
-        const ValueType viscosity_ratio = Opm::pow(temp_value, 2.5);
+        const ValueType viscosity_ratio = pow(temp_value, 2.5);
 
         if (viscosity_ratio <= max_visco_ratio) {
             return oil_viscosity * viscosity_ratio;
@@ -237,7 +287,7 @@ namespace mswellhelpers
                                    const double max_visco_ratio)
     {
         const ValueType temp_value = 1. / (1. - (0.6019 / 0.6410) * (1. - water_liquid_fraction) );
-        const ValueType viscosity_ratio = Opm::pow(temp_value, 2.5);
+        const ValueType viscosity_ratio = pow(temp_value, 2.5);
 
         if (viscosity_ratio <= max_visco_ratio) {
             return water_viscosity * viscosity_ratio;
@@ -254,7 +304,7 @@ namespace mswellhelpers
     template <typename ValueType>
     ValueType emulsionViscosity(const ValueType& water_fraction, const ValueType& water_viscosity,
                                 const ValueType& oil_fraction, const ValueType& oil_viscosity,
-                                const SpiralICD& sicd)
+                                const SICD& sicd)
     {
         const double width_transition = sicd.widthTransitionRegion();
 

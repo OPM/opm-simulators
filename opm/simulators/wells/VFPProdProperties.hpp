@@ -20,16 +20,14 @@
 #ifndef OPM_AUTODIFF_VFPPRODPROPERTIES_HPP_
 #define OPM_AUTODIFF_VFPPRODPROPERTIES_HPP_
 
-#include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
-#include <opm/material/densead/Math.hpp>
-#include <opm/material/densead/Evaluation.hpp>
-#include <opm/simulators/wells/VFPHelpers.hpp>
-
-#include <vector>
+#include <functional>
 #include <map>
+#include <vector>
 
 
 namespace Opm {
+
+class VFPProdTable;
 
 /**
  * Class which linearly interpolates BHP as a function of rate, tubing head pressure,
@@ -38,25 +36,11 @@ namespace Opm {
  */
 class VFPProdProperties {
 public:
+    VFPProdProperties() = default;
     /**
-     * Empty constructor
-     */
-    VFPProdProperties();
-
-    /**
-     * Constructor
      * Takes *no* ownership of data.
-     * @param prod_table A *single* VFPPROD table
      */
-    explicit VFPProdProperties(const VFPProdTable* prod_table);
-
-    /**
-     * Constructor
-     * Takes *no* ownership of data.
-     * @param prod_tables A map of different VFPPROD tables.
-     */
-    using ProdTable = std::map<int, std::shared_ptr<const VFPProdTable> >;
-    explicit VFPProdProperties(const ProdTable& prod_tables);
+    void addTable(const VFPProdTable& new_table);
 
     /**
      * Linear interpolation of bhp as a function of the input parameters given as
@@ -81,37 +65,7 @@ public:
                  const EvalWell& liquid,
                  const EvalWell& vapour,
                  const double& thp,
-                 const double& alq) const {
-
-        //Get the table
-        const VFPProdTable* table = detail::getTable(m_tables, table_id);
-        EvalWell bhp = 0.0 * aqua;
-
-        //Find interpolation variables
-        EvalWell flo = detail::getFlo(aqua, liquid, vapour, table->getFloType());
-        EvalWell wfr = detail::getWFR(aqua, liquid, vapour, table->getWFRType());
-        EvalWell gfr = detail::getGFR(aqua, liquid, vapour, table->getGFRType());
-
-        //Compute the BHP for each well independently
-        if (table != nullptr) {
-            //First, find the values to interpolate between
-            //Value of FLO is negative in OPM for producers, but positive in VFP table
-            auto flo_i = detail::findInterpData(-flo.value(), table->getFloAxis());
-            auto thp_i = detail::findInterpData( thp, table->getTHPAxis()); // assume constant
-            auto wfr_i = detail::findInterpData( wfr.value(), table->getWFRAxis());
-            auto gfr_i = detail::findInterpData( gfr.value(), table->getGFRAxis());
-            auto alq_i = detail::findInterpData( alq, table->getALQAxis()); //assume constant
-
-            detail::VFPEvaluation bhp_val = detail::interpolate(*table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
-
-            bhp = (bhp_val.dwfr * wfr) + (bhp_val.dgfr * gfr) - (bhp_val.dflo * flo);
-            bhp.setValue(bhp_val.value);
-        }
-        else {
-            bhp.setValue(-1e100); //Signal that this value has not been calculated properly, due to "missing" table
-        }
-        return bhp;
-    }
+                 const double& alq) const;
 
     /**
      * Linear interpolation of bhp as a function of the input parameters
@@ -155,7 +109,7 @@ public:
      * Returns the table associated with the ID, or throws an exception if
      * the table does not exist
      */
-    const VFPProdTable* getTable(const int table_id) const;
+    const VFPProdTable& getTable(const int table_id) const;
 
     /**
      * Check whether there is table associated with ID
@@ -170,19 +124,6 @@ public:
     }
 
 
-    /**
-     * Calculate the Bhp value from the THP target/constraint value
-     * based on inflow performance relationship and VFP curves
-     */
-     double
-     calculateBhpWithTHPTarget(const std::vector<double>& ipr_a,
-                               const std::vector<double>& ipr_b,
-                               const double bhp_limit,
-                               const double thp_table_id,
-                               const double thp_limit,
-                               const double alq,
-                               const double dp) const;
-
 protected:
     // calculate a group bhp values with a group of flo rate values
     std::vector<double> bhpwithflo(const std::vector<double>& flos,
@@ -194,7 +135,7 @@ protected:
                                    const double dp) const;
 
     // Map which connects the table number with the table itself
-    std::map<int, const VFPProdTable*> m_tables;
+    std::map<int, std::reference_wrapper<const VFPProdTable>> m_tables;
 };
 
 

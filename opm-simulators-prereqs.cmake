@@ -6,6 +6,8 @@ set (opm-simulators_CONFIG_VAR
   HAVE_MPI
   HAVE_PETSC
   HAVE_CUDA
+  HAVE_OPENCL
+  HAVE_FPGA
   HAVE_SUITESPARSE_UMFPACK_H
   HAVE_DUNE_ISTL
   DUNE_ISTL_VERSION_MAJOR
@@ -30,7 +32,7 @@ set (opm-simulators_DEPS
   # Look for MPI support
   "MPI"
   # Tim Davis' SuiteSparse archive
-  "SuiteSparse COMPONENTS umfpack"
+  "SuiteSparse REQUIRED COMPONENTS umfpack"
   # SuperLU direct solver
   "SuperLU"
   # OPM dependency

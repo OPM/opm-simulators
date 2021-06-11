@@ -33,6 +33,8 @@
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/alignedallocator.hh>
 
+#include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/WGState.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
@@ -44,6 +46,7 @@
 #include <dune/geometry/referenceelements.hh>
 
 #include <map>
+#include <unordered_set>
 
 namespace Opm {
 
@@ -73,24 +76,24 @@ class EcfvDiscretization;
 template <class TypeTag>
 class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
 {
-    typedef BaseAuxiliaryModule<TypeTag> AuxModule;
+    using AuxModule = BaseAuxiliaryModule<TypeTag>;
 
-    typedef typename AuxModule::NeighborSet NeighborSet;
-    typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
-    typedef typename GET_PROP_TYPE(TypeTag, SolutionVector) SolutionVector;
-    typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) GlobalEqVector;
+    using NeighborSet = typename AuxModule::NeighborSet;
+    using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
+    using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
+    using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, Discretization) Discretization;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) IntensiveQuantities;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using Discretization = GetPropType<TypeTag, Properties::Discretization>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
 
-    typedef Opm::MathToolbox<Evaluation> Toolbox;
+    typedef MathToolbox<Evaluation> Toolbox;
 
     typedef typename GridView::template Codim<0>::Entity        Element;
     typedef Element  ElementStorage;
@@ -100,8 +103,8 @@ class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
 
     // convenient access to the number of phases and the number of
     // components
-    static const unsigned numComponents = GET_PROP_VALUE(TypeTag, NumComponents);
-    static const unsigned numPhases = GET_PROP_VALUE(TypeTag, NumPhases);
+    static const unsigned numComponents = getPropValue<TypeTag, Properties::NumComponents>();
+    static const unsigned numPhases = getPropValue<TypeTag, Properties::NumPhases>();
 
     // convenient access to the phase and component indices. If the compiler bails out
     // here, you're probably using an incompatible fluid system. This class has only been
@@ -114,15 +117,15 @@ class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
     static const unsigned waterCompIdx = FluidSystem::waterCompIdx;
     static const unsigned gasCompIdx = FluidSystem::gasCompIdx;
 
-    static const unsigned numModelEq = GET_PROP_VALUE(TypeTag, NumEq);
-    static const unsigned conti0EqIdx = GET_PROP_TYPE(TypeTag, Indices)::conti0EqIdx;
-    static const unsigned contiEnergyEqIdx = GET_PROP_TYPE(TypeTag, Indices)::contiEnergyEqIdx;
+    static const unsigned numModelEq = getPropValue<TypeTag, Properties::NumEq>();
+    static const unsigned conti0EqIdx = GetPropType<TypeTag, Properties::Indices>::conti0EqIdx;
+    static const unsigned contiEnergyEqIdx = GetPropType<TypeTag, Properties::Indices>::contiEnergyEqIdx;
 
-    static constexpr unsigned historySize = GET_PROP_VALUE(TypeTag, TimeDiscHistorySize);
+    static constexpr unsigned historySize = getPropValue<TypeTag, Properties::TimeDiscHistorySize>();
 
-    static constexpr bool enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy);
+    static constexpr bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
 
-    typedef Opm::CompositionalFluidState<Scalar, FluidSystem, /*storeEnthalpy=*/true> FluidState;
+    typedef CompositionalFluidState<Scalar, FluidSystem, /*storeEnthalpy=*/true> FluidState;
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
 
     // all quantities that need to be stored per degree of freedom that intersects the
@@ -133,7 +136,7 @@ class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
 
         // retrieve the solution dependent quantities that are only updated at the
         // beginning of a time step from the IntensiveQuantities of the model
-        void updateBeginTimestep(const IntensiveQuantities& intQuants OPM_UNUSED)
+        void updateBeginTimestep(const IntensiveQuantities&)
         {}
 
         // retrieve the solution dependent quantities from the IntensiveQuantities of the
@@ -291,13 +294,13 @@ public:
     /*!
      * \copydoc Opm::BaseAuxiliaryModule::numDofs()
      */
-    virtual unsigned numDofs() const
+    unsigned numDofs() const override
     { return 1; }
 
     /*!
      * \copydoc Opm::BaseAuxiliaryModule::addNeighbors()
      */
-    virtual void addNeighbors(std::vector<NeighborSet>& neighbors) const
+    void addNeighbors(std::vector<NeighborSet>& neighbors) const override
     {
         int wellGlobalDof = AuxModule::localToGlobalDof(/*localDofIdx=*/0);
 
@@ -317,7 +320,7 @@ public:
     /*!
      * \copydoc Opm::BaseAuxiliaryModule::addNeighbors()
      */
-    virtual void applyInitial()
+    void applyInitial() override
     {
         auto& sol = const_cast<SolutionVector&>(simulator_.model().solution(/*timeIdx=*/0));
 
@@ -326,7 +329,7 @@ public:
 
         // make valgrind shut up about the DOFs for the well even if the PrimaryVariables
         // class contains some "holes" due to alignment
-        Opm::Valgrind::SetDefined(sol[wellGlobalDof]);
+        Valgrind::SetDefined(sol[wellGlobalDof]);
 
         // also apply the initial solution of the well to the "old" time steps
         for (unsigned timeIdx = 1; timeIdx < historySize; ++timeIdx) {
@@ -339,7 +342,7 @@ public:
     /*!
      * \copydoc Opm::BaseAuxiliaryModule::linearize()
      */
-    virtual void linearize(SparseMatrixAdapter& matrix, GlobalEqVector& residual)
+    void linearize(SparseMatrixAdapter& matrix, GlobalEqVector& residual) override
     {
         const SolutionVector& curSol = simulator_.model().solution(/*timeIdx=*/0);
 
@@ -465,10 +468,10 @@ public:
             // rate for each component as its first conservation equation, but we require
             // the black-oil model for now anyway, so this should not be too much of a
             // problem...
-            Opm::Valgrind::CheckDefined(q);
+            Valgrind::CheckDefined(q);
             block = 0.0;
             for (unsigned eqIdx = 0; eqIdx < numModelEq; ++ eqIdx)
-                block[eqIdx][0] = - Opm::getValue(q[eqIdx])/dofVars.totalVolume;
+                block[eqIdx][0] = - getValue(q[eqIdx])/dofVars.totalVolume;
 
             matrix.setBlock(gridDofIdx, wellGlobalDofIdx, block);
 
@@ -1217,7 +1220,7 @@ public:
                 q[conti0EqIdx + eqIdx] += modelRate[conti0EqIdx + eqIdx];
         }
 
-        Opm::Valgrind::CheckDefined(q);
+        Valgrind::CheckDefined(q);
     }
 
 protected:
@@ -1256,7 +1259,7 @@ protected:
                                     const BhpEval& bottomHolePressure,
                                     const DofVariables& dofVars) const
     {
-        typedef Opm::MathToolbox<Evaluation> DofVarsToolbox;
+        typedef MathToolbox<Evaluation> DofVarsToolbox;
         typedef typename std::conditional<std::is_same<BhpEval, Scalar>::value,
                                           ResultEval,
                                           Scalar>::type DofEval;
@@ -1309,13 +1312,13 @@ protected:
             else
                 throw std::logic_error("Type of well \""+name()+"\" is undefined");
 
-            Opm::Valgrind::CheckDefined(pbh);
-            Opm::Valgrind::CheckDefined(p);
-            Opm::Valgrind::CheckDefined(g);
-            Opm::Valgrind::CheckDefined(rho);
-            Opm::Valgrind::CheckDefined(lambda);
-            Opm::Valgrind::CheckDefined(depth);
-            Opm::Valgrind::CheckDefined(refDepth_);
+            Valgrind::CheckDefined(pbh);
+            Valgrind::CheckDefined(p);
+            Valgrind::CheckDefined(g);
+            Valgrind::CheckDefined(rho);
+            Valgrind::CheckDefined(lambda);
+            Valgrind::CheckDefined(depth);
+            Valgrind::CheckDefined(refDepth_);
 
             // pressure in the borehole ("hole pressure") at the given location
             ResultEval ph = pbh + rho*g*(depth - refDepth_);
@@ -1323,9 +1326,9 @@ protected:
             // volumetric reservoir rate for the phase
             volRates[phaseIdx] = Twj*lambda*(ph - p);
 
-            Opm::Valgrind::CheckDefined(g);
-            Opm::Valgrind::CheckDefined(ph);
-            Opm::Valgrind::CheckDefined(volRates[phaseIdx]);
+            Valgrind::CheckDefined(g);
+            Valgrind::CheckDefined(ph);
+            Valgrind::CheckDefined(volRates[phaseIdx]);
         }
     }
 
@@ -1409,6 +1412,63 @@ protected:
                 * Toolbox::value(dofVars.density[waterPhaseIdx])
                 / rhoWaterSurface;
     }
+
+    const WellState& wellState() const
+    {
+        throw std::logic_error("wellState() method not implemented for class eclpeacemanwell");
+    }
+
+    WellState& wellState()
+    {
+        throw std::logic_error("wellState() method not implemented for class eclpeacemanwell");
+    }
+
+    void commitWGState()
+    {
+        throw std::logic_error("commitWellState() method not implemented for class eclpeacemanwell");
+    }
+
+    void commitWGState(WGState)
+    {
+        throw std::logic_error("commitWellState() method not implemented for class eclpeacemanwell");
+    }
+
+    void resetWGState()
+    {
+        throw std::logic_error("resetWellState() method not implemented for class eclpeacemanwell");
+    }
+
+    void updateNupcolWGState()
+    {
+        throw std::logic_error("updateNupcolWellState() method not implemented for class eclpeacemanwell");
+    }
+
+    void
+    updateEclWell(int, int)
+    {
+        throw std::logic_error("updateEclWell() method not implemented for class eclpeacemanwell");
+    }
+
+
+    void
+    updateEclWells(int, const std::unordered_set<std::string>&) {
+        throw std::logic_error("updateEclWells() method not implemented for class eclpeacemanwell");
+    }
+
+
+    double
+    wellPI(int) const
+    {
+        throw std::logic_error("wellPI() method not implemented for class eclpeacemanwell");
+    }
+
+    double
+    wellPI(const std::string& ) const
+    {
+        throw std::logic_error("wellPI() method not implemented for class eclpeacemanwell");
+    }
+
+
 
     /*!
      * \brief Compute the volumetric phase rate of the complete well given a bottom hole
@@ -1517,7 +1577,7 @@ protected:
         bool onBail = false;
 
         // Newton-Raphson method
-        typedef Opm::DenseAd::Evaluation<Scalar, 1> BhpEval;
+        typedef DenseAd::Evaluation<Scalar, 1> BhpEval;
 
         BhpEval bhpEval(bhpScalar);
         bhpEval.setDerivative(0, 1.0);
@@ -1527,8 +1587,8 @@ protected:
             const auto& f = wellResidual_<BhpEval>(bhpEval);
 
             if (std::abs(f.derivative(0)) < 1e-20)
-                throw Opm::NumericalIssue("Cannot determine the bottom hole pressure for well "+name()
-                                            +": Derivative of the well residual is too small");
+                throw NumericalIssue("Cannot determine the bottom hole pressure for well "+name()
+                                     +": Derivative of the well residual is too small");
             Scalar delta = f.value()/f.derivative(0);
 
             bhpEval.setValue(bhpEval.value() - delta);
@@ -1546,8 +1606,8 @@ protected:
                 return bhpEval.value();
         }
 
-        throw Opm::NumericalIssue("Could not determine the bottom hole pressure of well '"+name()
-                                  +"' within " + std::to_string(maxIter) + " iterations.");
+        throw NumericalIssue("Could not determine the bottom hole pressure of well '"+name()
+                              +"' within " + std::to_string(maxIter) + " iterations.");
     }
 
     template <class BhpEval>
@@ -1555,7 +1615,7 @@ protected:
                           const DofVariables *replacementDofVars = 0,
                           int replacedGridIdx = -1) const
     {
-        typedef Opm::MathToolbox<BhpEval> BhpEvalToolbox;
+        typedef MathToolbox<BhpEval> BhpEvalToolbox;
 
         // compute the volumetric reservoir and surface rates for the complete well
         BhpEval resvRate = 0.0;
@@ -1592,10 +1652,10 @@ protected:
         // injectors. (i.e., the target bottom hole pressure is an upper limit for
         // injectors and a lower limit for producers.) Note that with this approach, one
         // of the limits must always be reached to get the well equation to zero...
-        Opm::Valgrind::CheckDefined(maximumSurfaceRate_);
-        Opm::Valgrind::CheckDefined(maximumReservoirRate_);
-        Opm::Valgrind::CheckDefined(surfaceRate);
-        Opm::Valgrind::CheckDefined(resvRate);
+        Valgrind::CheckDefined(maximumSurfaceRate_);
+        Valgrind::CheckDefined(maximumReservoirRate_);
+        Valgrind::CheckDefined(surfaceRate);
+        Valgrind::CheckDefined(resvRate);
 
         BhpEval result = 1e30;
 
@@ -1641,7 +1701,7 @@ protected:
 
     std::string name_;
 
-    std::vector<DofVariables, Opm::aligned_allocator<DofVariables, alignof(DofVariables)> > dofVarsStore_;
+    std::vector<DofVariables, aligned_allocator<DofVariables, alignof(DofVariables)> > dofVarsStore_;
     std::map<int, DofVariables*> dofVariables_;
 
     // the number of times beginIteration*() was called for the current time step
@@ -1702,7 +1762,7 @@ protected:
     std::array<Scalar, numPhases> actualResvRates_;
 
     // The relative weight of the volumetric rate of each fluid
-    Scalar volumetricWeight_[numPhases];
+    std::array<Scalar, numPhases> volumetricWeight_;
 
     // the reference depth for the bottom hole pressure. if not specified otherwise, this
     // is the position of the _highest_ DOF in the well.

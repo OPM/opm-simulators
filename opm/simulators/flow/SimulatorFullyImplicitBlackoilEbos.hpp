@@ -1,5 +1,5 @@
 /*
-  Copyright 2013, 2015 SINTEF ICT, Applied Mathematics.
+  Copyright 2013, 2015, 2020 SINTEF Digital, Mathematics and Cybernetics.
   Copyright 2015 Andreas Lauser
   Copyright 2017 IRIS
 
@@ -25,49 +25,65 @@
 #include <opm/simulators/flow/NonlinearSolverEbos.hpp>
 #include <opm/simulators/flow/BlackoilModelEbos.hpp>
 #include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
-#include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
 #include <opm/simulators/utils/moduleVersion.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
 #include <opm/grid/utility/StopWatch.hpp>
 
-#include <opm/common/Exceptions.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_PROP_TAG(EnableTerminalOutput);
-NEW_PROP_TAG(EnableAdaptiveTimeStepping);
-NEW_PROP_TAG(EnableTuning);
+template<class TypeTag, class MyTypeTag>
+struct EnableAdaptiveTimeStepping {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EnableTuning {
+    using type = UndefinedProperty;
+};
 
-SET_BOOL_PROP(EclFlowProblem, EnableTerminalOutput, true);
-SET_BOOL_PROP(EclFlowProblem, EnableAdaptiveTimeStepping, true);
-SET_BOOL_PROP(EclFlowProblem, EnableTuning, false);
+template<class TypeTag>
+struct EnableTerminalOutput<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = true;
+};
+template<class TypeTag>
+struct EnableAdaptiveTimeStepping<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = true;
+};
+template<class TypeTag>
+struct EnableTuning<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = false;
+};
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 
+void outputReportStep(const SimulatorTimer& timer);
+void outputTimestampFIP(const SimulatorTimer& timer,
+                        const std::string& title,
+                        const std::string& version);
 
 /// a simulator for the blackoil model
 template<class TypeTag>
 class SimulatorFullyImplicitBlackoilEbos
 {
 public:
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) BlackoilIndices;
-    typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables)  PrimaryVariables;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
-    typedef typename GET_PROP_TYPE(TypeTag, SolutionVector)    SolutionVector ;
-    typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Grid = GetPropType<TypeTag, Properties::Grid>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using BlackoilIndices = GetPropType<TypeTag, Properties::Indices>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
+    using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
 
     typedef AdaptiveTimeSteppingEbos<TypeTag> TimeStepper;
-    typedef Opm::BlackOilPolymerModule<TypeTag> PolymerModule;
+    typedef BlackOilPolymerModule<TypeTag> PolymerModule;
 
-    typedef WellStateFullyImplicitBlackoil WellState;
     typedef BlackoilModelEbos<TypeTag> Model;
     typedef NonlinearSolverEbos<TypeTag, Model> Solver;
     typedef typename Model::ModelParameters ModelParameters;
@@ -130,182 +146,176 @@ public:
     /// \return                    simulation report, with timing data
     SimulatorReport run(SimulatorTimer& timer)
     {
-        failureReport_ = SimulatorReport();
+        init(timer);
+        // Main simulation loop.
+        while (!timer.done()) {
+            bool continue_looping = runStep(timer);
+            if (!continue_looping) break;
+        }
+        return finalize();
+    }
 
+    void init(SimulatorTimer &timer)
+    {
         ebosSimulator_.setEpisodeIndex(-1);
 
         // Create timers and file for writing timing info.
-        Opm::time::StopWatch solverTimer;
-        Opm::time::StopWatch totalTimer;
-        totalTimer.start();
+        solverTimer_ = std::make_unique<time::StopWatch>();
+        totalTimer_ = std::make_unique<time::StopWatch>();
+        totalTimer_->start();
 
         // adaptive time stepping
-        const auto& events = schedule().getEvents();
-        std::unique_ptr<TimeStepper > adaptiveTimeStepping;
         bool enableAdaptive = EWOMS_GET_PARAM(TypeTag, bool, EnableAdaptiveTimeStepping);
         bool enableTUNING = EWOMS_GET_PARAM(TypeTag, bool, EnableTuning);
         if (enableAdaptive) {
+            const UnitSystem& unitSystem = this->ebosSimulator_.vanguard().eclState().getUnits();
             if (enableTUNING) {
-                adaptiveTimeStepping.reset(new TimeStepper(schedule().getTuning(timer.currentStepNum()), terminalOutput_));
+                adaptiveTimeStepping_ = std::make_unique<TimeStepper>(schedule()[timer.currentStepNum()].tuning(),
+                                                                      unitSystem, terminalOutput_);
             }
             else {
-                adaptiveTimeStepping.reset(new TimeStepper(terminalOutput_));
+                adaptiveTimeStepping_ = std::make_unique<TimeStepper>(unitSystem, terminalOutput_);
             }
 
             if (isRestart()) {
                 // For restarts the ebosSimulator may have gotten some information
                 // about the next timestep size from the OPMEXTRA field
-                adaptiveTimeStepping->setSuggestedNextStep(ebosSimulator_.timeStepSize());
+                adaptiveTimeStepping_->setSuggestedNextStep(ebosSimulator_.timeStepSize());
             }
         }
+    }
 
-        SimulatorReport report;
-        SimulatorReport stepReport;
-
-        // Main simulation loop.
-        while (!timer.done()) {
-            if (schedule().exitStatus().has_value()) {
-                if (terminalOutput_) {
-                    OpmLog::info("Stopping simulation since EXIT was triggered by an action keyword.");
-                }
-                report.exit_status = schedule().exitStatus().value();
-                break;
-            }
-
-            // Report timestep.
+    bool runStep(SimulatorTimer& timer)
+    {
+        if (schedule().exitStatus().has_value()) {
             if (terminalOutput_) {
-                std::ostringstream ss;
-                timer.report(ss);
-                OpmLog::debug(ss.str());
+                OpmLog::info("Stopping simulation since EXIT was triggered by an action keyword.");
             }
+            report_.success.exit_status = schedule().exitStatus().value();
+            return false;
+        }
 
-            if (terminalOutput_) {
-                std::ostringstream stepMsg;
-                boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
-                stepMsg.imbue(std::locale(std::locale::classic(), facet));
-                stepMsg << "\nReport step " << std::setw(2) <<timer.currentStepNum()
-                         << "/" << timer.numSteps()
-                         << " at day " << (double)unit::convert::to(timer.simulationTimeElapsed(), unit::day)
-                         << "/" << (double)unit::convert::to(timer.totalTime(), unit::day)
-                         << ", date = " << timer.currentDateTime();
-                OpmLog::info(stepMsg.str());
-            }
+        // Report timestep.
+        if (terminalOutput_) {
+            std::ostringstream ss;
+            timer.report(ss);
+            OpmLog::debug(ss.str());
+        }
 
-            // write the inital state at the report stage
-            if (timer.initialStep()) {
-                Dune::Timer perfTimer;
-                perfTimer.start();
+        if (terminalOutput_) {
+            outputReportStep(timer);
+        }
 
-                ebosSimulator_.setEpisodeIndex(-1);
-                ebosSimulator_.setEpisodeLength(0.0);
-                ebosSimulator_.setTimeStepSize(0.0);
-
-                wellModel_().beginReportStep(timer.currentStepNum());
-                ebosSimulator_.problem().writeOutput();
-
-                report.output_write_time += perfTimer.stop();
-            }
-
-            // Run a multiple steps of the solver depending on the time step control.
-            solverTimer.start();
-
-            auto solver = createSolver(wellModel_());
-
-            ebosSimulator_.startNextEpisode(ebosSimulator_.startTime() + schedule().getTimeMap().getTimePassedUntil(timer.currentStepNum()),
-                                            timer.currentStepLength());
-            ebosSimulator_.setEpisodeIndex(timer.currentStepNum());
-            solver->model().beginReportStep();
-
-            // If sub stepping is enabled allow the solver to sub cycle
-            // in case the report steps are too large for the solver to converge
-            //
-            // \Note: The report steps are met in any case
-            // \Note: The sub stepping will require a copy of the state variables
-            if (adaptiveTimeStepping) {
-                if (enableTUNING) {
-                    if (events.hasEvent(ScheduleEvents::TUNING_CHANGE,timer.currentStepNum())) {
-                        adaptiveTimeStepping->updateTUNING(schedule().getTuning(timer.currentStepNum()));
-                    }
-                }
-
-                bool event = events.hasEvent(ScheduleEvents::NEW_WELL, timer.currentStepNum()) ||
-                        events.hasEvent(ScheduleEvents::PRODUCTION_UPDATE, timer.currentStepNum()) ||
-                        events.hasEvent(ScheduleEvents::INJECTION_UPDATE, timer.currentStepNum()) ||
-                        events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE, timer.currentStepNum());
-                stepReport = adaptiveTimeStepping->step(timer, *solver, event, nullptr);
-                report += stepReport;
-                failureReport_ += adaptiveTimeStepping->failureReport();
-            }
-            else {
-                // solve for complete report step
-                stepReport = solver->step(timer);
-                report += stepReport;
-                failureReport_ += solver->failureReport();
-
-                if (terminalOutput_) {
-                    std::ostringstream ss;
-                    stepReport.reportStep(ss);
-                    OpmLog::info(ss.str());
-                }
-            }
-
-            // write simulation state at the report stage
+        // write the inital state at the report stage
+        if (timer.initialStep()) {
             Dune::Timer perfTimer;
             perfTimer.start();
-            const double nextstep = adaptiveTimeStepping ? adaptiveTimeStepping->suggestedNextStep() : -1.0;
-            ebosSimulator_.problem().setNextTimeStepSize(nextstep);
+
+            ebosSimulator_.setEpisodeIndex(-1);
+            ebosSimulator_.setEpisodeLength(0.0);
+            ebosSimulator_.setTimeStepSize(0.0);
+
+            wellModel_().beginReportStep(timer.currentStepNum());
             ebosSimulator_.problem().writeOutput();
-            report.output_write_time += perfTimer.stop();
 
-            solver->model().endReportStep();
-
-            // take time that was used to solve system for this reportStep
-            solverTimer.stop();
-
-            // update timing.
-            report.solver_time += solverTimer.secsSinceStart();
-
-            // Increment timer, remember well state.
-            ++timer;
-
-
-            if (terminalOutput_) {
-                if (!timer.initialStep()) {
-                    const std::string version = moduleVersionName();
-                    outputTimestampFIP(timer, version);
-                }
-            }
-
-            if (terminalOutput_) {
-                std::string msg =
-                    "Time step took " + std::to_string(solverTimer.secsSinceStart()) + " seconds; "
-                    "total solver time " + std::to_string(report.solver_time) + " seconds.";
-                OpmLog::debug(msg);
-            }
-
+            report_.success.output_write_time += perfTimer.stop();
         }
 
+        // Run a multiple steps of the solver depending on the time step control.
+        solverTimer_->start();
+
+        auto solver = createSolver(wellModel_());
+
+        ebosSimulator_.startNextEpisode(
+            ebosSimulator_.startTime()
+               + schedule().seconds(timer.currentStepNum()),
+            timer.currentStepLength());
+        ebosSimulator_.setEpisodeIndex(timer.currentStepNum());
+        solver->model().beginReportStep();
+        bool enableTUNING = EWOMS_GET_PARAM(TypeTag, bool, EnableTuning);
+
+        // If sub stepping is enabled allow the solver to sub cycle
+        // in case the report steps are too large for the solver to converge
+        //
+        // \Note: The report steps are met in any case
+        // \Note: The sub stepping will require a copy of the state variables
+        if (adaptiveTimeStepping_) {
+            const auto& events = schedule()[timer.currentStepNum()].events();
+            if (enableTUNING) {
+                if (events.hasEvent(ScheduleEvents::TUNING_CHANGE)) {
+                    adaptiveTimeStepping_->updateTUNING(schedule()[timer.currentStepNum()].tuning());
+                }
+            }
+            bool event = events.hasEvent(ScheduleEvents::NEW_WELL) ||
+                events.hasEvent(ScheduleEvents::INJECTION_TYPE_CHANGED) ||
+                events.hasEvent(ScheduleEvents::WELL_SWITCHED_INJECTOR_PRODUCER) ||
+                events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE);
+            auto stepReport = adaptiveTimeStepping_->step(timer, *solver, event, nullptr);
+            report_ += stepReport;
+        } else {
+            // solve for complete report step
+            auto stepReport = solver->step(timer);
+            report_ += stepReport;
+            if (terminalOutput_) {
+                std::ostringstream ss;
+                stepReport.reportStep(ss);
+                OpmLog::info(ss.str());
+            }
+        }
+
+        // write simulation state at the report stage
+        Dune::Timer perfTimer;
+        perfTimer.start();
+        const double nextstep = adaptiveTimeStepping_ ? adaptiveTimeStepping_->suggestedNextStep() : -1.0;
+        ebosSimulator_.problem().setNextTimeStepSize(nextstep);
+        ebosSimulator_.problem().writeOutput();
+        report_.success.output_write_time += perfTimer.stop();
+
+        solver->model().endReportStep();
+
+        // take time that was used to solve system for this reportStep
+        solverTimer_->stop();
+
+        // update timing.
+        report_.success.solver_time += solverTimer_->secsSinceStart();
+
+        // Increment timer, remember well state.
+        ++timer;
+
+        if (terminalOutput_) {
+            if (!timer.initialStep()) {
+                const std::string version = moduleVersionName();
+                outputTimestampFIP(timer, eclState().getTitle(), version);
+            }
+        }
+
+        if (terminalOutput_) {
+            std::string msg =
+                "Time step took " + std::to_string(solverTimer_->secsSinceStart()) + " seconds; "
+                "total solver time " + std::to_string(report_.success.solver_time) + " seconds.";
+            OpmLog::debug(msg);
+        }
+        return true;
+    }
+
+    SimulatorReport finalize()
+    {
         // make sure all output is written to disk before run is finished
         {
             Dune::Timer finalOutputTimer;
             finalOutputTimer.start();
 
             ebosSimulator_.problem().finalizeOutput();
-            report.output_write_time += finalOutputTimer.stop();
+            report_.success.output_write_time += finalOutputTimer.stop();
         }
 
         // Stop timer and create timing report
-        totalTimer.stop();
-        report.total_time = totalTimer.secsSinceStart();
-        report.converged = true;
+        totalTimer_->stop();
+        report_.success.total_time = totalTimer_->secsSinceStart();
+        report_.success.converged = true;
 
-        return report;
+        return report_;
     }
-
-    /** \brief Returns the simulator report for the failed substeps of the simulation.
-     */
-    const SimulatorReport& failureReport() const
-    { return failureReport_; };
 
     const Grid& grid() const
     { return ebosSimulator_.vanguard().grid(); }
@@ -314,26 +324,12 @@ protected:
 
     std::unique_ptr<Solver> createSolver(WellModel& wellModel)
     {
-        auto model = std::unique_ptr<Model>(new Model(ebosSimulator_,
-                                                      modelParam_,
-                                                      wellModel,
-                                                      terminalOutput_));
+        auto model = std::make_unique<Model>(ebosSimulator_,
+                                             modelParam_,
+                                             wellModel,
+                                             terminalOutput_);
 
-        return std::unique_ptr<Solver>(new Solver(solverParam_, std::move(model)));
-    }
-
-    void outputTimestampFIP(const SimulatorTimer& timer, const std::string version)
-    {
-        std::ostringstream ss;
-        boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d %b %Y");
-        ss.imbue(std::locale(std::locale::classic(), facet));
-        ss << "\n                              **************************************************************************\n"
-        << "  Balance  at" << std::setw(10) << (double)unit::convert::to(timer.simulationTimeElapsed(), unit::day) << "  Days"
-        << " *" << std::setw(30) << eclState().getTitle() << "                                          *\n"
-        << "  Report " << std::setw(4) << timer.reportStepNum() << "    " << timer.currentDateTime()
-        << "  *                                             Flow  version " << std::setw(11) << version << "  *\n"
-        << "                              **************************************************************************\n";
-        OpmLog::note(ss.str());
+        return std::make_unique<Solver>(solverParam_, std::move(model));
     }
 
     const EclipseState& eclState() const
@@ -358,7 +354,6 @@ protected:
     // Data.
     Simulator& ebosSimulator_;
     std::unique_ptr<WellConnectionAuxiliaryModule<TypeTag>> wellAuxMod_;
-    SimulatorReport failureReport_;
 
     ModelParameters modelParam_;
     SolverParameters solverParam_;
@@ -367,6 +362,11 @@ protected:
     PhaseUsage phaseUsage_;
     // Misc. data
     bool terminalOutput_;
+
+    SimulatorReport report_;
+    std::unique_ptr<time::StopWatch> solverTimer_;
+    std::unique_ptr<time::StopWatch> totalTimer_;
+    std::unique_ptr<TimeStepper> adaptiveTimeStepping_;
 };
 
 } // namespace Opm

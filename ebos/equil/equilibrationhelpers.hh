@@ -35,7 +35,9 @@
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
+#include <opm/common/utility/numeric/RootFinders.hpp>
 
+#include <cmath>
 #include <memory>
 
 
@@ -89,21 +91,21 @@ namespace Opm {
 namespace EQUIL {
 
 
-typedef Opm::BlackOilFluidSystem<double> FluidSystemSimple;
+using FluidSystemSimple = BlackOilFluidSystem<double>;
 
 // Adjust oil pressure according to gas saturation and cap pressure
-typedef Opm::SimpleModularFluidState<double,
-                                     /*numPhases=*/3,
-                                     /*numComponents=*/3,
-                                     FluidSystemSimple,
-                                     /*storePressure=*/false,
-                                     /*storeTemperature=*/false,
-                                     /*storeComposition=*/false,
-                                     /*storeFugacity=*/false,
-                                     /*storeSaturation=*/true,
-                                     /*storeDensity=*/false,
-                                     /*storeViscosity=*/false,
-                                     /*storeEnthalpy=*/false> SatOnlyFluidState;
+using SatOnlyFluidState = SimpleModularFluidState<double,
+                                                  /*numPhases=*/3,
+                                                  /*numComponents=*/3,
+                                                  FluidSystemSimple,
+                                                  /*storePressure=*/false,
+                                                  /*storeTemperature=*/false,
+                                                  /*storeComposition=*/false,
+                                                  /*storeFugacity=*/false,
+                                                  /*storeSaturation=*/true,
+                                                  /*storeDensity=*/false,
+                                                  /*storeViscosity=*/false,
+                                                  /*storeEnthalpy=*/false>;
 
 /**
  * Types and routines relating to phase mixing in
@@ -234,7 +236,7 @@ public:
     }
 
 private:
-    typedef Opm::Tabulated1DFunction<double> RsVsDepthFunc;
+    using RsVsDepthFunc = Tabulated1DFunction<double>;
 
     const int pvtRegionIdx_;
     RsVsDepthFunc rsVsDepth_;
@@ -302,7 +304,7 @@ public:
     }
 
 private:
-    typedef Opm::Tabulated1DFunction<double> PbubVsDepthFunc;
+    using PbubVsDepthFunc = Tabulated1DFunction<double>;
 
     const int pvtRegionIdx_;
     PbubVsDepthFunc pbubVsDepth_;
@@ -370,7 +372,7 @@ public:
     }
 
 private:
-    typedef Opm::Tabulated1DFunction<double> PdewVsDepthFunc;
+    using PdewVsDepthFunc = Tabulated1DFunction<double>;
 
     const int pvtRegionIdx_;
     PdewVsDepthFunc pdewVsDepth_;
@@ -438,7 +440,7 @@ public:
     }
 
 private:
-    typedef Opm::Tabulated1DFunction<double> RvVsDepthFunc;
+    using RvVsDepthFunc = Tabulated1DFunction<double>;
 
     const int pvtRegionIdx_;
     RvVsDepthFunc rvVsDepth_;
@@ -612,6 +614,8 @@ private:
  */
 class EquilReg
 {
+    using TabulatedFunction = Tabulated1DFunction<double>;
+
 public:
     /**
      * Constructor.
@@ -621,13 +625,15 @@ public:
      * \param[in] rv      Calculator of vapourised oil-gas ratio.
      * \param[in] pvtRegionIdx The pvt region index
      */
-    EquilReg(const Opm::EquilRecord& rec,
+    EquilReg(const EquilRecord& rec,
              std::shared_ptr<Miscibility::RsFunction> rs,
              std::shared_ptr<Miscibility::RsFunction> rv,
+             const TabulatedFunction& saltVdTable,
              const int pvtIdx)
         : rec_    (rec)
         , rs_     (rs)
         , rv_     (rv)
+        , saltVdTable_ (saltVdTable)
         , pvtIdx_ (pvtIdx)
     {}
 
@@ -701,15 +707,18 @@ public:
     const CalcEvaporation&
     evaporationCalculator() const { return *this->rv_; }
 
+    const TabulatedFunction&
+    saltVdTable() const { return saltVdTable_;}
     /**
      * Retrieve pvtIdx of the region.
      */
     int pvtIdx() const { return this->pvtIdx_; }
 
 private:
-    Opm::EquilRecord rec_;     /**< Equilibration data */
+    EquilRecord rec_;     /**< Equilibration data */
     std::shared_ptr<Miscibility::RsFunction> rs_;      /**< RS calculator */
     std::shared_ptr<Miscibility::RsFunction> rv_;      /**< RV calculator */
+    const TabulatedFunction& saltVdTable_;
     const int pvtIdx_;
 };
 
@@ -818,45 +827,17 @@ double satFromPc(const MaterialLawManager& materialLawManager,
     const PcEq<FluidSystem, MaterialLaw, MaterialLawManager> f(materialLawManager, phase, cell, targetPc);
     double f0 = f(s0);
     double f1 = f(s1);
-
     if (f0 <= 0.0)
         return s0;
     else if (f1 >= 0.0)
         return s1;
-
     assert(f0 > 0 && f1 < 0);
-
-    const int maxIter = 60;
     const double tol = 1e-10;
-
-    // regula falsi with the "Pegasus" method to avoid stagnation
-    for (int iter = 0; iter < maxIter; ++ iter) {
-        // determine the pivot
-        double s = (s1*f0 - s0*f1)/(f0 - f1);
-
-        // adapt the interval
-        double fs = f(s);
-        if (fs == 0.0)
-            return s;
-        else if ((fs > 0.0) == (f0 > 0.0)) {
-            // update interval and reverse
-            s0 = s1;
-            f0 = f1;
-        }
-        else
-            // "Pegasus" method
-            f0 *= f1/(f1 + fs);
-
-        s1 = s;
-        f1 = fs;
-
-        // check for convergence
-        if (std::abs(s1 - s0) < tol)
-            return (s1 + s0)/2;
-    }
-
-    throw std::runtime_error("Could not find solution for PcEq = 0.0 after "+std::to_string(maxIter)
-                             +" iterations.");
+    // should at least converge in 2 times bisection but some safety here:
+    const int maxIter = -2*static_cast<int>(std::log2(tol)) + 10;
+    int usedIterations = -1;
+    const double root = RegulaFalsiBisection<ThrowOnError>::solve(f, s0, s1, maxIter, tol, usedIterations);
+    return root;
 }
 
 
@@ -933,38 +914,12 @@ double satFromSumOfPcs(const MaterialLawManager& materialLawManager,
         return s1;
 
     assert(f0 > 0.0 && f1 < 0.0);
-
-    const int maxIter = 60;
     const double tol = 1e-10;
-
-    // regula falsi with the "Pegasus" method to avoid stagnation
-    for (int iter = 0; iter < maxIter; ++ iter) {
-        // determine the pivot
-        double s = (s1*f0 - s0*f1)/(f0 - f1);
-
-        // adapt the interval
-        double fs = f(s);
-        if (fs == 0.0)
-            return s;
-        else if ((fs > 0.0) == (f0 > 0.0)) {
-            // update interval and reverse
-            s0 = s1;
-            f0 = f1;
-        }
-        else
-            // "Pegasus" method
-            f0 *= f1 / (f1 + fs);
-
-        s1 = s;
-        f1 = fs;
-
-        // check for convergence
-        if (std::abs(s1 - s0) < tol)
-            return (s1 + s0)/2;
-    }
-
-    throw std::runtime_error("Could not find solution for PcEqSum = 0.0 after "+std::to_string(maxIter)
-                             +" iterations.");
+    // should at least converge in 2 times bisection but some safety here:
+    const int maxIter = -2*static_cast<int>(std::log2(tol)) + 10;
+    int usedIterations = -1;
+    const double root = RegulaFalsiBisection<ThrowOnError>::solve(f, s0, s1, maxIter, tol, usedIterations);
+    return root;
 }
 
 /// Compute saturation from depth. Used for constant capillary pressure function

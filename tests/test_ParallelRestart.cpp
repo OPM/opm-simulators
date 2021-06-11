@@ -24,17 +24,20 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include <opm/common/OpmLog/Location.hpp>
+#include <memory>
+#include <tuple>
+#include <utility>
+
+#include <opm/common/OpmLog/KeywordLocation.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Deck/DeckItem.hpp>
-#include <opm/parser/eclipse/EclipseState/Aquancon.hpp>
-#include <opm/parser/eclipse/EclipseState/AquiferCT.hpp>
-#include <opm/parser/eclipse/EclipseState/AquiferConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/Aquifetp.hpp>
+#include <opm/parser/eclipse/EclipseState/Aquifer/Aquancon.hpp>
+#include <opm/parser/eclipse/EclipseState/Aquifer/AquiferCT.hpp>
+#include <opm/parser/eclipse/EclipseState/Aquifer/AquiferConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/Aquifer/Aquifetp.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 #include <opm/parser/eclipse/EclipseState/TracerConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/Edit/EDITNNC.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/Fault.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/FaultCollection.hpp>
@@ -46,7 +49,7 @@
 #include <opm/parser/eclipse/EclipseState/InitConfig/FoamConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/IOConfig/RestartConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/RSTConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionAST.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/PyAction.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/Actions.hpp>
@@ -59,13 +62,14 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRateModel.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MessageLimits.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/icd.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/MSW/SpiralICD.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/MSW/AICD.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/MSW/SICD.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Network/Node.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/RFTConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/ScheduleTypes.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Tuning.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQActive.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQAssign.hpp>
@@ -77,6 +81,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQInput.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/PAvg.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Connection.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellFoamProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellPolymerProperties.hpp>
@@ -111,6 +116,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/TableContainer.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableSchema.hpp>
+#include <opm/output/data/Aquifer.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
 #include <opm/simulators/utils/ParallelRestart.hpp>
 #include <ebos/eclmpiserializer.hh>
@@ -164,6 +170,8 @@ Opm::data::Connection getConnection()
     con1.cell_saturation_water = 5.0;
     con1.cell_saturation_gas = 6.0;
     con1.effective_Kh = 7.0;
+    con1.trans_factor = 8.0;
+
     return con1;
 }
 
@@ -187,6 +195,15 @@ Opm::data::CurrentControl getCurrentControl()
     return curr;
 }
 
+Opm::data::GuideRateValue getWellGuideRate()
+{
+    using Item = Opm::data::GuideRateValue::Item;
+
+    return Opm::data::GuideRateValue{}.set(Item::Oil  , 1.23)
+                                      .set(Item::Gas  , 2.34)
+                                      .set(Item::Water, 3.45)
+                                      .set(Item::ResV , 4.56);
+}
 
 Opm::data::Well getWell()
 {
@@ -199,10 +216,84 @@ Opm::data::Well getWell()
     well1.connections.push_back(getConnection());
     well1.segments.insert({0, getSegment()});
     well1.current_control = getCurrentControl();
+    well1.guide_rates = getWellGuideRate();
     return well1;
 }
 
+Opm::data::GroupGuideRates getGroupGuideRates()
+{
+    using Item = Opm::data::GuideRateValue::Item;
 
+    auto gr = Opm::data::GroupGuideRates{};
+
+    gr.production.set(Item::Oil ,   999.888)
+                 .set(Item::Gas ,  8888.777)
+                 .set(Item::ResV, 12345.678);
+
+    gr.injection.set(Item::Gas  , 9876.543)
+                .set(Item::Water, 2345.987);
+
+    return gr;
+}
+
+Opm::data::GroupConstraints getGroupConstraints()
+{
+    using PMode = ::Opm::Group::ProductionCMode;
+    using IMode = ::Opm::Group::InjectionCMode;
+
+    return Opm::data::GroupConstraints{}
+    .set(PMode::ORAT,           // Production
+         IMode::VREP,           // Gas Injection
+         IMode::NONE);          // Water Injection
+}
+
+Opm::data::GroupData getGroupData()
+{
+    return Opm::data::GroupData {
+        getGroupConstraints(),
+        getGroupGuideRates()
+    };
+}
+
+Opm::data::NodeData getNodeData()
+{
+    return Opm::data::NodeData {
+        123.457
+    };
+}
+
+Opm::data::AquiferData getFetkovichAquifer(const int aquiferID = 1)
+{
+    auto aquifer = Opm::data::AquiferData {
+        aquiferID, 123.456, 56.78, 9.0e10, 290.0, 2515.5, Opm::data::AquiferType::Fetkovich
+    };
+
+    aquifer.aquFet = std::make_shared<Opm::data::FetkovichData>();
+
+    aquifer.aquFet->initVolume = 1.23;
+    aquifer.aquFet->prodIndex = 45.67;
+    aquifer.aquFet->timeConstant = 890.123;
+
+    return aquifer;
+}
+
+Opm::data::AquiferData getCarterTracyAquifer(const int aquiferID = 5)
+{
+    auto aquifer = Opm::data::AquiferData {
+        aquiferID, 123.456, 56.78, 9.0e10, 290.0, 2515.5, Opm::data::AquiferType::CarterTracy
+    };
+
+    aquifer.aquCT = std::make_shared<Opm::data::CarterTracyData>();
+
+    aquifer.aquCT->timeConstant = 987.65;
+    aquifer.aquCT->influxConstant = 43.21;
+    aquifer.aquCT->waterDensity = 1014.5;
+    aquifer.aquCT->waterViscosity = 0.00318;
+    aquifer.aquCT->dimensionless_time = 42.0;
+    aquifer.aquCT->dimensionless_pressure = 2.34;
+
+    return aquifer;
+}
 }
 
 
@@ -256,6 +347,52 @@ BOOST_AUTO_TEST_CASE(Rates)
     DO_CHECKS(data::Rates)
 }
 
+BOOST_AUTO_TEST_CASE(dataFetkovichData)
+{
+    const auto val1 = getFetkovichAquifer();
+    const auto val2 = PackUnpack(val1);
+
+    DO_CHECKS(data::FetkovichData)
+}
+
+BOOST_AUTO_TEST_CASE(dataCarterTracyData)
+{
+    const auto val1 = getCarterTracyAquifer();
+    const auto val2 = PackUnpack(val1);
+
+    DO_CHECKS(data::CarterTracyData)
+}
+
+BOOST_AUTO_TEST_CASE(dataAquifers)
+{
+    const auto val1 = Opm::data::Aquifers {
+        { 1, getFetkovichAquifer(1) },
+        { 4, getFetkovichAquifer(4) },
+        { 5, getCarterTracyAquifer(5) },
+    };
+
+    const auto val2 = PackUnpack(val1);
+
+    DO_CHECKS(data::Aquifers)
+}
+
+BOOST_AUTO_TEST_CASE(dataGuideRateValue)
+{
+    using Item = Opm::data::GuideRateValue::Item;
+
+    const auto val1 = Opm::data::GuideRateValue{}
+    .set(Item::Oil ,   999.888)
+    .set(Item::Gas ,  8888.777)
+    .set(Item::ResV, 12345.678);
+
+    const auto val2 = PackUnpack(val1);
+
+    BOOST_CHECK_MESSAGE(! std::get<0>(val2).has(Item::Water),
+                        "Water Must Not Appear From "
+                        "Serializing GuideRateValues");
+
+    DO_CHECKS(data::GuideRateValue)
+}
 
 BOOST_AUTO_TEST_CASE(dataConnection)
 {
@@ -297,6 +434,37 @@ BOOST_AUTO_TEST_CASE(WellRates)
     DO_CHECKS(data::WellRates)
 }
 
+BOOST_AUTO_TEST_CASE(dataGroupConstraints)
+{
+    const auto val1 = getGroupConstraints();
+    const auto val2 = PackUnpack(val1);
+
+    DO_CHECKS(data::GroupConstraints)
+}
+
+BOOST_AUTO_TEST_CASE(dataGroupGuideRates)
+{
+    const auto val1 = getGroupData().guideRates;
+    const auto val2 = PackUnpack(val1);
+
+    DO_CHECKS(data::GroupGuideRates)
+}
+
+BOOST_AUTO_TEST_CASE(dataGroupData)
+{
+    const auto val1 = getGroupData();
+    const auto val2 = PackUnpack(val1);
+
+    DO_CHECKS(data::GroupData)
+}
+
+BOOST_AUTO_TEST_CASE(dataNodeData)
+{
+    const auto val1 = getNodeData();
+    const auto val2 = PackUnpack(val1);
+
+    DO_CHECKS(data::NodeData)
+}
 
 BOOST_AUTO_TEST_CASE(CellData)
 {
@@ -319,10 +487,28 @@ BOOST_AUTO_TEST_CASE(RestartKey)
 
 BOOST_AUTO_TEST_CASE(RestartValue)
 {
-    Opm::data::WellRates wells1;
-    wells1.insert({"test_well", getWell()});
-    Opm::RestartValue val1(getSolution(), wells1);
-    auto val2 = PackUnpack(val1);
+    auto wells1 = Opm::data::WellRates {{
+        { "test_well", getWell() },
+    }};
+    auto grp_nwrk_1 = Opm::data::GroupAndNetworkValues {
+        {                       // .groupData
+            { "test_group1", getGroupData() },
+        },
+        {                       // .nodeData
+            { "test_node1", getNodeData() },
+        }
+    };
+
+    auto aquifers = Opm::data::Aquifers {
+        { 2, getCarterTracyAquifer(2) },
+        {11, getFetkovichAquifer(11) },
+    };
+
+    const auto val1 = Opm::RestartValue {
+        getSolution(), std::move(wells1), std::move(grp_nwrk_1), std::move(aquifers)
+    };
+    const auto val2 = PackUnpack(val1);
+
     DO_CHECKS(RestartValue)
 }
 
@@ -349,6 +535,7 @@ TEST_FOR_TYPE(Aquancon)
 TEST_FOR_TYPE(AquiferConfig)
 TEST_FOR_TYPE(AquiferCT)
 TEST_FOR_TYPE(Aquifetp)
+TEST_FOR_TYPE(AutoICD)
 TEST_FOR_TYPE2(Action, Actions)
 TEST_FOR_TYPE2(Action, ActionX)
 TEST_FOR_TYPE2(Action, AST)
@@ -366,10 +553,10 @@ TEST_FOR_TYPE(DenT)
 TEST_FOR_TYPE(Dimension)
 TEST_FOR_TYPE(EclHysterConfig)
 TEST_FOR_TYPE(EclipseConfig)
-TEST_FOR_TYPE(EDITNNC)
 TEST_FOR_TYPE(EndpointScaling)
 TEST_FOR_TYPE(Eqldims)
 TEST_FOR_TYPE(Equil)
+TEST_FOR_TYPE(TLMixpar)
 TEST_FOR_TYPE(Events)
 TEST_FOR_TYPE(Fault)
 TEST_FOR_TYPE(FaultCollection)
@@ -387,12 +574,13 @@ TEST_FOR_TYPE(GuideRateModel)
 TEST_FOR_TYPE(InitConfig)
 TEST_FOR_TYPE(IOConfig)
 TEST_FOR_TYPE(JFunc)
-TEST_FOR_TYPE(Location)
+TEST_FOR_TYPE(KeywordLocation)
 TEST_FOR_TYPE(MessageLimits)
-TEST_FOR_TYPE(MLimits)
 TEST_FOR_TYPE(MULTREGTScanner)
 TEST_FOR_TYPE(NNC)
+TEST_FOR_TYPE2(Network, Node)
 TEST_FOR_TYPE(OilVaporizationProperties)
+TEST_FOR_TYPE(PAvg)
 TEST_FOR_TYPE(Phases)
 TEST_FOR_TYPE(PlymwinjTable)
 TEST_FOR_TYPE(PlyshlogTable)
@@ -402,8 +590,7 @@ TEST_FOR_TYPE(PvtoTable)
 TEST_FOR_TYPE(PvtwsaltTable)
 TEST_FOR_TYPE(PvtwTable)
 TEST_FOR_TYPE(Regdims)
-TEST_FOR_TYPE(RestartConfig)
-TEST_FOR_TYPE(RestartSchedule)
+TEST_FOR_TYPE(RSTConfig)
 TEST_FOR_TYPE(RFTConfig)
 TEST_FOR_TYPE(RockConfig)
 TEST_FOR_TYPE(RockTable)
@@ -412,12 +599,13 @@ TEST_FOR_TYPE(Rock2dtrTable)
 TEST_FOR_TYPE(Rock2dTable)
 TEST_FOR_TYPE(Runspec)
 TEST_FOR_TYPE(Schedule)
+TEST_FOR_TYPE(ScheduleDeck)
 TEST_FOR_TYPE(Segment)
 TEST_FOR_TYPE(SimpleTable)
 TEST_FOR_TYPE(SimulationConfig)
 TEST_FOR_TYPE(SkprpolyTable)
 TEST_FOR_TYPE(SkprwatTable)
-TEST_FOR_TYPE(SpiralICD)
+TEST_FOR_TYPE(SICD)
 TEST_FOR_TYPE(SolventDensityTable)
 TEST_FOR_TYPE(SummaryConfig)
 TEST_FOR_TYPE(SummaryConfigNode)
@@ -427,7 +615,6 @@ TEST_FOR_TYPE(TableContainer)
 TEST_FOR_TYPE(TableManager)
 TEST_FOR_TYPE(TableSchema)
 TEST_FOR_TYPE(ThresholdPressure)
-TEST_FOR_TYPE(TimeMap)
 TEST_FOR_TYPE(TracerConfig)
 TEST_FOR_TYPE(TransMult)
 TEST_FOR_TYPE(Tuning)

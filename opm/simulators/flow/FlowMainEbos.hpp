@@ -25,22 +25,17 @@
 
 #include <sys/utsname.h>
 
-#include <opm/simulators/flow/BlackoilModelEbos.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/simulators/utils/ParallelFileMerger.hpp>
 #include <opm/simulators/utils/moduleVersion.hpp>
-#include <opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp>
+#include <opm/simulators/utils/ParallelEclipseState.hpp>
 
-#include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
-
-#include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 #include <opm/common/utility/String.hpp>
+
+#include <fmt/format.h>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
@@ -48,41 +43,79 @@
 #include <dune/common/parallel/mpihelper.hh>
 #endif
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_PROP_TAG(EnableDryRun);
-NEW_PROP_TAG(OutputInterval);
-NEW_PROP_TAG(UseAmg);
-NEW_PROP_TAG(EnableLoggingFalloutWarning);
+template<class TypeTag, class MyTypeTag>
+struct EnableDryRun {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct OutputInterval {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EnableLoggingFalloutWarning {
+    using type = UndefinedProperty;
+};
 
 // TODO: enumeration parameters. we use strings for now.
-SET_STRING_PROP(EclFlowProblem, EnableDryRun, "auto");
+template<class TypeTag>
+struct EnableDryRun<TypeTag, TTag::EclFlowProblem> {
+    static constexpr auto value = "auto";
+};
 // Do not merge parallel output files or warn about them
-SET_BOOL_PROP(EclFlowProblem, EnableLoggingFalloutWarning, false);
-SET_INT_PROP(EclFlowProblem, OutputInterval, 1);
+template<class TypeTag>
+struct EnableLoggingFalloutWarning<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
+struct OutputInterval<TypeTag, TTag::EclFlowProblem> {
+    static constexpr int value = 1;
+};
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm
 {
+
+    class Deck;
+
     // The FlowMain class is the ebos based black-oil simulator.
     template <class TypeTag>
     class FlowMainEbos
     {
     public:
-        typedef typename GET_PROP(TypeTag, MaterialLaw)::EclMaterialLawManager MaterialLawManager;
-        typedef typename GET_PROP_TYPE(TypeTag, Simulator) EbosSimulator;
-        typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
-        typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-        typedef typename GET_PROP_TYPE(TypeTag, Problem) Problem;
-        typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-        typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+        using MaterialLawManager = typename GetProp<TypeTag, Properties::MaterialLaw>::EclMaterialLawManager;
+        using EbosSimulator = GetPropType<TypeTag, Properties::Simulator>;
+        using Grid = GetPropType<TypeTag, Properties::Grid>;
+        using GridView = GetPropType<TypeTag, Properties::GridView>;
+        using Problem = GetPropType<TypeTag, Properties::Problem>;
+        using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+        using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
-        typedef Opm::SimulatorFullyImplicitBlackoilEbos<TypeTag> Simulator;
+        typedef SimulatorFullyImplicitBlackoilEbos<TypeTag> Simulator;
+
+        FlowMainEbos(int argc, char **argv, bool output_cout, bool output_files )
+            : argc_{argc}, argv_{argv},
+              output_cout_{output_cout}, output_files_{output_files}
+        {
+
+        }
 
         // Read the command line parameters. Throws an exception if something goes wrong.
         static int setupParameters_(int argc, char** argv)
         {
+            using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
+            if (!ParamsMeta::registrationOpen()) {
+                // We have already successfully run setupParameters_().
+                // For the dynamically chosen runs (as from the main flow
+                // executable) we must run this function again with the
+                // real typetag to be used, as the first time was with the
+                // "FlowEarlyBird" typetag. However, for the static ones (such
+                // as 'flow_onephase_energy') it has already been run with the
+                // correct typetag.
+                return EXIT_SUCCESS;
+            }
             // register the flow specific parameters
             EWOMS_REGISTER_PARAM(TypeTag, std::string, EnableDryRun,
                                  "Specify if the simulation ought to be actually run, or just pretended to be");
@@ -94,7 +127,7 @@ namespace Opm
             Simulator::registerParameters();
 
             // register the parameters inherited from ebos
-            Opm::registerAllParameters_<TypeTag>(/*finalizeRegistration=*/false);
+            registerAllParameters_<TypeTag>(/*finalizeRegistration=*/false);
 
             // hide the parameters unused by flow. TODO: this is a pain to maintain
             EWOMS_HIDE_PARAM(TypeTag, EnableGravity);
@@ -139,7 +172,45 @@ namespace Opm
             // the default eWoms checkpoint/restart mechanism does not work with flow
             EWOMS_HIDE_PARAM(TypeTag, RestartTime);
             EWOMS_HIDE_PARAM(TypeTag, RestartWritingInterval);
-
+            // hide all vtk related it is not currently possible to do this dependet on if the vtk writing is used
+            //if(not(EWOMS_GET_PARAM(TypeTag,bool,EnableVtkOutput))){
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteOilFormationVolumeFactor);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteOilSaturationPressure);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteOilVaporizationFactor);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWritePorosity);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWritePotentialGradients);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWritePressures);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWritePrimaryVars);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWritePrimaryVarsMeaning);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteProcessRank);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteRelativePermeabilities);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteSaturatedGasOilVaporizationFactor);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteSaturatedOilGasDissolutionFactor);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteSaturationRatios);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteSaturations);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteTemperature);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteViscosities);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteWaterFormationVolumeFactor);                
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteGasDissolutionFactor);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteGasFormationVolumeFactor);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteGasSaturationPressure);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteIntrinsicPermeabilities);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteEclTracerConcentration);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteExtrusionFactor);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteFilterVelocities);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteDensities);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteDofIndex);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteMobilities);
+                //}
+            EWOMS_HIDE_PARAM(TypeTag, VtkWriteAverageMolarMasses);           
+            EWOMS_HIDE_PARAM(TypeTag, VtkWriteFugacities);
+            EWOMS_HIDE_PARAM(TypeTag, VtkWriteFugacityCoeffs);
+            EWOMS_HIDE_PARAM(TypeTag, VtkWriteMassFractions);
+            EWOMS_HIDE_PARAM(TypeTag, VtkWriteMolarities);
+            EWOMS_HIDE_PARAM(TypeTag, VtkWriteMoleFractions);
+            EWOMS_HIDE_PARAM(TypeTag, VtkWriteTotalMassFractions);
+            EWOMS_HIDE_PARAM(TypeTag, VtkWriteTotalMoleFractions);
+            
             EWOMS_END_PARAM_REGISTRATION(TypeTag);
 
             int mpiRank = 0;
@@ -148,14 +219,14 @@ namespace Opm
 #endif
 
             // read in the command line parameters
-            int status = Opm::setupParameters_<TypeTag>(argc, const_cast<const char**>(argv), /*doRegistration=*/false, /*allowUnused=*/true, /*handleHelp=*/(mpiRank==0));
+            int status = ::Opm::setupParameters_<TypeTag>(argc, const_cast<const char**>(argv), /*doRegistration=*/false, /*allowUnused=*/true, /*handleHelp=*/(mpiRank==0));
             if (status == 0) {
 
                 // deal with unknown parameters.
 
                 int unknownKeyWords = 0;
                 if (mpiRank == 0) {
-                    unknownKeyWords = Opm::Parameters::printUnused<TypeTag>(std::cerr);
+                    unknownKeyWords = Parameters::printUnused<TypeTag>(std::cerr);
                 }
 #if HAVE_MPI
                 int globalUnknownKeyWords;
@@ -187,13 +258,13 @@ namespace Opm
                 if (EWOMS_GET_PARAM(TypeTag, int, PrintProperties) == 1) {
                     doExit = true;
                     if (mpiRank == 0)
-                        Opm::Properties::printValues<TypeTag>();
+                        Properties::printValues<TypeTag>();
                 }
 
                 if (EWOMS_GET_PARAM(TypeTag, int, PrintParameters) == 1) {
                     doExit = true;
                     if (mpiRank == 0)
-                        Opm::Parameters::printValues<TypeTag>();
+                        Parameters::printValues<TypeTag>();
                 }
 
                 if (doExit)
@@ -231,6 +302,11 @@ namespace Opm
                 threads =  omp_get_max_threads();
             else
                 threads = std::min(2, omp_get_max_threads());
+
+            const int input_threads = EWOMS_GET_PARAM(TypeTag, int, ThreadsPerProcess);
+
+            if (input_threads > 0)
+                threads = std::min(input_threads, omp_get_max_threads());
 #endif
 
 #if HAVE_MPI
@@ -243,45 +319,30 @@ namespace Opm
         /// This is the main function of Flow.  It runs a complete simulation with the
         /// given grid and simulator classes, based on the user-specified command-line
         /// input.
-        int execute(int argc, char** argv, bool output_cout, bool output_to_files)
+        int execute()
         {
-            try {
-                // deal with some administrative boilerplate
+            return execute_(&FlowMainEbos::runSimulator, /*cleanup=*/true);
+        }
 
-                int status = setupParameters_(argc, argv);
-                if (status)
-                    return status;
+        int executeInitStep()
+        {
+            return execute_(&FlowMainEbos::runSimulatorInit, /*cleanup=*/false);
+        }
 
-                setupParallelism();
-                setupEbosSimulator();
-                runDiagnostics(output_cout);
-                createSimulator();
+        // Returns true unless "EXIT" was encountered in the schedule
+        //   section of the input datafile.
+        int executeStep()
+        {
+            return simulator_->runStep(*simtimer_);
+        }
 
-                // do the actual work
-                int retval = runSimulator(output_cout);
-
-                // clean up
-                mergeParallelLogFiles(output_to_files);
-
-                return retval;
-            }
-            catch (const std::exception& e) {
-                std::ostringstream message;
-                message  << "Program threw an exception: " << e.what();
-
-                if (output_cout) {
-                    // in some cases exceptions are thrown before the logging system is set
-                    // up.
-                    if (OpmLog::hasBackend("STREAMLOG")) {
-                        OpmLog::error(message.str());
-                    }
-                    else {
-                        std::cout << message.str() << "\n";
-                    }
-                }
-
-                return EXIT_FAILURE;
-            }
+        // Called from Python to cleanup after having executed the last
+        // executeStep()
+        int executeStepsCleanup()
+        {
+            SimulatorReport report = simulator_->finalize();
+            runSimulatorAfterSim_(report);
+            return report.success.exit_status;
         }
 
         // Print an ASCII-art header to the PRT and DEBUG files.
@@ -323,10 +384,60 @@ namespace Opm
               ss << "Simulation started on " << tmstr << " hrs\n";
 
               ss << "Parameters used by Flow:\n";
-              Opm::Parameters::printValues<TypeTag>(ss);
+              Parameters::printValues<TypeTag>(ss);
 
               OpmLog::note(ss.str());
           }
+        }
+
+        EbosSimulator *getSimulatorPtr() {
+            return ebosSimulator_.get();
+        }
+
+    private:
+        // called by execute() or executeInitStep()
+        int execute_(int (FlowMainEbos::* runOrInitFunc)(), bool cleanup)
+        {
+            try {
+                // deal with some administrative boilerplate
+
+                int status = setupParameters_(this->argc_, this->argv_);
+                if (status)
+                    return status;
+
+                setupParallelism();
+                setupEbosSimulator();
+                createSimulator();
+
+                // if run, do the actual work, else just initialize
+                int exitCode = (this->*runOrInitFunc)();
+                if (cleanup) {
+                    executeCleanup_();
+                }
+                return exitCode;
+            }
+            catch (const std::exception& e) {
+                std::ostringstream message;
+                message  << "Program threw an exception: " << e.what();
+
+                if (this->output_cout_) {
+                    // in some cases exceptions are thrown before the logging system is set
+                    // up.
+                    if (OpmLog::hasBackend("STREAMLOG")) {
+                        OpmLog::error(message.str());
+                    }
+                    else {
+                        std::cout << message.str() << "\n";
+                    }
+                }
+
+                return EXIT_FAILURE;
+            }
+        }
+
+        void executeCleanup_() {
+            // clean up
+            mergeParallelLogFiles();
         }
 
     protected:
@@ -349,22 +460,22 @@ namespace Opm
                 omp_set_num_threads(std::min(2, omp_get_num_procs()));
 #endif
 
-            typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) ThreadManager;
+            using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;
             ThreadManager::init();
         }
 
 
 
-        void mergeParallelLogFiles(bool output_to_files)
+        void mergeParallelLogFiles()
         {
             // force closing of all log files.
             OpmLog::removeAllBackends();
 
-            if (mpi_rank_ != 0 || mpi_size_ < 2 || !output_to_files) {
+            if (mpi_rank_ != 0 || mpi_size_ < 2 || !this->output_files_) {
                 return;
             }
 
-            namespace fs = Opm::filesystem;
+            namespace fs = ::Opm::filesystem;
             const std::string& output_dir = eclState().getIOConfig().getOutputDir();
             fs::path output_path(output_dir);
             fs::path deck_filename(EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName));
@@ -433,53 +544,78 @@ namespace Opm
         const Schedule& schedule() const
         { return ebosSimulator_->vanguard().schedule(); }
 
-
-        // Run diagnostics.
-        // Writes to:
-        //   OpmLog singleton.
-        void runDiagnostics(bool output_cout)
+        // Run the simulator.
+        int runSimulator()
         {
-            if (!output_cout) {
-                return;
-            }
+            return runSimulatorInitOrRun_(&FlowMainEbos::runSimulatorRunCallback_);
+        }
 
-            // Run relperm diagnostics if we have more than one phase.
-            if (FluidSystem::numActivePhases() > 1) {
-                RelpermDiagnostics diagnostic;
-                if (mpi_size_ > 1) {
-#if HAVE_MPI
-                    this->grid().switchToGlobalView();
-                    static_cast<ParallelEclipseState&>(this->eclState()).switchToGlobalProps();
+        int runSimulatorInit()
+        {
+            return runSimulatorInitOrRun_(&FlowMainEbos::runSimulatorInitCallback_);
+        }
+
+    private:
+        // Callback that will be called from runSimulatorInitOrRun_().
+        int runSimulatorRunCallback_()
+        {
+            SimulatorReport report = simulator_->run(*simtimer_);
+            runSimulatorAfterSim_(report);
+            return report.success.exit_status;
+        }
+
+        // Callback that will be called from runSimulatorInitOrRun_().
+        int runSimulatorInitCallback_()
+        {
+            simulator_->init(*simtimer_);
+            return EXIT_SUCCESS;
+        }
+
+        // Output summary after simulation has completed
+        void runSimulatorAfterSim_(SimulatorReport &report)
+        {
+            if (this->output_cout_) {
+                std::ostringstream ss;
+                ss << "\n\n================    End of simulation     ===============\n\n";
+                ss << fmt::format("Number of MPI processes: {:9}\n", mpi_size_ );
+#if _OPENMP
+                int threads = omp_get_max_threads();
+#else
+                int threads = 1;
 #endif
-                }
-                diagnostic.diagnosis(eclState(), this->grid());
-                if (mpi_size_ > 1) {
-#if HAVE_MPI
-                    this->grid().switchToDistributedView();
-                    static_cast<ParallelEclipseState&>(this->eclState()).switchToDistributedProps();
-#endif
+                ss << fmt::format("Threads per MPI process: {:9}\n", threads);
+                report.reportFullyImplicit(ss);
+                OpmLog::info(ss.str());
+                const std::string dir = eclState().getIOConfig().getOutputDir();
+                namespace fs = ::Opm::filesystem;
+                fs::path output_dir(dir);
+                {
+                    std::string filename = eclState().getIOConfig().getBaseName() + ".INFOSTEP";
+                    fs::path fullpath = output_dir / filename;
+                    std::ofstream os(fullpath.string());
+                    report.fullReports(os);
                 }
             }
         }
 
         // Run the simulator.
-        int runSimulator(bool output_cout)
+        int runSimulatorInitOrRun_(int (FlowMainEbos::* initOrRunFunc)())
         {
+
             const auto& schedule = this->schedule();
-            const auto& timeMap = schedule.getTimeMap();
             auto& ioConfig = eclState().getIOConfig();
-            SimulatorTimer simtimer;
+            simtimer_ = std::make_unique<SimulatorTimer>();
 
             // initialize variables
             const auto& initConfig = eclState().getInitConfig();
-            simtimer.init(timeMap, (size_t)initConfig.getRestartStep());
+            simtimer_->init(schedule, (size_t)initConfig.getRestartStep());
 
-            if (output_cout) {
+            if (this->output_cout_) {
                 std::ostringstream oss;
 
                 // This allows a user to catch typos and misunderstandings in the
                 // use of simulator parameters.
-                if (Opm::Parameters::printUnused<TypeTag>(oss)) {
+                if (Parameters::printUnused<TypeTag>(oss)) {
                     std::cout << "-----------------   Unrecognized parameters:   -----------------\n";
                     std::cout << oss.str();
                     std::cout << "----------------------------------------------------------------" << std::endl;
@@ -487,35 +623,23 @@ namespace Opm
             }
 
             if (!ioConfig.initOnly()) {
-                if (output_cout) {
+                if (this->output_cout_) {
                     std::string msg;
                     msg = "\n\n================ Starting main simulation loop ===============\n";
                     OpmLog::info(msg);
                 }
 
-                SimulatorReport successReport = simulator_->run(simtimer);
-                SimulatorReport failureReport = simulator_->failureReport();
-                if (output_cout) {
-                    std::ostringstream ss;
-                    ss << "\n\n================    End of simulation     ===============\n\n";
-                    ss << "Number of MPI processes: " << std::setw(6) << mpi_size_ << "\n";
-#if _OPENMP
-                    int threads = omp_get_max_threads();
-#else
-                    int threads = 1;
-#endif
-                    ss << "Threads per MPI process:  " << std::setw(5) << threads << "\n";
-                    successReport.reportFullyImplicit(ss, &failureReport);
-                    OpmLog::info(ss.str());
-                }
-                return successReport.exit_status;
-            } else {
-                if (output_cout) {
+                return (this->*initOrRunFunc)();
+            }
+            else {
+                if (this->output_cout_) {
                     std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;
                 }
                 return EXIT_SUCCESS;
             }
         }
+
+    protected:
 
         /// This is the main function of Flow.
         // Create simulator instance.
@@ -544,6 +668,11 @@ namespace Opm
         int  mpi_size_ = 1;
         std::any parallel_information_;
         std::unique_ptr<Simulator> simulator_;
+        std::unique_ptr<SimulatorTimer> simtimer_;
+        int argc_;
+        char **argv_;
+        bool output_cout_;
+        bool output_files_;
     };
 } // namespace Opm
 

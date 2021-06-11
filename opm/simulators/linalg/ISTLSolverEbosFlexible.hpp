@@ -24,23 +24,22 @@
 #include <opm/simulators/linalg/findOverlapRowsAndColumns.hpp>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/setupPropertyTree.hpp>
+#include <opm/simulators/linalg/WriteSystemMatrixHelper.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
-
-#include <boost/property_tree/json_parser.hpp>
 
 #include <memory>
 #include <utility>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(FlowIstlSolverFlexible, INHERITS_FROM(FlowIstlSolverParams));
+namespace TTag {
+struct FlowIstlSolverFlexible {
+    using InheritsFrom = std::tuple<FlowIstlSolverParams>;
+};
+}
 
-NEW_PROP_TAG(GlobalEqVector);
-NEW_PROP_TAG(SparseMatrixAdapter);
-NEW_PROP_TAG(Simulator);
-
-END_PROPERTIES
+} // namespace Opm::Properties
 
 
 namespace Opm
@@ -58,30 +57,32 @@ namespace Opm
 template <class TypeTag>
 class ISTLSolverEbosFlexible
 {
-    using GridView = typename GET_PROP_TYPE(TypeTag, GridView);
-    using SparseMatrixAdapter = typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter);
-    using VectorType = typename GET_PROP_TYPE(TypeTag, GlobalEqVector);
-    using Simulator = typename GET_PROP_TYPE(TypeTag, Simulator);
-    using Scalar = typename GET_PROP_TYPE(TypeTag, Scalar);
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
+    using VectorType = GetPropType<TypeTag, Properties::GlobalEqVector>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using MatrixType = typename SparseMatrixAdapter::IstlMatrix;
+    using WellModel = GetPropType<TypeTag, Properties::EclWellModel>;
 #if HAVE_MPI
     using Communication = Dune::OwnerOverlapCopyCommunication<int, int>;
+#else
+    using Communication = int; // Dummy type.
 #endif
+    using AbstractOperatorType = Dune::AssembledLinearOperator<MatrixType, VectorType, VectorType>;
+    using WellModelOpType = WellModelAsLinearOperator<WellModel, VectorType, VectorType>;
     using SolverType = Dune::FlexibleSolver<MatrixType, VectorType>;
 
     // for quasiImpesWeights
-    typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector) Vector;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
-    //typedef typename GET_PROP_TYPE(TypeTag, EclWellModel) WellModel;
-    //typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+    using Vector = GetPropType<TypeTag, Properties::GlobalEqVector>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
     typedef typename SparseMatrixAdapter::IstlMatrix Matrix;
     typedef typename SparseMatrixAdapter::MatrixBlock MatrixBlockType;
     typedef typename Vector::block_type BlockVector;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) ThreadManager;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;
     typedef typename GridView::template Codim<0>::Entity Element;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
 public:
     static void registerParameters()
@@ -91,9 +92,15 @@ public:
 
     explicit ISTLSolverEbosFlexible(const Simulator& simulator)
         : simulator_(simulator)
+        , ownersFirst_(EWOMS_GET_PARAM(TypeTag, bool, OwnerCellsFirst))
+        , matrixAddWellContributions_(EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions))
+        , interiorCellNum_(detail::numMatrixRowsToUseInSolver(simulator_.vanguard().grid(), ownersFirst_))
     {
         parameters_.template init<TypeTag>();
-        prm_ = setupPropertyTree<TypeTag>(parameters_);
+        prm_ = setupPropertyTree(parameters_,
+                                 EWOMS_PARAM_IS_SET(TypeTag, int, LinearSolverMaxIter),
+                                 EWOMS_PARAM_IS_SET(TypeTag, int, CprMaxEllIter));
+
         extractParallelGridInformationToISTL(simulator_.vanguard().grid(), parallelInformation_);
         // For some reason simulator_.model().elementMapper() is not initialized at this stage
         // Hence const auto& elemMapper = simulator_.model().elementMapper(); does not work.
@@ -114,7 +121,7 @@ public:
         if (simulator.gridView().comm().rank() == 0) {
             std::ostringstream os;
             os << "Property tree for linear solver:\n";
-            boost::property_tree::write_json(os, prm_, true);
+            prm_.write_json(os, true);
             OpmLog::note(os.str());
         }
     }
@@ -135,74 +142,53 @@ public:
             parinfo->copyValuesTo(comm_->indexSet(), comm_->remoteIndices(), size, 1);
             firstcall = false;
         }
-        makeOverlapRowsInvalid(mat.istlMatrix());
+        if (isParallel() && matrixAddWellContributions_) {
+            makeOverlapRowsInvalid(mat.istlMatrix());
+        }
 #endif
-        // Decide if we should recreate the solver or just do
-        // a minimal preconditioner update.
-        const int newton_iteration = this->simulator_.model().newtonMethod().numIterations();
-        bool recreate_solver = false;
-        if (this->parameters_.cpr_reuse_setup_ == 0) {
-            // Always recreate solver.
-            recreate_solver = true;
-        } else if (this->parameters_.cpr_reuse_setup_ == 1) {
-            // Recreate solver on the first iteration of every timestep.
-            if (newton_iteration == 0) {
-                recreate_solver = true;
-            }
-        } else if (this->parameters_.cpr_reuse_setup_ == 2) {
-            // Recreate solver if the last solve used more than 10 iterations.
-            if (this->iterations() > 10) {
-                recreate_solver = true;
-            }
-        } else {
-            assert(this->parameters_.cpr_reuse_setup_ == 3);
-            assert(recreate_solver == false);
-            // Never recreate solver.
-        }
 
-        std::function<VectorType()> weightsCalculator;
+        matrix_ = &mat.istlMatrix(); // Store pointer for output if needed.
+        std::function<VectorType()> weightsCalculator = getWeightsCalculator(mat.istlMatrix(), b);
 
-        auto preconditionerType = prm_.get("preconditioner.type", "cpr");
-        if( preconditionerType  == "cpr" ||
-            preconditionerType == "cprt"
-            )
-        {
-            bool transpose = false;
-            if(preconditionerType == "cprt"){
-                transpose = true;
-            }
-
-            auto weightsType = prm_.get("preconditioner.weight_type", "quasiimpes");
-            auto pressureIndex = this->prm_.get("preconditioner.pressure_var_index", 1);
-            if(weightsType == "quasiimpes") {
-                // weighs will be created as default in the solver
-                weightsCalculator =
-                    [&mat, transpose, pressureIndex](){
-                        return Opm::Amg::getQuasiImpesWeights<MatrixType,
-                                                              VectorType>(
-                                                                          mat.istlMatrix(),
-                                                                          pressureIndex,
-                                                                          transpose);
-                    };
-
-            }else if(weightsType == "trueimpes"  ){
-                weightsCalculator =
-                    [this, &b, pressureIndex](){
-                        return this->getTrueImpesWeights(b, pressureIndex);
-                    };
-            }else{
-                OPM_THROW(std::invalid_argument, "Weights type " << weightsType << "not implemented for cpr."
-                          << " Please use quasiimpes or trueimpes.");
-            }
-        }
-
-        if (recreate_solver || !solver_) {
+        if (shouldCreateSolver()) {
             if (isParallel()) {
 #if HAVE_MPI
-                solver_.reset(new SolverType(prm_, mat.istlMatrix(), weightsCalculator, *comm_));
-#endif
+                if (matrixAddWellContributions_) {
+                    using ParOperatorType = Dune::OverlappingSchwarzOperator<MatrixType, VectorType, VectorType, Communication>;
+                    auto op = std::make_unique<ParOperatorType>(mat.istlMatrix(), *comm_);
+                    auto sol = std::make_unique<SolverType>(*op, *comm_, prm_, weightsCalculator);
+                    solver_ = std::move(sol);
+                    linear_operator_ = std::move(op);
+                } else {
+                    if (!ownersFirst_) {
+                        OPM_THROW(std::runtime_error, "In parallel, the flexible solver requires "
+                                  "--owner-cells-first=true when --matrix-add-well-contributions=false is used.");
+                    }
+                    using ParOperatorType = WellModelGhostLastMatrixAdapter<MatrixType, VectorType, VectorType, true>;
+                    auto well_op = std::make_unique<WellModelOpType>(simulator_.problem().wellModel());
+                    auto op = std::make_unique<ParOperatorType>(mat.istlMatrix(), *well_op, interiorCellNum_);
+                    auto sol = std::make_unique<SolverType>(*op, *comm_, prm_, weightsCalculator);
+                    solver_ = std::move(sol);
+                    linear_operator_ = std::move(op);
+                    well_operator_ = std::move(well_op);
+                }
+#endif // HAVE_MPI
             } else {
-                solver_.reset(new SolverType(prm_, mat.istlMatrix(), weightsCalculator));
+                if (matrixAddWellContributions_) {
+                    using SeqOperatorType = Dune::MatrixAdapter<MatrixType, VectorType, VectorType>;
+                    auto op = std::make_unique<SeqOperatorType>(mat.istlMatrix());
+                    auto sol = std::make_unique<SolverType>(*op, prm_, weightsCalculator);
+                    solver_ = std::move(sol);
+                    linear_operator_ = std::move(op);
+                } else {
+                    using SeqOperatorType = WellModelMatrixAdapter<MatrixType, VectorType, VectorType, false>;
+                    auto well_op = std::make_unique<WellModelOpType>(simulator_.problem().wellModel());
+                    auto op = std::make_unique<SeqOperatorType>(mat.istlMatrix(), *well_op);
+                    auto sol = std::make_unique<SolverType>(*op, prm_, weightsCalculator);
+                    solver_ = std::move(sol);
+                    linear_operator_ = std::move(op);
+                    well_operator_ = std::move(well_op);
+                }
             }
             rhs_ = b;
         } else {
@@ -214,6 +200,7 @@ public:
     bool solve(VectorType& x)
     {
         solver_->apply(x, rhs_, res_);
+        this->writeMatrix();
         return res_.converged;
     }
 
@@ -243,6 +230,65 @@ public:
 
 protected:
 
+    bool shouldCreateSolver() const
+    {
+        // Decide if we should recreate the solver or just do
+        // a minimal preconditioner update.
+        if (!solver_) {
+            return true;
+        }
+        const int newton_iteration = this->simulator_.model().newtonMethod().numIterations();
+        bool recreate_solver = false;
+        if (this->parameters_.cpr_reuse_setup_ == 0) {
+            // Always recreate solver.
+            recreate_solver = true;
+        } else if (this->parameters_.cpr_reuse_setup_ == 1) {
+            // Recreate solver on the first iteration of every timestep.
+            if (newton_iteration == 0) {
+                recreate_solver = true;
+            }
+        } else if (this->parameters_.cpr_reuse_setup_ == 2) {
+            // Recreate solver if the last solve used more than 10 iterations.
+            if (this->iterations() > 10) {
+                recreate_solver = true;
+            }
+        } else {
+            assert(this->parameters_.cpr_reuse_setup_ == 3);
+            assert(recreate_solver == false);
+            // Never recreate solver.
+        }
+        return recreate_solver;
+    }
+
+    std::function<VectorType()> getWeightsCalculator(const MatrixType& mat, const VectorType& b) const
+    {
+        std::function<VectorType()> weightsCalculator;
+
+        using namespace std::string_literals;
+
+        auto preconditionerType = prm_.get("preconditioner.type", "cpr"s);
+        if (preconditionerType == "cpr" || preconditionerType == "cprt") {
+            const bool transpose = preconditionerType == "cprt";
+            const auto weightsType = prm_.get("preconditioner.weight_type", "quasiimpes"s);
+            const auto pressureIndex = this->prm_.get("preconditioner.pressure_var_index", 1);
+            if (weightsType == "quasiimpes") {
+                // weighs will be created as default in the solver
+                weightsCalculator = [&mat, transpose, pressureIndex]() {
+                    return Opm::Amg::getQuasiImpesWeights<MatrixType, VectorType>(mat, pressureIndex, transpose);
+                };
+            } else if (weightsType == "trueimpes") {
+                weightsCalculator = [this, &b, pressureIndex]() {
+                    return this->getTrueImpesWeights(b, pressureIndex);
+                };
+            } else {
+                OPM_THROW(std::invalid_argument,
+                          "Weights type " << weightsType << "not implemented for cpr."
+                                          << " Please use quasiimpes or trueimpes.");
+            }
+        }
+        return weightsCalculator;
+    }
+
     /// Zero out off-diagonal blocks on rows corresponding to overlap cells
     /// Diagonal blocks on ovelap rows are set to diag(1.0).
     void makeOverlapRowsInvalid(MatrixType& matrix) const
@@ -265,7 +311,7 @@ protected:
         }
     }
 
-    VectorType getTrueImpesWeights(const VectorType& b,const int pressureVarIndex)
+    VectorType getTrueImpesWeights(const VectorType& b, const int pressureVarIndex) const
     {
         VectorType weights(b.size());
         ElementContext elemCtx(simulator_);
@@ -275,17 +321,33 @@ protected:
         return weights;
     }
 
-    const Simulator& simulator_;
+    void writeMatrix()
+    {
+        const int verbosity = prm_.get<int>("verbosity");
+        const bool write_matrix = verbosity > 10;
+        if (write_matrix) {
+            Opm::Helper::writeSystem(this->simulator_, //simulator is only used to get names
+                                     *(this->matrix_),
+                                     this->rhs_,
+                                     comm_.get());
+        }
+    }
 
+
+    const Simulator& simulator_;
+    MatrixType* matrix_;
+    std::unique_ptr<WellModelOpType> well_operator_;
+    std::unique_ptr<AbstractOperatorType> linear_operator_;
     std::unique_ptr<SolverType> solver_;
     FlowLinearSolverParameters parameters_;
-    boost::property_tree::ptree prm_;
+    PropertyTree prm_;
     VectorType rhs_;
     Dune::InverseOperatorResult res_;
     std::any parallelInformation_;
-#if HAVE_MPI
+    bool ownersFirst_;
+    bool matrixAddWellContributions_;
+    int interiorCellNum_;
     std::unique_ptr<Communication> comm_;
-#endif
     std::vector<int> overlapRows_;
     std::vector<int> interiorRows_;
 }; // end ISTLSolverEbosFlexible

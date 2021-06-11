@@ -31,21 +31,31 @@
 
 namespace Opm {
 namespace Properties {
-NEW_TYPE_TAG(EclFlowEnergyProblem, INHERITS_FROM(EclFlowProblem));
-SET_BOOL_PROP(EclFlowEnergyProblem, EnableEnergy, true);
+namespace TTag {
+struct EclFlowEnergyProblem {
+    using InheritsFrom = std::tuple<EclFlowProblem>;
+};
+}
+template<class TypeTag>
+struct EnableEnergy<TypeTag, TTag::EclFlowEnergyProblem> {
+    static constexpr bool value = true;
+};
 }}
 
 namespace Opm {
-void flowEbosEnergySetDeck(double setupTime, Deck *deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
+void flowEbosEnergySetDeck(double setupTime, std::unique_ptr<Deck> deck,
+                          std::unique_ptr<EclipseState> eclState,
+                          std::unique_ptr<Schedule> schedule,
+                          std::unique_ptr<SummaryConfig> summaryConfig)
 {
-    typedef TTAG(EclFlowEnergyProblem) TypeTag;
-    typedef GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
+    using TypeTag = Properties::TTag::EclFlowEnergyProblem;
+    using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
 
     Vanguard::setExternalSetupTime(setupTime);
-    Vanguard::setExternalDeck(deck);
-    Vanguard::setExternalEclState(&eclState);
-    Vanguard::setExternalSchedule(&schedule);
-    Vanguard::setExternalSummaryConfig(&summaryConfig);
+    Vanguard::setExternalDeck(std::move(deck));
+    Vanguard::setExternalEclState(std::move(eclState));
+    Vanguard::setExternalSchedule(std::move(schedule));
+    Vanguard::setExternalSummaryConfig(std::move(summaryConfig));
 }
 
 // ----------------- Main program -----------------
@@ -53,7 +63,7 @@ int flowEbosEnergyMain(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
-    Opm::resetLocale();
+    resetLocale();
 
     // initialize MPI, finalize is done automatically on exit
 #if HAVE_DUNE_FEM
@@ -62,8 +72,9 @@ int flowEbosEnergyMain(int argc, char** argv, bool outputCout, bool outputFiles)
     Dune::MPIHelper::instance(argc, argv).rank();
 #endif
 
-    Opm::FlowMainEbos<TTAG(EclFlowEnergyProblem)> mainfunc;
-    return mainfunc.execute(argc, argv, outputCout, outputFiles);
+    FlowMainEbos<Properties::TTag::EclFlowEnergyProblem>
+        mainfunc {argc, argv, outputCout, outputFiles};
+    return mainfunc.execute();
 }
 
 }

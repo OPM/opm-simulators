@@ -21,17 +21,15 @@
 #define OPM_PRESSURE_SOLVER_POLICY_HEADER_INCLUDED
 
 #include <opm/simulators/linalg/PressureTransferPolicy.hpp>
-
-#include <boost/property_tree/ptree.hpp>
+#include <opm/simulators/linalg/PropertyTree.hpp>
 
 #include <dune/istl/solver.hh>
+#include <dune/istl/owneroverlapcopy.hh>
 
 namespace Dune
 {
 namespace Amg
 {
-    namespace pt = boost::property_tree;
-
     template <class OperatorType, class Solver, class LevelTransferPolicy>
     class PressureSolverPolicy
     {
@@ -42,7 +40,7 @@ namespace Amg
          * @brief Constructs the coarse solver policy.
          * @param prm Parameter tree specifying the solver details.
          */
-        explicit PressureSolverPolicy(const pt::ptree prm)
+        explicit PressureSolverPolicy(const Opm::PropertyTree& prm)
             : prm_(prm)
         {
         }
@@ -55,17 +53,29 @@ namespace Amg
          * The operator will use one step of AMG to approximately solve
          * the coarse level system.
          */
-        struct PressureInverseOperator : public Dune::InverseOperator<X, X> {
-            template <class Comm>
-            PressureInverseOperator(Operator& op, const boost::property_tree::ptree& prm, const Comm& comm)
+        struct PressureInverseOperator : public Dune::InverseOperator<X, X>
+        {
+#if HAVE_MPI
+            template <typename GlobalIndex, typename LocalIndex>
+            PressureInverseOperator(Operator& op,
+                                    const Opm::PropertyTree& prm,
+                                    const Dune::OwnerOverlapCopyCommunication<GlobalIndex, LocalIndex>& comm)
                 : linsolver_()
             {
-                if (op.category() == Dune::SolverCategory::overlapping) {
-                    linsolver_.reset(new Solver(prm, op.getmat(), std::function<X()>(), comm));
-                } else {
-                    linsolver_.reset(new Solver(prm, op.getmat(), std::function<X()>()));
-                }
+                assert(op.category() == Dune::SolverCategory::overlapping);
+                linsolver_ = std::make_unique<Solver>(op, comm, prm, std::function<X()>());
             }
+#endif // HAVE_MPI
+
+            PressureInverseOperator(Operator& op,
+                                    const Opm::PropertyTree& prm,
+                                    const SequentialInformation&)
+                : linsolver_()
+            {
+                assert(op.category() != Dune::SolverCategory::overlapping);
+                linsolver_ = std::make_unique<Solver>(op, prm, std::function<X()>());
+            }
+
 
             Dune::SolverCategory::Category category() const override
             {
@@ -88,7 +98,7 @@ namespace Amg
             }
 
         private:
-            std::shared_ptr<Solver> linsolver_;
+            std::unique_ptr<Solver> linsolver_;
         };
 
     public:
@@ -119,7 +129,7 @@ namespace Amg
     private:
         /** @brief The coarse level operator. */
         std::shared_ptr<Operator> coarseOperator_;
-        pt::ptree prm_;
+        Opm::PropertyTree prm_;
     };
 } // namespace Amg
 } // namespace Dune

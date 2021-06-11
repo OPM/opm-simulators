@@ -40,16 +40,29 @@ class EclAluGridVanguard;
 
 } // namespace Opm
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(EclAluGridVanguard, INHERITS_FROM(EclBaseVanguard));
+namespace TTag {
+struct EclAluGridVanguard {
+    using InheritsFrom = std::tuple<EclBaseVanguard>;
+};
+}
 
 // declare the properties
-SET_TYPE_PROP(EclAluGridVanguard, Vanguard, Opm::EclAluGridVanguard<TypeTag>);
-SET_TYPE_PROP(EclAluGridVanguard, Grid,  Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming>);
-SET_TYPE_PROP(EclAluGridVanguard, EquilGrid, Dune::CpGrid);
+template<class TypeTag>
+struct Vanguard<TypeTag, TTag::EclAluGridVanguard> {
+    using type = Opm::EclAluGridVanguard<TypeTag>;
+};
+template<class TypeTag>
+struct Grid<TypeTag, TTag::EclAluGridVanguard> {
+    using type = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming>;
+};
+template<class TypeTag>
+struct EquilGrid<TypeTag, TTag::EclAluGridVanguard> {
+    using type = Dune::CpGrid;
+};
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -66,13 +79,13 @@ class EclAluGridVanguard : public EclBaseVanguard<TypeTag>
     friend class EclBaseVanguard<TypeTag>;
     typedef EclBaseVanguard<TypeTag> ParentType;
 
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
 public:
-    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
-    typedef typename GET_PROP_TYPE(TypeTag, EquilGrid) EquilGrid;
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    using Grid = GetPropType<TypeTag, Properties::Grid>;
+    using EquilGrid = GetPropType<TypeTag, Properties::EquilGrid>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
 
 private:
     typedef Opm::AluCartesianIndexMapper<Grid> CartesianIndexMapper;
@@ -168,9 +181,6 @@ public:
 protected:
     void createGrids_()
     {
-        const auto& gridProps = this->eclState().get3DProperties();
-        const std::vector<double>& porv = gridProps.getDoubleGridProperty("PORV").getData();
-
         // we use separate grid objects: one for the calculation of the initial condition
         // via EQUIL and one for the actual simulation. The reason is that the EQUIL code
         // cannot cope with arbitrary Dune grids and is also allergic to distributed
@@ -181,10 +191,10 @@ protected:
         /////
         equilGrid_ = new EquilGrid();
         equilGrid_->processEclipseFormat(&(this->eclState().getInputGrid()),
+                                         &(this->eclState()),
                                          /*isPeriodic=*/false,
                                          /*flipNormals=*/false,
-                                         /*clipZ=*/false,
-                                         porv);
+                                         /*clipZ=*/false);
 
         cartesianCellId_ = equilGrid_->globalCell();
 

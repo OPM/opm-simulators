@@ -15,7 +15,7 @@
 
 project(opm-simulators C CXX)
 
-cmake_minimum_required (VERSION 2.8)
+cmake_minimum_required (VERSION 3.10)
 
 
 option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
@@ -26,11 +26,10 @@ option(BUILD_FLOW_VARIANTS "Build the variants for flow by default?" OFF)
 option(BUILD_EBOS "Build the research oriented ebos simulator?" ON)
 option(BUILD_EBOS_EXTENSIONS "Build the variants for various extensions of ebos by default?" OFF)
 option(BUILD_EBOS_DEBUG_EXTENSIONS "Build the ebos variants which are purely for debugging by default?" OFF)
-
-option(ENABLE_3DPROPS_TESTING "Build and use the new experimental 3D properties" OFF)
-if (ENABLE_3DPROPS_TESTING)
-  add_definitions(-DENABLE_3DPROPS_TESTING)
-endif()
+option(BUILD_FLOW_POLY_GRID "Build flow blackoil with polyhedral grid" OFF)
+option(OPM_ENABLE_PYTHON "Enable python bindings?" OFF)
+option(OPM_ENABLE_PYTHON_TESTS "Enable tests for the python bindings?" ON)
+option(ENABLE_FPGA "Enable FPGA kernels integration?" OFF)
 
 if(SIBLING_SEARCH AND NOT opm-common_DIR)
   # guess the sibling dir
@@ -84,7 +83,7 @@ include ("${project}-prereqs")
 # Make sure we are using the same compiler underneath
 # NVCC as for the rest. In the case that NVCC does not support
 # that compiler it will error out. Unfortunately this will only
-# work CMake >= 3.8. We found no way to make FindCUDA.cmake error
+# work for CMake >= 3.8. We found no way to make FindCUDA.cmake error
 # out. It seems to ignore CMAKE_NVCC_FLAGS and CMAKE. Additionally
 # our way of specifying cuda source files never worked for CMake
 # version < 3.8. Hence we deactivate cuda for these versions.
@@ -93,24 +92,35 @@ include ("${project}-prereqs")
 # compatibility to cmake 3.6 and lower.
 if(NOT CMAKE_DISABLE_FIND_PACKAGE_CUDA AND
     CMAKE_VERSION VERSION_GREATER 3.7.9)
-  if(NOT DEFINED ENV{CUDAHOSTCXX} AND
-      (NOT CMAKE_CUDA_FLAGS OR NOT CMAKE_CUDA_FLAGS MATCHES ".*-ccbin .*"))
-    set(CMAKE_CUDA_FLAGS "-ccbin ${CMAKE_CXX_COMPILER} ${CMAKE_CUDA_FLAGS}")
+  if(CMAKE_BUILD_TYPE)
+    set(_flags_suffix "_${CMAKE_BUILD_TYPE}")
+  endif()
+  if(NOT DEFINED ENV{CUDAHOSTCXX} AND NOT DEFINED CMAKE_CUDA_HOST_COMPILER AND
+      (NOT CMAKE_CUDA_FLAGS${_flags_suffix} OR NOT CMAKE_CUDA_FLAGS${_flags_suffix} MATCHES ".*-ccbin .*"))
+    message(STATUS "Setting CUDA host compiler CMAKE_CUDA_HOST_COMPILER to ${CMAKE_CXX_COMPILER} to "
+      "prevent incompatibilities. Note that this might report that there "
+      "is not CUDA compiler if your system's CUDA compiler does not support "
+      "${CMAKE_CXX_COMPILER}.")
+    # check_language does not seem to care about ${CMAKE_CUDA_FLAGS} or $(CUDA_NVCC_FLAGS}.
+    # Hence we set CMAKE_CUDA_HOST_COMPILER to our C++ compiler.
+    # In check_language(CUDA) we will get an error if we in addition put
+    # "-ccbin ${CMAKE_CXX_COMPILER}" into CMAKE_CUDA_FLAGS. It results
+    # in "${NVCC} -ccbin=${CMAKE_CXX_COMPILER}   -ccbin ${CMAKE_CXX_COMPILER}"
+    # which causes nvcc to abort
+    set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
+    set(ENV{CUDAHOSTCXX} ${CMAKE_CUDA_HOST_COMPILER}) # The only thing honored by check_language(CUDA)!
   endif()
   include(CheckLanguage)
-  # Unfortunately check_language(CUDA) will only check whether there is
-  # a nvcc compiler. It will not check whether compilation with the above
-  # option works. Since the OPTIONAL flag of enable_language is currently
-  # ignored CMake will error out below if the options do not work.
   check_language(CUDA)
   if(CMAKE_CUDA_COMPILER)
+    # OPTIONAL is ignored. Hence the magic above to check whether enabling CUDA works
     enable_language(CUDA OPTIONAL)
+    # While the documentation says that it is deprecated, FindCUDA seems the
+    # only easy way to determine the cublas and cusparse libraries.
+    # Hence we call it unconditionally
+    # The WellContributions kernel uses __shfl_down_sync, which was introduced in CUDA 9.0
+    find_package(CUDA)
   endif()
-  # While the documentation says that it is deprecated, FindCUDA seems the
-  # only easy way to determine the cublas and cusparse libraries.
-  # Hence we call it unconditionally
-  # The WellContributions kernel uses __shfl_down_sync, which was introduced in CUDA 9.0
-  find_package(CUDA)
   if(CUDA_FOUND AND CUDA_VERSION VERSION_LESS "9.0")
     set(CUDA_FOUND OFF)
     message(WARNING "Deactivating CUDA as we require version 9.0 or newer."
@@ -121,6 +131,86 @@ endif()
 if(CUDA_FOUND)
   set(HAVE_CUDA 1)
   include_directories(${CUDA_INCLUDE_DIRS})
+endif()
+
+find_package(OpenCL)
+
+# include FPGA target only when ENABLE_FPGA is set to ON
+if(ENABLE_FPGA)
+  # must include opencl.h which is a wrapper for all the OpenCL extensions
+  find_file(OPENCL_H CL/opencl.h HINTS ${OpenCL_INCLUDE_DIRS})
+
+  # FIXME: devise a check for the presence of the "FPGA" module; currently looking for makefile in <opm-simulators>/../FPGA
+  find_file(FPGA_MODULE linearalgebra/ilu0bicgstab/xilinx/alveo_u280/vitis_20192/OPM-integration/makefile HINTS ${opm-simulators_SOURCE_DIR}/../FPGA)
+
+  # this code only runs if the user explicitly enabled the FPGA
+  # hence fatal_error instead of warning
+  if(NOT OPENCL_H OR NOT OpenCL_FOUND)
+    set(HAVE_FPGA 0)
+    message(FATAL_ERROR " OpenCL packages/headers were not found. Make sure CL/opencl.h exists or deactivate FPGA.")
+  elseif(NOT FPGA_MODULE)
+    set(HAVE_FPGA 0)
+    message(FATAL_ERROR " FPGA module was not found. Make sure FPGA repository exists or deactivate FPGA.")
+  elseif(NOT DEFINED ENV{XILINX_XRT})
+    # Xilinx XRT must be installed and properly setup
+    set(HAVE_FPGA 0)
+    message(FATAL_ERROR " Xilinx XRT not found. Make sure it is installed and setup (check its documentation) or deactivate FPGA.")
+  else()
+    set(HAVE_FPGA 1)
+    message(STATUS "FPGA library and kernel integration active.")
+
+    # FIXME: set the correct path to the FPGA module
+    set(FPGA_SOURCE_DIR ${opm-simulators_SOURCE_DIR}/../FPGA)
+
+    # configuration variables with default values: they can be overridden on the cmake command line
+    # FPGA_PORTS_CONFIG selects the kernel's memory ports configuration; must be in sync with available kernel bitstream
+    if(NOT FPGA_PORTS_CONFIG)
+      set(FPGA_PORTS_CONFIG 2r_3r3w_ddr)
+    endif()
+    # FPGA_DEBUG_LEVEL sets the debug messages level for FPGA library functions (should be set to 0 for Release build)
+    if(NOT FPGA_DEBUG_LEVEL)
+      set(FPGA_DEBUG_LEVEL 0)
+    endif()
+    message(STATUS "Using the following settings for the FPGA library compilation: "
+      "FPGA_PORTS_CONFIG=${FPGA_PORTS_CONFIG}, "
+      "FPGA_DEBUG_LEVEL=${FPGA_DEBUG_LEVEL}")
+    add_compile_options(-DPORTS_CONFIG=PORTS_${FPGA_PORTS_CONFIG})
+    add_compile_options(-DBDA_DEBUG_LEVEL=${FPGA_DEBUG_LEVEL})
+    # include directories for the FPGA library
+    include_directories(${FPGA_SOURCE_DIR})
+    include_directories(${FPGA_SOURCE_DIR}/linearalgebra/ilu0bicgstab/xilinx/src/sda_app)
+    include_directories(${FPGA_SOURCE_DIR}/linearalgebra/ilu0bicgstab/xilinx/src/sda_app/common)
+    # add external project to compile the FPGA library
+    include (ExternalProject)
+    ExternalProject_Add(FPGA_library
+      # force the build step to always be run because source dependencies cannot be made explicit
+      BUILD_ALWAYS 1
+      DOWNLOAD_COMMAND ""
+      UPDATE_COMMAND ""
+      CONFIGURE_COMMAND ""
+      BUILD_COMMAND make
+        -f ${FPGA_SOURCE_DIR}/linearalgebra/ilu0bicgstab/xilinx/alveo_u280/vitis_20192/OPM-integration/makefile
+        SRCDIR=${FPGA_SOURCE_DIR}/linearalgebra/ilu0bicgstab/xilinx/src/sda_app
+        PORTS_CONFIG=${FPGA_PORTS_CONFIG}
+        DEBUG_LEVEL=${FPGA_DEBUG_LEVEL}
+      INSTALL_COMMAND ""
+      TEST_COMMAND ""
+    )
+  endif()
+endif()
+
+if(OpenCL_FOUND)
+  # the current OpenCL implementation relies on cl.hpp, not cl2.hpp
+  # make sure it is available, otherwise disable OpenCL
+  find_file(CL_HPP CL/cl.hpp HINTS ${OpenCL_INCLUDE_DIRS})
+  if(CL_HPP)
+    set(HAVE_OPENCL 1)
+    include_directories(${OpenCL_INCLUDE_DIRS})
+  else()
+    message(WARNING " OpenCL was found, but this version of opm-simulators relies on CL/cl.hpp, which implements OpenCL 1.0, 1.1 and 1.2.\n Deactivating OpenCL")
+    set(OpenCL_FOUND OFF)
+    set(OPENCL_FOUND OFF)
+  endif()
 endif()
 
 # read the list of components from this file (in the project directory);
@@ -134,6 +224,12 @@ macro (config_hook)
       opm_need_version_of ("dune-fem")
   endif()
   opm_need_version_of ("opm-models")
+
+  if(NOT fmt_FOUND)
+    add_definitions(-DFMT_HEADER_ONLY)
+    list(APPEND EXTRA_INCLUDES SYSTEM ${PROJECT_SOURCE_DIR}/external/fmtlib/include)
+  endif()
+  include_directories(${EXTRA_INCLUDES})
 endmacro (config_hook)
 
 macro (prereqs_hook)
@@ -168,7 +264,7 @@ opm_add_test(test_gatherconvergencereport
   CONDITION
     MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
   DRIVER_ARGS
-    5 ${PROJECT_BINARY_DIR}
+    4 ${PROJECT_BINARY_DIR}
 )
 
 opm_add_test(test_gatherdeferredlogger
@@ -179,8 +275,18 @@ opm_add_test(test_gatherdeferredlogger
   CONDITION
     MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
   DRIVER_ARGS
-    5 ${PROJECT_BINARY_DIR}
+    4 ${PROJECT_BINARY_DIR}
 )
+
+opm_add_test(test_parallelwellinfo_mpi
+  EXE_NAME
+    test_parallelwellinfo
+  CONDITION
+    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
+  DRIVER_ARGS
+    4 ${PROJECT_BINARY_DIR}
+  NO_COMPILE
+    )
 
 include(OpmBashCompletion)
 
@@ -190,25 +296,39 @@ else()
   set(FLOW_DEFAULT_ENABLE_IF "TRUE")
 endif()
 
+add_library(moduleVersion OBJECT opm/simulators/utils/moduleVersion.cpp)
+set_property(TARGET moduleVersion PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+# Strictly we only depend on the update-version target,
+# but this is not exposed in a super-build.
+add_dependencies(moduleVersion opmsimulators)
+
+set(COMMON_MODELS brine energy extbo foam gasoil gaswater oilwater oilwater_polymer polymer solvent)
+set(FLOW_MODELS   blackoil oilwater_brine oilwater_polymer_injectivity)
+
+set(FLOW_TGTS)
+foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS})
+  add_library(flow_lib${OBJ} OBJECT flow/flow_ebos_${OBJ}.cpp)
+  list(APPEND FLOW_TGTS $<TARGET_OBJECTS:flow_lib${OBJ}>)
+  if(TARGET fmt::fmt)
+    target_link_libraries(flow_lib${OBJ} fmt::fmt)
+  endif()
+endforeach()
+set_property(TARGET flow_libblackoil PROPERTY POSITION_INDEPENDENT_CODE ON)
+
 # the production oriented general-purpose ECL simulator
 opm_add_test(flow
   ONLY_COMPILE
   ALWAYS_ENABLE
   DEFAULT_ENABLE_IF ${FLOW_DEFAULT_ENABLE_IF}
-  DEPENDS "opmsimulators"
-  LIBRARIES "opmsimulators"
+  DEPENDS opmsimulators
+  LIBRARIES opmsimulators
   SOURCES
   flow/flow.cpp
-  flow/flow_ebos_blackoil.cpp
-  flow/flow_ebos_gasoil.cpp
-  flow/flow_ebos_oilwater.cpp
-  flow/flow_ebos_polymer.cpp
-  flow/flow_ebos_foam.cpp
-  flow/flow_ebos_brine.cpp
-  flow/flow_ebos_solvent.cpp
-  flow/flow_ebos_energy.cpp
-  flow/flow_ebos_oilwater_polymer.cpp
-  flow/flow_ebos_oilwater_polymer_injectivity.cpp)
+  ${FLOW_TGTS}
+  $<TARGET_OBJECTS:moduleVersion>
+  )
+
 
 if (NOT BUILD_FLOW_BLACKOIL_ONLY)
   set(FLOW_BLACKOIL_ONLY_DEFAULT_ENABLE_IF "FALSE")
@@ -221,12 +341,44 @@ opm_add_test(flow_blackoil
   ONLY_COMPILE
   ALWAYS_ENABLE
   DEFAULT_ENABLE_IF ${FLOW_BLACKOIL_ONLY_DEFAULT_ENABLE_IF}
-  DEPENDS "opmsimulators"
-  LIBRARIES "opmsimulators"
+  DEPENDS opmsimulators
+  LIBRARIES opmsimulators
   SOURCES
   flow/flow.cpp
-  flow/flow_ebos_blackoil.cpp)
+  $<TARGET_OBJECTS:flow_libblackoil>
+  $<TARGET_OBJECTS:moduleVersion>)
 target_compile_definitions(flow_blackoil PRIVATE "FLOW_BLACKOIL_ONLY")
+
+if (NOT BUILD_FLOW_POLY_GRID)
+  set(FLOW_POLY_ONLY_DEFAULT_ENABLE_IF "FALSE")
+else()
+  set(FLOW_POLY_ONLY_DEFAULT_ENABLE_IF "TRUE")
+endif()
+
+# the production oriented general-purpose ECL simulator
+opm_add_test(flow_poly
+  ONLY_COMPILE
+  ALWAYS_ENABLE
+  DEFAULT_ENABLE_IF ${FLOW_POLY_ONLY_DEFAULT_ENABLE_IF}
+  DEPENDS opmsimulators
+  LIBRARIES opmsimulators
+  SOURCES
+  flow/flow_blackoil_poly.cpp
+  $<TARGET_OBJECTS:moduleVersion>)
+target_compile_definitions(flow_poly PRIVATE USE_POLYHEDRALGRID)
+
+# the production oriented general-purpose ECL simulator
+opm_add_test(flow_distribute_z
+  ONLY_COMPILE
+  ALWAYS_ENABLE
+  DEFAULT_ENABLE_IF ${FLOW_DEFAULT_ENABLE_IF}
+  DEPENDS opmsimulators
+  LIBRARIES opmsimulators
+  SOURCES
+  flow/flow_distribute_z.cpp
+  ${FLOW_TGTS}
+  $<TARGET_OBJECTS:moduleVersion>
+  )
 
 if (NOT BUILD_FLOW_VARIANTS)
   set(FLOW_VARIANTS_DEFAULT_ENABLE_IF "FALSE")
@@ -238,26 +390,32 @@ endif()
 opm_add_test(flow_blackoil_dunecpr
   ONLY_COMPILE
   DEFAULT_ENABLE_IF ${FLOW_VARIANTS_DEFAULT_ENABLE_IF}
-  SOURCES flow/flow_blackoil_dunecpr.cpp
+  SOURCES
+  flow/flow_blackoil_dunecpr.cpp
+  $<TARGET_OBJECTS:moduleVersion>
   EXE_NAME flow_blackoil_dunecpr
-  DEPENDS "opmsimulators"
-  LIBRARIES "opmsimulators")
+  DEPENDS opmsimulators
+  LIBRARIES opmsimulators)
 
 opm_add_test(flow_onephase
   ONLY_COMPILE
   DEFAULT_ENABLE_IF ${FLOW_VARIANTS_DEFAULT_ENABLE_IF}
-  SOURCES flow/flow_onephase.cpp
+  SOURCES
+  flow/flow_onephase.cpp
+  $<TARGET_OBJECTS:moduleVersion>
   EXE_NAME flow_onephase
-  DEPENDS "opmsimulators"
-  LIBRARIES "opmsimulators")
+  DEPENDS opmsimulators
+  LIBRARIES opmsimulators)
 
 opm_add_test(flow_onephase_energy
   ONLY_COMPILE
   DEFAULT_ENABLE_IF ${FLOW_VARIANTS_DEFAULT_ENABLE_IF}
-  SOURCES flow/flow_onephase_energy.cpp
+  SOURCES
+  flow/flow_onephase_energy.cpp
+  $<TARGET_OBJECTS:moduleVersion>
   EXE_NAME flow_onephase_energy
-  DEPENDS "opmsimulators"
-  LIBRARIES "opmsimulators")
+  DEPENDS opmsimulators
+  LIBRARIES opmsimulators)
 
 if (BUILD_FLOW)
   install(TARGETS flow DESTINATION bin)
@@ -278,8 +436,11 @@ endif()
 # the research oriented general-purpose ECL simulator ("ebos" == &ecl
 # &black-&oil &simulator)
 set(MEBOS_TARGETS "")
-foreach(OBJ blackoil solvent polymer foam brine gasoil oilwater oilwaterpolymer thermal)
+foreach(OBJ ${COMMON_MODELS} blackoil)
   add_library(ebos_lib${OBJ} OBJECT EXCLUDE_FROM_ALL ebos/ebos_${OBJ}.cc)
+  if(TARGET fmt::fmt)
+    target_link_libraries(ebos_lib${OBJ} fmt::fmt)
+  endif()
   list(APPEND MEBOS_TARGETS $<TARGET_OBJECTS:ebos_lib${OBJ}>)
 endforeach()
 
@@ -302,7 +463,7 @@ else()
   set(EBOS_EXTENSIONS_DEFAULT_ENABLE_IF "TRUE")
 endif()
 
-foreach(OBJ solvent polymer foam brine gasoil oilwater oilwaterpolymer thermal)
+foreach(OBJ ${COMMON_MODELS})
   opm_add_test(ebos_${OBJ}
     ONLY_COMPILE
     DEFAULT_ENABLE_IF ${EBOS_EXTENSIONS_DEFAULT_ENABLE_IF}
@@ -342,10 +503,12 @@ opm_add_test(ebos_plain
   LIBRARIES opmsimulators)
 
 if (BUILD_EBOS_EXTENSIONS)
-  foreach(TGT ebos_solvent ebos_polymer ebos_foam ebos_brine ebos_gasoil ebos_oilwater ebos_oilwaterpolymer ebos_thermal mebos)
-    install(TARGETS ${TGT} DESTINATION bin)
-    opm_add_bash_completion(${TGT})
+  foreach(TGT ${COMMON_MODELS})
+    install(TARGETS ebos_${TGT} DESTINATION bin)
+    opm_add_bash_completion(ebos_${TGT})
   endforeach()
+  install(TARGETS mebos DESTINATION bin)
+  opm_add_bash_completion(mebos)
 endif()
 
 if (OPM_ENABLE_PYTHON)
@@ -354,9 +517,19 @@ endif()
 
 add_custom_target(extra_test ${CMAKE_CTEST_COMMAND} -C ExtraTests)
 
-# must link libraries after target 'flow' has been defined
+# must link libraries after target 'opmsimulators' has been defined
+
 if(CUDA_FOUND)
   target_link_libraries( opmsimulators PUBLIC ${CUDA_cusparse_LIBRARY} )
   target_link_libraries( opmsimulators PUBLIC ${CUDA_cublas_LIBRARY} )
 endif()
 
+if(OpenCL_FOUND)
+  target_link_libraries( opmsimulators PUBLIC ${OpenCL_LIBRARIES} )
+endif()
+
+if(HAVE_FPGA)
+  add_dependencies(opmsimulators FPGA_library)
+  ExternalProject_Get_Property(FPGA_library binary_dir)
+  target_link_libraries(opmsimulators PUBLIC ${binary_dir}/fpga_lib_alveo_u280.a)
+endif()

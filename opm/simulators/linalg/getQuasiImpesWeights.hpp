@@ -20,6 +20,8 @@
 #ifndef OPM_GET_QUASI_IMPES_WEIGHTS_HEADER_INCLUDED
 #define OPM_GET_QUASI_IMPES_WEIGHTS_HEADER_INCLUDED
 
+#include <dune/common/fvector.hh>
+
 #include <algorithm>
 #include <cmath>
 
@@ -64,7 +66,7 @@ namespace Amg
             if (transpose) {
                 diag_block.solve(bweights, rhs);
             } else {
-                auto diag_block_transpose = Opm::Details::transposeDenseMatrix(diag_block);
+                auto diag_block_transpose = Details::transposeDenseMatrix(diag_block);
                 diag_block_transpose.solve(bweights, rhs);
             }
             double abs_max = *std::max_element(

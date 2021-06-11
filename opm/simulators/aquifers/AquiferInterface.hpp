@@ -23,9 +23,9 @@
 #define OPM_AQUIFERINTERFACE_HEADER_INCLUDED
 
 #include <opm/common/utility/numeric/linearInterpolation.hpp>
-#include <opm/parser/eclipse/EclipseState/Aquancon.hpp>
-#include <opm/parser/eclipse/EclipseState/AquiferCT.hpp>
-#include <opm/parser/eclipse/EclipseState/Aquifetp.hpp>
+#include <opm/parser/eclipse/EclipseState/Aquifer/Aquancon.hpp>
+#include <opm/parser/eclipse/EclipseState/Aquifer/AquiferCT.hpp>
+#include <opm/parser/eclipse/EclipseState/Aquifer/Aquifetp.hpp>
 
 #include <opm/output/data/Aquifer.hpp>
 
@@ -44,29 +44,30 @@ template <typename TypeTag>
 class AquiferInterface
 {
 public:
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) BlackoilIndices;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
-    typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) IntensiveQuantities;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using BlackoilIndices = GetPropType<TypeTag, Properties::Indices>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
 
-    enum { enableTemperature = GET_PROP_VALUE(TypeTag, EnableTemperature) };
-    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
-    enum { enableBrine = GET_PROP_VALUE(TypeTag, EnableBrine) };
+    enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
+    enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
 
     static const int numEq = BlackoilIndices::numEq;
     typedef double Scalar;
 
     typedef DenseAd::Evaluation<double, /*size=*/numEq> Eval;
 
-    typedef Opm::BlackOilFluidState<Eval,
-                                    FluidSystem,
-                                    enableTemperature,
-                                    enableEnergy,
-                                    BlackoilIndices::gasEnabled,
-                                    enableBrine,
-                                    BlackoilIndices::numPhases>
+    typedef BlackOilFluidState<Eval,
+                               FluidSystem,
+                               enableTemperature,
+                               enableEnergy,
+                               BlackoilIndices::gasEnabled,
+                               enableBrine,
+                               BlackoilIndices::numPhases>
         FluidState;
 
     static const auto waterCompIdx = FluidSystem::waterCompIdx;
@@ -75,33 +76,28 @@ public:
     // Constructor
     AquiferInterface(int aqID,
                      const std::vector<Aquancon::AquancCell>& connections,
-                     const std::unordered_map<int, int>& cartesian_to_compressed,
                      const Simulator& ebosSimulator)
-        : aquiferID(aqID)
+        : aquiferID_(aqID)
         , connections_(connections)
         , ebos_simulator_(ebosSimulator)
-        , cartesian_to_compressed_(cartesian_to_compressed)
     {
     }
 
-    // Deconstructor
+    // Destructor
     virtual ~AquiferInterface()
     {
     }
 
-    void initFromRestart(const std::vector<data::AquiferData>& aquiferSoln)
+    void initFromRestart(const data::Aquifers& aquiferSoln)
     {
-        auto xaqPos
-            = std::find_if(aquiferSoln.begin(), aquiferSoln.end(), [this](const data::AquiferData& xaq) -> bool {
-                   return xaq.aquiferID == this->aquiferID;
-              });
-
+        auto xaqPos = aquiferSoln.find(this->aquiferID());
         if (xaqPos == aquiferSoln.end())
             return;
 
-        this->assignRestartData(*xaqPos);
-        this->W_flux_ = xaqPos->volume;
-        this->pa0_ = xaqPos->initPressure;
+        this->assignRestartData(xaqPos->second);
+
+        this->W_flux_ = xaqPos->second.volume;
+        this->pa0_ = xaqPos->second.initPressure;
         this->solution_set_from_restart_ = true;
     }
 
@@ -120,42 +116,48 @@ public:
 
             elemCtx.updatePrimaryStencil(elem);
 
-            int cellIdx = elemCtx.globalSpaceIndex(0, 0);
-            int idx = cellToConnectionIdx_[cellIdx];
+            const int cellIdx = elemCtx.globalSpaceIndex(0, 0);
+            const int idx = cellToConnectionIdx_[cellIdx];
             if (idx < 0)
                 continue;
 
             elemCtx.updateIntensiveQuantities(0);
             const auto& iq = elemCtx.intensiveQuantities(0, 0);
-            pressure_previous_[idx] = Opm::getValue(iq.fluidState().pressure(waterPhaseIdx));
+            pressure_previous_[idx] = getValue(iq.fluidState().pressure(waterPhaseIdx));
         }
     }
 
     template <class Context>
-    void addToSource(RateVector& rates, const Context& context, unsigned spaceIdx, unsigned timeIdx)
+    void addToSource(RateVector& rates,
+                     const Context& context,
+                     const unsigned spaceIdx,
+                     const unsigned timeIdx)
     {
-        unsigned cellIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        const unsigned cellIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
 
-        int idx = cellToConnectionIdx_[cellIdx];
+        const int idx = this->cellToConnectionIdx_[cellIdx];
         if (idx < 0)
             return;
 
-        // We are dereferencing the value of IntensiveQuantities because cachedIntensiveQuantities return a const
-        // pointer to IntensiveQuantities of that particular cell_id
-        const IntensiveQuantities intQuants = context.intensiveQuantities(spaceIdx, timeIdx);
-        // This is the pressure at td + dt
-        updateCellPressure(pressure_current_, idx, intQuants);
-        updateCellDensity(idx, intQuants);
-        calculateInflowRate(idx, context.simulator());
-        rates[BlackoilIndices::conti0EqIdx + FluidSystem::waterCompIdx]
-            += Qai_[idx] / context.dofVolume(spaceIdx, timeIdx);
-    }
+        // We are dereferencing the value of IntensiveQuantities because
+        // cachedIntensiveQuantities return a const pointer to
+        // IntensiveQuantities of that particular cell_id
+        const auto& intQuants = context.intensiveQuantities(spaceIdx, timeIdx);
 
+        // This is the pressure at td + dt
+        this->updateCellPressure(this->pressure_current_, idx, intQuants);
+        this->updateCellDensity(idx, intQuants);
+        this->calculateInflowRate(idx, context.simulator());
+
+        rates[BlackoilIndices::conti0EqIdx + FluidSystem::waterCompIdx]
+            += this->Qai_[idx] / context.dofVolume(spaceIdx, timeIdx);
+    }
 
     std::size_t size() const {
         return this->connections_.size();
     }
 
+    int aquiferID() const { return this->aquiferID_; }
 
 protected:
     inline Scalar gravity_() const
@@ -201,41 +203,17 @@ protected:
         rhow_.at(idx) = fs.density(waterPhaseIdx);
     }
 
-    template <class faceCellType, class ugridType>
-    inline double getFaceArea(const faceCellType& faceCells,
-                              const ugridType& ugrid,
-                              const int faceIdx,
-                              const int idx) const
-    {
-        // Check now if the face is outside of the reservoir, or if it adjoins an inactive cell
-        // Do not make the connection if the product of the two cellIdx > 0. This is because the
-        // face is within the reservoir/not connected to boundary. (We still have yet to check for inactive cell
-        // adjoining)
-        double faceArea = 0.;
-        const auto cellNeighbour0 = faceCells(faceIdx, 0);
-        const auto cellNeighbour1 = faceCells(faceIdx, 1);
-        const auto defaultFaceArea = Opm::UgGridHelpers::faceArea(ugrid, faceIdx);
-        const auto calculatedFaceArea
-            = (!this->connections_[idx].influx_coeff.first) ? defaultFaceArea : this->connections_[idx].influx_coeff.second;
-        faceArea = (cellNeighbour0 * cellNeighbour1 > 0) ? 0. : calculatedFaceArea;
-        if (cellNeighbour1 == 0) {
-            faceArea = (cellNeighbour0 < 0) ? faceArea : 0.;
-        } else if (cellNeighbour0 == 0) {
-            faceArea = (cellNeighbour1 < 0) ? faceArea : 0.;
-        }
-        return faceArea;
-    }
 
     virtual void endTimeStep() = 0;
 
-    const int aquiferID;
+    const int aquiferID_{};
     const std::vector<Aquancon::AquancCell> connections_;
     const Simulator& ebos_simulator_;
-    const std::unordered_map<int, int> cartesian_to_compressed_;
 
     // Grid variables
     std::vector<Scalar> faceArea_connected_;
     std::vector<int> cellToConnectionIdx_;
+
     // Quantities at each grid id
     std::vector<Scalar> cell_depth_;
     std::vector<Scalar> pressure_previous_;
@@ -244,14 +222,107 @@ protected:
     std::vector<Eval> rhow_;
     std::vector<Scalar> alphai_;
 
-    Scalar Tc_; // Time constant
-    Scalar pa0_; // initial aquifer pressure
+    Scalar Tc_{}; // Time constant
+    Scalar pa0_{}; // initial aquifer pressure
 
     Eval W_flux_;
 
     bool solution_set_from_restart_ {false};
 
-    virtual void initializeConnections() = 0;
+    void initializeConnections()
+    {
+        this->cell_depth_.resize(this->size(), this->aquiferDepth());
+        this->alphai_.resize(this->size(), 1.0);
+        this->faceArea_connected_.resize(this->size(), 0.0);
+
+        // Translate the C face tag into the enum used by opm-parser's TransMult class
+        FaceDir::DirEnum faceDirection;
+
+        // denom_face_areas is the sum of the areas connected to an aquifer
+        Scalar denom_face_areas = 0.;
+        this->cellToConnectionIdx_.resize(this->ebos_simulator_.gridView().size(/*codim=*/0), -1);
+        const auto& gridView = this->ebos_simulator_.vanguard().gridView();
+        for (size_t idx = 0; idx < this->size(); ++idx) {
+            const auto global_index = this->connections_[idx].global_index;
+            const int cell_index = this->ebos_simulator_.vanguard().compressedIndex(global_index);
+            auto elemIt = gridView.template begin</*codim=*/ 0>();
+            if (cell_index > 0)
+                std::advance(elemIt, cell_index);
+
+           //the global_index is not part of this grid
+            if ( cell_index < 0 || elemIt->partitionType() != Dune::InteriorEntity)
+                continue;
+
+            this->cellToConnectionIdx_[cell_index] = idx;
+            this->cell_depth_.at(idx) = this->ebos_simulator_.vanguard().cellCenterDepth(cell_index);
+        }
+        // get areas for all connections
+        ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
+        auto elemIt = gridView.template begin</*codim=*/ 0>();
+        const auto& elemEndIt = gridView.template end</*codim=*/ 0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            const auto& elem = *elemIt;
+            unsigned cell_index = elemMapper.index(elem);
+            int idx = this->cellToConnectionIdx_[cell_index];
+
+            // only deal with connections given by the aquifer
+            if( idx < 0)
+                continue;
+
+            auto isIt = gridView.ibegin(elem);
+            const auto& isEndIt = gridView.iend(elem);
+            for (; isIt != isEndIt; ++ isIt) {
+                // store intersection, this might be costly
+                const auto& intersection = *isIt;
+
+                // only deal with grid boundaries
+                if (!intersection.boundary())
+                    continue;
+
+                int insideFaceIdx  = intersection.indexInInside();
+                switch (insideFaceIdx) {
+                case 0:
+                    faceDirection = FaceDir::XMinus;
+                    break;
+                case 1:
+                    faceDirection = FaceDir::XPlus;
+                    break;
+                case 2:
+                    faceDirection = FaceDir::YMinus;
+                    break;
+                case 3:
+                    faceDirection = FaceDir::YPlus;
+                    break;
+                case 4:
+                    faceDirection = FaceDir::ZMinus;
+                    break;
+                case 5:
+                    faceDirection = FaceDir::ZPlus;
+                    break;
+                default:
+                    OPM_THROW(std::logic_error,
+                        "Internal error in initialization of aquifer.");
+                }
+
+
+                if (faceDirection == this->connections_[idx].face_dir) {
+                    this->faceArea_connected_[idx] = this->connections_[idx].influx_coeff;
+                    break;
+                }
+            }
+            denom_face_areas += this->faceArea_connected_.at(idx);
+        }
+
+        const auto& comm = this->ebos_simulator_.vanguard().grid().comm();
+        comm.sum(&denom_face_areas, 1);
+        const double eps_sqrt = std::sqrt(std::numeric_limits<double>::epsilon());
+        for (size_t idx = 0; idx < this->size(); ++idx) {
+            this->alphai_.at(idx) = (denom_face_areas < eps_sqrt)
+                ? // Prevent no connection NaNs due to division by zero
+                0.
+                : this->faceArea_connected_.at(idx) / denom_face_areas;
+        }
+    }
 
     virtual void assignRestartData(const data::AquiferData& xaq) = 0;
 
@@ -261,7 +332,52 @@ protected:
 
     virtual void calculateAquiferConstants() = 0;
 
-    virtual Scalar calculateReservoirEquilibrium() = 0;
+    virtual Scalar aquiferDepth() const = 0;
+
+    // This function is for calculating the aquifer properties from equilibrium state with the reservoir
+    virtual Scalar calculateReservoirEquilibrium()
+    {
+        // Since the global_indices are the reservoir index, we just need to extract the fluidstate at those indices
+        std::vector<Scalar> pw_aquifer;
+        Scalar water_pressure_reservoir;
+
+        ElementContext elemCtx(this->ebos_simulator_);
+        const auto& gridView = this->ebos_simulator_.gridView();
+        auto elemIt = gridView.template begin</*codim=*/0>();
+        const auto& elemEndIt = gridView.template end</*codim=*/0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            const auto& elem = *elemIt;
+            elemCtx.updatePrimaryStencil(elem);
+
+            const auto cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto idx = this->cellToConnectionIdx_[cellIdx];
+            if (idx < 0)
+                continue;
+
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+            const auto& iq0 = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto& fs = iq0.fluidState();
+
+            water_pressure_reservoir = fs.pressure(waterPhaseIdx).value();
+            this->rhow_[idx] = fs.density(waterPhaseIdx);
+            pw_aquifer.push_back(
+                (water_pressure_reservoir
+                 - this->rhow_[idx].value() * this->gravity_() * (this->cell_depth_[idx] - this->aquiferDepth()))
+                * this->alphai_[idx]);
+        }
+
+        // We take the average of the calculated equilibrium pressures.
+        const auto& comm = ebos_simulator_.vanguard().grid().comm();
+
+        Scalar vals[2];
+        vals[0] = std::accumulate(this->alphai_.begin(), this->alphai_.end(), 0.0);
+        vals[1] = std::accumulate(pw_aquifer.begin(), pw_aquifer.end(), 0.0);
+
+        comm.sum(vals, 2);
+
+        return vals[1] / vals[0];
+    }
+
     // This function is used to initialize and calculate the alpha_i for each grid connection to the aquifer
 };
 } // namespace Opm

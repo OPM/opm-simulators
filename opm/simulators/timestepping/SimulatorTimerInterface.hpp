@@ -22,9 +22,7 @@
 
 #include <memory>
 
-#include <boost/date_time/gregorian/gregorian.hpp>
-#include <boost/date_time/posix_time/posix_time_types.hpp>
-#include <boost/date_time/posix_time/conversion.hpp>
+namespace boost { namespace posix_time { class ptime; } }
 
 namespace Opm
 {
@@ -90,19 +88,11 @@ namespace Opm
         virtual boost::posix_time::ptime startDateTime() const = 0;
 
         /// Return the current time as a posix time object.
-        virtual boost::posix_time::ptime currentDateTime() const
-        {
-           return startDateTime() + boost::posix_time::seconds( (int) simulationTimeElapsed());
-               //boost::posix_time::ptime(startDate()) +  boost::posix_time::seconds( (int) simulationTimeElapsed());
-        }
+        virtual boost::posix_time::ptime currentDateTime() const;
 
         /// Time elapsed since the start of the POSIX epoch (Jan 1st,
         /// 1970) until the current time step begins [s].
-        virtual time_t currentPosixTime() const
-        {
-            tm t = boost::posix_time::to_tm(currentDateTime());
-            return std::mktime(&t);
-        }
+        virtual time_t currentPosixTime() const;
 
         /// Return true if last time step failed
         virtual bool lastStepFailed() const = 0;

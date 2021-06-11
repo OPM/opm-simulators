@@ -27,11 +27,16 @@
 #include <ebos/eclproblem.hh>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
-#include <opm/common/utility/platform_dependent/disable_warnings.h>
-#include <opm/common/utility/platform_dependent/reenable_warnings.h>
-
 #include <cassert>
+#include <map>
+#include <memory>
+#include <optional>
+#include <string>
 #include <tuple>
+#include <unordered_map>
+#include <vector>
+
+#include <stddef.h>
 
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 
@@ -41,16 +46,22 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
 
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
+#include <opm/simulators/flow/countGlobalCells.hpp>
+#include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
+#include <opm/simulators/wells/GasLiftSingleWell.hpp>
+#include <opm/simulators/wells/GasLiftWellState.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
-#include <opm/simulators/flow/countGlobalCells.hpp>
-#include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/WGState.hpp>
 #include <opm/simulators/wells/RateConverter.hpp>
 #include <opm/simulators/wells/WellInterface.hpp>
 #include <opm/simulators/wells/StandardWell.hpp>
 #include <opm/simulators/wells/MultisegmentWell.hpp>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
+#include <opm/simulators/wells/WellProdIndexCalculator.hpp>
+#include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/timestepping/gatherConvergenceReport.hpp>
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -60,37 +71,43 @@
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_PROP_TAG(EnableTerminalOutput);
+template<class TypeTag, class MyTypeTag>
+struct EnableTerminalOutput {
+    using type = UndefinedProperty;
+};
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 
         /// Class for handling the blackoil well model.
         template<typename TypeTag>
-        class BlackoilWellModel : public Opm::BaseAuxiliaryModule<TypeTag>
+        class BlackoilWellModel : public BaseAuxiliaryModule<TypeTag>
+                                , public BlackoilWellModelGeneric
         {
         public:
             // ---------      Types      ---------
-            typedef WellStateFullyImplicitBlackoil WellState;
             typedef BlackoilModelParametersEbos<TypeTag> ModelParameters;
 
-            typedef typename GET_PROP_TYPE(TypeTag, Grid)                Grid;
-            typedef typename GET_PROP_TYPE(TypeTag, FluidSystem)         FluidSystem;
-            typedef typename GET_PROP_TYPE(TypeTag, ElementContext)      ElementContext;
-            typedef typename GET_PROP_TYPE(TypeTag, Indices)             Indices;
-            typedef typename GET_PROP_TYPE(TypeTag, Simulator)           Simulator;
-            typedef typename GET_PROP_TYPE(TypeTag, Scalar)              Scalar;
-            typedef typename GET_PROP_TYPE(TypeTag, RateVector)          RateVector;
-            typedef typename GET_PROP_TYPE(TypeTag, GlobalEqVector)      GlobalEqVector;
-            typedef typename GET_PROP_TYPE(TypeTag, SparseMatrixAdapter) SparseMatrixAdapter;
+            using Grid = GetPropType<TypeTag, Properties::Grid>;
+            using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+            using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+            using Indices = GetPropType<TypeTag, Properties::Indices>;
+            using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+            using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+            using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+            using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
+            using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
 
-            typedef typename Opm::BaseAuxiliaryModule<TypeTag>::NeighborSet NeighborSet;
+            typedef typename BaseAuxiliaryModule<TypeTag>::NeighborSet NeighborSet;
 
             static const int numEq = Indices::numEq;
             static const int solventSaturationIdx = Indices::solventSaturationIdx;
+            static constexpr bool has_solvent_ = getPropValue<TypeTag, Properties::EnableSolvent>();
+            static constexpr bool has_polymer_ = getPropValue<TypeTag, Properties::EnablePolymer>();
+            static constexpr bool has_energy_ = getPropValue<TypeTag, Properties::EnableEnergy>();
 
             // TODO: where we should put these types, WellInterface or Well Model?
             // or there is some other strategy, like TypeTag
@@ -99,7 +116,7 @@ namespace Opm {
 
             typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
 
-            typedef Opm::BlackOilPolymerModule<TypeTag> PolymerModule;
+            typedef BlackOilPolymerModule<TypeTag> PolymerModule;
 
             // For the conversion between the surface volume rate and resrevoir voidage rate
             using RateConverterType = RateConverter::
@@ -108,6 +125,7 @@ namespace Opm {
             BlackoilWellModel(Simulator& ebosSimulator);
 
             void init();
+            void initWellContainer() override;
 
             /////////////
             // <eWoms auxiliary module stuff>
@@ -184,46 +202,24 @@ namespace Opm {
             using WellInterfacePtr = std::shared_ptr<WellInterface<TypeTag> >;
             WellInterfacePtr well(const std::string& wellName) const;
 
-            void initFromRestartFile(const RestartValue& restartValues);
-
-            Opm::data::Group groupData(const int reportStepIdx, Opm::Schedule& sched) const
+            using BlackoilWellModelGeneric::initFromRestartFile;
+            void initFromRestartFile(const RestartValue& restartValues)
             {
-                Opm::data::Group dw;
-                for (const std::string gname :  sched.groupNames(reportStepIdx))  {
-                    const auto& grup = sched.getGroup(gname, reportStepIdx);
-                    const auto& grup_type = grup.getGroupType();
-                    Opm::data::currentGroupConstraints cgc;
-                    cgc.currentProdConstraint =  Opm::Group::ProductionCMode::NONE;
-                    cgc.currentGasInjectionConstraint = Opm::Group::InjectionCMode::NONE;
-                    cgc.currentWaterInjectionConstraint = Opm::Group::InjectionCMode::NONE;
-                    if (this->well_state_.hasProductionGroupControl(gname)) {
-                        cgc.currentProdConstraint = this->well_state_.currentProductionGroupControl(gname);
-                    }
-                    if ((grup_type == Opm::Group::GroupType::INJECTION) || (grup_type == Opm::Group::GroupType::MIXED))  {
-                        if (this->well_state_.hasInjectionGroupControl(Opm::Phase::WATER, gname)) {
-                            cgc.currentWaterInjectionConstraint = this->well_state_.currentInjectionGroupControl(Opm::Phase::WATER, gname);
-                        }
-                        if (this->well_state_.hasInjectionGroupControl(Opm::Phase::GAS, gname)) {
-                            cgc.currentGasInjectionConstraint = this->well_state_.currentInjectionGroupControl(Opm::Phase::GAS, gname);
-                        }
-                    }
-                    dw.emplace(gname, cgc);
-                }
-                return dw;
+                initFromRestartFile(restartValues,
+                                    UgGridHelpers::numCells(grid()),
+                                    param_.use_multisegment_well_);
             }
 
-            Opm::data::Wells wellData() const
+            data::Wells wellData() const
             {
-                auto wsrpt = well_state_.report(phase_usage_, Opm::UgGridHelpers::globalCell(grid()));
+                auto wsrpt = this->wellState().report(UgGridHelpers::globalCell(grid()),
+                                                      [this](const int well_ndex) -> bool
+                                                      {
+                                                          return this->wasDynamicallyShutThisTimeStep(well_ndex);
+                                                      });
 
-                for (const auto& well : this->wells_ecl_) {
-                    auto xwPos = wsrpt.find(well.name());
-                    if (xwPos == wsrpt.end()) { // No well results.  Unexpected.
-                        continue;
-                    }
-
-                    xwPos->second.current_control.isProducer = well.isProducer();
-                }
+                this->assignWellGuideRates(wsrpt);
+                this->assignShutConnections(wsrpt, this->reportStepIndex());
 
                 return wsrpt;
             }
@@ -234,7 +230,7 @@ namespace Opm {
             // subtract B*inv(D)*C * x from A*x
             void apply(const BVector& x, BVector& Ax) const;
 
-#if HAVE_CUDA
+#if HAVE_CUDA || HAVE_OPENCL
             // accumulate the contributions of all Wells in the WellContributions object
             void getWellContributions(WellContributions& x) const;
 #endif
@@ -245,14 +241,7 @@ namespace Opm {
             // Check if well equations is converged.
             ConvergenceReport getWellConvergence(const std::vector<Scalar>& B_avg, const bool checkGroupConvergence = false) const;
 
-            // return the internal well state, ignore the passed one.
-            // Used by the legacy code to make it compatible with the legacy well models.
-            const WellState& wellState(const WellState& well_state OPM_UNUSED) const;
-
-            // return the internal well state
-            const WellState& wellState() const;
-
-            const SimulatorReport& lastReport() const;
+            const SimulatorReportSingle& lastReport() const;
 
             void addWellContributions(SparseMatrixAdapter& jacobian) const
             {
@@ -264,74 +253,68 @@ namespace Opm {
             // called at the beginning of a report step
             void beginReportStep(const int time_step);
 
-            /// Return true if any well has a THP constraint.
-            bool hasTHPConstraints() const;
-
-            /// Shut down any single well, but only if it is in prediction mode.
-            /// Returns true if the well was actually found and shut.
-            bool forceShutWellByNameIfPredictionMode(const std::string& wellname, const double simulation_time);
+            void updatePerforationIntensiveQuantities();
+            // it should be able to go to prepareTimeStep(), however, the updateWellControls() and initPrimaryVariablesEvaluation()
+            // makes it a little more difficult. unless we introduce if (iterationIdx != 0) to avoid doing the above functions
+            // twice at the beginning of the time step
+            /// Calculating the explict quantities used in the well calculation. By explicit, we mean they are cacluated
+            /// at the beginning of the time step and no derivatives are included in these quantities
+            void calculateExplicitQuantities(DeferredLogger& deferred_logger) const;
+            // some preparation work, mostly related to group control and RESV,
+            // at the beginning of each time step (Not report step)
+            void prepareTimeStep(DeferredLogger& deferred_logger);
+            void initPrimaryVariablesEvaluation() const;
+            void updateWellControls(DeferredLogger& deferred_logger, const bool checkGroupControls);
+            WellInterfacePtr getWell(const std::string& well_name) const;
 
         protected:
             Simulator& ebosSimulator_;
 
-            std::vector< Well > wells_ecl_;
-            std::vector< std::vector<PerforationData> > well_perf_data_;
-            std::vector<int> first_perf_index_;
-
-            bool wells_active_;
-
             // a vector of all the wells.
-            std::vector<WellInterfacePtr > well_container_;
+            std::vector<WellInterfacePtr > well_container_{};
 
-            // map from logically cartesian cell indices to compressed ones
-            std::vector<int> cartesian_to_compressed_;
+            std::vector<bool> is_cell_perforated_{};
 
-            std::vector<bool> is_cell_perforated_;
-
-            void initializeWellPerfData();
+            void initializeWellState(const int           timeStepIdx,
+                                     const SummaryState& summaryState);
 
             // create the well container
-            std::vector<WellInterfacePtr > createWellContainer(const int time_step);
+            void createWellContainer(const int time_step) override;
 
-            WellInterfacePtr createWellForWellTest(const std::string& well_name, const int report_step, Opm::DeferredLogger& deferred_logger) const;
+            WellInterfacePtr
+            createWellPointer(const int wellID,
+                              const int time_step) const;
 
-            WellState well_state_;
-            WellState previous_well_state_;
-            WellState well_state_nupcol_;
+            template <typename WellType>
+            std::unique_ptr<WellType>
+            createTypedWellPointer(const int wellID,
+                                   const int time_step) const;
+
+            WellInterfacePtr createWellForWellTest(const std::string& well_name, const int report_step, DeferredLogger& deferred_logger) const;
+
 
             const ModelParameters param_;
-            bool terminal_output_;
-            bool has_solvent_;
-            bool has_polymer_;
-            std::vector<int> pvt_region_idx_;
-            PhaseUsage phase_usage_;
-            size_t global_nc_;
+            size_t global_num_cells_{};
             // the number of the cells in the local grid
-            size_t number_of_cells_;
-            double gravity_;
-            std::vector<double> depth_;
-            bool initial_step_;
-            bool report_step_starts_;
+            size_t local_num_cells_{};
+            double gravity_{};
+            std::vector<double> depth_{};
+            bool alternative_well_rate_init_{};
 
-            std::unique_ptr<RateConverterType> rateConverter_;
-            std::unique_ptr<VFPProperties<VFPInjProperties,VFPProdProperties>> vfp_properties_;
+            std::unique_ptr<RateConverterType> rateConverter_{};
 
-            SimulatorReport last_report_;
-
-            WellTestState wellTestState_;
-            std::unique_ptr<GuideRate> guideRate_;
+            SimulatorReportSingle last_report_{};
 
             // used to better efficiency of calcuation
-            mutable BVector scaleAddRes_;
+            mutable BVector scaleAddRes_{};
+
+            std::vector<Scalar> B_avg_{};
 
             const Grid& grid() const
             { return ebosSimulator_.vanguard().grid(); }
 
             const EclipseState& eclState() const
             { return ebosSimulator_.vanguard().eclState(); }
-
-            const Schedule& schedule() const
-            { return ebosSimulator_.vanguard().schedule(); }
 
             // compute the well fluxes and assemble them in to the reservoir equations as source terms
             // and in the well equations.
@@ -348,103 +331,56 @@ namespace Opm {
             // xw to update Well State
             void recoverWellSolutionAndUpdateWellState(const BVector& x);
 
-            void updateWellControls(Opm::DeferredLogger& deferred_logger, const bool checkGroupControls);
-
-            void updateAndCommunicateGroupData();
-
             // setting the well_solutions_ based on well_state.
-            void updatePrimaryVariables(Opm::DeferredLogger& deferred_logger);
+            void updatePrimaryVariables(DeferredLogger& deferred_logger);
 
-            void setupCartesianToCompressed_(const int* global_cell, int number_of_cells);
+            void setupCartesianToCompressed_(const int* global_cell, int local_num__cells);
 
-            void computeRepRadiusPerfLength(const Grid& grid, Opm::DeferredLogger& deferred_logger);
+            void updateAverageFormationFactor();
 
-
-            void computeAverageFormationFactor(std::vector<Scalar>& B_avg) const;
-
-            // Calculating well potentials for each well
-            void computeWellPotentials(std::vector<double>& well_potentials, const int reportStepIdx, Opm::DeferredLogger& deferred_logger);
+            void computePotentials(const std::size_t widx,
+                                   const WellState& well_state_copy,
+                                   std::string& exc_msg,
+                                   ExceptionType::ExcEnum& exc_type,
+                                   DeferredLogger& deferred_logger) override;
 
             const std::vector<double>& wellPerfEfficiencyFactors() const;
 
-            void calculateEfficiencyFactors(const int reportStepIdx);
-
-            // it should be able to go to prepareTimeStep(), however, the updateWellControls() and initPrimaryVariablesEvaluation()
-            // makes it a little more difficult. unless we introduce if (iterationIdx != 0) to avoid doing the above functions
-            // twice at the beginning of the time step
-            /// Calculating the explict quantities used in the well calculation. By explicit, we mean they are cacluated
-            /// at the beginning of the time step and no derivatives are included in these quantities
-            void calculateExplicitQuantities(Opm::DeferredLogger& deferred_logger) const;
-
-            SimulatorReport solveWellEq(const std::vector<Scalar>& B_avg, const double dt, Opm::DeferredLogger& deferred_logger);
-
-            void initPrimaryVariablesEvaluation() const;
+            void calculateProductivityIndexValuesShutWells(const int reportStepIdx, DeferredLogger& deferred_logger) override;
+            void calculateProductivityIndexValues(DeferredLogger& deferred_logger) override;
+            void calculateProductivityIndexValues(const WellInterface<TypeTag>* wellPtr,
+                                                  DeferredLogger& deferred_logger);
 
             // The number of components in the model.
             int numComponents() const;
 
-            int numLocalWells() const;
+            int reportStepIndex() const;
 
-            int numPhases() const;
+            void assembleWellEq(const double dt, DeferredLogger& deferred_logger);
 
-            void assembleWellEq(const std::vector<Scalar>& B_avg, const double dt, Opm::DeferredLogger& deferred_logger);
-
-            // some preparation work, mostly related to group control and RESV,
-            // at the beginning of each time step (Not report step)
-            void prepareTimeStep(Opm::DeferredLogger& deferred_logger);
+            void maybeDoGasLiftOptimize(DeferredLogger& deferred_logger);
 
             void extractLegacyCellPvtRegionIndex_();
 
             void extractLegacyDepth_();
 
-            /// return true if wells are available in the reservoir
-            bool wellsActive() const;
-
-            void setWellsActive(const bool wells_active);
-
-            /// return true if wells are available on this process
-            bool localWellsActive() const;
-
             /// upate the wellTestState related to economic limits
             void updateWellTestState(const double& simulationTime, WellTestState& wellTestState) const;
 
-            void updatePerforationIntensiveQuantities();
+            void wellTesting(const int timeStepIdx, const double simulationTime, DeferredLogger& deferred_logger);
 
-            void wellTesting(const int timeStepIdx, const double simulationTime, Opm::DeferredLogger& deferred_logger);
+            void calcRates(const int fipnum,
+                           const int pvtreg,
+                           std::vector<double>& resv_coeff) override;
 
-            // convert well data from opm-common to well state from opm-core
-            void wellsToState( const data::Wells& wells,
-                               const PhaseUsage& phases,
-                               const bool handle_ms_well,
-                               WellStateFullyImplicitBlackoil& state ) const;
+            void calcInjRates(const int fipnum,
+                           const int pvtreg,
+                           std::vector<double>& resv_coeff) override;
 
-            // whether there exists any multisegment well open on this process
-            bool anyMSWellOpenLocal() const;
+             void computeWellTemperature();
 
-            const Well& getWellEcl(const std::string& well_name) const;
-
-            void updateGroupIndividualControls(Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
-            void updateGroupIndividualControl(const Group& group, Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
-            bool checkGroupConstraints(const Group& group, Opm::DeferredLogger& deferred_logger) const;
-            Group::ProductionCMode checkGroupProductionConstraints(const Group& group, Opm::DeferredLogger& deferred_logger) const;
-            Group::InjectionCMode checkGroupInjectionConstraints(const Group& group, const Phase& phase) const;
-            void checkGconsaleLimits(const Group& group) const;
-
-            void updateGroupHigherControls(Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
-            void checkGroupHigherConstraints(const Group& group, Opm::DeferredLogger& deferred_logger, std::set<std::string>& switched_groups);
-
-            void actionOnBrokenConstraints(const Group& group, const Group::ExceedAction& exceed_action, const Group::ProductionCMode& newControl, Opm::DeferredLogger& deferred_logger);
-
-            void actionOnBrokenConstraints(const Group& group, const Group::InjectionCMode& newControl, const Phase& topUpPhase, Opm::DeferredLogger& deferred_logger);
-
-            WellInterfacePtr getWell(const std::string& well_name) const;
-
-            void updateWsolvent(const Group& group, const Schedule& schedule, const int reportStepIdx, const WellStateFullyImplicitBlackoil& wellState);
-
-            void setWsolvent(const Group& group, const Schedule& schedule, const int reportStepIdx, double wsolvent);
-
-
-
+        private:
+            BlackoilWellModel(Simulator& ebosSimulator, const PhaseUsage& pu);
         };
 
 

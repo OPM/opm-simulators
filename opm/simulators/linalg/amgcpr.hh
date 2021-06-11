@@ -483,7 +483,7 @@ namespace Dune
       matrices_->coarsenSmoother(*smoothers_, smootherArgs_);
       setupCoarseSolver();
       if (verbosity_>0 && matrices_->parallelInformation().finest()->communicator().rank()==0) {
-        std::cout << "Recalculating galerkin and coarse somothers "<< matrices_->maxlevels() << " levels "
+        std::cout << "Recalculating galerkin and coarse smoothers "<< matrices_->maxlevels() << " levels "
                   << watch.elapsed() << " seconds." << std::endl;
       }
     }

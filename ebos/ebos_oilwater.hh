@@ -28,14 +28,17 @@
 #ifndef EBOS_OIL_WATER_HH
 #define EBOS_OIL_WATER_HH
 
-#include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/parser/eclipse/Parser/ParseContext.hpp>
-#include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
+#include <memory>
 
 namespace Opm {
-void ebosOilWaterSetDeck(Opm::Deck* deck,
-                         Opm::ParseContext* parseContext,
-                         Opm::ErrorGuard* errorGuard,
+
+class Deck;
+class ErrorGuard;
+class ParseContext;
+
+void ebosOilWaterSetDeck(std::unique_ptr<Opm::Deck> deck,
+                         std::unique_ptr<Opm::ParseContext> parseContext,
+                         std::unique_ptr<Opm::ErrorGuard> errorGuard,
                          double externalSetupTime);
 
 int ebosOilWaterMain(int argc, char** argv);

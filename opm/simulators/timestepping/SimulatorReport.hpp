@@ -1,5 +1,5 @@
 /*
-  Copyright 2012 SINTEF ICT, Applied Mathematics.
+  Copyright 2012, 2020 SINTEF Digital, Mathematics and Cybernetics.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -19,20 +19,23 @@
 
 #ifndef OPM_SIMULATORREPORT_HEADER_INCLUDED
 #define OPM_SIMULATORREPORT_HEADER_INCLUDED
-
+#include <cassert>
 #include <iosfwd>
+#include <vector>
 
 namespace Opm
 {
 
     /// A struct for returning timing data from a simulator to its caller.
-    struct SimulatorReport
+    struct SimulatorReportSingle
     {
         double pressure_time;
         double transport_time;
         double total_time;
         double solver_time;
         double assemble_time;
+        double pre_post_time;
+        double assemble_time_well;
         double linear_solve_setup_time;
         double linear_solve_time;
         double update_time;
@@ -46,23 +49,31 @@ namespace Opm
         bool converged;
         int exit_status;
 
+        double global_time;
+        double timestep_length;
+
         /// Default constructor initializing all times to 0.0.
-        explicit SimulatorReport(bool verbose=true);
-        /// Copy constructor
-        SimulatorReport(const SimulatorReport&) = default;
+        SimulatorReportSingle();
         /// Increment this report's times by those in sr.
-        void operator+=(const SimulatorReport& sr);
-        /// Print a report to the given stream.
-        void report(std::ostream& os);
-        void reportStep(std::ostringstream& os);
-        /// Print a report, leaving out the transport time.
-        void reportFullyImplicit(std::ostream& os, const SimulatorReport* failedReport = nullptr);
-        void reportParam(std::ostream& os);
-    private:
-        // Whether to print statistics to std::cout
-        bool verbose_;
+        void operator+=(const SimulatorReportSingle& sr);
+        /// Print a report suitable for a single simulation step.
+        void reportStep(std::ostringstream& os) const;
+        /// Print a report suitable for the end of a fully implicit case, leaving out the pressure/transport time.
+        void reportFullyImplicit(std::ostream& os, const SimulatorReportSingle* failedReport = nullptr) const;
     };
 
-} // namespace Opm
+    struct SimulatorReport
+    {
+        SimulatorReportSingle success;
+        SimulatorReportSingle failure;
+        std::vector<SimulatorReportSingle> stepreports;
+
+        void operator+=(const SimulatorReportSingle& sr);
+        void operator+=(const SimulatorReport& sr);
+        void reportFullyImplicit(std::ostream& os) const;
+        void fullReports(std::ostream& os) const;
+    };
+
+    } // namespace Opm
 
 #endif // OPM_SIMULATORREPORT_HEADER_INCLUDED

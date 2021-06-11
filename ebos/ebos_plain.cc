@@ -28,17 +28,27 @@
 #include "config.h"
 
 #include "eclproblem.hh"
+#include "eclwellmanager.hh"
 
 #include <opm/models/utils/start.hh>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(EbosPlainTypeTag, INHERITS_FROM(BlackOilModel, EclBaseProblem));
+namespace TTag {
+struct EbosPlainTypeTag {
+    using InheritsFrom = std::tuple<EclBaseProblem, BlackOilModel>;
+};
+}
 
-END_PROPERTIES
+template<class TypeTag>
+struct EclWellModel<TypeTag, TTag::EbosPlainTypeTag> {
+    using type = EclWellManager<TypeTag>;
+};
+
+} // namespace Opm::Properties
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(EbosPlainTypeTag) ProblemTypeTag;
+    using ProblemTypeTag = Opm::Properties::TTag::EbosPlainTypeTag;
     return Opm::start<ProblemTypeTag>(argc, argv);
 }

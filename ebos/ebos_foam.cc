@@ -30,35 +30,42 @@
 #include "ebos.hh"
 #include "startEbos.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(EbosFoamTypeTag, INHERITS_FROM(EbosTypeTag));
+namespace TTag {
+struct EbosFoamTypeTag {
+    using InheritsFrom = std::tuple<EbosTypeTag>;
+};
+}
 
 // enable the foam extension of the black oil model
-SET_BOOL_PROP(EbosFoamTypeTag, EnableFoam, true);
+template<class TypeTag>
+struct EnableFoam<TypeTag, TTag::EbosFoamTypeTag> {
+    static constexpr bool value = true;
+};
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 
-void ebosFoamSetDeck(Opm::Deck* deck,
-                     Opm::ParseContext* parseContext,
-                     Opm::ErrorGuard* errorGuard,
+void ebosFoamSetDeck(std::unique_ptr<Deck> deck,
+                     std::unique_ptr<ParseContext> parseContext,
+                     std::unique_ptr<ErrorGuard> errorGuard,
                      double externalSetupTime)
 {
-    typedef TTAG(EbosFoamTypeTag) ProblemTypeTag;
-    typedef GET_PROP_TYPE(ProblemTypeTag, Vanguard) Vanguard;
+    using ProblemTypeTag = Properties::TTag::EbosFoamTypeTag;
+    using Vanguard = GetPropType<ProblemTypeTag, Properties::Vanguard>;
 
     Vanguard::setExternalSetupTime(externalSetupTime);
-    Vanguard::setExternalParseContext(parseContext);
-    Vanguard::setExternalErrorGuard(errorGuard);
-    Vanguard::setExternalDeck(deck);
+    Vanguard::setExternalParseContext(std::move(parseContext));
+    Vanguard::setExternalErrorGuard(std::move(errorGuard));
+    Vanguard::setExternalDeck(std::move(deck));
 }
 
 int ebosFoamMain(int argc, char **argv)
 {
-    typedef TTAG(EbosFoamTypeTag) ProblemTypeTag;
-    return Opm::startEbos<ProblemTypeTag>(argc, argv);
+    using ProblemTypeTag = Properties::TTag::EbosFoamTypeTag;
+    return startEbos<ProblemTypeTag>(argc, argv);
 }
 
 }

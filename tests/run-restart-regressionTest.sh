@@ -12,9 +12,8 @@ ABS_TOL="$5"
 REL_TOL="$6"
 COMPARE_ECL_COMMAND="$7"
 OPM_PACK_COMMAND="$8"
-PARALLEL="${9}"
-EXE_NAME="${10}"
-shift 10
+EXE_NAME="${9}"
+shift 9
 TEST_ARGS="$@"
 
 BASE_NAME=${FILENAME}_RESTART.DATA
@@ -22,19 +21,13 @@ BASE_NAME=${FILENAME}_RESTART.DATA
 rm -Rf ${RESULT_PATH}
 mkdir -p ${RESULT_PATH}
 cd ${RESULT_PATH}
-if test $PARALLEL -eq 1
-then
-  CMD_PREFIX="mpirun -np 4 "
-else
-  CMD_PREFIX=""
-fi
- ${CMD_PREFIX} ${BINPATH}/${EXE_NAME} ${INPUT_DATA_PATH}/${FILENAME} --enable-adaptive-time-stepping=false --output-dir=${RESULT_PATH} ${TEST_ARGS}
+${BINPATH}/${EXE_NAME} ${INPUT_DATA_PATH}/${FILENAME} --output-dir=${RESULT_PATH} ${TEST_ARGS}
 
 test $? -eq 0 || exit 1
 
 ${OPM_PACK_COMMAND} -o ${BASE_NAME} ${INPUT_DATA_PATH}/${FILENAME}_RESTART.DATA
 
-${CMD_PREFIX} ${BINPATH}/${EXE_NAME} ${BASE_NAME} --enable-adaptive-time-stepping=false --output-dir=${RESULT_PATH} ${TEST_ARGS}
+${BINPATH}/${EXE_NAME} ${BASE_NAME} --output-dir=${RESULT_PATH} ${TEST_ARGS}
 test $? -eq 0 || exit 1
 
 ecode=0

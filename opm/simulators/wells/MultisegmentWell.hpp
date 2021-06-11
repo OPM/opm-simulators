@@ -22,19 +22,27 @@
 #ifndef OPM_MULTISEGMENTWELL_HEADER_INCLUDED
 #define OPM_MULTISEGMENTWELL_HEADER_INCLUDED
 
-
 #include <opm/simulators/wells/WellInterface.hpp>
+#include <opm/simulators/wells/MultisegmentWellEval.hpp>
+
+#include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 
 namespace Opm
 {
+    class DeferredLogger;
 
     template<typename TypeTag>
-    class MultisegmentWell: public WellInterface<TypeTag>
+    class MultisegmentWell : public WellInterface<TypeTag>
+                           , public MultisegmentWellEval<GetPropType<TypeTag, Properties::FluidSystem>,
+                                                         GetPropType<TypeTag, Properties::Indices>,
+                                                         GetPropType<TypeTag, Properties::Scalar>>
     {
     public:
-        typedef WellInterface<TypeTag> Base;
+        using Base = WellInterface<TypeTag>;
+        using MSWEval = MultisegmentWellEval<GetPropType<TypeTag, Properties::FluidSystem>,
+                                             GetPropType<TypeTag, Properties::Indices>,
+                                             GetPropType<TypeTag, Properties::Scalar>>;
 
-        using typename Base::WellState;
         using typename Base::Simulator;
         using typename Base::IntensiveQuantities;
         using typename Base::FluidSystem;
@@ -43,10 +51,15 @@ namespace Opm
         using typename Base::Indices;
         using typename Base::RateConverterType;
         using typename Base::SparseMatrixAdapter;
-
+        using typename Base::FluidState;
+        using typename Base::GasLiftSingleWell;
+        using typename Base::GLiftProdWells;
+        using typename Base::GLiftOptWells;
+        using typename Base::GLiftWellStateMap;
 
         /// the number of reservior equations
         using Base::numEq;
+        using Base::numPhases;
 
         using Base::has_solvent;
         using Base::has_polymer;
@@ -54,81 +67,62 @@ namespace Opm
         using Base::Oil;
         using Base::Gas;
 
-        // TODO: for now, not considering the polymer, solvent and so on to simplify the development process.
-
-        // TODO: we need to have order for the primary variables and also the order for the well equations.
-        // sometimes, they are similar, while sometimes, they can have very different forms.
-
-        // TODO: the following system looks not rather flexible. Looking into all kinds of possibilities
-        // TODO: gas is always there? how about oil water case?
-        // Is it gas oil two phase case?
-        static const bool gasoil = numEq == 2 && (Indices::compositionSwitchIdx >= 0);
-        static const int GTotal = 0;
-        static const int WFrac = gasoil? -1000: 1;
-        static const int GFrac = gasoil? 1 : 2;
-        static const int SPres = gasoil? 2 : 3;
-
-        ///  the number of well equations // TODO: it should have a more general strategy for it
-        static const int numWellEq = GET_PROP_VALUE(TypeTag, EnablePolymer)? numEq : numEq + 1;
-
         using typename Base::Scalar;
 
         /// the matrix and vector types for the reservoir
         using typename Base::BVector;
         using typename Base::Eval;
 
-        // sparsity pattern for the matrices
-        // [A C^T    [x       =  [ res
-        //  B  D ]   x_well]      res_well]
+        using typename MSWEval::EvalWell;
+        using typename MSWEval::BVectorWell;
+        using typename MSWEval::DiagMatWell;
+        using typename MSWEval::OffDiagMatrixBlockWellType;
+        using MSWEval::GFrac;
+        using MSWEval::WFrac;
+        using MSWEval::GTotal;
+        using MSWEval::SPres;
+        using MSWEval::numWellEq;
 
-        // the vector type for the res_well and x_well
-        typedef Dune::FieldVector<Scalar, numWellEq> VectorBlockWellType;
-        typedef Dune::BlockVector<VectorBlockWellType> BVectorWell;
-
-        // the matrix type for the diagonal matrix D
-        typedef Dune::FieldMatrix<Scalar, numWellEq, numWellEq > DiagMatrixBlockWellType;
-        typedef Dune::BCRSMatrix <DiagMatrixBlockWellType> DiagMatWell;
-
-        // the matrix type for the non-diagonal matrix B and C^T
-        typedef Dune::FieldMatrix<Scalar, numWellEq, numEq>  OffDiagMatrixBlockWellType;
-        typedef Dune::BCRSMatrix<OffDiagMatrixBlockWellType> OffDiagMatWell;
-
-        // TODO: for more efficient implementation, we should have EvalReservoir, EvalWell, and EvalRerservoirAndWell
-        //                                                         EvalR (Eval), EvalW, EvalRW
-        // TODO: for now, we only use one type to save some implementation efforts, while improve later.
-        typedef DenseAd::Evaluation<double, /*size=*/numEq + numWellEq> EvalWell;
-
-        MultisegmentWell(const Well& well, const int time_step,
+        MultisegmentWell(const Well& well,
+                         const ParallelWellInfo& pw_info,
+                         const int time_step,
                          const ModelParameters& param,
                          const RateConverterType& rate_converter,
                          const int pvtRegionIdx,
                          const int num_components,
                          const int num_phases,
                          const int index_of_well,
-                         const int first_perf_index,
                          const std::vector<PerforationData>& perf_data);
 
         virtual void init(const PhaseUsage* phase_usage_arg,
                           const std::vector<double>& depth_arg,
                           const double gravity_arg,
-                          const int num_cells) override;
-
+                          const int num_cells,
+                          const std::vector< Scalar >& B_avg) override;
 
         virtual void initPrimaryVariablesEvaluation() const override;
 
-        virtual void assembleWellEq(const Simulator& ebosSimulator,
-                                    const std::vector<Scalar>& B_avg,
-                                    const double dt,
-                                    WellState& well_state,
-                                    Opm::DeferredLogger& deferred_logger) override;
+        virtual void gasLiftOptimizationStage1 (
+            WellState&,
+            const Simulator&,
+            DeferredLogger&,
+            GLiftProdWells &,
+            GLiftOptWells &,
+            GLiftWellStateMap &
+        ) const override {
+            // Not implemented yet
+        }
 
         /// updating the well state based the current control mode
-        virtual void updateWellStateWithTarget(const Simulator& ebos_simulator,
-                                               WellState& well_state,
-                                               Opm::DeferredLogger& deferred_logger) const override;
+        void updateWellStateWithTarget(const Simulator& ebos_simulator,
+                                       WellState& well_state,
+                                       DeferredLogger& deferred_logger) const;
 
         /// check whether the well equations get converged for this well
-        virtual ConvergenceReport getWellConvergence(const WellState& well_state, const std::vector<double>& B_avg, Opm::DeferredLogger& deferred_logger) const override;
+        virtual ConvergenceReport getWellConvergence(const WellState& well_state,
+                                                     const std::vector<double>& B_avg,
+                                                     DeferredLogger& deferred_logger,
+                                                     const bool relax_tolerance = false) const override;
 
         /// Ax = Ax - C D^-1 B x
         virtual void apply(const BVector& x, BVector& Ax) const override;
@@ -139,30 +133,43 @@ namespace Opm
         /// xw to update Well State
         virtual void recoverWellSolutionAndUpdateWellState(const BVector& x,
                                                            WellState& well_state,
-                                                           Opm::DeferredLogger& deferred_logger) const override;
+                                                           DeferredLogger& deferred_logger) const override;
 
         /// computing the well potentials for group control
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
-                                           const std::vector<Scalar>& B_avg,
                                            const WellState& well_state,
                                            std::vector<double>& well_potentials,
-                                           Opm::DeferredLogger& deferred_logger) override;
+                                           DeferredLogger& deferred_logger) override;
 
-        virtual void updatePrimaryVariables(const WellState& well_state, Opm::DeferredLogger& deferred_logger) const override;
+        virtual void updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_logger) const override;
 
-        virtual void solveEqAndUpdateWellState(WellState& well_state, Opm::DeferredLogger& deferred_logger) override; // const?
+        virtual void solveEqAndUpdateWellState(WellState& well_state, DeferredLogger& deferred_logger) override; // const?
 
         virtual void calculateExplicitQuantities(const Simulator& ebosSimulator,
                                                  const WellState& well_state,
-                                                 Opm::DeferredLogger& deferred_logger) override; // should be const?
+                                                 DeferredLogger& deferred_logger) override; // should be const?
+
+        virtual void updateProductivityIndex(const Simulator& ebosSimulator,
+                                             const WellProdIndexCalculator& wellPICalc,
+                                             WellState& well_state,
+                                             DeferredLogger& deferred_logger) const override;
 
         virtual void  addWellContributions(SparseMatrixAdapter& jacobian) const override;
 
-        /// number of segments for this well
-        /// int number_of_segments_;
-        int numberOfSegments() const;
+        virtual std::vector<double> computeCurrentWellRates(const Simulator& ebosSimulator,
+                                                            DeferredLogger& deferred_logger) const override;
 
-        int numberOfPerforations() const;
+        void computeConnLevelProdInd(const FluidState& fs,
+                                     const std::function<double(const double)>& connPICalc,
+                                     const std::vector<EvalWell>& mobility,
+                                     double* connPI) const;
+
+        void computeConnLevelInjInd(const FluidState& fs,
+                                    const Phase preferred_phase,
+                                    const std::function<double(const double)>& connIICalc,
+                                    const std::vector<EvalWell>& mobility,
+                                    double* connII,
+                                    DeferredLogger& deferred_logger) const;
 
     protected:
         int number_segments_;
@@ -171,9 +178,6 @@ namespace Opm
         WellSegments::CompPressureDrop compPressureDrop() const;
         // multi-phase flow model
         WellSegments::MultiPhaseModel multiphaseModel() const;
-
-        // get the WellSegments from the well_ecl_
-        const WellSegments& segmentSet() const;
 
         // protected member variables from the Base class
         using Base::well_ecl_;
@@ -189,118 +193,41 @@ namespace Opm
         using Base::well_cells_;
         using Base::param_;
         using Base::well_index_;
-        using Base::first_perf_;
         using Base::saturation_table_number_;
         using Base::well_efficiency_factor_;
         using Base::gravity_;
         using Base::perf_depth_;
         using Base::num_components_;
         using Base::connectionRates_;
+        using Base::ipr_a_;
+        using Base::ipr_b_;
+        using Base::changed_to_stopped_this_step_;
 
         // protected functions from the Base class
         using Base::phaseUsage;
         using Base::name;
         using Base::flowPhaseToEbosCompIdx;
+        using Base::flowPhaseToEbosPhaseIdx;
         using Base::ebosCompIdxToFlowCompIdx;
         using Base::getAllowCrossFlow;
         using Base::scalingFactor;
-        using Base::wellIsStopped_;
-
-
-        // TODO: trying to use the information from the Well opm-parser as much
-        // as possible, it will possibly be re-implemented later for efficiency reason.
-
-        // the completions that is related to each segment
-        // the completions's ids are their index in the vector well_index_, well_cell_
-        // This is also assuming the order of the completions in Well is the same with
-        // the order of the completions in wells.
-        // it is for convinience reason. we can just calcuate the inforation for segment once then using it for all the perofrations
-        // belonging to this segment
-        std::vector<std::vector<int> > segment_perforations_;
-
-        // the inlet segments for each segment. It is for convinience and efficiency reason
-        std::vector<std::vector<int> > segment_inlets_;
-
-        // segment number is an ID of the segment, it is specified in the deck
-        // get the loation of the segment with a segment number in the segmentSet
-        int segmentNumberToIndex(const int segment_number) const;
-
-        // TODO, the following should go to a class for computing purpose
-        // two off-diagonal matrices
-        mutable OffDiagMatWell duneB_;
-        mutable OffDiagMatWell duneC_;
-        // diagonal matrix for the well
-        mutable DiagMatWell duneD_;
-
-        // residuals of the well equations
-        mutable BVectorWell resWell_;
-
-        // the values for the primary varibles
-        // based on different solutioin strategies, the wells can have different primary variables
-        mutable std::vector<std::array<double, numWellEq> > primary_variables_;
-
-        // the Evaluation for the well primary variables, which contain derivativles and are used in AD calculation
-        mutable std::vector<std::array<EvalWell, numWellEq> > primary_variables_evaluation_;
-
-        // depth difference between perforations and the perforated grid cells
-        std::vector<double> cell_perforation_depth_diffs_;
-        // pressure correction due to the different depth of the perforation and
-        // center depth of the grid block
-        std::vector<double> cell_perforation_pressure_diffs_;
-
-        // depth difference between the segment and the peforation
-        // or in another way, the depth difference between the perforation and
-        // the segment the perforation belongs to
-        std::vector<double> perforation_segment_depth_diffs_;
+        using Base::wellIsStopped;
+        using Base::updateWellOperability;
+        using Base::checkWellOperability;
+        using Base::calculateBhpFromThp;
+        using Base::getALQ;
 
         // the intial amount of fluids in each segment under surface condition
         std::vector<std::vector<double> > segment_fluid_initial_;
 
-        // the densities of segment fluids
-        // we should not have this member variable
-        std::vector<EvalWell> segment_densities_;
-
-        // the viscosity of the segments
-        std::vector<EvalWell> segment_viscosities_;
-
-        // the mass rate of the segments
-        std::vector<EvalWell> segment_mass_rates_;
-
-        std::vector<double> segment_depth_diffs_;
-
-        // the upwinding segment for each segment based on the flow direction
-        std::vector<int> upwinding_segments_;
-
         mutable int debug_cost_counter_ = 0;
-
-        // TODO: this is the old implementation, it is possible the new value does not need it anymore
-        std::vector<EvalWell> segment_reservoir_volume_rates_;
-
-        std::vector<std::vector<EvalWell>> segment_phase_fractions_;
-
-        std::vector<std::vector<EvalWell>> segment_phase_viscosities_;
-
-
-        void initMatrixAndVectors(const int num_cells) const;
-
-        EvalWell getBhp() const;
-        EvalWell getQs(const int comp_idx) const;
-        EvalWell getWQTotal() const;
-
-        // xw = inv(D)*(rw - C*x)
-        void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
 
         // updating the well_state based on well solution dwells
         void updateWellState(const BVectorWell& dwells,
                              WellState& well_state,
-                             Opm::DeferredLogger& deferred_logger,
+                             DeferredLogger& deferred_logger,
                              const double relaxation_factor=1.0) const;
 
-
-        // initialize the segment rates with well rates
-        // when there is no more accurate way to initialize the segment rates, we initialize
-        // the segment rates based on well rates with a simple strategy
-        void initSegmentRatesWithWellRates(WellState& well_state) const;
 
         // computing the accumulation term for later use in well mass equations
         void computeInitialSegmentFluids(const Simulator& ebos_simulator);
@@ -308,18 +235,9 @@ namespace Opm
         // compute the pressure difference between the perforation and cell center
         void computePerfCellPressDiffs(const Simulator& ebosSimulator);
 
-        // fraction value of the primary variables
-        // should we just use member variables to store them instead of calculating them again and again
-        EvalWell volumeFraction(const int seg, const unsigned comp_idx) const;
-
-        // F_p / g_p, the basic usage of this value is because Q_p = G_t * F_p / G_p
-        EvalWell volumeFractionScaled(const int seg, const int comp_idx) const;
-
-        // basically Q_p / \sigma_p Q_p
-        EvalWell surfaceVolumeFraction(const int seg, const int comp_idx) const;
-
         void computePerfRatePressure(const IntensiveQuantities& int_quants,
                                      const std::vector<EvalWell>& mob_perfcells,
+                                     const double Tw,
                                      const int seg,
                                      const int perf,
                                      const EvalWell& segment_pressure,
@@ -328,29 +246,11 @@ namespace Opm
                                      EvalWell& perf_press,
                                      double& perf_dis_gas_rate,
                                      double& perf_vap_oil_rate,
-                                     Opm::DeferredLogger& deferred_logger) const;
-
-        // convert a Eval from reservoir to contain the derivative related to wells
-        EvalWell extendEval(const Eval& in) const;
-
-
-        template <class ValueType>
-        ValueType calculateBhpFromThp(const std::vector<ValueType>& rates, const Well& well, const SummaryState& summaryState, Opm::DeferredLogger& deferred_logger) const;
-
-        double calculateThpFromBhp(const std::vector<double>& rates, const double bhp, Opm::DeferredLogger& deferred_logger) const;
-        void updateThp(WellState& well_state, Opm::DeferredLogger& deferred_logger) const;
+                                     DeferredLogger& deferred_logger) const;
 
         // compute the fluid properties, such as densities, viscosities, and so on, in the segments
         // They will be treated implicitly, so they need to be of Evaluation type
         void computeSegmentFluidProperties(const Simulator& ebosSimulator);
-
-        EvalWell getSegmentPressure(const int seg) const;
-
-        EvalWell getSegmentRate(const int seg, const int comp_idx) const;
-
-        EvalWell getSegmentRateUpwinding(const int seg, const size_t comp_idx) const;
-
-        EvalWell getSegmentGTotal(const int seg) const;
 
         // get the mobility for specific perforation
         void getMobility(const Simulator& ebosSimulator,
@@ -358,93 +258,39 @@ namespace Opm
                          std::vector<EvalWell>& mob) const;
 
         void computeWellRatesAtBhpLimit(const Simulator& ebosSimulator,
-                                        const std::vector<Scalar>& B_avg,
                                         std::vector<double>& well_flux,
-                                        Opm::DeferredLogger& deferred_logger) const;
+                                        DeferredLogger& deferred_logger) const;
 
         void computeWellRatesWithBhp(const Simulator& ebosSimulator,
-                                     const std::vector<Scalar>& B_avg,
                                      const Scalar bhp,
                                      std::vector<double>& well_flux,
-                                     Opm::DeferredLogger& deferred_logger) const;
+                                     DeferredLogger& deferred_logger) const;
 
         std::vector<double>
         computeWellPotentialWithTHP(const Simulator& ebos_simulator,
-                                    const std::vector<Scalar>& B_avg,
-                                    Opm::DeferredLogger& deferred_logger) const;
+                                    DeferredLogger& deferred_logger) const;
 
-        void assembleControlEq(const WellState& well_state,
-                               const Opm::Schedule& schedule,
-                               const SummaryState& summaryState,
-                               const Well::InjectionControls& inj_controls,
-                               const Well::ProductionControls& prod_controls,
-                               Opm::DeferredLogger& deferred_logger);
+        virtual double getRefDensity() const override;
 
-        void assemblePressureEq(const int seg, WellState& well_state) const;
+        virtual bool iterateWellEqWithControl(const Simulator& ebosSimulator,
+                                              const double dt,
+                                              const Well::InjectionControls& inj_controls,
+                                              const Well::ProductionControls& prod_controls,
+                                              WellState& well_state,
+                                              const GroupState& group_state,
+                                              DeferredLogger& deferred_logger) override;
 
-        // hytrostatic pressure loss
-        EvalWell getHydroPressureLoss(const int seg) const;
-
-        // frictinal pressure loss
-        EvalWell getFrictionPressureLoss(const int seg) const;
-
-        void handleAccelerationPressureLoss(const int seg, WellState& well_state) const;
-
-        // handling the overshooting and undershooting of the fractions
-        void processFractions(const int seg) const;
-
-        // checking the operability of the well based on current reservoir condition
-        // it is not implemented for multisegment well yet
-        virtual void checkWellOperability(const Simulator& ebos_simulator,
-                                          const WellState& well_state,
-                                          Opm::DeferredLogger& deferred_logger) override;
-
-        void updateWellStateFromPrimaryVariables(WellState& well_state, Opm::DeferredLogger& deferred_logger) const;
-
-        bool frictionalPressureLossConsidered() const;
-
-        bool accelerationalPressureLossConsidered() const;
-
-        // TODO: try to make ebosSimulator const, as it should be
-        void iterateWellEquations(const Simulator& ebosSimulator,
-                                  const std::vector<Scalar>& B_avg,
-                                  const double dt,
-                                  const Well::InjectionControls& inj_controls,
-                                  const Well::ProductionControls& prod_controls,
-                                  WellState& well_state,
-                                  Opm::DeferredLogger& deferred_logger);
-
-        void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
-                                            const double dt,
-                                            const Well::InjectionControls& inj_controls,
-                                            const Well::ProductionControls& prod_controls,
-                                            WellState& well_state,
-                                            Opm::DeferredLogger& deferred_logger);
-
-        virtual void wellTestingPhysical(const Simulator& simulator, const std::vector<double>& B_avg,
-                                         const double simulation_time, const int report_step,
-                                         WellState& well_state, WellTestState& welltest_state, Opm::DeferredLogger& deferred_logger) override;
+        virtual void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
+                                                    const double dt,
+                                                    const Well::InjectionControls& inj_controls,
+                                                    const Well::ProductionControls& prod_controls,
+                                                    WellState& well_state,
+                                                    const GroupState& group_state,
+                                                    DeferredLogger& deferred_logger) override;
 
         virtual void updateWaterThroughput(const double dt, WellState& well_state) const override;
 
         EvalWell getSegmentSurfaceVolume(const Simulator& ebos_simulator, const int seg_idx) const;
-
-        std::vector<Scalar> getWellResiduals(const std::vector<Scalar>& B_avg) const;
-
-        void detectOscillations(const std::vector<double>& measure_history,
-                                const int it, bool& oscillate, bool& stagnate) const;
-
-        double getResidualMeasureValue(const WellState& well_state,
-                                       const std::vector<double>& residuals,
-                                       DeferredLogger& deferred_logger) const;
-
-        double getControlTolerance(const WellState& well_state, DeferredLogger& deferred_logger) const;
-
-        void checkConvergenceControlEq(const WellState& well_state,
-                                       ConvergenceReport& report,
-                                       DeferredLogger& deferred_logger) const;
-
-        void updateUpwindingSegments();
 
         // turn on crossflow to avoid singular well equations
         // when the well is banned from cross-flow and the BHP is not properly initialized,
@@ -459,28 +305,23 @@ namespace Opm
 
 
         std::optional<double> computeBhpAtThpLimitProd(const Simulator& ebos_simulator,
-                                                       const std::vector<Scalar>& B_avg,
                                                        const SummaryState& summary_state,
                                                        DeferredLogger& deferred_logger) const;
 
         std::optional<double> computeBhpAtThpLimitInj(const Simulator& ebos_simulator,
-                                                      const std::vector<Scalar>& B_avg,
                                                       const SummaryState& summary_state,
                                                       DeferredLogger& deferred_logger) const;
 
         double maxPerfPress(const Simulator& ebos_simulator) const;
 
-        void assembleSICDPressureEq(const int seg, WellState& well_state) const;
+        // check whether the well is operable under BHP limit with current reservoir condition
+        virtual void checkOperabilityUnderBHPLimitProducer(const WellState& well_state, const Simulator& ebos_simulator, DeferredLogger& deferred_logger) override;
 
-        // TODO: when more ICD devices join, we should have a better interface to do this
-        void calculateSICDFlowScalingFactors();
+        // check whether the well is operable under THP limit with current reservoir condition
+        virtual void checkOperabilityUnderTHPLimitProducer(const Simulator& ebos_simulator, const WellState& well_state, DeferredLogger& deferred_logger) override;
 
-        EvalWell pressureDropSpiralICD(const int seg) const;
-
-        // assemble the pressure equation for sub-critical valve (WSEGVALV)
-        void assembleValvePressureEq(const int seg, WellState& well_state) const;
-
-        EvalWell pressureDropValve(const int seg) const;
+        // updating the inflow based on the current reservoir condition
+        virtual void updateIPR(const Simulator& ebos_simulator, DeferredLogger& deferred_logger) const override;
     };
 
 }

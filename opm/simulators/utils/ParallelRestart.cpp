@@ -22,7 +22,20 @@
 #endif
 
 #include "ParallelRestart.hpp"
+#include <cassert>
+#include <cstring>
+#include <ctime>
+#include <memory>
 #include <dune/common/parallel/mpitraits.hh>
+#include <opm/output/data/Aquifer.hpp>
+#include <opm/output/data/Cells.hpp>
+#include <opm/output/data/Groups.hpp>
+#include <opm/output/data/GuideRateValue.hpp>
+#include <opm/output/data/Solution.hpp>
+#include <opm/output/data/Wells.hpp>
+#include <opm/output/eclipse/EclipseIO.hpp>
+#include <opm/output/eclipse/RestartValue.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
 
 #define HANDLE_AS_POD(T) \
   std::size_t packSize(const T& data, Dune::MPIHelper::MPICommunicator comm) \
@@ -78,6 +91,17 @@ std::size_t packSize(const std::pair<T1,T2>& data, Dune::MPIHelper::MPICommunica
 {
     return packSize(data.first, comm) + packSize(data.second, comm);
 }
+
+template<class T>
+std::size_t packSize(const std::optional<T>& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    bool has_value = data.has_value();
+    std::size_t pack_size = packSize(has_value, comm);
+    if (has_value)
+        pack_size += packSize(*data, comm);
+    return pack_size;
+}
+
 
 template<class T, class A>
 std::size_t packSize(const std::vector<T,A>& data, Dune::MPIHelper::MPICommunicator comm)
@@ -193,10 +217,56 @@ std::size_t packSize(const std::array<T,N>& data, Dune::MPIHelper::MPICommunicat
     return N*packSize(data[0], comm);
 }
 
+HANDLE_AS_POD(data::CarterTracyData)
 HANDLE_AS_POD(data::Connection)
 HANDLE_AS_POD(data::CurrentControl)
+HANDLE_AS_POD(data::FetkovichData)
+HANDLE_AS_POD(data::GroupConstraints)
+HANDLE_AS_POD(data::NodeData)
 HANDLE_AS_POD(data::Rates)
 HANDLE_AS_POD(data::Segment)
+
+std::size_t packSize(const data::AquiferData& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    const auto type = 0ull;
+
+    const auto base = packSize(data.aquiferID, comm)
+        + packSize(data.pressure, comm)
+        + packSize(data.fluxRate, comm)
+        + packSize(data.volume, comm)
+        + packSize(data.initPressure, comm)
+        + packSize(data.datumDepth, comm)
+        + packSize(type, comm);
+
+    if (data.aquFet != nullptr) {
+        return base + packSize(*data.aquFet, comm);
+    }
+    else if (data.aquCT != nullptr) {
+        return base + packSize(*data.aquCT, comm);
+    }
+
+    return base;
+}
+
+std::size_t packSize(const data::GuideRateValue&, Dune::MPIHelper::MPICommunicator comm)
+{
+    const auto nItem = static_cast<std::size_t>(data::GuideRateValue::Item::NumItems);
+
+    return packSize(std::array<int   , nItem>{}, comm)
+        +  packSize(std::array<double, nItem>{}, comm);
+}
+
+std::size_t packSize(const data::GroupGuideRates& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.production, comm)
+        +  packSize(data.injection, comm);
+}
+
+std::size_t packSize(const data::GroupData& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.currentControl, comm)
+        +  packSize(data.guideRates, comm);
+}
 
 std::size_t packSize(const data::Well& data, Dune::MPIHelper::MPICommunicator comm)
 {
@@ -207,6 +277,7 @@ std::size_t packSize(const data::Well& data, Dune::MPIHelper::MPICommunicator co
     size += packSize(data.connections, comm);
     size += packSize(data.segments, comm);
     size += packSize(data.current_control, comm);
+    size += packSize(data.guide_rates, comm);
     return size;
 }
 
@@ -227,6 +298,12 @@ std::size_t packSize(const data::Solution& data, Dune::MPIHelper::MPICommunicato
     return packSize(static_cast<const std::map< std::string, data::CellData>&>(data), comm);
 }
 
+std::size_t packSize(const data::GroupAndNetworkValues& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.groupData, comm)
+        +  packSize(data.nodeData, comm);
+}
+
 std::size_t packSize(const data::WellRates& data, Dune::MPIHelper::MPICommunicator comm)
 {
     // Needs explicit conversion to a supported base type holding the data
@@ -236,8 +313,19 @@ std::size_t packSize(const data::WellRates& data, Dune::MPIHelper::MPICommunicat
 
 std::size_t packSize(const RestartValue& data, Dune::MPIHelper::MPICommunicator comm)
 {
-    return packSize(data.solution, comm) + packSize(data.wells, comm) + packSize(data.extra, comm);
+    return packSize(data.solution, comm)
+        +  packSize(data.wells, comm)
+        +  packSize(data.grp_nwrk, comm)
+        +  packSize(data.aquifer, comm)
+        +  packSize(data.extra, comm);
 }
+
+std::size_t packSize(const Opm::time_point&, Dune::MPIHelper::MPICommunicator comm)
+{
+    std::time_t tp;
+    return packSize(tp, comm);
+}
+
 
 ////// pack routines
 
@@ -281,6 +369,17 @@ void pack(const std::pair<T1,T2>& data, std::vector<char>& buffer, int& position
     pack(data.first, buffer, position, comm);
     pack(data.second, buffer, position, comm);
 }
+
+template<class T>
+void pack(const std::optional<T>& data, std::vector<char>& buffer, int& position,
+    Dune::MPIHelper::MPICommunicator comm)
+{
+    bool has_value = data.has_value();
+    pack(has_value, buffer, position, comm);
+    if (has_value)
+        pack(*data, buffer, position, comm);
+}
+
 
 template<class T, class A>
 void pack(const std::vector<T, A>& data, std::vector<char>& buffer, int& position,
@@ -338,7 +437,7 @@ void pack(const std::vector<bool,A>& data, std::vector<char>& buffer, int& posit
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.size(), buffer, position, comm);
-    for (const auto& entry : data) {
+    for (const auto entry : data) { // Not a reference: vector<bool> range
         bool b = entry;
         pack(b, buffer, position, comm);
     }
@@ -414,6 +513,65 @@ void pack(const std::unordered_map<T1,T2,H,P,A>& data, std::vector<char>& buffer
     }
 }
 
+void pack(const data::AquiferData& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    const auto type =
+          (data.aquFet != nullptr)*(1ull << 0)
+        + (data.aquCT  != nullptr)*(1ull << 1);
+
+    pack(data.aquiferID, buffer, position, comm);
+    pack(data.pressure, buffer, position, comm);
+    pack(data.fluxRate, buffer, position, comm);
+    pack(data.volume, buffer, position, comm);
+    pack(data.initPressure, buffer, position, comm);
+    pack(data.datumDepth, buffer, position, comm);
+    pack(type, buffer, position, comm);
+
+    if (data.aquFet != nullptr) {
+        pack(*data.aquFet, buffer, position, comm);
+    }
+    else if (data.aquCT != nullptr) {
+        pack(*data.aquCT, buffer, position, comm);
+    }
+}
+
+void pack(const data::GuideRateValue& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    using Item = data::GuideRateValue::Item;
+    const auto nItem = static_cast<std::size_t>(Item::NumItems);
+
+    auto has = std::array<int   , nItem>{};  has.fill(0);
+    auto val = std::array<double, nItem>{};  val.fill(0.0);
+
+    for (auto itemID = 0*nItem; itemID < nItem; ++itemID) {
+        const auto item = static_cast<Item>(itemID);
+
+        if (data.has(item)) {
+            has[itemID] = 1;
+            val[itemID] = data.get(item);
+        }
+    }
+
+    pack(has, buffer, position, comm);
+    pack(val, buffer, position, comm);
+}
+
+void pack(const data::GroupGuideRates& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.production, buffer, position, comm);
+    pack(data.injection, buffer, position, comm);
+}
+
+void pack(const data::GroupData& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.currentControl, buffer, position, comm);
+    pack(data.guideRates, buffer, position, comm);
+}
+
 void pack(const data::Well& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
@@ -425,6 +583,7 @@ void pack(const data::Well& data, std::vector<char>& buffer, int& position,
     pack(data.connections, buffer, position, comm);
     pack(data.segments, buffer, position, comm);
     pack(data.current_control, buffer, position, comm);
+    pack(data.guide_rates, buffer, position, comm);
 }
 
 void pack(const RestartKey& data, std::vector<char>& buffer, int& position,
@@ -461,13 +620,29 @@ void pack(const data::WellRates& data, std::vector<char>& buffer, int& position,
          buffer, position, comm);
 }
 
+void pack(const data::GroupAndNetworkValues& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.groupData, buffer, position, comm);
+    pack(data.nodeData, buffer, position, comm);
+}
+
 void pack(const RestartValue& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     pack(data.solution, buffer, position, comm);
     pack(data.wells, buffer, position, comm);
+    pack(data.grp_nwrk, buffer, position, comm);
+    pack(data.aquifer, buffer, position, comm);
     pack(data.extra, buffer, position, comm);
 }
+
+void pack(const Opm::time_point& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(Opm::TimeService::to_time_t(data), buffer, position, comm);
+}
+
 
 /// unpack routines
 
@@ -509,6 +684,21 @@ void unpack(std::pair<T1,T2>& data, std::vector<char>& buffer, int& position,
     unpack(data.first, buffer, position, comm);
     unpack(data.second, buffer, position, comm);
 }
+
+template<class T>
+void unpack(std::optional<T>&data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    bool has_value;
+    unpack(has_value, buffer, position, comm);
+    if (has_value) {
+        T val;
+        unpack(val, buffer, position, comm);
+        data = std::optional<T>(val);
+    } else
+        data.reset();
+}
+
 
 template<class T, class A>
 void unpack(std::vector<T,A>& data, std::vector<char>& buffer, int& position,
@@ -672,6 +862,65 @@ void unpack(data::Well& data, std::vector<char>& buffer, int& position,
     unpack(data.connections, buffer, position, comm);
     unpack(data.segments, buffer, position, comm);
     unpack(data.current_control, buffer, position, comm);
+    unpack(data.guide_rates, buffer, position, comm);
+}
+
+void unpack(data::AquiferData& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    auto type = 0ull;
+
+    unpack(data.aquiferID, buffer, position, comm);
+    unpack(data.pressure, buffer, position, comm);
+    unpack(data.fluxRate, buffer, position, comm);
+    unpack(data.volume, buffer, position, comm);
+    unpack(data.initPressure, buffer, position, comm);
+    unpack(data.datumDepth, buffer, position, comm);
+    unpack(type, buffer, position, comm);
+
+    if (type == 1ull) {
+        data.type = data::AquiferType::Fetkovich;
+        data.aquFet = std::make_shared<data::FetkovichData>();
+        unpack(*data.aquFet, buffer, position, comm);
+    }
+    else if (type == 2ull) {
+        data.type = data::AquiferType::CarterTracy;
+        data.aquCT = std::make_shared<data::CarterTracyData>();
+        unpack(*data.aquCT, buffer, position, comm);
+    }
+}
+
+void unpack(data::GuideRateValue& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    using Item = data::GuideRateValue::Item;
+    const auto nItem = static_cast<std::size_t>(Item::NumItems);
+
+    auto has = std::array<int   , nItem>{};
+    auto val = std::array<double, nItem>{};
+
+    unpack(has, buffer, position, comm);
+    unpack(val, buffer, position, comm);
+
+    for (auto itemID = 0*nItem; itemID < nItem; ++itemID) {
+        if (has[itemID] != 0) {
+            data.set(static_cast<Item>(itemID), val[itemID]);
+        }
+    }
+}
+
+void unpack(data::GroupGuideRates& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(data.production, buffer, position, comm);
+    unpack(data.injection, buffer, position, comm);
+}
+
+void unpack(data::GroupData& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(data.currentControl, buffer, position, comm);
+    unpack(data.guideRates, buffer, position, comm);
 }
 
 void unpack(RestartKey& data, std::vector<char>& buffer, int& position,
@@ -708,13 +957,33 @@ void unpack(data::WellRates& data, std::vector<char>& buffer, int& position,
            buffer, position, comm);
 }
 
+void unpack(data::GroupAndNetworkValues& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(data.groupData, buffer, position, comm);
+    unpack(data.nodeData, buffer, position, comm);
+}
+
 void unpack(RestartValue& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
     unpack(data.solution, buffer, position, comm);
     unpack(data.wells, buffer, position, comm);
+    unpack(data.grp_nwrk, buffer, position, comm);
+    unpack(data.aquifer, buffer, position, comm);
     unpack(data.extra, buffer, position, comm);
 }
+
+void unpack([[maybe_unused]] Opm::time_point& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    std::time_t tp;
+    unpack(tp, buffer, position, comm);
+#if HAVE_MPI
+    data = Opm::TimeService::from_time_t(tp);
+#endif
+}
+
 
 #define INSTANTIATE_PACK_VECTOR(...) \
 template std::size_t packSize(const std::vector<__VA_ARGS__>& data, \
@@ -764,11 +1033,16 @@ INSTANTIATE_PACK(std::array<bool,3>)
 INSTANTIATE_PACK(std::array<int,3>)
 INSTANTIATE_PACK(unsigned char)
 INSTANTIATE_PACK(std::map<std::pair<int,int>,std::pair<bool,double>>)
+INSTANTIATE_PACK(std::optional<double>)
+INSTANTIATE_PACK(std::optional<std::string>)
+INSTANTIATE_PACK(std::pair<double, double>)
+INSTANTIATE_PACK(std::optional<std::pair<double,double>>)
 INSTANTIATE_PACK(std::map<std::string,std::vector<int>>)
 INSTANTIATE_PACK(std::map<std::string,std::map<std::pair<int,int>,int>>)
 INSTANTIATE_PACK(std::map<std::string,int>)
 INSTANTIATE_PACK(std::map<std::string,double>)
 INSTANTIATE_PACK(std::map<int,int>)
+INSTANTIATE_PACK(std::map<int,data::AquiferData>)
 INSTANTIATE_PACK(std::unordered_map<std::string,size_t>)
 INSTANTIATE_PACK(std::unordered_map<std::string,std::string>)
 INSTANTIATE_PACK(std::unordered_set<std::string>)
@@ -778,26 +1052,28 @@ INSTANTIATE_PACK(std::set<std::string>)
 
 } // end namespace Mpi
 
-RestartValue loadParallelRestart(const EclipseIO* eclIO, SummaryState& summaryState,
+RestartValue loadParallelRestart(const EclipseIO* eclIO, Action::State& actionState, SummaryState& summaryState,
                                  const std::vector<Opm::RestartKey>& solutionKeys,
                                  const std::vector<Opm::RestartKey>& extraKeys,
                                  Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> comm)
 {
 #if HAVE_MPI
-    data::Solution sol;
-    data::Wells wells;
-    RestartValue restartValues(sol, wells);
+    RestartValue restartValues{};
 
     if (eclIO)
     {
         assert(comm.rank() == 0);
-        restartValues = eclIO->loadRestart(summaryState, solutionKeys, extraKeys);
+        restartValues = eclIO->loadRestart(actionState, summaryState, solutionKeys, extraKeys);
         int packedSize = Mpi::packSize(restartValues, comm);
         std::vector<char> buffer(packedSize);
         int position=0;
         Mpi::pack(restartValues, buffer, position, comm);
         comm.broadcast(&position, 1, 0);
         comm.broadcast(buffer.data(), position, 0);
+        std::vector<char> buf2 = summaryState.serialize();
+        int size = buf2.size();
+        comm.broadcast(&size, 1, 0);
+        comm.broadcast(buf2.data(), size, 0);
     }
     else
     {
@@ -807,11 +1083,15 @@ RestartValue loadParallelRestart(const EclipseIO* eclIO, SummaryState& summarySt
         comm.broadcast(buffer.data(), bufferSize, 0);
         int position{};
         Mpi::unpack(restartValues, buffer, position, comm);
+        comm.broadcast(&bufferSize, 1, 0);
+        buffer.resize(bufferSize);
+        comm.broadcast(buffer.data(), bufferSize, 0);
+        summaryState.deserialize(buffer);
     }
     return restartValues;
 #else
     (void) comm;
-    return eclIO->loadRestart(summaryState, solutionKeys, extraKeys);
+    return eclIO->loadRestart(actionState, summaryState, solutionKeys, extraKeys);
 #endif
 }
 

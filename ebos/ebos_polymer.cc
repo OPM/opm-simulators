@@ -30,35 +30,42 @@
 #include "ebos.hh"
 #include "startEbos.hh"
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(EbosPolymerTypeTag, INHERITS_FROM(EbosTypeTag));
+namespace TTag {
+struct EbosPolymerTypeTag {
+    using InheritsFrom = std::tuple<EbosTypeTag>;
+};
+}
 
 // enable the polymer extension of the black oil model
-SET_BOOL_PROP(EbosPolymerTypeTag, EnablePolymer, true);
+template<class TypeTag>
+struct EnablePolymer<TypeTag, TTag::EbosPolymerTypeTag> {
+    static constexpr bool value = true;
+};
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 
-void ebosPolymerSetDeck(Opm::Deck* deck,
-                        Opm::ParseContext* parseContext,
-                        Opm::ErrorGuard* errorGuard,
+void ebosPolymerSetDeck(std::unique_ptr<Deck> deck,
+                        std::unique_ptr<ParseContext> parseContext,
+                        std::unique_ptr<ErrorGuard> errorGuard,
                         double externalSetupTime)
 {
-    typedef TTAG(EbosPolymerTypeTag) ProblemTypeTag;
-    typedef GET_PROP_TYPE(ProblemTypeTag, Vanguard) Vanguard;
+    using ProblemTypeTag = Properties::TTag::EbosPolymerTypeTag;
+    using Vanguard = GetPropType<ProblemTypeTag, Properties::Vanguard>;
 
     Vanguard::setExternalSetupTime(externalSetupTime);
-    Vanguard::setExternalParseContext(parseContext);
-    Vanguard::setExternalErrorGuard(errorGuard);
-    Vanguard::setExternalDeck(deck);
+    Vanguard::setExternalParseContext(std::move(parseContext));
+    Vanguard::setExternalErrorGuard(std::move(errorGuard));
+    Vanguard::setExternalDeck(std::move(deck));
 }
 
 int ebosPolymerMain(int argc, char **argv)
 {
-    typedef TTAG(EbosPolymerTypeTag) ProblemTypeTag;
-    return Opm::startEbos<ProblemTypeTag>(argc, argv);
+    using ProblemTypeTag = Properties::TTag::EbosPolymerTypeTag;
+    return startEbos<ProblemTypeTag>(argc, argv);
 }
 
 }

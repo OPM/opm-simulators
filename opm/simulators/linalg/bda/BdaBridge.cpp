@@ -18,8 +18,6 @@
 */
 
 #include <config.h>
-#include <memory>
-#include <sstream>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
@@ -28,6 +26,19 @@
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 
+#if HAVE_CUDA
+#include <opm/simulators/linalg/bda/cusparseSolverBackend.hpp>
+#endif
+
+#if HAVE_OPENCL
+#include <opm/simulators/linalg/bda/openclSolverBackend.hpp>
+#endif
+
+#if HAVE_FPGA
+#include <opm/simulators/linalg/bda/FPGASolverBackend.hpp>
+#endif
+
+
 #define PRINT_TIMERS_BRIDGE 0
 
 typedef Dune::InverseOperatorResult InverseOperatorResult;
@@ -35,11 +46,69 @@ typedef Dune::InverseOperatorResult InverseOperatorResult;
 namespace Opm
 {
 
-BdaBridge::BdaBridge(bool use_gpu_, int linear_solver_verbosity, int maxit, double tolerance)
-    : use_gpu(use_gpu_)
+    using bda::BdaResult;
+    using bda::BdaSolver;
+    using bda::SolverStatus;
+    using bda::ILUReorder;
+
+template <class BridgeMatrix, class BridgeVector, int block_size>
+BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string accelerator_mode_,
+                                                             [[maybe_unused]] std::string fpga_bitstream,
+                                                             int linear_solver_verbosity, int maxit,
+                                                             double tolerance,
+                                                             [[maybe_unused]] unsigned int platformID,
+                                                             unsigned int deviceID,
+                                                             [[maybe_unused]] std::string opencl_ilu_reorder)
+: accelerator_mode(accelerator_mode_)
 {
-    if (use_gpu) {
-        backend.reset(new cusparseSolverBackend(linear_solver_verbosity, maxit, tolerance));
+    if (accelerator_mode.compare("cusparse") == 0) {
+#if HAVE_CUDA
+        use_gpu = true;
+        backend.reset(new bda::cusparseSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance, deviceID));
+#else
+        OPM_THROW(std::logic_error, "Error cusparseSolver was chosen, but CUDA was not found by CMake");
+#endif
+    } else if (accelerator_mode.compare("opencl") == 0) {
+#if HAVE_OPENCL
+        use_gpu = true;
+        ILUReorder ilu_reorder;
+        if (opencl_ilu_reorder == "") {
+            ilu_reorder = bda::ILUReorder::GRAPH_COLORING;  // default when not selected by user
+        } else if (opencl_ilu_reorder == "level_scheduling") {
+            ilu_reorder = bda::ILUReorder::LEVEL_SCHEDULING;
+        } else if (opencl_ilu_reorder == "graph_coloring") {
+            ilu_reorder = bda::ILUReorder::GRAPH_COLORING;
+        } else if (opencl_ilu_reorder == "none") {
+            ilu_reorder = bda::ILUReorder::NONE;
+        } else {
+            OPM_THROW(std::logic_error, "Error invalid argument for --opencl-ilu-reorder, usage: '--opencl-ilu-reorder=[level_scheduling|graph_coloring]'");
+        }
+        backend.reset(new bda::openclSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance, platformID, deviceID, ilu_reorder));
+#else
+        OPM_THROW(std::logic_error, "Error openclSolver was chosen, but OpenCL was not found by CMake");
+#endif
+    } else if (accelerator_mode.compare("fpga") == 0) {
+#if HAVE_FPGA
+        use_fpga = true;
+        ILUReorder ilu_reorder;
+        if (opencl_ilu_reorder == "") {
+            ilu_reorder = bda::ILUReorder::LEVEL_SCHEDULING;  // default when not selected by user
+        } else if (opencl_ilu_reorder == "level_scheduling") {
+            ilu_reorder = bda::ILUReorder::LEVEL_SCHEDULING;
+        } else if (opencl_ilu_reorder == "graph_coloring") {
+            ilu_reorder = bda::ILUReorder::GRAPH_COLORING;
+        } else {
+            OPM_THROW(std::logic_error, "Error invalid argument for --opencl-ilu-reorder, usage: '--opencl-ilu-reorder=[level_scheduling|graph_coloring]'");
+        }
+        backend.reset(new bda::FpgaSolverBackend<block_size>(fpga_bitstream, linear_solver_verbosity, maxit, tolerance, ilu_reorder));
+#else
+        OPM_THROW(std::logic_error, "Error fpgaSolver was chosen, but FPGA was not enabled by CMake");
+#endif
+    } else if (accelerator_mode.compare("none") == 0) {
+        use_gpu = false;
+        use_fpga = false;
+    } else {
+        OPM_THROW(std::logic_error, "Error unknown value for parameter 'AcceleratorMode', should be passed like '--accelerator-mode=[none|cusparse|opencl|fpga]");
     }
 }
 
@@ -85,7 +154,7 @@ int checkZeroDiagonal(BridgeMatrix& mat) {
 
 
 // iterate sparsity pattern from Matrix and put colIndices and rowPointers in arrays
-// sparsity pattern should stay the same due to matrix-add-well-contributions
+// sparsity pattern should stay the same
 // this could be removed if Dune::BCRSMatrix features an API call that returns colIndices and rowPointers
 template <class BridgeMatrix>
 void getSparsityPattern(BridgeMatrix& mat, std::vector<int> &h_rows, std::vector<int> &h_cols) {
@@ -112,18 +181,20 @@ void getSparsityPattern(BridgeMatrix& mat, std::vector<int> &h_rows, std::vector
 } // end getSparsityPattern()
 
 
-template <class BridgeMatrix, class BridgeVector>
-void BdaBridge::solve_system(BridgeMatrix *mat OPM_UNUSED, BridgeVector &b OPM_UNUSED, WellContributions& wellContribs OPM_UNUSED, InverseOperatorResult &res OPM_UNUSED)
+template <class BridgeMatrix, class BridgeVector, int block_size>
+void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatrix *mat OPM_UNUSED, BridgeVector &b OPM_UNUSED, WellContributions& wellContribs OPM_UNUSED, InverseOperatorResult &res OPM_UNUSED)
 {
 
-    if (use_gpu) {
+    if (use_gpu || use_fpga) {
         BdaResult result;
         result.converged = false;
         static std::vector<int> h_rows;
         static std::vector<int> h_cols;
         const int dim = (*mat)[0][0].N();
-        const int N = mat->N()*dim;
-        const int nnz = (h_rows.empty()) ? mat->nonzeroes()*dim*dim : h_rows.back()*dim*dim;
+        const int Nb = mat->N();
+        const int N = Nb * dim;
+        const int nnzb = (h_rows.empty()) ? mat->nonzeroes() : h_rows.back();
+        const int nnz = nnzb * dim * dim;
 
         if (dim != 3) {
             OpmLog::warning("cusparseSolver only accepts blocksize = 3 at this time, will use Dune for the remainder of the program");
@@ -132,8 +203,8 @@ void BdaBridge::solve_system(BridgeMatrix *mat OPM_UNUSED, BridgeVector &b OPM_U
         }
 
         if (h_rows.capacity() == 0) {
-            h_rows.reserve(N+1);
-            h_cols.reserve(nnz);
+            h_rows.reserve(Nb+1);
+            h_cols.reserve(nnzb);
 #if PRINT_TIMERS_BRIDGE
             Dune::Timer t;
 #endif
@@ -159,21 +230,20 @@ void BdaBridge::solve_system(BridgeMatrix *mat OPM_UNUSED, BridgeVector &b OPM_U
         /////////////////////////
         // actually solve
 
-        typedef cusparseSolverBackend::cusparseSolverStatus cusparseSolverStatus;
         // assume that underlying data (nonzeroes) from mat (Dune::BCRSMatrix) are contiguous, if this is not the case, cusparseSolver is expected to perform undefined behaviour
-        cusparseSolverStatus status = backend->solve_system(N, nnz, dim, static_cast<double*>(&(((*mat)[0][0][0][0]))), h_rows.data(), h_cols.data(), static_cast<double*>(&(b[0][0])), wellContribs, result);
+        SolverStatus status = backend->solve_system(N, nnz, dim, static_cast<double*>(&(((*mat)[0][0][0][0]))), h_rows.data(), h_cols.data(), static_cast<double*>(&(b[0][0])), wellContribs, result);
         switch(status) {
-        case cusparseSolverStatus::CUSPARSE_SOLVER_SUCCESS:
-            //OpmLog::info("cusparseSolver converged");
+        case SolverStatus::BDA_SOLVER_SUCCESS:
+            //OpmLog::info("BdaSolver converged");
             break;
-        case cusparseSolverStatus::CUSPARSE_SOLVER_ANALYSIS_FAILED:
-            OpmLog::warning("cusparseSolver could not analyse level information of matrix, perhaps there is still a 0.0 on the diagonal of a block on the diagonal");
+        case SolverStatus::BDA_SOLVER_ANALYSIS_FAILED:
+            OpmLog::warning("BdaSolver could not analyse level information of matrix, perhaps there is still a 0.0 on the diagonal of a block on the diagonal");
             break;
-        case cusparseSolverStatus::CUSPARSE_SOLVER_CREATE_PRECONDITIONER_FAILED:
-            OpmLog::warning("cusparseSolver could not create preconditioner, perhaps there is still a 0.0 on the diagonal of a block on the diagonal");
+        case SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED:
+            OpmLog::warning("BdaSolver could not create preconditioner, perhaps there is still a 0.0 on the diagonal of a block on the diagonal");
             break;
         default:
-            OpmLog::warning("cusparseSolver returned unknown status code");
+            OpmLog::warning("BdaSolver returned unknown status code");
         }
 
         res.iterations = result.iterations;
@@ -181,69 +251,62 @@ void BdaBridge::solve_system(BridgeMatrix *mat OPM_UNUSED, BridgeVector &b OPM_U
         res.converged = result.converged;
         res.conv_rate = result.conv_rate;
         res.elapsed = result.elapsed;
-    }else{
+    } else {
         res.converged = false;
     }
 }
 
 
-template <class BridgeVector>
-void BdaBridge::get_result(BridgeVector &x OPM_UNUSED) {
-    if (use_gpu) {
-        backend->post_process(static_cast<double*>(&(x[0][0])));
+template <class BridgeMatrix, class BridgeVector, int block_size>
+void BdaBridge<BridgeMatrix, BridgeVector, block_size>::get_result(BridgeVector &x OPM_UNUSED) {
+    if (use_gpu || use_fpga) {
+        backend->get_result(static_cast<double*>(&(x[0][0])));
     }
 }
 
-template void BdaBridge::solve_system<
-Dune::BCRSMatrix<Opm::MatrixBlock<double, 1, 1>, std::allocator<Opm::MatrixBlock<double, 1, 1> > > ,
-Dune::BlockVector<Dune::FieldVector<double, 1>, std::allocator<Dune::FieldVector<double, 1> > > >
-(Dune::BCRSMatrix<Opm::MatrixBlock<double, 1, 1>, std::allocator<Opm::MatrixBlock<double, 1, 1> > > *mat,
-    Dune::BlockVector<Dune::FieldVector<double, 1>, std::allocator<Dune::FieldVector<double, 1> > > &b,
-    WellContributions& wellContribs,
-    InverseOperatorResult &res);
-
-template void BdaBridge::solve_system<
-Dune::BCRSMatrix<Opm::MatrixBlock<double, 2, 2>, std::allocator<Opm::MatrixBlock<double, 2, 2> > > ,
-Dune::BlockVector<Dune::FieldVector<double, 2>, std::allocator<Dune::FieldVector<double, 2> > > >
-(Dune::BCRSMatrix<Opm::MatrixBlock<double, 2, 2>, std::allocator<Opm::MatrixBlock<double, 2, 2> > > *mat,
-    Dune::BlockVector<Dune::FieldVector<double, 2>, std::allocator<Dune::FieldVector<double, 2> > > &b,
-    WellContributions& wellContribs,
-    InverseOperatorResult &res);
-
-template void BdaBridge::solve_system<
-Dune::BCRSMatrix<Opm::MatrixBlock<double, 3, 3>, std::allocator<Opm::MatrixBlock<double, 3, 3> > > ,
-Dune::BlockVector<Dune::FieldVector<double, 3>, std::allocator<Dune::FieldVector<double, 3> > > >
-(Dune::BCRSMatrix<Opm::MatrixBlock<double, 3, 3>, std::allocator<Opm::MatrixBlock<double, 3, 3> > > *mat,
-    Dune::BlockVector<Dune::FieldVector<double, 3>, std::allocator<Dune::FieldVector<double, 3> > > &b,
-    WellContributions& wellContribs,
-    InverseOperatorResult &res);
-
-template void BdaBridge::solve_system<
-Dune::BCRSMatrix<Opm::MatrixBlock<double, 4, 4>, std::allocator<Opm::MatrixBlock<double, 4, 4> > > ,
-Dune::BlockVector<Dune::FieldVector<double, 4>, std::allocator<Dune::FieldVector<double, 4> > > >
-(Dune::BCRSMatrix<Opm::MatrixBlock<double, 4, 4>, std::allocator<Opm::MatrixBlock<double, 4, 4> > > *mat,
-    Dune::BlockVector<Dune::FieldVector<double, 4>, std::allocator<Dune::FieldVector<double, 4> > > &b,
-    WellContributions& wellContribs,
-    InverseOperatorResult &res);
-
-template void BdaBridge::get_result<
-Dune::BlockVector<Dune::FieldVector<double, 1>, std::allocator<Dune::FieldVector<double, 1> > > >
-(Dune::BlockVector<Dune::FieldVector<double, 1>, std::allocator<Dune::FieldVector<double, 1> > > &x);
-
-template void BdaBridge::get_result<
-Dune::BlockVector<Dune::FieldVector<double, 2>, std::allocator<Dune::FieldVector<double, 2> > > >
-(Dune::BlockVector<Dune::FieldVector<double, 2>, std::allocator<Dune::FieldVector<double, 2> > > &x);
-
-template void BdaBridge::get_result<
-Dune::BlockVector<Dune::FieldVector<double, 3>, std::allocator<Dune::FieldVector<double, 3> > > >
-(Dune::BlockVector<Dune::FieldVector<double, 3>, std::allocator<Dune::FieldVector<double, 3> > > &x);
-
-template void BdaBridge::get_result<
-Dune::BlockVector<Dune::FieldVector<double, 4>, std::allocator<Dune::FieldVector<double, 4> > > >
-(Dune::BlockVector<Dune::FieldVector<double, 4>, std::allocator<Dune::FieldVector<double, 4> > > &x);
-
-
-
+template <class BridgeMatrix, class BridgeVector, int block_size>
+void BdaBridge<BridgeMatrix, BridgeVector, block_size>::initWellContributions([[maybe_unused]] WellContributions& wellContribs) {
+    if(accelerator_mode.compare("opencl") == 0){
+#if HAVE_OPENCL
+        const auto openclBackend = static_cast<const bda::openclSolverBackend<block_size>*>(backend.get());
+        wellContribs.setOpenCLEnv(openclBackend->context.get(), openclBackend->queue.get());
+#else
+        OPM_THROW(std::logic_error, "Error openclSolver was chosen, but OpenCL was not found by CMake");
+#endif
+    }
 }
+
+#define INSTANTIATE_BDA_FUNCTIONS(n)                                                                                                \
+template BdaBridge<Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >,              \
+Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >,                                    \
+n>::BdaBridge                                                                                                                       \
+(std::string accelerator_mode_, std::string fpga_bitstream, int linear_solver_verbosity, int maxit, double tolerance,               \
+unsigned int platformID, unsigned int deviceID, std::string opencl_ilu_reorder);                                                    \
+                                                                                                                                    \
+template void BdaBridge<Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >,         \
+Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >,                                    \
+n>::solve_system                                                                                                                    \
+(Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >*,                               \
+    Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >&,                               \
+    WellContributions&, InverseOperatorResult&);                                                                                    \
+                                                                                                                                    \
+template void BdaBridge<Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >,         \
+Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >,                                    \
+n>::get_result                                                                                                                      \
+(Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >&);                                 \
+                                                                                                                                    \
+template void BdaBridge<Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >,         \
+Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >,                                    \
+n>::initWellContributions(WellContributions&)
+
+
+INSTANTIATE_BDA_FUNCTIONS(1);
+INSTANTIATE_BDA_FUNCTIONS(2);
+INSTANTIATE_BDA_FUNCTIONS(3);
+INSTANTIATE_BDA_FUNCTIONS(4);
+
+#undef INSTANTIATE_BDA_FUNCTIONS
+
+} // namespace Opm
 
 

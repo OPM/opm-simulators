@@ -18,11 +18,13 @@
 */
 
 #include <config.h>
+
+#include <opm/simulators/utils/ParallelSerialization.hpp>
+
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/DynamicState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ASTNode.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/MSW/SpiralICD.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/MSW/SICD.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQActive.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQASTNode.hpp>
@@ -46,4 +48,9 @@ void eclStateBroadcast(EclipseState& eclState, Schedule& schedule,
     ser.broadcast(summaryConfig);
 }
 
+void eclScheduleBroadcast(Schedule& schedule)
+{
+    Opm::EclMpiSerializer ser(Dune::MPIHelper::getCollectiveCommunication());
+    ser.broadcast(schedule);
+}
 }

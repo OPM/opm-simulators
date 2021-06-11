@@ -30,8 +30,6 @@
 
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
-#include <opm/material/common/Exceptions.hpp>
-
 #include <dune/common/fvector.hh>
 
 namespace Opm {
@@ -48,10 +46,9 @@ namespace Opm {
 template<class TypeTag>
 class EclDummyGradientCalculator
 {
-
-    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
     enum { dimWorld = GridView::dimensionworld };
 

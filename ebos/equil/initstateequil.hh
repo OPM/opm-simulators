@@ -46,8 +46,9 @@
 #include <opm/parser/eclipse/EclipseState/Tables/RvvdTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PbvdTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PdvdTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SaltvdTable.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
-#include <opm/common/data/SimulationDataContainer.hpp>
+#include <fmt/format.h>
 
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/fluidstates/SimpleModularFluidState.hpp>
@@ -62,14 +63,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
-
-BEGIN_PROPERTIES
-
-NEW_PROP_TAG(Simulator);
-NEW_PROP_TAG(Grid);
-NEW_PROP_TAG(FluidSystem);
-
-END_PROPERTIES
+#include <string>
 
 namespace Opm {
 
@@ -156,31 +150,38 @@ namespace PhasePressODE {
 template <class FluidSystem>
 class Water
 {
+using TabulatedFunction = Tabulated1DFunction<double>;
 public:
     Water(const double temp,
+          const TabulatedFunction& saltVdTable,
           const int pvtRegionIdx,
           const double normGrav)
         : temp_(temp)
+        , saltVdTable_(saltVdTable)
         , pvtRegionIdx_(pvtRegionIdx)
         , g_(normGrav)
     {}
 
     double
-    operator()(const double /* depth */,
+    operator()(const double depth,
                const double press) const
     {
-        return this->density(press) * g_;
+        return this->density(depth, press) * g_;
     }
 
 private:
     const double temp_;
+    const TabulatedFunction& saltVdTable_;
     const int pvtRegionIdx_;
     const double g_;
 
     double
-    density(const double press) const
+    density(const double depth,
+            const double press) const
     {
-        double rho = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp_, press);
+        // The initializing algorithm can give depths outside the range due to numerical noise i.e. we extrapolate
+        double saltConcentration = saltVdTable_.eval(depth, /*extrapolate=*/true);
+        double rho = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp_, press, saltConcentration);
         rho *= FluidSystem::referenceDensity(FluidSystem::waterPhaseIdx, pvtRegionIdx_);
         return rho;
     }
@@ -756,7 +757,7 @@ makeWatPressure(const typename WPress::InitCond& ic,
                 const VSpan&                     span)
 {
     const auto drho = WatPressODE {
-        this->temperature_, reg.pvtIdx(), this->gravity_
+        this->temperature_, reg.saltVdTable(), reg.pvtIdx(), this->gravity_
     };
 
     this->wat_ = std::make_unique<WPress>(drho, ic, this->nsample_, span);
@@ -1411,89 +1412,29 @@ invertCapPress(const double   pc,
 
 // ===========================================================================
 
-template <typename Grid, typename CellRange>
-void verticalExtent(const Grid&           grid,
-                    const CellRange&      cells,
+template <typename CellRange, typename Comm>
+void verticalExtent(const CellRange&      cells,
+                    const std::vector<std::pair<double, double>>& cellZMinMax,
+                    const Comm& comm,
                     std::array<double,2>& span)
 {
-    // This code is only supported in three space dimensions
-    assert (Grid::dimensionworld == 3);
-
     span[0] = std::numeric_limits<double>::max();
     span[1] = std::numeric_limits<double>::lowest();
-
-    const int nd = Grid::dimensionworld;
 
     // Define vertical span as
     //
     //   [minimum(node depth(cells)), maximum(node depth(cells))]
     //
-    // Note: We use a sledgehammer approach--looping all
-    // the nodes of all the faces of all the 'cells'--to
-    // compute those bounds.  This necessarily entails
-    // visiting some nodes (and faces) multiple times.
-    //
     // Note: The implementation of 'RK4IVP<>' implicitly
     // imposes the requirement that cell centroids are all
     // within this vertical span.  That requirement is not
     // checked.
-    auto cell2Faces = Opm::UgGridHelpers::cell2Faces(grid);
-    auto faceVertices = Opm::UgGridHelpers::face2Vertices(grid);
-
-    for (typename CellRange::const_iterator
-             ci = cells.begin(), ce = cells.end();
-         ci != ce; ++ci)
-    {
-        for (auto fi = cell2Faces[*ci].begin(),
-                  fe = cell2Faces[*ci].end();
-             fi != fe; ++fi)
-        {
-            for (auto i = faceVertices[*fi].begin(),
-                      e = faceVertices[*fi].end();
-                 i != e; ++i)
-            {
-                const double z = Opm::UgGridHelpers::
-                    vertexCoordinates(grid, *i)[nd - 1];
-
-                if (z < span[0]) { span[0] = z; }
-                if (z > span[1]) { span[1] = z; }
-            }
-        }
+    for (const auto& cell : cells) {
+        if (cellZMinMax[cell].first < span[0]) { span[0] = cellZMinMax[cell].first; }
+        if (cellZMinMax[cell].second > span[1]) { span[1] = cellZMinMax[cell].second; }
     }
-}
-
-template <typename Grid, typename CellID>
-std::pair<double, double>
-horizontalTopBottomDepths(const Grid& grid, const CellID cell)
-{
-    const auto nd = Grid::dimensionworld;
-
-    auto c2f = Opm::UgGridHelpers::cell2Faces(grid);
-    auto top = std::numeric_limits<double>::max();
-    auto bot = std::numeric_limits<double>::lowest();
-
-    const auto topTag = 4;      // Top face
-    const auto botTag = 5;      // Bottom face
-
-    for (auto f = c2f[cell].begin(), e = c2f[cell].end(); f != e; ++f) {
-        const auto tag = Opm::UgGridHelpers::faceTag(grid, f);
-        if ((tag != topTag) && (tag != botTag)) {
-            // Not top/bottom face.  Skip.
-            continue;
-        }
-
-        const auto depth = Opm::UgGridHelpers::
-            faceCentroid(grid, *f)[nd - 1];
-
-        if (tag == topTag) { // Top face
-            top = std::min(top, depth);
-        }
-        else { // Bottom face (tag == 5)
-            bot = std::max(bot, depth);
-        }
-    }
-
-    return std::make_pair(top, bot);
+    span[0] = comm.min(span[0]);
+    span[1] = comm.max(span[1]);
 }
 
 inline
@@ -1513,16 +1454,14 @@ void subdivisionCentrePoints(const double                            left,
     }
 }
 
-template <typename Grid, typename CellID>
+template <typename CellID>
 std::vector<std::pair<double, double>>
-horizontalSubdivision(const Grid&  grid,
-                      const CellID cell,
+horizontalSubdivision(const CellID cell,
+                      const std::pair<double, double> topbot,
                       const int    numIntervals)
 {
     auto subdiv = std::vector<std::pair<double, double>>{};
     subdiv.reserve(2 * numIntervals);
-
-    const auto topbot = horizontalTopBottomDepths(grid, cell);
 
     if (topbot.first > topbot.second) {
         throw std::out_of_range {
@@ -1537,11 +1476,64 @@ horizontalSubdivision(const Grid&  grid,
     return subdiv;
 }
 
+template <class Element>
+double cellCenterDepth(const Element& element)
+{
+    typedef typename Element::Geometry Geometry;
+    static constexpr int zCoord = Element::dimension - 1;
+    double zz = 0.0;
+
+    const Geometry& geometry = element.geometry();
+    const int corners = geometry.corners();
+    for (int i=0; i < corners; ++i)
+        zz += geometry.corner(i)[zCoord];
+
+    return zz/corners;
+}
+
+template <class Element>
+std::pair<double,double> cellZSpan(const Element& element)
+{
+    typedef typename Element::Geometry Geometry;
+    static constexpr int zCoord = Element::dimension - 1;
+    double bot = 0.0;
+    double top = 0.0;
+
+    const Geometry& geometry = element.geometry();
+    const int corners = geometry.corners();
+    assert(corners == 8);
+    for (int i=0; i < 4; ++i)
+        bot += geometry.corner(i)[zCoord];
+    for (int i=4; i < corners; ++i)
+        top += geometry.corner(i)[zCoord];
+
+    return std::make_pair(bot/4, top/4);
+}
+
+template <class Element>
+std::pair<double,double> cellZMinMax(const Element& element)
+{
+    typedef typename Element::Geometry Geometry;
+    static constexpr int zCoord = Element::dimension - 1;
+    const Geometry& geometry = element.geometry();
+    const int corners = geometry.corners();
+    assert(corners == 8);
+    auto min = std::numeric_limits<double>::max();
+    auto max = std::numeric_limits<double>::lowest();
+
+
+    for (int i=0; i < corners; ++i) {
+        min = std::min(min, geometry.corner(i)[zCoord]);
+        max = std::max(max, geometry.corner(i)[zCoord]);
+    }
+    return std::make_pair(min, max);
+}
+
 } // namespace Details
 
 namespace DeckDependent {
-inline std::vector<Opm::EquilRecord>
-getEquil(const Opm::EclipseState& state)
+inline std::vector<EquilRecord>
+getEquil(const EclipseState& state)
 {
     const auto& init = state.getInitConfig();
 
@@ -1553,12 +1545,12 @@ getEquil(const Opm::EclipseState& state)
     return { equil.begin(), equil.end() };
 }
 
-template<class Grid>
+template<class GridView>
 std::vector<int>
-equilnum(const Opm::EclipseState& eclipseState,
-         const Grid& grid)
+equilnum(const EclipseState& eclipseState,
+         const GridView& gridview)
 {
-    std::vector<int> eqlnum(grid.size(0), 0);
+    std::vector<int> eqlnum(gridview.size(0), 0);
 
     if (eclipseState.fieldProps().has_int("EQLNUM")) {
         const auto& e = eclipseState.fieldProps().get_int("EQLNUM");
@@ -1571,24 +1563,30 @@ equilnum(const Opm::EclipseState& eclipseState,
 template<class TypeTag>
 class InitialStateComputer
 {
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Element = typename GridView::template Codim<0>::Entity;
+    using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
+    using Grid = GetPropType<TypeTag, Properties::Grid>;
+    using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
 
 public:
     template<class MaterialLawManager>
     InitialStateComputer(MaterialLawManager& materialLawManager,
-                         const Opm::EclipseState& eclipseState,
-                         const Grid& grid,
-                         const double grav = Opm::unit::gravity,
+                         const EclipseState& eclipseState,
+                         const GridView& gridView,
+                         const CartesianIndexMapper& cartMapper,
+                         const double grav = unit::gravity,
                          const bool applySwatInit = true)
-        : temperature_(grid.size(/*codim=*/0)),
+        : temperature_(gridView.size(/*codim=*/0)),
+          saltConcentration_(gridView.size(/*codim=*/0)),
           pp_(FluidSystem::numPhases,
-              std::vector<double>(grid.size(/*codim=*/0))),
+          std::vector<double>(gridView.size(/*codim=*/0))),
           sat_(FluidSystem::numPhases,
-               std::vector<double>(grid.size(/*codim=*/0))),
-          rs_(grid.size(/*codim=*/0)),
-          rv_(grid.size(/*codim=*/0))
+          std::vector<double>(gridView.size(/*codim=*/0))),
+          rs_(gridView.size(/*codim=*/0)),
+          rv_(gridView.size(/*codim=*/0)),
+          cartesianIndexMapper_(cartMapper)
     {
         //Check for presence of kw SWATINIT
         if (applySwatInit) {
@@ -1597,12 +1595,16 @@ public:
             }
         }
 
+        // Querry cell depth, cell top-bottom.
+        // numerical aquifer cells might be specified with different depths.
+        const auto& num_aquifers = eclipseState.aquifer().numericalAquifers();
+        updateCellProps_(gridView, num_aquifers);
 
         // Get the equilibration records.
-        const std::vector<Opm::EquilRecord> rec = getEquil(eclipseState);
+        const std::vector<EquilRecord> rec = getEquil(eclipseState);
         const auto& tables = eclipseState.getTableManager();
         // Create (inverse) region mapping.
-        const Opm::RegionMapping<> eqlmap(equilnum(eclipseState, grid));
+        const RegionMapping<> eqlmap(equilnum(eclipseState, gridView));
         const int invalidRegion = -1;
         regionPvtIdx_.resize(rec.size(), invalidRegion);
         setRegionPvtIdx(eclipseState, eqlmap);
@@ -1617,17 +1619,17 @@ public:
                 }
                 const int pvtIdx = regionPvtIdx_[i];
                 if (!rec[i].liveOilInitConstantRs()) {
-                    const Opm::TableContainer& rsvdTables = tables.getRsvdTables();
-                    const Opm::TableContainer& pbvdTables = tables.getPbvdTables();
+                    const TableContainer& rsvdTables = tables.getRsvdTables();
+                    const TableContainer& pbvdTables = tables.getPbvdTables();
                     if (rsvdTables.size() > 0) {
 
-                        const Opm::RsvdTable& rsvdTable = rsvdTables.getTable<Opm::RsvdTable>(i);
+                        const RsvdTable& rsvdTable = rsvdTables.getTable<RsvdTable>(i);
                         std::vector<double> depthColumn = rsvdTable.getColumn("DEPTH").vectorCopy();
                         std::vector<double> rsColumn = rsvdTable.getColumn("RS").vectorCopy();
                         rsFunc_.push_back(std::make_shared<Miscibility::RsVD<FluidSystem>>(pvtIdx,
                                                                                            depthColumn, rsColumn));
                     } else if (pbvdTables.size() > 0) {
-                        const Opm::PbvdTable& pbvdTable = pbvdTables.getTable<Opm::PbvdTable>(i);
+                        const PbvdTable& pbvdTable = pbvdTables.getTable<PbvdTable>(i);
                         std::vector<double> depthColumn = pbvdTable.getColumn("DEPTH").vectorCopy();
                         std::vector<double> pbubColumn = pbvdTable.getColumn("PBUB").vectorCopy();
                         rsFunc_.push_back(std::make_shared<Miscibility::PBVD<FluidSystem>>(pvtIdx,
@@ -1665,17 +1667,17 @@ public:
                 }
                 const int pvtIdx = regionPvtIdx_[i];
                 if (!rec[i].wetGasInitConstantRv()) {
-                    const Opm::TableContainer& rvvdTables = tables.getRvvdTables();
-                    const Opm::TableContainer& pdvdTables = tables.getPdvdTables();
+                    const TableContainer& rvvdTables = tables.getRvvdTables();
+                    const TableContainer& pdvdTables = tables.getPdvdTables();
 
                     if (rvvdTables.size() > 0) {
-                        const Opm::RvvdTable& rvvdTable = rvvdTables.getTable<Opm::RvvdTable>(i);
+                        const RvvdTable& rvvdTable = rvvdTables.getTable<RvvdTable>(i);
                         std::vector<double> depthColumn = rvvdTable.getColumn("DEPTH").vectorCopy();
                         std::vector<double> rvColumn = rvvdTable.getColumn("RV").vectorCopy();
                         rvFunc_.push_back(std::make_shared<Miscibility::RvVD<FluidSystem>>(pvtIdx,
                                                                                            depthColumn, rvColumn));
                     } else if (pdvdTables.size() > 0) {
-                        const Opm::PdvdTable& pdvdTable = pdvdTables.getTable<Opm::PdvdTable>(i);
+                        const PdvdTable& pdvdTable = pdvdTables.getTable<PdvdTable>(i);
                         std::vector<double> depthColumn = pdvdTable.getColumn("DEPTH").vectorCopy();
                         std::vector<double> pdewColumn = pdvdTable.getColumn("PDEW").vectorCopy();
                         rvFunc_.push_back(std::make_shared<Miscibility::PDVD<FluidSystem>>(pvtIdx,
@@ -1706,8 +1708,15 @@ public:
         // EXTRACT the initial temperature
         updateInitialTemperature_(eclipseState);
 
+        // EXTRACT the initial salt concentration
+        updateInitialSaltConcentration_(eclipseState, eqlmap);
+
         // Compute pressures, saturations, rs and rv factors.
-        calcPressSatRsRv(eqlmap, rec, materialLawManager, grid, grav);
+        const auto& comm = gridView.comm();
+        calcPressSatRsRv(eqlmap, rec, materialLawManager, comm, grav);
+
+        // modify the pressure and saturation for numerical aquifer cells
+        applyNumericalAquifers_(gridView, num_aquifers);
 
         // Modify oil pressure in no-oil regions so that the pressures of present phases can
         // be recovered from the oil pressure and capillary relations.
@@ -1717,29 +1726,149 @@ public:
     typedef std::vector<Vec>    PVec; // One per phase.
 
     const Vec& temperature() const { return temperature_; }
+    const Vec& saltConcentration() const { return saltConcentration_; }
     const PVec& press() const { return pp_; }
     const PVec& saturation() const { return sat_; }
     const Vec& rs() const { return rs_; }
     const Vec& rv() const { return rv_; }
 
 private:
-    void updateInitialTemperature_(const Opm::EclipseState& eclState)
+
+    void updateInitialTemperature_(const EclipseState& eclState)
     {
         this->temperature_ = eclState.fieldProps().get_double("TEMPI");
     }
 
+    template <class RMap>
+    void updateInitialSaltConcentration_(const EclipseState& eclState, const RMap& reg)
+    {
+        const int numEquilReg = rsFunc_.size();
+        saltVdTable_.resize(numEquilReg);
+        const auto& tables = eclState.getTableManager();
+        const TableContainer& saltvdTables = tables.getSaltvdTables();
+
+        // If no saltvd table is given, we create a trivial table for the density calculations
+        if (saltvdTables.empty()) {
+            std::vector<double> x = {0.0,1.0};
+            std::vector<double> y = {0.0,0.0};
+            for (auto& table : this->saltVdTable_) {
+                table.setXYContainers(x, y);
+            }
+        } else {
+            for (size_t i = 0; i < saltvdTables.size(); ++i) {
+                const SaltvdTable& saltvdTable = saltvdTables.getTable<SaltvdTable>(i);
+                saltVdTable_[i].setXYContainers(saltvdTable.getDepthColumn(), saltvdTable.getSaltColumn());
+
+                const auto& cells = reg.cells(i);
+                for (const auto& cell : cells) {
+                    const double depth = cellCenterDepth_[cell];
+                    this->saltConcentration_[cell] = saltVdTable_[i].eval(depth, /*extrapolate=*/true);
+                }
+            }
+        }
+    }
+
     std::vector< std::shared_ptr<Miscibility::RsFunction> > rsFunc_;
     std::vector< std::shared_ptr<Miscibility::RsFunction> > rvFunc_;
+    using TabulatedFunction = Tabulated1DFunction<double>;
+    std::vector<TabulatedFunction> saltVdTable_;
     std::vector<int> regionPvtIdx_;
     Vec temperature_;
+    Vec saltConcentration_;
     PVec pp_;
     PVec sat_;
     Vec rs_;
     Vec rv_;
+    const CartesianIndexMapper& cartesianIndexMapper_;
     Vec swatInit_;
+    Vec cellCenterDepth_;
+    std::vector<std::pair<double,double>> cellZSpan_;
+    std::vector<std::pair<double,double>> cellZMinMax_;
 
+    void updateCellProps_(const GridView& gridView,
+                          const NumericalAquifers& aquifer)
+    {
+        ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
+        int numElements = gridView.size(/*codim=*/0);
+        cellCenterDepth_.resize(numElements);
+        cellZSpan_.resize(numElements);
+        cellZMinMax_.resize(numElements);
+
+        auto elemIt = gridView.template begin</*codim=*/0>();
+        const auto& elemEndIt = gridView.template end</*codim=*/0>();
+        const auto num_aqu_cells = aquifer.allAquiferCells();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            const Element& element = *elemIt;
+            const unsigned int elemIdx = elemMapper.index(element);
+            cellCenterDepth_[elemIdx] = Details::cellCenterDepth(element);
+            const auto cartIx = cartesianIndexMapper_.cartesianIndex(elemIdx);
+            if (!num_aqu_cells.empty()) {
+                const auto search = num_aqu_cells.find(cartIx);
+                if (search != num_aqu_cells.end()) {
+                    const auto* aqu_cell = num_aqu_cells.at(cartIx);
+                    cellCenterDepth_[elemIdx] = aqu_cell->depth;
+                }
+            }
+            cellZSpan_[elemIdx] = Details::cellZSpan(element);
+            cellZMinMax_[elemIdx] = Details::cellZMinMax(element);
+        }
+    }
+
+    void applyNumericalAquifers_(const GridView& gridView,
+                                 const NumericalAquifers& aquifer)
+    {
+        const auto num_aqu_cells = aquifer.allAquiferCells();
+        if (num_aqu_cells.empty()) return;
+
+        ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
+        auto elemIt = gridView.template begin</*codim=*/0>();
+        const auto& elemEndIt = gridView.template end</*codim=*/0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            const Element& element = *elemIt;
+            const unsigned int elemIdx = elemMapper.index(element);
+            const auto cartIx = cartesianIndexMapper_.cartesianIndex(elemIdx);
+            const auto search = num_aqu_cells.find(cartIx);
+            if (search != num_aqu_cells.end()) {
+                // numerical aquifer cells are filled with water initially
+                const auto watPos = FluidSystem::waterPhaseIdx;
+                if (FluidSystem::phaseIsActive(watPos)) {
+                    this->sat_[watPos][elemIdx] = 1.;
+                } else {
+                    throw std::logic_error  { "Water phase has to be active for numerical aquifer case" };
+                }
+
+                const auto oilPos = FluidSystem::oilPhaseIdx;
+                if (FluidSystem::phaseIsActive(oilPos)) {
+                    this->sat_[oilPos][elemIdx] = 0.;
+                }
+
+                const auto gasPos = FluidSystem::gasPhaseIdx;
+                if (FluidSystem::phaseIsActive(gasPos)) {
+                    this->sat_[gasPos][elemIdx] = 0.;
+                }
+                const auto* aqu_cell = num_aqu_cells.at(cartIx);
+                const auto msg = fmt::format("FOR AQUIFER CELL AT ({}, {}, {}) OF NUMERICAL "
+                                             "AQUIFER {}, WATER SATURATION IS SET TO BE UNITY",
+                                             aqu_cell->I+1, aqu_cell->J+1, aqu_cell->K+1, aqu_cell->aquifer_id);
+                OpmLog::info(msg);
+
+                // if pressure is specified for numerical aquifers, we use these pressure values
+                // for numerical aquifer cells
+                if (aqu_cell->init_pressure) {
+                    const double pres = *(aqu_cell->init_pressure);
+                    this->pp_[watPos][elemIdx] = pres;
+                    if (FluidSystem::phaseIsActive(gasPos)) {
+                        this->pp_[gasPos][elemIdx] = pres;
+                    }
+                    if (FluidSystem::phaseIsActive(oilPos)) {
+                        this->pp_[oilPos][elemIdx] = pres;
+                    }
+                }
+            }
+        }
+    }
     template<class RMap>
-    void setRegionPvtIdx(const Opm::EclipseState& eclState, const RMap& reg)
+    void setRegionPvtIdx(const EclipseState& eclState, const RMap& reg)
     {
         const auto& pvtnumData = eclState.fieldProps().get_int("PVTNUM");
 
@@ -1749,11 +1878,11 @@ private:
         }
     }
 
-    template <class RMap, class MaterialLawManager>
+    template <class RMap, class MaterialLawManager, class Comm>
     void calcPressSatRsRv(const RMap& reg,
-                          const std::vector< Opm::EquilRecord >& rec,
+                          const std::vector<EquilRecord>& rec,
                           MaterialLawManager& materialLawManager,
-                          const Grid& grid,
+                          const Comm& comm,
                           const double grav)
     {
         using PhaseSat = Details::PhaseSaturations<
@@ -1764,18 +1893,27 @@ private:
         auto psat   = PhaseSat { materialLawManager, this->swatInit_ };
         auto vspan  = std::array<double, 2>{};
 
-        for (const auto& r : reg.activeRegions()) {
+        std::vector<int> regionIsEmpty(rec.size(), 0);
+        for (size_t r = 0; r < rec.size(); ++r) {
             const auto& cells = reg.cells(r);
+
+            Details::verticalExtent(cells, cellZMinMax_, comm, vspan);
+
+            const auto acc = rec[r].initializationTargetAccuracy();
+            if (acc > 0) {
+                throw std::runtime_error {
+                    "Cannot initialise model: Positive item 9 is not supported "
+                    "in EQUIL keyword, record " + std::to_string(r + 1)
+                };
+            }
+
             if (cells.empty()) {
-                Opm::OpmLog::warning("Equilibration region " + std::to_string(r + 1)
-                                     + " has no active cells");
+                regionIsEmpty[r] = 1;
                 continue;
             }
 
-            Details::verticalExtent(grid, cells, vspan);
-
             const auto eqreg = EquilReg {
-                rec[r], this->rsFunc_[r], this->rvFunc_[r], this->regionPvtIdx_[r]
+                rec[r], this->rsFunc_[r], this->rvFunc_[r], this->saltVdTable_[r], this->regionPvtIdx_[r]
             };
 
             // Ensure gas/oil and oil/water contacts are within the span for the
@@ -1785,15 +1923,27 @@ private:
 
             ptable.equilibrate(eqreg, vspan);
 
-            const auto acc = eqreg.equilibrationAccuracy();
             if (acc == 0) {
                 // Centre-point method
-                this->equilibrateCellCentres(cells, eqreg, grid, ptable, psat);
+                this->equilibrateCellCentres(cells, eqreg, ptable, psat);
             }
             else if (acc < 0) {
                 // Horizontal subdivision
                 this->equilibrateHorizontal(cells, eqreg, -acc,
-                                            grid, ptable, psat);
+                                            ptable, psat);
+            } else {
+                // Horizontal subdivision with titled fault blocks
+                // the simulator throw a few line above for the acc > 0 case
+                // i.e. we should not reach here.
+                assert(false);
+            }
+        }
+        comm.min(regionIsEmpty.data(),regionIsEmpty.size());
+        if (comm.rank() == 0) {
+            for (size_t r = 0; r < rec.size(); ++r) {
+                if (regionIsEmpty[r]) //region is empty on all partitions
+                    OpmLog::warning("Equilibration region " + std::to_string(r + 1)
+                                     + " has no active cells");
             }
         }
     }
@@ -1840,18 +1990,16 @@ private:
         }
     }
 
-    template <class CellRange, class Grid, class PressTable, class PhaseSat>
-    void equilibrateCellCentres(const CellRange&  cells,
-                                const EquilReg&   eqreg,
-                                const Grid&       grid,
-                                const PressTable& ptable,
-                                PhaseSat&         psat)
+    template <class CellRange, class PressTable, class PhaseSat>
+    void equilibrateCellCentres(const CellRange&         cells,
+                                const EquilReg&          eqreg,
+                                const PressTable&        ptable,
+                                PhaseSat&                psat)
     {
         using CellPos = typename PhaseSat::Position;
         using CellID  = std::remove_cv_t<std::remove_reference_t<
             decltype(std::declval<CellPos>().cell)>>;
-
-        this->cellLoop(cells, [this, &eqreg, &grid, &ptable, &psat]
+        this->cellLoop(cells, [this, &eqreg,  &ptable, &psat]
             (const CellID                 cell,
              Details::PhaseQuantityValue& pressures,
              Details::PhaseQuantityValue& saturations,
@@ -1859,7 +2007,7 @@ private:
              double&                      Rv) -> void
         {
             const auto pos = CellPos {
-                cell, UgGridHelpers::cellCenterDepth(grid, cell)
+                cell, cellCenterDepth_[cell]
             };
 
             saturations = psat.deriveSaturations(pos, eqreg, ptable);
@@ -1875,11 +2023,10 @@ private:
         });
     }
 
-    template <class CellRange, class Grid, class PressTable, class PhaseSat>
+    template <class CellRange, class PressTable, class PhaseSat>
     void equilibrateHorizontal(const CellRange&  cells,
                                const EquilReg&   eqreg,
                                const int         acc,
-                               const Grid&       grid,
                                const PressTable& ptable,
                                PhaseSat&         psat)
     {
@@ -1887,7 +2034,7 @@ private:
         using CellID  = std::remove_cv_t<std::remove_reference_t<
             decltype(std::declval<CellPos>().cell)>>;
 
-        this->cellLoop(cells, [this, acc, &eqreg, &grid, &ptable, &psat]
+        this->cellLoop(cells, [this, acc, &eqreg, &ptable, &psat]
             (const CellID                 cell,
              Details::PhaseQuantityValue& pressures,
              Details::PhaseQuantityValue& saturations,
@@ -1898,7 +2045,7 @@ private:
             saturations.reset();
 
             auto totfrac = 0.0;
-            for (const auto& [depth, frac] : Details::horizontalSubdivision(grid, cell, acc)) {
+            for (const auto& [depth, frac] : Details::horizontalSubdivision(cell, cellZSpan_[cell], acc)) {
                 const auto pos = CellPos { cell, depth };
 
                 saturations.axpy(psat.deriveSaturations(pos, eqreg, ptable), frac);
@@ -1911,7 +2058,7 @@ private:
             pressures   /= totfrac;
 
             const auto temp = this->temperature_[cell];
-            const auto cz   = UgGridHelpers::cellCenterDepth(grid, cell);
+            const auto cz   = cellCenterDepth_[cell];
 
             Rs = eqreg.dissolutionCalculator()
                 (cz, pressures.oil, temp, saturations.gas);

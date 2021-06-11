@@ -20,39 +20,23 @@
 #ifndef OPM_AUTODIFF_VFPINJPROPERTIES_HPP_
 #define OPM_AUTODIFF_VFPINJPROPERTIES_HPP_
 
-#include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
-#include <opm/material/densead/Math.hpp>
-#include <opm/material/densead/Evaluation.hpp>
-#include <opm/simulators/wells/VFPHelpers.hpp>
 
-#include <vector>
+#include <functional>
 #include <map>
-
+#include <vector>
 
 
 namespace Opm {
 
+class VFPInjTable;
+
 class VFPInjProperties {
 public:
+    VFPInjProperties() = default;
     /**
-     * Empty constructor
-     */
-    VFPInjProperties();
-
-    /**
-     * Constructor
      * Takes *no* ownership of data.
-     * @param inj_table A *single* VFPINJ table
      */
-    explicit VFPInjProperties(const VFPInjTable* inj_table);
-
-    /**
-     * Constructor
-     * Takes *no* ownership of data.
-     * @param inj_tables A map of different VFPINJ tables.
-     */
-    using InjTable = std::map<int, std::shared_ptr<const VFPInjTable> >;
-    explicit VFPInjProperties(const InjTable& inj_tables);
+    void addTable(const VFPInjTable& new_table);
 
     /**
      * Linear interpolation of bhp as a function of the input parameters given as
@@ -75,38 +59,13 @@ public:
                  const EvalWell& aqua,
                  const EvalWell& liquid,
                  const EvalWell& vapour,
-                 const double& thp) const {
-
-        //Get the table
-        const VFPInjTable* table = detail::getTable(m_tables, table_id);
-        EvalWell bhp = 0.0 * aqua;
-
-        //Find interpolation variables
-        EvalWell flo = detail::getFlo(aqua, liquid, vapour, table->getFloType());
-
-        //Compute the BHP for each well independently
-        if (table != nullptr) {
-            //First, find the values to interpolate between
-            //Value of FLO is negative in OPM for producers, but positive in VFP table
-            auto flo_i = detail::findInterpData(flo.value(), table->getFloAxis());
-            auto thp_i = detail::findInterpData( thp, table->getTHPAxis()); // assume constant
-
-            detail::VFPEvaluation bhp_val = detail::interpolate(*table, flo_i, thp_i);
-
-            bhp = bhp_val.dflo * flo;
-            bhp.setValue(bhp_val.value); // thp is assumed constant i.e.
-        }
-        else {
-            bhp.setValue(-1e100); //Signal that this value has not been calculated properly, due to "missing" table
-        }
-        return bhp;
-    }
+                 const double& thp) const;
 
     /**
      * Returns the table associated with the ID, or throws an exception if
      * the table does not exist
      */
-    const VFPInjTable* getTable(const int table_id) const;
+    const VFPInjTable& getTable(const int table_id) const;
 
     /**
      * Check whether there is table associated with ID
@@ -156,7 +115,7 @@ public:
 
 protected:
     // Map which connects the table number with the table itself
-    std::map<int, const VFPInjTable*> m_tables;
+    std::map<int, std::reference_wrapper<const VFPInjTable>> m_tables;
 };
 
 

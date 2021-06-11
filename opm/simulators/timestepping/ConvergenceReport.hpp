@@ -109,12 +109,12 @@ namespace Opm
             status_ = static_cast<Status>(status_ | WellFailed);
             well_failures_.push_back(wf);
         }
-        
+
         void setGroupConverged(const bool groupConverged)
         {
             groupConverged_ = groupConverged;
         }
-        
+
         ConvergenceReport& operator+=(const ConvergenceReport& other)
         {
             status_ = static_cast<Status>(status_ | other.status_);
@@ -159,10 +159,10 @@ namespace Opm
                 return s1 < s2 ? s2 : s1;
             };
             auto s = Severity::None;
-            for (const auto f : res_failures_) {
+            for (const auto& f : res_failures_) {
                 s = smax(s, f.severity());
             }
-            for (const auto f : well_failures_) {
+            for (const auto& f : well_failures_) {
                 s = smax(s, f.severity());
             }
             return s;

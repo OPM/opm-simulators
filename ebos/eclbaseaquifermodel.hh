@@ -35,13 +35,6 @@
 #include <stdexcept>
 #include <vector>
 
-BEGIN_PROPERTIES
-
-NEW_PROP_TAG(Simulator);
-NEW_PROP_TAG(RateVector);
-
-END_PROPERTIES
-
 namespace Opm {
 
 /*!
@@ -55,8 +48,8 @@ namespace Opm {
 template <class TypeTag>
 class EclBaseAquiferModel
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
-    typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
 
 public:
     EclBaseAquiferModel(Simulator& simulator)
@@ -79,7 +72,7 @@ public:
      *        aquifer pressure and the base run's total produced liquid
      *        volume from the model's aquifers.
      */
-    void initFromRestart(const std::vector<data::AquiferData>& aquiferSoln OPM_UNUSED)
+    void initFromRestart(const data::Aquifers& aquiferSoln OPM_UNUSED)
     {
         throw std::logic_error {
             "Initialization from restart data not supported "
@@ -155,6 +148,11 @@ public:
     template <class Restarter>
     void deserialize(Restarter& res OPM_UNUSED)
     { }
+
+
+    data::Aquifers aquiferData() const
+    { return data::Aquifers{}; }
+
 
 protected:
     Simulator& simulator_;

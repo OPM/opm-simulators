@@ -28,15 +28,16 @@
 #ifndef EBOS_BRINE_HH
 #define EBOS_BRINE_HH
 
-#include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/parser/eclipse/Parser/ParseContext.hpp>
-#include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
-
 namespace Opm {
+
+class Deck;
+class ErrorGuard;
+class ParseContext;
+
 void ebosBrineSetDeck(Opm::Deck* deck,
-                     Opm::ParseContext* parseContext,
-                     Opm::ErrorGuard* errorGuard,
-                     double externalSetupTime);
+                      Opm::ParseContext* parseContext,
+                      Opm::ErrorGuard* errorGuard,
+                      double externalSetupTime);
 
 int ebosBrineMain(int argc, char** argv);
 }

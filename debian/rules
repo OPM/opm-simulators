@@ -21,7 +21,7 @@ override_dh_auto_build:
 
 # consider using -DUSE_VERSIONED_DIR=ON if backporting
 override_dh_auto_configure:
-	dh_auto_configure --buildsystem=cmake -- -DCMAKE_BUILD_TYPE=Release -DUSE_MPI=1 -DBUILD_SHARED_LIBS=1 -DCMAKE_INSTALL_DOCDIR=share/doc/libopm-simulators1 -DWHOLE_PROG_OPTIM=OFF -DUSE_RUNPATH=OFF -DWITH_NATIVE=OFF -DUSE_QUADMATH=0
+	dh_auto_configure --buildsystem=cmake -- -DCMAKE_BUILD_TYPE=Release -DUSE_MPI=1 -DBUILD_SHARED_LIBS=1 -DCMAKE_INSTALL_DOCDIR=share/doc/libopm-simulators1 -DWHOLE_PROG_OPTIM=OFF -DUSE_RUNPATH=OFF -DWITH_NATIVE=OFF -DUSE_QUADMATH=0 -DOPM_ENABLE_PYTHON=1 -DOPM_INSTALL_PYTHON=1 -DPYTHON_EXECUTABLE=/usr/bin/python3 -DOPM_ENABLE_PYTHON_TESTS=0
 
 override_dh_auto_install:
 	dh_auto_install -- install-html

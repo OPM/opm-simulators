@@ -28,21 +28,22 @@
 #ifndef EBOS_BLACK_OIL_HH
 #define EBOS_BLACK_OIL_HH
 
-#include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/parser/eclipse/Parser/ParseContext.hpp>
-#include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
-
 #include <memory>
 #include <string>
 
 namespace Opm {
+
+class Deck;
+class ErrorGuard;
+class ParseContext;
+
 bool ebosBlackOilDeckFileNameIsSet(int argc, char** argv);
 std::string ebosBlackOilGetDeckFileName(int argc, char** argv);
 std::unique_ptr<Opm::ParseContext> ebosBlackOilCreateParseContext(int argc, char** argv);
 
-void ebosBlackOilSetDeck(Opm::Deck* deck,
-                         Opm::ParseContext* parseContext,
-                         Opm::ErrorGuard* errorGuard,
+void ebosBlackOilSetDeck(std::unique_ptr<Opm::Deck> deck,
+                         std::unique_ptr<Opm::ParseContext> parseContext,
+                         std::unique_ptr<Opm::ErrorGuard> errorGuard,
                          double externalSetupTime);
 
 int ebosBlackOilMain(int argc, char** argv);

@@ -24,42 +24,70 @@
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/common/Exceptions.hpp>
 #include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
 
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
+#include <opm/models/utils/basicproperties.hh>
+#include <opm/common/Exceptions.hpp>
 
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <memory>
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(FlowNonLinearSolver);
+namespace TTag {
+struct FlowNonLinearSolver {};
+}
 
-NEW_PROP_TAG(Scalar);
-NEW_PROP_TAG(NewtonMaxRelax);
-NEW_PROP_TAG(FlowNewtonMaxIterations);
-NEW_PROP_TAG(FlowNewtonMinIterations);
-NEW_PROP_TAG(NewtonRelaxationType);
+template<class TypeTag, class MyTypeTag>
+struct NewtonMaxRelax {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct FlowNewtonMaxIterations {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct FlowNewtonMinIterations{
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct NewtonRelaxationType{
+    using type = UndefinedProperty;
+};
 
-SET_SCALAR_PROP(FlowNonLinearSolver, NewtonMaxRelax, 0.5);
-SET_INT_PROP(FlowNonLinearSolver, FlowNewtonMaxIterations, 20);
-SET_INT_PROP(FlowNonLinearSolver, FlowNewtonMinIterations, 1);
-SET_STRING_PROP(FlowNonLinearSolver, NewtonRelaxationType, "dampen");
+template<class TypeTag>
+struct NewtonMaxRelax<TypeTag, TTag::FlowNonLinearSolver> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.5;
+};
+template<class TypeTag>
+struct FlowNewtonMaxIterations<TypeTag, TTag::FlowNonLinearSolver> {
+    static constexpr int value = 20;
+};
+template<class TypeTag>
+struct FlowNewtonMinIterations<TypeTag, TTag::FlowNonLinearSolver> {
+    static constexpr int value = 1;
+};
+template<class TypeTag>
+struct NewtonRelaxationType<TypeTag, TTag::FlowNonLinearSolver> {
+    static constexpr auto value = "dampen";
+};
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 
+class WellState;
 
     /// A nonlinear solver class suitable for general fully-implicit models,
     /// as well as pressure, transport and sequential models.
     template <class TypeTag, class PhysicalModel>
     class NonlinearSolverEbos
     {
-        typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+        using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
     public:
         // Available relaxation scheme types.
@@ -120,7 +148,7 @@ namespace Opm {
         };
 
         // Forwarding types from PhysicalModel.
-        typedef typename PhysicalModel::WellState WellState;
+        //typedef typename PhysicalModel::WellState WellState;
 
         // ---------  Public methods  ---------
 
@@ -149,14 +177,14 @@ namespace Opm {
         }
 
 
-        SimulatorReport step(const SimulatorTimerInterface& timer)
+        SimulatorReportSingle step(const SimulatorTimerInterface& timer)
         {
-            SimulatorReport iterReport;
-            SimulatorReport report;
-            failureReport_ = SimulatorReport();
+            SimulatorReportSingle report;
+            report.global_time = timer.simulationTimeElapsed();
+            report.timestep_length = timer.currentStepLength();
 
             // Do model-specific once-per-step calculations.
-            model_->prepareStep(timer);
+            report += model_->prepareStep(timer);
 
             int iteration = 0;
 
@@ -171,8 +199,8 @@ namespace Opm {
                     // Do the nonlinear step. If we are in a converged state, the
                     // model will usually do an early return without an expensive
                     // solve, unless the minIter() count has not been reached yet.
-                    iterReport = model_->nonlinearIteration(iteration, timer, *this);
-
+                    auto iterReport = model_->nonlinearIteration(iteration, timer, *this);
+                    iterReport.global_time = timer.simulationTimeElapsed();
                     report += iterReport;
                     report.converged = iterReport.converged;
 
@@ -182,7 +210,7 @@ namespace Opm {
                 catch (...) {
                     // if an iteration fails during a time step, all previous iterations
                     // count as a failure as well
-                    failureReport_ += report;
+                    failureReport_ = report;
                     failureReport_ += model_->failureReport();
                     throw;
                 }
@@ -190,21 +218,20 @@ namespace Opm {
             while ( (!converged && (iteration <= maxIter())) || (iteration <= minIter()));
 
             if (!converged) {
-                failureReport_ += report;
+                failureReport_ = report;
 
                 std::string msg = "Solver convergence failure - Failed to complete a time step within " + std::to_string(maxIter()) + " iterations.";
-                OPM_THROW_NOLOG(Opm::TooManyIterations, msg);
+                OPM_THROW_NOLOG(TooManyIterations, msg);
             }
 
             // Do model-specific post-step actions.
-            model_->afterStep(timer);
+            report += model_->afterStep(timer);
             report.converged = true;
-
             return report;
         }
 
         /// return the statistics if the step() method failed
-        const SimulatorReport& failureReport() const
+        const SimulatorReportSingle& failureReport() const
         { return failureReport_; }
 
         /// Number of linearizations used in all calls to step().
@@ -353,7 +380,7 @@ namespace Opm {
 
     private:
         // ---------  Data members  ---------
-        SimulatorReport failureReport_;
+        SimulatorReportSingle failureReport_;
         SolverParameters param_;
         std::unique_ptr<PhysicalModel> model_;
         int linearizations_;

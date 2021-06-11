@@ -22,6 +22,8 @@
 #define ECL_MPI_SERIALIZER_HH
 
 #include <opm/simulators/utils/ParallelRestart.hpp>
+#include <optional>
+#include <variant>
 
 namespace Opm {
 
@@ -48,6 +50,10 @@ public:
             ptr(data);
         } else if constexpr (is_pair<T>::value) {
             pair(data);
+        } else if constexpr (is_variant<T>::value) {
+            variant(data);
+        } else if constexpr (is_optional<T>::value) {
+          optional(data);
         } else {
           if (m_op == Operation::PACKSIZE)
               m_packSize += Mpi::packSize(data, m_comm);
@@ -93,6 +99,143 @@ public:
         }
     }
 
+
+    //! \brief Handler for std::variant<> with four types
+
+    /*
+      The std::variant<> serialization is a first attempt and *not* particularly
+      general. In particular that implies:
+
+        1. It is hardcoded to hold exactly four alternative types T0, T1, T2 and
+           T3.
+
+        2. All the four types T0, T1, T2 and T3 must implement the ::serializeOp( )
+           method. This implies that a variant with a fundamental type like e.g.
+           std::variant<int, double, Opm::Well, Opm::Group> will *not* work in the
+           current implementation.
+    */
+    template<class T0, class T1, class T2, class T3>
+    void variant(const std::variant<T0,T1,T2,T3>& _data)
+    {
+        auto handle = [&](auto& d) {
+            d.serializeOp(*this);
+        };
+
+        std::variant<T0,T1,T2,T3>& data = const_cast<std::variant<T0,T1,T2,T3>&>(_data);
+        if (m_op == Operation::PACKSIZE) {
+            m_packSize += Mpi::packSize(data.index(), m_comm);
+            std::visit( [&] (auto& arg) { handle(arg); }, data);
+        } else if (m_op == Operation::PACK) {
+            Mpi::pack(data.index(), m_buffer, m_position, m_comm);
+            std::visit([&](auto& arg) { handle(arg); }, data);
+        } else if (m_op == Operation::UNPACK) {
+            size_t index;
+            Mpi::unpack(index, m_buffer, m_position, m_comm);
+
+            if (index == 0) {
+                data = T0();
+                handle(std::get<0>(data));
+            } else if (index == 1) {
+                data = T1();
+                handle(std::get<1>(data));
+            } else if (index == 2) {
+                data = T2();
+                handle(std::get<2>(data));
+            } else if (index == 3) {
+                data = T3();
+                handle(std::get<3>(data));
+            } else
+                std::logic_error("Internal meltdown in std::variant<T0,T1,T2,T3> unpack");
+        }
+    }
+
+
+    //! \brief Handler for std::variant<> with two fundamental types
+
+    /*
+      This std::variant serialization is highly specialized:
+
+        1. It is hardcoded to take exactly two types T0 and T1.
+
+        2. Both T0 and T1 must be basic types where Mpi::pack(T, ...) overloads
+           must exist.
+
+    */
+    template<class T0, class T1>
+    void variant(const std::variant<T0,T1>& data)
+    {
+        auto pack_size = [&](auto& d) {
+                             m_packSize += Mpi::packSize(d, m_comm);
+                         };
+
+        auto pack = [&](auto& d) {
+                          Mpi::pack(d, m_buffer, m_position, m_comm);
+                      };
+
+        if (m_op == Operation::PACKSIZE) {
+            m_packSize += Mpi::packSize(data.index(), m_comm);
+            std::visit( [&] (auto& arg) { pack_size(arg); }, data);
+        } else if (m_op == Operation::PACK) {
+            Mpi::pack(data.index(), m_buffer, m_position, m_comm);
+            std::visit([&](auto& arg) { pack(arg); }, data);
+        } else if (m_op == Operation::UNPACK) {
+            size_t index;
+            std::variant<T0,T1>& mutable_data = const_cast<std::variant<T0,T1>&>(data);
+            Mpi::unpack(index, m_buffer, m_position, m_comm);
+
+            if (index == 0) {
+                T0 t0;
+                Mpi::unpack(t0, m_buffer, m_position, m_comm);
+                mutable_data = t0;
+            } else if (index == 1) {
+                T1 t1;
+                Mpi::unpack(t1, m_buffer, m_position, m_comm);
+                mutable_data = t1;
+            } else
+                throw std::logic_error("Internal meltdown in std::variant<T0,T1> unpack loaded index=" + std::to_string(index) + " allowed range: [0,1]");
+        }
+
+    }
+
+    //! \brief Handler for std::optional.
+    //! \tparam T Type for data
+    //! \param data The optional to (de-)serialize
+    template<class T>
+    void optional(const std::optional<T>& data)
+    {
+        if (m_op == Operation::PACKSIZE) {
+            m_packSize += Mpi::packSize(data.has_value(), m_comm);
+            if (data.has_value()) {
+                if constexpr (has_serializeOp<T>::value) {
+                    const_cast<T&>(*data).serializeOp(*this);
+                } else
+                    m_packSize += Mpi::packSize(*data, m_comm);
+            }
+        } else if (m_op == Operation::PACK) {
+            Mpi::pack(data.has_value(), m_buffer, m_position, m_comm);
+            if (data.has_value()) {
+                if constexpr (has_serializeOp<T>::value) {
+                    const_cast<T&>(*data).serializeOp(*this);
+                } else {
+                    Mpi::pack(*data, m_buffer, m_position, m_comm);
+                }
+            }
+        } else if (m_op == Operation::UNPACK) {
+            bool has;
+            Mpi::unpack(has, m_buffer, m_position, m_comm);
+            if (has) {
+                T res;
+                if constexpr (has_serializeOp<T>::value) {
+                    res.serializeOp(*this);
+                } else {
+                    Mpi::unpack(res, m_buffer, m_position, m_comm);
+                }
+                const_cast<std::optional<T>&>(data) = res;
+            }
+        }
+
+    }
+
     //! \brief Handler for maps.
     //! \tparam Map map type
     //! \tparam complexType Whether or not Data in map is a complex type
@@ -109,24 +252,30 @@ public:
                 this->template vector<typename Data::value_type,complexType>(d);
             else if constexpr (is_ptr<Data>::value)
                 ptr(d);
-            else if constexpr (is_dynamic_state<Data>::value)
-                d.template serializeOp<EclMpiSerializer, complexType>(*this);
             else if constexpr (complexType)
                 d.serializeOp(*this);
             else
                 (*this)(d);
         };
 
+        auto keyHandle = [&](auto& d)
+        {
+              if constexpr (is_pair<Key>::value)
+                  pair(d);
+              else
+                  (*this)(d);
+        };
+
         if (m_op == Operation::PACKSIZE) {
             m_packSize += Mpi::packSize(data.size(), m_comm);
             for (auto& it : data) {
-                m_packSize += Mpi::packSize(it.first, m_comm);
+                keyHandle(it.first);
                 handle(it.second);
             }
         } else if (m_op == Operation::PACK) {
             Mpi::pack(data.size(), m_buffer, m_position, m_comm);
             for (auto& it : data) {
-                Mpi::pack(it.first, m_buffer, m_position, m_comm);
+                keyHandle(it.first);
                 handle(it.second);
             }
         } else if (m_op == Operation::UNPACK) {
@@ -134,7 +283,7 @@ public:
             Mpi::unpack(size, m_buffer, m_position, m_comm);
             for (size_t i = 0; i < size; ++i) {
                 Key key;
-                Mpi::unpack(key, m_buffer, m_position, m_comm);
+                keyHandle(key);
                 Data entry;
                 handle(entry);
                 data.insert(std::make_pair(key, entry));
@@ -178,12 +327,21 @@ public:
             return;
 
         if (m_comm.rank() == 0) {
-            pack(data);
-            m_packSize = m_position;
-            m_comm.broadcast(&m_packSize, 1, 0);
-            m_comm.broadcast(m_buffer.data(), m_position, 0);
+            try {
+                pack(data);
+                m_packSize = m_position;
+                m_comm.broadcast(&m_packSize, 1, 0);
+                m_comm.broadcast(m_buffer.data(), m_position, 0);
+            } catch (...) {
+                m_packSize = std::numeric_limits<size_t>::max();
+                m_comm.broadcast(&m_packSize, 1, 0);
+                throw;
+            }
         } else {
             m_comm.broadcast(&m_packSize, 1, 0);
+            if (m_packSize == std::numeric_limits<size_t>::max()) {
+                throw std::runtime_error("Error detected in parallel serialization");
+            }
             m_buffer.resize(m_packSize);
             m_comm.broadcast(m_buffer.data(), m_packSize, 0);
             unpack(data);
@@ -232,6 +390,17 @@ protected:
         constexpr static bool value = true;
     };
 
+    //! \brief Predicate for detecting variants.
+    template<class T>
+    struct is_variant {
+        constexpr static bool value = false;
+    };
+
+    template<class... Ts>
+    struct is_variant<std::variant<Ts...>> {
+        constexpr static bool value = true;
+    };
+
     //! \brief Predicate for smart pointers.
     template<class T>
     struct is_ptr {
@@ -248,14 +417,14 @@ protected:
         constexpr static bool value = true;
     };
 
-    //! \brief Predicate for DynamicState.
+    //! \brief Predicate for std::optional.
     template<class T>
-    struct is_dynamic_state {
+    struct is_optional {
         constexpr static bool value = false;
     };
 
     template<class T1>
-    struct is_dynamic_state<DynamicState<T1>> {
+    struct is_optional<std::optional<T1>> {
         constexpr static bool value = true;
     };
 
@@ -291,6 +460,21 @@ protected:
         if (data)
             data->serializeOp(*this);
     }
+
+    //! \brief Checks if a type has a serializeOp member.
+    //! \detail Ideally we would check for the serializeOp member,
+    //!         but this is a member template. For simplicity,
+    //!         we use serializeObject as our check for now.
+    template <typename T>
+    class has_serializeOp
+    {
+        using yes_type = char;
+        using no_type = long;
+        template <typename U> static yes_type test(decltype(&U::serializeObject));
+        template <typename U> static no_type  test(...);
+    public:
+        static constexpr bool value = sizeof(test<T>(0)) == sizeof(yes_type);
+    };
 
     Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> m_comm; //!< Communicator to broadcast using
 

@@ -28,14 +28,17 @@
 #ifndef EBOS_SOLVENT_HH
 #define EBOS_SOLVENT_HH
 
-#include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/parser/eclipse/Parser/ParseContext.hpp>
-#include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
+#include <memory>
 
 namespace Opm {
-void ebosSolventSetDeck(Opm::Deck* deck,
-                        Opm::ParseContext* parseContext,
-                        Opm::ErrorGuard* errorGuard,
+
+class Deck;
+class ErrorGuard;
+class ParseContext;
+
+void ebosSolventSetDeck(std::unique_ptr<Opm::Deck> deck,
+                        std::unique_ptr<Opm::ParseContext> parseContext,
+                        std::unique_ptr<Opm::ErrorGuard> errorGuard,
                         double externalSetupTime);
 
 int ebosSolventMain(int argc, char** argv);

@@ -22,7 +22,6 @@
 
 #include <opm/simulators/linalg/GraphColoring.hpp>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
-#include <opm/common/Exceptions.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <dune/common/version.hh>
 #include <dune/istl/preconditioner.hh>
@@ -80,7 +79,7 @@ class ParallelOverlappingILU0Args
 {
  public:
     ParallelOverlappingILU0Args(MILU_VARIANT milu = MILU_VARIANT::ILU )
-        : milu_(milu)
+        : milu_(milu), n_(0)
     {}
     void setMilu(MILU_VARIANT milu)
     {
@@ -381,7 +380,7 @@ namespace Opm
                 }
             }
             // create the row
-            for(const auto entry: rowPattern)
+            for (const auto& entry : rowPattern)
             {
                 iluRow.insert(entry.first);
             }

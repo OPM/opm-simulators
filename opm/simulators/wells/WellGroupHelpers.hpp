@@ -21,21 +21,28 @@
 #ifndef OPM_WELLGROUPHELPERS_HEADER_INCLUDED
 #define OPM_WELLGROUPHELPERS_HEADER_INCLUDED
 
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRate.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
-#include <opm/simulators/utils/DeferredLogger.hpp>
-#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
-#include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
 
-#include <algorithm>
-#include <cassert>
-#include <type_traits>
+#include <map>
+#include <string>
 #include <vector>
 
 namespace Opm
 {
 
+class DeferredLogger;
+class Group;
+class GroupState;
+namespace Network { class ExtNetwork; }
+struct PhaseUsage;
+class Schedule;
+class VFPProdProperties;
+class WellState;
+
+template <typename>
+class WellContainer;
+
+namespace Network { class ExtNetwork; }
 
 namespace WellGroupHelpers
 {
@@ -46,38 +53,39 @@ namespace WellGroupHelpers
                        const Schedule& schedule,
                        const SummaryState& summaryState,
                        const int reportStepIdx,
-                       WellStateFullyImplicitBlackoil& wellState);
+                       WellState& wellState,
+                       GroupState& group_state);
 
     void accumulateGroupEfficiencyFactor(const Group& group,
                                          const Schedule& schedule,
                                          const int reportStepIdx,
                                          double& factor);
 
-    double sumWellPhaseRates(const std::vector<double>& rates,
+    double sumWellPhaseRates(const WellContainer<std::vector<double>>& rates,
                              const Group& group,
                              const Schedule& schedule,
-                             const WellStateFullyImplicitBlackoil& wellState,
+                             const WellState& wellState,
                              const int reportStepIdx,
                              const int phasePos,
                              const bool injector);
 
     double sumWellRates(const Group& group,
                         const Schedule& schedule,
-                        const WellStateFullyImplicitBlackoil& wellState,
+                        const WellState& wellState,
                         const int reportStepIdx,
                         const int phasePos,
                         const bool injector);
 
     double sumWellResRates(const Group& group,
                            const Schedule& schedule,
-                           const WellStateFullyImplicitBlackoil& wellState,
+                           const WellState& wellState,
                            const int reportStepIdx,
                            const int phasePos,
                            const bool injector);
 
     double sumSolventRates(const Group& group,
                            const Schedule& schedule,
-                           const WellStateFullyImplicitBlackoil& wellState,
+                           const WellState& wellState,
                            const int reportStepIdx,
                            const bool injector);
 
@@ -87,184 +95,96 @@ namespace WellGroupHelpers
                                     const bool isInjector,
                                     const PhaseUsage& pu,
                                     const GuideRate& guide_rate,
-                                    const WellStateFullyImplicitBlackoil& wellStateNupcol,
-                                    WellStateFullyImplicitBlackoil& wellState,
+                                    const WellState& wellStateNupcol,
+                                    WellState& wellState,
+                                    GroupState& group_state,
                                     std::vector<double>& groupTargetReduction);
 
     template <class Comm>
-    void updateGuideRateForGroups(const Group& group,
-                                  const Schedule& schedule,
-                                  const PhaseUsage& pu,
-                                  const int reportStepIdx,
-                                  const double& simTime,
-                                  const bool isInjector,
-                                  WellStateFullyImplicitBlackoil& wellState,
-                                  const Comm& comm,
-                                  GuideRate* guideRate,
-                                  std::vector<double>& pot)
-    {
-        const int np = pu.num_phases;
-        for (const std::string& groupName : group.groups()) {
-            std::vector<double> thisPot(np, 0.0);
-            const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
-            updateGuideRateForGroups(
-                groupTmp, schedule, pu, reportStepIdx, simTime, isInjector, wellState, comm, guideRate, thisPot);
-
-            // accumulate group contribution from sub group unconditionally
-            if (isInjector) {
-                const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
-                for (Phase phase : all) {
-                    int phasePos;
-                    if (phase == Phase::GAS && pu.phase_used[BlackoilPhases::Vapour])
-                        phasePos = pu.phase_pos[BlackoilPhases::Vapour];
-                    else if (phase == Phase::OIL && pu.phase_used[BlackoilPhases::Liquid])
-                        phasePos = pu.phase_pos[BlackoilPhases::Liquid];
-                    else if (phase == Phase::WATER && pu.phase_used[BlackoilPhases::Aqua])
-                        phasePos = pu.phase_pos[BlackoilPhases::Aqua];
-                    else
-                        continue;
-
-                    pot[phasePos] += thisPot[phasePos];
-                }
-            } else {
-                const Group::ProductionCMode& currentGroupControl = wellState.currentProductionGroupControl(groupName);
-                if (currentGroupControl != Group::ProductionCMode::FLD
-                    && currentGroupControl != Group::ProductionCMode::NONE) {
-                    continue;
-                }
-                for (int phase = 0; phase < np; phase++) {
-                    pot[phase] += thisPot[phase];
-                }
-            }
-        }
-        for (const std::string& wellName : group.wells()) {
-            const auto& wellTmp = schedule.getWell(wellName, reportStepIdx);
-
-            if (wellTmp.isProducer() && isInjector)
-                continue;
-
-            if (wellTmp.isInjector() && !isInjector)
-                continue;
-
-            if (wellTmp.getStatus() == Well::Status::SHUT)
-                continue;
-            const auto& end = wellState.wellMap().end();
-            const auto& it = wellState.wellMap().find(wellName);
-            if (it == end) // the well is not found
-                continue;
-
-            int well_index = it->second[0];
-            const auto wellrate_index = well_index * wellState.numPhases();
-            // add contribution from wells unconditionally
-            for (int phase = 0; phase < np; phase++) {
-                pot[phase] += wellState.wellPotentials()[wellrate_index + phase];
-            }
-        }
-
-        double oilPot = 0.0;
-        if (pu.phase_used[BlackoilPhases::Liquid])
-            oilPot = pot[pu.phase_pos[BlackoilPhases::Liquid]];
-
-        double gasPot = 0.0;
-        if (pu.phase_used[BlackoilPhases::Vapour])
-            gasPot = pot[pu.phase_pos[BlackoilPhases::Vapour]];
-
-        double waterPot = 0.0;
-        if (pu.phase_used[BlackoilPhases::Aqua])
-            waterPot = pot[pu.phase_pos[BlackoilPhases::Aqua]];
-
-        const double gefac = group.getGroupEfficiencyFactor();
-
-        oilPot = comm.sum(oilPot) * gefac;
-        gasPot = comm.sum(gasPot) * gefac;
-        waterPot = comm.sum(waterPot) * gefac;
-
-        if (isInjector) {
-            wellState.setCurrentGroupInjectionPotentials(group.name(), pot);
-        } else {
-            guideRate->compute(group.name(), reportStepIdx, simTime, oilPot, gasPot, waterPot);
-        }
-    }
+    void updateGuideRateForProductionGroups(const Group& group,
+                                            const Schedule& schedule,
+                                            const PhaseUsage& pu,
+                                            const int reportStepIdx,
+                                            const double& simTime,
+                                            WellState& wellState,
+                                            const GroupState& group_state,
+                                            const Comm& comm,
+                                            GuideRate* guideRate,
+                                            std::vector<double>& pot);
 
     template <class Comm>
     void updateGuideRatesForWells(const Schedule& schedule,
                                   const PhaseUsage& pu,
                                   const int reportStepIdx,
                                   const double& simTime,
-                                  const WellStateFullyImplicitBlackoil& wellState,
+                                  const WellState& wellState,
                                   const Comm& comm,
-                                  GuideRate* guideRate)
-    {
+                                  GuideRate* guideRate);
 
-        const auto& end = wellState.wellMap().end();
-        for (const auto& well : schedule.getWells(reportStepIdx)) {
-            double oilpot = 0.0;
-            double gaspot = 0.0;
-            double waterpot = 0.0;
-
-            const auto& it = wellState.wellMap().find(well.name());
-            if (it != end) { // the well is found
-
-                int well_index = it->second[0];
-
-                const auto wpot = wellState.wellPotentials().data() + well_index * wellState.numPhases();
-                if (pu.phase_used[BlackoilPhases::Liquid] > 0)
-                    oilpot = wpot[pu.phase_pos[BlackoilPhases::Liquid]];
-
-                if (pu.phase_used[BlackoilPhases::Vapour] > 0)
-                    gaspot = wpot[pu.phase_pos[BlackoilPhases::Vapour]];
-
-                if (pu.phase_used[BlackoilPhases::Aqua] > 0)
-                    waterpot = wpot[pu.phase_pos[BlackoilPhases::Aqua]];
-            }
-            const double wefac = well.getEfficiencyFactor();
-            oilpot = comm.sum(oilpot) * wefac;
-            gaspot = comm.sum(gaspot) * wefac;
-            waterpot = comm.sum(waterpot) * wefac;
-            guideRate->compute(well.name(), reportStepIdx, simTime, oilpot, gaspot, waterpot);
-        }
-    }
-
+    void updateGuideRatesForInjectionGroups(const Group& group,
+                                            const Schedule& schedule,
+                                            const SummaryState& summaryState,
+                                            const Opm::PhaseUsage& pu,
+                                            const int reportStepIdx,
+                                            const WellState& wellState,
+                                            const GroupState& group_state,
+                                            GuideRate* guideRate,
+                                            Opm::DeferredLogger& deferred_logger);
 
     void updateVREPForGroups(const Group& group,
                              const Schedule& schedule,
                              const int reportStepIdx,
-                             const WellStateFullyImplicitBlackoil& wellStateNupcol,
-                             WellStateFullyImplicitBlackoil& wellState);
+                             const WellState& wellStateNupcol,
+                             WellState& wellState,
+                             GroupState& group_state);
 
     void updateReservoirRatesInjectionGroups(const Group& group,
                                              const Schedule& schedule,
                                              const int reportStepIdx,
-                                             const WellStateFullyImplicitBlackoil& wellStateNupcol,
-                                             WellStateFullyImplicitBlackoil& wellState);
+                                             const WellState& wellStateNupcol,
+                                             WellState& wellState,
+                                             GroupState& group_state);
 
     void updateWellRates(const Group& group,
                          const Schedule& schedule,
                          const int reportStepIdx,
-                         const WellStateFullyImplicitBlackoil& wellStateNupcol,
-                         WellStateFullyImplicitBlackoil& wellState);
+                         const WellState& wellStateNupcol,
+                         WellState& wellState);
 
     void updateGroupProductionRates(const Group& group,
                                     const Schedule& schedule,
                                     const int reportStepIdx,
-                                    const WellStateFullyImplicitBlackoil& wellStateNupcol,
-                                    WellStateFullyImplicitBlackoil& wellState);
+                                    const WellState& wellStateNupcol,
+                                    WellState& wellState,
+                                    GroupState& group_state);
 
     void updateREINForGroups(const Group& group,
                              const Schedule& schedule,
                              const int reportStepIdx,
                              const PhaseUsage& pu,
                              const SummaryState& st,
-                             const WellStateFullyImplicitBlackoil& wellStateNupcol,
-                             WellStateFullyImplicitBlackoil& wellState);
+                             const WellState& wellStateNupcol,
+                             WellState& wellState,
+                             GroupState& group_state);
+
+    std::map<std::string, double>
+    computeNetworkPressures(const Opm::Network::ExtNetwork& network,
+                            const WellState& well_state,
+                            const GroupState& group_state,
+                            const VFPProdProperties& vfp_prod_props,
+                            const Schedule& schedule,
+                            const int report_time_step);
 
     GuideRate::RateVector
-    getRateVector(const WellStateFullyImplicitBlackoil& well_state, const PhaseUsage& pu, const std::string& name);
+    getWellRateVector(const WellState& well_state, const PhaseUsage& pu, const std::string& name);
 
+    GuideRate::RateVector
+    getProductionGroupRateVector(const GroupState& group_state, const PhaseUsage& pu, const std::string& group_name);
 
     double getGuideRate(const std::string& name,
                         const Schedule& schedule,
-                        const WellStateFullyImplicitBlackoil& wellState,
+                        const WellState& wellState,
+                        const GroupState& group_state,
                         const int reportStepIdx,
                         const GuideRate* guideRate,
                         const GuideRateModel::Target target,
@@ -273,30 +193,36 @@ namespace WellGroupHelpers
 
     double getGuideRateInj(const std::string& name,
                            const Schedule& schedule,
-                           const WellStateFullyImplicitBlackoil& wellState,
+                           const WellState& wellState,
+                           const GroupState& group_state,
                            const int reportStepIdx,
                            const GuideRate* guideRate,
                            const GuideRateModel::Target target,
                            const Phase& injectionPhase,
                            const PhaseUsage& pu);
 
-
     int groupControlledWells(const Schedule& schedule,
-                             const WellStateFullyImplicitBlackoil& well_state,
+                             const WellState& well_state,
+                             const GroupState& group_state,
                              const int report_step,
                              const std::string& group_name,
-                             const std::string& always_included_child);
+                             const std::string& always_included_child,
+                             const bool is_production_group,
+                             const Phase injection_phase);
 
 
     class FractionCalculator
     {
     public:
         FractionCalculator(const Schedule& schedule,
-                           const WellStateFullyImplicitBlackoil& well_state,
+                           const WellState& well_state,
+                           const GroupState& group_state,
                            const int report_step,
                            const GuideRate* guide_rate,
                            const GuideRateModel::Target target,
-                           const PhaseUsage& pu);
+                           const PhaseUsage& pu,
+                           const bool is_producer,
+                           const Phase injection_phase);
         double fraction(const std::string& name, const std::string& control_group_name, const bool always_include_this);
         double localFraction(const std::string& name, const std::string& always_included_child);
 
@@ -307,41 +233,22 @@ namespace WellGroupHelpers
         int groupControlledWells(const std::string& group_name, const std::string& always_included_child);
         GuideRate::RateVector getGroupRateVector(const std::string& group_name);
         const Schedule& schedule_;
-        const WellStateFullyImplicitBlackoil& well_state_;
+        const WellState& well_state_;
+        const GroupState& group_state_;
         int report_step_;
         const GuideRate* guide_rate_;
         GuideRateModel::Target target_;
-        PhaseUsage pu_;
+        const PhaseUsage& pu_;
+        bool is_producer_;
+        Phase injection_phase_;
     };
 
-    GuideRate::RateVector getGroupRateVector(const std::string& group_name);
-
-
-    double fractionFromGuideRates(const std::string& name,
-                                  const std::string& controlGroupName,
-                                  const Schedule& schedule,
-                                  const WellStateFullyImplicitBlackoil& wellState,
-                                  const int reportStepIdx,
-                                  const GuideRate* guideRate,
-                                  const GuideRateModel::Target target,
-                                  const PhaseUsage& pu,
-                                  const bool alwaysIncludeThis = false);
-
-    double fractionFromInjectionPotentials(const std::string& name,
-                                           const std::string& controlGroupName,
-                                           const Schedule& schedule,
-                                           const WellStateFullyImplicitBlackoil& wellState,
-                                           const int reportStepIdx,
-                                           const GuideRate* guideRate,
-                                           const GuideRateModel::Target target,
-                                           const PhaseUsage& pu,
-                                           const Phase& injectionPhase,
-                                           const bool alwaysIncludeThis = false);
 
     std::pair<bool, double> checkGroupConstraintsInj(const std::string& name,
                                                      const std::string& parent,
                                                      const Group& group,
-                                                     const WellStateFullyImplicitBlackoil& wellState,
+                                                     const WellState& wellState,
+                                                     const GroupState& group_state,
                                                      const int reportStepIdx,
                                                      const GuideRate* guideRate,
                                                      const double* rates,
@@ -369,7 +276,8 @@ namespace WellGroupHelpers
     std::pair<bool, double> checkGroupConstraintsProd(const std::string& name,
                                                       const std::string& parent,
                                                       const Group& group,
-                                                      const WellStateFullyImplicitBlackoil& wellState,
+                                                      const WellState& wellState,
+                                                      const GroupState& group_state,
                                                       const int reportStepIdx,
                                                       const GuideRate* guideRate,
                                                       const double* rates,

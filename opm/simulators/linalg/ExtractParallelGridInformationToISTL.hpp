@@ -21,8 +21,9 @@
 #define OPM_EXTRACTPARALLELGRIDINFORMATIONTOISTL_HEADER_INCLUDED
 #ifdef HAVE_OPM_GRID
 
-#include<opm/grid/CpGrid.hpp>
 #include <any>
+
+namespace Dune { class CpGrid; }
 
 namespace Opm
 {

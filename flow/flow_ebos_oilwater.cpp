@@ -16,9 +16,6 @@
 */
 #include "config.h"
 
-// Define making clear that the simulator supports AMG
-#define FLOW_SUPPORT_AMG 1
-
 #include <flow/flow_ebos_oilwater.hpp>
 
 #include <opm/material/common/ResetLocale.hpp>
@@ -36,40 +33,49 @@
 
 namespace Opm {
 namespace Properties {
-NEW_TYPE_TAG(EclFlowOilWaterProblem, INHERITS_FROM(EclFlowProblem));
+namespace TTag {
+struct EclFlowOilWaterProblem {
+    using InheritsFrom = std::tuple<EclFlowProblem>;
+};
+}
 
 //! The indices required by the model
-SET_PROP(EclFlowOilWaterProblem, Indices)
+template<class TypeTag>
+struct Indices<TypeTag, TTag::EclFlowOilWaterProblem>
 {
 private:
     // it is unfortunately not possible to simply use 'TypeTag' here because this leads
     // to cyclic definitions of some properties. if this happens the compiler error
     // messages unfortunately are *really* confusing and not really helpful.
-    typedef TTAG(EclFlowProblem) BaseTypeTag;
-    typedef typename GET_PROP_TYPE(BaseTypeTag, FluidSystem) FluidSystem;
+    using BaseTypeTag = TTag::EclFlowProblem;
+    using FluidSystem = GetPropType<BaseTypeTag, Properties::FluidSystem>;
 
 public:
-    typedef Opm::BlackOilTwoPhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent),
-                                         GET_PROP_VALUE(TypeTag, EnablePolymer),
-                                         GET_PROP_VALUE(TypeTag, EnableEnergy),
-                                         GET_PROP_VALUE(TypeTag, EnableFoam),
-                                         GET_PROP_VALUE(TypeTag, EnableBrine),
-                                         /*PVOffset=*/0,
-                                         /*disabledCompIdx=*/FluidSystem::gasCompIdx> type;
+    typedef BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
+                                    getPropValue<TypeTag, Properties::EnableExtbo>(),
+                                    getPropValue<TypeTag, Properties::EnablePolymer>(),
+                                    getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                    getPropValue<TypeTag, Properties::EnableFoam>(),
+                                    getPropValue<TypeTag, Properties::EnableBrine>(),
+                                    /*PVOffset=*/0,
+                                    /*disabledCompIdx=*/FluidSystem::gasCompIdx> type;
 };
 }}
 
 namespace Opm {
-void flowEbosOilWaterSetDeck(double setupTime, Deck *deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
+void flowEbosOilWaterSetDeck(double setupTime, std::unique_ptr<Deck> deck,
+                             std::unique_ptr<EclipseState> eclState,
+                             std::unique_ptr<Schedule> schedule,
+                             std::unique_ptr<SummaryConfig> summaryConfig)
 {
-    typedef TTAG(EclFlowOilWaterProblem) TypeTag;
-    typedef GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
+    using TypeTag = Properties::TTag::EclFlowOilWaterProblem;
+    using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
 
     Vanguard::setExternalSetupTime(setupTime);
-    Vanguard::setExternalDeck(deck);
-    Vanguard::setExternalEclState(&eclState);
-    Vanguard::setExternalSchedule(&schedule);
-    Vanguard::setExternalSummaryConfig(&summaryConfig);
+    Vanguard::setExternalDeck(std::move(deck));
+    Vanguard::setExternalEclState(std::move(eclState));
+    Vanguard::setExternalSchedule(std::move(schedule));
+    Vanguard::setExternalSummaryConfig(std::move(summaryConfig));
 }
 
 // ----------------- Main program -----------------
@@ -77,7 +83,7 @@ int flowEbosOilWaterMain(int argc, char** argv, bool outputCout, bool outputFile
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
-    Opm::resetLocale();
+    resetLocale();
 
 #if HAVE_DUNE_FEM
     Dune::Fem::MPIManager::initialize(argc, argv);
@@ -85,8 +91,9 @@ int flowEbosOilWaterMain(int argc, char** argv, bool outputCout, bool outputFile
     Dune::MPIHelper::instance(argc, argv);
 #endif
 
-    Opm::FlowMainEbos<TTAG(EclFlowOilWaterProblem)> mainfunc;
-    return mainfunc.execute(argc, argv, outputCout, outputFiles);
+    FlowMainEbos<Properties::TTag::EclFlowOilWaterProblem>
+        mainfunc {argc, argv, outputCout, outputFiles};
+    return mainfunc.execute();
 }
 
 }

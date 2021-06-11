@@ -20,11 +20,13 @@
 #ifndef OPM_SIMULATORTIMER_HEADER_INCLUDED
 #define OPM_SIMULATORTIMER_HEADER_INCLUDED
 
-#include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
 
 #include <iosfwd>
 #include <vector>
+
+namespace boost { namespace gregorian { class date; } }
 
 namespace Opm
 {
@@ -46,11 +48,11 @@ namespace Opm
         ///    stepsize_days (default 1)
         void init(const ParameterGroup& param);
 
-        /// Use the SimulatorTimer as a shim around opm-parser's Opm::TimeMap
-        void init(const TimeMap& timeMap, size_t report_step = 0);
+        /// Use the SimulatorTimer as a shim around opm-commons Schedule class
+        void init(const Schedule& schedule, size_t report_step = 0);
 
         /// Whether the current step is the first step.
-        bool initialStep() const;
+        bool initialStep() const override;
 
         /// Total number of steps.
         int numSteps() const;
@@ -59,7 +61,7 @@ namespace Opm
         /// has been completed from the start of the run. The time
         /// after initialization but before the simulation has started
         /// is timestep number zero.
-        int currentStepNum() const;
+        int currentStepNum() const override;
 
         /// Set current step number.
         void setCurrentStepNum(int step);
@@ -68,7 +70,7 @@ namespace Opm
         /// the simulator will take in the next iteration.
         ///
         /// @note if done(), it is an error to call currentStepLength().
-        double currentStepLength() const;
+        double currentStepLength() const override;
 
         /// Previous step length. This is the length of the step that
         /// was taken to arrive at this time.
@@ -76,20 +78,20 @@ namespace Opm
         /// @note if no increments have been done (i.e. the timer is
         /// still in its constructed state and currentStepNum() == 0),
         /// it is an error to call stepLengthTaken().
-        double stepLengthTaken () const;
+        double stepLengthTaken () const override;
 
         /// Time elapsed since the start of the simulation until the
         /// beginning of the current time step [s].
-        double simulationTimeElapsed() const;
+        double simulationTimeElapsed() const override;
 
         /// Total time.
         double totalTime() const;
 
         /// Return start date of simulation
-        boost::posix_time::ptime startDateTime() const;
+        boost::posix_time::ptime startDateTime() const override;
 
         /// Return current date.
-        boost::posix_time::ptime currentDateTime() const;
+        boost::posix_time::ptime currentDateTime() const override;
 
         /// Set total time.
         /// This is primarily intended for multi-epoch schedules,
@@ -105,24 +107,24 @@ namespace Opm
         SimulatorTimer& operator++();
 
         /// advance time by currentStepLength
-        void advance() { this->operator++(); }
+        void advance() override { this->operator++(); }
 
         /// Return true if op++() has been called numSteps() times.
-        bool done() const;
+        bool done() const override;
 
         /// Always return false. Timestep failures is handled in the
         /// substepTimer
-        bool lastStepFailed() const {return false;}
+        bool lastStepFailed() const override { return false; }
 
         /// return copy of object
-        virtual std::unique_ptr< SimulatorTimerInterface > clone() const;
+        std::unique_ptr< SimulatorTimerInterface > clone() const override;
 
     private:
         std::vector<double> timesteps_;
         int current_step_;
         double current_time_;
         double total_time_;
-        boost::gregorian::date start_date_;
+        std::shared_ptr<boost::gregorian::date> start_date_;
     };
 
 

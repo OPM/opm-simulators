@@ -23,18 +23,16 @@
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRate.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
-#include <opm/simulators/utils/DeferredLogger.hpp>
-#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
-#include <opm/simulators/wells/WellStateFullyImplicitBlackoil.hpp>
 
-#include <algorithm>
-#include <cassert>
-#include <type_traits>
+#include <string>
 #include <vector>
 
 namespace Opm
 {
+
+class DeferredLogger;
+class GroupState;
+struct PhaseUsage;
 
 namespace WellGroupHelpers
 {
@@ -46,113 +44,63 @@ namespace WellGroupHelpers
     public:
         TargetCalculator(const Group::ProductionCMode cmode,
                          const PhaseUsage& pu,
-                         const std::vector<double>& resv_coeff)
-            : cmode_(cmode)
-            , pu_(pu)
-            , resv_coeff_(resv_coeff)
+                         const std::vector<double>& resv_coeff,
+                         const double group_grat_target_from_sales);
+
+        template <typename RateType>
+        RateType calcModeRateFromRates(const std::vector<RateType>& rates) const
         {
+          return calcModeRateFromRates(rates.data());
         }
+
+        template <typename RateType>
+        RateType calcModeRateFromRates(const RateType* rates) const;
+
+        double groupTarget(const Group::ProductionControls ctrl) const;
+
+        GuideRateModel::Target guideTargetMode() const;
+
+    private:
+        Group::ProductionCMode cmode_;
+        const PhaseUsage& pu_;
+        const std::vector<double>& resv_coeff_;
+        const double group_grat_target_from_sales_;
+    };
+
+    /// Based on a group control mode, extract or calculate rates, and
+    /// provide other conveniences.
+    class InjectionTargetCalculator
+    {
+    public:
+        InjectionTargetCalculator(const Group::InjectionCMode& cmode,
+                                  const PhaseUsage& pu,
+                                  const std::vector<double>& resv_coeff,
+                                  const std::string& group_name,
+                                  const double sales_target,
+                                  const GroupState& group_state,
+                                  const Phase& injection_phase,
+                                  DeferredLogger& deferred_logger);
 
         template <typename RateVec>
         auto calcModeRateFromRates(const RateVec& rates) const
         {
-            // ElemType is just the plain element type of the rates container,
-            // without any reference, const or volatile modifiers.
-            using ElemType = std::remove_cv_t<std::remove_reference_t<decltype(rates[0])>>;
-            switch (cmode_) {
-            case Group::ProductionCMode::ORAT: {
-                assert(pu_.phase_used[BlackoilPhases::Liquid]);
-                const int pos = pu_.phase_pos[BlackoilPhases::Liquid];
-                return rates[pos];
-            }
-            case Group::ProductionCMode::WRAT: {
-                assert(pu_.phase_used[BlackoilPhases::Aqua]);
-                const int pos = pu_.phase_pos[BlackoilPhases::Aqua];
-                return rates[pos];
-            }
-            case Group::ProductionCMode::GRAT: {
-                assert(pu_.phase_used[BlackoilPhases::Vapour]);
-                const int pos = pu_.phase_pos[BlackoilPhases::Vapour];
-                return rates[pos];
-            }
-            case Group::ProductionCMode::LRAT: {
-                assert(pu_.phase_used[BlackoilPhases::Liquid]);
-                assert(pu_.phase_used[BlackoilPhases::Aqua]);
-                const int opos = pu_.phase_pos[BlackoilPhases::Liquid];
-                const int wpos = pu_.phase_pos[BlackoilPhases::Aqua];
-                return rates[opos] + rates[wpos];
-            }
-            case Group::ProductionCMode::RESV: {
-                assert(pu_.phase_used[BlackoilPhases::Liquid]);
-                assert(pu_.phase_used[BlackoilPhases::Aqua]);
-                assert(pu_.phase_used[BlackoilPhases::Vapour]);
-                ElemType mode_rate = zero<ElemType>();
-                for (int phase = 0; phase < pu_.num_phases; ++phase) {
-                    mode_rate += rates[phase] * resv_coeff_[phase];
-                }
-                return mode_rate;
-            }
-            default:
-                // Should never be here.
-                assert(false);
-                return zero<ElemType>();
-            }
+            return rates[pos_];
         }
 
-        double groupTarget(const Group::ProductionControls ctrl) const
-        {
-            switch (cmode_) {
-            case Group::ProductionCMode::ORAT:
-                return ctrl.oil_target;
-            case Group::ProductionCMode::WRAT:
-                return ctrl.water_target;
-            case Group::ProductionCMode::GRAT:
-                return ctrl.gas_target;
-            case Group::ProductionCMode::LRAT:
-                return ctrl.liquid_target;
-            case Group::ProductionCMode::RESV:
-                return ctrl.resv_target;
-            default:
-                // Should never be here.
-                assert(false);
-                return 0.0;
-            }
-        }
+        double groupTarget(const Group::InjectionControls& ctrl, Opm::DeferredLogger& deferred_logger) const;
 
-        GuideRateModel::Target guideTargetMode() const
-        {
-            switch (cmode_) {
-            case Group::ProductionCMode::ORAT:
-                return GuideRateModel::Target::OIL;
-            case Group::ProductionCMode::WRAT:
-                return GuideRateModel::Target::WAT;
-            case Group::ProductionCMode::GRAT:
-                return GuideRateModel::Target::GAS;
-            case Group::ProductionCMode::LRAT:
-                return GuideRateModel::Target::LIQ;
-            case Group::ProductionCMode::RESV:
-                return GuideRateModel::Target::RES;
-            default:
-                // Should never be here.
-                assert(false);
-                return GuideRateModel::Target::NONE;
-            }
-        }
+        GuideRateModel::Target guideTargetMode() const;
 
     private:
-        template <typename ElemType>
-        static ElemType zero()
-        {
-            // This is for Evaluation types.
-            ElemType x;
-            x = 0.0;
-            return x;
-        }
-        Group::ProductionCMode cmode_;
+        Group::InjectionCMode cmode_;
         const PhaseUsage& pu_;
         const std::vector<double>& resv_coeff_;
+        const std::string& group_name_;
+        double sales_target_;
+        const GroupState& group_state_;
+        int pos_;
+        GuideRateModel::Target target_;
     };
-
 } // namespace WellGroupHelpers
 
 } // namespace Opm

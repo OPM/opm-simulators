@@ -42,123 +42,10 @@
 
 #include <opm/common/utility/String.hpp>
 
-BEGIN_PROPERTIES
-
-// forward declaration of property tags
-NEW_PROP_TAG(Scalar);
-NEW_PROP_TAG(Simulator);
-NEW_PROP_TAG(ThreadManager);
-NEW_PROP_TAG(PrintProperties);
-NEW_PROP_TAG(PrintParameters);
-NEW_PROP_TAG(ParameterFile);
-NEW_PROP_TAG(Problem);
-END_PROPERTIES
-
+#include <opm/simulators/flow/Main.hpp>
 //! \cond SKIP_THIS
 
 namespace Opm {
-
-enum class FileOutputMode {
-    //! \brief No output to files.
-    OUTPUT_NONE = 0,
-    //! \brief Output only to log files, no eclipse output.
-    OUTPUT_LOG_ONLY = 1,
-    //! \brief Output to all files.
-    OUTPUT_ALL = 3
-};
-
-
-static void ensureOutputDirExists(const std::string& cmdline_output_dir)
-{
-    if (!Opm::filesystem::is_directory(cmdline_output_dir)) {
-        try {
-            Opm::filesystem::create_directories(cmdline_output_dir);
-        }
-        catch (...) {
-            throw std::runtime_error("Creation of output directory '" + cmdline_output_dir + "' failed\n");
-        }
-    }
-}
-
-// Setup the OpmLog backends
-static FileOutputMode setupLogging(int mpi_rank_, const std::string& deck_filename, const std::string& cmdline_output_dir, const std::string& cmdline_output, bool output_cout_, const std::string& stdout_log_id) {
-
-    if (!cmdline_output_dir.empty()) {
-        ensureOutputDirExists(cmdline_output_dir);
-    }
-
-    // create logFile
-    using Opm::filesystem::path;
-    path fpath(deck_filename);
-    std::string baseName;
-    std::ostringstream debugFileStream;
-    std::ostringstream logFileStream;
-
-    // Strip extension "." or ".DATA"
-    std::string extension = uppercase(fpath.extension().string());
-    if (extension == ".DATA" || extension == ".") {
-        baseName = uppercase(fpath.stem().string());
-    } else {
-        baseName = uppercase(fpath.filename().string());
-    }
-
-    std::string output_dir = cmdline_output_dir;
-    if (output_dir.empty()) {
-        output_dir = absolute(path(baseName).parent_path()).string();
-    }
-
-    logFileStream << output_dir << "/" << baseName;
-    debugFileStream << output_dir << "/" << baseName;
-
-    if (mpi_rank_ != 0) {
-        // Added rank to log file for non-zero ranks.
-        // This prevents message loss.
-        debugFileStream << "." << mpi_rank_;
-        // If the following file appears then there is a bug.
-        logFileStream << "." << mpi_rank_;
-    }
-    logFileStream << ".PRT";
-    debugFileStream << ".DBG";
-
-    FileOutputMode output;
-    {
-        static std::map<std::string, FileOutputMode> stringToOutputMode =
-            { {"none", FileOutputMode::OUTPUT_NONE },
-              {"false", FileOutputMode::OUTPUT_LOG_ONLY },
-              {"log", FileOutputMode::OUTPUT_LOG_ONLY },
-              {"all" , FileOutputMode::OUTPUT_ALL },
-              {"true" , FileOutputMode::OUTPUT_ALL }};
-        auto outputModeIt = stringToOutputMode.find(cmdline_output);
-        if (outputModeIt != stringToOutputMode.end()) {
-            output = outputModeIt->second;
-        }
-        else {
-            output = FileOutputMode::OUTPUT_ALL;
-            std::cerr << "Value " << cmdline_output <<
-                " is not a recognized output mode. Using \"all\" instead."
-                      << std::endl;
-        }
-    }
-
-    if (output > FileOutputMode::OUTPUT_NONE) {
-        std::shared_ptr<Opm::EclipsePRTLog> prtLog = std::make_shared<Opm::EclipsePRTLog>(logFileStream.str(), Opm::Log::NoDebugMessageTypes, false, output_cout_);
-        Opm::OpmLog::addBackend("ECLIPSEPRTLOG", prtLog);
-        prtLog->setMessageLimiter(std::make_shared<Opm::MessageLimiter>());
-        prtLog->setMessageFormatter(std::make_shared<Opm::SimpleMessageFormatter>(false));
-    }
-
-    if (output >= FileOutputMode::OUTPUT_LOG_ONLY) {
-        std::string debugFile = debugFileStream.str();
-        std::shared_ptr<Opm::StreamLog> debugLog = std::make_shared<Opm::EclipsePRTLog>(debugFileStream.str(), Opm::Log::DefaultMessageTypes, false, output_cout_);
-        Opm::OpmLog::addBackend("DEBUGLOG", debugLog);
-    }
-
-    std::shared_ptr<Opm::StreamLog> streamLog = std::make_shared<Opm::StreamLog>(std::cout, Opm::Log::StdoutMessageTypes);
-    Opm::OpmLog::addBackend(stdout_log_id, streamLog);
-    streamLog->setMessageFormatter(std::make_shared<Opm::SimpleMessageFormatter>(true));
-
-    return output;
-}
 
 //! \endcond
 
@@ -204,7 +91,7 @@ static inline int startEbos(int argc, char **argv)
 
     // Call the main function. Parameters are already registered
     // They should not be registered again
-    return Opm::start<TypeTag>(argc, argv, /*registerParams=*/false);
+    return start<TypeTag>(argc, argv, /*registerParams=*/false);
 
 }
 

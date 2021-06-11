@@ -23,20 +23,55 @@
 #include <mpi.h>
 #endif
 
-#include <opm/output/eclipse/RestartValue.hpp>
-#include <opm/output/eclipse/EclipseIO.hpp>
-#include <opm/output/eclipse/Summary.hpp>
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/utility/TimeService.hpp>
 
 #include <dune/common/parallel/mpihelper.hh>
 
-#include <set>
-#include <tuple>
-#include <vector>
+#include <chrono>
+#include <optional>
 #include <map>
+#include <set>
+#include <string>
+#include <tuple>
+#include <typeinfo>
 #include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 namespace Opm
 {
+
+class EclipseIO;
+class SummaryState;
+class RestartKey;
+class RestartValue;
+
+namespace data
+{
+struct AquiferData;
+struct CarterTracyData;
+struct CellData;
+struct Connection;
+struct CurrentControl;
+struct FetkovichData;
+class GroupAndNetworkValues;
+struct GroupConstraints;
+struct GroupData;
+struct GroupGuideRates;
+class GuideRateValue;
+struct NodeData;
+class Rates;
+struct Segment;
+class Solution;
+struct Well;
+class WellRates;
+}
+
+namespace Action
+{
+class State;
+}
 
 namespace Mpi
 {
@@ -55,7 +90,8 @@ template<class T>
 std::size_t packSize(const T&, Dune::MPIHelper::MPICommunicator,
                      std::integral_constant<bool, false>)
 {
-    OPM_THROW(std::logic_error, "Packing not (yet) supported for this non-pod type.");
+    std::string msg = std::string{"Packing not (yet) supported for non-pod type: "} + typeid(T).name();
+    OPM_THROW(std::logic_error, msg);
 }
 
 template<class T>
@@ -81,6 +117,9 @@ std::size_t packSize(const T& data, Dune::MPIHelper::MPICommunicator comm)
 template<class T1, class T2>
 std::size_t packSize(const std::pair<T1,T2>& data, Dune::MPIHelper::MPICommunicator comm);
 
+template<class T>
+std::size_t packSize(const std::optional<T>& data, Dune::MPIHelper::MPICommunicator comm);
+
 template<class T, class A>
 std::size_t packSize(const std::vector<T,A>& data, Dune::MPIHelper::MPICommunicator comm);
 
@@ -102,8 +141,6 @@ template<class T, std::size_t N>
 std::size_t packSize(const std::array<T,N>& data, Dune::MPIHelper::MPICommunicator comm);
 
 std::size_t packSize(const char* str, Dune::MPIHelper::MPICommunicator comm);
-
-std::size_t packSize(const std::string& str, Dune::MPIHelper::MPICommunicator comm);
 
 template<class T1, class T2, class C, class A>
 std::size_t packSize(const std::map<T1,T2,C,A>& data, Dune::MPIHelper::MPICommunicator comm);
@@ -156,6 +193,10 @@ void pack(const T& data, std::vector<char>& buffer, int& position,
 
 template<class T1, class T2>
 void pack(const std::pair<T1,T2>& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm);
+
+template<class T>
+void pack(const std::optional<T>& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm);
 
 template<class T, class A>
@@ -243,6 +284,10 @@ template<class T1, class T2>
 void unpack(std::pair<T1,T2>& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm);
 
+template<class T>
+void unpack(std::optional<T>& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm);
+
 template<class T, class A>
 void unpack(std::vector<T,A>& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm);
@@ -289,23 +334,33 @@ void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& posit
   void unpack(T& data, std::vector<char>& buffer, int& position, \
               Dune::MPIHelper::MPICommunicator comm);
 
+ADD_PACK_PROTOTYPES(data::AquiferData)
+ADD_PACK_PROTOTYPES(data::CarterTracyData)
 ADD_PACK_PROTOTYPES(data::CellData)
 ADD_PACK_PROTOTYPES(data::Connection)
 ADD_PACK_PROTOTYPES(data::CurrentControl)
+ADD_PACK_PROTOTYPES(data::FetkovichData)
 ADD_PACK_PROTOTYPES(data::Rates)
 ADD_PACK_PROTOTYPES(data::Segment)
 ADD_PACK_PROTOTYPES(data::Solution)
+ADD_PACK_PROTOTYPES(data::GuideRateValue)
+ADD_PACK_PROTOTYPES(data::GroupConstraints)
+ADD_PACK_PROTOTYPES(data::GroupGuideRates)
+ADD_PACK_PROTOTYPES(data::GroupData)
+ADD_PACK_PROTOTYPES(data::NodeData)
+ADD_PACK_PROTOTYPES(data::GroupAndNetworkValues)
 ADD_PACK_PROTOTYPES(data::Well)
 ADD_PACK_PROTOTYPES(data::WellRates)
 ADD_PACK_PROTOTYPES(RestartKey)
 ADD_PACK_PROTOTYPES(RestartValue)
 ADD_PACK_PROTOTYPES(std::string)
+ADD_PACK_PROTOTYPES(time_point)
 
 } // end namespace Mpi
 
-RestartValue loadParallelRestart(const EclipseIO* eclIO, SummaryState& summaryState,
-                                 const std::vector<Opm::RestartKey>& solutionKeys,
-                                 const std::vector<Opm::RestartKey>& extraKeys,
+RestartValue loadParallelRestart(const EclipseIO* eclIO, Action::State& actionState, SummaryState& summaryState,
+                                 const std::vector<RestartKey>& solutionKeys,
+                                 const std::vector<RestartKey>& extraKeys,
                                  Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> comm);
 
 } // end namespace Opm

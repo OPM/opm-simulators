@@ -17,14 +17,26 @@
 #ifndef FLOW_EBOS_BLACKOIL_HPP
 #define FLOW_EBOS_BLACKOIL_HPP
 
-#include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
-#include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+#include <memory>
 
 namespace Opm {
-void flowEbosBlackoilSetDeck(double setupTime, Deck *deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig);
+
+class Deck;
+class EclipseState;
+template<class TypeTag> class FlowMainEbos;
+class Schedule;
+class SummaryConfig;
+namespace Properties { namespace TTag { struct EclFlowProblem; } }
+
+void flowEbosBlackoilSetDeck(double setupTime, std::unique_ptr<Deck> deck,
+                             std::unique_ptr<EclipseState> eclState,
+                             std::unique_ptr<Schedule> schedule,
+                             std::unique_ptr<SummaryConfig> summaryConfig);
+
 int flowEbosBlackoilMain(int argc, char** argv, bool outputCout, bool outputFiles);
+
+std::unique_ptr<FlowMainEbos<Properties::TTag::EclFlowProblem>>
+    flowEbosBlackoilMainInit(int argc, char** argv, bool outputCout, bool outputFiles);
 }
 
 #endif // FLOW_EBOS_BLACKOIL_HPP

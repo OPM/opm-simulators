@@ -41,75 +41,140 @@ template <class TypeTag>
 class EbosProblem;
 }
 
-BEGIN_PROPERTIES
+namespace Opm::Properties {
 
-NEW_TYPE_TAG(EbosTypeTag, INHERITS_FROM(BlackOilModel, EclBaseProblem, FlowModelParameters));
+namespace TTag {
+struct EbosTypeTag {
+    using InheritsFrom = std::tuple<FlowModelParameters, EclBaseProblem, BlackOilModel>;
+};
+}
 
 // Set the problem class
-SET_TYPE_PROP(EbosTypeTag, Problem, Opm::EbosProblem<TypeTag>);
+template<class TypeTag>
+struct Problem<TypeTag, TTag::EbosTypeTag> {
+    using type = EbosProblem<TypeTag>;
+};
 
 // Enable experimental features for ebos: ebos is the research simulator of the OPM
 // project. If you're looking for a more stable "production quality" simulator, consider
 // using `flow`
-SET_BOOL_PROP(EbosTypeTag, EnableExperiments, true);
+template<class TypeTag>
+struct EnableExperiments<TypeTag, TTag::EbosTypeTag> {
+    static constexpr bool value = true;
+};
 
 // use flow's well model for now
-SET_TYPE_PROP(EbosTypeTag, EclWellModel, Opm::BlackoilWellModel<TypeTag>);
+template<class TypeTag>
+struct EclWellModel<TypeTag, TTag::EbosTypeTag> {
+    using type = BlackoilWellModel<TypeTag>;
+};
 
 // currently, ebos uses the non-multisegment well model by default to avoid
 // regressions. the --use-multisegment-well=true|false command line parameter is still
 // available in ebos, but hidden from view.
-SET_BOOL_PROP(EbosTypeTag, UseMultisegmentWell, false);
+template<class TypeTag>
+struct UseMultisegmentWell<TypeTag, TTag::EbosTypeTag> {
+    static constexpr bool value = false;
+};
 
 // set some properties that are only required by the well model
-SET_BOOL_PROP(EbosTypeTag, MatrixAddWellContributions, true);
-SET_BOOL_PROP(EbosTypeTag, EnableTerminalOutput, false);
+template<class TypeTag>
+struct MatrixAddWellContributions<TypeTag, TTag::EbosTypeTag> {
+    static constexpr bool value = true;
+};
+
+template<class TypeTag>
+struct EnableTerminalOutput<TypeTag, TTag::EbosTypeTag> {
+    static constexpr bool value = false;
+};
+
 // flow's well model only works with surface volumes
-SET_BOOL_PROP(EbosTypeTag, BlackoilConserveSurfaceVolume, true);
+template<class TypeTag>
+struct BlackoilConserveSurfaceVolume<TypeTag, TTag::EbosTypeTag> {
+    static constexpr bool value = true;
+};
+
 // the values for the residual are for the whole cell instead of for a cubic meter of the cell
-SET_BOOL_PROP(EbosTypeTag, UseVolumetricResidual, false);
+template<class TypeTag>
+struct UseVolumetricResidual<TypeTag, TTag::EbosTypeTag> {
+    static constexpr bool value = false;
+};
 
 // by default use flow's aquifer model for now
-SET_TYPE_PROP(EbosTypeTag, EclAquiferModel, Opm::BlackoilAquiferModel<TypeTag>);
+template<class TypeTag>
+struct EclAquiferModel<TypeTag, TTag::EbosTypeTag> {
+    using type = BlackoilAquiferModel<TypeTag>;
+};
 
 // use flow's linear solver backend for now
-SET_TAG_PROP(EbosTypeTag, LinearSolverSplice, FlowIstlSolver);
+template<class TypeTag>
+struct LinearSolverSplice<TypeTag, TTag::EbosTypeTag> {
+    using type = TTag::FlowIstlSolver;
+};
 
 // the default for the allowed volumetric error for oil per second
-SET_SCALAR_PROP(EbosTypeTag, NewtonTolerance, 1e-1);
+template<class TypeTag>
+struct NewtonTolerance<TypeTag, TTag::EbosTypeTag> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-1;
+};
 
 // set fraction of the pore volume where the volumetric residual may be violated during
 // strict Newton iterations
-SET_SCALAR_PROP(EbosTypeTag, EclNewtonRelaxedVolumeFraction, 0.05);
+template<class TypeTag>
+struct EclNewtonRelaxedVolumeFraction<TypeTag, TTag::EbosTypeTag> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.05;
+};
 
 // the maximum volumetric error of a cell in the relaxed region
-SET_SCALAR_PROP(EbosTypeTag, EclNewtonRelaxedTolerance, 1e6*GET_PROP_VALUE(TypeTag, NewtonTolerance));
+template<class TypeTag>
+struct EclNewtonRelaxedTolerance<TypeTag, TTag::EbosTypeTag> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e6*getPropValue<TypeTag, Properties::NewtonTolerance>();
+};
 
 // the tolerated amount of "incorrect" amount of oil per time step for the complete
 // reservoir. this is scaled by the pore volume of the reservoir, i.e., larger reservoirs
 // will tolerate larger residuals.
-SET_SCALAR_PROP(EbosTypeTag, EclNewtonSumTolerance, 1e-5);
+template<class TypeTag>
+struct EclNewtonSumTolerance<TypeTag, TTag::EbosTypeTag> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-5;
+};
 
 // make all Newton iterations strict, i.e., the volumetric Newton tolerance must be
 // always be upheld in the majority of the spatial domain. In this context, "majority"
 // means 1 - EclNewtonRelaxedVolumeFraction.
-SET_INT_PROP(EbosTypeTag, EclNewtonStrictIterations, 100);
+template<class TypeTag>
+struct EclNewtonStrictIterations<TypeTag, TTag::EbosTypeTag> {
+    static constexpr int value = 100;
+};
 
 // set the maximum number of Newton iterations to 8 so that we fail quickly (albeit
 // relatively often)
-SET_INT_PROP(EbosTypeTag, NewtonMaxIterations, 8);
+template<class TypeTag>
+struct NewtonMaxIterations<TypeTag, TTag::EbosTypeTag> {
+    static constexpr int value = 8;
+};
 
 // if openMP is available, set the default the number of threads per process for the main
 // simulation to 2 (instead of grabbing everything that is available).
 #if _OPENMP
-SET_INT_PROP(EbosTypeTag, ThreadsPerProcess, 2);
+template<class TypeTag>
+struct ThreadsPerProcess<TypeTag, TTag::EbosTypeTag> {
+    static constexpr int value = 2;
+};
 #endif
 
 // By default, ebos accepts the result of the time integration unconditionally if the
 // smallest time step size is reached.
-SET_BOOL_PROP(EbosTypeTag, ContinueOnConvergenceError, true);
+template<class TypeTag>
+struct ContinueOnConvergenceError<TypeTag, TTag::EbosTypeTag> {
+    static constexpr bool value = true;
+};
 
-END_PROPERTIES
+} // namespace Opm::Properties
 
 namespace Opm {
 template <class TypeTag>
@@ -122,7 +187,7 @@ public:
     {
         ParentType::registerParameters();
 
-        Opm::BlackoilModelParametersEbos<TypeTag>::registerParameters();
+        BlackoilModelParametersEbos<TypeTag>::registerParameters();
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableTerminalOutput, "Do *NOT* use!");
         EWOMS_HIDE_PARAM(TypeTag, DbhpMaxRel);
         EWOMS_HIDE_PARAM(TypeTag, DwellFractionMax);
@@ -136,8 +201,9 @@ public:
         EWOMS_HIDE_PARAM(TypeTag, UseMultisegmentWell);
         EWOMS_HIDE_PARAM(TypeTag, TolerancePressureMsWells);
         EWOMS_HIDE_PARAM(TypeTag, MaxPressureChangeMsWells);
-        EWOMS_HIDE_PARAM(TypeTag, UseInnerIterationsMsWells);
         EWOMS_HIDE_PARAM(TypeTag, MaxInnerIterMsWells);
+        EWOMS_HIDE_PARAM(TypeTag, MaxNewtonIterationsWithInnerWellIterations);
+        EWOMS_HIDE_PARAM(TypeTag, MaxInnerIterWells);
         EWOMS_HIDE_PARAM(TypeTag, MaxSinglePrecisionDays);
         EWOMS_HIDE_PARAM(TypeTag, MaxStrictIter);
         EWOMS_HIDE_PARAM(TypeTag, SolveWelleqInitially);

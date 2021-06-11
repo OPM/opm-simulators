@@ -22,8 +22,11 @@
 */
 #include "config.h"
 
+#define BOOST_TEST_MODULE EclOutput
+
 #include <ebos/equil/equilibrationhelpers.hh>
 #include <ebos/eclproblem.hh>
+#include <ebos/eclwellmanager.hh>
 #include <opm/models/utils/start.hh>
 
 #include <opm/grid/UnstructuredGrid.h>
@@ -37,6 +40,7 @@
 #include <ebos/collecttoiorank.hh>
 #include <ebos/ecloutputblackoilmodule.hh>
 #include <ebos/eclwriter.hh>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/State.hpp>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
@@ -54,34 +58,38 @@
 #include <vector>
 #include <string.h>
 
-#define CHECK(value, expected)             \
-    {                                      \
-         if ((value) != (expected)) {      \
-             std::cerr << "Test failure: ";     \
-             std::cerr << "expected value " << expected << " != " << value << std::endl; \
-             throw std::runtime_error("Test failed"); \
-         }                                 \
-    }
+#include <boost/test/unit_test.hpp>
+#include <boost/version.hpp>
+#if BOOST_VERSION / 100000 == 1 && BOOST_VERSION / 100 % 1000 < 71
+#include <boost/test/floating_point_comparison.hpp>
+#else
+#include <boost/test/tools/floating_point_comparison.hpp>
+#endif
 
-#define CHECK_CLOSE(value, expected, reltol)                            \
-    {                                                                   \
-        if (std::fabs((expected) - (value)) > 1e-14 &&                  \
-            std::fabs(((expected) - (value))/((expected) + (value))) > reltol) \
-            { \
-            std::cerr << "Test failure: "; \
-            std::cerr << "expected value " << expected << " is not close to value " << value << std::endl; \
-            throw std::runtime_error("Test failed");                    \
-        } \
-    }
+namespace Opm::Properties {
+namespace TTag {
 
+struct TestEclOutputTypeTag {
+    using InheritsFrom = std::tuple<EclBaseProblem, BlackOilModel>;
+};
+}
 
-BEGIN_PROPERTIES
+template<class TypeTag>
+struct EnableGravity<TypeTag, TTag::TestEclOutputTypeTag> {
+    static constexpr bool value = false;
+};
 
-NEW_TYPE_TAG(TestEclOutputTypeTag, INHERITS_FROM(BlackOilModel, EclBaseProblem));
-SET_BOOL_PROP(TestEclOutputTypeTag, EnableGravity, false);
-SET_BOOL_PROP(TestEclOutputTypeTag, EnableAsyncEclOutput, false);
+template<class TypeTag>
+struct EnableAsyncEclOutput<TypeTag, TTag::TestEclOutputTypeTag> {
+    static constexpr bool value = false;
+};
 
-END_PROPERTIES
+template<class TypeTag>
+struct EclWellModel<TypeTag, TTag::TestEclOutputTypeTag> {
+    using type = EclWellManager<TypeTag>;
+};
+
+} // namespace Opm::Properties
 
 namespace {
 std::unique_ptr<Opm::EclIO::ESmry> readsum(const std::string& base)
@@ -104,10 +112,10 @@ double ecl_sum_get_general_var(const Opm::EclIO::ESmry* smry,
 }
 
 template <class TypeTag>
-std::unique_ptr<typename GET_PROP_TYPE(TypeTag, Simulator)>
+std::unique_ptr<Opm::GetPropType<TypeTag, Opm::Properties::Simulator>>
 initSimulator(const char *filename)
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+    using Simulator = Opm::GetPropType<TypeTag, Opm::Properties::Simulator>;
 
     std::string filenameArg = "--ecl-deck-file-name=";
     filenameArg += filename;
@@ -122,17 +130,41 @@ initSimulator(const char *filename)
     return std::unique_ptr<Simulator>(new Simulator);
 }
 
-void test_summary()
+struct EclOutputFixture {
+    EclOutputFixture () {
+    int argc = boost::unit_test::framework::master_test_suite().argc;
+    char** argv = boost::unit_test::framework::master_test_suite().argv;
+#if HAVE_DUNE_FEM
+    Dune::Fem::MPIManager::initialize(argc, argv);
+#else
+    Dune::MPIHelper::instance(argc, argv);
+#endif
+        using TypeTag = Opm::Properties::TTag::TestEclOutputTypeTag;
+        Opm::registerAllParameters_<TypeTag>();
+    }
+};
+
+}
+
+BOOST_GLOBAL_FIXTURE(EclOutputFixture);
+
+BOOST_AUTO_TEST_CASE(Summary)
 {
-    typedef typename TTAG(TestEclOutputTypeTag) TypeTag;
+    using TypeTag = Opm::Properties::TTag::TestEclOutputTypeTag;
     const std::string filename = "SUMMARY_DECK_NON_CONSTANT_POROSITY.DATA";
     const std::string casename = "SUMMARY_DECK_NON_CONSTANT_POROSITY";
 
     auto simulator = initSimulator<TypeTag>(filename.data());
-    typedef typename GET_PROP_TYPE(TypeTag, Vanguard) Vanguard;
-    typedef Opm::CollectDataToIORank< Vanguard > CollectDataToIORankType;
-    CollectDataToIORankType collectToIORank(simulator->vanguard());
-    Opm::EclOutputBlackOilModule<TypeTag> eclOutputModule(*simulator, collectToIORank);
+    using Grid = Opm::GetPropType<TypeTag, Opm::Properties::Grid>;
+    using EquilGrid = Opm::GetPropType<TypeTag, Opm::Properties::EquilGrid>;
+    using GridView = Opm::GetPropType<TypeTag, Opm::Properties::GridView>;
+    using CollectDataToIORankType = Opm::CollectDataToIORank<Grid,EquilGrid,GridView>;
+    CollectDataToIORankType collectToIORank(simulator->vanguard().grid(),
+                                            &simulator->vanguard().equilGrid(),
+                                            simulator->vanguard().gridView(),
+                                            simulator->vanguard().cartesianIndexMapper(),
+                                            &simulator->vanguard().equilCartesianIndexMapper());
+    Opm::EclOutputBlackOilModule<TypeTag> eclOutputModule(*simulator, {}, collectToIORank);
 
     typedef Opm::EclWriter<TypeTag> EclWriterType;
     // create the actual ECL writer
@@ -160,39 +192,39 @@ void test_summary()
 
     // fpr = sum_ (p * hcpv ) / hcpv, hcpv = pv * (1 - sw)
     const double fpr =  ( (3 * 0.1 + 8 * 0.2) * 500 * (1 - 0.2) ) / ( (500*0.1 + 500*0.2) * (1 - 0.2));
-    CHECK_CLOSE( fpr, ecl_sum_get_field_var( resp, 1, "FPR" ) , 1e-5 );
+    BOOST_CHECK_CLOSE( fpr, ecl_sum_get_field_var( resp, 1, "FPR" ) , 1e-3 );
 
     // foip = sum_ (b * s * pv), rs == 0;
     const double foip = ( (0.3 * 0.1 + 0.8 * 0.2) * 500 * (1 - 0.2) );
-    CHECK_CLOSE(foip, ecl_sum_get_field_var( resp, 1, "FOIP" ), 1e-3 );
+    BOOST_CHECK_CLOSE(foip, ecl_sum_get_field_var( resp, 1, "FOIP" ), 1e-1 );
 
     // fgip = sum_ (b * pv * s), sg == 0;
     const double fgip = 0.0;
-    CHECK_CLOSE(fgip, ecl_sum_get_field_var( resp, 1, "FGIP" ), 1e-3 );
+    BOOST_CHECK_CLOSE(fgip, ecl_sum_get_field_var( resp, 1, "FGIP" ), 1e-1 );
 
     // fgip = sum_ (b * pv * s),
     const double fwip = 1.0/1000 * ( 0.1 + 0.2) * 500 * 0.2;
-    CHECK_CLOSE(fwip, ecl_sum_get_field_var( resp, 1, "FWIP" ), 1e-3 );
+    BOOST_CHECK_CLOSE(fwip, ecl_sum_get_field_var( resp, 1, "FWIP" ), 1e-1 );
 
     // region 1
     // rpr = sum_ (p * hcpv ) / hcpv, hcpv = pv * (1 - sw)
     const double rpr1 =  ( 2.5 * 0.1 * 400 * (1 - 0.2) ) / (400*0.1 * (1 - 0.2));
-    CHECK_CLOSE( rpr1, ecl_sum_get_general_var( resp, 1, "RPR:1" ) , 1e-5 );
+    BOOST_CHECK_CLOSE( rpr1, ecl_sum_get_general_var( resp, 1, "RPR:1" ) , 1e-3 );
     // roip = sum_ (b * s * pv) // rs == 0;
     const double roip1 = ( 0.25 * 0.1 * 400 * (1 - 0.2) );
-    CHECK_CLOSE(roip1, ecl_sum_get_general_var( resp, 1, "ROIP:1" ), 1e-3 );
+    BOOST_CHECK_CLOSE(roip1, ecl_sum_get_general_var( resp, 1, "ROIP:1" ), 1e-1 );
 
 
     // region 2
     // rpr = sum_ (p * hcpv ) / hcpv, hcpv = pv * (1 - sw)
     const double rpr2 =  ( (5 * 0.1 * 100 + 6 * 0.2 * 100) * (1 - 0.2) ) / ( (100*0.1 + 100*0.2) * (1 - 0.2));
-    CHECK_CLOSE( rpr2, ecl_sum_get_general_var( resp, 1, "RPR:2" ) , 1e-5 );
+    BOOST_CHECK_CLOSE( rpr2, ecl_sum_get_general_var( resp, 1, "RPR:2" ) , 1e-3 );
     // roip = sum_ (b * s * pv) // rs == 0;
     const double roip2 = ( (0.5 * 0.1 * 100 + 0.6 * 0.2 * 100) * (1 - 0.2) );
-    CHECK_CLOSE(roip2, ecl_sum_get_general_var( resp, 1, "ROIP:2" ), 1e-3 );
+    BOOST_CHECK_CLOSE(roip2, ecl_sum_get_general_var( resp, 1, "ROIP:2" ), 1e-1 );
 }
 
-void test_readWriteWells()
+BOOST_AUTO_TEST_CASE(readWriteWells)
 {
     using opt = Opm::data::Rates::opt;
 
@@ -230,8 +262,8 @@ void test_readWriteWells()
      *  the connection keys (active indices) and well names correspond to the
      *  input deck. All other entries in the well structures are arbitrary.
      */
-    w1.connections.push_back( { 88, rc1, 30.45, 123.45, 0.0, 0.0, 0.0, 0.0 } );
-    w1.connections.push_back( { 288, rc2, 33.19, 67.89, 0.0, 0.0, 0.0, 0.0 } );
+    w1.connections.push_back( { 88, rc1, 30.45, 123.45, 0.0, 0.0, 0.0, 0.0, 123.456 } );
+    w1.connections.push_back( { 288, rc2, 33.19, 67.89, 0.0, 0.0, 0.0, 0.0, 123.456 } );
 
     w2.rates = r2;
     w2.bhp = 2.34;
@@ -239,7 +271,7 @@ void test_readWriteWells()
     w2.control = 1;
     //w1.injectionControl = 2;
     //w1.productionControl = 2;
-    w2.connections.push_back( { 188, rc3, 36.22, 19.28, 0.0, 0.0, 0.0, 0.0 } );
+    w2.connections.push_back( { 188, rc3, 36.22, 19.28, 0.0, 0.0, 0.0, 0.0, 123.456 } );
 
     Opm::data::Wells wellRates;
 
@@ -255,26 +287,6 @@ void test_readWriteWells()
     Opm::data::Wells wellRatesCopy;
     wellRatesCopy.read(buffer);
 
-    CHECK( wellRatesCopy.get( "OP_1" , opt::wat) , wellRates.get( "OP_1" , opt::wat));
-    CHECK( wellRatesCopy.get( "OP_2" , 188 , opt::wat) , wellRates.get( "OP_2" , 188 , opt::wat));
+    BOOST_CHECK_EQUAL( wellRatesCopy.get( "OP_1" , opt::wat) , wellRates.get( "OP_1" , opt::wat));
+    BOOST_CHECK_EQUAL( wellRatesCopy.get( "OP_2" , 188 , opt::wat) , wellRates.get( "OP_2" , 188 , opt::wat));
 }
-} // Anonymous namespace
-
-
-int main(int argc, char** argv)
-{
-#if HAVE_DUNE_FEM
-    Dune::Fem::MPIManager::initialize(argc, argv);
-#else
-    Dune::MPIHelper::instance(argc, argv);
-#endif
-
-    typedef TTAG(TestEclOutputTypeTag) TypeTag;
-    Opm::registerAllParameters_<TypeTag>();
-    test_summary();
-    test_readWriteWells();
-
-    return 0;
-}
-
-

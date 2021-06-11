@@ -22,74 +22,45 @@
 #include <opm/simulators/flow/Main.hpp>
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
 
+namespace Opm::Properties {
 
-BEGIN_PROPERTIES
-NEW_TYPE_TAG(EclFlowProblemSimple, INHERITS_FROM(EclFlowProblem));
-SET_BOOL_PROP(EclFlowProblemSimple, EnableEnergy, true);
-NEW_PROP_TAG(FluidState);
-NEW_PROP_TAG(FluidSystem);
+namespace TTag {
+struct EclFlowProblemSimple {
+    using InheritsFrom = std::tuple<EclFlowProblem>;
+};
+}
+template<class TypeTag>
+struct EnableEnergy<TypeTag, TTag::EclFlowProblemSimple> {
+    static constexpr bool value = true;
+};
 //! The indices required by the model
-SET_PROP(EclFlowProblemSimple, Indices)
+template<class TypeTag>
+struct Indices<TypeTag, TTag::EclFlowProblemSimple>
 {
 private:
     // it is unfortunately not possible to simply use 'TypeTag' here because this leads
     // to cyclic definitions of some properties. if this happens the compiler error
     // messages unfortunately are *really* confusing and not really helpful.
-    typedef TTAG(EclFlowProblem) BaseTypeTag;
-    typedef typename GET_PROP_TYPE(BaseTypeTag, FluidSystem) FluidSystem;
+    using BaseTypeTag = TTag::EclFlowProblem;
+    using FluidSystem = GetPropType<BaseTypeTag, Properties::FluidSystem>;
 
 public:
-    typedef Opm::BlackOilOnePhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent),
-                                         GET_PROP_VALUE(TypeTag, EnablePolymer),
-                                         GET_PROP_VALUE(TypeTag, EnableEnergy),
-                                         GET_PROP_VALUE(TypeTag, EnableFoam),
-                                         GET_PROP_VALUE(TypeTag, EnableBrine),
+    typedef Opm::BlackOilOnePhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
+                                         getPropValue<TypeTag, Properties::EnableExtbo>(),
+                                         getPropValue<TypeTag, Properties::EnablePolymer>(),
+                                         getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                         getPropValue<TypeTag, Properties::EnableFoam>(),
+                                         getPropValue<TypeTag, Properties::EnableBrine>(),
                                          /*PVOffset=*/0,
                                          /*enebledCompIdx=*/FluidSystem::waterCompIdx>
         type;
 };
-SET_PROP(EclFlowProblemSimple, FluidState)
-{
-private:
-    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
-    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
-    enum { enableTemperature = GET_PROP_VALUE(TypeTag, EnableTemperature) };
-    enum { enableSolvent = GET_PROP_VALUE(TypeTag, EnableSolvent) };
-    enum { enableEnergy = GET_PROP_VALUE(TypeTag, EnableEnergy) };
-    enum { enableBrine = GET_PROP_VALUE(TypeTag, EnableBrine) };
-    enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
-    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-    static const bool compositionSwitchEnabled = Indices::gasEnabled;
 
-public:
-    // typedef Opm::BlackOilFluidSystemSimple<Scalar> type;
-    typedef Opm::BlackOilFluidState<Evaluation,
-                                    FluidSystem,
-                                    enableTemperature,
-                                    enableEnergy,
-                                    compositionSwitchEnabled,
-                                    enableBrine,
-                                    Indices::numPhases>
-        type;
-};
-
-// SET_PROP(EclFlowProblemSimple, FluidSystem)
-// {
-// private:
-//   //typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-//   typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-//   typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
-//   typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
-
-// public:
-//   typedef Opm::BlackOilFluidSystem<Scalar,Indices> type;
-// };
-END_PROPERTIES
+} // namespace Opm::Properties
 
 int main(int argc, char** argv)
 {
-    using TypeTag = TTAG(EclFlowProblemSimple);
+    using TypeTag = Opm::Properties::TTag::EclFlowProblemSimple;
     auto mainObject = Opm::Main(argc, argv);
     return mainObject.runStatic<TypeTag>();
 }

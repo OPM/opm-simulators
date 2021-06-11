@@ -68,14 +68,14 @@ namespace
         const auto rf = local_report.reservoirFailures();
         int num_rf = rf.size();
         MPI_Pack(&num_rf, 1, MPI_INT, buf.data(), buf.size(), &offset, MPI_COMM_WORLD);
-        for (const auto f : rf) {
+        for (const auto& f : rf) {
             packReservoirFailure(f, buf, offset);
         }
         // Well failures.
         const auto wf = local_report.wellFailures();
         int num_wf = wf.size();
         MPI_Pack(&num_wf, 1, MPI_INT, buf.data(), buf.size(), &offset, MPI_COMM_WORLD);
-        for (const auto f : wf) {
+        for (const auto& f : wf) {
             packWellFailure(f, buf, offset);
         }
     }
@@ -87,7 +87,7 @@ namespace
         const int num_rf = local_report.reservoirFailures().size();
         const int num_wf = local_report.wellFailures().size();
         int wellnames_length = 0;
-        for (const auto f : local_report.wellFailures()) {
+        for (const auto& f : local_report.wellFailures()) {
             wellnames_length += (f.wellName().size() + 1);
         }
         return (2 + 3*num_rf + 4*num_wf) * int_pack_size + wellnames_length;

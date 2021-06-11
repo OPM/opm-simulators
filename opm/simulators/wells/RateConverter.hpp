@@ -169,7 +169,7 @@ namespace Opm {
                     using VT = typename AttributeMap::value_type;
 
                     for (const auto& r : rmap.activeRegions()) {
-                        auto v = std::unique_ptr<Value>(new Value(attr));
+                        auto v = std::make_unique<Value>(attr);
 
                         const auto stat = attr_.insert(VT(r, std::move(v)));
 
@@ -435,20 +435,26 @@ namespace Opm {
 
                 // create map from cell to region
                 // and set all attributes to zero
-                const auto& grid = simulator.vanguard().grid();
-                const unsigned numCells = grid.size(/*codim=*/0);
-                std::vector<int> cell2region(numCells, -1);
                 for (const auto& reg : rmap_.activeRegions()) {
-                    for (const auto& cell : rmap_.cells(reg)) {
-                        cell2region[cell] = reg;
-                    }
                     auto& ra = attr_.attributes(reg);
                     ra.pressure = 0.0;
                     ra.temperature = 0.0;
                     ra.rs = 0.0;
                     ra.rv = 0.0;
                     ra.pv = 0.0;
+                    ra.saltConcentration = 0.0;
 
+                }
+
+                // quantities for pore volume average
+                std::unordered_map<RegionId, Attributes> attributes_pv;
+
+                // quantities for hydrocarbon volume average
+                std::unordered_map<RegionId, Attributes> attributes_hpv;
+
+                for (const auto& reg : rmap_.activeRegions()) {
+                    attributes_pv.insert({reg, Attributes()});
+                    attributes_hpv.insert({reg, Attributes()});
                 }
 
                 ElementContext elemCtx( simulator );
@@ -482,44 +488,68 @@ namespace Opm {
                         hydrocarbon -= fs.saturation(FluidSystem::waterPhaseIdx).value();
                     }
 
-                    int reg = cell2region[cellIdx];
+                    const int reg = rmap_.region(cellIdx);
                     assert(reg >= 0);
-                    auto& ra = attr_.attributes(reg);
-                    auto& p  = ra.pressure;
-                    auto& T  = ra.temperature;
-                    auto& rs  = ra.rs;
-                    auto& rv  = ra.rv;
-                    auto& pv  = ra.pv;
 
                     // sum p, rs, rv, and T.
-                    double hydrocarbonPV = pv_cell*hydrocarbon;
-                    if (hydrocarbonPV > 0) {
-                        pv += hydrocarbonPV;
-                        p += fs.pressure(FluidSystem::oilPhaseIdx).value()*hydrocarbonPV;
-                        rs += fs.Rs().value()*hydrocarbonPV;
-                        rv += fs.Rv().value()*hydrocarbonPV;
-                        T += fs.temperature(FluidSystem::oilPhaseIdx).value()*hydrocarbonPV;
+                    const double hydrocarbonPV = pv_cell*hydrocarbon;
+                    if (hydrocarbonPV > 0.) {
+                        auto& attr = attributes_hpv[reg];
+                        attr.pv += hydrocarbonPV;
+                        attr.pressure += fs.pressure(FluidSystem::oilPhaseIdx).value() * hydrocarbonPV;
+                        attr.rs += fs.Rs().value() * hydrocarbonPV;
+                        attr.rv += fs.Rv().value() * hydrocarbonPV;
+                        attr.temperature += fs.temperature(FluidSystem::oilPhaseIdx).value() * hydrocarbonPV;
+                        attr.saltConcentration += fs.saltConcentration().value() * hydrocarbonPV;
+                    }
+
+                    if (pv_cell > 0.) {
+                        auto& attr = attributes_pv[reg];
+                        attr.pv += pv_cell;
+                        attr.pressure += fs.pressure(FluidSystem::oilPhaseIdx).value() * pv_cell;
+                        attr.rs += fs.Rs().value() * pv_cell;
+                        attr.rv += fs.Rv().value() * pv_cell;
+                        attr.temperature += fs.temperature(FluidSystem::oilPhaseIdx).value() * pv_cell;
+                        attr.saltConcentration += fs.saltConcentration().value() * pv_cell;
                     }
                 }
 
                 for (const auto& reg : rmap_.activeRegions()) {
                       auto& ra = attr_.attributes(reg);
-                      auto& p  = ra.pressure;
-                      auto& T  = ra.temperature;
-                      auto& rs  = ra.rs;
-                      auto& rv  = ra.rv;
-                      auto& pv  = ra.pv;
-                      // communicate sums
-                      p = comm.sum(p);
-                      T = comm.sum(T);
-                      rs = comm.sum(rs);
-                      rv = comm.sum(rv);
-                      pv = comm.sum(pv);
-                      // compute average
-                      p /= pv;
-                      T /= pv;
-                      rs /= pv;
-                      rv /= pv;
+                      const double hpv_sum = comm.sum(attributes_hpv[reg].pv);
+                      // TODO: should we have some epsilon here instead of zero?
+                      if (hpv_sum > 0.) {
+                          const auto& attri_hpv = attributes_hpv[reg];
+                          const double p_hpv_sum = comm.sum(attri_hpv.pressure);
+                          const double T_hpv_sum = comm.sum(attri_hpv.temperature);
+                          const double rs_hpv_sum = comm.sum(attri_hpv.rs);
+                          const double rv_hpv_sum = comm.sum(attri_hpv.rv);
+                          const double sc_hpv_sum = comm.sum(attri_hpv.saltConcentration);
+
+                          ra.pressure = p_hpv_sum / hpv_sum;
+                          ra.temperature = T_hpv_sum / hpv_sum;
+                          ra.rs = rs_hpv_sum / hpv_sum;
+                          ra.rv = rv_hpv_sum / hpv_sum;
+                          ra.pv = hpv_sum;
+                          ra.saltConcentration = sc_hpv_sum / hpv_sum;
+                      } else {
+                          // using the pore volume to do the averaging
+                          const auto& attri_pv = attributes_pv[reg];
+                          const double pv_sum = comm.sum(attri_pv.pv);
+                          assert(pv_sum > 0.);
+                          const double p_pv_sum = comm.sum(attri_pv.pressure);
+                          const double T_pv_sum = comm.sum(attri_pv.temperature);
+                          const double rs_pv_sum = comm.sum(attri_pv.rs);
+                          const double rv_pv_sum = comm.sum(attri_pv.rv);
+                          const double sc_pv_sum = comm.sum(attri_pv.saltConcentration);
+
+                          ra.pressure = p_pv_sum / pv_sum;
+                          ra.temperature = T_pv_sum / pv_sum;
+                          ra.rs = rs_pv_sum / pv_sum;
+                          ra.rv = rv_pv_sum / pv_sum;
+                          ra.pv = pv_sum;
+                          ra.saltConcentration = sc_pv_sum / pv_sum;
+                      }
                 }
             }
 
@@ -565,6 +595,7 @@ namespace Opm {
                 const auto& ra = attr_.attributes(r);
                 const double p = ra.pressure;
                 const double T = ra.temperature;
+                const double saltConcentration = ra.saltConcentration;
 
                 const int   iw = Details::PhasePos::water(pu);
                 const int   io = Details::PhasePos::oil  (pu);
@@ -575,7 +606,7 @@ namespace Opm {
                 if (Details::PhaseUsed::water(pu)) {
                     // q[w]_r = q[w]_s / bw
 
-                    const double bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p);
+                    const double bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, saltConcentration);
 
                     coeff[iw] = 1.0 / bw;
                 }
@@ -614,6 +645,41 @@ namespace Opm {
                 }
             }
 
+            template <class Coeff>
+            void
+            calcInjCoeff(const RegionId r, const int pvtRegionIdx, Coeff& coeff) const
+            {
+                const auto& pu = phaseUsage_;
+                const auto& ra = attr_.attributes(r);
+                const double p = ra.pressure;
+                const double T = ra.temperature;
+                const double saltConcentration = ra.saltConcentration;
+
+                const int   iw = Details::PhasePos::water(pu);
+                const int   io = Details::PhasePos::oil  (pu);
+                const int   ig = Details::PhasePos::gas  (pu);
+
+                std::fill(& coeff[0], & coeff[0] + phaseUsage_.num_phases, 0.0);
+
+                if (Details::PhaseUsed::water(pu)) {
+                    // q[w]_r = q[w]_s / bw
+
+                    const double bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, saltConcentration);
+
+                    coeff[iw] = 1.0 / bw;
+                }
+
+                if (Details::PhaseUsed::oil(pu)) {
+                    const double bo = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, 0.0);
+                    coeff[io] += 1.0 / bo;
+                }
+
+                if (Details::PhaseUsed::gas(pu)) {
+                    const double bg = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, 0.0);
+                    coeff[ig] += 1.0 / bg;
+                }
+            }
+
 
             /**
              * Converting surface volume rates to reservoir voidage rates
@@ -645,6 +711,7 @@ namespace Opm {
                 const auto& ra = attr_.attributes(r);
                 const double p = ra.pressure;
                 const double T = ra.temperature;
+                const double saltConcentration = ra.saltConcentration;
 
                 const int   iw = Details::PhasePos::water(pu);
                 const int   io = Details::PhasePos::oil  (pu);
@@ -653,7 +720,7 @@ namespace Opm {
                 if (Details::PhaseUsed::water(pu)) {
                     // q[w]_r = q[w]_s / bw
 
-                    const double bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p);
+                    const double bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, saltConcentration);
 
                     voidage_rates[iw] = surface_rates[iw] / bw;
                 }
@@ -755,6 +822,7 @@ namespace Opm {
                     , rs(0.0)
                     , rv(0.0)
                     , pv(0.0)
+                    , saltConcentration(0.0)
                 {}
 
                 double pressure;
@@ -762,6 +830,7 @@ namespace Opm {
                 double rs;
                 double rv;
                 double pv;
+                double saltConcentration;
             };
 
             Details::RegionAttributes<RegionId, Attributes> attr_;

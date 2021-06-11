@@ -17,15 +17,21 @@
 #ifndef FLOW_EBOS_SOLVENT_HPP
 #define FLOW_EBOS_SOLVENT_HPP
 
-#include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
-#include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
-
+#include <memory>
 
 namespace Opm {
-void flowEbosSolventSetDeck(double setupTime, Deck *deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig);
+
+class Deck;
+class EclipseState;
+class Schedule;
+class SummaryConfig;
+
+void flowEbosSolventSetDeck(double setupTime, std::unique_ptr<Deck> deck,
+                            std::unique_ptr<EclipseState> eclState,
+                            std::unique_ptr<Schedule> schedule,
+                            std::unique_ptr<SummaryConfig> summaryConfig);
 int flowEbosSolventMain(int argc, char** argv, bool outoutCout, bool outputFiles);
+
 }
 
 #endif // FLOW_EBOS_SOLVENT_HPP

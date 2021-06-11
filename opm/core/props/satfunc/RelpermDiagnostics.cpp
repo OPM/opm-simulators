@@ -19,13 +19,29 @@
 
 #include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
+
 #include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/Sof2Table.hpp>
+
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/parser/eclipse/EclipseState/Grid/SatfuncPropertyInitializers.hpp>
+#include <opm/parser/eclipse/EclipseState/Runspec.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SgfnTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SgofTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SgwfnTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SlgofTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/Sof2Table.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/Sof3Table.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SsfnTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SwfnTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SwofTable.hpp>
+
+#include <opm/grid/CpGrid.hpp>
+#include <opm/grid/polyhedralgrid.hh>
 
 namespace Opm{
 
-    void RelpermDiagnostics::phaseCheck_(const EclipseState& es)
+    bool RelpermDiagnostics::phaseCheck_(const EclipseState& es)
     {
         const auto& phases = es.runspec().phases();
         bool hasWater   = phases.active( Phase::WATER );
@@ -33,6 +49,23 @@ namespace Opm{
         bool hasOil     = phases.active( Phase::OIL );
         bool hasSolvent = phases.active( Phase::SOLVENT );
 
+        if (hasWater && !hasGas && !hasOil && !hasSolvent) {
+            const std::string msg = "System:  Single phase Water system. Nothing to check";
+            OpmLog::info(msg);
+            return false;
+        }
+
+        if (!hasWater && hasGas && !hasOil && !hasSolvent) {
+            const std::string msg = "System:  Single phase Gas system. Nothing to check";
+            OpmLog::info(msg);
+            return false;
+        }
+
+        if (!hasWater && !hasGas && hasOil && !hasSolvent) {
+            const std::string msg = "System:  Single phase Oil system. Nothing to check";
+            OpmLog::info(msg);
+            return false;
+        }
         if (hasWater && hasGas && !hasOil && !hasSolvent) {
             const std::string msg = "System:  Water-Gas system.";
             OpmLog::info(msg);
@@ -58,13 +91,14 @@ namespace Opm{
             OpmLog::info(msg);
             fluidSystem_ = FluidSystem::Solvent;
         }
+        return true;
     }
 
 
 
 
 
-    void RelpermDiagnostics::satFamilyCheck_(const Opm::EclipseState& eclState)
+    void RelpermDiagnostics::satFamilyCheck_(const EclipseState& eclState)
     {
         const PhaseUsage pu = phaseUsageFromDeck(eclState);
 
@@ -203,7 +237,7 @@ namespace Opm{
 
 
 
-    void RelpermDiagnostics::swofTableCheck_(const Opm::SwofTable& swofTables,
+    void RelpermDiagnostics::swofTableCheck_(const SwofTable& swofTables,
                                              const int satnumIdx)
     {
         const auto& sw = swofTables.getSwColumn();
@@ -238,7 +272,7 @@ namespace Opm{
 
 
 
-    void RelpermDiagnostics::sgofTableCheck_(const Opm::SgofTable& sgofTables,
+    void RelpermDiagnostics::sgofTableCheck_(const SgofTable& sgofTables,
                                              const int satnumIdx)
     {
         const auto& sg = sgofTables.getSgColumn();
@@ -273,7 +307,7 @@ namespace Opm{
         //TODO check if run with water.
     }
 
-    void RelpermDiagnostics::slgofTableCheck_(const Opm::SlgofTable& slgofTables,
+    void RelpermDiagnostics::slgofTableCheck_(const SlgofTable& slgofTables,
                                               const int satnumIdx)
     {
         const auto& sl = slgofTables.getSlColumn();
@@ -310,7 +344,7 @@ namespace Opm{
 
 
 
-    void RelpermDiagnostics::swfnTableCheck_(const Opm::SwfnTable& swfnTables,
+    void RelpermDiagnostics::swfnTableCheck_(const SwfnTable& swfnTables,
                                              const int satnumIdx)
     {
         const auto& sw = swfnTables.getSwColumn();
@@ -338,7 +372,7 @@ namespace Opm{
 
 
 
-    void RelpermDiagnostics::sgfnTableCheck_(const Opm::SgfnTable& sgfnTables,
+    void RelpermDiagnostics::sgfnTableCheck_(const SgfnTable& sgfnTables,
                                              const int satnumIdx)
     {
         const auto& sg = sgfnTables.getSgColumn();
@@ -365,7 +399,7 @@ namespace Opm{
 
 
 
-    void RelpermDiagnostics::sof3TableCheck_(const Opm::Sof3Table& sof3Tables,
+    void RelpermDiagnostics::sof3TableCheck_(const Sof3Table& sof3Tables,
                                              const int satnumIdx)
     {
         const auto& so = sof3Tables.getSoColumn();
@@ -410,7 +444,7 @@ namespace Opm{
 
 
 
-    void RelpermDiagnostics::sof2TableCheck_(const Opm::Sof2Table& sof2Tables,
+    void RelpermDiagnostics::sof2TableCheck_(const Sof2Table& sof2Tables,
                                              const int satnumIdx)
     {
         const auto& so = sof2Tables.getSoColumn();
@@ -438,7 +472,7 @@ namespace Opm{
 
 
 
-    void RelpermDiagnostics::sgwfnTableCheck_(const Opm::SgwfnTable& sgwfnTables,
+    void RelpermDiagnostics::sgwfnTableCheck_(const SgwfnTable& sgwfnTables,
                                               const int satnumIdx)
     {
         const auto& sg = sgwfnTables.getSgColumn();
@@ -475,7 +509,7 @@ namespace Opm{
 
 
 
-    void RelpermDiagnostics::sgcwmisTableCheck_(const Opm::SgcwmisTable& sgcwmisTables,
+    void RelpermDiagnostics::sgcwmisTableCheck_(const SgcwmisTable& sgcwmisTables,
                                                 const int satnumIdx)
     {
         const auto& sw = sgcwmisTables.getWaterSaturationColumn();
@@ -498,7 +532,7 @@ namespace Opm{
 
 
 
-    void RelpermDiagnostics::sorwmisTableCheck_(const Opm::SorwmisTable& sorwmisTables,
+    void RelpermDiagnostics::sorwmisTableCheck_(const SorwmisTable& sorwmisTables,
                                                 const int satnumIdx)
     {
         const auto& sw = sorwmisTables.getWaterSaturationColumn();
@@ -520,7 +554,7 @@ namespace Opm{
 
 
 
-    void RelpermDiagnostics::ssfnTableCheck_(const Opm::SsfnTable& ssfnTables,
+    void RelpermDiagnostics::ssfnTableCheck_(const SsfnTable& ssfnTables,
                                              const int satnumIdx)
     {
         const auto& frac = ssfnTables.getSolventFractionColumn();
@@ -551,7 +585,7 @@ namespace Opm{
 
 
 
-    void RelpermDiagnostics::miscTableCheck_(const Opm::MiscTable& miscTables,
+    void RelpermDiagnostics::miscTableCheck_(const MiscTable& miscTables,
                                              const int miscnumIdx)
     {
         const auto& frac = miscTables.getSolventFractionColumn();
@@ -575,7 +609,7 @@ namespace Opm{
 
 
 
-    void RelpermDiagnostics::msfnTableCheck_(const Opm::MsfnTable& msfnTables,
+    void RelpermDiagnostics::msfnTableCheck_(const MsfnTable& msfnTables,
                                              const int satnumIdx)
     {
         const auto& frac = msfnTables.getGasPhaseFractionColumn();
@@ -609,10 +643,26 @@ namespace Opm{
     void RelpermDiagnostics::unscaledEndPointsCheck_(const EclipseState& eclState)
     {
         // get the number of saturation regions and the number of cells in the deck
-        const int numSatRegions = eclState.runspec().tabdims().getNumSatTables();
+        const auto& runspec       = eclState.runspec();
+        const int   numSatRegions = runspec.tabdims().getNumSatTables();
+
+        if (numSatRegions < 1) {
+            return;
+        }
+
         unscaledEpsInfo_.resize(numSatRegions);
 
         const auto& tables = eclState.getTableManager();
+        const auto& phases = runspec.phases();
+        const auto tolcrit = runspec.saturationFunctionControls()
+            .minimumRelpermMobilityThreshold();
+
+        const auto rtep =
+            satfunc::getRawTableEndpoints(tables, phases, tolcrit);
+
+        const auto rfunc =
+            satfunc::getRawFunctionValues(tables, phases, rtep);
+
         const TableContainer&  swofTables = tables.getSwofTables();
         const TableContainer&  sgofTables = tables.getSgofTables();
         const TableContainer& slgofTables = tables.getSlgofTables();
@@ -620,7 +670,9 @@ namespace Opm{
 
         // std::cout << "***************\nEnd-Points In all the Tables\n";
         for (int satnumIdx = 0; satnumIdx < numSatRegions; ++satnumIdx) {
-             unscaledEpsInfo_[satnumIdx].extractUnscaled(eclState, satnumIdx);
+             this->unscaledEpsInfo_[satnumIdx]
+                 .extractUnscaled(rtep, rfunc, satnumIdx);
+
              const std::string regionIdx = std::to_string(satnumIdx + 1);
              ///Consistency check.
              if (unscaledEpsInfo_[satnumIdx].Sgu > (1. - unscaledEpsInfo_[satnumIdx].Swl)) {
@@ -677,9 +729,74 @@ namespace Opm{
         }
     }
 
+    template <class CartesianIndexMapper>
+    void RelpermDiagnostics::diagnosis(const EclipseState& eclState,
+                                       const CartesianIndexMapper& cartesianIndexMapper)
+    {
+        OpmLog::info("\n===============Saturation Functions Diagnostics===============\n");
+        bool doDiagnostics = phaseCheck_(eclState);
+        if (!doDiagnostics) // no diagnostics needed for single phase problems
+            return;
+        satFamilyCheck_(eclState);
+        tableCheck_(eclState);
+        unscaledEndPointsCheck_(eclState);
+        scaledEndPointsCheck_(eclState, cartesianIndexMapper);
+    }
 
+    template <class CartesianIndexMapper>
+    void RelpermDiagnostics::scaledEndPointsCheck_(const EclipseState& eclState,
+                                                   const CartesianIndexMapper& cartesianIndexMapper)
+    {
+        // All end points are subject to round-off errors, checks should account for it
+        const float tolerance = 1e-6;
+        const int nc = cartesianIndexMapper.compressedSize();
+        const bool threepoint = eclState.runspec().endpointScaling().threepoint();
+        scaledEpsInfo_.resize(nc);
+        EclEpsGridProperties epsGridProperties(eclState, false);
+        const std::string tag = "Scaled endpoints";
+        for (int c = 0; c < nc; ++c) {
+            const std::string satnumIdx = std::to_string(epsGridProperties.satRegion(c));
+            std::string cellIdx;
+            {
+                std::array<int, 3> ijk;
+                cartesianIndexMapper.cartesianCoordinate(c, ijk);
+                cellIdx = "(" + std::to_string(ijk[0]) + ", " +
+                    std::to_string(ijk[1]) + ", " +
+                    std::to_string(ijk[2]) + ")";
+            }
+            scaledEpsInfo_[c].extractScaled(eclState, epsGridProperties, c);
 
+            // SGU <= 1.0 - SWL
+            if (scaledEpsInfo_[c].Sgu > (1.0 - scaledEpsInfo_[c].Swl + tolerance)) {
+                const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SGU exceed 1.0 - SWL";
+                OpmLog::warning(tag, msg);
+            }
 
+            // SGL <= 1.0 - SWU
+            if (scaledEpsInfo_[c].Sgl > (1.0 - scaledEpsInfo_[c].Swu + tolerance)) {
+                const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SGL exceed 1.0 - SWU";
+                OpmLog::warning(tag, msg);
+            }
 
+            if (threepoint && fluidSystem_ == FluidSystem::BlackOil) {
+                // Mobilility check.
+                if ((scaledEpsInfo_[c].Sowcr + scaledEpsInfo_[c].Swcr) >= (1.0 + tolerance)) {
+                    const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SOWCR + SWCR exceed 1.0";
+                    OpmLog::warning(tag, msg);
+                }
 
+            if ((scaledEpsInfo_[c].Sogcr + scaledEpsInfo_[c].Sgcr + scaledEpsInfo_[c].Swl) >= (1.0 + tolerance)) {
+                    const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SOGCR + SGCR + SWL exceed 1.0";
+                    OpmLog::warning(tag, msg);
+                }
+            }
+        }
+    }
+
+#define INSTANCE_DIAGNOSIS(...) \
+    template void RelpermDiagnostics::diagnosis<Dune::CartesianIndexMapper<__VA_ARGS__>>(const EclipseState&, const Dune::CartesianIndexMapper<__VA_ARGS__>&); \
+    template void RelpermDiagnostics::scaledEndPointsCheck_<Dune::CartesianIndexMapper<__VA_ARGS__>>(const EclipseState&, const Dune::CartesianIndexMapper<__VA_ARGS__>&);
+
+    INSTANCE_DIAGNOSIS(Dune::CpGrid)
+    INSTANCE_DIAGNOSIS(Dune::PolyhedralGrid<3,3>)
 } //namespace Opm

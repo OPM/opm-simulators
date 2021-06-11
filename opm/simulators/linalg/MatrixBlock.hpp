@@ -458,6 +458,37 @@ namespace Opm
 {
 namespace Detail
 {
+    //! calculates ret = A * B
+    template< class TA, class TB, class TC, class PositiveSign >
+    static inline void multMatrixImpl( const TA &A, // n x m
+                                       const TB &B, // n x p
+                                       TC &ret,     // m x p
+                                       const PositiveSign )
+    {
+        typedef typename TA :: size_type size_type;
+        typedef typename TA :: field_type K;
+        assert( A.N() == B.N() );
+        assert( A.M() == ret.N() );
+        assert( B.M() == ret.M() );
+
+        const size_type n = A.N();
+        const size_type m = ret.N();
+        const size_type p = B.M();
+        for( size_type i = 0; i < m; ++i )
+        {
+            for( size_type j = 0; j < p; ++j )
+            {
+                K sum = 0;
+                for( size_type k = 0; k < n; ++k )
+                {
+                    sum += A[ i ][ k ] * B[ k ][ j ];
+                }
+                // set value depending on given sign
+                ret[ i ][ j ] = PositiveSign::value ? sum : -sum;
+            }
+        }
+    }
+
     //! calculates ret = sign * (A^T * B)
     //! TA, TB, and TC are not necessarily FieldMatrix, but those should
     //! follow the Dune::DenseMatrix interface.
@@ -536,6 +567,214 @@ namespace Detail
             }
         }
     }
+
+    //! perform out of place matrix inversion on C-style arrays
+    //! must have a specified block_size
+    template <int block_size>
+    struct Inverter
+    {
+        template <typename K>
+        void operator()(const K *matrix [[maybe_unused]], K *inverse [[maybe_unused]])
+        {
+            throw std::logic_error("Not implemented");
+        }
+    };
+
+    //! perform out of place matrix inversion on C-style arrays
+    template <>
+    struct Inverter<4>
+    {
+        template <typename K>
+        void operator()(const K *matrix, K *inverse)
+        {
+            // based on Dune::FMatrixHelp::invertMatrix
+            inverse[0] = matrix[5] * matrix[10] * matrix[15] -
+                    matrix[5] * matrix[11] * matrix[14] -
+                    matrix[9] * matrix[6] * matrix[15] +
+                    matrix[9] * matrix[7] * matrix[14] +
+                    matrix[13] * matrix[6] * matrix[11] -
+                    matrix[13] * matrix[7] * matrix[10];
+
+            inverse[4] = -matrix[4] * matrix[10] * matrix[15] +
+                    matrix[4] * matrix[11] * matrix[14] +
+                    matrix[8] * matrix[6] * matrix[15] -
+                    matrix[8] * matrix[7] * matrix[14] -
+                    matrix[12] * matrix[6] * matrix[11] +
+                    matrix[12] * matrix[7] * matrix[10];
+
+            inverse[8] = matrix[4] * matrix[9] * matrix[15] -
+                    matrix[4] * matrix[11] * matrix[13] -
+                    matrix[8] * matrix[5] * matrix[15] +
+                    matrix[8] * matrix[7] * matrix[13] +
+                    matrix[12] * matrix[5] * matrix[11] -
+                    matrix[12] * matrix[7] * matrix[9];
+
+            inverse[12] = -matrix[4] * matrix[9] * matrix[14] +
+                    matrix[4] * matrix[10] * matrix[13] +
+                    matrix[8] * matrix[5] * matrix[14] -
+                    matrix[8] * matrix[6] * matrix[13] -
+                    matrix[12] * matrix[5] * matrix[10] +
+                    matrix[12] * matrix[6] * matrix[9];
+
+            inverse[1]= -matrix[1]  * matrix[10] * matrix[15] +
+                    matrix[1] * matrix[11] * matrix[14] +
+                    matrix[9] * matrix[2] * matrix[15] -
+                    matrix[9] * matrix[3] * matrix[14] -
+                    matrix[13] * matrix[2] * matrix[11] +
+                    matrix[13] * matrix[3] * matrix[10];
+
+            inverse[5] = matrix[0] * matrix[10] * matrix[15] -
+                    matrix[0] * matrix[11] * matrix[14] -
+                    matrix[8] * matrix[2] * matrix[15] +
+                    matrix[8] * matrix[3] * matrix[14] +
+                    matrix[12] * matrix[2] * matrix[11] -
+                    matrix[12] * matrix[3] * matrix[10];
+
+            inverse[9] = -matrix[0] * matrix[9] * matrix[15] +
+                    matrix[0] * matrix[11] * matrix[13] +
+                    matrix[8] * matrix[1] * matrix[15] -
+                    matrix[8] * matrix[3] * matrix[13] -
+                    matrix[12] * matrix[1] * matrix[11] +
+                    matrix[12] * matrix[3] * matrix[9];
+
+            inverse[13] = matrix[0] * matrix[9] * matrix[14] -
+                    matrix[0] * matrix[10] * matrix[13] -
+                    matrix[8] * matrix[1] * matrix[14] +
+                    matrix[8] * matrix[2] * matrix[13] +
+                    matrix[12] * matrix[1] * matrix[10] -
+                    matrix[12] * matrix[2] * matrix[9];
+
+            inverse[2] = matrix[1] * matrix[6] * matrix[15] -
+                    matrix[1] * matrix[7] * matrix[14] -
+                    matrix[5] * matrix[2] * matrix[15] +
+                    matrix[5] * matrix[3] * matrix[14] +
+                    matrix[13] * matrix[2] * matrix[7] -
+                    matrix[13] * matrix[3] * matrix[6];
+
+            inverse[6] = -matrix[0]  * matrix[6] * matrix[15] +
+                    matrix[0] * matrix[7] * matrix[14] +
+                    matrix[4] * matrix[2] * matrix[15] -
+                    matrix[4] * matrix[3] * matrix[14] -
+                    matrix[12] * matrix[2] * matrix[7] +
+                    matrix[12] * matrix[3] * matrix[6];
+
+            inverse[10] = matrix[0] * matrix[5] * matrix[15] -
+                    matrix[0] * matrix[7] * matrix[13] -
+                    matrix[4] * matrix[1] * matrix[15] +
+                    matrix[4] * matrix[3] * matrix[13] +
+                    matrix[12] * matrix[1] * matrix[7] -
+                    matrix[12] * matrix[3] * matrix[5];
+
+            inverse[14] = -matrix[0] * matrix[5] * matrix[14] +
+                    matrix[0] * matrix[6] * matrix[13] +
+                    matrix[4] * matrix[1] * matrix[14] -
+                    matrix[4] * matrix[2] * matrix[13] -
+                    matrix[12] * matrix[1] * matrix[6] +
+                    matrix[12] * matrix[2] * matrix[5];
+
+            inverse[3] = -matrix[1] * matrix[6] * matrix[11] +
+                    matrix[1] * matrix[7] * matrix[10] +
+                    matrix[5] * matrix[2] * matrix[11] -
+                    matrix[5] * matrix[3] * matrix[10] -
+                    matrix[9] * matrix[2] * matrix[7] +
+                    matrix[9] * matrix[3] * matrix[6];
+
+            inverse[7] = matrix[0] * matrix[6] * matrix[11] -
+                    matrix[0] * matrix[7] * matrix[10] -
+                    matrix[4] * matrix[2] * matrix[11] +
+                    matrix[4] * matrix[3] * matrix[10] +
+                    matrix[8] * matrix[2] * matrix[7] -
+                    matrix[8] * matrix[3] * matrix[6];
+
+            inverse[11] = -matrix[0] * matrix[5] * matrix[11] +
+                    matrix[0] * matrix[7] * matrix[9] +
+                    matrix[4] * matrix[1] * matrix[11] -
+                    matrix[4] * matrix[3] * matrix[9] -
+                    matrix[8] * matrix[1] * matrix[7] +
+                    matrix[8] * matrix[3] * matrix[5];
+
+            inverse[15] = matrix[0] * matrix[5] * matrix[10] -
+                    matrix[0] * matrix[6] * matrix[9] -
+                    matrix[4] * matrix[1] * matrix[10] +
+                    matrix[4] * matrix[2] * matrix[9] +
+                    matrix[8] * matrix[1] * matrix[6] -
+                    matrix[8] * matrix[2] * matrix[5];
+
+            K det = matrix[0] * inverse[0] + matrix[1] * inverse[4] +
+                    matrix[2] * inverse[8] + matrix[3] * inverse[12];
+
+            // return identity for singular or nearly singular matrices.
+            if (std::abs(det) < 1e-40) {
+                for (int i = 0; i < 4; ++i){
+                    inverse[4*i + i] = 1.0;
+                }
+            }
+            K inv_det = 1.0 / det;
+
+            for (unsigned int i = 0; i < 4 * 4; ++i) {
+                inverse[i] *= inv_det;
+            }
+        }
+    };
+
+    //! perform out of place matrix inversion on C-style arrays
+    template <>
+    struct Inverter<3>
+    {
+        template <typename K>
+        void operator()(const K *matrix, K *inverse)
+        {
+            // code generated by maple, copied from Dune::DenseMatrix
+            K t4  = matrix[0] * matrix[4];
+            K t6  = matrix[0] * matrix[5];
+            K t8  = matrix[1] * matrix[3];
+            K t10 = matrix[2] * matrix[3];
+            K t12 = matrix[1] * matrix[6];
+            K t14 = matrix[2] * matrix[6];
+
+            K det = (t4 * matrix[8] - t6 * matrix[7] - t8 * matrix[8] +
+                          t10 * matrix[7] + t12 * matrix[5] - t14 * matrix[4]);
+            K t17 = 1.0 / det;
+
+            inverse[0] =  (matrix[4] * matrix[8] - matrix[5] * matrix[7]) * t17;
+            inverse[1] = -(matrix[1] * matrix[8] - matrix[2] * matrix[7]) * t17;
+            inverse[2] =  (matrix[1] * matrix[5] - matrix[2] * matrix[4]) * t17;
+            inverse[3] = -(matrix[3] * matrix[8] - matrix[5] * matrix[6]) * t17;
+            inverse[4] =  (matrix[0] * matrix[8] - t14) * t17;
+            inverse[5] = -(t6 - t10) * t17;
+            inverse[6] =  (matrix[3] * matrix[7] - matrix[4] * matrix[6]) * t17;
+            inverse[7] = -(matrix[0] * matrix[7] - t12) * t17;
+            inverse[8] =  (t4 - t8) * t17;
+        }
+    };
+
+    //! perform out of place matrix inversion on C-style arrays
+    template <>
+    struct Inverter<2>
+    {
+        template <typename K>
+        void operator()(const K *matrix, K *inverse)
+        {
+            // code based on Dune::DenseMatrix
+            K detinv = matrix[0] * matrix[3] - matrix[1] * matrix[2];
+            detinv = 1 / detinv;
+            inverse[0] =  matrix[3] * detinv;
+            inverse[1] = -matrix[1] * detinv;
+            inverse[2] = -matrix[2] * detinv;
+            inverse[3] =  matrix[0] * detinv;
+        }
+    };
+
+    //! perform out of place matrix inversion on C-style arrays
+    template <>
+    struct Inverter<1>
+    {
+        template <typename K>
+        void operator()(const K *matrix, K *inverse)
+        {
+            inverse[0] = 1.0 / matrix[0];
+        }
+    };
 
 } // namespace Detail
 } // namespace Opm

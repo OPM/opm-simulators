@@ -17,6 +17,12 @@ DIMENS
 REGDIMS
   3 /
 
+--
+--       WELL    WELL    GRUPS   GRUPS
+--       MXWELS  MXCONS  MXGRPS  MXGRPW
+WELLDIMS
+         4       4       3        3      /
+
 OIL
 GAS
 WATER

@@ -34,79 +34,81 @@ namespace Opm {
 
 bool ebosBlackOilDeckFileNameIsSet(int argc, char** argv)
 {
-    typedef TTAG(EbosTypeTag) ProblemTypeTag;
+    using ProblemTypeTag = Properties::TTag::EbosTypeTag;
 
     // use the ewoms parameter machinery and the blackoil vanguard to handle the grunt of
     // the work
-    EWOMS_RESET_PARAMS_(ProblemTypeTag);
-    Opm::setupParameters_<ProblemTypeTag>(argc,
-                                          const_cast<const char**>(argv),
-                                          /*doRegistration=*/true,
-                                          /*allowUnused=*/true,
-                                          /*handleHelp=*/false);
+    Parameters::reset<ProblemTypeTag>();
+    setupParameters_<ProblemTypeTag>(argc,
+                                     const_cast<const char**>(argv),
+                                     /*doRegistration=*/true,
+                                     /*allowUnused=*/true,
+                                     /*handleHelp=*/false);
     bool result = EWOMS_PARAM_IS_SET(ProblemTypeTag, std::string, EclDeckFileName);
-    EWOMS_RESET_PARAMS_(ProblemTypeTag);
+    Parameters::reset<ProblemTypeTag>();
 
     return result;
 }
 
 std::string ebosBlackOilGetDeckFileName(int argc, char** argv)
 {
-    typedef TTAG(EbosTypeTag) ProblemTypeTag;
-    typedef GET_PROP_TYPE(ProblemTypeTag, Vanguard) Vanguard;
+    using ProblemTypeTag = Properties::TTag::EbosTypeTag;
+    using Vanguard = GetPropType<ProblemTypeTag, Properties::Vanguard>;
 
     // use the ewoms parameter machinery and the blackoil vanguard to handle the grunt of
     // the work
-    EWOMS_RESET_PARAMS_(ProblemTypeTag);
-    Opm::setupParameters_<ProblemTypeTag>(argc,
-                                          const_cast<const char**>(argv),
-                                          /*doRegistration=*/true,
-                                          /*allowUnused=*/true,
-                                          /*handleHelp=*/false);
+    Parameters::reset<ProblemTypeTag>();
+    setupParameters_<ProblemTypeTag>(argc,
+                                     const_cast<const char**>(argv),
+                                     /*doRegistration=*/true,
+                                     /*allowUnused=*/true,
+                                     /*handleHelp=*/false);
     std::string rawDeckFileName = EWOMS_GET_PARAM(ProblemTypeTag, std::string, EclDeckFileName);
-    std::string result = Vanguard::canonicalDeckPath(rawDeckFileName).string();
-    EWOMS_RESET_PARAMS_(ProblemTypeTag);
+    std::string result = Vanguard::canonicalDeckPath(rawDeckFileName);
+    Parameters::reset<ProblemTypeTag>();
 
     return result;
 }
 
-std::unique_ptr<Opm::ParseContext> ebosBlackOilCreateParseContext(int argc, char** argv)
+std::unique_ptr<ParseContext> ebosBlackOilCreateParseContext(int argc, char** argv)
 {
-    typedef TTAG(EbosTypeTag) ProblemTypeTag;
-    typedef GET_PROP_TYPE(ProblemTypeTag, Vanguard) Vanguard;
+    using ProblemTypeTag = Properties::TTag::EbosTypeTag;
+    using Vanguard = GetPropType<ProblemTypeTag, Properties::Vanguard>;
 
     // use the ewoms parameter machinery and the blackoil vanguard to handle the grunt of
     // the work
-    EWOMS_RESET_PARAMS_(ProblemTypeTag);
-    Opm::setupParameters_<ProblemTypeTag>(argc,
-                                          const_cast<const char**>(argv),
-                                          /*doRegistration=*/true,
-                                          /*allowUnused=*/true,
-                                          /*handleHelp=*/false);
-    std::unique_ptr<Opm::ParseContext> result = Vanguard::createParseContext();
-    EWOMS_RESET_PARAMS_(ProblemTypeTag);
+    Parameters::reset<ProblemTypeTag>();
+    setupParameters_<ProblemTypeTag>(argc,
+                                     const_cast<const char**>(argv),
+                                     /*doRegistration=*/true,
+                                     /*allowUnused=*/true,
+                                     /*handleHelp=*/false);
+    const std::string ignoredKeywords = EWOMS_GET_PARAM(ProblemTypeTag, std::string, IgnoreKeywords);
+    bool eclStrictParsing = EWOMS_GET_PARAM(ProblemTypeTag, bool, EclStrictParsing);
+    std::unique_ptr<ParseContext> result = Vanguard::createParseContext(ignoredKeywords, eclStrictParsing);
+    Parameters::reset<ProblemTypeTag>();
 
     return result;
 }
 
-void ebosBlackOilSetDeck(Opm::Deck* deck,
-                         Opm::ParseContext* parseContext,
-                         Opm::ErrorGuard* errorGuard,
+void ebosBlackOilSetDeck(std::unique_ptr<Deck> deck,
+                         std::unique_ptr<ParseContext> parseContext,
+                         std::unique_ptr<ErrorGuard> errorGuard,
                          double externalSetupTime)
 {
-    typedef TTAG(EbosTypeTag) ProblemTypeTag;
-    typedef GET_PROP_TYPE(ProblemTypeTag, Vanguard) Vanguard;
+    using ProblemTypeTag = Properties::TTag::EbosTypeTag;
+    using Vanguard = GetPropType<ProblemTypeTag, Properties::Vanguard>;
 
     Vanguard::setExternalSetupTime(externalSetupTime);
-    Vanguard::setExternalParseContext(parseContext);
-    Vanguard::setExternalErrorGuard(errorGuard);
-    Vanguard::setExternalDeck(deck);
+    Vanguard::setExternalParseContext(std::move(parseContext));
+    Vanguard::setExternalErrorGuard(std::move(errorGuard));
+    Vanguard::setExternalDeck(std::move(deck));
 }
 
 int ebosBlackOilMain(int argc, char **argv)
 {
-    typedef TTAG(EbosTypeTag) ProblemTypeTag;
-    return Opm::startEbos<ProblemTypeTag>(argc, argv);
+    using ProblemTypeTag = Properties::TTag::EbosTypeTag;
+    return startEbos<ProblemTypeTag>(argc, argv);
 }
 
 }

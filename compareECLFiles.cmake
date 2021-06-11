@@ -96,7 +96,6 @@ function(add_test_compare_restarted_simulation)
                            ${PARAM_ABS_TOL} ${PARAM_REL_TOL}
                            ${COMPARE_ECL_COMMAND}
                            ${OPM_PACK_COMMAND}
-                           0
                TEST_ARGS ${PARAM_TEST_ARGS})
 endfunction()
 
@@ -161,7 +160,6 @@ function(add_test_compare_parallel_restarted_simulation)
                            ${PARAM_ABS_TOL} ${PARAM_REL_TOL}
                            ${COMPARE_ECL_COMMAND}
                            ${OPM_PACK_COMMAND}
-                           1
                TEST_ARGS ${PARAM_TEST_ARGS})
   set_tests_properties(compareParallelRestartedSim_${PARAM_SIMULATOR}+${PARAM_FILENAME}
                        PROPERTIES RUN_SERIAL 1)
@@ -192,11 +190,12 @@ set(abs_tol 2e-2)
 set(rel_tol 1e-5)
 set(coarse_rel_tol 1e-2)
 
-add_test_compareECLFiles(CASENAME spe1
+add_test_compareECLFiles(CASENAME spe12
                          FILENAME SPE1CASE2
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
-                         REL_TOL ${coarse_rel_tol})
+                         REL_TOL ${coarse_rel_tol}
+                         DIR spe1)
 
 add_test_compareECLFiles(CASENAME spe1_2p
                          FILENAME SPE1CASE2_2P
@@ -218,6 +217,13 @@ add_test_compareECLFiles(CASENAME spe1
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol})
 
+add_test_compareECLFiles(CASENAME spe1_import
+                         FILENAME SPE1CASE1_IMPORT
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR spe1)
+
 
 add_test_compareECLFiles(CASENAME spe1_nowells
                          FILENAME SPE1CASE2_NOWELLS
@@ -228,6 +234,13 @@ add_test_compareECLFiles(CASENAME spe1_nowells
 
 add_test_compareECLFiles(CASENAME spe1_thermal
                          FILENAME SPE1CASE2_THERMAL
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR spe1)
+
+add_test_compareECLFiles(CASENAME spe1_thermal_watvisc
+                         FILENAME SPE1CASE2_THERMAL_WATVISC
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
@@ -254,6 +267,29 @@ add_test_compareECLFiles(CASENAME spe1_metric_vfp1
                          REL_TOL ${rel_tol}
                          DIR vfpprod_spe1)
 
+if(BUILD_FLOW_VARIANTS)
+  add_test_compareECLFiles(CASENAME spe1_water
+                           FILENAME SPE1CASE1_WATER
+                           SIMULATOR flow_onephase
+                           ABS_TOL ${abs_tol}
+                           REL_TOL ${rel_tol}
+                           DIR spe1)
+
+  add_test_compareECLFiles(CASENAME spe1_thermal_onephase
+                           FILENAME SPE1CASE2_THERMAL_ONEPHASE
+                           SIMULATOR flow_onephase_energy
+                           ABS_TOL ${abs_tol}
+                           REL_TOL ${rel_tol}
+                           DIR spe1)
+endif()
+
+add_test_compareECLFiles(CASENAME spe1_spider
+                           FILENAME SPIDER_CAKESLICE
+                           SIMULATOR flow
+                           ABS_TOL ${abs_tol}
+                           REL_TOL ${rel_tol}
+                           DIR radial_grid)
+
 add_test_compareECLFiles(CASENAME ctaquifer_2d_oilwater
                          FILENAME 2D_OW_CTAQUIFER
                          SIMULATOR flow
@@ -267,6 +303,22 @@ add_test_compareECLFiles(CASENAME fetkovich_2d
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR aquifer-fetkovich)
+
+add_test_compareECLFiles(CASENAME numerical_aquifer_3d_2aqu
+                         FILENAME 3D_2AQU_NUM
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR aquifer-num
+                         TEST_ARGS --relaxed-max-pv-fraction=0 --tolerance-cnv=0.00003 --time-step-control=pid --linsolver=cpr)
+
+add_test_compareECLFiles(CASENAME numerical_aquifer_3d_1aqu
+                         FILENAME 3D_1AQU_3CELLS
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR aquifer-num
+                         TEST_ARGS --relaxed-max-pv-fraction=0 --tolerance-cnv=0.00003 --time-step-control=pid --linsolver=cpr)
 
 add_test_compareECLFiles(CASENAME spe3
                          FILENAME SPE3CASE1
@@ -286,6 +338,13 @@ add_test_compareECLFiles(CASENAME spe9group
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol})
+
+add_test_compareECLFiles(CASENAME spe9group_resv
+                         FILENAME SPE9_CP_GROUP_RESV
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR spe9group)
 
 add_test_compareECLFiles(CASENAME msw_2d_h
                          FILENAME 2D_H__
@@ -323,6 +382,13 @@ add_test_compareECLFiles(CASENAME polymer_simple2D
 
 add_test_compareECLFiles(CASENAME spe5
                          FILENAME SPE5CASE1
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${coarse_rel_tol}
+                         TEST_ARGS --flow-newton-max-iterations=20)
+
+add_test_compareECLFiles(CASENAME spe5_co2eor
+                         FILENAME SPE5CASE1_DYN
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol}
@@ -445,6 +511,70 @@ add_test_compareECLFiles(CASENAME udq_wconprod
                          REL_TOL ${rel_tol}
                          DIR udq_actionx)
 
+add_test_compareECLFiles(CASENAME actionx_m1
+                         FILENAME ACTIONX_M1
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR udq_actionx
+                         TEST_ARGS --solver-max-time-step-in-days=1)
+
+add_test_compareECLFiles(CASENAME pinch_multz_all
+                         FILENAME PINCH_MULTZ_ALL
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR pinch)
+
+add_test_compareECLFiles(CASENAME pinch_multz_all_barrier
+                         FILENAME PINCH_MULTZ_ALL_BARRIER
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR pinch)
+
+add_test_compareECLFiles(CASENAME udq_uadd
+                         FILENAME UDQ_M1
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR udq_actionx)
+
+add_test_compareECLFiles(CASENAME udq_undefined
+                         FILENAME UDQ_M2
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR udq_actionx)
+
+add_test_compareECLFiles(CASENAME udq_in_actionx
+                         FILENAME UDQ_M3
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR udq_actionx)
+
+add_test_compareECLFiles(CASENAME co2store
+                         FILENAME CO2STORE
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR co2store)
+
+add_test_compareECLFiles(CASENAME co2store_diffusive
+                         FILENAME CO2STORE_DIFFUSIVE
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR co2store)
+
+add_test_compareECLFiles(CASENAME co2store_drsdtcon
+                         FILENAME CO2STORE_DRSDTCON
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR co2store)
+
 if (opm-common_EMBEDDED_PYTHON)
   add_test_compareECLFiles(CASENAME udq_pyaction
                            FILENAME PYACTION_WCONPROD
@@ -552,6 +682,20 @@ add_test_compareECLFiles(CASENAME 9_2a_grpctl_msw_model2
                          REL_TOL ${rel_tol}
                          DIR model2)
 
+add_test_compareECLFiles(CASENAME 9_2b_grpctl_stw_model2
+                         FILENAME 9_2B_DEPL_GCONPROD_2L_STW
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2)
+
+add_test_compareECLFiles(CASENAME 9_2b_grpctl_msw_model2
+                         FILENAME 9_2B_DEPL_GCONPROD_2L_MSW
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2)
+
 add_test_compareECLFiles(CASENAME 9_3a_grpctl_stw_model2
                          FILENAME 9_3A_GINJ_REIN-G_STW
                          SIMULATOR flow
@@ -589,6 +733,34 @@ add_test_compareECLFiles(CASENAME 9_3c_grpctl_stw_model2
 
 add_test_compareECLFiles(CASENAME 9_3c_grpctl_msw_model2
                          FILENAME 9_3C_GINJ_GAS_GCONSUMP_MSW
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2)
+
+add_test_compareECLFiles(CASENAME 9_3d_grpctl_stw_model2
+                         FILENAME 9_3D_GINJ_GAS_MAX_EXPORT_STW
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2)
+
+add_test_compareECLFiles(CASENAME 9_3d_grpctl_msw_model2
+                         FILENAME 9_3D_GINJ_GAS_MAX_EXPORT_MSW
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2)
+
+add_test_compareECLFiles(CASENAME 9_3e_grpctl_stw_model2
+                         FILENAME 9_3E_GAS_MIN_EXPORT_STW
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model2)
+
+add_test_compareECLFiles(CASENAME 9_3e_grpctl_msw_model2
+                         FILENAME 9_3E_GAS_MIN_EXPORT_MSW
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
@@ -650,8 +822,35 @@ add_test_compareECLFiles(CASENAME 9_4d_grpctl_msw_model2
                          REL_TOL ${rel_tol}
                          DIR model2)
 
+add_test_compareECLFiles(CASENAME model4_group
+                         FILENAME MOD4_GRP
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model4)
+
+add_test_compareECLFiles(CASENAME model4_udq_group
+                         FILENAME MOD4_UDQ_ACTIONX
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model4)
+
+add_test_compareECLFiles(CASENAME model6_msw
+                         FILENAME 1_MSW_MODEL6
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model6)
+
 add_test_compareECLFiles(CASENAME wsegsicd
 			  FILENAME TEST_WSEGSICD
+			  SIMULATOR flow
+			  ABS_TOL ${abs_tol}
+			  REL_TOL ${rel_tol})
+
+add_test_compareECLFiles(CASENAME wsegaicd
+			  FILENAME BASE_MSW_WSEGAICD
 			  SIMULATOR flow
 			  ABS_TOL ${abs_tol}
 			  REL_TOL ${rel_tol})
@@ -677,12 +876,34 @@ add_test_compareECLFiles(CASENAME bc_lab
                          REL_TOL ${rel_tol}
                          DIR bc_lab)
 
+add_test_compareECLFiles(CASENAME norne_reperf
+                         FILENAME NORNE_ATW2013_B1H_RE-PERF
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR norne)
+
+add_test_compareECLFiles(CASENAME compl_smry
+                         FILENAME COMPL_SMRY
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR compl_smry)
+
+add_test_compareECLFiles(CASENAME 3d_tran_operator
+                         FILENAME 3D_TRAN_OPERATOR
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR parallel_fieldprops)
+
 # Restart tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
 
 # Cruder tolerances for the restarted tests
 set(abs_tol_restart 2e-1)
-set(rel_tol_restart 4e-5)
+set(rel_tol_restart 4e-4)
+
 add_test_compare_restarted_simulation(CASENAME spe1
                                       FILENAME SPE1CASE2_ACTNUM
                                       SIMULATOR flow
@@ -695,12 +916,20 @@ add_test_compare_restarted_simulation(CASENAME spe9
                                       ABS_TOL ${abs_tol_restart}
                                       REL_TOL ${rel_tol_restart}
                                       TEST_ARGS --sched-restart=false)
+
+# The dynamic MSW data is not written to /read from the restart file
+# We therefore accept significant deviation in the results.
+# Note also that we use --sched-restart=true since some necessary
+# MSW info is still lacking in the restart file.
+set(abs_tol_restart_msw 2e2)
+set(rel_tol_restart_msw 1e-3)
+
 add_test_compare_restarted_simulation(CASENAME msw_3d_hfa
                                       FILENAME 3D_MSW
                                       SIMULATOR flow
-                                      ABS_TOL ${abs_tol_restart}
-                                      REL_TOL ${rel_tol_restart}
-                                      TEST_ARGS --sched-restart=false)
+                                      ABS_TOL ${abs_tol_restart_msw}
+                                      REL_TOL ${rel_tol_restart_msw}
+                                      TEST_ARGS --enable-adaptive-time-stepping=false --sched-restart=true)
 
 # PORV test
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-porv-acceptanceTest.sh "")
@@ -723,9 +952,16 @@ add_test_compareECLFiles(CASENAME norne
                          PREFIX compareECLInitFiles
                          DIR_PREFIX /init)
 
+# This is not a proper regression test; the test will load a norne case prepared
+# for restart and run one single timestep - of length one day. The results are not
+# verified in any way.
+add_test(NAME NORNE_RESTART
+         COMMAND flow --output-dir=${BASE_RESULT_PATH}/norne-restart ${OPM_TESTS_ROOT}/norne/NORNE_ATW2013_RESTART.DATA)
+
+
 # Parallel tests
 if(MPI_FOUND)
-  opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
+  opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-parallel-restart-regressionTest.sh "")
   add_test_compare_parallel_restarted_simulation(CASENAME spe1
                                                  FILENAME SPE1CASE2_ACTNUM
                                                  SIMULATOR flow
@@ -738,7 +974,7 @@ if(MPI_FOUND)
 
   # Different tolerances for these tests
   set(abs_tol_parallel 0.02)
-  set(rel_tol_parallel 1e-5)
+  set(rel_tol_parallel 8e-5)
   set(coarse_rel_tol_parallel 1e-2)
 
   add_test_compare_parallel_simulation(CASENAME spe1
@@ -751,6 +987,14 @@ if(MPI_FOUND)
   add_test_compare_parallel_simulation(CASENAME spe9
                                        FILENAME SPE9_CP_SHORT
                                        SIMULATOR flow
+                                       ABS_TOL ${abs_tol_parallel}
+                                       REL_TOL ${rel_tol_parallel}
+                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
+
+  # A test for distributed standard wells. We load distribute only along the z-axis
+  add_test_compare_parallel_simulation(CASENAME spe9
+                                       FILENAME SPE9_CP_SHORT
+                                       SIMULATOR flow_distribute_z
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${rel_tol_parallel}
                                        TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
@@ -787,8 +1031,7 @@ if(MPI_FOUND)
                                        FILENAME SPE1FOAM
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol}
-                                       REL_TOL ${rel_tol}
-                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
+                                       REL_TOL ${coarse_rel_tol_parallel})
 
   add_test_compare_parallel_simulation(CASENAME spe1_thermal
                                        FILENAME SPE1CASE2_THERMAL
@@ -798,10 +1041,76 @@ if(MPI_FOUND)
                                        DIR spe1
                                        TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
+if(BUILD_FLOW_VARIANTS)
+  add_test_compare_parallel_simulation(CASENAME spe1_thermal
+                                       FILENAME SPE1CASE2_THERMAL_ONEPHASE
+                                       SIMULATOR flow_onephase_energy
+                                       ABS_TOL ${abs_tol}
+                                       REL_TOL ${rel_tol}
+                                       DIR spe1
+                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
+
+  add_test_compare_parallel_simulation(CASENAME spe1_water
+                                       FILENAME SPE1CASE1_WATER
+                                       SIMULATOR flow_onephase
+                                       ABS_TOL ${abs_tol}
+                                       REL_TOL ${rel_tol}
+                                       DIR spe1
+                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
+endif()
+
   add_test_compare_parallel_simulation(CASENAME spe1_brine
                                        FILENAME SPE1CASE1_BRINE
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol_parallel}
+                                       REL_TOL ${coarse_rel_tol_parallel}
+                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
+
+  add_test_compare_parallel_simulation(CASENAME fetkovich_2d
+                                       FILENAME 2D_FETKOVICHAQUIFER
+                                       SIMULATOR flow
+                                       ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${rel_tol_parallel}
+                                       DIR aquifer-fetkovich
+                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
+
+  add_test_compare_parallel_simulation(CASENAME ctaquifer_2d_oilwater
+                                       FILENAME 2D_OW_CTAQUIFER
+                                       SIMULATOR flow
+                                       ABS_TOL ${abs_tol_parallel}
+                                       REL_TOL ${rel_tol_parallel}
+                                       DIR aquifer-oilwater
+                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
+
+  add_test_compare_parallel_simulation(CASENAME 3d_tran_operator
+                                       FILENAME 3D_TRAN_OPERATOR
+                                       SIMULATOR flow
+                                       ABS_TOL ${abs_tol_parallel}
+                                       REL_TOL ${rel_tol_parallel}
+                                       DIR parallel_fieldprops
+                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
+
+  add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_2aqu
+                                       FILENAME 3D_2AQU_NUM
+                                       SIMULATOR flow
+                                       ABS_TOL 0.12
+                                       REL_TOL ${coarse_rel_tol_parallel}
+                                       DIR aquifer-num
+                                       TEST_ARGS --relaxed-max-pv-fraction=0 --tolerance-cnv=0.00003 --time-step-control=pid --linsolver=cpr)
+
+  add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_1aqu
+                                       FILENAME 3D_1AQU_3CELLS
+                                       SIMULATOR flow
+                                       ABS_TOL ${abs_tol_parallel}
+                                       REL_TOL ${coarse_rel_tol_parallel}
+                                       DIR aquifer-num
+                                       TEST_ARGS --relaxed-max-pv-fraction=0 --tolerance-cnv=0.00003 --time-step-control=pid --linsolver=cpr)
+
+  add_test_compare_parallel_simulation(CASENAME actionx_m1
+                                       FILENAME ACTIONX_M1
+                                       SIMULATOR flow
+                                       ABS_TOL ${abs_tol_parallel}
+                                       REL_TOL ${coarse_rel_tol_parallel}
+                                       DIR udq_actionx
                                        TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
 endif()
