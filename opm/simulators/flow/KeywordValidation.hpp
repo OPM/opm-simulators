@@ -22,6 +22,8 @@
 
 #include <opm/common/OpmLog/KeywordLocation.hpp>
 
+#include <functional>
+#include <initializer_list>
 #include <map>
 #include <optional>
 #include <string>
@@ -47,7 +49,7 @@ namespace KeywordValidation
     template <typename T>
     struct PartiallySupportedKeywordProperties {
         bool critical; // Set to true if the unsupported item value should be an error
-        std::vector<T> permitted_values; // The list of permitted values
+        std::function<bool(T)> validator; // Predicate function to test values
         std::optional<std::string> message; // An optional message to show if an illegal item is encountered
     };
 
@@ -68,8 +70,8 @@ namespace KeywordValidation
     struct ValidationError {
         bool critical; // Determines if the encountered problem should be an error or a warning
         KeywordLocation location; // Location information (keyword name, file and line number)
-        size_t record_number; // Number of the offending record.
-        std::optional<size_t> item_number; // Number of the offending item, -1 if the kewyord is not supported at all.
+        size_t record_number; // Number of the offending record
+        std::optional<size_t> item_number; // Number of the offending item
         std::optional<std::string> item_value; // The offending value of a problematic item
         std::optional<std::string> user_message; // An optional message to show if a problem is encountered
     };
@@ -86,10 +88,12 @@ namespace KeywordValidation
     public:
         KeywordValidator(const UnsupportedKeywords& keywords,
                          const PartiallySupportedKeywords<std::string>& string_items,
-                         const PartiallySupportedKeywords<int>& int_items)
+                         const PartiallySupportedKeywords<int>& int_items,
+                         const PartiallySupportedKeywords<double>& double_items)
             : m_keywords(keywords)
             , m_string_items(string_items)
             , m_int_items(int_items)
+            , m_double_items(double_items)
         {
         }
 
@@ -121,6 +125,29 @@ namespace KeywordValidation
         const UnsupportedKeywords m_keywords;
         const PartiallySupportedKeywords<std::string> m_string_items;
         const PartiallySupportedKeywords<int> m_int_items;
+        const PartiallySupportedKeywords<double> m_double_items;
+    };
+
+
+    // Helper class to test if a given value is with a list of allowed values.
+    template <typename T>
+    class allow_values
+    {
+    public:
+        allow_values(const std::initializer_list<T>& allowed_values)
+        {
+            for (auto item : allowed_values) {
+                m_allowed_values.push_back(item);
+            }
+        }
+
+        bool operator()(const T& value) const
+        {
+            return std::find(m_allowed_values.begin(), m_allowed_values.end(), value) != m_allowed_values.end();
+        }
+
+    private:
+        std::vector<T> m_allowed_values;
     };
 
 

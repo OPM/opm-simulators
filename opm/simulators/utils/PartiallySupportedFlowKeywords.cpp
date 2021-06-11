@@ -19,32 +19,33 @@
 
 #include <opm/simulators/utils/PartiallySupportedFlowKeywords.hpp>
 
+using namespace Opm::KeywordValidation;
 namespace Opm::FlowKeywordValidation
 {
 
-template<>
-const KeywordValidation::PartiallySupportedKeywords<std::string>&
+template <>
+const PartiallySupportedKeywords<std::string>&
 partiallySupported()
 {
-    static const KeywordValidation::PartiallySupportedKeywords<std::string> partially_supported_keywords_strings = {
+    static const PartiallySupportedKeywords<std::string> partially_supported_keywords_strings = {
         {
             "COMPORD",
             {
-                {2, {false, {"INPUT"}, std::nullopt}}, // ORDER_TYPE
+                {2, {false, allow_values<std::string>{"INPUT"}, std::nullopt}}, // ORDER_TYPE
             },
         },
         {
             "ENDSCALE",
             {
-                {1, {false, {"NODIR"}, std::nullopt}}, // DIRECT
-                {2, {false, {"REVERS"}, std::nullopt}}, // IRREVERS
+                {1, {false, allow_values<std::string>{"NODIR"}, std::nullopt}}, // DIRECT
+                {2, {false, allow_values<std::string>{"REVERS"}, std::nullopt}}, // IRREVERS
             },
         },
         {
             "PINCH",
             {
-                {2, {false, {"GAP"}, std::nullopt}}, // GAP
-                {4, {false, {"TOPBOT"}, std::nullopt}}, // PINCHOUT_OPTION
+                {2, {false, allow_values<std::string>{"GAP"}, std::nullopt}}, // GAP
+                {4, {false, allow_values<std::string>{"TOPBOT"}, std::nullopt}}, // PINCHOUT_OPTION
             },
         },
     };
@@ -52,20 +53,29 @@ partiallySupported()
     return partially_supported_keywords_strings;
 }
 
-template<>
-const KeywordValidation::PartiallySupportedKeywords<int>&
+template <>
+const PartiallySupportedKeywords<int>&
 partiallySupported()
 {
-    static const KeywordValidation::PartiallySupportedKeywords<int> partially_supported_keywords_int = {
+    static const PartiallySupportedKeywords<int> partially_supported_keywords_int = {
         {
             "EHYSTR",
             {
-                {2, {false, {0}, std::nullopt}}, //relative_perm_hyst
+                {2, {false, allow_values<int>{0}, std::nullopt}}, // relative_perm_hyst
             },
         },
     };
 
     return partially_supported_keywords_int;
+}
+
+template <>
+const PartiallySupportedKeywords<double>&
+partiallySupported()
+{
+    static const PartiallySupportedKeywords<double> partially_supported_keywords_double = {};
+
+    return partially_supported_keywords_double;
 }
 
 } // namespace Opm::FlowKeywordValidation
