@@ -304,7 +304,7 @@ std::size_t packSize(const data::GroupAndNetworkValues& data, Dune::MPIHelper::M
         +  packSize(data.nodeData, comm);
 }
 
-std::size_t packSize(const data::WellRates& data, Dune::MPIHelper::MPICommunicator comm)
+std::size_t packSize(const data::Wells& data, Dune::MPIHelper::MPICommunicator comm)
 {
     // Needs explicit conversion to a supported base type holding the data
     // to prevent throwing.
@@ -611,7 +611,7 @@ void pack(const data::Solution& data, std::vector<char>& buffer, int& position,
          buffer, position, comm);
 }
 
-void pack(const data::WellRates& data, std::vector<char>& buffer, int& position,
+void pack(const data::Wells& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     // Needs explicit conversion to a supported base type holding the data
@@ -948,7 +948,7 @@ void unpack(data::Solution& data, std::vector<char>& buffer, int& position,
            buffer, position, comm);
 }
 
-void unpack(data::WellRates& data, std::vector<char>& buffer, int& position,
+void unpack(data::Wells& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
     // Needs explicit conversion to a supported base type holding the data
