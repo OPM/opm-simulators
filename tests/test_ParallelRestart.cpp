@@ -428,7 +428,7 @@ BOOST_AUTO_TEST_CASE(dataWell)
 
 BOOST_AUTO_TEST_CASE(WellRates)
 {
-    Opm::data::WellRates val1;
+    Opm::data::Wells val1;
     val1.insert({"test_well", getWell()});
     auto val2 = PackUnpack(val1);
     DO_CHECKS(data::WellRates)
