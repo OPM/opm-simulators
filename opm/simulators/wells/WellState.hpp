@@ -129,8 +129,8 @@ public:
     report(const int* globalCellIdxMap,
            const std::function<bool(const int)>& wasDynamicallyClosed) const;
 
-    void reportConnections(data::Well& well, const PhaseUsage &pu,
-                           const WellMapType::value_type& wt,
+    void reportConnections(std::vector<data::Connection>& connections, const PhaseUsage &pu,
+                           std::size_t well_index,
                            const int* globalCellIdxMap) const;
 
     /// init the MS well related.
