@@ -37,7 +37,7 @@ namespace bda
 template <unsigned int block_size>
 int colorBlockedNodes(int rows, const int *CSRRowPointers, const int *CSRColIndices, const int *CSCColPointers, const int *CSCRowIndices, std::vector<int>& colors, int maxRowsPerColor, int maxColsPerColor)
 {
-    int left, c;
+    int left, c=-1;
     const int max_tries = 100;            // since coloring is random, it is possible that a coloring fails. In that case, try again.
     std::vector<int> randoms;
     randoms.resize(rows);
