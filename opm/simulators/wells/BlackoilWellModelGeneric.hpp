@@ -404,7 +404,7 @@ protected:
     mutable std::unordered_set<std::string> closed_this_step_;
 
     WellTestState wellTestState_{};
-    std::unique_ptr<GuideRate> guideRate_;
+    GuideRate guideRate_;
     std::unique_ptr<VFPProperties> vfp_properties_{};
     std::map<std::string, double> node_pressures_; // Storing network pressures for output.
 

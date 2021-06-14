@@ -286,7 +286,7 @@ namespace Opm {
 
         for (auto& well : well_container_) {
             well->setVFPProperties(vfp_properties_.get());
-            well->setGuideRate(guideRate_.get());
+            well->setGuideRate(&guideRate_);
         }
 
         // Close completions due to economical reasons
@@ -322,9 +322,9 @@ namespace Opm {
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         std::vector<double> pot(numPhases(), 0.0);
         const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
-        WellGroupHelpers::updateGuideRateForProductionGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, this->wellState(), this->groupState(), comm, guideRate_.get(), pot);
-        WellGroupHelpers::updateGuideRatesForInjectionGroups(fieldGroup, schedule(), summaryState, phase_usage_, reportStepIdx, this->wellState(), this->groupState(), guideRate_.get(), local_deferredLogger);
-        WellGroupHelpers::updateGuideRatesForWells(schedule(), phase_usage_, reportStepIdx, simulationTime, this->wellState(), comm, guideRate_.get());
+        WellGroupHelpers::updateGuideRateForProductionGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, this->wellState(), this->groupState(), comm, &guideRate_, pot);
+        WellGroupHelpers::updateGuideRatesForInjectionGroups(fieldGroup, schedule(), summaryState, phase_usage_, reportStepIdx, this->wellState(), this->groupState(), &guideRate_, local_deferredLogger);
+        WellGroupHelpers::updateGuideRatesForWells(schedule(), phase_usage_, reportStepIdx, simulationTime, this->wellState(), comm, &guideRate_);
 
         try {
             // Compute initial well solution for new wells and injectors that change injection type i.e. WAG.
@@ -397,7 +397,7 @@ namespace Opm {
 
                 well->setWellEfficiencyFactor(well_efficiency_factor);
                 well->setVFPProperties(vfp_properties_.get());
-                well->setGuideRate(guideRate_.get());
+                well->setGuideRate(&guideRate_);
 
                 const WellTestConfig::Reason testing_reason = testWell.second;
 
