@@ -487,7 +487,7 @@ BOOST_AUTO_TEST_CASE(RestartKey)
 
 BOOST_AUTO_TEST_CASE(RestartValue)
 {
-    auto wells1 = Opm::data::WellRates {{
+    auto wells1 = Opm::data::Wells {{
         { "test_well", getWell() },
     }};
     auto grp_nwrk_1 = Opm::data::GroupAndNetworkValues {
