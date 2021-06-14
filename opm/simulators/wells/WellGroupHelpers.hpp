@@ -109,6 +109,7 @@ namespace WellGroupHelpers
                                             WellState& wellState,
                                             const GroupState& group_state,
                                             const Comm& comm,
+                                            const bool update_guiderate,
                                             GuideRate* guideRate,
                                             std::vector<double>& pot);
 
@@ -119,7 +120,8 @@ namespace WellGroupHelpers
                                   const double& simTime,
                                   const WellState& wellState,
                                   const Comm& comm,
-                                  GuideRate* guideRate);
+                                  GuideRate* guideRate,
+                                  const bool update_now = false);
 
     void updateGuideRatesForInjectionGroups(const Group& group,
                                             const Schedule& schedule,
