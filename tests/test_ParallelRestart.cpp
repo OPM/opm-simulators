@@ -426,12 +426,12 @@ BOOST_AUTO_TEST_CASE(dataWell)
 }
 
 
-BOOST_AUTO_TEST_CASE(WellRates)
+BOOST_AUTO_TEST_CASE(Wells)
 {
     Opm::data::Wells val1;
     val1.insert({"test_well", getWell()});
     auto val2 = PackUnpack(val1);
-    DO_CHECKS(data::WellRates)
+    DO_CHECKS(data::Wells)
 }
 
 BOOST_AUTO_TEST_CASE(dataGroupConstraints)
