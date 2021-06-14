@@ -545,9 +545,10 @@ GAS
 )";
     Opm::PhaseUsage pu = Opm::phaseUsageFromDeck(Opm::Parser{}.parseString(deck_string));
 
-    Opm::PerfData pd1(3,pu);
-    Opm::PerfData pd2(3,pu);
-    Opm::PerfData pd3(2,pu);
+    Opm::PerfData pd1(3, true, pu);
+    Opm::PerfData pd2(3, true, pu);
+    Opm::PerfData pd3(2, true, pu);
+    Opm::PerfData pd4(3, false, pu);
 
 
     for (std::size_t i = 0; i < 3; i++) {
@@ -565,6 +566,8 @@ GAS
     for (std::size_t i = 0; i < 3; i++) {
         BOOST_CHECK(pd1.pressure[i] == 10*(i+1));
     }
+
+    BOOST_CHECK(!pd1.try_assign(pd4));
 }
 
 

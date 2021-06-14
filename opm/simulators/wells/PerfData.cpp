@@ -24,20 +24,22 @@ namespace Opm
 {
 
 
-PerfData::PerfData(std::size_t num_perf, const PhaseUsage& pu_arg):
+PerfData::PerfData(std::size_t num_perf, bool injector_, const PhaseUsage& pu_arg):
     pu(pu_arg),
+    injector(injector_),
     pressure(num_perf),
     rates(num_perf),
     phase_rates(num_perf * pu.num_phases),
     solvent_rates(num_perf),
     polymer_rates(num_perf),
     brine_rates(num_perf),
-    prod_index(num_perf * pu.num_phases),
-    water_throughput(num_perf),
-    skin_pressure(num_perf),
-    water_velocity(num_perf)
+    prod_index(num_perf * pu.num_phases)
 {
-
+    if (injector) {
+        this->water_throughput.resize(num_perf);
+        this->skin_pressure.resize(num_perf);
+        this->water_velocity.resize(num_perf);
+    }
 }
 
 std::size_t PerfData::size() const {
@@ -46,6 +48,9 @@ std::size_t PerfData::size() const {
 
 bool PerfData::try_assign(const PerfData& other) {
     if (this->size() != other.size())
+        return false;
+
+    if (this->injector != other.injector)
         return false;
 
     this->pressure = other.pressure;
@@ -58,7 +63,6 @@ bool PerfData::try_assign(const PerfData& other) {
     this->skin_pressure = other.skin_pressure;
     this->water_velocity = other.water_velocity;
     this->prod_index = other.prod_index;
-
     return true;
 }
 
