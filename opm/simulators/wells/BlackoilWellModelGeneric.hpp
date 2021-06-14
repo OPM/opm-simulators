@@ -48,7 +48,7 @@ namespace Opm {
 namespace data {
 struct GroupData;
 struct GroupGuideRates;
-struct GroupAndNetworkValues;
+class GroupAndNetworkValues;
 struct NodeData;
 }
 

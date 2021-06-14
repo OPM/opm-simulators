@@ -44,7 +44,7 @@
 
 namespace Opm {
 
-namespace data { struct Solution; }
+namespace data { class Solution; }
 class EclipseState;
 
 template<class FluidSystem, class Scalar>
