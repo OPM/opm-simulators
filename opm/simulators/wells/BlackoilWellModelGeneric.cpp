@@ -55,12 +55,11 @@ BlackoilWellModelGeneric(Schedule& schedule,
     , eclState_(eclState)
     , comm_(comm)
     , phase_usage_(phase_usage)
+    , guideRate_(schedule)
     , active_wgstate_(phase_usage)
     , last_valid_wgstate_(phase_usage)
     , nupcol_wgstate_(phase_usage)
 {
-    // Create the guide rate container.
-    this->guideRate_ = std::make_unique<GuideRate>(schedule_);
 
   const auto numProcs = comm_.size();
   this->not_on_process_ = [this, numProcs](const Well& well) {
@@ -796,7 +795,7 @@ checkGroupHigherConstraints(const Group& group,
                     this->wellState(),
                     this->groupState(),
                     reportStepIdx,
-                    guideRate_.get(),
+                    &guideRate_,
                     rates.data(),
                     phase,
                     phase_usage_,
@@ -833,7 +832,7 @@ checkGroupHigherConstraints(const Group& group,
                     this->wellState(),
                     this->groupState(),
                     reportStepIdx,
-                    guideRate_.get(),
+                    &guideRate_,
                     rates.data(),
                     phase_usage_,
                     group.getGroupEfficiencyFactor(),
@@ -1150,7 +1149,7 @@ getGuideRateValues(const Well& well) const
         return grval;
     }
 
-    if (!this->guideRate_->has(wname)) {
+    if (!this->guideRate_.has(wname)) {
         // No guiderates exist for 'wname'.
         return grval;
     }
@@ -1172,7 +1171,7 @@ getGuideRateValues(const GuideRate::RateVector& qs,
 {
     auto getGR = [this, &wgname, &qs](const GuideRateModel::Target t)
     {
-        return this->guideRate_->get(wgname, t, qs);
+        return this->guideRate_.get(wgname, t, qs);
     };
 
     // Note: GuideRate does currently (2020-07-20) not support Target::RES.
@@ -1194,9 +1193,6 @@ BlackoilWellModelGeneric::
 getGuideRateValues(const Group& group) const
 {
     auto grval = data::GuideRateValue{};
-
-    assert (this->guideRate_ != nullptr);
-
     const auto& gname = group.name();
 
     if (!this->groupState().has_production_rates(gname)) {
@@ -1206,7 +1202,7 @@ getGuideRateValues(const Group& group) const
         return grval;
     }
 
-    if (!this->guideRate_->has(gname)) {
+    if (!this->guideRate_.has(gname)) {
         // No guiderates exist for 'gname'.
         return grval;
     }
@@ -1228,13 +1224,13 @@ getGuideRateInjectionGroupValues(const Group& group) const
     assert (this->guideRate_ != nullptr);
 
     const auto& gname = group.name();
-    if (this->guideRate_->has(gname, Phase::GAS)) {
+    if (this->guideRate_.has(gname, Phase::GAS)) {
         grval.set(data::GuideRateValue::Item::Gas,
-                  this->guideRate_->get(gname, Phase::GAS));
+                  this->guideRate_.get(gname, Phase::GAS));
     }
-    if (this->guideRate_->has(gname, Phase::WATER)) {
+    if (this->guideRate_.has(gname, Phase::WATER)) {
         grval.set(data::GuideRateValue::Item::Water,
-                  this->guideRate_->get(gname, Phase::WATER));
+                  this->guideRate_.get(gname, Phase::WATER));
     }
     return grval;
 }
@@ -1309,7 +1305,7 @@ calculateAllGroupGuiderates(const int reportStepIdx) const
 
     for (const auto& wname : schedule_.wellNames(reportStepIdx)) {
         if (! (this->wellState().hasWellRates(wname) &&
-               this->guideRate_->has(wname)))
+               this->guideRate_.has(wname)))
         {
             continue;
         }
@@ -1346,12 +1342,12 @@ calculateAllGroupGuiderates(const int reportStepIdx) const
             const auto& gname = up[start + gi];
             const auto& group = schedule_.getGroup(gname, reportStepIdx);
 
-            if (this->guideRate_->has(gname)) {
+            if (this->guideRate_.has(gname)) {
                 gr[gname].production = this->getGuideRateValues(group);
             }
 
-            if (this->guideRate_->has(gname, Phase::WATER)
-                    || this->guideRate_->has(gname, Phase::GAS)) {
+            if (this->guideRate_.has(gname, Phase::WATER)
+                    || this->guideRate_.has(gname, Phase::GAS)) {
                 gr[gname].injection = this->getGuideRateInjectionGroupValues(group);
             }
 
@@ -1416,7 +1412,7 @@ assignGroupGuideRates(const Group& group,
 
     auto xgrPos = groupGuideRates.find(group.name());
     if ((xgrPos == groupGuideRates.end()) ||
-        !this->guideRate_->has(group.name()))
+        !this->guideRate_.has(group.name()))
     {
         // No guiderates defined for this group.
         return;
@@ -1487,9 +1483,9 @@ updateAndCommunicateGroupData(const int reportStepIdx,
     // the group target reduction rates needs to be update since wells may have switched to/from GRUP control
     // Currently the group target reduction does not honor NUPCOL. TODO: is that true?
     std::vector<double> groupTargetReduction(numPhases(), 0.0);
-    WellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ false, phase_usage_, *guideRate_, well_state_nupcol, well_state, this->groupState(), groupTargetReduction);
+    WellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ false, phase_usage_, guideRate_, well_state_nupcol, well_state, this->groupState(), groupTargetReduction);
     std::vector<double> groupTargetReductionInj(numPhases(), 0.0);
-    WellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ true, phase_usage_, *guideRate_, well_state_nupcol, well_state, this->groupState(), groupTargetReductionInj);
+    WellGroupHelpers::updateGroupTargetReduction(fieldGroup, schedule(), reportStepIdx, /*isInjector*/ true, phase_usage_, guideRate_, well_state_nupcol, well_state, this->groupState(), groupTargetReductionInj);
 
     WellGroupHelpers::updateREINForGroups(fieldGroup, schedule(), reportStepIdx, phase_usage_, summaryState_, well_state_nupcol, well_state, this->groupState());
     WellGroupHelpers::updateVREPForGroups(fieldGroup, schedule(), reportStepIdx, well_state_nupcol, well_state, this->groupState());

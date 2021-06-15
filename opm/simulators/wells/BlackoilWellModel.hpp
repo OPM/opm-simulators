@@ -130,18 +130,18 @@ namespace Opm {
             /////////////
             // <eWoms auxiliary module stuff>
             /////////////
-            unsigned numDofs() const
+            unsigned numDofs() const override
             // No extra dofs are inserted for wells. (we use a Schur complement.)
             { return 0; }
 
-            void addNeighbors(std::vector<NeighborSet>& neighbors) const;
+            void addNeighbors(std::vector<NeighborSet>& neighbors) const override;
 
-            void applyInitial()
+            void applyInitial() override
             {}
 
-            void linearize(SparseMatrixAdapter& jacobian, GlobalEqVector& res);
+            void linearize(SparseMatrixAdapter& jacobian, GlobalEqVector& res) override;
 
-            void postSolve(GlobalEqVector& deltaX)
+            void postSolve(GlobalEqVector& deltaX) override
             {
                 recoverWellSolutionAndUpdateWellState(deltaX);
             }

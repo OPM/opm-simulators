@@ -23,6 +23,8 @@
 
 #include <opm/common/utility/FileSystem.hpp>
 
+#include <boost/version.hpp>
+
 namespace Opm
 {
 

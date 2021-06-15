@@ -65,7 +65,7 @@ class Rates;
 struct Segment;
 class Solution;
 struct Well;
-class WellRates;
+class Wells;
 }
 
 namespace Action
@@ -350,7 +350,7 @@ ADD_PACK_PROTOTYPES(data::GroupData)
 ADD_PACK_PROTOTYPES(data::NodeData)
 ADD_PACK_PROTOTYPES(data::GroupAndNetworkValues)
 ADD_PACK_PROTOTYPES(data::Well)
-ADD_PACK_PROTOTYPES(data::WellRates)
+ADD_PACK_PROTOTYPES(data::Wells)
 ADD_PACK_PROTOTYPES(RestartKey)
 ADD_PACK_PROTOTYPES(RestartValue)
 ADD_PACK_PROTOTYPES(std::string)
