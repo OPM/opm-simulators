@@ -324,6 +324,10 @@ namespace Opm {
 
             std::vector<Scalar> B_avg_{};
 
+            std::map<std::string, std::pair<std::string, std::string>> switched_wells_;
+            std::map<std::string, std::pair<std::string, std::string>> switched_prod_groups_;
+            std::map<std::pair<Phase, std::string>, std::pair<std::string, std::string>> switched_inj_groups_;
+
             const Grid& grid() const
             { return ebosSimulator_.vanguard().grid(); }
 

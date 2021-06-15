@@ -300,32 +300,38 @@ protected:
                              const int reportStepIdx,
                              DeferredLogger& deferred_logger);
 
-    void checkGroupHigherConstraints(const Group& group,
+    bool checkGroupHigherConstraints(const Group& group,
                                      DeferredLogger& deferred_logger,
                                      const int reportStepIdx,
-                                     std::set<std::string>& switched_groups);
+                                     std::map<std::string, std::pair<std::string, std::string>>& switched_prod_groups,
+                                     std::map<std::pair<Phase, std::string>, std::pair<std::string, std::string>>& switched_inj_groups);
 
-    void updateGroupIndividualControl(const Group& group,
+    bool updateGroupIndividualControl(const Group& group,
                                       DeferredLogger& deferred_logger,
                                       const int reportStepIdx,
-                                      std::set<std::string>& switched_groups);
+                                      std::map<std::string, std::pair<std::string, std::string>>& switched_prod_groups,
+                                      std::map<std::pair<Phase, std::string>, std::pair<std::string, std::string>>& switched_inj_groups);
 
-    void updateGroupIndividualControls(DeferredLogger& deferred_logger,
-                                       std::set<std::string>& switched_groups,
+    bool updateGroupIndividualControls(DeferredLogger& deferred_logger,
+                                       std::map<std::string, std::pair<std::string, std::string>>& switched_prod_groups,
+                                       std::map<std::pair<Phase, std::string>, std::pair<std::string, std::string>>& switched_inj_groups,
                                        const int reportStepIdx,
                                        const int iterationIdx);
 
-    void updateGroupHigherControls(DeferredLogger& deferred_logger,
+    bool updateGroupHigherControls(DeferredLogger& deferred_logger,
                                    const int reportStepIdx,
-                                   std::set<std::string>& switched_groups);
+                                   std::map<std::string, std::pair<std::string, std::string>>& switched_prod_groups,
+                                   std::map<std::pair<Phase, std::string>, std::pair<std::string, std::string>>& switched_inj_groups);
 
     void actionOnBrokenConstraints(const Group& group,
                                    const Group::ExceedAction& exceed_action,
                                    const Group::ProductionCMode& newControl,
+                                   std::map<std::string, std::pair<std::string, std::string>>& switched_prod_groups,
                                    DeferredLogger& deferred_logger);
     void actionOnBrokenConstraints(const Group& group,
                                    const Group::InjectionCMode& newControl,
                                    const Phase& controlPhase,
+                                   std::map<std::pair<Phase, std::string>, std::pair<std::string, std::string>>& switched_inj_groups,
                                    DeferredLogger& deferred_logger);
 
     void updateAndCommunicateGroupData(const int reportStepIdx,

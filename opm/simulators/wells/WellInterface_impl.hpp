@@ -156,6 +156,7 @@ namespace Opm
                       const IndividualOrGroup iog,
                       WellState& well_state,
                       const GroupState& group_state,
+                      std::map<std::string, std::pair<std::string, std::string>>& switched_wells,
                       DeferredLogger& deferred_logger) /* const */
     {
         if (this->wellIsStopped()) {
@@ -199,7 +200,8 @@ namespace Opm
             if (cc.size() > 1) {
                ss << " on rank " << cc.rank();
             }
-            deferred_logger.info(ss.str());
+            deferred_logger.debug(ss.str());
+            switched_wells[this->name()] = std::make_pair(from, to);
             updateWellStateWithTarget(ebos_simulator, group_state, well_state, deferred_logger);
             updatePrimaryVariables(well_state, deferred_logger);
         }

@@ -204,6 +204,7 @@ public:
                            const IndividualOrGroup iog,
                            WellState& well_state,
                            const GroupState& group_state,
+                           std::map<std::string, std::pair<std::string, std::string>>& switched_wells,
                            DeferredLogger& deferred_logger) /* const */;
 
     virtual void updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_logger) const = 0;
