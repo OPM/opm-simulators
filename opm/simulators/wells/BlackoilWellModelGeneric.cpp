@@ -1139,8 +1139,6 @@ getGuideRateValues(const Well& well) const
 {
     auto grval = data::GuideRateValue{};
 
-    assert (this->guideRate_ != nullptr);
-
     const auto& wname = well.name();
     if (!this->wellState().hasWellRates(wname)) {
         // No flow rates for 'wname' -- might be before well comes
@@ -1220,8 +1218,6 @@ BlackoilWellModelGeneric::
 getGuideRateInjectionGroupValues(const Group& group) const
 {
     auto grval = data::GuideRateValue{};
-
-    assert (this->guideRate_ != nullptr);
 
     const auto& gname = group.name();
     if (this->guideRate_.has(gname, Phase::GAS)) {
