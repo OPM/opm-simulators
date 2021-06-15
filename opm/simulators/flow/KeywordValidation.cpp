@@ -109,6 +109,7 @@ namespace KeywordValidation
             // Otherwise, check all its items.
             validateKeywordItems(keyword, m_string_items, errors);
             validateKeywordItems(keyword, m_int_items, errors);
+            validateKeywordItems(keyword, m_double_items, errors);
         }
     }
 
@@ -152,8 +153,7 @@ namespace KeywordValidation
                                                const T& item_value,
                                                std::vector<ValidationError>& errors) const
     {
-        const auto& permitted = properties.permitted_values;
-        if (std::find(permitted.begin(), permitted.end(), item_value) == permitted.end()) {
+        if (!properties.validator(item_value)) {
             // If the value is not permitted, format the value to report it.
             std::string formatted_value;
             if constexpr (std::is_arithmetic<T>::value)

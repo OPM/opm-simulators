@@ -36,16 +36,17 @@
     This struct has the following fields:
 
     critical (bool) : if this is a critical error.
-    permitted_values (vector of strings) : the list of values that is allowed.
+    validator (function wrapper) : A function wrapper object that is used to test values.
     message (itemal string): an optional message to add to the error reported by flow.
 
-    Below is the set of partiall supported keywords, currently used by flow.
+    For convenience there is a small class KeywordValidation::allow_values which
+    can be initialized with a list of permitted values, and used as a validator.
 */
 
 namespace Opm::FlowKeywordValidation
 {
 
-template<typename T>
+template <typename T>
 const KeywordValidation::PartiallySupportedKeywords<T>& partiallySupported();
 
 } // namespace Opm::FlowKeywordValidation
