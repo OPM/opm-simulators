@@ -188,9 +188,9 @@ public:
                                        std::vector<double>& well_potentials,
                                        DeferredLogger& deferred_logger) = 0;
 
-    void updateWellStateWithTarget(const Simulator& ebos_simulator,
-                                   WellState& well_state,
-                                   DeferredLogger& deferred_logger) const;
+    virtual void updateWellStateWithTarget(const Simulator& ebos_simulator,
+                                           WellState& well_state,
+                                           DeferredLogger& deferred_logger) const;
 
     enum class IndividualOrGroup { Individual, Group, Both };
     bool updateWellControl(const Simulator& ebos_simulator,

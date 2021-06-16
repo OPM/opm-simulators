@@ -114,9 +114,9 @@ namespace Opm
         }
 
         /// updating the well state based the current control mode
-        void updateWellStateWithTarget(const Simulator& ebos_simulator,
-                                       WellState& well_state,
-                                       DeferredLogger& deferred_logger) const;
+        virtual void updateWellStateWithTarget(const Simulator& ebos_simulator,
+                                               WellState& well_state,
+                                               DeferredLogger& deferred_logger) const override;
 
         /// check whether the well equations get converged for this well
         virtual ConvergenceReport getWellConvergence(const WellState& well_state,
