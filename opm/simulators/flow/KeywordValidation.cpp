@@ -129,14 +129,16 @@ namespace KeywordValidation
                     // Find the index number, which starts counting at one, so item_index + 1
                     const auto& item_properties = keyword_properties->second.find(item_index + 1);
                     if (item_properties != keyword_properties->second.end()) {
-                        // Validate the item, if it is partially supported.
-                        validateKeywordItem<T>(keyword,
-                                               item_properties->second,
-                                               keyword.size() > 1,
-                                               record_index,
-                                               item_index,
-                                               item.get<T>(0),
-                                               errors);
+                        if (item.hasValue(0)) {
+                            // Validate the item, if it is partially supported.
+                            validateKeywordItem<T>(keyword,
+                                                   item_properties->second,
+                                                   keyword.size() > 1,
+                                                   record_index,
+                                                   item_index,
+                                                   item.get<T>(0),
+                                                   errors);
+                        }
                     }
                 }
             }
