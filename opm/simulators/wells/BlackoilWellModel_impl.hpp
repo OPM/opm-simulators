@@ -851,19 +851,165 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     maybeDoGasLiftOptimize(DeferredLogger& deferred_logger)
     {
-        this->wellState().enableGliftOptimization();
-        GLiftOptWells glift_wells;
-        GLiftProdWells prod_wells;
-        GLiftWellStateMap state_map;
-        // Stage1: Optimize single wells not checking any group limits
-        for (auto& well : well_container_) {
-            well->gasLiftOptimizationStage1(
-                this->wellState(), ebosSimulator_, deferred_logger,
-                prod_wells, glift_wells, state_map);
+        if (checkDoGasLiftOptimization(deferred_logger)) {
+            GLiftOptWells glift_wells;
+            GLiftProdWells prod_wells;
+            GLiftWellStateMap state_map;
+            // NOTE: To make GasLiftGroupInfo (see below) independent of the TypeTag
+            //  associated with *this (i.e. BlackoilWellModel<TypeTag>) we observe
+            //  that GasLiftGroupInfo's only dependence on *this is that it needs to
+            //  access the eclipse Wells in the well container (the eclipse Wells
+            //  themselves are independent of the TypeTag).
+            //  Hence, we extract them from the well container such that we can pass
+            //  them to the GasLiftGroupInfo constructor.
+            GLiftEclWells ecl_well_map;
+            initGliftEclWellMap(ecl_well_map);
+            GasLiftGroupInfo group_info {
+                ecl_well_map,
+                ebosSimulator_.vanguard().schedule(),
+                ebosSimulator_.vanguard().summaryState(),
+                ebosSimulator_.episodeIndex(),
+                ebosSimulator_.model().newtonMethod().numIterations(),
+                phase_usage_,
+                deferred_logger,
+                this->wellState()
+            };
+            group_info.initialize(ebosSimulator_.vanguard().grid().comm());
+            gasLiftOptimizationStage1(
+                deferred_logger, prod_wells, glift_wells, group_info, state_map);
+            gasLiftOptimizationStage2(
+                deferred_logger, prod_wells, glift_wells, state_map,
+                ebosSimulator_.episodeIndex());
+            if (this->glift_debug) gliftDebugShowALQ(deferred_logger);
         }
-        gasLiftOptimizationStage2(deferred_logger, prod_wells, glift_wells, state_map, ebosSimulator_.episodeIndex());
-        if (this->glift_debug) gliftDebugShowALQ(deferred_logger);
-        this->wellState().disableGliftOptimization();
+    }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    gasLiftOptimizationStage1(DeferredLogger& deferred_logger,
+        GLiftProdWells &prod_wells, GLiftOptWells &glift_wells,
+        GasLiftGroupInfo &group_info, GLiftWellStateMap &state_map)
+    {
+        auto comm = ebosSimulator_.vanguard().grid().comm();
+        int num_procs = comm.size();
+        // NOTE: Gas lift optimization stage 1 seems to be difficult
+        //  to do in parallel since the wells are optimized on different
+        //  processes and each process needs to know the current ALQ allocated
+        //  to each group it is a memeber of in order to check group limits and avoid
+        //  allocating more ALQ than necessary.  (Surplus ALQ is removed in
+        //  stage 2). In stage1, as each well is adding ALQ, the current group ALQ needs
+        //  to be communicated to the other processes.  But there is no common
+        //  synchronization point that all process will reach in the
+        //  runOptimizeLoop_() in GasLiftSingleWell.cpp.
+        //
+        //  TODO: Maybe a better solution could be invented by distributing
+        //    wells according to certain parent groups. Then updated group rates
+        //    might not have to be communicated to the other processors.
+
+        //  Currently, the best option seems to be to run this part sequentially
+        //    (not in parallel).
+        //
+        //  TODO: The simplest approach seems to be if a) one process could take
+        //    ownership of all the wells (the union of all the wells in the
+        //    well_container_ of each process) then this process could do the
+        //    optimization, while the other processes could wait for it to
+        //    finish (e.g. comm.barrier()), or alternatively, b) if all
+        //    processes could take ownership of all the wells.  Then there
+        //    would be no need for synchronization here..
+        //
+        for (int i = 0; i< num_procs; i++) {
+            int num_rates_to_sync = 0;  // communication variable
+            GLiftSyncGroups groups_to_sync;
+            if (comm.rank() ==  i) {
+                // Run stage1: Optimize single wells while also checking group limits
+                for (const auto& well : well_container_) {
+                    // NOTE: Only the wells in "group_info" needs to be optimized
+                    if (group_info.hasWell(well->name())) {
+                        well->gasLiftOptimizationStage1(
+                            this->wellState(), ebosSimulator_, deferred_logger,
+                            prod_wells, glift_wells, state_map,
+                            group_info, groups_to_sync);
+                    }
+                }
+                num_rates_to_sync = groups_to_sync.size();
+            }
+            // Since "group_info" is not used in stage2, there is no need to
+            //   communicate rates if this is the last iteration...
+            if (i == (num_procs - 1))
+                break;
+            num_rates_to_sync = comm.sum(num_rates_to_sync);
+            if (num_rates_to_sync > 0) {
+                std::vector<int> group_indexes;
+                group_indexes.reserve(num_rates_to_sync);
+                std::vector<double> group_alq_rates;
+                group_alq_rates.reserve(num_rates_to_sync);
+                std::vector<double> group_oil_rates;
+                group_oil_rates.reserve(num_rates_to_sync);
+                std::vector<double> group_gas_rates;
+                group_gas_rates.reserve(num_rates_to_sync);
+                if (comm.rank() == i) {
+                    for (auto idx : groups_to_sync) {
+                        auto [oil_rate, gas_rate, alq] = group_info.getRates(idx);
+                        group_indexes.push_back(idx);
+                        group_oil_rates.push_back(oil_rate);
+                        group_gas_rates.push_back(gas_rate);
+                        group_alq_rates.push_back(alq);
+                    }
+                }
+                // TODO: We only need to broadcast to processors with index
+                //   j > i since we do not use the "group_info" in stage 2. In
+                //   this case we should use comm.send() and comm.receive()
+                //   instead of comm.broadcast() to communicate with specific
+                //   processes, and these processes only need to receive the
+                //   data if they are going to check the group rates in stage1
+                //   Another similar idea is to only communicate the rates to
+                //   process j = i + 1
+                comm.broadcast(group_indexes.data(), num_rates_to_sync, i);
+                comm.broadcast(group_oil_rates.data(), num_rates_to_sync, i);
+                comm.broadcast(group_gas_rates.data(), num_rates_to_sync, i);
+                comm.broadcast(group_alq_rates.data(), num_rates_to_sync, i);
+                if (comm.rank() != i) {
+                    for (int j=0; j<num_rates_to_sync; j++) {
+                        group_info.updateRate(group_indexes[j],
+                            group_oil_rates[j], group_gas_rates[j], group_alq_rates[j]);
+                    }
+                }
+            }
+        }
+    }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    initGliftEclWellMap(GLiftEclWells &ecl_well_map)
+    {
+        for ( const auto& well: well_container_ ) {
+            ecl_well_map.try_emplace(
+                well->name(), &(well->wellEcl()), well->indexOfWell());
+        }
+    }
+
+    template<typename TypeTag>
+    bool
+    BlackoilWellModel<TypeTag>::
+    checkDoGasLiftOptimization(Opm::DeferredLogger& deferred_logger)
+    {
+        gliftDebug("checking if GLIFT should be done..", deferred_logger);
+        /*
+        std::size_t num_procs = ebosSimulator_.gridView().comm().size();
+        if (num_procs > 1u) {
+            const std::string msg = fmt::format("  GLIFT: skipping optimization. "
+                "Parallel run not supported yet: num procs = {}", num_procs);
+            deferred_logger.warning(msg);
+            return false;
+        }
+        */
+        if (!(this->wellState().gliftOptimizationEnabled())) {
+            gliftDebug("Optimization disabled in WellState", deferred_logger);
+            return false;
+        }
+        return true;
     }
 
     template<typename TypeTag>

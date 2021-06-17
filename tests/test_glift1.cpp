@@ -38,6 +38,8 @@
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 #include <opm/simulators/wells/StandardWell.hpp>
 #include <opm/simulators/wells/GasLiftSingleWell.hpp>
+#include <opm/simulators/wells/GasLiftSingleWellGeneric.hpp>
+#include <opm/simulators/wells/GasLiftGroupInfo.hpp>
 //#include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
 //#include <flow/flow_ebos_blackoil.hpp>
 #include <opm/simulators/wells/WellState.hpp>
@@ -122,7 +124,11 @@ BOOST_AUTO_TEST_CASE(G1)
     using WellState = Opm::WellState;
     using StdWell = Opm::StandardWell<TypeTag>;
     using GasLiftSingleWell = Opm::GasLiftSingleWell<TypeTag>;
+    using GasLiftGroupInfo = Opm::GasLiftGroupInfo;
+    using GasLiftSingleWellGeneric = Opm::GasLiftSingleWellGeneric;
+    using GLiftEclWells = typename GasLiftGroupInfo::GLiftEclWells;
     const std::string filename = "GLIFT1.DATA";
+    using GLiftSyncGroups = typename GasLiftSingleWellGeneric::GLiftSyncGroups;
 
     auto simulator = initSimulator<TypeTag>(filename.data());
 
@@ -161,9 +167,23 @@ BOOST_AUTO_TEST_CASE(G1)
     BOOST_CHECK_EQUAL( well.name(), "B-1H");
     const auto& summary_state = simulator->vanguard().summaryState();
     WellState &well_state = well_model.wellState();
+    GLiftEclWells ecl_well_map;
+    well_model.initGliftEclWellMap(ecl_well_map);
+    const int iteration_idx = simulator->model().newtonMethod().numIterations();
+    GasLiftGroupInfo group_info {
+        ecl_well_map,
+        schedule,
+        summary_state,
+        simulator->episodeIndex(),
+        iteration_idx,
+        well_model.phaseUsage(),
+        deferred_logger,
+        well_state
+    };
+    GLiftSyncGroups sync_groups;
     GasLiftSingleWell glift {*std_well, *(simulator.get()), summary_state,
-                             deferred_logger, well_state};
-    auto state = glift.runOptimize(simulator->model().newtonMethod().numIterations());
+        deferred_logger, well_state, group_info, sync_groups};
+    auto state = glift.runOptimize(iteration_idx);
     BOOST_CHECK_CLOSE(state->oilRate(), 0.01736111111111111, 1e-8);
     BOOST_CHECK_CLOSE(state->gasRate(), 1.6464646999768586, 1e-8);
     BOOST_CHECK(state->oilIsLimited());
@@ -172,3 +192,4 @@ BOOST_AUTO_TEST_CASE(G1)
     BOOST_CHECK_CLOSE(state->alq(), 0.0, 1e-8);
     BOOST_CHECK(!state->increase().has_value());
 }
+

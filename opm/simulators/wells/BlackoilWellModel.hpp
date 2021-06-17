@@ -31,6 +31,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <tuple>
 #include <unordered_map>
@@ -50,6 +51,9 @@
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/wells/GasLiftSingleWell.hpp>
 #include <opm/simulators/wells/GasLiftWellState.hpp>
+#include <opm/simulators/wells/GasLiftSingleWellGeneric.hpp>
+#include <opm/simulators/wells/GasLiftStage2.hpp>
+#include <opm/simulators/wells/GasLiftGroupInfo.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
@@ -100,6 +104,12 @@ namespace Opm {
             using RateVector = GetPropType<TypeTag, Properties::RateVector>;
             using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
             using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
+            using GLiftOptWells = typename BlackoilWellModelGeneric::GLiftOptWells;
+            using GLiftProdWells = typename BlackoilWellModelGeneric::GLiftProdWells;
+            using GLiftWellStateMap =
+                typename BlackoilWellModelGeneric::GLiftWellStateMap;
+            using GLiftEclWells = typename GasLiftGroupInfo::GLiftEclWells;
+            using GLiftSyncGroups = typename GasLiftSingleWellGeneric::GLiftSyncGroups;
 
             typedef typename BaseAuxiliaryModule<TypeTag>::NeighborSet NeighborSet;
 
@@ -266,6 +276,7 @@ namespace Opm {
             void initPrimaryVariablesEvaluation() const;
             void updateWellControls(DeferredLogger& deferred_logger, const bool checkGroupControls);
             WellInterfacePtr getWell(const std::string& well_name) const;
+            void initGliftEclWellMap(GLiftEclWells &ecl_well_map);
 
         protected:
             Simulator& ebosSimulator_;
@@ -359,6 +370,12 @@ namespace Opm {
             void assembleWellEq(const double dt, DeferredLogger& deferred_logger);
 
             void maybeDoGasLiftOptimize(DeferredLogger& deferred_logger);
+
+            bool checkDoGasLiftOptimization(DeferredLogger& deferred_logger);
+
+            void gasLiftOptimizationStage1(DeferredLogger& deferred_logger,
+                GLiftProdWells &prod_wells, GLiftOptWells &glift_wells,
+                GasLiftGroupInfo &group_info, GLiftWellStateMap &state_map);
 
             void extractLegacyCellPvtRegionIndex_();
 

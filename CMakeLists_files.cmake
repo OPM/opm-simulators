@@ -60,6 +60,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/utils/ParallelRestart.cpp
   opm/simulators/wells/ALQState.cpp
   opm/simulators/wells/BlackoilWellModelGeneric.cpp
+  opm/simulators/wells/GasLiftGroupInfo.cpp
   opm/simulators/wells/GasLiftSingleWellGeneric.cpp
   opm/simulators/wells/GasLiftStage2.cpp
   opm/simulators/wells/GlobalWellInfo.cpp

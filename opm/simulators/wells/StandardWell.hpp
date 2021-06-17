@@ -32,6 +32,7 @@
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/GasLiftSingleWell.hpp>
+#include <opm/simulators/wells/GasLiftGroupInfo.hpp>
 
 #include <opm/models/blackoil/blackoilpolymermodules.hh>
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
@@ -85,6 +86,7 @@ namespace Opm
         using typename Base::GLiftOptWells;
         using typename Base::GLiftProdWells;
         using typename Base::GLiftWellStateMap;
+        using typename Base::GLiftSyncGroups;
 
         using Base::numEq;
         using Base::numPhases;
@@ -230,7 +232,9 @@ namespace Opm
             DeferredLogger& deferred_logger,
             GLiftProdWells &prod_wells,
             GLiftOptWells &glift_wells,
-            GLiftWellStateMap &state_map
+            GLiftWellStateMap &state_map,
+            GasLiftGroupInfo &group_info,
+            GLiftSyncGroups &sync_groups
         ) const override;
 
         /* returns BHP */

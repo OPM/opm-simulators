@@ -35,17 +35,23 @@
 namespace Opm
 {
 
-GasLiftSingleWellGeneric::GasLiftSingleWellGeneric(DeferredLogger& deferred_logger,
-                                                   WellState& well_state,
-                                                   const Well& ecl_well,
-                                                   const SummaryState& summary_state,
-                                                   const Schedule& schedule,
-                                                   const int report_step_idx)
-    : deferred_logger_(deferred_logger)
-    , well_state_(well_state)
-    , ecl_well_(ecl_well)
-    , summary_state_(summary_state)
-    , controls_(ecl_well_.productionControls(summary_state_))
+GasLiftSingleWellGeneric::GasLiftSingleWellGeneric(
+    DeferredLogger& deferred_logger,
+    WellState& well_state,
+    const Well& ecl_well,
+    const SummaryState& summary_state,
+    GasLiftGroupInfo &group_info,
+    const Schedule& schedule,
+    const int report_step_idx,
+    GLiftSyncGroups &sync_groups
+) :
+    deferred_logger_{deferred_logger}
+    , well_state_{well_state}
+    , ecl_well_{ecl_well}
+    , summary_state_{summary_state}
+    , group_info_{group_info}
+    , sync_groups_{sync_groups}
+    , controls_{ecl_well_.productionControls(summary_state_)}
     , num_phases_{well_state_.numPhases()}
     , debug_{false}  // extra debugging output
     , debug_limit_increase_decrease_{false}
@@ -106,33 +112,28 @@ calcIncOrDecGradient(double oil_rate, double gas_rate, double alq, bool increase
     }
 }
 
-bool
+std::unique_ptr<GasLiftWellState>
 GasLiftSingleWellGeneric::
-computeInitialWellRates_(std::vector<double>& potentials)
+runOptimize(const int iteration_idx)
 {
-    if (auto bhp = computeBhpAtThpLimit_(this->orig_alq_); bhp) {
-        {
-            const std::string msg = fmt::format(
-                "computed initial bhp {} given thp limit and given alq {}",
-                *bhp, this->orig_alq_);
-            displayDebugMessage_(msg);
+    std::unique_ptr<GasLiftWellState> state;
+    if (this->optimize_) {
+        if (this->debug_limit_increase_decrease_) {
+            state = runOptimize1_();
         }
-        computeWellRates_(*bhp, potentials);
-        {
-            const std::string msg = fmt::format(
-                "computed initial well potentials given bhp, "
-                "oil: {}, gas: {}, water: {}",
-                -potentials[this->oil_pos_],
-                -potentials[this->gas_pos_],
-                -potentials[this->water_pos_]);
-            displayDebugMessage_(msg);
+        else {
+            state = runOptimize2_();
         }
-        return true;
+        if (state) {
+            if (state->increase()) {
+                double alq = state->alq();
+                if (this->debug_)
+                    logSuccess_(alq, iteration_idx);
+                this->well_state_.setALQ(this->well_name_, alq);
+            }
+        }
     }
-    else {
-        displayDebugMessage_("Aborting optimization.");
-        return false;
-    }
+    return state;
 }
 
 /****************************************
@@ -229,9 +230,10 @@ checkInitialALQmodified_(double alq, double initial_alq) const
 
 bool
 GasLiftSingleWellGeneric::
-checkWellRatesViolated_(std::vector<double>& potentials,
-                        const std::function<bool(double, double, const std::string &)>& callback,
-                        bool increase)
+checkWellRatesViolated_(
+    std::vector<double>& potentials,
+    const std::function<bool(double, double, const std::string &)>& callback,
+    bool increase)
 {
     if (!increase) {
         auto oil_rate = -potentials[this->oil_pos_];
@@ -274,6 +276,35 @@ checkWellRatesViolated_(std::vector<double>& potentials,
     // TODO: Check group contraints?
 
     return false;
+}
+
+bool
+GasLiftSingleWellGeneric::
+computeInitialWellRates_(std::vector<double>& potentials)
+{
+    if (auto bhp = computeBhpAtThpLimit_(this->orig_alq_); bhp) {
+        {
+            const std::string msg = fmt::format(
+                "computed initial bhp {} given thp limit and given alq {}",
+                *bhp, this->orig_alq_);
+            displayDebugMessage_(msg);
+        }
+        computeWellRates_(*bhp, potentials);
+        {
+            const std::string msg = fmt::format(
+                "computed initial well potentials given bhp, "
+                "oil: {}, gas: {}, water: {}",
+                -potentials[this->oil_pos_],
+                -potentials[this->gas_pos_],
+                -potentials[this->water_pos_]);
+            displayDebugMessage_(msg);
+        }
+        return true;
+    }
+    else {
+        displayDebugMessage_("Aborting optimization.");
+        return false;
+    }
 }
 
 void
@@ -566,6 +597,365 @@ logSuccess_(double alq, const int iteration_idx)
     this->deferred_logger_.info(message);
 }
 
+std::tuple<double,double,double,bool,bool>
+GasLiftSingleWellGeneric::
+maybeAdjustALQbeforeOptimizeLoop_(
+    bool increase, double alq, double oil_rate, double gas_rate,
+    bool oil_is_limited, bool gas_is_limited,
+    std::vector<double> &potentials)
+{
+    double orig_alq = alq;
+    if (this->debug_) {
+        const std::string msg = fmt::format("initial ALQ: {}", alq);
+        displayDebugMessage_(msg);
+    }
+    if (!increase && oil_is_limited) {
+        // NOTE: Try to decrease ALQ down to a value where the oil target is
+        //   not exceeded.
+        // NOTE: This may reduce ALQ below the minimum value set in WLIFTOPT
+        //   item 5. However, this is OK since the rate target is met and there
+        //   is no point in using a higher ALQ value then.
+        std::tie(oil_rate, gas_rate, oil_is_limited, gas_is_limited, alq) =
+            reduceALQtoOilTarget_(
+                alq, oil_rate, gas_rate, oil_is_limited, gas_is_limited, potentials);
+    }
+    else {
+        if (increase && oil_rate < 0) {
+            // NOTE: Try to increase ALQ up to a value where oil_rate is positive
+            std::tie(oil_rate, gas_rate, oil_is_limited, gas_is_limited, alq) =
+               increaseALQtoPositiveOilRate_(alq, oil_rate,
+                   gas_rate, oil_is_limited, gas_is_limited, potentials);
+        }
+        if (increase && (this->min_alq_> 0) && (alq < this->min_alq_)) {
+            // NOTE: Try to increase ALQ up to the minimum limit without checking
+            //   the economic gradient..
+            std::tie(oil_rate, gas_rate, oil_is_limited, gas_is_limited, alq) =
+                increaseALQtoMinALQ_(alq, oil_rate, gas_rate,
+                    oil_is_limited, gas_is_limited, potentials);
+        }
+    }
+    if (this->debug_ && (orig_alq != alq)) {
+        const std::string msg = fmt::format("adjusted ALQ to: {}", alq);
+        displayDebugMessage_(msg);
+    }
+    return std::make_tuple(oil_rate, gas_rate, alq, oil_is_limited, gas_is_limited);
+}
+
+std::tuple<double,double,bool,bool,double>
+GasLiftSingleWellGeneric::
+reduceALQtoOilTarget_(double alq,
+                      double oil_rate,
+                      double gas_rate,
+                      bool oil_is_limited,
+                      bool gas_is_limited,
+                      std::vector<double>& potentials)
+{
+    displayDebugMessage_("Reducing ALQ to meet oil target before iteration starts..");
+    double orig_oil_rate = oil_rate;
+    double orig_alq = alq;
+    // NOTE: This method should only be called if oil_is_limited, and hence
+    //   we know that it has oil rate control
+    assert(this->controls_.hasControl(Well::ProducerCMode::ORAT));
+    auto target = this->controls_.oil_rate;
+    bool stop_iteration = false;
+    double temp_alq = alq;
+    while(!stop_iteration) {
+        temp_alq -= this->increment_;
+        if (temp_alq <= 0) break;
+        auto bhp_opt = computeBhpAtThpLimit_(temp_alq);
+        if (!bhp_opt) break;
+        alq = temp_alq;
+        auto [bhp, bhp_is_limited] = getBhpWithLimit_(*bhp_opt);
+        computeWellRates_(bhp, potentials);
+        oil_rate = -potentials[this->oil_pos_];
+        if (oil_rate < target) {
+            break;
+        }
+    }
+    std::tie(oil_rate, oil_is_limited) = getOilRateWithLimit_(potentials);
+    std::tie(gas_rate, gas_is_limited) = getGasRateWithLimit_(potentials);
+    if (this->debug_) {
+        assert( alq <= orig_alq );
+        if (alq < orig_alq) {
+            // NOTE: ALQ may drop below zero before we are able to meet the target
+            const std::string msg = fmt::format(
+                "Reduced (oil_rate, alq) from ({}, {}) to ({}, {}) to meet target "
+                "at {}. ", orig_oil_rate, orig_alq, oil_rate, alq, target);
+            displayDebugMessage_(msg);
+        }
+        else if (alq == orig_alq) {
+            // We might not be able to reduce ALQ, for example if ALQ starts out at zero.
+            const std::string msg = fmt::format("Not able to reduce ALQ {} further. "
+                "Oil rate is {} and oil target is {}", orig_alq, oil_rate, target);
+            displayDebugMessage_(msg);
+        }
+    }
+    return std::make_tuple(oil_rate, gas_rate, oil_is_limited, gas_is_limited, alq);
+}
+
+// INPUT:
+//  - increase (boolean) :
+//   - true  : try increase the lift gas supply,
+//   - false : try decrease lift gas supply.
+//
+// OUTPUT:
+//
+//  - return value: a new GasLiftWellState or nullptr
+//
+std::unique_ptr<GasLiftWellState>
+GasLiftSingleWellGeneric::
+runOptimizeLoop_(bool increase)
+{
+    std::vector<double> potentials(this->num_phases_, 0.0);
+    std::unique_ptr<GasLiftWellState> ret_value; // nullptr initially
+    if (!computeInitialWellRates_(potentials)) return ret_value;
+    bool alq_is_limited = false;
+    bool oil_is_limited = false;
+    bool gas_is_limited = false;
+    double oil_rate, gas_rate;
+    std::tie(oil_rate, gas_rate, oil_is_limited, gas_is_limited) =
+        getInitialRatesWithLimit_(potentials);
+    //if (this->debug_) debugShowBhpAlqTable_();
+    if (this->debug_) debugShowAlqIncreaseDecreaseCounts_();
+    if (this->debug_) debugShowTargets_();
+    bool success = false;  // did we succeed to increase alq?
+    auto cur_alq = this->orig_alq_;
+    double new_oil_rate, new_gas_rate, new_alq;
+    bool new_oil_is_limited, new_gas_is_limited;
+    std::tie(new_oil_rate, new_gas_rate, new_alq, new_oil_is_limited, new_gas_is_limited)
+        = maybeAdjustALQbeforeOptimizeLoop_(
+            increase, cur_alq, oil_rate, gas_rate,
+            oil_is_limited, gas_is_limited, potentials);
+    double delta_oil = 0.0;
+    double delta_gas = 0.0;
+    double delta_alq = 0.0;
+    OptimizeState state {*this, increase};
+    if (checkInitialALQmodified_(new_alq, cur_alq)) {
+        delta_oil = new_oil_rate - oil_rate;
+        delta_gas = new_gas_rate - gas_rate;
+        delta_alq = new_alq - cur_alq;
+        if (!(state.checkGroupTargetsViolated(delta_oil, delta_gas)) &&
+            !(state.checkGroupALQrateExceeded(delta_alq)))
+        {
+            oil_rate = new_oil_rate;
+            gas_rate = new_gas_rate;
+            oil_is_limited = new_oil_is_limited;
+            gas_is_limited = new_gas_is_limited;
+            cur_alq = new_alq;
+            success = true;
+        }
+        else {
+            state.stop_iteration = true;
+        }
+    }
+    auto temp_alq = cur_alq;
+    if (this->debug_) debugShowStartIteration_(temp_alq, increase, oil_rate);
+    while (!state.stop_iteration && (++state.it <= this->max_iterations_)) {
+        if (!increase && state.checkNegativeOilRate(oil_rate)) break;
+        if (state.checkWellRatesViolated(potentials)) break;
+        if (state.checkGroupTargetsViolated(delta_oil, delta_gas)) break;
+        if (state.checkAlqOutsideLimits(temp_alq, oil_rate)) break;
+        std::optional<double> alq_opt;
+        std::tie(alq_opt, alq_is_limited)
+            = state.addOrSubtractAlqIncrement(temp_alq);
+        if (!alq_opt) break;
+        delta_alq = *alq_opt - temp_alq;
+        if (state.checkGroupALQrateExceeded(delta_alq)) break;
+        temp_alq = *alq_opt;
+        if (this->debug_) state.debugShowIterationInfo(temp_alq);
+        if (!state.computeBhpAtThpLimit(temp_alq)) break;
+        // NOTE: if BHP is below limit, we set state.stop_iteration = true
+        auto bhp = state.getBhpWithLimit();
+        computeWellRates_(bhp, potentials);
+        std::tie(new_oil_rate, new_oil_is_limited) = getOilRateWithLimit_(potentials);
+/*        if (this->debug_abort_if_decrease_and_oil_is_limited_) {
+            if (oil_is_limited && !increase) {
+                // if oil is limited we do not want to decrease
+                displayDebugMessage_(
+                    "decreasing ALQ and oil is limited -> aborting iteration");
+                break;
+            }
+            }
+*/
+        std::tie(new_gas_rate, new_gas_is_limited) = getGasRateWithLimit_(potentials);
+/*        if (this->debug_abort_if_increase_and_gas_is_limited_) {
+            if (gas_is_limited && increase) {
+                // if gas is limited we do not want to increase
+                displayDebugMessage_(
+                    "increasing ALQ and gas is limited -> aborting iteration");
+                break;
+            }
+        }
+*/
+        auto gradient = state.calcEcoGradient(
+            oil_rate, new_oil_rate, gas_rate, new_gas_rate);
+        if (this->debug_)
+            debugCheckNegativeGradient_(
+                gradient, cur_alq, temp_alq, oil_rate, new_oil_rate,
+                gas_rate, new_gas_rate, increase);
+        if (state.checkEcoGradient(gradient)) break;
+        cur_alq = temp_alq;
+        success = true;
+        delta_oil = new_oil_rate - oil_rate;
+        delta_gas = new_gas_rate - gas_rate;
+        oil_rate = new_oil_rate;
+        gas_rate = new_gas_rate;
+        oil_is_limited = new_oil_is_limited;
+        gas_is_limited = new_gas_is_limited;
+        state.updateGroupRates(delta_oil, delta_gas, delta_alq);
+    }
+    if (state.it > this->max_iterations_) {
+        warnMaxIterationsExceeded_();
+    }
+    std::optional<bool> increase_opt;
+    if (success) {
+        this->well_state_.gliftUpdateAlqIncreaseCount(this->well_name_, increase);
+        increase_opt = increase;
+    }
+    else {
+        increase_opt = std::nullopt;
+    }
+    ret_value = std::make_unique<GasLiftWellState>(oil_rate, oil_is_limited,
+        gas_rate, gas_is_limited, cur_alq, alq_is_limited, increase_opt);
+    return ret_value;
+}
+
+std::unique_ptr<GasLiftWellState>
+GasLiftSingleWellGeneric::
+runOptimize1_()
+{
+    std::unique_ptr<GasLiftWellState> state;
+    auto inc_count = this->well_state_.gliftGetAlqIncreaseCount(this->well_name_);
+    auto dec_count = this->well_state_.gliftGetAlqDecreaseCount(this->well_name_);
+    if (dec_count == 0 && inc_count == 0) {
+        state = tryIncreaseLiftGas_();
+        if (!state && !state->alqChanged()) {
+            state = tryDecreaseLiftGas_();
+        }
+    }
+    else if (dec_count == 0) {
+        assert(inc_count > 0);
+        state = tryIncreaseLiftGas_();
+    }
+    else if (inc_count == 0) {
+        assert(dec_count > 0);
+        state = tryDecreaseLiftGas_();
+    }
+    return state;
+}
+
+std::unique_ptr<GasLiftWellState>
+GasLiftSingleWellGeneric::
+runOptimize2_()
+{
+    std::unique_ptr<GasLiftWellState> state;
+    state = tryIncreaseLiftGas_();
+    if (!state || !(state->alqChanged())) {
+        state = tryDecreaseLiftGas_();
+    }
+    return state;
+}
+
+std::unique_ptr<GasLiftWellState>
+GasLiftSingleWellGeneric::
+tryDecreaseLiftGas_()
+{
+    return runOptimizeLoop_(/*increase=*/ false);
+}
+
+std::unique_ptr<GasLiftWellState>
+GasLiftSingleWellGeneric::
+tryIncreaseLiftGas_()
+{
+    return runOptimizeLoop_(/*increase=*/ true);
+}
+
+void
+GasLiftSingleWellGeneric::
+setAlqMinRate_(const GasLiftOpt::Well& well)
+{
+    // NOTE:  According to WLIFTOPT item 5 :
+    //   if min_rate() is negative, it means: allocate at least enough lift gas
+    //   to enable the well to flow
+    // NOTE: "to enable the well to flow" : How to interpret this?
+    //   We choose to interpret it to mean a positive oil rate as returned from
+    //
+    //    computeWellRates_(bhp, cur_potentials);
+    //
+    //   So even if the well is producing gas, if the oil rate is zero
+    //   we say that the "well is not flowing".
+    //
+    //   Note that if WECON item 2 is set, the well can be shut off
+    //   before the flow rate reaches zero. Also,
+    //   if bhp drops below the bhp lower limit, the well might switch to bhp
+    //   control before the oil rate becomes zero.
+
+    this->min_alq_ = well.min_rate();
+    if (this->min_alq_ > 0) {
+        if (this->min_alq_ >= this->max_alq_) {
+            // NOTE: We reset the value to a negative value.
+            //   negative value means: Allocate at least enough lift gas
+            //   to allow the well to flow.
+            // TODO: Consider other options for resetting the value..
+            this->min_alq_ = -1;
+            displayWarning_("Minimum ALQ value is larger than maximum ALQ value!"
+                " Resetting value.");
+        }
+    }
+}
+
+// Called when we should use a fixed ALQ value
+void
+GasLiftSingleWellGeneric::
+updateWellStateAlqFixedValue_(const GasLiftOpt::Well& well)
+{
+    auto& max_alq_optional = well.max_rate();
+    if (max_alq_optional) {
+        // According to WLIFTOPT, item 3:
+        // If item 2 is NO, then item 3 is regarded as the fixed
+        // lift gas injection rate for the well.
+        auto new_alq = *max_alq_optional;
+        this->well_state_.setALQ(this->well_name_, new_alq);
+    }
+    // else {
+    //    // If item 3 is defaulted, the lift gas rate remains
+    //    // unchanged at its current value.
+    //}
+
+}
+
+// Determine if we should use a fixed ALQ value.
+//
+// From the manual for WLIFTOPT, item 2:
+//   Is the well's lift gas injection rate to be calculated by the
+//   optimization facility?
+// - YES : The well's lift gas injection rate is calculated by the
+//   optimization facility.
+// - NO  : The well's lift gas injection rate remains fixed at a
+//   value that can be set either in Item 3 of this keyword, or in
+//   Item 12 of keyword WCONPROD, or with keyword WELTARG.
+bool
+GasLiftSingleWellGeneric::
+useFixedAlq_(const GasLiftOpt::Well& well)
+{
+    auto wliftopt_item2 = well.use_glo();
+    if (wliftopt_item2) {
+        return false;
+    }
+    else {
+        //  auto& max_alq_optional = well.max_rate();
+        //  if (max_alq_optional) {
+               // According to WLIFTOPT, item 3:
+               // If item 2 is NO, then item 3 is regarded as the fixed
+               // lift gas injection rate for the well.
+        //  }
+        //  else {
+              // If item 3 is defaulted, the lift gas rate remains
+              // unchanged at its current value.
+        //  }
+        return true;
+    }
+}
 void
 GasLiftSingleWellGeneric::
 warnMaxIterationsExceeded_()
@@ -700,6 +1090,70 @@ checkAlqOutsideLimits(double alq, [[maybe_unused]] double oil_rate)
             this->parent.displayDebugMessage_(msg);
     }
     return result;
+}
+
+bool
+GasLiftSingleWellGeneric::OptimizeState::
+checkGroupALQrateExceeded(double delta_alq)
+{
+    const auto &pairs =
+        this->parent.group_info_.getWellGroups(this->parent.well_name_);
+    for (const auto &[group_name, efficiency] : pairs) {
+        auto max_alq_opt = this->parent.group_info_.maxAlq(group_name);
+        if (max_alq_opt) {
+            double alq =
+                this->parent.group_info_.alqRate(group_name) + efficiency * delta_alq;
+            if (alq > *max_alq_opt) {
+                if (this->parent.debug_) {
+                    const std::string msg = fmt::format(
+                        "Group {} : alq {} exceeds max_alq {}. Stopping iteration",
+                        group_name, alq, *max_alq_opt);
+                    this->parent.displayDebugMessage_(msg);
+                }
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool
+GasLiftSingleWellGeneric::OptimizeState::
+checkGroupTargetsViolated(double delta_oil, double delta_gas)
+{
+    const auto &pairs =
+        this->parent.group_info_.getWellGroups(this->parent.well_name_);
+    for (const auto &[group_name, efficiency] : pairs) {
+        auto oil_target_opt = this->parent.group_info_.oilTarget(group_name);
+        if (oil_target_opt) {
+            double oil_rate =
+                this->parent.group_info_.oilRate(group_name) + efficiency * delta_oil;
+            if (oil_rate > *oil_target_opt) {
+                if (this->parent.debug_) {
+                    const std::string msg = fmt::format(
+                       "Group {} : oil rate {} exceeds oil target {}. Stopping iteration",
+                       group_name, oil_rate, *oil_target_opt);
+                    this->parent.displayDebugMessage_(msg);
+                }
+                return true;
+            }
+        }
+        auto gas_target_opt = this->parent.group_info_.gasTarget(group_name);
+        if (gas_target_opt) {
+            double gas_rate =
+                this->parent.group_info_.gasRate(group_name) + efficiency * delta_gas;
+            if (gas_rate > *gas_target_opt) {
+                if (this->parent.debug_) {
+                    const std::string msg = fmt::format(
+                       "Group {} : gas rate {} exceeds gas target {}. Stopping iteration",
+                       group_name, gas_rate, *gas_target_opt);
+                    this->parent.displayDebugMessage_(msg);
+                }
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 bool
@@ -840,340 +1294,19 @@ getBhpWithLimit()
     return new_bhp;
 }
 
-std::tuple<double,double,bool,bool,double>
-GasLiftSingleWellGeneric::
-reduceALQtoOilTarget_(double alq,
-                      double oil_rate,
-                      double gas_rate,
-                      bool oil_is_limited,
-                      bool gas_is_limited,
-                      std::vector<double>& potentials)
-{
-    displayDebugMessage_("Reducing ALQ to meet oil target before iteration starts..");
-    double orig_oil_rate = oil_rate;
-    double orig_alq = alq;
-    // NOTE: This method should only be called if oil_is_limited, and hence
-    //   we know that it has oil rate control
-    assert(this->controls_.hasControl(Well::ProducerCMode::ORAT));
-    auto target = this->controls_.oil_rate;
-    bool stop_iteration = false;
-    double temp_alq = alq;
-    while(!stop_iteration) {
-        temp_alq -= this->increment_;
-        if (temp_alq <= 0) break;
-        auto bhp_opt = computeBhpAtThpLimit_(temp_alq);
-        if (!bhp_opt) break;
-        alq = temp_alq;
-        auto [bhp, bhp_is_limited] = getBhpWithLimit_(*bhp_opt);
-        computeWellRates_(bhp, potentials);
-        oil_rate = -potentials[this->oil_pos_];
-        if (oil_rate < target) {
-            break;
-        }
-    }
-    std::tie(oil_rate, oil_is_limited) = getOilRateWithLimit_(potentials);
-    std::tie(gas_rate, gas_is_limited) = getGasRateWithLimit_(potentials);
-    if (this->debug_) {
-        assert( alq <= orig_alq );
-        if (alq < orig_alq) {
-            // NOTE: ALQ may drop below zero before we are able to meet the target
-            const std::string msg = fmt::format(
-                "Reduced (oil_rate, alq) from ({}, {}) to ({}, {}) to meet target "
-                "at {}. ", orig_oil_rate, orig_alq, oil_rate, alq, target);
-            displayDebugMessage_(msg);
-        }
-        else if (alq == orig_alq) {
-            // We might not be able to reduce ALQ, for example if ALQ starts out at zero.
-            const std::string msg = fmt::format("Not able to reduce ALQ {} further. "
-                "Oil rate is {} and oil target is {}", orig_alq, oil_rate, target);
-            displayDebugMessage_(msg);
-        }
-    }
-    return std::make_tuple(oil_rate, gas_rate, oil_is_limited, gas_is_limited, alq);
-}
-
-// INPUT:
-//  - increase (boolean) :
-//   - true  : try increase the lift gas supply,
-//   - false : try decrease lift gas supply.
-//
-// OUTPUT:
-//
-//  - return value: a new GLiftWellState or nullptr
-//
-std::unique_ptr<GasLiftWellState>
-GasLiftSingleWellGeneric::
-runOptimizeLoop_(bool increase)
-{
-    std::vector<double> potentials(this->num_phases_, 0.0);
-    std::unique_ptr<GasLiftWellState> ret_value; // nullptr initially
-    if (!computeInitialWellRates_(potentials)) return ret_value;
-    bool alq_is_limited = false;
-    bool oil_is_limited = false;
-    bool gas_is_limited = false;
-    double oil_rate, gas_rate;
-    std::tie(oil_rate, gas_rate, oil_is_limited, gas_is_limited) =
-        getInitialRatesWithLimit_(potentials);
-    if (this->debug_) debugShowBhpAlqTable_();
-    if (this->debug_) debugShowAlqIncreaseDecreaseCounts_();
-    if (this->debug_) debugShowTargets_();
-    bool success = false;  // did we succeed to increase alq?
-    auto cur_alq = this->orig_alq_;
-    auto temp_alq = cur_alq;
-    if (!increase && oil_is_limited) {
-        // NOTE: Try to decrease ALQ down to a value where the oil target is
-        //   not exceeded.
-        // NOTE: This may reduce ALQ below the minimum value set in WLIFTOPT
-        //   item 5. However, this is OK since the rate target is met and there
-        //   is no point in using a higher ALQ value then.
-        std::tie(oil_rate, gas_rate, oil_is_limited, gas_is_limited, temp_alq) =
-            reduceALQtoOilTarget_(
-                temp_alq, oil_rate, gas_rate, oil_is_limited, gas_is_limited, potentials);
-    }
-    else {
-        if (increase && oil_rate < 0) {
-            // NOTE: Try to increase ALQ up to a value where oil_rate is positive
-            std::tie(oil_rate, gas_rate, oil_is_limited, gas_is_limited, temp_alq) =
-               increaseALQtoPositiveOilRate_(temp_alq, oil_rate,
-                   gas_rate, oil_is_limited, gas_is_limited, potentials);
-        }
-        if (increase && (this->min_alq_> 0) && (temp_alq < this->min_alq_)) {
-            // NOTE: Try to increase ALQ up to the minimum limit without checking
-            //   the economic gradient..
-            std::tie(oil_rate, gas_rate, oil_is_limited, gas_is_limited, temp_alq) =
-                increaseALQtoMinALQ_(temp_alq, oil_rate, gas_rate,
-                    oil_is_limited, gas_is_limited, potentials);
-        }
-    }
-    if (checkInitialALQmodified_(temp_alq, cur_alq)) {
-        cur_alq = temp_alq;
-        success = true;
-    }
-    OptimizeState state {*this, increase};
-    if (this->debug_) debugShowStartIteration_(temp_alq, increase, oil_rate);
-    while (!state.stop_iteration && (++state.it <= this->max_iterations_)) {
-        if (!increase && state.checkNegativeOilRate(oil_rate)) break;
-        if (state.checkWellRatesViolated(potentials)) break;
-        if (state.checkAlqOutsideLimits(temp_alq, oil_rate)) break;
-        std::optional<double> alq_opt;
-        std::tie(alq_opt, alq_is_limited)
-            = state.addOrSubtractAlqIncrement(temp_alq);
-        if (!alq_opt) break;
-        temp_alq = *alq_opt;
-        if (this->debug_) state.debugShowIterationInfo(temp_alq);
-        if (!state.computeBhpAtThpLimit(temp_alq)) break;
-        // NOTE: if BHP is below limit, we set state.stop_iteration = true
-        auto bhp = state.getBhpWithLimit();
-        computeWellRates_(bhp, potentials);
-        auto [new_oil_rate, new_oil_is_limited] = getOilRateWithLimit_(potentials);
-/*        if (this->debug_abort_if_decrease_and_oil_is_limited_) {
-            if (oil_is_limited && !increase) {
-                // if oil is limited we do not want to decrease
-                displayDebugMessage_(
-                    "decreasing ALQ and oil is limited -> aborting iteration");
-                break;
-            }
-            }
-*/
-        auto [new_gas_rate, new_gas_is_limited] = getGasRateWithLimit_(potentials);
-/*        if (this->debug_abort_if_increase_and_gas_is_limited_) {
-            if (gas_is_limited && increase) {
-                // if gas is limited we do not want to increase
-                displayDebugMessage_(
-                    "increasing ALQ and gas is limited -> aborting iteration");
-                break;
-            }
-        }
-*/
-        auto gradient = state.calcEcoGradient(
-            oil_rate, new_oil_rate, gas_rate, new_gas_rate);
-        if (this->debug_)
-            debugCheckNegativeGradient_(
-                gradient, cur_alq, temp_alq, oil_rate, new_oil_rate,
-                gas_rate, new_gas_rate, increase);
-        if (state.checkEcoGradient(gradient)) break;
-        cur_alq = temp_alq;
-        success = true;
-        oil_rate = new_oil_rate;
-        gas_rate = new_gas_rate;
-        oil_is_limited = new_oil_is_limited;
-        gas_is_limited = new_gas_is_limited;
-    }
-    if (state.it > this->max_iterations_) {
-        warnMaxIterationsExceeded_();
-    }
-    std::optional<bool> increase_opt;
-    if (success) {
-        this->well_state_.gliftUpdateAlqIncreaseCount(this->well_name_, increase);
-        increase_opt = increase;
-    }
-    else {
-        increase_opt = std::nullopt;
-    }
-    ret_value = std::make_unique<GasLiftWellState>(oil_rate, oil_is_limited,
-        gas_rate, gas_is_limited, cur_alq, alq_is_limited, increase_opt);
-    return ret_value;
-}
-
-std::unique_ptr<GasLiftWellState>
-GasLiftSingleWellGeneric::
-runOptimize(const int iteration_idx)
-{
-    std::unique_ptr<GasLiftWellState> state;
-    if (this->optimize_) {
-        if (this->debug_limit_increase_decrease_) {
-            state = runOptimize1_();
-        }
-        else {
-            state = runOptimize2_();
-        }
-        if (state) {
-            if (state->increase()) {
-                double alq = state->alq();
-                if (this->debug_)
-                    logSuccess_(alq, iteration_idx);
-                this->well_state_.setALQ(this->well_name_, alq);
-            }
-        }
-    }
-    return state;
-}
-
-std::unique_ptr<GasLiftWellState>
-GasLiftSingleWellGeneric::
-runOptimize1_()
-{
-    std::unique_ptr<GasLiftWellState> state;
-    auto inc_count = this->well_state_.gliftGetAlqIncreaseCount(this->well_name_);
-    auto dec_count = this->well_state_.gliftGetAlqDecreaseCount(this->well_name_);
-    if (dec_count == 0 && inc_count == 0) {
-        state = tryIncreaseLiftGas_();
-        if (!state && !state->alqChanged()) {
-            state = tryDecreaseLiftGas_();
-        }
-    }
-    else if (dec_count == 0) {
-        assert(inc_count > 0);
-        state = tryIncreaseLiftGas_();
-    }
-    else if (inc_count == 0) {
-        assert(dec_count > 0);
-        state = tryDecreaseLiftGas_();
-    }
-    return state;
-}
-
-std::unique_ptr<GasLiftWellState>
-GasLiftSingleWellGeneric::
-runOptimize2_()
-{
-    std::unique_ptr<GasLiftWellState> state;
-    state = tryIncreaseLiftGas_();
-    if (!state || !(state->alqChanged())) {
-        state = tryDecreaseLiftGas_();
-    }
-    return state;
-}
-
-std::unique_ptr<GasLiftWellState>
-GasLiftSingleWellGeneric::
-tryDecreaseLiftGas_()
-{
-    return runOptimizeLoop_(/*increase=*/ false);
-}
-
-std::unique_ptr<GasLiftWellState>
-GasLiftSingleWellGeneric::
-tryIncreaseLiftGas_()
-{
-    return runOptimizeLoop_(/*increase=*/ true);
-}
-
 void
-GasLiftSingleWellGeneric::
-setAlqMinRate_(const GasLiftOpt::Well& well)
+GasLiftSingleWellGeneric::OptimizeState::
+updateGroupRates(double delta_oil, double delta_gas, double delta_alq)
 {
-    // NOTE:  According to WLIFTOPT item 5 :
-    //   if min_rate() is negative, it means: allocate at least enough lift gas
-    //   to enable the well to flow
-    // NOTE: "to enable the well to flow" : How to interpret this?
-    //   We choose to interpret it to mean a positive oil rate as returned from
-    //
-    //    computeWellRates_(bhp, cur_potentials);
-    //
-    //   So even if the well is producing gas, if the oil rate is zero
-    //   we say that the "well is not flowing".
-    //
-    //   Note that if WECON item 2 is set, the well can be shut off
-    //   before the flow rate reaches zero. Also,
-    //   if bhp drops below the bhp lower limit, the well might switch to bhp
-    //   control before the oil rate becomes zero.
-
-    this->min_alq_ = well.min_rate();
-    if (this->min_alq_ > 0) {
-        if (this->min_alq_ >= this->max_alq_) {
-            // NOTE: We reset the value to a negative value.
-            //   negative value means: Allocate at least enough lift gas
-            //   to allow the well to flow.
-            // TODO: Consider other options for resetting the value..
-            this->min_alq_ = -1;
-            displayWarning_("Minimum ALQ value is larger than maximum ALQ value!"
-                " Resetting value.");
-        }
+    const auto &pairs =
+        this->parent.group_info_.getWellGroups(this->parent.well_name_);
+    for (const auto &[group_name, efficiency] : pairs) {
+        int idx = this->parent.group_info_.getGroupIdx(group_name);
+        this->parent.sync_groups_.insert(idx);
+        this->parent.group_info_.update(group_name,
+            efficiency * delta_oil, efficiency * delta_gas, efficiency * delta_alq);
     }
 }
 
-// Called when we should use a fixed ALQ value
-void
-GasLiftSingleWellGeneric::
-updateWellStateAlqFixedValue_(const GasLiftOpt::Well& well)
-{
-    auto& max_alq_optional = well.max_rate();
-    if (max_alq_optional) {
-        // According to WLIFTOPT, item 3:
-        // If item 2 is NO, then item 3 is regarded as the fixed
-        // lift gas injection rate for the well.
-        auto new_alq = *max_alq_optional;
-        this->well_state_.setALQ(this->well_name_, new_alq);
-    }
-    // else {
-    //    // If item 3 is defaulted, the lift gas rate remains
-    //    // unchanged at its current value.
-    //}
-
-}
-
-// Determine if we should use a fixed ALQ value.
-//
-// From the manual for WLIFTOPT, item 2:
-//   Is the well's lift gas injection rate to be calculated by the
-//   optimization facility?
-// - YES : The well's lift gas injection rate is calculated by the
-//   optimization facility.
-// - NO  : The well's lift gas injection rate remains fixed at a
-//   value that can be set either in Item 3 of this keyword, or in
-//   Item 12 of keyword WCONPROD, or with keyword WELTARG.
-bool
-GasLiftSingleWellGeneric::
-useFixedAlq_(const GasLiftOpt::Well& well)
-{
-    auto wliftopt_item2 = well.use_glo();
-    if (wliftopt_item2) {
-        return false;
-    }
-    else {
-        //  auto& max_alq_optional = well.max_rate();
-        //  if (max_alq_optional) {
-               // According to WLIFTOPT, item 3:
-               // If item 2 is NO, then item 3 is regarded as the fixed
-               // lift gas injection rate for the well.
-        //  }
-        //  else {
-              // If item 3 is defaulted, the lift gas rate remains
-              // unchanged at its current value.
-        //  }
-        return true;
-    }
-}
 
 } // namespace Opm
