@@ -41,7 +41,6 @@
 namespace Opm {
     template<typename TypeTag> class GasLiftSingleWell;
     template<typename TypeTag> class BlackoilWellModel;
-    class GasLiftGroupInfo;
 }
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
 #include <opm/simulators/wells/GasLiftSingleWell.hpp>

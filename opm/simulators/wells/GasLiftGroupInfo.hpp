@@ -75,6 +75,9 @@ public:
     std::vector<std::pair<std::string,double>>& getWellGroups(
         const std::string& well_name);
 
+    // TODO: See comment below for initializeGroupRatesRecursive_() for why
+    //   the implementation of initialize() is kept here in the header file instead
+    //   of in the .cpp file...
     template<class Comm>
     void
     initialize(const Comm& comm)
@@ -118,7 +121,7 @@ private:
     //   class since we are also constructing a GasLiftGroupInfo object in the
     //   test file test1_glift.cpp and when the linker tries to find a definition
     //   of the GasLiftGroupInfo(...) constructor in libopmsimulators.a,
-    //   the the template type of the MPI communicator (Dune::Communication<..>)
+    //   the template type of the MPI communicator (Dune::Communication<..>)
     //   is not of the same type as the one needed by the test case.
     //   The test case needs Dune::Communication<ompi_communicator_t*>, whereas
     //   the one in libopmsimulators.a is Dune::Communication<Dune::No_Comm>.

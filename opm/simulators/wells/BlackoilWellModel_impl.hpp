@@ -892,7 +892,7 @@ namespace Opm {
         GasLiftGroupInfo &group_info, GLiftWellStateMap &state_map)
     {
         auto comm = ebosSimulator_.vanguard().grid().comm();
-        std::size_t num_procs = comm.size();
+        int num_procs = comm.size();
         // NOTE: Gas lift optimization stage 1 seems to be difficult
         //  to do in parallel since the wells are optimized on different
         //  processes and each process needs to know the current ALQ allocated
@@ -918,10 +918,10 @@ namespace Opm {
         //    processes could take ownership of all the wells.  Then there
         //    would be no need for synchronization here..
         //
-        for (std::size_t i = 0; i< num_procs; i++) {
+        for (int i = 0; i< num_procs; i++) {
             int num_rates_to_sync = 0;  // communication variable
             GLiftSyncGroups groups_to_sync;
-            if (comm.rank() == i) {
+            if (comm.rank() ==  i) {
                 // Run stage1: Optimize single wells while also checking group limits
                 for (const auto& well : well_container_) {
                     // NOTE: Only the wells in "group_info" needs to be optimized
