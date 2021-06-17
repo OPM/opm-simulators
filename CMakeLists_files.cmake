@@ -153,6 +153,12 @@ if(MPI_FOUND)
   list(APPEND TEST_SOURCE_FILES tests/test_parallelistlinformation.cpp
                                 tests/test_ParallelRestart.cpp)
 endif()
+if(CUDA_FOUND)
+  list(APPEND TEST_SOURCE_FILES tests/test_cusparseSolver.cpp)
+endif()
+if(OPENCL_FOUND)
+  list(APPEND TEST_SOURCE_FILES tests/test_openclSolver.cpp)
+endif()
 
 list (APPEND TEST_DATA_FILES
   tests/SUMMARY_DECK_NON_CONSTANT_POROSITY.DATA
