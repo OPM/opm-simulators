@@ -321,10 +321,16 @@ namespace Opm {
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         std::vector<double> pot(numPhases(), 0.0);
+        const auto& guideRateConfig = this->schedule().guideRateConfig(reportStepIdx);
         const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
-        WellGroupHelpers::updateGuideRateForProductionGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx, simulationTime, this->wellState(), this->groupState(), comm, &guideRate_, pot);
+        const bool update_guiderate = guideRateConfig.has_model() &&
+                                      this->guideRate_.timeToUpdate(simulationTime, guideRateConfig.model().update_delay());
+        WellGroupHelpers::updateGuideRateForProductionGroups(fieldGroup, schedule(), phase_usage_, reportStepIdx,
+                                                             simulationTime, update_guiderate, this->wellState(),
+                                                             this->groupState(), comm, &guideRate_, pot);
         WellGroupHelpers::updateGuideRatesForInjectionGroups(fieldGroup, schedule(), summaryState, phase_usage_, reportStepIdx, this->wellState(), this->groupState(), &guideRate_, local_deferredLogger);
-        WellGroupHelpers::updateGuideRatesForWells(schedule(), phase_usage_, reportStepIdx, simulationTime, this->wellState(), comm, &guideRate_);
+        WellGroupHelpers::updateGuideRatesForWells(schedule(), phase_usage_, reportStepIdx, simulationTime,
+                                                   update_guiderate, this->wellState(), comm, &guideRate_);
 
         try {
             // Compute initial well solution for new wells and injectors that change injection type i.e. WAG.

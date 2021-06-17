@@ -106,6 +106,7 @@ namespace WellGroupHelpers
                                             const PhaseUsage& pu,
                                             const int reportStepIdx,
                                             const double& simTime,
+                                            const bool time_to_update,
                                             WellState& wellState,
                                             const GroupState& group_state,
                                             const Comm& comm,
@@ -117,6 +118,7 @@ namespace WellGroupHelpers
                                   const PhaseUsage& pu,
                                   const int reportStepIdx,
                                   const double& simTime,
+                                  const bool time_to_update,
                                   const WellState& wellState,
                                   const Comm& comm,
                                   GuideRate* guideRate);
