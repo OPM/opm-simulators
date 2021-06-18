@@ -56,6 +56,7 @@ namespace Opm
         using typename Base::GLiftProdWells;
         using typename Base::GLiftOptWells;
         using typename Base::GLiftWellStateMap;
+        using typename Base::GLiftSyncGroups;
 
         /// the number of reservior equations
         using Base::numEq;
@@ -108,15 +109,17 @@ namespace Opm
             DeferredLogger&,
             GLiftProdWells &,
             GLiftOptWells &,
-            GLiftWellStateMap &
+            GLiftWellStateMap &,
+            GasLiftGroupInfo &,
+            GLiftSyncGroups &
         ) const override {
             // Not implemented yet
         }
 
         /// updating the well state based the current control mode
-        void updateWellStateWithTarget(const Simulator& ebos_simulator,
-                                       WellState& well_state,
-                                       DeferredLogger& deferred_logger) const;
+        virtual void updateWellStateWithTarget(const Simulator& ebos_simulator,
+                                               WellState& well_state,
+                                               DeferredLogger& deferred_logger) const override;
 
         /// check whether the well equations get converged for this well
         virtual ConvergenceReport getWellConvergence(const WellState& well_state,

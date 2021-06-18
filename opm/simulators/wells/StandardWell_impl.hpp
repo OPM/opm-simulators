@@ -1499,34 +1499,24 @@ namespace Opm
                        DeferredLogger& deferred_logger,
                        GLiftProdWells &prod_wells,
                        GLiftOptWells &glift_wells,
-                       GLiftWellStateMap &glift_state_map
-                       //std::map<std::string, WellInterface *> &prod_wells
+                       GLiftWellStateMap &glift_state_map,
+                       GasLiftGroupInfo &group_info,
+                       GLiftSyncGroups &sync_groups
     ) const
     {
-        const auto& well = well_ecl_;
-        if (well.isProducer()) {
-            const auto& summary_state = ebos_simulator.vanguard().summaryState();
-            if ( this->Base::wellHasTHPConstraints(summary_state) ) {
-                const int iteration_idx = ebos_simulator.model().newtonMethod().numIterations();
-                if (this->doGasLiftOptimize(well_state,
-                                            ebos_simulator.episodeIndex(),
-                                            iteration_idx,
-                                            ebos_simulator.vanguard().schedule(),
-                                            deferred_logger)) {
-                    std::unique_ptr<GasLiftSingleWell> glift
-                        = std::make_unique<GasLiftSingleWell>(
-                             *this, ebos_simulator, summary_state,
-                             deferred_logger, well_state);
-                    auto state = glift->runOptimize(iteration_idx);
-                    if (state) {
-                        glift_state_map.insert({this->name(), std::move(state)});
-                        glift_wells.insert({this->name(), std::move(glift)});
-                        return;
-                    }
-                }
-            }
-            prod_wells.insert({this->name(), this});
+        const auto& summary_state = ebos_simulator.vanguard().summaryState();
+        std::unique_ptr<GasLiftSingleWell> glift
+            = std::make_unique<GasLiftSingleWell>(
+                *this, ebos_simulator, summary_state,
+                deferred_logger, well_state, group_info, sync_groups);
+        auto state = glift->runOptimize(
+            ebos_simulator.model().newtonMethod().numIterations());
+        if (state) {
+            glift_state_map.insert({this->name(), std::move(state)});
+            glift_wells.insert({this->name(), std::move(glift)});
+            return;
         }
+        prod_wells.insert({this->name(), this});
     }
 
     template<typename TypeTag>

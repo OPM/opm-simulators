@@ -458,7 +458,7 @@ mpiSyncGlobalGradVector_(std::vector<GradPair> &grads_global) const
 
     std::vector<GradPair> grads_local;
     for (auto itr = grads_global.begin(); itr != grads_global.end(); itr++) {
-        if (well_state_map_.count(itr->first) > 0) {
+        if (this->well_state_map_.count(itr->first) > 0) {
             grads_local.push_back(*itr);
         }
     }
@@ -640,15 +640,18 @@ redistributeALQ_(std::vector<GasLiftSingleWell *> &wells,  const Group &group,
     std::vector<GradPair> &inc_grads, std::vector<GradPair> &dec_grads)
 {
     OptimizeState state {*this, group};
-    // NOTE: 'inc_grads' and 'dec_grads' can never grow larger than wells.size()
-    //   By reserving space here, we can ensure that any push_back() on these
-    //   will never reallocate memory and invalidate any iterators.
-    inc_grads.reserve(wells.size());
-    dec_grads.reserve(wells.size());
     if (this->comm_.size() == 1) {
+        // NOTE: 'inc_grads' and 'dec_grads' can never grow larger than wells.size()
+        //   By reserving space here, we can ensure that any push_back() on these
+        //   will never reallocate memory and invalidate any iterators.
+        inc_grads.reserve(wells.size());
+        dec_grads.reserve(wells.size());
         state.calculateEcoGradients(wells, inc_grads, dec_grads);
     }
     else {
+        auto max_size = this->comm_.sum(wells.size());
+        inc_grads.reserve(max_size);
+        dec_grads.reserve(max_size);
         std::vector<GradPair> inc_grads_local;
         std::vector<GradPair> dec_grads_local;
         inc_grads_local.reserve(wells.size());
@@ -662,7 +665,7 @@ redistributeALQ_(std::vector<GasLiftSingleWell *> &wells,  const Group &group,
     if (!state.checkAtLeastTwoWells(wells)) {
         // NOTE: Even though we here in redistributeALQ_() do not use the
         //   economic gradient if there is only a single well, we still
-        //   need to calculate it since inc_grads and dec_grads are returned
+        //   need to calculate it (see above) since inc_grads and dec_grads are returned
         //   and will be used by removeSurplusALQ_() later.
         return;
     }

@@ -60,6 +60,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/utils/ParallelRestart.cpp
   opm/simulators/wells/ALQState.cpp
   opm/simulators/wells/BlackoilWellModelGeneric.cpp
+  opm/simulators/wells/GasLiftGroupInfo.cpp
   opm/simulators/wells/GasLiftSingleWellGeneric.cpp
   opm/simulators/wells/GasLiftStage2.cpp
   opm/simulators/wells/GlobalWellInfo.cpp
@@ -151,6 +152,12 @@ list (APPEND TEST_SOURCE_FILES
 if(MPI_FOUND)
   list(APPEND TEST_SOURCE_FILES tests/test_parallelistlinformation.cpp
                                 tests/test_ParallelRestart.cpp)
+endif()
+if(CUDA_FOUND)
+  list(APPEND TEST_SOURCE_FILES tests/test_cusparseSolver.cpp)
+endif()
+if(OPENCL_FOUND)
+  list(APPEND TEST_SOURCE_FILES tests/test_openclSolver.cpp)
 endif()
 
 list (APPEND TEST_DATA_FILES
