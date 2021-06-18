@@ -350,7 +350,7 @@ public:
 
 #ifndef NDEBUG
         unsigned compIdx = eqIdx - Indices::conti0EqIdx;
-        assert(0 <= compIdx && compIdx <= numPhases);
+        assert(compIdx <= numPhases);
 #endif
 
         // make all kg equal

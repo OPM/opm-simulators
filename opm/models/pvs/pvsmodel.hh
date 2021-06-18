@@ -424,7 +424,7 @@ public:
             return tmp;
 
         unsigned compIdx = eqIdx - Indices::conti0EqIdx;
-        assert(0 <= compIdx && compIdx <= numComponents);
+        assert(compIdx <= numComponents);
 
         // make all kg equal
         return FluidSystem::molarMass(compIdx);
