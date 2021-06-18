@@ -175,7 +175,7 @@ public:
 
         size_t diagIdx = 1 + colIdx - rowIdx;
         // make sure that the requested column is in range
-        assert(0 <= diagIdx && diagIdx < 3);
+        assert(diagIdx < 3);
         return diag_[diagIdx][colIdx];
     }
 
@@ -194,7 +194,7 @@ public:
 
         size_t diagIdx = 1 + colIdx - rowIdx;
         // make sure that the requested column is in range
-        assert(0 <= diagIdx && diagIdx < 3);
+        assert(diagIdx < 3);
         return diag_[diagIdx][colIdx];
     }
 

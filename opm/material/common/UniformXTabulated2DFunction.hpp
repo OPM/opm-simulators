@@ -145,7 +145,7 @@ public:
      */
     Scalar iToX(unsigned i) const
     {
-        assert(0 <= i && i < numX());
+        assert(i < numX());
 
         return xPos_.at(i);
     }
@@ -175,8 +175,8 @@ public:
       */
     Scalar jToY(unsigned i, unsigned j) const
     {
-        assert(0 <= i && i < numX());
-        assert(0 <= j && size_t(j) < samples_[i].size());
+        assert(i < numX());
+        assert(size_t(j) < samples_[i].size());
 
         return std::get<1>(samples_.at(i).at(j));
     }
@@ -234,7 +234,7 @@ public:
     template <class Evaluation>
     unsigned ySegmentIndex(const Evaluation& y, unsigned xSampleIdx, bool extrapolate OPM_OPTIM_UNUSED = false) const
     {
-        assert(0 <= xSampleIdx && xSampleIdx < numX());
+        assert(xSampleIdx < numX());
         const auto& colSamplePoints = samples_.at(xSampleIdx);
 
         assert(colSamplePoints.size() >= 2);
@@ -271,8 +271,8 @@ public:
     template <class Evaluation>
     Evaluation yToBeta(const Evaluation& y, unsigned xSampleIdx, unsigned ySegmentIdx) const
     {
-        assert(0 <= xSampleIdx && xSampleIdx < numX());
-        assert(0 <= ySegmentIdx && ySegmentIdx < numY(xSampleIdx) - 1);
+        assert(xSampleIdx < numX());
+        assert(ySegmentIdx < numY(xSampleIdx) - 1);
 
         const auto& colSamplePoints = samples_.at(xSampleIdx);
 
@@ -411,7 +411,7 @@ public:
      */
     size_t appendSamplePoint(size_t i, Scalar y, Scalar value)
     {
-        assert(0 <= i && i < numX());
+        assert(i < numX());
         Scalar x = iToX(i);
         if (samples_[i].empty() || std::get<1>(samples_[i].back()) < y) {
             samples_[i].push_back(SamplePoint(x, y, value));

@@ -458,7 +458,7 @@ public:
     //! \copydoc BaseFluidSystem::isLiquid
     static bool isLiquid(unsigned phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(phaseIdx < numPhases);
         return phaseIdx != gasPhaseIdx;
     }
 
@@ -653,8 +653,8 @@ public:
                            unsigned phaseIdx,
                            unsigned regionIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx <= numPhases);
-        assert(0 <= regionIdx && regionIdx <= numRegions());
+        assert(phaseIdx <= numPhases);
+        assert(regionIdx <= numRegions());
 
         const LhsEval& p = decay<LhsEval>(fluidState.pressure(phaseIdx));
         const LhsEval& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
@@ -717,8 +717,8 @@ public:
                                     unsigned phaseIdx,
                                     unsigned regionIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx <= numPhases);
-        assert(0 <= regionIdx && regionIdx <= numRegions());
+        assert(phaseIdx <= numPhases);
+        assert(regionIdx <= numRegions());
 
         const auto& p = fluidState.pressure(phaseIdx);
         const auto& T = fluidState.temperature(phaseIdx);
@@ -782,8 +782,8 @@ public:
                                                 unsigned phaseIdx,
                                                 unsigned regionIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx <= numPhases);
-        assert(0 <= regionIdx && regionIdx <= numRegions());
+        assert(phaseIdx <= numPhases);
+        assert(regionIdx <= numRegions());
 
         const auto& p = decay<LhsEval>(fluidState.pressure(phaseIdx));
         const auto& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
@@ -838,8 +838,8 @@ public:
                                                          unsigned phaseIdx,
                                                          unsigned regionIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx <= numPhases);
-        assert(0 <= regionIdx && regionIdx <= numRegions());
+        assert(phaseIdx <= numPhases);
+        assert(regionIdx <= numRegions());
 
         const auto& p = decay<LhsEval>(fluidState.pressure(phaseIdx));
         const auto& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
@@ -860,9 +860,9 @@ public:
                                        unsigned compIdx,
                                        unsigned regionIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx <= numPhases);
-        assert(0 <= compIdx && compIdx <= numComponents);
-        assert(0 <= regionIdx && regionIdx <= numRegions());
+        assert(phaseIdx <= numPhases);
+        assert(compIdx <= numComponents);
+        assert(regionIdx <= numRegions());
 
         const auto& p = decay<LhsEval>(fluidState.pressure(phaseIdx));
         const auto& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
@@ -981,8 +981,8 @@ public:
                              unsigned phaseIdx,
                              unsigned regionIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx <= numPhases);
-        assert(0 <= regionIdx && regionIdx <= numRegions());
+        assert(phaseIdx <= numPhases);
+        assert(regionIdx <= numRegions());
 
         const LhsEval& p = decay<LhsEval>(fluidState.pressure(phaseIdx));
         const LhsEval& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
@@ -1036,8 +1036,8 @@ public:
                             unsigned phaseIdx,
                             unsigned regionIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx <= numPhases);
-        assert(0 <= regionIdx && regionIdx <= numRegions());
+        assert(phaseIdx <= numPhases);
+        assert(regionIdx <= numRegions());
 
         const auto& p = decay<LhsEval>(fluidState.pressure(phaseIdx));
         const auto& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
@@ -1076,8 +1076,8 @@ public:
                                               unsigned regionIdx,
                                               const LhsEval& maxOilSaturation)
     {
-        assert(0 <= phaseIdx && phaseIdx <= numPhases);
-        assert(0 <= regionIdx && regionIdx <= numRegions());
+        assert(phaseIdx <= numPhases);
+        assert(regionIdx <= numRegions());
 
         const auto& p = decay<LhsEval>(fluidState.pressure(phaseIdx));
         const auto& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
@@ -1104,8 +1104,8 @@ public:
                                               unsigned phaseIdx,
                                               unsigned regionIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx <= numPhases);
-        assert(0 <= regionIdx && regionIdx <= numRegions());
+        assert(phaseIdx <= numPhases);
+        assert(regionIdx <= numRegions());
 
         const auto& p = decay<LhsEval>(fluidState.pressure(phaseIdx));
         const auto& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
@@ -1154,8 +1154,8 @@ public:
                                       unsigned phaseIdx,
                                       unsigned regionIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx <= numPhases);
-        assert(0 <= regionIdx && regionIdx <= numRegions());
+        assert(phaseIdx <= numPhases);
+        assert(regionIdx <= numRegions());
 
         const auto& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
 

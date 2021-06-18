@@ -86,7 +86,7 @@ public:
             "gas"
         };
 
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(phaseIdx < numPhases);
         return name[phaseIdx];
     }
 
@@ -157,7 +157,7 @@ public:
             N2::name()
         };
 
-        assert(0 <= compIdx && compIdx < numComponents);
+        assert(compIdx < numComponents);
         return name[compIdx];
     }
 
@@ -262,7 +262,7 @@ public:
                            const ParameterCache<ParamCacheEval>& /*paramCache*/,
                            unsigned phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(phaseIdx < numPhases);
 
         const auto& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
         const auto& p = decay<LhsEval>(fluidState.pressure(phaseIdx));
@@ -300,7 +300,7 @@ public:
                              const ParameterCache<ParamCacheEval>& /*paramCache*/,
                              unsigned phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(phaseIdx < numPhases);
 
         const auto& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
         const auto& p = decay<LhsEval>(fluidState.pressure(phaseIdx));
@@ -354,8 +354,8 @@ public:
                                        unsigned phaseIdx,
                                        unsigned compIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
-        assert(0 <= compIdx && compIdx < numComponents);
+        assert(phaseIdx < numPhases);
+        assert(compIdx < numComponents);
 
         const auto& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
         const auto& p = decay<LhsEval>(fluidState.pressure(phaseIdx));
@@ -430,7 +430,7 @@ public:
                                        const ParameterCache<ParamCacheEval>& /*paramCache*/,
                                        unsigned phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(phaseIdx < numPhases);
 
         const auto& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
         const auto& p = decay<LhsEval>(fluidState.pressure(phaseIdx));

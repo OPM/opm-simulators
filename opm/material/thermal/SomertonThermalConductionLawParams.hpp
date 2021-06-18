@@ -57,7 +57,7 @@ public:
      */
     Scalar fullySaturatedLambda(unsigned phaseIdx) const
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(phaseIdx < numPhases);
 
         return fullySaturatedLambda_[phaseIdx];
     }
@@ -71,7 +71,7 @@ public:
      */
     void setFullySaturatedLambda(unsigned phaseIdx, Scalar value)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(phaseIdx < numPhases);
         assert(value > 0);
 
         fullySaturatedLambda_[phaseIdx] = value;

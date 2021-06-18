@@ -83,7 +83,7 @@ public:
     //! \copydoc BaseFluidSystem::phaseName
     static const char* phaseName(unsigned phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(phaseIdx < numPhases);
 
         static const char* name[] = {
             "wetting",
@@ -149,7 +149,7 @@ public:
     //! \copydoc BaseFluidSystem::componentName
     static const char* componentName(unsigned compIdx)
     {
-        assert(0 <= compIdx && compIdx < numComponents);
+        assert(compIdx < numComponents);
 
         if (compIdx == wettingCompIdx)
             return WettingPhase::name();
@@ -225,7 +225,7 @@ public:
                            const ParameterCache<ParamCacheEval>& /*paramCache*/,
                            unsigned phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(phaseIdx < numPhases);
 
         const auto& temperature = decay<LhsEval>(fluidState.temperature(phaseIdx));
         const auto& pressure = decay<LhsEval>(fluidState.pressure(phaseIdx));
@@ -240,7 +240,7 @@ public:
                              const ParameterCache<ParamCacheEval>& /*paramCache*/,
                              unsigned phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(phaseIdx < numPhases);
 
         const auto& temperature = decay<LhsEval>(fluidState.temperature(phaseIdx));
         const auto& pressure = decay<LhsEval>(fluidState.pressure(phaseIdx));
@@ -256,8 +256,8 @@ public:
                                        unsigned phaseIdx,
                                        unsigned compIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
-        assert(0 <= compIdx && compIdx < numComponents);
+        assert(phaseIdx < numPhases);
+        assert(compIdx < numComponents);
 
         if (phaseIdx == compIdx)
             // TODO (?): calculate the real fugacity coefficient of
@@ -274,7 +274,7 @@ public:
                             const ParameterCache<ParamCacheEval>& /*paramCache*/,
                             unsigned phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(phaseIdx < numPhases);
 
         const auto& temperature = decay<LhsEval>(fluidState.temperature(phaseIdx));
         const auto& pressure = decay<LhsEval>(fluidState.pressure(phaseIdx));
@@ -289,7 +289,7 @@ public:
                                        const ParameterCache<ParamCacheEval>& /*paramCache*/,
                                        unsigned phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(phaseIdx < numPhases);
 
         const auto& temperature = decay<LhsEval>(fluidState.temperature(phaseIdx));
         const auto& pressure = decay<LhsEval>(fluidState.pressure(phaseIdx));
@@ -304,7 +304,7 @@ public:
                                 const ParameterCache<ParamCacheEval>& /*paramCache*/,
                                 unsigned phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(phaseIdx < numPhases);
 
         const auto& temperature = decay<LhsEval>(fluidState.temperature(phaseIdx));
         const auto& pressure = decay<LhsEval>(fluidState.pressure(phaseIdx));

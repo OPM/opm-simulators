@@ -517,13 +517,13 @@ public:
 
     MaterialLawParams& materialLawParams(unsigned elemIdx)
     {
-        assert(0 <= elemIdx && elemIdx <  materialLawParams_.size());
+        assert(elemIdx <  materialLawParams_.size());
         return *materialLawParams_[elemIdx];
     }
 
     const MaterialLawParams& materialLawParams(unsigned elemIdx) const
     {
-        assert(0 <= elemIdx && elemIdx <  materialLawParams_.size());
+        assert(elemIdx <  materialLawParams_.size());
         return *materialLawParams_[elemIdx];
     }
 

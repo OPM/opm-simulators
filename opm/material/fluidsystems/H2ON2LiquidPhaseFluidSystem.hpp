@@ -145,7 +145,7 @@ public:
             N2::name()
         };
 
-        assert(0 <= compIdx && compIdx < numComponents);
+        assert(compIdx < numComponents);
         return name[compIdx];
     }
 
@@ -251,7 +251,7 @@ public:
                            const ParameterCache<ParamCacheEval>& /*paramCache*/,
                            unsigned phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(phaseIdx < numPhases);
 
         const auto& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
         const auto& p = decay<LhsEval>(fluidState.pressure(phaseIdx));
@@ -295,7 +295,7 @@ public:
                                        unsigned compIdx)
     {
         assert(phaseIdx == liquidPhaseIdx);
-        assert(0 <= compIdx && compIdx < numComponents);
+        assert(compIdx < numComponents);
 
         const auto& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
         const auto& p = decay<LhsEval>(fluidState.pressure(phaseIdx));
