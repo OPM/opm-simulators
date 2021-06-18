@@ -91,7 +91,6 @@ public:
      */
     int localToGlobalDof(unsigned localDofIdx) const
     {
-        assert(0 <= localDofIdx);
         assert(localDofIdx < numDofs());
         return dofOffset_ + localDofIdx;
     }

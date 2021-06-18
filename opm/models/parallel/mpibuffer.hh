@@ -165,7 +165,7 @@ public:
      */
     DataType& operator[](size_t i)
     {
-        assert(0 <= i && i < dataSize_);
+        assert(i < dataSize_);
         return data_[i];
     }
 
@@ -174,7 +174,7 @@ public:
      */
     const DataType& operator[](size_t i) const
     {
-        assert(0 <= i && i < dataSize_);
+        assert(i < dataSize_);
         return data_[i];
     }
 

@@ -400,7 +400,7 @@ public:
         else if (fugacity0Idx <= pvIdx && pvIdx < fugacity0Idx + numComponents) {
             // component fugacity
             unsigned compIdx = pvIdx - fugacity0Idx;
-            assert(0 <= compIdx && compIdx <= numComponents);
+            assert(compIdx <= numComponents);
 
             Opm::Valgrind::CheckDefined(minActivityCoeff_[globalDofIdx][compIdx]);
             static const Scalar fugacityBaseWeight =
@@ -414,7 +414,7 @@ public:
         else {
 #ifndef NDEBUG
             unsigned phaseIdx = pvIdx - saturation0Idx;
-            assert(0 <= phaseIdx && phaseIdx < numPhases - 1);
+            assert(phaseIdx < numPhases - 1);
 #endif
 
             // saturation
@@ -444,7 +444,7 @@ public:
 
         // a mass conservation equation
         unsigned compIdx = eqIdx - Indices::conti0EqIdx;
-        assert(0 <= compIdx && compIdx <= numComponents);
+        assert(compIdx <= numComponents);
 
         // make all kg equal
         return FluidSystem::molarMass(compIdx);
