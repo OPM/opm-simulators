@@ -142,6 +142,10 @@ struct MaxNewtonIterationsWithInnerWellIterations  {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
+struct ShutUnsolvableWells {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
 struct MaxInnerIterWells {
     using type = UndefinedProperty;
 };
@@ -251,6 +255,10 @@ struct MaxInnerIterWells<TypeTag, TTag::FlowModelParameters> {
     static constexpr int value = 50;
 };
 template<class TypeTag>
+struct ShutUnsolvableWells<TypeTag, TTag::FlowModelParameters> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
 struct AlternativeWellRateInit<TypeTag, TTag::FlowModelParameters> {
     static constexpr bool value = true;
 };
@@ -341,6 +349,9 @@ namespace Opm
         /// Maximum newton iterations with inner well iterations
         int max_niter_inner_well_iter_;
 
+        /// Whether to shut unsolvable well
+        bool shut_unsolvable_wells_;
+
         /// Maximum inner iteration number for standard wells
         int max_inner_iter_wells_;
 
@@ -398,6 +409,7 @@ namespace Opm
             strict_inner_iter_ms_wells_ = EWOMS_GET_PARAM(TypeTag, int, StrictInnerIterMsWells);
             regularization_factor_ms_wells_ = EWOMS_GET_PARAM(TypeTag, Scalar, RegularizationFactorMsw);
             max_niter_inner_well_iter_ = EWOMS_GET_PARAM(TypeTag, int, MaxNewtonIterationsWithInnerWellIterations);
+            shut_unsolvable_wells_ = EWOMS_GET_PARAM(TypeTag, bool, ShutUnsolvableWells);
             max_inner_iter_wells_ = EWOMS_GET_PARAM(TypeTag, int, MaxInnerIterWells);
             maxSinglePrecisionTimeStep_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxSinglePrecisionDays) *24*60*60;
             max_strict_iter_ = EWOMS_GET_PARAM(TypeTag, int, MaxStrictIter);
@@ -430,6 +442,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, int, MaxInnerIterMsWells, "Maximum number of inner iterations for multi-segment wells");
             EWOMS_REGISTER_PARAM(TypeTag, int, StrictInnerIterMsWells, "Number of inner iterations for multi-segment wells with strict tolerance");
             EWOMS_REGISTER_PARAM(TypeTag, int, MaxNewtonIterationsWithInnerWellIterations, "Maximum newton iterations with inner well iterations");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, ShutUnsolvableWells, "Shut unsolvable wells");
             EWOMS_REGISTER_PARAM(TypeTag, int, MaxInnerIterWells, "Maximum number of inner iterations for standard wells");
             EWOMS_REGISTER_PARAM(TypeTag, bool, AlternativeWellRateInit, "Use alternative well rate initialization procedure");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, RegularizationFactorMsw, "Regularization factor for ms wells");

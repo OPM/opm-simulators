@@ -345,6 +345,8 @@ protected:
 
     void solveWellForTesting(const Simulator& ebosSimulator, WellState& well_state, const GroupState& group_state,
                              DeferredLogger& deferred_logger);
+
+    bool shutUnsolvableWells() const;
 };
 
 }
