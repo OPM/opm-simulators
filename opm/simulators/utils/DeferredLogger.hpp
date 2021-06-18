@@ -21,8 +21,6 @@
 #ifndef OPM_DEFERREDLOGGER_HEADER_INCLUDED
 #define OPM_DEFERREDLOGGER_HEADER_INCLUDED
 
-#include <opm/common/OpmLog/OpmLog.hpp>
-
 #include <string>
 #include <vector>
 
