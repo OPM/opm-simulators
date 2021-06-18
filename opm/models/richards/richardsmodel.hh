@@ -347,7 +347,7 @@ public:
     Scalar eqWeight(unsigned globalDofIdx OPM_UNUSED, unsigned OPM_OPTIM_UNUSED eqIdx) const
     {
         unsigned OPM_OPTIM_UNUSED compIdx = eqIdx - Indices::contiEqIdx;
-        assert(0 <= compIdx && compIdx <= FluidSystem::numPhases);
+        assert(compIdx <= FluidSystem::numPhases);
 
         // make all kg equal
         return 1.0;
