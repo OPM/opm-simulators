@@ -158,6 +158,14 @@ namespace WellGroupHelpers
                                     WellState& wellState,
                                     GroupState& group_state);
 
+    void updateWellRatesFromGroupTargetScale(const double scale,
+                                             const Group& group,
+                                             const Schedule& schedule,
+                                             const int reportStepIdx,
+                                             bool isInjector,
+                                             const GroupState& group_state,
+                                             WellState& wellState);
+
     void updateREINForGroups(const Group& group,
                              const Schedule& schedule,
                              const int reportStepIdx,

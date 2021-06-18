@@ -397,15 +397,15 @@ checkGroupConstraints(const Group& group,
             if (!group.hasInjectionControl(phase)) {
                 continue;
             }
-            Group::InjectionCMode newControl = checkGroupInjectionConstraints(group, reportStepIdx, phase);
-            if (newControl != Group::InjectionCMode::NONE) {
+            const auto& check = checkGroupInjectionConstraints(group, reportStepIdx, phase);
+            if (check.first != Group::InjectionCMode::NONE) {
                 return true;
             }
         }
     }
     if (group.isProductionGroup()) {
-        Group::ProductionCMode newControl = checkGroupProductionConstraints(group, reportStepIdx, deferred_logger);
-        if (newControl != Group::ProductionCMode::NONE)
+        const auto& check = checkGroupProductionConstraints(group, reportStepIdx, deferred_logger);
+        if (check.first != Group::ProductionCMode::NONE)
         {
             return true;
         }
@@ -419,7 +419,7 @@ checkGroupConstraints(const Group& group,
     return violated;
 }
 
-Group::InjectionCMode
+std::pair<Group::InjectionCMode, double>
 BlackoilWellModelGeneric::
 checkGroupInjectionConstraints(const Group& group,
                                const int reportStepIdx,
@@ -451,7 +451,10 @@ checkGroupInjectionConstraints(const Group& group,
             current_rate = comm_.sum(current_rate);
 
             if (controls.surface_max_rate < current_rate) {
-                return Group::InjectionCMode::RATE;
+                double scale = 1.0;
+                if (current_rate > 1e-12)
+                    scale = controls.surface_max_rate / current_rate;
+                return std::make_pair(Group::InjectionCMode::RATE, scale);
             }
         }
     }
@@ -465,7 +468,10 @@ checkGroupInjectionConstraints(const Group& group,
             current_rate = comm_.sum(current_rate);
 
             if (controls.resv_max_rate < current_rate) {
-                return Group::InjectionCMode::RESV;
+                double scale = 1.0;
+                if (current_rate > 1e-12)
+                    scale = controls.resv_max_rate / current_rate;
+                return std::make_pair(Group::InjectionCMode::RESV, scale);
             }
         }
     }
@@ -487,7 +493,10 @@ checkGroupInjectionConstraints(const Group& group,
             current_rate = comm_.sum(current_rate);
 
             if (controls.target_reinj_fraction*production_Rate < current_rate) {
-                return Group::InjectionCMode::REIN;
+                double scale = 1.0;
+                if (current_rate > 1e-12)
+                    scale = controls.target_reinj_fraction*production_Rate / current_rate;
+                return std::make_pair(Group::InjectionCMode::REIN, scale);
             }
         }
     }
@@ -513,14 +522,17 @@ checkGroupInjectionConstraints(const Group& group,
             total_rate = comm_.sum(total_rate);
 
             if (controls.target_void_fraction*voidage_rate < total_rate) {
-                return Group::InjectionCMode::VREP;
+                double scale = 1.0;
+                if (total_rate > 1e-12)
+                    scale = controls.target_void_fraction*voidage_rate / total_rate;
+                return std::make_pair(Group::InjectionCMode::VREP, scale);
             }
         }
     }
-    return Group::InjectionCMode::NONE;
+    return std::make_pair(Group::InjectionCMode::NONE, 1.0);
 }
 
-Group::ProductionCMode
+std::pair<Group::ProductionCMode, double>
 BlackoilWellModelGeneric::
 checkGroupProductionConstraints(const Group& group,
                                 const int reportStepIdx,
@@ -542,7 +554,10 @@ checkGroupProductionConstraints(const Group& group,
             current_rate = comm_.sum(current_rate);
 
             if (controls.oil_target < current_rate  ) {
-                return Group::ProductionCMode::ORAT;
+                double scale = 1.0;
+                if (current_rate > 1e-12)
+                    scale = controls.oil_target / current_rate;
+                return std::make_pair(Group::ProductionCMode::ORAT, scale);
             }
         }
     }
@@ -559,7 +574,10 @@ checkGroupProductionConstraints(const Group& group,
             current_rate = comm_.sum(current_rate);
 
             if (controls.water_target < current_rate  ) {
-                return Group::ProductionCMode::WRAT;
+                double scale = 1.0;
+                if (current_rate > 1e-12)
+                    scale = controls.water_target / current_rate;
+                return std::make_pair(Group::ProductionCMode::WRAT, scale);
             }
         }
     }
@@ -573,7 +591,10 @@ checkGroupProductionConstraints(const Group& group,
             // sum over all nodes
             current_rate = comm_.sum(current_rate);
             if (controls.gas_target < current_rate  ) {
-                return Group::ProductionCMode::GRAT;
+                double scale = 1.0;
+                if (current_rate > 1e-12)
+                    scale = controls.gas_target / current_rate;
+                return std::make_pair(Group::ProductionCMode::GRAT, scale);
             }
         }
     }
@@ -589,7 +610,10 @@ checkGroupProductionConstraints(const Group& group,
             current_rate = comm_.sum(current_rate);
 
             if (controls.liquid_target < current_rate  ) {
-                 return Group::ProductionCMode::LRAT;
+                double scale = 1.0;
+                if (current_rate > 1e-12)
+                    scale = controls.liquid_target / current_rate;
+                return std::make_pair(Group::ProductionCMode::LRAT, scale);
             }
         }
     }
@@ -611,7 +635,10 @@ checkGroupProductionConstraints(const Group& group,
             current_rate = comm_.sum(current_rate);
 
             if (controls.resv_target < current_rate  ) {
-                return Group::ProductionCMode::RESV;
+                double scale = 1.0;
+                if (current_rate > 1e-12)
+                    scale = controls.resv_target / current_rate;
+                return std::make_pair(Group::ProductionCMode::RESV, scale);
             }
         }
     }
@@ -619,7 +646,7 @@ checkGroupProductionConstraints(const Group& group,
     {
         OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "PRBL control for production groups not implemented", deferred_logger);
     }
-    return Group::ProductionCMode::NONE;
+    return std::make_pair(Group::ProductionCMode::NONE, 1.0);
 }
 
 void
@@ -807,6 +834,7 @@ checkGroupHigherConstraints(const Group& group,
                 if (changed.first) {
                     switched_groups.insert(group.name());
                     actionOnBrokenConstraints(group, Group::InjectionCMode::FLD, phase, deferred_logger);
+                    WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed.second, group, schedule(), reportStepIdx, /* isInjector */ true, this->groupState(), this->wellState());
                 }
             }
         }
@@ -844,6 +872,7 @@ checkGroupHigherConstraints(const Group& group,
                     switched_groups.insert(group.name());
                     const auto exceed_action = group.productionControls(summaryState_).exceed_action;
                     actionOnBrokenConstraints(group, exceed_action, Group::ProductionCMode::FLD, deferred_logger);
+                    WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed.second, group, schedule(), reportStepIdx, /* isInjector */ false, this->groupState(), this->wellState());
                 }
             }
     }
@@ -869,21 +898,23 @@ updateGroupIndividualControl(const Group& group,
             if (!group.hasInjectionControl(phase)) {
                 continue;
             }
-            Group::InjectionCMode newControl = checkGroupInjectionConstraints(group, reportStepIdx, phase);
-            if (newControl != Group::InjectionCMode::NONE)
+            const auto& changed = checkGroupInjectionConstraints(group, reportStepIdx, phase);
+            if (changed.first != Group::InjectionCMode::NONE)
             {
                 switched_groups.insert(group.name());
-                actionOnBrokenConstraints(group, newControl, phase, deferred_logger);
+                actionOnBrokenConstraints(group, changed.first, phase, deferred_logger);
+                WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed.second, group, schedule(), reportStepIdx, /* isInjector */ false, this->groupState(), this->wellState());
             }
         }
     }
     if (!skip && group.isProductionGroup()) {
-        Group::ProductionCMode newControl = checkGroupProductionConstraints(group, reportStepIdx, deferred_logger);
+        const auto& changed = checkGroupProductionConstraints(group, reportStepIdx, deferred_logger);
         const auto controls = group.productionControls(summaryState_);
-        if (newControl != Group::ProductionCMode::NONE)
+        if (changed.first != Group::ProductionCMode::NONE)
         {
             switched_groups.insert(group.name());
-            actionOnBrokenConstraints(group, controls.exceed_action, newControl, deferred_logger);
+            actionOnBrokenConstraints(group, controls.exceed_action, changed.first, deferred_logger);
+            WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed.second, group, schedule(), reportStepIdx, /* isInjector */ false, this->groupState(), this->wellState());
         }
     }
 

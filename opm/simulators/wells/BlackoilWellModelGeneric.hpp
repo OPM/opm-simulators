@@ -286,10 +286,10 @@ protected:
                                const int reportStepIdx,
                                DeferredLogger& deferred_logger) const;
 
-    Group::InjectionCMode checkGroupInjectionConstraints(const Group& group,
+    std::pair<Group::InjectionCMode, double> checkGroupInjectionConstraints(const Group& group,
                                                          const int reportStepIdx,
                                                          const Phase& phase) const;
-    Group::ProductionCMode checkGroupProductionConstraints(const Group& group,
+    std::pair<Group::ProductionCMode, double> checkGroupProductionConstraints(const Group& group,
                                                            const int reportStepIdx,
                                                            DeferredLogger& deferred_logger) const;
 
