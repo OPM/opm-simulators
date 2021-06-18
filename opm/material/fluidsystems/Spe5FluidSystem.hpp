@@ -94,7 +94,7 @@ public:
             "oil",
         };
 
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(phaseIdx < numPhases);
         return name[phaseIdx];
     }
 
@@ -363,7 +363,7 @@ public:
                            const ParameterCache<ParamCacheEval>& paramCache,
                            unsigned phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(phaseIdx < numPhases);
 
         return fluidState.averageMolarMass(phaseIdx)/paramCache.molarVolume(phaseIdx);
     }
@@ -374,7 +374,7 @@ public:
                              const ParameterCache<ParamCacheEval>& /*paramCache*/,
                              unsigned phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx <= numPhases);
+        assert(phaseIdx <= numPhases);
 
         if (phaseIdx == gasPhaseIdx) {
             // given by SPE-5 in table on page 64. we use a constant
@@ -399,8 +399,8 @@ public:
                                        unsigned phaseIdx,
                                        unsigned compIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx <= numPhases);
-        assert(0 <= compIdx && compIdx <= numComponents);
+        assert(phaseIdx <= numPhases);
+        assert(compIdx <= numComponents);
 
         if (phaseIdx == oilPhaseIdx || phaseIdx == gasPhaseIdx)
             return PengRobinsonMixture::computeFugacityCoefficient(fluidState,

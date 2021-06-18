@@ -368,8 +368,8 @@ public:
                                        unsigned phaseIdx,
                                        unsigned compIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
-        assert(0 <= compIdx && compIdx < numComponents);
+        assert(phaseIdx < numPhases);
+        assert(compIdx < numComponents);
 
         const LhsEval& T = decay<LhsEval>(fluidState.temperature(phaseIdx));
         const LhsEval& p = decay<LhsEval>(fluidState.pressure(phaseIdx));
@@ -441,7 +441,7 @@ public:
                                        const ParameterCache<ParamCacheEval>& /*paramCache*/,
                                        unsigned phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(phaseIdx < numPhases);
 
         if (phaseIdx == waterPhaseIdx){ // water phase
             const LhsEval& T = decay<LhsEval>(fluidState.temperature(phaseIdx));

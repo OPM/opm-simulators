@@ -132,7 +132,7 @@ public:
      */
     Scalar iToX(unsigned i) const
     {
-        assert(0 <= i && i < numX());
+        assert(i < numX());
 
         return xMin() + i*(xMax() - xMin())/(numX() - 1);
     }
@@ -142,7 +142,7 @@ public:
       */
     Scalar jToY(unsigned j) const
     {
-        assert(0 <= j && j < numY());
+        assert(j < numY());
 
         return yMin() + j*(yMax() - yMin())/(numY() - 1);
     }
@@ -230,8 +230,8 @@ public:
      */
     Scalar getSamplePoint(unsigned i, unsigned j) const
     {
-        assert(0 <= i && i < m_);
-        assert(0 <= j && j < n_);
+        assert(i < m_);
+        assert(j < n_);
 
         return samples_[j*m_ + i];
     }
@@ -243,8 +243,8 @@ public:
      */
     void setSamplePoint(unsigned i, unsigned j, Scalar value)
     {
-        assert(0 <= i && i < m_);
-        assert(0 <= j && j < n_);
+        assert(i < m_);
+        assert(j < n_);
 
         samples_[j*m_ + i] = value;
     }

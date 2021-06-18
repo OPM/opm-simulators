@@ -102,7 +102,7 @@ public:
             "gas"
         };
 
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(phaseIdx < numPhases);
         return name[phaseIdx];
     }
 
@@ -111,7 +111,7 @@ public:
      */
     static bool isLiquid(unsigned phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(phaseIdx < numPhases);
 
         return phaseIdx != gasPhaseIdx;
     }
@@ -121,7 +121,7 @@ public:
      */
     static bool isIdealGas(unsigned phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(phaseIdx < numPhases);
 
         if (phaseIdx == gasPhaseIdx)
             return CO2::gasIsIdeal();
@@ -133,7 +133,7 @@ public:
      */
     static bool isIdealMixture(unsigned phaseIdx OPM_OPTIM_UNUSED)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(phaseIdx < numPhases);
 
         return true;
     }
@@ -143,7 +143,7 @@ public:
      */
     static bool isCompressible(unsigned phaseIdx OPM_OPTIM_UNUSED)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(phaseIdx < numPhases);
 
         return true;
     }
@@ -169,7 +169,7 @@ public:
             CO2::name(),
         };
 
-        assert(0 <= compIdx && compIdx < numComponents);
+        assert(compIdx < numComponents);
         return name[compIdx];
     }
 
@@ -178,7 +178,7 @@ public:
      */
     static Scalar molarMass(unsigned compIdx)
     {
-        assert(0 <= compIdx && compIdx < numComponents);
+        assert(compIdx < numComponents);
         return (compIdx==BrineIdx)
             ? Brine::molarMass()
             : CO2::molarMass();
@@ -233,7 +233,7 @@ public:
                            const ParameterCache<ParamCacheEval>& /*paramCache*/,
                            unsigned phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(phaseIdx < numPhases);
 
         const LhsEval& temperature = decay<LhsEval>(fluidState.temperature(phaseIdx));
         const LhsEval& pressure = decay<LhsEval>(fluidState.pressure(phaseIdx));
@@ -284,7 +284,7 @@ public:
                              const ParameterCache<ParamCacheEval>& /*paramCache*/,
                              unsigned phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(phaseIdx < numPhases);
 
         const LhsEval& temperature = decay<LhsEval>(fluidState.temperature(phaseIdx));
         const LhsEval& pressure = decay<LhsEval>(fluidState.pressure(phaseIdx));
@@ -312,8 +312,8 @@ public:
                                        unsigned phaseIdx,
                                        unsigned compIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
-        assert(0 <= compIdx && compIdx < numComponents);
+        assert(phaseIdx < numPhases);
+        assert(compIdx < numComponents);
 
         if (phaseIdx == gasPhaseIdx)
             // use the fugacity coefficients of an ideal gas. the
@@ -383,7 +383,7 @@ public:
                             const ParameterCache<ParamCacheEval>& /*paramCache*/,
                             unsigned phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(phaseIdx < numPhases);
 
         const LhsEval& temperature = decay<LhsEval>(fluidState.temperature(phaseIdx));
         const LhsEval& pressure = decay<LhsEval>(fluidState.pressure(phaseIdx));
@@ -442,7 +442,7 @@ public:
                                 const ParameterCache<ParamCacheEval>& /*paramCache*/,
                                 unsigned phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(phaseIdx < numPhases);
 
         const LhsEval& temperature = decay<LhsEval>(fluidState.temperature(phaseIdx));
         const LhsEval& pressure = decay<LhsEval>(fluidState.pressure(phaseIdx));

@@ -94,14 +94,14 @@ public:
     {
         switch (solidEnergyApproach_) {
         case SolidEnergyLawParams::heatcrApproach:
-            assert(0 <= elemIdx && elemIdx <  solidEnergyLawParams_.size());
+            assert(elemIdx <  solidEnergyLawParams_.size());
             return solidEnergyLawParams_[elemIdx];
 
         case SolidEnergyLawParams::specrockApproach:
         {
-            assert(0 <= elemIdx && elemIdx <  elemToSatnumIdx_.size());
+            assert(elemIdx <  elemToSatnumIdx_.size());
             unsigned satnumIdx = elemToSatnumIdx_[elemIdx];
-            assert(0 <= satnumIdx && satnumIdx <  solidEnergyLawParams_.size());
+            assert(satnumIdx <  solidEnergyLawParams_.size());
             return solidEnergyLawParams_[satnumIdx];
         }
 
@@ -119,7 +119,7 @@ public:
         switch (thermalConductivityApproach_) {
         case ThermalConductionLawParams::thconrApproach:
         case ThermalConductionLawParams::thcApproach:
-            assert(0 <= elemIdx && elemIdx <  thermalConductionLawParams_.size());
+            assert(elemIdx <  thermalConductionLawParams_.size());
             return thermalConductionLawParams_[elemIdx];
 
         case ThermalConductionLawParams::nullApproach:
