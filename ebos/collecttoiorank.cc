@@ -28,6 +28,7 @@
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/polyhedralgrid.hh>
 
+#include <dune/common/version.hh>
 #include <dune/grid/common/gridenums.hh>
 #include <dune/grid/common/mcmgmapper.hh>
 #if HAVE_DUNE_FEM
@@ -197,7 +198,11 @@ public:
         : sendMapper_(sendMapper), recvMapper_(recvMapper), elementIndices_(elementIndices)
     {}
     using DataType = int;
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+    bool fixedSize(int /*dim*/, int /*codim*/)
+#else
     bool fixedsize(int /*dim*/, int /*codim*/)
+#endif
     {
         return true;
     }
@@ -237,7 +242,11 @@ public:
         : mapper_(mapper), elementIndices_(elementIndices)
     {}
     using DataType = int;
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+    bool fixedSize(int /*dim*/, int /*codim*/)
+#else
     bool fixedsize(int /*dim*/, int /*codim*/)
+#endif
     {
         return true;
     }
