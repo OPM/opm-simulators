@@ -1070,7 +1070,7 @@ public:
 
     const SubControlVolume& subControlVolume(unsigned scvIdx) const
     {
-        assert(0 <= scvIdx && scvIdx < numDof());
+        assert(scvIdx < numDof());
         return subContVol[scvIdx];
     }
 
@@ -1092,7 +1092,7 @@ public:
      */
     unsigned globalSpaceIndex(unsigned dofIdx) const
     {
-        assert(0 <= dofIdx && dofIdx < numDof());
+        assert(dofIdx < numDof());
 
         return static_cast<unsigned>(vertexMapper_.subIndex(element_, static_cast<int>(dofIdx), /*codim=*/dim));
     }

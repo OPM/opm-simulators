@@ -409,7 +409,7 @@ public:
     const IntensiveQuantities& intensiveQuantities(unsigned dofIdx, unsigned timeIdx) const
     {
 #ifndef NDEBUG
-        assert(0 <= dofIdx && dofIdx < numDof(timeIdx));
+        assert(dofIdx < numDof(timeIdx));
 
         if (enableStorageCache_ && timeIdx != 0 && problem().recycleFirstIterationStorage())
             throw std::logic_error("If caching of the storage term is enabled, only the intensive quantities "
@@ -429,7 +429,7 @@ public:
      */
     const IntensiveQuantities *thermodynamicHint(unsigned dofIdx, unsigned timeIdx) const
     {
-        assert(0 <= dofIdx && dofIdx < numDof(timeIdx));
+        assert(dofIdx < numDof(timeIdx));
         return dofVars_[dofIdx].thermodynamicHint[timeIdx];
     }
     /*!
@@ -437,7 +437,7 @@ public:
      */
     IntensiveQuantities& intensiveQuantities(unsigned dofIdx, unsigned timeIdx)
     {
-        assert(0 <= dofIdx && dofIdx < numDof(timeIdx));
+        assert(dofIdx < numDof(timeIdx));
         return dofVars_[dofIdx].intensiveQuantities[timeIdx];
     }
 
@@ -451,7 +451,7 @@ public:
      */
     PrimaryVariables& primaryVars(unsigned dofIdx, unsigned timeIdx)
     {
-        assert(0 <= dofIdx && dofIdx < numDof(timeIdx));
+        assert(dofIdx < numDof(timeIdx));
         return dofVars_[dofIdx].priVars[timeIdx];
     }
     /*!
@@ -459,7 +459,7 @@ public:
      */
     const PrimaryVariables& primaryVars(unsigned dofIdx, unsigned timeIdx) const
     {
-        assert(0 <= dofIdx && dofIdx < numDof(timeIdx));
+        assert(dofIdx < numDof(timeIdx));
         return dofVars_[dofIdx].priVars[timeIdx];
     }
 
@@ -488,7 +488,7 @@ public:
      */
     void stashIntensiveQuantities(unsigned dofIdx)
     {
-        assert(0 <= dofIdx && dofIdx < numDof(/*timeIdx=*/0));
+        assert(dofIdx < numDof(/*timeIdx=*/0));
 
         intensiveQuantitiesStashed_ = dofVars_[dofIdx].intensiveQuantities[/*timeIdx=*/0];
         priVarsStashed_ = dofVars_[dofIdx].priVars[/*timeIdx=*/0];

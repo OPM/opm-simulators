@@ -203,7 +203,7 @@ public:
      */
     void globalPhaseStorage(EqVector& storage, unsigned phaseIdx)
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(phaseIdx < numPhases);
 
         storage = 0;
 

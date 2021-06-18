@@ -311,7 +311,7 @@ public:
      */
     unsigned globalSpaceIndex(unsigned dofIdx) const
     {
-        assert(0 <= dofIdx && dofIdx < numDof());
+        assert(dofIdx < numDof());
 
         return static_cast<unsigned>(elementMapper_.index(element(dofIdx)));
     }
@@ -331,7 +331,7 @@ public:
      */
     const Element& element(unsigned dofIdx) const
     {
-        assert(0 <= dofIdx && dofIdx < numDof());
+        assert(dofIdx < numDof());
 
         return elements_[dofIdx];
     }
