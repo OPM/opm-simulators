@@ -202,7 +202,7 @@ namespace Opm
             }
             deferred_logger.debug(ss.str());
             switched_wells[this->name()] = std::make_pair(from, to);
-            updateWellStateWithTarget(ebos_simulator, group_state, well_state, deferred_logger);
+            updateWellStateWithTarget(ebos_simulator, well_state, deferred_logger);
             updatePrimaryVariables(well_state, deferred_logger);
         }
 
