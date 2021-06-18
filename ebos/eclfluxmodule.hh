@@ -181,7 +181,7 @@ protected:
      */
     unsigned upstreamIndex_(unsigned phaseIdx) const
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(phaseIdx < numPhases);
 
         return upIdx_[phaseIdx];
     }
@@ -195,7 +195,7 @@ protected:
      */
     unsigned downstreamIndex_(unsigned phaseIdx) const
     {
-        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(phaseIdx < numPhases);
 
         return dnIdx_[phaseIdx];
     }

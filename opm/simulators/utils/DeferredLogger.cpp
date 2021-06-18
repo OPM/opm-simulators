@@ -17,8 +17,9 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
+#include <config.h>
 #include <opm/simulators/utils/DeferredLogger.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 
 namespace Opm
 {
