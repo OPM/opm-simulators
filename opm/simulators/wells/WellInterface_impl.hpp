@@ -342,12 +342,14 @@ namespace Opm
         const WellState well_state0 = well_state;
         const double dt = ebosSimulator.timeStepSize();
         const bool converged = iterateWellEquations(ebosSimulator, dt, well_state, group_state, deferred_logger);
-        if (converged) {
-            deferred_logger.debug("Compute initial well solution for well " + this->name() +  ". Converged");
-        } else {
+        if (!converged) {
             const int max_iter = param_.max_welleq_iter_;
             deferred_logger.debug("Compute initial well solution for well " + this->name() + ". Failed to converge in "
                                   + std::to_string(max_iter) + " iterations");
+            // the well operability system currently works only for producers in prediction mode
+            if (this->shutUnsolvableWells())
+                this->operability_status_.solvable = false;
+
             well_state = well_state0;
         }
     }
@@ -363,13 +365,35 @@ namespace Opm
                    const GroupState& group_state,
                    DeferredLogger& deferred_logger)
     {
-
+        const bool old_well_operable = this->operability_status_.isOperable();
         checkWellOperability(ebosSimulator, well_state, deferred_logger);
 
         // only use inner well iterations for the first newton iterations.
         const int iteration_idx = ebosSimulator.model().newtonMethod().numIterations();
-        if (iteration_idx < param_.max_niter_inner_well_iter_) {
-            this->iterateWellEquations(ebosSimulator, dt, well_state, group_state, deferred_logger);
+        bool converged = true;
+        if (iteration_idx < param_.max_niter_inner_well_iter_)
+            converged = this->iterateWellEquations(ebosSimulator, dt, well_state, group_state, deferred_logger);
+
+        // unsolvable wells are treated as not operable and will not be solved for in this iteration.
+        if (!converged) {
+            if (this->shutUnsolvableWells())
+                this->operability_status_.solvable = false;
+        }
+        const bool well_operable = this->operability_status_.isOperable();
+        if (!well_operable && old_well_operable) {
+            if (this->well_ecl_.getAutomaticShutIn()) {
+                deferred_logger.info(" well " + this->name() + " gets SHUT during iteration ");
+            } else {
+                if (!this->wellIsStopped()) {
+                    deferred_logger.info(" well " + this->name() + " gets STOPPED during iteration ");
+                    this->stopWell();
+                    changed_to_stopped_this_step_ = true;
+                }
+            }
+        } else if (well_operable && !old_well_operable) {
+            deferred_logger.info(" well " + this->name() + " gets REVIVED during iteration ");
+            this->openWell();
+            changed_to_stopped_this_step_ = false;
         }
 
         const auto& summary_state = ebosSimulator.vanguard().summaryState();
@@ -498,27 +522,18 @@ namespace Opm
             return;
         }
 
-        const bool old_well_operable = this->operability_status_.isOperable();
-
         updateWellOperability(ebos_simulator, well_state, deferred_logger);
+    }
 
-        const bool well_operable = this->operability_status_.isOperable();
 
-        if (!well_operable && old_well_operable) {
-            if (this->well_ecl_.getAutomaticShutIn()) {
-                deferred_logger.info(" well " + this->name() + " gets SHUT during iteration ");
-            } else {
-                if (!this->wellIsStopped()) {
-                    deferred_logger.info(" well " + this->name() + " gets STOPPED during iteration ");
-                    this->stopWell();
-                    changed_to_stopped_this_step_ = true;
-                }
-            }
-        } else if (well_operable && !old_well_operable) {
-            deferred_logger.info(" well " + this->name() + " gets REVIVED during iteration ");
-            this->openWell();
-            changed_to_stopped_this_step_ = false;
-        }
+    template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::
+    shutUnsolvableWells() const
+    {
+        bool shut_unsolvable_wells = param_.shut_unsolvable_wells_;
+        // the well operability system currently works only for producers in prediction mode
+        return shut_unsolvable_wells && !this->isInjector() && this->underPredictionMode();
     }
 
 

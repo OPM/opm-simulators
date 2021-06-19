@@ -40,8 +40,15 @@ const PartiallySupportedKeywords<std::string> test_string_items = {
     {
         "PINCH",
         {
-            {2, {false, allow_values<std::string>{"GAP", "BAR"}, std::nullopt}}, // GAP
-            {4, {true, allow_values<std::string>{"TOPBOT"}, "This is a critical error"}}, // PINCHOUT_OPTION
+            {2, {false, allow_values<std::string> {"GAP", "BAR"}, std::nullopt}}, // GAP
+            {4, {true, allow_values<std::string> {"TOPBOT"}, "This is a critical error"}}, // PINCHOUT_OPTION
+        },
+    },
+    {
+        "EQLOPTS",
+        {
+            {1, {false, allow_values<std::string> {}, std::nullopt}},
+            {3, {false, allow_values<std::string> {"THPRESS"}, std::nullopt}},
         },
     },
 };
@@ -51,15 +58,15 @@ const PartiallySupportedKeywords<int> test_int_items = {
     {
         "ENDSCALE",
         {
-            {3, {false, allow_values<int>{1}, std::nullopt}}, // NTENDP
-            {4, {true, allow_values<int>{20, 30, 40}, std::nullopt}}, // NSENDP
+            {3, {false, allow_values<int> {1}, std::nullopt}}, // NTENDP
+            {4, {true, allow_values<int> {20, 30, 40}, std::nullopt}}, // NSENDP
         },
     },
     {
         "COMPDAT",
         {
-            {2, {false, allow_values<int>{1}, std::nullopt}}, // I
-            {3, {false, allow_values<int>{1}, std::nullopt}}, // J
+            {2, {false, allow_values<int> {1}, std::nullopt}}, // I
+            {3, {false, allow_values<int> {1}, std::nullopt}}, // J
         },
     },
 };
@@ -70,10 +77,11 @@ const PartiallySupportedKeywords<double> test_double_items = {
         "EHYSTR",
         {
             {1, {false, [](double x) { return x > 0; }, std::nullopt}},
-            {3, {false, allow_values<double>{1.0, 2.0}, std::nullopt}},
+            {3, {false, allow_values<double> {1.0, 2.0}, std::nullopt}},
         },
     },
 };
+
 
 
 BOOST_AUTO_TEST_CASE(non_critical_keyword)
@@ -512,4 +520,54 @@ ENDSCALE
                    "  PINCH: invalid value 'FOO' for item 4\n"
                    "  In file: <memory string>, line 4\n"
                    "  This is a critical error");
+}
+
+
+BOOST_AUTO_TEST_CASE(keyword_without_default)
+{
+    const auto keywords_string = std::string {R"(
+EQLOPTS
+   1* /
+)"};
+    const auto deck = Parser {}.parseString(keywords_string);
+    const auto& test_keyword = deck.getKeyword("EQLOPTS");
+    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items);
+    std::vector<ValidationError> errors;
+    validator.validateDeckKeyword(test_keyword, errors);
+    BOOST_CHECK(errors.size() == 0);
+}
+
+
+
+BOOST_AUTO_TEST_CASE(keyword_without_default_with_wrong_value)
+{
+    const auto keywords_string = std::string {R"(
+EQLOPTS
+   FOO /
+)"};
+    const auto deck = Parser {}.parseString(keywords_string);
+    const auto& test_keyword = deck.getKeyword("EQLOPTS");
+    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items);
+    std::vector<ValidationError> errors;
+    validator.validateDeckKeyword(test_keyword, errors);
+    BOOST_CHECK(errors.size() == 1);
+    BOOST_CHECK(errors[0].item_number == 1);
+    BOOST_CHECK(errors[0].item_value == "FOO");
+    BOOST_CHECK(!errors[0].user_message);
+}
+
+
+
+BOOST_AUTO_TEST_CASE(keyword_without_default_with_correct_value)
+{
+    const auto keywords_string = std::string {R"(
+EQLOPTS
+   1* 1* THPRESS /
+)"};
+    const auto deck = Parser {}.parseString(keywords_string);
+    const auto& test_keyword = deck.getKeyword("EQLOPTS");
+    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items);
+    std::vector<ValidationError> errors;
+    validator.validateDeckKeyword(test_keyword, errors);
+    BOOST_CHECK(errors.size() == 0);
 }
