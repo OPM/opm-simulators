@@ -20,6 +20,7 @@
 */
 #include "config.h"
 
+#include <opm/simulators/utils/OpmMaterialTypes.hpp>
 #include <opm/simulators/flow/Main.hpp>
 #include  <opm/simulators/linalg/ISTLSolverEbosFlexible.hpp>
 

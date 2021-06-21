@@ -28,6 +28,8 @@
 #ifndef EBOS_HH
 #define EBOS_HH
 
+#include <opm/simulators/utils/OpmMaterialTypes.hpp>
+
 #include "eclproblem.hh"
 
 #include <opm/simulators/wells/BlackoilWellModel.hpp>

@@ -16,6 +16,7 @@
 */
 #include "config.h"
 
+#include <opm/simulators/utils/OpmMaterialTypes.hpp>
 #include <flow/flow_ebos_gasoil.hpp>
 
 #include <opm/material/common/ResetLocale.hpp>

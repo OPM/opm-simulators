@@ -16,6 +16,7 @@
 */
 #include "config.h"
 
+#include <opm/simulators/utils/OpmMaterialTypes.hpp>
 #include <flow/flow_ebos_oilwater_polymer_injectivity.hpp>
 
 #include <opm/material/common/ResetLocale.hpp>

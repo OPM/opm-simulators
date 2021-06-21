@@ -19,6 +19,7 @@
 // Define making clear that the simulator supports AMG
 #define FLOW_SUPPORT_AMG 1
 
+#include <opm/simulators/utils/OpmMaterialTypes.hpp>
 #include <flow/flow_ebos_gaswater.hpp>
 
 #include <opm/material/common/ResetLocale.hpp>
