@@ -645,8 +645,8 @@ public:
 
     bool operator==(const LiveOilPvt<Scalar>& data) const
     {
-        return this->gasReferenceDensity() == data.gasReferenceDensity() &&
-               this->oilReferenceDensity() == data.oilReferenceDensity() &&
+        return this->gasReferenceDensity_ == data.gasReferenceDensity_ &&
+               this->oilReferenceDensity_ == data.oilReferenceDensity_ &&
                this->inverseOilBTable() == data.inverseOilBTable() &&
                this->oilMuTable() == data.oilMuTable() &&
                this->inverseOilBMuTable() == data.inverseOilBMuTable() &&

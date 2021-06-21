@@ -297,8 +297,8 @@ public:
 
     bool operator==(const ConstantCompressibilityOilPvt<Scalar>& data) const
     {
-        return this->oilReferenceDensity() == data.oilReferenceDensity() &&
-               this->oilReferencePressure() == data.oilReferencePressure() &&
+        return this->oilReferenceDensity_ == data.oilReferenceDensity_ &&
+               this->oilReferencePressure_ == data.oilReferencePressure_ &&
                this->oilReferenceFormationVolumeFactor() == data.oilReferenceFormationVolumeFactor() &&
                this->oilCompressibility() == data.oilCompressibility() &&
                this->oilViscosity() == data.oilViscosity() &&

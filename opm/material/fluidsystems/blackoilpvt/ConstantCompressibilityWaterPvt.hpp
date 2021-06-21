@@ -230,7 +230,7 @@ public:
 
     bool operator==(const ConstantCompressibilityWaterPvt<Scalar>& data) const
     {
-        return this->waterReferenceDensity() == data.waterReferenceDensity() &&
+        return this->waterReferenceDensity_ == data.waterReferenceDensity_ &&
                this->waterReferencePressure() == data.waterReferencePressure() &&
                this->waterReferenceFormationVolumeFactor() == data.waterReferenceFormationVolumeFactor() &&
                this->waterCompressibility() == data.waterCompressibility() &&
