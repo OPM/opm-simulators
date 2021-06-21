@@ -492,7 +492,7 @@ void WellState::gatherVectorsOnRoot(const std::vector<data::Connection>& from_co
 
 data::Wells
 WellState::report(const int* globalCellIdxMap,
-                                       const std::function<bool(const int)>& wasDynamicallyClosed) const
+                  const std::function<bool(const int)>& wasDynamicallyClosed) const
 {
     if (this->numWells() == 0)
         return {};

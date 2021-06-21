@@ -38,6 +38,7 @@
 #include <opm/parser/eclipse/Units/Units.hpp>
 
 #include <cassert>
+#include <initializer_list>
 #include <iomanip>
 #include <sstream>
 #include <stdexcept>
@@ -827,33 +828,41 @@ doAllocBuffers(unsigned bufferSize,
         }
     }
 
-    outputFipRestart_ = false;
-    computeFip_ = false;
+    this->outputFipRestart_ = false;
+    this->computeFip_ = false;
 
     // Fluid in place
     for (const auto& phase : Inplace::phases()) {
         if (!substep || summaryConfig_.require3DField(EclString(phase))) {
             if (rstKeywords["FIP"] > 0) {
                 rstKeywords["FIP"] = 0;
-                outputFipRestart_ = true;
+                this->outputFipRestart_ = true;
             }
-            fip_[phase].resize(bufferSize, 0.0);
-            computeFip_ = true;
+
+            this->fip_[phase].resize(bufferSize, 0.0);
+            this->computeFip_ = true;
         }
-        else
-            fip_[phase].clear();
+        else {
+            this->fip_[phase].clear();
+        }
     }
 
-    if (!substep || summaryConfig_.hasKeyword("FPR") || summaryConfig_.hasKeyword("FPRP") || !this->RPRNodes_.empty()) {
-        fip_[Inplace::Phase::PoreVolume].resize(bufferSize, 0.0);
-        hydrocarbonPoreVolume_.resize(bufferSize, 0.0);
-        pressureTimesPoreVolume_.resize(bufferSize, 0.0);
-        pressureTimesHydrocarbonVolume_.resize(bufferSize, 0.0);
+    if (!substep ||
+        this->summaryConfig_.hasKeyword("FPR") ||
+        this->summaryConfig_.hasKeyword("FPRP") ||
+        !this->RPRNodes_.empty())
+    {
+        this->fip_[Inplace::Phase::PoreVolume].resize(bufferSize, 0.0);
+        this->dynamicPoreVolume_.resize(bufferSize, 0.0);
+        this->hydrocarbonPoreVolume_.resize(bufferSize, 0.0);
+        this->pressureTimesPoreVolume_.resize(bufferSize, 0.0);
+        this->pressureTimesHydrocarbonVolume_.resize(bufferSize, 0.0);
     }
     else {
-        hydrocarbonPoreVolume_.clear();
-        pressureTimesPoreVolume_.clear();
-        pressureTimesHydrocarbonVolume_.clear();
+        this->dynamicPoreVolume_.clear();
+        this->hydrocarbonPoreVolume_.clear();
+        this->pressureTimesPoreVolume_.clear();
+        this->pressureTimesHydrocarbonVolume_.clear();
     }
 
     // Well RFT data
@@ -1074,32 +1083,25 @@ void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
 fipUnitConvert_(std::unordered_map<Inplace::Phase, Scalar>& fip) const
 {
     const UnitSystem& units = eclState_.getUnits();
-    if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-        fip[Inplace::Phase::WATER] = unit::convert::to(fip[Inplace::Phase::WATER], unit::stb);
-        fip[Inplace::Phase::OIL] = unit::convert::to(fip[Inplace::Phase::OIL], unit::stb);
-        fip[Inplace::Phase::OilInLiquidPhase] = unit::convert::to(fip[Inplace::Phase::OilInLiquidPhase], unit::stb);
-        fip[Inplace::Phase::OilInGasPhase] = unit::convert::to(fip[Inplace::Phase::OilInGasPhase], unit::stb);
-        fip[Inplace::Phase::GAS] = unit::convert::to(fip[Inplace::Phase::GAS], 1000*unit::cubic(unit::feet));
-        fip[Inplace::Phase::GasInLiquidPhase] = unit::convert::to(fip[Inplace::Phase::GasInLiquidPhase], 1000*unit::cubic(unit::feet));
-        fip[Inplace::Phase::GasInGasPhase] = unit::convert::to(fip[Inplace::Phase::GasInGasPhase], 1000*unit::cubic(unit::feet));
-        fip[Inplace::Phase::PoreVolume] = unit::convert::to(fip[Inplace::Phase::PoreVolume], unit::stb);
-    }
-    else if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_LAB) {
-        Scalar scc = unit::cubic(prefix::centi * unit::meter); //standard cubic cm.
-        fip[Inplace::Phase::WATER] = unit::convert::to(fip[Inplace::Phase::WATER], scc);
-        fip[Inplace::Phase::OIL] = unit::convert::to(fip[Inplace::Phase::OIL], scc);
-        fip[Inplace::Phase::OilInLiquidPhase] = unit::convert::to(fip[Inplace::Phase::OilInLiquidPhase], scc);
-        fip[Inplace::Phase::OilInGasPhase] = unit::convert::to(fip[Inplace::Phase::OilInGasPhase], scc);
-        fip[Inplace::Phase::GAS] = unit::convert::to(fip[Inplace::Phase::GAS], scc);
-        fip[Inplace::Phase::GasInLiquidPhase] = unit::convert::to(fip[Inplace::Phase::GasInLiquidPhase], scc);
-        fip[Inplace::Phase::GasInGasPhase] = unit::convert::to(fip[Inplace::Phase::GasInGasPhase], scc);
-        fip[Inplace::Phase::PoreVolume] = unit::convert::to(fip[Inplace::Phase::PoreVolume], scc);
-    }
-    else if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-        // nothing to do
-    }
-    else {
-        throw std::runtime_error("Unsupported unit type for fluid in place output.");
+    using M = UnitSystem::measure;
+
+    const auto unit_map = std::unordered_map<Inplace::Phase, M> {
+        {Inplace::Phase::WATER,             M::liquid_surface_volume},
+        {Inplace::Phase::OIL,               M::liquid_surface_volume},
+        {Inplace::Phase::OilInLiquidPhase,  M::liquid_surface_volume},
+        {Inplace::Phase::OilInGasPhase,     M::liquid_surface_volume},
+        {Inplace::Phase::GAS,               M::gas_surface_volume},
+        {Inplace::Phase::GasInLiquidPhase,  M::gas_surface_volume},
+        {Inplace::Phase::GasInGasPhase,     M::gas_surface_volume},
+        {Inplace::Phase::PoreVolume,        M::volume},
+        {Inplace::Phase::DynamicPoreVolume, M::volume},
+    };
+
+    for (auto& [phase, value] : fip) {
+        auto unitPos = unit_map.find(phase);
+        if (unitPos != unit_map.end()) {
+            value = units.from_si(unitPos->second, value);
+        }
     }
 }
 
@@ -1107,20 +1109,8 @@ template<class FluidSystem, class Scalar>
 void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
 pressureUnitConvert_(Scalar& pav) const
 {
-    const UnitSystem& units = eclState_.getUnits();
-    if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-        pav = unit::convert::to(pav, unit::psia);
-    }
-    else if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-        pav = unit::convert::to(pav, unit::barsa);
-    }
-    else if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_LAB) {
-        pav = unit::convert::to(pav, unit::atm);
-
-    }
-    else {
-        throw std::runtime_error("Unsupported unit type for fluid in place output.");
-    }
+    pav = this->eclState_.getUnits()
+        .from_si(UnitSystem::measure::pressure, pav);
 }
 
 template<class FluidSystem, class Scalar>
@@ -1133,11 +1123,25 @@ outputRegionFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> oip,
         return;
 
     // don't output FIPNUM report if the region has no porv.
-    if (cip[Inplace::Phase::PoreVolume] == 0)
+    if (! (cip[Inplace::Phase::PoreVolume] > Scalar{0}))
         return;
 
     const UnitSystem& units = eclState_.getUnits();
     std::ostringstream ss;
+
+    ss << '\n';
+    if (reg == 0) {
+        ss << "Field total";
+    }
+    else {
+        ss << "FIPNUM report region " << reg;
+    }
+
+    ss << " pressure dependent pore volume = "
+       << std::fixed << std::setprecision(0)
+       << cip[Inplace::Phase::DynamicPoreVolume] << ' '
+       << units.name(UnitSystem::measure::volume) << "\n\n";
+
     if (reg == 0) {
         ss << "                                                  ===================================================\n"
            << "                                                  :                   Field Totals                  :\n";
@@ -1304,12 +1308,12 @@ isOutputCreationDirective_(const std::string& keyword)
 template<class FluidSystem, class Scalar>
 Scalar EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
 pressureAverage_(const Scalar& pressurePvHydrocarbon,
-             const Scalar& pvHydrocarbon,
-             const Scalar& pressurePv,
-             const Scalar& pv,
-             bool hydrocarbon)
+                 const Scalar& pvHydrocarbon,
+                 const Scalar& pressurePv,
+                 const Scalar& pv,
+                 const bool    hydrocarbon)
 {
-    if (pvHydrocarbon > 1e-10 && hydrocarbon)
+    if (hydrocarbon && (pvHydrocarbon > 1e-10))
         return pressurePvHydrocarbon / pvHydrocarbon;
 
     return pressurePv / pv;
@@ -1319,20 +1323,25 @@ template<class FluidSystem,class Scalar>
 typename EclGenericOutputBlackoilModule<FluidSystem,Scalar>::ScalarBuffer
 EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
 pressureAverage_(const ScalarBuffer& pressurePvHydrocarbon,
-             const ScalarBuffer& pvHydrocarbon,
-             const ScalarBuffer& pressurePv,
-             const ScalarBuffer& pv,
-             bool hydrocarbon)
+                 const ScalarBuffer& pvHydrocarbon,
+                 const ScalarBuffer& pressurePv,
+                 const ScalarBuffer& pv,
+                 const bool hydrocarbon)
 {
-    size_t size = pressurePvHydrocarbon.size();
+    const std::size_t size = pressurePvHydrocarbon.size();
     assert(pvHydrocarbon.size() == size);
     assert(pressurePv.size() == size);
     assert(pv.size() == size);
 
     ScalarBuffer fraction(size, 0.0);
-    for (size_t i = 0; i < size; ++i) {
-        fraction[i] = pressureAverage_(pressurePvHydrocarbon[i], pvHydrocarbon[i], pressurePv[i], pv[i], hydrocarbon);
+    for (std::size_t i = 0; i < size; ++i) {
+        fraction[i] = pressureAverage_(pressurePvHydrocarbon[i],
+                                       pvHydrocarbon[i],
+                                       pressurePv[i],
+                                       pv[i],
+                                       hydrocarbon);
     }
+
     return fraction;
 }
 
@@ -1421,13 +1430,15 @@ outputFipLogImpl(const Inplace& inplace) const
             current_values[phase] = inplace.get(phase);
         }
 
+        current_values[Inplace::Phase::DynamicPoreVolume] =
+            inplace.get(Inplace::Phase::DynamicPoreVolume);
 
         fipUnitConvert_(initial_values);
         fipUnitConvert_(current_values);
 
         pressureUnitConvert_(fieldHydroCarbonPoreVolumeAveragedPressure);
-        outputRegionFluidInPlace_(initial_values,
-                                  current_values,
+        outputRegionFluidInPlace_(std::move(initial_values),
+                                  std::move(current_values),
                                   fieldHydroCarbonPoreVolumeAveragedPressure);
     }
 
@@ -1439,6 +1450,10 @@ outputFipLogImpl(const Inplace& inplace) const
             initial_values[phase] = this->initialInplace_->get("FIPNUM", phase, reg);
             current_values[phase] = inplace.get("FIPNUM", phase, reg);
         }
+
+        current_values[Inplace::Phase::DynamicPoreVolume] =
+            inplace.get("FIPNUM", Inplace::Phase::DynamicPoreVolume, reg);
+
         fipUnitConvert_(initial_values);
         fipUnitConvert_(current_values);
 
@@ -1449,7 +1464,9 @@ outputFipLogImpl(const Inplace& inplace) const
                                    inplace.get("FIPNUM", Inplace::Phase::PoreVolume, reg),
                                    true);
         pressureUnitConvert_(regHydroCarbonPoreVolumeAveragedPressure);
-        outputRegionFluidInPlace_(initial_values, current_values, regHydroCarbonPoreVolumeAveragedPressure, reg);
+        outputRegionFluidInPlace_(std::move(initial_values),
+                                  std::move(current_values),
+                                  regHydroCarbonPoreVolumeAveragedPressure, reg);
     }
 }
 
@@ -1466,33 +1483,55 @@ template<class FluidSystem,class Scalar>
 void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
 update(Inplace& inplace,
        const std::string& region_name,
-       Inplace::Phase phase,
-       std::size_t ntFip,
-       const std::vector<double>& values)
+       const Inplace::Phase phase,
+       const std::size_t ntFip,
+       const ScalarBuffer& values)
 {
-    double sum = 0;
-    for (std::size_t region_number = 0; region_number < ntFip; region_number++) {
-        inplace.add( region_name, phase, region_number + 1, values[region_number] );
-        sum += values[region_number];
+    double sum = 0.0;
+    for (std::size_t region_number = 0; region_number < ntFip; ++region_number) {
+        const auto rval = static_cast<double>(values[region_number]);
+        inplace.add(region_name, phase, region_number + 1, rval);
+        sum += rval;
     }
-    inplace.add( phase, sum );
+    inplace.add(phase, sum);
 }
 
 template<class FluidSystem,class Scalar>
 void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
 makeRegionSum(Inplace& inplace,
               const std::string& region_name,
-              const Comm& comm)
+              const Comm& comm) const
 {
     const auto& region = this->regions_.at(region_name);
-    std::size_t ntFip = this->regionMax(region, comm);
+    const std::size_t ntFip = this->regionMax(region, comm);
 
-    update(inplace, region_name, Inplace::Phase::PressurePV, ntFip, this->regionSum(this->pressureTimesPoreVolume_, region, ntFip, comm));
-    update(inplace, region_name, Inplace::Phase::HydroCarbonPV, ntFip, this->regionSum(this->hydrocarbonPoreVolume_, region, ntFip, comm));
-    update(inplace, region_name, Inplace::Phase::PressureHydroCarbonPV, ntFip, this->regionSum(this->pressureTimesHydrocarbonVolume_, region, ntFip, comm));
+    auto update_inplace =
+        [&inplace, &region, &region_name, &comm, ntFip, this]
+        (const Inplace::Phase       phase,
+         const std::vector<Scalar>& value)
+    {
+        update(inplace, region_name, phase, ntFip,
+               this->regionSum(value, region, ntFip, comm));
+    };
 
-    for (const auto& phase : Inplace::phases())
-        update(inplace, region_name, phase, ntFip, this->regionSum(this->fip_[phase], region, ntFip, comm));
+    update_inplace(Inplace::Phase::PressurePV,
+                   this->pressureTimesPoreVolume_);
+
+    update_inplace(Inplace::Phase::HydroCarbonPV,
+                   this->hydrocarbonPoreVolume_);
+
+    update_inplace(Inplace::Phase::PressureHydroCarbonPV,
+                   this->pressureTimesHydrocarbonVolume_);
+
+    update_inplace(Inplace::Phase::DynamicPoreVolume,
+                   this->dynamicPoreVolume_);
+
+    for (const auto& phase : Inplace::phases()) {
+        auto fipPos = this->fip_.find(phase);
+        if (fipPos != this->fip_.end()) {
+            update_inplace(phase, fipPos->second);
+        }
+    }
 }
 
 template<class FluidSystem,class Scalar>
@@ -1501,9 +1540,8 @@ accumulateRegionSums(const Comm& comm)
 {
     Inplace inplace;
 
-    for (const auto& [region_name, _] : this->regions_) {
-        (void)_;
-        makeRegionSum(inplace, region_name, comm);
+    for (const auto& region : this->regions_) {
+        makeRegionSum(inplace, region.first, comm);
     }
 
     // The first time the outputFipLog function is run we store the inplace values in
@@ -1537,54 +1575,68 @@ updateSummaryRegionValues(const Inplace& inplace,
     // The field summary vectors should only use the FIPNUM based region sum.
     {
         for (const auto& phase : Inplace::phases()) {
-            std::string key = "F" + EclString(phase);
-            if (summaryConfig_.hasKeyword(key))
+            const std::string key = "F" + EclString(phase);
+            if (this->summaryConfig_.hasKeyword(key)) {
                 miscSummaryData[key] = inplace.get(phase);
+            }
         }
 
-        if (summaryConfig_.hasKeyword("FOE") && this->initialInplace_)
+        if (this->summaryConfig_.hasKeyword("FOE") && this->initialInplace_) {
             miscSummaryData["FOE"] = inplace.get(Inplace::Phase::OIL)
                 / this->initialInplace_.value().get(Inplace::Phase::OIL);
+        }
 
-        if (summaryConfig_.hasKeyword("FPR"))
-            miscSummaryData["FPR"] = pressureAverage_(inplace.get(Inplace::Phase::PressureHydroCarbonPV),
-                                                      inplace.get(Inplace::Phase::HydroCarbonPV),
-                                                      inplace.get(Inplace::Phase::PressurePV),
-                                                      inplace.get(Inplace::Phase::PoreVolume),
-                                                      true);
+        if (this->summaryConfig_.hasKeyword("FPR")) {
+            miscSummaryData["FPR"] =
+                pressureAverage_(inplace.get(Inplace::Phase::PressureHydroCarbonPV),
+                                 inplace.get(Inplace::Phase::HydroCarbonPV),
+                                 inplace.get(Inplace::Phase::PressurePV),
+                                 inplace.get(Inplace::Phase::PoreVolume),
+                                 true);
+        }
 
-
-        if (summaryConfig_.hasKeyword("FPRP"))
-            miscSummaryData["FPRP"] = pressureAverage_(inplace.get(Inplace::Phase::PressureHydroCarbonPV),
-                                                       inplace.get(Inplace::Phase::HydroCarbonPV),
-                                                       inplace.get(Inplace::Phase::PressurePV),
-                                                       inplace.get(Inplace::Phase::PoreVolume),
-                                                       false);
+        if (this->summaryConfig_.hasKeyword("FPRP")) {
+            miscSummaryData["FPRP"] =
+                pressureAverage_(inplace.get(Inplace::Phase::PressureHydroCarbonPV),
+                                 inplace.get(Inplace::Phase::HydroCarbonPV),
+                                 inplace.get(Inplace::Phase::PressurePV),
+                                 inplace.get(Inplace::Phase::PoreVolume),
+                                 false);
+        }
     }
 
     // The region summary vectors should loop through the FIPxxx regions to
     // support the RPR__xxx summary keywords.
     {
+        auto get_vector = [&inplace]
+            (const auto&          node,
+             const Inplace::Phase phase)
+        {
+            return inplace.get_vector(node.fip_region(), phase);
+        };
+
         for (const auto& phase : Inplace::phases()) {
             for (const auto& node : this->regionNodes_.at(phase))
-                regionData[node.keyword()] = inplace.get_vector(node.fip_region(), phase);
+                regionData[node.keyword()] = get_vector(node, phase);
         }
 
-        // The exact same quantity is calculated for RPR and RPRP - is that correct?
-        for (const auto& node : this->RPRNodes_)
-            regionData[node.keyword()] = pressureAverage_(inplace.get_vector(node.fip_region(), Inplace::Phase::PressureHydroCarbonPV),
-                                                          inplace.get_vector(node.fip_region(), Inplace::Phase::HydroCarbonPV),
-                                                          inplace.get_vector(node.fip_region(), Inplace::Phase::PressurePV),
-                                                          inplace.get_vector(node.fip_region(), Inplace::Phase::PoreVolume),
-                                                          true);
+        for (const auto& node : this->RPRNodes_) {
+            regionData[node.keyword()] =
+            pressureAverage_(get_vector(node, Inplace::Phase::PressureHydroCarbonPV),
+                             get_vector(node, Inplace::Phase::HydroCarbonPV),
+                             get_vector(node, Inplace::Phase::PressurePV),
+                             get_vector(node, Inplace::Phase::PoreVolume),
+                             true);
+        }
 
-
-        for (const auto& node : this->RPRPNodes_)
-            regionData[node.keyword()] = pressureAverage_(inplace.get_vector(node.fip_region(), Inplace::Phase::PressureHydroCarbonPV),
-                                                          inplace.get_vector(node.fip_region(), Inplace::Phase::HydroCarbonPV),
-                                                          inplace.get_vector(node.fip_region(), Inplace::Phase::PressurePV),
-                                                          inplace.get_vector(node.fip_region(), Inplace::Phase::PoreVolume),
-                                                          false);
+        for (const auto& node : this->RPRPNodes_) {
+            regionData[node.keyword()] =
+            pressureAverage_(get_vector(node, Inplace::Phase::PressureHydroCarbonPV),
+                             get_vector(node, Inplace::Phase::HydroCarbonPV),
+                             get_vector(node, Inplace::Phase::PressurePV),
+                             get_vector(node, Inplace::Phase::PoreVolume),
+                             false);
+        }
     }
 }
 

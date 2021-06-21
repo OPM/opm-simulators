@@ -261,7 +261,7 @@ protected:
 
     void makeRegionSum(Inplace& inplace,
                        const std::string& region_name,
-                       const Comm& comm);
+                       const Comm& comm) const;
 
     Inplace accumulateRegionSums(const Comm& comm);
 
@@ -285,7 +285,7 @@ protected:
     // Sum Fip values over regions.
     static ScalarBuffer regionSum(const ScalarBuffer& property,
                                   const std::vector<int>& regionId,
-                                  size_t maxNumberOfRegions,
+                                  const std::size_t maxNumberOfRegions,
                                   const Comm& comm);
 
     static int regionMax(const std::vector<int>& region,
@@ -293,9 +293,9 @@ protected:
 
     static void update(Inplace& inplace,
                        const std::string& region_name,
-                       Inplace::Phase phase,
-                       std::size_t ntFip,
-                       const std::vector<double>& values);
+                       const Inplace::Phase phase,
+                       const std::size_t ntFip,
+                       const ScalarBuffer& values);
 
     static Scalar sum(const ScalarBuffer& v);
 
@@ -332,6 +332,7 @@ protected:
     ScalarBuffer hydrocarbonPoreVolume_;
     ScalarBuffer pressureTimesPoreVolume_;
     ScalarBuffer pressureTimesHydrocarbonVolume_;
+    ScalarBuffer dynamicPoreVolume_;
     ScalarBuffer oilPressure_;
     ScalarBuffer temperature_;
     ScalarBuffer rs_;
