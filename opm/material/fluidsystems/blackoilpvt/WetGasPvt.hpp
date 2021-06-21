@@ -680,8 +680,8 @@ public:
 
     bool operator==(const WetGasPvt<Scalar>& data) const
     {
-        return this->gasReferenceDensity() == data.gasReferenceDensity() &&
-               this->oilReferenceDensity() == data.oilReferenceDensity() &&
+        return this->gasReferenceDensity_ == data.gasReferenceDensity_ &&
+               this->oilReferenceDensity_ == data.oilReferenceDensity_ &&
                this->inverseGasB() == data.inverseGasB() &&
                this->inverseSaturatedGasB() == data.inverseSaturatedGasB() &&
                this->gasMu() == data.gasMu() &&

@@ -300,7 +300,7 @@ public:
 
     bool operator==(const DeadOilPvt<Scalar>& data) const
     {
-        return this->oilReferenceDensity() == data.oilReferenceDensity() &&
+        return this->oilReferenceDensity_ == data.oilReferenceDensity_ &&
                this->inverseOilB() == data.inverseOilB() &&
                this->oilMu() == data.oilMu() &&
                this->inverseOilBMu() == data.inverseOilBMu();
