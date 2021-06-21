@@ -30,17 +30,18 @@
 
 #include <amgcl/amg.hpp>
 #include <amgcl/backend/builtin.hpp>
-#include <amgcl/backend/cuda.hpp>
-#include <amgcl/relaxation/cusparse_ilu0.hpp>
 #include <amgcl/adapter/crs_tuple.hpp>
 #include <amgcl/make_block_solver.hpp>
 #include <amgcl/relaxation/as_preconditioner.hpp>
 #include <amgcl/relaxation/ilu0.hpp>
 #include <amgcl/solver/bicgstab.hpp>
-
 #include <amgcl/preconditioner/runtime.hpp>
-
 #include <amgcl/value_type/static_matrix.hpp>
+
+#if HAVE_CUDA
+#include <amgcl/backend/cuda.hpp>
+#include <amgcl/relaxation/cusparse_ilu0.hpp>
+#endif
 
 #define AMGCL_CUDA 0
 

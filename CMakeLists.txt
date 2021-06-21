@@ -218,10 +218,12 @@ if(amgcl_FOUND)
   set(HAVE_AMGCL 1)
   # Linking to target angcl::amgcl drags in OpenMP and -fopenmp as a compile
   # flag. With that nvcc fails as it does not that flag.
-  # Hence we set AMG_CL_INCLUDE_DIRS.
+  # Hence we set AMGCL_INCLUDE_DIRS.
   get_property(AMGCL_INCLUDE_DIRS TARGET amgcl::amgcl PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
   include_directories(${AMGCL_INCLUDE_DIRS})
-  set_source_files_properties(opm/simulators/linalg/bda/amgclSolverBackend.cpp PROPERTIES LANGUAGE CUDA)
+  if(CUDA_FOUND)
+    set_source_files_properties(opm/simulators/linalg/bda/amgclSolverBackend.cpp PROPERTIES LANGUAGE CUDA)
+  endif()
 endif()
 
 # read the list of components from this file (in the project directory);
