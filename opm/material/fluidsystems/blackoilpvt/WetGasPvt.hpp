@@ -320,7 +320,6 @@ public:
         size_t nRv = 20;
         size_t nP = samplePoints.size()*2;
 
-        Scalar rhogRef = gasReferenceDensity_[regionIdx];
         Scalar rhooRef = oilReferenceDensity_[regionIdx];
 
         TabulatedOneDFunction gasFormationVolumeFactor;
