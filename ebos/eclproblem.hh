@@ -2379,8 +2379,13 @@ private:
                     this->solventSaturation_[elemIdx] = ssol;
             }
 
-            this->lastRs_[elemIdx] = elemFluidState.Rs();
-            this->lastRv_[elemIdx] = elemFluidState.Rv();
+            if (! this->lastRs_.empty()) {
+                this->lastRs_[elemIdx] = elemFluidState.Rs();
+            }
+
+            if (! this->lastRv_.empty()) {
+                this->lastRv_[elemIdx] = elemFluidState.Rv();
+            }
 
             if constexpr (enablePolymer)
                  this->polymerConcentration_[elemIdx] = eclWriter_->eclOutputModule().getPolymerConcentration(elemIdx);
