@@ -933,6 +933,38 @@ add_test_compare_restarted_simulation(CASENAME spe9
                                       REL_TOL ${rel_tol_restart}
                                       TEST_ARGS --sched-restart=false)
 
+add_test_compare_restarted_simulation(CASENAME ctaquifer_2d_oilwater
+                                      FILENAME 2D_OW_CTAQUIFER
+                                      SIMULATOR flow
+                                      ABS_TOL ${abs_tol_restart}
+                                      REL_TOL ${rel_tol_restart}
+                                      DIR aquifer-oilwater
+                                      TEST_ARGS --sched-restart=true)
+
+add_test_compare_restarted_simulation(CASENAME fetkovich_2d
+                                      FILENAME 2D_FETKOVICHAQUIFER
+                                      SIMULATOR flow
+                                      ABS_TOL ${abs_tol_restart}
+                                      REL_TOL ${rel_tol_restart}
+                                      DIR aquifer-fetkovich
+                                      TEST_ARGS --sched-restart=true)
+
+add_test_compare_restarted_simulation(CASENAME numerical_aquifer_3d_1aqu
+                                      FILENAME 3D_1AQU_3CELLS
+                                      SIMULATOR flow
+                                      ABS_TOL ${abs_tol_restart}
+                                      REL_TOL ${rel_tol_restart}
+                                      DIR aquifer-num
+                                      TEST_ARGS --sched-restart=true --enable-tuning=true)
+
+add_test_compare_restarted_simulation(CASENAME numerical_aquifer_3d_2aqu
+                                      FILENAME 3D_2AQU_NUM
+                                      SIMULATOR flow
+                                      ABS_TOL 0.4
+                                      REL_TOL 4.0e-3
+                                      DIR aquifer-num
+                                      TEST_ARGS --sched-restart=true --enable-tuning=true)
+
 # The dynamic MSW data is not written to /read from the restart file
 # We therefore accept significant deviation in the results.
 # Note also that we use --sched-restart=true since some necessary
@@ -999,6 +1031,37 @@ if(MPI_FOUND)
                                                  REL_TOL ${rel_tol_restart}
                                                  TEST_ARGS --sched-restart=false)
 
+  add_test_compare_parallel_restarted_simulation(CASENAME ctaquifer_2d_oilwater
+                                                 FILENAME 2D_OW_CTAQUIFER
+                                                 SIMULATOR flow
+                                                 ABS_TOL ${abs_tol_restart}
+                                                 REL_TOL ${rel_tol_restart}
+                                                 DIR aquifer-oilwater
+                                                 TEST_ARGS --enable-tuning=true --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
+
+  add_test_compare_parallel_restarted_simulation(CASENAME fetkovich_2d
+                                                 FILENAME 2D_FETKOVICHAQUIFER
+                                                 SIMULATOR flow
+                                                 ABS_TOL ${abs_tol_restart}
+                                                 REL_TOL ${rel_tol_restart}
+                                                 DIR aquifer-fetkovich
+                                                 TEST_ARGS --enable-tuning=true --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
+
+  add_test_compare_parallel_restarted_simulation(CASENAME numerical_aquifer_3d_2aqu
+                                                 FILENAME 3D_2AQU_NUM
+                                                 SIMULATOR flow
+                                                 ABS_TOL 0.12
+                                                 REL_TOL 5.0e-2
+                                                 DIR aquifer-num
+                                                 TEST_ARGS --enable-tuning=true --relaxed-max-pv-fraction=0 --tolerance-cnv=0.00003 --time-step-control=pid --linsolver=cpr)
+
+  add_test_compare_parallel_restarted_simulation(CASENAME numerical_aquifer_3d_1aqu
+                                                 FILENAME 3D_1AQU_3CELLS
+                                                 SIMULATOR flow
+                                                 ABS_TOL 0.12
+                                                 REL_TOL 5.0e-2
+                                                 DIR aquifer-num
+                                                 TEST_ARGS --enable-tuning=true --relaxed-max-pv-fraction=0 --tolerance-cnv=0.00003 --time-step-control=pid --linsolver=cpr)
 
   opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-parallel-regressionTest.sh "")
 
