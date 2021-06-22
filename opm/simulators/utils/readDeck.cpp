@@ -38,6 +38,7 @@
 #include <opm/output/eclipse/RestartIO.hpp>
 #include <opm/io/eclipse/ERst.hpp>
 #include <opm/io/eclipse/RestartFileView.hpp>
+#include <opm/io/eclipse/rst/aquifer.hpp>
 #include <opm/io/eclipse/rst/state.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
@@ -230,36 +231,70 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
                 eclipseState = std::make_unique<Opm::EclipseState>(*deck);
 #endif
             }
-            /*
-              For the time being initializing wells and groups from the
-              restart file is not possible, but work is underways and it is
-              included here as a switch.
-            */
+
             const auto& init_config = eclipseState->getInitConfig();
-            if (init_config.restartRequested() && initFromRestart) {
+            if (init_config.restartRequested()) {
+                // Analytic aquifers must always be loaded from the restart
+                // file in restarted runs and the corresponding keywords
+                // (e.g., AQUANCON and AQUCT) do not exist in the input deck
+                // in this case.  In other words, there's no way to check if
+                // there really are analytic aquifers in the run until we
+                // attempt to read the specifications from the restart file.
+                // If the loader determines that there are no analytic
+                // aquifers, then 'EclipseState::loadRestartAquifers()' does
+                // nothing.
                 const int report_step = init_config.getRestartStep();
                 const auto rst_filename = eclipseState->getIOConfig().getRestartFileName( init_config.getRestartRootName(), report_step, false );
                 auto rst_file = std::make_shared<EclIO::ERst>(rst_filename);
                 auto rst_view = std::make_shared<EclIO::RestartFileView>(std::move(rst_file), report_step);
-                const auto rst_state = Opm::RestartIO::RstState::load(std::move(rst_view));
-                if (!schedule)
-                    schedule = std::make_unique<Opm::Schedule>(*deck, *eclipseState, *parseContext, *errorGuard, python, outputInterval, &rst_state);
-                udqState = std::make_unique<Opm::UDQState>( schedule->operator[](0).udq().params().undefinedValue() );
+
+                // Note: RstState::load() will just *read* from the grid
+                // structure, and only do so if the case actually includes
+                // analytic aquifers.  The pointer to the input grid is just
+                // to allow 'nullptr' to signify "don't load aquifers" in
+                // certain unit tests.  Passing an optional<EclipseGrid> is
+                // too expensive however since doing so will create a copy
+                // of the grid inside the optional<>.
+                const auto rst_state = RestartIO::RstState::
+                    load(std::move(rst_view), &eclipseState->getInputGrid());
+
+                eclipseState->loadRestartAquifers(rst_state.aquifers);
+
+                // For the time being initializing wells and groups from the
+                // restart file is not possible.  Work is underway and the
+                // ability is included here contingent on user-level switch
+                // 'initFromRestart' (i.e., setting "--sched-restart=false"
+                // as a command line invocation parameter).
+                const auto* init_state = initFromRestart ? &rst_state : nullptr;
+                if (!schedule) {
+                    schedule = std::make_unique<Schedule>(*deck, *eclipseState,
+                                                          *parseContext, *errorGuard,
+                                                          python, outputInterval, init_state);
+                }
+
+                udqState = std::make_unique<UDQState>((*schedule)[0].udq().params().undefinedValue());
                 udqState->load_rst(rst_state);
             }
             else {
-                if (!schedule)
-                    schedule = std::make_unique<Opm::Schedule>(*deck, *eclipseState, *parseContext, *errorGuard, python);
-                udqState = std::make_unique<Opm::UDQState>( schedule->operator[](0).udq().params().undefinedValue() );
+                if (!schedule) {
+                    schedule = std::make_unique<Schedule>(*deck, *eclipseState,
+                                                          *parseContext, *errorGuard,
+                                                          python);
+                }
+
+                udqState = std::make_unique<UDQState>((*schedule)[0].udq().params().undefinedValue());
             }
 
-            if (Opm::OpmLog::hasBackend("STDOUT_LOGGER")) // loggers might not be set up!
-            {
-                setupMessageLimiter(schedule->operator[](0).message_limits(), "STDOUT_LOGGER");
+
+            if (Opm::OpmLog::hasBackend("STDOUT_LOGGER")) {
+                // loggers might not be set up!
+                setupMessageLimiter((*schedule)[0].message_limits(), "STDOUT_LOGGER");
             }
-            if (!summaryConfig)
-                summaryConfig = std::make_unique<Opm::SummaryConfig>(*deck, *schedule, eclipseState->fieldProps(), 
+
+            if (!summaryConfig) {
+                summaryConfig = std::make_unique<Opm::SummaryConfig>(*deck, *schedule, eclipseState->fieldProps(),
                                                                      eclipseState->aquifer(), *parseContext, *errorGuard);
+            }
 
             Opm::checkConsistentArrayDimensions(*eclipseState, *schedule, *parseContext, *errorGuard);
         }
