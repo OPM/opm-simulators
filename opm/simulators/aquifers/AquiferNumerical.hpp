@@ -22,9 +22,15 @@
 #define OPM_AQUIFERNUMERICAL_HEADER_INCLUDED
 
 #include <opm/output/data/Aquifer.hpp>
+
 #include <opm/parser/eclipse/EclipseState/Aquifer/NumericalAquifer/SingleNumericalAquifer.hpp>
 
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <unordered_map>
 #include <utility>
+#include <vector>
 
 namespace Opm
 {
@@ -54,29 +60,49 @@ public:
                      const std::unordered_map<int, int>& cartesian_to_compressed,
                      const Simulator& ebos_simulator,
                      const int* global_cell)
-        : id_(aquifer.id())
-        , ebos_simulator_(ebos_simulator)
-        , flux_rate_(0.)
-        , cumulative_flux_(0.)
-        , global_cell_(global_cell)
-        , init_pressure_(aquifer.numCells(), 0.0)
+        : id_             (aquifer.id())
+        , ebos_simulator_ (ebos_simulator)
+        , flux_rate_      (0.0)
+        , cumulative_flux_(0.0)
+        , global_cell_    (global_cell)
+        , init_pressure_  (aquifer.numCells(), 0.0)
     {
         this->cell_to_aquifer_cell_idx_.resize(this->ebos_simulator_.gridView().size(/*codim=*/0), -1);
 
-        for (size_t idx = 0; idx < aquifer.numCells(); ++idx) {
+        auto aquifer_on_process = false;
+        for (std::size_t idx = 0; idx < aquifer.numCells(); ++idx) {
             const auto* cell = aquifer.getCellPrt(idx);
 
             // Due to parallelisation, the cell might not exist in the current process
             auto search = cartesian_to_compressed.find(cell->global_index);
             if (search != cartesian_to_compressed.end()) {
                 this->cell_to_aquifer_cell_idx_[search->second] = idx;
+                aquifer_on_process = true;
             }
+        }
+
+        if (aquifer_on_process) {
+            this->checkConnectsToReservoir();
         }
     }
 
-    void initFromRestart([[maybe_unused]]const data::Aquifers& aquiferSoln)
+    void initFromRestart(const data::Aquifers& aquiferSoln)
     {
-        // NOT handling Restart for now
+        auto xaqPos = aquiferSoln.find(this->aquiferID());
+        if (xaqPos == aquiferSoln.end())
+            return;
+
+        if (this->connects_to_reservoir_) {
+            this->cumulative_flux_ = xaqPos->second.volume;
+        }
+
+        if (const auto* aqData = xaqPos->second.typeData.template get<data::AquiferType::Numerical>();
+            aqData != nullptr)
+        {
+            this->init_pressure_ = aqData->initPressure;
+        }
+
+        this->solution_set_from_restart_ = true;
     }
 
     void endTimeStep()
@@ -102,6 +128,10 @@ public:
 
     void initialSolutionApplied()
     {
+        if (this->solution_set_from_restart_) {
+            return;
+        }
+
         this->pressure_ = this->calculateAquiferPressure(this->init_pressure_);
         this->flux_rate_ = 0.;
         this->cumulative_flux_ = 0.;
@@ -113,16 +143,40 @@ public:
     }
 
 private:
-    const size_t id_;
+    const std::size_t id_;
     const Simulator& ebos_simulator_;
     double flux_rate_; // aquifer influx rate
     double cumulative_flux_; // cumulative aquifer influx
     const int* global_cell_; // mapping to global index
     std::vector<double> init_pressure_{};
     double pressure_; // aquifer pressure
+    bool solution_set_from_restart_ {false};
+    bool connects_to_reservoir_ {false};
 
     // TODO: maybe unordered_map can also do the work to save memory?
     std::vector<int> cell_to_aquifer_cell_idx_;
+
+    void checkConnectsToReservoir()
+    {
+        ElementContext elem_ctx(this->ebos_simulator_);
+        auto elemIt = std::find_if(this->ebos_simulator_.gridView().template begin</*codim=*/0>(),
+                                   this->ebos_simulator_.gridView().template end</*codim=*/0>(),
+            [&elem_ctx, this](const auto& elem) -> bool
+        {
+            elem_ctx.updateStencil(elem);
+
+            const auto cell_index = elem_ctx
+                .globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+
+            return this->cell_to_aquifer_cell_idx_[cell_index] == 0;
+        });
+
+        assert ((elemIt != this->ebos_simulator_.gridView().template end</*codim=*/0>())
+                && "Internal error locating numerical aquifer's connecting cell");
+
+        this->connects_to_reservoir_ =
+            elemIt->partitionType() == Dune::InteriorEntity;
+    }
 
     double calculateAquiferPressure() const
     {
@@ -183,21 +237,25 @@ private:
 
     double calculateAquiferFluxRate() const
     {
-        double aquifer_flux = 0.;
+        double aquifer_flux = 0.0;
 
-        ElementContext  elem_ctx(this->ebos_simulator_);
+        if (! this->connects_to_reservoir_) {
+            return aquifer_flux;
+        }
+
+        ElementContext elem_ctx(this->ebos_simulator_);
         const auto& gridView = this->ebos_simulator_.gridView();
         auto elemIt = gridView.template begin</*codim=*/0>();
         const auto& elemEndIt = gridView.template end</*codim=*/0>();
         for (; elemIt != elemEndIt; ++elemIt) {
-            const auto &elem = *elemIt;
+            const auto& elem = *elemIt;
             if (elem.partitionType() != Dune::InteriorEntity) {
                 continue;
             }
             // elem_ctx.updatePrimaryStencil(elem);
             elem_ctx.updateStencil(elem);
 
-            const size_t cell_index = elem_ctx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const std::size_t cell_index = elem_ctx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
             const int idx = this->cell_to_aquifer_cell_idx_[cell_index];
             // we only need the first aquifer cell
             if (idx != 0) {
@@ -206,19 +264,19 @@ private:
             elem_ctx.updateAllIntensiveQuantities();
             elem_ctx.updateAllExtensiveQuantities();
 
-            const size_t num_interior_faces = elem_ctx.numInteriorFaces(/*timeIdx*/ 0);
+            const std::size_t num_interior_faces = elem_ctx.numInteriorFaces(/*timeIdx*/ 0);
             // const auto &problem = elem_ctx.problem();
-            const auto &stencil = elem_ctx.stencil(0);
+            const auto& stencil = elem_ctx.stencil(0);
             // const auto& inQuants = elem_ctx.intensiveQuantities(0, /*timeIdx*/ 0);
 
-            for (size_t face_idx = 0; face_idx < num_interior_faces; ++face_idx) {
-                const auto &face = stencil.interiorFace(face_idx);
+            for (std::size_t face_idx = 0; face_idx < num_interior_faces; ++face_idx) {
+                const auto& face = stencil.interiorFace(face_idx);
                 // dof index
-                const size_t i = face.interiorIndex();
-                const size_t j = face.exteriorIndex();
+                const std::size_t i = face.interiorIndex();
+                const std::size_t j = face.exteriorIndex();
                 // compressed index
                 // const size_t I = stencil.globalSpaceIndex(i);
-                const size_t J = stencil.globalSpaceIndex(j);
+                const std::size_t J = stencil.globalSpaceIndex(j);
 
                 assert(stencil.globalSpaceIndex(i) == cell_index);
 
@@ -227,11 +285,11 @@ private:
                 if (this->cell_to_aquifer_cell_idx_[J] > 0) {
                     continue;
                 }
-                const auto &exQuants = elem_ctx.extensiveQuantities(face_idx, /*timeIdx*/ 0);
+                const auto& exQuants = elem_ctx.extensiveQuantities(face_idx, /*timeIdx*/ 0);
                 const double water_flux = Toolbox::value(exQuants.volumeFlux(waterPhaseIdx));
 
-                const size_t up_id = water_flux >= 0. ? i : j;
-                const auto &intQuantsIn = elem_ctx.intensiveQuantities(up_id, 0);
+                const std::size_t up_id = water_flux >= 0.0 ? i : j;
+                const auto& intQuantsIn = elem_ctx.intensiveQuantities(up_id, 0);
                 const double invB = Toolbox::value(intQuantsIn.fluidState().invB(waterPhaseIdx));
                 const double face_area = face.area();
                 aquifer_flux += water_flux * invB * face_area;
