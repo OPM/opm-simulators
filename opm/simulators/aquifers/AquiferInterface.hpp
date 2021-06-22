@@ -24,8 +24,6 @@
 
 #include <opm/common/utility/numeric/linearInterpolation.hpp>
 #include <opm/parser/eclipse/EclipseState/Aquifer/Aquancon.hpp>
-#include <opm/parser/eclipse/EclipseState/Aquifer/AquiferCT.hpp>
-#include <opm/parser/eclipse/EclipseState/Aquifer/Aquifetp.hpp>
 
 #include <opm/output/data/Aquifer.hpp>
 
@@ -35,6 +33,10 @@
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 
 #include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <limits>
+#include <numeric>
 #include <unordered_map>
 #include <vector>
 
@@ -168,7 +170,7 @@ protected:
     {
         // We reset the cumulative flux at the start of any simulation, so, W_flux = 0
         if (!this->solution_set_from_restart_) {
-            W_flux_ = 0.;
+            W_flux_ = Scalar{0};
         }
 
         // We next get our connections to the aquifer and initialize these quantities using the initialize_connections
@@ -177,9 +179,9 @@ protected:
         calculateAquiferCondition();
         calculateAquiferConstants();
 
-        pressure_previous_.resize(this->connections_.size(), 0.);
-        pressure_current_.resize(this->connections_.size(), 0.);
-        Qai_.resize(this->connections_.size(), 0.0);
+        pressure_previous_.resize(this->connections_.size(), Scalar{0});
+        pressure_current_.resize(this->connections_.size(), Scalar{0});
+        Qai_.resize(this->connections_.size(), Scalar{0});
     }
 
     inline void
@@ -225,16 +227,18 @@ protected:
     {
         this->cell_depth_.resize(this->size(), this->aquiferDepth());
         this->alphai_.resize(this->size(), 1.0);
-        this->faceArea_connected_.resize(this->size(), 0.0);
+        this->faceArea_connected_.resize(this->size(), Scalar{0});
 
         // Translate the C face tag into the enum used by opm-parser's TransMult class
         FaceDir::DirEnum faceDirection;
 
+        bool has_active_connection_on_proc = false;
+
         // denom_face_areas is the sum of the areas connected to an aquifer
-        Scalar denom_face_areas = 0.;
+        Scalar denom_face_areas{0};
         this->cellToConnectionIdx_.resize(this->ebos_simulator_.gridView().size(/*codim=*/0), -1);
         const auto& gridView = this->ebos_simulator_.vanguard().gridView();
-        for (size_t idx = 0; idx < this->size(); ++idx) {
+        for (std::size_t idx = 0; idx < this->size(); ++idx) {
             const auto global_index = this->connections_[idx].global_index;
             const int cell_index = this->ebos_simulator_.vanguard().compressedIndex(global_index);
             auto elemIt = gridView.template begin</*codim=*/ 0>();
@@ -244,6 +248,8 @@ protected:
            //the global_index is not part of this grid
             if ( cell_index < 0 || elemIt->partitionType() != Dune::InteriorEntity)
                 continue;
+
+            has_active_connection_on_proc = true;
 
             this->cellToConnectionIdx_[cell_index] = idx;
             this->cell_depth_.at(idx) = this->ebos_simulator_.vanguard().cellCenterDepth(cell_index);
@@ -308,12 +314,36 @@ protected:
         const auto& comm = this->ebos_simulator_.vanguard().grid().comm();
         comm.sum(&denom_face_areas, 1);
         const double eps_sqrt = std::sqrt(std::numeric_limits<double>::epsilon());
-        for (size_t idx = 0; idx < this->size(); ++idx) {
+        for (std::size_t idx = 0; idx < this->size(); ++idx) {
+            // Protect against division by zero NaNs.
             this->alphai_.at(idx) = (denom_face_areas < eps_sqrt)
-                ? // Prevent no connection NaNs due to division by zero
-                0.
+                ? Scalar{0}
                 : this->faceArea_connected_.at(idx) / denom_face_areas;
         }
+
+        if (this->solution_set_from_restart_) {
+            this->rescaleProducedVolume(has_active_connection_on_proc);
+        }
+    }
+
+    void rescaleProducedVolume(const bool has_active_connection_on_proc)
+    {
+        // Needed in parallel restart to approximate influence of aquifer
+        // being "owned" by a subset of the parallel processes.  If the
+        // aquifer is fully owned by a single process--i.e., if all cells
+        // connecting to the aquifer are on a single process--then this_area
+        // is tot_area on that process and zero elsewhere.
+
+        const auto this_area = has_active_connection_on_proc
+            ? std::accumulate(this->alphai_.begin(),
+                              this->alphai_.end(),
+                              Scalar{0})
+            : Scalar{0};
+
+        const auto tot_area = this->ebos_simulator_.vanguard()
+            .grid().comm().sum(this_area);
+
+        this->W_flux_ *= this_area / tot_area;
     }
 
     virtual void assignRestartData(const data::AquiferData& xaq) = 0;
@@ -364,8 +394,8 @@ protected:
         const auto& comm = ebos_simulator_.vanguard().grid().comm();
 
         Scalar vals[2];
-        vals[0] = std::accumulate(this->alphai_.begin(), this->alphai_.end(), 0.0);
-        vals[1] = std::accumulate(pw_aquifer.begin(), pw_aquifer.end(), 0.0);
+        vals[0] = std::accumulate(this->alphai_.begin(), this->alphai_.end(), Scalar{0});
+        vals[1] = std::accumulate(pw_aquifer.begin(), pw_aquifer.end(), Scalar{0});
 
         comm.sum(vals, 2);
 
