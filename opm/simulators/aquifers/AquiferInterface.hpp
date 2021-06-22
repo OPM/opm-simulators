@@ -146,7 +146,6 @@ public:
 
         // This is the pressure at td + dt
         this->updateCellPressure(this->pressure_current_, idx, intQuants);
-        this->updateCellDensity(idx, intQuants);
         this->calculateInflowRate(idx, context.simulator());
 
         rates[BlackoilIndices::conti0EqIdx + FluidSystem::waterCompIdx]
@@ -197,13 +196,6 @@ protected:
         pressure_water.at(idx) = fs.pressure(waterPhaseIdx).value();
     }
 
-    inline void updateCellDensity(const int idx, const IntensiveQuantities& intQuants)
-    {
-        const auto& fs = intQuants.fluidState();
-        rhow_.at(idx) = fs.density(waterPhaseIdx);
-    }
-
-
     virtual void endTimeStep() = 0;
 
     const int aquiferID_{};
@@ -219,11 +211,11 @@ protected:
     std::vector<Scalar> pressure_previous_;
     std::vector<Eval> pressure_current_;
     std::vector<Eval> Qai_;
-    std::vector<Eval> rhow_;
     std::vector<Scalar> alphai_;
 
     Scalar Tc_{}; // Time constant
     Scalar pa0_{}; // initial aquifer pressure
+    Scalar rhow_{};
 
     Eval W_flux_;
 
@@ -359,11 +351,13 @@ protected:
             const auto& fs = iq0.fluidState();
 
             water_pressure_reservoir = fs.pressure(waterPhaseIdx).value();
-            this->rhow_[idx] = fs.density(waterPhaseIdx);
-            pw_aquifer.push_back(
-                (water_pressure_reservoir
-                 - this->rhow_[idx].value() * this->gravity_() * (this->cell_depth_[idx] - this->aquiferDepth()))
-                * this->alphai_[idx]);
+            const auto water_density = fs.density(waterPhaseIdx);
+
+            const auto gdz =
+                this->gravity_() * (this->cell_depth_[idx] - this->aquiferDepth());
+
+            pw_aquifer.push_back(this->alphai_[idx] *
+                (water_pressure_reservoir - water_density.value()*gdz));
         }
 
         // We take the average of the calculated equilibrium pressures.
