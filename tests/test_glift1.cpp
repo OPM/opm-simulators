@@ -178,7 +178,8 @@ BOOST_AUTO_TEST_CASE(G1)
         iteration_idx,
         well_model.phaseUsage(),
         deferred_logger,
-        well_state
+        well_state,
+        simulator->vanguard().grid().comm()
     };
     GLiftSyncGroups sync_groups;
     GasLiftSingleWell glift {*std_well, *(simulator.get()), summary_state,
