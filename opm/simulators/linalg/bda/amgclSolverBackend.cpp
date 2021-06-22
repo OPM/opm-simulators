@@ -65,19 +65,37 @@ void amgclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doubl
     rhs.resize(N);
     x.resize(N);
 
-#if AMGCL_CUDA
-    cudaDeviceProp prop;
-    cudaGetDeviceProperties(&prop, deviceID);
-    std::cout << prop.name << std::endl;
-    cusparseCreate(&bprm.cusparse_handle);
-#endif
+    // try to read amgcl parameters via json file
+    std::string filename = "amgcl_options.json";
+    std::ifstream file(filename);
 
-    // read amgcl parameters via json file
-    std::ifstream file("amgcl_options.json");
-    boost::property_tree::read_json(file, prm);
+    if (file.is_open()) { // if file exists, read parameters from file
+        boost::property_tree::read_json(file, prm);
 
-    // print json parameters
-    boost::property_tree::write_json(std::cout, prm);
+        backend_type_cuda = prm.get("backend_type_cuda", false); // defaults to false if not specified
+        out << "Using parameters from " << filename << ":\n";
+    } else { // otherwise use default parameters, same as Dune
+        prm.put("backend_type_cuda", false);
+        prm.put("precond.class", "relaxation");
+        prm.put("precond.type", "ilu0");
+        prm.put("precond.damping", 0.9);
+        prm.put("solver.type", "bicgstab");
+        prm.put("solver.tol", tolerance);
+        prm.put("solver.maxiter", maxit);
+        prm.put("solver.verbose", verbosity >= 2);
+        out << "Using default amgcl parameters:\n";
+    }
+
+    boost::property_tree::write_json(out, prm); // print amgcl parameters
+    prm.erase("backend_type_cuda");             // delete custom parameter, otherwise amgcl prints a warning
+
+    if (backend_type_cuda) {
+        cudaDeviceProp prop;
+        cudaGetDeviceProperties(&prop, deviceID);
+        out << prop.name << std::endl;
+        cusparseCreate(&CUDA_bprm.cusparse_handle);
+    }
+    OpmLog::info(out.str());
 
     initialized = true;
 } // end initialize()
@@ -146,46 +164,56 @@ void amgclSolverBackend<block_size>::solve_system(double *b, WellContributions &
     double error = 0.0;
 
     try {
-        // create matrix object
-#if AMGCL_CUDA
-        auto A = std::tie(N, A_rows, A_cols, A_vals);
-#else
-        auto Atmp = std::tie(N, A_rows, A_cols, A_vals);
-        auto A = amgcl::adapter::block_matrix<dmat_type>(Atmp);
-#endif
+        if (backend_type_cuda) { // use CUDA
+            // create matrix object
+            auto A = std::tie(N, A_rows, A_cols, A_vals);
 
-        // create solver and construct preconditioner
-        // don't reuse this unless the preconditioner can be reused
-        Solver solve(A, prm, bprm);
+            // create solver and construct preconditioner
+            // don't reuse this unless the preconditioner can be reused
+            CUDA_Solver solve(A, prm, CUDA_bprm);
 
-        // print info (once)
-        std::call_once(print_info, [&](){
-            // print solver structure
-            std::cout << solve << std::endl;
-        });
+            // print solver structure (once)
+            std::call_once(print_info, [&](){
+                std::ostringstream out;
+                out << solve << std::endl;
+                OpmLog::info(out.str());
+            });
 
-#if AMGCL_CUDA
-        thrust::device_vector<double> B(b, b + N);
-        thrust::device_vector<double> X(N, 0.0);
+            thrust::device_vector<double> B(b, b + N);
+            thrust::device_vector<double> X(N, 0.0);
 
-        // actually solve
-        std::tie(iters, error) = solve(B, X);
+            // actually solve
+            std::tie(iters, error) = solve(B, X);
 
-        thrust::copy(X.begin(), X.end(), x.begin());
-#else
-        // reset x vector
-        std::fill(x.begin(), x.end(), 0.0);
+            thrust::copy(X.begin(), X.end(), x.begin());
+        } else { // use builtin backend (CPU)
+            // create matrix object
+            auto Atmp = std::tie(N, A_rows, A_cols, A_vals);
+            auto A = amgcl::adapter::block_matrix<dmat_type>(Atmp);
 
-        // create blocked vectors
-        auto b_ptr = reinterpret_cast<dvec_type*>(b);
-        auto x_ptr = reinterpret_cast<dvec_type*>(x.data());
-        auto B = amgcl::make_iterator_range(b_ptr, b_ptr + N / block_size);
-        auto X = amgcl::make_iterator_range(x_ptr, x_ptr + N / block_size);
+            // create solver and construct preconditioner
+            // don't reuse this unless the preconditioner can be reused
+            CPU_Solver solve(A, prm);
 
-        // actually solve
-        std::tie(iters, error) = solve(B, X);
-#endif
+            // print solver structure (once)
+            std::call_once(print_info, [&](){
+                std::ostringstream out;
+                out << solve << std::endl;
+                OpmLog::info(out.str());
+            });
 
+            // reset x vector
+            std::fill(x.begin(), x.end(), 0.0);
+
+            // create blocked vectors
+            auto b_ptr = reinterpret_cast<dvec_type*>(b);
+            auto x_ptr = reinterpret_cast<dvec_type*>(x.data());
+            auto B = amgcl::make_iterator_range(b_ptr, b_ptr + N / block_size);
+            auto X = amgcl::make_iterator_range(x_ptr, x_ptr + N / block_size);
+
+            // actually solve
+            std::tie(iters, error) = solve(B, X);
+        }
     } catch (const std::exception& ex) {
         std::cerr << "Caught exception: " << ex.what() << std::endl;
         throw ex;

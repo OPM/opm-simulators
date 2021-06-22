@@ -43,8 +43,6 @@
 #include <amgcl/relaxation/cusparse_ilu0.hpp>
 #endif
 
-#define AMGCL_CUDA 0
-
 namespace bda
 {
 
@@ -66,18 +64,13 @@ class amgclSolverBackend : public BdaSolver<block_size>
     using Base::tolerance;
     using Base::initialized;
 
-#if AMGCL_CUDA
-#if !HAVE_CUDA
-    #error "Error amgcl is trying to use CUDA, but CUDA was not found by CMake"
-#endif
-    typedef amgcl::backend::cuda<double> Backend;
-#else
+    typedef amgcl::backend::cuda<double> CUDA_Backend;
     typedef amgcl::static_matrix<double, block_size, block_size> dmat_type; // matrix value type in double precision
     typedef amgcl::static_matrix<double, block_size, 1> dvec_type; // the corresponding vector value type
-    typedef amgcl::backend::builtin<dmat_type> Backend;
-#endif
+    typedef amgcl::backend::builtin<dmat_type> CPU_Backend;
 
-    typedef amgcl::make_solver<amgcl::runtime::preconditioner<Backend>, amgcl::runtime::solver::wrapper<Backend> > Solver;
+    typedef amgcl::make_solver<amgcl::runtime::preconditioner<CUDA_Backend>, amgcl::runtime::solver::wrapper<CUDA_Backend> > CUDA_Solver;
+    typedef amgcl::make_solver<amgcl::runtime::preconditioner<CPU_Backend>, amgcl::runtime::solver::wrapper<CPU_Backend> > CPU_Solver;
 
 private:
     // store matrix in CSR format
@@ -85,9 +78,11 @@ private:
     std::vector<double> A_vals, rhs;
     std::vector<double> x;
     std::once_flag print_info;
+    bool backend_type_cuda = false;  // true if amgcl uses cuda, otherwise use cpu backend
+                                     // if more backend are supported (vexcl), turn into enum
 
-    boost::property_tree::ptree prm;
-    typename Backend::params bprm;  // amgcl backend parameters, only used for cusparseHandle
+    boost::property_tree::ptree prm;         // amgcl parameters
+    typename CUDA_Backend::params CUDA_bprm; // amgcl backend parameters, only used for cusparseHandle
 
     /// Initialize GPU and allocate memory
     /// \param[in] N              number of nonzeroes, divide by dim*dim to get number of blocks
