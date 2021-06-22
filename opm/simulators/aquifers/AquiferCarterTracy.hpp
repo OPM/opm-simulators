@@ -104,10 +104,10 @@ protected:
     Scalar dimensionless_time_{0};
     Scalar dimensionless_pressure_{0};
 
-    void assignRestartData(const data::AquiferData& /* xaq */) override
+    void assignRestartData(const data::AquiferData& xaq) override
     {
-        throw std::runtime_error {"Restart-based initialization not currently supported "
-                                  "for Carter-Tracey analytic aquifers"};
+        this->fluxValue_ = xaq.volume;
+        this->rhow_ = this->aquct_data_.waterDensity();
     }
 
     std::pair<Scalar, Scalar>
@@ -176,6 +176,10 @@ protected:
 
     inline void calculateAquiferCondition() override
     {
+        if (this->solution_set_from_restart_) {
+            return;
+        }
+
         if (! this->aquct_data_.initial_pressure.has_value()) {
             this->aquct_data_.initial_pressure =
                 this->calculateReservoirEquilibrium();
