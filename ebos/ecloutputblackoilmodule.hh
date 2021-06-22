@@ -623,15 +623,18 @@ private:
         // PORV, MINPV and friends). Also note that because of this, the porosity
         // returned by the intensive quantities can be outside of the physical
         // range [0, 1] in pathetic cases.
-        const double pv =
-            elemCtx.simulator().model().dofTotalVolume(globalDofIdx)
-            * intQuants.porosity().value();
+        const auto totVolume =
+            elemCtx.simulator().model().dofTotalVolume(globalDofIdx);
+        const double pv = totVolume * intQuants.porosity().value();
 
         if (!this->pressureTimesHydrocarbonVolume_.empty() && !this->pressureTimesPoreVolume_.empty()) {
             assert(this->hydrocarbonPoreVolume_.size() ==  this->pressureTimesHydrocarbonVolume_.size());
             assert(this->fip_[Inplace::Phase::PoreVolume].size() == this->pressureTimesPoreVolume_.size());
 
-            this->fip_[Inplace::Phase::PoreVolume][globalDofIdx] = pv;
+            this->fip_[Inplace::Phase::PoreVolume][globalDofIdx] =
+                totVolume * intQuants.referencePorosity();
+
+            this->dynamicPoreVolume_[globalDofIdx] = pv;
 
             Scalar hydrocarbon = 0.0;
             if (FluidSystem::phaseIsActive(oilPhaseIdx))

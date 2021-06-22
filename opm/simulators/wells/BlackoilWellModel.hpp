@@ -222,11 +222,12 @@ namespace Opm {
 
             data::Wells wellData() const
             {
-                auto wsrpt = this->wellState().report(UgGridHelpers::globalCell(grid()),
-                                                      [this](const int well_ndex) -> bool
-                                                      {
-                                                          return this->wasDynamicallyShutThisTimeStep(well_ndex);
-                                                      });
+                auto wsrpt = this->wellState()
+                    .report(UgGridHelpers::globalCell(grid()),
+                            [this](const int well_ndex) -> bool
+                {
+                    return this->wasDynamicallyShutThisTimeStep(well_ndex);
+                });
 
                 this->assignWellGuideRates(wsrpt);
                 this->assignShutConnections(wsrpt, this->reportStepIndex());
