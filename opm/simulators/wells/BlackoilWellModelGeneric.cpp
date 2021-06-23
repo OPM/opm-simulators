@@ -144,7 +144,8 @@ getWellEcl(const std::string& well_name) const
 
 void
 BlackoilWellModelGeneric::
-loadRestartData(const data::Wells& rst_wells,
+loadRestartData(std::size_t report_step,
+                const data::Wells& rst_wells,
                 const data::GroupAndNetworkValues& grpNwrkValues,
                 const PhaseUsage& phases,
                 const bool handle_ms_well,
@@ -251,6 +252,25 @@ loadRestartData(const data::Wells& rst_wells,
             this->groupState().injection_control(group, Phase::WATER, cwi);
         }
     }
+
+    const auto& guide_rate = this->schedule()[report_step].guide_rate();
+    if (guide_rate.has_model()) {
+        for( const auto& [wname, _] : well_state.wellMap() ) {
+            (void)_;
+            const auto& rst_well = rst_wells.at(wname);
+            if (guide_rate.has_well(wname)) {
+                const auto& rst_guide_rates = rst_well.guide_rates;
+                using GRItem = data::GuideRateValue::Item;
+                auto target = guide_rate.model().target();
+                GuideRate::RateVector guide_rates( rst_guide_rates.get(GRItem::Oil),
+                                                   rst_guide_rates.get(GRItem::Gas),
+                                                   rst_guide_rates.get(GRItem::Water) );
+                auto sim_time = this->schedule().seconds(report_step);
+                GuideRate::GuideRateValue value(sim_time, guide_rates.eval( target ), target);
+                this->guideRate_.init_grvalue(report_step, wname, value);
+            }
+        }
+    }
 }
 
 void
@@ -275,7 +295,7 @@ initFromRestartFile(const RestartValue& restartValues,
     if (nw > 0) {
         handle_ms_well &= anyMSWellOpenLocal();
         this->wellState().resize(wells_ecl_, local_parallel_well_info_, schedule(), handle_ms_well, numCells, well_perf_data_, summaryState_); // Resize for restart step
-        loadRestartData(restartValues.wells, restartValues.grp_nwrk, phase_usage_, handle_ms_well, this->wellState());
+        loadRestartData(report_step, restartValues.wells, restartValues.grp_nwrk, phase_usage_, handle_ms_well, this->wellState());
     }
 
     this->commitWGState();

@@ -124,7 +124,8 @@ public:
                         const std::unordered_set<std::string>& wells);
 
 
-    void loadRestartData(const data::Wells& rst_wells,
+    void loadRestartData(std::size_t report_step,
+                         const data::Wells& rst_wells,
                          const data::GroupAndNetworkValues& grpNwrkValues,
                          const PhaseUsage& phases,
                          const bool handle_ms_well,
