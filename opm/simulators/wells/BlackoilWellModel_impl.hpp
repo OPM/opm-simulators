@@ -1209,7 +1209,7 @@ namespace Opm {
     template<typename TypeTag>
     ConvergenceReport
     BlackoilWellModel<TypeTag>::
-    getWellConvergence(const std::vector<Scalar>& B_avg, bool checkGroupConvergence) const
+    getWellConvergence(const std::vector<Scalar>& B_avg, bool checkGroupConvergence)
     {
 
         DeferredLogger local_deferredLogger;
@@ -1220,6 +1220,16 @@ namespace Opm {
                 local_report += well->getWellConvergence(this->wellState(), B_avg, local_deferredLogger);
             }
         }
+        if (checkGroupConvergence) {
+            bool violated = updateWellControls(local_deferredLogger, /* check group controls */ true);
+            //const int reportStepIdx = ebosSimulator_.episodeIndex();
+            //const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
+            //bool violated = checkGroupConstraints(fieldGroup,
+            //                                      ebosSimulator_.episodeIndex(),
+            //                                      local_deferredLogger);
+            local_report.setGroupConverged(!violated);
+        }
+
         DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
         if (terminal_output_) {
             global_deferredLogger.logMessages();
@@ -1238,14 +1248,6 @@ namespace Opm {
             }
         }
 
-        if (checkGroupConvergence) {
-            const int reportStepIdx = ebosSimulator_.episodeIndex();
-            const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
-            bool violated = checkGroupConstraints(fieldGroup,
-                                                  ebosSimulator_.episodeIndex(),
-                                                  global_deferredLogger);
-            report.setGroupConverged(!violated);
-        }
         return report;
     }
 
@@ -1269,14 +1271,14 @@ namespace Opm {
 
 
     template<typename TypeTag>
-    void
+    bool
     BlackoilWellModel<TypeTag>::
     updateWellControls(DeferredLogger& deferred_logger, const bool checkGroupControls)
     {
         // Even if there are no wells active locally, we cannot
         // return as the DeferredLogger uses global communication.
         // For no well active globally we simply return.
-        if( !wellsActive() ) return ;
+        if( !wellsActive() ) return true;
 
         const int episodeIdx = ebosSimulator_.episodeIndex();
         const int iterationIdx = ebosSimulator_.model().newtonMethod().numIterations();
@@ -1335,6 +1337,7 @@ namespace Opm {
             changed = comm.sum(changed);
             iter++;
         }
+        return changed;
     }
 
 
