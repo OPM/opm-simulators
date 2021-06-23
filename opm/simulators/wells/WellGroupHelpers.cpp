@@ -290,6 +290,9 @@ namespace WellGroupHelpers
                                  "Invalid GuideRateInjTarget in updateGuideRatesForInjectionGroups",
                                  deferred_logger);
             }
+
+            const UnitSystem& unit_system = schedule.getUnits();
+            guideRateValue = unit_system.from_si(UnitSystem::measure::rate, guideRateValue);
             guideRate->compute(group.name(), phase, reportStepIdx, guideRateValue);
         }
     }
@@ -1383,6 +1386,10 @@ namespace WellGroupHelpers
         oilPot = comm.sum(oilPot);
         gasPot = comm.sum(gasPot);
         waterPot = comm.sum(waterPot);
+        const UnitSystem& unit_system = schedule.getUnits();
+        oilPot = unit_system.from_si(UnitSystem::measure::liquid_surface_rate, oilPot);
+        waterPot = unit_system.from_si(UnitSystem::measure::liquid_surface_rate, waterPot);
+        gasPot = unit_system.from_si(UnitSystem::measure::gas_surface_rate, gasPot);
         guideRate->compute(group.name(), reportStepIdx, simTime, oilPot, gasPot, waterPot);
     }
 
@@ -1420,6 +1427,10 @@ namespace WellGroupHelpers
             oilpot = comm.sum(oilpot);
             gaspot = comm.sum(gaspot);
             waterpot = comm.sum(waterpot);
+            const UnitSystem& unit_system = schedule.getUnits();
+            oilpot = unit_system.from_si(UnitSystem::measure::liquid_surface_rate, oilpot);
+            waterpot = unit_system.from_si(UnitSystem::measure::liquid_surface_rate, waterpot);
+            gaspot = unit_system.from_si(UnitSystem::measure::gas_surface_rate, gaspot);
             guideRate->compute(well.name(), reportStepIdx, simTime, oilpot, gaspot, waterpot);
         }
     }
