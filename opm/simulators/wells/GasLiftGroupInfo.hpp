@@ -171,7 +171,7 @@ private:
     GroupIdxMap group_idx_;
     int next_group_idx_ = 0;
     // Optimize only wells under THP control
-    bool optimize_only_thp_wells_ = true;
+    bool optimize_only_thp_wells_ = false;
 
 };
 

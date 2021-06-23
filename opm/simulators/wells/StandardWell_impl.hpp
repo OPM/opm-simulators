@@ -1495,6 +1495,7 @@ namespace Opm
     StandardWell<TypeTag>::
     gasLiftOptimizationStage1(
                        WellState& well_state,
+                       const GroupState& group_state,
                        const Simulator& ebos_simulator,
                        DeferredLogger& deferred_logger,
                        GLiftProdWells &prod_wells,
@@ -1508,7 +1509,7 @@ namespace Opm
         std::unique_ptr<GasLiftSingleWell> glift
             = std::make_unique<GasLiftSingleWell>(
                 *this, ebos_simulator, summary_state,
-                deferred_logger, well_state, group_info, sync_groups);
+                deferred_logger, well_state, group_state, group_info, sync_groups);
         auto state = glift->runOptimize(
             ebos_simulator.model().newtonMethod().numIterations());
         if (state) {

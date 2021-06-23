@@ -114,6 +114,9 @@ public:
         return this->active_wgstate_.well_state;
     }
 
+    GroupState& groupState() { return this->active_wgstate_.group_state; }
+
+
     double wellPI(const int well_index) const;
     double wellPI(const std::string& well_name) const;
 
@@ -155,7 +158,6 @@ public:
                                              const double simulation_time);
 
 protected:
-    GroupState& groupState() { return this->active_wgstate_.group_state; }
 
     /*
       The dynamic state of the well model is maintained with an instance

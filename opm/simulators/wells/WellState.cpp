@@ -997,6 +997,15 @@ bool WellState::wellIsOwned(const std::string& wellName) const
     return wellIsOwned(well_index, wellName);
 }
 
+int WellState::wellIndex(const std::string& wellName) const
+{
+    const auto& it = this->wellMap_.find( wellName );
+    if (it == this->wellMap_.end()) {
+        OPM_THROW(std::logic_error, "Could not find well " << wellName << " in well map");
+    }
+    return it->second[0];
+}
+
 int WellState::numSegments(const int well_id) const
 {
     const auto& segments = this->segments(well_id);
