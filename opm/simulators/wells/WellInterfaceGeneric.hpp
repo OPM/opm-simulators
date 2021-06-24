@@ -43,6 +43,9 @@ class SummaryState;
 class VFPProperties;
 class WellTestState;
 class WellState;
+class GroupState;
+class Group;
+class Schedule;
 
 class WellInterfaceGeneric {
 public:
@@ -173,6 +176,7 @@ protected:
                                      const bool write_message_to_opmlog,
                                      WellTestState& well_test_state,
                                      DeferredLogger& deferred_logger) const;
+
 
     // definition of the struct OperabilityStatus
     struct OperabilityStatus {

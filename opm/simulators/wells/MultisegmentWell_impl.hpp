@@ -140,10 +140,11 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     updateWellStateWithTarget(const Simulator& ebos_simulator,
+                              const GroupState& group_state,
                               WellState& well_state,
                               DeferredLogger&  deferred_logger) const
     {
-        Base::updateWellStateWithTarget(ebos_simulator, well_state, deferred_logger);
+        Base::updateWellStateWithTarget(ebos_simulator, group_state, well_state, deferred_logger);
         // scale segment rates based on the wellRates
         // and segment pressure based on bhp
         this->scaleSegmentRatesWithWellRates(well_state);
