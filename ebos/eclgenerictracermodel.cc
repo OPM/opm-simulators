@@ -133,14 +133,14 @@ doInit(bool enabled, size_t numGridDof,
 
 
         //TBLK keyword
-        if (!tracer.concentration.empty()){
-            int tblkDatasize = tracer.concentration.size();
+        if (!tracer.free_concentration.empty()){
+            int tblkDatasize = tracer.free_concentration.size();
             if (tblkDatasize < cartMapper_.cartesianSize()){
                 throw std::runtime_error("Wrong size of TBLK for" + tracer.name);
             }
             for (size_t globalDofIdx = 0; globalDofIdx < numGridDof; ++globalDofIdx){
                 int cartDofIdx = cartMapper_.cartesianIndex(globalDofIdx);
-                tracerConcentration_[tracerIdx][globalDofIdx] = tracer.concentration[cartDofIdx];
+                tracerConcentration_[tracerIdx][globalDofIdx] = tracer.free_concentration[cartDofIdx];
             }
         }
         //TVDPF keyword
@@ -150,7 +150,7 @@ doInit(bool enabled, size_t numGridDof,
             for (size_t globalDofIdx = 0; globalDofIdx < numGridDof; ++globalDofIdx){
                 int cartDofIdx = cartMapper_.cartesianIndex(globalDofIdx);
                 const auto& center = eclGrid.getCellCenter(cartDofIdx);
-                tracerConcentration_[tracerIdx][globalDofIdx] = tracer.tvdpf.evaluate("TRACER_CONCENTRATION", center[2]);
+                tracerConcentration_[tracerIdx][globalDofIdx] = tracer.free_tvdp.evaluate("TRACER_CONCENTRATION", center[2]);
             }
         }
         ++tracerIdx;
@@ -241,6 +241,43 @@ linearSolve_(const TracerMatrix& M, TracerVector& x, TracerVector& b)
 
     // return the result of the solver
     return result.converged;
+}
+
+template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
+bool  EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
+linearSolveBatchwise_(const TracerMatrix& M, std::vector<TracerVector>& x, std::vector<TracerVector>& b)
+{
+#if ! DUNE_VERSION_NEWER(DUNE_COMMON, 2,7)
+    Dune::FMatrixPrecision<Scalar>::set_singular_limit(1.e-30);
+    Dune::FMatrixPrecision<Scalar>::set_absolute_limit(1.e-30);
+#endif
+    Scalar tolerance = 1e-2;
+    int maxIter = 100;
+
+    int verbosity = 0;
+    using TracerSolver = Dune::BiCGSTABSolver<TracerVector>;
+    using TracerOperator = Dune::MatrixAdapter<TracerMatrix,TracerVector,TracerVector>;
+    using TracerScalarProduct = Dune::SeqScalarProduct<TracerVector>;
+    using TracerPreconditioner = Dune::SeqILU< TracerMatrix,TracerVector,TracerVector>;
+
+    TracerOperator tracerOperator(M);
+    TracerScalarProduct tracerScalarProduct;
+    TracerPreconditioner tracerPreconditioner(M, 0, 1); // results in ILU0
+
+    TracerSolver solver (tracerOperator, tracerScalarProduct,
+                         tracerPreconditioner, tolerance, maxIter,
+                         verbosity);
+
+    bool converged = true;
+    for (size_t nrhs =0; nrhs < b.size(); ++nrhs) {
+        x[nrhs] = 0.0;
+        Dune::InverseOperatorResult result;
+        solver.apply(x[nrhs], b[nrhs], result);
+        converged = (converged && result.converged);
+    }
+
+    // return the result of the solver
+    return converged;
 }
 
 #if HAVE_DUNE_FEM

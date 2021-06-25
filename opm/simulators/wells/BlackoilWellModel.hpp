@@ -229,6 +229,8 @@ namespace Opm {
                     return this->wasDynamicallyShutThisTimeStep(well_ndex);
                 });
 
+                this->assignWellTracerRates(wsrpt);
+
                 this->assignWellGuideRates(wsrpt);
                 this->assignShutConnections(wsrpt, this->reportStepIndex());
 
@@ -395,7 +397,9 @@ namespace Opm {
                            const int pvtreg,
                            std::vector<double>& resv_coeff) override;
 
-             void computeWellTemperature();
+            void computeWellTemperature();
+
+            void assignWellTracerRates(data::Wells& wsrpt) const;
 
         private:
             BlackoilWellModel(Simulator& ebosSimulator, const PhaseUsage& pu);
