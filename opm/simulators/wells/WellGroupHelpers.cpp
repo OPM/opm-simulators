@@ -33,6 +33,7 @@
 #include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/wells/WellContainer.hpp>
 
+#include <fmt/format.h>
 #include <algorithm>
 #include <cassert>
 #include <set>
@@ -945,7 +946,9 @@ namespace WellGroupHelpers
         const double my_guide_rate = guideRate(name, always_included_child);
         const Group& parent_group = schedule_.getGroup(parent(name), report_step_);
         const double total_guide_rate = guideRateSum(parent_group, always_included_child);
-        assert(total_guide_rate >= my_guide_rate);
+        if (my_guide_rate > total_guide_rate)
+            throw std::logic_error(fmt::format("Guide rate: {} for {} exceeds total guide rate {}", my_guide_rate, name, total_guide_rate));
+
         const double guide_rate_epsilon = 1e-12;
         return (total_guide_rate > guide_rate_epsilon) ? my_guide_rate / total_guide_rate : 0.0;
     }
