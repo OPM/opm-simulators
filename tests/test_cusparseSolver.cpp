@@ -40,6 +40,11 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
 
+class DeviceInitException : public std::logic_error
+{
+public:
+    DeviceInitException(std::string msg) : logic_error(msg){};
+};
 
 template <int bz>
 Dune::BlockVector<Dune::FieldVector<double, bz>>
@@ -76,14 +81,15 @@ testCusparseSolver(const boost::property_tree::ptree& prm, const std::string& ma
 
     Vector x(rhs.size());
     Opm::WellContributions wellContribs("cusparse");
+    std::unique_ptr<Opm::BdaBridge<Matrix, Vector, bz> > bridge;
     try {
-        Opm::BdaBridge<Matrix, Vector, bz> bridge(gpu_mode, fpga_bitstream, linear_solver_verbosity, maxit, tolerance, platformID, deviceID, opencl_ilu_reorder);
-
-        bridge.solve_system(&matrix, rhs, wellContribs, result);
-        bridge.get_result(x);
+        bridge = std::make_unique<Opm::BdaBridge<Matrix, Vector, bz> >(gpu_mode, fpga_bitstream, linear_solver_verbosity, maxit, tolerance, platformID, deviceID, opencl_ilu_reorder);
     } catch (const std::logic_error& error) {
         BOOST_WARN_MESSAGE(true, error.what());
+        throw DeviceInitException(error.what());
     }
+    bridge->solve_system(&matrix, rhs, wellContribs, result);
+    bridge->get_result(x);
 
     return x;
 }
@@ -116,8 +122,12 @@ BOOST_AUTO_TEST_CASE(TestDefaultPreconditionerFactory)
         pt::read_json(file, prm);
     }
 
-    // Test with 3x3 block solvers.
-    test3(prm);
+    try {
+        // Test with 3x3 block solvers.
+        test3(prm);
+    } catch(const DeviceInitException& ) {
+        BOOST_WARN_MESSAGE(true, "Problem with initializing a device. skipping test");
+    }
 }
 
 
